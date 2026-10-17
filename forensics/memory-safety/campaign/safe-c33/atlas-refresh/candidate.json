@@ -3,7 +3,7 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "893e4e6e21d817f23e91ebb91bcba03fdeeb4682",
+    "head_sha": "bd5468ac87981be0cc3611e1f980bf007528d12f",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
@@ -670,23 +670,27 @@
   },
   "cohort_metrics": {
     "1_unique_closure_files": 628,
-    "2_files_ownership_reconstructed": 315,
+    "2_files_ownership_reconstructed": 314,
     "3_files_fully_discharged_obligations": 0,
     "3_note": "Obligations are discharged ONLY at the seal point (AGENTS.md \u00a77 SAFETY_DISCHARGED, \u00a718). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.",
     "4_unresolved_interior_raw_sites": {
       "allocator_definition_files_excluded": [
         "src/runtime/mem.rs"
       ],
-      "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
-      "seam_bearing_files_with_raw_sites": 269,
-      "seam_bearing_raw_sites_unclassified": 3307,
-      "unconverted_no_seam_files": 27,
-      "unconverted_no_seam_sites": 142,
-      "upper_bound_total": 3449
+      "note": "Allocation calls and release calls are reported separately and must not be added into one 'raw site' figure. Calls in no-seam files are unambiguously unclassified interior work. Calls in seam-bearing files are mixed: they include legitimate seam-constructor/release sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported as classification burden, not as defects.",
+      "seam_bearing_files_with_production_alloc_calls": 216,
+      "seam_bearing_production_alloc_calls_unclassified": 611,
+      "seam_bearing_production_release_calls_unclassified": 629,
+      "unconverted_no_seam_files": 15,
+      "unconverted_no_seam_production_alloc_calls": 21,
+      "unconverted_no_seam_production_release_calls": 29,
+      "upper_bound_total": 1290
     },
     "5_consumers_safe_compatible": 0,
     "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
-    "closure_raw_sites_total": 3507,
+    "closure_production_alloc_calls_total": 632,
+    "closure_production_release_calls_total": 713,
+    "closure_raw_sites_total": 1345,
     "per_consumer": [
       {
         "evidence": "fingerprint",
@@ -1180,7 +1184,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-17T16:00:26Z",
+  "generated_utc": "2026-10-17T16:05:19Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1295,6 +1299,7 @@
       "ui": 5
     }
   },
+  "measurement_revision": 2,
   "mechanism_file_mapping": {
     "paths": {
       "ASN1_OCSP": [
@@ -1370,11 +1375,18 @@
       "category": "BIO/error",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 7,
-      "closure_no_seam_raw_files": 1,
-      "closure_raw_sites": 22,
+      "closure_no_seam_production_alloc_files": 0,
+      "closure_no_seam_raw_files": 0,
+      "closure_production_alloc_calls": 2,
+      "closure_production_alloc_files": 1,
+      "closure_production_release_calls": 2,
+      "closure_raw_sites": 4,
+      "closure_seam_bearing_production_alloc_files": 1,
+      "closure_seam_bearing_production_alloc_sites": 2,
       "closure_seam_files": 1,
       "closure_seam_raw_files": 1,
-      "closure_zero_raw_files": 5,
+      "closure_zero_production_alloc_files": 6,
+      "closure_zero_raw_files": 6,
       "converted_files_on_branch": [],
       "crate_files_frozen": 8,
       "crate_unsafe_operations_frozen": 540,
@@ -1383,21 +1395,28 @@
       "families_total": 33,
       "id": "ERR",
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_file_count": 1,
-      "unconverted_interior_files": [
-        "src/runtime/err_state.rs"
-      ],
-      "unconverted_interior_sites": 4
+      "unconverted_interior_file_count": 0,
+      "unconverted_interior_files": [],
+      "unconverted_interior_production_alloc_sites": 0,
+      "unconverted_interior_production_release_sites": 0,
+      "unconverted_interior_sites": 0
     },
     {
       "category": "RAND/CMS/STORE/key formats",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 83,
+      "closure_no_seam_production_alloc_files": 2,
       "closure_no_seam_raw_files": 2,
-      "closure_raw_sites": 430,
+      "closure_production_alloc_calls": 63,
+      "closure_production_alloc_files": 32,
+      "closure_production_release_calls": 79,
+      "closure_raw_sites": 142,
+      "closure_seam_bearing_production_alloc_files": 30,
+      "closure_seam_bearing_production_alloc_sites": 59,
       "closure_seam_files": 45,
-      "closure_seam_raw_files": 42,
-      "closure_zero_raw_files": 39,
+      "closure_seam_raw_files": 30,
+      "closure_zero_production_alloc_files": 51,
+      "closure_zero_raw_files": 51,
       "converted_files_on_branch": [
         "src/cms/cms_env.rs",
         "src/pem/pvkfmt.rs",
@@ -1412,20 +1431,29 @@
       "state": "OWNERSHIP_RECONSTRUCTED",
       "unconverted_interior_file_count": 2,
       "unconverted_interior_files": [
-        "src/pkcs12/p12_kiss.rs",
+        "src/cmp/cmp_util.rs",
         "src/pkcs12/p12_mutl.rs"
       ],
-      "unconverted_interior_sites": 7
+      "unconverted_interior_production_alloc_sites": 4,
+      "unconverted_interior_production_release_sites": 1,
+      "unconverted_interior_sites": 4
     },
     {
       "category": "BIO/error",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 34,
+      "closure_no_seam_production_alloc_files": 0,
       "closure_no_seam_raw_files": 0,
-      "closure_raw_sites": 134,
+      "closure_production_alloc_calls": 28,
+      "closure_production_alloc_files": 14,
+      "closure_production_release_calls": 38,
+      "closure_raw_sites": 66,
+      "closure_seam_bearing_production_alloc_files": 14,
+      "closure_seam_bearing_production_alloc_sites": 28,
       "closure_seam_files": 21,
-      "closure_seam_raw_files": 16,
-      "closure_zero_raw_files": 18,
+      "closure_seam_raw_files": 14,
+      "closure_zero_production_alloc_files": 20,
+      "closure_zero_raw_files": 20,
       "converted_files_on_branch": [],
       "crate_files_frozen": 40,
       "crate_unsafe_operations_frozen": 6593,
@@ -1436,17 +1464,26 @@
       "state": "UNSAFE_OPEN",
       "unconverted_interior_file_count": 0,
       "unconverted_interior_files": [],
+      "unconverted_interior_production_alloc_sites": 0,
+      "unconverted_interior_production_release_sites": 0,
       "unconverted_interior_sites": 0
     },
     {
       "category": "EVP/PKEY/digest/cipher/provider state",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 270,
-      "closure_no_seam_raw_files": 7,
-      "closure_raw_sites": 1850,
-      "closure_seam_files": 155,
-      "closure_seam_raw_files": 130,
-      "closure_zero_raw_files": 133,
+      "closure_no_seam_production_alloc_files": 3,
+      "closure_no_seam_raw_files": 3,
+      "closure_production_alloc_calls": 356,
+      "closure_production_alloc_files": 113,
+      "closure_production_release_calls": 434,
+      "closure_raw_sites": 790,
+      "closure_seam_bearing_production_alloc_files": 110,
+      "closure_seam_bearing_production_alloc_sites": 353,
+      "closure_seam_files": 154,
+      "closure_seam_raw_files": 110,
+      "closure_zero_production_alloc_files": 157,
+      "closure_zero_raw_files": 157,
       "converted_files_on_branch": [
         "src/ec/smpl.rs",
         "src/evp/digest.rs",
@@ -1467,17 +1504,15 @@
       "families_total": 32,
       "id": "EVP_PKEY_PROVIDER",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 7,
+      "unconverted_interior_file_count": 3,
       "unconverted_interior_files": [
         "src/bn/bignum.rs",
-        "src/bn/mont.rs",
-        "src/dh/ctrl.rs",
-        "src/ec/ctrl.rs",
         "src/evp/p_legacy.rs",
-        "src/provider/core_dispatch.rs",
-        "src/rsa/ctrl.rs"
+        "src/provider/activate.rs"
       ],
-      "unconverted_interior_sites": 42
+      "unconverted_interior_production_alloc_sites": 3,
+      "unconverted_interior_production_release_sites": 10,
+      "unconverted_interior_sites": 3
     },
     {
       "category": "runtime allocator/ownership",
@@ -1485,11 +1520,18 @@
         "src/runtime/mem.rs"
       ],
       "closure_files_recomputed": 12,
+      "closure_no_seam_production_alloc_files": 1,
       "closure_no_seam_raw_files": 1,
-      "closure_raw_sites": 113,
+      "closure_production_alloc_calls": 8,
+      "closure_production_alloc_files": 3,
+      "closure_production_release_calls": 12,
+      "closure_raw_sites": 20,
+      "closure_seam_bearing_production_alloc_files": 2,
+      "closure_seam_bearing_production_alloc_sites": 5,
       "closure_seam_files": 6,
-      "closure_seam_raw_files": 5,
-      "closure_zero_raw_files": 5,
+      "closure_seam_raw_files": 2,
+      "closure_zero_production_alloc_files": 9,
+      "closure_zero_raw_files": 9,
       "converted_files_on_branch": [],
       "crate_files_frozen": 40,
       "crate_unsafe_operations_frozen": 4229,
@@ -1502,17 +1544,26 @@
       "unconverted_interior_files": [
         "src/context/namemap.rs"
       ],
-      "unconverted_interior_sites": 20
+      "unconverted_interior_production_alloc_sites": 3,
+      "unconverted_interior_production_release_sites": 7,
+      "unconverted_interior_sites": 3
     },
     {
       "category": "ASN.1",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 79,
-      "closure_no_seam_raw_files": 1,
-      "closure_raw_sites": 177,
+      "closure_no_seam_production_alloc_files": 0,
+      "closure_no_seam_raw_files": 0,
+      "closure_production_alloc_calls": 33,
+      "closure_production_alloc_files": 18,
+      "closure_production_release_calls": 27,
+      "closure_raw_sites": 60,
+      "closure_seam_bearing_production_alloc_files": 18,
+      "closure_seam_bearing_production_alloc_sites": 33,
       "closure_seam_files": 33,
-      "closure_seam_raw_files": 25,
-      "closure_zero_raw_files": 53,
+      "closure_seam_raw_files": 18,
+      "closure_zero_production_alloc_files": 61,
+      "closure_zero_raw_files": 61,
       "converted_files_on_branch": [],
       "crate_files_frozen": 79,
       "crate_unsafe_operations_frozen": 10865,
@@ -1521,21 +1572,28 @@
       "families_total": 31,
       "id": "ASN1_OCSP",
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_file_count": 1,
-      "unconverted_interior_files": [
-        "src/asn1/fre.rs"
-      ],
-      "unconverted_interior_sites": 7
+      "unconverted_interior_file_count": 0,
+      "unconverted_interior_files": [],
+      "unconverted_interior_production_alloc_sites": 0,
+      "unconverted_interior_production_release_sites": 0,
+      "unconverted_interior_sites": 0
     },
     {
       "category": "X.509 verify/policy",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 97,
-      "closure_no_seam_raw_files": 10,
-      "closure_raw_sites": 437,
+      "closure_no_seam_production_alloc_files": 7,
+      "closure_no_seam_raw_files": 7,
+      "closure_production_alloc_calls": 72,
+      "closure_production_alloc_files": 34,
+      "closure_production_release_calls": 74,
+      "closure_raw_sites": 146,
+      "closure_seam_bearing_production_alloc_files": 27,
+      "closure_seam_bearing_production_alloc_sites": 65,
       "closure_seam_files": 39,
-      "closure_seam_raw_files": 36,
-      "closure_zero_raw_files": 51,
+      "closure_seam_raw_files": 27,
+      "closure_zero_production_alloc_files": 63,
+      "closure_zero_raw_files": 63,
       "converted_files_on_branch": [
         "src/x509/pcy_data.rs",
         "src/x509/pcy_lib.rs",
@@ -1551,29 +1609,35 @@
       "families_total": 31,
       "id": "X509_VERIFY_POLICY",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 10,
+      "unconverted_interior_file_count": 7,
       "unconverted_interior_files": [
-        "src/x509/pcy_data.rs",
-        "src/x509/pcy_lib.rs",
         "src/x509/v3_enum.rs",
         "src/x509/v3_group_ac.rs",
         "src/x509/v3_ind_iss.rs",
         "src/x509/v3_no_ass.rs",
         "src/x509/v3_no_rev_avail.rs",
         "src/x509/v3_single_use.rs",
-        "src/x509/v3_soa_id.rs",
-        "src/x509/x509_cmp.rs"
+        "src/x509/v3_soa_id.rs"
       ],
-      "unconverted_interior_sites": 17
+      "unconverted_interior_production_alloc_sites": 7,
+      "unconverted_interior_production_release_sites": 0,
+      "unconverted_interior_sites": 7
     },
     {
       "category": "runtime concurrency",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 5,
+      "closure_no_seam_production_alloc_files": 1,
       "closure_no_seam_raw_files": 1,
-      "closure_raw_sites": 48,
+      "closure_production_alloc_calls": 7,
+      "closure_production_alloc_files": 5,
+      "closure_production_release_calls": 15,
+      "closure_raw_sites": 22,
+      "closure_seam_bearing_production_alloc_files": 4,
+      "closure_seam_bearing_production_alloc_sites": 4,
       "closure_seam_files": 4,
       "closure_seam_raw_files": 4,
+      "closure_zero_production_alloc_files": 0,
       "closure_zero_raw_files": 0,
       "converted_files_on_branch": [
         "src/context/namemap.rs",
@@ -1590,17 +1654,26 @@
       "unconverted_interior_files": [
         "src/runtime/thread_events.rs"
       ],
-      "unconverted_interior_sites": 20
+      "unconverted_interior_production_alloc_sites": 3,
+      "unconverted_interior_production_release_sites": 11,
+      "unconverted_interior_sites": 3
     },
     {
       "category": "SSL/SSL_CTX/session",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 44,
-      "closure_no_seam_raw_files": 4,
-      "closure_raw_sites": 303,
+      "closure_no_seam_production_alloc_files": 1,
+      "closure_no_seam_raw_files": 1,
+      "closure_production_alloc_calls": 64,
+      "closure_production_alloc_files": 12,
+      "closure_production_release_calls": 33,
+      "closure_raw_sites": 97,
+      "closure_seam_bearing_production_alloc_files": 11,
+      "closure_seam_bearing_production_alloc_sites": 63,
       "closure_seam_files": 13,
-      "closure_seam_raw_files": 12,
-      "closure_zero_raw_files": 28,
+      "closure_seam_raw_files": 11,
+      "closure_zero_production_alloc_files": 32,
+      "closure_zero_raw_files": 32,
       "converted_files_on_branch": [
         "src/ssl/ssl_lib.rs",
         "src/ssl/ssl_sess.rs",
@@ -1614,88 +1687,123 @@
       "families_total": 25,
       "id": "SSL_SESSION",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 4,
+      "unconverted_interior_file_count": 1,
       "unconverted_interior_files": [
-        "src/ssl/adv_alloc.rs",
-        "src/ssl/s3_lib.rs",
-        "src/ssl/statem/extensions_clnt.rs",
-        "src/ssl/statem/extensions_srvr.rs"
+        "src/ssl/s3_lib.rs"
       ],
-      "unconverted_interior_sites": 25
+      "unconverted_interior_production_alloc_sites": 1,
+      "unconverted_interior_production_release_sites": 0,
+      "unconverted_interior_sites": 1
     }
   ],
   "next_targets": [
     {
       "families_reaching": 32,
       "mechanism": "EVP_PKEY_PROVIDER",
-      "score": 1344,
-      "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 7,
-      "unconverted_interior_sites": 42
-    },
-    {
-      "families_reaching": 25,
-      "mechanism": "SSL_SESSION",
-      "score": 625,
-      "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 4,
-      "unconverted_interior_sites": 25
-    },
-    {
-      "families_reaching": 31,
-      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-      "score": 620,
-      "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 1,
-      "unconverted_interior_sites": 20
+      "no_seam_production_alloc_calls": 3,
+      "no_seam_production_alloc_files": 3,
+      "production_alloc_calls": 356,
+      "production_alloc_files": 113,
+      "production_release_calls": 434,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 11392,
+      "state": "OWNERSHIP_RECONSTRUCTED"
     },
     {
       "families_reaching": 31,
       "mechanism": "X509_VERIFY_POLICY",
-      "score": 527,
-      "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 10,
-      "unconverted_interior_sites": 17
+      "no_seam_production_alloc_calls": 7,
+      "no_seam_production_alloc_files": 7,
+      "production_alloc_calls": 72,
+      "production_alloc_files": 34,
+      "production_release_calls": 74,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 2232,
+      "state": "OWNERSHIP_RECONSTRUCTED"
     },
     {
       "families_reaching": 25,
-      "mechanism": "RUNTIME_CONCURRENCY",
-      "score": 500,
-      "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 1,
-      "unconverted_interior_sites": 20
+      "mechanism": "SSL_SESSION",
+      "no_seam_production_alloc_calls": 1,
+      "no_seam_production_alloc_files": 1,
+      "production_alloc_calls": 64,
+      "production_alloc_files": 12,
+      "production_release_calls": 33,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 1600,
+      "state": "OWNERSHIP_RECONSTRUCTED"
     },
     {
       "families_reaching": 33,
       "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "score": 231,
-      "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 2,
-      "unconverted_interior_sites": 7
+      "no_seam_production_alloc_calls": 4,
+      "no_seam_production_alloc_files": 2,
+      "production_alloc_calls": 63,
+      "production_alloc_files": 32,
+      "production_release_calls": 79,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 2079,
+      "state": "OWNERSHIP_RECONSTRUCTED"
     },
     {
       "families_reaching": 31,
       "mechanism": "ASN1_OCSP",
-      "score": 217,
-      "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 1,
-      "unconverted_interior_sites": 7
-    },
-    {
-      "families_reaching": 33,
-      "mechanism": "ERR",
-      "score": 132,
-      "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 1,
-      "unconverted_interior_sites": 4
+      "no_seam_production_alloc_calls": 0,
+      "no_seam_production_alloc_files": 0,
+      "production_alloc_calls": 33,
+      "production_alloc_files": 18,
+      "production_release_calls": 27,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 1023,
+      "state": "UNSAFE_OPEN"
     },
     {
       "families_reaching": 32,
       "mechanism": "BIO",
-      "score": 0,
-      "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 0,
-      "unconverted_interior_sites": 0
+      "no_seam_production_alloc_calls": 0,
+      "no_seam_production_alloc_files": 0,
+      "production_alloc_calls": 28,
+      "production_alloc_files": 14,
+      "production_release_calls": 38,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 896,
+      "state": "UNSAFE_OPEN"
+    },
+    {
+      "families_reaching": 31,
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "no_seam_production_alloc_calls": 3,
+      "no_seam_production_alloc_files": 1,
+      "production_alloc_calls": 8,
+      "production_alloc_files": 3,
+      "production_release_calls": 12,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 248,
+      "state": "UNSAFE_OPEN"
+    },
+    {
+      "families_reaching": 25,
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "no_seam_production_alloc_calls": 3,
+      "no_seam_production_alloc_files": 1,
+      "production_alloc_calls": 7,
+      "production_alloc_files": 5,
+      "production_release_calls": 15,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 175,
+      "state": "OWNERSHIP_RECONSTRUCTED"
+    },
+    {
+      "families_reaching": 33,
+      "mechanism": "ERR",
+      "no_seam_production_alloc_calls": 0,
+      "no_seam_production_alloc_files": 0,
+      "production_alloc_calls": 2,
+      "production_alloc_files": 1,
+      "production_release_calls": 2,
+      "rank_metric": "production allocation call sites in the mechanism closure (work burden, not a defect count)",
+      "reach_x_alloc_score": 66,
+      "state": "UNSAFE_OPEN"
     }
   ],
   "non_claims": [
@@ -1703,22 +1811,417 @@
     "The 33 historical DROP_IN_PASS verdicts are against an EARLIER candidate; functional re-testing is required before graduation.",
     "A present seam (OwnedCtx/OwnedBuf/impl Drop/\u2026) is OWNERSHIP_RECONSTRUCTED, never discharge.",
     "Mechanism\u2192file association is a declared directory mapping, not a per-symbol proof; it is an upper bound used for reachability.",
-    "Raw allocator sites in seam-bearing files are reported, not claimed converted."
+    "Production allocation calls are a work-burden metric, not a defect count; allocation and release calls are reported separately.",
+    "Calls in files that also carry a seam token are classification burden, not proven defects or proven conversions."
   ],
   "recomputed_source_scan": {
+    "adoption_call_pattern": "\\bOwned[A-Za-z0-9_]*\\s*::\\s*(?:from_raw|take|adopt)\\s*\\(|\\badopt(?:_cleansed)?\\s*\\(",
+    "adoption_calls_total": 707,
     "allocator_definition_files": [
-      "src/runtime/mem.rs"
+      "src/runtime/mem.rs",
+      "src/runtime/secure.rs"
     ],
-    "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
+    "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their calls are the seam being defined, not interior residuals, and are excluded from metric 4. Both `src/runtime/mem.rs` and `src/runtime/secure.rs` are treated as allocator seam implementations.",
+    "allocator_surface": {
+      "alloc_names": [
+        "CRYPTO_aligned_alloc",
+        "CRYPTO_aligned_alloc_array",
+        "CRYPTO_calloc",
+        "CRYPTO_clear_realloc",
+        "CRYPTO_clear_realloc_array",
+        "CRYPTO_malloc",
+        "CRYPTO_malloc_array",
+        "CRYPTO_memdup",
+        "CRYPTO_realloc",
+        "CRYPTO_realloc_array",
+        "CRYPTO_secure_calloc",
+        "CRYPTO_secure_malloc",
+        "CRYPTO_secure_malloc_array",
+        "CRYPTO_secure_malloc_init",
+        "CRYPTO_secure_zalloc",
+        "CRYPTO_strdup",
+        "CRYPTO_strndup",
+        "CRYPTO_zalloc"
+      ],
+      "excluded_public_functions": [
+        "CRYPTO_get_mem_functions",
+        "CRYPTO_memcmp",
+        "CRYPTO_secure_actual_size",
+        "CRYPTO_secure_allocated",
+        "CRYPTO_secure_malloc_initialized",
+        "CRYPTO_secure_used",
+        "CRYPTO_set_mem_functions",
+        "OPENSSL_cleanse"
+      ],
+      "families": {
+        "CRYPTO_aligned_alloc": {
+          "family": "aligned",
+          "kind": "alloc"
+        },
+        "CRYPTO_aligned_alloc_array": {
+          "family": "aligned",
+          "kind": "alloc"
+        },
+        "CRYPTO_calloc": {
+          "family": "calloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_clear_free": {
+          "family": "cleansing_release",
+          "kind": "release"
+        },
+        "CRYPTO_clear_realloc": {
+          "family": "clear_realloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_clear_realloc_array": {
+          "family": "array",
+          "kind": "alloc"
+        },
+        "CRYPTO_free": {
+          "family": "plain_release",
+          "kind": "release"
+        },
+        "CRYPTO_malloc": {
+          "family": "malloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_malloc_array": {
+          "family": "array",
+          "kind": "alloc"
+        },
+        "CRYPTO_memdup": {
+          "family": "dup",
+          "kind": "alloc"
+        },
+        "CRYPTO_realloc": {
+          "family": "realloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_realloc_array": {
+          "family": "array",
+          "kind": "alloc"
+        },
+        "CRYPTO_secure_calloc": {
+          "family": "secure_calloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_secure_clear_free": {
+          "family": "secure_cleansing_release",
+          "kind": "release"
+        },
+        "CRYPTO_secure_free": {
+          "family": "secure_release",
+          "kind": "release"
+        },
+        "CRYPTO_secure_malloc": {
+          "family": "secure_alloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_secure_malloc_array": {
+          "family": "secure_array",
+          "kind": "alloc"
+        },
+        "CRYPTO_secure_malloc_done": {
+          "family": "secure_arena",
+          "kind": "release"
+        },
+        "CRYPTO_secure_malloc_init": {
+          "family": "secure_arena",
+          "kind": "alloc"
+        },
+        "CRYPTO_secure_zalloc": {
+          "family": "secure_zalloc",
+          "kind": "alloc"
+        },
+        "CRYPTO_strdup": {
+          "family": "dup",
+          "kind": "alloc"
+        },
+        "CRYPTO_strndup": {
+          "family": "dup",
+          "kind": "alloc"
+        },
+        "CRYPTO_zalloc": {
+          "family": "zalloc",
+          "kind": "alloc"
+        },
+        "OPENSSL_clear_free": {
+          "family": "openssl_alias",
+          "kind": "release"
+        }
+      },
+      "openssl_alias_names": [
+        "OPENSSL_clear_free"
+      ],
+      "release_names": [
+        "CRYPTO_clear_free",
+        "CRYPTO_free",
+        "CRYPTO_secure_clear_free",
+        "CRYPTO_secure_free",
+        "CRYPTO_secure_malloc_done",
+        "OPENSSL_clear_free"
+      ],
+      "source_files": [
+        "src/runtime/mem.rs",
+        "src/runtime/secure.rs"
+      ]
+    },
+    "cfg_attr_cfg_test_attributes": 0,
+    "external_test_module_file_count": 7,
+    "external_test_module_files": [
+      "src/ml_dsa/tests.rs",
+      "src/ml_kem/tests.rs",
+      "src/runtime/miri_tcb.rs",
+      "src/runtime/sparse_array_probe.rs",
+      "src/slh_dsa/tests.rs",
+      "src/ssl/adv_alloc.rs",
+      "src/test_support.rs"
+    ],
+    "family_note": "Families keep secure, cleansing, array, aligned, duplicate and realloc operations visible; they are not folded into plain malloc.",
     "files_total": 866,
-    "files_with_raw_sites": 360,
-    "files_with_seam": 376,
-    "files_zero_raw_sites": 506,
-    "raw_site_patterns": [
-      "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
-      "\\bCRYPTO_(?:free|clear_free)\\b"
+    "files_with_production_alloc_calls": 282,
+    "files_with_raw_sites": 282,
+    "files_with_seam": 375,
+    "files_zero_production_alloc_calls": 582,
+    "files_zero_raw_sites": 582,
+    "item_cfg_test_alloc_release_reclassified": 0,
+    "item_cfg_test_range_count": 9,
+    "item_cfg_test_sites_reclassified": 0,
+    "measurement_method": "comments and string/char literals are blanked in place by a hand-written scanner (offsets and line numbers preserved); a site is an identifier followed by optional whitespace/turbofish and '(' and is not a `fn` definition; alloc/release names are discovered from the seam files; test classification covers inline cfg(test) modules, external `mod name;` files, and individual items",
+    "no_seam_production_alloc_file_count": 18,
+    "no_seam_production_alloc_files": [
+      "src/bn/bignum.rs",
+      "src/cmp/cmp_util.rs",
+      "src/context/namemap.rs",
+      "src/ct/ct_x509v3.rs",
+      "src/evp/p_legacy.rs",
+      "src/ml_dsa/poly.rs",
+      "src/pkcs12/p12_mutl.rs",
+      "src/provider/activate.rs",
+      "src/runtime/thread_events.rs",
+      "src/sm2/crypt.rs",
+      "src/ssl/s3_lib.rs",
+      "src/x509/v3_enum.rs",
+      "src/x509/v3_group_ac.rs",
+      "src/x509/v3_ind_iss.rs",
+      "src/x509/v3_no_ass.rs",
+      "src/x509/v3_no_rev_avail.rs",
+      "src/x509/v3_single_use.rs",
+      "src/x509/v3_soa_id.rs"
     ],
-    "raw_sites_total": 4304,
+    "production_adoption_calls": 699,
+    "production_alloc_call_files": 282,
+    "production_alloc_calls": 806,
+    "production_by_family": {
+      "array": {
+        "alloc_calls": 22,
+        "alloc_files": 12,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "calloc": {
+        "alloc_calls": 18,
+        "alloc_files": 12,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "cleansing_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 159,
+        "release_files": 75
+      },
+      "clear_realloc": {
+        "alloc_calls": 5,
+        "alloc_files": 5,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "dup": {
+        "alloc_calls": 289,
+        "alloc_files": 124,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "malloc": {
+        "alloc_calls": 247,
+        "alloc_files": 153,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "openssl_alias": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 23,
+        "release_files": 12
+      },
+      "plain_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 647,
+        "release_files": 280
+      },
+      "realloc": {
+        "alloc_calls": 11,
+        "alloc_files": 10,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_alloc": {
+        "alloc_calls": 14,
+        "alloc_files": 11,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_array": {
+        "alloc_calls": 1,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_calloc": {
+        "alloc_calls": 1,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_cleansing_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 30,
+        "release_files": 20
+      },
+      "secure_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 4,
+        "release_files": 4
+      },
+      "secure_zalloc": {
+        "alloc_calls": 8,
+        "alloc_files": 6,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "zalloc": {
+        "alloc_calls": 190,
+        "alloc_files": 134,
+        "release_calls": 0,
+        "release_files": 0
+      }
+    },
+    "production_release_call_files": 299,
+    "production_release_calls": 863,
+    "raw_site_keys_note": "`raw_site_patterns`, `files_zero_raw_sites`, `files_with_raw_sites` and `raw_sites_total` are deprecated aliases. They now describe production call sites (comments/literals stripped; test and seam excluded), not the old token regex counts.",
+    "raw_site_patterns": [
+      "\\b(?P<name>CRYPTO_aligned_alloc|CRYPTO_aligned_alloc_array|CRYPTO_calloc|CRYPTO_clear_realloc|CRYPTO_clear_realloc_array|CRYPTO_malloc|CRYPTO_malloc_array|CRYPTO_memdup|CRYPTO_realloc|CRYPTO_realloc_array|CRYPTO_secure_calloc|CRYPTO_secure_malloc|CRYPTO_secure_malloc_array|CRYPTO_secure_malloc_init|CRYPTO_secure_zalloc|CRYPTO_strdup|CRYPTO_strndup|CRYPTO_zalloc)\\s*(?:::\\s*<[^<>\\n]*>\\s*)?\\(",
+      "\\b(?P<name>CRYPTO_clear_free|CRYPTO_free|CRYPTO_secure_clear_free|CRYPTO_secure_free|CRYPTO_secure_malloc_done|OPENSSL_clear_free)\\s*(?:::\\s*<[^<>\\n]*>\\s*)?\\("
+    ],
+    "raw_sites_total": 1669,
+    "raw_sites_total_note": "DEPRECATED ALIAS, not used as a headline. Use production_alloc_calls and production_release_calls separately; they are not interchangeable and their sum is not a defect count.",
+    "seam_bearing_files_with_production_alloc": 264,
+    "seam_file_adoption_calls": 0,
+    "seam_file_alloc_calls": 37,
+    "seam_file_by_family": {
+      "aligned": {
+        "alloc_calls": 2,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "array": {
+        "alloc_calls": 1,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "calloc": {
+        "alloc_calls": 1,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "cleansing_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 1,
+        "release_files": 1
+      },
+      "clear_realloc": {
+        "alloc_calls": 2,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "malloc": {
+        "alloc_calls": 8,
+        "alloc_files": 2,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "plain_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 7,
+        "release_files": 2
+      },
+      "secure_alloc": {
+        "alloc_calls": 5,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_arena": {
+        "alloc_calls": 8,
+        "alloc_files": 1,
+        "release_calls": 18,
+        "release_files": 1
+      },
+      "secure_array": {
+        "alloc_calls": 3,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_calloc": {
+        "alloc_calls": 3,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "secure_cleansing_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 3,
+        "release_files": 1
+      },
+      "secure_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 5,
+        "release_files": 1
+      },
+      "secure_zalloc": {
+        "alloc_calls": 2,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "zalloc": {
+        "alloc_calls": 2,
+        "alloc_files": 2,
+        "release_calls": 0,
+        "release_files": 0
+      }
+    },
+    "seam_file_calls": 71,
+    "seam_file_files": [
+      "src/runtime/mem.rs",
+      "src/runtime/secure.rs"
+    ],
+    "seam_file_label": "allocator seam implementation; excluded from consumer-site counts",
+    "seam_file_release_calls": 34,
     "seam_tokens": [
       "OwnedCtx",
       "OwnedBuf",
@@ -1730,45 +2233,115 @@
       "CtxDestroy",
       "CipherDestroy",
       "impl Drop"
-    ]
+    ],
+    "sites_inside_seam_bearing_files": 776,
+    "test_detection_method": "cfg-attribute brace span for inline cfg(test) modules, path resolution for external `#[cfg(test)] mod name;` files, and brace/statement spans for individual cfg(test) items; not a full parser (residual limitation reported)",
+    "test_module_count": 313,
+    "test_only_alloc_calls": 55,
+    "test_only_by_family": {
+      "calloc": {
+        "alloc_calls": 3,
+        "alloc_files": 2,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "cleansing_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 1,
+        "release_files": 1
+      },
+      "clear_realloc": {
+        "alloc_calls": 2,
+        "alloc_files": 1,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "dup": {
+        "alloc_calls": 11,
+        "alloc_files": 4,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "malloc": {
+        "alloc_calls": 28,
+        "alloc_files": 9,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "plain_release": {
+        "alloc_calls": 0,
+        "alloc_files": 0,
+        "release_calls": 54,
+        "release_files": 22
+      },
+      "realloc": {
+        "alloc_calls": 4,
+        "alloc_files": 2,
+        "release_calls": 0,
+        "release_files": 0
+      },
+      "zalloc": {
+        "alloc_calls": 7,
+        "alloc_files": 5,
+        "release_calls": 0,
+        "release_files": 0
+      }
+    },
+    "test_only_call_files": 28,
+    "test_only_calls": 110,
+    "test_only_release_calls": 55
   },
   "schema": "openssl-rs/p25-safe-c33/atlas-refresh/1",
+  "site_worklist": {
+    "fields": [
+      "file",
+      "line",
+      "kind",
+      "callee",
+      "family",
+      "function",
+      "seam_bearing_file",
+      "in_safe33_closure"
+    ],
+    "note": "Per-site evidence queue: production (non-test, non-seam) alloc and release call sites only, sorted by file then line.",
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/site-worklist.json",
+    "row_count": 1669
+  },
   "unknown_vs_demonstrated_failure": {
     "demonstrated_failure": [
       {
-        "mechanism": "ERR",
-        "unconverted_interior_files": 1
-      },
-      {
         "mechanism": "RAND_CMS_STORE_KEYFMT",
+        "unconverted_interior_alloc_calls": 4,
         "unconverted_interior_files": 2
       },
       {
         "mechanism": "EVP_PKEY_PROVIDER",
-        "unconverted_interior_files": 7
+        "unconverted_interior_alloc_calls": 3,
+        "unconverted_interior_files": 3
       },
       {
         "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-        "unconverted_interior_files": 1
-      },
-      {
-        "mechanism": "ASN1_OCSP",
+        "unconverted_interior_alloc_calls": 3,
         "unconverted_interior_files": 1
       },
       {
         "mechanism": "X509_VERIFY_POLICY",
-        "unconverted_interior_files": 10
+        "unconverted_interior_alloc_calls": 7,
+        "unconverted_interior_files": 7
       },
       {
         "mechanism": "RUNTIME_CONCURRENCY",
+        "unconverted_interior_alloc_calls": 3,
         "unconverted_interior_files": 1
       },
       {
         "mechanism": "SSL_SESSION",
-        "unconverted_interior_files": 4
+        "unconverted_interior_alloc_calls": 1,
+        "unconverted_interior_files": 1
       }
     ],
-    "demonstrated_failure_note": "A closure file with a raw allocator site and NO ownership seam is a known-unconverted interior site in a mechanism a consumer needs. This is the only class this refresh asserts as failure-shaped; it is not a functional regression.",
+    "demonstrated_failure_note": "A closure file with at least one production allocation CALL and NO ownership seam is a known-unconverted interior allocation site in a mechanism a consumer needs. This is the only class this refresh asserts as failure-shaped; it is not a functional regression.",
     "unknown_coverage": [
       {
         "families_without_symbol_fingerprint": 27,
