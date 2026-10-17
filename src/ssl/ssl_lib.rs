@@ -83,6 +83,7 @@ use crate::runtime::mem::{
     CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
     OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -2898,16 +2899,6 @@ pub(crate) unsafe fn raise_statem(reason: c_int, file: *const core::ffi::c_char,
     unsafe { raise_with(ERR_LIB_SSL, reason, file, line) };
 }
 
-/// `CRYPTO_UP_REF(&refs, &i)` — the relaxed fetch-add the authority's header defines.
-fn up_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_add(1, Ordering::Relaxed) + 1
-}
-
-/// `CRYPTO_DOWN_REF(&refs, &i)` — the release fetch-sub the authority's header defines.
-fn down_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_sub(1, Ordering::Release) - 1
-}
-
 /// `SSL_CONNECTION_IS_DTLS(sc)` — `ssl_local.h:257`, read from the method's enc-flag.
 ///
 /// # Safety
@@ -3108,12 +3099,7 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
 pub unsafe extern "C" fn SSL_CTX_up_ref(ctx: *mut SslCtx) -> c_int {
     guard_ffi(0, || {
         // SAFETY: the caller guarantees `ctx` is live.
-        let i = up_ref(unsafe { &(*ctx).references });
-        if i <= 0 {
-            0
-        } else {
-            c_int::from(i > 1)
-        }
+        up_ref(unsafe { &(*ctx).references })
     })
 }
 
@@ -3137,13 +3123,13 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             return;
         }
         // SAFETY: the caller guarantees `ctx` is live.
-        let i = down_ref(unsafe { &(*ctx).references });
-        if i > 0 {
-            return;
+        match down_ref(unsafe { &(*ctx).references }) {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // SAFETY: the count reached zero, so this is the last reference and `ctx` is owned here;
-        // `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own `SSL_CTX_free`
-        // body followed by the block release, so the body below no longer walks a release by hand.
+        // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `ctx` is
+        // owned here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's
+        // own `SSL_CTX_free` body followed by the block release.
         unsafe { drop(OwnedCtx::<SslCtx>::from_raw(ctx, FILE, 4467)) };
     })
 }
@@ -3482,12 +3468,7 @@ pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
 pub unsafe extern "C" fn SSL_up_ref(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         // SAFETY: the caller guarantees `s` is live.
-        let i = up_ref(unsafe { &(*s).references });
-        if i <= 0 {
-            0
-        } else {
-            c_int::from(i > 1)
-        }
+        up_ref(unsafe { &(*s).references })
     })
 }
 
@@ -3502,13 +3483,13 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             return;
         }
         // SAFETY: the caller guarantees `s` is live.
-        let i = down_ref(unsafe { &(*s).references });
-        if i > 0 {
-            return;
+        match down_ref(unsafe { &(*s).references }) {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // SAFETY: the count reached zero, so this is the last reference and `s` is owned here;
-        // `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own `SSL_free`
-        // body followed by the block release, so the body below no longer walks a release by hand.
+        // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `s` is owned
+        // here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own
+        // `SSL_free` body followed by the block release.
         unsafe { drop(OwnedCtx::<Ssl>::from_raw(s, FILE, 1442)) };
     })
 }
@@ -12149,9 +12130,12 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
         // SAFETY: `s` is live per the caller's contract; every pointer this body uses is derived
         // from it or from the fresh `SSL_new` it allocates.
         unsafe {
-            // If we are not quiescent, just up_ref.
+            // If we are not quiescent, just up_ref. The guarded increment refuses a
+            // connection that is already retiring instead of resurrecting it.
             if SSL_in_init(s) == 0 || SSL_in_before(s) == 0 {
-                up_ref(&(*s).references);
+                if up_ref(&(*s).references) == 0 {
+                    return ptr::null_mut();
+                }
                 return s;
             }
 
@@ -13033,5 +13017,129 @@ mod adv_realloc_probe {
 
             CRYPTO_free(r.cast(), ptr::null(), 0);
         }
+    }
+}
+
+/// Re-entrancy controls for the two reference-counted SSL object classes.
+///
+/// `SSL_free`/`SSL_CTX_free` invoke application ex-data callbacks after the last
+/// reference has been released. Each test registers a callback for its own class that
+/// re-enters the same `*_free`; the destroying sentinel must turn the re-entry into a
+/// defined no-op rather than a second teardown.
+#[cfg(test)]
+mod refcount_reentrancy_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::ssl::methods::TLS_method;
+    use core::sync::atomic::AtomicUsize;
+
+    static CTX_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static CTX_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static SSL_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static SSL_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn ctx_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == CTX_TARGET.load(Ordering::Relaxed) {
+            CTX_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live context this callback was invoked for, and the outer
+            // `SSL_CTX_free` is still inside its destructor body.
+            unsafe { SSL_CTX_free(obj.cast::<SslCtx>()) };
+        }
+    }
+
+    unsafe extern "C" fn ssl_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == SSL_TARGET.load(Ordering::Relaxed) {
+            SSL_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live connection this callback was invoked for, and the
+            // outer `SSL_free` is still inside its destructor body.
+            unsafe { SSL_free(obj.cast::<Ssl>()) };
+        }
+    }
+
+    struct ResetTargets;
+    impl Drop for ResetTargets {
+        fn drop(&mut self) {
+            CTX_TARGET.store(0, Ordering::Relaxed);
+            SSL_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn ctx_free_reentrancy_is_defined_noop() {
+        CTX_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_SSL_CTX,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(ctx_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: the method is a process-lifetime static and `SSL_CTX_new` takes ownership
+        // of nothing else.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new(TLS_method()) must succeed");
+        let _reset = ResetTargets;
+        CTX_TARGET.store(ctx as usize, Ordering::Relaxed);
+
+        // SAFETY: `ctx` is live and `idx` is the index registered above.
+        let set = unsafe { SSL_CTX_set_ex_data(ctx, idx, ctx.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the context's only reference; the callback re-enters it.
+        unsafe { SSL_CTX_free(ctx) };
+
+        assert_eq!(CTX_CALLS.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn ssl_free_reentrancy_is_defined_noop() {
+        SSL_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_SSL,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(ssl_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: the method is a process-lifetime static and both constructors take no
+        // borrowed arguments beyond a live context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new(TLS_method()) must succeed");
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null(), "SSL_new on a fresh context must succeed");
+        let _reset = ResetTargets;
+        SSL_TARGET.store(ssl as usize, Ordering::Relaxed);
+
+        // SAFETY: `ssl` is live and `idx` is the index registered above.
+        let set = unsafe { SSL_set_ex_data(ssl, idx, ssl.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the connection's only reference; the callback re-enters it.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(SSL_CALLS.load(Ordering::Relaxed), 1);
+
+        // SAFETY: the connection released its two context references; this releases ours.
+        unsafe { SSL_CTX_free(ctx) };
     }
 }

@@ -32,10 +32,11 @@ file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1199** passed
-(one concurrent-refcount test added in subphase 39) and the adversarial probes
-are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of sweep 35
-there are **18** probes).
+`cargo test --lib` (must pass; the established baseline is **1207** passed
+(one concurrent-refcount test added in subphase 39 and eight
+reference-count/re-entrancy tests added in subphase 40) and the adversarial
+probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
+sweep 35 there are **18** probes).
 
 ## Landed batches
 
@@ -139,6 +140,7 @@ there are **18** probes).
 | 79 | stage/p25/sweep37 | provider/cipher, ec/lib, ssl/ssl_lib | **destructor zero-validity**: D1/D2 `hw` null guard and D3/D4 `meth` null guard make the clear bodies no-ops on the all-zero block; constructed-path order, layouts, coordinates and cleansing unchanged; Ssl `session_ticket` comment reconciled with the authority's raw release; 2 new deterministic zero-state negative controls; 18/18 probes; hidden 0 |
 | 80 | stage/p25/sweep38 | DESTRUCTOR-CONTRACTS.md, PROGRESS.md | **subphase 38 adjudication (docs only)**: 19 `CONTRACTED` `CtxDestroy` rows independently re-read against every constructor/publication path; **16 promoted to `ESTABLISHED`**, **3 retained `CONTRACTED`** (`SslCtx`, `Ssl`, `X509Store`), **0 STOP defects**; no `DISCHARGED`; residual callback/non-atomic-refcount obligations recorded |
 | 81 | stage/p25/sweep39 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **runtime/alias adjudication**: `X509Store` last-ref gate moved from plain `c_int` to layout-compatible `AtomicI32` (size 160 / offset 144 / align 8 asserts; relaxed fetch-add, release fetch-sub + acquire fence); concurrent up-ref test added; `SslCtx`/`Ssl`/`X509Store` retained `CONTRACTED` for reachable callback re-entrancy (ex-data / lookup `free` hook / `BIO_free_all`); 0 STOP; 1199 passed, 18 ignored; 18/18 probes; hidden 0 |
+| 82 | stage/p25/sweep40 | src/runtime/refcount.rs, src/runtime/mod.rs, src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **callback-reentrancy repair**: shared `REF_DESTROYING` sentinel CAS in the existing `AtomicI32`; `*_free` claims the last reference `1 -> destroying` and a re-entrant/over-free is a defined no-op; `*_up_ref` refuses zero/destroying without resurrecting; applied to `Ssl`, `SslCtx`, `SslSession`, `X509Store`; 8 deterministic tests (4 protocol + 4 real ex-data re-entry); no layout/ABI/allocator/free-order change; 0 STOP; 1207 passed, 18 ignored; 18/18 probes; hidden 0 |
 
 ### Subphase 38 — destructor-contract adjudication (docs only)
 
@@ -169,6 +171,28 @@ there are **18** probes).
 - No row promoted to `ESTABLISHED` or `DISCHARGED`; 0 STOP defects.
 - Gate: `fmt` clean, clippy clean, **1199 passed / 18 ignored**, adv-probe
   **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md`.
+
+### Subphase 40 — reference-count destroying sentinel (callback re-entrancy)
+
+- Shared gate `src/runtime/refcount.rs`: `REF_DESTROYING = i32::MIN` lives in
+  the existing `AtomicI32` (no field, layout or exported-signature change).
+  `*_free` loads, treats zero/negative/sentinel as a defined no-op, releases a
+  positive `n > 1` with `CAS(n, n-1)` (Release), and claims `1` with
+  `CAS(1, REF_DESTROYING)` (AcqRel) before running the destructor body.
+  `*_up_ref` CAS-increments only a positive count; zero/destroying returns 0
+  without changing the count. `SSL_dup`'s quiescent path returns NULL if that
+  guarded increment fails.
+- Applied to `Ssl`, `SslCtx`, `SslSession` and `X509Store`. The authority's
+  over-free UB becomes a defined no-op (a documented §17 safety divergence).
+- Deterministic tests (no allocator hook, not ignored): one real ex-data
+  `free_func` re-entry per type — `store_free_reentrancy_is_defined_noop`,
+  `session_free_reentrancy_is_defined_noop`,
+  `ctx_free_reentrancy_is_defined_noop`, `ssl_free_reentrancy_is_defined_noop`
+  — plus four protocol tests in `runtime::refcount`.
+- No row promoted to `SAFETY_DISCHARGED`; `SslCtx`/`Ssl`/`X509Store` remain
+  `CONTRACTED` for the §7 independent-check package. 0 STOP defects.
+- Gate: `fmt` clean, clippy clean, **1207 passed / 18 ignored**, adv-probe
+  **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md` §§1–3.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
