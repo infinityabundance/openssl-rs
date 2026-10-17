@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1230** passed
+`cargo test --lib` (must pass; the established baseline is **1235** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -528,6 +528,21 @@ package.
   Gate: `fmt` 0, clippy 0, **1230 passed / 18 ignored**, adv-probe **18/18**.
   Progress: **99 of 173**.
 
+### Subphase 54 — `OwnedStr` and the S-P string group
+
+- New `src/runtime/owned_str.rs`: a possibly-NULL C string with stored release
+  coordinates and plain NULL-tolerant `CRYPTO_free`. Constructors preserve each
+  site's allocator (`strdup`/`strndup`/`malloc`) and separate allocation/release
+  coordinates; `adopt` / `adopt_nullable` are `unsafe` with provenance,
+  NUL/extent, alignment and exclusive-ownership contracts.
+- Ten S-P copies migrated: cmp client/ctx/genm, ct log/sct_ctx, dso, provider
+  init/keymgmt/ml_dsa_kmgmt/slh_dsa_kmgmt. Allocator, coordinates, NULL
+  semantics, release order and `into_raw` hand-offs unchanged; dso's len-only
+  malloc path keeps its `DSO_pathbyaddr` NUL contract.
+- Adversarial review **PASS** (one overstated test name fixed). Gate: `fmt` 0,
+  clippy 0, **1235 passed / 18 ignored**, adv-probe **18/18**. Progress: **109
+  of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -705,7 +720,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `45f702415` (always-cleanse groups merged)
+**Last observed HEAD:** `3924e5ea0` (S-P string consolidation merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -756,9 +771,9 @@ the unsafe-obligation denominator now exists.
 helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
 `B-P` (39 of 52; 13 need shared-API extensions), `B-Z` (13), `B-L` (4 of 8;
 4 excluded), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (2 of 3; `bn/rand` needs an
-owner-derived slice accessor). Remaining: `B-P` exclusions (13), `B-L`
-exclusions (4), `B-CF-FL` (`bn/rand`); then
-`OwnedStr` (33) and `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
+owner-derived slice accessor), `OwnedStr` S-P (10). Remaining: `B-P`
+exclusions (13), `B-L` exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr` S-L (13)
+and S-Z (10); then `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
 OwnedScratch/constant-char* groups (8). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
 inventory, adversarial review and a fresh gate. Afterwards, the
