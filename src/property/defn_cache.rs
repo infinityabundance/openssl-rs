@@ -83,6 +83,71 @@ struct PropertyDefnElem {
     body: [c_char; 1],
 }
 
+/// An owned `PROPERTY_DEFN_ELEM` block from this unit's `CRYPTO_malloc`/`CRYPTO_free`
+/// seam.
+///
+/// The block keeps the authority's exact size and its allocation `file`/`line`
+/// (observable to a caller-installed `CRYPTO_set_mem_functions` hook), and its release
+/// keeps the authority's own free coordinate; its *ownership* is this type. [`Self::new`]
+/// allocates here, [`Self::adopt`] takes in an element the table hands back for release,
+/// and `Drop` is the single plain release. The lhash owns an element it has accepted, so
+/// [`Self::into_raw`] is the transfer at that ABI edge.
+struct OwnedElem {
+    ptr: *mut PropertyDefnElem,
+    release_line: c_int,
+}
+
+impl OwnedElem {
+    /// `CRYPTO_malloc(size, FILE, alloc_line)`, released at `release_line`, or `None` when
+    /// the allocator answers NULL.
+    fn new(size: usize, alloc_line: c_int, release_line: c_int) -> Option<OwnedElem> {
+        let raw = CRYPTO_malloc(size, FILE, alloc_line).cast::<PropertyDefnElem>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedElem {
+                ptr: raw,
+                release_line,
+            })
+        }
+    }
+
+    /// Adopt an element block for release by `Drop`; NULL answers `None`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or one of the table's elements: a block this module's allocator
+    /// seam allocated in full, not a sub-range, and no other owner will release it;
+    /// `release_line` is the authority's own free site.
+    unsafe fn adopt(ptr: *mut PropertyDefnElem, release_line: c_int) -> Option<OwnedElem> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedElem { ptr, release_line })
+        }
+    }
+
+    /// The block's address, for the raw calls that initialise or publish it.
+    fn as_ptr(&self) -> *mut PropertyDefnElem {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the lhash that accepted it.
+    fn into_raw(self) -> *mut PropertyDefnElem {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedElem {
+    /// The block's single release through the seam it was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, and
+        // `self.release_line` is the authority's own free site; `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.release_line) };
+    }
+}
+
 /// `static unsigned long property_defn_hash(const PROPERTY_DEFN_ELEM *a)`
 ///
 /// # Safety
@@ -120,12 +185,16 @@ unsafe extern "C" fn property_defn_cmp(a: *const c_void, b: *const c_void) -> c_
 /// # Safety
 /// `elem` is one of the table's elements.
 unsafe extern "C" fn property_defn_free_thunk(elem: *mut c_void) {
+    // SAFETY: `elem` is one of the table's elements, allocated in full by
+    // `ossl_prop_defn_set` through the crate's allocator seam and not released before;
+    // the `doall` calls this once per element, so this frame becomes its only owner.
+    let Some(elem) = (unsafe { OwnedElem::adopt(elem.cast::<PropertyDefnElem>(), LINE_FREE_ELEM) })
+    else {
+        return;
+    };
     // SAFETY: `elem` is a live element, so its `defn` pointer is NULL or a list this
-    // crate allocated.
-    unsafe {
-        crate::property::parse::ossl_property_free((*elem.cast::<PropertyDefnElem>()).defn);
-        CRYPTO_free(elem, FILE, LINE_FREE_ELEM);
-    }
+    // crate allocated. The owner's `Drop` then releases the block, after the list.
+    unsafe { crate::property::parse::ossl_property_free((*elem.as_ptr()).defn) };
 }
 
 /// `void ossl_property_defns_free(void *vproperty_defns)`
@@ -274,30 +343,28 @@ pub(crate) unsafe fn ossl_prop_defn_set(
             // SAFETY: `prop` is NUL-terminated per the contract.
             let len = unsafe { c_strlen(prop) };
             // `sizeof(*p) + len`, where `sizeof(*p)` places `body` at offset 16 on this
-            // target: 8 for `prop`, 8 for `defn`, 1 for `body`, padded to 24.
-            // SAFETY: the size arithmetic is the authority's.
-            let block = CRYPTO_malloc(
-                core::mem::size_of::<PropertyDefnElem>() + len,
-                FILE,
-                LINE_MALLOC_ELEM,
-            )
-            .cast::<PropertyDefnElem>();
-            if !block.is_null() {
-                // SAFETY: `block` is `size_of + len` bytes, so writing `len + 1` bytes
-                // at `body` (offset 16) stays inside it.
+            // target: 8 for `prop`, 8 for `defn`, 1 for `body`, padded to 24. The sum is
+            // checked so an impossible wrapped request never reaches the allocator; on
+            // that path no block is allocated, which is the allocation-failure outcome.
+            let block = core::mem::size_of::<PropertyDefnElem>()
+                .checked_add(len)
+                .and_then(|size| OwnedElem::new(size, LINE_MALLOC_ELEM, LINE_FREE_ELEM));
+            if let Some(block) = block {
+                let p = block.as_ptr();
+                // SAFETY: `p` is `size_of + len` bytes, so writing `len + 1` bytes at
+                // `body` (offset 16) stays inside it.
                 unsafe {
-                    (*block).prop = core::ptr::addr_of!((*block).body).cast::<c_char>();
-                    (*block).defn = *pl;
+                    (*p).prop = core::ptr::addr_of!((*p).body).cast::<c_char>();
+                    (*p).defn = *pl;
                     core::ptr::copy_nonoverlapping(
                         prop,
-                        core::ptr::addr_of_mut!((*block).body).cast::<c_char>(),
+                        core::ptr::addr_of_mut!((*p).body).cast::<c_char>(),
                         len + 1,
                     );
                 }
-                // SAFETY: `t` is live and `block` is a fresh element for it.
-                let old = unsafe {
-                    OPENSSL_LH_insert(t, block.cast::<c_void>()).cast::<PropertyDefnElem>()
-                };
+                // SAFETY: `t` is live and `p` is a fresh element for it.
+                let old =
+                    unsafe { OPENSSL_LH_insert(t, p.cast::<c_void>()).cast::<PropertyDefnElem>() };
                 // `!ossl_assert(old == NULL)` under `NDEBUG` is `old != NULL`, and the
                 // retrieve above established that it cannot be — so this arm is the
                 // authority's assertion, kept as a branch rather than removed.
@@ -305,6 +372,7 @@ pub(crate) unsafe fn ossl_prop_defn_set(
                     // SAFETY: `t` is live.
                     if unsafe { OPENSSL_LH_error(t) } == 0 {
                         // No error: the element is in the table and the table owns it.
+                        let _ = block.into_raw();
                         // SAFETY: the lock was taken above.
                         crate::context::lib_ctx_unlock(ctx);
                         return res;
@@ -313,9 +381,8 @@ pub(crate) unsafe fn ossl_prop_defn_set(
                 // The unwind path, reached when the insertion failed or the assertion's
                 // condition was false. The authority releases the block here whether or
                 // not the table kept it, which is a double-free if it did; reproduced
-                // structurally, and unreachable unless an allocation fails.
-                // SAFETY: the block came from `CRYPTO_malloc`.
-                unsafe { CRYPTO_free(block.cast::<c_void>(), FILE, LINE_FREE_ELEM) };
+                // structurally, and unreachable unless an allocation fails. The owner's
+                // `Drop` is that release, at the authority's line 132.
             }
             res = 0;
         }
