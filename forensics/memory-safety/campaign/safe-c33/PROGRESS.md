@@ -74,6 +74,37 @@ size/release test added in subphase 44) and the adversarial
 probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
 sweep 35 there are **18** probes).
 
+## Open STOP blockers
+
+**STOP-1 — `up_ref` can wrap a live count into the destroying sentinel.**
+
+`src/runtime/refcount.rs:92` increments with `n + 1`. At `n == i32::MAX` the
+addition panics in an overflow-checked build and, with overflow checks disabled,
+wraps to `i32::MIN`, which is `REF_DESTROYING`. A live object would then be
+treated as already being destroyed: the next `*_free` becomes a no-op and the
+destructor never runs (leak), and `*_up_ref` stops working.
+
+Required remediation (one bounded source subphase):
+
+1. In `up_ref`, use `let Some(next) = n.checked_add(1) else { return 0; };`
+   before the compare-exchange, so a refused increment leaves the count
+   unchanged and reports the same failure answer as a zero/destroying count.
+2. Add a deterministic test with `AtomicI32::new(i32::MAX)` asserting
+   `up_ref` returns `0` and the value is still `i32::MAX` (after the fix, run it
+   as the first test of that module and in the ordinary suite).
+3. Record the divergence in the module's `§17` note: the authority's
+   `CRYPTO_UP_REF` would overflow (UB) at the same value; this crate refuses
+   without changing state, consistent with its existing zero-refusal policy.
+4. Re-run the full gate in the court container (`fmt`, `clippy -D warnings`,
+   `cargo test --lib -- --test-threads=4`, `scripts/adv-probe.sh`), commit on a
+   `stage/p25/refcount-overflow` branch, merge, and clear this blocker.
+
+`down_ref` is **not** affected: `n == 1` is claimed explicitly and the
+`n > 1` path subtracts from a value greater than one, so no underflow exists.
+
+Until this lands, no reference-count boundary may be promoted to
+`SAFETY_DISCHARGED`.
+
 ## Landed batches
 
 | # | branch | files | notes |
@@ -504,11 +535,15 @@ differ).
 the `Drop` owners that run them: **199** implementations (136 `CtxDestroy`,
 27 `CipherDestroy`, 14 `KdfDestroy`, 7 `MacDestroy`, 7 `FreeOnDrop`,
 5 `DrbgCtx`, 3 `GcmDestroy`) across **49 trait definitions** (46 `*Destroy`
-including 42 `CtxDestroy`, plus `DrbgCtx` and 2 `FreeOnDrop`). Result: **21 `CONTRACTED`, 178 `ESTABLISHED`, 0 `DISCHARGED`**;
-**4 STOP defect sites / 3 classes** (null `hw` dereference in
-`ProvAesSivCtx`/`ProvAesGcmSivCtx`; null `meth` dereference in
-`EcGroup`/`EcPoint::clear_destroy_body`). No mechanism is discharged by this
-audit; the defects are reported, not fixed.
+including 42 `CtxDestroy`, plus `DrbgCtx` and 2 `FreeOnDrop`). `PROGRESS.md`
+previously reported the subphase-37 checkpoint (178 `ESTABLISHED` / 21
+`CONTRACTED`); **that figure is obsolete.** After subphases 38–43 the current
+result is **199 `ESTABLISHED`, 0 `CONTRACTED`, 0 `DISCHARGED`** — authoritative
+per-row detail is in `DESTRUCTOR-CONTRACTS.md`. Source-established is not
+`SAFETY_DISCHARGED`: no row has the §7 independent-check package. The 4 STOP
+defect sites found by the audit (null `hw` in `ProvAesSivCtx`/
+`ProvAesGcmSivCtx`; null `meth` in `EcGroup`/`EcPoint::clear_destroy_body`)
+were fixed in subphase 37 with deterministic zero-state controls.
 
 ## Receipts
 
@@ -560,6 +595,11 @@ recurse back into the object — that remains a §21 boundary obligation to stat
 and discharge explicitly.
 
 ### Next executable subphase — obligation denominator (unsafe-operation census)
+
+**Before this:** clear **STOP-1** (`up_ref` overflow) in a bounded
+`stage/p25/refcount-overflow` source subphase, gated and merged. It is a
+confirmed soundness defect in a shared protocol and blocks any reference-count
+discharge claim.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
