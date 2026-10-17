@@ -32,9 +32,10 @@ file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1198** passed
-and the adversarial probes are `#[ignore]`d and run separately via
-`scripts/adv-probe.sh`; as of sweep 35 there are **18** probes).
+`cargo test --lib` (must pass; the established baseline is **1199** passed
+(one concurrent-refcount test added in subphase 39) and the adversarial probes
+are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of sweep 35
+there are **18** probes).
 
 ## Landed batches
 
@@ -137,6 +138,7 @@ and the adversarial probes are `#[ignore]`d and run separately via
 | 78 | stage/p25/sweep35 | src/dsa/object, src/dh/object, scripts/adv-probe.sh | **targeted court**: later initialisation failure (`meth->init` returns 0) runs the partial cleanup — method `finish` once, one forwarded context allocation, one release of the same block, default method restored and exercised; allocation-refusal arm already covered; lock-null (Box-based) and ex-data failure are unreachable/non-injectable and not claimed; 18/18 probes; hidden 0 |
 | 79 | stage/p25/sweep37 | provider/cipher, ec/lib, ssl/ssl_lib | **destructor zero-validity**: D1/D2 `hw` null guard and D3/D4 `meth` null guard make the clear bodies no-ops on the all-zero block; constructed-path order, layouts, coordinates and cleansing unchanged; Ssl `session_ticket` comment reconciled with the authority's raw release; 2 new deterministic zero-state negative controls; 18/18 probes; hidden 0 |
 | 80 | stage/p25/sweep38 | DESTRUCTOR-CONTRACTS.md, PROGRESS.md | **subphase 38 adjudication (docs only)**: 19 `CONTRACTED` `CtxDestroy` rows independently re-read against every constructor/publication path; **16 promoted to `ESTABLISHED`**, **3 retained `CONTRACTED`** (`SslCtx`, `Ssl`, `X509Store`), **0 STOP defects**; no `DISCHARGED`; residual callback/non-atomic-refcount obligations recorded |
+| 81 | stage/p25/sweep39 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **runtime/alias adjudication**: `X509Store` last-ref gate moved from plain `c_int` to layout-compatible `AtomicI32` (size 160 / offset 144 / align 8 asserts; relaxed fetch-add, release fetch-sub + acquire fence); concurrent up-ref test added; `SslCtx`/`Ssl`/`X509Store` retained `CONTRACTED` for reachable callback re-entrancy (ex-data / lookup `free` hook / `BIO_free_all`); 0 STOP; 1199 passed, 18 ignored; 18/18 probes; hidden 0 |
 
 ### Subphase 38 — destructor-contract adjudication (docs only)
 
@@ -151,6 +153,22 @@ and the adversarial probes are `#[ignore]`d and run separately via
   `DISCHARGED`.
 - Source witnesses and residual obligations are in
   `DESTRUCTOR-CONTRACTS.md` → “Adjudication (subphase 38)”.
+
+### Subphase 39 — runtime/alias adjudication
+
+- `X509Store`: the non-atomic `c_int` gate was a genuine concurrent-use defect
+  (lost updates, premature free / use-after-free); fixed with `AtomicI32` and
+  the authority's orderings. No layout, offset, allocator-coordinate or
+  exported-signature change. One new concurrent-increment test.
+- `SslCtx`/`Ssl`/`X509Store`: after the count reaches zero, application
+  callbacks run by the destructor (`CRYPTO_free_ex_data`, the lookup `free`
+  hook, `BIO_free_all`) can call the same `*_free` again. The `i > 0` gate does
+  not reject the 0 → -1 transition, so a second `OwnedCtx` is created and the
+  object is torn down twice. Recorded as a retained boundary, not redesigned;
+  the minimal fix is a `DESTROYING` sentinel in the existing atomic refcount.
+- No row promoted to `ESTABLISHED` or `DISCHARGED`; 0 STOP defects.
+- Gate: `fmt` clean, clippy clean, **1199 passed / 18 ignored**, adv-probe
+  **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md`.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
