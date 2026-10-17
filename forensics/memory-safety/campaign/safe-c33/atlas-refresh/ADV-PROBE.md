@@ -2,6 +2,20 @@
 
 Status: **green** (routine + probed gates) on the candidate below.
 
+## Committed candidate + independent CI evidence
+
+The original record below (branch `stage/p25/adv-harden`, working tree) is the
+**development-time** evidence and is preserved unrewritten. The stronger,
+independent evidence is the **committed** candidate and its CI run:
+
+- Integration HEAD: `5f320e2f6` on `integrate/safe-c33` (the adversarial-probe
+  work merged via `517f52df5`; the routine suite reports **1196 passed, 9
+  ignored** and `scripts/adv-probe.sh` reports **9/9 passed** at this HEAD).
+- The dedicated `adversarial` CI job completed successfully at this tip; the
+  `lints (clippy)` job also passed. This is the source identity to cite for the
+  probe evidence going forward; re-run `bash scripts/adv-probe.sh` and record a
+  new block here whenever a callback/allocator edge changes.
+
 This record is deliberately **separate from the routine `cargo test --lib` count**. The probes
 install the process-global `CRYPTO_set_mem_functions` hook and are `#[ignore]`d, so the routine
 suite reports them as `ignored`; a green routine run never implies they executed. Only the probed
@@ -135,6 +149,14 @@ acquires the authority source (needed to compile the test target), then runs
 and fails hard. The job is cheap and runs on every push and pull request.
 
 ## Residual notes
+
+**Reentrancy scope (do not overstate).** `serverinfo_realloc_reentrancy_reads_member`
+proves **publication ordering** only: a synthetic allocator observer invoked
+during `CRYPTO_realloc` sees the original pointer/length, and the new pair
+after success. It does **not** prove soundness under an arbitrary application
+callback that reenters and mutates or releases the same object; no Rust borrow
+is held across that call, but the broader callback/alias boundary remains a
+§21 obligation to state and discharge explicitly per affected API.
 
 - Isolation is per probe **process**, not per test thread; `--test-threads=1` alone is not
   sufficient because the allocator hook is process-global.
