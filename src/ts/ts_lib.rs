@@ -12,6 +12,7 @@
 use core::ffi::c_int;
 
 use crate::asn1::a_print::ASN1_STRING_print;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_INTEGER_to_BN;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::asn1::text::i2a_ASN1_OBJECT;
@@ -21,7 +22,6 @@ use crate::runtime::bio::dump::BIO_dump_indent;
 use crate::runtime::bio::iolib::BIO_write;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2ln, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::stack::OpenSslStack;
 use crate::x509::v3_prn::X509V3_EXT_print;
@@ -52,16 +52,23 @@ pub(crate) unsafe extern "C" fn TS_ASN1_INTEGER_print_bio(
         return -1;
     }
     // SAFETY: `num_bn` is live.
-    let hex = unsafe { BN_bn2hex(num_bn) };
-    if !hex.is_null() {
-        // SAFETY: `hex` is a NUL-terminated string.
-        let hex_len = unsafe { core::ffi::CStr::from_ptr(hex) }.to_bytes().len() as c_int;
-        // SAFETY: `bio` is live and `hex` holds `hex_len` bytes.
+    let hex_raw = unsafe { BN_bn2hex(num_bn) };
+    // `BN_bn2hex` handed this frame one NUL-terminated block; `OPENSSL_free(hex)` at
+    // `ts_lib.c:31` is its single release, and the owner's `Drop` is that release.
+    // SAFETY: `hex_raw` is NULL or a fresh, exclusively-owned `BN_bn2hex` block.
+    let hex = unsafe { OwnedBlock::<core::ffi::c_char>::from_raw(hex_raw, FILE.as_ptr(), 31) };
+    if let Some(hex) = hex {
+        let hex_ptr = hex.as_ptr();
+        // SAFETY: `hex_ptr` is a NUL-terminated string.
+        let hex_len = unsafe { core::ffi::CStr::from_ptr(hex_ptr) }
+            .to_bytes()
+            .len() as c_int;
+        // SAFETY: `bio` is live and `hex_ptr` holds `hex_len` bytes.
         result = (unsafe { BIO_write(bio, c"0x".as_ptr().cast(), 2) } > 0) as c_int;
         // SAFETY: as above.
-        result &= (unsafe { BIO_write(bio, hex.cast(), hex_len) } > 0) as c_int;
-        // SAFETY: `hex` is a `BN_bn2hex` allocation; this is `OPENSSL_free(hex)` at `:31`.
-        unsafe { CRYPTO_free(hex.cast(), FILE.as_ptr(), 31) };
+        result &= (unsafe { BIO_write(bio, hex_ptr.cast(), hex_len) } > 0) as c_int;
+        // `OPENSSL_free(hex)` at `ts_lib.c:31`, before `BN_free(num_bn)` below.
+        drop(hex);
     }
     // SAFETY: `num_bn` is live.
     unsafe { BN_free(num_bn) };
