@@ -2206,3 +2206,81 @@ mod tests {
         assert_eq!(fallbacks, 1, "only `default` is a fallback in this profile");
     }
 }
+
+/// Publication-ordering boundary court for [`ossl_provider_set_operation_bit`] (§16 / §21).
+///
+/// **Scope.** This establishes **publication ordering only**: the intercepted `CRYPTO_realloc`
+/// observes the *old* `(operation_bits, operation_bits_sz)` pair during the call, and the new pair
+/// becomes visible only after it returns. It does **not** model a genuine reentrant call that takes
+/// the same `opbits_lock`: that lock is non-reentrant, so such a call would deadlock rather than
+/// expose a partially published pair. The limitation is recorded here, not hidden.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn opbits_realloc_publishes_after_old_pair() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // An all-zero `OsslProvider` is a valid value: every field is a raw pointer, an atomic, a
+        // scalar or a null-niche `Option<_>`, and `ossl_provider_set_operation_bit` reads only the
+        // two operation-bit members and the lock set below.
+        // SAFETY: zero is a valid bit pattern for every field of `OsslProvider`.
+        let mut p: OsslProvider = unsafe { core::mem::zeroed() };
+        p.opbits_lock = CRYPTO_THREAD_lock_new();
+        assert!(
+            !p.opbits_lock.is_null(),
+            "the operation-bits lock must allocate"
+        );
+
+        adv_alloc::reset();
+        adv_alloc::arm_realloc(1, false);
+        // SAFETY: `p` is live, its `opbits_lock` is live, and the pair is `(NULL, 0)`.
+        adv_alloc::arm_reenter(
+            core::ptr::addr_of_mut!(p.operation_bits),
+            core::ptr::addr_of_mut!(p.operation_bits_sz),
+        );
+        // SAFETY: `p` is live; bit 3 needs exactly one byte, so this is the intercepted realloc.
+        let rc = unsafe { ossl_provider_set_operation_bit(&mut p, 3) };
+        adv_alloc::disarm_realloc();
+
+        assert_eq!(rc, 1, "the operation bit must be set");
+        assert_eq!(
+            adv_alloc::reenter_observed(),
+            Some((0, 0)),
+            "during the realloc the pair must still be the old `(NULL, 0)`"
+        );
+        assert!(
+            !p.operation_bits.is_null(),
+            "the new block must be published"
+        );
+        assert_eq!(
+            p.operation_bits_sz, 1,
+            "the size must be published with the block"
+        );
+        // SAFETY: the realloc above returned a live one-byte block and the pair is in bounds.
+        assert_eq!(unsafe { *p.operation_bits }, 1 << 3, "bit 3 must be set");
+
+        // Release the members this probe owns, exactly as the authority's remove/free path does.
+        // SAFETY: `p.operation_bits` is the single block from the realloc above.
+        unsafe {
+            CRYPTO_free(
+                p.operation_bits.cast::<c_void>(),
+                FILE,
+                L_REMOVE_METHODS_FREE_BITS,
+            );
+            p.operation_bits = ptr::null_mut();
+            p.operation_bits_sz = 0;
+        }
+        // SAFETY: `p.opbits_lock` came from `CRYPTO_THREAD_lock_new` and is released once here.
+        unsafe { CRYPTO_THREAD_lock_free(p.opbits_lock) };
+        adv_alloc::assert_no_double_free();
+    }
+}

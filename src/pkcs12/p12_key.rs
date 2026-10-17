@@ -497,3 +497,43 @@ mod tests {
         ERR_clear_error();
     }
 }
+
+/// Cleansed-release boundary court for [`OwnedUniPass`] (§16).
+///
+/// `OPENSSL_clear_free` is the authority's release for password material; the allocator hook reads
+/// the block before forwarding the release, so a `Drop` that freed without cleansing cannot pass.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_malloc;
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn unipass_drop_cleanses_before_release() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        const LEN: usize = 16;
+
+        // `CRYPTO_malloc` is safe; `p` is a fresh block of `LEN` bytes owned by this frame.
+        let p = CRYPTO_malloc(LEN, FILE.as_ptr(), 37).cast::<c_uchar>();
+        assert!(!p.is_null(), "the password canary block must allocate");
+        // SAFETY: `p` is the fresh `LEN`-byte block above and is not yet owned elsewhere.
+        unsafe { core::ptr::write_bytes(p, 0xAA, LEN) };
+
+        adv_alloc::reset();
+        // SAFETY: `p` is the live `LEN`-byte block above; the hook reads exactly those bytes
+        // before forwarding the release.
+        unsafe { adv_alloc::arm_cleansed_free(LEN) };
+        // SAFETY: `p` is the live `LEN`-byte block and `OwnedUniPass` becomes its sole owner;
+        // `Drop` releases it exactly once through the authority's `CRYPTO_clear_free`.
+        drop(unsafe { OwnedUniPass::take(p, LEN, 37) });
+
+        adv_alloc::assert_not_cleansed();
+        adv_alloc::assert_no_double_free();
+    }
+}

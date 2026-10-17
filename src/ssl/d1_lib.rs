@@ -462,3 +462,83 @@ pub unsafe extern "C" fn DTLS_set_timer_cb(ssl: *mut Ssl, cb: Option<DtlsTimerCb
         unsafe { (*(*ssl).d1).timer_cb = cb };
     })
 }
+
+/// Allocator and lifecycle boundary court for [`dtls1_new_state`]/[`dtls1_free`] (§16).
+///
+/// The refusal arm is size-only: the state block is allocated at this file's own `(FILE, 79)`
+/// coordinate, which the SSL ticket probes' site-specific arming cannot reach.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::adv_alloc::{self, Ev};
+    use core::ptr;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dtls_state_refusal_and_lifecycle() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dtls1State>();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(size);
+        // SAFETY: `dtls1_new_state` takes no caller pointer; a refusal answers NULL.
+        let d1 = unsafe { dtls1_new_state(true) };
+        adv_alloc::disarm_any();
+
+        assert!(
+            d1.is_null(),
+            "a refused Dtls1State block must make dtls1_new_state answer NULL"
+        );
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: true, .. } if *n == size))
+                .count(),
+            1,
+            "exactly the Dtls1State-sized request is refused"
+        );
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            0,
+            "the refused request must never be forwarded"
+        );
+        assert!(
+            !ev.iter().any(|e| matches!(e, Ev::Free { .. })),
+            "a refusal before the block exists must not release anything"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The success path: a live state block is released exactly once and the `Ssl` field is
+        // cleared before the caller frees the enclosing (zeroed) connection block.
+        // SAFETY: `zeroed_ssl` answers NULL or a live zeroed `Ssl` block this frame owns.
+        let s = unsafe { adv_alloc::zeroed_ssl() };
+        assert!(!s.is_null(), "the zeroed Ssl block must allocate");
+        adv_alloc::reset();
+        // SAFETY: `s` is live and zeroed; `dtls1_new_state` answers a fresh block this field owns.
+        unsafe { (*s).d1 = dtls1_new_state(true) };
+        // SAFETY: `s` is live; `dtls1_free` releases the field's block and clears it.
+        unsafe {
+            assert!(
+                !(*s).d1.is_null(),
+                "the unarmed state allocation must succeed"
+            );
+            dtls1_free(s);
+            assert!(
+                (*s).d1.is_null(),
+                "dtls1_free must clear the field after releasing the state"
+            );
+        }
+        adv_alloc::assert_no_double_free();
+        // SAFETY: `s` is the zeroed block from `zeroed_ssl`; this is its single release.
+        unsafe { CRYPTO_free(s.cast(), ptr::null(), 0) };
+        adv_alloc::assert_no_double_free();
+    }
+}

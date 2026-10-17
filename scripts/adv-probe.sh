@@ -40,6 +40,9 @@ probes=(
   "dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free"
   "dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free"
   "ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free"
+  "ssl::d1_lib::adv_probe::dtls_state_refusal_and_lifecycle"
+  "pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release"
+  "provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair"
 )
 
 failures=0
