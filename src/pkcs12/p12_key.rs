@@ -59,7 +59,7 @@ use crate::params::{
 };
 use crate::pkcs12::p12_utl::{OPENSSL_asc2uni, OPENSSL_utf82uni};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_key.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_key.c";
@@ -78,41 +78,12 @@ const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
 /// `OSSL_KDF_PARAM_ITER` — `include/openssl/core_names.h:290`, `"iter"`.
 const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
 
-/// A converted password buffer and its single, *cleansing* release.
-///
-/// `OPENSSL_asc2uni`/`OPENSSL_utf82uni` answer a fresh block the caller owns; the bytes are
-/// password material, so the authority releases them with `OPENSSL_clear_free(unipass, uniplen)`
-/// after cleansing exactly `uniplen` bytes. The owner records that length and the authority's
-/// release line, so `Drop` reproduces the same free at the same coordinates.
-struct OwnedUniPass {
-    ptr: *mut c_uchar,
-    len: usize,
-    line: c_int,
-}
-
-impl OwnedUniPass {
-    /// Adopt the conversion's block, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a fresh block of exactly `len` bytes produced by the crate's allocator
-    /// seam and owned exclusively by the caller; no other owner will release it.
-    unsafe fn take(ptr: *mut c_uchar, len: usize, line: c_int) -> Option<OwnedUniPass> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedUniPass { ptr, len, line })
-        }
-    }
-}
-
-impl Drop for OwnedUniPass {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the conversion's block this handle owns and has not released;
-        // `self.len` is its exact byte length, so the authority's own `CRYPTO_clear_free` cleanses
-        // those bytes and then releases the block at the recorded line.
-        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), self.line) };
-    }
-}
+// The converted password buffer and its single, *cleansing* release.
+//
+// `OPENSSL_asc2uni`/`OPENSSL_utf82uni` answer a fresh block the caller owns; the bytes are
+// password material, so the authority releases them with `OPENSSL_clear_free(unipass, uniplen)`
+// after cleansing exactly `uniplen` bytes. `OwnedBuf::adopt_cleansed` records that length and
+// the authority's release line, so `Drop` reproduces the same free at the same coordinates.
 
 /// `PKCS12_key_gen_asc_ex` — `crypto/pkcs12/p12_key.c:19-39`.
 ///
@@ -153,12 +124,13 @@ pub unsafe extern "C" fn PKCS12_key_gen_asc_ex(
     }
     // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
     // owner's `Drop` is its single, cleansing release at `p12_key.c:37`.
-    let unipass = unsafe { OwnedUniPass::take(unipass, uniplen.max(0) as usize, 37) };
+    let unipass =
+        unsafe { OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, FILE.as_ptr(), 37) };
     // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
     // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass.as_ref().map_or(ptr::null_mut(), |p| p.ptr),
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr()),
             uniplen,
             salt,
             saltlen,
@@ -250,12 +222,13 @@ pub unsafe extern "C" fn PKCS12_key_gen_utf8_ex(
     }
     // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
     // owner's `Drop` is its single, cleansing release at `p12_key.c:67`.
-    let unipass = unsafe { OwnedUniPass::take(unipass, uniplen.max(0) as usize, 67) };
+    let unipass =
+        unsafe { OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, FILE.as_ptr(), 67) };
     // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
     // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass.as_ref().map_or(ptr::null_mut(), |p| p.ptr),
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr()),
             uniplen,
             salt,
             saltlen,
@@ -498,7 +471,7 @@ mod tests {
     }
 }
 
-/// Cleansed-release boundary court for [`OwnedUniPass`] (§16).
+/// Cleansed-release boundary court for the password owner ([`OwnedBuf`], §16).
 ///
 /// `OPENSSL_clear_free` is the authority's release for password material; the allocator hook reads
 /// the block before forwarding the release, so a `Drop` that freed without cleansing cannot pass.
@@ -529,9 +502,9 @@ mod adv_probe {
         // SAFETY: `p` is the live `LEN`-byte block above; the hook reads exactly those bytes
         // before forwarding the release.
         unsafe { adv_alloc::arm_cleansed_free(LEN) };
-        // SAFETY: `p` is the live `LEN`-byte block and `OwnedUniPass` becomes its sole owner;
+        // SAFETY: `p` is the live `LEN`-byte block and the shared owner becomes its sole owner;
         // `Drop` releases it exactly once through the authority's `CRYPTO_clear_free`.
-        drop(unsafe { OwnedUniPass::take(p, LEN, 37) });
+        drop(unsafe { OwnedBuf::adopt_cleansed(p, LEN, FILE.as_ptr(), 37) });
 
         adv_alloc::assert_not_cleansed();
         adv_alloc::assert_no_double_free();

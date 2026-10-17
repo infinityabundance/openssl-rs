@@ -98,7 +98,8 @@ use crate::provider::util::{
     OSSL_ALG_PARAM_CIPHER, OSSL_ALG_PARAM_DIGEST, OSSL_ALG_PARAM_ENGINE, OSSL_ALG_PARAM_PROPERTIES,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
 };
@@ -351,40 +352,8 @@ impl<T: DrbgCtx> Drop for OwnedRaw<T> {
     }
 }
 
-/// An owned scratch buffer: `strndup` allocates it through the crate's allocator seam and `Drop`
-/// releases it with the authority's own plain `CRYPTO_free`.
-///
-/// Used for the CTR `set_ctx_params` "ECB" copy, which the authority `CRYPTO_strndup`s, overwrites
-/// in place and releases before returning.
-struct OwnedScratch {
-    ptr: ptr::NonNull<c_char>,
-    file: *const c_char,
-}
-
-impl OwnedScratch {
-    /// `CRYPTO_strndup(s, max, file, LINE)`: a NUL-terminated copy of `s` of at most `max` bytes,
-    /// or `None` when `s` is NULL or the allocator answers NULL.
-    ///
-    /// # Safety
-    /// `s` is readable for `max` bytes.
-    unsafe fn strndup(s: *const c_char, max: usize, file: *const c_char) -> Option<OwnedScratch> {
-        // SAFETY: `s` is readable for `max` bytes per the contract.
-        let raw = unsafe { CRYPTO_strndup(s, max, file, LINE) };
-        ptr::NonNull::new(raw).map(|ptr| OwnedScratch { ptr, file })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr.as_ptr()
-    }
-}
-
-impl Drop for OwnedScratch {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the buffer `strndup` allocated and has not released.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, LINE) };
-    }
-}
+// The CTR `set_ctx_params` "ECB" copy, owned by `OwnedBuf`: the authority `CRYPTO_strndup`s
+// it, overwrites it in place and releases it before returning.
 
 // =============================================================================================
 // `struct prov_drbg_st` — `prov/drbg.h:59-165`
@@ -3160,13 +3129,15 @@ unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCt
             }
             // The "ECB" copy is this unit's own scratch, held by `ecb` and released in scope by
             // `Drop` with the authority's own `CRYPTO_strndup`/`CRYPTO_free` pair.
-            let Some(ecb) = OwnedScratch::strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR)
+            let Some(ecb) =
+                OwnedBuf::new_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR, LINE)
             else {
                 return 0;
             };
+            let ecb_ptr = ecb.as_ptr().cast::<c_char>();
             ptr::copy_nonoverlapping(
                 c"ECB".as_ptr(),
-                ecb.as_ptr().add((*(*p).cipher).data_size - ecb_str_len),
+                ecb_ptr.add((*(*p).cipher).data_size - ecb_str_len),
                 4,
             );
             EVP_CIPHER_free((*ctr).cipher_ecb);
@@ -3175,7 +3146,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCt
             (*ctr).cipher_ecb = ptr::null_mut();
             // Fetch from our own provider first; the fetch falls back on its own.
             (*ctr).cipher_ctr = EVP_CIPHER_fetch(libctx, base, propquery);
-            (*ctr).cipher_ecb = EVP_CIPHER_fetch(libctx, ecb.as_ptr(), propquery);
+            (*ctr).cipher_ecb = EVP_CIPHER_fetch(libctx, ecb_ptr, propquery);
             if (*ctr).cipher_ctr.is_null() || (*ctr).cipher_ecb.is_null() {
                 raise_site(&err_sites::PROV_DRBG_CTR_1124);
                 return 0;

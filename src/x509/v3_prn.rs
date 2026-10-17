@@ -46,8 +46,8 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::FILE;
 use crate::runtime::bio::{BIO_free, BIO_new_fp, Bio, BIO_NOCLOSE};
 use crate::runtime::conf::types::ConfValue;
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier, OBJ_obj2nid};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::v3_lib::{X509V3_EXT_get, X509V3_EXT_MULTILINE};
 use crate::x509::v3_utl::X509V3_conf_free;
@@ -61,44 +61,11 @@ const FILE: &CStr = c"crypto/x509/v3_prn.c";
 /// `X509V3_EXT_print`'s `err:` `OPENSSL_free(value)` — `crypto/x509/v3_prn.c:130`.
 const LINE_FREE_VALUE: c_int = 130;
 
-/// An `i2s` callback result owned by the frame that received it.
-///
-/// The authority's `X509V3_EXT_METHOD.i2s` contract returns a NUL-terminated string allocated
-/// through `OPENSSL_malloc`/`OPENSSL_strdup`; `X509V3_EXT_print` owns it and releases it once at
-/// its own `err:` site (`v3_prn.c:130`). This handle makes that release the only one.
-struct OwnedExtValue {
-    ptr: *mut c_char,
-}
-
-impl OwnedExtValue {
-    /// Adopt the block an `i2s` callback returned, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL, or the callback's result: a NUL-terminated block whose whole extent was
-    /// produced by the crate's `CRYPTO_malloc`/`CRYPTO_strdup` seam, owned exclusively by this
-    /// frame (the callback retains no alias and no other owner will release it). `Drop` performs
-    /// its single release at the authority's own coordinates.
-    unsafe fn adopt(ptr: *mut c_char) -> Option<OwnedExtValue> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedExtValue { ptr })
-        }
-    }
-
-    /// The string, for the release-free reads this frame performs.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedExtValue {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `adopt` took; this is its single release, at
-        // `v3_prn.c:130`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_VALUE) };
-    }
-}
+// An `i2s` callback result owned by the frame that received it (`OwnedStr`).
+//
+// The authority's `X509V3_EXT_METHOD.i2s` contract returns a NUL-terminated string allocated
+// through `OPENSSL_malloc`/`OPENSSL_strdup`; `X509V3_EXT_print` owns it and releases it once at
+// its own `err:` site (`v3_prn.c:130`). The shared owner makes that release the only one.
 
 /// `#define X509V3_EXT_UNKNOWN_MASK (0xfL << 16)` — `include/openssl/x509v3.h.in:518`.
 const X509V3_EXT_UNKNOWN_MASK: c_ulong = 0xf << 16;
@@ -288,11 +255,11 @@ pub unsafe extern "C" fn X509V3_EXT_print(
         )
     };
     let mut nval: *mut OpenSslStack = ptr::null_mut();
-    let mut value: Option<OwnedExtValue> = None;
+    let mut value: Option<OwnedStr> = None;
     if let Some(f) = i2s {
         // SAFETY: `method`/`ext_str` are the callback's contract; the result is the callback's
         // exclusively owned seam block (or NULL).
-        value = unsafe { OwnedExtValue::adopt(f(method, ext_str)) };
+        value = unsafe { OwnedStr::adopt(f(method, ext_str), FILE.as_ptr(), LINE_FREE_VALUE) };
         if let Some(v) = value.as_ref() {
             // SAFETY: `out` is live; `v` is NUL-terminated.
             unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), v.as_ptr()) };
