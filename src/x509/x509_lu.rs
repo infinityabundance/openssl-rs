@@ -101,6 +101,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::mem::{offset_of, size_of, MaybeUninit};
 use core::ptr;
+use core::sync::atomic::{fence, AtomicI32, Ordering};
 
 use crate::asn1::layout::Asn1String;
 use crate::evp::pkey::EvpPkey;
@@ -502,7 +503,12 @@ pub struct X509Store {
     /// `CRYPTO_EX_DATA ex_data` — the application extension block.
     pub(crate) ex_data: CryptoExData,
     /// `CRYPTO_REF_COUNT references` — the count `X509_STORE_up_ref`/`_free` move.
-    pub(crate) references: c_int,
+    ///
+    /// The authority's `CRYPTO_REF_COUNT` is an `int` moved through its atomic
+    /// `CRYPTO_UP_REF`/`CRYPTO_DOWN_REF` macros. `AtomicI32` has the same size and
+    /// alignment, so this field is layout-compatible with the C member while making
+    /// the exported refcount pair race-free.
+    pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` — the lock guarding `objs`.
     pub(crate) lock: *mut CryptoRwlock,
 }
@@ -528,6 +534,11 @@ const _: () = {
     assert!(offset_of!(X509Store, ex_data) == 128);
     assert!(offset_of!(X509Store, references) == 144);
     assert!(offset_of!(X509Store, lock) == 152);
+    assert!(core::mem::align_of::<X509Store>() == 8);
+    // The atomic swap above must not disturb the C layout: `CRYPTO_REF_COUNT` is a
+    // 4-byte, 4-aligned `int` on every supported target.
+    assert!(size_of::<AtomicI32>() == size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -1856,7 +1867,7 @@ pub unsafe extern "C" fn X509_STORE_new() -> *mut X509Store {
     // `refcnt->val = n; return 1;`, so the test is the assignment and the branch is unreachable
     // rather than omitted, exactly as `X509_STORE_up_ref` transcribes its half.
     // SAFETY: `references` is a field of this call's own allocation.
-    unsafe { (*ret.as_ptr()).references = 1 };
+    unsafe { (*ret.as_ptr()).references.store(1, Ordering::Relaxed) };
     ret.finish()
 }
 
@@ -1875,14 +1886,15 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the header's `HAVE_ATOMICS` arm answers the new
-    // count. The field is a plain `c_int` here (as `X509_STORE_up_ref` transcribes the other half),
-    // so the decrement is a plain store. `REF_PRINT_COUNT` is a trace hook that expands to nothing
-    // without `REF_COUNT_DEBUG`, and `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
+    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the header's `HAVE_ATOMICS` arm is a release
+    // fetch-sub answering the new count, with an acquire fence when it reaches zero.
+    // `REF_PRINT_COUNT` is a trace hook that expands to nothing without `REF_COUNT_DEBUG`, and
+    // `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
     // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.wrapping_sub(1) };
-    // SAFETY: `xs` is live and writable.
-    unsafe { (*xs).references = i };
+    let i = unsafe { (*xs).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
+    if i == 0 {
+        fence(Ordering::Acquire);
+    }
     if i > 0 {
         return;
     }
@@ -1941,10 +1953,9 @@ pub unsafe extern "C" fn X509_STORE_unlock(xs: *mut X509Store) -> c_int {
 /// `xs` must be a live `X509_STORE`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_STORE_up_ref(xs: *mut X509Store) -> c_int {
+    // `CRYPTO_UP_REF` is a *relaxed* fetch-add answering the new count.
     // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.wrapping_add(1) };
-    // SAFETY: `xs` is live and writable.
-    unsafe { (*xs).references = i };
+    let i = unsafe { (*xs).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
     c_int::from(i > 1)
 }
 
@@ -2992,4 +3003,47 @@ pub unsafe extern "C" fn X509_STORE_CTX_get1_crls(
 pub unsafe extern "C" fn X509_STORE_CTX_get0_store(ctx: *const X509StoreCtx) -> *mut X509Store {
     // SAFETY: `ctx` is live per the contract.
     unsafe { (*ctx).store }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The authority gates `CRYPTO_REF_COUNT` with its atomic `CRYPTO_UP_REF`; a plain
+    /// read-modify-write is a data race and loses concurrent increments, which can release a
+    /// store while another thread still holds a reference. Every increment here must land.
+    #[test]
+    fn store_refcount_is_atomic_under_concurrent_up_ref() {
+        const THREADS: i32 = 8;
+        const PER_THREAD: i32 = 2_000;
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        let addr = store as usize;
+
+        std::thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(move || {
+                    let p = addr as *mut X509Store;
+                    for _ in 0..PER_THREAD {
+                        // SAFETY: `p` is the store this scope keeps alive for every worker.
+                        assert_eq!(unsafe { X509_STORE_up_ref(p) }, 1);
+                    }
+                });
+            }
+        });
+
+        // SAFETY: the store is live and every `up_ref` above succeeded.
+        let count = unsafe { (*store).references.load(Ordering::SeqCst) };
+        assert_eq!(count, 1 + THREADS * PER_THREAD);
+
+        // SAFETY: `store` is live and carries exactly `count` references, so the final call here
+        // retires it.
+        unsafe {
+            for _ in 0..count {
+                X509_STORE_free(store);
+            }
+        }
+    }
 }
