@@ -24,8 +24,9 @@ use crate::evp::cipher_ctx::{
 };
 use crate::evp::evp_pbe::EVP_PBE_CipherInit_ex;
 use crate::rand::rand_lib::RAND_bytes_ex;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{NID_id_alg_PWRI_KEK, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::OPENSSL_sk_push;
 
 use super::cms_asn1::*;
@@ -37,102 +38,6 @@ const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
 const EVP_MAX_IV_LENGTH: usize = 16;
 /// `OSSL_MAX_NAME_SIZE` — `internal/sizes.h:15`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new_cleansed`
-/// allocates it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
-/// takes it over (the recipient's `encrypted_key.data`, or `ec.key`). A NULL pointer is a valid,
-/// empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)`.
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first
-    /// (`tmp`, `key`).
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
-            }
-        }
-    }
-}
 
 /// `int CMS_RecipientInfo_set0_password(CMS_RecipientInfo *ri, unsigned char *pass,`
 /// `ossl_ssize_t passlen)` — `cms_pwri.c:22-37`.
@@ -574,7 +479,9 @@ unsafe fn kek_unwrap_key(
     // The decrypted scratch is this frame's block, allocated through the crate's allocator seam;
     // its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `inlen > 0`.
-    let Some(tmp) = OwnedBuf::new_cleansed(inlen, c"cms_pwri.c".as_ptr(), 219) else {
+    let Some(tmp) =
+        OwnedBuf::new_cleansed_released(inlen, c"cms_pwri.c".as_ptr(), 219, core::ptr::null(), 0)
+    else {
         return 0;
     };
     // Setup IV by decrypting last two blocks.
@@ -930,7 +837,13 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
             // The wrapped key is this frame's block, allocated through the crate's allocator
             // seam; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
             // SAFETY: `keylen > 0`.
-            let Some(key_buf) = OwnedBuf::new_cleansed(keylen, c"cms_pwri.c".as_ptr(), 392) else {
+            let Some(key_buf) = OwnedBuf::new_cleansed_released(
+                keylen,
+                c"cms_pwri.c".as_ptr(),
+                392,
+                core::ptr::null(),
+                0,
+            ) else {
                 break 'body;
             };
 
@@ -961,8 +874,13 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
             // The unwrapped key is this frame's block, allocated through the crate's allocator
             // seam; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
             // SAFETY: `elen >= 0`.
-            let Some(key_buf) = OwnedBuf::new_cleansed(elen as usize, c"cms_pwri.c".as_ptr(), 403)
-            else {
+            let Some(key_buf) = OwnedBuf::new_cleansed_released(
+                elen as usize,
+                c"cms_pwri.c".as_ptr(),
+                403,
+                core::ptr::null(),
+                0,
+            ) else {
                 break 'body;
             };
             // SAFETY: `pwri` is live; `key_buf` is writable.

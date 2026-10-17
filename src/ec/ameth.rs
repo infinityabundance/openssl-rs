@@ -68,8 +68,9 @@ use crate::params::OsslParam;
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{NID_X9_62_id_ecPublicKey, NID_sha256, NID_sm3, OBJ_length, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{
     ossl_x509_PUBKEY_get0_libctx, X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param,
 };
@@ -81,103 +82,6 @@ const EC_PKEY_NO_PARAMETERS: c_int = 0x001;
 const OSSL_PKEY_PARAM_USE_COFACTOR_ECDH: *const c_char = c"use-cofactor-ecdh".as_ptr();
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c".as_ptr();
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays the allocation the authority itself makes -- a `CRYPTO_malloc`, or a helper's
-/// (`i2d_ECPrivateKey`, `EC_KEY_priv2buf`, ...) through that same seam -- and only its *ownership*
-/// is this type: [`Self::new`] allocates it, [`Self::adopt`]/[`Self::adopt_cleansed`] take in a
-/// helper's block, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
-/// takes it over (`X509_PUBKEY_set0_param`, `PKCS8_pkey_set0`). A NULL pointer is a valid, empty
-/// buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`penc`, `pub_buf`, `pub_key_buf`,
-    /// `gen_buf`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, ...)`, which zeroes `num` bytes first
-    /// (`ep`, `priv_buf`).
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// Adopt a block this crate allocated inside a helper whose release is the cleansing
-    /// `CRYPTO_clear_free(ptr, num, ...)`, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is
-    /// readable for `num` bytes.
-    unsafe fn adopt_cleansed(ptr: *mut c_uchar, num: usize) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed { num },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, ptr::null(), 0) };
-            }
-        }
-    }
-}
 
 /// `static int eckey_param2type(int *pptype, void **ppval, const EC_KEY *ec_key)` —
 /// `crypto/ec/ec_ameth.c:29-66`.
@@ -480,7 +384,7 @@ unsafe extern "C" fn eckey_priv_encode(
     // below releases it at the authority's own site and the success path hands it on.
     // SAFETY: `ep` is a live block `i2d_ECPrivateKey` allocated and no one else owns, readable for
     // `eplen` bytes.
-    let ep = unsafe { OwnedBuf::adopt_cleansed(ep, eplen as usize) };
+    let ep = unsafe { OwnedBuf::adopt_cleansed_nullable(ep, eplen as usize, core::ptr::null(), 0) };
     // SAFETY: `p8` is live and `pval`/`ep` are the objects the setter takes ownership of.
     if unsafe {
         PKCS8_pkey_set0(
@@ -672,7 +576,7 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
             publen = EC_KEY_key2buf(x, EC_KEY_get_conv_form(x), &mut pub_buf, ptr::null_mut());
             // SAFETY: `pub_buf` is NULL or a live block `EC_KEY_key2buf` allocated and no one else
             // owns.
-            pub_owned = Some(OwnedBuf::adopt(pub_buf, FILE, 343));
+            pub_owned = Some(OwnedBuf::adopt_plain_nullable(pub_buf, FILE, 343));
             if publen == 0 {
                 // goto err
                 raise_site(&err_sites::EC_AMETH_341);
@@ -684,7 +588,12 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
             privlen = EC_KEY_priv2buf(x, &mut priv_buf);
             // SAFETY: `priv_buf` is NULL or a live block `EC_KEY_priv2buf` allocated and no one
             // else owns, readable for `privlen` bytes.
-            priv_owned = Some(OwnedBuf::adopt_cleansed(priv_buf, privlen));
+            priv_owned = Some(OwnedBuf::adopt_cleansed_nullable(
+                priv_buf,
+                privlen,
+                core::ptr::null(),
+                0,
+            ));
             if privlen == 0 {
                 raise_site(&err_sites::EC_AMETH_341);
                 return 0;
@@ -1056,7 +965,7 @@ unsafe extern "C" fn ec_pkey_export_to(
     // below releases what it built -- the authority's plain `CRYPTO_free`.
     // SAFETY: `gen_buf` is NULL or a live block `ossl_ec_group_todata` allocated and no one else
     // owns.
-    let gen_owned = unsafe { OwnedBuf::adopt(gen_buf, FILE, 602) };
+    let gen_owned = unsafe { OwnedBuf::adopt_plain_nullable(gen_buf, FILE, 602) };
     // `pub_key_buf` is adopted only if the public point below is exported; its handle starts empty.
     let mut pub_key_owned: Option<OwnedBuf> = None;
     if !group_ok {
@@ -1088,7 +997,7 @@ unsafe extern "C" fn ec_pkey_export_to(
         // `pub_key_buf` is the point the call allocated; the handle owns it.
         // SAFETY: `pub_key_buf` is NULL or a live block `EC_POINT_point2buf` allocated and no one
         // else owns.
-        pub_key_owned = Some(unsafe { OwnedBuf::adopt(pub_key_buf, FILE, 601) });
+        pub_key_owned = Some(unsafe { OwnedBuf::adopt_plain_nullable(pub_key_buf, FILE, 601) });
         if pub_key_buflen == 0
             // SAFETY: `tmpl` is live and the buffer is `pub_key_buflen` long.
             || unsafe {

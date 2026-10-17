@@ -69,10 +69,9 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-    OPENSSL_cleanse,
+    CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
 };
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -260,135 +259,6 @@ const LINE_KEY_FREE: c_int = 74;
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of a key buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned key buffer allocated through the crate's allocator seam.
-///
-/// The block stays the allocation the authority itself makes -- an `OPENSSL_strdup` for the
-/// property-query string, a `CRYPTO_malloc`/`CRYPTO_secure_zalloc` for the export buffers -- at the
-/// authority's exact size and `file`/`line`, because a Rust `String`/`Vec` would hide both the
-/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook. Only its
-/// *ownership* is this type: [`Self::new_cleansed`]/[`Self::new_secure_zalloc_cleansed`] allocate
-/// it, [`Self::adopt`] takes up a block the crate allocated inside a helper (an `OPENSSL_strdup`)
-/// or reclaimed from a key field, `Drop` is its single release, and [`Self::into_raw`] hands the
-/// block to the `#[repr(C)]` `MLX_KEY`/`PROV_ML_KEM_GEN_CTX` field whose address the exported ABI
-/// exposes. The two context blocks themselves, whose release is a compound destructor body, stay on
-/// the raw seam.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a key buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`key->propq`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (`pubenc`).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-    /// The authority's cleansing `CRYPTO_secure_clear_free(ptr, num, file, line)` (`prvenc`).
-    SecureCleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)` for a block the authority frees through its cleansing
-    /// `CRYPTO_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed {
-                num: len,
-                file,
-                line,
-            },
-        })
-    }
-
-    /// `CRYPTO_secure_zalloc(len, file, line)` for a block the authority frees through its cleansing
-    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure_zalloc_cleansed(
-        len: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
-        let raw = unsafe { CRYPTO_secure_zalloc(len, file, line) }.cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::SecureCleansed {
-                num: len,
-                file,
-                line,
-            },
-        })
-    }
-
-    /// Take up a plain block the crate allocated inside a helper (an `OPENSSL_strdup`) or reclaimed
-    /// from a key field, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the key field it is stored in.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-            BufRelease::SecureCleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
-                // NULL.
-                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// Raise a fixed message through a site, the `ERR_raise_data` form.
 ///
@@ -416,7 +286,7 @@ unsafe extern "C" fn mlx_kem_key_free(vkey: *mut c_void) {
     unsafe {
         // `propq`'s handle releases it at the authority's own site; the block itself stays on the
         // raw seam (its release is part of the key's destructor body).
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain(
             (*key).propq.cast::<c_uchar>(),
             FILE,
             LINE_KEY_FREE_PROPQ,
@@ -436,7 +306,7 @@ unsafe fn mlx_kem_key_new(v: c_uint, libctx: *mut c_void, propq: *mut c_char) ->
     // The handle owns the caller's `propq` until the key takes it over; a refusal below drops it at
     // the authority's own `err:` site.
     // SAFETY: `propq` is NULL or a live plain block the caller handed over.
-    let propq = unsafe { OwnedBuf::adopt(propq.cast::<c_uchar>(), FILE, LINE_KEY_NEW_PROPQ) };
+    let propq = unsafe { OwnedBuf::adopt_plain(propq.cast::<c_uchar>(), FILE, LINE_KEY_NEW_PROPQ) };
     // SAFETY: the malloc answers NULL on failure, which is checked.
     unsafe {
         if is_running() == 0 || v as usize >= HYBRID_VTABLE.len() {
@@ -1447,7 +1317,7 @@ unsafe extern "C" fn mlx_kem_set_params(vkey: *mut c_void, params: *const OsslPa
         if !p.propq.is_null() {
             // The old `propq` is a live plain block this key owns; the handle releases it at the
             // authority's own site, then `OSSL_PARAM_get_utf8_string` allocates the replacement.
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*key).propq.cast::<c_uchar>(),
                 FILE,
                 LINE_SET_FREE_PROPQ,
@@ -1502,12 +1372,12 @@ unsafe extern "C" fn mlx_kem_gen_set_params(vgctx: *mut c_void, params: *const O
             }
             // The old `propq` releases through its handle; the replacement is an `OPENSSL_strdup`
             // block the handle takes up, and a refusal leaves the field NULL.
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*gctx).propq.cast::<c_uchar>(),
                 FILE,
                 LINE_GEN_SET_PROPQ,
             ));
-            let Some(buf) = OwnedBuf::adopt(
+            let Some(buf) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_SET_PROPQ).cast::<c_uchar>(),
                 FILE,
                 LINE_GEN_SET_PROPQ,
@@ -1667,7 +1537,7 @@ unsafe extern "C" fn mlx_kem_gen_cleanup(vgctx: *mut c_void) {
     // SAFETY: `gctx` is live per the contract; `propq` is a live plain block this context owns and
     // both `CRYPTO_free`s accept NULL.
     unsafe {
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain(
             (*gctx).propq.cast::<c_uchar>(),
             FILE,
             LINE_GEN_CLEANUP_PROPQ,
@@ -1701,7 +1571,7 @@ unsafe extern "C" fn mlx_kem_dup(vkey: *const c_void, selection: c_int) -> *mut 
         if !(*key).propq.is_null() {
             // The copy is an `OPENSSL_strdup` block the handle takes up; a refusal drops it with the
             // key block at the authority's `err:` site.
-            match OwnedBuf::adopt(
+            match OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*key).propq, FILE, LINE_DUP_MEMDUP).cast::<c_uchar>(),
                 FILE,
                 LINE_DUP_MEMDUP,
@@ -1720,7 +1590,7 @@ unsafe extern "C" fn mlx_kem_dup(vkey: *const c_void, selection: c_int) -> *mut 
                 return ret.cast();
             }
             // Fail if the source key is in an inconsistent state.
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*ret).propq.cast::<c_uchar>(),
                 FILE,
                 LINE_DUP_FREE,
