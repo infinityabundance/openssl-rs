@@ -35,13 +35,13 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_void;
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::modes::{Block128F, Ocb128F};
+use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array, CRYPTO_memcmp,
-    CRYPTO_realloc_array, OPENSSL_cleanse,
+    CRYPTO_clear_free, CRYPTO_malloc_array, CRYPTO_memcmp, CRYPTO_realloc_array, OPENSSL_cleanse,
 };
 
 /// The translation-unit coordinates, as the allocator reports them.
@@ -76,6 +76,34 @@ pub struct OcbCtx {
     sum: [u8; 16],
     offset: [u8; 16],
     checksum: [u8; 16],
+}
+
+/// The authority's `CRYPTO_ocb128_cleanup` body minus any block release: the `l` table and the
+/// context cleanse. [`RawCtx`] uses this type only for its `#[repr(C)]` layout and its
+/// `FILE`/`LINE` coordinates; the exported [`CRYPTO_ocb128_cleanup`] runs the body directly, and
+/// the caller pairs it with its own `OPENSSL_free` of the block.
+// SAFETY: (a) `destroy_body` is the authority's `CRYPTO_ocb128_cleanup` member body, releasing the
+// `l` table once (the releaser accepts the not-yet-set NULL) and cleansing only the context, never
+// the enclosing block; (b) `OcbCtx` is a `#[repr(C)]` record of raw pointers, integers, `Option<fn>`
+// slots and byte arrays, so an all-zero block is a valid `OcbCtx` the body is sound on.
+unsafe impl CtxDestroy for OcbCtx {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(ptr: *mut OcbCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `l` is NULL or the table this
+        // file's allocator produced and `max_l_index` its element count.
+        unsafe {
+            CRYPTO_clear_free(
+                (*ptr).l.cast(),
+                (*ptr).max_l_index * 16,
+                FILE.as_ptr(),
+                LINE,
+            );
+            OPENSSL_cleanse(ptr.cast(), core::mem::size_of::<OcbCtx>());
+        }
+    }
 }
 
 /// `static u32 ocb_ntz(u64 n)` — `crypto/modes/ocb128.c:20-37`.
@@ -173,13 +201,14 @@ pub unsafe extern "C" fn CRYPTO_ocb128_new(
 ) -> *mut OcbCtx {
     // SAFETY: the caller's contract.
     unsafe {
-        let octx =
-            CRYPTO_malloc(core::mem::size_of::<OcbCtx>(), FILE.as_ptr(), LINE).cast::<OcbCtx>();
-        if !octx.is_null() {
-            if CRYPTO_ocb128_init(octx, keyenc, keydec, encrypt, decrypt, stream) != 0 {
-                return octx;
-            }
-            CRYPTO_free(octx.cast(), FILE.as_ptr(), LINE);
+        // The block is owned storage that is not yet a valid `OcbCtx`: `init` below fills it, and on
+        // failure its `Drop` releases the block **alone** -- the authority's own `OPENSSL_free`,
+        // running no context destructor.
+        let Some(octx) = RawCtx::<OcbCtx>::malloc() else {
+            return ptr::null_mut();
+        };
+        if CRYPTO_ocb128_init(octx.as_ptr(), keyenc, keydec, encrypt, decrypt, stream) != 0 {
+            return octx.into_raw();
         }
         ptr::null_mut()
     }
@@ -704,13 +733,8 @@ pub unsafe extern "C" fn CRYPTO_ocb128_cleanup(ctx: *mut OcbCtx) {
     // SAFETY: the caller's contract.
     unsafe {
         if !ctx.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).l.cast(),
-                (*ctx).max_l_index * 16,
-                FILE.as_ptr(),
-                LINE,
-            );
-            OPENSSL_cleanse(ctx.cast(), core::mem::size_of::<OcbCtx>());
+            // `destroy_body` is the authority's own `CRYPTO_ocb128_cleanup` body.
+            <OcbCtx as CtxDestroy>::destroy_body(ctx);
         }
     }
 }
