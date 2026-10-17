@@ -289,6 +289,12 @@ unsafe fn free_value(val: *mut c_void) {
 /// Not `#[repr(C)]`: the type is opaque and its layout is never read from C. The three counters
 /// are the observable fields (`sa->levels`, `sa->top`, `sa->nelem`); `root` is the owned tree,
 /// the counterpart of the authority's raw `nodes`.
+///
+/// **Classification (this batch): structural Rust-owned representation, retained.** The tree's
+/// shape and traversal are deliberately safe Rust, and the node/header *allocations* already go
+/// through the crate's allocator seam ([`OwnedNode`] and the header in [`ossl_sa_new`]). No
+/// rewrite is attempted here: the remaining `unsafe` boundary is the opaque-handle-to-reference
+/// conversion at each C entry point, which is stated at those functions.
 pub(crate) struct OpenSslSa {
     /// The depth currently in use.
     pub(crate) levels: c_int,
