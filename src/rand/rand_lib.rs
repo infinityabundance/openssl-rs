@@ -95,6 +95,7 @@ use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::init::OPENSSL_INIT_BASE_ONLY;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strlcpy};
 use crate::runtime::thread::{
@@ -309,51 +310,6 @@ pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
 // Ownership of the per-context record and the names it holds
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// The name blocks a [`RandGlobal`] holds are separate allocations: [`random_set_string`] and
-/// [`set_random_provider_name`] strdup each and install it, [`ossl_rand_ctx_new`] strdups the
-/// seed provider's name, and [`ossl_rand_ctx_free`] releases them all. A handle's `Drop` is one
-/// block's single release at the authority's own site.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release
-    /// site for the string.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop`
-    /// performs its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// Give up ownership of the string to the field that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
-    }
-}
-
 /// The authority's destructor body for a [`RandGlobal`], without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs.
 ///
@@ -428,16 +384,37 @@ unsafe impl CtxDestroy for RandGlobal {
             CRYPTO_THREAD_lock_free((*ptr).lock);
             EVP_RAND_CTX_free((*ptr).primary);
             EVP_RAND_CTX_free((*ptr).seed);
-            drop(OwnedStr::take(
+            drop(OwnedStr::adopt(
                 (*ptr).random_provider_name,
+                FILE,
                 L_CTX_FREE_PROVIDER_NAME,
             ));
-            drop(OwnedStr::take((*ptr).rng_name, L_CTX_FREE_RNG_NAME));
-            drop(OwnedStr::take((*ptr).rng_cipher, L_CTX_FREE_RNG_CIPHER));
-            drop(OwnedStr::take((*ptr).rng_digest, L_CTX_FREE_RNG_DIGEST));
-            drop(OwnedStr::take((*ptr).rng_propq, L_CTX_FREE_RNG_PROPQ));
-            drop(OwnedStr::take((*ptr).seed_name, L_CTX_FREE_SEED_NAME));
-            drop(OwnedStr::take((*ptr).seed_propq, L_CTX_FREE_SEED_PROPQ));
+            drop(OwnedStr::adopt((*ptr).rng_name, FILE, L_CTX_FREE_RNG_NAME));
+            drop(OwnedStr::adopt(
+                (*ptr).rng_cipher,
+                FILE,
+                L_CTX_FREE_RNG_CIPHER,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptr).rng_digest,
+                FILE,
+                L_CTX_FREE_RNG_DIGEST,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptr).rng_propq,
+                FILE,
+                L_CTX_FREE_RNG_PROPQ,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptr).seed_name,
+                FILE,
+                L_CTX_FREE_SEED_NAME,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptr).seed_propq,
+                FILE,
+                L_CTX_FREE_SEED_PROPQ,
+            ));
         }
     }
 }
@@ -504,8 +481,9 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
     // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this
     // call's own fresh block or NULL.
     let name = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),
+            FILE,
             L_CTX_ERR_PROVIDER_NAME,
         )
     };
@@ -1673,7 +1651,7 @@ unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
         // SAFETY: `s` is NUL-terminated per the contract.
         let dup = unsafe { CRYPTO_strdup(s, FILE, L_RANDOM_SET_STRING_DUP) };
         // SAFETY: `dup` is this call's own `CRYPTO_strdup` answer or NULL.
-        match unsafe { OwnedStr::take(dup, L_RANDOM_SET_STRING_FREE) } {
+        match unsafe { OwnedStr::adopt(dup, FILE, L_RANDOM_SET_STRING_FREE) } {
             // A failed strdup leaves the slot as it was, which is the authority's early return.
             None => return 0,
             Some(dup) => Some(dup),
@@ -1681,7 +1659,7 @@ unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
     };
     // SAFETY: `p` is a live slot holding NULL or this module's own `CRYPTO_strdup` block; the
     // seam performs the authority's own plain release.
-    drop(unsafe { OwnedStr::take(*p, L_RANDOM_SET_STRING_FREE) });
+    drop(unsafe { OwnedStr::adopt(*p, FILE, L_RANDOM_SET_STRING_FREE) });
     // SAFETY: `p` is live per the contract.
     unsafe { *p = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw) };
     1
@@ -1929,11 +1907,12 @@ unsafe fn set_random_provider_name(dgbl: *mut RandGlobal, name: *const c_char) -
     }
     // SAFETY: `existing` is NULL or this field's own `CRYPTO_strdup` block; the seam performs
     // the authority's own plain release.
-    drop(unsafe { OwnedStr::take(existing, L_PROVIDER_NAME_DUP) });
+    drop(unsafe { OwnedStr::adopt(existing, FILE, L_PROVIDER_NAME_DUP) });
     // SAFETY: `name` is NUL-terminated per the contract.
     let fresh = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strdup(name, FILE, L_PROVIDER_NAME_DUP),
+            FILE,
             L_PROVIDER_NAME_DUP,
         )
     };
@@ -1960,8 +1939,9 @@ pub unsafe extern "C" fn RAND_set1_random_provider(
     if prov.is_null() {
         // SAFETY: `dgbl` is live and the name is its own `CRYPTO_strdup` block, released here.
         unsafe {
-            drop(OwnedStr::take(
+            drop(OwnedStr::adopt(
                 (*dgbl).random_provider_name,
+                FILE,
                 L_PROVIDER_NAME_DUP,
             ));
             (*dgbl).random_provider_name = ptr::null_mut();

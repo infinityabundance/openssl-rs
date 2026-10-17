@@ -93,6 +93,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::OpenSslStack;
 use crate::selftest::OsslCallback;
 
@@ -274,7 +275,7 @@ pub unsafe extern "C" fn OSSL_DECODER_free(decoder: *mut OsslDecoder) {
     unsafe {
         // The name block is adopted here so its single release is the handle's `Drop`, at the
         // authority's own site.
-        drop(OwnedStr::adopt((*decoder).base.name));
+        drop(OwnedStr::adopt((*decoder).base.name, ptr::null(), 0));
         crate::property::parse::ossl_property_free((*decoder).base.parsed_propdef);
         crate::provider::ossl_provider_free((*decoder).base.prov);
         CRYPTO_free(decoder.cast(), ptr::null(), 0);
@@ -316,7 +317,7 @@ pub(crate) unsafe fn ossl_decoder_from_algorithm(
     // The name is a member buffer released by `OSSL_DECODER_free`; adopt it, then hand it to the
     // field, so no path here writes a `CRYPTO_free`.
     // SAFETY: `name` is NULL or the helper's fresh block.
-    let Some(name) = (unsafe { OwnedStr::adopt(name) }) else {
+    let Some(name) = (unsafe { OwnedStr::adopt(name, ptr::null(), 0) }) else {
         // SAFETY: `decoder` is live and owned here.
         unsafe { OSSL_DECODER_free(decoder) };
         return ptr::null_mut();
@@ -721,46 +722,6 @@ pub struct OsslDecoderCtx {
 // ---------------------------------------------------------------------------
 // Ownership of the module's member blocks
 // ---------------------------------------------------------------------------
-
-/// An owned `char *` name block the method store's `ossl_algorithm_get1_first_name` answered,
-/// released by `Drop` with a plain `CRYPTO_free` at the authority's own (NULL, 0) site.
-///
-/// The block stays the authority's own allocation at its exact `file`/`line`, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
-/// this type.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a block the method store's name helper answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller
-    /// owns exclusively; `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// Give up ownership to the `#[repr(C)]` field that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released.
-        unsafe { CRYPTO_free(self.ptr.cast(), ptr::null(), 0) };
-    }
-}
 
 /// `OSSL_DECODER_CTX_free`'s member body (`decoder_meth.c:665-675`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the cleanup callback with the construct data, the instance chain

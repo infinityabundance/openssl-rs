@@ -34,7 +34,7 @@ use crate::cmp::crmf_asn::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_crl_distribution_points, NID_id_it_caCerts,
     NID_id_it_caKeyUpdateInfo, NID_id_it_caProtEncCert, NID_id_it_certProfile,
@@ -46,6 +46,7 @@ use crate::runtime::obj::{
     NID_id_it_unsupportedOIDs, NID_id_regCtrl_algId, NID_id_regCtrl_rsaKeyLen,
     NID_issuing_distribution_point, OBJ_nid2obj, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve,
     OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -1600,50 +1601,6 @@ pub extern "C" fn OSSL_CMP_PKISTATUS_it() -> *const Asn1Item {
 // The message callback and its libctx helper
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// The message's `propq` is a block separate from the message: [`CRYPTO_strdup`] answers it and
-/// [`Self::take`] adopts it, `Drop` is its single `CRYPTO_free`, and [`Self::into_raw`] hands it to
-/// the `#[repr(C)]` `OSSL_CMP_MSG` field whose address the exported ABI exposes. A Rust `String`
-/// would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook, which is why only ownership moves.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release site
-    /// for the string.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// Give up ownership of the string to the message field it is stored in.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
-
 /// `int ossl_cmp_msg_set0_libctx(OSSL_CMP_MSG *msg, OSSL_LIB_CTX *libctx, const char *propq)` —
 /// `cmp_msg.c:41-55`. Defined here because `ossl_cmp_msg_cb` is this unit's, and the callback
 /// needs it on the duplicate path.
@@ -1661,15 +1618,15 @@ pub(crate) unsafe fn ossl_cmp_msg_set0_libctx(
             (*msg).libctx = libctx;
             // The old `propq` block; the handle's `Drop` is the authority's own
             // `CRYPTO_free((*msg).propq, FILE, 46)`.
-            drop(OwnedStr::take((*msg).propq, 46));
+            drop(OwnedStr::adopt((*msg).propq, FILE.as_ptr(), 46));
             (*msg).propq = ptr::null_mut();
         }
         if !propq.is_null() {
             // SAFETY: `propq` is a NUL-terminated string per the contract; the handle is its only
             // owner until it is installed into the message.
-            let Some(dup) =
-                (unsafe { OwnedStr::take(CRYPTO_strdup(propq, FILE.as_ptr(), 49), 49) })
-            else {
+            let Some(dup) = (unsafe {
+                OwnedStr::adopt(CRYPTO_strdup(propq, FILE.as_ptr(), 49), FILE.as_ptr(), 49)
+            }) else {
                 return 0;
             };
             // SAFETY: `msg` is live.
@@ -1697,7 +1654,7 @@ unsafe extern "C" fn ossl_cmp_msg_cb(
         ASN1_OP_FREE_POST => {
             // SAFETY: `msg` is live; its `propq` is NULL or the block this unit strdup'd, and the
             // handle's `Drop` is the authority's own `CRYPTO_free((*msg).propq, FILE, 854)`.
-            unsafe { drop(OwnedStr::take((*msg).propq, 854)) };
+            unsafe { drop(OwnedStr::adopt((*msg).propq, FILE.as_ptr(), 854)) };
         }
         ASN1_OP_DUP_POST => {
             let old = exarg as *const CmpMsg;
