@@ -53,7 +53,9 @@ use crate::mac::poly1305::{
     POLY1305_BLOCK_SIZE,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{
+    CRYPTO_clear_free, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse,
+};
 use crate::runtime::obj::{NID_chacha20, NID_chacha20_poly1305};
 
 /// `EVP_CIPH_CUSTOM_IV` — `include/openssl/evp.h:327`.
@@ -129,6 +131,76 @@ unsafe fn poly1305_ctx(actx: *mut EvpChachaAeadCtx) -> *mut Poly1305 {
         actx.cast::<u8>()
             .add(core::mem::size_of::<EvpChachaAeadCtx>())
             .cast::<Poly1305>()
+    }
+}
+
+/// The allocation extent of an AEAD context: the struct followed by its Poly1305 context.
+///
+/// `None` is an arithmetic overflow, which the authority's `int`-sized expression cannot produce;
+/// both allocation sites translate it to their own allocation-failure error.
+fn aead_block_size() -> Option<usize> {
+    core::mem::size_of::<EvpChachaAeadCtx>().checked_add(Poly1305_ctx_size())
+}
+
+/// An AEAD context block while it is still local, before it is published into
+/// `EVP_CIPHER_CTX::cipher_data`.
+///
+/// The block keeps the authority's size and `CRYPTO_zalloc`/`CRYPTO_memdup` sites. Once written to
+/// the cipher context it is the framework's, released by `EVP_CIPHER_CTX_reset`; until then this
+/// handle's `Drop` is its single release, and that release cleanses because the block may hold key
+/// schedule material.
+struct OwnedAeadBlock {
+    ptr: *mut EvpChachaAeadCtx,
+    len: usize,
+}
+
+impl OwnedAeadBlock {
+    /// `CRYPTO_zalloc(len, FILE, line)`, or `None` when the allocator answers NULL.
+    fn zalloc(len: usize) -> Option<OwnedAeadBlock> {
+        let ptr = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<EvpChachaAeadCtx>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedAeadBlock { ptr, len })
+        }
+    }
+
+    /// `CRYPTO_memdup(src, len, FILE, line)`, or `None` when the allocator answers NULL.
+    ///
+    /// # Safety
+    /// `src` must be readable for `len` bytes.
+    unsafe fn memdup(src: *const EvpChachaAeadCtx, len: usize) -> Option<OwnedAeadBlock> {
+        // SAFETY: `src` is readable for `len` bytes per the caller's contract.
+        let ptr = unsafe { CRYPTO_memdup(src.cast(), len, FILE.as_ptr(), LINE) }
+            .cast::<EvpChachaAeadCtx>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedAeadBlock { ptr, len })
+        }
+    }
+
+    /// The writable/readable start of the block.
+    fn as_ptr(&self) -> *mut EvpChachaAeadCtx {
+        self.ptr
+    }
+
+    /// Transfer the block to the cipher context, which now owns it.
+    fn into_raw(self) -> *mut EvpChachaAeadCtx {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        ptr
+    }
+}
+
+impl Drop for OwnedAeadBlock {
+    /// The local block's single release, over exactly its allocation extent.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not published; `self.len` is
+        // its allocation length, and `CRYPTO_clear_free` accepts NULL.
+        unsafe {
+            CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), LINE);
+        }
     }
 }
 
@@ -688,10 +760,10 @@ unsafe extern "C" fn chacha20_poly1305_cleanup(ctx: *mut c_void) -> c_int {
     if !actx.is_null() {
         // SAFETY: `ctx` is live and the block is `sizeof(*actx) + Poly1305_ctx_size()`.
         unsafe {
-            OPENSSL_cleanse(
-                (*ctx).cipher_data,
-                core::mem::size_of::<EvpChachaAeadCtx>() + Poly1305_ctx_size(),
-            )
+            let Some(block_len) = aead_block_size() else {
+                return 0;
+            };
+            OPENSSL_cleanse((*ctx).cipher_data, block_len)
         };
     }
     1
@@ -713,18 +785,23 @@ unsafe extern "C" fn chacha20_poly1305_ctrl(
     match type_ {
         EVP_CTRL_INIT => {
             if actx.is_null() {
-                // SAFETY: `ctx` is live; the allocation is zeroed and its size is the struct plus
-                // the Poly1305 context that follows it.
-                actx = unsafe {
-                    let p = CRYPTO_zalloc(
-                        core::mem::size_of::<EvpChachaAeadCtx>() + Poly1305_ctx_size(),
-                        FILE.as_ptr(),
-                        LINE,
-                    )
-                    .cast::<EvpChachaAeadCtx>();
-                    (*ctx).cipher_data = p.cast();
-                    p
+                // The extent is the struct plus the Poly1305 context that follows it. The
+                // authority's `int`-sized arithmetic cannot overflow; `checked_add` makes the
+                // impossible case an allocation failure rather than a panic.
+                let Some(block_len) = aead_block_size() else {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::E_CHACHA20_POLY1305_508) };
+                    return 0;
                 };
+                let Some(block) = OwnedAeadBlock::zalloc(block_len) else {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::E_CHACHA20_POLY1305_508) };
+                    return 0;
+                };
+                // SAFETY: `ctx` is live; the block is its fresh, zeroed `cipher_data` extent and
+                // is published from the local owner only after it is a valid AEAD context.
+                unsafe { (*ctx).cipher_data = block.as_ptr().cast() };
+                actx = block.into_raw();
             }
             if actx.is_null() {
                 // SAFETY: a compile-time-constant site.
@@ -747,20 +824,27 @@ unsafe extern "C" fn chacha20_poly1305_ctrl(
         EVP_CTRL_COPY => {
             if !actx.is_null() {
                 let dst = ptr_.cast::<EvpCipherCtx>();
-                // SAFETY: `dst` is the caller's live destination context.
-                unsafe {
-                    (*dst).cipher_data = CRYPTO_memdup(
-                        actx.cast(),
-                        core::mem::size_of::<EvpChachaAeadCtx>() + Poly1305_ctx_size(),
-                        FILE.as_ptr(),
-                        LINE,
-                    );
-                    if (*dst).cipher_data.is_null() {
-                        // SAFETY: a compile-time-constant site.
-                        raise_site(&err_sites::E_CHACHA20_POLY1305_527);
-                        return 0;
-                    }
-                }
+                let Some(block_len) = aead_block_size() else {
+                    // The authority's assignment stores NULL when the duplicate is refused.
+                    // SAFETY: `dst` is the caller's live destination context.
+                    unsafe { (*dst).cipher_data = ptr::null_mut() };
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::E_CHACHA20_POLY1305_527) };
+                    return 0;
+                };
+                // SAFETY: `actx` is the source context and readable for `block_len` bytes.
+                let duplicate = unsafe { OwnedAeadBlock::memdup(actx, block_len) };
+                let Some(block) = duplicate else {
+                    // The authority's assignment stores NULL on a refused duplicate.
+                    // SAFETY: `dst` is the caller's live destination context.
+                    unsafe { (*dst).cipher_data = ptr::null_mut() };
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::E_CHACHA20_POLY1305_527) };
+                    return 0;
+                };
+                // SAFETY: `dst` is the caller's live destination context; the fresh duplicate is
+                // a valid AEAD context and transfers its ownership to it.
+                unsafe { (*dst).cipher_data = block.into_raw().cast() };
             }
             1
         }

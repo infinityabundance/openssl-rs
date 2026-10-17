@@ -36,10 +36,10 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::ptr::{self, NonNull};
 
 use crate::modes::{Block128F, Ctr128F};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_memcmp};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
 
 /// The translation-unit coordinates, as `CRYPTO_malloc`/`CRYPTO_clear_free` report them.
 const FILE: &core::ffi::CStr = c"crypto/modes/gcm128.c";
@@ -234,6 +234,92 @@ unsafe fn init(ctx: *mut GcmCtx, key: *mut c_void, block: Block128F) {
     }
 }
 
+/// A freshly allocated GCM block that `init` has not yet made a valid context.
+///
+/// It owns the block but never forms a reference to [`GcmCtx`], and its `Drop` releases the
+/// **block alone** at the authority's allocation site. The window closes with
+/// [`Self::assume_init`], the one validated transition to [`GcmCtxOwner`].
+struct GcmRawCtx {
+    ptr: NonNull<GcmCtx>,
+}
+
+impl GcmRawCtx {
+    /// `CRYPTO_malloc(sizeof(*ctx), FILE, line)`, or `None` when the allocator answers NULL.
+    fn malloc() -> Option<GcmRawCtx> {
+        let raw =
+            CRYPTO_malloc(core::mem::size_of::<GcmCtx>(), FILE.as_ptr(), LINE).cast::<GcmCtx>();
+        NonNull::new(raw).map(|ptr| GcmRawCtx { ptr })
+    }
+
+    /// The stable address `init` writes the context through.
+    fn as_ptr(&self) -> *mut GcmCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// The validated transition: the block now holds a fully initialised `GcmCtx`.
+    ///
+    /// # Safety
+    /// Every field has been written, so the block is a valid `GcmCtx`, and no other owner will
+    /// release it: the returned handle's `Drop` is the block's single release.
+    unsafe fn assume_init(self) -> GcmCtxOwner {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        GcmCtxOwner { ptr }
+    }
+}
+
+impl Drop for GcmRawCtx {
+    /// Releases the block alone; the storage is not (yet) a valid context.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is
+        // its single release, and the authority's bare `OPENSSL_free` is the whole release.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE.as_ptr(), LINE) };
+    }
+}
+
+/// An owned, fully initialised GCM context block.
+///
+/// The block keeps the authority's layout and stable address; its single release is the
+/// authority's cleansing `OPENSSL_clear_free(ctx, sizeof(*ctx))`.
+struct GcmCtxOwner {
+    ptr: NonNull<GcmCtx>,
+}
+
+impl GcmCtxOwner {
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut GcmCtx {
+        let ptr = self.ptr.as_ptr();
+        core::mem::forget(self);
+        ptr
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by
+    /// `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous [`Self::into_raw`] gave up and `Drop` has not
+    /// released.
+    unsafe fn from_raw(ptr: *mut GcmCtx) -> Option<GcmCtxOwner> {
+        NonNull::new(ptr).map(|ptr| GcmCtxOwner { ptr })
+    }
+}
+
+impl Drop for GcmCtxOwner {
+    /// The context's single cleansing release, over the authority's own extent.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not handed out; the extent is
+        // exactly `sizeof(GcmCtx)`, which is what the authority's `OPENSSL_clear_free` covers.
+        unsafe {
+            CRYPTO_clear_free(
+                self.ptr.as_ptr().cast(),
+                core::mem::size_of::<GcmCtx>(),
+                FILE.as_ptr(),
+                LINE,
+            )
+        };
+    }
+}
+
 /// `GCM128_CONTEXT *CRYPTO_gcm128_new(void *key, block128_f block)` —
 /// `crypto/modes/gcm128.c:1614-1622`.
 ///
@@ -241,15 +327,17 @@ unsafe fn init(ctx: *mut GcmCtx, key: *mut c_void, block: Block128F) {
 /// `block` must be the caller's live block cipher and `key` its schedule.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_gcm128_new(key: *mut c_void, block: Block128F) -> *mut GcmCtx {
-    // SAFETY: `CRYPTO_malloc` answers NULL or a block of the requested size.
-    unsafe {
-        let ret =
-            CRYPTO_malloc(core::mem::size_of::<GcmCtx>(), FILE.as_ptr(), LINE).cast::<GcmCtx>();
-        if !ret.is_null() {
-            init(ret, key, block);
-        }
-        ret
-    }
+    // `GcmRawCtx::malloc` is the authority's `OPENSSL_malloc(sizeof(*ret))` at `gcm128.c:1616`.
+    let Some(raw) = GcmRawCtx::malloc() else {
+        return ptr::null_mut();
+    };
+    let ret = raw.as_ptr();
+    // SAFETY: `ret` is the fresh block this call owns and `key`/`block` are the caller's live
+    // cipher per this function's contract; `init` writes every field of the context.
+    unsafe { init(ret, key, block) };
+    // SAFETY: `init` zeroed the whole block and wrote the fields [`GcmCtxOwner`]'s release reads;
+    // the owner's `Drop` is the block's single cleansing release.
+    unsafe { raw.assume_init() }.into_raw()
 }
 
 /// `void CRYPTO_gcm128_release(GCM128_CONTEXT *ctx)` — `crypto/modes/gcm128.c:1624-1628`,
@@ -259,15 +347,10 @@ pub unsafe extern "C" fn CRYPTO_gcm128_new(key: *mut c_void, block: Block128F) -
 /// `ctx` is NULL or a live context from [`CRYPTO_gcm128_new`].
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_gcm128_release(ctx: *mut GcmCtx) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        CRYPTO_clear_free(
-            ctx.cast(),
-            core::mem::size_of::<GcmCtx>(),
-            FILE.as_ptr(),
-            LINE,
-        )
-    }
+    // SAFETY: `ctx` is NULL or the live block [`CRYPTO_gcm128_new`] handed out and has not been
+    // released. `from_raw` maps NULL to `None`; `Drop` cleanses exactly `sizeof(*ctx)` bytes and
+    // then releases the block, the authority's own `OPENSSL_clear_free` at its own site.
+    unsafe { drop(GcmCtxOwner::from_raw(ctx)) };
 }
 
 /// `void CRYPTO_gcm128_init(GCM128_CONTEXT *ctx, void *key, block128_f block)` —
