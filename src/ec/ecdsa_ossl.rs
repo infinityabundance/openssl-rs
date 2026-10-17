@@ -38,6 +38,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::bn::arith::{BN_mod_add, BN_mod_mul, BN_nnmod, BN_rshift, BN_ucmp};
 use crate::bn::bignum::{
     ossl_bn_is_word_fixed_top, BN_bin2bn, BN_clear_free, BN_copy, BN_is_negative, BN_is_zero,
@@ -58,7 +59,6 @@ use crate::ec::lib::{
 use crate::ec::{EcKey, EcPoint, EcdsaSig};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_free;
 
 /// The translation-unit coordinate the one `OPENSSL_free` in this unit is attributed to, as the
 /// allocator reports it: `OPENSSL_free(der)` is a macro expanded at `ecdsa_ossl.c:437`, so
@@ -821,7 +821,10 @@ pub unsafe extern "C" fn ossl_ecdsa_verify(
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
         let mut p = sigbuf;
-        let mut der: *mut c_uchar = ptr::null_mut();
+        // `unsigned char *der = NULL;` -- the encoder's block, adopted below. The authority frees
+        // it at each of its three exits (all at `ecdsa_ossl.c:437`), so the owner's `Drop` sits at
+        // those exact positions.
+        let mut der: Option<OwnedBlock<c_uchar>> = None;
         let mut ret: c_int = -1;
 
         let mut s = ECDSA_SIG_new();
@@ -829,20 +832,28 @@ pub unsafe extern "C" fn ossl_ecdsa_verify(
             return ret;
         }
         if d2i_ECDSA_SIG(&raw mut s, &raw mut p, sig_len as c_long).is_null() {
-            CRYPTO_free(der.cast::<c_void>(), FILE, 437);
+            // `OPENSSL_free(der)`: still NULL on this path, exactly as in the authority.
+            drop(der);
             ECDSA_SIG_free(s);
             return ret;
         }
         /* Ensure signature uses DER and doesn't have trailing garbage */
-        let derlen = i2d_ECDSA_SIG(s, &raw mut der);
-        if derlen != sig_len || memcmp(sigbuf.cast(), der.cast(), derlen as usize) != 0 {
-            CRYPTO_free(der.cast::<c_void>(), FILE, 437);
+        let mut der_raw: *mut c_uchar = ptr::null_mut();
+        let derlen = i2d_ECDSA_SIG(s, &raw mut der_raw);
+        // SAFETY: `i2d_ECDSA_SIG` answered a fresh block of `derlen` bytes through the crate's
+        // allocator seam (or NULL when it refused); this frame owns that block exclusively and no
+        // other owner will release it. The owner's `Drop` is the authority's `:437` plain free.
+        der = OwnedBlock::<c_uchar>::from_raw(der_raw, FILE, 437);
+        let der_ptr = der.as_ref().map_or(ptr::null_mut(), |block| block.as_ptr());
+        if derlen != sig_len || memcmp(sigbuf.cast(), der_ptr.cast(), derlen as usize) != 0 {
+            // `OPENSSL_free(der); ECDSA_SIG_free(s);` -- the authority's middle exit.
+            drop(der);
             ECDSA_SIG_free(s);
             return ret;
         }
         ret = ECDSA_do_verify(dgst, dgst_len, s, eckey);
         // `OPENSSL_free(der)`, line 437.
-        CRYPTO_free(der.cast::<c_void>(), FILE, 437);
+        drop(der);
         ECDSA_SIG_free(s);
         ret
     }

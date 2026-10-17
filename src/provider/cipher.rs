@@ -458,7 +458,7 @@ fn fail() -> c_int {
 ///
 /// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
 /// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CipherDestroy: Sized {
+pub(crate) unsafe trait CipherDestroy: Sized {
     /// `__FILE__` for this unit's `CRYPTO_*` calls.
     const FILE: *const c_char;
 
@@ -478,14 +478,14 @@ unsafe trait CipherDestroy: Sized {
 /// the authority's own size rather than a Rust `Box` on purpose -- a caller-installed
 /// `CRYPTO_set_mem_functions` hook observes the allocation, its size and the cleansing release
 /// exactly as it observes the authority's, which a Rust global allocation would hide.
-struct OwnedCtx<T: CipherDestroy> {
+pub(crate) struct OwnedCtx<T: CipherDestroy> {
     ptr: ptr::NonNull<T>,
 }
 
 impl<T: CipherDestroy> OwnedCtx<T> {
     /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
     /// when it answers NULL (the authority's refused `CRYPTO_zalloc`).
-    fn new() -> Option<OwnedCtx<T>> {
+    pub(crate) fn new() -> Option<OwnedCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
         let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE).cast::<T>();
@@ -493,12 +493,12 @@ impl<T: CipherDestroy> OwnedCtx<T> {
     }
 
     /// The stable address the dispatch hands out and `*_freectx` takes back.
-    fn as_ptr(&self) -> *mut T {
+    pub(crate) fn as_ptr(&self) -> *mut T {
         self.ptr.as_ptr()
     }
 
     /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut T {
+    pub(crate) fn into_raw(self) -> *mut T {
         let p = self.ptr.as_ptr();
         core::mem::forget(self);
         p
