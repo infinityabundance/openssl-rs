@@ -36,7 +36,7 @@
 #![allow(unreachable_pub)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
-use core::ptr::{self, NonNull};
+use core::ptr;
 
 use crate::bn::arith::{BN_cmp, BN_div};
 use crate::bn::bignum::{BN_bin2bn, BN_free, BN_is_zero, BN_new, BigNum};
@@ -73,12 +73,12 @@ use crate::provider::cipher::{param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::kem_util::{ossl_eckem_modename2id, KEM_MODE_DHKEM, KEM_MODE_UNDEFINED};
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::raise_site_data;
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_clear_free};
 
 /// `LABEL_KEM` — `ec_kem.c.in:70`, `"KEM"`.
 const LABEL_KEM: &[u8] = b"KEM";
@@ -161,58 +161,6 @@ unsafe impl CtxDestroy for ProvEcCtx {
             CRYPTO_clear_free((*ptr).ikm.cast(), (*ptr).ikmlen, FILE_EC_KEM, 213);
             recipient_key_set(ptr, ptr::null_mut());
             sender_authkey_set(ptr, ptr::null_mut());
-        }
-    }
-}
-
-/// An owned `PROV_EC_CTX` block.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
-/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
-/// seam and `Drop` runs the authority's own destructor body before the block's single release. It
-/// stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its release.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), T::FILE, T::LINE_ALLOC)`, or `None` when it answers NULL.
-    fn zalloc() -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The stable address the constructor writes the context's own fields through.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The context destructor: the authority's `eckem_freectx` body ([`CtxDestroy::destroy_body`])
-    /// followed by the block's single release.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and this is its single release; `Drop`
-        // runs once, and `destroy_body` is the authority's own body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
         }
     }
 }

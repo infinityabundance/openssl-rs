@@ -27,7 +27,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void, CStr};
-use core::ptr::{self, NonNull};
+use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::skeymgmt::{
@@ -41,9 +41,9 @@ use crate::params::{
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::param_octet_string;
 use crate::provider::ctx::prov_libctx_of;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_memdup};
 use crate::selftest::OsslCallback;
 
 /// `FILE_GENERIC_SKEYMGMT` — the generated unit's own `__FILE__`.
@@ -98,58 +98,6 @@ unsafe impl CtxDestroy for ProvSkey {
         // SAFETY: `ptr` is a live key per the trait contract.
         unsafe {
             CRYPTO_clear_free((*ptr).data.cast(), (*ptr).length, FILE_GENERIC_SKEYMGMT, 0);
-        }
-    }
-}
-
-/// An owned `PROV_SKEY` block.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
-/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
-/// seam and `Drop` runs the authority's own destructor body before the block's single release. It
-/// stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its release.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), T::FILE, T::LINE_ALLOC)`, or `None` when it answers NULL.
-    fn zalloc() -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The stable address the constructor writes the key's own fields through.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's keydata pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The key destructor: the authority's `generic_free` body ([`CtxDestroy::destroy_body`])
-    /// followed by the block's single release, through the same allocator seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and this is its single release; `Drop`
-        // runs once, and `destroy_body` is the authority's own body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
         }
     }
 }
