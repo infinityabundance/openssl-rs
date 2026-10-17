@@ -34,6 +34,7 @@
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{
     BIO_callback_ctrl, BIO_clear_flags, BIO_copy_next_retry, BIO_ctrl, BIO_f_buffer, BIO_find_type,
     BIO_free, BIO_get_data, BIO_get_init, BIO_get_retry_reason, BIO_get_shutdown, BIO_method_type,
@@ -48,7 +49,6 @@ use crate::runtime::bio::{
     BIO_FLAGS_SHOULD_RETRY, BIO_FLAGS_WRITE, BIO_RR_ACCEPT, BIO_RR_CONNECT, BIO_RR_SSL_X509_LOOKUP,
     BIO_TYPE_SSL,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::ssl::ssl_lib::{
     ssl_copy_session_id, ssl_read_internal, ssl_set_accept_state, ssl_set_connect_state,
     ssl_write_internal, SSL_clear, SSL_do_handshake, SSL_free, SSL_get_error, SSL_get_rbio,
@@ -91,6 +91,20 @@ struct BioSsl {
     renegotiate_timeout: c_long,
     /// `unsigned long last_time`.
     last_time: c_long,
+}
+
+// SAFETY: (a) `destroy_body` is empty because the authority does **not** release `ssl`
+// unconditionally: `ssl_free` runs `SSL_free` only when the BIO's shutdown flag is set and the BIO
+// is initialised, and it does so before dropping this block, so the pointer is that function's
+// release and never the block owner's; the enclosing block is released by `OwnedCtx` alone; (b) an
+// all-zero `BioSsl` is valid: a null `ssl`, zero scalars, exactly the authority's `OPENSSL_zalloc`
+// result.
+unsafe impl CtxDestroy for BioSsl {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 64;
+    const LINE_FREE: c_int = 91;
+
+    unsafe fn destroy_body(_ptr: *mut BioSsl) {}
 }
 
 /// `ssl_write` — `bio_ssl.c:165-225`.
@@ -578,15 +592,17 @@ unsafe extern "C" fn ssl_callback_ctrl(b: *mut Bio, cmd: c_int, fp: Option<BioIn
 /// # Safety
 /// `bi` must be a live BIO of this method.
 unsafe extern "C" fn ssl_new(bi: *mut Bio) -> c_int {
-    // SAFETY: a zeroed block of this size is a valid initial `BioSsl` image.
-    let bs = CRYPTO_zalloc(core::mem::size_of::<BioSsl>(), FILE, 64).cast::<BioSsl>();
-    if bs.is_null() {
+    // The owner allocates at the authority's own size/coordinates; a zeroed `BioSsl` is its
+    // constructed state, so `OwnedCtx` validates it directly. `into_raw` hands the BIO the stable
+    // data pointer, and `ssl_free` reclaims it.
+    let Some(bs) = OwnedCtx::<BioSsl>::zalloc() else {
         return 0;
-    }
+    };
+    let raw = bs.into_raw().cast::<c_void>();
     // SAFETY: `bi` is live per the caller's contract.
     unsafe {
         BIO_set_init(bi, 0);
-        BIO_set_data(bi, bs.cast::<c_void>());
+        BIO_set_data(bi, raw);
         BIO_clear_flags(bi, !0);
     }
     1
@@ -615,8 +631,10 @@ unsafe extern "C" fn ssl_free(a: *mut Bio) -> c_int {
             BIO_clear_flags(a, !0);
             BIO_set_init(a, 0);
         }
-        CRYPTO_free(bs.cast::<c_void>(), FILE, 91);
     }
+    // SAFETY: `bs` is NULL or the block `ssl_new` handed out and has not been released;
+    // `from_raw` maps NULL to `None`, and `Drop` is the block's single release at `bio_ssl.c:91`.
+    drop(unsafe { OwnedCtx::<BioSsl>::from_raw(bs) });
     1
 }
 
