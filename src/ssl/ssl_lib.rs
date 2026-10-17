@@ -79,8 +79,8 @@ use crate::runtime::ex_data::{
     CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
 use crate::runtime::mem::{
-    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc_array, CRYPTO_strdup,
-    CRYPTO_zalloc,
+    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc, CRYPTO_realloc_array,
+    CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
 use crate::runtime::stack::{
@@ -795,12 +795,13 @@ pub struct CertKey {
     /// object-owned `(ptr, len)` **member buffer**. Its invariant is stated once by
     /// [`MemberBufSlot`] and mediated by [`CertKey::serverinfo`]/[`CertKey::serverinfo_slot`];
     /// see `MEMBER-BUFFER-MODEL.md`. It stays `*mut u8` at this exact offset so the `#[repr(C)]`
-    /// layout is the authority's. It stays `pub(crate)` because `ssl_rsa.rs`'s
-    /// `SSL_CTX_use_serverinfo_ex` regrows the block **in place** with `CRYPTO_realloc` (an
-    /// operation the clear/store model does not define) and is enumerated in the batch report.
-    pub(crate) serverinfo: *mut u8,
+    /// layout is the authority's, and it is **private**: `ssl_rsa.rs`'s
+    /// `SSL_CTX_use_serverinfo_ex` regrows the block **in place** through
+    /// [`MemberBufSlot::realloc`] (the `CRYPTO_realloc` operation added to the model), so every
+    /// read, write and release now goes through the handle/reader.
+    serverinfo: *mut u8,
     /// `size_t serverinfo_length` — the length companion of `serverinfo`.
-    pub(crate) serverinfo_length: usize,
+    serverinfo_length: usize,
     /// `OSSL_COMP_CERT *comp_cert[TLSEXT_comp_cert_limit]` — the pre-compressed forms
     /// (`ssl_cert_comp.c`).
     pub comp_cert: [*mut crate::ssl::ssl_cert_comp::OsslCompCert; TLSEXT_COMP_CERT_LIMIT],
@@ -1306,12 +1307,12 @@ pub struct SslCtx {
     /// `OSSL_LIB_CTX *libctx` — the library context, stored verbatim.
     pub libctx: *mut c_void,
     /// `char *propq` — the property query, an object-owned C-string **member buffer** ([`MemberCStrSlot`]
-    /// and `MEMBER-BUFFER-MODEL.md`). Its write and release are mediated by [`SslCtx::propq_slot`]
-    /// and its in-module reads by [`SslCtx::propq`]; it stays `*mut c_char` at this exact offset so
-    /// the `#[repr(C)]` layout is the authority's. It stays `pub(crate)` because many fetch sites
-    /// across `src/ssl/statem`, `t1_enc.rs`, `tls13_enc.rs`, `t1_trce.rs`, `tls_srp.rs` and
-    /// `ssl_rsa.rs` still read it directly (enumerated in the batch report).
-    pub(crate) propq: *mut c_char,
+    /// and `MEMBER-BUFFER-MODEL.md`). Every write and release is mediated by [`SslCtx::propq_slot`] and
+    /// every read by [`SslCtx::propq`]; it stays `*mut c_char` at this exact offset so the `#[repr(C)]`
+    /// layout is the authority's, and it is **private** now that every fetch site across
+    /// `src/ssl/statem`, `t1_enc.rs`, `tls13_enc.rs`, `t1_trce.rs`, `tls_srp.rs` and `ssl_rsa.rs` reads
+    /// through the reader.
+    propq: *mut c_char,
     /// `int min_proto_version`.
     pub min_proto_version: c_int,
     /// `int max_proto_version`.
@@ -1789,11 +1790,12 @@ pub struct Ssl {
     pub post_handshake_auth: c_int,
     /// `unsigned char *pha_context` — the request context echoed from a TLS1.3 CertificateRequest
     /// (`tls_construct_certificate_request`, `statem_srvr.c:3028-3048`). An object-owned `(ptr, len)`
-    /// **member buffer** ([`MemberBufSlot`]); its writers live in `statem_clnt.rs`/`statem_srvr.rs`,
-    /// so it stays `pub(crate)` and those writers are enumerated (see the batch report).
-    pub(crate) pha_context: *mut u8,
+    /// **member buffer** ([`MemberBufSlot`]) mediated by [`Ssl::pha_context`]/
+    /// [`Ssl::pha_context_slot`]; its writers live in `statem_clnt.rs`/`statem_srvr.rs` and now go
+    /// through the handle, so it is **private**.
+    pha_context: *mut u8,
     /// `size_t pha_context_len` — the length companion of `pha_context`.
-    pub(crate) pha_context_len: usize,
+    pha_context_len: usize,
     /// `EVP_MD_CTX *pha_dgst` — the handshake digest through the client Finished, saved for PHA
     /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
     pub pha_dgst: *mut c_void,
@@ -1939,24 +1941,31 @@ pub struct Ssl {
     /// `size_t ext.npn_len` — the length companion of `ext_npn`.
     ext_npn_len: usize,
     /// `char *ext.hostname` — the SNI name, an object-owned C-string **member buffer**
-    /// ([`MemberCStrSlot`]); written by `s3_lib.rs`'s `ssl3_ctrl_set_tlsext_host_name`, so it stays
-    /// `pub(crate)` and that writer is enumerated (see the batch report).
-    pub(crate) ext_hostname: *mut c_char,
+    /// ([`MemberCStrSlot`]) mediated by [`Ssl::ext_hostname`]/[`Ssl::ext_hostname_slot`]; written by
+    /// `s3_lib.rs`'s `ssl3_ctrl_set_tlsext_host_name` and the client-hello parser, both now through
+    /// the handle, so it is **private**.
+    ext_hostname: *mut c_char,
     /// `unsigned char *s3.alpn_selected` — the negotiated ALPN protocol, an object-owned `(ptr, len)`
-    /// **member buffer** ([`MemberBufSlot`]); written by the handshake (`statem_clnt.rs`/
-    /// `statem_srvr.rs`), so it stays `pub(crate)` and those writers are enumerated.
-    pub(crate) s3_alpn_selected: *mut u8,
+    /// **member buffer** ([`MemberBufSlot`]) mediated by [`Ssl::s3_alpn_selected`]/
+    /// [`Ssl::s3_alpn_selected_slot`]; written by the handshake (`statem_clnt.rs`/`statem_srvr.rs`),
+    /// which now goes through the handle, so it is **private**.
+    s3_alpn_selected: *mut u8,
     /// `size_t s3.alpn_selected_len` — the length companion of `s3_alpn_selected`.
-    pub(crate) s3_alpn_selected_len: usize,
+    s3_alpn_selected_len: usize,
     /// `unsigned char *s3.alpn_proposed` — the client's offered protocol list (server side), an
-    /// object-owned `(ptr, len)` **member buffer** ([`MemberBufSlot`]); written by `statem_srvr.rs`,
-    /// so it stays `pub(crate)` and that writer is enumerated.
-    pub(crate) s3_alpn_proposed: *mut u8,
+    /// object-owned `(ptr, len)` **member buffer** ([`MemberBufSlot`]) mediated by
+    /// [`Ssl::s3_alpn_proposed`]/[`Ssl::s3_alpn_proposed_slot`]; written by `statem_srvr.rs`, which
+    /// now goes through the handle, so it is **private**.
+    s3_alpn_proposed: *mut u8,
     /// `size_t s3.alpn_proposed_len` — the length companion of `s3_alpn_proposed`.
-    pub(crate) s3_alpn_proposed_len: usize,
-    /// `uint16_t *ext.supportedgroups` — the connection's supported group list. Its length is an
-    /// *element count* and its writer is the external `t1_lib::tls1_set_groups` (raw `*mut *mut u16`),
-    /// so it is not a [`MemberBufSlot`]; it stays `pub(crate)` and its release is enumerated.
+    s3_alpn_proposed_len: usize,
+    /// `uint16_t *ext.supportedgroups` — the connection's supported group list. **Retained raw
+    /// boundary, not a [`MemberBufSlot`]:** its length is an *element count*, not the allocation's
+    /// byte extent (`tls1_set_groups`/`SSL_new` use `len * size_of::<u16>()`), and its writer
+    /// `t1_lib::tls1_set_groups` takes the raw `*mut *mut u16`/`*mut usize` pair. It therefore does
+    /// not satisfy the blob invariant (`len` == byte extent); it stays `pub(crate)` and its three
+    /// accesses (the `tls1_set_groups` regrow, `tls1_get_supported_groups`'s slice, and the `SSL_new`
+    /// copy) plus the two destructor frees are enumerated in the batch report.
     pub(crate) supportedgroups: *mut u16,
     /// `size_t ext.supportedgroups_len`.
     pub(crate) supportedgroups_len: usize,
@@ -2263,6 +2272,12 @@ impl Ssl {
         (self.s3_alpn_selected, self.s3_alpn_selected_len)
     }
 
+    /// The object-owned offered-ALPN blob `(ptr, len)` (NULL/0 when unset) — the authoritative read
+    /// of the `s3_alpn_proposed`/`s3_alpn_proposed_len` member buffer.
+    pub(crate) fn s3_alpn_proposed(&self) -> (*const u8, usize) {
+        (self.s3_alpn_proposed, self.s3_alpn_proposed_len)
+    }
+
     /// Derive the [`MemberBufSlot`] handle over this connection's `s3_alpn_selected` pair.
     ///
     /// # Safety
@@ -2281,6 +2296,12 @@ impl Ssl {
     pub(crate) unsafe fn s3_alpn_proposed_slot(&mut self) -> MemberBufSlot<'_> {
         // SAFETY: `self` is live and its `s3_alpn_proposed` pair obeys the invariant.
         unsafe { MemberBufSlot::of(&mut self.s3_alpn_proposed, &mut self.s3_alpn_proposed_len) }
+    }
+
+    /// The object-owned PHA request context `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `pha_context`/`pha_context_len` member buffer.
+    pub(crate) fn pha_context(&self) -> (*const u8, usize) {
+        (self.pha_context, self.pha_context_len)
     }
 
     /// Derive the [`MemberBufSlot`] handle over this connection's `pha_context` pair.
@@ -2793,6 +2814,50 @@ impl<'a, N: Copy + Default + PartialEq> MemberBufSlot<'a, N> {
         );
         *self.ptr = new;
         *self.len = len;
+    }
+}
+
+/// The in-place **regrow** operation on a `(ptr, len)` blob whose length is a byte extent
+/// (`N = usize`) — the `CRYPTO_realloc` shape the clear/store pair cannot express.
+impl<'a> MemberBufSlot<'a> {
+    /// Regrow the incumbent block **in place** through the authority's own `CRYPTO_realloc` site,
+    /// reproducing `realloc`'s failure semantics exactly: on success the member becomes
+    /// `(new, new_len)` and the (possibly moved) block is returned for the caller to fill; on
+    /// failure (NULL) the old block is **kept** and the member is left unchanged, so the object
+    /// still owns — and will still release — it. This is the operation `SSL_CTX_use_serverinfo_ex`
+    /// (`ssl_rsa.c:839`) needs: the block must move in place, and a refused regrow must keep the
+    /// old allocation (not free it), which `clear`+`store` cannot reproduce.
+    ///
+    /// The authority publishes the pointer one statement before the length (after its `memcpy`);
+    /// this publishes both together. No allocator event or observer lies between them, so the
+    /// transcript and the observable final state are identical.
+    ///
+    /// # Safety
+    ///
+    /// `new_len > 0`. `self` was built by [`MemberBufSlot::of`], so the pair currently obeys the
+    /// blob member-buffer invariant: the incumbent is NULL or the object's own single block of
+    /// exactly its current length, live for a `realloc`. The caller owns the returned pointer and
+    /// must initialise the first `new_len` bytes before any of them are read.
+    pub(crate) unsafe fn realloc(
+        &mut self,
+        new_len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> *mut u8 {
+        debug_assert!(
+            new_len > 0,
+            "blob realloc to zero is not an in-place regrow"
+        );
+        let old = *self.ptr;
+        // SAFETY: by the invariant `old` is NULL or the object's own single block, live for its
+        // current length; `CRYPTO_realloc` returns NULL on failure (keeping the old block) and
+        // consumes the old block on success.
+        let new = unsafe { CRYPTO_realloc(old.cast(), new_len, file, line) }.cast::<u8>();
+        if !new.is_null() {
+            *self.ptr = new;
+            *self.len = new_len;
+        }
+        new
     }
 }
 

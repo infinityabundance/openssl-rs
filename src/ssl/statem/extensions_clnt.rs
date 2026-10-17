@@ -121,8 +121,8 @@ const EXT_RETURN_FAIL: c_int = -1;
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_server_name(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // SAFETY: `s` is live.
-    let host = unsafe { (*s).ext_hostname };
+    // SAFETY: `s` is live; its `ext_hostname` member obeys the member-buffer invariant.
+    let host = unsafe { (*s).ext_hostname() };
     if host.is_null() {
         return EXT_RETURN_NOT_SENT;
     }
@@ -385,7 +385,7 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
 
     let group = OSSL_TLS_GROUP_ID_x25519;
     // SAFETY: `s` is live; `ctx` is the connection's context.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
     // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; `params` is a
     // terminated array.

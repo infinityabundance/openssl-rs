@@ -973,8 +973,8 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
     if !ctx.is_null() {
         // SAFETY: `ctx` is the live context read above.
         if let Some(cb) = unsafe { (*ctx).alpn_select_cb } {
-            // SAFETY: `s` is live.
-            let proposed = unsafe { (*s).s3_alpn_proposed };
+            // SAFETY: `s` is live; its `s3_alpn_proposed` member obeys the member-buffer invariant.
+            let (proposed, proposed_len) = unsafe { (*s).s3_alpn_proposed() };
             if !proposed.is_null() {
                 let mut selected: *const u8 = core::ptr::null();
                 let mut selected_len: u8 = 0;
@@ -986,28 +986,29 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
                         &mut selected,
                         &mut selected_len,
                         proposed,
-                        (*s).s3_alpn_proposed_len as core::ffi::c_uint,
+                        proposed_len as core::ffi::c_uint,
                         (*ctx).alpn_select_cb_arg,
                     )
                 };
                 if r == SSL_TLSEXT_ERR_OK {
-                    // SAFETY: `s` is live; `selected`/`selected_len` name a live buffer.
+                    // SAFETY: `s` is live; `selected`/`selected_len` name a live buffer and the
+                    // `s3_alpn_selected` member obeys the member-buffer invariant.
                     unsafe {
-                        use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                        CRYPTO_free((*s).s3_alpn_selected.cast(), core::ptr::null(), 0);
-                        (*s).s3_alpn_selected = CRYPTO_memdup(
+                        use crate::runtime::mem::CRYPTO_memdup;
+                        let mut slot = (*s).s3_alpn_selected_slot();
+                        slot.clear(core::ptr::null(), 0);
+                        let dup = CRYPTO_memdup(
                             selected.cast(),
                             selected_len as usize,
                             core::ptr::null(),
                             0,
                         )
                         .cast::<u8>();
-                        if (*s).s3_alpn_selected.is_null() {
-                            (*s).s3_alpn_selected_len = 0;
+                        if dup.is_null() {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                             return 0;
                         }
-                        (*s).s3_alpn_selected_len = selected_len as usize;
+                        slot.store(dup, selected_len as usize);
                     }
                     return 1;
                 } else if r != SSL_TLSEXT_ERR_NOACK {
@@ -1196,16 +1197,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 return 0;
             }
             // SAFETY: `s` is live; `eb[5..]` holds `nlen` readable bytes with no interior NUL, so
-            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator.
+            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator, and the
+            // `ext_hostname` member obeys the member-buffer invariant.
             unsafe {
-                use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
-                CRYPTO_free((*s).ext_hostname.cast(), core::ptr::null(), 0);
-                (*s).ext_hostname =
-                    CRYPTO_strndup(eb.as_ptr().add(5).cast(), nlen, core::ptr::null(), 0);
-                if (*s).ext_hostname.is_null() {
+                use crate::runtime::mem::CRYPTO_strndup;
+                let mut slot = (*s).ext_hostname_slot();
+                slot.clear(core::ptr::null(), 0);
+                let dup = CRYPTO_strndup(eb.as_ptr().add(5).cast(), nlen, core::ptr::null(), 0);
+                if dup.is_null() {
                     ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                     return 0;
                 }
+                slot.store(dup);
             }
             sni_sent = true;
         }
@@ -1269,18 +1272,19 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
                 return 0;
             }
-            // SAFETY: `s` is live; `list` is `list_len` readable bytes.
+            // SAFETY: `s` is live; `list` is `list_len` readable bytes and the `s3_alpn_proposed`
+            // member obeys the member-buffer invariant.
             unsafe {
-                use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                CRYPTO_free((*s).s3_alpn_proposed.cast(), core::ptr::null(), 0);
-                (*s).s3_alpn_proposed =
-                    CRYPTO_memdup(list.as_ptr().cast(), list.len(), core::ptr::null(), 0)
-                        .cast::<u8>();
-                if (*s).s3_alpn_proposed.is_null() {
+                use crate::runtime::mem::CRYPTO_memdup;
+                let mut slot = (*s).s3_alpn_proposed_slot();
+                slot.clear(core::ptr::null(), 0);
+                let dup = CRYPTO_memdup(list.as_ptr().cast(), list.len(), core::ptr::null(), 0)
+                    .cast::<u8>();
+                if dup.is_null() {
                     ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                     return 0;
                 }
-                (*s).s3_alpn_proposed_len = list.len();
+                slot.store(dup, list.len());
             }
         }
         if etype == TLSEXT_TYPE_POST_HANDSHAKE_AUTH {
@@ -1911,7 +1915,7 @@ const MSG_FLOW_READING_13: c_int = 2;
 /// `s` is live.
 unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live; the selected protocol is owned by the connection.
-    let (selected, sel_len) = unsafe { ((*s).s3_alpn_selected, (*s).s3_alpn_selected_len) };
+    let (selected, sel_len) = unsafe { (*s).s3_alpn_selected() };
     // The `Extension extensions<0..2^16-1>` block, then a two-byte length prefix in `body`.
     let mut ext = [0u8; 512];
     let mut ext_len = 0usize;
@@ -2359,19 +2363,20 @@ pub(crate) unsafe fn tls13_server_send_pha_cert_request(s: *mut Ssl) -> c_int {
     }
     // SAFETY: `s` is live; the previous context (if any) is owned here.
     unsafe {
-        crate::runtime::mem::CRYPTO_free((*s).pha_context.cast(), core::ptr::null(), 0);
-        (*s).pha_context = crate::runtime::mem::CRYPTO_memdup(
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+        let mut slot = (*s).pha_context_slot();
+        slot.clear(core::ptr::null(), 0);
+        let dup = crate::runtime::mem::CRYPTO_memdup(
             ctx.as_ptr().cast(),
             ctx.len(),
             core::ptr::null(),
             0,
         )
         .cast::<u8>();
-        if (*s).pha_context.is_null() {
-            (*s).pha_context_len = 0;
+        if dup.is_null() {
             return 0;
         }
-        (*s).pha_context_len = ctx.len();
+        slot.store(dup, ctx.len());
     }
     // SAFETY: `s` is live; rewinding happens before the request is added to the transcript
     // (`statem_srvr.c:3044-3048`).
@@ -2838,7 +2843,7 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
         return -1;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
     // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
     let Some(pkey) = OwnedCtx::<EvpPkey>::new(unsafe {
@@ -3503,7 +3508,7 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     // SAFETY: `body[1..1+ptlen]` is `ptlen` readable bytes; the name is NUL-terminated.
     let peer = unsafe {
         crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
