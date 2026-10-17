@@ -105,7 +105,7 @@
 //! The `EVP_MD` block `evp_md_new` builds, the `EVP_MD_CTX` block `EVP_MD_CTX_new` builds and the
 //! legacy `md_data` buffer the init and copy paths allocate are owned here, on the crate's allocator
 //! seam at the authority's own size, file and line, so a caller-installed `CRYPTO_set_mem_functions`
-//! hook observes the allocation and its release. Each is an [`OwnedCtx`]/[`OwnedBlock`] whose `Drop`
+//! hook observes the allocation and its release. Each is an [`OwnedCtx`]/[`OwnedBuf`] whose `Drop`
 //! is the *single* release: the two exported releasers and `cleanup_old_md_data` reclaim the block
 //! instead of releasing it by hand, and the constructors hand it out with `into_raw`, so the exported
 //! ABI's stable address and its borrowed-until-free lifetime are unchanged.
@@ -163,7 +163,7 @@ use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_count_to_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_DIGESTS};
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::{
     NID_hmacWithMD5, NID_hmacWithSHA1, NID_hmacWithSHA224, NID_hmacWithSHA256, NID_hmacWithSHA384,
@@ -175,6 +175,7 @@ use crate::runtime::obj::{
     NID_sha512, NID_sha512_224, NID_sha512_256, OBJ_NAME_do_all, OBJ_NAME_do_all_sorted,
     OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn, ObjName,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
 ///
@@ -293,96 +294,14 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-/// An owned legacy `md_data` buffer: the authority's own `CRYPTO_zalloc`/`CRYPTO_malloc` block whose
-/// single release is `Drop`, so no call site writes the release by hand.
-///
-/// [`Self::take`] adopts a block a seam answered and [`Self::from_raw`] reclaims one a previous
-/// `into_raw` stored in a context, so a caller-installed `CRYPTO_set_mem_functions` hook observes
-/// the allocation and its release exactly as it observes the authority's. `clear` selects the
-/// authority's cleansing release (`CRYPTO_clear_free` over `len` bytes for `info`) versus the plain
-/// `CRYPTO_free`.
-struct OwnedBlock {
-    ptr: *mut c_void,
-    len: usize,
-    clear: bool,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Adopt a block the seam answered, or `None` for NULL. `len` is the length a clearing release
-    /// needs; it is ignored by the plain form.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
-    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
-    /// release.
-    unsafe fn take(
-        ptr: *mut c_void,
-        len: usize,
-        clear: bool,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock {
-                ptr,
-                len,
-                clear,
-                file,
-                line,
-            })
-        }
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] stored in a context, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` stored and `Drop` has not released.
-    unsafe fn from_raw(
-        ptr: *mut c_void,
-        len: usize,
-        clear: bool,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock {
-                ptr,
-                len,
-                clear,
-                file,
-                line,
-            })
-        }
-    }
-
-    /// Give up ownership of the block to a context member that takes it over.
-    fn into_raw(self) -> *mut c_void {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
-        // released before; `self.len` is its allocation length and `clear` selects the authority's
-        // cleanse-then-free. Both accept NULL.
-        unsafe {
-            if self.clear {
-                CRYPTO_clear_free(self.ptr, self.len, self.file, self.line);
-            } else {
-                CRYPTO_free(self.ptr, self.file, self.line);
-            }
-        }
-    }
-}
+// ---------------------------------------------------------------------------------------------
+// Ownership of the legacy `md_data` buffers
+// ---------------------------------------------------------------------------------------------
+//
+// The shared [`OwnedBuf`] carries the authority's conditional release: the block a seam answered
+// is owned with `adopt_conditional`, whose `clear` is fixed at construction and selects
+// `CRYPTO_clear_free` over the stored length versus the plain `CRYPTO_free`. `into_raw` hands the
+// block to a context, and `adopt_conditional` reclaims one a previous `into_raw` stored.
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the fifteen function-pointer types.
@@ -1880,8 +1799,8 @@ unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
         // `ctx_size` bytes as that field said when it was allocated; `from_raw` reclaims it and
         // `Drop` is its single cleansing release. `ctx` is live.
         unsafe {
-            drop(OwnedBlock::from_raw(
-                md_data,
+            drop(OwnedBuf::adopt_conditional(
+                md_data.cast::<u8>(),
                 ctx_size as usize,
                 true,
                 FILE,
@@ -2412,8 +2331,8 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
             // SAFETY: `CRYPTO_zalloc` is this crate's allocator seam and the block it answers is
             // owned by this frame, with no other owner.
             let Some(block) = (unsafe {
-                OwnedBlock::take(
-                    CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA),
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA).cast(),
                     ctx_size as usize,
                     true,
                     FILE,
@@ -2423,7 +2342,7 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
                 return 0;
             };
             // SAFETY: `ctx` is live and `block` is this context's own allocation.
-            unsafe { (*ctx).md_data = block.into_raw() };
+            unsafe { (*ctx).md_data = block.into_raw().cast() };
         }
     }
 
@@ -3181,8 +3100,8 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
             // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and the block it answers is
             // owned by this frame, with no other owner.
             let Some(fresh) = (unsafe {
-                OwnedBlock::take(
-                    CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA),
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA).cast(),
                     ctx_size as usize,
                     false,
                     FILE,
@@ -3191,7 +3110,7 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
             }) else {
                 return 0;
             };
-            fresh.into_raw()
+            fresh.into_raw().cast()
         };
         // SAFETY: `block` is at least `ctx_size` bytes -- either the destination's own old block
         // for this very method, or a fresh allocation of exactly that size -- and `in_md_data` is
