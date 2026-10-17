@@ -571,6 +571,18 @@ package.
 - Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1236 passed / 18
   ignored**, adv-probe **18/18**. Progress: **140 of 173**.
 
+### Subphase 57 — small owner groups
+
+- Eight copies migrated: `OwnedIkm` (ecx_kem) and `OwnedUniPass` (p12_key) to
+  `adopt_cleansed` (stored length, coordinates and cleanse-before-free probe
+  preserved); `OwnedScratch` (mac, rand), `OwnedLogBuf` (bss_log),
+  `OwnedSlotBuf` (err, err_state), `OwnedExtValue` (v3_prn) and `OwnedI2s`
+  (v3_sxnet) to the shared buffer/string owners.
+- Added unsafe `OwnedBuf::new_strndup(str, max, file, line)` with a
+  NULL/readable-for-`max` contract; no borrowed const string became an owner.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1236 passed / 18
+  ignored**, adv-probe **18/18**. Progress: **148 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -748,7 +760,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `209449a8b` (OwnedBlock consolidation merged)
+**Last observed HEAD:** `915a22f19` (small owner groups merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
