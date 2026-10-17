@@ -32,6 +32,41 @@ use super::method::bwrite_conv;
 use super::sys;
 use super::{Bio, BioMethod, BIO_CTRL_SET, BIO_TYPE_MEM};
 
+/// The NUL-terminated copy `slg_write` makes of its input.
+///
+/// The block stays the authority's `OPENSSL_malloc(inl + 1)` and its single release is the
+/// authority's `OPENSSL_free(buf)`; only the *ownership* is this type, so every early return and
+/// the normal tail release it through `Drop`.
+struct OwnedLogBuf {
+    ptr: *mut c_char,
+}
+
+impl OwnedLogBuf {
+    /// `CRYPTO_malloc(len, NULL, 0)`, or `None` when the allocator answers NULL.
+    fn new(len: usize) -> Option<OwnedLogBuf> {
+        let ptr = CRYPTO_malloc(len, ptr::null(), 0).cast::<c_char>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedLogBuf { ptr })
+        }
+    }
+
+    /// The writable start of the copy.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedLogBuf {
+    /// The block's single release, at the authority's own (NULL, 0) coordinates.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, and the
+        // authority's own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), ptr::null(), 0) };
+    }
+}
+
 /// The method name the authority reports for the syslog BIO.
 const LOG_NAME: &[u8] = b"syslog\0";
 
@@ -156,11 +191,13 @@ unsafe extern "C" fn slg_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c
     }
     // The authority copies the input into a heap buffer and NUL-terminates it so
     // the prefix comparison and the logged text are NUL-safe.
-    // SAFETY: the size is `inl + 1` and the allocation is freed below.
-    let buf = CRYPTO_malloc((inl as usize) + 1, ptr::null(), 0).cast::<c_char>();
-    if buf.is_null() {
+    let Some(len) = (inl as usize).checked_add(1) else {
         return 0;
-    }
+    };
+    let Some(buf) = OwnedLogBuf::new(len) else {
+        return 0;
+    };
+    let buf = buf.as_ptr();
     // SAFETY: `in_` is readable for `inl` bytes and `buf` has `inl + 1`.
     unsafe {
         ptr::copy_nonoverlapping(in_, buf, inl as usize);
@@ -188,8 +225,6 @@ unsafe extern "C" fn slg_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c
     unsafe {
         sys::syslog(priority, c"%s".as_ptr(), buf.add(prefix_len));
     }
-    // SAFETY: `buf` came from `CRYPTO_malloc`.
-    unsafe { CRYPTO_free(buf.cast(), ptr::null(), 0) };
     ret
 }
 
