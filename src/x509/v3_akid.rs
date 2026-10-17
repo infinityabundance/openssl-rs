@@ -44,8 +44,8 @@ use crate::asn1::string::{ASN1_INTEGER_free, ASN1_OCTET_STRING_free, ASN1_STRING
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -178,53 +178,6 @@ unsafe extern "C" fn conf_value_free_thunk(p: *mut c_void) {
 // Ownership of the `i2s_ASN1_OCTET_STRING` strings the `i2v` callback allocates
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `char *` string `i2s_ASN1_OCTET_STRING` allocated through the crate's `CRYPTO_*` seam.
-///
-/// `i2v_AUTHORITY_KEYID` releases each of the two strings it builds at a success and an error site
-/// (`:54`/`:58` for the key id, `:75`/`:78` for the serial); the handle's `Drop` is that single
-/// release, pointed at the site the reached path uses.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_*` string this unit just allocated, or `None` for NULL.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string the crate's `CRYPTO_*` seam allocated in full (not a
-    /// sub-range) and no other owner will release; `line` is the authority's own release site for the
-    /// string. `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the calls that read it.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this string, on the path that reaches
-    /// it (the error site `:54`/`:75` rather than the success site `:58`/`:78`).
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the handle adopted and `Drop` runs once; the authority's
-        // own `CRYPTO_free` accepts the block.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
-
 /// `(X509V3_EXT_I2V)i2v_AUTHORITY_KEYID` — the cast the row's initialiser writes.
 const fn as_i2v(
     f: unsafe extern "C" fn(
@@ -331,8 +284,9 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
         // SAFETY: the keyid is a live `ASN1_OCTET_STRING`; the allocator answers NULL or a fresh
         // block the authority releases at its own `:58` site.
         let Some(mut tmp) = (unsafe {
-            OwnedStr::take(
+            OwnedStr::adopt(
                 i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).keyid),
+                FILE.as_ptr(),
                 58,
             )
         }) else {
@@ -378,8 +332,9 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
         // SAFETY: the serial is a live `ASN1_OCTET_STRING`; the allocator answers NULL or a fresh
         // block the authority releases at its own `:78` site.
         let Some(mut tmp) = (unsafe {
-            OwnedStr::take(
+            OwnedStr::adopt(
                 i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).serial),
+                FILE.as_ptr(),
                 78,
             )
         }) else {

@@ -23,7 +23,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// An owned NUL-terminated (or, before its consumer fills it, writable) C
 /// string allocated through the crate's `CRYPTO_*` allocator seam.
@@ -50,6 +50,33 @@ impl OwnedStr {
         release_line: c_int,
     ) -> Option<Self> {
         let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_char>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            file: release_file,
+            line: release_line,
+        })
+    }
+
+    /// `CRYPTO_zalloc(len, alloc_file, alloc_line)` for a zeroed block whose
+    /// `Drop` releases at `release_file`/`release_line`, or `None` when the
+    /// allocator answers NULL.
+    ///
+    /// As [`Self::new`], the two coordinate pairs stay separate so a
+    /// caller-installed `CRYPTO_set_mem_functions` hook observes each at the
+    /// authority's own site. The bytes are an all-zero initialised block of
+    /// `len` bytes; a consumer that reads it as a C string still needs the
+    /// zeroed first byte to be its terminator.
+    pub(crate) fn new_zeroed(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<Self> {
+        let raw = CRYPTO_zalloc(len, alloc_file, alloc_line).cast::<c_char>();
         if raw.is_null() {
             return None;
         }
@@ -109,6 +136,13 @@ impl OwnedStr {
         Self { ptr, file, line }
     }
 
+    /// Re-point the release diagnostic at the authority's other site for this
+    /// string, preserving the release file. The line is metadata only: no
+    /// extent, ownership or initialization invariant depends on it.
+    pub(crate) fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
     /// The start of the string. Writable, because crate constructors fill a
     /// freshly allocated block through this handle.
     pub(crate) fn as_ptr(&self) -> *mut c_char {
@@ -154,6 +188,38 @@ mod tests {
         }
         for i in 0..6 {
             // SAFETY: `i` is within the requested 6-byte extent.
+            assert_eq!(unsafe { *owned.as_ptr().add(i) }, 0x5a);
+        }
+    }
+
+    #[test]
+    fn set_release_line_keeps_the_file_and_changes_only_the_line() {
+        let mut owned = OwnedStr::new(4, FILE, 21, FILE, 22);
+        assert!(owned.is_some(), "a 4-byte block must be allocatable");
+        let Some(ref mut owned) = owned else { return };
+        assert_eq!(owned.file, FILE);
+        assert_eq!(owned.line, 22);
+        owned.set_release_line(23);
+        assert_eq!(owned.file, FILE, "the release file must be preserved");
+        assert_eq!(owned.line, 23);
+    }
+
+    #[test]
+    fn new_zeroed_allocates_a_zeroed_writable_block() {
+        let owned = OwnedStr::new_zeroed(8, FILE, 24, FILE, 25);
+        assert!(
+            owned.is_some(),
+            "an 8-byte zeroed block must be allocatable"
+        );
+        let Some(owned) = owned else { return };
+        for i in 0..8 {
+            // SAFETY: `i` is within the requested 8-byte extent.
+            assert_eq!(unsafe { *owned.as_ptr().add(i) }, 0);
+        }
+        // SAFETY: the block is writable for the requested 8 bytes.
+        unsafe { ptr::write_bytes(owned.as_ptr(), 0x5a, 8) };
+        for i in 0..8 {
+            // SAFETY: `i` is within the requested 8-byte extent.
             assert_eq!(unsafe { *owned.as_ptr().add(i) }, 0x5a);
         }
     }

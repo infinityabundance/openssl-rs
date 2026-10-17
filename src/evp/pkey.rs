@@ -137,13 +137,14 @@ use crate::runtime::ex_data::{
     CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
     CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_EVP_PKEY,
 };
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_id_ecPublicKey, NID_X9_62_prime_field,
     NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_hmac, NID_poly1305, NID_rsaEncryption,
     NID_rsassaPss, NID_siphash, NID_sm2, NID_undef, OBJ_ln2nid, OBJ_nid2ln, OBJ_nid2sn, OBJ_sn2nid,
     NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strlcpy;
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
@@ -504,95 +505,6 @@ impl Drop for RawPkey {
         // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
         // release is the authority's own plain `CRYPTO_free` at the allocation's own site.
         unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_ZALLOC_PKEY) };
-    }
-}
-
-/// An owned heap buffer allocated through the crate's allocator seam.
-///
-/// [`Self::new`] allocates with `CRYPTO_malloc` and [`Self::new_zeroed`] with `CRYPTO_zalloc`; both
-/// carry the authority's own allocation site, and `Drop` is the buffer's single release at the
-/// authority's own site. `clear` selects the authority's cleansing release (`CRYPTO_clear_free`,
-/// chosen for the retry buffer only once the provider has filled it with key material) versus the
-/// plain `CRYPTO_free`.
-struct OwnedBlock {
-    ptr: ptr::NonNull<u8>,
-    len: usize,
-    clear: bool,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Allocate `len` bytes through `CRYPTO_malloc`, or `None` when it answers NULL. `alloc_line`
-    /// is the authority's allocation site and `line` its release site.
-    fn new(len: usize, file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedBlock> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedBlock {
-            ptr,
-            len,
-            clear: false,
-            file,
-            line,
-        })
-    }
-
-    /// Allocate `len` zeroed bytes through `CRYPTO_zalloc`, or `None` when it answers NULL.
-    fn new_zeroed(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        line: c_int,
-    ) -> Option<OwnedBlock> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `len` bytes.
-        let raw = CRYPTO_zalloc(len, file, alloc_line).cast::<u8>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedBlock {
-            ptr,
-            len,
-            clear: false,
-            file,
-            line,
-        })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr.as_ptr()
-    }
-
-    /// Select the authority's cleansing release, for a buffer the provider has filled with key
-    /// material.
-    fn set_clear(&mut self, clear: bool) {
-        self.clear = clear;
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
-        // released before; `self.len` is its allocation length and `clear` selects the authority's
-        // cleanse-then-free. Both accept NULL.
-        unsafe {
-            if self.clear {
-                CRYPTO_clear_free(
-                    self.ptr.as_ptr().cast::<c_void>(),
-                    self.len,
-                    self.file,
-                    self.line,
-                );
-            } else {
-                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-            }
-        }
     }
 }
 
@@ -1287,7 +1199,7 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
      * cleanup rather than for the read: an unfilled buffer is cleansed on the way out, and cleansing
      * uninitialised bytes would be a read of them. */
     let mut buffer = [0u8; 2048];
-    let mut buf: Option<OwnedBlock> = None;
+    let mut buf: Option<OwnedBuf> = None;
 
     if key_name.is_null() || bn.is_null() {
         return 0;
@@ -1310,7 +1222,19 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
         let buf_sz = params[0].return_size;
         // The retry buffer, allocated through the crate's allocator seam; `Drop` is its single
         // release, chosen between the authority's cleansing form and its plain one by `modified`.
-        buf = OwnedBlock::new_zeroed(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER, LINE_FREE_BN_BUFFER);
+        // The conditional arm fixes `num` at the whole allocation extent (`buf_sz`) and starts in
+        // the authority's plain mode; only the later `set_clear` may change the mode.
+        // SAFETY: the block is the seam's own fresh, zeroed, exclusively owned allocation of
+        // `buf_sz` bytes, and `buf_sz` is its whole extent.
+        buf = unsafe {
+            OwnedBuf::adopt_conditional(
+                CRYPTO_zalloc(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER).cast::<c_uchar>(),
+                buf_sz,
+                false,
+                FILE,
+                LINE_FREE_BN_BUFFER,
+            )
+        };
         let Some(block) = buf.as_mut() else {
             return 0;
         };
@@ -1339,7 +1263,7 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
 /// plain `CRYPTO_free` otherwise. With no heap buffer, a modified run cleanses the stack buffer in
 /// place, exactly as the authority does.
 fn bn_param_cleanup(
-    mut buf: Option<OwnedBlock>,
+    mut buf: Option<OwnedBuf>,
     params: &mut [crate::params::OsslParam; 2],
     buffer: &mut [u8; 2048],
     ret: c_int,
@@ -1347,7 +1271,7 @@ fn bn_param_cleanup(
     // SAFETY: `params` is a live array of two.
     let modified = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } != 0;
     if let Some(block) = buf.as_mut() {
-        block.set_clear(modified);
+        let _ = block.set_clear(modified);
     } else if modified {
         // SAFETY: `buffer` is a live 2048-byte buffer and the provider wrote
         // `params[0].data_size` bytes into it.
@@ -3785,10 +3709,11 @@ pub unsafe extern "C" fn EVP_PKEY_get1_encoded_public_key(
         unsafe { *ppub = ptr::null_mut() };
         // This allocates `return_size` bytes, which is the authority's `OPENSSL_malloc`; the crate's
         // `CRYPTO_malloc` carries the authority's coordinates and its own failure raise.
-        let Some(buf) = OwnedBlock::new(
+        let Some(buf) = OwnedBuf::new_plain_released(
             return_size,
             FILE,
             LINE_MALLOC_ENCODED_PUBKEY,
+            FILE,
             LINE_FREE_ENCODED_PUBKEY,
         ) else {
             return 0;

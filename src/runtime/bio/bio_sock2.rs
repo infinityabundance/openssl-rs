@@ -52,7 +52,7 @@ use crate::runtime::err::err_sites::{
     BIO_SOCK_410, BIO_SOCK_412, BIO_SOCK_416, BIO_SOCK_421,
 };
 use crate::runtime::err::{raise_site, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::addr::{
     sockaddr, sockaddr_noconst, sockaddr_size, zeroed, BIO_ADDR_family, BIO_ADDR_hostname_string,
@@ -67,65 +67,6 @@ use super::sys;
 
 /// `INVALID_SOCKET`.
 const INVALID_SOCKET: c_int = -1;
-
-/// An owned C string allocated through the crate's allocator seam.
-///
-/// `BIO_get_accept_socket`'s `BIO_parse_hostserv` out-parameters and `BIO_accept`'s two
-/// `BIO_ADDR_*_string` results are released at the authority's `(NULL, 0)` coordinates. Until they
-/// are dropped or handed out, this handle is their single owner. `BIO_accept`'s joined buffer is
-/// the same shape: it is filled here and leaves through [`OwnedStr::into_raw`] into the caller's
-/// `*ip_port`, where the caller owns it.
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a NUL-terminated string this unit's calls produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live NUL-terminated block the crate's allocator seam produced, owned by
-    /// this frame; no other owner will release it and this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// `CRYPTO_zalloc(len, NULL, 0)`, or `None` when the allocator answers NULL.
-    fn zalloc(len: usize) -> Option<OwnedStr> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `len` bytes.
-        let raw = CRYPTO_zalloc(len, ptr::null(), 0).cast::<c_char>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr: raw })
-        }
-    }
-
-    /// The NUL-terminated start of the string.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the C caller that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle adopted or allocated and has not handed out;
-        // its single release is the authority's own plain `(NULL, 0)` free.
-        unsafe { CRYPTO_free(self.ptr.cast(), ptr::null(), 0) };
-    }
-}
 
 /// `int BIO_socket(int domain, int socktype, int protocol, int options)`
 ///
@@ -611,9 +552,9 @@ pub unsafe extern "C" fn BIO_get_accept_socket(host: *mut c_char, bind_mode: c_i
 
         // SAFETY: on success each out-parameter is NULL or a `CRYPTO_strndup` block this frame
         // owns; no other owner holds either string.
-        let h = unsafe { OwnedStr::adopt(h_raw) };
+        let h = unsafe { OwnedStr::adopt(h_raw, ptr::null(), 0) };
         // SAFETY: as above for the service half.
-        let p = unsafe { OwnedStr::adopt(p_raw) };
+        let p = unsafe { OwnedStr::adopt(p_raw, ptr::null(), 0) };
         let h_ptr = h.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
         let p_ptr = p.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
 
@@ -722,9 +663,21 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
         if !ip_port.is_null() {
             // SAFETY: `res` is a live address; each result is NULL or a `CRYPTO_strdup` block this
             // frame owns.
-            let host = unsafe { OwnedStr::adopt(BIO_ADDR_hostname_string(ptr::addr_of!(res), 1)) };
+            let host = unsafe {
+                OwnedStr::adopt(
+                    BIO_ADDR_hostname_string(ptr::addr_of!(res), 1),
+                    ptr::null(),
+                    0,
+                )
+            };
             // SAFETY: as above.
-            let port = unsafe { OwnedStr::adopt(BIO_ADDR_service_string(ptr::addr_of!(res), 1)) };
+            let port = unsafe {
+                OwnedStr::adopt(
+                    BIO_ADDR_service_string(ptr::addr_of!(res), 1),
+                    ptr::null(),
+                    0,
+                )
+            };
             let joined = if let (Some(h), Some(p)) = (host.as_ref(), port.as_ref()) {
                 // SAFETY: both are NUL-terminated byte strings.
                 let hl = unsafe { sys::strlen(h.as_ptr()) };
@@ -733,7 +686,8 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
                 // A wrapped size would be a too-small allocation; treat it as the allocator's
                 // refusal arm instead of reproducing that overflow (§17).
                 let size = hl.checked_add(pl).and_then(|n| n.checked_add(2));
-                let buf = size.and_then(OwnedStr::zalloc);
+                let buf =
+                    size.and_then(|len| OwnedStr::new_zeroed(len, ptr::null(), 0, ptr::null(), 0));
                 if let Some(ref buf) = buf {
                     // SAFETY: `buf` has room for `hl + pl + 2` bytes including the
                     // terminator and the colon.

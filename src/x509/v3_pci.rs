@@ -61,10 +61,11 @@ use crate::runtime::err::err_reasons::{
     X509V3_R_POLICY_WHEN_PROXY_LANGUAGE_REQUIRES_NO_POLICY,
 };
 use crate::runtime::err::{openssl_rs_err_add_data, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
+use crate::runtime::mem::CRYPTO_realloc;
 use crate::runtime::obj::{
     Asn1Object, NID_Independent, NID_id_ppl_inheritAll, NID_proxyCertInfo, OBJ_obj2nid, OBJ_txt2obj,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value};
 use crate::runtime::str::OPENSSL_hexstr2buf;
 use crate::x509::v3_conf::{X509V3Ctx, X509V3_get_section, X509V3_section_free};
@@ -105,59 +106,6 @@ const LINE_FREE_TEXT_FAIL: c_int = 217;
 // Ownership of the policy octet string's buffer and the `hex:` scratch block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned block allocated through the crate's `CRYPTO_*` seam.
-///
-/// [`process_pci_value`]'s policy arms hold two such blocks: the scratch the `hex:` decoder
-/// (`OPENSSL_hexstr2buf`) answers, and the `policy` octet string's accumulated buffer as
-/// `CRYPTO_realloc` grows it. The block stays a `CRYPTO_*` allocation at the authority's own
-/// `file`/`line`; only its *ownership* is this handle, whose `Drop` is its single release at that
-/// line. A NULL pointer is a valid empty block whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_void,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block the seam answered, or NULL as an empty block.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this unit's `CRYPTO_*` seam allocated in full (not a
-    /// sub-range) and no other owner will release; `line` is the authority's own release site.
-    /// `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn adopt(ptr: *mut c_void, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, line }
-    }
-
-    /// The block's address, typed for the calls that read it.
-    fn as_ptr(&self) -> *mut c_void {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that
-    /// reaches it.
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-
-    /// Give up the block to a consumer that takes it over, leaving the owner empty.
-    fn take_raw(&mut self) -> *mut c_void {
-        let p = self.ptr;
-        self.ptr = ptr::null_mut();
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam and the authority's own line.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the handle adopted (or NULL, a no-op) and `Drop` runs
-        // once; the authority's own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr, FILE.as_ptr(), self.line) };
-    }
-}
-
 /// Grow the `policy` octet string's accumulated buffer by `n` bytes and append the `n` bytes at
 /// `src`, NUL-terminating -- the authority's `OPENSSL_realloc((*policy)->data, ...)` at
 /// `realloc_line`.
@@ -184,7 +132,7 @@ unsafe fn policy_grow(
     // Take the accumulated buffer into an owner whose `Drop` is the authority's failure-arm
     // release at `free_line`.
     // SAFETY: `(*str_).data` is NULL or this unit's block per the contract.
-    let mut buf = unsafe { OwnedBuf::adopt((*str_).data.cast::<c_void>(), free_line) };
+    let buf = unsafe { OwnedBuf::adopt_plain_nullable((*str_).data, FILE.as_ptr(), free_line) };
     // The owner holds the block now; the string gets it back only on success.
     // SAFETY: `str_` is live.
     unsafe {
@@ -194,7 +142,14 @@ unsafe fn policy_grow(
     let newlen = (len as c_long + n as c_long + 1) as usize;
     // SAFETY: `buf`'s block is this unit's, NULL or live, and `newlen` is the requested size; a
     // NULL answer leaves the old block with the owner.
-    let newp = unsafe { CRYPTO_realloc(buf.as_ptr(), newlen, FILE.as_ptr(), realloc_line) };
+    let newp = unsafe {
+        CRYPTO_realloc(
+            buf.as_ptr().cast::<c_void>(),
+            newlen,
+            FILE.as_ptr(),
+            realloc_line,
+        )
+    };
     if newp.is_null() {
         // `buf`'s `Drop` releases the old block at `free_line`; the string stays empty.
         return false;
@@ -208,7 +163,7 @@ unsafe fn policy_grow(
         *(*str_).data.add((*str_).length as usize) = 0;
     }
     // The octet string owns the block now; the owner gives it up so its `Drop` cannot release it.
-    buf.take_raw();
+    buf.into_raw();
     true
 }
 
@@ -477,8 +432,9 @@ unsafe fn process_pci_value(
             // SAFETY: `valp` is NUL-terminated per the contract; the seam takes the file/line for
             // its record only.
             let mut data2 = unsafe {
-                OwnedBuf::adopt(
-                    OPENSSL_hexstr2buf(valp, &raw mut val_len).cast::<c_void>(),
+                OwnedBuf::adopt_plain_nullable(
+                    OPENSSL_hexstr2buf(valp, &raw mut val_len),
+                    FILE.as_ptr(),
                     LINE_FREE_HEX2_FAIL,
                 )
             };
@@ -492,7 +448,7 @@ unsafe fn process_pci_value(
             if unsafe {
                 policy_grow(
                     pol,
-                    data2.as_ptr(),
+                    data2.as_ptr().cast::<c_void>(),
                     val_len as usize,
                     LINE_REALLOC_HEX,
                     LINE_FREE_HEX_DATA_FAIL,
