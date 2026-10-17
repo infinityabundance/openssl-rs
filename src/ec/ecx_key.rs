@@ -35,10 +35,10 @@ use core::sync::atomic::{fence, AtomicI32, Ordering};
 
 use crate::ec::curve25519::ossl_x25519;
 use crate::ec::curve448::ossl_x448;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_zalloc};
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c".as_ptr();
@@ -97,6 +97,8 @@ pub struct EcxKey {
 // pointers, integers, a byte array and an atomic, so an all-zero block is a valid `EcxKey`, and
 // `destroy_body` is sound on it (`CRYPTO_free(NULL)` and `CRYPTO_secure_clear_free(NULL, 0, ...)`).
 unsafe impl CtxDestroy for EcxKey {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 23;
     const LINE_FREE: c_int = 83;
 
     unsafe fn destroy_body(ptr: *mut EcxKey) {
@@ -112,96 +114,10 @@ unsafe impl CtxDestroy for EcxKey {
     }
 }
 
-/// An owned, fully constructed `ECX_KEY` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout, its `CRYPTO_zalloc` size/`file` and its
-/// stable address (the C ABI hands it out and takes it back), but its *ownership* is this type:
-/// [`Self::into_raw`] hands it out and [`Self::from_raw`] reclaims it so `Drop` runs the
-/// authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its single block
-/// release at `ossl_ecx_key_free`'s own site. A Rust `Box` would hide both releases from a
-/// caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `into_raw`/`from_raw` handed out and this is its single
-        // release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, T::LINE_FREE);
-        }
-    }
-}
-
-/// An owned `ECX_KEY` block still under construction.
-///
-/// `ossl_ecx_key_new` allocates the block and fills its fields one at a time; until `assume_init`
-/// the block is not yet a valid `ECX_KEY` and its release is the block alone — the authority's own
-/// `OPENSSL_free(ret)` at its `:60` error arm — so the destructor ([`CtxDestroy::destroy_body`])
-/// over fields that may not be set must not run. [`Self::assume_init`] closes the window.
-struct RawEcxKey {
-    ptr: ptr::NonNull<EcxKey>,
-}
-
-impl RawEcxKey {
-    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 23)`, or `None` when the allocator answers NULL.
-    fn zalloc() -> Option<RawEcxKey> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<EcxKey>()` bytes, exactly `ECX_KEY`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 23).cast::<EcxKey>();
-        ptr::NonNull::new(raw).map(|ptr| RawEcxKey { ptr })
-    }
-
-    /// The writable start of the block, for the field writes that construct the object.
-    fn as_ptr(&self) -> *mut EcxKey {
-        self.ptr.as_ptr()
-    }
-
-    /// The validated transition: the block now holds a fully initialised, valid `ECX_KEY`.
-    ///
-    /// # Safety
-    /// Every field [`CtxDestroy::destroy_body`] reads has been written, so the block is a valid
-    /// `ECX_KEY`, and no other owner will release it: the returned handle's `Drop` is the block's
-    /// single release.
-    unsafe fn assume_init(self) -> OwnedCtx<EcxKey> {
-        let ptr = self.ptr;
-        core::mem::forget(self);
-        OwnedCtx { ptr }
-    }
-}
-
-impl Drop for RawEcxKey {
-    /// The authority's `ossl_ecx_key_new` error-arm release (`:60`): the block alone. The `:57`
-    /// `OPENSSL_free(propq)` is over the NULL the failed `strdup` returned, which the allocator
-    /// seam ignores, so the block release is the whole observable release.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `zalloc` allocated and has not been handed out; its
-        // single release is the authority's own plain `CRYPTO_free` at the error arm.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, 60) };
-    }
-}
+// The object's two states are the canonical [`OwnedCtx`] (a fully built key, `Drop` runs
+// `ossl_ecx_key_free`'s body) and [`RawCtx`] (the block while `ossl_ecx_key_new` fills it, released
+// block-alone at the `:60` error arm). Both stay `CRYPTO_zalloc` blocks at the authority's size, so
+// a caller-installed `CRYPTO_set_mem_functions` hook observes every allocation and release.
 
 /// `ECX_KEY *ossl_ecx_key_new(OSSL_LIB_CTX *libctx, ECX_KEY_TYPE type, int haspubkey,
 /// const char *propq)` — `crypto/ec/ecx_key.c:20`.
@@ -215,9 +131,8 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
     haspubkey: c_int,
     propq: *const c_char,
 ) -> *mut EcxKey {
-    let raw = match RawEcxKey::zalloc() {
-        Some(raw) => raw,
-        None => return ptr::null_mut(),
+    let Some(mut raw) = RawCtx::<EcxKey>::zalloc_at(FILE, 23, FILE, 60) else {
+        return ptr::null_mut();
     };
     let ret = raw.as_ptr();
 
@@ -254,6 +169,8 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
         unsafe { (*ret).propq = propq_dup };
     }
 
+    // The constructed key is released by `ossl_ecx_key_free` at `:83`.
+    raw.set_release_line(83);
     // SAFETY: every field `destroy_body` reads is now written, so the block is a valid `ECX_KEY`,
     // and `raw` holds its only ownership; `into_raw` hands it to the C caller.
     unsafe { raw.assume_init().into_raw() }
@@ -283,7 +200,7 @@ pub unsafe extern "C" fn ossl_ecx_key_free(key: *mut EcxKey) {
 
     // SAFETY: `key` is live, this is its last reference, and `OwnedCtx`'s `Drop` runs the
     // authority's own member release (`:77`, `:81`) followed by the block release (`:83`).
-    let _owner = unsafe { OwnedCtx::from_raw(key) };
+    let _owner = unsafe { OwnedCtx::<EcxKey>::from_raw_at(key, FILE, 83) };
 }
 
 /// `void ossl_ecx_key_set0_libctx(ECX_KEY *key, OSSL_LIB_CTX *libctx)` —

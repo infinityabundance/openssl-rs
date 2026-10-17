@@ -26,7 +26,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void, CStr};
-use core::ptr::{self, NonNull};
+use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::ec::key::{EC_KEY_free, EC_KEY_up_ref};
@@ -47,9 +47,8 @@ use crate::provider::util::prov_digest::{
     ossl_prov_digest_copy, ossl_prov_digest_fetch, ossl_prov_digest_load, ossl_prov_digest_md,
     ossl_prov_digest_reset, ProvDigest,
 };
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::sm2::crypt::{
     ossl_sm2_ciphertext_size, ossl_sm2_decrypt, ossl_sm2_encrypt, ossl_sm2_plaintext_size,
 };
@@ -92,112 +91,8 @@ unsafe impl CtxDestroy for ProvSm2Ctx {
     }
 }
 
-/// An owned `PROV_SM2_CTX` block.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
-/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
-/// seam at the authority's own size/`file`/`line` and `Drop` runs the authority's own destructor
-/// body before its single block release. A Rust `Box` would hide the allocation and its release
-/// from a caller-installed `CRYPTO_set_mem_functions` hook, which is why only ownership moves.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: NonNull<T>,
-    line_free: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), FILE, line_alloc)`, whose `Drop` releases the block at
-    /// `FILE`/`line_free`, or `None` when the allocator answers NULL.
-    ///
-    /// A zeroed block is the authority's own constructed state for this context (`sm2_newctx`
-    /// `OPENSSL_zalloc`s it), so it may be validated immediately.
-    fn zalloc(line_alloc: c_int, line_free: c_int) -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, line_alloc).cast::<T>();
-        NonNull::new(raw).map(|ptr| OwnedCtx { ptr, line_free })
-    }
-
-    /// The stable address the constructor writes the context's own fields through.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop` at
-    /// `FILE`/`line_free`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, line_free: c_int) -> Option<OwnedCtx<T>> {
-        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, line_free })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The context destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`])
-    /// followed by the block's release, through the same allocator seam the block was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and this is its single release; `Drop`
-        // runs once, and `destroy_body` is the authority's own body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line_free);
-        }
-    }
-}
-
-/// Allocated storage for a `PROV_SM2_CTX` whose members are **not yet** ownable.
-///
-/// `sm2_dupctx` copies the source context and must not let a partial copy's destructor run: until
-/// the borrowed key's own reference is taken, the copied members are not the block's to release, so
-/// its release is the block alone ([`RawCtx`]'s `Drop`). [`RawCtx::assume_init`] is the one
-/// validated transition to [`OwnedCtx`].
-struct RawCtx<T: CtxDestroy> {
-    ptr: NonNull<T>,
-    line_free: c_int,
-}
-
-impl<T: CtxDestroy> RawCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), FILE, line_alloc)`, whose `Drop` releases the **block alone**
-    /// at `FILE`/`line_free` (the authority's own `OPENSSL_free(dstctx)`), or `None` when the
-    /// allocator answers NULL.
-    fn zalloc(line_alloc: c_int, line_free: c_int) -> Option<RawCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, line_alloc).cast::<T>();
-        NonNull::new(raw).map(|ptr| RawCtx { ptr, line_free })
-    }
-
-    /// The stable address the copy writes the block through.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// The validated transition: the storage now holds a fully initialised, valid `T` whose release
-    /// is the authority's `*_free` body followed by the block release at `FILE`/`line_free`.
-    ///
-    /// # Safety
-    /// The storage holds a valid, fully initialised `T` -- every field [`CtxDestroy::destroy_body`]
-    /// reads has been written, so the block is a valid `T` and its members satisfy the destructor's
-    /// invariants -- and no other owner will release it.
-    unsafe fn assume_init(self, line_free: c_int) -> OwnedCtx<T> {
-        let ptr = self.ptr;
-        core::mem::forget(self);
-        OwnedCtx { ptr, line_free }
-    }
-}
-
-impl<T: CtxDestroy> Drop for RawCtx<T> {
-    /// Releases the **block alone**: the members are not (yet) the block's to release, so the
-    /// destructor body must not run.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not handed out; this is its
-        // single release, and the authority's own bare `CRYPTO_free` is the whole release.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line_free) };
-    }
-}
+// The two states are the canonical [`OwnedCtx`] (fully built, `Drop` runs `sm2_freectx`'s body) and
+// [`RawCtx`] (a `sm2_dupctx` copy whose members still alias its source, released block-alone).
 
 /// `static void *sm2_newctx(void *provctx)` — `sm2_enc.c:55-64`.
 ///
@@ -207,7 +102,7 @@ unsafe extern "C" fn sm2_newctx(provctx: *mut c_void) -> *mut c_void {
     // A fresh zeroed `PROV_SM2_CTX` is the authority's own starting state, so this is
     // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
     // `sm2_freectx`'s own site.
-    let Some(ctx) = OwnedCtx::<ProvSm2Ctx>::zalloc(57, 135) else {
+    let Some(ctx) = OwnedCtx::<ProvSm2Ctx>::zalloc_at(FILE, 57, FILE, 135) else {
         return ptr::null_mut();
     };
     let p = ctx.as_ptr();
@@ -343,7 +238,7 @@ unsafe extern "C" fn sm2_freectx(vpsm2ctx: *mut c_void) {
     // SAFETY: `psm2ctx` is NULL or the caller's context and no other owner has released it;
     // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `sm2_freectx` body
     // (the key release and the digest reset) and block release at the authority's own site.
-    drop(unsafe { OwnedCtx::<ProvSm2Ctx>::from_raw(psm2ctx, 135) });
+    drop(unsafe { OwnedCtx::<ProvSm2Ctx>::from_raw_at(psm2ctx, FILE, 135) });
 }
 
 /// `static void *sm2_dupctx(void *vpsm2ctx)` — `sm2_enc.c:138-161`.
@@ -359,7 +254,7 @@ unsafe extern "C" fn sm2_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
     // release is `sm2_freectx` (`:135`).
     // SAFETY: a fresh zeroed allocation of this call's own context at the authority's exact
     // size/`file`/`line`.
-    let Some(dst) = RawCtx::<ProvSm2Ctx>::zalloc(143, 152) else {
+    let Some(mut dst) = RawCtx::<ProvSm2Ctx>::zalloc_at(FILE, 143, FILE, 152) else {
         return ptr::null_mut();
     };
     let dstctx = dst.as_ptr();
@@ -381,10 +276,11 @@ unsafe extern "C" fn sm2_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
 
     // The key's own reference is taken, so the block is now a valid context whose release is the
     // authority's `sm2_freectx` body followed by the block release at `:135`.
+    dst.set_release_line(135);
     // SAFETY: the block holds a fully initialised `ProvSm2Ctx` -- `key` carries its own reference,
     // `libctx` was copied and `md` is the reset all-NULL digest -- and no other owner will release
     // it.
-    let dst = unsafe { dst.assume_init(135) };
+    let dst = unsafe { dst.assume_init() };
 
     // SAFETY: `dstctx` is `dst`'s own block and `srcctx` is the caller's live context.
     if unsafe {

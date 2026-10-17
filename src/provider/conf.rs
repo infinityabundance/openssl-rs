@@ -71,7 +71,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::conf::lib::{NCONF_get0_libctx, NCONF_get_section};
 use crate::runtime::conf::types::{Conf, ConfValue};
@@ -81,7 +81,7 @@ use crate::runtime::err::err_sites::{
     PROVIDER_CONF_328, PROVIDER_CONF_412,
 };
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -150,6 +150,8 @@ pub(crate) struct ProviderConfGlobal {
 // a valid value and the body is sound on it (`OPENSSL_sk_pop_free(NULL)` returns early and
 // `CRYPTO_THREAD_lock_free(NULL)` is a no-op).
 unsafe impl CtxDestroy for ProviderConfGlobal {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = L_PCGBL;
     const LINE_FREE: c_int = L_PCGBL_FREE;
 
     unsafe fn destroy_body(ptr: *mut ProviderConfGlobal) {
@@ -163,97 +165,11 @@ unsafe impl CtxDestroy for ProviderConfGlobal {
     }
 }
 
-/// An owned, fully constructed [`ProviderConfGlobal`] block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout, its `CRYPTO_zalloc` size/`file`/`line` and
-/// the stable address slot 16 holds, but its *ownership* is this type: [`Self::into_raw`] hands it
-/// to the context slot and [`Self::from_raw`] reclaims it from the slot's releaser, so `Drop` runs
-/// the authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its single block
-/// release at the authority's own site. A Rust `Box` would hide both releases from a
-/// caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Give up ownership of the object to the context slot that holds it.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim the block the context slot hands back, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live object a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block a previous `into_raw`/`from_raw` handed out and this is
-        // its single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, T::LINE_FREE);
-        }
-    }
-}
-
-/// An owned [`ProviderConfGlobal`] block still under construction.
-///
-/// `ossl_prov_conf_ctx_new` allocates the block and creates its lock; until the lock exists the
-/// block is not yet a valid, complete object and its release is the block alone — the authority's
-/// own `OPENSSL_free(pcgbl)` at its failure arm — so the destructor
-/// ([`CtxDestroy::destroy_body`]) over a lock that is not set must not run. [`Self::assume_init`]
-/// closes the window.
-struct RawProviderConf {
-    ptr: ptr::NonNull<ProviderConfGlobal>,
-}
-
-impl RawProviderConf {
-    /// `CRYPTO_zalloc(sizeof(*pcgbl), FILE, L_PCGBL)`, or `None` when it answers NULL.
-    fn zalloc() -> Option<RawProviderConf> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<ProviderConfGlobal>()` bytes, exactly `PROVIDER_CONF_GLOBAL`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<ProviderConfGlobal>(), FILE, L_PCGBL)
-            .cast::<ProviderConfGlobal>();
-        ptr::NonNull::new(raw).map(|ptr| RawProviderConf { ptr })
-    }
-
-    /// The writable start of the block, for the lock field write that completes the object.
-    fn as_ptr(&self) -> *mut ProviderConfGlobal {
-        self.ptr.as_ptr()
-    }
-
-    /// The validated transition: the block now holds a fully initialised, valid
-    /// [`ProviderConfGlobal`].
-    ///
-    /// # Safety
-    /// Every field [`CtxDestroy::destroy_body`] reads has been written, so the block is a valid
-    /// `PROVIDER_CONF_GLOBAL`, and no other owner will release it: the returned handle's `Drop` is
-    /// the block's single release.
-    unsafe fn assume_init(self) -> OwnedCtx<ProviderConfGlobal> {
-        let ptr = self.ptr;
-        core::mem::forget(self);
-        OwnedCtx { ptr }
-    }
-}
-
-impl Drop for RawProviderConf {
-    /// The authority's `ossl_prov_conf_ctx_new` failure-arm release: the block alone.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `zalloc` allocated and has not been handed out; its
-        // single release is the authority's own plain `CRYPTO_free` at the failure arm.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, L_PCGBL_ERR) };
-    }
-}
+// The object's two states are the canonical [`OwnedCtx`] (fully built, `Drop` runs
+// `ossl_prov_conf_ctx_free`'s body) and [`RawCtx`] (the block while its lock is not yet set,
+// released block-alone at the `:39` failure arm). Both stay `CRYPTO_zalloc` blocks at the
+// authority's size/interning coordinates, so a caller-installed `CRYPTO_set_mem_functions` hook
+// observes every allocation and release.
 
 /// `void *ossl_prov_conf_ctx_new(OSSL_LIB_CTX *libctx)`.
 ///
@@ -266,9 +182,9 @@ impl Drop for RawProviderConf {
 /// `libctx` is accepted and unused; the authority's argument is the context being built, which
 /// the caller in `context_init` is holding, so it is live.
 pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut ProviderConfGlobal {
-    let raw = match RawProviderConf::zalloc() {
-        Some(raw) => raw,
-        None => return ptr::null_mut(),
+    let Some(mut raw) = RawCtx::<ProviderConfGlobal>::zalloc_at(FILE, L_PCGBL, FILE, L_PCGBL_ERR)
+    else {
+        return ptr::null_mut();
     };
 
     let lock = CRYPTO_THREAD_lock_new();
@@ -279,6 +195,8 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut Provid
     // SAFETY: `raw`'s block is this call's own live object, so writing its field does not alias.
     unsafe { (*raw.as_ptr()).lock = lock };
 
+    // The constructed object is released by `ossl_prov_conf_ctx_free` at `:55`.
+    raw.set_release_line(L_PCGBL_FREE);
     // SAFETY: `destroy_body` reads only `lock` (now set) and `activated_providers` (still the zero
     // `zalloc` gave it), so the block is a valid `PROVIDER_CONF_GLOBAL` and `raw` holds its only
     // ownership; `into_raw` hands it to the context slot.
@@ -304,7 +222,7 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_free(vpcgbl: *mut c_void) {
     // has not already released; `OwnedCtx`'s `Drop` runs the authority's own member release
     // (`activated_providers`, the lock) followed by the block release. NULL is `None` and a no-op,
     // matching the authority's own `free(NULL)`.
-    drop(unsafe { OwnedCtx::from_raw(pcgbl) });
+    drop(unsafe { OwnedCtx::<ProviderConfGlobal>::from_raw_at(pcgbl, FILE, L_PCGBL_FREE) });
 }
 
 /// The `ossl_provider_free` callback in the shape `OPENSSL_sk_pop_free` takes. The authority
