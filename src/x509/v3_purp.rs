@@ -75,6 +75,7 @@ use crate::asn1::prim::{ASN1_INTEGER_cmp, ASN1_INTEGER_get, ASN1_OBJECT_free};
 use crate::asn1::string::{ASN1_BIT_STRING_free, ASN1_OCTET_STRING_cmp};
 use crate::evp::legacy_sha::EVP_sha1;
 use crate::evp::pkey::{EVP_PKEY_is_a, EvpPkey};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::err_reasons::{
     X509V3_R_EMPTY_KEY_USAGE, X509V3_R_INVALID_CERTIFICATE, X509V3_R_INVALID_PURPOSE,
@@ -403,29 +404,6 @@ const LINE_XPFREE_P: c_int = 271;
 // Ownership of the file's heap records and the dynamic rows' names
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for one of the file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
-/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
-///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
-/// block is a valid `Self`; this file builds its owner only through the `unsafe from_raw` reclaim
-/// route, not a `zalloc`-and-wrap constructor.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned one of the file's heap records.
 ///
 /// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
@@ -472,7 +450,9 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// authority's leading `(*p).flags & X509_PURPOSE_DYNAMIC` early return is unobservable here.
 // SAFETY: (a) holds: `destroy_body` is the authority's `x509_purpose_free` body -- it releases
 // exactly the row's own dynamic `name`/`sname` strings when the DYNAMIC_NAME flag is set (each
-// NULL-tolerant) and never the enclosing block.
+// NULL-tolerant) and never the enclosing block. (b) holds: `X509Purpose` is a `#[repr(C)]` record of
+// integers, an `Option<fn>` and three raw pointers, so an all-zero block is a valid value; its zero
+// `flags` skips both frees.
 unsafe impl CtxDestroy for X509Purpose {
     unsafe fn destroy_body(ptr: *mut X509Purpose) {
         // SAFETY: `ptr` is a live row per the trait contract; `name`/`sname` are NULL or this file's

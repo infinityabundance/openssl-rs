@@ -41,6 +41,7 @@ use crate::params::{
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::param_octet_string;
 use crate::provider::ctx::prov_libctx_of;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
 use crate::selftest::OsslCallback;
@@ -83,31 +84,6 @@ fn is_running() -> c_int {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the `PROV_SKEY` block and its secret member
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `generic_free` member body, without the block release [`OwnedCtx`]'s `Drop`
-/// performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live key this unit allocated:
-/// * `destroy_body(ptr)` runs the authority's `generic_free` member body **exactly once** -- the
-///   `CRYPTO_clear_free` of the key's own secret bytes, which accepts the not-yet-set NULL/zero
-///   state -- and **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * an all-zero block of `Self` is a valid `Self` for which the body is sound. This is the
-///   obligation the safe [`OwnedCtx::zalloc`] leans on, and `generic_import` builds its key with
-///   `OPENSSL_zalloc`.
-unsafe trait CtxDestroy: Sized {
-    /// `__FILE__` for this unit's `CRYPTO_*` calls.
-    const FILE: *const c_char;
-    /// `__LINE__` for the block's allocation (`generic.c` is generated, so both are `0`).
-    const LINE_ALLOC: c_int;
-    /// `__LINE__` for the block's release.
-    const LINE_FREE: c_int;
-
-    /// # Safety
-    /// `ptr` is a live key this unit allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 // SAFETY: (a) `destroy_body` is `generic_free`'s member body, releasing exactly this key's own
 // secret buffer once (the clearer accepts the unset NULL) and never the enclosing block, which

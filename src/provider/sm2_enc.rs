@@ -47,6 +47,7 @@ use crate::provider::util::prov_digest::{
     ossl_prov_digest_copy, ossl_prov_digest_fetch, ossl_prov_digest_load, ossl_prov_digest_md,
     ossl_prov_digest_reset, ProvDigest,
 };
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::sm2::crypt::{
@@ -74,23 +75,6 @@ struct ProvSm2Ctx {
     key: *mut EcKey,
     /// `PROV_DIGEST md`.
     md: ProvDigest,
-}
-
-/// The authority's `sm2_freectx` member body, without the block release [`OwnedCtx`]'s `Drop`
-/// performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `sm2_freectx` member body **exactly once** -- the key
-///   release and the digest reset, each accepting the not-yet-set (NULL/zero) state -- and **never**
-///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * an all-zero block of `Self` is a valid `Self` for which the body is sound. This is the
-///   obligation the safe [`OwnedCtx::zalloc`] leans on.
-unsafe trait CtxDestroy: Sized {
-    /// # Safety
-    /// `ptr` is a live context this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
 }
 
 // SAFETY: (a) `destroy_body` is the authority's `sm2_freectx` member body, releasing exactly this

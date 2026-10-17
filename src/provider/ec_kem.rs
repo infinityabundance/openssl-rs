@@ -73,6 +73,7 @@ use crate::provider::cipher::{param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::kem_util::{ossl_eckem_modename2id, KEM_MODE_DHKEM, KEM_MODE_UNDEFINED};
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
@@ -142,32 +143,6 @@ struct ProvEcCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the context block and its secret IKM seed
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `eckem_freectx` member body, without the block release [`OwnedCtx`]'s `Drop`
-/// performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live context this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `eckem_freectx` member body **exactly once** -- the
-///   `CRYPTO_clear_free` of the ephemeral seed and the release of the two held key references, each
-///   accepting the not-yet-set NULL/zero state -- and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases; and
-/// * an all-zero block of `Self` is a valid `Self` for which the body is sound. This is the
-///   obligation the safe [`OwnedCtx::zalloc`] leans on, and `eckem_newctx` builds its context with
-///   `OPENSSL_zalloc`.
-unsafe trait CtxDestroy: Sized {
-    /// `__FILE__` for this unit's `CRYPTO_*` calls.
-    const FILE: *const c_char;
-    /// `__LINE__` for the block's allocation.
-    const LINE_ALLOC: c_int;
-    /// `__LINE__` for the block's release.
-    const LINE_FREE: c_int;
-
-    /// # Safety
-    /// `ptr` is a live context this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 // SAFETY: (a) `destroy_body` is `eckem_freectx`'s member body, releasing exactly this context's own
 // ephemeral seed and two held key references once (each releaser accepts the unset NULL) and never
