@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1242** passed
+`cargo test --lib` (must pass; the established baseline is **1251** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -706,6 +706,39 @@ package.
   block-only before it was accepted). Gate: `fmt` 0, clippy 0, **1242 passed /
   18 ignored**, adv-probe **18/18**. Owners unified so far: **42 of 61**.
 
+### Subphase 66 — per-file audit pilot (`evp/digest.rs`)
+
+- `PERFILE-AUDIT.md` establishes the reusable unit: 711 production sites in
+  **254** `(kind, function)` groups, each with operation, contract,
+  establishment, ABI/export class, dependency group, state and evidence needed.
+- Result: **95 ESTABLISHED, 154 CONTRACTED, 5 UNATTRIBUTED**. The five
+  unattributed groups were the two MD_CTX raw-copy paths (including an
+  unguarded `copy_nonoverlapping`), `EVP_MD_meth_dup`'s shallow owning-field
+  copy, the type-erased `OBJ_NAME` cast, and the top-level `unsafe impl`s.
+  File-level audit is explicitly **not** `SAFETY_DISCHARGED`.
+- Independent review **PASS** (template strengthened with ABI class and
+  dependency ids).
+
+### Subphase 67 — digest copy soundness fixes
+
+- Per-file audit findings fixed in `src/evp/digest.rs`:
+  1. `EVP_MD_CTX_copy_ex` now decides in the authority's order
+     (`digest.c:592-720`): NULL → 0; uninitialised self resets; provider
+     `dupctx == NULL` → 0; provider self reproduces `copyctx`/pctx/cleanup side
+     effects; legacy self returns 1 without side effects because the authority
+     resets then dereferences the NULLed digest (probe SIGSEGV) — recorded as a
+     §17 divergence. `copy_nonoverlapping` can no longer see equal pointers.
+  2. `EVP_MD_meth_dup` no longer shallow-copies the owned `type_name`; the
+     duplicate frees cleanly and the original remains usable.
+  3. The legacy copy no longer aliases `fetched_digest`/`algctx`: the
+     destination takes its own up-ref and duplicate, clears them on failure,
+     and the allocation-failure path returns 0 without cleanup on NULL
+     `md_data`, matching the authority.
+- Nine regression tests; audit now **158 CONTRACTED / 1 UNATTRIBUTED**.
+- Adversarial review **FAILED twice** on compatibility details and **PASSED**
+  after correction. Gate: `fmt` 0, clippy 0, **1251 passed / 18 ignored**,
+  adv-probe **18/18**. Per-file campaign: **1 of 761** PARTIAL files audited.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -883,7 +916,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `69fa69c74` (remaining per-instance OwnedCtx merged)
+**Last observed HEAD:** `e68008e03` (digest copy soundness fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -930,23 +963,20 @@ and discharge explicitly.
 `atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
 the unsafe-obligation denominator now exists.
 
-**Next in sequence:** continue consolidating the IDENTICAL module-local owner
-helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
-`B-P` (39 of 52; 13 need shared-API extensions), `B-Z` (13), `B-L` (4 of 8;
-4 excluded), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (2 of 3; `bn/rand` needs an
-owner-derived slice accessor), `OwnedStr` (30 of 33; `http_lib`, `v3_akid`,
-`bio_sock2` excluded pending mutable-release/zalloc API), `OwnedBlock` (11 of 15;
-`v3_utl`, `asn1/string`, `evp/pkey`, `crmf/crmf_lib` excluded pending
-mutable-release/realloc/set_clear API). Remaining: `B-P` exclusions (13), `B-L`
-exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr` exclusions (3), `OwnedBlock`
-exclusions (4), plus the small OwnedIkm/OwnedUniPass/OwnedScratch/
-constant-char* groups (8). Do not
-touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
-inventory, adversarial review and a fresh gate. Afterwards, the
-`CtxDestroy`/`CipherDestroy` shared-trait migration that unblocks the 61 local
-`OwnedCtx`/`RawCtx` copies, then member-buffer slots, per-file audits by
-consumer reachability, and seal evidence before any `SAFETY_DISCHARGED` /
-`SAFE_COMPATIBLE` promotion.
+**Next in sequence:** continue the per-file obligation audit with the repeatable
+unit in `PERFILE-AUDIT.md`. Owner consolidation is complete (170 of 173
+identical groups; 42 of 61 local `OwnedCtx`/`RawCtx` copies; 39 of 41
+`CtxDestroy` traits), and the queue is the **761 `PARTIAL` files** in
+`ATTRIBUTION.md`, ordered by unattributed-site count and consumer reachability
+(`ssl/ssl_lib.rs` 1,125; `evp/pkey_ctx.rs` 975; `provider/cipher.rs` 825;
+`evp/cipher_ctx.rs` 652; `provider/kdf.rs` 518; `evp/pkey.rs` 485; …). Each
+file produces grouped rows (operation, contract, caller/ABI establishment, ABI
+class, dependency id, state, evidence needed, residuals). Groups marked
+UNATTRIBUTED are investigated against the pinned authority and fixed when they
+are real defects, as the `evp/digest.rs` pilot did (three soundness defects
+fixed). After the file audits: seal evidence (ASan, loom, differential courts
+against `forensics/authorities/src/openssl-3.6.4/`, the 8 L7-functional
+consumers) and only then `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotions.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
