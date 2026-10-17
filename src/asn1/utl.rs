@@ -42,10 +42,10 @@
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 
@@ -340,9 +340,11 @@ pub(crate) unsafe fn enc_free(pval: *mut *mut c_void, it: &Asn1Item) {
     // SAFETY: the caller's contract.
     let enc = unsafe { get_enc_ptr(pval, it) };
     if !enc.is_null() {
-        // SAFETY: `enc` is live and its `enc` field came from this allocator.
+        // SAFETY: `enc` is live and its `enc` field is NULL or a block from this allocator; the
+        // handle's `Drop` is that block's single release, at the authority's own site.
+        drop(unsafe { OwnedBlock::<u8>::from_raw((*enc).enc, FILE.as_ptr(), LINE) });
+        // SAFETY: `enc` is live.
         unsafe {
-            CRYPTO_free((*enc).enc.cast::<c_void>(), FILE.as_ptr(), LINE);
             (*enc).enc = core::ptr::null_mut();
             (*enc).len = 0;
             (*enc).modified = 1;
@@ -371,23 +373,23 @@ pub(crate) unsafe fn enc_save(
     if enc.is_null() {
         return 1;
     }
+    // The authority frees any previous encoding first: the cached bytes are NULL or a block from
+    // this allocator and the handle's `Drop` is that block's single release at the authority's site.
     // SAFETY: `enc` is live.
-    unsafe {
-        CRYPTO_free((*enc).enc.cast::<c_void>(), FILE.as_ptr(), LINE);
-        if inlen <= 0 {
-            (*enc).enc = core::ptr::null_mut();
-            return 0;
-        }
-    }
-    // SAFETY: `inlen` is positive.
-    let buf = CRYPTO_malloc(inlen as usize, FILE.as_ptr(), LINE) as *mut c_uchar;
-    if buf.is_null() {
+    drop(unsafe { OwnedBlock::<u8>::from_raw((*enc).enc, FILE.as_ptr(), LINE) });
+    if inlen <= 0 {
+        // SAFETY: `enc` is live.
+        unsafe { (*enc).enc = core::ptr::null_mut() };
         return 0;
     }
-    // SAFETY: `buf` holds `inlen` bytes and `in_` is readable for `inlen`.
+    // SAFETY: `inlen` is positive.
+    let Some(buf) = OwnedBlock::<u8>::malloc(inlen as usize, FILE.as_ptr(), LINE) else {
+        return 0;
+    };
+    // SAFETY: `buf` holds `inlen` bytes, `in_` is readable for `inlen`, and `enc` is live.
     unsafe {
-        core::ptr::copy_nonoverlapping(in_, buf, inlen as usize);
-        (*enc).enc = buf;
+        core::ptr::copy_nonoverlapping(in_, buf.as_ptr(), inlen as usize);
+        (*enc).enc = buf.into_raw();
         (*enc).len = inlen;
         (*enc).modified = 0;
     }
