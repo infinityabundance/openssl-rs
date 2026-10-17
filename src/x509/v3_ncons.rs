@@ -81,11 +81,12 @@ use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::X509V3_R_INVALID_SYNTAX;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+use crate::runtime::mem::CRYPTO_strndup;
 use crate::runtime::obj::{
     NID_commonName, NID_delegated_name_constraints, NID_holder_name_constraints,
     NID_id_on_SmtpUTF8Mailbox, NID_name_constraints, NID_pkcs9_emailAddress, OBJ_cmp, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
@@ -166,67 +167,6 @@ const LINE_FREE_SCHEME: c_int = 805;
 const LINE_FREE_URI_COPY: c_int = 806;
 /// The same function's `OPENSSL_free(host)` at the `end:` label (`v3_ncons.c:830`).
 const LINE_FREE_HOST: c_int = 830;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_strndup` (or a helper's own `CRYPTO_malloc`: `ossl_ipaddr_to_asc`,
-/// `ASN1_STRING_to_UTF8`, `OSSL_parse_url`) at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
-/// in a block the crate allocated inside such a helper, `Drop` is its single release at the
-/// authority's own `file`/`line`, [`Self::into_raw`] hands it to a consumer that takes it over
-/// (`cn2dnsid`'s `*dnsid`), and [`Self::set_release_line`] re-points the release at the authority's
-/// other site for the block on the path that reaches it (the same buffer is freed at several
-/// lines). A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that
-    /// reaches it.
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
-    }
-}
 
 /// One `v3_ncons.c` raise coordinate, declared locally (see the module doc).
 const fn v3_ncons_site(
@@ -618,9 +558,9 @@ unsafe fn print_nc_ipadd(bp: *mut Bio, ip: *mut Asn1String) -> c_int {
     let ip2 = unsafe { ossl_ipaddr_to_asc((*ip).data.add(len1 as usize), len2) };
     // The two blocks are the helper's own; each handle is its single release.
     // SAFETY: `ip1` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
-    let ip1 = unsafe { OwnedBuf::adopt(ip1.cast(), FILE.as_ptr(), LINE_FREE_IP1) };
+    let ip1 = unsafe { OwnedBuf::adopt_plain_nullable(ip1.cast(), FILE.as_ptr(), LINE_FREE_IP1) };
     // SAFETY: `ip2` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
-    let ip2 = unsafe { OwnedBuf::adopt(ip2.cast(), FILE.as_ptr(), LINE_FREE_IP2) };
+    let ip2 = unsafe { OwnedBuf::adopt_plain_nullable(ip2.cast(), FILE.as_ptr(), LINE_FREE_IP2) };
     // SAFETY: `bp` is live; `ip1`/`ip2` are NULL or NUL-terminated.
     c_int::from(
         !ip1.as_ptr().is_null()
@@ -979,7 +919,7 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
     // The copy is the seam's own; the handle is its single release as this frame returns.
     // SAFETY: `baseptr` is a live block `CRYPTO_strndup` allocated and no one else owns.
     let baseptr_owned =
-        unsafe { OwnedBuf::adopt(baseptr.cast(), FILE.as_ptr(), LINE_FREE_BASEPTR) };
+        unsafe { OwnedBuf::adopt_plain_nullable(baseptr.cast(), FILE.as_ptr(), LINE_FREE_BASEPTR) };
     let baseptr = baseptr_owned.as_ptr().cast::<c_char>();
     let mut ulabel = [0 as c_char; 256];
     let size = ulabel.len();
@@ -1138,8 +1078,9 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     // The copy is the seam's own; the handle is its single release, at the authority's own line
     // for the path that reaches it.
     // SAFETY: `uri_copy_raw` is a live block `CRYPTO_strndup` allocated and no one else owns.
-    let mut uri_copy =
-        unsafe { OwnedBuf::adopt(uri_copy_raw.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY) };
+    let mut uri_copy = unsafe {
+        OwnedBuf::adopt_plain_nullable(uri_copy_raw.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY)
+    };
     let mut scheme: *mut c_char = ptr::null_mut();
     let mut host: *mut c_char = ptr::null_mut();
     // SAFETY: `uri_copy` is NUL-terminated; `scheme`/`host` are this call's own writable slots.
@@ -1163,10 +1104,12 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     // `OSSL_parse_url` allocated these only on this success path; the authority frees neither on
     // the parse failure above. Each handle is its single release.
     // SAFETY: `scheme` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
-    let mut scheme =
-        unsafe { OwnedBuf::adopt(scheme.cast(), FILE.as_ptr(), LINE_FREE_SCHEME_MISSING) };
+    let mut scheme = unsafe {
+        OwnedBuf::adopt_plain_nullable(scheme.cast(), FILE.as_ptr(), LINE_FREE_SCHEME_MISSING)
+    };
     // SAFETY: `host` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
-    let host = unsafe { OwnedBuf::adopt(host.cast(), FILE.as_ptr(), LINE_FREE_HOST) };
+    let host =
+        unsafe { OwnedBuf::adopt_plain_nullable(host.cast(), FILE.as_ptr(), LINE_FREE_HOST) };
     let hostptr = host.as_ptr().cast::<c_char>();
     // Make sure the scheme is there.
     let scheme_ptr = scheme.as_ptr().cast::<c_char>();
@@ -1358,8 +1301,9 @@ unsafe fn cn2dnsid(cn: *mut Asn1String, dnsid: *mut *mut c_uchar, idlen: *mut us
     // The UTF-8 copy is the helper's own; the handle is its single release, at the authority's own
     // line for the path that reaches it.
     // SAFETY: `utf8_value` is a live block `ASN1_STRING_to_UTF8` allocated and no one else owns.
-    let mut utf8 =
-        unsafe { OwnedBuf::adopt(utf8_value.cast(), FILE.as_ptr(), LINE_FREE_UTF8_EMBEDDED) };
+    let mut utf8 = unsafe {
+        OwnedBuf::adopt_plain_nullable(utf8_value.cast(), FILE.as_ptr(), LINE_FREE_UTF8_EMBEDDED)
+    };
     let utf8_value = utf8.as_ptr();
     // Remove a trailing NUL run.
     // SAFETY: `utf8_value` has `utf8_length` readable bytes.
@@ -1543,7 +1487,8 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check_CN(
         // `cn2dnsid` gave the block up to this call; the handle is its single release. It is NULL
         // when `idlen` is 0, whose release is the authority's no-op `free(NULL)`.
         // SAFETY: `idval` is NULL or the block `cn2dnsid` allocated and no one else owns.
-        let idval = unsafe { OwnedBuf::adopt(idval.cast(), FILE.as_ptr(), LINE_FREE_IDVAL) };
+        let idval =
+            unsafe { OwnedBuf::adopt_plain_nullable(idval.cast(), FILE.as_ptr(), LINE_FREE_IDVAL) };
         // Only process attributes that look like hostnames.
         if idlen != 0 {
             // SAFETY: `gntmp.d.ia5` names the live `stmp` local, whose fields are writable.

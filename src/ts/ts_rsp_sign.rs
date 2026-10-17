@@ -17,7 +17,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::asn1::a_type::{ASN1_TYPE_get, ASN1_TYPE_new, ASN1_TYPE_set};
@@ -50,12 +50,13 @@ use crate::pkcs7::pk7_lib::{
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys::{gettimeofday, Timeval};
 use crate::runtime::bio::{BIO_free_all, Bio};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
     NID_id_smime_ct_TSTInfo, NID_pkcs7_signed, NID_pkcs9_contentType, OBJ_cmp, OBJ_dup,
     OBJ_nid2obj, OBJ_obj2txt,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -151,60 +152,6 @@ const TS_R_ESS_ADD_SIGNING_CERT_V2_ERROR: c_int = 139;
 const TS_R_TS_DATASIGN: c_int = 124;
 /// `TS_R_COULD_NOT_SET_TIME` — `include/openssl/tserr.h`.
 const TS_R_COULD_NOT_SET_TIME: c_int = 115;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
-/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
-/// and only its *ownership* is this type: [`Self::new`] allocates it at the authority's `file`/`line`,
-/// `Drop` is its single release, and [`Self::set_release_line`] re-points the release at the
-/// authority's other site on the path that reaches it (`ossl_ess_add1_signing_cert[_v2]` free the
-/// same DER encoding at their error tail and, on success, just below). A NULL pointer is a valid,
-/// empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that
-    /// reaches it.
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `TS_serial_cb` — `include/openssl/ts.h:248`.
 pub(crate) type TsSerialCb = unsafe extern "C" fn(*mut TsRespCtx, *mut c_void) -> *mut Asn1String;

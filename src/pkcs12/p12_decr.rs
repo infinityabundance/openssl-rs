@@ -48,7 +48,7 @@ use crate::evp::cipher_ctx::{
 use crate::evp::evp_pbe::EVP_PBE_CipherInit_ex;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::OPENSSL_cleanse;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_decr.c` — the authority's `__FILE__` string.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_decr.c";
@@ -61,76 +61,6 @@ const EVP_CTRL_AEAD_TLS1_AAD: c_int = 0x16;
 const EVP_CTRL_AEAD_SET_TAG: c_int = 0x11;
 /// `EVP_CTRL_AEAD_GET_TAG` — `include/openssl/evp.h:388`.
 const EVP_CTRL_AEAD_GET_TAG: c_int = 0x10;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_zalloc` (the crypt's zeroed output) or an ASN.1 encoder's own block at
-/// the authority's exact size -- a Rust `Box`/`Vec` would hide both the allocation and its release
-/// from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
-/// [`Self::new_zeroed`] allocates the crypt's output, [`Self::adopt`] takes in the block the PBE
-/// crypt or an ASN.1 encoder leaves for this frame, [`Self::set_release`] points `Drop` at the
-/// authority's release site for the path that reaches it, and [`Self::into_raw`] hands the block to
-/// a consumer that takes it over (the caller's `*data`).
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block the PBE crypt or an ASN.1 encoder left for this frame, `file`/`line` being
-    /// the authority's release site for it.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Point `Drop` at the authority's own release site for the path that reaches it.
-    fn set_release(&mut self, file: *const c_char, line: c_int) {
-        self.file = file;
-        self.line = line;
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `unsigned char *PKCS12_pbe_crypt_ex(const X509_ALGOR *algor, const char *pass, int passlen,
 /// const unsigned char *in, int inlen, unsigned char **data, int *datalen, int en_de,
@@ -259,7 +189,7 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
     if unsafe { EVP_CipherUpdate(ctx, out.as_ptr(), &raw mut i, in_, inlen) } == 0 {
         // The authority's failure release is the plain `CRYPTO_free` at `:85`, in its own order
         // before the raise and the context release.
-        out.set_release(FILE.as_ptr(), 85);
+        out.set_release_line(85);
         drop(out);
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS12_87) };
@@ -271,7 +201,7 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
     // SAFETY: `ctx` is live; `out + i` is inside the buffer.
     if unsafe { EVP_CipherFinal_ex(ctx, out.as_ptr().add(i as usize), &raw mut i) } == 0 {
         // The authority's failure release is the plain `CRYPTO_free` at `:92`.
-        out.set_release(FILE.as_ptr(), 92);
+        out.set_release_line(92);
         drop(out);
         let msg = if passlen == 0 {
             c"empty password"
@@ -299,7 +229,7 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
             } <= 0
             {
                 // The authority's failure release is the plain `CRYPTO_free` at `:105`.
-                out.set_release(FILE.as_ptr(), 105);
+                out.set_release_line(105);
                 drop(out);
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PKCS12_110) };
@@ -409,7 +339,7 @@ pub unsafe extern "C" fn PKCS12_item_decrypt_d2i_ex(
     // The PBE crypt handed this frame the block it allocated; `crypted` is it and `Drop` is its
     // single release at the authority's own site (`:171`).
     // SAFETY: `crypted` is the live block the PBE crypt allocated and handed over here.
-    let out = unsafe { OwnedBuf::adopt(crypted, FILE.as_ptr(), 171) };
+    let out = unsafe { OwnedBuf::adopt_plain_nullable(crypted, FILE.as_ptr(), 171) };
     let mut p: *const c_uchar = out.as_ptr();
     /* The authority's `OSSL_TRACE_BEGIN(PKCS12_DECRYPT)` block is a no-op on a build without
      * tracing, and reproducing the trace output is not part of this crate's surface. */
@@ -498,7 +428,7 @@ pub unsafe extern "C" fn PKCS12_item_i2d_encrypt_ex(
     // The ASN.1 encoder handed this frame its own encoding, released at `:216` on the success tail;
     // the crypt's failure tail releases it at `:211` instead.
     // SAFETY: `in_raw` is the live block `ASN1_item_i2d` allocated and handed over here.
-    let mut in_ = unsafe { OwnedBuf::adopt(in_raw, FILE.as_ptr(), 216) };
+    let mut in_ = unsafe { OwnedBuf::adopt_plain_nullable(in_raw, FILE.as_ptr(), 216) };
     // SAFETY: `algor` is live; `oct` is live, so its `data`/`length` slots are writable; `in_`
     // is readable for `inlen` bytes.
     let crypted = unsafe {
@@ -518,7 +448,7 @@ pub unsafe extern "C" fn PKCS12_item_i2d_encrypt_ex(
     if crypted.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS12_210) };
-        in_.set_release(FILE.as_ptr(), 211);
+        in_.set_release_line(211);
         drop(in_);
         // SAFETY: `oct` is this call's own.
         unsafe { ASN1_OCTET_STRING_free(oct) };

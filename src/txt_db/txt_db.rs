@@ -58,7 +58,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_long, c_ulong, c_void};
 use core::mem::size_of;
 use core::ptr;
 
@@ -71,7 +71,8 @@ use crate::runtime::lhash::{
     OPENSSL_LH_delete, OPENSSL_LH_free, OPENSSL_LH_insert, OPENSSL_LH_new, OPENSSL_LH_retrieve,
     OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -137,78 +138,6 @@ type HashFn = unsafe extern "C" fn(*const c_void) -> c_ulong;
 /// `int (*)(const void *, const void *)` — `OPENSSL_LH_COMPFUNC` (`lhash.h`).
 type CompFn = unsafe extern "C" fn(*const c_void, *const c_void) -> c_int;
 
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
-/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
-/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
-/// [`Self::set_release_line`] re-points that release at the authority's other site on the path that
-/// reaches it (a row [`TXT_DB_read`] parses is released at `:104`, `:110` or, once on the stack,
-/// `:309`), and [`Self::into_raw`] hands it to a consumer that takes it over (the `data` stack in
-/// [`TXT_DB_read`]). [`Self::adopt`] takes in a block an object already carries so the single
-/// releases of [`read_err`] and [`TXT_DB_free`] run through the same one seam. A NULL pointer is a
-/// valid, empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this object already owns, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it.
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `TXT_DB` — `include/openssl/txt_db.h:39-48`.
 ///
 /// The header defines the structure in full, so the layout is ABI and is reproduced field
@@ -249,9 +178,21 @@ unsafe fn read_err(buf: *mut BufMem, ret: *mut TxtDb) -> *mut TxtDb {
         // block below is this object's own single release, run by the handle's `Drop`.
         unsafe {
             OPENSSL_sk_free((*ret).data);
-            drop(OwnedBuf::adopt((*ret).index.cast(), FILE, READ_FREE_INDEX));
-            drop(OwnedBuf::adopt((*ret).qual.cast(), FILE, READ_FREE_QUAL));
-            drop(OwnedBuf::adopt(ret.cast(), FILE, READ_FREE_DB));
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*ret).index.cast(),
+                FILE,
+                READ_FREE_INDEX,
+            ));
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*ret).qual.cast(),
+                FILE,
+                READ_FREE_QUAL,
+            ));
+            drop(OwnedBuf::adopt_plain_nullable(
+                ret.cast(),
+                FILE,
+                READ_FREE_DB,
+            ));
         }
     }
     ptr::null_mut()
@@ -821,10 +762,22 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                 i -= 1;
             }
             // SAFETY: the array came from `CRYPTO_malloc_array` in `TXT_DB_read`.
-            unsafe { drop(OwnedBuf::adopt((*db).index.cast(), FILE, FREE_INDEX)) };
+            unsafe {
+                drop(OwnedBuf::adopt_plain_nullable(
+                    (*db).index.cast(),
+                    FILE,
+                    FREE_INDEX,
+                ))
+            };
         }
         // SAFETY: the array came from `CRYPTO_malloc_array` or is NULL.
-        unsafe { drop(OwnedBuf::adopt((*db).qual.cast(), FILE, FREE_QUAL)) };
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*db).qual.cast(),
+                FILE,
+                FREE_QUAL,
+            ))
+        };
         // SAFETY: `db` is live.
         if !unsafe { (*db).data }.is_null() {
             // SAFETY: `data` is a live stack.
@@ -841,7 +794,7 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                         // SAFETY: `n` is in `[0, nf)` and the field is this row's own single
                         // allocation.
                         unsafe {
-                            drop(OwnedBuf::adopt(
+                            drop(OwnedBuf::adopt_plain_nullable(
                                 (*p.add(n as usize)).cast(),
                                 FILE,
                                 FREE_FIELD_NEW,
@@ -856,18 +809,24 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                         let field = unsafe { *p.add(n as usize) };
                         if (field as usize) < (p as usize) || (field as usize) > (max as usize) {
                             // SAFETY: `field` lies outside the row's own block.
-                            unsafe { drop(OwnedBuf::adopt(field.cast(), FILE, FREE_FIELD_EXT)) };
+                            unsafe {
+                                drop(OwnedBuf::adopt_plain_nullable(
+                                    field.cast(),
+                                    FILE,
+                                    FREE_FIELD_EXT,
+                                ))
+                            };
                         }
                     }
                 }
                 // SAFETY: the row block is this object's own allocation.
-                unsafe { drop(OwnedBuf::adopt(p.cast(), FILE, FREE_ROW)) };
+                unsafe { drop(OwnedBuf::adopt_plain_nullable(p.cast(), FILE, FREE_ROW)) };
                 i -= 1;
             }
             // SAFETY: `data` is a live stack whose elements are released above.
             unsafe { OPENSSL_sk_free((*db).data) };
         }
         // SAFETY: `db` was allocated by `CRYPTO_malloc` in `TXT_DB_read`.
-        unsafe { drop(OwnedBuf::adopt(db.cast(), FILE, FREE_DB)) };
+        unsafe { drop(OwnedBuf::adopt_plain_nullable(db.cast(), FILE, FREE_DB)) };
     });
 }
