@@ -11,24 +11,56 @@ Frozen atlas baseline (original inventory): **2420** allocation sites
 
 ## Current candidate-bound measurement
 
-Regenerated at HEAD `0b56262523556a70babcb827fed9708dd28d28eb` by
-`python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (see
-`atlas-refresh/REPORT.md`; the generator is measurement-only and claims no
-discharge):
+Regenerated at HEAD `e48a1b519` (`measurement_revision: 2`) by
+`python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py`;
+`atlas-refresh/verify_measurement.py` independently reconciles the scan against
+comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
+generator is measurement-only and claims no discharge.
 
-- Safe-33 closure: **628** files; **313** have a recognised ownership seam
-  (**49.8%**); **0** files have fully discharged obligations; **0/33**
+- Safe-33 closure: **628** files; **315** have a recognised ownership seam
+  (**50.2%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
-- Whole tree: **865** `src/**/*.rs`; **374** files have a seam; **359** still
-  contain raw allocator sites; **4,290** raw sites in total, which includes
-  legitimate seam constructors and test-only probe helpers and is therefore
-  **not** a residual count.
-- Closure raw sites: **3,435** (upper bound; **143** in files with no seam).
-  A seam is a file-level heuristic, not a per-site proof.
+- Whole tree: **866** `src/**/*.rs`; **376** files have a seam.
+- Disjoint call-site classes: **806** production allocation calls in **282**
+  files; **863** production release calls in **299** files; **110** test-only;
+  **71** in the allocator-seam implementations (`src/runtime/mem.rs`,
+  `src/runtime/secure.rs`). 806 + 863 + 110 + 71 = **1,850** call sites, all
+  matched as call expressions only — comments, imports and function-pointer
+  table entries are excluded, and allocations are no longer added to releases.
+- **16** files have at least one production allocation call and no recognised
+  seam. A seam is a file-level heuristic, not a per-site proof.
+- `atlas-refresh/site-worklist.json` is the per-site evidence queue: **1,669**
+  production allocation/release call sites, each with file, line, allocator
+  family, enclosing function and closure membership.
 
-The residual conversion queue is re-derived from the frozen census and Git by
-the snippet in the resume procedure; it is deliberately separate from this
-file-level atlas metric.
+Measurement reproduction (court container):
+
+```sh
+bash docker/openssl-rs-court.sh exec bash -c \
+  'cd /work && python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py'
+bash docker/openssl-rs-court.sh exec bash -c \
+  'cd /work && python3 forensics/memory-safety/campaign/safe-c33/atlas-refresh/verify_measurement.py'
+```
+
+The generator is byte-deterministic. Do not quote the deprecated
+`raw_sites_total` / `closure_raw_sites` keys: they mix allocations with releases
+and predate revision 2.
+
+Residual conversion queue (file level), exact procedure:
+
+```sh
+git log --name-only --format= integrate/safe-c33 \
+  --branches='stage/p25/*' \
+  --not b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491 -- src/
+# then join artifacts/phase25/ownership-planes.json allocation_sites rows to
+# artifacts/phase25/source-census.json sites by site_id (row[7]) and subtract
+# the touched set above
+```
+
+At HEAD `e48a1b519` the only file with an allocation site outside the touched
+set is `src/runtime/mem.rs` — the allocator seam itself, which the atlas
+excludes by rule. The file-level conversion queue is therefore **empty**; the
+remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
@@ -375,10 +407,12 @@ the stack/lhash element storage remain hook-invisible; that is the remaining
 **P1 hook-size residual**, not a discharge claim.
 
 The queue is re-derived from Git + `artifacts/phase25/source-census.json` with
-the snippet in the resume procedure; do not treat any list here as frozen. The
+the exact snippet in “Current candidate-bound measurement”; do not treat any
+list here as frozen. At `e48a1b519` the file-level queue is empty. The
 remaining work is **not** more mechanical conversion: it is per-site obligation
-evidence, the remaining P1 residuals, and the seal (`SAFETY_DISCHARGED`
-promotions and current-candidate consumer verification).
+evidence over `atlas-refresh/site-worklist.json` (1,669 production call sites),
+the remaining P1 residuals, and the seal (`SAFETY_DISCHARGED` promotions and
+current-candidate consumer verification).
 
 ## Progress measurement (five dimensions — see AGENTS.md §19)
 
@@ -484,7 +518,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `c66812cb4` (merge of `stage/p25/rwlock-repr`, subphase 44)
+**Last observed HEAD:** `e48a1b519` (atlas instrument revision 2)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
