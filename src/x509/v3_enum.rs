@@ -140,6 +140,10 @@ const fn as_i2s(
 ///
 /// `method` is a live row whose `usr_data` is a `BitStringBitname` array terminated by a null
 /// `lname`, and `e` is NULL or a live enumerated value.
+///
+/// The returned `char *`, on either path, is a fresh block owned by the caller: the extension
+/// machinery releases it through the allocator seam. There is no local release, so the transfer
+/// edge is the raw return rather than an owner that would free a returned block.
 #[no_mangle]
 pub unsafe extern "C" fn i2s_ASN1_ENUMERATED_TABLE(
     method: *mut X509V3ExtMethod,
@@ -153,12 +157,18 @@ pub unsafe extern "C" fn i2s_ASN1_ENUMERATED_TABLE(
     unsafe {
         while !(*enam).lname.is_null() {
             if strval == c_long::from((*enam).bitnum) {
+                // The returned block belongs to the caller: the extension machinery owns the
+                // returned `char *` and releases it through the allocator seam. There is no local
+                // release, so the transfer edge is this raw return rather than an owner that
+                // would free a returned block.
                 return CRYPTO_strdup((*enam).lname, FILE.as_ptr(), LINE_STRDUP);
             }
             enam = enam.add(1);
         }
     }
     // SAFETY: the caller's contract is forwarded to `i2s_ASN1_ENUMERATED`.
+    //
+    // The same transfer contract holds: that function answers a fresh block owned by the caller.
     unsafe { i2s_ASN1_ENUMERATED(method, e) }
 }
 
