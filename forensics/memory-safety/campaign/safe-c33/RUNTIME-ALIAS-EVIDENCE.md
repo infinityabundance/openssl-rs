@@ -15,6 +15,15 @@
 > authority's `ssl_clear_bad_session` before releasing the session (S4). Seven
 > deterministic alias/refcount tests were added. `X509Store` stays `CONTRACTED`;
 > nothing is `SAFETY_DISCHARGED`.
+>
+> **Subphase 42 update.** `X509Store` is promoted to `ESTABLISHED` after driving
+> the lookup `free` hook independently: `store_free_from_lookup_free_hook_is_defined_noop`
+> asserts the hook runs once, observes `REF_DESTROYING`, sees `X509_STORE_up_ref`
+> refuse resurrection, and that the re-entrant `X509_STORE_free` leaves the
+> sentinel in place. The teardown order is the authority's. The ex-data callback's
+> authority-parity partial-release exposure is recorded in §5 as a retained
+> obligation; the two D1/D2 `CipherDestroy` rows are re-adjudicated to
+> `ESTABLISHED`. Nothing is `SAFETY_DISCHARGED`.
 
 Independent runtime-boundary review of the three `CONTRACTED` `CtxDestroy`
 rows. Source witnesses are current-candidate line numbers at the time of this
@@ -28,7 +37,7 @@ layout-compatible atomic swap recorded in row 3.
 |---|---|---|---|---|
 | `SslCtx` (`src/ssl/ssl_lib.rs` `SslCtx::destroy_body`) | `AtomicI32`, sentinel gate sound | **repaired**: sentinel no-op, test passes | S1 owner back-pointer fixed; S2 engine finish added | `ESTABLISHED` |
 | `Ssl` (`src/ssl/ssl_lib.rs` `Ssl::destroy_body`) | `AtomicI32`, sentinel gate sound | **repaired**: sentinel no-op, test passes | S3 DANE final added; S4 cache teardown added; chains borrowed-by-accessor | `ESTABLISHED` |
-| `X509Store` (`src/x509/x509_lu.rs:770-805`) | **fixed**: `AtomicI32`, layout-compatible | **repaired**: sentinel no-op, test passes | store callbacks gate through the same sentinel | `CONTRACTED` |
+| `X509Store` (`src/x509/x509_lu.rs:770-805`) | **fixed**: `AtomicI32`, layout-compatible | **repaired**: sentinel no-op, ex-data and lookup-`free` tests pass | store callbacks gate through the same sentinel | `ESTABLISHED` |
 
 No STOP defect was introduced. S1–S4 were real ownership/lifecycle defects and
 are fixed; the callback edge in all three rows is a retained boundary, not a
@@ -92,14 +101,16 @@ field the result is deterministic.
 block coordinates are identical. The only change is the ordering/atomicity the
 authority already specifies. The test adds one library test.
 
-**Retained status (why the row stays `CONTRACTED`).** `destroy_body` still runs
-the `X509_LOOKUP_METHOD.free` hook via `X509_LOOKUP_free` (`:790-794`) and the
-store ex-data `free_func` via `CRYPTO_free_ex_data` (`:797-801`), and either
-can call `X509_STORE_free(xs)` again. **Repaired in subphase 40:** the new gate
-installs `REF_DESTROYING` before the body runs, so the re-entrant call observes
-the sentinel and returns without a second `OwnedCtx`. The row remains
-`CONTRACTED` because the positive control is a deterministic unit test, not the
-§7 independent-check package.
+**Retained status (why the row stayed `CONTRACTED` through subphase 41).**
+`destroy_body` still runs the `X509_LOOKUP_METHOD.free` hook via
+`X509_LOOKUP_free` (`:790-794`) and the store ex-data `free_func` via
+`CRYPTO_free_ex_data` (`:797-801`), and either can call `X509_STORE_free(xs)`
+again. **Repaired in subphase 40:** the gateway installs `REF_DESTROYING` before
+the body runs, so the re-entrant call observes the sentinel and returns without a
+second `OwnedCtx`. **Driven independently in subphase 42:** the lookup `free`
+hook now has its own deterministic test (§5); the row is promoted to
+`ESTABLISHED` and retains only the §7 independent-check package plus the
+authority-parity partial-release path recorded there.
 
 ## 2. `Ssl` / `SslCtx` callback re-entrancy — repaired in subphase 40
 
@@ -277,6 +288,53 @@ slice allocates them — a future writer must add one; and `SSL_clear`/`SSL_dup`
 session arms remain recorded compatibility reductions. Nothing is
 `SAFETY_DISCHARGED`.
 
+## 5. Subphase 42 — `X509Store` callback-family closure and D1/D2 re-adjudication
+
+**Test added.** `x509::x509_lu::tests::store_free_from_lookup_free_hook_is_defined_noop`
+builds a minimal `X509_LOOKUP_METHOD` whose only callback is `free`, installs it
+with `X509_STORE_add_lookup`, and calls `X509_STORE_free` on the store's sole
+reference. The hook:
+
+1. runs exactly once;
+2. reads `references == REF_DESTROYING` before re-entry;
+3. calls `X509_STORE_up_ref`, which answers `0` and does not change the count;
+4. re-enters `X509_STORE_free(store)`; and
+5. reads the count after that call and finds `REF_DESTROYING` still in place.
+
+Together with `DownRef::Last` being the only arm that builds
+`OwnedCtx::<X509Store>`, this witnesses a single block release: the re-entrant
+call cannot reach `Last` or a second `destroy_body`.
+
+**Teardown order.** Candidate (`src/x509/x509_lu.rs:786-806`) and authority
+(`crypto/x509/x509_lu.c:240-253`): lookups (`shutdown`, then `free` → method
+`free` hook) → lookup stack → object cache → ex-data (`free_func`)
+→ verify param → lock → block. All member releases are single and
+NULL/zero-tolerant for the all-zero store.
+
+**Callbacks that can observe teardown state.**
+
+- The lookup `free` hook runs before any store member is released, so it sees a
+  fully built store whose count is `REF_DESTROYING`; re-entry is defined.
+- The ex-data `free_func` runs after `get_cert_methods` and `objs` are released,
+  with both struct fields still holding the freed pointers. A callback that calls
+  `X509_STORE_free`/`X509_STORE_up_ref` is defined; one that calls a store mutator
+  reading `objs`/`get_cert_methods` (for example `X509_STORE_add_lookup`,
+  `X509_STORE_add_cert`, `X509_STORE_add_crl`) would dereference freed memory.
+  This is the authority's own order (`:246-249`) and is retained as a callback
+  contract, not counted as a conversion defect.
+- The candidate caches `OPENSSL_sk_num` before the lookup loop; the authority
+  re-evaluates it (`:241`). A hook that pushes another lookup during teardown is
+  freed by the authority and left on the freed stack here (callback-created leak
+  only). Retained divergence.
+
+**D1/D2.** `ProvAesSivCtx` and `ProvAesGcmSivCtx` are `ESTABLISHED`: the body is
+the authority's `*_freectx` minus the block, the NULL `hw` guard makes the
+all-zero state a no-op, both hardware lookups always return a static table, and
+`a_zeroed_siv_context_drops_without_a_hardware_table` exercises the zero state.
+The guard is a §17 divergence for the unconstructed state only (the authority
+dereferences unconditionally); no sanitizer/model-checker backs the control.
+Neither row is `SAFETY_DISCHARGED`.
+
 ## Evidence limits (subphase 41)
 
 - The concurrent-increment test exercises lost updates, not every interleaving;
@@ -284,10 +342,13 @@ session arms remain recorded compatibility reductions. Nothing is
 - The re-entrancy controls are deterministic single-threaded runs. They prove
   the sentinel path rejects the in-body re-entry; they are not a model-checked
   proof of every interleaving, and no Miri/sanitizer/loom run was performed.
-- The tests cover the ex-data `free_func` edge. The `BIO_free_all`, lookup
-  `free` hook and CT-log callback paths reach the same `*_free` gate, so the
-  same protocol applies, but those specific callback families were not driven
-  independently.
+- The tests cover the ex-data `free_func` and, since subphase 42, the lookup
+  `free` hook. The `BIO_free_all` and CT-log callback paths reach the same
+  `*_free` gate, so the same protocol applies, but those specific callback
+  families were not driven independently.
+- The subphase-42 ex-data partial-release path is source-witnessed, not triggered:
+  no test calls a store mutator from the callback, because the authority's own
+  ordering makes that a caller-contract violation rather than a supported state.
 - S1 is proven by the deterministic `owner == NULL` assertions and the
   surviving-session timeout call; the absence of a use-after-free is not backed
   by ASan/Miri in this pass. S2/S3 are source-witnessed authority-parity fixes;

@@ -3009,6 +3009,7 @@ pub unsafe extern "C" fn X509_STORE_CTX_get0_store(ctx: *const X509StoreCtx) -> 
 mod tests {
     use super::*;
     use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::runtime::refcount::REF_DESTROYING;
     use core::sync::atomic::AtomicUsize;
 
     /// Target store for [`store_reenter_free`]. `AtomicUsize` avoids threading a context
@@ -3071,6 +3072,109 @@ mod tests {
         unsafe { X509_STORE_free(store) };
 
         assert_eq!(REENTER_CALLS.load(Ordering::Relaxed), 1);
+    }
+
+    /// Observations made by [`lookup_reenter_store_free`]. The hook is installed only on the
+    /// lookup method this test builds, so no other test can reach it.
+    static LOOKUP_FREE_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_SAW_SENTINEL: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_SAW_SENTINEL_AFTER: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_UP_REF_ANSWER: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+    /// An application `X509_LOOKUP_METHOD.free` hook. It receives the lookup the store is
+    /// releasing and re-enters `X509_STORE_free` with that lookup's own `store_ctx`, which is the
+    /// store whose destructor body is running.
+    unsafe extern "C" fn lookup_reenter_store_free(ctx: *mut X509Lookup) {
+        LOOKUP_FREE_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: `ctx` is the live lookup this teardown is releasing; its `store_ctx` is the
+        // store whose body is running and whose block has not been released yet.
+        let store = unsafe { (*ctx).store_ctx };
+        if store.is_null() {
+            return;
+        }
+        // SAFETY: `store` is live per the above; its atomic count is readable.
+        let before = unsafe { (*store).references.load(Ordering::Relaxed) };
+        LOOKUP_SAW_SENTINEL.store(usize::from(before == REF_DESTROYING), Ordering::Relaxed);
+        // A store whose last reference has been claimed must not be resurrected.
+        // SAFETY: `store` is live per the above.
+        let answer = unsafe { X509_STORE_up_ref(store) };
+        LOOKUP_UP_REF_ANSWER.store(answer as usize, Ordering::Relaxed);
+        LOOKUP_REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: `store` is live; the outer `X509_STORE_free` installed the sentinel before
+        // running the body, so this re-entry must return without a second teardown.
+        unsafe { X509_STORE_free(store) };
+        // SAFETY: the re-entrant call returned as a no-op; the outer body still owns the block.
+        let after = unsafe { (*store).references.load(Ordering::Relaxed) };
+        LOOKUP_SAW_SENTINEL_AFTER.store(usize::from(after == REF_DESTROYING), Ordering::Relaxed);
+    }
+
+    /// The lookup `free` hook is the second store callback family (after ex-data). It runs from
+    /// `X509_STORE_free`'s own body while the store's members are still live but its count has
+    /// already been claimed as `REF_DESTROYING`. The re-entrant `X509_STORE_free` must be a no-op
+    /// and the block must still be released exactly once by the outer `OwnedCtx`.
+    #[test]
+    fn store_free_from_lookup_free_hook_is_defined_noop() {
+        LOOKUP_FREE_CALLS.store(0, Ordering::Relaxed);
+        LOOKUP_REENTER_CALLS.store(0, Ordering::Relaxed);
+        LOOKUP_SAW_SENTINEL.store(0, Ordering::Relaxed);
+        LOOKUP_SAW_SENTINEL_AFTER.store(0, Ordering::Relaxed);
+        LOOKUP_UP_REF_ANSWER.store(usize::MAX, Ordering::Relaxed);
+
+        // A minimal method vtable with only the `free` hook: `X509_STORE_add_lookup` installs it,
+        // and `X509_LOOKUP_free` dispatches it during the store's teardown.
+        let mut method = X509LookupMethod {
+            name: ptr::null_mut(),
+            new_item: None,
+            free: Some(lookup_reenter_store_free),
+            init: None,
+            shutdown: None,
+            ctrl: None,
+            get_by_subject: None,
+            get_by_issuer_serial: None,
+            get_by_fingerprint: None,
+            get_by_alias: None,
+            get_by_subject_ex: None,
+            ctrl_ex: None,
+        };
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        // SAFETY: `store` is live and `method` outlives the free below; the lookup is owned by
+        // the store's stack from this point.
+        let lookup = unsafe { X509_STORE_add_lookup(store, &mut method) };
+        assert!(!lookup.is_null());
+
+        // SAFETY: `store` is live and this call retires its only reference. Its body releases the
+        // lookup, whose `free` hook re-enters this same function.
+        unsafe { X509_STORE_free(store) };
+
+        assert_eq!(
+            LOOKUP_FREE_CALLS.load(Ordering::Relaxed),
+            1,
+            "the lookup free hook must run exactly once"
+        );
+        assert_eq!(
+            LOOKUP_REENTER_CALLS.load(Ordering::Relaxed),
+            1,
+            "the hook must have issued exactly one re-entrant free"
+        );
+        assert_eq!(
+            LOOKUP_SAW_SENTINEL.load(Ordering::Relaxed),
+            1,
+            "the store must already carry REF_DESTROYING when the hook runs"
+        );
+        assert_eq!(
+            LOOKUP_UP_REF_ANSWER.load(Ordering::Relaxed),
+            0,
+            "a destroying reference count must not be resurrected"
+        );
+        assert_eq!(
+            LOOKUP_SAW_SENTINEL_AFTER.load(Ordering::Relaxed),
+            1,
+            "the re-entrant free must leave the sentinel in place (no second teardown)"
+        );
     }
 
     /// The authority gates `CRYPTO_REF_COUNT` with its atomic `CRYPTO_UP_REF`; a plain
