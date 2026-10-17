@@ -4,12 +4,12 @@ Deterministic, candidate-bound measurement of unsafe operations. This report mak
 
 - Schema: `openssl-rs/atlas/unsafe-census/v2`
 - Generator: `forensics/memory-safety/campaign/safe-c33/unsafe_census.py`
-- Generated (candidate-bound): `2026-10-17T16:43:22Z`
+- Generated (candidate-bound): `2026-10-17T20:31:17Z`
 - Branch: `integrate/safe-c33`
-- HEAD: `cdcee54b513b1c9637e51f8063491d238204cf2c`
+- HEAD: `8751ea75f742c90c19b92564257566f71d606dcd`
 - Crate version: `0.0.27`
-- Rust files: 866
-- Source content sha256: `b9078c0e0d09df737ee97ca73f41878a92fb2a4910900e921b2a29b16d758c2e`
+- Rust files: 868
+- Source content sha256: `c06aea132e05ccb47651b3a668927db713e1391b53e50d1c7de9b4f1574ec653`
 
 ## Compact JSON schema
 
@@ -33,19 +33,19 @@ Per-file aggregates remain in `files[].kind_counts`, `files[].partition_counts`,
 
 | kind | production | test-only | allocator seam | total |
 |---|---:|---:|---:|---:|
-| `UNSAFE_BLOCK` | 42,729 | 2,216 | 93 | 45,038 |
-| `UNSAFE_FN_DEF` | 13,431 | 169 | 33 | 13,633 |
+| `UNSAFE_BLOCK` | 42,533 | 2,241 | 93 | 44,867 |
+| `UNSAFE_FN_DEF` | 13,263 | 169 | 33 | 13,465 |
 | `UNSAFE_IMPL` | 331 | 3 | 0 | 334 |
-| `UNSAFE_TRAIT` | 49 | 0 | 0 | 49 |
+| `UNSAFE_TRAIT` | 29 | 0 | 0 | 29 |
 | `UNSAFE_EXTERN_BLOCK` | 10 | 0 | 0 | 10 |
 | `HIGH_RISK_CALL` | 274 | 40 | 1 | 315 |
 | `EXTERN_C_FN_DEF` | 836 | 6 | 10 | 852 |
-| `NONALLOC_FFI_CALL` | 7,547 | 1,793 | 48 | 9,388 |
-| **operations** | **65,207** | **4,227** | **185** | **69,619** |
+| `NONALLOC_FFI_CALL` | 7,548 | 1,797 | 48 | 9,393 |
+| **operations** | **64,824** | **4,256** | **185** | **69,265** |
 
 ### Separate context metric (not an unsafe operation)
 
-Raw-pointer type contexts (`*mut` / `*const`): **47,965** (production 46,735, test-only 1,039, allocator seam 191).
+Raw-pointer type contexts (`*mut` / `*const`): **47,090** (production 45,858, test-only 1,041, allocator seam 191).
 
 Extern "C" function definitions: **9,805** total; 8,953 are `unsafe extern "C" fn` and are counted once under `UNSAFE_FN_DEF`, leaving 852 safe-ABI `EXTERN_C_FN_DEF` sites.
 
@@ -53,31 +53,31 @@ Extern "C" function definitions: **9,805** total; 8,953 are `unsafe extern "C" f
 
 | file | production ops | breakdown |
 |---|---:|---|
-| `src/ssl/ssl_lib.rs` | 1,276 | UNSAFE_BLOCK=798, UNSAFE_FN_DEF=424, UNSAFE_IMPL=4, UNSAFE_TRAIT=1, HIGH_RISK_CALL=18, NONALLOC_FFI_CALL=99 |
+| `src/ssl/ssl_lib.rs` | 1,273 | UNSAFE_BLOCK=797, UNSAFE_FN_DEF=422, UNSAFE_IMPL=4, UNSAFE_TRAIT=1, HIGH_RISK_CALL=18, NONALLOC_FFI_CALL=99 |
 | `src/provider/cipher.rs` | 1,098 | UNSAFE_BLOCK=442, UNSAFE_FN_DEF=445, UNSAFE_IMPL=28, UNSAFE_TRAIT=1, HIGH_RISK_CALL=11, NONALLOC_FFI_CALL=199 |
-| `src/evp/pkey_ctx.rs` | 1,030 | UNSAFE_BLOCK=777, UNSAFE_FN_DEF=227, UNSAFE_IMPL=3, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=34 |
-| `src/evp/digest.rs` | 718 | UNSAFE_BLOCK=596, UNSAFE_FN_DEF=128, UNSAFE_IMPL=3, UNSAFE_TRAIT=1, HIGH_RISK_CALL=1, EXTERN_C_FN_DEF=2, NONALLOC_FFI_CALL=20 |
+| `src/evp/pkey_ctx.rs` | 1,026 | UNSAFE_BLOCK=776, UNSAFE_FN_DEF=225, UNSAFE_IMPL=3, NONALLOC_FFI_CALL=34 |
 | `src/provider/kdf.rs` | 716 | UNSAFE_BLOCK=286, UNSAFE_FN_DEF=267, UNSAFE_IMPL=14, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=153 |
+| `src/evp/digest.rs` | 713 | UNSAFE_BLOCK=595, UNSAFE_FN_DEF=125, UNSAFE_IMPL=3, HIGH_RISK_CALL=1, EXTERN_C_FN_DEF=2, NONALLOC_FFI_CALL=20 |
 | `src/evp/cipher_ctx.rs` | 672 | UNSAFE_BLOCK=583, UNSAFE_FN_DEF=83, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=1, NONALLOC_FFI_CALL=13 |
 | `src/evp/pkey.rs` | 572 | UNSAFE_BLOCK=440, UNSAFE_FN_DEF=112, UNSAFE_IMPL=1, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=34 |
-| `src/cms/cms_env.rs` | 552 | UNSAFE_BLOCK=431, UNSAFE_FN_DEF=51, NONALLOC_FFI_CALL=70 |
+| `src/cms/cms_env.rs` | 549 | UNSAFE_BLOCK=429, UNSAFE_FN_DEF=50, NONALLOC_FFI_CALL=70 |
 | `src/x509/v3_addr.rs` | 498 | UNSAFE_BLOCK=360, UNSAFE_FN_DEF=47, EXTERN_C_FN_DEF=9, NONALLOC_FFI_CALL=82 |
 | `src/cmp/cmp_msg.rs` | 472 | UNSAFE_BLOCK=324, UNSAFE_FN_DEF=48, NONALLOC_FFI_CALL=100 |
-| `src/x509/x509_vfy.rs` | 471 | UNSAFE_BLOCK=223, UNSAFE_FN_DEF=131, UNSAFE_IMPL=1, UNSAFE_TRAIT=1, EXTERN_C_FN_DEF=1, NONALLOC_FFI_CALL=116 |
-| `src/pkcs7/pk7_doit.rs` | 435 | UNSAFE_BLOCK=352, UNSAFE_FN_DEF=35, NONALLOC_FFI_CALL=48 |
-| `src/x509/v3_utl.rs` | 431 | UNSAFE_BLOCK=333, UNSAFE_FN_DEF=65, UNSAFE_IMPL=1, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=42 |
-| `src/cms/cms_sd.rs` | 425 | UNSAFE_BLOCK=309, UNSAFE_FN_DEF=41, HIGH_RISK_CALL=2, NONALLOC_FFI_CALL=73 |
-| `src/hpke/mod.rs` | 417 | UNSAFE_BLOCK=380, UNSAFE_FN_DEF=39, HIGH_RISK_CALL=1, EXTERN_C_FN_DEF=4, NONALLOC_FFI_CALL=4 |
-| `src/params/mod.rs` | 398 | UNSAFE_BLOCK=314, UNSAFE_FN_DEF=80, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=1, NONALLOC_FFI_CALL=2 |
-| `src/rand/rand_lib.rs` | 390 | UNSAFE_BLOCK=251, UNSAFE_FN_DEF=49, UNSAFE_IMPL=2, UNSAFE_TRAIT=1, EXTERN_C_FN_DEF=5, NONALLOC_FFI_CALL=82 |
+| `src/x509/x509_vfy.rs` | 469 | UNSAFE_BLOCK=223, UNSAFE_FN_DEF=130, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=1, NONALLOC_FFI_CALL=116 |
+| `src/pkcs7/pk7_doit.rs` | 431 | UNSAFE_BLOCK=350, UNSAFE_FN_DEF=33, NONALLOC_FFI_CALL=48 |
+| `src/x509/v3_utl.rs` | 428 | UNSAFE_BLOCK=332, UNSAFE_FN_DEF=63, UNSAFE_IMPL=1, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=42 |
+| `src/cms/cms_sd.rs` | 422 | UNSAFE_BLOCK=307, UNSAFE_FN_DEF=40, HIGH_RISK_CALL=2, NONALLOC_FFI_CALL=73 |
+| `src/hpke/mod.rs` | 415 | UNSAFE_BLOCK=379, UNSAFE_FN_DEF=38, HIGH_RISK_CALL=1, EXTERN_C_FN_DEF=4, NONALLOC_FFI_CALL=4 |
+| `src/params/mod.rs` | 395 | UNSAFE_BLOCK=312, UNSAFE_FN_DEF=79, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=1, NONALLOC_FFI_CALL=2 |
+| `src/rand/rand_lib.rs` | 388 | UNSAFE_BLOCK=250, UNSAFE_FN_DEF=48, UNSAFE_IMPL=2, UNSAFE_TRAIT=1, EXTERN_C_FN_DEF=5, NONALLOC_FFI_CALL=82 |
 | `src/pem/pvkfmt.rs` | 382 | UNSAFE_BLOCK=318, UNSAFE_FN_DEF=39, NONALLOC_FFI_CALL=25 |
-| `src/x509/v3_purp.rs` | 365 | UNSAFE_BLOCK=272, UNSAFE_FN_DEF=60, UNSAFE_IMPL=2, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=30 |
-| `src/provider/rand.rs` | 359 | UNSAFE_BLOCK=119, UNSAFE_FN_DEF=123, UNSAFE_IMPL=5, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=111 |
-| `src/cmp/cmp_asn.rs` | 358 | UNSAFE_BLOCK=238, UNSAFE_FN_DEF=79, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=9, NONALLOC_FFI_CALL=31 |
+| `src/x509/v3_purp.rs` | 363 | UNSAFE_BLOCK=271, UNSAFE_FN_DEF=59, UNSAFE_IMPL=2, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=30 |
+| `src/cmp/cmp_asn.rs` | 356 | UNSAFE_BLOCK=237, UNSAFE_FN_DEF=78, UNSAFE_IMPL=1, EXTERN_C_FN_DEF=9, NONALLOC_FFI_CALL=31 |
+| `src/provider/rand.rs` | 356 | UNSAFE_BLOCK=117, UNSAFE_FN_DEF=122, UNSAFE_IMPL=5, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=111 |
 | `src/ssl/t1_trce.rs` | 353 | UNSAFE_BLOCK=327, UNSAFE_FN_DEF=25, UNSAFE_IMPL=1 |
-| `src/store/store_lib.rs` | 346 | UNSAFE_BLOCK=265, UNSAFE_FN_DEF=58, UNSAFE_IMPL=3, UNSAFE_TRAIT=1, NONALLOC_FFI_CALL=23 |
-| `src/cmp/cmp_client.rs` | 345 | UNSAFE_BLOCK=254, UNSAFE_FN_DEF=20, NONALLOC_FFI_CALL=71 |
-| `src/evp/bio_enc.rs` | 342 | UNSAFE_BLOCK=306, UNSAFE_FN_DEF=33, UNSAFE_IMPL=2, UNSAFE_TRAIT=1, EXTERN_C_FN_DEF=3 |
+| `src/cmp/cmp_client.rs` | 343 | UNSAFE_BLOCK=253, UNSAFE_FN_DEF=19, NONALLOC_FFI_CALL=71 |
+| `src/ssl/statem/statem_srvr.rs` | 342 | UNSAFE_BLOCK=220, UNSAFE_FN_DEF=46, UNSAFE_IMPL=4, UNSAFE_TRAIT=1, HIGH_RISK_CALL=1, NONALLOC_FFI_CALL=76 |
+| `src/store/store_lib.rs` | 342 | UNSAFE_BLOCK=264, UNSAFE_FN_DEF=56, UNSAFE_IMPL=3, NONALLOC_FFI_CALL=23 |
 
 ## Closure files with ZERO production unsafe ops
 

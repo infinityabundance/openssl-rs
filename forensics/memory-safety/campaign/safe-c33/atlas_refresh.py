@@ -55,6 +55,69 @@ SEAM_TOKENS = [
     "impl Drop",
 ]
 
+# Shared-owner consolidation markers. After owners are consolidated into shared
+# modules, a consumer can import the owning type and no longer contain a local
+# definition or destructor of its own. The bare tokens above already match an
+# unaliased import; these path-qualified markers additionally recognise aliased
+# imports of the exact shared owner. A marker is admitted only when the imported
+# local name is *used outside its own `use` declaration*: a bare re-export or an
+# unused import is not evidence of ownership and must not inflate the seam count.
+SHARED_OWNER_IMPORTS = {
+    "runtime::owned_buf::OwnedBuf": "OwnedBuf",
+    "runtime::owned_str::OwnedStr": "OwnedStr",
+    "runtime::bio::owned::OwnedCtx": "OwnedCtx",
+    "runtime::bio::owned::RawCtx": "RawCtx",
+    "runtime::bio::owned::OwnedBlock": "OwnedBlock",
+    "asn1::owned::OwnedBlock": "OwnedBlock",
+    "provider::cipher::OwnedCtx": "OwnedCtx",
+}
+
+USE_DECL_RE = re.compile(r"\buse\s+[^;]+;")
+
+
+def shared_owner_import_seams(stripped: str) -> list[str]:
+    """Shared-owner imports that are actually used, as seam markers.
+
+    Only `use` paths naming one of ``SHARED_OWNER_IMPORTS`` count, and the
+    imported local name (including an ``as`` alias) must still occur after all
+    `use` declarations are removed. A module-only import, a glob import, an
+    unused import and a pure `pub use` re-export therefore add nothing.
+    """
+    local_to_path: dict[str, str] = {}
+    spans: list[tuple[int, int]] = []
+    for match in USE_DECL_RE.finditer(stripped):
+        spans.append((match.start(), match.end()))
+        path_part = re.sub(r"\s+", "", match.group(0)[len("use") :].rstrip(";"))
+        if "{" in path_part:
+            base, _, members = path_part.partition("{")
+            base = base.rstrip(":")
+            members = members.rsplit("}", 1)[0]
+            items = [item for item in members.split(",") if item]
+        else:
+            base, _, item = path_part.rpartition("::")
+            items = [item] if item else []
+        base = re.sub(r"^(?:(?:crate|self|super)::)+", "", base)
+        for item in items:
+            if item == "self" or item.startswith("*"):
+                continue
+            name, _, alias = item.partition("as")
+            name = name.strip()
+            alias = alias.strip() or name
+            full = f"{base}::{name}" if base else name
+            if full in SHARED_OWNER_IMPORTS:
+                local_to_path[alias] = full
+    if not local_to_path:
+        return []
+    rest = list(stripped)
+    for start, end in spans:
+        rest[start:end] = " " * (end - start)
+    rest_s = "".join(rest)
+    markers = []
+    for local, full in sorted(local_to_path.items()):
+        if re.search(r"\b" + re.escape(local) + r"\b", rest_s):
+            markers.append("shared-owner-import:" + SHARED_OWNER_IMPORTS[full])
+    return markers
+
 # Allocation / release **call** names are discovered from the allocator seam
 # (`src/runtime/mem.rs` and the secure allocator in `src/runtime/secure.rs`)
 # rather than maintained as a hand-written subset. A site is an identifier
@@ -939,6 +1002,11 @@ def scan_files(root: Path, rel_paths: list[str]):
             return [s for s in sites if not s["in_test"] and not s["is_seam_file"]]
 
         seams = [t for t in SEAM_TOKENS if t in stripped]
+        # Shared-owner imports: only used imports count, and a type already
+        # recognised by its bare token is not recorded twice.
+        for marker in shared_owner_import_seams(stripped):
+            if marker.split(":", 1)[1] not in seams:
+                seams.append(marker)
         per_file[rel] = {
             "sha256": hashlib.sha256(raw).hexdigest(),
             "seams": seams,
