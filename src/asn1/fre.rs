@@ -166,7 +166,13 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
             // no-op it looks like — and it is written out because the authority writes it.
             // SAFETY: `pval` holds a live `ASN1_TYPE` in this arm.
             unsafe { primitive_free(pval, core::ptr::null(), 0) };
-            // SAFETY: `pval` holds a pointer this crate allocated, or null.
+            // SAFETY: boundary `ASN1_ANY_STRUCT_FREE`. Provenance: `*pval` is the `ASN1_TYPE`
+            // structure the ASN.1 allocation layer (`tasn_new.c` through the crate's seam)
+            // allocated and the recursive call just emptied of its payload. Extent: exactly that
+            // allocated `ASN1_TYPE` block, not the union value the recursive call released.
+            // Initialization: it is a valid, live `ASN1_TYPE`. Single release: this frame is its
+            // only owner, `CRYPTO_free` at the authority's `tasn_fre.c` coordinates is that
+            // release, and the slot is cleared below so no later arm can release it again.
             unsafe { CRYPTO_free(*pval, FILE.as_ptr(), LINE) };
         }
         _ => {
@@ -267,7 +273,12 @@ pub(crate) unsafe fn item_embed_free(pval: *mut *mut c_void, it: *const Asn1Item
                 unsafe { cb(ASN1_OP_FREE_POST, pval, it, core::ptr::null_mut()) };
             }
             if embed == 0 {
-                // SAFETY: `*pval` came from this allocator and is not reused.
+                // SAFETY: boundary `ASN1_CHOICE_STRUCT_FREE`. Provenance: `*pval` is the value
+                // structure the ASN.1 allocation layer allocated for this item. Extent: exactly
+                // that block. Initialization: the template walk above released its fields, so it
+                // is a live value of the item type. Single release: no other owner holds it,
+                // `CRYPTO_free` at the authority's `tasn_fre.c` coordinates is that release, and
+                // the slot is cleared immediately after.
                 unsafe { CRYPTO_free(*pval, FILE.as_ptr(), LINE) };
                 // SAFETY: the caller's slot is writable.
                 unsafe { *pval = core::ptr::null_mut() };
@@ -336,7 +347,12 @@ pub(crate) unsafe fn item_embed_free(pval: *mut *mut c_void, it: *const Asn1Item
                 unsafe { cb(ASN1_OP_FREE_POST, pval, it, core::ptr::null_mut()) };
             }
             if embed == 0 {
-                // SAFETY: `*pval` came from this allocator and is not reused.
+                // SAFETY: boundary `ASN1_SEQUENCE_STRUCT_FREE`. Provenance: `*pval` is the value
+                // structure the ASN.1 allocation layer allocated for this item. Extent: exactly
+                // that block. Initialization: the reverse template walk above released every
+                // field, so it is a live value of the item type. Single release: no other owner
+                // holds it, `CRYPTO_free` at the authority's `tasn_fre.c` coordinates is that
+                // release, and the slot is cleared immediately after.
                 unsafe { CRYPTO_free(*pval, FILE.as_ptr(), LINE) };
                 // SAFETY: the caller's slot is writable.
                 unsafe { *pval = core::ptr::null_mut() };

@@ -435,6 +435,53 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c".as_p
 /// `OPENSSL_zalloc(sizeof(*pbe_tmp))` — `crypto/evp/evp_pbe.c:212`.
 const LINE_ZALLOC_CTL: c_int = 212;
 
+/// An owned application PBE registry row.
+///
+/// `EVP_PBE_alg_add_type` allocates the row, fills it, and transfers it to the registry stack. On
+/// a refused push the row is still this frame's, so `Drop` releases it at the authority's own
+/// `(FILE, LINE_ZALLOC_CTL)` site; once pushed, the stack owns it and `free_evp_pbe_ctl` is its
+/// single release.
+struct OwnedPbeCtl {
+    ptr: *mut EvpPbeCtl,
+}
+
+impl OwnedPbeCtl {
+    /// `CRYPTO_zalloc(sizeof(*pbe_tmp), FILE, LINE_ZALLOC_CTL)`, or `None` when the allocator
+    /// answers NULL.
+    fn zalloc() -> Option<OwnedPbeCtl> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `size_of::<EvpPbeCtl>()` bytes.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpPbeCtl>(), FILE, LINE_ZALLOC_CTL)
+            .cast::<EvpPbeCtl>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedPbeCtl { ptr: raw })
+        }
+    }
+
+    /// The writable start of the row.
+    fn as_ptr(&self) -> *mut EvpPbeCtl {
+        self.ptr
+    }
+
+    /// Give up ownership of the row to the registry stack.
+    fn into_raw(self) -> *mut EvpPbeCtl {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPbeCtl {
+    /// Release a row that was not registered.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the row `zalloc` produced and has not been handed to the stack;
+        // `Drop` runs once, so this is its single release at the authority's own site.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE, LINE_ZALLOC_CTL) };
+    }
+}
+
 /// `static STACK_OF(EVP_PBE_CTL) *pbe_algs` — `crypto/evp/evp_pbe.c:33`.
 ///
 /// The caller-filled registry beside `builtin_pbe[]`. The authority's accessors are the
@@ -734,30 +781,32 @@ pub unsafe extern "C" fn EVP_PBE_alg_add_type(
         unsafe { PBE_ALGS = st };
     }
 
-    let pbe_tmp =
-        CRYPTO_zalloc(core::mem::size_of::<EvpPbeCtl>(), FILE, LINE_ZALLOC_CTL).cast::<EvpPbeCtl>();
-    if pbe_tmp.is_null() {
+    let Some(pbe_tmp) = OwnedPbeCtl::zalloc() else {
         return 0;
-    }
+    };
 
-    // SAFETY: `pbe_tmp` is this call's own freshly allocated block.
+    // SAFETY: `pbe_tmp` is this call's own freshly allocated block; every field is written before
+    // any path can observe it.
     unsafe {
-        (*pbe_tmp).pbe_type = pbe_type;
-        (*pbe_tmp).pbe_nid = pbe_nid;
-        (*pbe_tmp).cipher_nid = cipher_nid;
-        (*pbe_tmp).md_nid = md_nid;
-        (*pbe_tmp).keygen = keygen;
-        (*pbe_tmp).keygen_ex = None;
+        let row = pbe_tmp.as_ptr();
+        (*row).pbe_type = pbe_type;
+        (*row).pbe_nid = pbe_nid;
+        (*row).cipher_nid = cipher_nid;
+        (*row).md_nid = md_nid;
+        (*row).keygen = keygen;
+        (*row).keygen_ex = None;
     }
 
     // SAFETY: `PBE_ALGS` is live and `pbe_tmp` outlives the registry until `EVP_PBE_cleanup`.
-    if unsafe { OPENSSL_sk_push(PBE_ALGS, pbe_tmp.cast::<c_void>()) } == 0 {
+    if unsafe { OPENSSL_sk_push(PBE_ALGS, pbe_tmp.as_ptr().cast::<c_void>()) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::EVP_PBE_222) };
-        // SAFETY: the row was allocated by this call and was not registered.
-        unsafe { CRYPTO_free(pbe_tmp.cast::<c_void>(), FILE, LINE_ZALLOC_CTL) };
+        // A refused push leaves the row unregistered; `pbe_tmp` drops at the authority's own
+        // failure-path release site.
         return 0;
     }
+    // Ownership transfers to the registry stack, whose `free_evp_pbe_ctl` is the single release.
+    let _ = pbe_tmp.into_raw();
     1
 }
 
@@ -883,7 +932,9 @@ pub unsafe extern "C" fn EVP_PBE_find(
 /// `static void free_evp_pbe_ctl(EVP_PBE_CTL *pbe)` — `crypto/evp/evp_pbe.c:289`.
 ///
 /// # Safety
-/// `pbe` must be NULL or a row this module allocated with `CRYPTO_zalloc`.
+/// `pbe` is NULL or one row this module allocated with `CRYPTO_zalloc` at
+/// `(FILE, LINE_ZALLOC_CTL)`; it is the registry's single owner and this call is its single
+/// release.
 unsafe extern "C" fn free_evp_pbe_ctl(pbe: *mut c_void) {
     // SAFETY: `pbe` is NULL or this module's own allocation, and `CRYPTO_free` releases it.
     unsafe { CRYPTO_free(pbe, FILE, LINE_ZALLOC_CTL) };
