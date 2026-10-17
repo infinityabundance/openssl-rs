@@ -99,6 +99,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | 62 | stage/p25/sweep18 | provider/ml_kem_kem, context/thread_data, evp/e_chacha20_poly1305, asn1/a_strnid, runtime/bio/bss_log, modes/gcm | staged ML-KEM/thread contexts; cleansed AEAD local owners; registry-row owner; log buffer; staged GCM context with clear_free; hidden 0 |
 | 63 | stage/p25/sweep19 | context/mod, rsa/ameth, evp/evp_pkey, asn1/p5_pbe, ec/oct, x509/v3_usernotice | staged libctx; plain/cleansed DER owners at setter edges; salt and point-buffer owners; notice conversion owner; hidden 0 |
 | 64 | stage/p25/sweep20 | runtime/{threads_common,confmod/asn1}, x509/x509_obj, pem/pem_info, selftest/mod, mac/cmac | master-key owner; BUF_MEM data-transfer owner; PEM triple-buffer owners; staged self-test/CMAC contexts; checked conf length; hidden 0 |
+| 65 | stage/p25/sweep21 | asn1/{time,a_mbstr}, mac/hmac, property/globals, x509/v3_utf8, dh/ctrl | shortened-time/mbstr/UTF8 owners with checked lengths; `OwnedCtx` HMAC/global-properties; ukm custody contract; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
