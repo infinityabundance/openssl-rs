@@ -100,13 +100,13 @@ use crate::ffc::params::{
     ossl_ffc_params_set0_pqg,
 };
 use crate::ffc::FfcParams;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
     CRYPTO_EX_INDEX_DH,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
 
 use super::key::DH_get_default_method;
@@ -227,12 +227,13 @@ pub(crate) unsafe fn ossl_dh_new_ex(libctx: *mut c_void) -> *mut Dh {
 ///
 /// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
 unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
-    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`, and `CRYPTO_zalloc` is
-    // a *safe* function in this crate (D113), so this call needs no guard.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Dh>(), FILE_DH_LIB, LINE).cast::<Dh>();
-    if ret.is_null() {
+    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`. The window between the
+    // allocation and the point where the block is a valid `Dh` is a `RawCtx`: its `Drop` releases
+    // the block alone, so a refusal before validation never runs a destructor.
+    let Some(raw) = RawCtx::<Dh>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ret = raw.as_ptr();
 
     // SAFETY: `CRYPTO_THREAD_lock_new` reads no caller pointer.
     let lock = CRYPTO_THREAD_lock_new();
@@ -241,8 +242,8 @@ unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DH_LIB_83) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        unsafe { CRYPTO_free(ret.cast(), FILE_DH_LIB, LINE) };
+        // `raw` drops here, releasing the block alone -- exactly the authority's bare
+        // `CRYPTO_free(ret, FILE, LINE)` before an object exists.
         return ptr::null_mut();
     }
 
@@ -305,12 +306,64 @@ unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     };
 
     if !built {
-        // SAFETY: `ret` is this call's own object and the authority's `err:` label releases it
-        // through `DH_free` on exactly these paths.
-        unsafe { DH_free(ret) };
+        // SAFETY: every field `Dh`'s destructor reads is written. The block is zeroed, and
+        // `references`, `meth`, `lock`, `libctx` and `engine` are set before the label; `params`,
+        // `ex_data` and the two key slots are either the authority's zero state (which its own
+        // `DH_free` accepts) or the values its failure point left. Consuming `raw` as an
+        // `OwnedCtx` runs the destructor body and then releases the block -- exactly the
+        // authority's `DH_free(ret)` at its `err:` label.
+        unsafe { drop(raw.assume_init()) };
         return ptr::null_mut();
     }
-    ret
+    raw.into_raw()
+}
+
+// SAFETY: (a) `destroy_body` is the member-release half of `DH_free` -- the method's `finish`,
+// the ex-data, the lock, the embedded FFC parameters and the two key `BIGNUM`s -- run exactly once
+// and never the enclosing block, which `OwnedCtx`'s `Drop` releases. Every releaser accepts the
+// NULL/zero state a refused constructor leaves. (b) an all-zero `Dh` is the state
+// `OPENSSL_zalloc` produces, and the authority's own `DH_free` accepts it.
+unsafe impl CtxDestroy for Dh {
+    const FILE: *const c_char = FILE_DH_LIB;
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(ptr: *mut Dh) {
+        // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
+        // SAFETY: `ptr` is live per the trait contract.
+        let meth = unsafe { (*ptr).meth };
+        if !meth.is_null() {
+            // SAFETY: `meth` is the object's own table, alive until this statement.
+            if let Some(finish) = unsafe { (*meth).finish } {
+                // SAFETY: `finish` is that table's own destructor for this object.
+                unsafe { finish(ptr) };
+            }
+        }
+
+        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every
+        // state this crate can reach. See the module documentation.
+
+        // SAFETY: `ptr` is live and `ex_data` is a field of it.
+        unsafe {
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_DH,
+                ptr.cast(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            )
+        };
+        // SAFETY: `ptr` is live and `lock` is the lock the constructor created.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+
+        // SAFETY: `params` is the object's own embedded parameters, whose four `BIGNUM`s and seed
+        // are each NULL or owned by it.
+        unsafe { ossl_ffc_params_cleanup(ptr::addr_of_mut!((*ptr).params)) };
+        // SAFETY: both keys are NULL or the object's own `BIGNUM`s, and both are secret material,
+        // so the clearing form the authority spells is used.
+        unsafe {
+            BN_clear_free((*ptr).pub_key);
+            BN_clear_free((*ptr).priv_key);
+        }
+    }
 }
 
 /// `void DH_free(DH *r)` — `dh_lib.c:136-165`.
@@ -340,44 +393,12 @@ pub unsafe extern "C" fn DH_free(r: *mut Dh) {
         return;
     }
 
-    // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
-    // SAFETY: `r` is live and this is the last reference.
-    let meth = unsafe { (*r).meth };
-    if !meth.is_null() {
-        // SAFETY: `meth` is the object's own table, alive until this statement.
-        if let Some(finish) = unsafe { (*meth).finish } {
-            // SAFETY: `finish` is that table's own destructor for this object.
-            unsafe { finish(r) };
-        }
-    }
-
-    // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
-    // this crate can reach. See the module documentation.
-
-    // SAFETY: `r` is live and `ex_data` is a field of it.
-    unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_DH,
-            r.cast(),
-            ptr::addr_of_mut!((*r).ex_data),
-        )
-    };
-    // SAFETY: `r` is live and `lock` is the lock the constructor created.
-    unsafe { CRYPTO_THREAD_lock_free((*r).lock) };
-
     // `CRYPTO_FREE_REF(&r->references)` is empty on this profile's arm of the header.
 
-    // SAFETY: `params` is the object's own embedded parameters, whose four `BIGNUM`s and seed are
-    // each NULL or owned by it; this is the last reference.
-    unsafe { ossl_ffc_params_cleanup(ptr::addr_of_mut!((*r).params)) };
-    // SAFETY: both keys are NULL or the object's own `BIGNUM`s, and both are secret material, so
-    // the clearing form the authority spells is used.
-    unsafe {
-        BN_clear_free((*r).pub_key);
-        BN_clear_free((*r).priv_key);
-    }
-    // SAFETY: `r` is this object's own allocation, released last.
-    unsafe { CRYPTO_free(r.cast(), FILE_DH_LIB, LINE) };
+    // SAFETY: `r` is the last reference and a live block this crate allocated; `from_raw`
+    // reclaims it and `Drop` runs `destroy_body` (the authority's member releases) followed by
+    // the block release, in the authority's order.
+    unsafe { drop(OwnedCtx::<Dh>::from_raw(r)) };
 }
 
 /// `int DH_up_ref(DH *r)` — `dh_lib.c:167-177`.

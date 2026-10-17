@@ -165,6 +165,62 @@ struct ProvEddsaCtx {
     context_string_len: usize,
 }
 
+/// An owned `PROV_EDDSA_CTX` block.
+///
+/// The authority allocates it with `OPENSSL_zalloc` in `eddsa_newctx`/`eddsa_dupctx` and releases
+/// it, after `ossl_ecx_key_free(ctx->key)`, in `eddsa_freectx` (`eddsa_sig.c.in:755`). This owner
+/// is the block's single release: `Drop` runs the authority's member release and then the block
+/// release at the caller's own allocation line. A zeroed block is a valid `PROV_EDDSA_CTX` -- its
+/// only owned member is a NULL key -- so dropping a freshly allocated block is sound.
+struct CtxBlock {
+    ptr: ptr::NonNull<ProvEddsaCtx>,
+    release_line: c_int,
+}
+
+impl CtxBlock {
+    /// Allocate a fresh zeroed context through the crate's allocator seam at the authority's own
+    /// allocation line, or `None` when the seam answers NULL.
+    fn zalloc(alloc_line: c_int, release_line: c_int) -> Option<CtxBlock> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of the struct's size.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<ProvEddsaCtx>(), FILE, alloc_line)
+            .cast::<ProvEddsaCtx>();
+        ptr::NonNull::new(raw).map(|ptr| CtxBlock { ptr, release_line })
+    }
+
+    /// The stable address the dispatch table stores and the C caller holds.
+    fn as_ptr(&self) -> *mut ProvEddsaCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut ProvEddsaCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block `eddsa_freectx` was handed, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live `PROV_EDDSA_CTX` block this file allocated through the seam and has
+    /// not released; its `key` is NULL or a reference this object owns.
+    unsafe fn from_raw(ptr: *mut ProvEddsaCtx, release_line: c_int) -> Option<CtxBlock> {
+        ptr::NonNull::new(ptr).map(|ptr| CtxBlock { ptr, release_line })
+    }
+}
+
+impl Drop for CtxBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a live block this handle owns; `key` is NULL or a reference the
+        // object owns, so this is the authority's `ossl_ecx_key_free` and then its single block
+        // release at the same allocator coordinates.
+        unsafe {
+            ossl_ecx_key_free((*self.ptr.as_ptr()).key);
+            CRYPTO_free(self.ptr.as_ptr().cast(), FILE, self.release_line);
+        }
+    }
+}
+
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
@@ -180,16 +236,17 @@ unsafe extern "C" fn eddsa_newctx(provctx: *mut c_void, _propq: *const c_char) -
         return ptr::null_mut();
     }
 
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvEddsaCtx>(), FILE, 194).cast::<ProvEddsaCtx>();
-    if ctx.is_null() {
+    // A fresh zeroed allocation: its only owned member is a NULL key, so the owner's `Drop` is
+    // sound from the moment it exists.
+    let Some(ctx) = CtxBlock::zalloc(194, 755) else {
         return ptr::null_mut();
-    }
+    };
+    let p = ctx.as_ptr();
 
-    // SAFETY: `ctx` is this call's own allocation.
-    unsafe { (*ctx).libctx = prov_libctx_of(provctx) };
+    // SAFETY: `p` is this call's own allocation.
+    unsafe { (*p).libctx = prov_libctx_of(provctx) };
 
-    ctx.cast()
+    ctx.into_raw().cast()
 }
 
 /// `static int eddsa_setup_instance(...)` — `eddsa_sig.c.in:202-255`, without the
@@ -836,13 +893,9 @@ unsafe extern "C" fn ed448_digest_verify(
 /// # Safety
 /// The signature `freectx` dispatch contract.
 unsafe extern "C" fn eddsa_freectx(vctx: *mut c_void) {
-    let ctx = vctx.cast::<ProvEddsaCtx>();
-
-    // SAFETY: `ctx` is the caller's context.
-    unsafe {
-        ossl_ecx_key_free((*ctx).key);
-        CRYPTO_free(ctx.cast(), FILE, 755);
-    }
+    // SAFETY: `vctx` is NULL or the caller's live context; `from_raw` reclaims it and `Drop` runs
+    // the authority's `ossl_ecx_key_free` followed by the block release.
+    unsafe { drop(CtxBlock::from_raw(vctx.cast::<ProvEddsaCtx>(), 755)) };
 }
 
 /// `static void *eddsa_dupctx(void *vpeddsactx)` — `eddsa_sig.c.in:759-781`.
@@ -856,12 +909,12 @@ unsafe extern "C" fn eddsa_dupctx(vctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let dstctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvEddsaCtx>(), FILE, 764).cast::<ProvEddsaCtx>();
-    if dstctx.is_null() {
+    // A fresh zeroed allocation; `Drop` releases it at `eddsa_freectx`'s own line on every
+    // refusal below, exactly the authority's `err:` arm.
+    let Some(dst) = CtxBlock::zalloc(764, 755) else {
         return ptr::null_mut();
-    }
+    };
+    let dstctx = dst.as_ptr();
 
     // SAFETY: both pointers are live per the contract, and the copy is of this call's allocation.
     unsafe {
@@ -870,22 +923,14 @@ unsafe extern "C" fn eddsa_dupctx(vctx: *mut c_void) -> *mut c_void {
 
         if !(*srcctx).key.is_null() && ossl_ecx_key_up_ref((*srcctx).key) == 0 {
             raise_site(&err_sites::PROV_EDDSA_SIG_774);
-            return eddsa_dupctx_err(dstctx);
+            // `dst` drops here: its key is NULL, so this is the authority's `eddsa_dupctx_err`
+            // (`eddsa_freectx` on the half-built duplicate) without a second owner.
+            return ptr::null_mut();
         }
         (*dstctx).key = (*srcctx).key;
     }
 
-    dstctx.cast()
-}
-
-/// The authority's `err:` arm (`eddsa_sig.c.in:779-781`).
-///
-/// # Safety
-/// `dstctx` is this call's own allocation.
-unsafe fn eddsa_dupctx_err(dstctx: *mut ProvEddsaCtx) -> *mut c_void {
-    // SAFETY: the caller's contract.
-    unsafe { eddsa_freectx(dstctx.cast()) };
-    ptr::null_mut()
+    dst.into_raw().cast()
 }
 
 /// `static const char **ed25519_sigalg_query_key_types(void)` — `eddsa_sig.c.in:783-788`.
