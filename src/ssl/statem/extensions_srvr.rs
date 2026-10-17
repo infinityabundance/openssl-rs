@@ -93,7 +93,7 @@ unsafe fn tls_construct_stoc_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
         return EXT_RETURN_FAIL;
     }
     // SAFETY: `s` is live; `ctx` is the connection's context.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
     // SAFETY: the arguments are the context's; the name is NUL-terminated; `params` is terminated.
     let skey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };

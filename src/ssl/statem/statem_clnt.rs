@@ -1426,16 +1426,15 @@ pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -
                 }
                 // SAFETY: `s` is live; `eb[3..3+plen]` holds `plen` readable bytes.
                 unsafe {
-                    use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                    CRYPTO_free((*s).s3_alpn_selected.cast(), core::ptr::null(), 0);
-                    (*s).s3_alpn_selected =
-                        CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
-                            .cast::<u8>();
-                    if (*s).s3_alpn_selected.is_null() {
-                        (*s).s3_alpn_selected_len = 0;
+                    use crate::runtime::mem::CRYPTO_memdup;
+                    let mut slot = (*s).s3_alpn_selected_slot();
+                    slot.clear(core::ptr::null(), 0);
+                    let dup = CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
+                        .cast::<u8>();
+                    if dup.is_null() {
                         return 0;
                     }
-                    (*s).s3_alpn_selected_len = plen;
+                    slot.store(dup, plen);
                 }
             }
             off += elen;
@@ -1487,21 +1486,21 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
     // available, so the empty (in-handshake) context is the only one the reduced driver reaches.
     if ctx_len != 0 {
         // Post-handshake auth context: recorded and handled by the PHA driver.
-        // SAFETY: `s` is live.
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
         unsafe {
-            crate::runtime::mem::CRYPTO_free((*s).pha_context.cast(), core::ptr::null(), 0);
-            (*s).pha_context = crate::runtime::mem::CRYPTO_memdup(
+            let mut slot = (*s).pha_context_slot();
+            slot.clear(core::ptr::null(), 0);
+            let dup = crate::runtime::mem::CRYPTO_memdup(
                 body.as_ptr().add(1).cast(),
                 ctx_len,
                 core::ptr::null(),
                 0,
             )
             .cast::<u8>();
-            if (*s).pha_context.is_null() {
-                (*s).pha_context_len = 0;
+            if dup.is_null() {
                 return 0;
             }
-            (*s).pha_context_len = ctx_len;
+            slot.store(dup, ctx_len);
         }
     }
     // SAFETY: `s` is live.
@@ -1936,8 +1935,8 @@ pub(crate) unsafe fn tls13_process_server_finished(s: *mut Ssl, msg: &[u8]) -> c
     if unsafe { (*s).s3_tmp_cert_req } != 0 {
         // The request context is echoed in the Certificate; in-handshake it is empty, under PHA it
         // is the server's `pha_context` (`statem_clnt.c:3857-3868`).
-        // SAFETY: `s` is live.
-        let (ctx, ctx_len) = unsafe { ((*s).pha_context, (*s).pha_context_len) };
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+        let (ctx, ctx_len) = unsafe { (*s).pha_context() };
         // SAFETY: `ctx` names `ctx_len` readable bytes when non-NULL, else the slice is empty.
         let context: &[u8] = if ctx.is_null() {
             &[]
@@ -2078,8 +2077,8 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
         return 0;
     }
     // `tls_construct_client_certificate` (`statem_clnt.c:3851-3910`): the stored context is echoed.
-    // SAFETY: `s` is live.
-    let (ctx, ctx_len) = unsafe { ((*s).pha_context, (*s).pha_context_len) };
+    // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+    let (ctx, ctx_len) = unsafe { (*s).pha_context() };
     // SAFETY: `ctx` names `ctx_len` readable bytes when non-NULL, else the slice is empty.
     let context: &[u8] = if ctx.is_null() {
         &[]
@@ -2498,7 +2497,7 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     // SAFETY: `point` is `ptlen` readable bytes.
     let peer = unsafe {
         crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
@@ -2604,7 +2603,7 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     };
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
     // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
     let Some(pkey) = OwnedCtx::<EvpPkey>::new(unsafe {

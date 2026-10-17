@@ -93,7 +93,7 @@ pub(crate) unsafe fn tls12_setup_cipher(s: *mut Ssl, cipher_id: u16) -> c_int {
     unsafe {
         if (*s).tls13_cipher.is_null() {
             let libctx = (*(*s).ctx).libctx;
-            let propq = (*(*s).ctx).propq;
+            let propq = (*(*s).ctx).propq();
             let c = EVP_CIPHER_fetch(libctx, name.as_ptr().cast(), propq);
             if c.is_null() {
                 return 0;
