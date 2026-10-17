@@ -114,50 +114,14 @@ use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::{BIO_free, Bio};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free};
+use crate::runtime::mem::CRYPTO_clear_free;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_mgf1, NID_sha1, NID_undef, OBJ_nid2sn,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack,
 };
-
-/// An owned seam block released with the authority's plain `CRYPTO_free` (`file` NULL/`line` 0) --
-/// the `pub_buf` an EC-key encoder left for this frame.
-///
-/// The block stays the authority's own allocation through the same allocator seam, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
-/// this type.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// Adopt a non-NULL block a helper allocated in full through the crate's `CRYPTO_*` seam, for
-    /// release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live, non-NULL block the crate's allocator seam allocated in full (not a
-    /// sub-range) and this caller owns exclusively -- this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_uchar) -> OwnedBuf {
-        OwnedBuf { ptr }
-    }
-
-    /// The start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast(), ptr::null(), 0) };
-    }
-}
 
 /// An owned seam block released with the authority's *cleansing* `CRYPTO_clear_free` over a recorded
 /// length (`file` NULL/`line` 0) -- the `buf`/`priv_buf` an EC-key encoder left for this frame.
@@ -718,7 +682,9 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
         }
         // SAFETY: `EC_KEY_key2buf` answered this non-NULL `raw` as a `pub_len`-byte block the
         // crate's allocator produced in full; this frame is its only owner.
-        pub_buf = Some(unsafe { OwnedBuf::adopt(raw) });
+        // SAFETY: `raw` is a live non-NULL block the crate's `CRYPTO_*` seam allocated in full
+        // and this frame owns exclusively.
+        pub_buf = unsafe { OwnedBuf::adopt_plain(raw, ptr::null(), 0) };
     }
 
     let priv_ptr = priv_buf

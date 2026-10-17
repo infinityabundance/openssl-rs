@@ -124,6 +124,7 @@ use crate::runtime::obj::{
     NID_SLH_DSA_SHAKE_128s, NID_SLH_DSA_SHAKE_192f, NID_SLH_DSA_SHAKE_192s, NID_SLH_DSA_SHAKE_256f,
     NID_SLH_DSA_SHAKE_256s, NID_X9_62_id_ecPublicKey, NID_sm2, OBJ_cmp, OBJ_nid2obj, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::selftest::OsslCallback;
 use crate::slh_dsa::key::{
     ossl_slh_dsa_key_free, ossl_slh_dsa_key_get_name, ossl_slh_dsa_key_get_pub_len,
@@ -490,36 +491,6 @@ fn der2key_check_selection(selection: c_int, desc: &KeytypeDesc) -> c_int {
 // Ownership of the decoder's scratch DER blob and the SLH-DSA bare-public-key record
 // ---------------------------------------------------------------------------------------------
 
-/// An owned scratch DER blob allocated through the crate's allocator seam.
-///
-/// The block stays an `ossl_read_der` `CRYPTO_malloc` at the authority's own `(NULL, 0)` site -- a
-/// Rust `Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
-/// the block the read leaves for this frame and `Drop` is its single release. A NULL pointer is a
-/// valid, empty block whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// Adopt the block `ossl_read_der` left for this frame.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar) -> OwnedBuf {
-        OwnedBuf { ptr }
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
-    }
-}
-
 /// The authority's `err:`-label cleanup body for a `BARE_PUBKEY`, without the block's own release,
 /// which [`OwnedCtx`]'s `Drop` performs.
 ///
@@ -735,8 +706,9 @@ unsafe extern "C" fn der2key_decode(
     }
 
     // The read's block is this frame's from here on; `Drop` is its single release on every tail.
-    // SAFETY: `der_raw` is NULL or the live block `ossl_read_der` allocated and handed over here.
-    let der = unsafe { OwnedBuf::adopt(der_raw) };
+    // SAFETY: `der_raw` is NULL or the live block `ossl_read_der` allocated through the crate's
+    // `CRYPTO_*` seam and handed over here; no other owner will release it.
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(der_raw, ptr::null(), 0) };
     if fatal {
         if let Some(fr) = desc.free_key {
             // SAFETY: `key` is NULL or live and the row's own free owns it.
