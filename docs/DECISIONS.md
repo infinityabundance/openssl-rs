@@ -36272,3 +36272,20 @@ makes the mechanism inexpressible, and `validate_cve_replay` refuses one with no
 seal's property is `NOT_CLAIMED` with the non-claims named as findings, so a passing `MS-SEAL` is an
 instrument plus an observation record and must never be read as "the candidate is memory safe".
 
+## D561 -- The AES key-wrap row refuses an output extent the authority's check admits
+
+The pinned authority's `aes_wrap_cipher` checks only `outsize < inl`
+(`providers/implementations/ciphers/cipher_aes_wrp.c:249`), then calls
+`aes_wrap_cipher_internal`, whose encrypting arm writes `up8(inl) + 8` with padding (or `inl + 8`
+without). A caller passing `outsize == inl` therefore satisfies the authority's check but is
+overrun by the wrap call. The crate keeps the authority's first check, so every case the authority
+rejected with `PROV_R_OUTPUT_BUFFER_TOO_SMALL` is still rejected at the same source coordinate
+(`PROV_CIPHER_AES_WRP_250`), and additionally rejects the encrypting arm's actual write extent.
+The added check runs only for an actual write: it is skipped when `input == NULL` (the authority's
+helper returns 0 at `:174`), when `out == NULL` (its size-query arm at `:203`), and when the input
+length is one the helper refuses before writing (`:178-192`), so it neither preempts a size query
+nor changes an `INVALID_INPUT_LENGTH` result. The decrypting arm's extent is `inl - 8`, which the
+authority's check already covers, so no accepted decrypt case changes. This is a deliberate
+memory-safety divergence, not a transcription slip: no under-sized destination reaches the wrap
+function and no buffer is written through.
+
