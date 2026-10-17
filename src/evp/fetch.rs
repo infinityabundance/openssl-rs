@@ -84,7 +84,8 @@ use crate::provider::{ossl_provider_libctx, OsslProvider};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ptr;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
@@ -109,50 +110,6 @@ const LINE_STRDUP_EMPTY: c_int = 592;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the rendered property string
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`]
-/// allocates it, `Drop` is its single release at the authority's own `:483`, and
-/// [`Self::into_raw`] hands it to the caller that takes it over
-/// ([`evp_get_global_properties_str`]'s returned string).
-struct OwnedBuf {
-    ptr: *mut c_char,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_char>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr: raw })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own plain `CRYPTO_free` at `:483`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, LINE_MALLOC_PROPSTR) };
-    }
-}
 
 /// `static OSSL_METHOD_STORE *get_evp_method_store(OSSL_LIB_CTX *libctx)`.
 ///
@@ -206,7 +163,13 @@ unsafe fn evp_set_parsed_default_properties(
             // takes the allocation's failure branch, which is the authority's own shape.
             let strsz = ossl_property_list_to_string(libctx, def_prop, core::ptr::null_mut(), 0);
             let propstr = if strsz > 0 {
-                OwnedBuf::new(strsz, FILE, LINE_MALLOC_PROPSTR)
+                OwnedBuf::new_plain_released(
+                    strsz,
+                    FILE,
+                    LINE_MALLOC_PROPSTR,
+                    FILE,
+                    LINE_MALLOC_PROPSTR,
+                )
             } else {
                 None
             };
@@ -215,7 +178,13 @@ unsafe fn evp_set_parsed_default_properties(
                 raise_site(&err_sites::EVP_FETCH_485);
                 return 0;
             };
-            if ossl_property_list_to_string(libctx, def_prop, propstr.as_ptr(), strsz) == 0 {
+            if ossl_property_list_to_string(
+                libctx,
+                def_prop,
+                propstr.as_ptr().cast::<c_char>(),
+                strsz,
+            ) == 0
+            {
                 // `propstr` is the render that failed; its `Drop` releases it at `:483`.
                 // SAFETY: a compile-time-constant site.
                 raise_site(&err_sites::EVP_FETCH_492);
@@ -223,7 +192,7 @@ unsafe fn evp_set_parsed_default_properties(
             }
             // Every activated provider is told, because a provider that rebuilds its own tables
             // needs the query as text.
-            ossl_provider_default_props_update(libctx, propstr.as_ptr());
+            ossl_provider_default_props_update(libctx, propstr.as_ptr().cast::<c_char>());
             // `propstr`'s `Drop` is the authority's own plain `CRYPTO_free` at `:483`.
 
             // The old list goes, the new one is adopted, and the cache is invalidated.
@@ -441,18 +410,22 @@ pub(crate) unsafe fn evp_get_global_properties_str(
         unsafe { raise_site(&err_sites::EVP_FETCH_596) };
         return core::ptr::null_mut();
     }
-    // `CRYPTO_malloc` is a SAFE function in this crate (D113), so `OwnedBuf::new` needs no block.
-    let Some(propstr) = OwnedBuf::new(sz, FILE, LINE_MALLOC_PROPSTR) else {
+    // `CRYPTO_malloc` is a SAFE function in this crate (D113), so the constructor needs no block.
+    let Some(propstr) =
+        OwnedBuf::new_plain_released(sz, FILE, LINE_MALLOC_PROPSTR, FILE, LINE_MALLOC_PROPSTR)
+    else {
         return core::ptr::null_mut();
     };
     // SAFETY: `propstr` is `sz` bytes and the list is live.
-    if unsafe { ossl_property_list_to_string(libctx, *plp, propstr.as_ptr(), sz) } == 0 {
+    if unsafe { ossl_property_list_to_string(libctx, *plp, propstr.as_ptr().cast::<c_char>(), sz) }
+        == 0
+    {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::EVP_FETCH_604) };
         // `propstr` is the render that failed; its `Drop` releases it at `:483`.
         return core::ptr::null_mut();
     }
-    propstr.into_raw()
+    propstr.into_raw().cast::<c_char>()
 }
 
 /// `char *EVP_get1_default_properties(OSSL_LIB_CTX *libctx)`.

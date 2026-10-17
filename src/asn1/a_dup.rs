@@ -31,69 +31,13 @@ use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the duplication path.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/a_dup.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
-
-/// An owned DER scratch buffer allocated through the crate's allocator seam.
-///
-/// Both routines here hand a scratch block to a decode and release it with a plain
-/// `CRYPTO_free(..., FILE, LINE)` once the decode has read it: `ASN1_dup`'s block is its own
-/// `CRYPTO_malloc(sized + 10)` (the authority's `+ 10` slack included) and `ASN1_item_dup`'s is
-/// the one `ASN1_item_i2d` produced. The block stays a `CRYPTO_*`-seam allocation at the
-/// authority's own size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook
-/// observes it -- a Rust `Box`/`Vec` would hide it. Only the *ownership* is this type:
-/// [`Self::malloc`] and [`Self::adopt`] acquire the block, [`Self::as_ptr`] exposes it, and
-/// `Drop` is its single release at the authority's own site.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, LINE)` -- `ASN1_dup`'s own scratch allocation -- or `None` when
-    /// the allocator answers NULL.
-    fn malloc(len: usize) -> Option<OwnedBuf> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, FILE.as_ptr(), LINE).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr: raw })
-        }
-    }
-
-    /// Adopt the block an encoder produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block `ASN1_item_i2d` produced for this call and this frame owns;
-    /// no other owner will release it, and this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_uchar) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr })
-        }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE) };
-    }
-}
 
 /// How many bytes precede the NUL of a C string, via the crate's own `OPENSSL_strnlen`.
 ///
@@ -131,11 +75,17 @@ pub unsafe extern "C" fn ASN1_dup(i2d: I2dOfVoid, d2i: D2iOfVoid, x: *const c_vo
         if sized <= 0 {
             return core::ptr::null_mut();
         }
-        // The scratch is this frame's own block: `OwnedBuf::malloc` performs the authority's
+        // The scratch is this frame's own block: the constructor performs the authority's
         // `CRYPTO_malloc(sized + 10, FILE, LINE)` -- the `+ 10` slack reproduced because the
         // allocation either succeeds or does not, and a caller can observe which -- and `Drop`
         // is its single release.
-        let Some(buf) = OwnedBuf::malloc(sized as usize + 10) else {
+        let Some(buf) = OwnedBuf::new_plain_released(
+            sized as usize + 10,
+            FILE.as_ptr(),
+            LINE,
+            FILE.as_ptr(),
+            LINE,
+        ) else {
             return core::ptr::null_mut();
         };
         let mut p = buf.as_ptr();
@@ -237,7 +187,7 @@ pub unsafe extern "C" fn ASN1_item_dup(it: *const Asn1Item, x: *const c_void) ->
         // end, keeping the free ahead of the `DUP_POST` callback.
         // SAFETY: `b` is the block `ASN1_item_i2d` allocated for this call and no other owner
         // will release it.
-        let buf = unsafe { OwnedBuf::adopt(b) };
+        let buf = unsafe { OwnedBuf::adopt_plain(b, FILE.as_ptr(), LINE) };
         let mut p: *const c_uchar = b;
         // SAFETY: the block holds `n` bytes and `p` is advanced by the decode.
         let ret = unsafe {

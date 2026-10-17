@@ -78,8 +78,8 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::NID_undef;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::check::ossl_dh_check_pub_key_partial;
 use super::group_params::DH_get_nid;
@@ -109,48 +109,6 @@ const FILE_DH_KEY: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_key.c"
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
-
-/// An owned `CRYPTO_malloc` block from this unit's allocator seam.
-///
-/// The block keeps the authority's allocation size and `file`/`line` (observable to a
-/// caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type. `Drop` is the
-/// single plain release at the authority's own free coordinate, and [`into_raw`](OwnedBuf::into_raw)
-/// is the transfer edge where a caller-owned result leaves the crate.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let ptr = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr })
-        }
-    }
-
-    /// The start of the block, for the raw calls that write it.
-    fn as_mut_ptr(&mut self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller, at the documented transfer edge.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam and coordinates as the authority.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE_DH_KEY, LINE) };
-    }
-}
 
 /// `int ossl_dh_compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh)` —
 /// `dh_key.c:40-108`.
@@ -910,9 +868,10 @@ pub(crate) unsafe fn ossl_dh_key2buf(
             }
         } else {
             // The allocation's ownership is the local owner's until the transfer edge below.
-            pbuf_owner = OwnedBuf::new(p_size as usize, FILE_DH_KEY, LINE);
-            pbuf = match pbuf_owner.as_mut() {
-                Some(owner) => owner.as_mut_ptr(),
+            pbuf_owner =
+                OwnedBuf::new_plain_released(p_size as usize, FILE_DH_KEY, LINE, FILE_DH_KEY, LINE);
+            pbuf = match pbuf_owner.as_ref() {
+                Some(owner) => owner.as_ptr(),
                 None => ptr::null_mut(),
             };
         }
