@@ -247,6 +247,7 @@ use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
 use crate::runtime::mem::{
     CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc_array, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_delete, OPENSSL_sk_delete_ptr, OPENSSL_sk_find,
     OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
@@ -581,55 +582,6 @@ const _: SkCompFn = ossl_provider_cmp;
 // Ownership of a heap buffer
 // ---------------------------------------------------------------------------------------------
 
-/// An owned heap buffer allocated through the crate's allocator seam.
-///
-/// The block stays the allocation the authority itself makes -- an `OPENSSL_strdup` for a name,
-/// a path or a parameter value -- and only its *ownership* is this type: [`Self::adopt`] takes up
-/// a block a helper or a field handed over, `Drop` is its single release at the authority's own
-/// `file`/`line`, and [`Self::into_raw`] gives the block back to the `#[repr(C)]` field that owns
-/// it. A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
-/// `free(NULL)`.
-///
-/// The `#[repr(C)]` objects themselves -- `INFOPAIR`, `OSSL_PROVIDER`, `PROVIDER_STORE`,
-/// `OSSL_PROVIDER_CHILD_CB` and the store's info array -- whose release is a compound destructor
-/// body, stay on the raw seam.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a live buffer this file allocated (or one a helper handed back), for release by
-    /// `Drop` at the authority's own `file`/`line`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// Give up ownership of the block to the `#[repr(C)]` field that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `static void infopair_free(INFOPAIR *pair)`.
 ///
 /// # Safety
@@ -642,12 +594,14 @@ unsafe extern "C" fn infopair_free(p: *mut c_void) {
     // SAFETY: `pair` is live, so both fields are NULL or blocks this pair owns; each handle
     // releases its field at the authority's own site, and the object block stays on the raw seam.
     unsafe {
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*pair).name.cast::<c_uchar>(),
             FILE,
             lines::L_PAIR_FREE_NAME,
         ));
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*pair).value.cast::<c_uchar>(),
             FILE,
             lines::L_PAIR_FREE_VALUE,
@@ -677,7 +631,8 @@ unsafe extern "C" fn infopair_copy(p: *const c_void) -> *mut c_void {
     // fields are NULL or NUL-terminated.
     unsafe {
         if !(*src).name.is_null() {
-            let Some(name) = OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let Some(name) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*src).name, FILE, lines::L_PAIR_COPY_NAME).cast::<c_uchar>(),
                 FILE,
                 lines::L_PAIR_COPY_NAME,
@@ -688,7 +643,8 @@ unsafe extern "C" fn infopair_copy(p: *const c_void) -> *mut c_void {
             (*dest).name = name.into_raw().cast::<c_char>();
         }
         if !(*src).value.is_null() {
-            let Some(value) = OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let Some(value) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*src).value, FILE, lines::L_PAIR_COPY_VALUE).cast::<c_uchar>(),
                 FILE,
                 lines::L_PAIR_COPY_VALUE,
@@ -726,7 +682,8 @@ pub(crate) unsafe fn infopair_add(
     }
     // SAFETY: `pair` is a fresh block; both strings are NUL-terminated per the contract.
     unsafe {
-        let Some(name_buf) = OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        let Some(name_buf) = OwnedBuf::adopt_plain(
             CRYPTO_strdup(name, FILE, lines::L_PAIR_ADD_NAME).cast::<c_uchar>(),
             FILE,
             lines::L_PAIR_ADD_NAME,
@@ -735,17 +692,20 @@ pub(crate) unsafe fn infopair_add(
             return 0;
         };
         (*pair).name = name_buf.into_raw().cast::<c_char>();
-        let Some(value_buf) = OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        let Some(value_buf) = OwnedBuf::adopt_plain(
             CRYPTO_strdup(value, FILE, lines::L_PAIR_ADD_VALUE).cast::<c_uchar>(),
             FILE,
             lines::L_PAIR_ADD_VALUE,
         ) else {
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*pair).name.cast::<c_uchar>(),
                 FILE,
                 lines::L_PAIR_ADD_ERR_NAME,
             ));
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*pair).value.cast::<c_uchar>(),
                 FILE,
                 lines::L_PAIR_ADD_ERR_VALUE,
@@ -783,12 +743,14 @@ pub(crate) unsafe fn ossl_provider_info_clear(info: *mut OsslProviderInfo) {
     // SAFETY: `info` is live, so its two strings are NULL or blocks it owns and its stack is NULL
     // or one this crate built; each string handle releases its block at the authority's own site.
     unsafe {
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*info).name.cast::<c_uchar>(),
             FILE,
             lines::L_INFO_CLEAR_NAME,
         ));
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*info).path.cast::<c_uchar>(),
             FILE,
             lines::L_INFO_CLEAR_PATH,
@@ -1095,7 +1057,8 @@ pub(crate) unsafe fn ossl_provider_store_free(vstore: *mut c_void) {
     // SAFETY: `store` is live, so each field is NULL or owned by it.
     unsafe {
         (*store).freeing = 1;
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*store).default_path.cast::<c_uchar>(),
             FILE,
             lines::L_STORE_FREE_PATH,
@@ -1448,7 +1411,8 @@ pub(crate) unsafe fn ossl_provider_add_builtin(
     let mut entry = blank_info();
     // SAFETY: `name` is NUL-terminated per the contract; the fresh block is the entry's to own.
     let Some(name_buf) = (unsafe {
-        OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        OwnedBuf::adopt_plain(
             CRYPTO_strdup(name, FILE_PROVIDER, lines::L_ADD_BUILTIN_DUP).cast::<c_uchar>(),
             FILE_PROVIDER,
             lines::L_ADD_BUILTIN_DUP,
@@ -1885,7 +1849,8 @@ pub(crate) unsafe fn provider_new(
     }
     // SAFETY: `prov` is live; `name` is NUL-terminated per the contract.
     unsafe {
-        let Some(name_buf) = OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        let Some(name_buf) = OwnedBuf::adopt_plain(
             CRYPTO_strdup(name, FILE, lines::L_PROV_NEW_NAME).cast::<c_uchar>(),
             FILE,
             lines::L_PROV_NEW_NAME,
@@ -1977,13 +1942,15 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
     unsafe {
         if (*prov).flags & FLAG_INITIALIZED != 0 {
             crate::provider::init::ossl_provider_teardown(prov);
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*prov).error_strings.cast::<c_uchar>(),
                 FILE,
                 lines::L_PROV_FREE_ERROR_STRINGS,
             ));
             (*prov).error_strings = ptr::null_mut();
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*prov).operation_bits.cast::<c_uchar>(),
                 FILE,
                 lines::L_PROV_FREE_OPERATION_BITS,
@@ -2002,12 +1969,14 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
         // would run at thread exit against a provider that no longer exists. 6.6e-ii.
         crate::runtime::thread_events::ossl_init_thread_deregister(prov.cast::<c_void>());
         DSO_free((*prov).module);
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*prov).name.cast::<c_uchar>(),
             FILE,
             lines::L_PROV_FREE_NAME,
         ));
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*prov).path.cast::<c_uchar>(),
             FILE,
             lines::L_PROV_FREE_PATH,
@@ -2034,7 +2003,8 @@ pub(crate) unsafe fn ossl_provider_set_module_path(
 ) -> c_int {
     // SAFETY: `prov` is live, so `path` is NULL or a block it owns.
     unsafe {
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*prov).path.cast::<c_uchar>(),
             FILE,
             lines::L_SET_PATH_FREE,
@@ -2043,7 +2013,8 @@ pub(crate) unsafe fn ossl_provider_set_module_path(
         if module_path.is_null() {
             return 1;
         }
-        let Some(path_buf) = OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        let Some(path_buf) = OwnedBuf::adopt_plain(
             CRYPTO_strdup(module_path, FILE, lines::L_SET_PATH_DUP).cast::<c_uchar>(),
             FILE,
             lines::L_SET_PATH_DUP,
@@ -2168,7 +2139,8 @@ pub(crate) unsafe fn ossl_provider_set_default_search_path(
     if !path.is_null() {
         // SAFETY: `path` is NUL-terminated per the contract.
         p = unsafe {
-            OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            OwnedBuf::adopt_plain(
                 CRYPTO_strdup(path, FILE, lines::L_SET_SEARCH_PATH_DUP).cast::<c_uchar>(),
                 FILE,
                 lines::L_SET_SEARCH_PATH_ERR,
@@ -2187,7 +2159,8 @@ pub(crate) unsafe fn ossl_provider_set_default_search_path(
         if locked {
             // SAFETY: `store` is live and the lock is held; `default_path` is NULL or owned.
             unsafe {
-                drop(OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt_plain(
                     (*store).default_path.cast::<c_uchar>(),
                     FILE,
                     lines::L_SET_SEARCH_PATH_FREE,

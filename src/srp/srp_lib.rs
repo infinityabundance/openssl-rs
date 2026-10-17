@@ -23,7 +23,7 @@
 // does.
 #![allow(unused_assignments)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use std::sync::OnceLock;
 
@@ -45,7 +45,8 @@ use crate::evp::digest::{
     EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free, EvpMd,
 };
 use crate::runtime::bio::sys::{strcmp, strlen};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::SrpGN;
 
@@ -67,54 +68,6 @@ const LINE_FREE_CS: c_int = 184;
 /// The number of rows in `knowngN[]`, which is `OSSL_NELEM`'s answer for the authority's
 /// initialiser — `crypto/srp/srp_lib.c:288-296`.
 const KNOWN_GN_NUMBER: usize = 7;
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays the authority's own `OPENSSL_malloc`/`OPENSSL_free` at its exact size and
-/// `file`/`line`. Only its *ownership* is this type: [`Self::new`] allocates the scratch and `Drop`
-/// is its single release through the same seam the authority uses. A Rust `Vec` would hide both the
-/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line_alloc)`, whose `Drop` releases the block at
-    /// `file`/`line_free` (`srp_Calc_xy` allocates at `:42` and frees at `:51`; `SRP_Calc_x_ex` at
-    /// `:157` and `:184`), or `None` when the allocator answers NULL.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        line_alloc: c_int,
-        line_free: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line_alloc).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line: line_free,
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`'s macro `((BN_num_bits(a) + 7) / 8)`, written
 /// as its body because a macro has no symbol.
@@ -166,10 +119,11 @@ unsafe fn srp_Calc_xy(
             break 'done;
         }
         // The allocation is `numN * 2` bytes, the authority's `OPENSSL_malloc_array`.
-        let Some(buf) = OwnedBuf::new(
+        let Some(buf) = OwnedBuf::new_plain_released(
             (numN as usize) * 2,
             FILE.as_ptr(),
             LINE_MALLOC_TMP,
+            FILE.as_ptr(),
             LINE_FREE_TMP,
         ) else {
             break 'done;
@@ -434,10 +388,11 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
 
     'done: {
         // SAFETY: `s` is NULL or live; the allocation is `BN_num_bytes(s)` bytes.
-        let Some(buf) = OwnedBuf::new(
+        let Some(buf) = OwnedBuf::new_plain_released(
             unsafe { bn_num_bytes(s) } as usize,
             FILE.as_ptr(),
             LINE_MALLOC_CS,
+            FILE.as_ptr(),
             LINE_FREE_CS,
         ) else {
             break 'done;

@@ -73,7 +73,8 @@ use crate::runtime::constant_time::{
     constant_time_msb_s, constant_time_msb_u32, constant_time_select, constant_time_select_int,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `rsa_enc.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
@@ -197,72 +198,6 @@ static PADDING_ITEM: [PaddingItem; 5] = [
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size, and only its *ownership* is
-/// this type: [`Self::new`] allocates the OAEP/TLS scratch `rsa_encrypt`/`rsa_decrypt` write,
-/// [`Self::adopt`] takes up a block the crate allocated inside a helper (`OSSL_PARAM_get_octet_string`,
-/// `CRYPTO_memdup`) or reclaimed from the context's `oaep_label`, `Drop` is its single release
-/// through the same seam the authority uses, and [`Self::into_raw`] hands it to the `#[repr(C)]`
-/// `PROV_RSA_CTX` field whose address the exported ABI exposes. A Rust `Box`/`Vec` would hide both
-/// the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook, which is
-/// why only ownership moves.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Take up a plain block the crate allocated inside a helper (an `OSSL_PARAM_get_octet_string`,
-    /// a `CRYPTO_memdup`) or reclaimed from the context's `oaep_label`, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the context field it is stored in.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `static void *rsa_newctx(void *provctx)` — `rsa_enc.c.in:87-100`.
 ///
@@ -606,7 +541,8 @@ unsafe extern "C" fn rsa_freectx(vprsactx: *mut c_void) {
         EVP_MD_free((*prsactx).mgf1_md);
         // The label's handle releases the field's own plain block at the authority's site; the
         // context block stays on the raw seam (its release is part of the destructor body).
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
             (*prsactx).oaep_label.cast::<c_uchar>(),
             FILE,
             332,
@@ -662,7 +598,8 @@ unsafe extern "C" fn rsa_dupctx(vprsactx: *mut c_void) -> *mut c_void {
             let src_label = (*dstctx).oaep_label;
             let src_labellen = (*dstctx).oaep_labellen;
             (*dstctx).oaep_label = ptr::null_mut();
-            let Some(dup) = OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let Some(dup) = OwnedBuf::adopt_plain(
                 CRYPTO_memdup(src_label.cast(), src_labellen, FILE, 369).cast::<c_uchar>(),
                 FILE,
                 369,
@@ -1149,12 +1086,14 @@ unsafe extern "C" fn rsa_set_ctx_params(vprsactx: *mut c_void, params: *const Os
             }
             // The old label's handle releases it at the authority's own site; the replacement is
             // the helper's fresh block, handed to the field through a second handle.
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*prsactx).oaep_label.cast::<c_uchar>(),
                 FILE,
                 576,
             ));
-            (*prsactx).oaep_label = OwnedBuf::adopt(tmp_label.cast::<c_uchar>(), FILE, 576)
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            (*prsactx).oaep_label = OwnedBuf::adopt_plain(tmp_label.cast::<c_uchar>(), FILE, 576)
                 .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*prsactx).oaep_labellen = tmp_labellen;
         }
