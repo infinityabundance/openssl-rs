@@ -129,6 +129,44 @@ const FILE_FFC_PARAMS_GENERATE: *const c_char =
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
+/// An owned seed or seed-scratch buffer allocated by the FIPS 186 generator.
+///
+/// The authority allocates both buffers with `CRYPTO_malloc(seedlen, FILE, LINE)` and releases
+/// them, at the same site, in its `err:` epilogue. Keeping each block in this handle makes that
+/// epilogue the single release: the seed is owned only when **this call** allocated it (a
+/// caller-supplied `params->seed` is never wrapped), and `ossl_ffc_params_set_validate_params`
+/// duplicates the seed into the parameters rather than taking the pointer.
+struct SeedBuf {
+    ptr: *mut u8,
+}
+
+impl SeedBuf {
+    /// `CRYPTO_malloc(seedlen, FILE_FFC_PARAMS_GENERATE, LINE)`, or `None` on refusal.
+    fn malloc(len: usize) -> Option<SeedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = CRYPTO_malloc(len, FILE_FFC_PARAMS_GENERATE, LINE).cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(SeedBuf { ptr: raw })
+        }
+    }
+
+    /// The stable address the generators read and write.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for SeedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `malloc` allocated and has not handed out; this is its
+        // single release at the authority's own `err:` site.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_FFC_PARAMS_GENERATE, LINE) };
+    }
+}
+
 /// `static int ffc_validate_LN(size_t L, size_t N, int type, int verify)` —
 /// `crypto/ffc/ffc_params_generate.c:67-98`. **The `#else` arm.**
 ///
@@ -871,30 +909,29 @@ fn default_mdname(n: usize) -> *const c_char {
 /// The 186-4 verifier's `err:` epilogue, and the 186-2 verifier's is the same minus the two seed
 /// buffers. Transcribed as one function so the six release steps cannot diverge between the arms.
 ///
-/// The first line is the interesting one: **`seed` is released only when it is not the caller's**
-/// — the pointer comparison is the ownership test, which is why an allocated seed is never
-/// installed in `params` before the epilogue runs.
+/// The first two lines are the authority's seed releases, in its order: `seed` is a [`SeedBuf`]
+/// **only when this call allocated it**, so a caller-supplied `params->seed` is never released
+/// here (the authority's pointer comparison is encoded by the owner's presence), and `seed_tmp`
+/// is always this call's own block.
 ///
 /// # Safety
 ///
-/// `seed` must be NULL or a block this crate allocated (never the caller's `params->seed`);
-/// `params_seed` must be NULL or the caller's pointer; `seed_tmp` must be NULL or such a block;
-/// `ctx`, `mont`, `mctx` and `md` must each be NULL or live.
+/// `ctx`, `mont`, `mctx` and `md` must each be NULL or live; `seed` and `seed_tmp` are the
+/// generator's own owned blocks (`None` when absent), and their `Drop` is the single release of
+/// each. No raw release path remains.
 unsafe fn fips186_4_epilogue(
     ctx: *mut BnCtx,
     mont: *mut MontCtx,
     mctx: *mut EvpMdCtx,
     md: *mut EvpMd,
-    seed: *mut u8,
-    params_seed: *mut u8,
-    seed_tmp: *mut u8,
+    seed: Option<SeedBuf>,
+    seed_tmp: Option<SeedBuf>,
 ) {
+    // The seed first, then the scratch buffer -- the authority's own `err:` order.
+    drop(seed);
+    drop(seed_tmp);
     // SAFETY: every pointer is NULL or live per this function's `# Safety` section.
     unsafe {
-        if seed != params_seed {
-            CRYPTO_free(seed.cast(), FILE_FFC_PARAMS_GENERATE, LINE);
-        }
-        CRYPTO_free(seed_tmp.cast(), FILE_FFC_PARAMS_GENERATE, LINE);
         if !ctx.is_null() {
             BN_CTX_end(ctx);
         }
@@ -984,7 +1021,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
 ) -> c_int {
     let mut ok: c_int = FFC_PARAM_RET_STATUS_FAILED;
     let mut seed: *mut u8 = ptr::null_mut();
-    let mut seed_tmp: *mut u8 = ptr::null_mut();
+    // Assigned at the one allocation site; every path that reaches a read has already taken the
+    // `else` arm that allocates it.
+    let seed_tmp: *mut u8;
+    // The two buffers' owners. `seed_owner` is `Some` only when the generator allocated the seed;
+    // a caller-supplied `params->seed` remains a raw borrow. Both are consumed by the epilogue at
+    // every exit, which drops them in the authority's release order.
+    let mut seed_owner: Option<SeedBuf> = None;
+    let mut seed_tmp_owner: Option<SeedBuf> = None;
     let mut counter: c_int;
     let mut pcounter: c_int = 0;
     let mut seedlen: usize;
@@ -1043,14 +1087,32 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     if md.is_null() {
         /* The authority's `goto err`, whose six releases are all no-ops here. */
         // SAFETY: every handle is NULL at this point.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
     // SAFETY: `md` is live.
     let mdsize = unsafe { EVP_MD_get_size(md) };
     if mdsize <= 0 {
         // SAFETY: `md` is live; the rest are NULL here.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1068,7 +1130,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         // SAFETY: `res` is writable and every handle is NULL or live.
         unsafe {
             *res = FFC_CHECK_BAD_LN_PAIR;
-            fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            );
         }
         return ok;
     }
@@ -1078,7 +1147,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     mctx = EVP_MD_CTX_new();
     if mctx.is_null() {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1086,7 +1164,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     ctx = unsafe { BN_CTX_new_ex(libctx) };
     if ctx.is_null() {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1101,7 +1188,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     }
     if tmp.is_null() {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1123,7 +1219,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             /* For generation: p & q must both be NULL or NON-NULL */
             if ((*params).p.is_null()) != ((*params).q.is_null()) {
                 *res = FFC_CHECK_INVALID_PQ;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
                 return ok;
             }
         } else {
@@ -1132,13 +1235,27 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 && (seed.is_null() || (*params).pcounter < 0)
             {
                 *res = FFC_CHECK_MISSING_SEED_OR_COUNTER;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
                 return ok;
             }
             /* Validation of g also requires g to be set */
             if (flags & FFC_PARAM_FLAG_VALIDATE_G) != 0 && (*params).g.is_null() {
                 *res = FFC_CHECK_INVALID_G;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
                 return ok;
             }
         }
@@ -1168,7 +1285,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         }
         if q.is_null() {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
 
@@ -1181,19 +1307,35 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             // SAFETY: `res` is writable and every handle is NULL or live.
             unsafe {
                 *res = FFC_CHECK_INVALID_SEED_SIZE;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
             }
             return ok;
         }
 
-        // SAFETY: `CRYPTO_malloc` is a safe `extern "C"` function here and answers NULL or
-        // `seedlen` bytes.
-        seed_tmp = CRYPTO_malloc(seedlen, FILE_FFC_PARAMS_GENERATE, LINE).cast();
-        if seed_tmp.is_null() {
+        // `CRYPTO_malloc(seedlen, FILE, LINE)`, `ffc_params_generate.c:586`, through the owner.
+        let Some(owner) = SeedBuf::malloc(seedlen) else {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
-        }
+        };
+        seed_tmp = owner.as_ptr();
+        seed_tmp_owner = Some(owner);
 
         if seed.is_null() {
             /* Validation requires the seed to be supplied */
@@ -1201,18 +1343,37 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 // SAFETY: `res` is writable and every handle is NULL or live.
                 unsafe {
                     *res = FFC_CHECK_MISSING_SEED_OR_COUNTER;
-                    fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    );
                 }
                 return ok;
             }
             /* if the seed is not supplied then alloc a seed buffer */
-            // SAFETY: as above; `CRYPTO_malloc` answers NULL or `seedlen` bytes.
-            seed = CRYPTO_malloc(seedlen, FILE_FFC_PARAMS_GENERATE, LINE).cast();
-            if seed.is_null() {
+            // `CRYPTO_malloc(seedlen, FILE, LINE)`, `ffc_params_generate.c:601`, through the
+            // owner: only an allocated seed gets a handle, so this call's own block is the one the
+            // epilogue releases.
+            let Some(owner) = SeedBuf::malloc(seedlen) else {
                 // SAFETY: every handle is NULL or live.
-                unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+                unsafe {
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    )
+                };
                 return ok;
-            }
+            };
+            seed = owner.as_ptr();
+            seed_owner = Some(owner);
         }
 
         /* A.1.1.2 Step (11): max loop count = 4L - 1 */
@@ -1225,7 +1386,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 // SAFETY: `res` is writable and every handle is NULL or live.
                 unsafe {
                     *res = FFC_CHECK_INVALID_COUNTER;
-                    fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    );
                 }
                 return ok;
             }
@@ -1244,7 +1412,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         // SAFETY: `test` is live and `BN_value_one` is static storage this call only reads.
         if unsafe { BN_lshift(test, BN_value_one(), (l - 1) as c_int) } == 0 {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
 
@@ -1266,7 +1443,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             };
             if qok == 0 {
                 // SAFETY: every handle is NULL or live.
-                unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+                unsafe {
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    )
+                };
                 return ok;
             }
             /* A.1.1.3 Step (9): Verify that q matches the expected value */
@@ -1275,14 +1461,30 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 // SAFETY: `res` is writable and every handle is NULL or live.
                 unsafe {
                     *res = FFC_CHECK_Q_MISMATCH;
-                    fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    );
                 }
                 return ok;
             }
             // SAFETY: `cb` is NULL or live.
             if unsafe { BN_GENCB_call(cb, 2, 0) } == 0 || unsafe { BN_GENCB_call(cb, 3, 0) } == 0 {
                 // SAFETY: every handle is NULL or live.
-                unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+                unsafe {
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    )
+                };
                 return ok;
             }
 
@@ -1310,7 +1512,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             }
             if r < 0 {
                 // SAFETY: every handle is NULL or live.
-                unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+                unsafe {
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    )
+                };
                 return ok;
             }
             /*
@@ -1322,7 +1533,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 // SAFETY: `res` is writable and every handle is NULL or live.
                 unsafe {
                     *res = FFC_CHECK_P_NOT_PRIME;
-                    fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                    fips186_4_epilogue(
+                        ctx,
+                        mont,
+                        mctx,
+                        md,
+                        seed_owner.take(),
+                        seed_tmp_owner.take(),
+                    );
                 }
                 return ok;
             }
@@ -1330,7 +1548,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         // SAFETY: `cb` is NULL or live.
         if unsafe { BN_GENCB_call(cb, 2, 1) } == 0 {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
         /*
@@ -1340,7 +1567,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         // SAFETY: `params` and `p` are live.
         if verify && (pcounter != counter || unsafe { BN_cmp(p, (*params).p) } != 0) {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
 
@@ -1348,7 +1584,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         if (flags & FFC_PARAM_FLAG_VALIDATE_PQG) == FFC_PARAM_FLAG_VALIDATE_PQ {
             let answer = pass_answer(flags, canonical_g);
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return answer;
         }
     }
@@ -1358,13 +1603,31 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     mont = unsafe { BN_MONT_CTX_new() };
     if mont.is_null() {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
     // SAFETY: `mont` and `p` are live and `ctx` is live.
     if unsafe { BN_MONT_CTX_set(mont, p, ctx) } == 0 {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1376,7 +1639,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         };
         if vok == 0 {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
     }
@@ -1392,7 +1664,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         BN_sub(pm1, p, BN_value_one()) == 0 || BN_div(e, ptr::null_mut(), pm1, q, ctx) == 0
     } {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1408,7 +1689,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             // SAFETY: `res` is writable and every handle is NULL or live.
             unsafe {
                 *res = FFC_CHECK_INVALID_G;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
             }
             return ok;
         }
@@ -1418,7 +1706,14 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
             // SAFETY: `res` is writable and every handle is NULL or live.
             unsafe {
                 *res = FFC_CHECK_G_MISMATCH;
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
             }
             return ok;
         }
@@ -1426,7 +1721,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
         // SAFETY: `ctx`, `mont`, `g`, `tmp`, `p`, `e`, `pm1` are live.
         if unsafe { generate_unverifiable_g(ctx, mont, g, tmp, p, e, pm1, &raw mut hret) } == 0 {
             // SAFETY: every handle is NULL or live.
-            unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+            unsafe {
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                )
+            };
             return ok;
         }
     }
@@ -1434,7 +1738,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     // SAFETY: `cb` is NULL or live.
     if unsafe { BN_GENCB_call(cb, 3, 1) } == 0 {
         // SAFETY: every handle is NULL or live.
-        unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+        unsafe {
+            fips186_4_epilogue(
+                ctx,
+                mont,
+                mctx,
+                md,
+                seed_owner.take(),
+                seed_tmp_owner.take(),
+            )
+        };
         return ok;
     }
 
@@ -1455,11 +1768,25 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
                 (*params).g = BN_dup(g);
             }
             if (*params).p.is_null() || (*params).q.is_null() || (*params).g.is_null() {
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
                 return ok;
             }
             if ossl_ffc_params_set_validate_params(params, seed, seedlen, pcounter) == 0 {
-                fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp);
+                fips186_4_epilogue(
+                    ctx,
+                    mont,
+                    mctx,
+                    md,
+                    seed_owner.take(),
+                    seed_tmp_owner.take(),
+                );
                 return ok;
             }
             (*params).h = hret;
@@ -1469,7 +1796,16 @@ pub(crate) unsafe fn ossl_ffc_params_FIPS186_4_gen_verify(
     /* `pass:` — falls straight into the `err:` epilogue. */
     ok = pass_answer(flags, canonical_g);
     // SAFETY: every handle is NULL or live.
-    unsafe { fips186_4_epilogue(ctx, mont, mctx, md, seed, params_seed, seed_tmp) };
+    unsafe {
+        fips186_4_epilogue(
+            ctx,
+            mont,
+            mctx,
+            md,
+            seed_owner.take(),
+            seed_tmp_owner.take(),
+        )
+    };
     ok
 }
 

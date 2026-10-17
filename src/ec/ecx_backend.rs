@@ -33,7 +33,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_void};
-use core::ptr;
+use core::ptr::{self, NonNull};
 
 use crate::asn1::layout::{Asn1String, V_ASN1_UNDEF};
 use crate::asn1::p8_pkey::{PKCS8_pkey_get0, Pkcs8PrivKeyInfo};
@@ -52,11 +52,94 @@ use crate::params::{OSSL_PARAM_get_octet_string, OsslParam};
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::OBJ_obj2nid;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c".as_ptr();
+
+/// `ossl_ecx_key_free`'s block release, `crypto/ec/ecx_key.c:83` -- the one site any
+/// `ossl_ecx_key_dup` failure releases its block at.
+const FILE_ECX_KEY: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c".as_ptr();
+
+/// `ossl_ecx_key_free`'s `OPENSSL_free(key)` (`crypto/ec/ecx_key.c:83`).
+const LINE_FREE_KEY: c_int = 83;
+
+/// The construction window of [`ossl_ecx_key_dup`]: an owned `ECX_KEY` block that is **not yet**
+/// a value whose destructor body may run.
+///
+/// Its `Drop` is the block release alone. The authority's `err:` label always reaches
+/// `ossl_ecx_key_free`, so the window never closes through this handle on a normal path: every
+/// failure is the explicit [`Self::assume_init`] transition followed by [`dup_err`], and success is
+/// [`OwnedDupKey::into_raw`]. The block-only release is the safety net for an interrupted (panic)
+/// construction, when no member has been installed yet.
+struct RawDupKey {
+    ptr: NonNull<EcxKey>,
+}
+
+impl RawDupKey {
+    /// `OPENSSL_zalloc(sizeof(*ret))`, `ecx_backend.c:106`.
+    fn zalloc() -> Option<RawDupKey> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<EcxKey>()` bytes, exactly `ECX_KEY`'s layout.
+        let raw = CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 106).cast::<EcxKey>();
+        NonNull::new(raw).map(|ptr| RawDupKey { ptr })
+    }
+
+    /// The writable start of the block, for the identity-field writes.
+    fn as_ptr(&self) -> *mut EcxKey {
+        self.ptr.as_ptr()
+    }
+
+    /// The validated transition: the destructor-visible members are now in a state
+    /// `ossl_ecx_key_free` accepts.
+    ///
+    /// # Safety
+    /// `propq` and `privkey` are NULL or owned blocks of this object, `keylen` is written, and
+    /// `references` is 1, so `ossl_ecx_key_free` may run; no other owner will release the block.
+    unsafe fn assume_init(self) -> OwnedDupKey {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        OwnedDupKey { ptr }
+    }
+}
+
+impl Drop for RawDupKey {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated and has not been handed out; this is
+        // its single release, at the authority's own block-release site.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE_ECX_KEY,
+                LINE_FREE_KEY,
+            )
+        };
+    }
+}
+
+/// A fully initialised `ECX_KEY` block under construction, whose `Drop` is the authority's own
+/// `ossl_ecx_key_free` -- the `err:` label of [`ossl_ecx_key_dup`].
+struct OwnedDupKey {
+    ptr: NonNull<EcxKey>,
+}
+
+impl OwnedDupKey {
+    /// Give up ownership to the C caller on success.
+    fn into_raw(self) -> *mut EcxKey {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedDupKey {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is this call's own key block, its destructor-visible fields are valid,
+        // and this is its single release; the authority's `err:` label is this same call.
+        unsafe { ossl_ecx_key_free(self.ptr.as_ptr()) };
+    }
+}
 
 /// `KEY_OP_PUBLIC` — `include/crypto/ecx.h:130`.
 pub(crate) const KEY_OP_PUBLIC: c_int = 0;
@@ -247,25 +330,34 @@ pub unsafe extern "C" fn ossl_ecx_key_fromdata(
 /// `key` is live; the returned object is a fresh key the caller owns.
 #[no_mangle]
 pub unsafe extern "C" fn ossl_ecx_key_dup(key: *const EcxKey, selection: c_int) -> *mut EcxKey {
-    // SAFETY: `OPENSSL_zalloc(sizeof(*ret))`, line 106.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 106).cast::<EcxKey>();
-    if ret.is_null() {
+    // The authority's `OPENSSL_zalloc(sizeof(*ret))` at line 106, through the staged owner: a
+    // refused allocation returns NULL and no full destructor can run on an unformed object.
+    let Some(raw) = RawDupKey::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ret = raw.as_ptr();
 
-    // SAFETY: `key` is live and `ret` is this call's own object.
+    // SAFETY: `key` is live and `ret` is this call's own block.
     unsafe {
         (*ret).libctx = (*key).libctx;
         (*ret).haspubkey = 0;
         (*ret).keylen = (*key).keylen;
         (*ret).type_ = (*key).type_;
         (*ret).references = core::sync::atomic::AtomicI32::new(1);
+    }
+    // SAFETY: the destructor-visible members are the zeroed `propq`/`privkey`, `keylen` is written
+    // and `references` is 1, so `ossl_ecx_key_free` is valid from here on and this handle is the
+    // block's only owner.
+    let owner = unsafe { raw.assume_init() };
 
+    // SAFETY: `key` is live and `ret` is this call's own object.
+    unsafe {
         if !(*key).propq.is_null() {
-            // `OPENSSL_strdup(key->propq)`, line 119.
+            // `OPENSSL_strdup(key->propq)`, line 119. The duplicate is the object's own member:
+            // a NULL answer leaves `propq` NULL and the owner's `Drop` is its single release.
             (*ret).propq = CRYPTO_strdup((*key).propq, FILE, 119);
             if (*ret).propq.is_null() {
-                return dup_err(ret);
+                return dup_err(owner);
             }
         }
 
@@ -282,24 +374,22 @@ pub unsafe extern "C" fn ossl_ecx_key_dup(key: *const EcxKey, selection: c_int) 
             if ossl_ecx_key_allocate_privkey(ret).is_null() {
                 // SAFETY: a compile-time-constant site (`ecx_backend.c:133`, ERR_R_EC_LIB).
                 raise_site(&err_sites::ECX_BACKEND_133);
-                return dup_err(ret);
+                return dup_err(owner);
             }
             ptr::copy_nonoverlapping((*key).privkey, (*ret).privkey, (*ret).keylen);
         }
     }
 
-    ret
+    owner.into_raw()
 }
 
-/// The `err:` label of [`ossl_ecx_key_dup`] — `crypto/ec/ecx_backend.c:138-141`.
+/// The `err:` label of [`ossl_ecx_key_dup`] -- `crypto/ec/ecx_backend.c:138-141`.
 ///
-/// `CRYPTO_FREE_REF` is empty on this profile, so the label is `ossl_ecx_key_free(ret)`.
-///
-/// # Safety
-/// `ret` is a live, uniquely-owned key.
-unsafe fn dup_err(ret: *mut EcxKey) -> *mut EcxKey {
-    // SAFETY: `ret` is live and uniquely owned per the contract.
-    unsafe { ossl_ecx_key_free(ret) };
+/// `CRYPTO_FREE_REF` is empty on this profile, so the label is `ossl_ecx_key_free(ret)`; the
+/// consumed owner's `Drop` is exactly that call, so the block, its `propq` duplicate and its
+/// secure private scalar are each released once by the authority's own destructor.
+fn dup_err(key: OwnedDupKey) -> *mut EcxKey {
+    drop(key);
     ptr::null_mut()
 }
 
