@@ -102,6 +102,38 @@ const FILE_RSA_GEN: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
+/// An owned plaintext buffer for the pairwise test: the authority's own `OPENSSL_calloc` block
+/// whose single release is `Drop`.
+///
+/// The allocation keeps the authority's exact `plaintxt_len * 3` request (element count and
+/// element size passed separately, so the seam performs the authority's own overflow check), its
+/// `file`/`line`, and the authority's successful-or-failed release order: the buffer is dropped
+/// after `OSSL_SELF_TEST_onend`/`OSSL_SELF_TEST_free`, on every path.
+struct OwnedBuf {
+    ptr: core::ptr::NonNull<c_uchar>,
+}
+
+impl OwnedBuf {
+    /// `OPENSSL_calloc(num, size)`, or `None` when the allocator answers NULL.
+    fn calloc(num: usize, size: usize) -> Option<OwnedBuf> {
+        let raw = CRYPTO_calloc(num, size, FILE_RSA_GEN, LINE).cast::<c_uchar>();
+        core::ptr::NonNull::new(raw).map(|ptr| OwnedBuf { ptr })
+    }
+
+    /// The writable start of the `3 * plaintxt_len`-byte block.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `calloc` allocated and has not handed out; its single
+        // release is the authority's own `OPENSSL_free` at the allocation's coordinates.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE_RSA_GEN, LINE) };
+    }
+}
+
 /// `##__VA_ARGS__`-free `OPENSSL_FILE`/`OPENSSL_LINE` for the two `OPENSSL_free`
 /// calls the pairwise test makes; the authority's `OPENSSL_free` is
 /// `CRYPTO_free(ptr, OPENSSL_FILE, OPENSSL_LINE)`.
@@ -1074,7 +1106,6 @@ unsafe fn rsa_keygen_pairwise_test(
 ) -> c_int {
     let mut ret: c_int = 0;
     const PADDING: c_int = 3; /* RSA_NO_PADDING */
-    let mut plaintxt: *mut c_uchar = core::ptr::null_mut();
 
     // SAFETY: `OSSL_SELF_TEST_new` takes no caller pointers and answers a fresh
     // object or NULL.
@@ -1097,14 +1128,14 @@ unsafe fn rsa_keygen_pairwise_test(
      */
     // SAFETY: `rsa` is live with a live `n`.
     let plaintxt_len = unsafe { RSA_size(rsa) };
-    // `OPENSSL_calloc(plaintxt_len, 3)`.
-    let block = CRYPTO_calloc(plaintxt_len as usize, 3, FILE_RSA_GEN, LINE).cast::<c_uchar>();
+    // `OPENSSL_calloc(plaintxt_len, 3)`; the owner preserves the request and its coordinates.
+    let block = OwnedBuf::calloc(plaintxt_len as usize, 3);
 
     'body: {
-        if block.is_null() {
+        let Some(block) = block.as_ref() else {
             break 'body;
-        }
-        plaintxt = block;
+        };
+        let plaintxt = block.as_ptr();
         // SAFETY: `block` was allocated this call for `3 * plaintxt_len` octets, so
         // both offsets are in bounds.
         let ciphertxt = unsafe { plaintxt.add(plaintxt_len as usize) };
@@ -1147,15 +1178,13 @@ unsafe fn rsa_keygen_pairwise_test(
         ret = 1;
     }
 
-    // SAFETY: `st` is live or NULL; `plaintxt` is the block this call allocated or
-    // NULL.
+    // SAFETY: `st` is live or NULL. The plaintext owner's `Drop` performs the authority's
+    // release after the self-test teardown, on every path.
     unsafe {
         OSSL_SELF_TEST_onend(st, ret);
         OSSL_SELF_TEST_free(st);
-        if !plaintxt.is_null() {
-            CRYPTO_free(plaintxt.cast(), FILE_RSA_GEN, LINE);
-        }
     }
+    drop(block);
 
     ret
 }
