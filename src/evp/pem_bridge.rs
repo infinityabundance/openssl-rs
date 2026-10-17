@@ -119,7 +119,8 @@ use crate::runtime::buffer::BufMem;
 use crate::runtime::ctype::ossl_ctype_check;
 use crate::runtime::ctype_table::mask::{MASK_BASE64, MASK_CNTRL};
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 use crate::runtime::str::OPENSSL_hexchar2int;
 
@@ -269,84 +270,6 @@ impl Drop for PemBuf {
         // SAFETY: `self.ptr` is the block `pem_malloc` answered and has not handed out; `pem_free`
         // dispatches on the recorded flags and accepts NULL.
         unsafe { pem_free(self.ptr, self.flags, self.num, FILE_PEM_LIB, self.line) };
-    }
-}
-
-/// An owned scratch buffer from this unit's direct `CRYPTO_malloc`/`CRYPTO_malloc_array` seam.
-///
-/// The release is plain for `PEM_SignFinal`'s signature buffer ([`Self::new`]) and cleansing for
-/// `PEM_write_bio`'s line buffer ([`Self::new_array`]); `Drop` performs the arm the constructor
-/// recorded, at the authority's own site.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    /// The byte count `CRYPTO_clear_free` is told; unused by a plain release.
-    len: usize,
-    file: *const c_char,
-    line: c_int,
-    cleanse: bool,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, alloc_line)`, released by a plain `CRYPTO_free` at `release_line`.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            len,
-            file,
-            line: release_line,
-            cleanse: false,
-        })
-    }
-
-    /// `CRYPTO_malloc_array(num, size, file, alloc_line)`, released by
-    /// `CRYPTO_clear_free(ptr, num * size, file, release_line)`.
-    fn new_array(
-        num: usize,
-        size: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc_array(num, size, file, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            len: num * size,
-            file,
-            line: release_line,
-            cleanse: true,
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the arm the constructor recorded.
-    fn drop(&mut self) {
-        if self.cleanse {
-            // SAFETY: `self.ptr` is this frame's own block of `self.len` bytes; the authority's own
-            // `OPENSSL_clear_free` accepts NULL.
-            unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
-        } else {
-            // SAFETY: `self.ptr` is this frame's own block; the authority's own `CRYPTO_free`
-            // accepts NULL.
-            unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-        }
     }
 }
 
@@ -1378,9 +1301,16 @@ pub unsafe extern "C" fn PEM_write_bio(
     }
 
     // `OPENSSL_malloc_array(PEM_BUFSIZE, 8)` — this frame's own line buffer, released by its `Drop`
-    // on every exit below through the authority's own `OPENSSL_clear_free`.
-    let Some(buf_owner) = OwnedBuf::new_array(PEM_BUFSIZE as usize, 8, FILE_PEM_LIB, 665, 699)
-    else {
+    // on every exit below through the authority's own `OPENSSL_clear_free`. The product is a
+    // compile-time constant, so it observes the same `malloc_request(total, file, line)` call the
+    // authority's checked-multiply wrapper makes.
+    let Some(buf_owner) = OwnedBuf::new_cleansed_released(
+        (PEM_BUFSIZE as usize) * 8,
+        FILE_PEM_LIB,
+        665,
+        FILE_PEM_LIB,
+        699,
+    ) else {
         // SAFETY: this frame's own context.
         unsafe { pem_write_bio_err(ctx, reason, retval) };
         return retval;
@@ -1509,7 +1439,9 @@ pub unsafe extern "C" fn PEM_SignFinal(
     // SAFETY: `pkey` is live per the contract.
     let size = unsafe { EVP_PKEY_get_size(pkey) };
     // SAFETY: the allocation validates its own argument; `size` is the key's signature length.
-    let Some(m_owner) = OwnedBuf::new(size as usize, FILE_PEM_SIGN, 35, 47) else {
+    let Some(m_owner) =
+        OwnedBuf::new_plain_released(size as usize, FILE_PEM_SIGN, 35, FILE_PEM_SIGN, 47)
+    else {
         return ret;
     };
     let m = m_owner.as_ptr();
