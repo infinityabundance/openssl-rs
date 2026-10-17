@@ -85,21 +85,27 @@
 //! The orderings are the authority's: `AcqRel` for the read-modify-write
 //! operations, `Acquire` for loads, `Release` for stores.
 //!
-//! ## Ownership classification (this batch)
+//! ## Ownership classification
 //!
-//! [`CryptoRwlock`] (`CRYPTO_RWLOCK`) is a **deliberately Rust-owned internal
-//! representation**: `CRYPTO_THREAD_lock_new` boxes an `RwlockInner` and casts it
-//! to the opaque handle, and `CRYPTO_THREAD_lock_free` is the exported lifecycle
-//! that drops that same `Box`. The internal `ossl_crypto_mutex_*` /
-//! `ossl_crypto_condvar_*` primitives are likewise `pub(crate)` Rust-owned `Box`
-//! representations and are not exported. None of these objects is allocated
-//! through the `CRYPTO_*` seam, and the consequence is stated rather than hidden:
-//! an installed `CRYPTO_set_mem_functions` hook does not observe their
-//! allocations or releases. Allocating the handle through
-//! `CRYPTO_zalloc(size_of::<...>())` would make the hook observe a byte count that
-//! is not the authority's C object size, violating §6's exact-size rule. This is
-//! the recorded compatibility residual **P1**, retained and **not** a
-//! `SAFETY_DISCHARGED` claim.
+//! On the measured `linux`/`x86_64`/64-bit target, [`CryptoRwlock`]
+//! (`CRYPTO_RWLOCK`) uses **option B** from `OPAQUE-REPRESENTATIONS.md`:
+//! `CRYPTO_THREAD_lock_new` allocates the authority's exact 56-byte
+//! `pthread_rwlock_t` block through `CRYPTO_zalloc` at
+//! `crypto/threads_pthread.c:910` and writes an [`RwlockInner`] inline;
+//! `CRYPTO_THREAD_lock_free` runs `drop_in_place` and releases the same block at
+//! `:1005`. A caller-installed `CRYPTO_set_mem_functions` hook therefore observes
+//! the authority's byte count and coordinates, including the NULL-on-refusal
+//! behaviour. Compile-time `size_of`/`align_of` asserts make a growing Rust type
+//! a build error rather than out-of-bounds storage. On every other target the
+//! module keeps option A (`Box<RwlockInner>`), because no authority size has been
+//! measured there.
+//!
+//! The internal `ossl_crypto_mutex_*` / `ossl_crypto_condvar_*` primitives remain
+//! `pub(crate)` Rust-owned `Box` representations and are not exported; they are
+//! outside this decision. `RwlockInner` itself contains only `Mutex`/`Condvar`, so
+//! the `Vec`-style secondary allocations the other opaque objects retain do not
+//! exist here. This still promotes nothing to `SAFETY_DISCHARGED`: the §7
+//! independent-check package is outstanding.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
@@ -108,6 +114,12 @@ use std::time::Duration;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::sys::{self, Timespec, Timeval};
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 // ---------------------------------------------------------------------------
 // pthread bindings
@@ -165,14 +177,103 @@ struct RwlockInner {
     cond: Condvar,
 }
 
+/// The authority's `sizeof(pthread_rwlock_t)` for the `USE_RWLOCK` profile on
+/// the measured target (`crypto/threads_pthread.c:910`). The other branch, which
+/// the admitted build does not select, allocates a 40-byte `pthread_mutex_t`; a
+/// target whose authority layout is not measured keeps option A.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_CRYPTO_RWLOCK_SIZE: usize = 56;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_CRYPTO_RWLOCK_ALIGN: usize = 8;
+
+// The 56-byte derivation assumes an 8-byte pointer and a 4-byte C `int`, and an
+// `RwlockInner` that fits. Each is checked here rather than trusted.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<usize>() == 8);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<*mut c_void>() == 8);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<c_int>() == 4);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::size_of::<RwlockInner>() <= AUTHORITY_CRYPTO_RWLOCK_SIZE,
+    "RwlockInner no longer fits the authority-sized CRYPTO_RWLOCK block"
+);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::align_of::<RwlockInner>() <= AUTHORITY_CRYPTO_RWLOCK_ALIGN,
+    "RwlockInner alignment exceeds what the C allocator guarantees"
+);
+
+/// The authority's allocation coordinate (`OPENSSL_zalloc(sizeof(...))` at
+/// `crypto/threads_pthread.c:910`) and release coordinate (`:1005`).
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const FILE: &core::ffi::CStr = c"crypto/threads_pthread.c";
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const LINE_ALLOC: c_int = 910;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const LINE_FREE: c_int = 1005;
+
+/// The state the authority's `pthread_rwlock_init` establishes.
+fn new_inner() -> RwlockInner {
+    RwlockInner {
+        state: Mutex::new(LockState {
+            writer: false,
+            writer_id: None,
+            readers: 0,
+        }),
+        cond: Condvar::new(),
+    }
+}
+
 /// # Safety
 /// `lock` must be non-NULL and point to a live `RwlockInner` produced by
 /// [`CRYPTO_THREAD_lock_new`] and not yet freed.
 unsafe fn rwlock_inner<'a>(lock: *mut CryptoRwlock) -> &'a RwlockInner {
-    // SAFETY: `CRYPTO_THREAD_lock_new` boxes an `RwlockInner` and casts it to
-    // `*mut CryptoRwlock`; the caller guarantees the pointer is live and
-    // non-NULL. The returned reference's lifetime is the caller's contract for
-    // the duration of one C call.
+    // SAFETY: `CRYPTO_THREAD_lock_new` writes an `RwlockInner` into the block it
+    // returns and casts it to `*mut CryptoRwlock`; the caller guarantees the
+    // pointer is live and non-NULL. The returned reference's lifetime is the
+    // caller's contract for the duration of one C call.
     unsafe { &*lock.cast::<RwlockInner>() }
 }
 
@@ -210,23 +311,47 @@ fn current_id() -> CryptoThreadId {
 // Locks
 // ---------------------------------------------------------------------------
 
+/// Option B: one `CRYPTO_zalloc` block of the authority's exact size, with the
+/// Rust state written into it. The compile-time asserts above establish both the
+/// extent and the alignment obligation; a refusal is NULL, as in the authority
+/// (which deliberately raises no error here).
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+fn alloc_lock() -> *mut CryptoRwlock {
+    let block = CRYPTO_zalloc(AUTHORITY_CRYPTO_RWLOCK_SIZE, FILE.as_ptr(), LINE_ALLOC)
+        .cast::<RwlockInner>();
+    if block.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `CRYPTO_zalloc` returned a fresh, exclusively-owned, writable block
+    // of `AUTHORITY_CRYPTO_RWLOCK_SIZE` bytes. The compile-time asserts prove that
+    // is at least `size_of::<RwlockInner>()`; the C allocator contract guarantees
+    // an alignment at least as strict as `AUTHORITY_CRYPTO_RWLOCK_ALIGN`. No other
+    // reference to the block exists, so one `write` initialises the whole value.
+    unsafe { block.write(new_inner()) };
+    block.cast::<CryptoRwlock>()
+}
+
+/// Option A, retained for targets whose authority layout has not been measured.
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+)))]
+fn alloc_lock() -> *mut CryptoRwlock {
+    Box::into_raw(Box::new(new_inner())).cast::<CryptoRwlock>()
+}
+
 /// `CRYPTO_RWLOCK *CRYPTO_THREAD_lock_new(void)`
 ///
 /// Returns NULL when allocation fails. The authority deliberately sets no error
 /// here ("to avoid recursion blowup" in its own comment), so neither does this.
 #[no_mangle]
 pub extern "C" fn CRYPTO_THREAD_lock_new() -> *mut CryptoRwlock {
-    guard_ffi(core::ptr::null_mut(), || {
-        let inner = RwlockInner {
-            state: Mutex::new(LockState {
-                writer: false,
-                writer_id: None,
-                readers: 0,
-            }),
-            cond: Condvar::new(),
-        };
-        Box::into_raw(Box::new(inner)).cast::<CryptoRwlock>()
-    })
+    guard_ffi(core::ptr::null_mut(), alloc_lock)
 }
 
 /// `int CRYPTO_THREAD_read_lock(CRYPTO_RWLOCK *lock)`
@@ -330,6 +455,53 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
     })
 }
 
+/// Releases the authority-sized block after the Rust state has been dropped. The
+/// guard makes the block release happen exactly once even if a destructor ever
+/// unwinds.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+struct BlockRelease(*mut CryptoRwlock);
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+impl Drop for BlockRelease {
+    fn drop(&mut self) {
+        // SAFETY: the block came from `CRYPTO_zalloc` at `FILE`/`LINE_ALLOC` in
+        // `alloc_lock`, and this guard is its single release at the authority's
+        // freeing coordinate.
+        unsafe { CRYPTO_free(self.0.cast::<c_void>(), FILE.as_ptr(), LINE_FREE) };
+    }
+}
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+unsafe fn free_lock(lock: *mut CryptoRwlock) {
+    let _release = BlockRelease(lock);
+    // SAFETY: `lock` is a live, initialized `RwlockInner` from `alloc_lock`,
+    // exclusively owned by the caller, and this is its single destructor.
+    unsafe { core::ptr::drop_in_place(lock.cast::<RwlockInner>()) };
+}
+
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+)))]
+unsafe fn free_lock(lock: *mut CryptoRwlock) {
+    // SAFETY: `lock` came from `Box::into_raw` in `alloc_lock` and is not freed
+    // elsewhere.
+    unsafe { drop(Box::from_raw(lock.cast::<RwlockInner>())) };
+}
+
 /// `void CRYPTO_THREAD_lock_free(CRYPTO_RWLOCK *lock)`
 ///
 /// NULL is a no-op, matching the authority. Freeing a lock that is held or
@@ -345,9 +517,10 @@ pub unsafe extern "C" fn CRYPTO_THREAD_lock_free(lock: *mut CryptoRwlock) {
         if lock.is_null() {
             return;
         }
-        // SAFETY: `lock` came from `Box::into_raw` in `CRYPTO_THREAD_lock_new`
-        // and is not used again by the caller.
-        drop(unsafe { Box::from_raw(lock.cast::<RwlockInner>()) });
+        // SAFETY: `lock` came from `CRYPTO_THREAD_lock_new` and is not used again
+        // by the caller; `free_lock` is the single release path for either
+        // representation.
+        unsafe { free_lock(lock) };
     })
 }
 
@@ -1040,6 +1213,140 @@ mod tests {
         assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
         // SAFETY: no user remains.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
+    // -------- rwlock option-B allocator hook --------------------------------
+
+    /// The allocator seam latches shut after a process's first `CRYPTO_*`
+    /// allocation, so the observation is made in a fresh process in which this is
+    /// the only test that runs. That is what makes it deterministic: no other
+    /// test can allocate first or race the counters.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_pointer_width = "64"
+    ))]
+    mod lock_hook {
+        use super::super::*;
+        use crate::runtime::mem::CRYPTO_set_mem_functions;
+        use core::ffi::{c_char, c_int, c_void};
+        use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
+
+        extern "C" {
+            fn malloc(n: usize) -> *mut c_void;
+            fn realloc(p: *mut c_void, n: usize) -> *mut c_void;
+            fn free(p: *mut c_void);
+        }
+
+        static MALLOCS: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_SIZE: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_FILE: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_LINE: AtomicI32 = AtomicI32::new(0);
+        static FREES: AtomicUsize = AtomicUsize::new(0);
+        static FREED_PTR: AtomicUsize = AtomicUsize::new(0);
+        static FREE_FILE: AtomicUsize = AtomicUsize::new(0);
+        static FREE_LINE: AtomicI32 = AtomicI32::new(0);
+
+        unsafe extern "C" fn hook_malloc(
+            n: usize,
+            file: *const c_char,
+            line: c_int,
+        ) -> *mut c_void {
+            MALLOCS.fetch_add(1, Ordering::SeqCst);
+            MALLOC_SIZE.store(n, Ordering::SeqCst);
+            MALLOC_FILE.store(file as usize, Ordering::SeqCst);
+            MALLOC_LINE.store(line, Ordering::SeqCst);
+            // SAFETY: `malloc` has no preconditions.
+            unsafe { malloc(n) }
+        }
+
+        unsafe extern "C" fn hook_realloc(
+            p: *mut c_void,
+            n: usize,
+            _file: *const c_char,
+            _line: c_int,
+        ) -> *mut c_void {
+            // SAFETY: `p` is NULL or a block from `hook_malloc`.
+            unsafe { realloc(p, n) }
+        }
+
+        unsafe extern "C" fn hook_free(p: *mut c_void, file: *const c_char, line: c_int) {
+            FREES.fetch_add(1, Ordering::SeqCst);
+            FREED_PTR.store(p as usize, Ordering::SeqCst);
+            FREE_FILE.store(file as usize, Ordering::SeqCst);
+            FREE_LINE.store(line, Ordering::SeqCst);
+            // SAFETY: `p` is NULL or a block from `hook_malloc`.
+            unsafe { free(p) }
+        }
+
+        const CHILD_ENV: &str = "OPENSSL_RS_RWLOCK_HOOK_CHILD";
+
+        #[test]
+        fn hook_observes_authority_size_and_single_release() {
+            if std::env::var_os(CHILD_ENV).is_some() {
+                run_probe();
+                return;
+            }
+
+            let exe = std::env::current_exe().unwrap_or_default();
+            assert!(!exe.as_os_str().is_empty(), "the test binary has no path");
+            let ran_and_passed = std::process::Command::new(exe)
+                .args([
+                    "--exact",
+                    "runtime::thread::tests::lock_hook::hook_observes_authority_size_and_single_release",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(CHILD_ENV, "1")
+                .status()
+                .map(|status| status.success())
+                .unwrap_or(false);
+            assert!(ran_and_passed, "the isolated hook probe failed");
+        }
+
+        fn run_probe() {
+            // SAFETY: the hooks forward to libc and stay valid for the process;
+            // this process runs exactly this test, so the seam has not latched.
+            let installed = unsafe {
+                CRYPTO_set_mem_functions(Some(hook_malloc), Some(hook_realloc), Some(hook_free))
+            };
+            assert_eq!(installed, 1, "the allocator seam refused installation");
+
+            let lock = CRYPTO_THREAD_lock_new();
+            assert!(!lock.is_null(), "CRYPTO_THREAD_lock_new returned NULL");
+
+            assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "one block allocation");
+            assert_eq!(
+                MALLOC_SIZE.load(Ordering::SeqCst),
+                AUTHORITY_CRYPTO_RWLOCK_SIZE,
+                "the hook must observe the authority's sizeof(pthread_rwlock_t)"
+            );
+            assert_eq!(
+                MALLOC_FILE.load(Ordering::SeqCst),
+                FILE.as_ptr() as usize,
+                "the allocation reports the authority's file"
+            );
+            assert_eq!(MALLOC_LINE.load(Ordering::SeqCst), LINE_ALLOC);
+
+            // Every operation must work through the inline representation.
+            // SAFETY: `lock` is live and unheld.
+            assert_eq!(unsafe { CRYPTO_THREAD_read_lock(lock) }, 1);
+            // SAFETY: this thread holds the read lock.
+            assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+            // SAFETY: `lock` is live and unheld.
+            assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 1);
+            // SAFETY: this thread holds the write lock.
+            assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+
+            // SAFETY: `lock` is live and unheld; this is its single release.
+            unsafe { CRYPTO_THREAD_lock_free(lock) };
+
+            assert_eq!(FREES.load(Ordering::SeqCst), 1, "exactly one release");
+            assert_eq!(FREED_PTR.load(Ordering::SeqCst), lock as usize);
+            assert_eq!(FREE_FILE.load(Ordering::SeqCst), FILE.as_ptr() as usize);
+            assert_eq!(FREE_LINE.load(Ordering::SeqCst), LINE_FREE);
+            assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "no second allocation");
+        }
     }
 }
 
