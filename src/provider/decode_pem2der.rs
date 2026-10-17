@@ -39,6 +39,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::decoder_meth::{
     OSSL_FUNC_DECODER_DECODE, OSSL_FUNC_DECODER_FREECTX, OSSL_FUNC_DECODER_NEWCTX,
@@ -62,10 +63,10 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::provider::decode_epki2pki::ossl_epki2pki_der_decode;
 use crate::provider::decode_spki2typespki::ossl_spki2typespki_der_decode;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::{strcmp, strlen};
 use crate::runtime::bio::BIO_free;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -255,6 +256,16 @@ struct Pem2DerCtx {
     propq: [c_char; OSSL_MAX_PROPQUERY_SIZE],
 }
 
+// SAFETY: (a) `destroy_body` is the authority's own `pem2der_freectx` body -- the context owns no
+// member separate from its block, so it releases nothing and never the enclosing block, which
+// `OwnedCtx`'s `Drop` releases; and (b) an all-zero `Pem2DerCtx` is a valid context (a NULL
+// `provctx` and two zeroed `char` arrays), which is exactly the state the authority's own
+// `CRYPTO_zalloc` leaves it in.
+unsafe impl CtxDestroy for Pem2DerCtx {
+    /// The context owns no member separate from its block, so the authority's free body is empty.
+    unsafe fn destroy_body(_ptr: *mut Pem2DerCtx) {}
+}
+
 /// `struct pem2der_pass_data_st` — `decode_pem2der.c:166-169`.
 #[repr(C)]
 struct Pem2DerPassData {
@@ -294,14 +305,13 @@ unsafe fn read_pem(
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe extern "C" fn pem2der_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<Pem2DerCtx>(), ptr::null(), 0).cast::<Pem2DerCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh zeroed allocation this frame owns.
-        unsafe { (*ctx).provctx = provctx };
-    }
-    ctx.cast::<c_void>()
+    let Some(ctx) = OwnedCtx::<Pem2DerCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let p = ctx.as_ptr();
+    // SAFETY: `p` is this frame's fresh, zeroed context.
+    unsafe { (*p).provctx = provctx };
+    ctx.into_raw().cast::<c_void>()
 }
 
 /// `static void pem2der_freectx(void *vctx)` — `decode_pem2der.c:74-79`.
@@ -309,8 +319,9 @@ unsafe extern "C" fn pem2der_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn pem2der_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or the context `pem2der_newctx` allocated.
-    unsafe { CRYPTO_free(vctx.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the context `pem2der_newctx` allocated; the handle's `Drop` runs
+    // the authority's own free body and is its single block release.
+    drop(unsafe { OwnedCtx::<Pem2DerCtx>::from_raw(vctx.cast::<Pem2DerCtx>()) });
 }
 
 /// `struct pem2der_set_ctx_params_st` — `decode_pem2der.c:92-95`, the two fields the
@@ -502,12 +513,31 @@ unsafe extern "C" fn pem2der_decode(
         return 1;
     }
 
-    let result = 'end: {
+    // The three blocks `read_pem` allocated on success -- `pem_name`/`pem_header` (C strings) and
+    // `der` (`PEM_read_bio`'s own blocks). Each handle's `Drop` is exactly the authority's own
+    // `CRYPTO_free(ptr, NULL, 0)` at the `end:` label below, on every path out.
+    // SAFETY: `read_pem` answered non-NULL, so `pem_name` is a live block it allocated for this call
+    // that this frame now exclusively owns.
+    let Some(pem_name) = (unsafe { OwnedBlock::<c_char>::from_raw(pem_name, ptr::null(), 0) })
+    else {
+        return 1;
+    };
+    // SAFETY: as above, for `pem_header`.
+    let Some(pem_header) = (unsafe { OwnedBlock::<c_char>::from_raw(pem_header, ptr::null(), 0) })
+    else {
+        return 1;
+    };
+    // SAFETY: as above, for `der`.
+    let Some(der) = (unsafe { OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0) }) else {
+        return 1;
+    };
+
+    'end: {
         // 10 is the number of characters in "Proc-Type:", which `PEM_get_EVP_CIPHER_INFO()
         // requires to be present. If the PEM header has fewer characters than that, it's not worth
         // spending cycles on it.
         // SAFETY: `pem_header` is a NUL-terminated string `PEM_read_bio` returned.
-        if unsafe { strlen(pem_header) } > 10 {
+        if unsafe { strlen(pem_header.as_ptr()) } > 10 {
             // SAFETY: the all-zero `EvpCipherInfo` is a valid value and `PEM_get_EVP_CIPHER_INFO`
             // initialises both fields before anything reads them.
             let mut cipher: EvpCipherInfo = unsafe { core::mem::zeroed() };
@@ -518,12 +548,12 @@ unsafe extern "C" fn pem2der_decode(
 
             ok = 0; // Assume that we fail
                     // SAFETY: `pem_header` is a writable NUL-terminated string and `cipher` is this frame's.
-            if unsafe { PEM_get_EVP_CIPHER_INFO(pem_header, &mut cipher) } == 0
+            if unsafe { PEM_get_EVP_CIPHER_INFO(pem_header.as_ptr(), &mut cipher) } == 0
                 // SAFETY: `cipher` was filled in above and `der`/`der_len` are `read_pem`'s.
                 || unsafe {
                     PEM_do_header(
                         &mut cipher,
-                        der,
+                        der.as_ptr(),
                         &mut der_len,
                         Some(pem2der_pass_helper as PemPasswordCb),
                         (&mut pass_data as *mut Pem2DerPassData).cast::<c_void>(),
@@ -540,8 +570,11 @@ unsafe extern "C" fn pem2der_decode(
 
         // Have a look to see if we recognise anything.
         let mut i = 0usize;
-        // SAFETY: `pem_name` is a NUL-terminated string and each entry's `pem_name` is one too.
-        while i < PEM_NAME_MAP.len() && unsafe { strcmp(pem_name, PEM_NAME_MAP[i].pem_name) } != 0 {
+        while i < PEM_NAME_MAP.len() {
+            // SAFETY: `pem_name` is a NUL-terminated string and each entry's `pem_name` is one too.
+            if unsafe { strcmp(pem_name.as_ptr(), PEM_NAME_MAP[i].pem_name) } == 0 {
+                break;
+            }
             i += 1;
         }
 
@@ -575,7 +608,7 @@ unsafe extern "C" fn pem2der_decode(
                 // SAFETY: the engine's contract; every argument is `read_pem`'s or the caller's.
                 ok = unsafe {
                     ossl_epki2pki_der_decode(
-                        der,
+                        der.as_ptr(),
                         der_len,
                         selection,
                         data_cb,
@@ -603,7 +636,7 @@ unsafe extern "C" fn pem2der_decode(
                 // SAFETY: the engine's contract; every argument is `read_pem`'s or the caller's.
                 ok = unsafe {
                     ossl_spki2typespki_der_decode(
-                        der,
+                        der.as_ptr(),
                         der_len,
                         selection,
                         data_cb,
@@ -640,7 +673,7 @@ unsafe extern "C" fn pem2der_decode(
                 }
                 params[n] = OSSL_PARAM_construct_octet_string(
                     OSSL_OBJECT_PARAM_DATA,
-                    der.cast(),
+                    der.as_ptr().cast(),
                     der_len as usize,
                 );
                 n += 1;
@@ -659,15 +692,7 @@ unsafe extern "C" fn pem2der_decode(
         }
 
         ok
-    };
-
-    // SAFETY: each is NULL or the allocation `read_pem` made; this call owns them all.
-    unsafe {
-        CRYPTO_free(pem_name.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(pem_header.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0);
     }
-    result
 }
 
 /// `ossl_pem_to_der_decoder_functions[]` — `decode_pem2der.c:327-336`. Five named slots and the
