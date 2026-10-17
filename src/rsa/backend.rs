@@ -80,6 +80,7 @@ use crate::rsa::asn1::{
 };
 use crate::rsa::gen::ossl_rsa_multiprime_derive;
 use crate::rsa::mp::ossl_rsa_multip_calc_product;
+use crate::rsa::mp::ossl_rsa_multip_info_free;
 use crate::rsa::mp_names::{
     ossl_rsa_mp_coeff_names, ossl_rsa_mp_exp_names, ossl_rsa_mp_factor_names,
 };
@@ -859,6 +860,52 @@ unsafe fn rsa_bn_dup_check(out: *mut *mut BigNum, f: *const BigNum) -> c_int {
     1
 }
 
+/// An owned `RSA_PRIME_INFO` record allocated by [`ossl_rsa_dup`] before it is installed in
+/// `dupkey->prime_infos`.
+///
+/// The authority allocates the record in `rsa_backend.c` and, once pushed, releases it through
+/// the stack's `ossl_rsa_multip_info_free` destructor (whose block release is attributed to
+/// `rsa_mp.c`). The owner keeps the allocation at `rsa_backend.c`'s own coordinate while the
+/// record still belongs to this frame; `into_raw` is the install that transfers it to the stack.
+struct OwnedPrimeInfo {
+    ptr: *mut RsaPrimeInfo,
+}
+
+impl OwnedPrimeInfo {
+    /// The authority's `OPENSSL_zalloc(sizeof(*duppinfo))` at `rsa_backend.c`'s coordinate.
+    fn zalloc() -> Option<OwnedPrimeInfo> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `size_of::<RsaPrimeInfo>()` bytes.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE).cast::<RsaPrimeInfo>();
+        (!raw.is_null()).then_some(OwnedPrimeInfo { ptr: raw })
+    }
+
+    /// The record's stable address, for the `BIGNUM` duplication and the stack push.
+    fn as_ptr(&self) -> *mut RsaPrimeInfo {
+        self.ptr
+    }
+
+    /// Install the record: the enclosing `RSA`'s `prime_infos` stack becomes its owner.
+    fn into_raw(self) -> *mut RsaPrimeInfo {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPrimeInfo {
+    /// The authority's `ossl_rsa_multip_info_free`: each member is NULL or owned here, and the
+    /// block is released at that destructor's own `rsa_mp.c` coordinate. This path is the
+    /// pre-install window, in which the zeroed record's members are all NULL.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the record `zalloc` allocated and has not been installed; its
+        // members are NULL or owned by this handle, which is exactly `ossl_rsa_multip_info_free`'s
+        // contract, and this is the record's single release.
+        unsafe { ossl_rsa_multip_info_free(self.ptr) };
+    }
+}
+
 /// `RSA *ossl_rsa_dup(const RSA *rsa, int selection)` — `rsa_backend.c:467-560`. Internal.
 ///
 /// The copier `EVP_PKEY_dup` reaches through the keymgmt, and the four things a reader has to get
@@ -881,8 +928,8 @@ unsafe fn rsa_bn_dup_check(out: *mut *mut BigNum, f: *const BigNum) -> c_int {
 /// depends on: `RSA_free` tolerates every partially populated field, and `ex_data` is duplicated
 /// *last* so that a failure before it leaves the copy's `ex_data` zeroed.
 ///
-/// `#[allow(dead_code)]`'s reason: **the provider keymgmt's `dup` method is its reader**; the
-/// `EVP_PKEY`-level path that would reach it is 8.8's.
+/// `#[allow(dead_code)]`'s reason: **the provider keymgmt's `dup` method is its reader**;
+/// the `EVP_PKEY`-level path that would reach it is 8.8's.
 ///
 /// # Safety
 /// `rsa` is a live object; on success the answer is a new object the caller owns.
@@ -949,13 +996,16 @@ pub(crate) unsafe fn ossl_rsa_dup(rsa: *const Rsa, selection: c_int) -> *mut Rsa
                 }
                 let mut i: c_int = 0;
                 while i < pnum {
-                    let duppinfo = CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE)
-                        .cast::<RsaPrimeInfo>();
-                    if duppinfo.is_null() {
+                    let Some(duppinfo_owner) = OwnedPrimeInfo::zalloc() else {
                         break 'build false;
-                    }
+                    };
+                    let duppinfo = duppinfo_owner.as_ptr();
                     /* push first so cleanup in error case works */
                     OPENSSL_sk_push((*dupkey).prime_infos, duppinfo.cast());
+                    // The push installs the record: `prime_infos` owns it from here on, so every
+                    // later failure releases it through `ossl_rsa_multip_info_free` inside
+                    // `RSA_free`, exactly as the authority's already-pushed record is released.
+                    let _ = duppinfo_owner.into_raw();
 
                     let pinfo = OPENSSL_sk_value((*rsa).prime_infos, i).cast::<RsaPrimeInfo>();
                     if rsa_bn_dup_check(&mut (*duppinfo).r, (*pinfo).r) == 0 {

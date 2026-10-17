@@ -102,6 +102,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | 65 | stage/p25/sweep21 | asn1/{time,a_mbstr}, mac/hmac, property/globals, x509/v3_utf8, dh/ctrl | shortened-time/mbstr/UTF8 owners with checked lengths; `OwnedCtx` HMAC/global-properties; ukm custody contract; hidden 0 |
 | 66 | stage/p25/sweep22 | asn1/bitstr, cmp/cmp_genm, provider/{encode_key2blob,util}, x509/{v3_soa_id,v3_ind_iss} | bit-string owner + documented regrow; subject/blob owners; memdup transfer; returned strdup edges documented; hidden 0 |
 | 67 | stage/p25/sweep23 | apps/{prime,configutl}, asn1/p5_pbev2, pem/key_legacy, provider/ctx, rsa/ctrl | output/helper owners; PBKDF2 salt owner with string-layer release; PEM name/data order; `OwnedCtx` provider context; OAEP label custody contract; hidden 0 |
+| 68 | stage/p25/sweep24 | ec/{backend,curve}, rsa/backend, ts/ts_lib, store/store_register, provider/endecoder_common | EC key/array owners; RSA prime-info install owner; TS/store/endecoder owners; checked curve extents; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
