@@ -70,9 +70,8 @@ use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{
     raise_site, raise_site_data, ERR_clear_last_mark, ERR_peek_error, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strncasecmp};
 use crate::runtime::time::TimeT;
@@ -766,134 +765,6 @@ unsafe fn str_len(s: *const c_char) -> usize {
 // Ownership of a heap block
 // ---------------------------------------------------------------------------
 
-/// An owned heap block allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
-/// a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`/
-/// `new_cleansed` allocate it, [`Self::adopt`]/[`Self::adopt_cleansed`] take in a block the crate
-/// allocated (a helper's, a structure field a shared destructor releases, or a C-ABI argument),
-/// `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that takes it over (a
-/// struct field, another function's `end:` tail, or a return). A NULL pointer is a valid, empty
-/// block whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a block.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)`.
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which zeroes `num`
-    /// bytes before release.
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `CRYPTO_clear_free(ptr, num, file, line)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, num: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num, file, line },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated -- a helper's, a structure field a shared destructor
-    /// releases, or a C-ABI argument -- for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file` is
-    /// NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// Adopt a block whose release is the cleansing `CRYPTO_clear_free(ptr, num, ...)`, for release
-    /// by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
-    /// for `num` bytes, and `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed { num, file, line },
-        }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Low-level API implementation
 // ---------------------------------------------------------------------------
@@ -998,16 +869,32 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_free(rctx: *mut OsslHttpReqCtx) {
         /* do not free rctx->rbio */
         BIO_free((*rctx).mem);
         BIO_free((*rctx).req);
-        drop(OwnedBuf::adopt((*rctx).buf.cast(), FILE.as_ptr(), 148));
-        drop(OwnedBuf::adopt((*rctx).proxy.cast(), FILE.as_ptr(), 149));
-        drop(OwnedBuf::adopt((*rctx).server.cast(), FILE.as_ptr(), 150));
-        drop(OwnedBuf::adopt((*rctx).port.cast(), FILE.as_ptr(), 151));
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain(
+            (*rctx).buf.cast(),
+            FILE.as_ptr(),
+            148,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*rctx).proxy.cast(),
+            FILE.as_ptr(),
+            149,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*rctx).server.cast(),
+            FILE.as_ptr(),
+            150,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*rctx).port.cast(),
+            FILE.as_ptr(),
+            151,
+        ));
+        drop(OwnedBuf::adopt_plain(
             (*rctx).expected_ct.cast(),
             FILE.as_ptr(),
             152,
         ));
-        drop(OwnedBuf::adopt(rctx.cast(), FILE.as_ptr(), 153));
+        drop(OwnedBuf::adopt_plain(rctx.cast(), FILE.as_ptr(), 153));
     }
 }
 
@@ -1223,7 +1110,7 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_set_expected(
             return 0;
         }
 
-        drop(OwnedBuf::adopt(
+        drop(OwnedBuf::adopt_plain(
             (*rctx).expected_ct.cast(),
             FILE.as_ptr(),
             284,
@@ -1232,12 +1119,14 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_set_expected(
         if !content_type.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block,
             // released by `OSSL_HTTP_REQ_CTX_free` at line 152.
-            let dup = OwnedBuf::adopt(
+            let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(content_type, FILE.as_ptr(), 287).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 152,
             );
-            (*rctx).expected_ct = dup.into_raw().cast::<c_char>();
+            (*rctx).expected_ct = dup
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                .cast::<c_char>();
             if (*rctx).expected_ct.is_null() {
                 return 0;
             }
@@ -1458,12 +1347,14 @@ unsafe fn http_req_ctx_new(
         if !proxy.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block,
             // released by `OSSL_HTTP_REQ_CTX_free` at line 149.
-            let dup = OwnedBuf::adopt(
+            let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(proxy, FILE.as_ptr(), 428).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 149,
             );
-            (*rctx).proxy = dup.into_raw().cast::<c_char>();
+            (*rctx).proxy = dup
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                .cast::<c_char>();
             if (*rctx).proxy.is_null() {
                 OSSL_HTTP_REQ_CTX_free(rctx);
                 return ptr::null_mut();
@@ -1472,12 +1363,14 @@ unsafe fn http_req_ctx_new(
         if !server.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block,
             // released by `OSSL_HTTP_REQ_CTX_free` at line 150.
-            let dup = OwnedBuf::adopt(
+            let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(server, FILE.as_ptr(), 431).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 150,
             );
-            (*rctx).server = dup.into_raw().cast::<c_char>();
+            (*rctx).server = dup
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                .cast::<c_char>();
             if (*rctx).server.is_null() {
                 OSSL_HTTP_REQ_CTX_free(rctx);
                 return ptr::null_mut();
@@ -1486,12 +1379,14 @@ unsafe fn http_req_ctx_new(
         if !port.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the field's block,
             // released by `OSSL_HTTP_REQ_CTX_free` at line 151.
-            let dup = OwnedBuf::adopt(
+            let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(port, FILE.as_ptr(), 434).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 151,
             );
-            (*rctx).port = dup.into_raw().cast::<c_char>();
+            (*rctx).port = dup
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                .cast::<c_char>();
             if (*rctx).port.is_null() {
                 OSSL_HTTP_REQ_CTX_free(rctx);
                 return ptr::null_mut();
@@ -2242,7 +2137,7 @@ unsafe fn explict_or_default_port(
                     c"80".as_ptr()
                 };
             }
-            drop(OwnedBuf::adopt(service.cast(), FILE.as_ptr(), 1013));
+            drop(OwnedBuf::adopt_plain(service.cast(), FILE.as_ptr(), 1013));
         } /* otherwise take the explicitly given port */
         port
     }
@@ -2415,8 +2310,16 @@ pub unsafe extern "C" fn OSSL_HTTP_open(
                 return ptr::null_mut();
             }
             cbio = http_new_bio(server, port, use_ssl, proxy_host, proxy_port);
-            drop(OwnedBuf::adopt(proxy_host.cast(), FILE.as_ptr(), 1131));
-            drop(OwnedBuf::adopt(proxy_port.cast(), FILE.as_ptr(), 1132));
+            drop(OwnedBuf::adopt_plain(
+                proxy_host.cast(),
+                FILE.as_ptr(),
+                1131,
+            ));
+            drop(OwnedBuf::adopt_plain(
+                proxy_port.cast(),
+                FILE.as_ptr(),
+                1132,
+            ));
             if cbio.is_null() {
                 return ptr::null_mut();
             }
@@ -2559,13 +2462,13 @@ pub unsafe extern "C" fn OSSL_HTTP_exchange(
                     raise_site(&HC_1226);
                 } else {
                     /* may be NULL if out of memory: */
-                    *redirection_url = OwnedBuf::adopt(
+                    *redirection_url = OwnedBuf::adopt_plain(
                         CRYPTO_strdup((*rctx).redirection_url, FILE.as_ptr(), 1229)
                             .cast::<c_uchar>(),
                         FILE.as_ptr(),
                         1357,
                     )
-                    .into_raw()
+                    .map_or(ptr::null_mut(), OwnedBuf::into_raw)
                     .cast::<c_char>();
                 }
             } else {
@@ -2699,12 +2602,14 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
             raise_site(&HC_1300);
             return ptr::null_mut();
         }
-        let current_url_blk = OwnedBuf::adopt(
+        let current_url_blk = OwnedBuf::adopt_plain(
             CRYPTO_strdup(url, FILE.as_ptr(), 1303).cast::<c_uchar>(),
             FILE.as_ptr(),
             1367,
         );
-        let mut current_url = current_url_blk.into_raw().cast::<c_char>();
+        let mut current_url = current_url_blk
+            .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+            .cast::<c_char>();
         if current_url.is_null() {
             return ptr::null_mut();
         }
@@ -2761,44 +2666,58 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
                         resp = OSSL_HTTP_exchange(rctx, &mut redirection_url);
                     }
                 }
-                drop(OwnedBuf::adopt(path.cast(), FILE.as_ptr(), 1332));
+                drop(OwnedBuf::adopt_plain(path.cast(), FILE.as_ptr(), 1332));
                 if resp.is_null() && !redirection_url.is_null() {
                     n_redirs += 1;
                     if redirection_ok(n_redirs, current_url, redirection_url) != 0
                         && may_still_retry(max_time, &mut timeout) != 0
                     {
                         bio_reset(bio);
-                        drop(OwnedBuf::adopt(current_url.cast(), FILE.as_ptr(), 1337));
+                        drop(OwnedBuf::adopt_plain(
+                            current_url.cast(),
+                            FILE.as_ptr(),
+                            1337,
+                        ));
                         current_url = redirection_url;
                         if *redirection_url == b'/' as c_char {
                             /* redirection to same server */
-                            let path_blk = OwnedBuf::adopt(
+                            let path_blk = OwnedBuf::adopt_plain(
                                 CRYPTO_strdup(redirection_url, FILE.as_ptr(), 1340)
                                     .cast::<c_uchar>(),
                                 FILE.as_ptr(),
                                 1332,
                             );
-                            path = path_blk.into_raw().cast::<c_char>();
+                            path = path_blk
+                                .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                                .cast::<c_char>();
                             if path.is_null() {
-                                drop(OwnedBuf::adopt(host.cast(), FILE.as_ptr(), 1342));
-                                drop(OwnedBuf::adopt(port.cast(), FILE.as_ptr(), 1343));
+                                drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1342));
+                                drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1343));
                                 let _ = OSSL_HTTP_close(rctx, 1);
                                 BIO_free(resp);
-                                drop(OwnedBuf::adopt(current_url.cast(), FILE.as_ptr(), 1346));
+                                drop(OwnedBuf::adopt_plain(
+                                    current_url.cast(),
+                                    FILE.as_ptr(),
+                                    1346,
+                                ));
                                 return ptr::null_mut();
                             }
                             continue 'new_rpath;
                         }
-                        drop(OwnedBuf::adopt(host.cast(), FILE.as_ptr(), 1351));
-                        drop(OwnedBuf::adopt(port.cast(), FILE.as_ptr(), 1352));
+                        drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1351));
+                        drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1352));
                         let _ = OSSL_HTTP_close(rctx, 1);
                         continue 'outer;
                     }
                     /* if redirection not allowed, ignore it */
-                    drop(OwnedBuf::adopt(redirection_url.cast(), FILE.as_ptr(), 1357));
+                    drop(OwnedBuf::adopt_plain(
+                        redirection_url.cast(),
+                        FILE.as_ptr(),
+                        1357,
+                    ));
                 }
-                drop(OwnedBuf::adopt(host.cast(), FILE.as_ptr(), 1359));
-                drop(OwnedBuf::adopt(port.cast(), FILE.as_ptr(), 1360));
+                drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1359));
+                drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1360));
                 if OSSL_HTTP_close(rctx, c_int::from(!resp.is_null())) == 0 {
                     BIO_free(resp);
                     resp = ptr::null_mut();
@@ -2806,7 +2725,11 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
                 break 'outer;
             }
         }
-        drop(OwnedBuf::adopt(current_url.cast(), FILE.as_ptr(), 1367));
+        drop(OwnedBuf::adopt_plain(
+            current_url.cast(),
+            FILE.as_ptr(),
+            1367,
+        ));
         resp
     }
 }
@@ -3050,7 +2973,16 @@ pub unsafe extern "C" fn OSSL_HTTP_proxy_connect(
                 len += str_len(proxypass);
             }
             // The credentials block is the authority's `CRYPTO_malloc`, released cleansing.
-            let proxyauth_buf = OwnedBuf::new_cleansed(len + 1, len, FILE.as_ptr(), 1508);
+            // `usize::MAX` cannot be a valid allocation length; an overflow takes the same
+            // allocation-failure return as a NULL block, before allocating or writing.
+            let Some(alloc_len) = len.checked_add(1) else {
+                return finish_proxy_connect(fbio, mbuf_buf, ret);
+            };
+            // SAFETY: the allocation is `alloc_len` bytes and only `len` bytes hold
+            // credentials (the extra byte is the NUL terminator), so
+            // `num = len <= alloc_len` is the allocation extent.
+            let proxyauth_buf =
+                OwnedBuf::new_cleansed_num(alloc_len, len, FILE.as_ptr(), 1508, 1508);
             let proxyauth = proxyauth_buf
                 .as_ref()
                 .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_char>());
@@ -3059,7 +2991,7 @@ pub unsafe extern "C" fn OSSL_HTTP_proxy_connect(
             }
             if BIO_snprintf(
                 proxyauth,
-                len + 1,
+                alloc_len,
                 c"%s:%s".as_ptr(),
                 proxyuser,
                 if !proxypass.is_null() {
