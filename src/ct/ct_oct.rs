@@ -25,7 +25,8 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_int, c_long, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
@@ -41,7 +42,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memdup;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -104,67 +105,6 @@ const CT_OCT_328: ErrSite = ct_oct_site(328, c"i2o_SCT_LIST", CT_R_SCT_LIST_INVA
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
-/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
-/// and only its *ownership* is this type: [`Self::new`] allocates it, [`Self::adopt`] takes in a
-/// block a helper left for this frame (`i2d_ASN1_OCTET_STRING`'s `data`, in [`i2d_SCT_LIST`]),
-/// `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that takes it over
-/// (the caller's `*out`, in [`i2o_SCT`] and [`i2o_SCT_LIST`]). A NULL pointer is a valid, empty
-/// buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 // -------------------------------------------------------------------------------------------
 // The network-order macros of `crypto/ct/ct_local.h:28-55`.
@@ -557,13 +497,19 @@ pub unsafe extern "C" fn i2o_SCT(sct: *const Sct, out: *mut *mut c_uchar) -> c_i
         if !(*out).is_null() {
             let p = *out;
             *out = p.add(len);
-            pstart = OwnedBuf::adopt(ptr::null_mut(), ptr::null(), 0);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            pstart = OwnedBuf::adopt_plain_nullable(ptr::null_mut(), ptr::null(), 0);
             p
         } else {
             let Some(buf) = OwnedBuf::new(len, ptr::null(), 0) else {
                 // The authority's failure tail frees the still-NULL `pstart`; an empty handle is
                 // that same no-op `free(NULL)`.
-                drop(OwnedBuf::adopt(ptr::null_mut(), ptr::null(), 0));
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt_plain_nullable(
+                    ptr::null_mut(),
+                    ptr::null(),
+                    0,
+                ));
                 return -1;
             };
             let p = buf.as_ptr();
@@ -900,7 +846,7 @@ pub unsafe extern "C" fn i2d_SCT_LIST(a: *const OpenSslStack, out: *mut *mut c_u
     // The block `i2o_SCT_LIST` left in the octet string's `data` is this call's own; the handle
     // releases it here.
     // SAFETY: `(*octp).data` is NULL or the block `i2o_SCT_LIST` allocated and no one else owns.
-    let data = unsafe { OwnedBuf::adopt((*octp).data.cast(), ptr::null(), 0) };
+    let data = unsafe { OwnedBuf::adopt_plain_nullable((*octp).data.cast(), ptr::null(), 0) };
     drop(data);
     len
 }

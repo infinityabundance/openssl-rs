@@ -46,7 +46,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_long, c_void};
 
 use crate::asn1::der::{ASN1_object_size, ASN1_put_object};
 use crate::asn1::i2d::ASN1_item_ndef_i2d;
@@ -64,7 +65,6 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the filter BIO.
@@ -85,82 +85,6 @@ const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned heap block allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
-/// a Rust `Box` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
-/// allocate it, [`Self::adopt`] takes in a block the filter or the caller allocated (the context
-/// stored in the BIO's data slot, the NDEF support block stored in the filter's `ex_arg`, and the
-/// DER buffer the prefix and suffix passes build), `Drop` is its single release, and
-/// [`Self::into_raw`] hands it to a consumer that takes it over (the BIO's data slot, the `ex_arg`
-/// slot, or the prefix buffer's `pbuf`). A NULL pointer is a valid, empty block whose release is
-/// the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `asn1_bio_state_t`.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -342,11 +266,12 @@ unsafe extern "C" fn asn1_bio_free(b: *mut Bio) -> c_int {
         };
     }
     // SAFETY: `buf` came from this allocator and is not owned elsewhere.
-    drop(unsafe { OwnedBuf::adopt(ctx.buf.cast(), FILTER_FILE.as_ptr(), LINE) });
+    drop(unsafe { OwnedBuf::adopt_plain_nullable(ctx.buf.cast(), FILTER_FILE.as_ptr(), LINE) });
     let p: *mut BioAsn1BufCtx = ctx;
     // SAFETY: the context came from this allocator, is not owned elsewhere, and the BIO is about
     // to forget it.
-    drop(unsafe { OwnedBuf::adopt(p.cast(), FILTER_FILE.as_ptr(), LINE) });
+    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+    drop(unsafe { OwnedBuf::adopt_plain_nullable(p.cast(), FILTER_FILE.as_ptr(), LINE) });
     // SAFETY: `b` is a live BIO.
     unsafe {
         BIO_set_data(b, core::ptr::null_mut());
@@ -926,7 +851,7 @@ pub unsafe extern "C" fn BIO_new_NDEF(
             // allocating handle gives its block up to one that frees even a NULL.
             let raw = ndef_buf.map_or(core::ptr::null_mut(), OwnedBuf::into_raw);
             // SAFETY: `raw` is NULL or this frame's own block, given up by the handle above.
-            drop(unsafe { OwnedBuf::adopt(raw.cast(), NDEF_FILE.as_ptr(), LINE) });
+            drop(unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), NDEF_FILE.as_ptr(), LINE) });
             return core::ptr::null_mut();
         }
 
@@ -1092,7 +1017,12 @@ unsafe extern "C" fn ndef_prefix_free(
     // SAFETY: `ndef_aux` is live and uniquely owned.
     unsafe {
         let aux = &mut *ndef_aux;
-        drop(OwnedBuf::adopt(aux.derbuf.cast(), NDEF_FILE.as_ptr(), LINE));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            aux.derbuf.cast(),
+            NDEF_FILE.as_ptr(),
+            LINE,
+        ));
         aux.derbuf = core::ptr::null_mut();
         *pbuf = core::ptr::null_mut();
         *plen = 0;
@@ -1127,7 +1057,8 @@ unsafe extern "C" fn ndef_suffix_free(
     if !block.is_null() {
         // SAFETY: `block` came from `CRYPTO_zalloc` in `BIO_new_NDEF` and is not
         // owned elsewhere once the pointer is cleared.
-        drop(unsafe { OwnedBuf::adopt(block.cast(), NDEF_FILE.as_ptr(), LINE) });
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(unsafe { OwnedBuf::adopt_plain_nullable(block.cast(), NDEF_FILE.as_ptr(), LINE) });
         // SAFETY: `slot` is the caller's live `ex_arg` slot.
         unsafe {
             *slot = core::ptr::null_mut();
