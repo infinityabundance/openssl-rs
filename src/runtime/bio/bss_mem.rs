@@ -30,9 +30,10 @@ use crate::ffi::guard_ffi;
 use crate::runtime::buffer::{BufMem, BUF_MEM_FLAG_SECURE};
 use crate::runtime::err::err_sites::{BSS_MEM_221, BSS_MEM_228, BSS_MEM_90};
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_zalloc;
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_GET_CLOSE, BIO_CTRL_INFO,
     BIO_CTRL_PENDING, BIO_CTRL_POP, BIO_CTRL_PUSH, BIO_CTRL_RESET, BIO_CTRL_SET_CLOSE,
@@ -51,6 +52,23 @@ pub struct BioBufMem {
     pub buf: *mut BufMem,
     /// The read pointer header (the authority's `bb->readp`).
     pub readp: *mut BufMem,
+}
+
+/// The authority's `mem_free` member body *minus* the block release [`OwnedCtx`]'s `Drop` performs.
+///
+/// `readp` is the read-cursor header this context owns (a `CRYPTO_zalloc` block). `buf` is released
+/// separately by `mem_buf_free`, whose `BIO_FLAGS_MEM_RDONLY` adjustment needs the owning BIO, so
+/// that member's release stays the authority's own call rather than this destructor's.
+// SAFETY: (a) `destroy_body` releases exactly this context's read-cursor header once (the
+// `OwnedBlock::take` accepts the unset NULL) and never the enclosing block, which `OwnedCtx`
+// releases; (b) `BioBufMem` is a `#[repr(C)]` record of two raw pointers, so an all-zero block is a
+// valid `BioBufMem` the body is sound on.
+unsafe impl CtxDestroy for BioBufMem {
+    unsafe fn destroy_body(ptr: *mut BioBufMem) {
+        // SAFETY: `ptr` is a live context per the trait contract; `readp` is NULL or an owned seam
+        // block whose single release is the block handle's `Drop`.
+        unsafe { drop(OwnedBlock::take((*ptr).readp.cast())) };
+    }
 }
 
 /// The method name the authority reports for a memory buffer.
@@ -165,38 +183,39 @@ pub unsafe extern "C" fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut
 /// # Safety
 /// `bi` must be a live BIO whose `ptr` is not yet used by this method.
 unsafe fn mem_init(bi: *mut Bio, flags: core::ffi::c_ulong) -> c_int {
-    // `CRYPTO_zalloc` and `BUF_MEM_new_ex` are safe entry points; no `unsafe`
-    // block is needed to call them, and the previous `unsafe` markers here were
-    // noise that the lints correctly flagged.
-    let bb = CRYPTO_zalloc(core::mem::size_of::<BioBufMem>(), ptr::null(), 0).cast::<BioBufMem>();
-    if bb.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns a fresh zeroed `BioBufMem` of the requested size, or NULL;
+    // a zeroed block is the valid context `BioBufMem`'s destructor is written for.
+    let Some(bb) = OwnedCtx::<BioBufMem>::zalloc() else {
         return 0;
-    }
+    };
+    let bbp = bb.as_ptr();
+    // `BUF_MEM_new_ex` is the authority's own buffer constructor; `BUF_MEM_free` releases its
+    // `BUF_MEM` (in `mem_buf_free`, or on the failure path below).
     let buf = crate::runtime::buffer::BUF_MEM_new_ex(flags);
     if buf.is_null() {
-        // SAFETY: `bb` is owned here and not yet published.
-        unsafe { CRYPTO_free(bb.cast(), ptr::null(), 0) };
+        // `bb`'s handle releases the (still NULL) context on this path.
         return 0;
     }
     let readp = CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast::<BufMem>();
     if readp.is_null() {
-        // SAFETY: neither allocation is published yet.
-        unsafe {
-            crate::runtime::buffer::BUF_MEM_free(buf);
-            CRYPTO_free(bb.cast(), ptr::null(), 0);
-        }
+        // SAFETY: `buf` is this call's own and not yet published; `bb`'s handle releases the
+        // context (whose `readp`/`buf` members are still NULL).
+        unsafe { crate::runtime::buffer::BUF_MEM_free(buf) };
         return 0;
     }
-    // SAFETY: `readp` is a fresh header; `buf` is live.
+    // SAFETY: `readp` is a fresh header; `buf` is live; `bbp` is the context this call owns; `bi`
+    // is live.
     unsafe {
         *readp = *buf;
-        (*bb).buf = buf;
-        (*bb).readp = readp;
+        (*bbp).buf = buf;
+        (*bbp).readp = readp;
         (*bi).shutdown = 1;
         (*bi).init = 1;
         (*bi).num = -1;
-        (*bi).ptr = bb.cast();
+        (*bi).ptr = bbp.cast();
     }
+    // The context is now the BIO's; `mem_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = bb.into_raw();
     1
 }
 
@@ -255,8 +274,11 @@ unsafe extern "C" fn mem_free(a: *mut Bio) -> c_int {
         if mem_buf_free(a) == 0 {
             return 0;
         }
-        CRYPTO_free((*bb).readp.cast(), ptr::null(), 0);
-        CRYPTO_free(bb.cast(), ptr::null(), 0);
+        // Reclaim the context `mem_init` handed out; its `Drop` releases the read-cursor header
+        // (`destroy_body`) and then the block, exactly as the authority frees them by hand. `buf`
+        // was released by `mem_buf_free` above, in the authority's own order. A NULL `ptr` makes
+        // this a no-op rather than the authority's out-of-contract NULL dereference.
+        drop(OwnedCtx::<BioBufMem>::from_raw(bb));
     }
     1
 }

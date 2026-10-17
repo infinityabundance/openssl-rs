@@ -29,6 +29,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+use core::ptr::NonNull;
 
 use crate::asn1_dsa::{ossl_decode_der_dsa_sig, ossl_encode_der_dsa_sig};
 use crate::bn::bignum::{BN_clear_free, BN_new, BigNum};
@@ -53,6 +54,127 @@ const FILE_DSA_SIGN: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_si
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the unit's heap objects
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `DSA_SIG` allocated through the crate's allocator seam.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it and
+/// `Drop` is the authority's own `DSA_SIG_free` body -- `BN_clear_free` of both halves, then the
+/// block release at the authority's own `__FILE__`/`__LINE__`. A caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation and the release exactly as it observes
+/// the authority's, which a Rust `Box` would hide.
+struct OwnedSig {
+    ptr: NonNull<DsaSig>,
+}
+
+impl OwnedSig {
+    /// `OPENSSL_zalloc(sizeof(DSA_SIG))`, or `None` when it answers NULL.
+    fn new() -> Option<OwnedSig> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<DsaSig>()` bytes, which is exactly `DSA_SIG`'s layout.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<DsaSig>(), FILE_DSA_SIGN, LINE).cast::<DsaSig>();
+        NonNull::new(raw).map(|ptr| OwnedSig { ptr })
+    }
+
+    /// The stable address the ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut DsaSig {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's pointer.
+    fn into_raw(self) -> *mut DsaSig {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a signature the ABI (or a signing arm) handed over, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live `DSA_SIG` this unit allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut DsaSig) -> Option<OwnedSig> {
+        NonNull::new(ptr).map(|ptr| OwnedSig { ptr })
+    }
+}
+
+impl Drop for OwnedSig {
+    /// The authority's `DSA_SIG_free` body: both halves cleared, then the block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; each half is NULL
+        // or the object's own, and this is the block's single release.
+        unsafe {
+            BN_clear_free((*self.ptr.as_ptr()).r);
+            BN_clear_free((*self.ptr.as_ptr()).s);
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DSA_SIGN, LINE);
+        }
+    }
+}
+
+/// An owned `BUF_MEM` the DER encoder grows, released by the authority's own `BUF_MEM_free`.
+struct OwnedBufMem {
+    ptr: NonNull<BufMem>,
+}
+
+impl OwnedBufMem {
+    /// `BUF_MEM_new()`, or `None` when it answers NULL.
+    fn new() -> Option<OwnedBufMem> {
+        NonNull::new(BUF_MEM_new()).map(|ptr| OwnedBufMem { ptr })
+    }
+
+    /// The buffer the encoder writes through.
+    fn as_ptr(&self) -> *mut BufMem {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for OwnedBufMem {
+    /// The buffer's single release: the authority's own `BUF_MEM_free` (which cleanses and releases
+    /// the data block it still holds).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the `BUF_MEM` this handle owns and has not released.
+        unsafe { BUF_MEM_free(self.ptr.as_ptr()) };
+    }
+}
+
+/// An owned block from a DER re-encode, cleansed and released on `Drop`.
+///
+/// `DSA_verify`'s `der` is a block `i2d_DSA_SIG` allocated through the crate's seam and the
+/// authority releases with `OPENSSL_clear_free(der, derlen)`; the handle keeps that single cleansing
+/// release at the authority's own `__FILE__`/`__LINE__`.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+}
+
+impl OwnedBuf {
+    /// Adopt a block the encoder produced, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit's encoder produced in full (not a sub-range); no
+    /// other owner will release it, and this handle's `Drop` is its single release. `len` is its
+    /// length, the extent the cleansing release covers.
+    unsafe fn adopt(ptr: *mut c_uchar, len: usize) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr, len })
+        }
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single cleansing release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
+        // length; the authority's own `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE_DSA_SIGN, LINE) };
+    }
+}
 
 /// `DSA_SIG *DSA_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)` — `dsa_sign.c:22-25`.
 ///
@@ -121,8 +243,9 @@ pub unsafe extern "C" fn DSA_sign_setup(
 /// Takes no pointer.
 #[no_mangle]
 pub unsafe extern "C" fn DSA_SIG_new() -> *mut DsaSig {
-    // SAFETY: `CRYPTO_zalloc` reads no caller pointer and is a safe function in this crate (D113).
-    CRYPTO_zalloc(core::mem::size_of::<DsaSig>(), FILE_DSA_SIGN, LINE).cast::<DsaSig>()
+    // The object is this call's own until it is handed to the caller: `OwnedSig::new` performs the
+    // authority's `OPENSSL_zalloc(sizeof(DSA_SIG))` and `into_raw` gives up ownership.
+    OwnedSig::new().map_or(core::ptr::null_mut(), |sig| sig.into_raw())
 }
 
 /// `void DSA_SIG_free(DSA_SIG *sig)` — `dsa_sign.c:41-48`.
@@ -136,15 +259,9 @@ pub unsafe extern "C" fn DSA_SIG_new() -> *mut DsaSig {
 /// `sig` is NULL or a live signature.
 #[no_mangle]
 pub unsafe extern "C" fn DSA_SIG_free(sig: *mut DsaSig) {
-    if sig.is_null() {
-        return;
-    }
-    // SAFETY: `sig` is live per the contract and each half is NULL or the object's own.
-    unsafe {
-        BN_clear_free((*sig).r);
-        BN_clear_free((*sig).s);
-        CRYPTO_free(sig.cast(), FILE_DSA_SIGN, LINE);
-    }
+    // SAFETY: `sig` is NULL or a live signature this unit allocated; the handle's `Drop` is the
+    // authority's own `DSA_SIG_free` body (both halves cleared, then the block release).
+    unsafe { drop(OwnedSig::from_raw(sig)) };
 }
 
 /// `void DSA_SIG_get0(const DSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)` —
@@ -219,14 +336,19 @@ pub unsafe extern "C" fn d2i_DSA_SIG(
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used.
     unsafe {
+        // The signature this call allocated, if any: a caller-supplied `*psig` is reused, not
+        // owned. It is released on the failure path below and handed over on success.
+        let mut owned: Option<OwnedSig> = None;
         let sig = if !psig.is_null() && !(*psig).is_null() {
             *psig
         } else {
-            let s = DSA_SIG_new();
-            if s.is_null() {
+            // SAFETY: `OwnedSig::new` answers NULL or a fresh zeroed signature of its own.
+            let Some(s) = OwnedSig::new() else {
                 return core::ptr::null_mut();
-            }
-            s
+            };
+            let p = s.as_ptr();
+            owned = Some(s);
+            p
         };
 
         if (*sig).r.is_null() {
@@ -239,13 +361,17 @@ pub unsafe extern "C" fn d2i_DSA_SIG(
             || (*sig).s.is_null()
             || ossl_decode_der_dsa_sig((*sig).r, (*sig).s, ppin, len as usize) == 0
         {
-            if psig.is_null() || (*psig).is_null() {
-                DSA_SIG_free(sig);
-            }
+            // A signature this call allocated (the `owned` handle) is released here; a caller's is
+            // not, exactly as the authority's `if (psig == NULL || *psig == NULL) DSA_SIG_free`.
             return core::ptr::null_mut();
         }
         if !psig.is_null() && (*psig).is_null() {
             *psig = sig;
+        }
+        // The signature is now the caller's (returned, and/or stored in `*psig`); give the handle
+        // up so `Drop` does not release it.
+        if let Some(s) = owned.take() {
+            let _ = s.into_raw();
         }
         sig
     }
@@ -264,10 +390,12 @@ pub unsafe extern "C" fn d2i_DSA_SIG(
 /// encoded length.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_DSA_SIG(sig: *const DsaSig, ppout: *mut *mut c_uchar) -> c_int {
-    let mut buf: *mut BufMem = core::ptr::null_mut();
     let mut encoded_len: usize = 0;
     // SAFETY: `pkt`, `buf`, `r`, `s` are live per this module's own contracts.
     let mut pkt: Wpacket = unsafe { core::mem::zeroed() };
+    // The buffer the encoder grows, only in the `*ppout == NULL` arm; the other two arms pass no
+    // buffer (the authority's own `BUF_MEM_free(NULL)` is a no-op, here simply the absent handle).
+    let mut buf: Option<OwnedBufMem> = None;
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used.
     unsafe {
@@ -276,11 +404,16 @@ pub unsafe extern "C" fn i2d_DSA_SIG(sig: *const DsaSig, ppout: *mut *mut c_ucha
                 return -1;
             }
         } else if (*ppout).is_null() {
-            buf = BUF_MEM_new();
-            if buf.is_null() || WPACKET_init_len(&mut pkt, buf, 0) == 0 {
-                BUF_MEM_free(buf);
+            // `OwnedBufMem::new` performs the authority's `BUF_MEM_new`; a NULL answers None and the
+            // original's `BUF_MEM_free(NULL)` no-op is the absent handle here.
+            let Some(b) = OwnedBufMem::new() else {
+                return -1;
+            };
+            if WPACKET_init_len(&mut pkt, b.as_ptr(), 0) == 0 {
+                // `b`'s `Drop` releases the buffer, exactly as the authority's `BUF_MEM_free(buf)`.
                 return -1;
             }
+            buf = Some(b);
         } else if WPACKET_init_static_len(&mut pkt, *ppout, usize::MAX, 0) == 0 {
             return -1;
         }
@@ -289,16 +422,20 @@ pub unsafe extern "C" fn i2d_DSA_SIG(sig: *const DsaSig, ppout: *mut *mut c_ucha
             || WPACKET_get_total_written(&mut pkt, &mut encoded_len) == 0
             || WPACKET_finish(&mut pkt) == 0
         {
-            BUF_MEM_free(buf);
+            // `buf`'s `Drop` releases the buffer, exactly as the authority's `BUF_MEM_free(buf)`.
             WPACKET_cleanup(&mut pkt);
             return -1;
         }
 
         if !ppout.is_null() {
             if (*ppout).is_null() {
-                *ppout = (*buf).data.cast::<c_uchar>();
-                (*buf).data = core::ptr::null_mut();
-                BUF_MEM_free(buf);
+                // Detach the data for the caller, then let `Drop` release the (now empty) buffer,
+                // exactly as the authority's `*ppout = buf->data; buf->data = NULL; BUF_MEM_free`.
+                // The `*ppout == NULL` arm above installed the buffer, so it is present here.
+                if let Some(b) = buf.as_ref() {
+                    *ppout = (*b.as_ptr()).data.cast::<c_uchar>();
+                    (*b.as_ptr()).data = core::ptr::null_mut();
+                }
             } else {
                 *ppout = (*ppout).add(encoded_len);
             }
@@ -380,13 +517,15 @@ pub(crate) unsafe fn ossl_dsa_sign_int(
         } else {
             ossl_dsa_do_sign_int(dgst, dlen, dsa, nonce_type, digestname, libctx, propq)
         };
-        if s.is_null() {
+        // The signature the signing arm handed over is this call's; its `Drop` runs the authority's
+        // own `DSA_SIG_free` on every path below.
+        // SAFETY: `s` is NULL or a live signature the arm above allocated.
+        let Some(s) = OwnedSig::from_raw(s) else {
             *siglen = 0;
             return 0;
-        }
+        };
         let mut out = sig;
-        *siglen = i2d_DSA_SIG(s, &mut out) as c_uint;
-        DSA_SIG_free(s);
+        *siglen = i2d_DSA_SIG(s.as_ptr(), &mut out) as c_uint;
     }
     1
 }
@@ -451,36 +590,37 @@ pub unsafe extern "C" fn DSA_verify(
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used.
     unsafe {
         let mut p = sigbuf;
-        let s = DSA_SIG_new();
-        if s.is_null() {
+        // The signature this call builds is its own; its `Drop` is the authority's own
+        // `DSA_SIG_free`.
+        // SAFETY: `OwnedSig::new` answers NULL or a fresh zeroed signature of its own.
+        let Some(s) = OwnedSig::new() else {
             return ret;
-        }
+        };
 
         let mut der: *mut c_uchar = core::ptr::null_mut();
         let mut derlen: c_int = -1;
 
         /* The authority's three `goto err` sites are the `if` bodies below; the release that
          * follows them is the single `err:` label. */
-        let mut slot: *mut DsaSig = s;
+        let mut slot: *mut DsaSig = s.as_ptr();
         if !d2i_DSA_SIG(&mut slot, &mut p, siglen as c_long).is_null() {
-            derlen = i2d_DSA_SIG(s, &mut der);
+            derlen = i2d_DSA_SIG(s.as_ptr(), &mut der);
             /* Ensure signature uses DER and doesn't have trailing garbage. */
             let canonical = derlen == siglen
                 && (derlen <= 0
                     || core::slice::from_raw_parts(sigbuf, derlen as usize)
                         == core::slice::from_raw_parts(der, derlen as usize));
             if canonical {
-                ret = DSA_do_verify(dgst, dgst_len, s, dsa);
+                ret = DSA_do_verify(dgst, dgst_len, s.as_ptr(), dsa);
             }
         }
 
-        CRYPTO_clear_free(
-            der.cast::<c_void>(),
-            derlen.max(0) as usize,
-            FILE_DSA_SIGN,
-            LINE,
-        );
-        DSA_SIG_free(s);
+        // The re-encode is this call's own block; its `Drop` cleanses and releases it over
+        // `derlen.max(0)` bytes, exactly as the authority's `OPENSSL_clear_free`. `s`'s `Drop`
+        // releases the signature afterwards, in the authority's own order.
+        // SAFETY: `der` is NULL or the block `i2d_DSA_SIG` allocated above; `derlen.max(0)` is its
+        // length.
+        drop(OwnedBuf::adopt(der, derlen.max(0) as usize));
     }
     ret
 }
