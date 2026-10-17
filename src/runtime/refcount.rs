@@ -21,9 +21,12 @@
 //! out under `NDEBUG`) and its `CRYPTO_UP_REF` on a zero count increments to one and then
 //! reports failure. This protocol deliberately does not reproduce the UB: a `*_free` that
 //! observes zero or [`REF_DESTROYING`] while the object's storage is still live is a
-//! defined no-op, and `*_up_ref` reports failure without changing the count. On a live
-//! object with a positive count both operations preserve the authority's observable
-//! answer and ordering.
+//! defined no-op, and `*_up_ref` reports failure without changing the count. At
+//! `i32::MAX` the authority's `CRYPTO_UP_REF` computes `n + 1`, which is signed overflow
+//! (undefined behaviour in C); this implementation uses a checked add, reports failure
+//! (`0`) and leaves the count unchanged, consistent with its refusal of a zero or
+//! destroying count. On a live object with a positive count both operations preserve the
+//! authority's observable answer and ordering.
 
 use core::ffi::c_int;
 use core::sync::atomic::{AtomicI32, Ordering};
@@ -89,7 +92,14 @@ pub(crate) fn up_ref(refs: &AtomicI32) -> c_int {
         if n == REF_DESTROYING || n <= 0 {
             return 0;
         }
-        match refs.compare_exchange(n, n + 1, Ordering::Relaxed, Ordering::Relaxed) {
+        // A live count at `i32::MAX` cannot be incremented: the authority's `n + 1` is
+        // signed overflow (UB in C), and wrapping to `i32::MIN` would fabricate the
+        // destroying sentinel. Refuse without modifying the count, matching the zero and
+        // destroying answers.
+        let Some(next) = n.checked_add(1) else {
+            return 0;
+        };
+        match refs.compare_exchange(n, next, Ordering::Relaxed, Ordering::Relaxed) {
             // `compare_exchange` answers the *previous* value. A positive `n` makes the new
             // count greater than one, which is the authority's `1` answer.
             Ok(_) => return 1,
@@ -128,6 +138,13 @@ mod tests {
         let destroying = AtomicI32::new(REF_DESTROYING);
         assert_eq!(up_ref(&destroying), 0);
         assert_eq!(destroying.load(Ordering::Relaxed), REF_DESTROYING);
+    }
+
+    #[test]
+    fn up_ref_refuses_overflow_without_changing_count() {
+        let refs = AtomicI32::new(i32::MAX);
+        assert_eq!(up_ref(&refs), 0);
+        assert_eq!(refs.load(Ordering::Relaxed), i32::MAX);
     }
 
     #[test]
