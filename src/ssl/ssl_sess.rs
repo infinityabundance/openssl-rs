@@ -671,6 +671,11 @@ unsafe fn cache_delete_ptr(ctx: *mut SslCtx, s: *mut SslSession) -> c_int {
         if unsafe { OPENSSL_sk_value(st, i).cast::<SslSession>() } == s {
             // SAFETY: the index is in range.
             unsafe { OPENSSL_sk_delete(st, i) };
+            // The authority's `SSL_SESSION_list_remove` clears the cache back-pointer
+            // (`ssl_sess.c:1349`). The session may outlive the context through an independent
+            // reference, so leaving `owner` pointing at the context is a dangling reference.
+            // SAFETY: `s` is live per the contract.
+            unsafe { (*s).owner = ptr::null_mut() };
             return i;
         }
     }
@@ -837,6 +842,9 @@ pub unsafe extern "C" fn SSL_CTX_flush_sessions_ex(s: *mut SslCtx, t: i64) {
                     if !current.is_null() && (t == 0 || sess_timedout(t as u64, current)) {
                         OPENSSL_sk_delete(st, i);
                         (*current).not_resumable = 1;
+                        // `SSL_SESSION_list_remove` clears the cache back-pointer
+                        // (`ssl_sess.c:1349`); a caller-held reference outlives the context.
+                        (*current).owner = ptr::null_mut();
                         removed.push(current);
                     }
                     i -= 1;
@@ -879,7 +887,13 @@ pub(crate) unsafe fn ssl_ctx_session_cache_free(ctx: *mut SslCtx) {
         }
         let n = OPENSSL_sk_num(st);
         for i in 0..n {
-            SSL_SESSION_free(OPENSSL_sk_value(st, i).cast::<SslSession>());
+            let session = OPENSSL_sk_value(st, i).cast::<SslSession>();
+            if !session.is_null() {
+                // `SSL_CTX_flush_sessions_ex` removes each cache entry from the list before the
+                // context is released, so a session still held by an application has no owner.
+                (*session).owner = ptr::null_mut();
+            }
+            SSL_SESSION_free(session);
         }
         OPENSSL_sk_free(st);
         (*ctx).sessions = ptr::null_mut();
@@ -2398,5 +2412,100 @@ mod refcount_reentrancy_tests {
         unsafe { SSL_SESSION_free(session) };
 
         assert_eq!(REENTER_CALLS.load(Ordering::Relaxed), 1);
+    }
+}
+
+/// The session's `owner` is a cache back-pointer, not an owning reference. Every path that
+/// removes the session from the cache must clear it (the authority's `SSL_SESSION_list_remove`,
+/// `ssl_sess.c:1349`), or a session held independently of the context would retain a pointer
+/// into the freed `SSL_CTX` and `SSL_SESSION_set_timeout` would dereference it.
+#[cfg(test)]
+mod alias_ownership_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new};
+
+    fn session_refs(session: *const SslSession) -> i32 {
+        // SAFETY: `session` is a live session in every caller.
+        unsafe { (*session).references.load(Ordering::Relaxed) }
+    }
+
+    fn new_cached_session(ctx: *mut SslCtx) -> *mut SslSession {
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        // SAFETY: `session` and `ctx` are live. A non-zero id is required for cache removal.
+        unsafe {
+            (*session).session_id_length = 4;
+            (&mut (*session).session_id)[..4].copy_from_slice(b"test");
+            assert_eq!(SSL_CTX_add_session(ctx, session), 1);
+            assert_eq!((*session).owner, ctx);
+        }
+        assert_eq!(session_refs(session), 2);
+        session
+    }
+
+    #[test]
+    fn removed_session_does_not_retain_a_context_back_pointer() {
+        // SAFETY: process-lifetime method table; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        let session = new_cached_session(ctx);
+
+        // SAFETY: both pointers are live and the session is in `ctx`'s cache.
+        assert_eq!(unsafe { SSL_CTX_remove_session(ctx, session) }, 1);
+        // SAFETY: `session` survives through this frame's reference.
+        assert!(unsafe { (*session).owner }.is_null());
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: this releases the caller's remaining session reference.
+        unsafe { SSL_SESSION_free(session) };
+        // SAFETY: the context still has the caller's reference.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    #[test]
+    fn flushed_session_does_not_retain_a_context_back_pointer() {
+        // SAFETY: process-lifetime method table; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        let session = new_cached_session(ctx);
+
+        // SAFETY: both pointers are live; a timestamp of 0 flushes every cached session.
+        unsafe { SSL_CTX_flush_sessions_ex(ctx, 0) };
+        // SAFETY: `session` survives through this frame's reference.
+        assert!(unsafe { (*session).owner }.is_null());
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: this releases the caller's remaining session reference.
+        unsafe { SSL_SESSION_free(session) };
+        // SAFETY: the context still has the caller's reference.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    #[test]
+    fn context_free_clears_the_back_pointer_of_a_surviving_session() {
+        // SAFETY: process-lifetime method table; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        let session = new_cached_session(ctx);
+
+        // SAFETY: this retires the context, releasing the cache's reference. The session is
+        // still alive through this frame's reference.
+        unsafe { SSL_CTX_free(ctx) };
+        // SAFETY: `session` is live and must no longer point at the freed context.
+        assert!(unsafe { (*session).owner }.is_null());
+        assert_eq!(session_refs(session), 1);
+
+        // This reader dereferences `owner->lock`; before the fix it read freed memory.
+        // SAFETY: `session` is live and unowned by any context now.
+        assert_eq!(unsafe { SSL_SESSION_set_timeout(session, 42) }, 1);
+        // SAFETY: `session` is live and unowned by any context now.
+        assert_eq!(unsafe { SSL_SESSION_get_timeout(session) }, 42);
+
+        // SAFETY: this releases the caller's remaining reference.
+        unsafe { SSL_SESSION_free(session) };
     }
 }
