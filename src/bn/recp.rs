@@ -22,6 +22,20 @@
 //! context that was never set therefore reaches `BN_div` with a zero divisor — and
 //! reaches it through `BN_reciprocal`, so the raise is `BN_div`'s own coordinate,
 //! not a new one.
+//!
+//! ## Ownership classification (this batch)
+//!
+//! `BN_RECP_CTX` is a **deliberately Rust-owned representation**: [`RecpCtx`] is
+//! a Rust `Box` whose limbs are `Vec<Limb>` fields, created by
+//! [`BN_RECP_CTX_new`] and released by [`BN_RECP_CTX_free`], which are the
+//! exported lifecycle. No allocation or release in this module crosses the
+//! `CRYPTO_*` seam. The consequence is explicit: an installed
+//! `CRYPTO_set_mem_functions` hook does not observe the context or its limb
+//! storage, and the Rust representation's byte size is not the authority's C
+//! `BN_RECP_CTX` size — allocating it at `size_of::<RecpCtx>()` would make the
+//! hook observe the wrong byte count, violating §6's exact-size rule. This is the
+//! recorded compatibility residual **P1**, retained and **not** a
+//! `SAFETY_DISCHARGED` claim.
 
 use core::ffi::c_int;
 

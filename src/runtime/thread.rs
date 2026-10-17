@@ -84,6 +84,22 @@
 //!
 //! The orderings are the authority's: `AcqRel` for the read-modify-write
 //! operations, `Acquire` for loads, `Release` for stores.
+//!
+//! ## Ownership classification (this batch)
+//!
+//! [`CryptoRwlock`] (`CRYPTO_RWLOCK`) is a **deliberately Rust-owned internal
+//! representation**: `CRYPTO_THREAD_lock_new` boxes an `RwlockInner` and casts it
+//! to the opaque handle, and `CRYPTO_THREAD_lock_free` is the exported lifecycle
+//! that drops that same `Box`. The internal `ossl_crypto_mutex_*` /
+//! `ossl_crypto_condvar_*` primitives are likewise `pub(crate)` Rust-owned `Box`
+//! representations and are not exported. None of these objects is allocated
+//! through the `CRYPTO_*` seam, and the consequence is stated rather than hidden:
+//! an installed `CRYPTO_set_mem_functions` hook does not observe their
+//! allocations or releases. Allocating the handle through
+//! `CRYPTO_zalloc(size_of::<...>())` would make the hook observe a byte count that
+//! is not the authority's C object size, violating §6's exact-size rule. This is
+//! the recorded compatibility residual **P1**, retained and **not** a
+//! `SAFETY_DISCHARGED` claim.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};

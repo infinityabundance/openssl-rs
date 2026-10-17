@@ -42,6 +42,21 @@
 //! `num_nodes` and `num_alloc_nodes` are *observable* through the report, and they
 //! are not the same number, so the linear-hashing layout had to be reproduced
 //! rather than approximated.
+//!
+//! ## Ownership classification (this batch)
+//!
+//! `OPENSSL_LHASH` is a **deliberately Rust-owned representation**: the opaque
+//! [`OpenSslLhash`] handle points at an `Inner` created by `Box::into_raw` in
+//! `boxed`, whose header and bucket array (`Vec<Vec<Node>>`) are Rust-owned, and
+//! the exported `OPENSSL_LH_new` / `OPENSSL_LH_free` lifecycle owns and releases
+//! it with `Box::from_raw`. No allocation or release in this module crosses the
+//! `CRYPTO_*` seam. The consequence is explicit: an installed
+//! `CRYPTO_set_mem_functions` hook does not observe the header or the bucket
+//! storage, and the Rust representation's byte size is not the authority's C
+//! `OPENSSL_LHASH` size — allocating it at `size_of::<Inner>()` would make the
+//! hook observe the wrong byte count, violating §6's exact-size rule. This is the
+//! recorded compatibility residual **P1**, retained and **not** a
+//! `SAFETY_DISCHARGED` claim.
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 

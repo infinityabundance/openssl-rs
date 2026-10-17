@@ -130,6 +130,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | 73 | stage/p25/sweep29 | runtime/bio/method, x509/{v3_prn,v3_sxnet}, ct/ct_x509v3, dsa/asn1, asn1/x_algor | **allocator-seam fix**: BIO_METHOD now zalloc/strdup/free through CRYPTO_* (no Box/libc bypass); extension/test owners; returned CT string documented; hidden 0 |
 | -- | stage/p25/sweep30 | bn/ctx, runtime/sparse_array | structural/no-seam classification; four opaque objects retained Rust-owned because a seam allocation would report the wrong byte size (P1 hook-parity residual recorded) |
 | 74 | stage/p25/sweep31 | rsa/asn1, bn/{mont,bn_srp}, x509/v3_no_ass | test-only owners; Rust-owned-opaque and no-seam classifications; returned strdup contract; hidden 0 |
+| 75 | stage/p25/sweep32 | runtime/{thread,stack,lhash}, bn/recp | final opaque-representation classification; P1 allocator-hook byte-size residual stated; documentation only; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
