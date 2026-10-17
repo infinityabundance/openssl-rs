@@ -20,8 +20,9 @@ use crate::cmp::cmp_util::{
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_get_type, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::{NID_hmac_sha1, NID_sha256, NID_subject_alt_name, OBJ_nid2sn};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OpenSslStack,
 };
@@ -45,44 +46,6 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_ctx.c";
 
 /// This unit's `__FILE__` as the allocator seam's `file` argument.
 const FILE_C: *const c_char = FILE.as_ptr();
-
-/// An owned seam block: one of the context's `*mut c_char` members (or the block a setter leaves
-/// for a field), released by `Drop` with a plain `CRYPTO_free` at the authority's own `file`/`line`.
-///
-/// The block stays the authority's own allocation at its exact `file`/`line`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is this type.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a block a field still holds, for release by `Drop` at the authority's own site; NULL
-    /// answers `None`, which the callers treat as the authority's NULL release.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller
-    /// owns exclusively -- this handle's `Drop` is its single release; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `ERR_LIB_CMP`.
 const ERR_LIB_CMP: c_int = 58;

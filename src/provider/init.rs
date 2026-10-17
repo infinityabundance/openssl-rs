@@ -54,6 +54,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
@@ -68,7 +69,7 @@ use crate::runtime::defaults::ossl_get_modulesdir;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_load_strings};
 use crate::runtime::getenv::ossl_safe_getenv;
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_strdup};
 use crate::runtime::thread::{CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
@@ -127,46 +128,6 @@ struct ErrStringData {
     error: c_ulong,
     /// The text, borrowed from the provider's own table.
     string: *const c_char,
-}
-
-/// An owned C string produced by the crate's allocator seam.
-///
-/// `provider_init` duplicates and builds several path strings, each released at its own authority
-/// `OPENSSL_free` site. This handle is their single release: it stays a seam block, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes the same allocation and free.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a freshly allocated NUL-terminated block.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live NUL-terminated block the crate's allocator seam produced, is owned
-    /// by the caller, and will not be freed or handed to any other owner -- this handle's `Drop`
-    /// is its single release.
-    unsafe fn take(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedStr {
-            ptr: ptr.as_ptr(),
-            file,
-            line,
-        })
-    }
-
-    /// The pointer the DSO layer borrows for the duration of this call.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedStr {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle adopted and has not released; this is its
-        // single release at the authority's own site.
-        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
-    }
 }
 
 /// `OSSL_FUNC_provider_get_reason_strings_fn` — the ninth id, and the only one whose entry is
@@ -235,8 +196,10 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                     if dup.is_null() {
                         return 0;
                     }
-                    let owned = OwnedStr::take(dup, FILE, LINE_LOAD_DIR_FREE);
-                    let ptr = owned.as_ref().map_or(ptr::null(), OwnedStr::as_ptr);
+                    let owned = OwnedStr::adopt(dup, FILE, LINE_LOAD_DIR_FREE);
+                    let ptr = owned
+                        .as_ref()
+                        .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
                     (owned, ptr)
                 }
             };
@@ -274,9 +237,11 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 // release at the authority's own free site.
                 let owned = unsafe {
                     let path = DSO_convert_filename(dso, (*prov).name);
-                    OwnedStr::take(path, FILE, LINE_ALLOCATED_PATH_FREE)
+                    OwnedStr::adopt(path, FILE, LINE_ALLOCATED_PATH_FREE)
                 };
-                let ptr = owned.as_ref().map_or(ptr::null(), OwnedStr::as_ptr);
+                let ptr = owned
+                    .as_ref()
+                    .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
                 (owned, ptr)
             } else {
                 (None, module_path)
@@ -288,9 +253,11 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 let merged = unsafe { DSO_merge(dso, module_path, load_dir) };
                 // SAFETY: `merged` is this call's fresh exclusive block from the seam; the
                 // handle's `Drop` is its single release at the authority's own free site.
-                merged_path = unsafe { OwnedStr::take(merged, FILE, LINE_MERGED_PATH_FREE) };
+                merged_path = unsafe { OwnedStr::adopt(merged, FILE, LINE_MERGED_PATH_FREE) };
             }
-            let merged_ptr = merged_path.as_ref().map_or(ptr::null(), OwnedStr::as_ptr);
+            let merged_ptr = merged_path
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
 
             // SAFETY: `merged_ptr` is NULL or NUL-terminated; the load is the DSO layer's.
             let loaded = unsafe { DSO_load(dso, merged_ptr, ptr::null_mut(), 0) };

@@ -63,7 +63,8 @@ use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 use crate::slh_dsa::hash_ctx::{ossl_slh_dsa_hash_ctx_free, ossl_slh_dsa_hash_ctx_new};
 use crate::slh_dsa::key::{
@@ -115,46 +116,6 @@ const LINE_FREE_PROPQ: c_int = 452;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the generation context and its `propq` duplicate
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `propq` duplicate: a block this unit's `CRYPTO_strdup` leaves in the context, or one
-/// reclaimed from the field, released by `Drop` with a plain `CRYPTO_free` at the authority's own
-/// site.
-///
-/// The block stays the authority's own allocation, at its exact `file`/`line`, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
-/// this type.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a block a field still holds, for release by `Drop` at the authority's own site; NULL
-    /// answers `None`, which the callers treat as the authority's NULL release.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller
-    /// owns exclusively -- this handle's `Drop` is its single release; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `slh_dsa_gen_cleanup`'s body (`slh_dsa_kmgmt.c.in:450-452`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: cleanse the entropy, then release the `propq` duplicate, in the
