@@ -32,8 +32,8 @@ file-level atlas metric.
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
 `cargo test --lib` (must pass; the established baseline is **1196** passed
-and the 9 adversarial probes are `#[ignore]`d and run separately via
-`scripts/adv-probe.sh`).
+and the adversarial probes are `#[ignore]`d and run separately via
+`scripts/adv-probe.sh`; as of sweep 33 there are **13** probes).
 
 ## Landed batches
 
@@ -131,6 +131,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | -- | stage/p25/sweep30 | bn/ctx, runtime/sparse_array | structural/no-seam classification; four opaque objects retained Rust-owned because a seam allocation would report the wrong byte size (P1 hook-parity residual recorded) |
 | 74 | stage/p25/sweep31 | rsa/asn1, bn/{mont,bn_srp}, x509/v3_no_ass | test-only owners; Rust-owned-opaque and no-seam classifications; returned strdup contract; hidden 0 |
 | 75 | stage/p25/sweep32 | runtime/{thread,stack,lhash}, bn/recp | final opaque-representation classification; P1 allocator-hook byte-size residual stated; documentation only; hidden 0 |
+| 76 | stage/p25/sweep33 | src/ssl/adv_alloc, dsa/object, dh/object, ec/ecx_backend, scripts/adv-probe.sh | **targeted court**: site-independent `arm_any`, cleansed-free detector + canary; DSA/DH/ECX allocation-refusal probes; 13/13 probes; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 

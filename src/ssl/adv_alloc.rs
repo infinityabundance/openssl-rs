@@ -2,9 +2,14 @@
 //! (`stage/p25/adv-tests`, §16 negative controls / §18 verification schedule).
 //!
 //! It installs the crate's allocator seam (`CRYPTO_set_mem_functions`) with counting, recording
-//! hooks and, on request, refuses one allocation at a chosen authority coordinate, so a test can
-//! drive the `SSL_SESSION` ticket writers and the member-buffer handles through their
+//! hooks and, on request, refuses one allocation at a chosen authority coordinate (or at any
+//! coordinate for a given size), so a test can drive the `SSL_SESSION` ticket writers, the
+//! member-buffer handles and the new DSA/DH/ECX object boundaries through their
 //! allocation-refusal path and observe the exact allocator-event sequence.
+//!
+//! It also carries a one-shot **cleansed-free** check: the next release can be inspected before it
+//! is forwarded, so a probe can prove that secret-bearing storage is zeroed by the time it is
+//! freed. That instrument is test-only, like the rest of this module.
 //!
 //! Installing an allocator is a **process-global** act, so each probe test that uses this module is
 //! `#[ignore]`d: the ordinary `cargo test --lib` suite reports it as **ignored** (never as a false
@@ -60,6 +65,11 @@ struct State {
     /// The member `(ptr, len)` pair an armed reentrant realloc hook observed *during* the call, if
     /// any. `None` means the reenter observer did not fire.
     reenter_obs: Option<(usize, usize)>,
+    /// Whether the armed cleansed-free check ran on a forwarded release. A dead check must not be
+    /// mistaken for a clean one, so this is tracked separately from the result.
+    cleansed_observed: bool,
+    /// Whether the last armed cleansed-free check found a non-zero byte in the released block.
+    cleansed_violation: bool,
 }
 
 static STATE: Mutex<State> = Mutex::new(State {
@@ -67,12 +77,24 @@ static STATE: Mutex<State> = Mutex::new(State {
     freed: Vec::new(),
     double_free: false,
     reenter_obs: None,
+    cleansed_observed: false,
+    cleansed_violation: false,
 });
 
 /// One-shot refusal: set by [`arm`], consumed by the first matching request in `hook_malloc`.
 static ARMED: AtomicBool = AtomicBool::new(false);
 static ARMED_SIZE: AtomicUsize = AtomicUsize::new(0);
 static INSTALLED: AtomicBool = AtomicBool::new(false);
+
+/// One-shot size-only refusal: set by [`arm_any`], consumed by the first request of that size at
+/// **any** `(file, line)` coordinate.
+static ANY_ARMED: AtomicBool = AtomicBool::new(false);
+static ANY_SIZE: AtomicUsize = AtomicUsize::new(0);
+
+/// One-shot cleansed-free check: set by [`arm_cleansed_free`], consumed by the first forwarded
+/// non-NULL release.
+static CLEANSED_ARMED: AtomicBool = AtomicBool::new(false);
+static CLEANSED_LEN: AtomicUsize = AtomicUsize::new(0);
 
 /// One-shot realloc interception: refuse (or merely observe) the next `CRYPTO_realloc` of
 /// `REALLOC_SIZE` bytes. A refused request answers NULL without forwarding, so the incumbent block
@@ -101,6 +123,20 @@ unsafe extern "C" fn hook_malloc(n: usize, file: *const c_char, line: c_int) -> 
     if ARMED.load(Ordering::SeqCst) && site && n == ARMED_SIZE.load(Ordering::SeqCst) {
         // One-shot: disarm and answer NULL, exactly as a refused allocator call.
         ARMED.store(false, Ordering::SeqCst);
+        with_state(|s| {
+            s.log.push(Ev::Malloc {
+                n,
+                site,
+                refused: true,
+            })
+        });
+        return ptr::null_mut();
+    }
+    if ANY_ARMED.load(Ordering::SeqCst) && n == ANY_SIZE.load(Ordering::SeqCst) {
+        // One-shot, site-independent: the DSA/DH/ECX constructors allocate at their own
+        // `(FILE_*, LINE)` coordinates, which `arm` deliberately does not match. Record the real
+        // `site` bit exactly as the forwarding path does, then answer NULL.
+        ANY_ARMED.store(false, Ordering::SeqCst);
         with_state(|s| {
             s.log.push(Ev::Malloc {
                 n,
@@ -194,7 +230,26 @@ unsafe extern "C" fn hook_free(p: *mut c_void, _file: *const c_char, _line: c_in
             false
         }
     });
+    // A double release is not forwarded, so its storage may already be invalid: consume the
+    // one-shot arm but do not read it. The cleanliness check therefore applies only to a release
+    // that is actually forwarded.
+    let cleansed_armed = CLEANSED_ARMED.swap(false, Ordering::SeqCst);
     if !already {
+        if cleansed_armed {
+            let len = CLEANSED_LEN.load(Ordering::SeqCst);
+            // SAFETY: the test armed this check with the length of the block it is about to
+            // release; `p` is that live block and its first `len` bytes are readable until the
+            // `free` below. Reading them here, before forwarding, is the whole probe.
+            let all_zero = unsafe { core::slice::from_raw_parts(p.cast::<u8>(), len) }
+                .iter()
+                .all(|&b| b == 0);
+            with_state(|s| {
+                s.cleansed_observed = true;
+                if !all_zero {
+                    s.cleansed_violation = true;
+                }
+            });
+        }
         // SAFETY: `p` is a block `hook_malloc` returned and has not been released yet.
         unsafe { free(p) };
     }
@@ -267,6 +322,42 @@ pub(crate) fn assert_instrument_live() {
     reset();
 }
 
+/// Arm a one-shot refusal for the next request of exactly `size` bytes at **any** `(file, line)`
+/// coordinate.
+///
+/// This is the boundary-court counterpart to [`arm`]: the DSA, DH and ECX constructors allocate at
+/// their own source coordinates, so a site-specific arm can never reach them. The recorded event
+/// carries the real `site` bit, so a probe can still distinguish the coordinate shape.
+pub(crate) fn arm_any(size: usize) {
+    ANY_SIZE.store(size, Ordering::SeqCst);
+    ANY_ARMED.store(true, Ordering::SeqCst);
+}
+
+/// Disarm an `arm_any` refusal that was not consumed.
+pub(crate) fn disarm_any() {
+    ANY_ARMED.store(false, Ordering::SeqCst);
+}
+
+/// Arm a one-shot cleansed-free check of `len` bytes.
+///
+/// The next **forwarded** non-NULL release is inspected before it is handed to the real allocator:
+/// the first `len` bytes must all be zero. A non-zero byte sets the violation flag, which
+/// [`cleansed_free_ok`] reports and [`assert_not_cleansed`] turns into a hard failure. A release
+/// that is refused as a double free is not read (its storage may already be invalid).
+///
+/// # Safety
+///
+/// The next non-NULL `CRYPTO_free` observed by the installed hook must release a block with at
+/// least `len` readable bytes. The hook reads those bytes before forwarding the release.
+pub(crate) unsafe fn arm_cleansed_free(len: usize) {
+    CLEANSED_LEN.store(len, Ordering::SeqCst);
+    with_state(|s| {
+        s.cleansed_observed = false;
+        s.cleansed_violation = false;
+    });
+    CLEANSED_ARMED.store(true, Ordering::SeqCst);
+}
+
 /// Arm a one-shot refusal for the next request of exactly `size` bytes at the `(NULL, 0)` site.
 pub(crate) fn arm(size: usize) {
     ARMED_SIZE.store(size, Ordering::SeqCst);
@@ -307,15 +398,22 @@ pub(crate) fn reenter_observed() -> Option<(usize, usize)> {
 }
 
 /// Clear the event log, the freed-pointer set, the double-release flag, the reentrancy
-/// observation and any un-consumed arming.
+/// observation, the cleansed-free result and any un-consumed `arm_any`/cleansed-free arming.
+///
+/// The site-specific [`arm`] state is deliberately left alone: existing probes reset and then arm
+/// at the measured window, and changing that behaviour would weaken the old courts.
 pub(crate) fn reset() {
     REALLOC_ARMED.store(false, Ordering::SeqCst);
     REENTER_ARMED.store(false, Ordering::SeqCst);
+    ANY_ARMED.store(false, Ordering::SeqCst);
+    CLEANSED_ARMED.store(false, Ordering::SeqCst);
     with_state(|s| {
         s.log.clear();
         s.freed.clear();
         s.double_free = false;
         s.reenter_obs = None;
+        s.cleansed_observed = false;
+        s.cleansed_violation = false;
     });
 }
 
@@ -329,6 +427,38 @@ pub(crate) fn double_free() -> bool {
     with_state(|s| s.double_free)
 }
 
+/// Whether the last armed cleansed-free check ran and found every one of the first `len` bytes
+/// zero. A check that never ran is **not** `ok`: a dead detector cannot report a clean release.
+pub(crate) fn cleansed_free_ok() -> bool {
+    with_state(|s| s.cleansed_observed && !s.cleansed_violation)
+}
+
+/// Panic unless no block has been released twice since the last [`reset`].
+pub(crate) fn assert_no_double_free() {
+    assert!(
+        !double_free(),
+        "allocator probe: a block was released twice; the second release was not forwarded"
+    );
+}
+
+/// Panic unless the armed cleansed-free check ran on a forwarded release and observed an all-zero
+/// prefix of the armed length.
+///
+/// The name states the defect being excluded: a block that was **not** cleansed before release.
+/// Both failure modes are hard failures, so a check that never ran cannot pass silently.
+pub(crate) fn assert_not_cleansed() {
+    let (observed, violation) = with_state(|s| (s.cleansed_observed, s.cleansed_violation));
+    assert!(
+        observed,
+        "allocator probe: the armed cleansed-free check did not run on a forwarded release"
+    );
+    assert!(
+        !violation,
+        "allocator probe: the released block's first {} bytes were not all zero",
+        CLEANSED_LEN.load(Ordering::SeqCst)
+    );
+}
+
 /// A zeroed `Ssl` block allocated through the installed seam, the way `SSL_new` allocates it, so
 /// the refusal tests can drive a ticket writer with only the few fields its failure path reads set.
 ///
@@ -340,4 +470,70 @@ pub(crate) unsafe fn zeroed_ssl() -> *mut Ssl {
     // allocates; every field of `Ssl` has an all-zero valid value, and the caller sets the fields
     // the writer reads before it is used.
     CRYPTO_zalloc(core::mem::size_of::<Ssl>(), ptr::null(), 0).cast::<Ssl>()
+}
+
+/// Negative control for the cleansed-free instrument itself (§16).
+///
+/// The mechanism must (a) accept a zeroed block and (b) flag residue and make
+/// [`assert_not_cleansed`] panic. Both directions run in this one process: the allocator hook is
+/// process-global and either half alone could pass with a dead detector.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn cleansed_free_instrument_detects_residue() {
+        let _g = crate::test_support::lock_global_state();
+        require_installed();
+        assert_instrument_live();
+
+        const LEN: usize = 24;
+
+        // (a) A zeroed block passes the check.
+        // SAFETY: `p` is a fresh zeroed block this frame owns; `LEN` is its size.
+        unsafe {
+            let p = CRYPTO_zalloc(LEN, ptr::null(), 0).cast::<u8>();
+            assert!(!p.is_null(), "the zeroed canary block must allocate");
+            reset();
+            arm_cleansed_free(LEN);
+            CRYPTO_free(p.cast(), ptr::null(), 0);
+            assert!(
+                cleansed_free_ok(),
+                "a zeroed block must pass the cleansed-free check"
+            );
+            assert_not_cleansed();
+        }
+
+        // (b) Residue is flagged, and the hard-failing helper panics with the precise reason.
+        // SAFETY: `q` is a fresh block this frame owns; `LEN` bytes are written before release.
+        unsafe {
+            let q = CRYPTO_malloc(LEN, ptr::null(), 0).cast::<u8>();
+            assert!(!q.is_null(), "the residue canary block must allocate");
+            ptr::write_bytes(q, 0xAA, LEN);
+            reset();
+            arm_cleansed_free(LEN);
+            CRYPTO_free(q.cast(), ptr::null(), 0);
+            assert!(
+                !cleansed_free_ok(),
+                "a block with residue must not pass the cleansed-free check"
+            );
+
+            let payload =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(assert_not_cleansed))
+                    .expect_err("assert_not_cleansed must panic on residue");
+            let msg = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .unwrap_or("");
+            assert!(
+                msg.contains("not all zero"),
+                "the hard failure must name the uncleansed block, got: {msg}"
+            );
+        }
+
+        assert_no_double_free();
+    }
 }

@@ -36,6 +36,10 @@ probes=(
   "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_reentrancy_reads_member"
   "ssl::ssl_lib::adv_realloc_probe::canary_realloc_refusal_instrument_fires"
   "ssl::ssl_lib::adv_realloc_probe::canary_reenter_observer_fires"
+  "ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue"
+  "dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free"
+  "dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free"
+  "ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free"
 )
 
 failures=0

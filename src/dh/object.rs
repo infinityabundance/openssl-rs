@@ -799,3 +799,75 @@ pub(crate) unsafe fn ossl_dh_get0_nid(dh: *const Dh) -> c_int {
     // SAFETY: `dh` is live per the contract.
     unsafe { (*dh).params.nid }
 }
+
+/// Allocator-refusal boundary court for [`ossl_dh_new_ex`] (§16 negative controls).
+///
+/// The arm is size-only, because the constructor allocates at
+/// `(FILE_DH_LIB, LINE)` rather than at the `(NULL, 0)` coordinate the SSL ticket probes use.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dh_new_refused_alloc_returns_null_without_free() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dh>();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(size);
+        // SAFETY: `ossl_dh_new_ex(NULL)` takes no live pointer beyond the NULL library context.
+        let dh = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        adv_alloc::disarm_any();
+
+        assert!(
+            dh.is_null(),
+            "a refused Dh block must make the constructor answer NULL"
+        );
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: true, .. } if *n == size))
+                .count(),
+            1,
+            "exactly the Dh-sized request is refused"
+        );
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            0,
+            "the refused request must never be forwarded"
+        );
+        assert!(
+            !ev.iter().any(|e| matches!(e, Ev::Free { .. })),
+            "a refusal before the block exists must not release anything"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The harness must not perturb the success path: an unarmed constructor still produces a
+        // live object, and its single release is observed exactly once.
+        adv_alloc::reset();
+        // SAFETY: reads no caller pointer beyond the NULL library context.
+        let live = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        assert!(
+            !live.is_null(),
+            "an unarmed Dh allocation must succeed under the hook"
+        );
+        assert!(
+            adv_alloc::events()
+                .iter()
+                .any(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size)),
+            "the success path must be recorded as a forwarded allocation"
+        );
+        // SAFETY: `live` is this probe's own object and holds one reference.
+        unsafe { DH_free(live) };
+        adv_alloc::assert_no_double_free();
+    }
+}
