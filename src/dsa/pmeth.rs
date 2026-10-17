@@ -57,8 +57,8 @@ use crate::ffc::params::ossl_ffc_set_digest;
 use crate::ffc::params_generate::ossl_ffc_params_FIPS186_4_generate;
 use crate::ffc::FFC_PARAM_TYPE_DSA;
 use crate::rand::sys::atoi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{
     NID_dsa, NID_dsaWithSHA, NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha3_224,
     NID_sha3_256, NID_sha3_384, NID_sha3_512, NID_sha512,
@@ -91,6 +91,21 @@ struct DsaPkeyCtx {
     md: *const EvpMd,
 }
 
+/// [`OwnedCtx`]'s destructor body for [`DsaPkeyCtx`], without the block's own release.
+///
+/// The authority's `pkey_dsa_cleanup` (`:71-75`) releases the block and nothing else: the five
+/// members are scalars, borrowed digest pointers and the inline `gentmp` scratch, none owned.
+// SAFETY: (a) `destroy_body` releases nothing -- there is no owned member and never the enclosing
+// block, which `OwnedCtx`'s `Drop` releases; (b) an all-zero block of this `#[repr(C)]` record
+// (integers, NULL pointers and a zeroed `gentmp`) is a valid context.
+unsafe impl CtxDestroy for DsaPkeyCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_MALLOC_DCTX;
+    const LINE_FREE: c_int = LINE_FREE_DCTX;
+
+    unsafe fn destroy_body(_ptr: *mut DsaPkeyCtx) {}
+}
+
 /// `strcmp(s, lit) == 0` in the crate's `CStr` idiom.
 ///
 /// # Safety
@@ -105,20 +120,27 @@ unsafe fn cstr_is(s: *const c_char, lit: &[u8]) -> bool {
 /// # Safety
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_dsa_init(ctx: *mut EvpPkeyCtx) -> c_int {
-    /* `CRYPTO_malloc` is one of the safe entry points of this crate: it validates its own argument
-     * and answers NULL rather than reading anything of the caller's. */
-    let dctx = CRYPTO_malloc(core::mem::size_of::<DsaPkeyCtx>(), FILE, LINE_MALLOC_DCTX)
-        .cast::<DsaPkeyCtx>();
-    if dctx.is_null() {
+    // The authority's `OPENSSL_malloc(sizeof(*dctx))` at `:40`, through the staged `RawCtx` so a
+    // refusal returns 0 without forming a value and no destructor can run on the uninitialised
+    // block. The release coordinates are `pkey_dsa_cleanup`'s `:74`.
+    let Some(raw) = RawCtx::<DsaPkeyCtx>::malloc() else {
         return 0;
-    }
-    // SAFETY: `dctx` is this call's own allocation and `ctx` is live per the contract.
+    };
+    let dctx = raw.as_ptr();
+    // SAFETY: `dctx` is this call's own block and `ctx` is live per the contract. Every destructor-
+    // visible field is written below; `gentmp` is the authority's uninitialised scratch, zeroed
+    // here so the block is a valid Rust value before it is handed out (the keygen callback writes
+    // it before reading, so no observable behaviour changes).
     unsafe {
         (*dctx).nbits = 2048;
         (*dctx).qbits = 224;
         (*dctx).pmd = ptr::null();
+        (*dctx).gentmp = [0; 2];
         (*dctx).md = ptr::null();
 
+        // SAFETY: every field is now initialised, so the block is a valid `DsaPkeyCtx` and this
+        // handle is its only owner; `into_raw` hands it to `ctx->data`.
+        let dctx = raw.assume_init().into_raw();
         (*ctx).data = dctx.cast::<c_void>();
         /* `ctx->keygen_info = dctx->gentmp`: the address of the structure's own array. */
         (*ctx).keygen_info = ptr::addr_of_mut!((*dctx).gentmp).cast::<c_int>();
@@ -163,8 +185,10 @@ unsafe extern "C" fn pkey_dsa_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx)
 unsafe extern "C" fn pkey_dsa_cleanup(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is live per the contract.
     let dctx = unsafe { (*ctx).data };
-    // SAFETY: `dctx` is NULL or this method's own allocation, and `CRYPTO_free` accepts NULL.
-    unsafe { CRYPTO_free(dctx, FILE, LINE_FREE_DCTX) };
+    // SAFETY: `dctx` is NULL or the block `pkey_dsa_init` handed out and no other owner has
+    // released; `from_raw` maps NULL to `None` and `Drop` runs the authority's block release at
+    // `pkey_dsa_cleanup`'s own `FILE`/`:74`.
+    drop(unsafe { OwnedCtx::<DsaPkeyCtx>::from_raw(dctx.cast::<DsaPkeyCtx>()) });
 }
 
 /// `static int pkey_dsa_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned
