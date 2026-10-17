@@ -44,7 +44,8 @@ use crate::rand::rand_lib::ossl_rand_get0_seed_noncreating;
 use crate::rand::unix::{ossl_pool_acquire_entropy, ossl_pool_add_nonce_data};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 
 /// `crypto/rand/prov_seed.c`, as the authority's compiler spelled it.
@@ -55,54 +56,6 @@ const LINE: c_int = 0;
 // ---------------------------------------------------------------------------------------------
 // Ownership of `ossl_rand_get_user_nonce`'s scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// `ossl_rand_get_user_nonce` (`:98-110`) allocates a `min_len`-byte buffer, hands it to the
-/// caller's `*pout` on success and releases it with `OPENSSL_free` on the `EVP_RAND_generate`
-/// failure arm. The block stays a `CRYPTO_malloc` at this unit's own size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`]
-/// allocates it, `Drop` is its single `OPENSSL_free`, and [`Self::into_raw`] hands it to the caller
-/// on the success path.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
-    fn new(len: usize) -> Option<OwnedBuf> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, FILE, LINE).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr: raw })
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller that takes it over (`*pout`).
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own plain `CRYPTO_free`, whose NULL arm is a no-op, is the whole release.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE, LINE) };
-    }
-}
 
 /// `size_t ossl_rand_get_entropy(OSSL_LIB_CTX *ctx, unsigned char **pout, int entropy, size_t
 /// min_len, size_t max_len)` — `prov_seed.c:18-41`. Polls the platform pool.
@@ -265,7 +218,7 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         return unsafe { ossl_rand_get_nonce(ctx, pout, min_len, max_len, salt, salt_len) };
     }
 
-    let buf = match OwnedBuf::new(min_len) {
+    let buf = match OwnedBuf::new_plain_released(min_len, FILE, LINE, FILE, LINE) {
         Some(buf) => buf,
         None => return 0,
     };

@@ -26,7 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
@@ -34,7 +34,8 @@ use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_up_ref, EvpMd};
 use crate::evp::legacy_evp::{EVP_get_cipherbyname, EVP_get_digestbyname};
 use crate::params::{OsslParam, OSSL_PARAM_UTF8_STRING};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use crate::evp::mac::{
     EVP_MAC_CTX_free, EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_free,
@@ -657,47 +658,6 @@ pub(crate) unsafe fn ossl_prov_macctx_load(
 const FILE_PROVIDER_UTIL: *const c_char =
     c"../../src/openssl-3.6.4/providers/common/provider_util.c".as_ptr();
 
-/// The block [`ossl_prov_memdup`] duplicates for its caller.
-///
-/// The block stays `CRYPTO_memdup`'s own allocation at the authority's exact `file`/`line`; only
-/// its *ownership* is this type. The normal path transfers it to the caller's context with
-/// [`Self::into_raw`]; `Drop` is a defensive single release if that transfer is interrupted.
-struct OwnedBuf {
-    ptr: *mut u8,
-}
-
-impl OwnedBuf {
-    /// Adopt the duplicate `CRYPTO_memdup` answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's `CRYPTO_memdup` seam produced in full for the
-    /// duplicate's byte count, owned exclusively by this frame and not yet released. It is not a
-    /// borrowed or caller-owned pointer, and no other owner will release it.
-    unsafe fn adopt(ptr: *mut u8) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr })
-        }
-    }
-
-    /// Give up ownership of the duplicate to the caller's context slot.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam, if a transfer is interrupted.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own plain `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
-    }
-}
-
 /// `int ossl_prov_memdup(const void *src, size_t src_len, unsigned char **dest,
 /// size_t *dest_len)` — `provider_util.c:353-365`.
 ///
@@ -722,10 +682,10 @@ pub(crate) unsafe fn ossl_prov_memdup(
             let copy = CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0).cast::<u8>();
             // SAFETY: the seam answered NULL or one fresh block this frame owns exclusively; it is
             // not borrowed from `src` and no other owner will release it.
-            let Some(copy) = OwnedBuf::adopt(copy) else {
+            let Some(copy) = OwnedBuf::adopt_plain(copy.cast::<c_uchar>(), ptr::null(), 0) else {
                 return 0;
             };
-            *dest = copy.into_raw();
+            *dest = copy.into_raw().cast::<u8>();
             *dest_len = src_len;
         } else {
             *dest = ptr::null_mut();

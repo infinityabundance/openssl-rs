@@ -69,8 +69,8 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::{
     openssl_rs_err_add_data, raise_site, raise_site_data, raise_site_dynamic,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::OBJ_txt2obj;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -121,73 +121,6 @@ const LINE_FREE_ORIG_DER: c_int = 243;
 const LINE_FREE_NEW_DER: c_int = 244;
 /// `asn1_multi`'s `err:`-tail `OPENSSL_free(der)` — `asn1_gen.c:461`.
 const LINE_FREE_MULTI_DER: c_int = 461;
-
-/// An owned DER scratch buffer.
-///
-/// Three of this unit's routines manage such a buffer by hand: `generate_v3`'s `orig_der` (a block
-/// `i2d_ASN1_TYPE` produced, released at `:243`) and `new_der` (a `CRYPTO_malloc` released at
-/// `:244`), and `asn1_multi`'s `der` (a block `i2d_ASN1_SEQUENCE_ANY`/`i2d_ASN1_SET_ANY` produced,
-/// released at `:461`). The block stays a `CRYPTO_*`-seam allocation at the authority's own
-/// size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook observes both ends --
-/// a Rust `Box`/`Vec` would hide them. Only the *ownership* is this type: [`Self::malloc`] and
-/// [`Self::adopt`] acquire it, [`Self::as_ptr`] exposes it, [`Self::into_raw`] hands it to the
-/// value that takes it over, and `Drop` is its single release at `self.line`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, alloc_line)`, released on `Drop` at `free_line`, or `None` when
-    /// the allocator answers NULL.
-    fn malloc(len: usize, alloc_line: c_int, free_line: c_int) -> Option<OwnedBuf> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, FILE.as_ptr(), alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr: raw,
-                line: free_line,
-            })
-        }
-    }
-
-    /// Adopt a block an encoder produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit's encoder produced and this frame owns; no other
-    /// owner will release it, and this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, line })
-        }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the value that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam at `self.line`.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.line) };
-    }
-}
 
 /// One `ASN1_GEN_STR` row: the name, its length, and the tag it names.
 ///
@@ -1077,8 +1010,9 @@ unsafe fn asn1_multi(
                 i2d_ASN1_SEQUENCE_ANY(sk, &mut der_slot)
             }
         };
-        // SAFETY: `der_slot` is NULL or the block the `i2d` call allocated for this call.
-        der = unsafe { OwnedBuf::adopt(der_slot, LINE_FREE_MULTI_DER) };
+        // SAFETY: `der_slot` is NULL or the block the `i2d` call allocated for this call through
+        // the crate's `CRYPTO_*` seam; no other owner will release it.
+        der = unsafe { OwnedBuf::adopt_plain(der_slot, FILE.as_ptr(), LINE_FREE_MULTI_DER) };
         if derlen < 0 {
             break 'build;
         }
@@ -1191,8 +1125,10 @@ unsafe fn generate_v3(
     // SAFETY: `ret` is live and this call owns it.
     unsafe { ASN1_TYPE_free(ret) };
     ret = ptr::null_mut();
-    // SAFETY: `orig_der_slot` is NULL or the block the `i2d` call allocated for this call.
-    let orig_der = unsafe { OwnedBuf::adopt(orig_der_slot, LINE_FREE_ORIG_DER) };
+    // SAFETY: `orig_der_slot` is NULL or the block the `i2d` call allocated for this call through
+    // the crate's `CRYPTO_*` seam; no other owner will release it.
+    let orig_der =
+        unsafe { OwnedBuf::adopt_plain(orig_der_slot, FILE.as_ptr(), LINE_FREE_ORIG_DER) };
     let orig_ptr = match orig_der.as_ref() {
         Some(buf) => buf.as_ptr(),
         // `new_der` is still None here, so nothing else is held.
@@ -1258,7 +1194,13 @@ unsafe fn generate_v3(
             i += 1;
         }
 
-        new_der = OwnedBuf::malloc(len as usize, LINE_ALLOC_WRAP_DER, LINE_FREE_NEW_DER);
+        new_der = OwnedBuf::new_plain_released(
+            len as usize,
+            FILE.as_ptr(),
+            LINE_ALLOC_WRAP_DER,
+            FILE.as_ptr(),
+            LINE_FREE_NEW_DER,
+        );
         let Some(new_buf) = new_der.as_ref() else {
             break 'tag;
         };
@@ -1411,8 +1353,9 @@ mod tests {
                 let n = i2d_ASN1_TYPE(v, &mut out);
                 assert!(n > 0, "encoding {text:?}");
                 assert!(!out.is_null());
-                // SAFETY: `out` is the block the `i2d` call allocated for this test.
-                let out = OwnedBuf::adopt(out, LINE_ALLOC_WRAP_DER);
+                // SAFETY: `out` is the block the `i2d` call allocated for this test through the
+                // crate's `CRYPTO_*` seam; no other owner will release it.
+                let out = OwnedBuf::adopt_plain(out, FILE.as_ptr(), LINE_ALLOC_WRAP_DER);
                 let mut p: *const c_uchar =
                     out.as_ref().map_or(ptr::null_mut(), |buf| buf.as_ptr());
                 let back = d2i_ASN1_TYPE(ptr::null_mut(), &mut p, n as c_long);

@@ -49,8 +49,8 @@ use crate::evp::signature::{EVP_SIGNATURE_fetch, EVP_SIGNATURE_free};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::comp::{COMP_get_name, COMP_get_type, CompMethod};
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num,
     OPENSSL_sk_push, OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_unshift,
@@ -1193,60 +1193,6 @@ pub(crate) unsafe fn cipher_list_tls12_num(sk: *mut OpenSslStack) -> c_int {
 // The `SSL_CIPHER_*` readers and the two `OSSL_default_*` lists (`ssl_ciph.c:1674-2260`)
 // ---------------------------------------------------------------------------------------------
 
-/// An owned block from this file's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size and file -- a
-/// Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`] and
-/// [`Self::new_zeroed`] allocate at the authority's own site, `Drop` is its single release at the
-/// authority's own site, and [`Self::into_raw`] hands it to a consumer that takes it over (the
-/// `SSL_CIPHER_description` return, or the compression-method stack).
-struct OwnedBuf {
-    ptr: *mut u8,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, FILE, line).cast::<u8>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr: raw, line })
-    }
-
-    /// `CRYPTO_zalloc(len, FILE, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, FILE, line).cast::<u8>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr: raw, line })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new`/`new_zeroed` allocated and has not been handed
-        // out; its single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE, self.line) };
-    }
-}
-
 /// `char *SSL_CIPHER_description(const SSL_CIPHER *cipher, char *buf, int len)` —
 /// `ssl/ssl_ciph.c:1674-1879`.
 ///
@@ -1272,7 +1218,7 @@ pub unsafe extern "C" fn SSL_CIPHER_description(
         if out.is_null() {
             out_len = 128;
             // The authority's own `CRYPTO_malloc(128, FILE, 1683)`.
-            let Some(desc) = OwnedBuf::new(128, 1683) else {
+            let Some(desc) = OwnedBuf::new_plain_released(128, FILE, 1683, FILE, 1683) else {
                 return ptr::null_mut();
             };
             out = desc.as_ptr().cast::<c_char>();
@@ -1775,7 +1721,7 @@ pub unsafe extern "C" fn SSL_COMP_add_compression_method(id: c_int, cm: *mut Com
         }
         // The authority's own `CRYPTO_zalloc` (`:2037`); the owner hands the block to the stack
         // below.
-        let Some(comp) = OwnedBuf::new_zeroed(core::mem::size_of::<SslComp>(), 2037) else {
+        let Some(comp) = OwnedBuf::new_zeroed(core::mem::size_of::<SslComp>(), FILE, 2037) else {
             return 1;
         };
         // The authority sets only `comp->id` here (`ssl_ciph.c:2041`); `name`/`method` are left

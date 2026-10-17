@@ -42,7 +42,7 @@
 // The three shared bodies expand with the authority's argument counts.
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::mem::size_of;
 use core::ptr;
 
@@ -84,6 +84,7 @@ use crate::provider::der_ml_dsa_key::ossl_DER_w_algorithmIdentifier_ML_DSA;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `ML_DSA_MESSAGE_ENCODE_RAW` — `ml_dsa_sig.c.in:32`.
 const ML_DSA_MESSAGE_ENCODE_RAW: c_int = 0;
@@ -162,50 +163,6 @@ struct ProvMlDsaCtx {
     siglen: usize,
 }
 
-/// An owned signature buffer.
-///
-/// The `#[repr(C)]` `ProvMlDsaCtx::sig` field keeps the raw pointer the ABI reads, so this handle
-/// owns the block only for the windows around a transition: between the allocation (this file's
-/// `CRYPTO_memdup`, or a helper's `OSSL_PARAM_get_octet_string`) and the field assignment, and
-/// between reclaiming the field and the authority's plain `CRYPTO_free`. `Drop` is the block's
-/// single release at the site the reclaimer names. The `ProvMlDsaCtx` block itself, whose release is
-/// a compound destructor body (`ml_dsa_freectx`) and whose address the dispatch ABI exposes, stays
-/// on the raw seam, as in [`crate::ml_kem::key`].
-struct OwnedBuf {
-    ptr: *mut u8,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Take up a live signature buffer the context owns, for release by `Drop` at `line`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit allocated through the seam (or one a helper
-    /// allocated for it) that no other owner will release.
-    unsafe fn adopt(ptr: *mut u8, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, line })
-    }
-
-    /// Give up ownership of the buffer to the `sig` field that takes it over.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam and the reclaimer's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `adopt` took and has not handed out; its single release is
-        // the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE, self.line) };
-    }
-}
-
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
@@ -226,7 +183,13 @@ unsafe extern "C" fn ml_dsa_freectx(vctx: *mut c_void) {
             (*ctx).test_entropy.as_mut_ptr().cast(),
             (*ctx).test_entropy_len,
         );
-        drop(OwnedBuf::adopt((*ctx).sig, LINE_FREE_SIG));
+        // SAFETY: `sig` is a live block this unit allocated through the crate's `CRYPTO_*` seam
+        // (or NULL), and no other owner will release it.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).sig.cast::<c_uchar>(),
+            FILE,
+            LINE_FREE_SIG,
+        ));
         CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX);
     }
 }
@@ -296,21 +259,24 @@ unsafe extern "C" fn ml_dsa_dupctx(vctx: *mut c_void) -> *mut c_void {
             // allocated and no one else owns; the handle adopts it so a refusal below releases it at
             // the authority's own site.
             // SAFETY: `(*srcctx).sig` is live for `(*srcctx).siglen` bytes.
-            let Some(sig) = OwnedBuf::adopt(
+            // SAFETY: `CRYPTO_memdup` answers NULL or a live block the crate's `CRYPTO_*` seam
+            // allocated in full and no other owner will release it.
+            let Some(sig) = OwnedBuf::adopt_plain(
                 CRYPTO_memdup(
                     (*srcctx).sig.cast(),
                     (*srcctx).siglen,
                     FILE,
                     LINE_MEMDUP_SIG,
                 )
-                .cast::<u8>(),
+                .cast::<c_uchar>(),
+                FILE,
                 LINE_FREE_SIG,
             ) else {
                 (*dstctx).sig = ptr::null_mut();
                 CRYPTO_free(dstctx.cast(), FILE, LINE_FREE_DSTCTX);
                 return ptr::null_mut();
             };
-            (*dstctx).sig = sig.into_raw();
+            (*dstctx).sig = sig.into_raw().cast::<u8>();
         }
 
         if !(*srcctx).md_ctx.is_null() {
@@ -1000,7 +966,13 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
         }
 
         if !p.sig.is_null() && (*pctx).operation == EVP_PKEY_OP_VERIFYMSG {
-            drop(OwnedBuf::adopt((*pctx).sig, LINE_FREE_SET_SIG));
+            // SAFETY: `sig` is a live block this unit allocated through the crate's `CRYPTO_*`
+            // seam (or NULL), and no other owner will release it.
+            drop(OwnedBuf::adopt_plain(
+                (*pctx).sig.cast::<c_uchar>(),
+                FILE,
+                LINE_FREE_SET_SIG,
+            ));
             (*pctx).sig = ptr::null_mut();
             (*pctx).siglen = 0;
             if OSSL_PARAM_get_octet_string(
