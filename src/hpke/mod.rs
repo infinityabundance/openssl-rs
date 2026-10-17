@@ -104,9 +104,10 @@ use crate::params::{
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::rand::rand_uniform::ossl_rand_uniform_uint32;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
 
 // ---------------------------------------------------------------------------------------------
 // The constants — `include/openssl/hpke.h`, `include/internal/hpke_util.h` and `core_names.h`.
@@ -1190,74 +1191,22 @@ unsafe fn destroy_ctx_body(ctx: *mut OsslHpkeCtx) {
     }
 }
 
-/// An owned `OSSL_HPKE_CTX` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out as `*mut OsslHpkeCtx` and takes it back in `OSSL_HPKE_CTX_free`), but its
-/// *ownership* is this type: `new` allocates it through the crate's allocator seam and `Drop` is
-/// its single release. It stays a `CRYPTO_zalloc` at `size_of::<OsslHpkeCtx>()` rather than a Rust
-/// `Box` on purpose -- a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation
-/// and its release exactly as it observes the authority's, which a Rust global allocation would
-/// hide. `line` is the authority's `__LINE__` for the block's release on this path, so the
-/// constructor's abandoned block records `858` and the destructor records `878`.
-///
-/// The block's *members* are a different case and stay raw: `shared_secret`, `key`, `nonce`,
-/// `exportersec`, `psk`, `pskid`, `ikme`, `authpub` and `propq` are `#[repr(C)]` fields handed out
-/// to, and read by, the ABI, so the context is the only place that can own them; their releases are
-/// relocated into [`destroy_ctx_body`] and never leave the layout alone.
-struct OwnedCtx {
-    ptr: ptr::NonNull<OsslHpkeCtx>,
-    line: c_int,
-}
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_HPKE_CTX_free` member body
+// ([`destroy_ctx_body`]), releasing exactly this context's own cipher, property query and buffers
+// once (each releaser accepts the unset NULL) and never the enclosing block, which `OwnedCtx`
+// releases; (b) `OsslHpkeCtx` is a `#[repr(C)]` record of raw pointers, integers, `Option<&'static
+// _>` (whose zeroed bytes are `None`) and `OsslHpkeSuite`, so an all-zero block is valid and the
+// body is sound on it. The block's *members* stay raw: `shared_secret`, `key`, `nonce`,
+// `exportersec`, `psk`, `pskid`, `ikme`, `authpub` and `propq` are `#[repr(C)]` fields handed out
+// to, and read by, the ABI, so the context is the only place that can own them.
+unsafe impl CtxDestroy for OsslHpkeCtx {
+    const FILE: *const c_char = FILE_HPKE;
+    const LINE_ALLOC: c_int = 831;
+    const LINE_FREE: c_int = 878;
 
-impl OwnedCtx {
-    /// Allocate a fresh, zeroed context block through the installed allocator, or `None` when it
-    /// answers NULL. `alloc_line`/`release_line` are the authority's allocation and release sites.
-    fn new(alloc_line: c_int, release_line: c_int) -> Option<OwnedCtx> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<OsslHpkeCtx>()` bytes, which is exactly this layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<OsslHpkeCtx>(), FILE_HPKE, alloc_line)
-            .cast::<OsslHpkeCtx>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
-            ptr,
-            line: release_line,
-        })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut OsslHpkeCtx {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut OsslHpkeCtx {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut OsslHpkeCtx, release_line: c_int) -> Option<OwnedCtx> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx {
-            ptr,
-            line: release_line,
-        })
-    }
-}
-
-impl Drop for OwnedCtx {
-    /// The context destructor: the authority's `OSSL_HPKE_CTX_free` body ([`destroy_ctx_body`])
-    /// followed by the block's release, through the same allocator seam the block was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new`/`from_raw` produced and this is its single release;
-        // `Drop` runs once, and `destroy_ctx_body` is the authority's own free body.
-        unsafe {
-            destroy_ctx_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_HPKE, self.line);
-        }
+    unsafe fn destroy_body(ptr: *mut OsslHpkeCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { destroy_ctx_body(ptr) }
     }
 }
 
@@ -2342,7 +2291,7 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
     }
     // SAFETY: the block is allocated through the crate's allocator seam and owned until handed to
     // the caller below; on either refusal `ctx_owner`'s `Drop` is the authority's `goto err`.
-    let Some(ctx_owner) = OwnedCtx::new(831, 858) else {
+    let Some(ctx_owner) = OwnedCtx::<OsslHpkeCtx>::zalloc_at(FILE_HPKE, 831, FILE_HPKE, 858) else {
         return ptr::null_mut();
     };
     let ctx = ctx_owner.as_ptr();
@@ -2391,7 +2340,7 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_HPKE_CTX_free(ctx: *mut OsslHpkeCtx) {
     // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
-    unsafe { drop(OwnedCtx::from_raw(ctx, 878)) };
+    unsafe { drop(OwnedCtx::<OsslHpkeCtx>::from_raw_at(ctx, FILE_HPKE, 878)) };
 }
 
 /// `int OSSL_HPKE_CTX_set1_psk(OSSL_HPKE_CTX *ctx, const char *pskid,
