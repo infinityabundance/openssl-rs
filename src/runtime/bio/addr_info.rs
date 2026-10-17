@@ -89,19 +89,117 @@ pub struct BioAddrInfo {
     next: *mut BioAddrInfo,
 }
 
-/// Allocate a zeroed node, or NULL.
-fn alloc_node() -> *mut BioAddrInfo {
-    let raw = CRYPTO_malloc(
-        core::mem::size_of::<BioAddrInfo>(),
-        ALLOC_FILE.as_ptr(),
-        ALLOC_LINE,
-    );
-    let p = raw.cast::<BioAddrInfo>();
-    if !p.is_null() {
-        // SAFETY: `p` is a fresh block of `size_of::<BioAddrInfo>()` bytes.
-        unsafe { sys::memset(p.cast::<c_void>(), 0, core::mem::size_of::<BioAddrInfo>()) };
+/// An owned `BioAddrInfo` node: the authority's own `CRYPTO_malloc`/`memset` block whose single
+/// release is `Drop`, so a node is never freed by hand at a call site.
+///
+/// The node owns its `addr` member too (the authority releases the address before the node in
+/// `BIO_ADDRINFO_free`), so `Drop` is the exact per-node cleanup. Ownership transfers to the
+/// chain (and then to the C caller) with [`Self::into_raw`]; [`Self::take`] reclaims a node at
+/// `BIO_ADDRINFO_free`.
+struct OwnedNode {
+    ptr: ptr::NonNull<BioAddrInfo>,
+}
+
+impl OwnedNode {
+    /// Allocate and zero a fresh node, or `None` when the allocator answers NULL -- the
+    /// authority's `alloc_node`.
+    fn new() -> Option<OwnedNode> {
+        let raw = CRYPTO_malloc(
+            core::mem::size_of::<BioAddrInfo>(),
+            ALLOC_FILE.as_ptr(),
+            ALLOC_LINE,
+        )
+        .cast::<BioAddrInfo>();
+        let ptr = ptr::NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh writable block of `size_of::<BioAddrInfo>()` bytes this
+        // handle owns; the all-zero image is a valid node (three integers, a `usize` and two
+        // nullable raw pointers), exactly the state the authority's own `memset` leaves.
+        unsafe {
+            sys::memset(
+                ptr.as_ptr().cast::<c_void>(),
+                0,
+                core::mem::size_of::<BioAddrInfo>(),
+            )
+        };
+        Some(OwnedNode { ptr })
     }
-    p
+
+    /// The node's address, for the fields this module fills before linking it.
+    fn as_ptr(&self) -> *mut BioAddrInfo {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the node to the chain that links it, or to the C caller.
+    fn into_raw(self) -> *mut BioAddrInfo {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Adopt a live node for release by `Drop`, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live node this module allocated and has not released; ownership of
+    /// the node and of its `addr` member transfers to the handle, whose `Drop` is their single
+    /// release.
+    unsafe fn take(ptr: *mut BioAddrInfo) -> Option<OwnedNode> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedNode { ptr })
+    }
+}
+
+impl Drop for OwnedNode {
+    fn drop(&mut self) {
+        // SAFETY: `p` is a live node this handle owns and has not released; `addr` is NULL or
+        // the live `BIO_ADDR` the node owns. The release order is the authority's: the address
+        // first, then the node block, both at the allocation's own seam coordinates.
+        unsafe {
+            let p = self.ptr.as_ptr();
+            let addr = (*p).addr;
+            if !addr.is_null() {
+                super::addr::BIO_ADDR_free(addr);
+            }
+            CRYPTO_free(p.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
+        }
+    }
+}
+
+/// An owned `char *` produced by the crate's `CRYPTO_strndup` seam.
+///
+/// The host/service half exists as this handle only between the duplication and the transfer to
+/// the caller's out-parameter; the failure path adopts it back and lets `Drop` release it.
+struct OwnedStr {
+    ptr: *mut c_char,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strndup` result, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strndup` seam; the caller owns it and no other owner will release it. `Drop`
+    /// performs its single `CRYPTO_free`.
+    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr })
+        }
+    }
+
+    /// Give up ownership of the string to the caller's out-parameter.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `take` adopted and has not handed out; its single
+        // release is the authority's own `CRYPTO_free` at the allocation's coordinates.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+    }
 }
 
 /// `const BIO_ADDRINFO *BIO_ADDRINFO_next(const BIO_ADDRINFO *bai)`
@@ -205,16 +303,11 @@ pub unsafe extern "C" fn BIO_ADDRINFO_free(bai: *mut BioAddrInfo) {
     guard_ffi((), || {
         let mut cur = bai;
         while !cur.is_null() {
-            // SAFETY: `cur` is a live node allocated by `alloc_node`.
+            // SAFETY: `cur` is a live node allocated by `OwnedNode::new`.
             let next = unsafe { (*cur).next };
-            // SAFETY: `cur` is a live node allocated by `alloc_node`.
-            let addr = unsafe { (*cur).addr };
-            if !addr.is_null() {
-                // SAFETY: `addr` is owned by this node.
-                unsafe { super::addr::BIO_ADDR_free(addr) };
-            }
-            // SAFETY: `cur` came from `CRYPTO_malloc` and is not used again.
-            unsafe { CRYPTO_free(cur.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+            // SAFETY: `cur` is a live node this module allocated and has not released;
+            // `Drop` frees its address and the node block, in the authority's order.
+            drop(unsafe { OwnedNode::take(cur) });
             cur = next;
         }
     })
@@ -236,35 +329,36 @@ unsafe fn addrinfo_wrap(
     port: u16,
     bai: *mut *mut BioAddrInfo,
 ) -> c_int {
-    let node = alloc_node();
-    if node.is_null() {
+    let Some(node) = OwnedNode::new() else {
         return 0;
-    }
-    // SAFETY: `node` is freshly allocated and zeroed; `bai` is writable.
+    };
+    let node_ptr = node.as_ptr();
+    // SAFETY: `node_ptr` is freshly allocated and zeroed; `bai` is writable.
     unsafe {
-        (*node).family = family;
-        (*node).socktype = socktype;
+        (*node_ptr).family = family;
+        (*node_ptr).socktype = socktype;
         if socktype == sys::SOCK_STREAM {
-            (*node).protocol = sys::IPPROTO_TCP;
+            (*node_ptr).protocol = sys::IPPROTO_TCP;
         }
         if socktype == sys::SOCK_DGRAM {
-            (*node).protocol = sys::IPPROTO_UDP;
+            (*node_ptr).protocol = sys::IPPROTO_UDP;
         }
         if family == sys::AF_UNIX {
-            (*node).protocol = 0;
+            (*node_ptr).protocol = 0;
         }
         let addr = BIO_ADDR_new();
         if !addr.is_null() {
             BIO_ADDR_rawmake(addr, family, where_, wherelen, port);
-            (*node).addr = addr;
+            (*node_ptr).addr = addr;
         }
-        (*node).next = ptr::null_mut();
-        if (*node).addr.is_null() {
-            BIO_ADDRINFO_free(node);
+        (*node_ptr).next = ptr::null_mut();
+        if (*node_ptr).addr.is_null() {
+            // The handle's `Drop` releases the address (if any) and then the node, exactly
+            // the authority's `BIO_ADDRINFO_free(node)` cleanup.
             *bai = ptr::null_mut();
             return 0;
         }
-        *bai = node;
+        *bai = node.into_raw();
     }
     1
 }
@@ -412,23 +506,23 @@ pub unsafe extern "C" fn BIO_lookup_ex(
             // SAFETY: `cur` is a node of glibc's list, which is live until
             // `freeaddrinfo` below.
             let ai = unsafe { &*cur };
-            let node = alloc_node();
-            if node.is_null() {
+            let Some(node) = OwnedNode::new() else {
                 break;
-            }
+            };
+            let node_ptr = node.as_ptr();
             let addr = BIO_ADDR_new();
-            // SAFETY: `node` and `addr` are freshly allocated.
+            // SAFETY: `node_ptr` and `addr` are freshly allocated.
             unsafe {
-                (*node).family = ai.ai_family;
-                (*node).socktype = ai.ai_socktype;
-                (*node).protocol = ai.ai_protocol;
-                (*node).addrlen = ai.ai_addrlen as usize;
-                (*node).next = ptr::null_mut();
+                (*node_ptr).family = ai.ai_family;
+                (*node_ptr).socktype = ai.ai_socktype;
+                (*node_ptr).protocol = ai.ai_protocol;
+                (*node_ptr).addrlen = ai.ai_addrlen as usize;
+                (*node_ptr).next = ptr::null_mut();
                 if !addr.is_null() && !ai.ai_addr.is_null() {
                     // `BIO_ADDR_make` handles the families the resolver returns and
                     // clears the rest, which is exactly the authority's cast.
                     if make_from_sockaddr(addr, ai.ai_addr) == 1 {
-                        (*node).addr = addr;
+                        (*node_ptr).addr = addr;
                     } else {
                         super::addr::BIO_ADDR_free(addr);
                     }
@@ -436,13 +530,16 @@ pub unsafe extern "C" fn BIO_lookup_ex(
                     super::addr::BIO_ADDR_free(addr);
                 }
             }
+            // Ownership transfers into the chain; the chain is released by
+            // `BIO_ADDRINFO_free`, which adopts each node.
+            let node_ptr = node.into_raw();
             if tail.is_null() {
-                head = node;
+                head = node_ptr;
             } else {
                 // SAFETY: `tail` is the last node linked so far.
-                unsafe { (*tail).next = node };
+                unsafe { (*tail).next = node_ptr };
             }
-            tail = node;
+            tail = node_ptr;
             cur = ai.ai_next;
         }
 
@@ -617,13 +714,15 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `host` is writable per the caller's contract.
                 unsafe { *host = ptr::null_mut() };
             } else {
-                // SAFETY: `h` is readable for `hl` bytes and `host` is writable.
-                let copied = unsafe { CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
-                if copied.is_null() {
+                // SAFETY: `h` is readable for `hl` bytes and the duplicate is this call's
+                // own seam block until it is handed to the out-parameter.
+                let Some(copied) = (unsafe {
+                    OwnedStr::take(CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE))
+                }) else {
                     return 0;
-                }
+                };
                 // SAFETY: `host` is writable.
-                unsafe { *host = copied };
+                unsafe { *host = copied.into_raw() };
             }
         }
 
@@ -635,32 +734,35 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `service` is writable per the caller's contract.
                 unsafe { *service = ptr::null_mut() };
             } else {
-                // SAFETY: `p` is readable for `pl` bytes and `service` is writable.
-                let copied = unsafe { CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
-                if copied.is_null() {
-                    // The host half, if it was allocated, is released again; the
+                // SAFETY: `p` is readable for `pl` bytes and the duplicate is this call's
+                // own seam block until it is handed to the out-parameter.
+                let Some(copied) = (unsafe {
+                    OwnedStr::take(CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE))
+                }) else {
+                    // The host half, if this call wrote it, is released again; the
                     // out-parameter is left NULL so the caller cannot double-free.
-                    if !host.is_null() {
-                        // SAFETY: `*host` is either NULL or our allocation.
+                    //
+                    // The `h != NULL` guard is the authority's own (`bio_addr.c`
+                    // frees `*host` only when `h != NULL && host != NULL`): with `h ==
+                    // NULL` the host branch never ran, so `*host` is the caller's
+                    // value and is left untouched.
+                    if !h.is_null() && !host.is_null() {
+                        // SAFETY: `*host` is writable and was written by the host
+                        // branch above, so it is NULL or this call's allocation.
                         let existing = unsafe { *host };
-                        if !existing.is_null() {
-                            // SAFETY: `existing` came from `CRYPTO_strndup` above.
-                            unsafe {
-                                CRYPTO_free(
-                                    existing.cast::<c_void>(),
-                                    ALLOC_FILE.as_ptr(),
-                                    ALLOC_LINE,
-                                )
-                            };
+                        // SAFETY: `existing` is NULL or the block `CRYPTO_strndup` produced
+                        // above, which this call owns and no one else will release.
+                        if let Some(owner) = unsafe { OwnedStr::take(existing) } {
+                            drop(owner);
                             // SAFETY: `host` is writable per the caller's contract;
                             // clearing it prevents the caller double-freeing.
                             unsafe { *host = ptr::null_mut() };
                         }
                     }
                     return 0;
-                }
+                };
                 // SAFETY: `service` is writable.
-                unsafe { *service = copied };
+                unsafe { *service = copied.into_raw() };
             }
         }
 

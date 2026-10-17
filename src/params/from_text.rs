@@ -48,6 +48,46 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/params_from_text.c";
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
 
+/// An owned `OSSL_PARAM` value buffer: the authority's `OPENSSL_zalloc` block whose single
+/// release is `Drop`, so the caller only ever sees the hand-out or the failure path.
+///
+/// The block is allocated and released at this translation unit's own `file`/`line` (the
+/// authority's coordinates for both calls); [`Self::into_raw`] is the documented transfer edge
+/// into `to->data`, which `OSSL_PARAM_free` later releases.
+struct OwnedBuf {
+    ptr: ptr::NonNull<u8>,
+}
+
+impl OwnedBuf {
+    /// `OPENSSL_zalloc(buf_n > 0 ? buf_n : 1)`, or `None` when the allocator answers NULL.
+    fn zalloc(len: usize) -> Option<OwnedBuf> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `len` bytes.
+        let raw = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBuf { ptr })
+    }
+
+    /// The writable value buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the buffer to the caller's `OSSL_PARAM`.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` allocated and has not handed out; its single
+        // release is the authority's own `OPENSSL_free`/`CRYPTO_free` at this unit's coordinates.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE.as_ptr(), LINE) };
+    }
+}
+
 /// `HAS_PREFIX(str, pre)` for the literal `"hex"` — a plain byte comparison, so
 /// `"HEX"` is **not** a prefix.
 ///
@@ -326,23 +366,26 @@ pub unsafe extern "C" fn OSSL_PARAM_allocate_from_text(
         };
         // `OPENSSL_zalloc(buf_n > 0 ? buf_n : 1)` — never a zero-length request.
         let alloc = if buf_n > 0 { buf_n } else { 1 };
-        let buf = CRYPTO_zalloc(alloc, FILE.as_ptr(), LINE).cast::<u8>();
-        if buf.is_null() {
+        let Some(buf) = OwnedBuf::zalloc(alloc) else {
             // SAFETY: as above.
             unsafe { BN_free(tmpbn) };
             return 0;
-        }
+        };
         // SAFETY: `to` is writable for one `OsslParam`; `paramdef` is live; `buf` is
         // writable for `buf_n` (zero when nothing is written); `value` is readable for
         // `value_n`; `tmpbn` is live.
-        let ok = unsafe { construct_from_text(to, paramdef, value, ishex, buf, buf_n, tmpbn) };
+        let ok =
+            unsafe { construct_from_text(to, paramdef, value, ishex, buf.as_ptr(), buf_n, tmpbn) };
         // SAFETY: `tmpbn` is live.
         unsafe { BN_free(tmpbn) };
         if !ok {
-            // SAFETY: `buf` was allocated by this function and never surfaced.
-            unsafe { CRYPTO_free(buf.cast(), FILE.as_ptr(), LINE) };
+            // `buf` drops here: the authority's failure release, at the same coordinates and
+            // after the `BIGNUM` release, with nothing written to `*to`.
             return 0;
         }
+        // `construct_from_text` moved the block into `*to->data`; the caller releases it
+        // through `OSSL_PARAM_free`.
+        let _ = buf.into_raw();
         1
     })
 }
