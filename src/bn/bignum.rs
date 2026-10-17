@@ -215,10 +215,20 @@ pub(crate) fn store(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool
     }
 }
 
-/// Copy `s` into memory the caller can release with `OPENSSL_free`.
+/// Copy `s` into a NUL-terminated block the caller owns.
+///
+/// This is the caller-ownership ABI edge: the block is one `CRYPTO_malloc(n, FILE, LINE)`
+/// allocation through the crate's allocator seam for `n == bytes.len() + 1` bytes, every byte of
+/// that extent is initialised (the payload followed by the terminator), and ownership transfers to
+/// the caller when this function returns. This frame keeps no owner, so the caller releases the
+/// block exactly once with `OPENSSL_free`/`CRYPTO_free`. The length sum is `checked_add`-guarded;
+/// on overflow the module's allocation-failure outcome (NULL) is returned without asking the
+/// allocator for a wrapped size.
 pub(crate) fn dup_cstring(s: &str) -> *mut c_char {
     let bytes = s.as_bytes();
-    let n = bytes.len() + 1;
+    let Some(n) = bytes.len().checked_add(1) else {
+        return core::ptr::null_mut();
+    };
     let p = crate::runtime::mem::CRYPTO_malloc(n, FILE.as_ptr(), LINE);
     if p.is_null() {
         return core::ptr::null_mut();
