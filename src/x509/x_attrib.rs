@@ -467,6 +467,7 @@ pub unsafe extern "C" fn ossl_print_attribute_value(
 mod tests {
     use super::*;
     use crate::asn1::layout::V_ASN1_INTEGER;
+    use crate::asn1::owned::OwnedBlock;
     use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
     use crate::asn1::string::ASN1_INTEGER_new;
     use crate::runtime::obj::{NID_commonName, OBJ_obj2nid};
@@ -511,7 +512,10 @@ mod tests {
             X509_ATTRIBUTE_free(dup);
             X509_ATTRIBUTE_free(decoded);
             X509_ATTRIBUTE_free(attr);
-            crate::runtime::mem::CRYPTO_free(out.cast(), ptr::null(), 0);
+            // SAFETY: `out` is the fresh block `i2d_X509_ATTRIBUTE` allocated through the crate's
+            // allocator seam; this frame owns it exclusively and this is its single release, at
+            // the (NULL, 0) coordinate the pre-conversion call used.
+            drop(OwnedBlock::<c_uchar>::from_raw(out, ptr::null(), 0));
         }
     }
 }
