@@ -29,9 +29,9 @@
 use core::ffi::{c_char, c_int, c_uint};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{BIO_read, BIO_test_flags, BIO_FLAGS_SHOULD_RETRY};
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::ssl::ssl_lib::{ssl_set_accept_state, SSL_clear, SSL_get_rbio, SSL_get_wbio, Ssl};
 
 /// `OPENSSL_FILE` of this translation unit.
@@ -100,6 +100,18 @@ pub struct Dtls1State {
     pub cookie: [u8; DTLS1_COOKIE_LENGTH],
 }
 
+// SAFETY: (a) `Dtls1State` has no owned members — its only pointer is the `Option<fn>` timer
+// callback — so `destroy_body` is empty and never releases the enclosing block, which `OwnedCtx`
+// releases; (b) an all-zero block is a valid state (a null-niche `None` callback, zero scalars and
+// a zeroed cookie array), which is exactly the authority's `OPENSSL_zalloc` result.
+unsafe impl CtxDestroy for Dtls1State {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 79;
+    const LINE_FREE: c_int = 168;
+
+    unsafe fn destroy_body(_ptr: *mut Dtls1State) {}
+}
+
 /// `dtls1_new`'s allocation half — `d1_lib.c:79-102`: a zeroed `DTLS1_STATE`, with the server cookie
 /// length pre-set (`d1_lib.c:87-89`).
 ///
@@ -107,13 +119,17 @@ pub struct Dtls1State {
 /// The returned pointer is a live, zeroed `Dtls1State` with the authority's server default; the
 /// caller owns it and releases it with [`dtls1_free`].
 pub(crate) unsafe fn dtls1_new_state(server: bool) -> *mut Dtls1State {
-    // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of this size.
-    let d1 = CRYPTO_zalloc(core::mem::size_of::<Dtls1State>(), FILE, 79).cast::<Dtls1State>();
-    if !d1.is_null() && server {
-        // SAFETY: `d1` is a fresh zeroed allocation.
-        unsafe { (*d1).cookie_len = DTLS1_COOKIE_LENGTH as c_uint };
+    // The owner's allocation is the authority's own `CRYPTO_zalloc` at `d1_lib.c:79`, and a zeroed
+    // state is valid, so it may be validated immediately. `into_raw` gives the `Ssl` the stable
+    // pointer its field stores; the matching free reclaims it.
+    let Some(d1) = OwnedCtx::<Dtls1State>::zalloc() else {
+        return core::ptr::null_mut();
+    };
+    if server {
+        // SAFETY: `d1` is a fresh zeroed block this call still owns.
+        unsafe { (*d1.as_ptr()).cookie_len = DTLS1_COOKIE_LENGTH as c_uint };
     }
-    d1
+    d1.into_raw()
 }
 
 /// `dtls1_free` — `d1_lib.c:151-170`, reduced to releasing the state block the queues above are not
@@ -128,10 +144,12 @@ pub(crate) unsafe fn dtls1_free(ssl: *mut Ssl) {
     }
     // SAFETY: `ssl` is live per the caller's contract.
     unsafe {
-        if (*ssl).d1.is_null() {
+        let d1 = (*ssl).d1;
+        if d1.is_null() {
             return;
         }
-        CRYPTO_free((*ssl).d1.cast(), FILE, 168);
+        // Free first and clear the field afterwards, exactly as `d1_lib.c:168` does.
+        drop(OwnedCtx::<Dtls1State>::from_raw(d1));
         (*ssl).d1 = core::ptr::null_mut();
     }
 }
