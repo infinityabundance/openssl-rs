@@ -1,12 +1,12 @@
 # Safe-33 atlas refresh — candidate-bound ownership-reconstruction status
 
-Generated 2026-10-17T13:58:47Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
+Generated 2026-10-17T14:24:31Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
 
 ## Candidate pin
 
-- HEAD `fdc0ae2c011a9fbfcf67d324d6802e947d9e5877` on `integrate/safe-c33`
+- HEAD `0b56262523556a70babcb827fed9708dd28d28eb` on `integrate/safe-c33`
 - crate `openssl-rs 0.0.27`
-- `src/**/*.rs`: **865** files, content sha256 `b1485b08530314eba43cf940e77cba07b98c854355592dddb0639dc11128be4e`
+- `src/**/*.rs`: **865** files, content sha256 `19bfec719f7c567bc9332e2e17a5999795da17df12a52c29dc36c16d1dcb4891`
 - frozen inventory was at `67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34` (base `b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491`); this refresh re-pins the current tree
 
 ## The frozen 33 (authoritative: `state.json#cohort`)
@@ -60,7 +60,7 @@ Generated 2026-10-17T13:58:47Z by `forensics/memory-safety/campaign/safe-c33/atl
 | ERR | UNSAFE_OPEN | 33 | 7 | 1 | 1 | 22 |
 | RAND_CMS_STORE_KEYFMT | OWNERSHIP_RECONSTRUCTED | 33 | 83 | 45 | 2 | 430 |
 | BIO | UNSAFE_OPEN | 32 | 34 | 21 | 0 | 134 |
-| EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 270 | 154 | 7 | 1837 |
+| EVP_PKEY_PROVIDER | OWNERSHIP_RECONSTRUCTED | 32 | 270 | 154 | 7 | 1843 |
 | RUNTIME_ALLOC_OWNERSHIP | UNSAFE_OPEN | 31 | 12 | 6 | 1 | 113 |
 | ASN1_OCSP | UNSAFE_OPEN | 31 | 79 | 33 | 1 | 177 |
 | X509_VERIFY_POLICY | OWNERSHIP_RECONSTRUCTED | 31 | 97 | 39 | 10 | 437 |
@@ -74,7 +74,7 @@ Generated 2026-10-17T13:58:47Z by `forensics/memory-safety/campaign/safe-c33/atl
 | 1 | unique source files in the union of the nine closures | **628** |
 | 2 | files with reconstructed ownership (seam present) | **313** |
 | 3 | files with fully discharged obligations | **0** |
-| 4 | unresolved interior raw-allocator sites in the closure | **3429** (upper bound; 143 unambiguous) |
+| 4 | unresolved interior raw-allocator sites in the closure | **3435** (upper bound; 143 unambiguous) |
 | 5 | consumers eligible for `SAFE_COMPATIBLE` | **0** |
 
 - **3** is 0 by construction: Obligations are discharged ONLY at the seal point (AGENTS.md §7 SAFETY_DISCHARGED, §18). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.
@@ -86,7 +86,7 @@ Generated 2026-10-17T13:58:47Z by `forensics/memory-safety/campaign/safe-c33/atl
 - files with a seam: **374**
 - files with zero raw allocator sites: **506**
 - files with raw allocator sites remaining: **359**
-- raw allocator sites total (incl. legitimate seam ctors): **4284**
+- raw allocator sites total (incl. legitimate seam ctors): **4290**
 - allocator-definition files (seam itself, excluded from metric 4): `src/runtime/mem.rs`
 
 Seam tokens counted: `OwnedCtx`, `OwnedBuf`, `OwnedBlock`, `OwnedStr`, `PropqSlot`, `RawCtx`, `OwnedRaw`, `CtxDestroy`, `CipherDestroy`, `impl Drop`.

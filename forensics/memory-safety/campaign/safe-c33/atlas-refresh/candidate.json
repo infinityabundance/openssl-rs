@@ -3,11 +3,11 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "fdc0ae2c011a9fbfcf67d324d6802e947d9e5877",
+    "head_sha": "0b56262523556a70babcb827fed9708dd28d28eb",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "b1485b08530314eba43cf940e77cba07b98c854355592dddb0639dc11128be4e",
+    "src_content_sha256": "19bfec719f7c567bc9332e2e17a5999795da17df12a52c29dc36c16d1dcb4891",
     "src_rs_files": 865
   },
   "census_crosscheck": {
@@ -679,14 +679,14 @@
       ],
       "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
       "seam_bearing_files_with_raw_sites": 267,
-      "seam_bearing_raw_sites_unclassified": 3286,
+      "seam_bearing_raw_sites_unclassified": 3292,
       "unconverted_no_seam_files": 28,
       "unconverted_no_seam_sites": 143,
-      "upper_bound_total": 3429
+      "upper_bound_total": 3435
     },
     "5_consumers_safe_compatible": 0,
     "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
-    "closure_raw_sites_total": 3487,
+    "closure_raw_sites_total": 3493,
     "per_consumer": [
       {
         "evidence": "fingerprint",
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-17T13:58:47Z",
+  "generated_utc": "2026-10-17T14:24:31Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1443,7 +1443,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 270,
       "closure_no_seam_raw_files": 7,
-      "closure_raw_sites": 1837,
+      "closure_raw_sites": 1843,
       "closure_seam_files": 154,
       "closure_seam_raw_files": 129,
       "closure_zero_raw_files": 134,
@@ -1719,7 +1719,7 @@
       "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
       "\\bCRYPTO_(?:free|clear_free)\\b"
     ],
-    "raw_sites_total": 4284,
+    "raw_sites_total": 4290,
     "seam_tokens": [
       "OwnedCtx",
       "OwnedBuf",
