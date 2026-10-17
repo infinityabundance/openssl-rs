@@ -78,6 +78,7 @@
 use core::ffi::{c_char, c_int, CStr};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_OBJECT_free;
 use crate::bn::bignum::{
     BN_bin2bn, BN_bn2binpad, BN_free, BN_is_word, BN_is_zero, BN_num_bits, BN_set_word, BigNum,
@@ -100,7 +101,7 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::raise_site_data;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc_array};
+use crate::runtime::mem::CRYPTO_malloc_array;
 use crate::runtime::obj::{
     NID_X9_62_prime256v1, NID_X9_62_prime_field, NID_undef, OBJ_length, OBJ_nid2obj, OBJ_nid2sn,
 };
@@ -632,13 +633,29 @@ pub unsafe extern "C" fn ossl_ec_curve_nid_from_params(
             param_len = len;
         }
 
-        let param_bytes = CRYPTO_malloc_array(NUM_BN_FIELDS, param_len as usize, FILE, 3114)
+        let param_len_usize = param_len as usize;
+        // `CRYPTO_malloc_array` is the authority's own `OPENSSL_malloc_array`, whose seam does
+        // the checked `NUM_BN_FIELDS * param_len` product and raises on overflow. The owner keeps
+        // the array's exact extent and its `Drop` is `OPENSSL_free(param_bytes)` at `:3175`.
+        let param_bytes_raw = CRYPTO_malloc_array(NUM_BN_FIELDS, param_len_usize, FILE, 3114)
             .cast::<core::ffi::c_uchar>();
+        // SAFETY: `param_bytes_raw` is NULL or a fresh block the seam allocated for exactly
+        // `NUM_BN_FIELDS * param_len` bytes and no one else owns.
+        let param_bytes_owner =
+            OwnedBlock::<core::ffi::c_uchar>::from_raw(param_bytes_raw, FILE, 3175);
+        let param_bytes = param_bytes_owner
+            .as_ref()
+            .map_or(ptr::null_mut(), |b| b.as_ptr());
 
         'walk: {
             if param_bytes.is_null() {
                 break 'walk;
             }
+            // The allocation above is non-NULL, so `CRYPTO_malloc_array`'s checked product did
+            // not overflow; state the extent through the same checked form the comparison uses.
+            let Some(param_bytes_len) = NUM_BN_FIELDS.checked_mul(param_len_usize) else {
+                break 'walk;
+            };
 
             for slot in bn.iter_mut() {
                 *slot = BN_CTX_get(ctx);
@@ -662,7 +679,10 @@ pub unsafe extern "C" fn ossl_ec_curve_nid_from_params(
             }
 
             for (i, value) in bn.iter().enumerate() {
-                if BN_bn2binpad(*value, param_bytes.add(i * param_len as usize), param_len) <= 0 {
+                let Some(offset) = i.checked_mul(param_len_usize) else {
+                    break 'walk;
+                };
+                if BN_bn2binpad(*value, param_bytes.add(offset), param_len) <= 0 {
                     break 'walk;
                 }
             }
@@ -683,11 +703,7 @@ pub unsafe extern "C" fn ossl_ec_curve_nid_from_params(
                         || seed_len == 0
                         || (data.seed_len as usize == seed_len
                             && memcmp(params_seed.cast(), seed.cast(), seed_len) == 0))
-                    && memcmp(
-                        param_bytes.cast(),
-                        params.cast(),
-                        param_len as usize * NUM_BN_FIELDS,
-                    ) == 0
+                    && memcmp(param_bytes.cast(), params.cast(), param_bytes_len) == 0
                 {
                     ret = row.nid;
                     break 'walk;
@@ -697,7 +713,8 @@ pub unsafe extern "C" fn ossl_ec_curve_nid_from_params(
             ret = NID_undef;
         }
 
-        CRYPTO_free(param_bytes.cast(), FILE, 3175);
+        // `OPENSSL_free(param_bytes)` at `ec_curve.c:3175`, before `BN_CTX_end`.
+        drop(param_bytes_owner);
         BN_CTX_end(ctx);
         ret
     }
