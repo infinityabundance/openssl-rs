@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1256** passed
+`cargo test --lib` (must pass; the established baseline is **1263** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -761,6 +761,32 @@ package.
   Phase-2 ABI **11/11**, Phase-7 **19/19**. Per-file campaign: **2 of 761**
   PARTIAL files audited, both with real defects fixed.
 
+### Subphase 69 — `provider/cipher.rs` audit and fixes
+
+- Audit: 1,098 production sites in 930 groups — **65 ESTABLISHED, 848
+  CONTRACTED, 17 UNATTRIBUTED**. No exported symbols, so no ABI-based
+  establishment was claimed.
+- Fixes:
+  1. `bits`/`bits_set`/`ctx_enc` and the flag helpers were **safe** fns that
+     dereferenced a caller-supplied raw context pointer; they are now
+     `unsafe fn` with live/aligned/exclusive contracts and justified callers.
+  2. AES wrap's added padded-extent refusal preempted the authority's length
+     query; it now runs only for non-NULL in/out after input validation, so
+     `in == NULL` returns 0 and `out == NULL` queries still answer
+     `up8(inl)+8` / `inl+8`. Oversized-padding writes are still refused (D561).
+  3. CBC-HMAC MAC-key scratch uses `OPENSSL_cleanse` instead of `write_bytes`.
+  4. Hardware `copyctx` and OCB `dupctx` use `ptr::copy` (defined for
+     self-copy); the unused OCB stub is documented as unreachable.
+  5. `aes_siv_dupctx` refuses self-duplication and releases exactly the
+     references it acquired on failure.
+- Residuals: `SyncCell` and the legacy `CipherDestroy` impls remain
+  `UNATTRIBUTED` (no invariant harness/negative control); Miri and failed
+  `copy_ctx` injection are absent, so items 1/3/4 are `CONTRACTED`.
+- Adversarial review **FAILED** on the length-query ordering and a weak test
+  and **PASSED** after correction. Gate: `fmt` 0, clippy 0, **1263 passed / 18
+  ignored**, adv-probe **18/18**; cipher authority/candidate probes **0 diffs**.
+  Per-file campaign: **3 of 761** PARTIAL files audited.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -938,7 +964,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `00d53a71e` (pkey_ctx soundness fixes merged)
+**Last observed HEAD:** `3c5c5e9f6` (cipher audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
