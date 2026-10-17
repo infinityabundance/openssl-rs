@@ -951,8 +951,12 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_rsa_keygen_primes(
 /// file for which a NULL arm exists.
 ///
 /// # Safety
-/// `ctx` NULL or live; `label` NULL (with `llen == 0`) or an `OPENSSL_malloc`ed buffer of `llen`
-/// bytes whose ownership transfers to this call.
+/// `ctx` NULL or live. `label` is NULL (with `llen == 0`) or an `OPENSSL_malloc`ed buffer of
+/// `llen` bytes, exclusively owned by the caller and not aliased by another owner. On a `1`
+/// return this call takes custody and releases it exactly once with `OPENSSL_free` at
+/// `rsa_lib.c:1211`; on every other return ownership stays with the caller and this call does
+/// not release it. The buffer is read, not retained, on the success path (the parameter is an
+/// `octet_string`), so the caller must neither use nor free it after a `1` return.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_set0_rsa_oaep_label(
     ctx: *mut EvpPkeyCtx,
@@ -999,7 +1003,10 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set0_rsa_oaep_label(
     }
 
     /* Ownership is supposed to be transferred to the callee. */
-    // SAFETY: `label` is the caller's allocation, which this call owns on this path.
+    // SAFETY: on this one success edge the authority takes custody of `label`; it is the
+    // caller's fresh, exclusively owned seam allocation of `llen` bytes (or NULL, which
+    // `CRYPTO_free` accepts), and this is its single release at the authority's coordinate.
+    // Every other return path leaves ownership with the caller.
     unsafe { crate::runtime::mem::CRYPTO_free(label, FILE_LIB, LINE_FREE_LABEL) };
     1
 }
