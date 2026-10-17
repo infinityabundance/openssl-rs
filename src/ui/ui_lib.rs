@@ -43,8 +43,8 @@
 //! Each `UI`, `UI_STRING` and `UI_METHOD` block is an owned [`OwnedCtx`]: it is a `CRYPTO_zalloc` at
 //! the authority's own size (so a caller-installed `CRYPTO_set_mem_functions` hook observes the
 //! allocation and its release), its *ownership* is the handle, and `Drop` runs the authority's
-//! `*_free` body before releasing the block. `UI_new_method`'s half-built object and
-//! `UI_create_method`'s use an [`OwnedRaw`] instead, because their refusal paths write a bare block
+//! `UI_free` body before releasing the block. `UI_new_method`'s half-built object and
+//! `UI_create_method`'s use a [`RawCtx`] instead, because their refusal paths write a bare block
 //! free that must not run the full destructor. The four `CRYPTO_strdup` copies a `UI_dup_*`
 //! allocates are [`OwnedStr`]s, released by `Drop` on the authority's `err:` line and handed to the
 //! `UI_STRING` that takes them over with `into_raw`.
@@ -59,7 +59,7 @@
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys::{memcpy, strchr, strlen};
 use crate::runtime::err::{
@@ -69,7 +69,7 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_UI, CRYPTO_EX_INDEX_UI_METHOD,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -280,116 +280,13 @@ const UI_CTRL_IS_REDOABLE: c_int = 2;
 // Ownership of the three objects
 // ---------------------------------------------------------------------------------------------
 
-/// An owned context block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out and takes it back in `UI_free`/`UI_destroy_method`, and it is pushed onto the
-/// string queue as `*mut c_void`), but its *ownership* is this type: `new` allocates it through the
-/// crate's allocator seam and `Drop` is its single release. It stays a `CRYPTO_zalloc` at
-/// `size_of::<T>()` rather than a Rust `Box` on purpose -- a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's, which a Rust global allocation would hide. `line` is the authority's `__LINE__`
-/// for the block's release on the path that reclaimed it, so `UI_new_method`'s abandoned block and
-/// `UI_free`'s release each record their own site.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line`/`release_line` are the authority's sites for this block.
-    fn new(alloc_line: c_int, release_line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
-            ptr,
-            line: release_line,
-        })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's context pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, release_line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx {
-            ptr,
-            line: release_line,
-        })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
-    /// by the block release, through the same allocator seam the block was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line);
-        }
-    }
-}
-
-/// An owned block whose single release is the block free *without* the object destructor.
-///
-/// This is the release a constructor performs on a block it abandons before the object is built:
-/// `UI_new_method`'s failed `CRYPTO_THREAD_lock_new` writes a bare `OPENSSL_free(ret)`, so the
-/// object destructor must not run. The block stays a `CRYPTO_zalloc` at `size_of::<T>()` on the
-/// seam. A block that builds successfully is handed out through [`Self::into_raw`] and released,
-/// later, by the row's own destructor (an [`OwnedCtx`]).
-struct OwnedRaw<T> {
-    ptr: ptr::NonNull<T>,
-    line: c_int,
-}
-
-impl<T> OwnedRaw<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`.
-    fn new(alloc_line: c_int, release_line: c_int) -> Option<OwnedRaw<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedRaw {
-            ptr,
-            line: release_line,
-        })
-    }
-
-    /// The block's address, for the fields the constructor fills.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller: the object was built.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl<T> Drop for OwnedRaw<T> {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line) };
-    }
-}
+// The blocks are the canonical [`OwnedCtx`] (fully built, `Drop` runs the destructor body) and
+// [`RawCtx`] (still being built, `Drop` releases the block alone). Both stay `CRYPTO_zalloc`
+// blocks at `size_of::<T>()` rather than Rust `Box`es on purpose: a caller-installed
+// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+// the authority's, which a Rust global allocation would hide. The per-path release line is the
+// canonical handle's `line` (`zalloc_at`/`from_raw_at`), so `UI_new_method`'s abandoned block and
+// `UI_free`'s release each record their own site.
 
 // The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
 // the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
@@ -513,9 +410,11 @@ pub unsafe extern "C" fn UI_new() -> *mut Ui {
 pub unsafe extern "C" fn UI_new_method(method: *const UiMethod) -> *mut Ui {
     // The context block, allocated through the crate's allocator seam and owned by `ret` until it
     // is handed to the caller below. Its abandoned-block release is the authority's own bare
-    // `OPENSSL_free(ret)` on the lock failure, which is why this is an [`OwnedRaw`] and not the
-    // full [`OwnedCtx`] `UI_free` uses.
-    let Some(ret) = OwnedRaw::<Ui>::new(LINE_NEW_METHOD_ZALLOC, LINE_NEW_METHOD_FREE) else {
+    // `OPENSSL_free(ret)` on the lock failure, which is why this is a [`RawCtx`] and not the full
+    // [`OwnedCtx`] `UI_free` uses.
+    let Some(ret) =
+        RawCtx::<Ui>::zalloc_at(FILE, LINE_NEW_METHOD_ZALLOC, FILE, LINE_NEW_METHOD_FREE)
+    else {
         return ptr::null_mut();
     };
 
@@ -572,8 +471,9 @@ unsafe extern "C" fn free_string(uis: *mut c_void) {
     // SAFETY: `uis` is NULL or a heap `UI_STRING` whose owning stack is being torn down;
     // `from_raw` reclaims it and `Drop` runs the payload releases and the block release.
     unsafe {
-        drop(OwnedCtx::<UiString>::from_raw(
+        drop(OwnedCtx::<UiString>::from_raw_at(
             uis.cast::<UiString>(),
+            FILE,
             LINE_FREE_STRING_FREE,
         ))
     };
@@ -591,7 +491,7 @@ unsafe extern "C" fn free_string(uis: *mut c_void) {
 pub unsafe extern "C" fn UI_free(ui: *mut Ui) {
     // SAFETY: `ui` is NULL or a live object; `from_raw` reclaims it (NULL is a no-op) and `Drop`
     // runs the authority's own `UI_free` body followed by the block release.
-    unsafe { drop(OwnedCtx::<Ui>::from_raw(ui, LINE_FREE_UI)) };
+    unsafe { drop(OwnedCtx::<Ui>::from_raw_at(ui, FILE, LINE_FREE_UI)) };
 }
 
 /// `static int allocate_string_stack(UI *ui)` — `crypto/ui/ui_lib.c:84-93`.
@@ -645,7 +545,12 @@ unsafe fn general_allocate_prompt(
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::UI_LIB_107) };
     } else {
-        ret = OwnedCtx::<UiString>::new(LINE_ALLOCATE_PROMPT, LINE_FREE_STRING_FREE);
+        ret = OwnedCtx::<UiString>::zalloc_at(
+            FILE,
+            LINE_ALLOCATE_PROMPT,
+            FILE,
+            LINE_FREE_STRING_FREE,
+        );
         if let Some(s) = ret.as_ref() {
             // SAFETY: `s` is the object just allocated and is ours alone.
             unsafe {
@@ -1736,10 +1641,13 @@ pub unsafe extern "C" fn UI_set_method(ui: *mut Ui, meth: *const UiMethod) -> *c
 pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod {
     // The zeroed method block, allocated through the crate's allocator seam and owned until it is
     // handed to the caller; the refusal path's release is the authority's own bare block free plus
-    // the name free, so the abandoned block uses an [`OwnedRaw`] and the name an [`OwnedStr`].
-    let Some(ui_method) =
-        OwnedRaw::<UiMethod>::new(LINE_CREATE_METHOD_ZALLOC, LINE_CREATE_METHOD_FREE)
-    else {
+    // the name free, so the abandoned block uses a [`RawCtx`] and the name an [`OwnedStr`].
+    let Some(ui_method) = RawCtx::<UiMethod>::zalloc_at(
+        FILE,
+        LINE_CREATE_METHOD_ZALLOC,
+        FILE,
+        LINE_CREATE_METHOD_FREE,
+    ) else {
         return ptr::null_mut();
     };
 
@@ -1796,8 +1704,9 @@ pub unsafe extern "C" fn UI_destroy_method(ui_method: *mut UiMethod) {
     // SAFETY: `ui_method` is NULL or a live object; `from_raw` reclaims it (NULL is a no-op) and
     // `Drop` runs the authority's own `UI_destroy_method` body plus the block release.
     unsafe {
-        drop(OwnedCtx::<UiMethod>::from_raw(
+        drop(OwnedCtx::<UiMethod>::from_raw_at(
             ui_method,
+            FILE,
             LINE_DESTROY_METHOD,
         ))
     };
