@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1236** passed
+`cargo test --lib` (must pass; the established baseline is **1240** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -583,6 +583,22 @@ package.
 - Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1236 passed / 18
   ignored**, adv-probe **18/18**. Progress: **148 of 173**.
 
+### Subphase 58 — shared-owner API extensions and B-P exclusions
+
+- Added metadata-only `set_release_line`, Conditional-only `set_clear` (preserves
+  the construction-time `num <= extent` invariant), `new_zeroed_released`,
+  unsafe `new_memdup` and unsafe `new_array` (checked product, overflow →
+  `None`), with four focused tests.
+- Twelve B-P exclusions migrated: cmp_vfy, crmf_pbm, evp/mac, p12_decr,
+  ml_dsa_codecs, ts_rsp_sign, txt_db, v3_ncons, x_name, x509spki, ssl_rsa,
+  x_x509. Allocator, coordinates, release mode/order and NULL policy unchanged
+  (p12_decr's file was already the module constant; ssl_rsa keeps 818/827).
+- `asn1/text` remains local: it needs `CRYPTO_realloc`/`CRYPTO_clear_realloc`
+  with changing extents and a NULL-initialised empty handle.
+- Adversarial review **PASS** (two hunks checked by diffstat only; gates green).
+  Gate: `fmt` 0, clippy 0, **1240 passed / 18 ignored**, adv-probe **18/18**.
+  Progress: **160 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -760,7 +776,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `915a22f19` (small owner groups merged)
+**Last observed HEAD:** `9d645c7b3` (B-P exclusion semantics merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
