@@ -51,7 +51,7 @@ use crate::evp::pkey::EvpPkey;
 use crate::runtime::bio::sys::memcmp;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::x509_lu::X509StoreCtx;
 use crate::x509::x509_set::{X509_get_X509_PUBKEY, X509_up_ref};
@@ -374,51 +374,6 @@ const LINE_FREE_CERT: c_int = 3261;
 /// `dane_match_rpk`'s `OPENSSL_free(i2dbuf)` (`x509_vfy.c:3377`).
 const LINE_FREE_RPK: c_int = 3377;
 
-/// An owned DER block allocated through the crate's `CRYPTO_*` seam.
-///
-/// `dane_match_cert`'s per-selector certificate/SPKI cache and `dane_match_rpk`'s one-shot raw
-/// public key encoding are both `CRYPTO_*` blocks the authority releases by hand at its own
-/// `__LINE__`s. The block stays a `CRYPTO_*` allocation at that `file`/`line`; only its *ownership*
-/// is this handle, whose `Drop` is its single release. A NULL pointer is a valid empty block whose
-/// release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block the seam answered, or NULL as an empty block.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's `CRYPTO_*` seam allocated in full (not a
-    /// sub-range) and no other owner will release; `line` is the authority's own release site.
-    /// `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, line }
-    }
-
-    /// The block's address, for the calls that read it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it (`dane_match_cert`'s mid-loop selector refresh at `:3196`, its tail at `:3261`).
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam and the authority's own line.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the handle adopted (or NULL, a no-op) and `Drop` runs
-        // once; the authority's own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.line) };
-    }
-}
-
 // ---------------------------------------------------------------------------------------------
 // The single choke point for the opaque `dane` field.
 // ---------------------------------------------------------------------------------------------
@@ -521,7 +476,8 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
     let mut ordinal: c_uint = DANETLS_NONE;
     let mut mtype: c_uint = DANETLS_NONE;
     // SAFETY: the seed value is NULL, the empty block `OwnedBuf::adopt` documents.
-    let mut i2dbuf = unsafe { OwnedBuf::adopt(ptr::null_mut(), LINE_FREE_CERT) };
+    let mut i2dbuf =
+        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_CERT) };
     let mut i2dlen: c_uint = 0;
     let mut mdbuf = [0u8; EVP_MAX_MD_SIZE];
     let mut cmpbuf: *mut c_uchar = ptr::null_mut();
@@ -584,8 +540,9 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
             // SAFETY: `cert` is live and `i2dlen` is a writable local; `t` is live, and the encoder
             // answers NULL or a fresh block.
             i2dbuf = unsafe {
-                OwnedBuf::adopt(
+                OwnedBuf::adopt_plain_nullable(
                     dane_i2d(cert, (*t).selector, &raw mut i2dlen),
+                    FILE.as_ptr(),
                     LINE_FREE_CERT,
                 )
             };
@@ -825,7 +782,7 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
     // The encoding is owned: `Drop` is the authority's own tail release at `:3377`.
     // SAFETY: `i2dbuf` is the block `i2d_PUBKEY` just answered (or NULL) and is not owned
     // elsewhere.
-    let i2dbuf = unsafe { OwnedBuf::adopt(i2dbuf, LINE_FREE_RPK) };
+    let i2dbuf = unsafe { OwnedBuf::adopt_plain_nullable(i2dbuf, FILE.as_ptr(), LINE_FREE_RPK) };
     let i2dlen = len as c_uint;
     let mut cmplen = len as c_uint;
     let mut cmpbuf = i2dbuf.as_ptr();

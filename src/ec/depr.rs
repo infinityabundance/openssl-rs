@@ -35,7 +35,7 @@ use crate::bn::ctx::BnCtx;
 use crate::ec::lib::{EC_POINT_clear_free, EC_POINT_new};
 use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcPoint, PointConversionForm};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The translation unit the four allocation pairs below are attributed to, with the admitted
 /// build record's `../../src/openssl-3.6.4/` prefix `ec_deprecated.c`'s compiled `__FILE__` carries.
@@ -45,67 +45,6 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_deprecated.c"
 /// `i32::MAX` rather than an `INT_MAX` constant because the authority's build defines it to
 /// exactly this on every target this crate admits.
 const INT_MAX: usize = i32::MAX as usize;
-
-/// An owned octet buffer allocated through the crate's allocator seam.
-///
-/// `EC_POINT_point2bn` adopts the block `EC_POINT_point2buf` produced and `EC_POINT_bn2point`
-/// allocates its own scratch; each is released at the authority's `OPENSSL_free` coordinates.
-/// Because one block is released from several different authority lines depending on the path,
-/// the release line is carried in the handle and re-pointed with [`OwnedBuf::set_line`].
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, alloc_line)`, released on `Drop` at `free_line`, or `None` when
-    /// the allocator answers NULL.
-    fn malloc(len: usize, alloc_line: c_int, free_line: c_int) -> Option<OwnedBuf> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, FILE, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr: raw,
-                line: free_line,
-            })
-        }
-    }
-
-    /// Adopt a block an encoder produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced, owned by this frame;
-    /// no other owner will release it and this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, line })
-        }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's own site for the path that reaches it.
-    fn set_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns (`malloc`/`adopt`) and has not
-        // released; this is its single release at the authority's own site.
-        unsafe { CRYPTO_free(self.ptr.cast(), FILE, self.line) };
-    }
-}
 
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`'s macro `((BN_num_bits(a) + 7) / 8)`.
 ///
@@ -151,7 +90,7 @@ pub unsafe extern "C" fn EC_POINT_point2bn(
 
         // SAFETY: `buf_len` is non-zero and in range, so `EC_POINT_point2buf` produced a live
         // octet block this frame owns and no other owner will release.
-        let buf = OwnedBuf::adopt(buf, 36);
+        let buf = OwnedBuf::adopt_plain(buf, FILE, 36);
         let buf_ptr = buf.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         // `ret = BN_bin2bn(buf, (int)buf_len, ret)`, line 34. `buf`'s `Drop` performs the
@@ -186,7 +125,8 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
 
         // `buf = OPENSSL_malloc(buf_len)`, line 50. The handle releases it at line 54 on the
         // serialisation failure path below.
-        let Some(mut buf) = OwnedBuf::malloc(buf_len as usize, 50, 54) else {
+        let Some(mut buf) = OwnedBuf::new_plain_released(buf_len as usize, FILE, 50, FILE, 54)
+        else {
             return ptr::null_mut();
         };
 
@@ -195,7 +135,7 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
         }
 
         // The next release site is the `EC_POINT_new` failure arm at line 60.
-        buf.set_line(60);
+        buf.set_release_line(60);
 
         let ret: *mut EcPoint;
         if point.is_null() {
@@ -208,7 +148,7 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
         }
 
         // The next release site is the `EC_POINT_oct2point` failure arm at line 69.
-        buf.set_line(69);
+        buf.set_release_line(69);
         if EC_POINT_oct2point(group, ret, buf.as_ptr(), buf_len as usize, ctx) == 0 {
             if ret != point {
                 // SAFETY: `ret` is this frame's own allocation, never the caller's point.
@@ -218,7 +158,7 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
         }
 
         // The success path releases the block at the authority's own line 73.
-        buf.set_line(73);
+        buf.set_release_line(73);
         ret
     }
 }

@@ -88,6 +88,13 @@ impl<T> OwnedBlock<T> {
         self.ptr.as_ptr()
     }
 
+    /// Re-point the release diagnostic at the authority's other site for this
+    /// block, preserving the allocation file. The line is metadata only: no
+    /// extent or ownership invariant depends on it.
+    pub(crate) fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
     /// Give up ownership of the block to the C caller's pointer.
     pub(crate) fn into_raw(self) -> *mut T {
         let p = self.ptr.as_ptr();
@@ -99,10 +106,11 @@ impl<T> OwnedBlock<T> {
 impl<T> Drop for OwnedBlock<T> {
     /// Release the block through the same allocator seam it was allocated on.
     fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns (allocated by `malloc`/
-        // `zalloc`, or reclaimed by `from_raw`), `self.file`/`self.line` are that
-        // allocation's own values, and `Drop` runs once, so this is its single
-        // release.
+        // SAFETY: `self.ptr` is the exclusively owned block this handle allocated
+        // (`malloc`/`zalloc`, or reclaimed by `from_raw`) and has not released; the
+        // stored release coordinates, which `set_release_line` may update, are the
+        // authority's release site for this block; `Drop` runs once, so this is its
+        // single release.
         unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
     }
 }
