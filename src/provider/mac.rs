@@ -139,6 +139,7 @@ use crate::provider::util::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The allocation-tracking `file` argument for CMAC's allocations.
 ///
@@ -348,35 +349,8 @@ impl<T: MacDestroy> Drop for OwnedRaw<T> {
     }
 }
 
-/// An owned scratch buffer: `new` allocates `len` bytes through the crate's allocator seam and
-/// `Drop` releases them with the authority's own plain `CRYPTO_free`.
-///
-/// Used for the KMAC `init` bytepad buffer, which the authority `OPENSSL_malloc`s sized, fills, and
-/// releases before returning.
-struct OwnedScratch {
-    ptr: ptr::NonNull<c_uchar>,
-    file: *const c_char,
-}
-
-impl OwnedScratch {
-    /// Allocate `len` bytes through the installed allocator, or `None` when it answers NULL.
-    fn new(len: usize, file: *const c_char) -> Option<OwnedScratch> {
-        let raw = CRYPTO_malloc(len, file, LINE).cast::<c_uchar>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedScratch { ptr, file })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&mut self) -> *mut c_uchar {
-        self.ptr.as_ptr()
-    }
-}
-
-impl Drop for OwnedScratch {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the buffer `new` allocated and has not released.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, LINE) };
-    }
-}
+// The KMAC `init` bytepad buffer, owned by `OwnedBuf`: the authority `OPENSSL_malloc`s it
+// sized, fills it, and releases it before returning.
 
 /// `struct cmac_data_st` — `cmac_prov.c:55-60`. `OSSL_FIPS_IND_DECLARE` contributes no field when
 /// `FIPS_MODULE` is undefined, so the three fields are the whole struct in this profile.
@@ -3970,7 +3944,7 @@ unsafe extern "C" fn kmac_init(
         }
         // The scratch buffer the authority `OPENSSL_malloc`s sized, fills and releases before it
         // returns; it is owned by `out` and released by `Drop` at the end of this scope.
-        let Some(mut out) = OwnedScratch::new(out_len, FILE_KMAC) else {
+        let Some(out) = OwnedBuf::new(out_len, FILE_KMAC, LINE) else {
             return 0;
         };
         let res = bytepad(
