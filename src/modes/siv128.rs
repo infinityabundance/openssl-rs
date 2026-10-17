@@ -65,7 +65,8 @@ use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_utf8_string,
     OsslParam,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
+use crate::runtime::mem::OPENSSL_cleanse;
 
 /// `SIV_LEN` — `include/crypto/modes.h:212`.
 pub const SIV_LEN: usize = 16;
@@ -122,6 +123,21 @@ pub struct Siv128Context {
     pub final_ret: c_int,
     /// `int crypto_ok` — one crypto operation per context, or `-1` under `speed`.
     pub crypto_ok: c_int,
+}
+
+// SAFETY: a zeroed `Siv128Context` is the state `ossl_siv128_init` requires of its caller and the
+// state the crate's constructor deliberately allocates (see the module documentation); every field
+// is a union of bytes, a pointer or an `int`, so the zeroed block is a valid value. The authority's
+// `ossl_siv128_new` release on failure is the bare `OPENSSL_free(ctx)`: the three owned members are
+// released by `ossl_siv128_init`'s own failure path or by `ossl_siv128_cleanup`, never by the block
+// destructor. `destroy_body` therefore releases nothing, leaving `RawCtx`'s block-only `Drop` as the
+// authority's exact failure-path release.
+unsafe impl CtxDestroy for Siv128Context {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(_ptr: *mut Siv128Context) {}
 }
 
 /// `static ossl_inline uint32_t rotl8(uint32_t x)` — `siv128.c:24-27`. `(x << 8) | (x >> 24)`
@@ -335,16 +351,17 @@ pub unsafe fn ossl_siv128_new(
     // SAFETY: the caller's contract; `ossl_siv128_init`'s own contract is satisfied because a
     // zeroed block is what it requires of its caller.
     unsafe {
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Siv128Context>(), FILE, LINE)
-            .cast::<Siv128Context>();
+        let ctx = match RawCtx::<Siv128Context>::zalloc() {
+            Some(ctx) => ctx,
+            None => return ptr::null_mut(),
+        };
 
-        if !ctx.is_null() {
-            if ossl_siv128_init(ctx, key, klen, cbc, ctr, libctx, propq) != 0 {
-                return ctx;
-            }
-            CRYPTO_free(ctx.cast(), FILE, LINE);
+        if ossl_siv128_init(ctx.as_ptr(), key, klen, cbc, ctr, libctx, propq) != 0 {
+            return ctx.into_raw();
         }
-
+        // On failure `ossl_siv128_init` has released the three owned members; the block alone is
+        // what the authority's `OPENSSL_free(ctx)` releases, and `RawCtx`'s `Drop` does exactly
+        // that at the same allocator coordinates.
         ptr::null_mut()
     }
 }

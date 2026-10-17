@@ -110,6 +110,48 @@ const FILE_DH_KEY: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_key.c"
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
+/// An owned `CRYPTO_malloc` block from this unit's allocator seam.
+///
+/// The block keeps the authority's allocation size and `file`/`line` (observable to a
+/// caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type. `Drop` is the
+/// single plain release at the authority's own free coordinate, and [`into_raw`](OwnedBuf::into_raw)
+/// is the transfer edge where a caller-owned result leaves the crate.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        let ptr = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr })
+        }
+    }
+
+    /// The start of the block, for the raw calls that write it.
+    fn as_mut_ptr(&mut self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the caller, at the documented transfer edge.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam and coordinates as the authority.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE_DH_KEY, LINE) };
+    }
+}
+
 /// `int ossl_dh_compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh)` —
 /// `dh_key.c:40-108`.
 ///
@@ -822,6 +864,8 @@ pub(crate) unsafe fn ossl_dh_key2buf(
     let mut pbuf: *mut c_uchar = ptr::null_mut();
     let mut pubkey: *const BigNum = ptr::null_mut();
     let mut p: *const BigNum = ptr::null_mut();
+    // The `alloc != 0` arm's owned block; `None` on the caller-buffer arm and before allocation.
+    let mut pbuf_owner: Option<OwnedBuf> = None;
 
     // SAFETY: `dh` is live and both out-parameters are writable locals.
     unsafe {
@@ -834,9 +878,19 @@ pub(crate) unsafe fn ossl_dh_key2buf(
         return 0;
     }
     // SAFETY: `p` is non-NULL past the guard above, so `BN_num_bits` has its object.
-    let p_size = unsafe { (BN_num_bits(p) + 7) / 8 };
+    let p_bits = unsafe { BN_num_bits(p) };
+    let Some(p_size) = p_bits.checked_add(7).map(|bits| bits / 8) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DH_KEY_430) };
+        return 0;
+    };
     // SAFETY: `pubkey` is non-NULL past the guard above, so `BN_num_bits` has its object.
-    let pubkey_bytes = unsafe { (BN_num_bits(pubkey) + 7) / 8 };
+    let pubkey_bits = unsafe { BN_num_bits(pubkey) };
+    let Some(pubkey_bytes) = pubkey_bits.checked_add(7).map(|bits| bits / 8) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DH_KEY_430) };
+        return 0;
+    };
     if p_size == 0 || pubkey_bytes == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DH_KEY_430) };
@@ -855,8 +909,12 @@ pub(crate) unsafe fn ossl_dh_key2buf(
                 unsafe { raise_site(&err_sites::DH_KEY_438) };
             }
         } else {
-            // `CRYPTO_malloc` is a safe function in this crate: it reads no caller pointer.
-            pbuf = CRYPTO_malloc(p_size as usize, FILE_DH_KEY, LINE).cast::<c_uchar>();
+            // The allocation's ownership is the local owner's until the transfer edge below.
+            pbuf_owner = OwnedBuf::new(p_size as usize, FILE_DH_KEY, LINE);
+            pbuf = match pbuf_owner.as_mut() {
+                Some(owner) => owner.as_mut_ptr(),
+                None => ptr::null_mut(),
+            };
         }
 
         /* Errors raised above */
@@ -870,8 +928,9 @@ pub(crate) unsafe fn ossl_dh_key2buf(
         // SAFETY: `pbuf` is writable for `p_size` bytes on both arms, and `pubkey` is live.
         if unsafe { BN_bn2binpad(pubkey, pbuf, p_size) } < 0 {
             if alloc != 0 {
-                // SAFETY: `pbuf` is this call's own allocation on the `alloc != 0` arm.
-                unsafe { CRYPTO_free(pbuf.cast(), FILE_DH_KEY, LINE) };
+                // The owned arm releases its block at the authority's own coordinates; the
+                // caller-buffer arm owns nothing and releases nothing.
+                drop(pbuf_owner);
             }
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::DH_KEY_453) };
@@ -879,6 +938,10 @@ pub(crate) unsafe fn ossl_dh_key2buf(
         }
         // SAFETY: `pbuf_out` is non-NULL on this arm.
         unsafe { *pbuf_out = pbuf };
+        if let Some(owner) = pbuf_owner {
+            // The documented transfer edge: `*pbuf_out` is the caller's block from here on.
+            let _ = owner.into_raw();
+        }
     }
     p_size as usize
 }
