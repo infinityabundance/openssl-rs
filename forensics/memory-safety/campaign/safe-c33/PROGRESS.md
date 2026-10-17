@@ -17,33 +17,32 @@ Regenerated at HEAD `e48a1b519` (`measurement_revision: 2`) by
 comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
-- Safe-33 closure: **628** files; **315** have a recognised ownership seam
-  (**50.2%**); **0** files have fully discharged obligations; **0/33**
+- Safe-33 closure: **628** files; **314** have a recognised ownership seam
+  (**50.0%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
-- Whole tree: **866** `src/**/*.rs`; **376** files have a seam.
-- Disjoint call-site classes: **806** production allocation calls in **282**
-  files; **863** production release calls in **299** files; **110** test-only;
+- Whole tree: **868** `src/**/*.rs`; **377** files have a seam.
+- Disjoint call-site classes: **700** production allocation calls in **240**
+  files; **657** production release calls in **212** files; **123** test-only;
   **71** in the allocator-seam implementations (`src/runtime/mem.rs`,
-  `src/runtime/secure.rs`). 806 + 863 + 110 + 71 = **1,850** call sites, all
+  `src/runtime/secure.rs`). 700 + 657 + 123 + 71 = **1,551** call sites, all
   matched as call expressions only — comments, imports and function-pointer
   table entries are excluded, and allocations are no longer added to releases.
-- **16** files have at least one production allocation call and no recognised
+- **18** files have at least one production allocation call and no recognised
   seam. A seam is a file-level heuristic, not a per-site proof.
-- `atlas-refresh/site-worklist.json` is the per-site evidence queue: **1,669**
+- `atlas-refresh/site-worklist.json` is the per-site evidence queue: **1,357**
   production allocation/release call sites, each with file, line, allocator
   family, enclosing function and closure membership.
 
 **Unsafe-operation denominator** (`unsafe_census.py`, artifacts
-`atlas-refresh/unsafe-census.json` + `UNSAFE-CENSUS.md`, candidate source
-`af25dd2f0`; the census commit is `15157bc32` and changes only `forensics/`):
-**65,207** production site operations — 42,729 `unsafe {}` blocks, 13,431
-`unsafe fn` definitions, 331 `unsafe impl`, 49 `unsafe trait`, 10 `unsafe extern`
+`atlas-refresh/unsafe-census.json` + `UNSAFE-CENSUS.md`, source `8751ea75f`):
+**64,824** production site operations — 42,533 `unsafe {}` blocks, 13,263
+`unsafe fn` definitions, 331 `unsafe impl`, 29 `unsafe trait`, 10 `unsafe extern`
 blocks, 274 high-risk calls (`transmute`, `assume_init`, raw-parts,
-`set_len`, …), 836 safe-ABI `extern "C"` definitions and 7,547 non-allocator
-FFI calls; 4,227 test-only and 185 seam. Raw-pointer type contexts (47,965) are
+`set_len`, …), 836 safe-ABI `extern "C"` definitions and 7,548 non-allocator
+FFI calls; 4,256 test-only and 185 seam. Raw-pointer type contexts (47,090) are
 reported separately and are **not** counted as operations. The scan is lexical
 (not a Rust parser), is byte-deterministic, and `--check` independently
-reconciles 117,584 counted sites. **38 of the 628 closure files contain zero
+reconciles 116,355 counted sites. **38 of the 628 closure files contain zero
 production operations** (36 of them zero unsafe-language/high-risk constructs);
 they are listed in `UNSAFE-CENSUS.md` and are complete with respect to unsafe
 code, subject to their safe-call dependencies.
@@ -616,6 +615,33 @@ package.
 - Adversarial review **FAILED** only on the stale ledger arithmetic and
   **PASSED** after reconciliation. Gate: `fmt` 0, clippy 0, **1242 passed / 18
   ignored**, adv-probe **18/18**. Progress: **170 of 173**.
+
+### Subphase 60 — CtxDestroy trait unification
+
+- **20 of 41** module-local `CtxDestroy` traits were semantically identical to
+  the canonical `runtime/bio/owned.rs` trait (destroy_body only; destructor-
+  exactly-once and zero-validity). They now import the canonical trait; local
+  definitions are deleted; every `unsafe impl` body is unchanged.
+- **21 remain local** for real reasons: 13 withhold the zero-validity claim,
+  6 carry extra associated consts, `ec/lib` adds `clear_destroy_body`, and
+  `provider/sm2_enc` states only a method-level contract. The canonical
+  defaulted `FILE`/`LINE_*` consts are never read by migrated modules.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1242 passed / 18
+  ignored**, adv-probe **18/18**. Net −525 lines.
+
+### Subphase 61 — measurement regeneration
+
+- Candidate `8751ea75f`: closure 628, **314 seam-bearing (50.0%)**, whole tree
+  868 / 377 seam; production calls 700 alloc / 657 release, 123 test-only, 71
+  seam; worklist 1,357; 18 no-seam allocation files.
+- Unsafe census: **64,824** production operations (42,533 unsafe blocks, 13,263
+  unsafe fns, 29 unsafe traits), 4,256 test-only, 185 seam; **38** closure files
+  with zero production operations.
+- The seam detector now documents why **314** is correct: the previous 315
+  counted a doc-comment mention in `provider/activate.rs`. Shared-owner imports
+  were added as markers but admitted zero files (each already carries the bare
+  type token). Both instruments are byte-deterministic and pass independent
+  reconciliation.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
