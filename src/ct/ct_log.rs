@@ -35,6 +35,7 @@ use crate::ct::ct_b64::CTLOG_new_from_base64_ex;
 use crate::ct::ct_sct::CT_V1_HASHLEN;
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::sys;
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::conf::lib::{NCONF_free, NCONF_get_string, NCONF_load, NCONF_new};
@@ -174,35 +175,6 @@ struct CtlogStoreLoadCtx {
 // Ownership of the `CTLOG`/`CTLOG_STORE` records, the load context, the duplicated strings and the
 // encoder scratch block
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for one of this file's heap records, without the block release
-/// [`OwnedCtx`]'s `Drop` performs. One impl per record type, so the owner runs the right destructor
-/// from `Drop` without a `CRYPTO_free` written at any call site.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (every releaser is
-///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned one of the file's heap records.
 ///

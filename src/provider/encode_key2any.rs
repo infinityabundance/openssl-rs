@@ -133,6 +133,7 @@ use crate::rsa::object::{
 use crate::rsa::pss::ossl_rsa_pss_params_30_is_unrestricted;
 use crate::rsa::{Rsa, RsaPssParams30};
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free, BIO_write, Bio};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
@@ -310,34 +311,6 @@ pub(crate) struct Key2anyCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the blobs and the context block
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `key2any_freectx` body for the context, without the block's own release, which
-/// [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `key2any_freectx` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the
-///   passphrase data and the cipher, each releaser the authority's own and accepting the
-///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
-///   `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// `key2any_freectx`'s body minus the block release: the passphrase data, then the cipher.
-    ///
-    /// # Safety
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `Key2anyCtx` block.
 ///

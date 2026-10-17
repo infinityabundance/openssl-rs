@@ -74,6 +74,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::evp::pkey::EVP_PKEY_up_ref;
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::raise_with;
 use crate::runtime::ex_data::{
     CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
@@ -161,33 +162,6 @@ unsafe fn session_new_ex_data(ss: *mut SslSession) -> c_int {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the session block, reclaimed from `SSL_SESSION_free`'s own body
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `SSL_SESSION_free` body for the session object, without the block's own release,
-/// which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
-/// the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `SSL_SESSION_free` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the
-///   ex-data, the peer/chain references and the object-owned member buffers, each releaser the
-///   authority's own and accepting the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `SSL_SESSION` block.
 ///

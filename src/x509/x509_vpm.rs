@@ -58,6 +58,7 @@ use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::asn1::prim::ASN1_OBJECT_free;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
@@ -243,32 +244,6 @@ const _: () = {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the parameter block and its scratch strings
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for the file's `#[repr(C)]` object, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `X509_VERIFY_PARAM_free` member
-///   body **exactly once** for that object; it frees **exactly** the members the object owns (every
-///   releaser is the authority's own and accepts the not-yet-set NULL/zero state) and **never**
-///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s
-    /// `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live parameter this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `X509_VERIFY_PARAM` block.
 ///
