@@ -82,11 +82,11 @@ use crate::runtime::bio::iolib::BIO_puts;
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free};
 use crate::runtime::obj::NID_rsassaPss;
 use crate::runtime::obj::{
     NID_md5, NID_md5_sha1, NID_sha1, NID_sha256, NID_sha384, NID_sha512, OBJ_nid2obj, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 use crate::x509::t_x509::X509_signature_dump;
 use crate::x509::x509_set::{X509SigInfo, X509_SIG_INFO_set};
@@ -104,78 +104,6 @@ pub(crate) const X509_SIG_INFO_TLS: u32 = 0x2;
 const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
 /// The authority's translation unit, for the `OPENSSL_clear_free` site below.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c".as_ptr();
-
-/// An owned DER buffer from this unit's `i2d_*` helpers.
-///
-/// `adopt` takes a block a helper allocated in full through the crate's allocator seam and
-/// `Drop` is its single release at the authority's own `file`/`line`: the plain
-/// `OPENSSL_free(penc)` at `rsa_ameth.c:71` for the public key, or the cleansing
-/// `OPENSSL_clear_free(rk, rklen)` at `:166` for the private key. [`Self::into_raw`] is the
-/// transfer edge to the setter that takes the block over.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    len: usize,
-    clear: bool,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block a helper allocated, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam (or a helper using it)
-    /// allocated in full (not a sub-range); where `clear` is true, `len` is its exact extent
-    /// and is valid for the cleansing release. Every byte the caller reads or hands to a
-    /// consumer is initialized, this frame exclusively owns the block and has not released it,
-    /// no other owner will release it, and `file`/`line` are the authority's own release site.
-    unsafe fn adopt(
-        ptr: *mut c_uchar,
-        len: usize,
-        clear: bool,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                len,
-                clear,
-                file,
-                line,
-            })
-        }
-    }
-
-    /// The block's address, for the setter that takes it or the DER cursor that reads it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership to the consumer that takes the block over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, plain or cleansing, at the authority's own coordinates.
-    fn drop(&mut self) {
-        if self.clear {
-            // SAFETY: `self.ptr` is the block this handle owns, `self.len` is its allocation
-            // extent (the authority's own `rklen`), and `Drop` runs once, so this is its single
-            // cleansing release at the authority's own coordinates.
-            unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
-        } else {
-            // SAFETY: as above; the authority's own release on this path is the plain free.
-            unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-        }
-    }
-}
 
 /// `#define pkey_is_pss(pkey)` — `crypto/rsa/rsa_local.h:150`,
 /// `(pkey->ameth->pkey_id == EVP_PKEY_RSA_PSS)`.
@@ -268,7 +196,7 @@ unsafe extern "C" fn rsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
     }
     // SAFETY: `penc` is the block `i2d_RSAPublicKey` allocated in full and `penclen` bytes
     // describe it; this frame owns it exclusively until the setter takes it over.
-    let penc_owned = unsafe { OwnedBuf::adopt(penc, penclen as usize, false, FILE, 71) };
+    let penc_owned = unsafe { OwnedBuf::adopt_plain(penc, FILE, 71) };
     let penc_ptr = penc_owned
         .as_ref()
         .map_or(ptr::null_mut(), OwnedBuf::as_ptr);
@@ -450,7 +378,7 @@ unsafe extern "C" fn rsa_priv_encode(
     // SAFETY: `rk` is the block `i2d_RSAPrivateKey` allocated in full, `rklen` is its exact
     // extent (the authority's own cleansing length), and this frame owns it exclusively until
     // the setter takes it over.
-    let rk_owned = unsafe { OwnedBuf::adopt(rk, rklen as usize, true, FILE, 166) };
+    let rk_owned = unsafe { OwnedBuf::adopt_cleansed(rk, rklen as usize, FILE, 166) };
     let rk_ptr = rk_owned.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     // SAFETY: `p8` is live and `str_`/`rk_ptr` are the objects the setter takes ownership of.
     if unsafe {

@@ -70,8 +70,8 @@ use crate::ffi::guard_ffi;
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 use crate::runtime::obj::{NID_dsaWithSHA1, NID_sm2, OBJ_find_sigid_by_algs, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_clear_free`
 /// expansions.
@@ -98,91 +98,6 @@ const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr(
 // ---------------------------------------------------------------------------------------------
 // Ownership of the signing scratch buffers
 // ---------------------------------------------------------------------------------------------
-
-/// An owned heap buffer from this unit's `OPENSSL_malloc`/`OPENSSL_clear_free` seam.
-///
-/// The buffer stays a `CRYPTO_malloc` at the authority's exact size and through its own
-/// `__FILE__`/`__LINE__` (observable to a caller-installed `CRYPTO_set_mem_functions` hook), but its
-/// *ownership* is this type: [`Self::new`] allocates it, [`Self::adopt`] takes in the DER block
-/// `ASN1_item_i2d` allocated, `Drop` is its single *cleansing* release (`CRYPTO_clear_free` over the
-/// recorded length -- the authority's `OPENSSL_clear_free`), and [`Self::into_raw`] hands the
-/// signature block to the `ASN1_BIT_STRING` that takes it over. A NULL pointer is not a block here:
-/// the constructors answer `None` for it, which the callers treat exactly as the authority's NULL.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    len: usize,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, alloc_line)`, whose `Drop` cleanses and releases it at
-    /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            len,
-            file,
-            line: release_line,
-        })
-    }
-
-    /// Adopt a block a helper allocated in full through the crate's `CRYPTO_*` seam, for cleansing
-    /// release by `Drop` at `file`/`release_line`; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam allocated in full (not a
-    /// sub-range) and no other owner will release; `file` is NULL or a NUL-terminated C string;
-    /// `len` is that block's length, the extent the cleansing release covers.
-    unsafe fn adopt(
-        ptr: *mut c_uchar,
-        len: usize,
-        file: *const c_char,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr,
-                len,
-                file,
-                line: release_line,
-            })
-        }
-    }
-
-    /// The start of the block, for the raw calls that read or write it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release: the authority's own `OPENSSL_clear_free`, cleansing the block over
-    /// its recorded length before the allocator frees it.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
-        // allocation length; the authority's own `CRYPTO_clear_free` accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
-    }
-}
 
 /// `int ASN1_sign(i2d_of_void *i2d, X509_ALGOR *algor1, X509_ALGOR *algor2,
 /// ASN1_BIT_STRING *signature, char *data, EVP_PKEY *pkey, const EVP_MD *type)` —
@@ -284,11 +199,12 @@ pub unsafe extern "C" fn ASN1_sign(
             return 0;
         }
         let inll = inl as usize;
-        let buf_in = OwnedBuf::new(inll, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN);
+        let buf_in = OwnedBuf::new_cleansed_at(inll, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN);
         // SAFETY: `pkey` is a live key.
         outl = unsafe { EVP_PKEY_get_size(pkey) };
         let outll = outl as usize;
-        let buf_out = OwnedBuf::new(outll, FILE.as_ptr(), LINE_MALLOC_OUT, LINE_CLEAR_OUT);
+        let buf_out =
+            OwnedBuf::new_cleansed_at(outll, FILE.as_ptr(), LINE_MALLOC_OUT, LINE_CLEAR_OUT);
         if buf_in.is_none() || buf_out.is_none() {
             // The authority's `err:` tail on a refused allocation: release whichever buffer the
             // seam produced (a `None` is the authority's own no-op `clear_free(NULL)`) and the
@@ -621,8 +537,10 @@ pub unsafe extern "C" fn ASN1_item_sign_ctx(
         let inl = buf_len as usize;
         // The encoder's block is owned from here; `Drop` is the authority's own cleansing tail.
         // SAFETY: `buf_in_raw` is a live block `ASN1_item_i2d` allocated in full through the
-        // crate's allocator seam and no one else owns.
-        let buf_in = unsafe { OwnedBuf::adopt(buf_in_raw, inl, FILE.as_ptr(), LINE_CLEAR_SIGN_IN) };
+        // crate's allocator seam and no one else owns; `inl` is the length that encoder returned,
+        // i.e. both the allocation extent and the cleansing length.
+        let buf_in =
+            unsafe { OwnedBuf::adopt_cleansed(buf_in_raw, inl, FILE.as_ptr(), LINE_CLEAR_SIGN_IN) };
         let buf_in_ptr = buf_in.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         // SAFETY: `ctx` is live; a null signature buffer asks for the length.
@@ -634,7 +552,8 @@ pub unsafe extern "C" fn ASN1_item_sign_ctx(
             return 0;
         }
         outl = outll;
-        let buf_out = OwnedBuf::new(outll, FILE.as_ptr(), LINE_MALLOC_SIGN, LINE_CLEAR_SIGN_OUT);
+        let buf_out =
+            OwnedBuf::new_cleansed_at(outll, FILE.as_ptr(), LINE_MALLOC_SIGN, LINE_CLEAR_SIGN_OUT);
         if buf_in.is_none() || buf_out.is_none() {
             drop(buf_in);
             drop(buf_out);

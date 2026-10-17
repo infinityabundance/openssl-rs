@@ -41,7 +41,8 @@ use crate::packet::{
     WPACKET_init_null, WPACKET_init_static_len, Wpacket,
 };
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_new, BufMem};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::{Dsa, DsaSig};
 
@@ -138,41 +139,6 @@ impl Drop for OwnedBufMem {
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the `BUF_MEM` this handle owns and has not released.
         unsafe { BUF_MEM_free(self.ptr.as_ptr()) };
-    }
-}
-
-/// An owned block from a DER re-encode, cleansed and released on `Drop`.
-///
-/// `DSA_verify`'s `der` is a block `i2d_DSA_SIG` allocated through the crate's seam and the
-/// authority releases with `OPENSSL_clear_free(der, derlen)`; the handle keeps that single cleansing
-/// release at the authority's own `__FILE__`/`__LINE__`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    len: usize,
-}
-
-impl OwnedBuf {
-    /// Adopt a block the encoder produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit's encoder produced in full (not a sub-range); no
-    /// other owner will release it, and this handle's `Drop` is its single release. `len` is its
-    /// length, the extent the cleansing release covers.
-    unsafe fn adopt(ptr: *mut c_uchar, len: usize) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, len })
-        }
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single cleansing release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.len` is its
-        // length; the authority's own `CRYPTO_clear_free` accepts NULL.
-        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE_DSA_SIGN, LINE) };
     }
 }
 
@@ -619,8 +585,13 @@ pub unsafe extern "C" fn DSA_verify(
         // `derlen.max(0)` bytes, exactly as the authority's `OPENSSL_clear_free`. `s`'s `Drop`
         // releases the signature afterwards, in the authority's own order.
         // SAFETY: `der` is NULL or the block `i2d_DSA_SIG` allocated above; `derlen.max(0)` is its
-        // length.
-        drop(OwnedBuf::adopt(der, derlen.max(0) as usize));
+        // allocation length and the cleansing length.
+        drop(OwnedBuf::adopt_cleansed(
+            der,
+            derlen.max(0) as usize,
+            FILE_DSA_SIGN,
+            LINE,
+        ));
     }
     ret
 }
