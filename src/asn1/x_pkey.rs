@@ -30,8 +30,9 @@ use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new};
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_free, X509_ALGOR_new};
 use crate::evp::pem_bridge::EvpCipherInfo;
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 
 /// `OPENSSL_FILE` at `crypto/asn1/x_pkey.c`'s allocation and free sites.
 const FILE: *const c_char = c"crypto/asn1/x_pkey.c".as_ptr();
@@ -78,6 +79,35 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Pkey, cipher) == 56);
 };
 
+/// `X509_PKEY_free`'s member releases, without the record's own `OPENSSL_free` at `:45`.
+///
+/// (a) The body releases the two constructed members, the decrypted key and (when `key_free` is
+/// set) `key_data` at the authority's `:44`, and never the enclosing record, which [`OwnedCtx`]'s
+/// `Drop` releases at `:45`; and (b) a zeroed `X509Pkey` is the state `X509_PKEY_new` starts from
+/// (NULL pointers, `key_free == 0`, zeroed cipher), every releaser accepts NULL and the `key_free`
+/// test is false, so the safe zeroed constructor may run this body.
+// SAFETY: the trait's two obligations are established by the body below -- it releases only the
+// record's own members (each NULL or owned) and never the block, and the zeroed constructor state
+// is the authority's own, for which every release is the NULL no-op.
+unsafe impl CtxDestroy for X509Pkey {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE_RECORD;
+
+    unsafe fn destroy_body(x: *mut X509Pkey) {
+        // SAFETY: `x` is a live context per the trait contract; each pointer is NULL or owned by
+        // this record.
+        unsafe {
+            X509_ALGOR_free((*x).enc_algor);
+            ASN1_OCTET_STRING_free((*x).enc_pkey);
+            EVP_PKEY_free((*x).dec_pkey);
+            if (*x).key_free != 0 {
+                CRYPTO_free((*x).key_data.cast::<c_void>(), FILE, LINE_FREE_KEY_DATA);
+            }
+        }
+    }
+}
+
 /// `X509_PKEY *X509_PKEY_new(void)` — `crypto/asn1/x_pkey.c:16-33`.
 ///
 /// Zero-allocates the record, then gives it an empty `enc_algor` and `enc_pkey`. Either
@@ -85,23 +115,32 @@ const _: () = {
 /// NULL.
 #[no_mangle]
 pub extern "C" fn X509_PKEY_new() -> *mut X509Pkey {
-    // SAFETY: the allocator's contract; the file/line are the authority's own.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<X509Pkey>(), FILE, LINE_ZALLOC).cast::<X509Pkey>();
-    if ret.is_null() {
+    // The window before the two slots are published is a `RawCtx`: its `Drop` would release the
+    // block alone, so a refusal before the record is a valid `X509Pkey` cannot run a destructor.
+    let Some(raw) = RawCtx::<X509Pkey>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ret` is live and its two fields are its own.
+    };
+    let ret = raw.as_ptr();
+    // SAFETY: `ret` is the zeroed block; its two member slots are written here.
     unsafe {
         (*ret).enc_algor = X509_ALGOR_new();
         (*ret).enc_pkey = ASN1_OCTET_STRING_new();
-        if (*ret).enc_algor.is_null() || (*ret).enc_pkey.is_null() {
-            X509_PKEY_free(ret);
-            // SAFETY: a compile-time-constant site.
-            raise_site(&err_sites::X_PKEY_28);
-            return ptr::null_mut();
-        }
     }
-    ret
+    // SAFETY: every field is initialised -- the block was zeroed and the two pointer slots are
+    // written above -- so it is a valid `X509Pkey` for the destructor, and this handle is its
+    // single owner.
+    let owned = unsafe { raw.assume_init() };
+    // SAFETY: `owned` is live.
+    let (algor, pkey) = unsafe { ((*owned.as_ptr()).enc_algor, (*owned.as_ptr()).enc_pkey) };
+    if algor.is_null() || pkey.is_null() {
+        // The authority's `X509_PKEY_free`: the members acquired so far, then the block, in that
+        // order.
+        drop(owned);
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::X_PKEY_28) };
+        return ptr::null_mut();
+    }
+    owned.into_raw()
 }
 
 /// `void X509_PKEY_free(X509_PKEY *x)` — `crypto/asn1/x_pkey.c:35-46`.
@@ -114,16 +153,8 @@ pub unsafe extern "C" fn X509_PKEY_free(x: *mut X509Pkey) {
     if x.is_null() {
         return;
     }
-    // SAFETY: `x` is live and each field is its own.
-    unsafe {
-        X509_ALGOR_free((*x).enc_algor);
-        ASN1_OCTET_STRING_free((*x).enc_pkey);
-        EVP_PKEY_free((*x).dec_pkey);
-        if (*x).key_free != 0 {
-            // SAFETY: `key_data` is this record's owned buffer per the contract.
-            CRYPTO_free((*x).key_data.cast::<c_void>(), FILE, LINE_FREE_KEY_DATA);
-        }
-        // SAFETY: `x` is this call's own record.
-        CRYPTO_free(x.cast::<c_void>(), FILE, LINE_FREE_RECORD);
-    }
+    // SAFETY: `x` is NULL or a live record this file allocated and has not released per the
+    // contract; the reclaimed handle's `Drop` releases the members (`key_data` at `:44` when
+    // `key_free` is set) and then the record itself at `:45`, each exactly once.
+    drop(unsafe { OwnedCtx::<X509Pkey>::from_raw(x) });
 }
