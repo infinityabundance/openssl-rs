@@ -109,7 +109,8 @@ use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::thread::{
     CRYPTO_THREAD_cleanup_local, CRYPTO_THREAD_get_local, CRYPTO_THREAD_init_local,
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock,
@@ -300,6 +301,37 @@ impl OsslLibCtx {
         ischild: 0,
         conf_diagnostics: 0,
     };
+}
+
+// SAFETY: (a) the free body this impl runs is `OSSL_LIB_CTX_free`'s member teardown -- the
+// child deregistration, then `context_deinit` -- which releases each slot exactly once and
+// never the enclosing block; `context_deinit`/`context_deinit_objs` accept the all-NULL state of
+// a zeroed or partially initialised context (every slot release is NULL-guarded or accepts
+// NULL). (b) an all-zero block is the authority's own constructed input: `context_init` reads no
+// field before writing it, and `context_deinit` on it is a no-op set of NULL releases.
+//
+// `LINE_FREE` is the authority's failed-`context_init` arm (`crypto/context.c:439`), the only
+// release this owner performs: success publishes with `RawCtx::into_raw`, and the C lifecycle's
+// `OSSL_LIB_CTX_free` then uses its own `:495` site. `RawCtx` -- which never runs
+// `destroy_body` -- is the sole consumer in this module, so a failed initialisation still drops
+// the block alone at `:439` with no slot teardown.
+unsafe impl CtxDestroy for OsslLibCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
+    const LINE_FREE: c_int = LINE_FREE_INIT_FAILURE;
+
+    /// `OSSL_LIB_CTX_free`'s member body, without the block release: the child deregistration
+    /// (skipped for the zeroed `ischild == 0` state) followed by [`context_deinit`].
+    unsafe fn destroy_body(ptr: *mut OsslLibCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; the branch and the teardown
+        // are the authority's own, and both accept a zeroed/partially built object.
+        unsafe {
+            if (*ptr).ischild != 0 {
+                crate::provider::child::ossl_provider_deinit_child(ptr.cast::<c_void>());
+            }
+            context_deinit(ptr);
+        }
+    }
 }
 
 /// The process-global default context, with a stable address.
@@ -1045,19 +1077,21 @@ fn lib_ctx_is_default(ctx: *mut OsslLibCtx) -> c_int {
 #[no_mangle]
 pub extern "C" fn OSSL_LIB_CTX_new() -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<OsslLibCtx>(), FILE, LINE_ZALLOC_CTX)
-            .cast::<OsslLibCtx>();
-        if ctx.is_null() {
+        // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*ctx))` at
+        // `crypto/context.c:436`. The block is not a valid context until `context_init`
+        // publishes every slot, so it stays a `RawCtx` (whose `Drop` releases the block alone)
+        // through initialisation.
+        let Some(ctx) = RawCtx::<OsslLibCtx>::zalloc() else {
+            return ptr::null_mut();
+        };
+        if !context_init(ctx.as_ptr()) {
+            // The owner's `Drop` is the authority's failed-`context_init` release at
+            // `crypto/context.c:439`: the block alone, never a slot teardown.
             return ptr::null_mut();
         }
-        if !context_init(ctx) {
-            // SAFETY: `ctx` came from `CRYPTO_zalloc` above, was never published,
-            // and `context_init` failed -- so nothing else holds it and it is
-            // released exactly once, here.
-            unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_INIT_FAILURE) };
-            return ptr::null_mut();
-        }
-        ctx.cast::<c_void>()
+        // Success publishes the stable address; the C lifecycle then owns it until
+        // `OSSL_LIB_CTX_free` releases it at its own `:495` site.
+        ctx.into_raw().cast::<c_void>()
     })
 }
 
