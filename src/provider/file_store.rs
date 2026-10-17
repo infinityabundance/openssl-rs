@@ -78,6 +78,7 @@ use crate::runtime::err::{
     ERR_clear_last_mark, ERR_peek_last_error, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strncasecmp};
 use crate::selftest::OsslCallback;
 use crate::x509::x509_cmp::X509_NAME_hash_ex;
@@ -303,46 +304,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-/// An owned seam block that is not the context -- a helper-allocated buffer the authority owns and
-/// releases with a plain `CRYPTO_free(ptr, NULL, 0)` (the `i2d_X509_NAME`/`X509_NAME_oneline`
-/// printer output and the `file_name_to_uri` name buffer).
-///
-/// It stays a `CRYPTO_*`-seam block released by `Drop` at the authority's own (NULL, 0) site, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes it. It is adopted with [`Self::take`]
-/// from the helper's answer.
-struct OwnedBlock {
-    ptr: *mut c_void,
-}
-
-impl OwnedBlock {
-    /// Adopt a block the seam answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
-    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
-    /// release.
-    unsafe fn take(ptr: *mut c_void) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock { ptr })
-        }
-    }
-
-    /// The block's address, for the printer/callback that reads it.
-    fn as_ptr(&self) -> *mut c_void {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBlock {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr, ptr::null(), 0) };
-    }
-}
+// The shared [`OwnedBuf`] owns a helper-allocated buffer the authority releases with a plain
+// `CRYPTO_free(ptr, NULL, 0)` (the `i2d_X509_NAME`/`X509_NAME_oneline` printer output and the
+// `file_name_to_uri` name buffer). The block stays a `CRYPTO_*`-seam block released at (NULL, 0),
+// so a caller-installed `CRYPTO_set_mem_functions` hook observes it.
 
 // SAFETY: (a) holds: `destroy_body` is `free_file_ctx` minus the block -- it releases exactly the
 // context's own URI and (for a stream context) decoder chain and strings, each NULL-tolerant, and
@@ -755,7 +720,11 @@ unsafe extern "C" fn file_set_ctx_params(
         if !p.propq.is_null() {
             // SAFETY: `ctx` is live and owns `propq`.
             unsafe {
-                drop(OwnedBlock::take((*ctx).file.propq.cast::<c_void>()));
+                drop(OwnedBuf::adopt_plain(
+                    (*ctx).file.propq.cast::<u8>(),
+                    ptr::null(),
+                    0,
+                ));
                 (*ctx).file.propq = ptr::null_mut();
                 // SAFETY: `p.propq` is a live descriptor; `propq` is this row's out-slot.
                 if OSSL_PARAM_get_utf8_string(p.propq, &mut (*ctx).file.propq, 0) == 0 {
@@ -766,7 +735,11 @@ unsafe extern "C" fn file_set_ctx_params(
         if !p.type_.is_null() {
             // SAFETY: `ctx` is live and owns `input_type`.
             unsafe {
-                drop(OwnedBlock::take((*ctx).file.input_type.cast::<c_void>()));
+                drop(OwnedBuf::adopt_plain(
+                    (*ctx).file.input_type.cast::<u8>(),
+                    ptr::null(),
+                    0,
+                ));
                 (*ctx).file.input_type = ptr::null_mut();
                 // SAFETY: `p.type_` is a live descriptor; `input_type` is this row's out-slot.
                 if OSSL_PARAM_get_utf8_string(p.type_, &mut (*ctx).file.input_type, 0) == 0 {
@@ -825,7 +798,7 @@ unsafe extern "C" fn file_set_ctx_params(
             // SAFETY: the site is a compile-time constant; `msg` is NUL-terminated.
             unsafe { raise_site_data(&err_sites::PROV_FILE_STORE_426, msg.as_ptr()) };
             // SAFETY: `str_` was allocated by the printer above; `Drop` is its single release.
-            unsafe { drop(OwnedBlock::take(str_.cast::<c_void>())) };
+            unsafe { drop(OwnedBuf::adopt_plain(str_.cast::<u8>(), ptr::null(), 0)) };
             // SAFETY: `x509_name` is live and this call owns it.
             unsafe { X509_NAME_free(x509_name) };
             return 0;
@@ -1131,7 +1104,7 @@ unsafe fn file_load_file(
 /// # Safety
 /// `ctx` must be a live context with a non-NULL `uri`; `name` must be non-NULL and
 /// NUL-terminated.
-unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> Option<OwnedBlock> {
+unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> Option<OwnedBuf> {
     // SAFETY: `ctx.uri` is NUL-terminated per the contract.
     let pathsep: *const c_char = if unsafe { ossl_ends_with_dirsep((*ctx).uri) } != 0 {
         c"".as_ptr()
@@ -1143,7 +1116,13 @@ unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> Option<O
         unsafe { sys::strlen((*ctx).uri) + sys::strlen(pathsep) + sys::strlen(name) + 1 };
     // SAFETY: the allocation asks for a zeroed block of the computed size, and this frame is its
     // first and only owner.
-    let data = unsafe { OwnedBlock::take(CRYPTO_zalloc(calculated_length, ptr::null(), 0)) }?;
+    let data = unsafe {
+        OwnedBuf::adopt_plain(
+            CRYPTO_zalloc(calculated_length, ptr::null(), 0).cast(),
+            ptr::null(),
+            0,
+        )
+    }?;
     let raw = data.as_ptr().cast::<c_char>();
     // SAFETY: `raw` is a live buffer of `calculated_length` bytes; the three sources are
     // NUL-terminated, so `OPENSSL_strlcat` writes within it.
@@ -1245,7 +1224,7 @@ unsafe fn file_load_dir_entry(
         unsafe { OSSL_PARAM_construct_utf8_string(OSSL_OBJECT_PARAM_DATA, ptr::null_mut(), 0) },
         OSSL_PARAM_construct_end(),
     ];
-    let mut newname: Option<OwnedBlock> = None;
+    let mut newname: Option<OwnedBuf> = None;
 
     loop {
         // SAFETY: `ctx` is live.
@@ -1291,7 +1270,9 @@ unsafe fn file_load_dir_entry(
         }
     }
 
-    object[1].data = newname.as_ref().map_or(ptr::null_mut(), OwnedBlock::as_ptr);
+    object[1].data = newname
+        .as_ref()
+        .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_void>());
     // SAFETY: `newname` is a NUL-terminated URI.
     object[1].data_size = unsafe {
         sys::strlen(
