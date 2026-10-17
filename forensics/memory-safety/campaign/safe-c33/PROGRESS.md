@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1251** passed
+`cargo test --lib` (must pass; the established baseline is **1256** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -739,6 +739,28 @@ package.
   after correction. Gate: `fmt` 0, clippy 0, **1251 passed / 18 ignored**,
   adv-probe **18/18**. Per-file campaign: **1 of 761** PARTIAL files audited.
 
+### Subphase 68 — `evp/pkey_ctx.rs` audit and soundness fixes
+
+- Audit: 1,024 production sites in 462 groups — **178 ESTABLISHED, 277
+  CONTRACTED, 7 UNATTRIBUTED**. Highest-risk CONTRACTED group: `EVP_PKEY_CTX_dup`.
+- Fixes:
+  1. `EVP_PKEY_meth_copy` identity-guards before `copy_nonoverlapping`
+     (authority `*dst = *src` is a no-op on self).
+  2. `EVP_PKEY_CTX_get_signature_md` refuses a NULL out-parameter before both
+     the provider and legacy roads; the authority dereferences it on both, so
+     the refusal is a §17 divergence.
+  3. `fix_distid_len` refuses NULL `p2` and writes nothing (§17).
+  4. `EVP_PKEY_CTX_dup` takes each method reference (kex, signature,
+     asym-cipher, KEM, peerkey) **before** storing the pointer, so a failed or
+     denied `up_ref` can no longer make `Drop` release a reference never taken.
+     The test observes refcount 3 inside `dupctx`, 2 after the failed dup and 1
+     after freeing the source.
+- Adversarial review **FAILED twice** (legacy-road guard placement, a
+  non-discriminating dup test) and **PASSED** after fixes.
+- Gate: `fmt` 0, clippy 0, **1256 passed / 18 ignored**, adv-probe **18/18**;
+  Phase-2 ABI **11/11**, Phase-7 **19/19**. Per-file campaign: **2 of 761**
+  PARTIAL files audited, both with real defects fixed.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -916,7 +938,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `e68008e03` (digest copy soundness fixes merged)
+**Last observed HEAD:** `00d53a71e` (pkey_ctx soundness fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
