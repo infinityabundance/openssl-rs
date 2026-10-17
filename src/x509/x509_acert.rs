@@ -119,6 +119,44 @@ const FILE: &core::ffi::CStr = c"crypto/x509/x509_acert.c";
 /// `X509_ACERT_add_attr_nconf`'s `OPENSSL_free(att_data)` at `x509_acert.c:295`.
 const LINE_FREE_ATTDATA: c_int = 295;
 
+/// The `att_data` block `i2d_ASN1_TYPE` writes to its out-parameter.
+///
+/// The authority releases it with the plain `OPENSSL_free(att_data)` at `x509_acert.c:295`, on
+/// both the success path and the `ret == 0` path. This handle owns the block from the encoder's
+/// out-parameter to that release, so its `Drop` is the block's single release at the authority's
+/// own coordinate. NULL is the empty state (the encoder may refuse and leave the slot NULL), and
+/// the seam's `CRYPTO_free` treats it as a no-op, exactly as the authority's unconditional
+/// `OPENSSL_free(NULL)`.
+struct AttDataBuf {
+    ptr: *mut c_uchar,
+}
+
+impl AttDataBuf {
+    /// Adopt the encoder's out-parameter.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's allocator seam produced in full (not a
+    /// sub-range) and this frame exclusively owns; nothing else will release it. `Drop`'s
+    /// `CRYPTO_free` is its single release.
+    unsafe fn adopt(ptr: *mut c_uchar) -> AttDataBuf {
+        AttDataBuf { ptr }
+    }
+
+    /// The block's address, typed for the attribute call that reads it.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for AttDataBuf {
+    /// The authority's own `OPENSSL_free(att_data)` (`x509_acert.c:295`).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took in (or NULL, the authority's no-op) and
+        // `Drop` runs once, so this is its single release at the authority's own coordinate.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_ATTDATA) };
+    }
+}
+
 /// One `x509_acert.c` raise coordinate, declared locally (see the module doc).
 const fn x509_acert_site(line: c_int, func: &'static core::ffi::CStr, reason: c_int) -> ErrSite {
     ErrSite {
@@ -1389,21 +1427,25 @@ pub unsafe extern "C" fn X509_ACERT_add_attr_nconf(
             if asn1.is_null() {
                 return 0;
             }
-            let mut att_data: *mut c_uchar = ptr::null_mut();
-            // SAFETY: `asn1` is live and `att_data` is a null slot.
-            let att_len = unsafe { i2d_ASN1_TYPE(asn1, &raw mut att_data) };
+            let mut att_data_slot: *mut c_uchar = ptr::null_mut();
+            // SAFETY: `asn1` is live and `att_data_slot` is a null slot, so the encoder allocates.
+            let att_len = unsafe { i2d_ASN1_TYPE(asn1, &raw mut att_data_slot) };
+            // SAFETY: `att_data_slot` is the block the encoder just allocated for this call (or
+            // NULL when it refused), exclusively owned here and released by the handle's `Drop`.
+            let att_data = unsafe { AttDataBuf::adopt(att_data_slot) };
             // SAFETY: `acert` is live; `att_data`/`att_len` are the encoding just made.
             let ret = unsafe {
                 X509_ACERT_add1_attr_by_txt(
                     acert,
                     (*v).name,
                     V_ASN1_SEQUENCE as c_int,
-                    att_data,
+                    att_data.as_ptr(),
                     att_len,
                 )
             };
-            // SAFETY: `att_data` came from this allocator and is not owned elsewhere.
-            unsafe { CRYPTO_free(att_data.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_ATTDATA) };
+            // The authority's own `OPENSSL_free(att_data)` (`x509_acert.c:295`), before
+            // `ASN1_TYPE_free`; the handle's `Drop` is the block's single release.
+            drop(att_data);
             // SAFETY: `asn1` is this call's own.
             unsafe { ASN1_TYPE_free(asn1) };
             if ret == 0 {
