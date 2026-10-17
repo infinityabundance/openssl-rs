@@ -88,13 +88,13 @@ use crate::passphrase::{
 };
 use crate::provider::{ossl_provider_ctx, OSSL_PROVIDER_get0_provider_ctx};
 use crate::runtime::bio::core_bio::{ossl_core_bio_free, ossl_core_bio_new_from_bio};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_shift, OpenSslStack,
@@ -129,63 +129,6 @@ extern "C" {
 // Ownership of the three objects and the two plain blocks
 // ---------------------------------------------------------------------------
 
-/// An owned `#[repr(C)]` object block.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out
-/// and takes it back), but its *ownership* is this type: [`Self::new`] allocates it through the
-/// crate's allocator seam and `Drop` is its single release. It stays a `CRYPTO_zalloc` at
-/// `size_of::<T>()` rather than a Rust `Box`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's, which a Rust global allocation would hide.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
-    /// when it answers NULL.
-    fn new() -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
-        // of `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), ptr::null(), 0).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block this file owns, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`])
-    /// followed by the block release, through the same allocator seam the block was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is
-        // its single release; `Drop` runs once, and `destroy_body` is the authority's own free
-        // body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0);
-        }
-    }
-}
-
 // The shared [`OwnedBuf`] owns a `CRYPTO_*`-seam block that is not one of the file's objects
 // (here the `CRYPTO_strdup` property copy and the `i2d_X509_NAME` name buffer), released at the
 // authority's own (NULL, 0) site, so a caller-installed `CRYPTO_set_mem_functions` hook observes
@@ -197,7 +140,7 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 // SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_CTX` has no destructor body beyond
 // `ossl_store_close_it`, which is run explicitly at close, so no member is released here and never
 // the enclosing block. (b) holds trivially: the body touches nothing, so an all-zero context is
-// valid -- what the safe `OwnedCtx::new` leans on.
+// valid -- what the safe `OwnedCtx::zalloc` leans on.
 unsafe impl CtxDestroy for OsslStoreCtx {
     /// Empty: `OSSL_STORE_CTX` has no destructor body beyond `ossl_store_close_it`, which
     /// `OSSL_STORE_close` runs explicitly to return its answer, so the block release is the only
@@ -207,7 +150,7 @@ unsafe impl CtxDestroy for OsslStoreCtx {
 
 // SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_SEARCH_free` is a bare block free, so no
 // member is released here and never the enclosing block. (b) holds trivially: the body touches
-// nothing, so an all-zero search is valid -- what the safe `OwnedCtx::new` leans on.
+// nothing, so an all-zero search is valid -- what the safe `OwnedCtx::zalloc` leans on.
 unsafe impl CtxDestroy for OsslStoreSearch {
     /// Empty: `OSSL_STORE_SEARCH_free` is a bare block free.
     unsafe fn destroy_body(_ptr: *mut OsslStoreSearch) {}
@@ -216,7 +159,7 @@ unsafe impl CtxDestroy for OsslStoreSearch {
 // SAFETY: (a) holds: `destroy_body` is `OSSL_STORE_INFO_free` minus the block -- the member
 // selected by `type_`, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
 // all-zero info has `type_` unset, so the `_ => {}` arm releases nothing -- what the safe
-// `OwnedCtx::new` leans on.
+// `OwnedCtx::zalloc` leans on.
 unsafe impl CtxDestroy for OsslStoreInfo {
     unsafe fn destroy_body(ptr: *mut OsslStoreInfo) {
         // SAFETY: `ptr` is a live object per the trait contract.
@@ -948,7 +891,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         }
         // The context block, allocated through the crate's allocator seam; `Drop` is its single
         // release on every refusal below and `into_raw` hands it out on success.
-        let Some(ctx) = OwnedCtx::<OsslStoreCtx>::new() else {
+        let Some(ctx) = OwnedCtx::<OsslStoreCtx>::zalloc() else {
             break 'err;
         };
 
@@ -1751,7 +1694,7 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
 
     // The context block, allocated through the crate's allocator seam; `Drop` is its single
     // release on the refusal below and `into_raw` hands it out on success.
-    let Some(ctx) = OwnedCtx::<OsslStoreCtx>::new() else {
+    let Some(ctx) = OwnedCtx::<OsslStoreCtx>::zalloc() else {
         // SAFETY: the mark was set above.
         ERR_clear_last_mark();
         return ptr::null_mut();
@@ -1863,7 +1806,7 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_new(
     data: *mut c_void,
 ) -> *mut OsslStoreInfo {
     // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(info) = OwnedCtx::<OsslStoreInfo>::new() else {
+    let Some(info) = OwnedCtx::<OsslStoreInfo>::zalloc() else {
         return ptr::null_mut();
     };
 
@@ -2319,7 +2262,7 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_name(name: *mut c_void) -> *mut OsslStoreSearch {
     // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
     };
 
@@ -2342,7 +2285,7 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_issuer_serial(
     serial: *const c_void,
 ) -> *mut OsslStoreSearch {
     // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
     };
 
@@ -2368,7 +2311,7 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
 ) -> *mut OsslStoreSearch {
     // The object block, allocated through the crate's allocator seam; `Drop` releases it on the
     // two refusals below and `into_raw` hands it out on success.
-    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
     };
 
@@ -2418,7 +2361,7 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_alias(alias: *const c_char) -> *mut OsslStoreSearch {
     // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(search) = OwnedCtx::<OsslStoreSearch>::new() else {
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
     };
 
