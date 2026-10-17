@@ -60,6 +60,7 @@ use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::ASN1_BIT_STRING_it;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::ASN1_STRING_free;
 use crate::asn1::x_bignum::BIGNUM_it;
 use crate::asn1::x_int64::ZINT32_it;
@@ -72,7 +73,6 @@ use crate::ffc::params::{
     ossl_ffc_params_set_validate_params,
 };
 use crate::ffc::FfcParams;
-use crate::runtime::mem::CRYPTO_free;
 
 /// `DH_FLAG_TYPE_MASK` — `include/openssl/dh.h:110`. The word `DH_FLAG_TYPE_DH`/`_DHX` live in,
 /// and the mask `dh_cb` clears on every decoded object.
@@ -425,11 +425,21 @@ pub unsafe extern "C" fn d2i_DHxparams(
             return ptr::null_mut();
         }
 
-        let dhx = d2i_int_dhx(ptr::null_mut(), pp, length);
-        if dhx.is_null() {
+        // The decoded private structure is one block from the ASN.1 item machinery, which this
+        // call owns exclusively from here; the owner's `Drop` is its release at `dh_asn1.c:129`.
+        // The `vparams` member keeps its own explicit release below, because `p`/`q`/`g`/`j` are
+        // transferred out and a full destructor would release them a second time.
+        // SAFETY: `d2i_int_dhx` answers NULL or a single block the crate's allocator seam produced
+        // and this frame exclusively owns.
+        let Some(dhx_block) = OwnedBlock::<IntDhx942Dh>::from_raw(
+            d2i_int_dhx(ptr::null_mut(), pp, length),
+            FILE,
+            129,
+        ) else {
             DH_free(dh);
             return ptr::null_mut();
-        }
+        };
+        let dhx = dhx_block.as_ptr();
 
         if !a.is_null() {
             DH_free(*a);
@@ -451,11 +461,19 @@ pub unsafe extern "C" fn d2i_DHxparams(
             );
             ASN1_STRING_free((*(*dhx).vparams).seed);
             BN_free((*(*dhx).vparams).counter);
-            CRYPTO_free((*dhx).vparams.cast(), FILE, 125);
+            // SAFETY: `vparams` is the enclosing decoded structure's own member and this frame is
+            // its sole owner; the owner's `Drop` releases it once at `dh_asn1.c:125`.
+            drop(OwnedBlock::<IntDhvparams>::from_raw(
+                (*dhx).vparams,
+                FILE,
+                125,
+            ));
             (*dhx).vparams = ptr::null_mut();
         }
 
-        CRYPTO_free(dhx.cast(), FILE, 129);
+        // The authority's own release site; the owner drops here, before the flag updates, exactly
+        // as the free did.
+        drop(dhx_block);
         DH_clear_flags(dh, DH_FLAG_TYPE_MASK);
         DH_set_flags(dh, DH_FLAG_TYPE_DHX);
         dh
@@ -583,7 +601,9 @@ mod tests {
             assert!(!bq.is_null());
             assert_eq!(BN_cmp(bq, sq), 0);
             DH_free(back);
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // SAFETY: `der` is the block `i2d_DHparams` allocated and this test owns; the
+            // owner's `Drop` is its single release at the authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0));
 
             // DHxparams: p, q and g.
             let mut der: *mut c_uchar = ptr::null_mut();
@@ -598,7 +618,9 @@ mod tests {
             assert_eq!(BN_cmp(bq, sq), 0);
             assert_eq!(BN_cmp(bg, sg), 0);
             DH_free(back);
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // SAFETY: `der` is the block `i2d_DHxparams` allocated and this test owns; the
+            // owner's `Drop` is its single release at the authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0));
 
             DH_free(d);
         }

@@ -78,6 +78,42 @@ const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
 /// `OSSL_KDF_PARAM_ITER` — `include/openssl/core_names.h:290`, `"iter"`.
 const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
 
+/// A converted password buffer and its single, *cleansing* release.
+///
+/// `OPENSSL_asc2uni`/`OPENSSL_utf82uni` answer a fresh block the caller owns; the bytes are
+/// password material, so the authority releases them with `OPENSSL_clear_free(unipass, uniplen)`
+/// after cleansing exactly `uniplen` bytes. The owner records that length and the authority's
+/// release line, so `Drop` reproduces the same free at the same coordinates.
+struct OwnedUniPass {
+    ptr: *mut c_uchar,
+    len: usize,
+    line: c_int,
+}
+
+impl OwnedUniPass {
+    /// Adopt the conversion's block, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a fresh block of exactly `len` bytes produced by the crate's allocator
+    /// seam and owned exclusively by the caller; no other owner will release it.
+    unsafe fn take(ptr: *mut c_uchar, len: usize, line: c_int) -> Option<OwnedUniPass> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedUniPass { ptr, len, line })
+        }
+    }
+}
+
+impl Drop for OwnedUniPass {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the conversion's block this handle owns and has not released;
+        // `self.len` is its exact byte length, so the authority's own `CRYPTO_clear_free` cleanses
+        // those bytes and then releases the block at the recorded line.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `PKCS12_key_gen_asc_ex` — `crypto/pkcs12/p12_key.c:19-39`.
 ///
 /// # Safety
@@ -115,16 +151,28 @@ pub unsafe extern "C" fn PKCS12_key_gen_asc_ex(
             return 0;
         }
     }
-    // SAFETY: `unipass`/`uniplen` describe the conversion's own buffer, or are NULL/0; the rest of
-    // the arguments are forwarded under this function's contract.
+    // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
+    // owner's `Drop` is its single, cleansing release at `p12_key.c:37`.
+    let unipass = unsafe { OwnedUniPass::take(unipass, uniplen.max(0) as usize, 37) };
+    // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
+    // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass, uniplen, salt, saltlen, id, iter, n, out, md_type, ctx, propq,
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.ptr),
+            uniplen,
+            salt,
+            saltlen,
+            id,
+            iter,
+            n,
+            out,
+            md_type,
+            ctx,
+            propq,
         )
     };
-    // SAFETY: `unipass` is the conversion's own buffer of `uniplen` bytes (or NULL/0), and it is a
-    // password, so it is cleansed before release.
-    unsafe { CRYPTO_clear_free(unipass.cast(), uniplen.max(0) as usize, FILE.as_ptr(), 37) };
+    // The owner drops here, reproducing the authority's free after the KDF call.
+    drop(unipass);
     c_int::from(ret > 0)
 }
 
@@ -200,16 +248,28 @@ pub unsafe extern "C" fn PKCS12_key_gen_utf8_ex(
             return 0;
         }
     }
-    // SAFETY: `unipass`/`uniplen` describe the conversion's own buffer, or are NULL/0; the rest of
-    // the arguments are forwarded under this function's contract.
+    // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
+    // owner's `Drop` is its single, cleansing release at `p12_key.c:67`.
+    let unipass = unsafe { OwnedUniPass::take(unipass, uniplen.max(0) as usize, 67) };
+    // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
+    // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass, uniplen, salt, saltlen, id, iter, n, out, md_type, ctx, propq,
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.ptr),
+            uniplen,
+            salt,
+            saltlen,
+            id,
+            iter,
+            n,
+            out,
+            md_type,
+            ctx,
+            propq,
         )
     };
-    // SAFETY: `unipass` is the conversion's own buffer of `uniplen` bytes (or NULL/0), and it is a
-    // password, so it is cleansed before release.
-    unsafe { CRYPTO_clear_free(unipass.cast(), uniplen.max(0) as usize, FILE.as_ptr(), 67) };
+    // The owner drops here, reproducing the authority's free after the KDF call.
+    drop(unipass);
     c_int::from(ret > 0)
 }
 
