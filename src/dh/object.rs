@@ -808,8 +808,34 @@ pub(crate) unsafe fn ossl_dh_get0_nid(dh: *const Dh) -> c_int {
 mod adv_probe {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
+    use core::sync::atomic::AtomicUsize;
+
     use super::*;
+    use crate::dh::key::DH_set_default_method;
     use crate::ssl::adv_alloc::{self, Ev};
+
+    /// The partially built object `init` was handed, and the one `finish` then saw. Stored as
+    /// addresses so the probe can compare them with the release the allocator hook recorded
+    /// without reading the freed block.
+    static INIT_CTX: AtomicUsize = AtomicUsize::new(0);
+    static FINISH_CTX: AtomicUsize = AtomicUsize::new(0);
+    /// How many times the method table's `finish` ran. The failure path must run it exactly once.
+    static FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// `int (*init)(DH *)` that refuses after the constructor has allocated and populated the
+    /// object. It records the object it was handed and answers 0, reaching `dh_new_intern`'s
+    /// `err:` label rather than the pre-validation refusal arms.
+    unsafe extern "C" fn fail_init(dh: *mut Dh) -> c_int {
+        INIT_CTX.store(dh as usize, Ordering::SeqCst);
+        0
+    }
+
+    /// `int (*finish)(DH *)` that records the object the destructor body was handed and succeeds.
+    unsafe extern "C" fn finish_counter(dh: *mut Dh) -> c_int {
+        FINISH_CTX.store(dh as usize, Ordering::SeqCst);
+        FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
 
     #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
     #[test]
@@ -868,6 +894,135 @@ mod adv_probe {
         );
         // SAFETY: `live` is this probe's own object and holds one reference.
         unsafe { DH_free(live) };
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// Later-initialisation failure court: the context allocation succeeds, then the method's
+    /// `init` refuses, so `dh_new_intern` must run the method's `finish` and release the same
+    /// partially built block exactly once.
+    ///
+    /// The allocation-refusal arm is `dh_new_refused_alloc_returns_null_without_free`. The
+    /// lock-null arm is unreachable in this crate (`CRYPTO_THREAD_lock_new` is `Box`-based) and
+    /// `CRYPTO_new_ex_data` failure is not injectable through the CRYPTO hook; neither is claimed
+    /// here.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dh_method_init_failure_runs_partial_cleanup() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dh>();
+        INIT_CTX.store(0, Ordering::SeqCst);
+        FINISH_CTX.store(0, Ordering::SeqCst);
+        FINISH_CALLS.store(0, Ordering::SeqCst);
+
+        // A hand-built, fully initialised table: every unused slot is NULL/None and `flags` is the
+        // authority's zero. It lives on this frame and is uninstalled before this test returns.
+        let method = DhMethod {
+            name: ptr::null_mut(),
+            generate_key: None,
+            compute_key: None,
+            bn_mod_exp: None,
+            init: Some(fail_init),
+            finish: Some(finish_counter),
+            flags: 0,
+            app_data: ptr::null_mut(),
+            generate_params: None,
+        };
+
+        // SAFETY: the getter takes no pointers.
+        let saved = DH_get_default_method();
+        // SAFETY: `method` is a live table with the authority's layout, every member initialised,
+        // and it outlives the install/restore window below.
+        unsafe { DH_set_default_method(&method) };
+
+        adv_alloc::reset();
+        // SAFETY: `ossl_dh_new_ex(NULL)` reads no caller pointer beyond the NULL library context
+        // and the default table installed immediately above.
+        let dh = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        // Restore the process-global default immediately, before any assertion can fail.
+        // SAFETY: `saved` is the live table the getter answered before the install above.
+        unsafe { DH_set_default_method(saved) };
+
+        assert!(
+            dh.is_null(),
+            "a refused method init must make the constructor answer NULL"
+        );
+        // SAFETY: the getter takes no pointers.
+        assert!(
+            core::ptr::eq(DH_get_default_method(), saved),
+            "the default method must be restored before assertions"
+        );
+        assert_eq!(
+            FINISH_CALLS.load(Ordering::SeqCst),
+            1,
+            "the method's finish must run exactly once on the partially built object"
+        );
+
+        let init_ctx = INIT_CTX.load(Ordering::SeqCst);
+        assert_ne!(init_ctx, 0, "init must be handed the allocated object");
+        assert_eq!(
+            FINISH_CTX.load(Ordering::SeqCst),
+            init_ctx,
+            "finish must run on the same object init refused"
+        );
+
+        let ev = adv_alloc::events();
+        // The method's `init` failure also raises an error site, whose debug strings allocate at the
+        // `(NULL, 0)` coordinate. Those are error-queue bookkeeping, not context blocks, so the
+        // assertion is scoped to the context's own size and to the identity of the single release.
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            1,
+            "the failed constructor must forward exactly one Dh-sized allocation"
+        );
+        let freed: Vec<usize> = ev
+            .iter()
+            .filter_map(|e| match e {
+                Ev::Free { p } => Some(*p),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            freed.len(),
+            1,
+            "the partial cleanup must release exactly once"
+        );
+        assert_eq!(
+            freed[0], init_ctx,
+            "the sole release must be the partially built Dh block"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The restoration must leave a fully functional default path, not merely a stored pointer.
+        adv_alloc::reset();
+        // SAFETY: `DH_new` takes no arguments and reads the restored default table.
+        let live = unsafe { DH_new() };
+        assert!(
+            !live.is_null(),
+            "the restored default method must still construct a Dh"
+        );
+        assert_eq!(
+            adv_alloc::events()
+                .iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            1,
+            "the restored success path must allocate the Dh block once"
+        );
+        // SAFETY: `live` is this probe's own object and holds one reference.
+        unsafe { DH_free(live) };
+        assert_eq!(
+            adv_alloc::events()
+                .iter()
+                .filter(|e| matches!(e, Ev::Free { .. }))
+                .count(),
+            1,
+            "the restored success path must release once"
+        );
         adv_alloc::assert_no_double_free();
     }
 }
