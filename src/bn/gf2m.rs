@@ -1149,12 +1149,15 @@ mod tests {
     /// A `BIGNUM` from a hex string.
     fn hex(s: &str) -> *mut BigNum {
         let c = crate::bn::bignum::dup_cstring(s);
+        // SAFETY: `dup_cstring` produced this block through the crate's allocator seam and this
+        // frame is its only owner; the handle's `Drop` is its single release (a NULL answer is
+        // the empty state).
+        let c_owned = unsafe { crate::runtime::bio::owned::OwnedBlock::take(c.cast()) };
         let mut p: *mut BigNum = core::ptr::null_mut();
-        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live.
-        unsafe {
-            assert!(BN_hex2bn(&mut p, c) > 0);
-            crate::runtime::mem::CRYPTO_free(c.cast(), core::ptr::null(), 0);
-        }
+        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live for the duration of
+        // the call; the block itself is owned by `c_owned` and released when it drops.
+        unsafe { assert!(BN_hex2bn(&mut p, c) > 0) };
+        drop(c_owned);
         p
     }
 

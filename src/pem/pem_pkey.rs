@@ -57,6 +57,7 @@
 use core::cell::Cell;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
+use core::ptr::NonNull;
 
 use crate::asn1::d2i_pr::ossl_d2i_PrivateKey_legacy;
 use crate::asn1::i2d_evp::i2d_PrivateKey;
@@ -388,6 +389,16 @@ unsafe fn pem_read_bio_key_legacy(
         }
     }
     ERR_clear_last_mark();
+    // The reader published the two secure-heap blocks; from here to the authority's `err:` label
+    // this frame is their only owner. The payload handle is declared first so the two `Drop`s run
+    // in the authority's order -- `OPENSSL_secure_free(nm)` then `secure_clear_free(data, len)`.
+    // SAFETY: `PEM_bytes_read_bio[_secmem]` answered 1, so it published an exclusively owned
+    // secure-heap `data` block of `len` bytes to this frame.
+    let data_buf = unsafe { SecureData::adopt(data.cast(), len) };
+    // SAFETY: as above, it published the exclusively owned secure-heap `nm` block.
+    let nm_buf = unsafe { SecureName::adopt(nm.cast()) };
+    let data = data_buf.as_ptr::<c_uchar>();
+    let nm = nm_buf.as_ptr::<c_char>();
     p = data;
 
     let mut to_err = false;
@@ -538,34 +549,96 @@ unsafe fn pem_read_bio_key_legacy(
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PEM_PKEY_209) };
     }
-    // SAFETY: the two buffers are this call's own.
-    unsafe { legacy_err_out(ret, data, len, nm) };
+    // The authority's `err:` release, in its own order: the name, then the payload at its cleansed
+    // length, each through the handle's `Drop` at the authority's coordinate.
+    drop(nm_buf);
+    drop(data_buf);
     ret
 }
 
-/// The authority's `err:` label of [`pem_read_bio_key_legacy`] — `pem_pkey.c:210-213` — as the
-/// release half the several early exits share.
+/// The secure-heap block name `pem_read_bio_key_legacy` receives from
+/// `PEM_bytes_read_bio[_secmem]`.
 ///
-/// The name buffer is released with `OPENSSL_secure_free` and the data buffer with
-/// `OPENSSL_secure_clear_free`, both on the secure heap because
-/// `PEM_bytes_read_bio_secmem` allocated them there.
+/// The authority releases it with `OPENSSL_secure_free` at `pem_pkey.c:211`; NULL is the empty
+/// state (a refused output), and the seam's release is a no-op on NULL.
+struct SecureName {
+    ptr: Option<NonNull<c_void>>,
+}
+
+impl SecureName {
+    /// Adopt the name block the reader published on success.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a fresh buffer the matching `PEM_bytes_read_bio[_secmem]` call handed to
+    /// this frame and no other owner will release; this handle's `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut c_void) -> SecureName {
+        SecureName {
+            ptr: NonNull::new(ptr),
+        }
+    }
+
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.map_or(ptr::null_mut(), |p| p.as_ptr().cast::<T>())
+    }
+}
+
+impl Drop for SecureName {
+    /// `OPENSSL_secure_free(nm)` at `pem_pkey.c:211`.
+    fn drop(&mut self) {
+        if let Some(p) = self.ptr.take() {
+            // SAFETY: `p` is the secure-heap block this handle owns and has not released; this is
+            // its single release at the authority's own coordinate.
+            unsafe { CRYPTO_secure_free(p.as_ptr(), FILE.as_ptr(), LINE_SECURE_FREE_NM) };
+        }
+    }
+}
+
+/// The secure-heap payload `pem_read_bio_key_legacy` receives, with the length the authority's
+/// `OPENSSL_secure_clear_free(data, len)` cleanses.
 ///
-/// # Safety
-///
-/// `nm` is NULL or the name buffer; `data` is NULL or `len` bytes; both came from the
-/// matching reader.
-unsafe fn legacy_err_out(_ret: *mut EvpPkey, data: *mut c_uchar, len: c_long, nm: *mut c_char) {
-    // SAFETY: `nm` is NULL or a secure-heap buffer from the reader.
-    unsafe { CRYPTO_secure_free(nm.cast::<c_void>(), FILE.as_ptr(), LINE_SECURE_FREE_NM) };
-    // SAFETY: `data` is NULL or a secure-heap buffer of `len` bytes.
-    unsafe {
-        CRYPTO_secure_clear_free(
-            data.cast::<c_void>(),
-            len.max(0) as usize,
-            FILE.as_ptr(),
-            LINE_SECURE_CLEAR_FREE_DATA,
-        )
-    };
+/// Release and cleansing are one obligation here: the block is secret-bearing, so `Drop` is
+/// `CRYPTO_secure_clear_free` at `pem_pkey.c:212` over exactly the authority's `len.max(0)` bytes.
+struct SecureData {
+    ptr: Option<NonNull<c_void>>,
+    len: usize,
+}
+
+impl SecureData {
+    /// Adopt the payload block the reader published on success.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a fresh secure-heap block the matching `PEM_bytes_read_bio[_secmem]` call
+    /// handed to this frame whose allocation is `len` bytes (or NULL when the reader published
+    /// none); no other owner will release it.
+    unsafe fn adopt(ptr: *mut c_void, len: c_long) -> SecureData {
+        SecureData {
+            ptr: NonNull::new(ptr),
+            len: len.max(0) as usize,
+        }
+    }
+
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.map_or(ptr::null_mut(), |p| p.as_ptr().cast::<T>())
+    }
+}
+
+impl Drop for SecureData {
+    /// `OPENSSL_secure_clear_free(data, len)` at `pem_pkey.c:212`.
+    fn drop(&mut self) {
+        if let Some(p) = self.ptr.take() {
+            // SAFETY: `p` is the secure-heap block of `self.len` bytes this handle owns and has
+            // not released; this is its single release and cleansing at the authority's own
+            // coordinate.
+            unsafe {
+                CRYPTO_secure_clear_free(
+                    p.as_ptr(),
+                    self.len,
+                    FILE.as_ptr(),
+                    LINE_SECURE_CLEAR_FREE_DATA,
+                )
+            };
+        }
+    }
 }
 
 /// `static EVP_PKEY *pem_read_bio_key(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u,

@@ -85,7 +85,7 @@
 use core::ffi::{c_char, c_int, c_uchar, c_uint};
 use core::ptr;
 
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 
 /// `OPENSSL_FILE` at the three allocation sites in `crypto/evp/encode.c`.
 const FILE_ENCODE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/encode.c".as_ptr();
@@ -208,6 +208,21 @@ const _: () = {
     assert!(core::mem::size_of::<EvpEncodeCtx>() == 96);
 };
 
+/// `EVP_ENCODE_CTX_free` has no member releases: the context is the block.
+///
+/// (a) The body is empty and never releases the enclosing block, which [`OwnedCtx`]'s `Drop`
+/// releases at `:125`; and (b) an all-zero `EvpEncodeCtx` is the state `EVP_ENCODE_CTX_new`
+/// publishes (every scalar and `enc_data` byte zero), so the safe zeroed constructor may run it.
+// SAFETY: the trait's two obligations are established here -- the body is empty and never releases
+// the block, and an all-zero context is the authority's own constructor state.
+unsafe impl CtxDestroy for EvpEncodeCtx {
+    const FILE: *const c_char = FILE_ENCODE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
+    const LINE_FREE: c_int = LINE_FREE_CTX;
+
+    unsafe fn destroy_body(_ctx: *mut EvpEncodeCtx) {}
+}
+
 /// `conv_ascii2bin(a, table)` — `crypto/evp/encode.c:102-107`.
 ///
 /// The `CHARSET_EBCDIC` arm is absent from this profile, so the byte is tested and indexed
@@ -245,12 +260,10 @@ pub(crate) unsafe fn evp_encode_ctx_set_flags(ctx: *mut EvpEncodeCtx, flags: c_u
 /// `EVP_ENCODE_CTX *EVP_ENCODE_CTX_new(void)`
 #[no_mangle]
 pub extern "C" fn EVP_ENCODE_CTX_new() -> *mut EvpEncodeCtx {
-    CRYPTO_zalloc(
-        core::mem::size_of::<EvpEncodeCtx>(),
-        FILE_ENCODE,
-        LINE_ZALLOC_CTX,
-    )
-    .cast::<EvpEncodeCtx>()
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*ctx), FILE, 120)`; the
+    // zeroed image is the context's own initial state, and `into_raw` publishes the stable
+    // pointer `EVP_ENCODE_CTX_free` reclaims.
+    OwnedCtx::<EvpEncodeCtx>::zalloc().map_or_else(ptr::null_mut, OwnedCtx::into_raw)
 }
 
 /// `void EVP_ENCODE_CTX_free(EVP_ENCODE_CTX *ctx)`
@@ -259,8 +272,10 @@ pub extern "C" fn EVP_ENCODE_CTX_new() -> *mut EvpEncodeCtx {
 /// `ctx` must be NULL or a pointer from [`EVP_ENCODE_CTX_new`], not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_ENCODE_CTX_free(ctx: *mut EvpEncodeCtx) {
-    // SAFETY: the caller's contract; `CRYPTO_free` accepts NULL.
-    unsafe { CRYPTO_free(ctx.cast(), FILE_ENCODE, LINE_FREE_CTX) };
+    // SAFETY: `ctx` is NULL or a live context this file allocated and has not released per the
+    // contract; the reclaimed handle's `Drop` is the authority's `OPENSSL_free(ctx)` at `:125`,
+    // and its empty body performs the unit's whole destructor.
+    drop(unsafe { OwnedCtx::<EvpEncodeCtx>::from_raw(ctx) });
 }
 
 /// `int EVP_ENCODE_CTX_copy(EVP_ENCODE_CTX *dctx, const EVP_ENCODE_CTX *sctx)`
