@@ -136,10 +136,9 @@ use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free, BIO_write, Bio};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{
-    CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_length, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::slh_dsa::key::{
     ossl_slh_dsa_key_get_priv, ossl_slh_dsa_key_get_priv_len, ossl_slh_dsa_key_get_pub,
     ossl_slh_dsa_key_get_pub_len,
@@ -312,60 +311,6 @@ pub(crate) struct Key2anyCtx {
 // Ownership of the blobs and the context block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned heap block allocated through the crate's allocator seam at this unit's own `(NULL, 0)`.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_memdup` at the authority's exact size — a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook — and only its *ownership* is this type: [`Self::new`] allocates
-/// a `WPACKET` output buffer, [`Self::adopt`] takes in a `k2d`'s DER blob, `Drop` is the block's
-/// single release, and [`Self::into_raw`] hands it to a consumer that takes it over
-/// (`PKCS8_pkey_set0`, `X509_PUBKEY_set0_param`, `ASN1_STRING_set0`). A NULL pointer is a valid,
-/// empty block whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, NULL, 0)`, or `None` when the allocator answers NULL.
-    fn new(len: usize) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, ptr::null(), 0).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr: raw })
-    }
-
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at this unit's own
-    /// `(NULL, 0)`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar) -> OwnedBuf {
-        OwnedBuf { ptr }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
-    }
-}
-
 /// The authority's `key2any_freectx` body for the context, without the block's own release, which
 /// [`OwnedCtx`]'s `Drop` performs.
 ///
@@ -496,8 +441,9 @@ unsafe fn key_to_p8info(
     if !p8info.is_null() {
         // SAFETY: `key` and `k2d` are the caller's per the contract; `der` is this frame's.
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
-        // SAFETY: `k2d` allocated `der` through the seam and no other owner holds it.
-        let der = unsafe { OwnedBuf::adopt(der) };
+        // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
+        // it.
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
         // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
@@ -628,8 +574,9 @@ unsafe fn key_to_pubkey(
     if !xpk.is_null() {
         // SAFETY: `key`/`k2d` are the caller's; `der` is this frame's.
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
-        // SAFETY: `k2d` allocated `der` through the seam and no other owner holds it.
-        let der = unsafe { OwnedBuf::adopt(der) };
+        // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
+        // it.
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
         // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
@@ -953,7 +900,7 @@ unsafe extern "C" fn key_to_type_specific_der_bio(
 
     // SAFETY: `k2d` succeeded, so `der` is a live block it allocated through the seam and no other
     // owner holds it.
-    let der = unsafe { OwnedBuf::adopt(der) };
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
     // SAFETY: `out` is live and `der` is `derlen` readable bytes.
     let ret = unsafe { BIO_write(out, der.as_ptr().cast::<c_void>(), derlen) };
     // `der` is released by its `Drop` at this unit's own `(NULL, 0)`.
@@ -1835,7 +1782,7 @@ unsafe extern "C" fn prepare_rsa_params(
                     }
                 } else {
                     // SAFETY: `str_sz` is the length the first pass measured.
-                    str = OwnedBuf::new(str_sz);
+                    str = OwnedBuf::new_plain_released(str_sz, ptr::null(), 0, ptr::null(), 0);
                     let init_ok = match str.as_ref() {
                         Some(buf) => {
                             // SAFETY: `pkt` is live, `buf` is `str_sz` writable bytes.

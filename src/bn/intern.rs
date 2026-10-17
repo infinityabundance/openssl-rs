@@ -95,57 +95,13 @@ use crate::runtime::err::err_sites::{
     BN_INTERN_97,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority's `__FILE__` for every raise site this unit defines, and the line the
 /// generated table records instead — `raise_site` reads the site, and these two arguments
 /// exist only so the allocation sites can name their own caller.
 const FILE: &CStr = c"crypto/bn/bn_intern.c";
 const LINE: c_int = 0;
-
-/// An owned buffer from this unit's `CRYPTO_malloc`/`CRYPTO_free` seam.
-///
-/// The block keeps the authority's exact allocation size and `file`/`line` (observable to
-/// a caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type.
-/// [`Self::new`] allocates it, `Drop` is its single plain release, and [`Self::into_raw`]
-/// hands the finished wNAF digit buffer to the caller, who owns it per the function's
-/// `# Safety` section.
-struct OwnedBuf {
-    ptr: *mut u8,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
-    fn new(len: usize) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, FILE.as_ptr(), LINE).cast::<u8>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr: raw })
-        }
-    }
-
-    /// The start of the block, for the raw calls that write it.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller who received it.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release through the seam it was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released, at the
-        // authority's own `file`/`line`; `CRYPTO_free` accepts NULL.
-        unsafe { crate::runtime::mem::CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), LINE) };
-    }
-}
 
 /// `signed char *bn_compute_wNAF(const BIGNUM *scalar, int w, size_t *ret_len)` —
 /// `crypto/bn/bn_intern.c:22-134`.
@@ -190,7 +146,8 @@ pub(crate) unsafe fn bn_compute_wNAF(
     // SAFETY: `scalar` is null-or-live per this function's `# Safety` section.
     if unsafe { BN_is_zero(scalar) } != 0 {
         // The one-byte block is a local owner until it is handed to the caller.
-        let Some(r) = OwnedBuf::new(1) else {
+        let Some(r) = OwnedBuf::new_plain_released(1, FILE.as_ptr(), LINE, FILE.as_ptr(), LINE)
+        else {
             return core::ptr::null_mut();
         };
         // SAFETY: `r` owns the one byte just allocated, and `ret_len` is writable.
@@ -241,7 +198,9 @@ pub(crate) unsafe fn bn_compute_wNAF(
 
     // `len + 1` is checked so an impossible wrapped request never reaches the allocator;
     // on that path no block is allocated and the answer is the authority's NULL.
-    let Some(r_buf) = len.checked_add(1).and_then(OwnedBuf::new) else {
+    let Some(r_buf) = len.checked_add(1).and_then(|len| {
+        OwnedBuf::new_plain_released(len, FILE.as_ptr(), LINE, FILE.as_ptr(), LINE)
+    }) else {
         return core::ptr::null_mut();
     };
     let r = r_buf.as_ptr();
