@@ -89,6 +89,7 @@ use crate::bn::bignum::{
     BN_bn2dec, BN_bn2hex, BN_dec2bn, BN_free, BN_hex2bn, BN_is_zero, BN_new, BN_num_bits, BigNum,
 };
 use crate::runtime::bio::iolib::BIO_puts;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
 use crate::runtime::bio::sys::{memchr, memcmp, memcpy, memset, strchr, strcmp, strlen, strncmp};
 use crate::runtime::bio::Bio;
@@ -129,28 +130,6 @@ use crate::x509::x_x509::X509;
 // ---------------------------------------------------------------------------
 // Ownership of a string or byte block, and of the `CONF_VALUE` object
 // ---------------------------------------------------------------------------
-
-/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
-/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
-///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
-/// block is a valid `Self`; this file builds its owner only through the `unsafe from_raw` reclaim
-/// route, not a `zalloc`-and-wrap constructor.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `#[repr(C)]` object block, reclaimed from the object's own destructor.
 ///
@@ -405,7 +384,8 @@ pub unsafe extern "C" fn X509V3_conf_free(conf: *mut ConfValue) {
 /// performs: the three member strings.
 // SAFETY: (a) holds: `destroy_body` is the authority's `CONF_VALUE` free body -- it releases
 // exactly the object's own `name`, `value` and `section` strings (each NULL-tolerant) and never the
-// enclosing block.
+// enclosing block. (b) holds: `ConfValue` is a `#[repr(C)]` record of raw pointers, so an all-zero
+// block is a valid value and the three `CRYPTO_free(NULL)` calls are no-ops.
 unsafe impl CtxDestroy for ConfValue {
     unsafe fn destroy_body(ptr: *mut ConfValue) {
         // SAFETY: `ptr` is live per the trait contract; each field is NULL or this structure's own.

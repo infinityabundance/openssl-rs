@@ -124,6 +124,7 @@ use crate::params::{
 use crate::provider::{ossl_provider_libctx, OsslProvider};
 use crate::rsa::backend::ossl_rsa_is_foreign;
 use crate::rsa::Rsa;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{
     bf_prefix::BIO_f_prefix,
@@ -384,30 +385,6 @@ const LINE_FREE_BN_BUFFER: c_int = 2248;
 // `EVP_PKEY_get_bn_param` and `EVP_PKEY_get1_encoded_public_key` manage by hand.
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for one of this file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `EVP_PKEY_free` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the key
-///   data, the ex-data block and the lock, each releaser the authority's own and accepting the
-///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
-///   `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the block is built through the staged
-/// [`RawPkey`] route ([`RawPkey::finish`] hands it to the C caller), so an all-zero block is
-/// **not** relied on as a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop`
-    /// performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned `EVP_PKEY` block.
 ///
 /// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
@@ -448,8 +425,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the key data, the ex-data block and the lock.
 // SAFETY: (a) holds: `destroy_body` is `EVP_PKEY_free` minus the block -- the key data, the
-// ex-data block and the lock, each releaser NULL-tolerant, never the enclosing block. The trait
-// makes no zero-validity claim: the object is built through the staged `RawPkey` route.
+// ex-data block and the lock, each releaser NULL-tolerant, never the enclosing block. (b) holds:
+// `EvpPkey` is a `#[repr(C)]` record of integers, raw pointers, atomics and the two pointer-only
+// `CryptoExData`/`EvpPkeyCache` records, so an all-zero block is a valid `EvpPkey`;
+// `evp_pkey_free_it` on it reads a NULL operation cache, a NULL legacy key and a NULL `keymgmt`, and
+// `CRYPTO_free_ex_data`/`CRYPTO_THREAD_lock_free` accept the zeroed ex-data and NULL lock.
 unsafe impl CtxDestroy for EvpPkey {
     unsafe fn destroy_body(ptr: *mut EvpPkey) {
         // SAFETY: `ptr` is a live record per the trait contract; every member is set because only a

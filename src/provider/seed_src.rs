@@ -81,6 +81,7 @@ use crate::rand::pool::{
     ossl_rand_pool_length, ossl_rand_pool_new, RandPool,
 };
 use crate::rand::unix::ossl_pool_acquire_entropy;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::owned_buf::OwnedBuf;
@@ -200,43 +201,6 @@ pub(crate) struct ProvSeedSrc {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the two RAND contexts and the `entropy`/`nonce` buffers they hold
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for one of this unit's `#[repr(C)]` contexts, without the block
-/// release [`OwnedCtx`]'s `Drop` performs. `FILE`/`LINE_ALLOC`/`LINE_FREE` are the authority's own
-/// `CRYPTO_*` coordinates, kept distinct so a caller-installed `CRYPTO_set_mem_functions` hook
-/// observes the release at the site the authority releases it.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`] builds
-/// the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (no member for
-///   `PROV_SEED_SRC`; the `entropy`/`nonce` buffers and the lock for `PROV_TEST_RNG`), every releaser
-///   the authority's own and accepting the not-yet-set NULL/zero state, and it **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// `__FILE__` for this context's `CRYPTO_*` calls.
-    const FILE: *const c_char;
-    /// `__LINE__` for the context's allocation.
-    const LINE_ALLOC: c_int;
-    /// `__LINE__` for the context's block release.
-    const LINE_FREE: c_int;
-
-    /// The authority's `*_free` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live context this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `#[repr(C)]` context block.
 ///

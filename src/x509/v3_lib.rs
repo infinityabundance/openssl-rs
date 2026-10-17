@@ -55,6 +55,7 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::layout::Asn1Item;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
@@ -188,29 +189,6 @@ unsafe impl Sync for X509V3ExtMethod {}
 // Ownership of the dynamic `X509V3_EXT_DYNAMIC` rows
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for one of the file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
-/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
-///   accepts the not-yet-set (NULL/zero) state -- and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
-/// block is a valid `Self`; this file's `OwnedCtx::new` is `CRYPTO_malloc`, and its caller fills the
-/// row before the owner can destroy it.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned `X509V3_EXT_DYNAMIC` row.
 ///
 /// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
@@ -274,7 +252,9 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// a copied row owns nothing itself, so only the block release is left.
 // SAFETY: (a) holds: `destroy_body` is the authority's no-op `ext_list_free` body -- the row owns
 // no releasable members -- and it never releases the enclosing block, which `OwnedCtx`'s `Drop`
-// owns. The trait makes no zero-validity claim.
+// owns. (b) holds: `X509V3ExtMethod` is a `#[repr(C)]` record of integers,
+// `Option<unsafe extern "C" fn>` callback slots and one raw pointer, so an all-zero block is a valid
+// value and the empty body is sound on it.
 unsafe impl CtxDestroy for X509V3ExtMethod {
     unsafe fn destroy_body(_ptr: *mut X509V3ExtMethod) {}
 }

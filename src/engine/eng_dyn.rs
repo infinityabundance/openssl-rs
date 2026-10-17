@@ -75,6 +75,7 @@ use crate::engine::eng_lib::{
 };
 use crate::engine::eng_list::{engine_add_dynamic_id, engine_remove_dynamic_id, ENGINE_add};
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::err_sites::{
     ENG_DYN_166, ENG_DYN_213, ENG_DYN_295, ENG_DYN_301, ENG_DYN_330, ENG_DYN_339, ENG_DYN_347,
     ENG_DYN_356, ENG_DYN_364, ENG_DYN_429, ENG_DYN_440, ENG_DYN_465, ENG_DYN_498, ENG_DYN_514,
@@ -301,31 +302,6 @@ static DYNAMIC_EX_DATA_IDX: AtomicI32 = AtomicI32::new(-1);
 // Ownership of the per-engine context and the strings it holds
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for a [`DynamicDataCtx`], without the block's own release,
-/// which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this unit allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs `dynamic_data_ctx_free_func`'s member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the DSO,
-///   the two owned names and the `dirs` stack, each releaser the authority's own and accepting the
-///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
-///   `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the block is built through the staged
-/// [`RawDataCtx`] route ([`RawDataCtx::finish`] hands it to the ENGINE's `ex_data`), so an all-zero
-/// block is **not** relied on as a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `dynamic_data_ctx_free_func` body, without the block release
-    /// [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned heap record of this unit.
 ///
 /// The block keeps the authority's layout and its exact allocator size/`file`/`line`, but its
@@ -365,8 +341,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 }
 
 // SAFETY: (a) holds: `destroy_body` is `dynamic_data_ctx_free_func` minus the block -- the DSO, the
-// two owned names and the `dirs` stack, each releaser NULL-tolerant, never the enclosing block. The
-// trait makes no zero-validity claim: the object is built through the staged `RawDataCtx` route.
+// two owned names and the `dirs` stack, each releaser NULL-tolerant, never the enclosing block.
+// (b) holds: `DynamicDataCtx` is a `#[repr(C)]` record of raw pointers, integers and
+// `Option<fn>`s, so an all-zero block is a valid value, and `destroy_body` is sound on it
+// (`DSO_free(NULL)`, two nullable `OwnedStr::adopt` and `OPENSSL_sk_pop_free(NULL)`).
 unsafe impl CtxDestroy for DynamicDataCtx {
     /// `dynamic_data_ctx_free_func`'s body (`:137-147`): the DSO, the two owned names and the
     /// `dirs` stack.
