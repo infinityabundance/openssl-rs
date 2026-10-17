@@ -61,6 +61,71 @@ const EVP_PKEY_KEY_PARAMETERS: c_int = 0x04 | 0x80;
 const EVP_PKEY_PUBLIC_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
 const EVP_PKEY_KEYPAIR: c_int = EVP_PKEY_PUBLIC_KEY | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
 
+/// An owned buffer produced by the PKCS#8 helpers' encoder/decoder seam.
+///
+/// `adopt` takes a block a helper allocated in full through the crate's allocator seam and
+/// `Drop` is its single release at the authority's own `(NULL, 0)` coordinates: the plain
+/// `CRYPTO_free(der, NULL, 0)` for the encoder's DER, or the cleansing
+/// `CRYPTO_clear_free(encoded_data, encoded_len, NULL, 0)` for the private key DER the decoder
+/// reads.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+    clear: bool,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBuf {
+    /// Adopt a block a helper allocated, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's allocator seam (or a helper using it)
+    /// allocated in full (not a sub-range); where `clear` is true, `len` is its exact extent
+    /// and is valid for the cleansing release. Every byte the caller reads is initialized,
+    /// this frame exclusively owns the block and has not released it, no other owner will
+    /// release it, and `file`/`line` are the authority's own release site.
+    unsafe fn adopt(
+        ptr: *mut c_uchar,
+        len: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr,
+                len,
+                clear,
+                file,
+                line,
+            })
+        }
+    }
+
+    /// The block's address, for the DER cursor that reads it.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, plain or cleansing, at the authority's own coordinates.
+    fn drop(&mut self) {
+        if self.clear {
+            // SAFETY: `self.ptr` is the block this handle owns, `self.len` is its allocation
+            // extent (the authority's own `encoded_len`), and `Drop` runs once, so this is its
+            // single cleansing release at the authority's own coordinates.
+            unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, self.file, self.line) };
+        } else {
+            // SAFETY: as above; the authority's own release on this path is the plain free.
+            unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+        }
+    }
+}
+
 /// `EVP_PKEY *evp_pkcs82pkey_legacy(const PKCS8_PRIV_KEY_INFO *p8, OSSL_LIB_CTX *libctx,
 /// const char *propq)` — `crypto/evp/evp_pkey.c:30-70`.
 ///
@@ -210,12 +275,18 @@ pub(crate) unsafe fn ossl_evp_pkey2pkcs8(pkey: *const EvpPkey) -> *mut Pkcs8Priv
             unsafe { OSSL_ENCODER_CTX_free(ctx) };
             return ptr::null_mut();
         }
-        let pp: *const c_uchar = der;
+        // SAFETY: `der` is the block `OSSL_ENCODER_to_data` allocated in full and `derlen`
+        // describes it; this frame owns it exclusively until the local drops below.
+        let der_owned = unsafe { OwnedBuf::adopt(der, derlen, false, ptr::null(), 0) };
+        let pp: *const c_uchar = der_owned
+            .as_ref()
+            .map_or(ptr::null(), |buf| buf.as_ptr().cast_const());
         let mut pp_mut = pp;
         // SAFETY: `pp_mut` is a readable cursor and `derlen` describes it.
         p8 = unsafe { d2i_PKCS8_PRIV_KEY_INFO(ptr::null_mut(), &raw mut pp_mut, derlen as c_long) };
-        // SAFETY: `der` is the buffer the encoder allocated.
-        unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+        // The authority releases the encoder's DER at its own `(NULL, 0)` site, before the
+        // `p8` null check; dropping the owner here keeps that order.
+        drop(der_owned);
         if p8.is_null() {
             // SAFETY: `ctx` is live.
             unsafe { OSSL_ENCODER_CTX_free(ctx) };
@@ -320,7 +391,16 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
         return ptr::null_mut();
     }
 
-    let mut p8_data: *const c_uchar = encoded_data;
+    // SAFETY: `encoded_data` is the block `i2d_PKCS8_PRIV_KEY_INFO` allocated in full,
+    // `encoded_len` is its exact extent (the authority's own cleansing length), and this frame
+    // owns it exclusively.
+    let Some(encoded) =
+        (unsafe { OwnedBuf::adopt(encoded_data, encoded_len as usize, true, ptr::null(), 0) })
+    else {
+        return ptr::null_mut();
+    };
+
+    let mut p8_data: *const c_uchar = encoded.as_ptr().cast_const();
     let mut len: usize = encoded_len as usize;
     let selection = EVP_PKEY_KEYPAIR | EVP_PKEY_KEY_PARAMETERS;
     // SAFETY: `pkey` is this frame's slot; the two strings are live and NUL-terminated.
@@ -365,15 +445,9 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
         pkey = unsafe { evp_pkcs82pkey_legacy(p8, libctx, propq) };
     }
 
-    // SAFETY: `encoded_data` is the buffer `i2d_PKCS8_PRIV_KEY_INFO` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            encoded_data.cast::<c_void>(),
-            encoded_len as usize,
-            ptr::null(),
-            0,
-        )
-    };
+    // The authority's cleansing release of the private key DER at its own `(NULL, 0)` site,
+    // before the decoder context is released; `Drop` is that release.
+    drop(encoded);
     // SAFETY: `dctx` is NULL or live.
     unsafe { OSSL_DECODER_CTX_free(dctx) };
     pkey
