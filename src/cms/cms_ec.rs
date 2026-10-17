@@ -47,12 +47,13 @@ use crate::evp::pkey_ctx::{
     EVP_PKEY_ECDH_KDF_NONE, EVP_PKEY_ECDH_KDF_X9_63,
 };
 use crate::evp::pmeth_gn::{EVP_PKEY_paramgen, EVP_PKEY_paramgen_init};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dh_cofactor_kdf, NID_dh_std_kdf, NID_undef, OBJ_find_sigid_algs,
     OBJ_find_sigid_by_algs, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{ossl_asn1_string_set_bits_left, CMS_SharedInfo_encode, CmsRecipientInfo};
 
@@ -65,103 +66,6 @@ const OSSL_MAX_NAME_SIZE: usize = 50;
 const OSSL_KEYMGMT_SELECT_ALL_PARAMETERS: c_int = 0x04 | 0x80;
 /// `INT_MAX` — `limits.h`.
 const INT_MAX: c_long = c_int::MAX as c_long;
-
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
-/// allocate it, `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that
-/// takes it over (`ASN1_STRING_set0`). [`Self::adopt`] takes in a block the crate allocated inside
-/// a helper (`CMS_SharedInfo_encode`, `i2d_X509_ALGOR`, `EVP_PKEY_get1_encoded_public_key`) so the
-/// failure paths that follow release what they built. A NULL pointer is a valid, empty buffer whose
-/// release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`der`, `penc`, `penc2`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)`, which zeroes `num` bytes first.
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `OPENSSL_clear_free(ptr, len)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// Adopt a plain block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `OPENSSL_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { super::cms_asn1::OPENSSL_clear_free(self.ptr, num) };
-            }
-        }
-    }
-}
 
 /// `EVP_PKEY *pkey_type2param(int ptype, const void *pval, OSSL_LIB_CTX *libctx,`
 /// `const char *propq)` — `cms_ec.c:20-71`.
@@ -542,7 +446,7 @@ unsafe fn ecdh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientI
     // The shared-info encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
     // failure paths below release what they built at the authority's own site.
     // SAFETY: `der_raw` is NULL or a live block the helper allocated and no one else owns.
-    der = Some(unsafe { OwnedBuf::adopt(der_raw, c"cms_ec.c".as_ptr(), 222) });
+    der = Some(unsafe { OwnedBuf::adopt_plain_nullable(der_raw, c"cms_ec.c".as_ptr(), 222) });
 
     if plen <= 0 {
         // SAFETY: the context and cipher are live.
@@ -695,7 +599,8 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             // The encoded public key is the helper's own `CRYPTO_malloc` block; it is adopted so the
             // failure path below releases what it built at the authority's own site.
             // SAFETY: `penc2_raw` is NULL or a live block the helper allocated and no one else owns.
-            let penc2 = unsafe { OwnedBuf::adopt(penc2_raw, c"cms_ec.c".as_ptr(), 289) };
+            let penc2 =
+                unsafe { OwnedBuf::adopt_plain_nullable(penc2_raw, c"cms_ec.c".as_ptr(), 289) };
             if enckeylen as c_long > INT_MAX || enckeylen == 0 {
                 // `penc2` releases its own block at the authority's own site on drop.
                 break 'body;
@@ -813,7 +718,8 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         // The shared-info encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
         // failure paths below release what they built at the authority's own site.
         // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
-        let penc_owned = unsafe { OwnedBuf::adopt(penc_raw, c"cms_ec.c".as_ptr(), 383) };
+        let penc_owned =
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_ec.c".as_ptr(), 383) };
 
         if penclen <= 0 {
             penc = Some(penc_owned);
@@ -837,7 +743,8 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         // The encoded identifier is the helper's own `CRYPTO_malloc` block; it is adopted so the
         // failure paths below release what they built at the authority's own site.
         // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
-        let penc_owned = unsafe { OwnedBuf::adopt(penc_raw, c"cms_ec.c".as_ptr(), 383) };
+        let penc_owned =
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_ec.c".as_ptr(), 383) };
         if penclen <= 0 {
             penc = Some(penc_owned);
             break 'body;

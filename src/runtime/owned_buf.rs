@@ -1,8 +1,10 @@
 //! Shared ownership for a crate-allocator byte block.
 //!
-//! This is the one owner for the `B-R1a` duplicate group: a `CRYPTO_malloc` block
-//! whose release is either the authority's plain `CRYPTO_free(ptr, file, line)`
-//! or its cleansing `CRYPTO_clear_free(ptr, num, file, line)`.
+//! This is the one owner for the `B-R1a`/`B-R1b`/`B-R3` duplicate groups: an
+//! allocator-seam block whose release is the authority's plain
+//! `CRYPTO_free(ptr, file, line)`, its cleansing `CRYPTO_clear_free(ptr, num,
+//! file, line)`, or its secure-heap `CRYPTO_secure_clear_free(ptr, num, file,
+//! line)`.
 //!
 //! The block stays a raw allocation through the crate's allocator seam: a Rust
 //! `Box`/`Vec` would hide both the allocation and its release from a
@@ -27,6 +29,9 @@ use core::ffi::{c_char, c_int, c_uchar, c_void};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::secure::{
+    CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
+};
 
 /// An owned block allocated through the crate's `CRYPTO_*` allocator seam.
 pub(crate) struct OwnedBuf {
@@ -44,6 +49,14 @@ enum Release {
     /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which
     /// zeroes `num` bytes before releasing the block.
     Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+    /// The authority's secure-heap cleansing
+    /// `CRYPTO_secure_clear_free(ptr, num, file, line)`, which zeroes the whole
+    /// usable allocation and releases it through the secure allocator.
+    SecureCleansed {
         num: usize,
         file: *const c_char,
         line: c_int,
@@ -89,7 +102,7 @@ impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for a block whose `Drop` cleanses exactly
     /// its allocation length, or `None` when the allocator answers NULL.
     pub(crate) fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<Self> {
-        Self::alloc_cleansed(len, len, file, line, line)
+        Self::alloc_cleansed(len, len, file, line, file, line)
     }
 
     /// `CRYPTO_malloc(len, file, alloc_line)` for a block whose `Drop` cleanses
@@ -104,8 +117,24 @@ impl OwnedBuf {
         if alloc_line == release_line {
             Self::new_cleansed(len, file, alloc_line)
         } else {
-            Self::alloc_cleansed(len, len, file, alloc_line, release_line)
+            Self::alloc_cleansed(len, len, file, alloc_line, file, release_line)
         }
+    }
+
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)` for a block whose `Drop`
+    /// cleanses exactly its allocation length at `release_file`/`release_line`,
+    /// or `None` when the allocator answers NULL.
+    ///
+    /// `B-R1b`'s cleansing wrapper records constant release coordinates that
+    /// differ from the allocation site, so the two pairs stay separate.
+    pub(crate) fn new_cleansed_released(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<Self> {
+        Self::alloc_cleansed(len, len, alloc_file, alloc_line, release_file, release_line)
     }
 
     /// `CRYPTO_zalloc(len, file, line)` for a block whose `Drop` cleanses exactly
@@ -141,6 +170,58 @@ impl OwnedBuf {
         })
     }
 
+    /// `CRYPTO_secure_malloc(len, file, line)` for a block whose `Drop` releases
+    /// through the authority's secure-heap cleansing
+    /// `CRYPTO_secure_clear_free(ptr, len, file, line)`, or `None` when the
+    /// allocator answers NULL.
+    ///
+    /// When the secure heap is not initialised the secure allocator falls back to
+    /// the plain seam, exactly as the authority does;
+    /// `CRYPTO_secure_clear_free` routes both provenances correctly.
+    pub(crate) fn new_secure_cleansed(
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `file` is NULL or a NUL-terminated C string at every call site.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            release: Release::SecureCleansed {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// `CRYPTO_secure_zalloc(len, file, line)` for a block whose `Drop` releases
+    /// through the authority's secure-heap cleansing
+    /// `CRYPTO_secure_clear_free(ptr, len, file, line)`, or `None` when the
+    /// allocator answers NULL.
+    pub(crate) fn new_secure_zalloc_cleansed(
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `file` is NULL or a NUL-terminated C string at every call site.
+        let raw = unsafe { CRYPTO_secure_zalloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            release: Release::SecureCleansed {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
     /// `CRYPTO_malloc(len, file, alloc_line)` for a block whose `Drop` cleanses
     /// `num` bytes at `file`/`release_line`, or `None` when the allocator answers
     /// NULL.
@@ -161,7 +242,7 @@ impl OwnedBuf {
             num <= len,
             "the cleansing length must not exceed the allocation"
         );
-        Self::alloc_cleansed(len, num, file, alloc_line, release_line)
+        Self::alloc_cleansed(len, num, file, alloc_line, file, release_line)
     }
 
     /// `CRYPTO_strdup(str_, file, line)`, or `None` when the helper answers NULL.
@@ -191,8 +272,10 @@ impl OwnedBuf {
     ///
     /// For a non-NULL `ptr` the caller must establish:
     ///
-    /// * **provenance** — the block came from the `CRYPTO_*` seam (not `Box`, `Vec`,
-    ///   `malloc`, or a foreign allocator), so `CRYPTO_free` is its valid release;
+    /// * **provenance** — the block came from the plain `CRYPTO_*` seam (not `Box`,
+    ///   `Vec`, `malloc`, a foreign allocator, or the secure heap), so `CRYPTO_free` is
+    ///   its valid release. A secure-heap pointer is **excluded**: releasing it
+    ///   through `CRYPTO_free` is undefined behaviour, not a fallback;
     /// * **allocation identity and extent** — `ptr` is the whole block's base, not a
     ///   sub-range or an interior pointer, and the extent is the allocation the
     ///   seam made;
@@ -225,9 +308,11 @@ impl OwnedBuf {
     ///
     /// For a non-NULL `ptr` the caller must establish:
     ///
-    /// * **provenance** — the block came from the `CRYPTO_*` seam (not `Box`, `Vec`,
-    ///   `malloc`, or a foreign allocator), so `CRYPTO_clear_free` is its valid
-    ///   release;
+    /// * **provenance** — the block came from the plain `CRYPTO_*` seam (not `Box`,
+    ///   `Vec`, `malloc`, a foreign allocator, or the secure heap), so
+    ///   `CRYPTO_clear_free` is its valid release. A secure-heap pointer is
+    ///   **excluded**: this arm performs a plain release after cleansing and does not
+    ///   carry the secure allocator's provenance;
     /// * **allocation identity and extent** — `ptr` is the whole block's base, not a
     ///   sub-range or an interior pointer, and `num <= allocated extent`;
     /// * **alignment** — it is aligned for the allocator's own release;
@@ -250,6 +335,92 @@ impl OwnedBuf {
             Some(Self {
                 ptr,
                 release: Release::Cleansed { num, file, line },
+            })
+        }
+    }
+
+    /// Adopt a plainly released block, treating NULL as the authority's empty
+    /// buffer. `Drop` then calls `CRYPTO_free(NULL, ...)`, the authority's no-op.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish the same conditions as
+    /// [`Self::adopt_plain`]: provenance from the `CRYPTO_*` seam, whole-block
+    /// identity and extent, alignment, initialization for any reads, exclusive
+    /// ownership, and the exact plain `CRYPTO_free` release site. A secure-heap
+    /// pointer is excluded here for the same reason as in [`Self::adopt_plain`].
+    pub(crate) unsafe fn adopt_plain_nullable(
+        ptr: *mut c_uchar,
+        file: *const c_char,
+        line: c_int,
+    ) -> Self {
+        Self {
+            ptr,
+            release: Release::Plain { file, line },
+        }
+    }
+
+    /// Adopt a secret block released cleansing over `num` bytes, treating NULL as
+    /// the authority's empty buffer. `Drop` then calls
+    /// `CRYPTO_clear_free(NULL, ...)`, the authority's no-op.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish the same conditions as
+    /// [`Self::adopt_cleansed`]: provenance from the `CRYPTO_*` seam, whole-block
+    /// identity and extent with `num <= allocated extent`, alignment, exclusive
+    /// ownership, and the exact cleansing `CRYPTO_clear_free` release site. A
+    /// secure-heap pointer is excluded here for the same reason as in
+    /// [`Self::adopt_cleansed`].
+    pub(crate) unsafe fn adopt_cleansed_nullable(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Self {
+        Self {
+            ptr,
+            release: Release::Cleansed { num, file, line },
+        }
+    }
+
+    /// Adopt a secure-heap block released cleansing over `num` bytes, or `None`
+    /// for NULL.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish:
+    ///
+    /// * **provenance** — the block is either (a) a live allocation from this
+    ///   module's secure heap, or (b) the exact plain-fallback block
+    ///   `CRYPTO_secure_malloc`/`CRYPTO_secure_zalloc` returned while the secure heap
+    ///   was uninitialised. `CRYPTO_secure_clear_free` is the release for both. An
+    ///   independently allocated plain `CRYPTO_malloc` block is **excluded** — the
+    ///   reverse of the exclusion in `adopt_plain`/`adopt_cleansed`; a plain block
+    ///   reaches this arm only through the secure allocator's own fallback;
+    /// * **allocation identity and extent** — `ptr` is the whole block's base, not a
+    ///   sub-range or an interior pointer, and `num <= allocated extent` (for the
+    ///   fallback case, that plain allocation's extent);
+    /// * **alignment** — it is aligned for the secure allocator's own release;
+    /// * **initialization** — the `num` bytes the caller reasons about are inside
+    ///   the allocation; the secure release cleanses the whole usable chunk and does
+    ///   not read those bytes for a decision;
+    /// * **exclusive ownership** — no other owner will release the block; this
+    ///   handle's `Drop` is its single release;
+    /// * **exact release** — `file`/`line` name the authority's own secure cleansing
+    ///   `CRYPTO_secure_clear_free` site for this block.
+    pub(crate) unsafe fn adopt_secure_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self {
+                ptr,
+                release: Release::SecureCleansed { num, file, line },
             })
         }
     }
@@ -289,11 +460,12 @@ impl OwnedBuf {
     fn alloc_cleansed(
         len: usize,
         num: usize,
-        file: *const c_char,
+        alloc_file: *const c_char,
         alloc_line: c_int,
+        release_file: *const c_char,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
+        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -301,7 +473,7 @@ impl OwnedBuf {
             ptr: raw,
             release: Release::Cleansed {
                 num,
-                file,
+                file: release_file,
                 line: release_line,
             },
         })
@@ -325,6 +497,15 @@ impl Drop for OwnedBuf {
                 // releases it and accepts NULL.
                 unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
             }
+            Release::SecureCleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the whole block a secure constructor allocated or
+                // `adopt_secure_cleansed` established as secure-allocator provenance
+                // (including that allocator's documented plain fallback); this handle has
+                // not released it. `CRYPTO_secure_clear_free` cleanses
+                // the whole usable secure chunk, routes its documented plain fallback,
+                // and accepts NULL.
+                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
         }
     }
 }
@@ -332,6 +513,10 @@ impl Drop for OwnedBuf {
 #[cfg(test)]
 mod tests {
     use super::OwnedBuf;
+    use crate::runtime::secure::{
+        test_arena_bytes, test_offset_of, CRYPTO_secure_actual_size, CRYPTO_secure_malloc_done,
+        CRYPTO_secure_malloc_init, CRYPTO_secure_used,
+    };
     use core::ffi::c_char;
     use core::ptr;
 
@@ -374,6 +559,91 @@ mod tests {
         // SAFETY: NULL is explicitly permitted by the adoption contract.
         let cleansed = unsafe { OwnedBuf::adopt_cleansed(ptr::null_mut(), 0, FILE, 14) };
         assert!(cleansed.is_none());
+    }
+
+    #[test]
+    fn adopt_secure_null_is_none() {
+        // SAFETY: NULL is explicitly permitted by the adoption contract; no secure
+        // heap needs to be initialised for it.
+        let adopted = unsafe { OwnedBuf::adopt_secure_cleansed(ptr::null_mut(), 0, FILE, 23) };
+        assert!(adopted.is_none());
+    }
+
+    #[test]
+    fn secure_cleansed_block_releases_through_the_secure_allocator() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        let init = CRYPTO_secure_malloc_init(1 << 20, 16);
+        assert!(
+            init == 1 || init == 2,
+            "the secure heap must initialise for this test (init returned {init})"
+        );
+        let buf = OwnedBuf::new_secure_cleansed(64, FILE, 24);
+        assert!(
+            buf.is_some(),
+            "a 64-byte allocation from an initialised secure heap must succeed"
+        );
+        let Some(buf) = buf else { return };
+        let ptr = buf.as_ptr().cast::<core::ffi::c_void>();
+        let size = CRYPTO_secure_actual_size(ptr);
+        assert!(size >= 64, "actual size {size} covers the request");
+        let offset = test_offset_of(ptr);
+        assert!(offset.is_some(), "the allocation must be inside the arena");
+        let Some(offset) = offset else { return };
+        assert!(
+            test_arena_bytes(offset, size).iter().all(|&b| b == 0),
+            "a fresh secure allocation starts zeroed"
+        );
+        // SAFETY: `buf` exclusively owns the whole `size`-byte usable chunk.
+        unsafe { core::ptr::write_bytes(buf.as_ptr(), 0xab, size) };
+        assert!(
+            test_arena_bytes(offset, size).iter().all(|&b| b == 0xab),
+            "the nonzero pattern must be observable before release"
+        );
+        drop(buf);
+        let released = test_arena_bytes(offset, size);
+        assert_eq!(released.len(), size, "the released chunk stays readable");
+        assert!(
+            released.iter().all(|&b| b == 0),
+            "the secure release must cleanse the whole usable chunk"
+        );
+        assert_eq!(CRYPTO_secure_used(), 0);
+        assert_eq!(CRYPTO_secure_malloc_done(), 1);
+    }
+
+    #[test]
+    fn secure_cleansed_zero_length_block_is_a_cleansed_minimum_chunk() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        let init = CRYPTO_secure_malloc_init(1 << 20, 16);
+        assert!(
+            init == 1 || init == 2,
+            "the secure heap must initialise for this test (init returned {init})"
+        );
+        let buf = OwnedBuf::new_secure_cleansed(0, FILE, 25);
+        assert!(
+            buf.is_some(),
+            "a zero-length request from an initialised secure heap still allocates"
+        );
+        let Some(buf) = buf else { return };
+        let ptr = buf.as_ptr().cast::<core::ffi::c_void>();
+        let size = CRYPTO_secure_actual_size(ptr);
+        assert_eq!(size, 16, "a zero-length request gets the minimum chunk");
+        let offset = test_offset_of(ptr);
+        assert!(offset.is_some(), "the allocation must be inside the arena");
+        let Some(offset) = offset else { return };
+        // SAFETY: `buf` exclusively owns the whole `size`-byte usable chunk.
+        unsafe { core::ptr::write_bytes(buf.as_ptr(), 0x5a, size) };
+        assert!(test_arena_bytes(offset, size).iter().all(|&b| b == 0x5a));
+        drop(buf);
+        let released = test_arena_bytes(offset, size);
+        assert_eq!(released.len(), size);
+        assert!(
+            released.iter().all(|&b| b == 0),
+            "the secure release cleanses even when the stored num is zero"
+        );
+        assert_eq!(CRYPTO_secure_used(), 0);
+        assert_eq!(CRYPTO_secure_malloc_done(), 1);
     }
 
     #[test]

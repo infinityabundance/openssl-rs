@@ -75,10 +75,8 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
-};
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_KDF_NAME_X963KDF` — `core_names.h`, the name the X9.63 KDF is fetched by.
 const OSSL_KDF_NAME_X963KDF: *const c_char = c"X963KDF".as_ptr();
@@ -128,152 +126,6 @@ struct ProvEcdhCtx {
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of a key-exchange buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned buffer allocated through the crate's allocator seam.
-///
-/// The block stays the allocation the authority itself makes -- a `CRYPTO_malloc`/
-/// `CRYPTO_secure_malloc` for the derived secret and the X9.63 staging buffer, an
-/// `OSSL_PARAM_get_octet_string`/`CRYPTO_memdup` block for the UKM -- at the authority's exact size
-/// and `file`/`line`, because a Rust `Vec` would hide both the allocation and its release from a
-/// caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type:
-/// [`Self::new_cleansed`]/[`Self::new_secure_cleansed`] allocate it, [`Self::adopt`]/
-/// [`Self::adopt_cleansed`] take up a block the crate allocated inside a helper or reclaimed from
-/// the context's `kdf_ukm`, `Drop` is its single release, and [`Self::into_raw`] hands the block to
-/// the `#[repr(C)]` `PROV_ECDH_CTX` field whose address the exported ABI exposes. The context block
-/// itself, whose release is a compound destructor body, stays on the raw seam.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a key-exchange buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`kdf_ukm` at `ecdh_set_ctx_params`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (`kdf_ukm`, the secret).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-    /// The authority's cleansing `CRYPTO_secure_clear_free(ptr, num, file, line)` (`stmp`).
-    SecureCleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)` for a block the authority frees through its cleansing
-    /// `CRYPTO_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed {
-                num: len,
-                file,
-                line,
-            },
-        })
-    }
-
-    /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its cleansing
-    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE_ECDH_EXCH`.
-        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::SecureCleansed {
-                num: len,
-                file,
-                line,
-            },
-        })
-    }
-
-    /// Take up a plain block the crate allocated inside a helper or reclaimed from the context's
-    /// `kdf_ukm`, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Take up a cleansing block reclaimed from the context's `kdf_ukm`, for release by `Drop` at
-    /// the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
-    /// for `num` bytes; `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed { num, file, line },
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the context field it is stored in.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-            BufRelease::SecureCleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
-                // NULL.
-                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// `static void *ecdh_newctx(void *provctx)` — `ecdh_exch.c.in:90-107`.
 ///
@@ -697,13 +549,14 @@ unsafe extern "C" fn ecdh_set_ctx_params(
             }
             // The old UKM releases through its handle at the authority's own plain free; the
             // replacement is the helper's fresh block, handed to the field through a second handle.
-            drop(OwnedBuf::adopt(
+            drop(OwnedBuf::adopt_plain(
                 (*pectx).kdf_ukm.cast::<c_uchar>(),
                 FILE_ECDH_EXCH,
                 350,
             ));
-            (*pectx).kdf_ukm = OwnedBuf::adopt(tmp_ukm.cast::<c_uchar>(), FILE_ECDH_EXCH, 350)
-                .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
+            (*pectx).kdf_ukm =
+                OwnedBuf::adopt_plain(tmp_ukm.cast::<c_uchar>(), FILE_ECDH_EXCH, 350)
+                    .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*pectx).kdf_ukmlen = tmp_ukmlen;
         }
     }
