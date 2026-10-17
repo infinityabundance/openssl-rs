@@ -100,6 +100,30 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
+  adversarial:
+    # Negative-control probes (§16 / §18). The allocator-injection tests install the
+    # process-global `CRYPTO_set_mem_functions` hook and are `#[ignore]`d in the routine suite, so
+    # a green `cargo test --lib` never implies they ran. They are also one-way, process-global
+    # state, so each must run alone in its own process. This job sets OPENSSL_RS_ADV_PROBE=1 and
+    # runs `scripts/adv-probe.sh`, which invokes every probe with `--ignored --exact
+    # --test-threads=1`, verifies exactly one test executed, and fails hard on any non-zero exit.
+    #
+    # Cheap (one test-target build plus short probe processes), so it lives with the conversion
+    # gates and runs on every push and pull request.
+    name: adversarial probes (allocator refusal / negative controls)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The test target embeds authority vector files with `include_str!` (see the lint job), so
+      # the authority source tree must be present before `cargo test --lib` can compile.
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
+
+      - name: Run adversarial probes (one process per probe)
+        run: bash scripts/adv-probe.sh
+
   static:
     name: static gates (build, tests, determinism, no-regression)
     runs-on: ubuntu-latest

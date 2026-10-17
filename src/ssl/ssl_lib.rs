@@ -12533,7 +12533,9 @@ mod adv_member_tests {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+    use crate::runtime::mem::{
+        CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_strdup, CRYPTO_zalloc,
+    };
     use crate::ssl::ssl_sess::{SSL_SESSION_dup, SSL_SESSION_free, SSL_SESSION_new};
 
     /// The member-buffer predicate the refusal test asserts: an empty blob member is `(NULL, 0)`.
@@ -12684,5 +12686,349 @@ mod adv_member_tests {
             !member_is_empty(released as *const u8, 16),
             "the predicate must reject a released-but-not-nulled member"
         );
+    }
+
+    /// A zeroed `CertKey`, the shape the authority's `ssl_cert_new` allocates. Every field is a raw
+    /// pointer or an integer (its `comp_cert` array is raw pointers), whose zero is the authority's
+    /// empty state, so the zeroed block is a valid empty `CertKey`.
+    fn new_certkey() -> *mut CertKey {
+        // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
+        // zeroed bytes are a valid empty `CertKey` per the type's all-zero-valid fields.
+        let p = CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0).cast::<CertKey>();
+        assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
+        p
+    }
+
+    /// `MemberBufSlot::realloc` on `CertKey.serverinfo`: successful growth publishes the new block
+    /// and length together and preserves the incumbent's bytes. `realloc` may keep or move the
+    /// block; the assertion is that the reader and the returned block agree, which holds either way.
+    #[test]
+    fn serverinfo_realloc_growth_updates_member_and_preserves_contents() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 8usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(0xA0 | i as u8);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            let new_len = 4096usize;
+            let grew = (*cpk).serverinfo_slot().realloc(new_len, ptr::null(), 0);
+            assert!(!grew.is_null(), "growth must succeed");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(n, new_len, "the length companion must be the new length");
+            assert_eq!(p, grew, "the reader and the returned block must agree");
+            for i in 0..old_len {
+                assert_eq!(
+                    *grew.add(i),
+                    0xA0 | i as u8,
+                    "realloc must preserve the incumbent bytes"
+                );
+            }
+
+            (*cpk).serverinfo_slot().clear(ptr::null(), 0);
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Subsequent destruction after a regrow: the authority's slot teardown (`cert_pkey_clear`)
+    /// releases the grown block and leaves the member empty (no second release of the old block).
+    #[test]
+    fn serverinfo_realloc_growth_then_destruction_releases_once() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; all its other members are NULL, so
+        // `cert_pkey_clear` accepts it.
+        unsafe {
+            let old = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            (*cpk).serverinfo_slot().store(old, 8);
+            let grew = (*cpk).serverinfo_slot().realloc(128, ptr::null(), 0);
+            assert!(!grew.is_null(), "growth must succeed");
+
+            cert_pkey_clear(cpk);
+            let (p, n) = (*cpk).serverinfo();
+            assert!(
+                p.is_null() && n == 0,
+                "destruction must leave the member (NULL, 0)"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Regrow from an empty member: `realloc(NULL, n)` behaves as a fresh allocation, so the member
+    /// becomes `(new, n)` and later destruction releases it. This is the first-install arm of
+    /// `SSL_CTX_use_serverinfo_ex`, where the slot has no incumbent.
+    #[test]
+    fn serverinfo_realloc_from_empty_allocates_and_destruction_releases_once() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey` whose empty member obeys the invariant.
+        unsafe {
+            let (p0, n0) = (*cpk).serverinfo();
+            assert!(
+                p0.is_null() && n0 == 0,
+                "a fresh CertKey's member must be empty"
+            );
+
+            let grew = (*cpk).serverinfo_slot().realloc(96, ptr::null(), 0);
+            assert!(!grew.is_null(), "regrow from empty must allocate");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(n, 96, "the length companion must be the new length");
+            assert_eq!(p, grew, "the reader and the returned block must agree");
+
+            cert_pkey_clear(cpk);
+            let (p2, n2) = (*cpk).serverinfo();
+            assert!(
+                p2.is_null() && n2 == 0,
+                "destruction must leave the member empty"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the growth test's predicate is live. A stale length (the
+    /// pre-growth value) must be rejected by `(reader == returned block && length == new length)`.
+    #[test]
+    fn canary_realloc_member_predicate_detects_stale_length() {
+        let old = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+        assert!(!old.is_null());
+        // SAFETY: `old` is a fresh 8-byte block this frame owns.
+        let grew = unsafe { CRYPTO_realloc(old.cast(), 64, ptr::null(), 0) }.cast::<u8>();
+        assert!(!grew.is_null(), "the canary regrow must succeed");
+        let bound = grew;
+        let new_len = 64usize;
+        let stale_len = 8usize;
+        // The exact predicate `serverinfo_realloc_growth_*` asserts.
+        let predicate = |block: *const u8, len: usize| block == grew && len == new_len;
+        assert!(
+            predicate(bound, new_len),
+            "the predicate must accept the new state"
+        );
+        assert!(
+            !predicate(bound, stale_len),
+            "the predicate must reject a stale length"
+        );
+        // SAFETY: `grew` is the live block from the realloc above.
+        unsafe { CRYPTO_free(grew.cast(), ptr::null(), 0) };
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// Adversarial `CertKey.serverinfo` realloc probes (`stage/p25/adv-harden`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// These need the process-global allocator hook to force `CRYPTO_realloc` to fail and to observe a
+// reentrant read of the member during the call, so they are `#[ignore]`d and run one process per
+// probe under `OPENSSL_RS_ADV_PROBE=1` (see `scripts/adv-probe.sh`).
+#[cfg(test)]
+mod adv_realloc_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    fn new_certkey() -> *mut CertKey {
+        // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
+        // zeroed bytes are a valid empty `CertKey` per its all-zero-valid fields.
+        let p = CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0).cast::<CertKey>();
+        assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
+        p
+    }
+
+    /// Failed growth: `CRYPTO_realloc` answers NULL, so the handle must keep the old block and
+    /// length unchanged, and later destruction must release that block exactly once.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn serverinfo_realloc_refused_keeps_old_owner() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 32usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(i as u8);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(4096, true);
+            let grew = (*cpk).serverinfo_slot().realloc(4096, ptr::null(), 0);
+            adv_alloc::disarm_realloc();
+
+            assert!(grew.is_null(), "a refused regrow must answer NULL");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(
+                (p, n),
+                (old as *const u8, old_len),
+                "a refused regrow must keep the old block and length unchanged"
+            );
+
+            let ev = adv_alloc::events();
+            assert_eq!(
+                ev.iter()
+                    .filter(|e| matches!(
+                        e,
+                        Ev::Realloc {
+                            n: 4096,
+                            refused: true
+                        }
+                    ))
+                    .count(),
+                1,
+                "exactly one realloc request is refused: {ev:?}"
+            );
+
+            // Subsequent destruction releases the preserved block once (no double release).
+            cert_pkey_clear(cpk);
+            let (p2, n2) = (*cpk).serverinfo();
+            assert!(
+                p2.is_null() && n2 == 0,
+                "destruction must leave the member empty"
+            );
+            assert!(
+                !adv_alloc::double_free(),
+                "the preserved block is released only once"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Reentrancy: the fake allocator reenters and reads the member pair *during* the
+    /// `CRYPTO_realloc` call. The handle must not have published the replacement yet, so the
+    /// observer sees the old block and length; after the call the member names the new block.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn serverinfo_realloc_reentrancy_reads_member() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 16usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(0x5A);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            let mut slot = (*cpk).serverinfo_slot();
+            // Derive the watched field addresses from the live handle's own borrows.
+            let ptr_field: *mut *mut u8 = &mut *slot.ptr;
+            let len_field: *mut usize = &mut *slot.len;
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(128, false);
+            adv_alloc::arm_reenter(ptr_field, len_field);
+            let grew = slot.realloc(128, ptr::null(), 0);
+            adv_alloc::disarm_realloc();
+
+            assert!(!grew.is_null(), "the growth must succeed");
+            assert_eq!(
+                adv_alloc::reenter_observed(),
+                Some((old as usize, old_len)),
+                "during realloc the member must still name the old block and length"
+            );
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(
+                (p, n),
+                (grew as *const u8, 128usize),
+                "after realloc the member must name the new block"
+            );
+            assert!(!adv_alloc::double_free());
+
+            slot.clear(ptr::null(), 0);
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the realloc-refusal instrument fires and leaves the
+    /// incumbent untouched, so `serverinfo_realloc_refused_keeps_old_owner` is meaningful.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_realloc_refusal_instrument_fires() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: `b` is a fresh block this frame owns.
+        unsafe {
+            let b = CRYPTO_malloc(24, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            b.write(0x11);
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(24, true);
+            let r = CRYPTO_realloc(b.cast(), 24, ptr::null(), 0).cast::<u8>();
+            adv_alloc::disarm_realloc();
+
+            assert!(r.is_null(), "the armed realloc refusal must answer NULL");
+            assert_eq!(
+                *b, 0x11,
+                "a refused regrow must leave the old block untouched"
+            );
+            let ev = adv_alloc::events();
+            assert!(
+                ev.iter().any(|e| matches!(
+                    e,
+                    Ev::Realloc {
+                        n: 24,
+                        refused: true
+                    }
+                )),
+                "the refusal must be recorded: {ev:?}"
+            );
+
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the reenter observer fires and reads the pair it was armed
+    /// with, so `serverinfo_realloc_reentrancy_reads_member` is meaningful.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_reenter_observer_fires() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: `b` is a fresh block this frame owns; the watched pair is this frame's.
+        unsafe {
+            let b = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            let mut watched_ptr = b;
+            let mut watched_len = 8usize;
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(8, false);
+            adv_alloc::arm_reenter(
+                core::ptr::addr_of_mut!(watched_ptr),
+                core::ptr::addr_of_mut!(watched_len),
+            );
+            let r = CRYPTO_realloc(b.cast(), 8, ptr::null(), 0).cast::<u8>();
+            adv_alloc::disarm_realloc();
+
+            assert!(!r.is_null(), "the canary regrow must succeed");
+            assert_eq!(
+                adv_alloc::reenter_observed(),
+                Some((b as usize, 8)),
+                "the reenter observer must capture the armed member pair"
+            );
+
+            CRYPTO_free(r.cast(), ptr::null(), 0);
+        }
     }
 }
