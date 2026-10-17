@@ -117,21 +117,32 @@ Deterministic (not ignored, run in the routine suite) `CertKey.serverinfo` cover
 
 ## Targeted boundary court (converted staged/duplicated contexts)
 
-Four probes extend the same process-global harness to the DSA, DH and ECX object
-boundaries. `adv_alloc::arm_any(size)` refuses the next request of exactly that
-size at **any** `(file, line)` coordinate; the existing site-specific
-`arm(size)` is unchanged and still backs the SSL ticket probes. The recorded
-`site` bit is the request's real coordinate, so a size-only match stays
-auditable. A one-shot `arm_cleansed_free(len)` inspects the first `len` bytes of
-the next forwarded release before freeing it; the PKCS#12 probe will use it in
-the next batch.
+Seven probes extend the same process-global harness to the DSA, DH, ECX, DTLS state,
+PKCS#12 password and provider operation-bit boundaries. `adv_alloc::arm_any(size)`
+refuses the next request of exactly that size at **any** `(file, line)` coordinate; the
+existing site-specific `arm(size)` is unchanged and still backs the SSL ticket probes.
+The recorded `site` bit is the request's real coordinate, so a size-only match stays
+auditable. A one-shot `arm_cleansed_free(len)` inspects the first `len` bytes of the next
+forwarded release before freeing it. With the nine original SSL probes, the targeted
+court now totals **16** probes.
 
 | Probe | Establishes | Does **not** establish |
 |-------|-------------|------------------------|
 | `dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free` | A refused `Dsa`-sized `CRYPTO_zalloc` makes `ossl_dsa_new(NULL)` answer NULL; exactly one refused request, none forwarded, no release of a block that never existed; the unarmed success path still allocates and releases once. | Other constructor failure arms (lock/ex-data/method `init`), arbitrary reentrancy, or any cryptographic property. |
 | `dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free` | The same refusal/cleanup contract for `ossl_dh_new_ex(NULL)` and the staged `Dh` block. | As above. |
 | `ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free` | `ossl_ecx_key_dup(k, 0)` answers NULL when its `ECX_KEY` zalloc is refused, with no release; the inert source key (`keylen`/`type_` set, `propq`/`privkey` NULL) releases once. | Duplication of a fully populated key, the `propq`/private-scalar failure arms, `realloc`/callback reentrancy, or crypto correctness. |
-| `ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue` | The cleansed-free detector accepts a zeroed block, flags residue, and `assert_not_cleansed()` panics with the precise reason; a dead check is not a pass. | That any specific release path cleanses its secret storage; that is the next batch's PKCS#12 assertion. |
+| `ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue` | The cleansed-free detector accepts a zeroed block, flags residue, and `assert_not_cleansed()` panics with the precise reason; a dead check is not a pass. | That any specific release path cleanses its secret storage. |
+| `ssl::d1_lib::adv_probe::dtls_state_refusal_and_lifecycle` | A refused `Dtls1State`-sized `CRYPTO_zalloc` makes `dtls1_new_state(true)` answer NULL with exactly one refused request and no release; on the success path `dtls1_free` releases the state once, clears the `Ssl.d1` field, and the enclosing zeroed `Ssl` block is released once. | `DTLSv1_listen` cookie-stage behaviour, the unmodelled queue/sequence fields, or reentrant access to `d1`. |
+| `pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release` | `OwnedUniPass::drop` zeros the `len` password bytes through `CRYPTO_clear_free` **before** the hooked release forwards them; the seized block is released exactly once. | That every PKCS#12 password conversion path is cleansed (only the owner's `Drop` is exercised), or KDF correctness. |
+| `provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair` | `ossl_provider_set_operation_bit(&mut p, 3)` regrows `(NULL, 0)` to one byte; during the intercepted realloc the member pair is still the old `(NULL, 0)`, and only after return are the new block, size 1 and bit `1 << 3` visible. | A reentrant call that takes the same `opbits_lock`: the lock is non-reentrant, so that call would deadlock. Also does not cover concurrent readers/writers or other realloc sizes. |
+
+**Provider publication-ordering scope (recorded, not hidden).** The provider probe
+establishes **publication ordering only**. A genuine reentrant call into
+`ossl_provider_set_operation_bit` (or `ossl_provider_test_operation_bit`) while the write
+lock is held is not attempted, because `opbits_lock` is a non-reentrant read/write lock
+and the reentrant call would deadlock rather than observe a partially published pair.
+The probe therefore exercises the allocator-boundary observation, not an application
+callback that reenters the provider.
 
 **Scope of the claim.** These probes exercise the allocator-refusal path of the
 boundary only. They do not model an application callback that reenters and
