@@ -83,6 +83,7 @@ use crate::rand::pool::{
 use crate::rand::unix::ossl_pool_acquire_entropy;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_unlock,
@@ -294,42 +295,6 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-/// An owned `entropy`/`nonce` buffer: a block `OSSL_PARAM_get_octet_string` left for the context, or
-/// one reclaimed from a field.
-///
-/// The block stays the authority's own allocation, at its exact `file`/`line`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes its release. `Drop` is its single release.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Take up a plain block the crate allocated inside `OSSL_PARAM_get_octet_string` or a context
-    /// field still holds, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns; `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `seed_src_free`'s body (`seed_src.c:70-73`): the block alone, no owned members.
 // SAFETY: (a) holds: `destroy_body` is `seed_src_free` minus the block -- the context owns no member
 // -- and never the enclosing block. (b) holds: an all-zero context is valid with no release to run --
@@ -357,12 +322,14 @@ unsafe impl CtxDestroy for ProvTestRng {
         // SAFETY: `ptr` is a live context per the trait contract; `entropy`/`nonce` are NULL or this
         // file's own `OSSL_PARAM_get_octet_string` blocks and `lock` is NULL or the context's own.
         unsafe {
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*ptr).entropy,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_FREE_ENTROPY,
             ));
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*ptr).nonce,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_FREE_NONCE,
@@ -1215,7 +1182,8 @@ unsafe extern "C" fn test_rng_set_ctx_params(
                 return 0;
             }
             // `(*t).entropy` is NULL or the buffer the context owns; `Drop` is its release.
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*t).entropy,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_SET_FREE_ENTROPY,
@@ -1232,7 +1200,8 @@ unsafe extern "C" fn test_rng_set_ctx_params(
                 return 0;
             }
             // `(*t).nonce` is NULL or the buffer the context owns; `Drop` is its release.
-            drop(OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
                 (*t).nonce,
                 FILE_TEST_RNG,
                 LINE_TEST_RNG_SET_FREE_NONCE,

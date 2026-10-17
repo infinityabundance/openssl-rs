@@ -47,7 +47,7 @@
 
 #![allow(non_upper_case_globals)] // the constants are the authority's own C macro spellings
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
@@ -58,10 +58,11 @@ use crate::evp::pkey_ctx::{
 };
 use crate::runtime::err::err_reasons::SSL_R_SSL3_EXT_INVALID_MAX_FRAGMENT_LENGTH;
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{
     NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha512, NID_undef, OBJ_nid2ln,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_cert::ssl_security;
 use crate::ssl::ssl_ciph_table::{
     SSL_aDSS, SSL_aECDSA, SSL_aPSK, SSL_aRSA, SSL_aSRP, SSL_kDHEPSK, SSL_kECDHE, SSL_kECDHEPSK,
@@ -92,66 +93,6 @@ fn is_max_fragment_length_ext_valid(value: u8) -> bool {
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new` allocates it,
-/// `Drop` is its single release, and [`Self::into_raw`] hands it to a consumer that takes it over
-/// (the `SSL_get1_builtin_sigalgs` return, or the `*grpext` slot). [`Self::adopt`] takes in a block
-/// this crate allocated so the replacement releases what it replaces. A NULL pointer is a valid,
-/// empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a plain block this crate allocated, for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `SIGALG_LOOKUP` — `ssl_local.h:1186-1212`, reduced to the three fields `SSL_get1_builtin_sigalgs`
 /// reads: the TLS name, the hash NID and the `EVP_PKEY` type.
@@ -852,7 +793,8 @@ pub(crate) unsafe fn tls1_set_groups(
     // SAFETY: `grpext`/`grpextlen` are writable per the contract, and the previous `*grpext` is a
     // plain block this crate allocated that no one else owns.
     unsafe {
-        drop(OwnedBuf::adopt((*grpext).cast(), FILE, 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable((*grpext).cast(), FILE, 0));
         *grpext = mem.into_raw().cast();
         *grpextlen = ngroups;
     }

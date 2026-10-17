@@ -33,14 +33,19 @@
 //! exists to paper over the two `strerror_r` ABIs, and the admitted profile has
 //! exactly one of them.
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
+#[cfg(test)]
+use core::ffi::c_void;
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     O_STR_229, O_STR_235, O_STR_241, O_STR_270, O_STR_303, O_STR_315, O_STR_352,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+#[cfg(test)]
+use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem::CRYPTO_zalloc;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use crate::runtime::bio::sys;
 
@@ -50,54 +55,6 @@ const DEFAULT_SEPARATOR: c_char = b':' as c_char;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
-/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
-/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
-/// and [`Self::into_raw`] hands it to a consumer that takes it over (the caller's out-parameter).
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `ossl_tolower(c)` from `crypto/ctype.c`.
 ///
