@@ -199,8 +199,8 @@ means the construction path releases block-only before the object is complete.
 | `BioSsl` (`ssl/bio_ssl.rs:102`) | E | none | E | EST |
 | `Dtls1State` (`ssl/d1_lib.rs:107`) | E | none | E | EST |
 | `Cert` (`ssl/ssl_lib.rs:995`) | S | clear 12 cert-key slots, `drop_in_place(custext)`, psk hint slot, `dh_tmp` | raw `RawCtx`; `custext` written before `assume_init` | EST |
-| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (subphase 40: destroying sentinel makes re-entrant `*_free` a no-op; deterministic test passes; not `DISCHARGED`) |
-| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (subphase 40: destroying sentinel makes re-entrant `*_free` a no-op; deterministic test passes; not `DISCHARGED`) |
+| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | EST (subphase 41: field-by-field audit and S1–S4 fixes; not `DISCHARGED`) |
+| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | EST (subphase 41: field-by-field audit and S1–S4 fixes; not `DISCHARGED`) |
 | `DanetlsRecord` (`ssl/ssl_lib.rs:11436`) | Z | `CRYPTO_free(data)`, `EVP_PKEY_free(spki)` | zero NULL | EST |
 | `SslSession` (`ssl/ssl_sess.rs:559`) | Z | ex_data, cleanse master key/id, peer, peer_rpk, chain, 7 member-buffer slots | zero NULL/arrays | EST (subphase 40: destroying sentinel; re-entrant ex-data free test passes) |
 | `OsslStoreCtx` (`store/store_lib.rs:262`) | E | none (`ossl_store_close_it` is explicit) | E | EST |
@@ -221,19 +221,19 @@ means the construction path releases block-only before the object is complete.
 | `ConfValue` (`x509/v3_utl.rs:479`) | R | free name/value/section | constructed record; no zero claim | EST |
 | `X509Lookup` (`x509/x509_lu.rs:739`) | Z | method `free` hook if method non-NULL | zero method NULL | EST (subphase 38) |
 | `X509Object` (`x509/x509_lu.rs:758`) | Z | `x509_object_free_internal` by tag | zero tag `X509_LU_NONE` | EST |
-| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (subphase 40: destroying sentinel makes lookup-`free`/ex-data re-entry a no-op; deterministic test passes; not `DISCHARGED`) |
+| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | EST (subphase 42: lookup-`free` and ex-data re-entry controls pass; partial-release path retained) |
 | `X509Trust` (`x509/x509_trust.rs:215`) | R | free name iff dynamic flag | constructed row; no zero claim | EST |
 | `X509StoreCtx` (`x509/x509_vfy.rs:319`) | Z | `X509_STORE_CTX_cleanup`, propq slot clear | cleanup preserves propq; zero accepted | EST |
 | `X509VerifyParam` (`x509/x509_vpm.rs:342`) | Z/R | policies, hosts, peername, email, ip | zero NULL | EST |
 | `X509CrlMethod` (`x509/x_crl.rs:272`) | E/S | none | E | EST |
 
-**CtxDestroy subtotal: 136 = 133 EST + 3 CON.** Subphase 38 independently
+**CtxDestroy subtotal: 136 = 136 EST + 0 CON.** Subphase 38 independently
 adjudicated the former 19 `CONTRACTED` rows: 16 are promoted to `ESTABLISHED`
 (`AsyncWaitCtx`, `OsslDecoderInstance`, `OsslDecoderCtx`, `Dh`, `Dsa`,
 `OsslEncoderInstance`, `OsslEncoderCtx`, `EvpPkey`, `EvpPkeyCtx`, `Rsa`, `CompCtx`,
-`SslSession`, `Ui`, `X509Lookup`, `EcGroup`, `EcPoint`); `SslCtx`, `Ssl` and
-`X509Store` remain `CONTRACTED` (see Adjudication). (`ProvAesSivCtx`/
-`ProvAesGcmSivCtx` are `CipherDestroy`, counted below.)
+`SslSession`, `Ui`, `X509Lookup`, `EcGroup`, `EcPoint`); subphase 41 promoted
+`SslCtx` and `Ssl`; subphase 42 promoted `X509Store` (see “Subphase 42”).
+(`ProvAesSivCtx`/`ProvAesGcmSivCtx` are `CipherDestroy`, counted below.)
 
 ## 3. `CipherDestroy` implementations (27)
 
@@ -249,11 +249,11 @@ adjudicated the former 19 `CONTRACTED` rows: 16 are promoted to `ESTABLISHED`
 | `ProvAesCcmCtx` (`:673`) | Z | E | E | EST |
 | `ProvAriaCcmCtx` (`:683`) | Z | E | E | EST |
 | `ProvSm4CcmCtx` (`:693`) | Z | E | E | EST |
-| `ProvAesSivCtx` (`:703`) | Z | `((*(*ptr).hw).cleanup)(ptr)` | **defect D1: null `hw` deref on all-zero** | CON |
+| `ProvAesSivCtx` (`:703`) | Z | `((*(*ptr).hw).cleanup)(ptr)` guarded by a NULL `hw` test | **D1 fixed:** zero `hw` skips the teardown; deterministic control | EST (subphase 42) |
 | `ProvNullCtx` (`:714`) | Z | E | E | EST |
 | `ProvAesHmacSha1Ctx` (`:724`) | Z | generic reset | zero `alloced` | EST |
 | `ProvAesHmacSha256Ctx` (`:735`) | Z | generic reset | zero `alloced` | EST |
-| `ProvAesGcmSivCtx` (`:746`) | Z | `CRYPTO_clear_free(aad,aad_len)`, `((*(*ptr).hw).clean_ctx)(ptr)` | **defect D2: null `hw` deref on all-zero** | CON |
+| `ProvAesGcmSivCtx` (`:746`) | Z | `CRYPTO_clear_free(aad,aad_len)`, `((*(*ptr).hw).clean_ctx)(ptr)` guarded by a NULL `hw` test | **D2 fixed:** zero `hw` skips the teardown; deterministic control | EST (subphase 42) |
 | `ProvChacha20Ctx` (`:761`) | Z | generic reset | zero `alloced` | EST |
 | `ProvChacha20Poly1305Ctx` (`:772`) | Z | generic reset | zero `alloced` | EST |
 | `ProvSm4Ctx` (`:783`) | Z | generic reset | zero `alloced` | EST |
@@ -267,7 +267,7 @@ adjudicated the former 19 `CONTRACTED` rows: 16 are promoted to `ESTABLISHED`
 | `ProvDesCtx` (`:22001`) | Z | generic reset | zero `alloced` | EST |
 | `ProvRc4HmacMd5Ctx` (`:22012`) | Z | generic reset | zero `alloced` | EST |
 
-**Subtotal: 27; EST 25, CON 2.**
+**Subtotal: 27; EST 27, CON 0.**
 
 ## 4. `KdfDestroy` (14), `MacDestroy` (7), `DrbgCtx` (5), `GcmDestroy` (3), `FreeOnDrop` (7)
 
@@ -295,7 +295,7 @@ adjudicated the former 19 `CONTRACTED` rows: 16 are promoted to `ESTABLISHED`
 | `FreeOnDrop` impls: `EVP_MD_CTX` / `EVP_CIPHER_CTX` / `HMAC_CTX` / `EVP_PKEY` (srvr), `EVP_MD_CTX` / `SSL_SESSION` / `EVP_PKEY` (clnt) (`statem_srvr.rs:268-312`, `statem_clnt.rs:239-270`) | N | complete matching `*_free` | no zero claim; `*_new` answer only | EST |
 | **FreeOnDrop subtotal 7: EST 7** | | | | |
 
-**Grand total: 199 = EST 178, CON 21.**
+**Grand total: 199 = EST 199, CON 0.**
 
 ## 5. `Drop` owners of destructor/member-buffer resources
 
@@ -571,6 +571,58 @@ package is outstanding, and the unset-member writers (`waitctx`, `bbio`,
 `scts`, `shared_sigalgs`, `peer_sigalgs`) are an explicit future obligation, not
 a current release claim. Nothing is `SAFETY_DISCHARGED`.
 
+### Subphase 42 — `X509Store` callback family and D1/D2 re-adjudication
+
+**`X509Store` teardown order.** The body (`src/x509/x509_lu.rs:786-806`) matches
+the authority's `X509_STORE_free` (`crypto/x509/x509_lu.c:226-254`): shut down and
+free each lookup (`X509_LOOKUP_shutdown`/`X509_LOOKUP_free`, running the method's
+`free` hook, authority `:241-245`); free the lookup stack (`:246`); pop-free the
+object cache (`:247`); `CRYPTO_free_ex_data` (`:249`); free the verify param and
+lock (`:250-251`); then the outer `OwnedCtx` releases the block at the authority's
+`:253`. The atomic count is claimed as `REF_DESTROYING` before this body runs, so
+both callback families that can re-enter `X509_STORE_free` are defined no-ops.
+
+**Witness — lookup `free` hook.** New deterministic test
+`x509::x509_lu::tests::store_free_from_lookup_free_hook_is_defined_noop` builds a
+minimal `X509_LOOKUP_METHOD` with only `free` installed, adds it through
+`X509_STORE_add_lookup`, and frees the store once. The hook observes
+`references == REF_DESTROYING`, `X509_STORE_up_ref` answers `0` without changing
+the count, the re-entrant `X509_STORE_free` leaves the sentinel in place, and the
+hook ran exactly once. The block release remains the single
+`OwnedCtx::<X509Store>` `Drop`: `from_raw` is constructed only on `DownRef::Last`,
+so the re-entrant call cannot reach a second teardown.
+
+**Retained partial-release path (authority parity).** The lookup `free` hook runs
+before any store member is released and therefore observes a live store. The
+ex-data `free_func` runs at the authority's `:249` position, **after**
+`get_cert_methods` and `objs` have been freed; their struct fields remain stale
+non-NULL. A callback that re-enters `X509_STORE_free`/`X509_STORE_up_ref` is
+defined (sentinel/refusal), but one that calls a store mutator reading those
+fields (`X509_STORE_add_lookup`, `X509_STORE_add_cert`, `X509_STORE_add_crl`)
+would dereference the freed stack. This is the authority's own order and is
+recorded as a retained callback-contract obligation, not a conversion regression.
+
+**Retained callback-mutation divergence.** The body caches `OPENSSL_sk_num(sk)`
+before the lookup loop; the authority re-evaluates it each iteration (`:241`). A
+lookup `free` hook that pushes another lookup onto the same store is therefore
+torn down by the authority but left on the freed stack by this transcription
+(a leak of callback-created state only; no use-after-free).
+
+**D1/D2 promoted to `ESTABLISHED`.** Both implementer obligations are now
+witnessed: (a) the destructor body is the authority's `*_freectx` minus the
+block — D1 `hw->cleanup` (`cipher_aes_siv.c:54`), D2 `CRYPTO_clear_free(aad,
+aad_len)` then `hw->clean_ctx` (`cipher_aes_gcm_siv.c:51-52`); neither body frees
+the enclosing block, and `OwnedCtx::drop` releases it once with
+`CRYPTO_clear_free`; (b) all-zero validity is guarded by the NULL `hw` test and
+exercised by `a_zeroed_siv_context_drops_without_a_hardware_table`. Both hardware
+lookups always return a static table
+(`src/provider/cipher.rs:10406-10408,13720-13722`; authority
+`cipher_aes_siv_hw.c:136-139`, `cipher_aes_gcm_siv_hw.c:339-342`), so the guard
+changes only the unconstructed/failure state. Retained: the guards are a §17
+safety improvement over the authority's unconditional dereference; no sanitizer
+or model-checker run backs the zero-state control. Neither row is
+`SAFETY_DISCHARGED`.
+
 ### STOP defects
 
 **Subphase 38: none found in the 19 rows.** Every body was checked for an
@@ -583,6 +635,11 @@ S2 and S3 were owned references the body never released; S4 was a missing
 authority teardown step in `SSL_free`. The seven deterministic controls and the
 full library suite pass after the fixes.
 
+**Subphase 42: none found.** The new lookup-`free` control passes, the teardown
+order is the authority's, and the only partial-release exposure is the ex-data
+callback path recorded above, which the authority also has. D1/D2 were already
+fixed in sweep-37; this pass only re-adjudicated their status.
+
 ### Residual / unknown obligations
 
 - The 16 subphase-38 promotions retain the external ABI obligation that a stored method or
@@ -591,8 +648,13 @@ full library suite pass after the fixes.
 - `SslCtx`/`Ssl` were promoted in subphase 41 after the field-by-field audit
   and S1–S4 fixes. Their retained obligation is independent §7 verification and
   the future writers for currently-unset members; it is no longer a known
-  alias/double-release gap. `X509Store` retains the §7 independent-check
-  obligation only; its callback re-entrancy positive control passes (subphase 40).
+  alias/double-release gap. `X509Store` was promoted in subphase 42 after the
+  lookup-`free` control; it retains the §7 independent-check obligation and the
+  authority-parity partial-release path recorded under “Subphase 42”.
+- The 16 subphase-38 promotions retain the external ABI obligation that a stored
+  method or provider callback is a valid function and frees only its own data;
+  the `X509Store` lookup/ex-data families are now driven, but `BIO_free_all` and
+  the CT-log callback were not driven independently.
 - `EcGroup`/`EcPoint` zero-state evidence is the deterministic negative control,
   not a model-checker or sanitizer result.
 - Nothing is promoted to `DISCHARGED`; §7's full dependency-closure and
@@ -603,18 +665,19 @@ full library suite pass after the fixes.
 | status | count |
 |---|---:|
 | implementations audited | 199 |
-| `CONTRACTED` | 3 (1 `CtxDestroy` + 2 `CipherDestroy`) |
-| `ESTABLISHED` | 196 |
+| `CONTRACTED` | 0 |
+| `ESTABLISHED` | 199 |
 | `DISCHARGED` | 0 |
-| defect sites (STOP) | 8, all fixed at source (4 sweep-37, 4 subphase 41); none added in subphase 38–40 |
+| defect sites (STOP) | 8, all fixed at source (4 sweep-37, 4 subphase 41); none added in subphase 38–42 |
 
 **Retained obligations (global):**
 
 - Every owner retains "the block is live and exclusively owned; `Drop` runs
   once". The owner types establish this; it is not independently checked here.
 - Callback-dispatching destructors retain the authority/provider callback
-  contract (D1/D2 are distinct: they are not callback obligations, they are
-  missing null tests).
+  contract. D1/D2 are no longer in this class: they were missing null tests and
+  are fixed and re-adjudicated in subphase 42. `X509Store` retains the
+  authority-parity ex-data partial-release path recorded under “Subphase 42".
 - Reference-counted destructors: `SslCtx`, `Ssl`, `SslSession` and
   `X509Store` use the shared destroying-sentinel gate (`runtime/refcount.rs`).
   Its retained obligation is independent verification, not the callback edge:
@@ -627,8 +690,9 @@ full library suite pass after the fixes.
   now holds, but the boundaries remain `ESTABLISHED` (no independent check).
 - `CipherDestroy::OwnedCtx::new` retains the zero-validity obligation for all
   27 implementers; D1/D2 showed it was not uniformly met, and the two failing
-  bodies now guard their hardware teardown. Deterministic zero-state tests cover
-  those two rows; the other 25 retain the source-witness status only.
+  bodies now guard their hardware teardown. All zero-state tests are
+  deterministic source/negative controls; the other 25 retain the source-witness
+  status only.
 - No Miri, sanitizer, negative-control, or differential run was performed for
   this audit. `ESTABLISHED` is a source-witness status, not an independently
   checked one, and nothing here is `SAFETY_DISCHARGED`.
