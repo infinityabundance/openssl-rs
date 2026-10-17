@@ -690,6 +690,22 @@ package.
   unified in this subphase; **28 remain** (11 carry other per-instance state,
   7 bind a different destroy trait, 8 have bespoke shapes, 2 are adoption-only).
 
+### Subphase 65 — remaining per-instance OwnedCtx copies
+
+- Five more files / nine local types unified: `ui_lib` (including the
+  block-only `OwnedRaw` used only for under-construction blocks), `hpke` (with a
+  new zero-valid `CtxDestroy` impl for `OsslHpkeCtx`), `sm2_enc`, `ecx_key` and
+  `provider/conf`. Per-path release lines, adoption coordinates, NULL behaviour
+  and the sm2_enc pre-init `RawCtx` window are preserved.
+- **19 local owners remain**: 7 with instance-state semantics (`ssl_lib` ×2,
+  `ec/lib`, `evp/bio_enc`, `mac_legacy_sig`, `slh_dsa_sig` ×2), 7 bound to a
+  different destroy trait (`CipherDestroy`, `GcmDestroy`, `KdfDestroy`,
+  `MacDestroy`, `DrbgCtx`, `FreeOnDrop`), and the bespoke shapes. Each is a
+  different abstraction; none is forced into the canonical type.
+- Adversarial review **PASS** (the `OwnedRaw` replacement was verified to be
+  block-only before it was accepted). Gate: `fmt` 0, clippy 0, **1242 passed /
+  18 ignored**, adv-probe **18/18**. Owners unified so far: **42 of 61**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -867,7 +883,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `b14cb9322` (per-call OwnedCtx unification merged)
+**Last observed HEAD:** `69fa69c74` (remaining per-instance OwnedCtx merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
