@@ -11,7 +11,9 @@ Frozen atlas baseline: **2420** allocation sites (`artifacts/phase25/ownership-p
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must be 1183/1183).
+`cargo test --lib` (must pass; the established baseline is **1196** passed
+and the 9 adversarial probes are `#[ignore]`d and run separately via
+`scripts/adv-probe.sh`).
 
 ## Landed batches
 
@@ -167,13 +169,18 @@ in one place, and the field becomes **private** once all accessors convert
 
 Landed: PKCS7 `propq` (private), CMS `propq` (private), PKCS12 nested release,
 X.509 `X509`/`X509_CRL`/`X509_REQ`/`X509_PUBKEY` (all private),
-`X509_STORE_CTX` + cached-store `propq` (private), and the
-`SslSession` buffers `ext_hostname`/`ext_tick`/`ext_alpn_selected`/
-`ticket_appdata` (all private; a latent ticket double-free closed).
-Remaining: the `SslCtx`/`Ssl` connection member buffers, the remaining
-`SslSession` C-string members (`psk_identity_hint`/`psk_identity`/
-`srp_username`), then the other member-buffer families the dependency
-atlas names for the 33 consumers.
+`X509_STORE_CTX` + cached-store `propq` (private), the `SslSession` buffers
+`ext_hostname`/`ext_tick`/`ext_alpn_selected`/`ticket_appdata` and the
+`SslSession` C-strings `psk_identity_hint`/`psk_identity`/`srp_username`
+(all private; a latent ticket double-free closed), and the `SslCtx`/`Ssl`
+buffers `propq` (26 readers routed, private), `CertKey.serverinfo` (via the
+new documented `realloc` model op, private), `ext_hostname`, `s3_alpn_selected`,
+`s3_alpn_proposed`, `pha_context` (all private), `ext_alpn`/`ext_npn`,
+`client/server_cert_type` (private).
+Remaining: only `Ssl`/`SslCtx.supportedgroups` (element-counted, raw-pointer
+writer — deliberately **not** forced into the byte-extent model; recorded as a
+retained boundary), then the other member-buffer families the dependency atlas
+names for the 33 consumers.
 
 ## Destructor-trait audit (complete)
 
@@ -194,7 +201,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `bd7b266baf5f9a99f4bc452f43775506705f4327`
+**Last observed HEAD:** `517f52df53cb73678d33cdbe3baea256766226fb`
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
