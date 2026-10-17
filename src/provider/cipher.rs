@@ -703,8 +703,17 @@ unsafe impl CipherDestroy for ProvSm4CcmCtx {
 unsafe impl CipherDestroy for ProvAesSivCtx {
     const FILE: *const c_char = FILE_SIV;
     unsafe fn destroy_body(ptr: *mut ProvAesSivCtx) {
-        // SAFETY: `ptr` is a live context per the trait contract; `hw` is installed by `newctx`.
-        unsafe { ((*(*ptr).hw).cleanup)(ptr.cast()) };
+        // SAFETY: `ptr` is a live context per the trait contract. A constructed context always has
+        // `hw` installed by `aes_siv_newctx`; the NULL test covers the all-zero block that the safe
+        // `OwnedCtx::new` can drop before installation. `aes_siv_freectx` dereferences `ctx->hw`
+        // unconditionally, but it never sees that state because `aes_siv_newctx` installs `hw`
+        // before returning -- this is a failure-path safety improvement, not a constructed-path
+        // change. The constructed event order (`hw->cleanup(ctx)` then the block release) is kept.
+        unsafe {
+            if !(*ptr).hw.is_null() {
+                ((*(*ptr).hw).cleanup)(ptr.cast());
+            }
+        }
     }
 }
 
@@ -747,10 +756,18 @@ unsafe impl CipherDestroy for ProvAesGcmSivCtx {
     const FILE: *const c_char = FILE_GCM_SIV;
     unsafe fn destroy_body(ptr: *mut ProvAesGcmSivCtx) {
         // SAFETY: `ptr` is a live context per the trait contract; `ossl_aes_gcm_siv_freectx`
-        // releases the AAD (over `aad_len`, the used length) and then the hardware context.
+        // releases the AAD (over `aad_len`, the used length) and then the hardware context. The
+        // AAD release already accepts the all-zero state; the NULL test on `hw` covers the block
+        // that the safe `OwnedCtx::new` can drop before `ossl_aes_gcm_siv_newctx` installs it. The
+        // authority's `ossl_aes_gcm_siv_freectx` dereferences `ctx->hw` unconditionally, but its
+        // constructor installs `hw` before returning and so never drops that state -- this is a
+        // failure-path safety improvement, not a constructed-path change. The constructed event
+        // order (AAD release, `hw->clean_ctx`, then the block release) is kept.
         unsafe {
             CRYPTO_clear_free((*ptr).aad.cast(), (*ptr).aad_len, FILE_GCM_SIV, LINE);
-            ((*(*ptr).hw).clean_ctx)(ptr.cast());
+            if !(*ptr).hw.is_null() {
+                ((*(*ptr).hw).clean_ctx)(ptr.cast());
+            }
         }
     }
 }
@@ -22020,6 +22037,7 @@ pub(crate) mod legacy {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
     use super::*;
     use crate::aes::AES_MAXNR;
 
@@ -22639,5 +22657,41 @@ mod tests {
             ks: core::ptr::null(),
             libctx: core::ptr::null_mut(),
         }
+    }
+
+    /// D1/D2 negative control: `OwnedCtx::new` hands `Drop` an all-zero block, so `hw` is NULL and
+    /// the destructor body must be a no-op. Before the guard this test dereferenced NULL; it runs
+    /// without the process-global allocator hook and asserts the zero state it is testing.
+    #[test]
+    fn a_zeroed_siv_context_drops_without_a_hardware_table() {
+        let Some(siv) = OwnedCtx::<ProvAesSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: `siv` owns a live, zero-initialised block of `ProvAesSivCtx` for this read.
+        unsafe {
+            let ctx = siv.as_ptr();
+            assert!((*ctx).hw.is_null(), "the zero state has no hardware table");
+            assert!((*ctx).ctr.is_null());
+            assert!((*ctx).cbc.is_null());
+            assert_eq!((*ctx).keylen, 0);
+        }
+        // `Drop` runs `ProvAesSivCtx::destroy_body` and the single cleansing block release. The
+        // body must skip `hw->cleanup`; reaching here without a fault proves the null guard.
+        drop(siv);
+
+        let Some(gsiv) = OwnedCtx::<ProvAesGcmSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: `gsiv` owns a live, zero-initialised block of `ProvAesGcmSivCtx` for this read.
+        unsafe {
+            let ctx = gsiv.as_ptr();
+            assert!((*ctx).hw.is_null(), "the zero state has no hardware table");
+            assert!((*ctx).ecb_ctx.is_null());
+            assert!((*ctx).aad.is_null());
+            assert_eq!((*ctx).aad_len, 0);
+        }
+        // `Drop` runs the AAD release (NULL, length 0), skips `hw->clean_ctx`, and releases the
+        // block exactly once through `OwnedCtx`.
+        drop(gsiv);
     }
 }
