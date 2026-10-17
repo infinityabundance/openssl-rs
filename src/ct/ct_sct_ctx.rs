@@ -22,6 +22,7 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
@@ -237,43 +238,6 @@ impl Drop for OwnedStr {
     }
 }
 
-/// An owned `DER` scratch block the crate's encoders allocate and [`SCT_CTX_set1_cert`] installs
-/// into the record.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block an encoder (`i2d_X509`, `i2d_re_X509_tbs`, `i2d_X509_PUBKEY`) left for this
-    /// frame, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `SCT_CTX *SCT_CTX_new(OSSL_LIB_CTX *libctx, const char *propq)` —
 /// `crypto/ct/ct_sct_ctx.c:23-40`.
 ///
@@ -447,7 +411,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             certderlen = unsafe { i2d_X509(cert, &mut der) };
             // The encoder's block is owned from here; `Drop` is the authority's `err:` release.
             // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-            certder_owner = Some(unsafe { OwnedBuf::adopt(der, ptr::null(), 0) });
+            certder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
             if certderlen < 0 {
                 break 'blk;
             }
@@ -483,7 +447,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             // SAFETY: `pretmp` is live; `der` is an out-slot.
             prederlen = unsafe { i2d_re_X509_tbs(pretmp, &mut der) };
             // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-            preder_owner = Some(unsafe { OwnedBuf::adopt(der, ptr::null(), 0) });
+            preder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
             if prederlen <= 0 {
                 break 'blk;
             }
@@ -498,13 +462,23 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
         // SAFETY: `sctx` is live; its old buffers are NULL or owned blocks; the two owners hold the
         // blocks this call allocated.
         unsafe {
-            drop(OwnedBuf::adopt((*sctx).certder, ptr::null(), 0));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*sctx).certder,
+                ptr::null(),
+                0,
+            ));
             (*sctx).certder = certder_owner
                 .take()
                 .map_or(ptr::null_mut(), OwnedBuf::into_raw);
             (*sctx).certderlen = certderlen as usize;
 
-            drop(OwnedBuf::adopt((*sctx).preder, ptr::null(), 0));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*sctx).preder,
+                ptr::null(),
+                0,
+            ));
             (*sctx).preder = preder_owner
                 .take()
                 .map_or(ptr::null_mut(), OwnedBuf::into_raw);
@@ -579,7 +553,7 @@ unsafe fn ct_public_key_hash(
         // SAFETY: `pkey` is live per the contract; `der` is an out-slot.
         let der_len = unsafe { i2d_X509_PUBKEY(pkey, &mut der) };
         // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-        der_owner = Some(unsafe { OwnedBuf::adopt(der, ptr::null(), 0) });
+        der_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
         if der_len <= 0 {
             break 'blk;
         }

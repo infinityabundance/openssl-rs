@@ -47,6 +47,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
 use core::mem::size_of;
 use core::ptr;
@@ -96,7 +97,7 @@ use crate::runtime::lhash::{
     ossl_lh_strcasehash, OPENSSL_LH_doall, OPENSSL_LH_error, OPENSSL_LH_flush, OPENSSL_LH_free,
     OPENSSL_LH_insert, OPENSSL_LH_new, OPENSSL_LH_retrieve, OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -202,81 +203,6 @@ struct DecoderCache {
 // Ownership of a heap block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned heap block allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
-/// a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
-/// allocate it, [`Self::adopt`] takes in a block the crate allocated (a helper's, or a structure a
-/// shared destructor releases), `Drop` is its single release, and [`Self::into_raw`] hands it to a
-/// consumer that takes it over (the cache return, an `OSSL_DECODER_CTX`'s construct data, or the
-/// cache's own table). A NULL pointer is a valid, empty block whose release is the authority's own
-/// no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this crate allocated -- a helper's, or a structure a shared destructor releases
-    /// -- for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// The strings and template a [`DecoderCacheEntry`] owns, released without its block. The
 /// authority's four string releases and the context release, in order; the block is left to the
 /// caller's handle.
@@ -290,14 +216,30 @@ unsafe fn decoder_cache_entry_free_fields(entry: *mut DecoderCacheEntry) {
     // SAFETY: `entry` is live, and each of the pointers is the entry's own -- the authority releases
     // all four strings and the template unconditionally, `free` accepting NULL.
     unsafe {
-        drop(OwnedBuf::adopt((*entry).input_type.cast(), ptr::null(), 0));
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*entry).input_type.cast(),
+            ptr::null(),
+            0,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
             (*entry).input_structure.cast(),
             ptr::null(),
             0,
         ));
-        drop(OwnedBuf::adopt((*entry).keytype.cast(), ptr::null(), 0));
-        drop(OwnedBuf::adopt((*entry).propquery.cast(), ptr::null(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*entry).keytype.cast(),
+            ptr::null(),
+            0,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*entry).propquery.cast(),
+            ptr::null(),
+            0,
+        ));
         OSSL_DECODER_CTX_free((*entry).template);
     }
 }
@@ -319,7 +261,8 @@ unsafe extern "C" fn decoder_cache_entry_free(entry: *mut c_void) {
     // SAFETY: `entry` is live and its block is its own; the fields release first, then the block.
     unsafe {
         decoder_cache_entry_free_fields(entry);
-        drop(OwnedBuf::adopt(entry.cast(), ptr::null(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(entry.cast(), ptr::null(), 0));
     }
 }
 
@@ -494,7 +437,8 @@ pub(crate) unsafe fn ossl_decoder_cache_free(vcache: *mut c_void) {
         OPENSSL_LH_doall((*cache).hashtable, Some(decoder_cache_entry_free));
         OPENSSL_LH_free((*cache).hashtable);
         CRYPTO_THREAD_lock_free((*cache).lock);
-        drop(OwnedBuf::adopt(cache.cast(), ptr::null(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(cache.cast(), ptr::null(), 0));
     }
 }
 
@@ -671,8 +615,15 @@ unsafe extern "C" fn decoder_construct_pkey(
         // SAFETY: `object_type` is the descriptor's own helper allocation, `data` is live, and its
         // old `object_type` is the one it owns.
         unsafe {
-            let object_type_buf = OwnedBuf::adopt(object_type.cast(), ptr::null(), 0);
-            drop(OwnedBuf::adopt((*data).object_type.cast(), ptr::null(), 0));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let object_type_buf =
+                OwnedBuf::adopt_plain_nullable(object_type.cast(), ptr::null(), 0);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*data).object_type.cast(),
+                ptr::null(),
+                0,
+            ));
             (*data).object_type = object_type_buf.into_raw().cast::<c_char>();
         }
     }
@@ -822,8 +773,18 @@ unsafe fn decoder_pkey_data_free_fields(data: *mut DecoderPkeyData) {
     // SAFETY: `data` is live and each field is its own allocation.
     unsafe {
         OPENSSL_sk_pop_free((*data).keymgmts, Some(keymgmt_free_thunk));
-        drop(OwnedBuf::adopt((*data).propq.cast(), ptr::null(), 0));
-        drop(OwnedBuf::adopt((*data).object_type.cast(), ptr::null(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*data).propq.cast(),
+            ptr::null(),
+            0,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*data).object_type.cast(),
+            ptr::null(),
+            0,
+        ));
     }
 }
 
@@ -844,7 +805,12 @@ unsafe extern "C" fn decoder_clean_pkey_construct_arg(construct_data: *mut c_voi
     // SAFETY: `data` is live and its fields and block are its own.
     unsafe {
         decoder_pkey_data_free_fields(data);
-        drop(OwnedBuf::adopt(construct_data.cast(), ptr::null(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            construct_data.cast(),
+            ptr::null(),
+            0,
+        ));
     }
 }
 
@@ -1140,7 +1106,8 @@ unsafe fn ossl_decoder_ctx_setup_for_pkey(
     if !propquery.is_null() {
         // SAFETY: `propquery` is NUL-terminated and its duplicate is helper-allocated for the seam.
         let dup = unsafe {
-            OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup(propquery, ptr::null(), 0).cast::<c_uchar>(),
                 ptr::null(),
                 0,
@@ -1397,7 +1364,8 @@ unsafe fn ossl_decoder_ctx_for_pkey_dup(
             // SAFETY: `process_data_src`'s `propq` is NUL-terminated and its duplicate is
             // helper-allocated for the seam.
             let dup = unsafe {
-                OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup((*process_data_src).propq, ptr::null(), 0).cast::<c_uchar>(),
                     ptr::null(),
                     0,
@@ -1611,7 +1579,8 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_new_for_pkey(
             // SAFETY: `input_type` is NUL-terminated and its duplicate is helper-allocated for the
             // seam.
             let dup = unsafe {
-                OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(input_type, ptr::null(), 0).cast::<c_uchar>(),
                     ptr::null(),
                     0,
@@ -1633,7 +1602,8 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_new_for_pkey(
             // SAFETY: `input_structure` is NUL-terminated and its duplicate is helper-allocated for
             // the seam.
             let dup = unsafe {
-                OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(input_structure, ptr::null(), 0).cast::<c_uchar>(),
                     ptr::null(),
                     0,
@@ -1655,7 +1625,8 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_new_for_pkey(
             // SAFETY: `keytype` is NUL-terminated and its duplicate is helper-allocated for the
             // seam.
             let dup = unsafe {
-                OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(keytype, ptr::null(), 0).cast::<c_uchar>(),
                     ptr::null(),
                     0,
@@ -1677,7 +1648,8 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_new_for_pkey(
             // SAFETY: `propquery` is NUL-terminated and its duplicate is helper-allocated for the
             // seam.
             let dup = unsafe {
-                OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(propquery, ptr::null(), 0).cast::<c_uchar>(),
                     ptr::null(),
                     0,

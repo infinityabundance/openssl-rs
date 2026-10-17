@@ -5,7 +5,8 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(private_interfaces)]
 
-use core::ffi::{c_char, c_int, c_long};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::asn1::a_type::ASN1_TYPE_free;
@@ -27,7 +28,7 @@ use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::bio::sys::time;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
 use crate::runtime::obj::{NID_id_it_implicitConfirm, NID_undef, OBJ_nid2obj, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -116,79 +117,6 @@ unsafe fn raise_cmp(line: c_int, func: &'static core::ffi::CStr, reason: c_int) 
     // SAFETY: the site is a compile-time constant.
     unsafe {
         raise_site(&cmp_site(line, func, reason));
-    }
-}
-
-/// An owned temporary from this unit's `CRYPTO_malloc`/`CRYPTO_free` seam.
-///
-/// The block keeps the authority's allocation size and `file`/`line` (observable to a
-/// caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type. The
-/// constructor allocates here, [`adopt`](OwnedBuf::adopt) takes in a block a helper
-/// allocated through the same seam, and `Drop` is the single plain release at the
-/// authority's own free coordinate.
-struct OwnedBuf {
-    ptr: *mut u8,
-    file: *const c_char,
-    release_line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, alloc_line)`, released at `release_line`, or `None` when
-    /// the allocator answers NULL.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr: raw,
-                file,
-                release_line,
-            })
-        }
-    }
-
-    /// Adopt a block a helper allocated in full through the crate's `CRYPTO_*` seam, for
-    /// release by `Drop`; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam allocated in full (not a
-    /// sub-range) and no other owner will release; `file` is NULL or a NUL-terminated C
-    /// string; `release_line` is the authority's own free site.
-    unsafe fn adopt(
-        ptr: *mut c_char,
-        file: *const c_char,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr: ptr.cast::<u8>(),
-                file,
-                release_line,
-            })
-        }
-    }
-
-    /// The start of the block, for the raw calls that read or write it.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release through the seam it was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.file`
-        // is that block's allocation file and `self.release_line` its authority free site;
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.release_line) };
     }
 }
 
@@ -332,7 +260,7 @@ pub(crate) unsafe fn ossl_cmp_hdr_update_messageTime(hdr: *mut CmpPkiHeader) -> 
 unsafe fn set_random(tgt: *mut *mut Asn1String, ctx: *mut OsslCmpCtx, len: c_int) -> c_int {
     let mut res = 0;
     // The local owner is the authority's single plain free on every path.
-    match OwnedBuf::new(len as usize, FILE.as_ptr(), 117, 124) {
+    match OwnedBuf::new_plain_released(len as usize, FILE.as_ptr(), 117, FILE.as_ptr(), 124) {
         // SAFETY: the site is a compile-time constant.
         None => unsafe { raise_cmp(121, c"set_random", 110) },
         Some(bytes) => {
@@ -548,8 +476,9 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
         // allocator seam; this frame becomes its only owner and `Drop` releases it at the
         // authority's line 258.
         let tid = unsafe {
-            OwnedBuf::adopt(
-                i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id),
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            OwnedBuf::adopt_plain(
+                i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id).cast::<c_uchar>(),
                 FILE.as_ptr(),
                 258,
             )

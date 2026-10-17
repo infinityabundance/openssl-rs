@@ -28,7 +28,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::mem::size_of;
 use core::ptr::{self, null_mut};
 
@@ -41,7 +42,7 @@ use crate::crypto_async::async_wait::{async_wait_ctx_reset_counts, AsyncWaitCtx}
 use crate::ffi::guard_ffi;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ASYNC};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_reserve, OPENSSL_sk_pop, OPENSSL_sk_push, OpenSslStack,
 };
@@ -73,81 +74,6 @@ const LINE_POOL_FREE: c_int = 401;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a heap block
 // ---------------------------------------------------------------------------------------------
-
-/// An owned heap block allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_zalloc` at the authority's exact size/`file`/`line` --
-/// a Rust `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_zeroed`
-/// allocate it, [`Self::adopt`] takes in a block the crate allocated (a job's `funcargs`, or a
-/// context/job/pool a shared destructor releases), `Drop` is its single release, and
-/// [`Self::into_raw`] hands it to a consumer that takes it over (the caller, a thread-local slot,
-/// or the job's `funcargs`). A NULL pointer is a valid, empty block whose release is the
-/// authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this crate allocated -- a job's `funcargs`, or a context/job/pool a shared
-    /// destructor releases -- for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `#define ASYNC_JOB_RUNNING 0` — `async.c:26`.
 const ASYNC_JOB_RUNNING: c_int = 0;
@@ -298,7 +224,12 @@ unsafe fn async_ctx_free() -> c_int {
         // and is not released, only the opaque storage.
         unsafe {
             async_fibre_storage_free((*ctx).dispatcher);
-            drop(OwnedBuf::adopt(ctx.cast(), FILE, LINE_CTX_FREE));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ctx.cast(),
+                FILE,
+                LINE_CTX_FREE,
+            ));
         }
     }
     1
@@ -340,13 +271,19 @@ unsafe fn async_job_free(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract, and its two buffers are its own.
     unsafe {
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
             (*job).funcargs.cast(),
             FILE,
             LINE_JOB_FREEARGS,
         ));
         async_fibre_release((*job).fibre);
-        drop(OwnedBuf::adopt(job.cast(), FILE, LINE_JOB_FREE));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            job.cast(),
+            FILE,
+            LINE_JOB_FREE,
+        ));
     }
 }
 
@@ -413,7 +350,8 @@ unsafe fn async_release_job(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract and `pool` is this thread's.
     unsafe {
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
             (*job).funcargs.cast(),
             FILE,
             LINE_JOB_FREEARGS,
@@ -799,7 +737,12 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
         unsafe {
             async_empty_pool(pool);
             OPENSSL_sk_free((*pool).jobs);
-            drop(OwnedBuf::adopt(pool.cast(), FILE, LINE_POOL_FREE));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                pool.cast(),
+                FILE,
+                LINE_POOL_FREE,
+            ));
             CRYPTO_THREAD_set_local_ex(
                 CRYPTO_THREAD_LOCAL_ASYNC_POOL_KEY,
                 CRYPTO_THREAD_NO_CONTEXT,
