@@ -61,6 +61,7 @@ use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_count_to_mark,
@@ -189,34 +190,6 @@ pub struct EvpAsymCipher {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the `EVP_ASYM_CIPHER` object and the decrypted-output block
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for an owned object, without the block release [`OwnedCtx`]'s
-/// `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (every releaser is
-///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live object this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned [`EvpAsymCipher`] block.
 ///

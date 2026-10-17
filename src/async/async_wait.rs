@@ -15,6 +15,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr::{null_mut, NonNull};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// The authority's `OPENSSL_FILE` for this unit.
@@ -78,35 +79,6 @@ pub struct AsyncWaitCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the `ASYNC_WAIT_CTX` object and its `fd_lookup_st` nodes
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for an owned context, without the block release [`OwnedCtx`]'s
-/// `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe
-/// [`OwnedCtx::new_zeroed`] builds the owner and its `Drop` runs the implementer's body through a
-/// safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (every releaser is
-///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned [`AsyncWaitCtx`] block.
 ///

@@ -60,6 +60,7 @@ use crate::provider::cipher::{param_int, param_octet_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::der_slh_dsa_key::ossl_DER_w_algorithmIdentifier_SLH_DSA;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
@@ -139,35 +140,6 @@ fn is_running() -> c_int {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the `PROV_SLH_DSA_CTX` block and the property query it holds
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for an owned context, without the block release [`OwnedCtx`]'s
-/// `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `slh_dsa_freectx` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the hash
-///   context and the property query, each releaser the authority's own and accepting the not-yet-set
-///   NULL/zero state, plus the cleansing of the context-owned `add_random` buffer) and **never**
-///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `slh_dsa_freectx` body, without the block release `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live context this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `PROV_SLH_DSA_CTX` block.
 ///
