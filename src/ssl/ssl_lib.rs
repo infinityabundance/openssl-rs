@@ -3522,11 +3522,14 @@ unsafe impl CtxDestroy for Ssl {
     /// `s` is a live connection whose reference count has reached zero and which this file owns.
     unsafe fn destroy_body(s: *mut Ssl) {
         // SAFETY: `s` is live per the contract; every member is NULL or owned, exactly as the
-        // authority's `SSL_free` walks it. The `#[repr(C)]` member buffers (`session_ticket`,
-        // `client_cert_type`/`server_cert_type`/`ext_alpn`/`ext_npn`/`ext_hostname`/
-        // `s3_alpn_selected`/`s3_alpn_proposed`/`pha_context`) are released through their
-        // [`MemberBufSlot`]/[`MemberCStrSlot`] handles; `supportedgroups` (an element-counted,
-        // externally-written list) stays a raw release, as in the authority.
+        // authority's `SSL_free` walks it. The `#[repr(C)]` member buffers (`client_cert_type`/
+        // `server_cert_type`/`ext_alpn`/`ext_npn`/`ext_hostname`/`s3_alpn_selected`/
+        // `s3_alpn_proposed`/`pha_context`) are released through their [`MemberBufSlot`]/
+        // [`MemberCStrSlot`] handles; `supportedgroups` (an element-counted, externally-written
+        // list) stays a raw release, as in the authority. `session_ticket` is a raw release too:
+        // it is the single `TLS_SESSION_TICKET_EXT` record with its data inline (`data = self + 1`),
+        // not a `(ptr, len)` member-buffer pair, and the authority releases it with `OPENSSL_free`
+        // in `tls1_free` (`ssl/t1_lib.c:122`), exactly as the call below does.
         unsafe {
             OPENSSL_sk_free((*s).cipher_list);
             OPENSSL_sk_free((*s).cipher_list_by_id);

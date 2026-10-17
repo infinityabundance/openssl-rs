@@ -319,8 +319,12 @@ on partially built or partially repaired storage.
 
 ## 6. Defects / inconsistencies (STOP findings)
 
-These are reported, not fixed. Each is a single case of a destructor accepting
-an invalid zero state; per the audit rule this is a STOP.
+These were reported by the independent audit; the four defect sites are now
+fixed at the source by the sweep-37 guards below. Each was a single case of a
+destructor accepting an invalid zero state. The affected boundaries remain
+`CONTRACTED`/`ESTABLISHED`, **not** `DISCHARGED`: a source guard plus a
+deterministic zero-state negative control is not the independent evidence §7
+requires, and no Miri/sanitizer/differential run was added by this fix.
 
 1. **D1 — `ProvAesSivCtx` null `hw` dereference.**
    `src/provider/cipher.rs:703-709`. The impl comment at `:700-702` claims
@@ -335,12 +339,32 @@ an invalid zero state; per the audit rule this is a STOP.
    abstraction's contract, not an observed path. Either the body must test
    `hw` or the zero-validity claim must be removed and the safe zalloc
    constructor replaced by a staged one.
+   **FIXED — sweep-37.** `ProvAesSivCtx::destroy_body` (`src/provider/cipher.rs:703-718`)
+   now guards the hardware teardown with `if !(*ptr).hw.is_null()` at `:713`.
+   The authority's `aes_siv_freectx` (`cipher_aes_siv.c:49-57`) calls
+   `ctx->hw->cleanup(ctx)` unconditionally, but `aes_siv_newctx`
+   (`cipher_aes_siv.c:37-46`) installs `hw` before returning, so the authority
+   never drops a context whose `hw` was never installed. The guard is therefore
+   a failure-path safety improvement for the safe `OwnedCtx::new` zero block; it
+   does not change the constructed path, whose order (`hw->cleanup`, then the
+   block's cleansing release) is unchanged. Negative control:
+   `a_zeroed_siv_context_drops_without_a_hardware_table`
+   (`src/provider/cipher.rs:22662-22696`).
 2. **D2 — `ProvAesGcmSivCtx` null `hw` dereference.**
    `src/provider/cipher.rs:746-755`. Same contradiction (`:743-745` claim,
    `:753` `((*(*ptr).hw).clean_ctx)(ptr.cast())`). `OwnedCtx::new` is the same
    safe zalloc constructor; `ossl_aes_gcm_siv_newctx` installs `hw` at
    `:13804` before `into_raw`, so no current path triggers it. Same required
    fix.
+   **FIXED — sweep-37.** `ProvAesGcmSivCtx::destroy_body`
+   (`src/provider/cipher.rs:755-773`) keeps the unconditional AAD release and
+   guards the hardware teardown with `if !(*ptr).hw.is_null()` at `:768`. The
+   authority's `ossl_aes_gcm_siv_freectx` (`cipher_aes_gcm_siv.c:44-54`)
+   dereferences `ctx->hw` unconditionally, but
+   `ossl_aes_gcm_siv_newctx` (`cipher_aes_gcm_siv.c:27-42`) installs it before
+   returning. Failure-path improvement only; the constructed order (AAD release,
+   `hw->clean_ctx`, then the block's cleansing release) is unchanged. The same
+   negative control covers this context.
 3. **D3 — `EcGroup::clear_destroy_body` null `meth` dereference.**
    `src/ec/lib.rs:277-294`, specifically `:280-281`
    (`let meth = (*ptr).meth; (*meth).group_clear_finish`). The trait
@@ -352,22 +376,45 @@ an invalid zero state; per the audit rule this is a STOP.
    a live block. The false claim is a latent soundness hole if a safe
    cleansing constructor is ever added. The plain `destroy_body` is null-safe
    because it uses `meth.as_ref()`.
+   **FIXED — sweep-37.** `EcGroup::clear_destroy_body` (`src/ec/lib.rs:280-301`)
+   now guards the method callback block with `if !(*ptr).meth.is_null()` at
+   `:284`. The authority's `EC_GROUP_clear_free` (`crypto/ec/ec_lib.c:142-159`)
+   dereferences `group->meth` unconditionally, but no constructed group has a
+   NULL method (`ossl_ec_group_new_ex`, `ec_lib.c:30-75`, rejects one), so the
+   guard is a failure-path safety improvement for the zero state only. The
+   plain body remains null-safe through `meth.as_ref()` (`:267`), and the
+   clear-body order (finish callback, then the member releases) is unchanged.
+   Negative control covers both this body and the plain one:
+   `a_zeroed_group_and_point_drop_through_both_bodies`
+   (`src/ec/lib.rs:3107-3178`).
 4. **D4 — `EcPoint::clear_destroy_body` null `meth` dereference.**
    `src/ec/lib.rs:311-320`, specifically `:314-315`. Identical to D3; the
    plain body at `:302-309` is null-safe, the clear body is not.
+   **FIXED — sweep-37.** `EcPoint::clear_destroy_body` (`src/ec/lib.rs:320-334`)
+   now guards the method callback block with `if !(*ptr).meth.is_null()` at
+   `:324`. The authority's `EC_POINT_clear_free` (`crypto/ec/ec_lib.c:758-768`)
+   dereferences `point->meth` unconditionally, but no constructed point has a
+   NULL method (`EC_POINT_new` requires one), so this is again a failure-path
+   improvement only. The plain body is already null-safe through `meth.as_ref()`
+   (`:314`), and the clear-body callback/order is unchanged. The same negative
+   control covers this body.
 
 **No other STOP was found in the audited set:** no `destroy_body` releases the
 enclosing block, no member is released twice by a body, and no body reads a
 field that the documented construction path leaves uninitialised. The four
-sites above are zero-state contract violations; D1/D2 are reachable by safe
-code inside their module, D3/D4 are latent behind an unsafe reclaim.
+sites above were zero-state contract violations; D1/D2 were reachable by safe
+code inside their module, D3/D4 are latent behind an unsafe reclaim. All four
+now carry the guards above.
 
 **Non-soundness inconsistencies recorded (no STOP):**
 
-- `Ssl::destroy_body` (`src/ssl/ssl_lib.rs:3524-3529`) says `session_ticket`
-  is released through a `MemberBufSlot`, but the body releases it with a raw
-  `CRYPTO_free` at `:3541`. Single release, so not a double-free; the comment
-  overstates the member-buffer coverage.
+- `Ssl::destroy_body` inconsistency **resolved in sweep-37**
+  (`src/ssl/ssl_lib.rs:3524-3533`): the implementation raw-frees
+  `session_ticket` (`CRYPTO_free`, `:3544`), which is the authority's contract
+  (`tls1_free`, `ssl/t1_lib.c:122`), and the comment now says so rather than
+  claiming a `MemberBufSlot`. No ownership change: a single release, not a
+  double-free. `TlsSessionTicketExt` is one record with its data inline
+  (`data = self + 1`), so it has no separate byte-length pair to model.
 - `PROGRESS.md`'s "46 module-local destructor traits" counts the `*Destroy`
   definitions; `DrbgCtx` and the two `FreeOnDrop` copies make the definition
   total 49 (42 `CtxDestroy` + 4 other `*Destroy` + `DrbgCtx` + 2 `FreeOnDrop`).
@@ -384,7 +431,7 @@ code inside their module, D3/D4 are latent behind an unsafe reclaim.
 | `CONTRACTED` | 21 |
 | `ESTABLISHED` | 178 |
 | `DISCHARGED` | 0 |
-| defect sites (STOP) | 4 (3 classes) |
+| defect sites (STOP) | 4, all fixed at source in sweep-37 |
 
 **Retained obligations (global):**
 
@@ -396,10 +443,13 @@ code inside their module, D3/D4 are latent behind an unsafe reclaim.
 - Reference-counted destructors (`EvpPkey`, `SslCtx`, `Ssl`, `SslSession`)
   retain the "last reference" precondition; the exported `*_free` wrappers
   establish it, but no independent check was run.
-- `EcGroup`/`EcPoint` retain the clear/plain selection obligation and the
-  D3/D4 latent null dereference.
+- `EcGroup`/`EcPoint` retain the clear/plain selection obligation. The D3/D4
+  latent null dereference is fixed by the sweep-37 guard; the zero-state claim
+  now holds, but the boundaries remain `ESTABLISHED` (no independent check).
 - `CipherDestroy::OwnedCtx::new` retains the zero-validity obligation for all
-  27 implementers; D1/D2 show it is not uniformly met.
+  27 implementers; D1/D2 showed it was not uniformly met, and the two failing
+  bodies now guard their hardware teardown. Deterministic zero-state tests cover
+  those two rows; the other 25 retain the source-witness status only.
 - No Miri, sanitizer, negative-control, or differential run was performed for
   this audit. `ESTABLISHED` is a source-witness status, not an independently
   checked one, and nothing here is `SAFETY_DISCHARGED`.
