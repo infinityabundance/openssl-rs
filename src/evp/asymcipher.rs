@@ -61,13 +61,13 @@ use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_count_to_mark,
     ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
 
 /// `OSSL_OP_ASYM_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_ASYM_CIPHER: c_int = 13;
@@ -191,71 +191,12 @@ pub struct EvpAsymCipher {
 // Ownership of the `EVP_ASYM_CIPHER` object and the decrypted-output block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned [`EvpAsymCipher`] block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/`line`,
-/// but its *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back
-/// the block the C ABI hands to [`EVP_ASYM_CIPHER_free`], and `Drop` runs the authority's own free
-/// body ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide
-/// both the release and a caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
-    /// is the authority's own starting state -- every owned member is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
-    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The object's address, the C ABI's `EVP_ASYM_CIPHER *`.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the object to the C ABI's answer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim the block the C ABI hands to [`EVP_ASYM_CIPHER_free`], for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live object this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object's destructor: the authority's own free body followed by its single block release,
-    /// through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
-        // the authority's own free body and this is the block's single release.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `EVP_ASYM_CIPHER_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the type name and the provider *reference*, in the authority's own order.
 // SAFETY: (a) holds: `destroy_body` is `EVP_ASYM_CIPHER_free` minus the block -- the type name and
 // the provider reference, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
 // all-zero cipher has both members NULL, so the body is the authority's own all-empty teardown --
-// what the safe `OwnedCtx::new_zeroed` leans on.
+// what the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for EvpAsymCipher {
     unsafe fn destroy_body(ptr: *mut EvpAsymCipher) {
         // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or this file's
@@ -344,7 +285,9 @@ unsafe extern "C" fn evp_asym_cipher_up_ref(data: *mut c_void) -> c_int {
 /// # Safety
 /// `prov` must be live.
 unsafe fn evp_asym_cipher_new(prov: *mut OsslProvider) -> *mut EvpAsymCipher {
-    let Some(cipher) = OwnedCtx::<EvpAsymCipher>::new_zeroed(FILE, LINE_ZALLOC_CIPHER) else {
+    let Some(cipher) =
+        OwnedCtx::<EvpAsymCipher>::zalloc_at(FILE, LINE_ZALLOC_CIPHER, FILE, LINE_ZALLOC_CIPHER)
+    else {
         return ptr::null_mut();
     };
     // SAFETY: `cipher` is this call's own object and `prov` is live.
@@ -506,7 +449,7 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
     }
     // SAFETY: `cipher` is live and this was its last reference, so no other owner will release it;
     // `Drop` runs the authority's own free body and this is the block's single release.
-    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw(cipher, FILE, LINE_FREE_CIPHER) });
+    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw_at(cipher, FILE, LINE_FREE_CIPHER) });
 }
 
 /// `int EVP_ASYM_CIPHER_up_ref(EVP_ASYM_CIPHER *cipher)`.

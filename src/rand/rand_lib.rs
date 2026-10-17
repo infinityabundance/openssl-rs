@@ -72,7 +72,7 @@ use crate::rand::pool::{
     ossl_rand_pool_buffer, ossl_rand_pool_entropy, ossl_rand_pool_free, ossl_rand_pool_length,
     ossl_rand_pool_new, RAND_POOL_MAX_LENGTH,
 };
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 // `stat`, `fstat`, `chmod`, `Stat` and `s_isreg` are `crate::rand::sys`'s -- they need the
 // `struct stat` layout, which has one home (D298/D312) and is tested there. The stdio calls
@@ -311,43 +311,6 @@ pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
 // Ownership of the per-context record and the names it holds
 // ---------------------------------------------------------------------------------------------
 
-/// An owned heap record of this unit.
-///
-/// The block keeps the authority's layout and its exact allocator size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::from_raw`] takes back the block the lib-context slot hands
-/// over and `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`])
-/// followed by its single block release at the authority's own site.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a record the lib-context slot holds, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's
-    /// own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 // SAFETY: (a) holds: `destroy_body` is `ossl_rand_ctx_free` minus the block -- the lock, the two
 // DRBG contexts and the seven owned names, each releaser NULL-tolerant, never the enclosing block.
 // (b) holds: `RandGlobal` is a `#[repr(C)]` record of raw pointers, so an all-zero block is a valid
@@ -492,7 +455,9 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
 pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
     // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly
     // once, here; `Drop` runs the authority's own free body and its single block release.
-    drop(unsafe { OwnedCtx::<RandGlobal>::from_raw(vdgbl.cast::<RandGlobal>(), FILE, L_CTX_FREE) });
+    drop(unsafe {
+        OwnedCtx::<RandGlobal>::from_raw_at(vdgbl.cast::<RandGlobal>(), FILE, L_CTX_FREE)
+    });
 }
 
 // ---------------------------------------------------------------------------------------------

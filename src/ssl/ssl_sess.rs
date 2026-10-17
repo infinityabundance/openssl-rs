@@ -74,7 +74,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::evp::pkey::EVP_PKEY_up_ref;
 use crate::ffi::guard_ffi;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::raise_with;
 use crate::runtime::ex_data::{
     CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
@@ -163,65 +163,6 @@ unsafe fn session_new_ex_data(ss: *mut SslSession) -> c_int {
 // Ownership of the session block, reclaimed from `SSL_SESSION_free`'s own body
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `SSL_SESSION` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
-/// through the crate's allocator seam at the authority's own `(file, alloc_line)` and `Drop`
-/// releases it at the authority's own `(file, line)`. It stays a `CRYPTO_zalloc` at
-/// `size_of::<SslSession>()` rather than a Rust `Box`, so a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
-        // bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
-    /// by the block release, through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// `void ssl_session_calculate_timeout(SSL_SESSION *ss)` — `ssl/ssl_sess.c:48-51`.
 ///
 /// # Safety
@@ -274,7 +215,7 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
         // The session block, allocated through the crate's allocator seam; `Drop` is its single
         // release on the refusal below and `into_raw` hands it out on success. `ss` is the block's
         // stable address.
-        let Some(ss_owner) = OwnedCtx::<SslSession>::new(FILE, 109, 930) else {
+        let Some(ss_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE, 109, FILE, 930) else {
             return ptr::null_mut();
         };
         let ss = ss_owner.as_ptr();
@@ -318,7 +259,7 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
     // on every refusal below and `into_raw` hands it out on success. `dest` is the block's stable
     // address, and the authority's `goto err` ladder reaches its destructor (`SSL_SESSION_free`),
     // which is `OwnedCtx`'s `Drop`.
-    let Some(dest_owner) = OwnedCtx::<SslSession>::new(FILE, 140, 930) else {
+    let Some(dest_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE, 140, FILE, 930) else {
         return ptr::null_mut();
     };
     let dest = dest_owner.as_ptr();
@@ -510,7 +451,7 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
         // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `ss` is owned
         // here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own
         // `SSL_SESSION_free` body followed by the block release.
-        unsafe { drop(OwnedCtx::<SslSession>::from_raw(ss, FILE, 930)) };
+        unsafe { drop(OwnedCtx::<SslSession>::from_raw_at(ss, FILE, 930)) };
     })
 }
 
@@ -520,7 +461,7 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
 // master key/id cleanse, the peer, CRL, peer_rpk and peer_chain references and the object-owned
 // member buffers, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero
 // session has every member NULL/zero, so the body is the authority's own all-empty teardown -- what
-// the safe `OwnedCtx::new` leans on.
+// the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for SslSession {
     /// # Safety
     /// `ptr` is a live session whose reference count has reached zero and which this file owns.

@@ -66,11 +66,11 @@ use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::dso::dlfcn::DSO_METHOD_openssl;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::ex_data::CryptoExData;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push,
@@ -188,84 +188,10 @@ pub(crate) const DSO_FLAG_GLOBAL_SYMBOLS: c_int = 0x20;
 // Ownership of the object block and its two names
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `DSO` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out and takes it back), but its *ownership* is this type: [`Self::new_zeroed`]
-/// allocates it through the crate's allocator seam at the authority's own `(file, alloc_line)` and
-/// `Drop` releases it at the authority's own `(file, line)` -- with the object's destructor body
-/// first. It stays a `CRYPTO_zalloc`/`CRYPTO_free` at the authority's own size rather than a Rust
-/// `Box`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size
-/// and its release exactly as it observes the authority's.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    /// The `__LINE__` this handle's `Drop` records for the block release.
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh zeroed block of `T`'s size at `file`/`alloc_line`, or `None` when the seam
-    /// answers NULL (the authority's refused `CRYPTO_zalloc`).
-    fn new_zeroed(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
-        // bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The block's stable address the exported ABI holds.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C ABI's `DSO *`.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// Release the block without the destructor body, at `line` -- the authority's own bare
-    /// `OPENSSL_free` in `DSO_new_method`'s stack-failure arm, which runs before the object is a
-    /// live object and does not reach the object's destructor. The destructor body is skipped
-    /// deliberately: this is the one place the owner is not the destructor, and it is the
-    /// authority's own partial teardown (the stack is the very member that failed to build).
-    fn release_block(self, line: c_int) {
-        let ptr = self.ptr.as_ptr().cast::<c_void>();
-        let file = self.file;
-        core::mem::forget(self);
-        // SAFETY: `ptr` is the block `new_zeroed` allocated and this is its single release; the
-        // authority's error arm writes its own bare `CRYPTO_free`.
-        unsafe { CRYPTO_free(ptr, file, line) };
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's own `DSO_free` body ([`CtxDestroy::destroy_body`])
-    /// followed by the block release, through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new_zeroed` allocated (or `from_raw` reclaimed) and this
-        // is its single release; `Drop` runs once and the body is the authority's own.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 // SAFETY: (a) holds: `destroy_body` is `DSO_free` minus the block -- the method-data stack and the
 // two names, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero `DSO`
 // has a NULL stack and two NULL names, so the body is the authority's own all-empty teardown (its
-// own doc) -- what the safe `OwnedCtx::new_zeroed` leans on.
+// own doc) -- what the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for Dso {
     /// `DSO_free`'s body minus the block release: `OPENSSL_sk_free(meth_data)`, then the two
     /// names. A zeroed (partially built) object has a NULL stack and two NULL names, so this is
@@ -298,19 +224,23 @@ unsafe impl CtxDestroy for Dso {
 /// # Safety
 /// `meth` must be NULL or a `'static` method.
 unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
-    // The allocation and its ownership are the same call: `new_zeroed` is the authority's
-    // `OPENSSL_zalloc`, and the handle is its single owner until the object is handed out.
-    let Some(owned) = OwnedCtx::<Dso>::new_zeroed(FILE_LIB, LINE_ZALLOC, LINE_FREE_DSO) else {
+    // Allocation and validity are separate states: `RawCtx::zalloc_at` is the authority's
+    // `OPENSSL_zalloc` and its `Drop` releases the block alone until every field is written.
+    let Some(mut raw) = RawCtx::<Dso>::zalloc_at(FILE_LIB, LINE_ZALLOC, FILE_LIB, LINE_FREE_DSO)
+    else {
         return ptr::null_mut();
     };
-    let ret = owned.as_ptr();
+    let ret = raw.as_ptr();
     // SAFETY: `ret` is a fresh, exclusively owned block of exactly this type.
     unsafe {
         (*ret).meth_data = OPENSSL_sk_new_null();
         if (*ret).meth_data.is_null() {
             // `sk_new` raises nothing of its own, so the authority raises here.
             raise_site(&err_sites::DSO_LIB_23);
-            owned.release_block(LINE_FREE_STACK_FAIL);
+            // The authority's error arm releases the block alone at `:26`, before the object is
+            // handed out; the raw owner's `Drop` is exactly that release.
+            raw.set_release_line(LINE_FREE_STACK_FAIL);
+            drop(raw);
             return ptr::null_mut();
         }
         // The `meth` argument is accepted and **discarded**: the authority assigns
@@ -322,6 +252,9 @@ unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
         (*ret).meth = DSO_METHOD_openssl();
         (*ret).references = AtomicI32::new(1);
     }
+    // SAFETY: every field of `Dso` has been written above (the only early return released the raw
+    // block before this point), so the storage is a valid `Dso`.
+    let owned = unsafe { raw.assume_init() };
     // The authority's `CRYPTO_NEW_REF` cannot fail for an inline atomic, so its failure
     // arm (`sk_void_free` then `OPENSSL_free`, at line 30) is unreachable here. The
     // ordering it documents — the stack released before the object — is in the arm
@@ -398,7 +331,7 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
         }
         // The last reference is gone: reclaim the block and run the object's destructor body.
         // SAFETY: `dso` is a live object a previous `into_raw` gave up and `Drop` has not released.
-        if let Some(owned) = unsafe { OwnedCtx::from_raw(dso, FILE_LIB, LINE_FREE_DSO) } {
+        if let Some(owned) = unsafe { OwnedCtx::from_raw_at(dso, FILE_LIB, LINE_FREE_DSO) } {
             drop(owned);
         }
         1

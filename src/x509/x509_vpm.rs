@@ -58,10 +58,10 @@ use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::asn1::prim::ASN1_OBJECT_free;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup};
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -245,75 +245,13 @@ const _: () = {
 // Ownership of the parameter block and its scratch strings
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `X509_VERIFY_PARAM` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
-/// through the crate's allocator seam at the authority's own `(file, alloc_line)`, `Drop` runs the
-/// authority's own free body ([`CtxDestroy::destroy_body`]) followed by its single block release at
-/// the authority's own `(file, line)`, and [`Self::into_raw`] hands the block to the caller. It
-/// stays a `CRYPTO_zalloc` at `size_of::<X509VerifyParam>()` rather than a Rust `Box` on purpose --
-/// a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release
-/// exactly as it observes the authority's.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The parameter's destructor: the authority's `X509_VERIFY_PARAM_free` body
-    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
-    /// allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `X509_VERIFY_PARAM_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the policy set, the host set, the peername, the email and the IP. **`name` is
 /// deliberately not released** -- the authority's own text omits it (see the module doc).
 // SAFETY: (a) holds: `destroy_body` is `X509_VERIFY_PARAM_free` minus the block -- it releases
 // exactly the parameter's own policy set, host set, peername, email and IP (each NULL-tolerant, and
 // deliberately not `name`) and never the enclosing block. (b) holds: a zeroed parameter is valid
-// and every release is a no-op -- the obligation the safe `OwnedCtx::<X509VerifyParam>::new` in
+// and every release is a no-op -- the obligation the safe `OwnedCtx::<X509VerifyParam>::zalloc_at` in
 // `X509_VERIFY_PARAM_new` leans on.
 unsafe impl CtxDestroy for X509VerifyParam {
     unsafe fn destroy_body(ptr: *mut X509VerifyParam) {
@@ -372,11 +310,14 @@ unsafe extern "C" fn asn1_object_free_void(a: *mut c_void) {
 /// A zeroed parameter with `trust = X509_TRUST_DEFAULT`, `depth = -1` and `auth_level = -1`.
 #[no_mangle]
 pub extern "C" fn X509_VERIFY_PARAM_new() -> *mut X509VerifyParam {
-    // `OwnedCtx::new` is the authority's own `OPENSSL_zalloc(sizeof(*param))`; it answers NULL when
+    // `OwnedCtx::zalloc_at` is the authority's own `OPENSSL_zalloc(sizeof(*param))`; it answers NULL when
     // the allocator does, else a fresh zeroed block of the parameter's size.
-    let Some(param) =
-        OwnedCtx::<X509VerifyParam>::new(FILE.as_ptr(), LINE_ZALLOC_PARAM, LINE_FREE_PARAM)
-    else {
+    let Some(param) = OwnedCtx::<X509VerifyParam>::zalloc_at(
+        FILE.as_ptr(),
+        LINE_ZALLOC_PARAM,
+        FILE.as_ptr(),
+        LINE_FREE_PARAM,
+    ) else {
         return ptr::null_mut();
     };
     let p = param.as_ptr();
@@ -404,7 +345,9 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_free(param: *mut X509VerifyParam) {
     // SAFETY: `param` is NULL or the block `X509_VERIFY_PARAM_new` allocated; reclaiming it runs the
     // authority's own free body (the policy set, the host set, the peername, the email and the IP)
     // and releases the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509VerifyParam>::from_raw(param, FILE.as_ptr(), LINE_FREE_PARAM) });
+    drop(unsafe {
+        OwnedCtx::<X509VerifyParam>::from_raw_at(param, FILE.as_ptr(), LINE_FREE_PARAM)
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
