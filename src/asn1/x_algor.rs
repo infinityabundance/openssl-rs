@@ -679,7 +679,8 @@ pub(crate) unsafe fn ossl_x509_algor_md_to_mgf1(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::mem::CRYPTO_free;
+    use crate::asn1::i2d::{FILE as I2D_FILE, LINE as I2D_LINE};
+    use crate::asn1::owned::OwnedBlock;
     use crate::runtime::obj::{OBJ_nid2obj, OBJ_obj2nid};
 
     /// `set0` builds an identifier whose OID is the caller's and whose parameter is an explicit
@@ -716,7 +717,14 @@ mod tests {
             assert_eq!(got_type, V_ASN1_NULL);
 
             X509_ALGOR_free(back);
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // `der` is the `i2d` frame's `CRYPTO_malloc` block at the encoder's own
+            // `FILE`/`LINE`, handed out with `into_raw`; this is its single release. The enclosing
+            // `unsafe` block carries the adoption contract.
+            drop(OwnedBlock::<c_uchar>::from_raw(
+                der,
+                I2D_FILE.as_ptr(),
+                I2D_LINE,
+            ));
             X509_ALGOR_free(alg);
         }
     }

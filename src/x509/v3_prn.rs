@@ -61,6 +61,45 @@ const FILE: &CStr = c"crypto/x509/v3_prn.c";
 /// `X509V3_EXT_print`'s `err:` `OPENSSL_free(value)` — `crypto/x509/v3_prn.c:130`.
 const LINE_FREE_VALUE: c_int = 130;
 
+/// An `i2s` callback result owned by the frame that received it.
+///
+/// The authority's `X509V3_EXT_METHOD.i2s` contract returns a NUL-terminated string allocated
+/// through `OPENSSL_malloc`/`OPENSSL_strdup`; `X509V3_EXT_print` owns it and releases it once at
+/// its own `err:` site (`v3_prn.c:130`). This handle makes that release the only one.
+struct OwnedExtValue {
+    ptr: *mut c_char,
+}
+
+impl OwnedExtValue {
+    /// Adopt the block an `i2s` callback returned, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL, or the callback's result: a NUL-terminated block whose whole extent was
+    /// produced by the crate's `CRYPTO_malloc`/`CRYPTO_strdup` seam, owned exclusively by this
+    /// frame (the callback retains no alias and no other owner will release it). `Drop` performs
+    /// its single release at the authority's own coordinates.
+    unsafe fn adopt(ptr: *mut c_char) -> Option<OwnedExtValue> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedExtValue { ptr })
+        }
+    }
+
+    /// The string, for the release-free reads this frame performs.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedExtValue {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took; this is its single release, at
+        // `v3_prn.c:130`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_VALUE) };
+    }
+}
+
 /// `#define X509V3_EXT_UNKNOWN_MASK (0xfL << 16)` — `include/openssl/x509v3.h.in:518`.
 const X509V3_EXT_UNKNOWN_MASK: c_ulong = 0xf << 16;
 /// `#define X509V3_EXT_DEFAULT 0` — `include/openssl/x509v3.h.in:520`.
@@ -204,7 +243,6 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     flag: c_ulong,
     indent: c_int,
 ) -> c_int {
-    let mut value: *mut c_char = ptr::null_mut();
     // SAFETY: `ext` is live per the contract.
     let extoct = unsafe { X509_EXTENSION_get_data(ext) };
     // SAFETY: `extoct` is the extension's embedded octet string.
@@ -250,14 +288,16 @@ pub unsafe extern "C" fn X509V3_EXT_print(
         )
     };
     let mut nval: *mut OpenSslStack = ptr::null_mut();
+    let mut value: Option<OwnedExtValue> = None;
     if let Some(f) = i2s {
-        // SAFETY: `method`/`ext_str` are the callback's contract.
-        value = unsafe { f(method, ext_str) };
-        if value.is_null() {
-            ok = 0;
+        // SAFETY: `method`/`ext_str` are the callback's contract; the result is the callback's
+        // exclusively owned seam block (or NULL).
+        value = unsafe { OwnedExtValue::adopt(f(method, ext_str)) };
+        if let Some(v) = value.as_ref() {
+            // SAFETY: `out` is live; `v` is NUL-terminated.
+            unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), v.as_ptr()) };
         } else {
-            // SAFETY: `out` is live; `value` is NUL-terminated.
-            unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), value) };
+            ok = 0;
         }
     } else if let Some(f) = i2v {
         // SAFETY: `method`/`ext_str` are the callback's contract; the destination slot is NULL.
@@ -279,8 +319,8 @@ pub unsafe extern "C" fn X509V3_EXT_print(
 
     // SAFETY: `nval` is NULL or this call's own `CONF_VALUE` stack.
     unsafe { OPENSSL_sk_pop_free(nval, Some(conf_value_free_thunk)) };
-    // SAFETY: `value` is NULL or this call's own; the site is constant.
-    unsafe { CRYPTO_free(value.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_VALUE) };
+    // The authority's `err:` order: release the value at :130, then the decoded structure.
+    drop(value);
     if let Some(it) = it {
         // SAFETY: `ext_str` is the item value; `it()` answers the item it describes.
         unsafe { ASN1_item_free(ext_str, it()) };

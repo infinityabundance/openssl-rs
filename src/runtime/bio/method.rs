@@ -23,14 +23,66 @@
 //! Reproducing that asymmetry matters because a caller can (and the RT-BIO probe
 //! does) set one form and read both.
 
-use core::ffi::{c_char, c_int, c_long};
+use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ptr;
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 
 use super::{
     Bio, BioCallbackCtrlFn, BioCreateFn, BioCtrlFn, BioDestroyFn, BioGetsFn, BioMethod, BioPutsFn,
     BioReadExFn, BioReadFn, BioRecvmmsgFn, BioSendmmsgFn, BioWriteExFn, BioWriteFn,
 };
+
+/// `__FILE__` for this unit's allocator calls — the source-tree `crypto/bio/bio_meth.c`.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/bio/bio_meth.c".as_ptr();
+/// `BIO_meth_new`'s `OPENSSL_zalloc(sizeof(BIO_METHOD))` — `bio_meth.c:39`.
+const LINE_ZALLOC: c_int = 39;
+/// `BIO_meth_new`'s `OPENSSL_strdup(name)` — `bio_meth.c:42`.
+const LINE_STRDUP: c_int = 42;
+/// `BIO_meth_new`'s failure `OPENSSL_free(biom)` — `bio_meth.c:43`.
+const LINE_FREE_REFUSED: c_int = 43;
+/// `BIO_meth_free`'s `OPENSSL_free(biom->name)` — `bio_meth.c:53`.
+const LINE_FREE_NAME: c_int = 53;
+/// `BIO_meth_free`'s `OPENSSL_free(biom)` — `bio_meth.c:54`.
+const LINE_FREE_TABLE: c_int = 54;
+
+/// `BIO_METHOD`'s owned-context contract.
+///
+/// The authority allocates the table with `OPENSSL_zalloc`, installs a `CRYPTO_strdup` name, and
+/// releases the name and then the table in `BIO_meth_free` (`bio_meth.c:37-56`).
+///
+/// # Safety
+/// Zero is the authority's constructed state: `type_` is a `c_int`, `name` is a raw pointer, and
+/// every dispatch slot is `None` in an all-zero block, so the zeroed storage is a valid
+/// `BioMethod`. `destroy_body` releases exactly the one member `BIO_meth_free` releases — the
+/// duplicate name — at that function's own coordinates, and never the enclosing table.
+// SAFETY: zero is a valid `BioMethod` (all fields are integers, raw pointers, or `Option<fn>`,
+// whose zero is `None`), and `destroy_body` frees only the `CRYPTO_strdup` name at :53, leaving
+// the table to `OwnedCtx::Drop` at :54.
+unsafe impl CtxDestroy for BioMethod {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE_TABLE;
+
+    /// `BIO_meth_free`'s `OPENSSL_free(biom->name)` (`bio_meth.c:53`), without the block release.
+    ///
+    /// # Safety
+    /// `ptr` is a live method table this crate allocated and has not released (the trait
+    /// contract).
+    unsafe fn destroy_body(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the trait contract; `name` is NULL or the single duplicate
+        // this crate installed, and the seam treats a NULL release as a no-op.
+        unsafe {
+            CRYPTO_free(
+                (*ptr).name.cast_mut().cast::<c_void>(),
+                FILE,
+                LINE_FREE_NAME,
+            )
+        };
+    }
+}
 
 /// The legacy write adapter the authority installs for `BIO_meth_set_write`.
 ///
@@ -113,51 +165,59 @@ pub(crate) unsafe extern "C" fn bread_conv(
 
 /// `BIO_METHOD *BIO_meth_new(int type, const char *name)`
 ///
-/// The name is **copied**, so `BIO_meth_free` owns it. A NULL `name` is a
-/// failure (the authority's `OPENSSL_strdup(NULL)` returns NULL).
+/// The name is **copied** through the `CRYPTO_strdup` seam, so `BIO_meth_free` owns it. A NULL
+/// `name` is a failure: the authority still allocates and releases the table around the refused
+/// duplicate, so a caller-installed `CRYPTO_set_mem_functions` hook observes that sequence.
 ///
 /// # Safety
 /// `name` must be NULL or point at a NUL-terminated C string that stays valid
-/// for the duration of the call; it is copied with `strdup` before returning.
+/// for the duration of the call; it is copied with `CRYPTO_strdup` before returning.
 /// The returned table must be released with `BIO_meth_free`, and must outlive
 /// every BIO created against it.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_new(type_: c_int, name: *const c_char) -> *mut BioMethod {
-    guard_ffi(core::ptr::null_mut(), || {
-        if name.is_null() {
-            return core::ptr::null_mut();
-        }
-        // SAFETY: `name` is a NUL-terminated C string.
-        let copied = unsafe { super::sys::strdup(name) };
+    guard_ffi(ptr::null_mut(), || {
+        // The authority allocates before duplicating (`bio_meth.c:39`), and a refused allocation
+        // answers NULL without raising.
+        let Some(table) = OwnedCtx::<BioMethod>::zalloc() else {
+            return ptr::null_mut();
+        };
+        // SAFETY: `name` is NULL or a NUL-terminated C string per this function's contract.
+        let copied = unsafe { CRYPTO_strdup(name, FILE, LINE_STRDUP) };
         if copied.is_null() {
-            return core::ptr::null_mut();
+            // The authority's failure arm releases the table at :43 (its `name` is still NULL, so
+            // only the block is released). `Drop` would release at :54, so release here at the
+            // authority's coordinate and give up the handle.
+            let table_ptr = table.as_ptr();
+            core::mem::forget(table);
+            // SAFETY: `table_ptr` is the block just allocated and forgotten; this is its single
+            // release.
+            unsafe { CRYPTO_free(table_ptr.cast::<c_void>(), FILE, LINE_FREE_REFUSED) };
+            return ptr::null_mut();
         }
-        Box::into_raw(Box::new(BioMethod {
-            name: copied,
-            ..BioMethod::new(type_, core::ptr::null())
-        }))
+        let table_ptr = table.as_ptr();
+        // SAFETY: `table_ptr` is the live zeroed table this call owns exclusively; `copied` is a
+        // fresh `CRYPTO_strdup` block whose ownership moves into the table.
+        unsafe {
+            (*table_ptr).name = copied;
+            (*table_ptr).type_ = type_;
+        }
+        table.into_raw()
     })
 }
 
 /// `void BIO_meth_free(BIO_METHOD *biom)`
 ///
 /// # Safety
-/// `biom` must be NULL or a table returned by `BIO_meth_new` (or an equivalent
-/// heap allocation) that no live BIO still references; it is reclaimed here and
-/// its copied `name` is freed.
+/// `biom` must be NULL or a table returned by `BIO_meth_new` that no live BIO still references;
+/// it is reclaimed here through the crate's allocator seam, releasing its copied `name` (at
+/// `bio_meth.c:53`) and then the table (at :54) in the authority's order.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_free(biom: *mut BioMethod) {
     guard_ffi((), || {
-        if biom.is_null() {
-            return;
-        }
-        // SAFETY: `biom` was allocated by `BIO_meth_new`; its `name` was copied
-        // by `strdup` and is owned here.
-        let boxed = unsafe { Box::from_raw(biom) };
-        if !boxed.name.is_null() {
-            // SAFETY: `name` came from `strdup`.
-            unsafe { super::sys::free(boxed.name.cast_mut().cast()) };
-        }
+        // SAFETY: `biom` is NULL or a live table `BIO_meth_new` handed out with `into_raw` and
+        // `Drop` has not released; `Drop` is its single release.
+        drop(unsafe { OwnedCtx::<BioMethod>::from_raw(biom) });
     })
 }
 
