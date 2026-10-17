@@ -40,6 +40,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
@@ -175,53 +176,6 @@ fn is_running() -> c_int {
 // Ownership of a context's scratch buffer
 // ---------------------------------------------------------------------------------------------
 
-/// An owned buffer the context holds, allocated through the crate's allocator seam.
-///
-/// The block stays the authority's own allocation -- a `CRYPTO_strdup` for the `PROPQ` or a
-/// `CRYPTO_memdup`/`OSSL_PARAM_get_octet_string` for the verification signature -- at the
-/// authority's exact size and `file`/`line`, because a Rust `String`/`Vec` would hide both the
-/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook. Only its
-/// *ownership* is this type: [`Self::adopt`] takes up a block the crate allocated inside a helper
-/// or reclaimed from a `PROV_DSA_CTX` field, `Drop` is its single release, and [`Self::into_raw`]
-/// hands the block to the `#[repr(C)]` `PROV_DSA_CTX` field whose address the exported ABI exposes.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Take up a plain block the crate allocated inside a helper (a `CRYPTO_strdup`, a
-    /// `CRYPTO_memdup`, an `OSSL_PARAM_get_octet_string`) or reclaimed from a `PROV_DSA_CTX` field,
-    /// for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
-    /// is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// Give up ownership of the block to the context field it is stored in.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `static size_t dsa_get_md_size(const PROV_DSA_CTX *pdsactx)` — `dsa_sig.c.in:120-131`.
 ///
 /// # Safety
@@ -262,7 +216,12 @@ unsafe extern "C" fn dsa_newctx(provctx: *mut c_void, propq: *const c_char) -> *
         if !propq.is_null() {
             // The copy is a plain block this context owns; a refusal drops it with the context at
             // the authority's `err:` site.
-            match OwnedBuf::adopt(CRYPTO_strdup(propq, FILE, 147).cast::<c_uchar>(), FILE, 629) {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
+                CRYPTO_strdup(propq, FILE, 147).cast::<c_uchar>(),
+                FILE,
+                629,
+            ) {
                 Some(buf) => (*pdsactx).propq = buf.into_raw().cast::<c_char>(),
                 None => {
                     CRYPTO_free(pdsactx.cast(), FILE, 148);
@@ -936,8 +895,18 @@ unsafe extern "C" fn dsa_freectx(vpdsactx: *mut c_void) {
         EVP_MD_free((*ctx).md);
         // Each field's handle releases its own plain block at the authority's site; the context
         // block stays on the raw seam (its release is part of the destructor body).
-        drop(OwnedBuf::adopt((*ctx).sig.cast::<c_uchar>(), FILE, 628));
-        drop(OwnedBuf::adopt((*ctx).propq.cast::<c_uchar>(), FILE, 629));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).sig.cast::<c_uchar>(),
+            FILE,
+            628,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).propq.cast::<c_uchar>(),
+            FILE,
+            629,
+        ));
         DSA_free((*ctx).dsa);
         CRYPTO_free(ctx.cast(), FILE, 631);
     }
@@ -990,7 +959,8 @@ unsafe extern "C" fn dsa_dupctx(vpdsactx: *mut c_void) -> *mut c_void {
         if !(*srcctx).propq.is_null() {
             // The copy is a plain block the handle takes up; a refusal drops it with the context at
             // the authority's `err:` site.
-            match OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*srcctx).propq, FILE, 663).cast::<c_uchar>(),
                 FILE,
                 629,
@@ -1001,7 +971,8 @@ unsafe extern "C" fn dsa_dupctx(vpdsactx: *mut c_void) -> *mut c_void {
         }
         if !(*srcctx).sig.is_null() {
             // As above, for the signature copy.
-            match OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
                 CRYPTO_memdup((*srcctx).sig.cast(), (*srcctx).siglen, FILE, 666).cast::<c_uchar>(),
                 FILE,
                 628,
@@ -1642,7 +1613,12 @@ unsafe extern "C" fn dsa_sigalg_set_ctx_params(
         if (*pdsactx).operation == EVP_PKEY_OP_VERIFYMSG && !p.sig.is_null() {
             // The old signature's handle releases it at the authority's own site; the replacement is
             // the helper's fresh block, handed to the field through a second handle.
-            drop(OwnedBuf::adopt((*pdsactx).sig.cast::<c_uchar>(), FILE, 979));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            drop(OwnedBuf::adopt_plain(
+                (*pdsactx).sig.cast::<c_uchar>(),
+                FILE,
+                979,
+            ));
             (*pdsactx).sig = ptr::null_mut();
             (*pdsactx).siglen = 0;
             let mut sig: *mut c_void = ptr::null_mut();
@@ -1651,11 +1627,17 @@ unsafe extern "C" fn dsa_sigalg_set_ctx_params(
             {
                 return 0;
             }
-            (*pdsactx).sig = OwnedBuf::adopt(sig.cast::<c_uchar>(), FILE, 628)
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            (*pdsactx).sig = OwnedBuf::adopt_plain(sig.cast::<c_uchar>(), FILE, 628)
                 .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             /* The signature must not be empty. */
             if (*pdsactx).siglen == 0 {
-                drop(OwnedBuf::adopt((*pdsactx).sig.cast::<c_uchar>(), FILE, 987));
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+                drop(OwnedBuf::adopt_plain(
+                    (*pdsactx).sig.cast::<c_uchar>(),
+                    FILE,
+                    987,
+                ));
                 (*pdsactx).sig = ptr::null_mut();
                 return 0;
             }

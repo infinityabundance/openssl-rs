@@ -26,6 +26,7 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
@@ -355,34 +356,6 @@ impl Drop for OwnedStr {
     }
 }
 
-/// An owned encoder scratch block (`i2d_PUBKEY`'s `pkey_der`).
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block an encoder (`i2d_PUBKEY`) left for this frame, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `void ctlog_free_void(void *p)` — the `FreeFn` thunk `CTLOG_STORE_free` installs.
 ///
 /// # Safety
@@ -405,7 +378,7 @@ unsafe fn ct_v1_log_id_from_pkey(log: *mut Ctlog, pkey: *mut EvpPkey) -> c_int {
     let pkey_der_len = unsafe { i2d_PUBKEY(pkey, &mut pkey_der) };
     // The encoder's block is owned from here; `Drop` is the authority's own tail release.
     // SAFETY: `pkey_der` is NULL or a live block this crate allocated that no one else owns.
-    let pkey_der_owner = unsafe { OwnedBuf::adopt(pkey_der, ptr::null(), 0) };
+    let pkey_der_owner = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, ptr::null(), 0) };
     let mut len: c_uint = 0;
     let mut sha256: *mut EvpMd = ptr::null_mut();
 

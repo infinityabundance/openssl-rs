@@ -53,7 +53,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
 use crate::context::dispatch::OsslDispatch;
@@ -165,49 +166,6 @@ impl Drop for OwnedStr {
         // SAFETY: `self.ptr` is the block this handle adopted and has not released; this is its
         // single release at the authority's own site.
         unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
-    }
-}
-
-/// An owned byte/record block produced by the crate's allocator seam.
-struct OwnedBuf {
-    ptr: *mut c_void,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a freshly allocated block.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced, is owned by the caller,
-    /// and will not be freed or handed to any other owner -- this handle's `Drop` is its single
-    /// release.
-    unsafe fn take(ptr: *mut c_void, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedBuf {
-            ptr: ptr.as_ptr(),
-            file,
-            line,
-        })
-    }
-
-    /// The stable address of the block.
-    fn as_ptr(&self) -> *mut c_void {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the provider object, which releases it on unload.
-    fn into_raw(self) -> *mut c_void {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle adopted and has not released; this is its
-        // single release at the authority's own site.
-        unsafe { CRYPTO_free(self.ptr, self.file, self.line) };
     }
 }
 
@@ -474,8 +432,10 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             );
             // SAFETY: `strings` is this call's fresh exclusive block from the seam; the handle's
             // `Drop` is its single release at the authority's own free site.
-            let Some(strings) = (unsafe { OwnedBuf::take(strings, FILE, LINE_REASON_STRINGS) })
-            else {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            let Some(strings) = (unsafe {
+                OwnedBuf::adopt_plain(strings.cast::<c_uchar>(), FILE, LINE_REASON_STRINGS)
+            }) else {
                 return 0;
             };
             let table_out = strings.as_ptr().cast::<ErrStringData>();
@@ -495,7 +455,7 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 // SAFETY: `prov` is live and the array is the one just built; the provider takes
                 // ownership of it here, exactly as the authority stores the pointer before
                 // `ERR_load_strings`.
-                (*prov).error_strings = strings.into_raw();
+                (*prov).error_strings = strings.into_raw().cast::<c_void>();
                 ERR_load_strings(error_lib, (*prov).error_strings);
             }
         }

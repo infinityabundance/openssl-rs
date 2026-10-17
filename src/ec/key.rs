@@ -47,6 +47,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 use core::sync::atomic::Ordering;
@@ -78,7 +79,7 @@ use crate::evp::pkey_asn1::Engine;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_EX_INDEX_EC_KEY};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_clear_free;
 use crate::runtime::obj::{NID_X9_62_prime_field, NID_sm2};
 use crate::selftest::{
     OSSL_SELF_TEST_free, OSSL_SELF_TEST_get_callback, OSSL_SELF_TEST_new, OSSL_SELF_TEST_onbegin,
@@ -90,79 +91,6 @@ use crate::ec::backend::ossl_ec_key_dup;
 /// The translation-unit coordinate the `OPENSSL_free`/`OPENSSL_clear_free`/`OPENSSL_malloc` sites
 /// in this unit are attributed to, as the allocator reports them.
 const FILE: *const c_char = c"crypto/ec/ec_key.c".as_ptr();
-
-/// An owned scratch block allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size and allocation site -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::new`] allocates
-/// at the authority's own site and re-points the release to the authority's (possibly different)
-/// free site, [`Self::adopt`] takes up a block the object already holds, `Drop` is its single
-/// release, and [`Self::into_raw`] hands the `EC_KEY_priv2buf` buffer to `*pbuf`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, with `Drop` releasing the block at the
-    /// authority's own free site (`file`/`line`, which differ from the allocation site for
-    /// `EC_KEY_priv2buf`), or `None` when the allocator answers NULL.
-    fn new(
-        len: usize,
-        alloc_file: *const c_char,
-        alloc_line: c_int,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block the object already holds (the `EC_KEY_free` release of `r->propq`), for release
-    /// by `Drop` at the authority's own site; NULL answers `None`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller owns
-    /// exclusively -- this handle's `Drop` is its single release; `file` is NULL or a NUL-terminated C
-    /// string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, file, line })
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller's `pbuf` slot.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `OSSL_SELF_TEST_TYPE_PCT` — `include/openssl/self_test.h:32`.
 const OSSL_SELF_TEST_TYPE_PCT: &core::ffi::CStr = c"Conditional_PCT";
@@ -350,7 +278,7 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         BN_clear_free((*r).priv_key);
         // `OPENSSL_free(r->propq)`, line 101; the handle's `Drop` is that release.
         // SAFETY: `(*r).propq` is NULL or this object's own block.
-        drop(OwnedBuf::adopt((*r).propq.cast(), FILE, 101));
+        drop(OwnedBuf::adopt_plain((*r).propq.cast(), FILE, 101));
         // `OPENSSL_clear_free((void *)r, sizeof(EC_KEY))`, line 103.
         CRYPTO_clear_free(r.cast(), core::mem::size_of::<EcKey>(), FILE, 103);
     }
@@ -1909,7 +1837,7 @@ pub unsafe extern "C" fn EC_KEY_priv2buf(eckey: *const EcKey, pbuf: *mut *mut c_
         // The buffer, allocated through the crate's allocator seam at the authority's own line 1019;
         // its release is the authority's `OPENSSL_free(buf)` at line 1023, run by the handle's `Drop`
         // on the failure path below and given up to `*pbuf` on success.
-        let Some(buf) = OwnedBuf::new(len, FILE, 1019, FILE, 1023) else {
+        let Some(buf) = OwnedBuf::new_plain_released(len, FILE, 1019, FILE, 1023) else {
             return 0;
         };
         len = EC_KEY_priv2oct(eckey, buf.as_ptr(), len);
