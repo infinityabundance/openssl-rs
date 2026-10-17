@@ -199,8 +199,8 @@ means the construction path releases block-only before the object is complete.
 | `BioSsl` (`ssl/bio_ssl.rs:102`) | E | none | E | EST |
 | `Dtls1State` (`ssl/d1_lib.rs:107`) | E | none | E | EST |
 | `Cert` (`ssl/ssl_lib.rs:995`) | S | clear 12 cert-key slots, `drop_in_place(custext)`, psk hint slot, `dh_tmp` | raw `RawCtx`; `custext` written before `assume_init` | EST |
-| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (subphase 38 retained: ex-data/nested callbacks, multi-member) |
-| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (subphase 38 retained: ex-data/BIO callbacks, 40+ member teardown) |
+| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (subphase 39: atomic last-ref gate; ex-data/store/CT-log callback reentrancy retained) |
+| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (subphase 39: atomic last-ref gate; ex-data/BIO callback reentrancy retained) |
 | `DanetlsRecord` (`ssl/ssl_lib.rs:11436`) | Z | `CRYPTO_free(data)`, `EVP_PKEY_free(spki)` | zero NULL | EST |
 | `SslSession` (`ssl/ssl_sess.rs:559`) | Z | ex_data, cleanse master key/id, peer, peer_rpk, chain, 7 member-buffer slots | zero NULL/arrays | EST (subphase 38) |
 | `OsslStoreCtx` (`store/store_lib.rs:262`) | E | none (`ossl_store_close_it` is explicit) | E | EST |
@@ -221,7 +221,7 @@ means the construction path releases block-only before the object is complete.
 | `ConfValue` (`x509/v3_utl.rs:479`) | R | free name/value/section | constructed record; no zero claim | EST |
 | `X509Lookup` (`x509/x509_lu.rs:739`) | Z | method `free` hook if method non-NULL | zero method NULL | EST (subphase 38) |
 | `X509Object` (`x509/x509_lu.rs:758`) | Z | `x509_object_free_internal` by tag | zero tag `X509_LU_NONE` | EST |
-| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (subphase 38 retained: non-atomic refcount, free hooks) |
+| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (subphase 39: atomic refcount established; lookup `free`/ex-data callback reentrancy retained) |
 | `X509Trust` (`x509/x509_trust.rs:215`) | R | free name iff dynamic flag | constructed row; no zero claim | EST |
 | `X509StoreCtx` (`x509/x509_vfy.rs:319`) | Z | `X509_STORE_CTX_cleanup`, propq slot clear | cleanup preserves propq; zero accepted | EST |
 | `X509VerifyParam` (`x509/x509_vpm.rs:342`) | Z/R | policies, hosts, peername, email, ip | zero NULL | EST |
@@ -458,29 +458,48 @@ differential or independent §7 package was run.
 
 ### Retained `CONTRACTED` (3)
 
+Subphase 39 re-checked these three rows as runtime/alias boundaries. The
+refcount gates are atomic and layout-compatible; the retained blocker is the
+re-entrant destructor edge described in `RUNTIME-ALIAS-EVIDENCE.md`.
+
 - **`SslCtx`** (`src/ssl/ssl_lib.rs:3155-3186`). The last-reference gate is
-  established (`:3134-3147`), the constructor validates the zero/partial block
-  before fallible members (`:2996-3100`), and the directly read helpers
+  established (`:3134-3147`) on `AtomicI32` (`:1302`, `src/ssl/ssl_lib.rs:2902-2909`),
+  the constructor validates the zero/partial block before fallible members
+  (`:2996-3100`), and the directly read helpers
   (`ssl_ctx_session_cache_free` `src/ssl/ssl_sess.rs:890-903`,
   `ssl_ctx_srp_ctx_free_intern` `src/ssl/tls_srp.rs:136-143`, slot clears) are
-  zero-safe. It is retained because `CRYPTO_free_ex_data` (`:3174`) dispatches
-  application ex-data free callbacks and `X509_STORE_free`/`CTLOG_STORE_free`
-  add nested refcount/callback obligations; the callback re-entrancy and the
-  complete single-owner proof across every member were not independently
-  discharged in this pass.
+  zero-safe. **Retained blocker:** after the count reaches zero, `destroy_body`
+  dispatches `CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx, …)`
+  (`src/ssl/ssl_lib.rs:3174`) and then `X509_STORE_free`/`CTLOG_STORE_free`
+  (`:3175`, `:3178`). Their application callbacks can call `SSL_CTX_free(ctx)`
+  again; the second call observes the count at zero and proceeds (the current
+  gate is `i > 0`, not an ownership-state check), producing a second
+  `OwnedCtx` and a double teardown. The callback is a C-ABI boundary, not a
+  disabled path; re-entrancy is therefore retained, not claimed safe.
 - **`Ssl`** (`src/ssl/ssl_lib.rs:3520-3583`). The two context references are
   balanced (`SSL_new` `:3227`, `:3347`; destructor `:3574`, `:3580`), the
   partial-construction `release_block` paths are the authority's block-only
   frees (`:3230`, `:3282`), and `session_ticket` is the authority's raw release.
-  Retained because the body performs 40+ releases, dispatches
-  `CRYPTO_free_ex_data` and `BIO_free_all` application callbacks, and the
-  alias/lifetime analysis across `session`, `peer_chain`/`verified_chain` and
-  `ctx`/`session_ctx` is not complete enough for a per-field claim.
-- **`X509Store`** (`src/x509/x509_lu.rs:770-794`). The body zero/stack teardown
-  is NULL-tolerant, but the last-reference precondition is enforced through a
-  non-atomic `c_int` (`:1883-1885`), so it is established only for single-
-  threaded use; the lookup `free` hooks are application callbacks. Retained as
-  a concurrency + callback obligation.
+  **Retained blocker:** after the count reaches zero, `destroy_body` calls
+  `SSL_SESSION_free` (`:3542`), `BIO_free_all` (`:3546-3547`) and
+  `CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s, …)` (`:3573`). An ex-data
+  `free_func` receives `s` itself; a BIO `destroy`/ex-data callback can recover
+  it through `argp`/`BIO_get_data`. Any of them can call `SSL_free(s)` again;
+  the count is zero and the `i > 0` gate does not stop the second
+  `OwnedCtx::from_raw`, so the connection is torn down twice. The 40+ member
+  releases also remain without a per-field independent claim.
+- **`X509Store`** (`src/x509/x509_lu.rs:770-794`). **Refcount blocker fixed in
+  subphase 39:** `references` is now `AtomicI32` (same size/alignment/offset as
+  (same size/alignment/offset as
+  the authority's `int`; `:511`, `:535-541`), and `X509_STORE_new`/`_up_ref`/`_free`
+  use the authority's relaxed fetch-add / release fetch-sub + acquire fence
+  (`:1870`, `:1894-1900`, `:1958`). Concurrent `X509_STORE_up_ref` can no
+  longer lose increments or prematurely free. **Retained blocker:** the
+  application `X509_LOOKUP_METHOD.free` hook (`:790-794`) and the store
+  ex-data `free_func` (`:797-801`) run after the count reaches zero and can
+  call `X509_STORE_free(xs)` again; `i > 0` does not reject the zero-to-minus-one
+  transition, so a second `OwnedCtx` is created. Retained as a callback
+  re-entrancy obligation.
 
 ### STOP defects
 
@@ -508,7 +527,7 @@ state.
 | `CONTRACTED` | 5 (3 `CtxDestroy` + 2 `CipherDestroy`) |
 | `ESTABLISHED` | 194 |
 | `DISCHARGED` | 0 |
-| defect sites (STOP) | 4, all fixed at source in sweep-37; none added in subphase 38 |
+| defect sites (STOP) | 4, all fixed at source in sweep-37; none added in subphase 38 or 39 |
 
 **Retained obligations (global):**
 
@@ -517,10 +536,12 @@ state.
 - Callback-dispatching destructors retain the authority/provider callback
   contract (D1/D2 are distinct: they are not callback obligations, they are
   missing null tests).
-- Reference-counted destructors: `SslCtx`, `Ssl` and `X509Store` retain the
-  "last reference" precondition as a retained obligation (the exported `*_free`
-  wrappers establish it at source; `X509Store` additionally has a non-atomic
-  count). `EvpPkey` and `SslSession` last-reference gates were source-witnessed in
+- Reference-counted destructors: `SslCtx`, `Ssl` and `X509Store` now all use
+  `AtomicI32` gates (the exported `*_free` wrappers establish the last-reference
+  precondition at source). Their retained obligation is **callback
+  re-entrancy**, not atomicity: an application callback can re-enter the
+  destructor after the count reached zero (`RUNTIME-ALIAS-EVIDENCE.md`).
+  `EvpPkey` and `SslSession` last-reference gates were source-witnessed in
   subphase 38 (`evp/pkey.rs:758-772`, `ssl/ssl_sess.rs:535-549`).
 - `EcGroup`/`EcPoint` retain the clear/plain selection obligation. The D3/D4
   latent null dereference is fixed by the sweep-37 guard; the zero-state claim
