@@ -34,7 +34,7 @@ Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
 `cargo test --lib` (must pass; the established baseline is **1196** passed
 and the adversarial probes are `#[ignore]`d and run separately via
-`scripts/adv-probe.sh`; as of sweep 34 there are **16** probes).
+`scripts/adv-probe.sh`; as of sweep 35 there are **18** probes).
 
 ## Landed batches
 
@@ -134,6 +134,7 @@ and the adversarial probes are `#[ignore]`d and run separately via
 | 75 | stage/p25/sweep32 | runtime/{thread,stack,lhash}, bn/recp | final opaque-representation classification; P1 allocator-hook byte-size residual stated; documentation only; hidden 0 |
 | 76 | stage/p25/sweep33 | src/ssl/adv_alloc, dsa/object, dh/object, ec/ecx_backend, scripts/adv-probe.sh | **targeted court**: site-independent `arm_any`, cleansed-free detector + canary; DSA/DH/ECX allocation-refusal probes; 13/13 probes; hidden 0 |
 | 77 | stage/p25/sweep34 | src/ssl/d1_lib, src/pkcs12/p12_key, src/provider/activate, scripts/adv-probe.sh | **targeted court**: DTLS state refusal/lifecycle, PKCS#12 `OwnedUniPass` cleansed release, provider operation-bits publication ordering; 16/16 probes; hidden 0 |
+| 78 | stage/p25/sweep35 | src/dsa/object, src/dh/object, scripts/adv-probe.sh | **targeted court**: later initialisation failure (`meth->init` returns 0) runs the partial cleanup — method `finish` once, one forwarded context allocation, one release of the same block, default method restored and exercised; allocation-refusal arm already covered; lock-null (Box-based) and ex-data failure are unreachable/non-injectable and not claimed; 18/18 probes; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
