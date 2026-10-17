@@ -122,6 +122,82 @@ pub(crate) struct OpCacheElem {
     pub(crate) selection: c_int,
 }
 
+/// An owned `OP_CACHE_ELEM` record allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc(sizeof(*p), FILE, 268)`. On the successful path it is handed to
+/// the operation-cache stack through [`Self::into_raw`], where `op_cache_free` is its single
+/// release; when `evp_keymgmt_util_cache_keydata` fails before the push, the handle's `Drop`
+/// releases the block at the authority's own failure site. Only the *ownership* is this type -- a
+/// Rust `Box` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook.
+struct OwnedCacheElem {
+    ptr: *mut OpCacheElem,
+    /// The authority's `OPENSSL_free` site for this block.
+    line: c_int,
+}
+
+impl OwnedCacheElem {
+    /// `CRYPTO_malloc(sizeof(OP_CACHE_ELEM), FILE, LINE_MALLOC_CACHE_ELEM)`, released on `Drop` at
+    /// `free_line`, or `None` when the allocator answers NULL.
+    fn new(free_line: c_int) -> Option<OwnedCacheElem> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<OpCacheElem>()` bytes, which is exactly the context's layout.
+        let raw = CRYPTO_malloc(
+            core::mem::size_of::<OpCacheElem>(),
+            FILE,
+            LINE_MALLOC_CACHE_ELEM,
+        )
+        .cast::<OpCacheElem>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedCacheElem {
+                ptr: raw,
+                line: free_line,
+            })
+        }
+    }
+
+    /// Reclaim a block the stack hands back to `op_cache_free`, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live element this file allocated and `Drop` has not released; it is NULL
+    /// or a block from the crate's `CRYPTO_malloc` seam that no other owner will release.
+    unsafe fn from_raw(ptr: *mut OpCacheElem, line: c_int) -> Option<OwnedCacheElem> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedCacheElem { ptr, line })
+        }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut OpCacheElem {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's own failure site for the path that reaches it.
+    fn set_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up ownership of the block to the operation-cache stack.
+    fn into_raw(self) -> *mut OpCacheElem {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedCacheElem {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
+    }
+}
+
 /// `struct evp_keymgmt_util_try_import_data_st` — the callback's argument.
 ///
 /// `keydata` is `NULL` on entry when the destination has nothing yet, and the callback allocates on
@@ -470,8 +546,10 @@ unsafe extern "C" fn op_cache_free(e: *mut c_void) {
     unsafe { evp_keymgmt_freedata(keymgmt, keydata) };
     // SAFETY: `keymgmt` is live and the cache holds one reference to it.
     unsafe { EVP_KEYMGMT_free(keymgmt) };
-    // SAFETY: `elem` was allocated with `CRYPTO_malloc`.
-    unsafe { CRYPTO_free(e, FILE, LINE_FREE_CACHE_ELEM) };
+    // Adopt the element the stack owns and release its block through the handle; `op_cache_free` is
+    // the stack's own free function, so the element is not released anywhere else.
+    // SAFETY: `e` is an element of the cache per the contract and no other owner releases it.
+    drop(unsafe { OwnedCacheElem::from_raw(elem, LINE_FREE_CACHE_ELEM) });
 }
 
 /// `int evp_keymgmt_util_clear_operation_cache(EVP_PKEY *pk)`.
@@ -568,38 +646,34 @@ pub(crate) unsafe fn evp_keymgmt_util_cache_keydata(
             unsafe { (*pk).operation_cache = stack };
         }
 
-        // SAFETY: this allocates a fresh object and reads nothing.
-        let p = CRYPTO_malloc(
-            core::mem::size_of::<OpCacheElem>(),
-            FILE,
-            LINE_MALLOC_CACHE_ELEM,
-        )
-        .cast::<OpCacheElem>();
-        if p.is_null() {
+        // SAFETY: this allocates a fresh object and reads nothing. The element's handle releases
+        // it at the authority's `up_ref`-failure site until it is re-pointed below.
+        let Some(mut p) = OwnedCacheElem::new(LINE_FREE_CACHE_ELEM_FAILED_UPREF) else {
             return 0;
-        }
+        };
         // SAFETY: `p` is this call's own allocation.
         unsafe {
-            (*p).keydata = keydata;
-            (*p).keymgmt = keymgmt;
-            (*p).selection = selection;
+            (*p.as_ptr()).keydata = keydata;
+            (*p.as_ptr()).keymgmt = keymgmt;
+            (*p.as_ptr()).selection = selection;
         }
 
         // SAFETY: `keymgmt` is live.
         if unsafe { EVP_KEYMGMT_up_ref(keymgmt) } == 0 {
-            // SAFETY: `p` is this call's own allocation.
-            unsafe { CRYPTO_free(p.cast(), FILE, LINE_FREE_CACHE_ELEM_FAILED_UPREF) };
+            // `p`'s `Drop` releases the element at the authority's `up_ref`-failure site.
             return 0;
         }
+        p.set_line(LINE_FREE_CACHE_ELEM_FAILED_PUSH);
 
         // SAFETY: `pk` is live and its cache stack was created above or already existed.
-        if unsafe { OPENSSL_sk_push((*pk).operation_cache, p.cast::<c_void>()) } == 0 {
+        if unsafe { OPENSSL_sk_push((*pk).operation_cache, p.as_ptr().cast::<c_void>()) } == 0 {
             // SAFETY: `keymgmt` is live and the push did not take the entry's reference.
             unsafe { EVP_KEYMGMT_free(keymgmt) };
-            // SAFETY: `p` is this call's own allocation.
-            unsafe { CRYPTO_free(p.cast(), FILE, LINE_FREE_CACHE_ELEM_FAILED_PUSH) };
+            // `p`'s `Drop` releases the element at the authority's push-failure site.
             return 0;
         }
+        // The stack now owns the element; give up the handle's ownership.
+        let _ = p.into_raw();
     }
     1
 }
