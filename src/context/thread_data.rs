@@ -53,7 +53,7 @@ use core::ptr;
 
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_THREAD_INDEX};
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::thread::{
     ossl_crypto_condvar_free, ossl_crypto_condvar_new, ossl_crypto_condvar_signal,
     ossl_crypto_condvar_wait, ossl_crypto_mutex_free, ossl_crypto_mutex_lock,
@@ -92,6 +92,27 @@ pub(crate) struct OsslLibCtxThreads {
     pub(crate) cond_finished: *mut CryptoCondvar,
 }
 
+// SAFETY: (a) `destroy_body` is the authority's `ossl_threads_ctx_free` member body: it releases
+// the two primitives the context owns, exactly once, and never the enclosing block, which
+// [`OwnedCtx`] releases; both primitives accept NULL, so it is also sound on a zeroed context.
+// (b) an all-zero block is a valid `OsslLibCtxThreads` — zero counters and NULL owned pointers —
+// which is exactly what the authority's `OPENSSL_zalloc` leaves.
+unsafe impl CtxDestroy for OsslLibCtxThreads {
+    const FILE: *const core::ffi::c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE;
+
+    /// `ossl_threads_ctx_free`'s two member releases (`crypto/thread/internal.c:142-145`).
+    unsafe fn destroy_body(ptr: *mut OsslLibCtxThreads) {
+        // SAFETY: `ptr` is a live context per the trait contract; each member is NULL or a live
+        // primitive this object owns, and both free functions accept a NULL target.
+        unsafe {
+            ossl_crypto_mutex_free(ptr::addr_of_mut!((*ptr).lock));
+            ossl_crypto_condvar_free(ptr::addr_of_mut!((*ptr).cond_finished));
+        }
+    }
+}
+
 /// `void *ossl_threads_ctx_new(OSSL_LIB_CTX *ctx)`
 ///
 /// The `ctx` argument is accepted and unused, exactly as in the authority's body:
@@ -102,11 +123,11 @@ pub(crate) struct OsslLibCtxThreads {
 /// Returns NULL when either primitive cannot be allocated, having released
 /// whatever it did allocate — the authority's `goto fail`.
 pub(crate) fn ossl_threads_ctx_new(_ctx: *mut c_void) -> *mut OsslLibCtxThreads {
-    let raw = CRYPTO_zalloc(core::mem::size_of::<OsslLibCtxThreads>(), FILE, LINE_ZALLOC)
-        .cast::<OsslLibCtxThreads>();
-    if raw.is_null() {
+    // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*t))` at
+    // `crypto/thread/internal.c:129`; the block is zeroed but not yet a published context.
+    let Some(ctx) = RawCtx::<OsslLibCtxThreads>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
     let mut lock = ossl_crypto_mutex_new();
     let mut cond = ossl_crypto_condvar_new();
     if lock.is_null() || cond.is_null() {
@@ -116,18 +137,19 @@ pub(crate) fn ossl_threads_ctx_new(_ctx: *mut c_void) -> *mut OsslLibCtxThreads 
             ossl_crypto_mutex_free(&raw mut lock);
             ossl_crypto_condvar_free(&raw mut cond);
         }
-        // SAFETY: `raw` came from `CRYPTO_zalloc` above, was never published, and
-        // nothing else holds it.
-        unsafe { CRYPTO_free(raw.cast::<c_void>(), FILE, LINE_FREE) };
+        // The block was never published, so it is released alone: `RawCtx`'s `Drop` is the
+        // authority's bare `OPENSSL_free(t)` and never runs a destructor body.
+        drop(ctx);
         return ptr::null_mut();
     }
-    // SAFETY: `raw` is a live zeroed block of exactly this struct's size that no
+    // SAFETY: `ctx` is a live zeroed block of exactly this struct's size that no
     // other thread can observe yet, and these are its only writes.
     unsafe {
+        let raw = ctx.as_ptr();
         (*raw).lock = lock;
         (*raw).cond_finished = cond;
+        ctx.assume_init().into_raw()
     }
-    raw
 }
 
 /// `void ossl_threads_ctx_free(void *vdata)` — accepts NULL, as the authority does.
@@ -136,19 +158,10 @@ pub(crate) fn ossl_threads_ctx_new(_ctx: *mut c_void) -> *mut OsslLibCtxThreads 
 /// `t` must be NULL or a live value returned by [`ossl_threads_ctx_new`], and no
 /// thread may be waiting on its condition variable.
 pub(crate) unsafe fn ossl_threads_ctx_free(t: *mut OsslLibCtxThreads) {
-    if t.is_null() {
-        return;
-    }
-    // SAFETY: `t` is live per the caller's contract. Both frees are of pointers
-    // this object owns, each released exactly once, and both accept NULL so a
-    // half-constructed object is safe to pass here.
-    unsafe {
-        ossl_crypto_mutex_free(ptr::addr_of_mut!((*t).lock));
-        ossl_crypto_condvar_free(ptr::addr_of_mut!((*t).cond_finished));
-    }
-    // SAFETY: as above; the block came from `CRYPTO_zalloc` in the constructor and
-    // is freed exactly once.
-    unsafe { CRYPTO_free(t.cast::<c_void>(), FILE, LINE_FREE) };
+    // SAFETY: `t` is NULL or the live block [`ossl_threads_ctx_new`] handed out and has not been
+    // released. `from_raw` maps NULL to `None`; `destroy_body` releases the two primitives and
+    // `Drop` releases the block alone, exactly once, at `crypto/thread/internal.c:156`.
+    unsafe { drop(OwnedCtx::<OsslLibCtxThreads>::from_raw(t)) };
 }
 
 /// `OSSL_LIB_CTX_GET_THREADS(ctx)` — the authority's macro, which is

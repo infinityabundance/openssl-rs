@@ -41,9 +41,10 @@ use crate::ml_kem::{
 };
 use crate::params::{OSSL_PARAM_get_octet_string, OSSL_PARAM_locate_const, OsslParam, END};
 use crate::provider::cipher::param_octet_string;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
 
 /// `OSSL_KEM_PARAM_IKME` — `core_names.h:325`.
 const OSSL_KEM_PARAM_IKME: *const c_char = c"ikme".as_ptr();
@@ -76,6 +77,30 @@ struct ProvMlKemCtx {
     op: c_int,
 }
 
+// SAFETY: (a) `ProvMlKemCtx` owns no separately allocated members: `key` is borrowed by the
+// framework and `entropy` is NULL or points into this context's own `entropy_buf`, so
+// `destroy_body` never releases the enclosing block, which `OwnedCtx` releases; (b) an all-zero
+// block is a valid `ProvMlKemCtx` (NULL pointers, zero scalars and a zeroed byte array) and
+// `destroy_body` is sound on it — the entropy cleanse is skipped because the pointer is NULL.
+unsafe impl CtxDestroy for ProvMlKemCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_NEWCTX;
+    const LINE_FREE: c_int = LINE_FREECTX;
+
+    /// `ml_kem_freectx`'s entropy cleanse (`ml_kem_kem.c:61-63`), without the block release
+    /// [`OwnedCtx`]'s `Drop` performs.
+    unsafe fn destroy_body(ptr: *mut ProvMlKemCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract, and `entropy` is NULL or
+        // points at `ML_KEM_RANDOM_BYTES` readable and writable bytes (`entropy_buf` or, on
+        // the authority's failure path, another buffer it explicitly refuses to own).
+        unsafe {
+            if !(*ptr).entropy.is_null() {
+                OPENSSL_cleanse((*ptr).entropy.cast(), ML_KEM_RANDOM_BYTES);
+            }
+        }
+    }
+}
+
 /// `static const OSSL_PARAM ml_kem_set_ctx_params_list[]` — generated `ml_kem_kem.c`.
 static ML_KEM_SET_CTX_PARAMS_LIST: [OsslParam; 2] = [param_octet_string(OSSL_KEM_PARAM_IKME), END];
 
@@ -84,20 +109,24 @@ static ML_KEM_SET_CTX_PARAMS_LIST: [OsslParam; 2] = [param_octet_string(OSSL_KEM
 /// # Safety
 /// The KEM `newctx` dispatch contract.
 unsafe extern "C" fn ml_kem_newctx(_provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked.
-    let ctx = CRYPTO_malloc(core::mem::size_of::<ProvMlKemCtx>(), FILE, LINE_NEWCTX)
-        .cast::<ProvMlKemCtx>();
-    if ctx.is_null() {
+    // `RawCtx::malloc` is the authority's `OPENSSL_malloc(sizeof(*ctx))` at `ml_kem_kem.c:50`;
+    // the block is not a valid context until every field is written, so it stays a `RawCtx`.
+    let Some(ctx) = RawCtx::<ProvMlKemCtx>::malloc() else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ctx` is a fresh allocation; every field is written below.
+    // SAFETY: `ctx.as_ptr()` is the fresh uninitialised block this call owns. The authority's
+    // `OPENSSL_malloc` leaves `entropy_buf` indeterminate, but `entropy` is NULL until a caller
+    // supplies `ikmE`, so zeroing the buffer is unobservable; it is required for the block to be
+    // a valid `ProvMlKemCtx` before `assume_init`. Every field the destructor reads is written.
     unsafe {
-        (*ctx).key = ptr::null_mut();
-        (*ctx).entropy = ptr::null_mut();
-        (*ctx).op = 0;
+        let raw = ctx.as_ptr();
+        ptr::write_bytes(raw.cast::<u8>(), 0, core::mem::size_of::<ProvMlKemCtx>());
+        (*raw).key = ptr::null_mut();
+        (*raw).entropy = ptr::null_mut();
+        (*raw).op = 0;
+        ctx.assume_init().into_raw().cast::<c_void>()
     }
-    ctx.cast()
 }
 
 /// `static void ml_kem_freectx(void *vctx)` — `ml_kem_kem.c:59-66`.
@@ -105,15 +134,14 @@ unsafe extern "C" fn ml_kem_newctx(_provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The KEM `freectx` dispatch contract.
 unsafe extern "C" fn ml_kem_freectx(vctx: *mut c_void) {
-    let ctx = vctx.cast::<ProvMlKemCtx>();
-
-    // SAFETY: `ctx` is live per the contract.
+    // SAFETY: `vctx` is NULL or the block `ml_kem_newctx` handed out and has not been released;
+    // `from_raw` maps NULL to `None`, `destroy_body` performs the authority's entropy cleanse at
+    // `ml_kem_kem.c:61-63`, and `Drop` is the block's single release at `ml_kem_kem.c:65`.
     unsafe {
-        if !(*ctx).entropy.is_null() {
-            OPENSSL_cleanse((*ctx).entropy.cast(), ML_KEM_RANDOM_BYTES);
-        }
-        CRYPTO_free(vctx, FILE, LINE_FREECTX);
-    }
+        drop(OwnedCtx::<ProvMlKemCtx>::from_raw(
+            vctx.cast::<ProvMlKemCtx>(),
+        ))
+    };
 }
 
 /// `static int ml_kem_init(void *vctx, int op, void *key, const OSSL_PARAM params[])` —
