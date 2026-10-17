@@ -34,6 +34,7 @@ use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_up_ref, EvpMd};
 use crate::evp::legacy_evp::{EVP_get_cipherbyname, EVP_get_digestbyname};
 use crate::params::{OsslParam, OSSL_PARAM_UTF8_STRING};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
 
 use crate::evp::mac::{
     EVP_MAC_CTX_free, EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_free,
@@ -656,6 +657,47 @@ pub(crate) unsafe fn ossl_prov_macctx_load(
 const FILE_PROVIDER_UTIL: *const c_char =
     c"../../src/openssl-3.6.4/providers/common/provider_util.c".as_ptr();
 
+/// The block [`ossl_prov_memdup`] duplicates for its caller.
+///
+/// The block stays `CRYPTO_memdup`'s own allocation at the authority's exact `file`/`line`; only
+/// its *ownership* is this type. The normal path transfers it to the caller's context with
+/// [`Self::into_raw`]; `Drop` is a defensive single release if that transfer is interrupted.
+struct OwnedBuf {
+    ptr: *mut u8,
+}
+
+impl OwnedBuf {
+    /// Adopt the duplicate `CRYPTO_memdup` answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's `CRYPTO_memdup` seam produced in full for the
+    /// duplicate's byte count, owned exclusively by this frame and not yet released. It is not a
+    /// borrowed or caller-owned pointer, and no other owner will release it.
+    unsafe fn adopt(ptr: *mut u8) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr })
+        }
+    }
+
+    /// Give up ownership of the duplicate to the caller's context slot.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the same seam, if a transfer is interrupted.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own plain `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ptr::null(), 0) };
+    }
+}
+
 /// `int ossl_prov_memdup(const void *src, size_t src_len, unsigned char **dest,
 /// size_t *dest_len)` — `provider_util.c:353-365`.
 ///
@@ -664,8 +706,9 @@ const FILE_PROVIDER_UTIL: *const c_char =
 /// A non-NULL `src` is `OPENSSL_memdup`'s copy, and a failed allocation is the only refusal.
 ///
 /// # Safety
-/// `src` is NULL or readable for `src_len` bytes; `dest`/`dest_len` are writable and `*dest` is
-/// either NULL or a block this allocator owns.
+/// `src` is NULL or readable for `src_len` bytes; `dest`/`dest_len` are writable. Any prior
+/// `*dest` is overwritten without being read or released. On success the caller's context owns
+/// the returned block and releases it through the allocator seam.
 pub(crate) unsafe fn ossl_prov_memdup(
     src: *const c_void,
     src_len: usize,
@@ -676,11 +719,13 @@ pub(crate) unsafe fn ossl_prov_memdup(
     // contract; `CRYPTO_memdup` is the authority's `OPENSSL_memdup`.
     unsafe {
         if !src.is_null() {
-            let copy = crate::runtime::mem::CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0);
-            if copy.is_null() {
+            let copy = CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0).cast::<u8>();
+            // SAFETY: the seam answered NULL or one fresh block this frame owns exclusively; it is
+            // not borrowed from `src` and no other owner will release it.
+            let Some(copy) = OwnedBuf::adopt(copy) else {
                 return 0;
-            }
-            *dest = copy.cast::<u8>();
+            };
+            *dest = copy.into_raw();
             *dest_len = src_len;
         } else {
             *dest = ptr::null_mut();
