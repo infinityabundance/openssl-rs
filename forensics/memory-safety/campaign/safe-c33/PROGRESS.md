@@ -220,9 +220,21 @@ session can resume from Git + the receipt without reconstructing reasoning.
 
 ### Outstanding targeted work
 
-Complete the retained SSL member-buffer accesses: `SslCtx.propq` readers, `CertKey.serverinfo` reallocation, `Ssl` handshake-state writers, and `supportedgroups`.
+SSL member buffers are **complete** except the deliberately retained
+`Ssl`/`SslCtx.supportedgroups` boundary (element-counted, raw-pointer writer —
+not forced into the byte-extent model). Do **not** re-do `SslCtx.propq`,
+`CertKey.serverinfo`, or the `Ssl` handshake-state writers: those are converted
+and their fields are private. The remaining campaign work is the residual
+conversion queue plus the member-buffer families named by the atlas.
 
-Preserve and expand the adversarial allocator-refusal tests as these ownership paths change. The TLS ticket double-free regression must remain covered.
+Preserve and expand the adversarial allocator-refusal tests as these ownership
+paths change. The TLS ticket double-free regression must remain covered, and
+any change touching a callback/allocator edge must keep `scripts/adv-probe.sh`
+green. Reentrancy evidence is scoped: the `serverinfo` observer probe proves
+**publication ordering** (the old pointer/len is visible during `realloc` and
+the new pair after), not soundness under arbitrary application callbacks that
+recurse back into the object — that remains a §21 boundary obligation to state
+and discharge explicitly.
 
 ### Non-negotiable evidence distinction
 
