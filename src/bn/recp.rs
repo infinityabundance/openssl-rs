@@ -23,21 +23,44 @@
 //! reaches it through `BN_reciprocal`, so the raise is `BN_div`'s own coordinate,
 //! not a new one.
 //!
-//! ## Ownership classification (this batch)
+//! ## Ownership classification and representation decision
 //!
-//! `BN_RECP_CTX` is a **deliberately Rust-owned representation**: [`RecpCtx`] is
-//! a Rust `Box` whose limbs are `Vec<Limb>` fields, created by
-//! [`BN_RECP_CTX_new`] and released by [`BN_RECP_CTX_free`], which are the
-//! exported lifecycle. No allocation or release in this module crosses the
-//! `CRYPTO_*` seam. The consequence is explicit: an installed
-//! `CRYPTO_set_mem_functions` hook does not observe the context or its limb
-//! storage, and the Rust representation's byte size is not the authority's C
-//! `BN_RECP_CTX` size — allocating it at `size_of::<RecpCtx>()` would make the
-//! hook observe the wrong byte count, violating §6's exact-size rule. This is the
-//! recorded compatibility residual **P1**, retained and **not** a
-//! `SAFETY_DISCHARGED` claim.
+//! On the admitted `x86_64-unknown-linux-gnu` target the authority's
+//! `struct bn_recp_ctx_st` is **64 bytes / 8-align**: two `BIGNUM` members
+//! (24 bytes each) plus three `int`s. The Rust [`RecpCtx`] is also 64 / 8 on
+//! this target, so the context block uses **option B** of
+//! `OPAQUE-REPRESENTATIONS.md`: `BN_RECP_CTX_new` asks the `CRYPTO_*` seam for
+//! the authority's 64 bytes and writes the Rust state inline, and
+//! `BN_RECP_CTX_free` drops that state and releases the same block through the
+//! seam. A caller-installed `CRYPTO_set_mem_functions` hook therefore observes
+//! one allocation of exactly `sizeof(BN_RECP_CTX)` and its single release, at
+//! the authority's `crypto/bn/bn_recp.c` coordinates.
+//!
+//! Two limits remain explicit rather than hidden:
+//!
+//! * the `n`/`nr` limb `Vec`s are still Rust-owned, so the hook does not observe
+//!   their storage. Only the context block's event has authority-size parity;
+//!   this is **not** a total-memory-parity or `SAFETY_DISCHARGED` claim.
+//! * the layout constants are target-gated and compile-time checked. On a target
+//!   whose authority layout has not been measured, the module keeps option A (a
+//!   Rust `Box`) rather than guessing. The former `Box` statement that
+//!   `size_of::<RecpCtx>()` differed from the C size was not measured and is
+//!   corrected by the 64-byte equality above.
 
 use core::ffi::c_int;
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+use core::ffi::c_void;
 
 use crate::bn::arith::{mod_exp_core, BN_div};
 use crate::bn::bignum::{as_mut, as_ref, new_owned, parts, store, BN_free, BigNum};
@@ -49,6 +72,77 @@ use crate::runtime::err::raise_site;
 
 /// `BN_FLG_CONSTTIME`, as the authority's `bn.h` defines it.
 const BN_FLG_CONSTTIME: c_int = 0x04;
+
+/// The authority's `sizeof(struct bn_recp_ctx_st)` on the measured target:
+/// two `BIGNUM` (8-byte pointer + four `int` = 24 bytes, align 8) plus three
+/// `int` = 64 bytes, align 8. Checked against the Rust type at compile time
+/// below; a target this has not been measured for falls back to option A.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_BN_RECP_CTX_SIZE: usize = 64;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_BN_RECP_CTX_ALIGN: usize = 8;
+
+// The 64-byte derivation `2 * (8 + 4 * 4) + 3 * 4` assumes an 8-byte pointer
+// and a 4-byte C `int`; both are checked here rather than trusted.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<usize>() == 8);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<c_int>() == 4);
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::size_of::<RecpCtx>() <= AUTHORITY_BN_RECP_CTX_SIZE,
+    "RecpCtx no longer fits the authority-sized BN_RECP_CTX block"
+);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::align_of::<RecpCtx>() <= AUTHORITY_BN_RECP_CTX_ALIGN,
+    "RecpCtx alignment exceeds what the C allocator guarantees"
+);
+
+/// The authority's allocation coordinate (`OPENSSL_zalloc(sizeof(*ret))`).
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const FILE: &core::ffi::CStr = c"crypto/bn/bn_recp.c";
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const LINE_ALLOC: c_int = 24;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+const LINE_FREE: c_int = 40;
 
 /// The authority's `BN_RECP_CTX`.
 pub struct RecpCtx {
@@ -80,6 +174,96 @@ unsafe fn as_mut_recp<'a>(p: *mut RecpCtx) -> Option<&'a mut RecpCtx> {
     }
 }
 
+/// The authority's `BN_RECP_CTX_init`: an empty divisor, reciprocal and signs.
+fn recp_init() -> RecpCtx {
+    RecpCtx {
+        n: Vec::new(),
+        neg: false,
+        nr: Vec::new(),
+        num_bits: 0,
+        shift: 0,
+    }
+}
+
+/// Option B: one `CRYPTO_zalloc` block of the authority's exact size, with the
+/// Rust state written into it. The compile-time asserts above establish both
+/// the extent and the alignment obligation.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+fn alloc_recp() -> *mut RecpCtx {
+    let block =
+        CRYPTO_zalloc(AUTHORITY_BN_RECP_CTX_SIZE, FILE.as_ptr(), LINE_ALLOC).cast::<RecpCtx>();
+    if block.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `CRYPTO_zalloc` returned a fresh, exclusively-owned, writable block
+    // of `AUTHORITY_BN_RECP_CTX_SIZE` bytes. The compile-time asserts prove that
+    // is at least `size_of::<RecpCtx>()`; the C allocator contract guarantees an
+    // alignment at least as strict as `AUTHORITY_BN_RECP_CTX_ALIGN`. No other
+    // reference to the block exists, so one `write` initialises the whole value.
+    unsafe { block.write(recp_init()) };
+    block
+}
+
+/// Option A, retained for targets whose authority layout has not been measured.
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+)))]
+fn alloc_recp() -> *mut RecpCtx {
+    Box::into_raw(Box::new(recp_init()))
+}
+
+/// Releases the C block after the Rust state has been dropped. The guard makes
+/// the block release happen exactly once even if a destructor ever unwinds.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+struct BlockRelease(*mut RecpCtx);
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+impl Drop for BlockRelease {
+    fn drop(&mut self) {
+        // SAFETY: the block came from `CRYPTO_zalloc` at `FILE`/`LINE_ALLOC` in
+        // `alloc_recp`, and this guard is its single release at the authority's
+        // freeing coordinate.
+        unsafe { CRYPTO_free(self.0.cast::<c_void>(), FILE.as_ptr(), LINE_FREE) };
+    }
+}
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+unsafe fn free_recp(p: *mut RecpCtx) {
+    let _release = BlockRelease(p);
+    // SAFETY: `p` is a live, initialized `RecpCtx` from `alloc_recp`, exclusively
+    // owned by the caller, and this is its single destructor.
+    unsafe { core::ptr::drop_in_place(p) };
+}
+
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+)))]
+unsafe fn free_recp(p: *mut RecpCtx) {
+    // SAFETY: `p` came from `Box::into_raw` in `alloc_recp` and is not freed
+    // elsewhere.
+    unsafe { drop(Box::from_raw(p)) };
+}
+
 /// `BN_RECP_CTX *BN_RECP_CTX_new(void)`
 ///
 /// # Safety
@@ -87,15 +271,7 @@ unsafe fn as_mut_recp<'a>(p: *mut RecpCtx) -> Option<&'a mut RecpCtx> {
 /// Takes no pointers.
 #[no_mangle]
 pub unsafe extern "C" fn BN_RECP_CTX_new() -> *mut RecpCtx {
-    guard_ffi(core::ptr::null_mut(), || {
-        Box::into_raw(Box::new(RecpCtx {
-            n: Vec::new(),
-            neg: false,
-            nr: Vec::new(),
-            num_bits: 0,
-            shift: 0,
-        }))
-    })
+    guard_ffi(core::ptr::null_mut(), alloc_recp)
 }
 
 /// `void BN_RECP_CTX_free(BN_RECP_CTX *recp)`
@@ -112,7 +288,7 @@ pub unsafe extern "C" fn BN_RECP_CTX_free(recp: *mut RecpCtx) {
         if !recp.is_null() {
             // SAFETY: the caller's contract is exactly that `recp` came from
             // `BN_RECP_CTX_new` and has not been freed.
-            drop(unsafe { Box::from_raw(recp) });
+            unsafe { free_recp(recp) };
         }
     });
 }
@@ -324,4 +500,124 @@ unsafe fn gets_consttime(b: *const BigNum) -> bool {
     // SAFETY: the caller guarantees `b` is null or live, which is `BN_get_flags`'s
     // own contract.
     unsafe { crate::bn::bignum::BN_get_flags(b, BN_FLG_CONSTTIME) != 0 }
+}
+
+#[cfg(all(
+    test,
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_pointer_width = "64"
+))]
+mod tests {
+    use super::*;
+    use crate::runtime::mem::CRYPTO_set_mem_functions;
+    use core::ffi::{c_char, c_int, c_void};
+    use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
+
+    extern "C" {
+        fn malloc(n: usize) -> *mut c_void;
+        fn realloc(p: *mut c_void, n: usize) -> *mut c_void;
+        fn free(p: *mut c_void);
+    }
+
+    static MALLOCS: AtomicUsize = AtomicUsize::new(0);
+    static MALLOC_SIZE: AtomicUsize = AtomicUsize::new(0);
+    static MALLOC_FILE: AtomicUsize = AtomicUsize::new(0);
+    static MALLOC_LINE: AtomicI32 = AtomicI32::new(0);
+    static FREES: AtomicUsize = AtomicUsize::new(0);
+    static FREED_PTR: AtomicUsize = AtomicUsize::new(0);
+    static FREE_FILE: AtomicUsize = AtomicUsize::new(0);
+    static FREE_LINE: AtomicI32 = AtomicI32::new(0);
+
+    unsafe extern "C" fn hook_malloc(n: usize, file: *const c_char, line: c_int) -> *mut c_void {
+        MALLOCS.fetch_add(1, Ordering::SeqCst);
+        MALLOC_SIZE.store(n, Ordering::SeqCst);
+        MALLOC_FILE.store(file as usize, Ordering::SeqCst);
+        MALLOC_LINE.store(line, Ordering::SeqCst);
+        // SAFETY: `malloc` has no preconditions.
+        unsafe { malloc(n) }
+    }
+
+    unsafe extern "C" fn hook_realloc(
+        p: *mut c_void,
+        n: usize,
+        _file: *const c_char,
+        _line: c_int,
+    ) -> *mut c_void {
+        // SAFETY: `p` is NULL or a block from `hook_malloc`.
+        unsafe { realloc(p, n) }
+    }
+
+    unsafe extern "C" fn hook_free(p: *mut c_void, file: *const c_char, line: c_int) {
+        FREES.fetch_add(1, Ordering::SeqCst);
+        FREED_PTR.store(p as usize, Ordering::SeqCst);
+        FREE_FILE.store(file as usize, Ordering::SeqCst);
+        FREE_LINE.store(line, Ordering::SeqCst);
+        // SAFETY: `p` is NULL or a block from `hook_malloc`.
+        unsafe { free(p) }
+    }
+
+    const CHILD_ENV: &str = "OPENSSL_RS_RECP_HOOK_CHILD";
+
+    /// The allocator seam latches shut after a process's first `CRYPTO_*`
+    /// allocation, so the observation is made in a fresh process in which this is
+    /// the only test that runs. That is what makes it deterministic: no other test
+    /// can allocate first or race the counters.
+    #[test]
+    fn hook_observes_authority_size_and_single_release() {
+        if std::env::var_os(CHILD_ENV).is_some() {
+            run_probe();
+            return;
+        }
+
+        let exe = std::env::current_exe().unwrap_or_default();
+        assert!(!exe.as_os_str().is_empty(), "the test binary has no path");
+        let ran_and_passed = std::process::Command::new(exe)
+            .args([
+                "--exact",
+                "bn::recp::tests::hook_observes_authority_size_and_single_release",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(CHILD_ENV, "1")
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        assert!(ran_and_passed, "the isolated hook probe failed");
+    }
+
+    fn run_probe() {
+        // SAFETY: the hooks forward to libc and stay valid for the process; this
+        // process runs exactly this test, so the seam has not latched shut.
+        let installed = unsafe {
+            CRYPTO_set_mem_functions(Some(hook_malloc), Some(hook_realloc), Some(hook_free))
+        };
+        assert_eq!(installed, 1, "the allocator seam refused installation");
+
+        // SAFETY: `BN_RECP_CTX_new` takes no pointers.
+        let recp = unsafe { BN_RECP_CTX_new() };
+        assert!(!recp.is_null(), "BN_RECP_CTX_new returned NULL");
+
+        assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "one block allocation");
+        assert_eq!(
+            MALLOC_SIZE.load(Ordering::SeqCst),
+            AUTHORITY_BN_RECP_CTX_SIZE,
+            "the hook must observe the authority's sizeof(BN_RECP_CTX)"
+        );
+        assert_eq!(
+            MALLOC_FILE.load(Ordering::SeqCst),
+            FILE.as_ptr() as usize,
+            "the allocation reports the authority's file"
+        );
+        assert_eq!(MALLOC_LINE.load(Ordering::SeqCst), LINE_ALLOC);
+
+        // SAFETY: `recp` is live and this is its single release.
+        unsafe { BN_RECP_CTX_free(recp) };
+
+        assert_eq!(FREES.load(Ordering::SeqCst), 1, "exactly one release");
+        assert_eq!(FREED_PTR.load(Ordering::SeqCst), recp as usize);
+        assert_eq!(FREE_FILE.load(Ordering::SeqCst), FILE.as_ptr() as usize);
+        assert_eq!(FREE_LINE.load(Ordering::SeqCst), LINE_FREE);
+        assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "no second allocation");
+    }
 }
