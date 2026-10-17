@@ -123,7 +123,7 @@ use crate::params::{
     OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_PTR, OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::{ossl_provider_ctx, OsslProvider};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::{strcmp, strlen, strtol};
 use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{err_sites, raise_site};
@@ -246,65 +246,6 @@ const LINE_FREE_HEXCTRL: c_int = 1605;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the context and method blocks, and of the frame buffers
 // ---------------------------------------------------------------------------------------------
-
-/// An owned context or method block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
-/// hands it out and takes it back), but its *ownership* is this type: [`Self::new`] allocates it
-/// through the crate's allocator seam at the authority's own `(file, alloc_line)` and `Drop`
-/// releases it at the authority's own `(file, line)`. It stays a `CRYPTO_zalloc` at
-/// `size_of::<T>()` rather than a Rust `Box` on purpose -- a caller-installed
-/// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
-/// the authority's, which a Rust global allocation would hide.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
-    /// by the block release, through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of the frame's byte buffers
@@ -682,7 +623,8 @@ unsafe fn int_ctx_new(
 
     // The context block, allocated through the crate's allocator seam; `Drop` is its single release
     // on every refusal below and `into_raw` hands it out on success.
-    let Some(ret) = OwnedCtx::<EvpPkeyCtx>::new(FILE, LINE_ZALLOC_CTX, LINE_FREE_CTX) else {
+    let Some(ret) = OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX)
+    else {
         // SAFETY: `keymgmt` is live and holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
         return ptr::null_mut();
@@ -1028,7 +970,13 @@ pub(crate) unsafe fn evp_pkey_ctx_use_cached_data(ctx: *mut EvpPkeyCtx) -> c_int
 pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
     // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
-    unsafe { drop(OwnedCtx::<EvpPkeyCtx>::from_raw(ctx, FILE, LINE_FREE_CTX)) };
+    unsafe {
+        drop(OwnedCtx::<EvpPkeyCtx>::from_raw_at(
+            ctx,
+            FILE,
+            LINE_FREE_CTX,
+        ))
+    };
 }
 
 /// The authority's `EVP_PKEY_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
@@ -1038,7 +986,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
 // cached data, the method reference, the property query, the two keys and the public exponent, each
 // releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero context has every
 // member NULL, so the body is the authority's own all-empty teardown -- what the safe
-// `OwnedCtx::new` leans on.
+// `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for EvpPkeyCtx {
     unsafe fn destroy_body(ptr: *mut EvpPkeyCtx) {
         // SAFETY: `ptr` is live per the trait contract.
@@ -1103,7 +1051,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
 
     // The copy's context block, allocated through the crate's allocator seam; `Drop` is its single
     // release on every refusal below and `into_raw` hands it out on success.
-    let Some(rctx) = OwnedCtx::<EvpPkeyCtx>::new(FILE, LINE_ZALLOC_CTX, LINE_FREE_CTX) else {
+    let Some(rctx) = OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX)
+    else {
         return ptr::null_mut();
     };
 
@@ -2124,7 +2073,8 @@ pub unsafe extern "C" fn EVP_PKEY_meth_get0(idx: usize) -> *const EvpPkeyMethod 
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpPkeyMethod {
     // The method block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(pmeth) = OwnedCtx::<EvpPkeyMethod>::new(FILE, LINE_ZALLOC_PMETH, LINE_FREE_PMETH)
+    let Some(pmeth) =
+        OwnedCtx::<EvpPkeyMethod>::zalloc_at(FILE, LINE_ZALLOC_PMETH, FILE, LINE_FREE_PMETH)
     else {
         return ptr::null_mut();
     };
@@ -2141,7 +2091,7 @@ pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpP
 // SAFETY: (a) holds: `destroy_body` is empty -- the struct has no owned members and the block is
 // the whole of `EVP_PKEY_meth_free`'s release, which `Drop` performs. (b) holds trivially: whatever
 // the block holds, an all-zero method is valid because the body touches nothing -- what the safe
-// `OwnedCtx::new` leans on.
+// `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for EvpPkeyMethod {
     unsafe fn destroy_body(_ptr: *mut EvpPkeyMethod) {}
 }
@@ -2167,7 +2117,7 @@ pub unsafe extern "C" fn EVP_PKEY_meth_free(pmeth: *mut EvpPkeyMethod) {
     // no-op) and `Drop` runs the authority's own block release.
     // SAFETY: `pmeth` is live and `DYNAMIC` is set, so this object is this module's own.
     unsafe {
-        drop(OwnedCtx::<EvpPkeyMethod>::from_raw(
+        drop(OwnedCtx::<EvpPkeyMethod>::from_raw_at(
             pmeth,
             FILE,
             LINE_FREE_PMETH,

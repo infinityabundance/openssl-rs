@@ -64,7 +64,7 @@ use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string,
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
@@ -94,43 +94,6 @@ const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the fetched method object and of the derive buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned one of this file's heap records.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::from_raw`] takes back the record whose last reference
-/// `EVP_KEYEXCH_free` released, and `Drop` runs the authority's own destructor body
-/// ([`CtxDestroy::destroy_body`]) followed by its single block release at the authority's own site.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a record for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
 
 /// The `EVP_KEYEXCH_free` destructor body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the method's owned `type_name` and the provider reference it holds.
@@ -523,7 +486,7 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
     }
     // SAFETY: `exchange` is live and this decrement was the last reference; the object's `Drop`
     // releases its `type_name`, its provider reference and the block, at the authority's own sites.
-    drop(unsafe { OwnedCtx::from_raw(exchange, FILE, LINE_FREE_KEYEXCH) });
+    drop(unsafe { OwnedCtx::from_raw_at(exchange, FILE, LINE_FREE_KEYEXCH) });
 }
 
 /// `int EVP_KEYEXCH_up_ref(EVP_KEYEXCH *exchange)`.

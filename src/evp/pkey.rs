@@ -124,7 +124,7 @@ use crate::params::{
 use crate::provider::{ossl_provider_libctx, OsslProvider};
 use crate::rsa::backend::ossl_rsa_is_foreign;
 use crate::rsa::Rsa;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{
     bf_prefix::BIO_f_prefix,
@@ -385,43 +385,6 @@ const LINE_FREE_BN_BUFFER: c_int = 2248;
 // `EVP_PKEY_get_bn_param` and `EVP_PKEY_get1_encoded_public_key` manage by hand.
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `EVP_PKEY` block.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_zalloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::from_raw`] reclaims the block the C caller still holds and
-/// `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`]) followed by its
-/// single block release at the authority's own site. A Rust `Box` would hide both the release and
-/// the caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a block the C caller hands back, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// the key data, the ex-data block and the lock.
 // SAFETY: (a) holds: `destroy_body` is `EVP_PKEY_free` minus the block -- the key data, the
@@ -661,7 +624,7 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
     // SAFETY: `x` is a live key this crate allocated and this is its last reference; `from_raw`
     // reclaims the block and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`])
     // followed by the block release, so this is its last use.
-    unsafe { drop(OwnedCtx::<EvpPkey>::from_raw(x, FILE, LINE_ZALLOC_PKEY)) };
+    unsafe { drop(OwnedCtx::<EvpPkey>::from_raw_at(x, FILE, LINE_ZALLOC_PKEY)) };
 }
 
 /// `static int pkey_set_type(EVP_PKEY *pkey, ENGINE *e, int type, const char *str, int len,

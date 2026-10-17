@@ -85,6 +85,10 @@ pub(crate) unsafe trait CtxDestroy: Sized {
 /// `Drop` is its single release.
 pub(crate) struct OwnedCtx<T: CtxDestroy> {
     ptr: NonNull<T>,
+    /// The authority's `__FILE__` for this block's release.
+    file: *const c_char,
+    /// The authority's `__LINE__` for this block's release.
+    line: c_int,
 }
 
 impl<T: CtxDestroy> OwnedCtx<T> {
@@ -98,6 +102,23 @@ impl<T: CtxDestroy> OwnedCtx<T> {
         // SAFETY: `T: CtxDestroy` carries implementer obligation (b) — an all-zero block is a valid
         // `T` for which `destroy_body` is sound — so the zeroed storage is a valid `T`.
         Some(unsafe { RawCtx::<T>::zalloc()?.assume_init() })
+    }
+
+    /// Allocate a fresh, zeroed block at the caller's allocation coordinates, for release at a
+    /// distinct site (`alloc_file`/`alloc_line` and `release_file`/`release_line` are the
+    /// authority's own `CRYPTO_zalloc` and `CRYPTO_free` sites).
+    pub(crate) fn zalloc_at(
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedCtx<T>> {
+        // SAFETY: as `zalloc` -- the allocator zeroes the block, and implementer obligation (b)
+        // makes that a valid `T`.
+        Some(unsafe {
+            RawCtx::<T>::zalloc_at(alloc_file, alloc_line, release_file, release_line)?
+                .assume_init()
+        })
     }
 
     /// The stable address the C ABI hands out and takes back.
@@ -117,7 +138,30 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// # Safety
     /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
     pub(crate) unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+        // SAFETY: the caller establishes this function's contract.
+        unsafe { Self::from_raw_at(ptr, T::FILE, T::LINE_FREE) }
+    }
+
+    /// Reclaim a block handed to the C caller, releasing it at the given authority site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    pub(crate) unsafe fn from_raw_at(
+        ptr: *mut T,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedCtx<T>> {
+        NonNull::new(ptr).map(|ptr| OwnedCtx {
+            ptr,
+            file: release_file,
+            line: release_line,
+        })
+    }
+
+    /// Re-point the block release at another authority site (a failed push releases at a different
+    /// line than the record's stored path).
+    pub(crate) fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
     }
 }
 
@@ -130,7 +174,7 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
         // `*_free` body.
         unsafe {
             T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
         }
     }
 }
@@ -146,6 +190,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// The window closes with [`RawCtx::assume_init`], the one validated transition to [`OwnedCtx`].
 pub(crate) struct RawCtx<T: CtxDestroy> {
     ptr: NonNull<MaybeUninit<T>>,
+    /// The authority's `__FILE__` for this block's release.
+    file: *const c_char,
+    /// The authority's `__LINE__` for this block's release.
+    line: c_int,
 }
 
 impl<T: CtxDestroy> RawCtx<T> {
@@ -153,11 +201,26 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// `None` when it answers NULL -- the authority's `CRYPTO_malloc` for the blocks it does not
     /// zero (`ossl_core_bio.c`'s handle and `linebuffer.c`'s context).
     pub(crate) fn malloc() -> Option<RawCtx<T>> {
+        Self::malloc_at(T::FILE, T::LINE_ALLOC, T::FILE, T::LINE_FREE)
+    }
+
+    /// Allocate a fresh, **uninitialised** block at the caller's allocation and release
+    /// coordinates (`CRYPTO_malloc`'s `file`/`line` and the later `CRYPTO_free`'s).
+    pub(crate) fn malloc_at(
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<RawCtx<T>> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC)
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), alloc_file, alloc_line)
             .cast::<MaybeUninit<T>>();
-        NonNull::new(raw).map(|ptr| RawCtx { ptr })
+        NonNull::new(raw).map(|ptr| RawCtx {
+            ptr,
+            file: release_file,
+            line: release_line,
+        })
     }
 
     /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
@@ -165,16 +228,37 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// `RawCtx`: zeroing is not, by itself, a valid `T` for every context, so the caller still
     /// validates it with [`RawCtx::assume_init`].
     pub(crate) fn zalloc() -> Option<RawCtx<T>> {
+        Self::zalloc_at(T::FILE, T::LINE_ALLOC, T::FILE, T::LINE_FREE)
+    }
+
+    /// Allocate a fresh, zeroed block at the caller's allocation and release coordinates
+    /// (`CRYPTO_zalloc`'s `file`/`line` and the later `CRYPTO_free`'s).
+    pub(crate) fn zalloc_at(
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<RawCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC)
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), alloc_file, alloc_line)
             .cast::<MaybeUninit<T>>();
-        NonNull::new(raw).map(|ptr| RawCtx { ptr })
+        NonNull::new(raw).map(|ptr| RawCtx {
+            ptr,
+            file: release_file,
+            line: release_line,
+        })
     }
 
     /// The stable address the caller initialises `T`'s fields through.
     pub(crate) fn as_ptr(&self) -> *mut T {
         self.ptr.as_ptr().cast::<T>()
+    }
+
+    /// Re-point the block-only release at another authority site (a constructor failure releases at
+    /// a different line than the object's stored path).
+    pub(crate) fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
     }
 
     /// Give up ownership of the uninitialised block to the C caller's context pointer.
@@ -193,8 +277,10 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// single release.
     pub(crate) unsafe fn assume_init(self) -> OwnedCtx<T> {
         let ptr = self.ptr.cast::<T>();
+        let file = self.file;
+        let line = self.line;
         core::mem::forget(self);
-        OwnedCtx { ptr }
+        OwnedCtx { ptr, file, line }
     }
 }
 
@@ -204,7 +290,7 @@ impl<T: CtxDestroy> Drop for RawCtx<T> {
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
         // single release, and the authority's own bare `CRYPTO_free` is the whole release.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE) };
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
     }
 }
 
@@ -255,9 +341,14 @@ mod adv_partial_init_tests {
 
     use super::*;
     use core::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Mutex;
 
     /// Records that a `destroy_body` ran, so a test can assert it did NOT.
     static DESTROY_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The three tests below observe the shared `DESTROY_CALLS` counter, so they must not run
+    /// concurrently with each other.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     /// A test-only context whose destructor records its own call and releases nothing: it holds a
     /// plain integer, so an all-zero block is a valid value and the destructor is sound on it.
@@ -283,6 +374,7 @@ mod adv_partial_init_tests {
     /// was never validated with `assume_init`.
     #[test]
     fn rawctx_drop_does_not_run_destroy_body() {
+        let _guard = TEST_LOCK.lock().unwrap();
         let before = destroys();
         {
             let raw = RawCtx::<ProbeCtx>::zalloc();
@@ -299,6 +391,7 @@ mod adv_partial_init_tests {
     /// Dropping a validated `OwnedCtx` does run the destructor exactly once.
     #[test]
     fn owned_ctx_drop_runs_destroy_body_once() {
+        let _guard = TEST_LOCK.lock().unwrap();
         let before = destroys();
         {
             let owned = OwnedCtx::<ProbeCtx>::zalloc();
@@ -314,6 +407,7 @@ mod adv_partial_init_tests {
     /// be vacuous.
     #[test]
     fn canary_destroy_instrument_is_live() {
+        let _guard = TEST_LOCK.lock().unwrap();
         let before = destroys();
         let raw = RawCtx::<ProbeCtx>::zalloc();
         assert!(raw.is_some());

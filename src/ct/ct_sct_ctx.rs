@@ -29,8 +29,8 @@ use core::ptr;
 
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
-use crate::runtime::bio::owned::CtxDestroy;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 use crate::runtime::obj::{
     NID_authority_key_identifier, NID_ct_precert_poison, NID_ct_precert_scts,
 };
@@ -94,68 +94,11 @@ const _: () = {
 // Ownership of the `SCT_CTX` record, its `propq` string and its `DER` scratch blocks
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `SCT_CTX` record.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size, but its
-/// *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back the
-/// block the C ABI hands to `SCT_CTX_free`, and `Drop` runs the authority's own free body
-/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
-/// the release and the caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
-    /// is the authority's own starting state -- every owned member is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
-    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The block's address, the C ABI's `SCT_CTX *`.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Reclaim the block the C ABI hands to `SCT_CTX_free`, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// Give up ownership of the record to the C ABI's answer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own `SCT_CTX_free` body followed by its single block
-    /// release, through the same allocator seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
-        // the authority's own free body and this is the block's single release.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 // SAFETY: (a) holds: `destroy_body` is the authority's `SCT_CTX_free` body minus the block -- the
 // key reference, the two key hashes, the certificate and pre-certificate DER buffers and the
 // duplicated `propq`, each NULL-tolerant, never the enclosing block. (b) holds: an all-zero
 // `SCT_CTX` has every member NULL, so the body is the authority's own all-empty teardown -- what the
-// safe `OwnedCtx::new_zeroed` leans on.
+// safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for SctCtx {
     unsafe fn destroy_body(ptr: *mut SctCtx) {
         // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or a block this
@@ -178,7 +121,7 @@ unsafe impl CtxDestroy for SctCtx {
 ///
 /// `libctx` is NULL or a live library context; `propq` is NULL or NUL-terminated.
 pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *mut SctCtx {
-    let Some(sctx) = OwnedCtx::<SctCtx>::new_zeroed(ptr::null(), 0) else {
+    let Some(sctx) = OwnedCtx::<SctCtx>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
         return ptr::null_mut();
     };
     // SAFETY: `sctx.as_ptr()` is a fresh zeroed record; `libctx` is a pointer value.
@@ -207,7 +150,7 @@ pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *
 pub(crate) unsafe fn SCT_CTX_free(sctx: *mut SctCtx) {
     // SAFETY: `sctx` is NULL or a live `SCT_CTX` this crate owns and that is not used afterwards;
     // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
-    drop(unsafe { OwnedCtx::<SctCtx>::from_raw(sctx, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<SctCtx>::from_raw_at(sctx, ptr::null(), 0) });
 }
 
 /// `static int ct_x509_get_ext(X509 *cert, int nid, int *is_duplicated)` —

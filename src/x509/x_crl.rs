@@ -50,7 +50,6 @@
 #![allow(non_snake_case)]
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
-use core::mem::size_of;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
@@ -66,11 +65,11 @@ use crate::asn1::prim::ASN1_INTEGER_cmp;
 use crate::asn1::string::ASN1_STRING_cmp;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_cmp, X509_ALGOR_it};
 use crate::evp::pkey::EvpPkey;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_reasons::X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -181,66 +180,6 @@ pub struct X509CrlMethod {
 // ---------------------------------------------------------------------------------------------
 // Ownership of a dynamic `X509_CRL_METHOD`
 // ---------------------------------------------------------------------------------------------
-
-/// An owned one of the file's heap records.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::new`] allocates it, `Drop` runs the authority's own destructor
-/// body ([`CtxDestroy::destroy_body`]) followed by its single block release at the authority's own
-/// site, [`Self::into_raw`] hands the block to the C caller and [`Self::from_raw`] takes it back. A
-/// Rust `Box` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_malloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
-    /// `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's own
-    /// site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
 
 /// The authority's `X509_CRL_METHOD_free` body: an `X509_CRL_METHOD` owns no sub-resources, so
 /// only the block release [`OwnedCtx`]'s `Drop` performs is left.
@@ -1320,20 +1259,29 @@ pub unsafe extern "C" fn X509_CRL_METHOD_new(
     >,
     crl_verify: Option<unsafe extern "C" fn(*mut X509Crl, *mut c_void) -> c_int>,
 ) -> *mut X509CrlMethod {
-    // `OwnedCtx::new` is the authority's own `OPENSSL_malloc(sizeof(*m))` at this unit's line; every
-    // field is set below before the block is handed to the caller.
-    let Some(m) = OwnedCtx::<X509CrlMethod>::new(FILE.as_ptr(), LINE_METHOD_NEW, LINE_METHOD_FREE)
-    else {
+    // `RawCtx::malloc_at` is the authority's own `OPENSSL_malloc(sizeof(*m))` at this unit's line;
+    // every field is set below before `assume_init` hands the block to the caller.
+    // SAFETY: the allocator answers NULL or a fresh block, and every field is written below
+    // before the validated transition.
+    let Some(raw) = RawCtx::<X509CrlMethod>::malloc_at(
+        FILE.as_ptr(),
+        LINE_METHOD_NEW,
+        FILE.as_ptr(),
+        LINE_METHOD_FREE,
+    ) else {
         return ptr::null_mut();
     };
-    // SAFETY: `m` is a fresh, unaliased allocation.
+    let p = raw.as_ptr();
+    // SAFETY: `p` is a fresh, unaliased allocation.
     unsafe {
-        (*m.as_ptr()).crl_init = crl_init;
-        (*m.as_ptr()).crl_free = crl_free;
-        (*m.as_ptr()).crl_lookup = crl_lookup;
-        (*m.as_ptr()).crl_verify = crl_verify;
-        (*m.as_ptr()).flags = X509_CRL_METHOD_DYNAMIC;
+        (*p).crl_init = crl_init;
+        (*p).crl_free = crl_free;
+        (*p).crl_lookup = crl_lookup;
+        (*p).crl_verify = crl_verify;
+        (*p).flags = X509_CRL_METHOD_DYNAMIC;
     }
+    // SAFETY: every field of the method has been written above.
+    let m = unsafe { raw.assume_init() };
     m.into_raw()
 }
 
@@ -1353,7 +1301,7 @@ pub unsafe extern "C" fn X509_CRL_METHOD_free(m: *mut X509CrlMethod) {
     }
     // SAFETY: `m` is the caller's `X509_CRL_METHOD_new` block; reclaiming it releases the block at
     // the authority's own `OPENSSL_free` site.
-    drop(unsafe { OwnedCtx::<X509CrlMethod>::from_raw(m, FILE.as_ptr(), LINE_METHOD_FREE) });
+    drop(unsafe { OwnedCtx::<X509CrlMethod>::from_raw_at(m, FILE.as_ptr(), LINE_METHOD_FREE) });
 }
 
 /// `void X509_CRL_set_meth_data(X509_CRL *crl, void *dat)` -- `crypto/x509/x_crl.c:518-521`.
