@@ -3,11 +3,11 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "03d4e76b984f0654e80a2c589b877d3d5ea353c3",
+    "head_sha": "d73167c3cc187490efa6dc8b05b95e1f43ebf944",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "ad81d5351f24951843c72d0992166babd7f1f3cb61954d3e876f648a5deb029c",
+    "src_content_sha256": "ebe0a6f396af9540c4362a838ca36f653540a83298162846f412dc51c35288be",
     "src_rs_files": 866
   },
   "census_crosscheck": {
@@ -670,7 +670,7 @@
   },
   "cohort_metrics": {
     "1_unique_closure_files": 628,
-    "2_files_ownership_reconstructed": 313,
+    "2_files_ownership_reconstructed": 314,
     "3_files_fully_discharged_obligations": 0,
     "3_note": "Obligations are discharged ONLY at the seal point (AGENTS.md \u00a77 SAFETY_DISCHARGED, \u00a718). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.",
     "4_unresolved_interior_raw_sites": {
@@ -678,15 +678,15 @@
         "src/runtime/mem.rs"
       ],
       "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
-      "seam_bearing_files_with_raw_sites": 267,
-      "seam_bearing_raw_sites_unclassified": 3292,
+      "seam_bearing_files_with_raw_sites": 268,
+      "seam_bearing_raw_sites_unclassified": 3299,
       "unconverted_no_seam_files": 28,
       "unconverted_no_seam_sites": 143,
-      "upper_bound_total": 3435
+      "upper_bound_total": 3442
     },
     "5_consumers_safe_compatible": 0,
     "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
-    "closure_raw_sites_total": 3493,
+    "closure_raw_sites_total": 3500,
     "per_consumer": [
       {
         "evidence": "fingerprint",
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-17T15:26:08Z",
+  "generated_utc": "2026-10-17T15:45:10Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1443,10 +1443,10 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 270,
       "closure_no_seam_raw_files": 7,
-      "closure_raw_sites": 1843,
-      "closure_seam_files": 154,
-      "closure_seam_raw_files": 129,
-      "closure_zero_raw_files": 134,
+      "closure_raw_sites": 1850,
+      "closure_seam_files": 155,
+      "closure_seam_raw_files": 130,
+      "closure_zero_raw_files": 133,
       "converted_files_on_branch": [
         "src/ec/smpl.rs",
         "src/evp/digest.rs",
@@ -1712,14 +1712,14 @@
     ],
     "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
     "files_total": 866,
-    "files_with_raw_sites": 359,
-    "files_with_seam": 374,
-    "files_zero_raw_sites": 507,
+    "files_with_raw_sites": 360,
+    "files_with_seam": 375,
+    "files_zero_raw_sites": 506,
     "raw_site_patterns": [
       "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
       "\\bCRYPTO_(?:free|clear_free)\\b"
     ],
-    "raw_sites_total": 4290,
+    "raw_sites_total": 4297,
     "seam_tokens": [
       "OwnedCtx",
       "OwnedBuf",
