@@ -1,12 +1,12 @@
 # Safe-33 atlas refresh — candidate-bound ownership-reconstruction status
 
-Generated 2026-10-17T14:34:11Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
+Generated 2026-10-17T14:43:02Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
 
 ## Candidate pin
 
-- HEAD `13f91dfa6e15064d6f19febdb8169ea5ffb69f10` on `integrate/safe-c33`
+- HEAD `86fa9b1351514fa4e7d10395cd53894240cd5c95` on `integrate/safe-c33`
 - crate `openssl-rs 0.0.27`
-- `src/**/*.rs`: **865** files, content sha256 `19bfec719f7c567bc9332e2e17a5999795da17df12a52c29dc36c16d1dcb4891`
+- `src/**/*.rs`: **865** files, content sha256 `ebb5eda3b301e5cd845f71ccd163c810d19f652226e5e758631e9edcdf3b449c`
 - frozen inventory was at `67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34` (base `b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491`); this refresh re-pins the current tree
 
 ## The frozen 33 (authoritative: `state.json#cohort`)
