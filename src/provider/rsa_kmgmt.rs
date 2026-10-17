@@ -210,6 +210,60 @@ struct RsaGenCtx {
     cbarg: *mut c_void,
 }
 
+/// An owned `rsa_gen_ctx` block.
+///
+/// The authority allocates it with `OPENSSL_zalloc` in `gen_init` (`rsa_kmgmt.c:459`) and releases
+/// it from two sites with two *different* member releases: `gen_init`'s `err:` label uses
+/// `BN_free(gctx->pub_exp); OPENSSL_free(gctx);` (`:490`), while `rsa_gen_cleanup` uses
+/// `BN_clear_free(gctx->pub_exp); OPENSSL_free(gctx);` (`:652`). This owner therefore owns the
+/// **block only** -- `Drop` never runs a member destructor -- so each site keeps its authority's
+/// own member release and the block's free coordinates.
+struct GenCtxBlock {
+    ptr: ptr::NonNull<RsaGenCtx>,
+    release_line: c_int,
+}
+
+impl GenCtxBlock {
+    /// Allocate a fresh zeroed context through the crate's allocator seam at the authority's own
+    /// allocation and release lines, or `None` when the seam answers NULL.
+    fn zalloc(alloc_line: c_int, release_line: c_int) -> Option<GenCtxBlock> {
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of the struct's size.
+        let raw =
+            CRYPTO_zalloc(core::mem::size_of::<RsaGenCtx>(), FILE, alloc_line).cast::<RsaGenCtx>();
+        ptr::NonNull::new(raw).map(|ptr| GenCtxBlock { ptr, release_line })
+    }
+
+    /// The stable address the dispatch table stores and the C caller holds.
+    fn as_ptr(&self) -> *mut RsaGenCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's generation-context pointer.
+    fn into_raw(self) -> *mut RsaGenCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block `rsa_gen_cleanup` was handed, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live `rsa_gen_ctx` block this crate allocated through the seam and has
+    /// not released.
+    unsafe fn from_raw(ptr: *mut RsaGenCtx, release_line: c_int) -> Option<GenCtxBlock> {
+        ptr::NonNull::new(ptr).map(|ptr| GenCtxBlock { ptr, release_line })
+    }
+}
+
+impl Drop for GenCtxBlock {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a live block this handle owns and has not handed out; this is its
+        // single release at the authority's own free site. `pub_exp` is released explicitly by
+        // the caller, because the two sites use different releasers.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE, self.release_line) };
+    }
+}
+
 /// `static int pss_params_fromdata(RSA_PSS_PARAMS_30 *pss_params, int *defaults_set,`
 /// `const OSSL_PARAM params[], int rsa_type, OSSL_LIB_CTX *libctx)` — `rsa_kmgmt.c:60-74`.
 ///
@@ -812,51 +866,52 @@ unsafe fn gen_init(
         return ptr::null_mut();
     }
 
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<RsaGenCtx>(), FILE, 459).cast::<RsaGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is this call's own allocation; `libctx` is the caller's.
-        unsafe {
-            (*gctx).libctx = libctx;
-            (*gctx).pub_exp = BN_new();
-        }
-        // SAFETY: `gctx` is non-NULL past the guard and `pub_exp` is this call's own.
-        let ok = unsafe { !(*gctx).pub_exp.is_null() && BN_set_word((*gctx).pub_exp, RSA_F4) != 0 };
-        if !ok {
-            // SAFETY: `gctx` and its `pub_exp` are this call's own, not yet published.
-            unsafe { gen_init_cleanup(gctx) };
-            return ptr::null_mut();
-        }
-        // SAFETY: `gctx` is this call's own allocation.
-        unsafe {
-            (*gctx).nbits = 2048;
-            (*gctx).primes = RSA_DEFAULT_PRIME_NUM as usize;
-            (*gctx).rsa_type = rsa_type;
-        }
-    } else {
+    // A fresh zeroed allocation, owned from the moment it exists; `Drop` releases the block alone
+    // on every refusal below, at `gen_init`'s own `err:` line.
+    let Some(block) = GenCtxBlock::zalloc(459, 490) else {
         return ptr::null_mut();
+    };
+    let gctx = block.as_ptr();
+    // SAFETY: `gctx` is this call's own allocation; `libctx` is the caller's.
+    unsafe {
+        (*gctx).libctx = libctx;
+        (*gctx).pub_exp = BN_new();
+    }
+    // SAFETY: `gctx` is non-NULL past the guard and `pub_exp` is this call's own.
+    let ok = unsafe { !(*gctx).pub_exp.is_null() && BN_set_word((*gctx).pub_exp, RSA_F4) != 0 };
+    if !ok {
+        // SAFETY: `gctx` and its `pub_exp` are this call's own, not yet published; the block is
+        // released by `block`'s `Drop` when this function returns.
+        unsafe { gen_init_cleanup(gctx) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `gctx` is this call's own allocation.
+    unsafe {
+        (*gctx).nbits = 2048;
+        (*gctx).primes = RSA_DEFAULT_PRIME_NUM as usize;
+        (*gctx).rsa_type = rsa_type;
     }
 
     // SAFETY: `gctx` is non-NULL and this call's own; `params` is the caller's.
     if unsafe { rsa_gen_set_params(gctx.cast(), params) } == 0 {
-        // SAFETY: `gctx` is this call's own allocation, not yet published.
+        // SAFETY: `gctx` is this call's own allocation, not yet published; the block is released
+        // by `block`'s `Drop` when this function returns.
         unsafe { gen_init_cleanup(gctx) };
         return ptr::null_mut();
     }
-    gctx.cast()
+    block.into_raw().cast()
 }
 
 /// The authority's `err:` label of `gen_init` — `BN_free(gctx->pub_exp); OPENSSL_free(gctx);`.
+/// The member release is explicit here; the block is released by the caller's [`GenCtxBlock`]
+/// `Drop` at the same `:490` site.
 ///
 /// # Safety
 /// `gctx` is this call's own allocation and has not been published.
 unsafe fn gen_init_cleanup(gctx: *mut RsaGenCtx) {
     if !gctx.is_null() {
         // SAFETY: `gctx` is this call's own allocation.
-        unsafe {
-            BN_free((*gctx).pub_exp);
-            CRYPTO_free(gctx.cast(), FILE, 490);
-        }
+        unsafe { BN_free((*gctx).pub_exp) };
     }
 }
 
@@ -1109,15 +1164,17 @@ unsafe extern "C" fn rsa_gen(
 unsafe extern "C" fn rsa_gen_cleanup(genctx: *mut c_void) {
     let gctx = genctx.cast::<RsaGenCtx>();
 
-    if gctx.is_null() {
+    // SAFETY: `gctx` is NULL or a live context this crate allocated through the seam.
+    let Some(block) = (unsafe { GenCtxBlock::from_raw(gctx, 652) }) else {
         return;
-    }
+    };
     /* `#if defined(FIPS_MODULE) && !defined(OPENSSL_NO_ACVP_TESTS)`'s
      * `ossl_rsa_acvp_test_gen_params_free` call is not this profile's. */
-    // SAFETY: `gctx` is this call's own context.
+    // SAFETY: `gctx` is this call's own context; the member release is the authority's clearing
+    // form, and the block's single release is `block`'s `Drop` immediately after it.
     unsafe {
         BN_clear_free((*gctx).pub_exp);
-        CRYPTO_free(gctx.cast(), FILE, 652);
+        drop(block);
     }
 }
 
