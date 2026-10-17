@@ -3154,6 +3154,10 @@ unsafe impl CtxDestroy for SslCtx {
             OPENSSL_sk_free((*ctx).srtp_profiles);
             ssl_ctx_session_cache_free(ctx);
             crate::ssl::tls_srp::ssl_ctx_srp_ctx_free_intern(ctx);
+            // `SSL_CTX_set_client_cert_engine` takes a structural engine reference with
+            // `ENGINE_init` (`ssl/tls_depr.c:84`); the authority releases it here via
+            // `tls_engine_finish` (`ssl_lib.c:4409`). `ENGINE_finish` is NULL-safe.
+            crate::engine::eng_init::ENGINE_finish((*ctx).client_cert_engine);
             OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
             X509_VERIFY_PARAM_free((*ctx).param);
@@ -3520,6 +3524,11 @@ unsafe impl CtxDestroy for Ssl {
             OPENSSL_sk_pop_free((*s).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).client_ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).peer_ca_names, Some(x509_name_free_void));
+            // The authority calls `ssl_clear_bad_session` before releasing the connection's
+            // session reference (`ssl_lib.c:1473-1476`), so a completed session leaves the
+            // context cache with its `owner` cleared instead of being retained after the
+            // connection is gone.
+            crate::ssl::ssl_sess::ssl_clear_bad_session(s);
             SSL_SESSION_free((*s).session);
             crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
@@ -3540,6 +3549,9 @@ unsafe impl CtxDestroy for Ssl {
             crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).peer_chain);
             crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).verified_chain.cast());
             X509_VERIFY_PARAM_free((*s).param);
+            // `ossl_ssl_connection_free` calls `dane_final(&s->dane)` (`ssl_lib.c:1462`): the
+            // per-connection TLSA records, candidate chain and matched certificate are owned.
+            dane_final(ptr::addr_of_mut!((*s).dane));
             cert_free((*s).cert);
             (*s).client_cert_type_slot().clear(FILE, 0);
             (*s).server_cert_type_slot().clear(FILE, 0);
@@ -13026,6 +13038,168 @@ mod adv_realloc_probe {
 /// reference has been released. Each test registers a callback for its own class that
 /// re-enters the same `*_free`; the destroying sentinel must turn the re-entry into a
 /// defined no-op rather than a second teardown.
+#[cfg(test)]
+mod alias_ownership_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_sess::{SSL_SESSION_new, SSL_get1_session};
+
+    fn ctx_refs(ctx: *const SslCtx) -> i32 {
+        // SAFETY: `ctx` is a live context in every caller.
+        unsafe { (*ctx).references.load(Ordering::Relaxed) }
+    }
+
+    fn session_refs(session: *const SslSession) -> i32 {
+        // SAFETY: `session` is a live session in every caller.
+        unsafe { (*session).references.load(Ordering::Relaxed) }
+    }
+
+    /// `SSL_set_session` takes its own reference; freeing the caller's reference and then the
+    /// connection must retire the session exactly once. An independent `SSL_get1_session`
+    /// reference is the only way the session may outlive `SSL_free`.
+    #[test]
+    fn set_session_and_ssl_free_release_the_session_once() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: both pointers are live; `SSL_set_session` up-refs `session`.
+        assert_eq!(unsafe { SSL_set_session(ssl, session) }, 1);
+        assert_eq!(session_refs(session), 2);
+
+        // Release the caller's original reference. The connection still owns one.
+        // SAFETY: the caller's reference is live and unreleased.
+        unsafe { SSL_SESSION_free(session) };
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: `ssl` is live and its session is non-NULL.
+        let held = unsafe { SSL_get1_session(ssl) };
+        assert_eq!(held, session);
+        assert_eq!(session_refs(session), 2);
+
+        // SAFETY: this retires the connection, releasing only its own session reference.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(session_refs(held), 1);
+
+        // SAFETY: `held` is the last reference; this retires the session once.
+        unsafe { SSL_SESSION_free(held) };
+        // SAFETY: the connection's two context references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    /// A fresh connection holds exactly two context references (`ctx` and `session_ctx`), and
+    /// `SSL_free` releases both exactly once.
+    #[test]
+    fn ssl_free_releases_the_two_context_references_once() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        assert_eq!(ctx_refs(ctx), 1);
+        // SAFETY: `ctx` is live; `SSL_new` up-refs it once for `ctx` and once for `session_ctx`.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        assert_eq!(ctx_refs(ctx), 3);
+
+        // SAFETY: this retires the connection, which owns the two context references.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(ctx_refs(ctx), 1);
+
+        // SAFETY: the connection's references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    /// `SSL_set_SSL_CTX` moves the `ctx` reference but leaves `session_ctx` on the original
+    /// context, so `SSL_free` must release two *different* contexts exactly once each.
+    #[test]
+    fn ssl_set_ssl_ctx_keeps_the_two_context_references_distinct() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let base = unsafe { SSL_CTX_new(TLS_method()) };
+        // SAFETY: process-lifetime method table; the constructor returns an owned object.
+        let alt = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!base.is_null() && !alt.is_null());
+        // SAFETY: `base` is live.
+        let ssl = unsafe { SSL_new(base) };
+        assert!(!ssl.is_null());
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (3, 1));
+
+        // SAFETY: both contexts are live; the call up-refs `alt` and releases `base`.
+        assert_eq!(unsafe { SSL_set_SSL_CTX(ssl, alt) }, alt);
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (2, 2));
+
+        // SAFETY: this releases `ctx` (alt) and `session_ctx` (base), one reference each.
+        unsafe { SSL_free(ssl) };
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (1, 1));
+
+        // SAFETY: each context still has the caller's reference.
+        unsafe { SSL_CTX_free(base) };
+        // SAFETY: `alt` still has the caller's reference.
+        unsafe { SSL_CTX_free(alt) };
+    }
+
+    /// The chain accessors return the connection's borrowed owners; identity is asserted and the
+    /// owners are released exactly once by `SSL_free`/`SSL_SESSION_free`, never by the accessor.
+    #[test]
+    fn peer_and_verified_chain_accessors_return_borrowed_owners() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: both calls allocate fresh empty stacks owned by this frame.
+        let chain = OPENSSL_sk_new_null();
+        let verified = OPENSSL_sk_new_null();
+        assert!(!chain.is_null() && !verified.is_null());
+
+        // SAFETY: `ssl` is live and the stacks are now its owned members.
+        unsafe {
+            (*ssl).peer_chain = chain;
+            (*ssl).verified_chain = verified.cast();
+        }
+        // SAFETY: both pointers are live.
+        assert_eq!(unsafe { SSL_get_peer_cert_chain(ssl) }, chain.cast());
+        // SAFETY: `ssl` is live and owns `verified`.
+        assert_eq!(unsafe { SSL_get0_verified_chain(ssl) }, verified.cast());
+
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        // SAFETY: `session` is live and `ssl` is live; the call up-refs the session.
+        assert_eq!(unsafe { SSL_set_session(ssl, session) }, 1);
+        // A session with no chain keeps the reduced-path fallback to the connection's chain.
+        // SAFETY: both pointers are live.
+        assert_eq!(unsafe { SSL_get_peer_cert_chain(ssl) }, chain.cast());
+
+        // SAFETY: a fresh empty stack owned by this frame.
+        let session_chain = OPENSSL_sk_new_null();
+        assert!(!session_chain.is_null());
+        // SAFETY: `session` is live and owned by the connection (one reference) plus this frame.
+        unsafe { (*session).peer_chain = session_chain };
+        // SAFETY: both pointers are live; the session's chain takes precedence.
+        let peer_chain = unsafe { SSL_get_peer_cert_chain(ssl) };
+        assert_eq!(peer_chain, session_chain.cast());
+        // SAFETY: `ssl` is live and owns `verified`.
+        assert_eq!(unsafe { SSL_get0_verified_chain(ssl) }, verified.cast());
+
+        // SAFETY: the caller's session reference is live and unreleased.
+        unsafe { SSL_SESSION_free(session) };
+        // SAFETY: `SSL_free` releases the connection's session reference and both connection
+        // chains exactly once; the borrowed accessor results are never freed here.
+        unsafe { SSL_free(ssl) };
+        // SAFETY: the connection's context references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+}
+
 #[cfg(test)]
 mod refcount_reentrancy_tests {
     #![allow(clippy::panic)]
