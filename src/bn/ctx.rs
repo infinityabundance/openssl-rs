@@ -12,6 +12,15 @@
 //!   pool.
 //! * `BN_GENCB` carries a callback and its argument, and `BN_GENCB_call` invokes it
 //!   with the two operation words the authority passes.
+//!
+//! ## Ownership classification (this batch)
+//!
+//! Both types are **deliberately Rust-owned internal representations**, not unconverted allocator-seam
+//! sites. Their storage is a Rust `Box` (the pool and marks are `Vec`s), and the objects are opaque
+//! to the authority's callers; the standing census classifies this file as fully Rust-owned and it is
+//! retained rather than forced into a `CRYPTO_*` owner. The consequence is stated rather than hidden:
+//! an installed `CRYPTO_set_mem_functions` hook does not observe these two objects' allocations or
+//! releases. That decision and its consequence are recorded here so the boundary is explicit.
 
 use core::ffi::{c_int, c_void};
 
