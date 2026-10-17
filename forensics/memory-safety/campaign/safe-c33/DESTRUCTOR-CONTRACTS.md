@@ -92,7 +92,7 @@ means the construction path releases block-only before the object is complete.
 |---|---|---|---|---|
 | `X509Info` (`asn1/x_info.rs:84`) | Z | `X509_free`, `X509_CRL_free`, `EVP_PKEY_free`, `OPENSSL_free(enc_data)` | all-zero slots NULL; each free NULL-tolerant | EST |
 | `X509Pkey` (`asn1/x_pkey.rs:92`) | Z | `X509_ALGOR_free`, `ASN1_OCTET_STRING_free`, `EVP_PKEY_free`, block fields | all-zero NULL | EST |
-| `AsyncWaitCtx` (`async/async_wait.rs:172`) | Z | walk `fds`; caller cleanup callback for live entries; release each node | zero `fds` skips loop | CON |
+| `AsyncWaitCtx` (`async/async_wait.rs:172`) | Z | walk `fds`; caller cleanup callback for live entries; release each node | zero `fds` skips loop | EST (subphase 38) |
 | `OsslCmpCtx` (`cmp/cmp_ctx.rs:486`) | Z | 5 `OwnedStr`, 2 `X509`, name, store, 2 stacks, cert/chain/pkey, 2 octet strings, secret cleanse, digest, nonces, itavs, stacks, pkey/names/int, extensions, policies, cert/req, itavs; then remaining members | all fields NULL/zero; secret guarded by `!is_null` | EST |
 | `OsslCmpSrvCtx` (`cmp/cmp_server.rs:151`) | Z | `OSSL_CMP_CTX_free(ctx)` | zero `ctx` NULL | EST |
 | `BioCoreGlobals` (`context/core_bio.rs:107`) | E | none | E | EST |
@@ -104,22 +104,22 @@ means the construction path releases block-only before the object is complete.
 | `CtPolicyEvalCtx` (`ct/ct_policy.rs:117`) | Z | `X509_free(cert/issuer)`, `OwnedBlock::take(propq)` | zero NULL / `take` NULL | EST |
 | `Sct` (`ct/ct_sct.rs:273`) | Z | four `CRYPTO_free` | zero NULL | EST |
 | `SctCtx` (`ct/ct_sct_ctx.rs:185`) | Z | `EVP_PKEY_free`, 5 `CRYPTO_free`, remaining members | zero NULL | EST |
-| `OsslDecoderInstance` (`decoder_lib.rs:111`) | Z | if decoder: `freectx(decoderctx)`, `OSSL_DECODER_free` | zero decoder NULL | CON (provider callback) |
-| `OsslDecoderCtx` (`decoder_meth.rs:774`) | Z | optional `cleanup(construct_data)`, `sk_pop_free(decoder_insts)`, pwdata clear | zero callbacks/NULL | CON (cleanup hook) |
-| `Dh` (`dh/object.rs:326`) | Z | method `finish` (if any), `free_ex_data`, lock, FFC params, `BN_clear_free` keys | zero method NULL; releasers NULL-tolerant | CON (method hook) |
+| `OsslDecoderInstance` (`decoder_lib.rs:111`) | Z | if decoder: `freectx(decoderctx)`, `OSSL_DECODER_free` | zero decoder NULL | EST (subphase 38) |
+| `OsslDecoderCtx` (`decoder_meth.rs:774`) | Z | optional `cleanup(construct_data)`, `sk_pop_free(decoder_insts)`, pwdata clear | zero callbacks/NULL | EST (subphase 38) |
+| `Dh` (`dh/object.rs:326`) | Z | method `finish` (if any), `free_ex_data`, lock, FFC params, `BN_clear_free` keys | zero method NULL; releasers NULL-tolerant | EST (subphase 38) |
 | `DhPkeyCtx` (`dh/pmeth.rs:140`) | Z | `kdf_ukm` block, `kdf_oid` | zero NULL | EST |
-| `Dsa` (`dsa/object.rs:264`) | Z | method `finish`, ex_data, lock, FFC params, `BN_clear_free` keys | zero method NULL | CON (method hook) |
+| `Dsa` (`dsa/object.rs:264`) | Z | method `finish`, ex_data, lock, FFC params, `BN_clear_free` keys | zero method NULL | EST (subphase 38) |
 | `DsaPkeyCtx` (`dsa/pmeth.rs:101`) | E | none | E | EST |
 | `Dso` (`dso/mod.rs:294`) | Z | `OPENSSL_sk_free(meth_data)`, 2 names | zero NULL/empty | EST |
 | `EcdsaSig` (`ec/ecdsa.rs:47`) | Z | `BN_clear_free(r)`, `BN_clear_free(s)` | zero NULL | EST |
 | `EcxKey` (`ec/ecx_key.rs:126`) | S | `CRYPTO_free(propq)`, `CRYPTO_secure_clear_free(privkey,keylen)` | staged; no zero claim | EST |
-| `EcGroup` (`ec/lib.rs:260`) | Z/R | plain: method `group_finish`, precomp, mont, generator, order, cofactor, seed, propq. **clear:** method `group_clear_finish`/`group_finish`, precomp, mont, `EC_POINT_clear_free`, `BN_clear_free`, seed | **defect D3:** clear body derefs null `meth` on all-zero | CON |
-| `EcPoint` (`ec/lib.rs:301`) | Z/R | plain: method `point_finish`. **clear:** `point_clear_finish`/`point_finish` | **defect D4:** clear body derefs null `meth` on all-zero | CON |
+| `EcGroup` (`ec/lib.rs:260`) | Z/R | plain: method `group_finish`, precomp, mont, generator, order, cofactor, seed, propq. **clear:** method `group_clear_finish`/`group_finish`, precomp, mont, `EC_POINT_clear_free`, `BN_clear_free`, seed | **defect D3 fixed:** clear body guards null `meth` on all-zero | EST (subphase 38) |
+| `EcPoint` (`ec/lib.rs:301`) | Z/R | plain: method `point_finish`. **clear:** `point_clear_finish`/`point_finish` | **defect D4 fixed:** clear body guards null `meth` on all-zero | EST (subphase 38) |
 | `EcPreCompSt` (`ec/mult.rs:69`) | Z | free each point, then points array | zero `points` NULL | EST |
 | `EcPkeyCtx` (`ec/pmeth.rs:139`) | Z | `gen_group`, `co_key`, `kdf_ukm` | zero NULL | EST |
-| `OsslEncoderInstance` (`encoder_lib.rs:494`) | Z | `freectx(encoderctx)`, `OSSL_ENCODER_free` | zero encoder NULL | CON (provider callback) |
+| `OsslEncoderInstance` (`encoder_lib.rs:494`) | Z | `freectx(encoderctx)`, `OSSL_ENCODER_free` | zero encoder NULL | EST (subphase 38) |
 | `OsslEncoder` (`encoder_meth.rs:310`) | Z | name, parsed propdef, provider ref | zero NULL | EST |
-| `OsslEncoderCtx` (`encoder_meth.rs:1246`) | Z | `sk_pop_free(encoder_insts)`, `CRYPTO_free(construct_data)`, pwdata clear | zero NULL/empty | CON (element destructor callback) |
+| `OsslEncoderCtx` (`encoder_meth.rs:1246`) | Z | `sk_pop_free(encoder_insts)`, `CRYPTO_free(construct_data)`, pwdata clear | zero NULL/empty | EST (subphase 38) |
 | `ConstructDataPkey` (`encoder_pkey.rs:301`) | E | none | E | EST |
 | `DynamicDataCtx` (`engine/eng_dyn.rs:419`) | R | `DSO_free`, 2 names, `sk_pop_free(dirs)` | zero NULL | EST |
 | `EnginePile` (`engine/eng_table.rs:96`) | Z | `sk_pop_free(sk)`, `ENGINE_free(funct)` | zero NULL | EST |
@@ -134,9 +134,9 @@ means the construction path releases block-only before the object is complete.
 | `EvpKeyExch` (`evp/exchange.rs:164`) | R | `CRYPTO_free(type_name)`, provider ref | no zero claim | EST |
 | `EvpKem` (`evp/kem.rs:199`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
 | `EvpKeyMgmt` (`evp/keymgmt.rs:320`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
-| `EvpPkey` (`evp/pkey.rs:452`) | S | `evp_pkey_free_it`, `free_ex_data`, lock | staged `RawPkey`; last-ref precondition | CON (refcount) |
+| `EvpPkey` (`evp/pkey.rs:452`) | S | `evp_pkey_free_it`, `free_ex_data`, lock | staged `RawPkey`; last-ref precondition | EST (subphase 38) |
 | `EvpPkeyAsn1Method` (`evp/pkey_asn1.rs:566`) | Z | `CRYPTO_free(pem_str/info)`, remaining member releases | zero NULL | EST |
-| `EvpPkeyCtx` (`evp/pkey_ctx.rs:1125`) | Z | free old ops/cached data, keymgmt, propquery, 2 keys, `BN_free(rsa_pubexp)` | zero NULL; old-op helpers handle zero | CON (freectx callbacks) |
+| `EvpPkeyCtx` (`evp/pkey_ctx.rs:1125`) | Z | free old ops/cached data, keymgmt, propquery, 2 keys, `BN_free(rsa_pubexp)` | zero NULL; old-op helpers handle zero | EST (subphase 38) |
 | `EvpPkeyMethod` (`evp/pkey_ctx.rs:2228`) | E | none | E | EST |
 | `EvpRand` (`evp/rand.rs:321`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
 | `EvpSignature` (`evp/signature.rs:359`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
@@ -175,7 +175,7 @@ means the construction path releases block-only before the object is complete.
 | `ProvSm2Ctx` (`provider/sm2_enc.rs:101`) | Z | `EC_KEY_free`, digest reset | zero NULL | EST |
 | `RandGlobal` (`rand/rand_lib.rs:422`) | R | lock, 2 DRBG ctx, 7 names | no zero claim; constructed global | EST |
 | `RsaPrimeInfo` (`rsa/mp.rs:67`) | Z | `BN_free(pp)`, coefficient members | zero NULL | EST |
-| `Rsa` (`rsa/object.rs:589`) | Z | method `finish`, ex_data, lock, `BN_free(n/e)`, `BN_clear_free(d,p,q,dmp1,dmq1,iqmp)`, prime infos, blinding | zero method NULL; NULL BNs | CON (method hook) |
+| `Rsa` (`rsa/object.rs:589`) | Z | method `finish`, ex_data, lock, `BN_free(n/e)`, `BN_clear_free(d,p,q,dmp1,dmq1,iqmp)`, prime infos, blinding | zero method NULL; NULL BNs | EST (subphase 38) |
 | `RsaPkeyCtx` (`rsa/pmeth.rs:189`) | Z | 5 member releases (including `BN_free` pubexp) | zero NULL | EST |
 | `BioBufferCtx` (`runtime/bio/bf_buff.rs:85`) | Z | `OwnedBlock::take(ibuf/obuf)` | zero NULL | EST |
 | `BioLineBufferCtx` (`runtime/bio/bf_lbuf.rs:58`) | Z | `OwnedBlock::take(obuf)` | zero NULL | EST |
@@ -188,7 +188,7 @@ means the construction path releases block-only before the object is complete.
 | `BioDgramPairSt` (`runtime/bio/bss_dgram_pair.rs:259`) | Z | lock free | zero NULL | EST |
 | `BioBufMem` (`runtime/bio/bss_mem.rs:66`) | Z | `OwnedBlock::take(readp)` | zero NULL | EST |
 | `BssSockData` (`runtime/bio/bss_sock.rs:385`) | E | none | E | EST |
-| `CompCtx` (`runtime/bio/comp.rs:167`) | Z | method `finish` if present | zero method NULL | CON (method hook) |
+| `CompCtx` (`runtime/bio/comp.rs:167`) | Z | method `finish` if present | zero method NULL | EST (subphase 38) |
 | `OsslCoreBio` (`runtime/bio/core_bio.rs:102`) | E | none | E | EST |
 | `BioMethod` (`runtime/bio/method.rs:64`) | Z | `CRYPTO_free(name)` | zero NULL | EST |
 | `ProbeCtx` (`runtime/bio/owned.rs:272`) | E (test) | records a call only | E; test-only | EST |
@@ -199,17 +199,17 @@ means the construction path releases block-only before the object is complete.
 | `BioSsl` (`ssl/bio_ssl.rs:102`) | E | none | E | EST |
 | `Dtls1State` (`ssl/d1_lib.rs:107`) | E | none | E | EST |
 | `Cert` (`ssl/ssl_lib.rs:995`) | S | clear 12 cert-key slots, `drop_in_place(custext)`, psk hint slot, `dh_tmp` | raw `RawCtx`; `custext` written before `assume_init` | EST |
-| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (multi-member, refcount) |
-| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (multi-member, refcount) |
+| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (subphase 38 retained: ex-data/nested callbacks, multi-member) |
+| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (subphase 38 retained: ex-data/BIO callbacks, 40+ member teardown) |
 | `DanetlsRecord` (`ssl/ssl_lib.rs:11436`) | Z | `CRYPTO_free(data)`, `EVP_PKEY_free(spki)` | zero NULL | EST |
-| `SslSession` (`ssl/ssl_sess.rs:559`) | Z | ex_data, cleanse master key/id, peer, peer_rpk, chain, 7 member-buffer slots | zero NULL/arrays | CON (refcount) |
+| `SslSession` (`ssl/ssl_sess.rs:559`) | Z | ex_data, cleanse master key/id, peer, peer_rpk, chain, 7 member-buffer slots | zero NULL/arrays | EST (subphase 38) |
 | `OsslStoreCtx` (`store/store_lib.rs:262`) | E | none (`ossl_store_close_it` is explicit) | E | EST |
 | `OsslStoreSearch` (`store/store_lib.rs:272`) | E | none | E | EST |
 | `OsslStoreInfo` (`store/store_lib.rs:281`) | Z | switch on `type_`; one member per tag | zero tag is not a case | EST |
 | `OsslStoreLoader` (`store/store_meth.rs:163`) | Z | provider ref if non-NULL | zero NULL | EST |
 | `TsVerifyCtx` (`ts/ts_verify_ctx.rs:79`) | Z | `TS_VERIFY_CTX_cleanup` (re-zeroes) | zero/cleanup | EST |
 | `UiString` (`ui/ui_lib.rs:475`) | Z | free `out_string` iff `OUT_STRING_FREEABLE` | zero flags skip | EST |
-| `Ui` (`ui/ui_lib.rs:515`) | Z | if `UI_FLAG_DUPL_DATA`: `ui_destroy_data`; strings; ex_data; lock | zero flags skip | CON (callback) |
+| `Ui` (`ui/ui_lib.rs:515`) | Z | if `UI_FLAG_DUPL_DATA`: `ui_destroy_data`; strings; ex_data; lock | zero flags skip | EST (subphase 38) |
 | `UiMethod` (`ui/ui_lib.rs:545`) | Z | ex_data, name | zero NULL | EST |
 | `ByDirHash` (`x509/by_dir.rs:363`) | E | none | E | EST |
 | `ByDirEntry` (`x509/by_dir.rs:371`) | S | `CRYPTO_free(dir)`, `sk_pop_free(hashes)` | malloc + all read fields written before drop | EST |
@@ -219,20 +219,21 @@ means the construction path releases block-only before the object is complete.
 | `X509V3ExtMethod` (`x509/v3_lib.rs:278`) | E/R | none | E; row copied whole before drop | EST |
 | `X509Purpose` (`x509/v3_purp.rs:475`) | R | free name/sname iff dynamic flag | constructed row; no zero claim | EST |
 | `ConfValue` (`x509/v3_utl.rs:479`) | R | free name/value/section | constructed record; no zero claim | EST |
-| `X509Lookup` (`x509/x509_lu.rs:739`) | Z | method `free` hook if method non-NULL | zero method NULL | CON (method hook) |
+| `X509Lookup` (`x509/x509_lu.rs:739`) | Z | method `free` hook if method non-NULL | zero method NULL | EST (subphase 38) |
 | `X509Object` (`x509/x509_lu.rs:758`) | Z | `x509_object_free_internal` by tag | zero tag `X509_LU_NONE` | EST |
-| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (lookup free hooks) |
+| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (subphase 38 retained: non-atomic refcount, free hooks) |
 | `X509Trust` (`x509/x509_trust.rs:215`) | R | free name iff dynamic flag | constructed row; no zero claim | EST |
 | `X509StoreCtx` (`x509/x509_vfy.rs:319`) | Z | `X509_STORE_CTX_cleanup`, propq slot clear | cleanup preserves propq; zero accepted | EST |
 | `X509VerifyParam` (`x509/x509_vpm.rs:342`) | Z/R | policies, hosts, peername, email, ip | zero NULL | EST |
 | `X509CrlMethod` (`x509/x_crl.rs:272`) | E/S | none | E | EST |
 
-**CtxDestroy subtotal: 136 = 117 EST + 19 CON.** The 19 `CONTRACTED` rows
-are `AsyncWaitCtx`, `OsslDecoderInstance`, `OsslDecoderCtx`, `Dh`, `Dsa`,
-`OsslEncoderInstance`, `OsslEncoderCtx`, `EvpPkey`, `EvpPkeyCtx`, `Rsa`,
-`CompCtx`, `SslCtx`, `Ssl`, `SslSession`, `Ui`, `X509Lookup`, `X509Store`,
-`EcGroup`, `EcPoint`. (`ProvAesSivCtx`/`ProvAesGcmSivCtx` are
-`CipherDestroy`, counted below.)
+**CtxDestroy subtotal: 136 = 133 EST + 3 CON.** Subphase 38 independently
+adjudicated the former 19 `CONTRACTED` rows: 16 are promoted to `ESTABLISHED`
+(`AsyncWaitCtx`, `OsslDecoderInstance`, `OsslDecoderCtx`, `Dh`, `Dsa`,
+`OsslEncoderInstance`, `OsslEncoderCtx`, `EvpPkey`, `EvpPkeyCtx`, `Rsa`, `CompCtx`,
+`SslSession`, `Ui`, `X509Lookup`, `EcGroup`, `EcPoint`); `SslCtx`, `Ssl` and
+`X509Store` remain `CONTRACTED` (see Adjudication). (`ProvAesSivCtx`/
+`ProvAesGcmSivCtx` are `CipherDestroy`, counted below.)
 
 ## 3. `CipherDestroy` implementations (27)
 
@@ -423,15 +424,91 @@ now carry the guards above.
   sound for the three GCM rows but is a different trait shape from the other
   destructor traits; a future GCM row that owns a member would need a body.
 
+## Adjudication (subphase 38)
+
+Independent source adjudication of the 19 `CONTRACTED` `CtxDestroy` rows. For
+each row the body, every constructor that can publish the object, and every
+path that can reach `Drop`/`destroy_body` were read. `ESTABLISHED` below means
+(a) the zero/partial state was checked field by field where the construction
+path can reach the body, (b) each member release was traced and the body was
+found not to release the enclosing block, and (c) no safe caller can hand the
+body an invalid state. It is **not** `SAFETY_DISCHARGED`: no Miri, sanitizer,
+differential or independent §7 package was run.
+
+### Promoted to `ESTABLISHED` (16)
+
+| row | source witnesses |
+|---|---|
+| `AsyncWaitCtx` | body `src/async/async_wait.rs:172-200`; zero `fds` NULL skips `:176`; `set_wait_fd` writes key/fd/custom_data/cleanup/add/next before linking `:300-309`; node release exactly once `:196-198`; owner release `:152-162`; callback ABI is the stored `FdLookup.cleanup` signature `:49-52` |
+| `OsslDecoderInstance` | body `src/decoder_lib.rs:111-130`; zero `decoder` skips `:117`; construction `:296-373`; error arm `fail_instance` `:137-140`; `dup` is `RawCtx` and validates only after writing `:404-456`; free wrapper `:387-391` |
+| `OsslDecoderCtx` | body `src/decoder_meth.rs:774-787`; `zalloc` constructor `:809-813`; `OPENSSL_sk_pop_free(NULL)` no-op `src/runtime/stack.rs:483-493`; `ossl_pw_clear_passphrase_data` is type-gated on zero `src/passphrase.rs:207-217`; free wrapper `:880-885` |
+| `Dh` | body `src/dh/object.rs:326-366`; `meth` guard `:334-341`; staged constructor writes `references`/`meth`/`lock`/`libctx`/`engine` before `assume_init` `:229-318`; FFC cleanup NULL-tolerant `src/ffc/params.rs:190-200`; last-ref gate `:380-401` |
+| `Dsa` | body `src/dsa/object.rs:264-304`; `meth` guard `:272-279`; staged constructor `:168-256`; same FFC cleanup witness; last-ref gate `:318-339` |
+| `OsslEncoderInstance` | body `src/encoder_lib.rs:494-511`; zero `encoder` skips `:498`; construction `:384-469`; error arm `:477-480`; free wrapper `:525-532` |
+| `OsslEncoderCtx` | body `src/encoder_meth.rs:1246-1256`; `zalloc` constructor `:1269-1274`; same stack and pwdata witnesses; free wrapper `:1339-1345` |
+| `EvpPkey` | body `src/evp/pkey.rs:452-465`; staged `RawPkey` is `unsafe`-only and releases the block alone `:474-507`; `EVP_PKEY_new` writes all members before `finish` `:611-655`; last-ref gate `:758-772`; the trait makes no zero-validity claim `:391-400` |
+| `EvpPkeyCtx` | body `src/evp/pkey_ctx.rs:1125-1156`; safe `OwnedCtx::new` zero state `:291-299`; `free_old_ops` dispatches from `operation` (zero selects no arm) `:904-947`; cached data is two NULL frees `:1006-1016`; free wrapper `:1111-1114` |
+| `Rsa` | body `src/rsa/object.rs:589-651`; `meth` guard `:597-603`; staged constructor `:371-471`; blinding release is NULL-safe `src/runtime/sparse_array.rs:488-498,558-568`; last-ref gate `:685-707` |
+| `CompCtx` | body `src/runtime/bio/comp.rs:167-180`; zero `meth` skips `:171`; constructor sets `meth` before `init` `:271-293`; free wrapper `:343-346` |
+| `SslSession` | body `src/ssl/ssl_sess.rs:559-592`; safe `OwnedCtx::new` `:216-224`; constructors `:304-332`, `:349-497`; arrays are exactly `TLS13_MAX_RESUMPTION_PSK_LENGTH`/`SSL_MAX_SSL_SESSION_ID_LENGTH` (`src/ssl/ssl_lib.rs:2458-2470`); member slots clear NULL safely `src/ssl/ssl_lib.rs:2725-2746,2793-2799`; last-ref gate `:535-549` |
+| `Ui` | body `src/ui/ui_lib.rs:515-538`; zero `flags` skips the callback `:519`; constructor sets `lock`/`meth` before any flag can be set `:586-632`; `UI_FLAG_DUPL_DATA` only set after `meth` is live `:1441-1453`; free wrapper `:664-667` |
+| `X509Lookup` | body `src/x509/x509_lu.rs:739-751`; zero `method` NULL skips `:744-749`; `RawLookup` constructor/error arm `:1022-1032,663-675`; free wrapper `:1049-1052` |
+| `EcGroup` | plain body `src/ec/lib.rs:263-278` reads `meth` through `as_ref` `:267`; clear body guards `meth` `:284`; safe `OwnedCtx::new` path `:371-400`; clear selection is `unsafe from_raw_clear` only `:493-497`; deterministic zero-state control `:3107-3178` |
+| `EcPoint` | plain body `src/ec/lib.rs:310-318` uses `as_ref` `:314`; clear body guards `meth` `:324`; safe constructor `:1460-1479`; clear selection `:1504-1508`; same zero-state control |
+
+### Retained `CONTRACTED` (3)
+
+- **`SslCtx`** (`src/ssl/ssl_lib.rs:3155-3186`). The last-reference gate is
+  established (`:3134-3147`), the constructor validates the zero/partial block
+  before fallible members (`:2996-3100`), and the directly read helpers
+  (`ssl_ctx_session_cache_free` `src/ssl/ssl_sess.rs:890-903`,
+  `ssl_ctx_srp_ctx_free_intern` `src/ssl/tls_srp.rs:136-143`, slot clears) are
+  zero-safe. It is retained because `CRYPTO_free_ex_data` (`:3174`) dispatches
+  application ex-data free callbacks and `X509_STORE_free`/`CTLOG_STORE_free`
+  add nested refcount/callback obligations; the callback re-entrancy and the
+  complete single-owner proof across every member were not independently
+  discharged in this pass.
+- **`Ssl`** (`src/ssl/ssl_lib.rs:3520-3583`). The two context references are
+  balanced (`SSL_new` `:3227`, `:3347`; destructor `:3574`, `:3580`), the
+  partial-construction `release_block` paths are the authority's block-only
+  frees (`:3230`, `:3282`), and `session_ticket` is the authority's raw release.
+  Retained because the body performs 40+ releases, dispatches
+  `CRYPTO_free_ex_data` and `BIO_free_all` application callbacks, and the
+  alias/lifetime analysis across `session`, `peer_chain`/`verified_chain` and
+  `ctx`/`session_ctx` is not complete enough for a per-field claim.
+- **`X509Store`** (`src/x509/x509_lu.rs:770-794`). The body zero/stack teardown
+  is NULL-tolerant, but the last-reference precondition is enforced through a
+  non-atomic `c_int` (`:1883-1885`), so it is established only for single-
+  threaded use; the lookup `free` hooks are application callbacks. Retained as
+  a concurrency + callback obligation.
+
+### STOP defects
+
+**None found in the 19 rows.** Every body was checked for an uninitialised
+field read, a double release of a member, and a release of the enclosing block;
+no such path was found, and no safe caller can reach a body with an invalid
+state.
+
+### Residual / unknown obligations
+
+- The 16 promotions retain the external ABI obligation that a stored method or
+  provider callback is a valid function and frees only its own data; callback
+  re-entrancy was not tested.
+- `EcGroup`/`EcPoint` zero-state evidence is the deterministic negative control,
+  not a model-checker or sanitizer result.
+- `SslCtx`/`Ssl`/`X509Store` retain the obligations above.
+- Nothing is promoted to `DISCHARGED`; §7's full dependency-closure and
+  independent-check package was not attempted.
+
 ## 7. Status counts and residuals
 
 | status | count |
 |---|---:|
 | implementations audited | 199 |
-| `CONTRACTED` | 21 |
-| `ESTABLISHED` | 178 |
+| `CONTRACTED` | 5 (3 `CtxDestroy` + 2 `CipherDestroy`) |
+| `ESTABLISHED` | 194 |
 | `DISCHARGED` | 0 |
-| defect sites (STOP) | 4, all fixed at source in sweep-37 |
+| defect sites (STOP) | 4, all fixed at source in sweep-37; none added in subphase 38 |
 
 **Retained obligations (global):**
 
@@ -440,9 +517,11 @@ now carry the guards above.
 - Callback-dispatching destructors retain the authority/provider callback
   contract (D1/D2 are distinct: they are not callback obligations, they are
   missing null tests).
-- Reference-counted destructors (`EvpPkey`, `SslCtx`, `Ssl`, `SslSession`)
-  retain the "last reference" precondition; the exported `*_free` wrappers
-  establish it, but no independent check was run.
+- Reference-counted destructors: `SslCtx`, `Ssl` and `X509Store` retain the
+  "last reference" precondition as a retained obligation (the exported `*_free`
+  wrappers establish it at source; `X509Store` additionally has a non-atomic
+  count). `EvpPkey` and `SslSession` last-reference gates were source-witnessed in
+  subphase 38 (`evp/pkey.rs:758-772`, `ssl/ssl_sess.rs:535-549`).
 - `EcGroup`/`EcPoint` retain the clear/plain selection obligation. The D3/D4
   latent null dereference is fixed by the sweep-37 guard; the zero-state claim
   now holds, but the boundaries remain `ESTABLISHED` (no independent check).

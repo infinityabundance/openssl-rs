@@ -136,6 +136,21 @@ and the adversarial probes are `#[ignore]`d and run separately via
 | 77 | stage/p25/sweep34 | src/ssl/d1_lib, src/pkcs12/p12_key, src/provider/activate, scripts/adv-probe.sh | **targeted court**: DTLS state refusal/lifecycle, PKCS#12 `OwnedUniPass` cleansed release, provider operation-bits publication ordering; 16/16 probes; hidden 0 |
 | 78 | stage/p25/sweep35 | src/dsa/object, src/dh/object, scripts/adv-probe.sh | **targeted court**: later initialisation failure (`meth->init` returns 0) runs the partial cleanup — method `finish` once, one forwarded context allocation, one release of the same block, default method restored and exercised; allocation-refusal arm already covered; lock-null (Box-based) and ex-data failure are unreachable/non-injectable and not claimed; 18/18 probes; hidden 0 |
 | 79 | stage/p25/sweep37 | provider/cipher, ec/lib, ssl/ssl_lib | **destructor zero-validity**: D1/D2 `hw` null guard and D3/D4 `meth` null guard make the clear bodies no-ops on the all-zero block; constructed-path order, layouts, coordinates and cleansing unchanged; Ssl `session_ticket` comment reconciled with the authority's raw release; 2 new deterministic zero-state negative controls; 18/18 probes; hidden 0 |
+| 80 | stage/p25/sweep38 | DESTRUCTOR-CONTRACTS.md, PROGRESS.md | **subphase 38 adjudication (docs only)**: 19 `CONTRACTED` `CtxDestroy` rows independently re-read against every constructor/publication path; **16 promoted to `ESTABLISHED`**, **3 retained `CONTRACTED`** (`SslCtx`, `Ssl`, `X509Store`), **0 STOP defects**; no `DISCHARGED`; residual callback/non-atomic-refcount obligations recorded |
+
+### Subphase 38 — destructor-contract adjudication (docs only)
+
+- `ESTABLISHED` (16 of 19): `AsyncWaitCtx`, `OsslDecoderInstance`,
+  `OsslDecoderCtx`, `Dh`, `Dsa`, `OsslEncoderInstance`, `OsslEncoderCtx`,
+  `EvpPkey`, `EvpPkeyCtx`, `Rsa`, `CompCtx`, `SslSession`, `Ui`, `X509Lookup`,
+  `EcGroup`, `EcPoint`.
+- Retained `CONTRACTED` (3): `SslCtx`, `Ssl` (application ex-data/BIO callbacks
+  and multi-member teardown analysis), `X509Store` (non-atomic `c_int`
+  reference count + lookup `free` hooks).
+- STOP defects: **0**. No production code changed; nothing promoted to
+  `DISCHARGED`.
+- Source witnesses and residual obligations are in
+  `DESTRUCTOR-CONTRACTS.md` → “Adjudication (subphase 38)”.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
