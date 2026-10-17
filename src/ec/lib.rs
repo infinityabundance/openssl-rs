@@ -256,7 +256,10 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 // minus the block -- the method finish callback, pre-computation, montgomery data, generator,
 // order, cofactor and the two names, each releaser NULL-tolerant, never the enclosing block. (b)
 // holds: an all-zero group has every member NULL/zero, so both bodies are the authority's own
-// all-empty teardown -- what the safe `OwnedCtx::new` leans on.
+// all-empty teardown -- what the safe `OwnedCtx::new` leans on. The authority's `EC_GROUP_free`
+// and `EC_GROUP_clear_free` dereference `group->meth` unconditionally, but no constructed group
+// has a NULL method (`ossl_ec_group_new_ex` requires one); the clear body's NULL test is a
+// failure-path safety improvement for the zero state, not a constructed-path change.
 unsafe impl CtxDestroy for EcGroup {
     unsafe fn destroy_body(ptr: *mut EcGroup) {
         // SAFETY: `ptr` is a live group per the trait contract.
@@ -275,13 +278,16 @@ unsafe impl CtxDestroy for EcGroup {
     }
 
     unsafe fn clear_destroy_body(ptr: *mut EcGroup) {
-        // SAFETY: `ptr` is a live group per the trait contract.
+        // SAFETY: `ptr` is a live group per the trait contract; the method is NULL only on the
+        // all-zero block a safe `OwnedCtx::new` can build, which has no finish callback.
         unsafe {
-            let meth = (*ptr).meth;
-            if let Some(clear_finish) = (*meth).group_clear_finish {
-                clear_finish(ptr);
-            } else if let Some(finish) = (*meth).group_finish {
-                finish(ptr);
+            if !(*ptr).meth.is_null() {
+                let meth = (*ptr).meth;
+                if let Some(clear_finish) = (*meth).group_clear_finish {
+                    clear_finish(ptr);
+                } else if let Some(finish) = (*meth).group_finish {
+                    finish(ptr);
+                }
             }
             EC_pre_comp_free(ptr);
             BN_MONT_CTX_free((*ptr).mont_data);
@@ -297,7 +303,10 @@ unsafe impl CtxDestroy for EcGroup {
 // SAFETY: (a) holds: `destroy_body`/`clear_destroy_body` are `EC_POINT_free`/`EC_POINT_clear_free`
 // minus the block -- the point finish callback, never the enclosing block. (b) holds: an all-zero
 // point has a NULL method, so both bodies are the authority's own all-empty teardown -- what the
-// safe `OwnedCtx::new` leans on.
+// safe `OwnedCtx::new` leans on. The authority's `EC_POINT_free`/`EC_POINT_clear_free` dereference
+// `point->meth` unconditionally, but no constructed point has a NULL method (`EC_POINT_new`
+// requires one); the clear body's NULL test is a failure-path safety improvement for the zero
+// state, not a constructed-path change.
 unsafe impl CtxDestroy for EcPoint {
     unsafe fn destroy_body(ptr: *mut EcPoint) {
         // SAFETY: `ptr` is a live point per the trait contract.
@@ -309,13 +318,16 @@ unsafe impl CtxDestroy for EcPoint {
     }
 
     unsafe fn clear_destroy_body(ptr: *mut EcPoint) {
-        // SAFETY: `ptr` is a live point per the trait contract.
+        // SAFETY: `ptr` is a live point per the trait contract; the method is NULL only on the
+        // all-zero block a safe `OwnedCtx::new` can build, which has no finish callback.
         unsafe {
-            let meth = (*ptr).meth;
-            if let Some(clear_finish) = (*meth).point_clear_finish {
-                clear_finish(ptr);
-            } else if let Some(finish) = (*meth).point_finish {
-                finish(ptr);
+            if !(*ptr).meth.is_null() {
+                let meth = (*ptr).meth;
+                if let Some(clear_finish) = (*meth).point_clear_finish {
+                    clear_finish(ptr);
+                } else if let Some(finish) = (*meth).point_finish {
+                    finish(ptr);
+                }
             }
         }
     }
@@ -3089,5 +3101,78 @@ pub unsafe extern "C" fn EC_GROUP_to_params(
         BN_CTX_end(bnctx);
         BN_CTX_free(new_bnctx);
         params
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+    use super::*;
+
+    /// D3/D4 negative control: the safe `OwnedCtx::new` builds an all-zero group/point whose
+    /// method is NULL. Both the plain body (selected by `new`) and the clear body (selected by
+    /// `from_raw_clear`) must be a no-op on that state and release the block exactly once.
+    #[test]
+    fn a_zeroed_group_and_point_drop_through_both_bodies() {
+        // Plain owners: `Drop` selects `destroy_body`, which reads the method through `as_ref()`.
+        let Some(group) = OwnedCtx::<EcGroup>::new(FILE, 44, 138) else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: the owner holds a live, zero-initialised block for these reads.
+        unsafe {
+            let g = group.as_ptr();
+            assert!((*g).meth.is_null(), "the zero state has no EC_METHOD");
+            assert!((*g).mont_data.is_null());
+            assert!((*g).generator.is_null());
+            assert!((*g).order.is_null());
+            assert!((*g).cofactor.is_null());
+            assert!((*g).seed.is_null());
+            assert_eq!((*g).seed_len, 0);
+            assert!((*g).propq.is_null());
+        }
+        drop(group);
+
+        let Some(point) = OwnedCtx::<EcPoint>::new(FILE, 729, 754) else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: the owner holds a live, zero-initialised block for these reads.
+        unsafe {
+            let p = point.as_ptr();
+            assert!((*p).meth.is_null(), "the zero state has no EC_METHOD");
+            assert!((*p).x.is_null());
+            assert!((*p).y.is_null());
+            assert!((*p).z.is_null());
+        }
+        drop(point);
+
+        // Clear owners: reclaim the same zeroed shape through the cleansing selection. The block
+        // is still the one `new` allocated, live and exclusively owned here.
+        let group = match OwnedCtx::<EcGroup>::new(FILE, 44, 138) {
+            Some(owner) => owner.into_raw(),
+            None => panic!("CRYPTO_zalloc answered NULL"),
+        };
+        // SAFETY: `group` is the live, zero-initialised block `new` just allocated and this frame
+        // has not released it; `from_raw_clear` reclaims it and its `Drop` is the single cleansing
+        // release at the authority's line.
+        unsafe {
+            let Some(group) = OwnedCtx::<EcGroup>::from_raw_clear(group, FILE, 158) else {
+                panic!("the block is non-NULL");
+            };
+            assert!((*group.as_ptr()).meth.is_null());
+            drop(group);
+        }
+
+        let point = match OwnedCtx::<EcPoint>::new(FILE, 729, 754) {
+            Some(owner) => owner.into_raw(),
+            None => panic!("CRYPTO_zalloc answered NULL"),
+        };
+        // SAFETY: as above, for the point block.
+        unsafe {
+            let Some(point) = OwnedCtx::<EcPoint>::from_raw_clear(point, FILE, 767) else {
+                panic!("the block is non-NULL");
+            };
+            assert!((*point.as_ptr()).meth.is_null());
+            drop(point);
+        }
     }
 }
