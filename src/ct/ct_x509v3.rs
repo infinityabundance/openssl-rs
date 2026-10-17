@@ -49,6 +49,10 @@ use crate::x509::v3_lib::{
 /// `static char *i2s_poison(const X509V3_EXT_METHOD *method, void *val)` —
 /// `crypto/ct/ct_x509v3.c:16-19`.
 ///
+/// The returned block is the caller's, not this frame's: it is the `X509V3_EXT_METHOD.i2s`
+/// result, so `X509V3_EXT_print` owns it and releases it once at `crypto/x509/v3_prn.c:130`.
+/// This function must not free it.
+///
 /// # Safety
 ///
 /// The caller's contract is the row's: neither argument is read.

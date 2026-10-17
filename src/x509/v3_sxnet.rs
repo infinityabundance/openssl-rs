@@ -62,6 +62,47 @@ use crate::x509::v3_utl::{i2s_ASN1_INTEGER, s2i_ASN1_INTEGER};
 
 /// `OPENSSL_FILE` for this unit's `OPENSSL_free` expansions — `crypto/x509/v3_sxnet.c`.
 const FILE: &core::ffi::CStr = c"crypto/x509/v3_sxnet.c";
+/// `sxnet_i2r`'s `OPENSSL_free(tmp)` — `crypto/x509/v3_sxnet.c:84`.
+const LINE_FREE_TMP: c_int = 84;
+
+/// An `i2s_ASN1_INTEGER` result owned by the frame that received it.
+///
+/// `i2s_ASN1_INTEGER` answers a NUL-terminated `OPENSSL_malloc`/`OPENSSL_strdup` block; the caller
+/// owns it, and the authority releases it once (`v3_sxnet.c:84`). This handle makes that release
+/// the only one.
+struct OwnedI2s {
+    ptr: *mut c_char,
+}
+
+impl OwnedI2s {
+    /// Adopt the block `i2s_ASN1_INTEGER` returned, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL, or the helper's result: a NUL-terminated block whose whole extent was
+    /// produced by the crate's `CRYPTO_malloc`/`CRYPTO_strdup` seam, owned exclusively by this
+    /// frame (the helper retains no alias and no other owner will release it). `Drop` performs its
+    /// single release at the authority's own coordinates.
+    unsafe fn adopt(ptr: *mut c_char) -> Option<OwnedI2s> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedI2s { ptr })
+        }
+    }
+
+    /// The string, for the release-free reads this frame performs.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedI2s {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took; this is its single release, at
+        // `v3_sxnet.c:84`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_TMP) };
+    }
+}
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -360,11 +401,12 @@ unsafe extern "C" fn sxnet_i2r(
     while i < num {
         // SAFETY: `sx->ids` is live and `i` is in bounds.
         let id = unsafe { OPENSSL_sk_value((*sx).ids, i) }.cast::<Sxnetid>();
-        // SAFETY: `id` is a live identifier; `zone` is its live integer.
-        let tmp = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), (*id).zone) };
-        if tmp.is_null() {
+        // SAFETY: `id` is a live identifier; `zone` is its live integer; the result is the
+        // helper's exclusively owned seam block (or NULL).
+        let Some(tmp) = (unsafe { OwnedI2s::adopt(i2s_ASN1_INTEGER(ptr::null_mut(), (*id).zone)) })
+        else {
             return 0;
-        }
+        };
         // SAFETY: `out` is a live BIO; `tmp` is NUL-terminated.
         unsafe {
             BIO_printf(
@@ -372,11 +414,10 @@ unsafe extern "C" fn sxnet_i2r(
                 c"\n%*sZone: %s, User: ".as_ptr(),
                 indent,
                 c"".as_ptr(),
-                tmp,
+                tmp.as_ptr(),
             )
         };
-        // SAFETY: `tmp` is this call's own, from `i2s_ASN1_INTEGER`.
-        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 84) };
+        drop(tmp);
         // SAFETY: `out` is live; `id->user` is its live string.
         unsafe { ASN1_STRING_print(out, (*id).user) };
         i += 1;
