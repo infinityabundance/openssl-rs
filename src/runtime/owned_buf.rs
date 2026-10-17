@@ -53,6 +53,15 @@ enum Release {
         file: *const c_char,
         line: c_int,
     },
+    /// The authority's conditional release: cleansing over `num` bytes when `clear`, plain
+    /// `CRYPTO_free` otherwise. `clear` is fixed at construction (the fields are private and no
+    /// method changes it), so the release kind a handle was adopted with cannot drift.
+    Conditional {
+        num: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    },
     /// The authority's secure-heap cleansing
     /// `CRYPTO_secure_clear_free(ptr, num, file, line)`, which zeroes the whole
     /// usable allocation and releases it through the secure allocator.
@@ -61,6 +70,17 @@ enum Release {
         file: *const c_char,
         line: c_int,
     },
+}
+
+/// Test-only observation of the conditional release arm. Thread-local so a concurrent test in
+/// another module cannot perturb the value and vice versa.
+#[cfg(test)]
+mod conditional_probe {
+    use core::cell::Cell;
+
+    thread_local! {
+        pub(super) static LAST: Cell<Option<(bool, usize)>> = const { Cell::new(None) };
+    }
 }
 
 impl OwnedBuf {
@@ -301,6 +321,40 @@ impl OwnedBuf {
         }
     }
 
+    /// Adopt a block whose authority release is conditional: cleansing over `num` bytes when
+    /// `clear`, plain `CRYPTO_free` otherwise. `clear` is fixed at construction and never
+    /// mutated. Answer `None` for NULL.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish the same conditions as
+    /// [`Self::adopt_cleansed`]: plain `CRYPTO_*` seam provenance (a secure-heap pointer is
+    /// excluded), whole-block identity and extent with `num <= allocated extent`, alignment,
+    /// initialization, exclusive ownership, and the exact `file`/`line` at which the authority
+    /// releases this block. `clear` must be the authority's own decision for this block and must
+    /// not change afterwards; the returned handle never mutates it.
+    pub(crate) unsafe fn adopt_conditional(
+        ptr: *mut c_uchar,
+        num: usize,
+        clear: bool,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self {
+                ptr,
+                release: Release::Conditional {
+                    num,
+                    clear,
+                    file,
+                    line,
+                },
+            })
+        }
+    }
+
     /// Adopt a secret block released cleansing over `num` bytes, or `None` for
     /// NULL.
     ///
@@ -497,6 +551,28 @@ impl Drop for OwnedBuf {
                 // releases it and accepts NULL.
                 unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
             }
+            Release::Conditional {
+                num,
+                clear,
+                file,
+                line,
+            } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released. `num`
+                // was established by `adopt_conditional`'s contract as at most the allocated
+                // extent, so the cleansing write is in bounds. `clear` was fixed at construction,
+                // so this handle's release kind cannot have changed; both releases accept NULL.
+                #[cfg(test)]
+                conditional_probe::LAST.with(|last| last.set(Some((clear, num))));
+                // SAFETY: both releases accept the block this handle owns; the preceding comment
+                // establishes its provenance, extent and single-release obligation.
+                unsafe {
+                    if clear {
+                        CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line);
+                    } else {
+                        CRYPTO_free(self.ptr.cast::<c_void>(), file, line);
+                    }
+                }
+            }
             Release::SecureCleansed { num, file, line } => {
                 // SAFETY: `self.ptr` is the whole block a secure constructor allocated or
                 // `adopt_secure_cleansed` established as secure-allocator provenance
@@ -512,7 +588,9 @@ impl Drop for OwnedBuf {
 
 #[cfg(test)]
 mod tests {
+    use super::conditional_probe;
     use super::OwnedBuf;
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::runtime::secure::{
         test_arena_bytes, test_offset_of, CRYPTO_secure_actual_size, CRYPTO_secure_malloc_done,
         CRYPTO_secure_malloc_init, CRYPTO_secure_used,
@@ -644,6 +722,34 @@ mod tests {
         );
         assert_eq!(CRYPTO_secure_used(), 0);
         assert_eq!(CRYPTO_secure_malloc_done(), 1);
+    }
+
+    #[test]
+    fn conditional_release_selects_the_mode_and_keeps_the_length() {
+        // The constructor must carry the authority's decision and its cleansing length through to
+        // `Drop`: `clear = true` selects `CRYPTO_clear_free` over exactly `num` bytes, while
+        // `clear = false` selects the plain `CRYPTO_free`.
+        fn observed_release(clear: bool) -> Option<(bool, usize)> {
+            // SAFETY: the block is a fresh 8-byte allocation from this crate's seam, owned by this
+            // frame and released exactly once by `buf`.
+            let buf = unsafe {
+                OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 18).cast(), 8, clear, FILE, 19)
+            }?;
+            conditional_probe::LAST.with(|last| last.set(None));
+            drop(buf);
+            conditional_probe::LAST.with(core::cell::Cell::take)
+        }
+
+        assert_eq!(
+            observed_release(true),
+            Some((true, 8)),
+            "clear = true must take the cleansing release over the stored length"
+        );
+        assert_eq!(
+            observed_release(false),
+            Some((false, 8)),
+            "clear = false must take the plain release"
+        );
     }
 
     #[test]

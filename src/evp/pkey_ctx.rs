@@ -63,7 +63,7 @@
 //!
 //! The four frame buffers this unit allocates for itself -- `evp_pkey_ctx_add1_octet_string`'s
 //! `info`, `EVP_PKEY_CTX_hex2ctrl`'s decoded `bin`, and `EVP_PKEY_CTX_set_algor_params`' and
-//! `EVP_PKEY_CTX_get_algor_params`' `der` -- are [`OwnedBlock`]s whose `Drop` is the release, at the
+//! `EVP_PKEY_CTX_get_algor_params`' `der` -- are [`OwnedBuf`]s whose `Drop` is the release, at the
 //! authority's own site (`clear` selects the cleansing `CRYPTO_clear_free` for `info`).
 //!
 //! **The `EVP_PKEY_CTX` member pointers stay raw, and so does the translation context's BIGNUM
@@ -128,15 +128,14 @@ use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::CRYPTO_malloc;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
     NID_rsassaPss, NID_sm2, NID_undef, NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
 use crate::runtime::obj::{OBJ_nid2sn, OBJ_sn2nid};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -332,70 +331,13 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     }
 }
 
-/// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is this type, so
-/// its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
-///
-/// [`Self::take`] adopts a block the frame allocated through the crate's allocator seam at the
-/// authority's own size, so a caller-installed `CRYPTO_set_mem_functions` hook observes the
-/// allocation and its release exactly as it observes the authority's. `clear` selects the
-/// authority's cleansing release (`CRYPTO_clear_free` over `len` bytes for `info`) versus the plain
-/// `CRYPTO_free`.
-struct OwnedBlock {
-    ptr: *mut c_void,
-    len: usize,
-    clear: bool,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBlock {
-    /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length a clearing
-    /// release needs; it is ignored by the plain form.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
-    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single
-    /// release.
-    unsafe fn take(
-        ptr: *mut c_void,
-        len: usize,
-        clear: bool,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<OwnedBlock> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBlock {
-                ptr,
-                len,
-                clear,
-                file,
-                line,
-            })
-        }
-    }
-
-    /// The buffer's address, for the raw calls the frame makes over it.
-    fn as_ptr<T>(&self) -> *mut T {
-        self.ptr.cast::<T>()
-    }
-}
-
-impl Drop for OwnedBlock {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
-        // released before; `self.len` is its allocation length and `clear` selects the authority's
-        // cleanse-then-free. Both accept NULL.
-        unsafe {
-            if self.clear {
-                CRYPTO_clear_free(self.ptr, self.len, self.file, self.line);
-            } else {
-                CRYPTO_free(self.ptr, self.file, self.line);
-            }
-        }
-    }
-}
+// ---------------------------------------------------------------------------------------------
+// Ownership of the frame's byte buffers
+// ---------------------------------------------------------------------------------------------
+//
+// The shared [`OwnedBuf`] carries the authority's conditional release: `adopt_conditional` fixes
+// `clear` at construction and selects `CRYPTO_clear_free` over the stored length versus the plain
+// `CRYPTO_free`.
 
 /// `struct evp_pkey_ctx_st`'s `cached_parameters` member.
 #[repr(C)]
@@ -9976,8 +9918,8 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
     // SAFETY: `CRYPTO_zalloc` is this crate's allocator seam and the block it answers is owned by
     // this frame, with no other owner.
     let Some(info) = (unsafe {
-        OwnedBlock::take(
-            CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF),
+        OwnedBuf::adopt_conditional(
+            CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF).cast(),
             info_alloc,
             true,
             FILE,
@@ -9991,7 +9933,7 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
     // SAFETY: `info` is `info_alloc` writable bytes, which the parameter records.
     unsafe {
         os_params[0] =
-            OSSL_PARAM_construct_octet_string(param, info.as_ptr::<c_void>(), info_alloc);
+            OSSL_PARAM_construct_octet_string(param, info.as_ptr().cast::<c_void>(), info_alloc);
     }
 
     /* If there is data, go get it. */
@@ -10006,7 +9948,7 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
     // SAFETY: `info` is `info_alloc` writable bytes, `info_len + datalen <= info_alloc`, and
     // `datalen` bytes are readable at `data`.
     unsafe {
-        ptr::copy_nonoverlapping(data, info.as_ptr::<u8>().add(info_len), datalen as usize);
+        ptr::copy_nonoverlapping(data, info.as_ptr().add(info_len), datalen as usize);
     }
 
     // SAFETY: `ctx` is live and `os_params` is this frame's terminated array.
@@ -11002,9 +10944,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_hex2ctrl(
     // way.
     // SAFETY: `bin` is the block `OPENSSL_hexstr2buf` allocated for this frame and no other owner
     // holds it.
-    let Some(_bin) =
-        (unsafe { OwnedBlock::take(bin.cast::<c_void>(), 0, false, FILE, LINE_FREE_HEXCTRL) })
-    else {
+    let Some(_bin) = (unsafe {
+        OwnedBuf::adopt_conditional(bin.cast::<u8>(), 0, false, FILE, LINE_FREE_HEXCTRL)
+    }) else {
         return 0;
     };
     let _ = ctx;
@@ -11269,8 +11211,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_algor_params(
     // SAFETY: `der` is the block `i2d_ASN1_TYPE` allocated for this frame and no other owner holds
     // it.
     let _der = unsafe {
-        OwnedBlock::take(
-            der.cast::<c_void>(),
+        OwnedBuf::adopt_conditional(
+            der.cast::<u8>(),
             0,
             false,
             FILE_EVP_LIB,
@@ -11334,8 +11276,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
         // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and the block it answers is owned
         // by this frame, with no other owner.
         let der = unsafe {
-            OwnedBlock::take(
-                CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET),
+            OwnedBuf::adopt_conditional(
+                CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET).cast(),
                 0,
                 false,
                 FILE_EVP_LIB,
@@ -11343,13 +11285,13 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
             )
         };
         if let Some(der) = der.as_ref() {
-            let mut derp: *const c_uchar = der.as_ptr::<c_uchar>();
+            let mut derp: *const c_uchar = der.as_ptr();
             // SAFETY: the constructor writes one entry of this frame's array, and `der` holds
             // `derl` bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS,
-                    der.as_ptr::<c_void>(),
+                    der.as_ptr().cast::<c_void>(),
                     derl,
                 );
             }
