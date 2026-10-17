@@ -42,6 +42,44 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/t_pkey.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
 
+/// An owned temporary from this unit's `CRYPTO_malloc`/`CRYPTO_clear_free` seam.
+///
+/// The block keeps the authority's size and its own `__FILE__`/`__LINE__` (observable to
+/// a caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type: the
+/// constructor allocates it and `Drop` is its single **cleansing** release, which is the
+/// authority's `OPENSSL_clear_free(buf, buflen)` on both of its exit paths.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new(len: usize, file: *const core::ffi::c_char, line: c_int) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr: raw, len })
+        }
+    }
+
+    /// The start of the block, for the raw calls that read or write it.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release: the authority's `OPENSSL_clear_free` over its length.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, and
+        // `self.len` is its allocation length; `CRYPTO_clear_free` cleanses that many
+        // bytes first and accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), LINE) };
+    }
+}
+
 /// `ASN1_BUF_PRINT_WIDTH` — octets per line.
 const ASN1_BUF_PRINT_WIDTH: usize = 15;
 /// `ASN1_PRINT_MAX_INDENT` — the most columns `BIO_indent` will write.
@@ -180,13 +218,12 @@ pub unsafe extern "C" fn ASN1_bn_print(
         }
 
         let buflen = nbytes as usize + 1;
-        // SAFETY: `CRYPTO_malloc` answers null or `buflen` bytes.
-        let buf = CRYPTO_malloc(buflen, FILE.as_ptr(), LINE).cast::<c_uchar>();
-        if buf.is_null() {
+        // The local owner is the authority's single cleansing free on both exit paths.
+        let Some(buf) = OwnedBuf::new(buflen, FILE.as_ptr(), LINE) else {
             return 0;
-        }
+        };
         // SAFETY: `buf` owns `buflen` bytes and `buflen >= 2`.
-        unsafe { *buf = 0 };
+        unsafe { *buf.as_ptr() = 0 };
         // SAFETY: `bp` is a live BIO, `number` is NUL-terminated.
         let header = unsafe {
             BIO_printf(
@@ -201,30 +238,25 @@ pub unsafe extern "C" fn ASN1_bn_print(
             )
         };
         if header <= 0 {
-            // SAFETY: `buf` came from this allocator and is not owned elsewhere.
-            unsafe { CRYPTO_clear_free(buf.cast(), buflen, FILE.as_ptr(), LINE) };
             return 0;
         }
         // SAFETY: `buf` owns `buflen` and the caller's contract makes `num` live;
         // `BN_bn2bin` writes exactly `nbytes` bytes at `buf + 1`.
-        let n = unsafe { BN_bn2bin(num, buf.add(1)) };
+        let n = unsafe { BN_bn2bin(num, buf.as_ptr().add(1)) };
 
         // The magnitude's first octet is significant only from here on. When its
         // top bit is set the leading zero is what keeps the printed form unsigned,
         // so it stays in the count; otherwise the leading zero is skipped.
         // SAFETY: `buf` has `buflen = nbytes + 1` bytes and `n <= nbytes`.
-        let (tmp, n) = if unsafe { *buf.add(1) } & 0x80 != 0 {
-            (buf, n + 1)
+        let (tmp, n) = if unsafe { *buf.as_ptr().add(1) } & 0x80 != 0 {
+            (buf.as_ptr(), n + 1)
         } else {
             // SAFETY: one byte past the start of an allocation of at least two bytes.
-            (unsafe { buf.add(1) }, n)
+            (unsafe { buf.as_ptr().add(1) }, n)
         };
 
         // SAFETY: `tmp` holds `n` bytes and `bp` is a live BIO.
         let rv = unsafe { ASN1_buf_print(bp, tmp, n as usize, indent + NEG_INDENT) };
-        // SAFETY: `buf` came from this allocator, is not owned elsewhere, and is
-        // `buflen` bytes long; the secret-clearing free is the authority's.
-        unsafe { CRYPTO_clear_free(buf.cast(), buflen, FILE.as_ptr(), LINE) };
         if rv == 0 {
             0
         } else {

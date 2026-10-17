@@ -119,6 +119,79 @@ unsafe fn raise_cmp(line: c_int, func: &'static core::ffi::CStr, reason: c_int) 
     }
 }
 
+/// An owned temporary from this unit's `CRYPTO_malloc`/`CRYPTO_free` seam.
+///
+/// The block keeps the authority's allocation size and `file`/`line` (observable to a
+/// caller-installed `CRYPTO_set_mem_functions` hook); its *ownership* is this type. The
+/// constructor allocates here, [`adopt`](OwnedBuf::adopt) takes in a block a helper
+/// allocated through the same seam, and `Drop` is the single plain release at the
+/// authority's own free coordinate.
+struct OwnedBuf {
+    ptr: *mut u8,
+    file: *const c_char,
+    release_line: c_int,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)`, released at `release_line`, or `None` when
+    /// the allocator answers NULL.
+    fn new(
+        len: usize,
+        file: *const c_char,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr: raw,
+                file,
+                release_line,
+            })
+        }
+    }
+
+    /// Adopt a block a helper allocated in full through the crate's `CRYPTO_*` seam, for
+    /// release by `Drop`; NULL answers `None`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's allocator seam allocated in full (not a
+    /// sub-range) and no other owner will release; `file` is NULL or a NUL-terminated C
+    /// string; `release_line` is the authority's own free site.
+    unsafe fn adopt(
+        ptr: *mut c_char,
+        file: *const c_char,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr: ptr.cast::<u8>(),
+                file,
+                release_line,
+            })
+        }
+    }
+
+    /// The start of the block, for the raw calls that read or write it.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release through the seam it was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `self.file`
+        // is that block's allocation file and `self.release_line` its authority free site;
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.release_line) };
+    }
+}
+
 /// `int ossl_cmp_hdr_set_pvno(OSSL_CMP_PKIHEADER *hdr, int pvno)` — `cmp_hdr.c:17-22`. Internal.
 ///
 /// # Safety
@@ -257,19 +330,22 @@ pub(crate) unsafe fn ossl_cmp_hdr_update_messageTime(hdr: *mut CmpPkiHeader) -> 
 /// # Safety
 /// `tgt` is a writable slot; `ctx` is a live `OSSL_CMP_CTX`.
 unsafe fn set_random(tgt: *mut *mut Asn1String, ctx: *mut OsslCmpCtx, len: c_int) -> c_int {
-    // SAFETY: `CRYPTO_malloc` returns `len` writable bytes or NULL.
-    let bytes = CRYPTO_malloc(len as usize, FILE.as_ptr(), 117).cast::<u8>();
     let mut res = 0;
-    // SAFETY: `bytes` is NULL or writable for `len` bytes; `ctx` is live.
-    if bytes.is_null() || unsafe { RAND_bytes_ex((*ctx).libctx, bytes, len as usize, 0) } <= 0 {
+    // The local owner is the authority's single plain free on every path.
+    match OwnedBuf::new(len as usize, FILE.as_ptr(), 117, 124) {
         // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cmp(121, c"set_random", 110) };
-    } else {
-        // SAFETY: `tgt` is a writable slot; `bytes` is readable for `len` bytes.
-        res = unsafe { ossl_cmp_asn1_octet_string_set1_bytes(tgt, bytes, len) };
+        None => unsafe { raise_cmp(121, c"set_random", 110) },
+        Some(bytes) => {
+            // SAFETY: `bytes` is writable for `len` bytes; `ctx` is live.
+            if unsafe { RAND_bytes_ex((*ctx).libctx, bytes.as_ptr(), len as usize, 0) } <= 0 {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { raise_cmp(121, c"set_random", 110) };
+            } else {
+                // SAFETY: `tgt` is a writable slot; `bytes` is readable for `len` bytes.
+                res = unsafe { ossl_cmp_asn1_octet_string_set1_bytes(tgt, bytes.as_ptr(), len) };
+            }
+        }
     }
-    // SAFETY: `bytes` is NULL or was allocated here.
-    unsafe { CRYPTO_free(bytes.cast(), FILE.as_ptr(), 124) };
     res
 }
 
@@ -468,9 +544,17 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
         if unsafe { set_random(ptr::addr_of_mut!((*ctx).transaction_id), ctx, 16) } == 0 {
             return 0;
         }
-        // SAFETY: `ctx` is live; the transaction is now set.
-        let tid = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id) };
-        if !tid.is_null() {
+        // SAFETY: `i2s_ASN1_OCTET_STRING` answers NULL or a block from the crate's
+        // allocator seam; this frame becomes its only owner and `Drop` releases it at the
+        // authority's line 258.
+        let tid = unsafe {
+            OwnedBuf::adopt(
+                i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id),
+                FILE.as_ptr(),
+                258,
+            )
+        };
+        if let Some(tid) = &tid {
             // SAFETY: `tid` is NUL-terminated; `ctx` is live.
             unsafe {
                 ossl_cmp_log_str(
@@ -479,12 +563,14 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
                     c"ossl_cmp_hdr_set_transactionID",
                     FILE,
                     257,
-                    format_args!("Starting new transaction with ID={}", cstr_to_str(tid)),
+                    format_args!(
+                        "Starting new transaction with ID={}",
+                        cstr_to_str(tid.as_ptr().cast::<c_char>())
+                    ),
                 )
             };
         }
-        // SAFETY: `tid` is NULL or allocated by `i2s_ASN1_OCTET_STRING`.
-        unsafe { CRYPTO_free(tid.cast(), FILE.as_ptr(), 258) };
+        // `tid`'s owner releases the block here, after the log call.
     }
     // SAFETY: `ctx`/`hdr` are live.
     unsafe {

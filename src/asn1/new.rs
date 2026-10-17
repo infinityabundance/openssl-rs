@@ -36,11 +36,11 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 
 use crate::asn1::fre::item_embed_free;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::ASN1_STRING_type_new;
 use crate::asn1::utl;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::OBJ_nid2obj;
 use crate::runtime::stack::OPENSSL_sk_new_null;
 
@@ -229,13 +229,18 @@ pub(crate) unsafe fn item_embed_new(
                 // `item.size` bytes.
                 unsafe { core::ptr::write_bytes(*pval, 0, item.size.max(0) as usize) };
             } else {
-                // SAFETY: the allocation is `item.size` bytes.
-                let fresh = CRYPTO_zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE);
-                // SAFETY: the caller's slot is writable.
-                unsafe { *pval = fresh };
-                if fresh.is_null() {
+                // The block is owned here until it is published to the caller's slot; the
+                // allocation is `item.size` bytes at the authority's `file`/`line`.
+                let Some(fresh) =
+                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE)
+                else {
+                    // SAFETY: the caller's slot is writable; the authority leaves it NULL
+                    // when the allocation is refused.
+                    unsafe { *pval = core::ptr::null_mut() };
                     return 0;
-                }
+                };
+                // SAFETY: the caller's slot is writable.
+                unsafe { *pval = fresh.into_raw().cast::<c_void>() };
             }
             // A CHOICE with no alternative selected is -1, and that is what makes
             // `ASN1_item_new` on a CHOICE a value a caller can inspect rather than one
@@ -273,25 +278,31 @@ pub(crate) unsafe fn item_embed_new(
                 // `item.size` bytes.
                 unsafe { core::ptr::write_bytes(*pval, 0, item.size.max(0) as usize) };
             } else {
-                // SAFETY: the allocation is `item.size` bytes.
-                let fresh = CRYPTO_zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE);
-                // SAFETY: the caller's slot is writable.
-                unsafe { *pval = fresh };
-                if fresh.is_null() {
+                // The block is owned here while `do_lock` initialises the reference count;
+                // ownership leaves this frame with the value published to the caller's slot.
+                // SAFETY: the allocation is `item.size` bytes at the authority's `file`/`line`.
+                let Some(fresh) =
+                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE)
+                else {
+                    // SAFETY: the caller's slot is writable; the authority leaves it NULL
+                    // when the allocation is refused.
+                    unsafe { *pval = core::ptr::null_mut() };
                     return 0;
-                }
-            }
-            // The reference count, if the item carries one. A negative answer is a
-            // failure and must not leave the value allocated when this call owns it.
-            // SAFETY: `*pval` is a live value of the item's type.
-            if unsafe { utl::do_lock(pval, 0, item) } < 0 {
-                if embed == 0 {
-                    // SAFETY: `*pval` came from this allocator and is not yet published.
-                    unsafe { crate::runtime::mem::CRYPTO_free(*pval, FILE.as_ptr(), LINE) };
+                };
+                // SAFETY: the caller's slot is writable; `do_lock` below reads `*pval`.
+                unsafe { *pval = fresh.as_ptr().cast::<c_void>() };
+                // The reference count, if the item carries one. A negative answer is a
+                // failure and must not leave the value allocated when this call owns it.
+                // SAFETY: `*pval` is a live value of the item's type.
+                if unsafe { utl::do_lock(pval, 0, item) } < 0 {
+                    // The owner's `Drop` is the authority's free, before the slot is
+                    // cleared -- its free-then-store order.
+                    drop(fresh);
                     // SAFETY: the caller's slot is writable.
                     unsafe { *pval = core::ptr::null_mut() };
+                    return 0;
                 }
-                return 0;
+                let _ = fresh.into_raw();
             }
             // SAFETY: `*pval` is a live value of the item's type.
             unsafe { utl::enc_init(pval, item) };
@@ -543,20 +554,21 @@ unsafe fn primitive_new(pval: *mut *mut c_void, it: *const Asn1Item, embed: c_in
         }
         V_ASN1_ANY => {
             // `OPENSSL_malloc` rather than `zalloc`: the authority sets both fields
-            // explicitly, and the union's other bytes are not part of the value.
-            // SAFETY: the allocation is one `ASN1_TYPE`.
-            let typ = CRYPTO_malloc(core::mem::size_of::<Asn1Type>(), FILE.as_ptr(), LINE)
-                as *mut Asn1Type;
-            if typ.is_null() {
+            // explicitly, and the union's other bytes are not part of the value. The
+            // owner holds the block until both fields are set and it is published.
+            // SAFETY: the allocation is one `ASN1_TYPE` at the authority's `file`/`line`.
+            let Some(typ) = OwnedBlock::<Asn1Type>::malloc(1, FILE.as_ptr(), LINE) else {
                 return 0;
-            }
-            // SAFETY: `typ` is a fresh `ASN1_TYPE`.
+            };
+            let raw = typ.as_ptr();
+            // SAFETY: `raw` is a fresh `ASN1_TYPE`.
             unsafe {
-                (*typ).value.ptr = core::ptr::null_mut();
-                (*typ).type_ = V_ASN1_UNDEF;
+                (*raw).value.ptr = core::ptr::null_mut();
+                (*raw).type_ = V_ASN1_UNDEF;
             }
-            // SAFETY: the slot is writable.
-            unsafe { *pval = typ.cast::<c_void>() };
+            // SAFETY: the slot is writable; ownership leaves this frame with the value.
+            unsafe { *pval = raw.cast::<c_void>() };
+            let _ = typ.into_raw();
         }
         _ => {
             // Every other primitive is an `ASN1_STRING` whose `type` is this `utype`.
