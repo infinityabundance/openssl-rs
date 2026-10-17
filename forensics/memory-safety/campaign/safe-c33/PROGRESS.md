@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1227** passed
+`cargo test --lib` (must pass; the established baseline is **1230** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -457,6 +457,24 @@ package.
 - Gate: `fmt` 0, clippy 0, **1227 passed / 18 ignored**, adv-probe **18/18**.
   Progress: **13 of 173** identical helpers consolidated.
 
+### Subphase 49 — B-R1b and B-R3 consolidation
+
+- Eighteen more copies (`B-R1b` 14, `B-R3` 4) now use the shared type. It gained
+  a `SecureCleansed` arm (`CRYPTO_secure_clear_free`), separate
+  allocation/release coordinates for constant-file cleansing releases, and
+  NULL-tolerant **unsafe** adopt variants.
+- Provenance is explicit in both directions: plain adoption excludes secure-heap
+  pointers (`CRYPTO_free`/`CRYPTO_clear_free` on an arena pointer is UB), and
+  secure adoption names the secure allocator or its documented plain fallback,
+  with `num <= extent`.
+- Secure tests no longer skip on failed heap initialisation; they assert init
+  success and verify the arena bytes are cleansed after release. A dead-code
+  witness shows no CMS/RSA secure allocation was downgraded.
+- Adversarial review **FAILED** the first version (silent-skip tests, no
+  cleansing assertion, ambiguous provenance) and **PASSED** after the fixes.
+- Gate: `fmt` 0, clippy 0, **1230 passed / 18 ignored**, adv-probe **18/18**.
+  Progress: **31 of 173** identical helpers consolidated.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -634,7 +652,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `dc0d97c27` (B-R1a consolidation merged)
+**Last observed HEAD:** `c52f0937f` (B-R1b/B-R3 consolidation merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -682,16 +700,15 @@ and discharge explicitly.
 the unsafe-obligation denominator now exists.
 
 **Next in sequence:** continue consolidating the IDENTICAL module-local owner
-helpers in disjoint staged groups. `B-R1b` (14) and `B-R3` (4) can join the new
-`runtime/owned_buf.rs` (constant file for the former, a secure release arm for
-the latter); then the `OwnedBuf` plain groups B-P (52), B-L (8), B-Z (13),
-B-CA-FL (5), B-CA-0 (5), B-CF-FL (3), B-R1b (14), B-R3 (4); then `OwnedStr`
-(33) and `OwnedBlock` (15). Do not touch the 26 DIFFERENT or 126
-MUST-STAY-LOCAL copies. Each group needs a caller inventory, adversarial review
-and a fresh gate. Afterwards, the `CtxDestroy`/`CipherDestroy` shared-trait
-migration that unblocks the 61 local `OwnedCtx`/`RawCtx` copies, then
-member-buffer slots, per-file audits by consumer reachability, and seal evidence
-before any `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
+helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4).
+Remaining `OwnedBuf` groups: `B-P` (52), `B-L` (8), `B-Z` (13), `B-CA-FL` (5),
+`B-CA-0` (5), `B-CF-FL` (3); then `OwnedStr` (33) and `OwnedBlock` (15). Do not
+touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
+inventory, adversarial review and a fresh gate. Afterwards, the
+`CtxDestroy`/`CipherDestroy` shared-trait migration that unblocks the 61 local
+`OwnedCtx`/`RawCtx` copies, then member-buffer slots, per-file audits by
+consumer reachability, and seal evidence before any `SAFETY_DISCHARGED` /
+`SAFE_COMPATIBLE` promotion.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
