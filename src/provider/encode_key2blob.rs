@@ -43,9 +43,9 @@ use crate::params::OsslParam;
 use crate::passphrase::OsslPassphraseCallback;
 use crate::provider::endecoder_common::{ossl_prov_free_key, ossl_prov_import_key};
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::OwnedBlock;
 use crate::runtime::bio::{BIO_free, BIO_write};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_free;
 
 /// `OSSL_KEYMGMT_SELECT_ALL_PARAMETERS` — `include/openssl/evp.h:105`, the domain-or-other pair.
 /// The crate keeps no shared constant for it, so it is spelled here from the two halves, as
@@ -141,8 +141,9 @@ unsafe fn key2blob_encode(vctx: *mut c_void, key: *const c_void, cout: *mut c_vo
         // SAFETY: `pubkey` is a live buffer of `pubkey_len` bytes this call owns.
         ok = unsafe { write_blob(vctx, cout, pubkey.cast::<c_void>(), pubkey_len) };
     }
-    // SAFETY: `pubkey` is NULL or the allocation `i2o_ECPublicKey` made.
-    unsafe { CRYPTO_free(pubkey.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `pubkey` is NULL or the allocation `i2o_ECPublicKey` made, which this frame owns
+    // exclusively; the owner's `Drop` is the authority's own `OPENSSL_free(pubkey)` at `(NULL, 0)`.
+    let _pubkey = unsafe { OwnedBlock::take(pubkey.cast::<c_void>()) };
     ok
 }
 
