@@ -33,6 +33,21 @@ generator is measurement-only and claims no discharge.
   production allocation/release call sites, each with file, line, allocator
   family, enclosing function and closure membership.
 
+**Unsafe-operation denominator** (`unsafe_census.py`, artifacts
+`atlas-refresh/unsafe-census.json` + `UNSAFE-CENSUS.md`, candidate source
+`af25dd2f0`; the census commit is `15157bc32` and changes only `forensics/`):
+**65,207** production site operations — 42,729 `unsafe {}` blocks, 13,431
+`unsafe fn` definitions, 331 `unsafe impl`, 49 `unsafe trait`, 10 `unsafe extern`
+blocks, 274 high-risk calls (`transmute`, `assume_init`, raw-parts,
+`set_len`, …), 836 safe-ABI `extern "C"` definitions and 7,547 non-allocator
+FFI calls; 4,227 test-only and 185 seam. Raw-pointer type contexts (47,965) are
+reported separately and are **not** counted as operations. The scan is lexical
+(not a Rust parser), is byte-deterministic, and `--check` independently
+reconciles 117,584 counted sites. **38 of the 628 closure files contain zero
+production operations** (36 of them zero unsafe-language/high-risk constructs);
+they are listed in `UNSAFE-CENSUS.md` and are complete with respect to unsafe
+code, subject to their safe-call dependencies.
+
 Measurement reproduction (court container):
 
 ```sh
@@ -543,7 +558,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `d722f3238` (STOP-1 refcount overflow fixed)
+**Last observed HEAD:** `15157bc32` (unsafe-operation census)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -586,10 +601,17 @@ and discharge explicitly.
 
 ### Next executable subphase — obligation denominator (unsafe-operation census)
 
-**Before this:** clear **STOP-1** (`up_ref` overflow) in a bounded
-`stage/p25/refcount-overflow` source subphase, gated and merged. It is a
-confirmed soundness defect in a shared protocol and blocks any reference-count
-discharge claim. **Status: done** (merge `d722f3238`; see “Open STOP blockers”).
+**Status: done** (`15157bc32`; see “Unsafe-operation denominator” above and
+`atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
+the unsafe-obligation denominator now exists.
+
+**Next in sequence:** boundary records and independent checks for the reusable
+ownership abstractions — `OwnedBlock`/`OwnedBuf`/`OwnedStr`/`OwnedRaw` adoption
+and release, member-buffer slots, and the `CtxDestroy`/`CipherDestroy`
+constructor contracts — starting with the reference-count protocol (now that
+STOP-1 is closed). Then per-file audits in consumer-reachability order using the
+unsafe census as the worklist, and finally the seal evidence before any
+`SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
