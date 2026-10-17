@@ -155,6 +155,7 @@ use crate::provider::slh_dsa_kmgmt::{
     SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS,
     SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS,
 };
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
@@ -420,36 +421,6 @@ struct DhGenCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the key-manager handles and the parameter-generation context
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's destructor body for one of the file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new_zeroed`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (a `KDF_DATA` owns
-///   none -- its `libctx` is borrowed -- while `DH_GEN_CTX` releases its two owned names and its
-///   cleansed seed), every releaser the authority's own and accepting the not-yet-set NULL/zero
-///   state, and it **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new_zeroed`] leans on: it validates a `CRYPTO_zalloc` block with no caller
-///   assertion.
-///
-/// The staged [`RawDhGenCtx`] route is the partial-construction counterpart: it releases the block
-/// alone and **never** runs `destroy_body`, so only a fully built object owned by [`OwnedCtx`]
-/// satisfies the (a) precondition. Breaking (a) lets safe Rust double-release or release the
-/// enclosing block; breaking (b) runs `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned one of the file's heap records.
 ///

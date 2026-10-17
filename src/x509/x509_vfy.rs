@@ -105,6 +105,7 @@ use crate::ocsp::ocsp_cl::{
 use crate::ocsp::ocsp_lib::{OCSP_cert_to_id, OCSP_id_cmp};
 use crate::ocsp::ocsp_srv::OCSP_id_get0_info;
 use crate::ocsp::ocsp_vfy::OCSP_basic_verify;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::sys::time;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_reasons::{
@@ -220,30 +221,6 @@ const FILE: &CStr = c"crypto/x509/x509_vfy.c";
 // ---------------------------------------------------------------------------------------------
 // Ownership of the store-context block
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for the file's `#[repr(C)]` object, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it frees **exactly** the members the object owns (every releaser is
-///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned store-context block.
 ///

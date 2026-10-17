@@ -76,6 +76,7 @@ use crate::evp::encode::{
     EvpEncodeCtx,
 };
 use crate::runtime::bio::method::{bread_conv, bwrite_conv};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::{
     BIO_callback_ctrl, BIO_clear_flags, BIO_copy_next_retry, BIO_ctrl, BIO_get_callback,
     BIO_get_callback_ex, BIO_get_data, BIO_get_init, BIO_read, BIO_set_data, BIO_set_init,
@@ -150,32 +151,6 @@ const fn evp_encode_length(l: usize) -> usize {
 const FILE_B64: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c".as_ptr();
 /// `crypto/evp/bio_enc.c`.
 const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c".as_ptr();
-
-/// The authority's own destructor body of a BIO context, without the block release [`OwnedCtx`]'s
-/// `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`]
-/// builds the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (every releaser is
-///   the authority's own and accepts the not-yet-set NULL/zero state) and **never** releases the
-///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live context this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned BIO context block (`BioB64Ctx`/`BioEncCtx`).
 ///
