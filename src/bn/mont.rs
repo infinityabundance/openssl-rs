@@ -26,6 +26,20 @@
 //!   `BN_R_CALLED_WITH_EVEN_MODULUS` at the authority's own coordinate otherwise —
 //!   a different answer from `BN_mod_exp`'s, which dispatches to a reciprocal path
 //!   when the modulus is even.
+//!
+//! ## Ownership classification (final classification batch)
+//!
+//! **Deliberately Rust-owned internal representation; no allocator-seam interior site.**
+//! `MontCtx` is opaque to callers and its storage is a Rust [`Box`] over `Vec<Limb>`
+//! fields, created in [`new_mont`] and released by [`BN_MONT_CTX_free`]'s `Box::from_raw`.
+//! There is no `CRYPTO_zalloc`/`CRYPTO_free` (or other seam allocation) in this file; the
+//! only `CRYPTO_THREAD_*` calls are the caller's read/write lock in
+//! [`BN_MONT_CTX_set_locked`], not an allocation. The consequence is stated rather than
+//! hidden: an installed `CRYPTO_set_mem_functions` hook does not observe these objects'
+//! allocations or releases. That is the recorded compatibility residual P1 in
+//! `PROGRESS.md` (the Rust representation's byte size differs from the authority's C
+//! struct, so allocating it at `size_of::<MontCtx>()` would violate §6's exact-size hook
+//! parity); it is retained, not claimed discharged.
 
 use core::ffi::{c_int, c_ulong};
 
