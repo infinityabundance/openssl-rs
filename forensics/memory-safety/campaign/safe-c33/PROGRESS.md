@@ -643,6 +643,25 @@ package.
   type token). Both instruments are byte-deterministic and pass independent
   reconciliation.
 
+### Subphase 62 — CtxDestroy adjudication of the remaining copies
+
+- Nineteen more traits unified: six with extra associated consts (values
+  preserved verbatim), `provider/sm2_enc` (zero-valid body), and twelve that
+  previously withheld the zero-validity claim. Each `destroy_body` was read and
+  shown zero-valid before the contract was strengthened.
+- **`ssl_lib::Cert` keeps a local trait.** `Cert.custext` is a `Vec`, whose
+  zeroed bytes have a NULL `NonNull`; `destroy_body` drops it in place, so the
+  all-zero block is **not** a valid `Cert` and the contract must not claim it.
+  This is sound today: `cert_new` writes `Vec::new()` before `assume_init`, and
+  every route to `assume_init` is `unsafe` with an initialization contract. The
+  residual obligation is explicit: **no new `RawCtx<Cert>` path may skip that
+  write**. `ec/lib` keeps its extra `clear_destroy_body` method.
+- Adversarial review **PASS**; the one open question (whether
+  `OwnedStr::adopt` is NULL-tolerant in `eng_dyn`) was resolved by inspection:
+  its shared form returns `Option` and `None` for NULL.
+- Gate: `fmt` 0, clippy 0, **1242 passed / 18 ignored**, adv-probe **18/18**.
+  Trait status: **39 of 41 unified**, 2 deliberately local with reasons.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -820,7 +839,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `65a59c05e` (owner consolidation complete)
+**Last observed HEAD:** `952c4ab80` (CtxDestroy adjudication merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
