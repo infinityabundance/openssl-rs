@@ -83,12 +83,13 @@ use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 
 /// `OSSL_OP_SIGNATURE` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_SIGNATURE: c_int = 12;
@@ -350,6 +351,26 @@ pub struct EvpSignature {
     pub(crate) query_key_types: Option<SignatureQueryKeyTypesFn>,
 }
 
+// SAFETY: a zeroed `EvpSignature` is the authority's own constructed state -- every pointer is
+// NULL (and `None` is the null function pointer), `name_id` is 0 and `refcnt` is 0 -- and the
+// constructor sets `refcnt` to 1 before any release. `destroy_body` is the authority's
+// `EVP_SIGNATURE_free` member release for that object's single reference: the owned first name and
+// the provider reference it took. It never releases the enclosing block, which `OwnedCtx` does.
+unsafe impl CtxDestroy for EvpSignature {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_SIGNATURE;
+    const LINE_FREE: c_int = LINE_FREE_SIGNATURE;
+
+    unsafe fn destroy_body(ptr: *mut EvpSignature) {
+        // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or the string
+        // this object owns and `prov` is NULL or the reference it holds.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 /// `static void evp_signature_free(void *data)`.
 ///
 /// # Safety
@@ -372,24 +393,17 @@ unsafe extern "C" fn evp_signature_up_ref(data: *mut c_void) -> c_int {
 ///
 /// # Safety
 /// `prov` must be live.
-unsafe fn evp_signature_new(prov: *mut OsslProvider) -> *mut EvpSignature {
-    // SAFETY: this allocates a fresh object and reads nothing.
-    let signature = CRYPTO_zalloc(
-        core::mem::size_of::<EvpSignature>(),
-        FILE,
-        LINE_ZALLOC_SIGNATURE,
-    )
-    .cast::<EvpSignature>();
-    if signature.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `signature` is this call's own object and `prov` is live.
+unsafe fn evp_signature_new(prov: *mut OsslProvider) -> Option<OwnedCtx<EvpSignature>> {
+    // A zeroed `EvpSignature` is valid for the `CtxDestroy` contract, so the block is this call's
+    // own object the moment it is allocated.
+    let signature = OwnedCtx::<EvpSignature>::zalloc()?;
+    // SAFETY: `signature.as_ptr()` is this call's own object and `prov` is live.
     unsafe {
-        (*signature).refcnt = AtomicI32::new(1);
+        (*signature.as_ptr()).refcnt = AtomicI32::new(1);
         ossl_provider_up_ref(prov);
-        (*signature).prov = prov;
+        (*signature.as_ptr()).prov = prov;
     }
-    signature
+    Some(signature)
 }
 
 /// Raise `EVP_R_INVALID_PROVIDER_FUNCTIONS` with the authority's message for one clause.
@@ -447,18 +461,18 @@ unsafe extern "C" fn evp_signature_from_algorithm(
     let fns = unsafe { (*algodef).implementation.cast::<OsslDispatch>() };
 
     // SAFETY: `prov` is live per the contract.
-    let signature = unsafe { evp_signature_new(prov) };
-    if signature.is_null() {
+    let Some(signature_owner) = (unsafe { evp_signature_new(prov) }) else {
         return ptr::null_mut();
-    }
+    };
+    let signature = signature_owner.as_ptr();
 
     // SAFETY: `signature` is live.
     unsafe { (*signature).name_id = name_id };
     // SAFETY: `algodef` is live.
     let type_name = unsafe { ossl_algorithm_get1_first_name(algodef) };
     if type_name.is_null() {
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     // SAFETY: `signature` is live and `type_name` is the string just allocated for it.
@@ -785,8 +799,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
     }
 
     if valid == 0 {
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
 
@@ -800,8 +814,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
     {
         // SAFETY: `signature` is live.
         unsafe { raise_clause(signature, &err_sites::SIGNATURE_409, c"digest_sign_init") };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     if (sig.digest_verify.is_some()
@@ -811,8 +825,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
     {
         // SAFETY: `signature` is live.
         unsafe { raise_clause(signature, &err_sites::SIGNATURE_419, c"digest_verify_init") };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     if sig.sign_message_update.is_none() != sig.sign_message_final.is_none() {
@@ -824,8 +838,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
                 c"only one of message signing update and final available",
             )
         };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     if sig.verify_message_update.is_none() != sig.verify_message_final.is_none() {
@@ -837,8 +851,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
                 c"only one of message verification update and final available",
             )
         };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     if sig.digest_sign_update.is_none() != sig.digest_sign_final.is_none() {
@@ -850,8 +864,8 @@ unsafe extern "C" fn evp_signature_from_algorithm(
                 c"only one of digest signing update and final available",
             )
         };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
     if sig.digest_verify_update.is_none() != sig.digest_verify_final.is_none() {
@@ -863,12 +877,12 @@ unsafe extern "C" fn evp_signature_from_algorithm(
                 c"only one of digest verification update and final available",
             )
         };
-        // SAFETY: `signature` is this call's own object.
-        unsafe { EVP_SIGNATURE_free(signature) };
+        // The owner's `Drop` runs the authority's member release and block release.
+        drop(signature_owner);
         return ptr::null_mut();
     }
 
-    signature.cast::<c_void>()
+    signature_owner.into_raw().cast::<c_void>()
 }
 
 use core::ffi::CStr;
@@ -2264,7 +2278,10 @@ mod tests {
     #[test]
     fn the_reference_count_is_taken_and_given_back() {
         // SAFETY: a NULL provider is allowed by the constructor, which up-refs conditionally.
-        let signature = unsafe { evp_signature_new(ptr::null_mut()) };
+        let Some(signature) = (unsafe { evp_signature_new(ptr::null_mut()) }).map(|s| s.into_raw())
+        else {
+            return;
+        };
         assert!(!signature.is_null());
         // SAFETY: `signature` is this test's own object.
         unsafe {
