@@ -133,11 +133,11 @@ use crate::rsa::object::{
 use crate::rsa::pss::ossl_rsa_pss_params_30_is_unrestricted;
 use crate::rsa::{Rsa, RsaPssParams30};
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free, BIO_write, Bio};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_memdup, OPENSSL_cleanse};
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_length, OBJ_nid2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::slh_dsa::key::{
@@ -312,63 +312,10 @@ pub(crate) struct Key2anyCtx {
 // Ownership of the blobs and the context block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `Key2anyCtx` block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the encoder dispatch
-/// hands it out and takes it back), but its *ownership* is this type: [`Self::new_zeroed`]
-/// allocates it through the crate's allocator seam and `Drop` runs the authority's own
-/// `key2any_freectx` body followed by its single release.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), NULL, 0)`, or `None` when it answers NULL. The zeroed image
-    /// is the authority's own starting state -- every owned member is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is `key2any_freectx`'s own all-empty teardown.
-    fn new_zeroed() -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(size_of::<T>(), ptr::null(), 0).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The block's stable address the encoder dispatch's `vctx` holds.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the encoder dispatch's `void *`.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the dispatch, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The context destructor: the authority's own `key2any_freectx` body
-    /// ([`CtxDestroy::destroy_body`]) followed by its single block release.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new_zeroed` allocated (or `from_raw` reclaimed) and this
-        // is its single release; `Drop` runs once and the body is the authority's own.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0);
-        }
-    }
-}
-
 // SAFETY: (a) holds: `destroy_body` is `key2any_freectx` minus the block -- it releases exactly the
 // context's own passphrase data and cipher (each NULL/zero tolerant) and never the enclosing block.
 // (b) holds: an all-zero context is valid with every release a no-op -- what the safe
-// `OwnedCtx::new_zeroed` leans on.
+// `OwnedCtx::zalloc` leans on.
 unsafe impl CtxDestroy for Key2anyCtx {
     /// `key2any_freectx`'s body minus the block release: clear the passphrase data, then free the
     /// cipher.
@@ -1930,7 +1877,7 @@ unsafe extern "C" fn slh_dsa_pki_priv_to_der(
 /// The encoder `newctx` dispatch contract.
 unsafe extern "C" fn key2any_newctx(provctx: *mut c_void) -> *mut c_void {
     // SAFETY: `CRYPTO_zalloc` validates its own allocation; the handle is the block's single owner.
-    let Some(ctx) = OwnedCtx::<Key2anyCtx>::new_zeroed() else {
+    let Some(ctx) = OwnedCtx::<Key2anyCtx>::zalloc() else {
         return ptr::null_mut();
     };
     let raw = ctx.as_ptr();

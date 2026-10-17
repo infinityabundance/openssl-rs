@@ -114,7 +114,7 @@ use crate::rsa::object::{
     ossl_rsa_check_factors, ossl_rsa_set0_libctx, RSA_free, RSA_test_flags, RSA_FLAG_TYPE_MASK,
     RSA_FLAG_TYPE_RSA, RSA_FLAG_TYPE_RSASSAPSS,
 };
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
@@ -492,50 +492,12 @@ fn der2key_check_selection(selection: c_int, desc: &KeytypeDesc) -> c_int {
 // Ownership of the decoder's scratch DER blob and the SLH-DSA bare-public-key record
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's heap records.
-///
-/// The block keeps its authority size and `(NULL, 0)` site; only its *ownership* is this type:
-/// [`Self::new_zeroed`] allocates it, `Drop` runs the authority's own `err:`-label body
-/// ([`CtxDestroy::destroy_body`]) followed by the block release, and [`Self::as_ptr`] is the
-/// address the item machinery parses into.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), NULL, 0)`, or `None` when it answers NULL. The zeroed image
-    /// is the authority's own starting state -- every owned member is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty cleanup.
-    fn new_zeroed() -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(size_of::<T>(), ptr::null(), 0).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The block's address.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own `err:`-label body
-    /// ([`CtxDestroy::destroy_body`]) followed by its single block release.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new_zeroed` allocated and this is its single release;
-        // `Drop` runs once and the body is the authority's own.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0);
-        }
-    }
-}
-
 /// The authority's `err:`-label cleanup body for a `BARE_PUBKEY`, minus the block release: the
 /// algorithm OID and the bit string.
 // SAFETY: (a) holds: `destroy_body` is the authority's `err:`-label body minus the block -- it
 // releases exactly the record's own algorithm OID and bit string (each NULL-tolerant) and never the
 // enclosing block. (b) holds: an all-zero record is valid with both releases a no-op -- what the safe
-// `OwnedCtx::new_zeroed` leans on.
+// `OwnedCtx::zalloc` leans on.
 unsafe impl CtxDestroy for BarePubkey {
     unsafe fn destroy_body(ptr: *mut BarePubkey) {
         // SAFETY: `ptr` is a live record per the trait contract; both members are NULL or the item
@@ -1137,7 +1099,7 @@ unsafe fn slh_dsa_d2i_pubkey(
 
     // The record is this frame's from here on; `Drop` runs the authority's own `err:`-label
     // cleanup (the OID, the bit string and the block) on every failure tail below.
-    let Some(spki) = OwnedCtx::<BarePubkey>::new_zeroed() else {
+    let Some(spki) = OwnedCtx::<BarePubkey>::zalloc() else {
         // SAFETY: `ret` is live and this call owns it.
         unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();

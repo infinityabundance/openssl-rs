@@ -75,10 +75,10 @@ use crate::params::{
 use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
@@ -158,60 +158,6 @@ fn is_running() -> c_int {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the generator block and the property/secret buffers
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `#[repr(C)]` object block.
-///
-/// The block keeps the authority's layout and its stable address (the exported ABI hands it out and
-/// takes it back), but its *ownership* is this type: it is allocated through the crate's allocator
-/// seam and `Drop` runs the authority's own destructor body before the block's single release. The
-/// block stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box`, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size and its
-/// release exactly as it observes the authority's.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
-    fn zalloc() -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, T::LINE_ALLOC).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
-    }
-
-    /// The stable address of the block, for the constructor's own field writes.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed by the
-    /// block's single release, through the same allocator seam the block was allocated on.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `zalloc` allocated (or `from_raw` reclaimed) and this is
-        // its single release; `Drop` runs once, and `destroy_body` is the authority's own body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, T::LINE_FREE);
-        }
-    }
-}
 
 /// `struct ecx_gen_ctx` — `ecx_kmgmt.c:84-91`.
 #[repr(C)]
