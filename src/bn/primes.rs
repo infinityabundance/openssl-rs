@@ -54,7 +54,7 @@
 //!   `BN_BLINDING_create_param` needs of it — an inversion that raises nothing and
 //!   reports "not coprime" separately — is written out there.
 
-use core::ffi::{c_int, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
@@ -1317,6 +1317,44 @@ unsafe fn probable_prime_dh(
     ret
 }
 
+/// An owned `NUMPRIMES`-entry sieve array `BN_generate_prime_ex2` fills with residues.
+///
+/// The block stays the authority's own `CRYPTO_calloc(NUMPRIMES, size_of::<PrimeT>(), FILE,
+/// LINE)` -- the exact count/size/`file`/`line` a caller-installed `CRYPTO_set_mem_functions`
+/// hook observes -- and only its *ownership* is this type: [`Self::calloc`] allocates it from
+/// that call and `Drop` is its single release at the authority's own `(FILE, LINE)`.
+struct OwnedMods {
+    ptr: core::ptr::NonNull<PrimeT>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedMods {
+    /// `CRYPTO_calloc(count, size_of::<PrimeT>(), file, line)`, or `None` when it answers NULL.
+    fn calloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedMods> {
+        // `CRYPTO_calloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `count * size_of::<PrimeT>()` bytes (raising and answering NULL on overflow), which is
+        // exactly `count` `PrimeT`s' layout.
+        let raw = CRYPTO_calloc(count, core::mem::size_of::<PrimeT>(), file, line).cast::<PrimeT>();
+        core::ptr::NonNull::new(raw).map(|ptr| OwnedMods { ptr, file, line })
+    }
+
+    /// The writable start of the array, for the sieve's `probable_prime`/`probable_prime_dh` calls.
+    fn as_ptr(&self) -> *mut PrimeT {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for OwnedMods {
+    /// The array's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `calloc` allocated and has not released; `self.file`/
+        // `self.line` are that allocation's own values, and `Drop` runs once, so this is its single
+        // `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
+    }
+}
+
 /// `int BN_generate_prime_ex2(BIGNUM *ret, int bits, int safe, const BIGNUM *add,`
 /// `const BIGNUM *rem, BN_GENCB *cb, BN_CTX *ctx)` —
 /// `crypto/bn/bn_prime.c:123-208`.
@@ -1367,17 +1405,10 @@ pub unsafe extern "C" fn BN_generate_prime_ex2(
 
             // `OPENSSL_calloc(NUMPRIMES, sizeof(*mods))`. The zeroing is not
             // observable — every slot the sieve reads is one it has written — but it
-            // is what the authority does.
-            let mods = CRYPTO_calloc(
-                NUMPRIMES,
-                core::mem::size_of::<PrimeT>(),
-                FILE.as_ptr(),
-                LINE,
-            )
-            .cast::<PrimeT>();
-            if mods.is_null() {
+            // it is what the authority does. The handle's `Drop` is its `OPENSSL_free`.
+            let Some(mods) = OwnedMods::calloc(NUMPRIMES, FILE.as_ptr(), LINE) else {
                 break 'body;
-            }
+            };
 
             // SAFETY: `ctx` is null or live per this function's `# Safety` section.
             unsafe { BN_CTX_start(ctx) };
@@ -1396,9 +1427,9 @@ pub unsafe extern "C" fn BN_generate_prime_ex2(
                     // all per this function's `# Safety` section.
                     let ok = unsafe {
                         if add.is_null() {
-                            probable_prime(ret, bits, safe, mods, ctx)
+                            probable_prime(ret, bits, safe, mods.as_ptr(), ctx)
                         } else {
-                            probable_prime_dh(ret, bits, safe, mods, add, rem, ctx)
+                            probable_prime_dh(ret, bits, safe, mods.as_ptr(), add, rem, ctx)
                         }
                     };
                     if ok == 0 {
@@ -1472,13 +1503,11 @@ pub unsafe extern "C" fn BN_generate_prime_ex2(
                 }
             }
 
-            // `OPENSSL_free(mods)`.
-            // SAFETY: `mods` came from the `CRYPTO_calloc` above and has not been
-            // released; `BN_CTX_end` matches the `BN_CTX_start` above.
-            unsafe {
-                CRYPTO_free(mods.cast(), FILE.as_ptr(), LINE);
-                BN_CTX_end(ctx);
-            }
+            // `OPENSSL_free(mods)` — the handle's `Drop` is that single release, taken here so the
+            // free precedes `BN_CTX_end` exactly as the authority's does.
+            drop(mods);
+            // SAFETY: `BN_CTX_end` matches the `BN_CTX_start` above.
+            unsafe { BN_CTX_end(ctx) };
         }
         found
     })
