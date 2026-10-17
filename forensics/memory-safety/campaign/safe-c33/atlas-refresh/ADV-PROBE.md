@@ -115,6 +115,30 @@ Deterministic (not ignored, run in the routine suite) `CertKey.serverinfo` cover
 | `serverinfo_realloc_from_empty_allocates_and_destruction_releases_once` | `realloc(NULL, n)` first-install arm |
 | `canary_realloc_member_predicate_detects_stale_length` | negative control: stale length is rejected |
 
+## Targeted boundary court (converted staged/duplicated contexts)
+
+Four probes extend the same process-global harness to the DSA, DH and ECX object
+boundaries. `adv_alloc::arm_any(size)` refuses the next request of exactly that
+size at **any** `(file, line)` coordinate; the existing site-specific
+`arm(size)` is unchanged and still backs the SSL ticket probes. The recorded
+`site` bit is the request's real coordinate, so a size-only match stays
+auditable. A one-shot `arm_cleansed_free(len)` inspects the first `len` bytes of
+the next forwarded release before freeing it; the PKCS#12 probe will use it in
+the next batch.
+
+| Probe | Establishes | Does **not** establish |
+|-------|-------------|------------------------|
+| `dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free` | A refused `Dsa`-sized `CRYPTO_zalloc` makes `ossl_dsa_new(NULL)` answer NULL; exactly one refused request, none forwarded, no release of a block that never existed; the unarmed success path still allocates and releases once. | Other constructor failure arms (lock/ex-data/method `init`), arbitrary reentrancy, or any cryptographic property. |
+| `dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free` | The same refusal/cleanup contract for `ossl_dh_new_ex(NULL)` and the staged `Dh` block. | As above. |
+| `ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free` | `ossl_ecx_key_dup(k, 0)` answers NULL when its `ECX_KEY` zalloc is refused, with no release; the inert source key (`keylen`/`type_` set, `propq`/`privkey` NULL) releases once. | Duplication of a fully populated key, the `propq`/private-scalar failure arms, `realloc`/callback reentrancy, or crypto correctness. |
+| `ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue` | The cleansed-free detector accepts a zeroed block, flags residue, and `assert_not_cleansed()` panics with the precise reason; a dead check is not a pass. | That any specific release path cleanses its secret storage; that is the next batch's PKCS#12 assertion. |
+
+**Scope of the claim.** These probes exercise the allocator-refusal path of the
+boundary only. They do not model an application callback that reenters and
+mutates the object, do not cover every constructor failure point, and do not
+substitute for the functional/differential courts. `arm_any` is a test-only
+negative-control instrument and never links into a release build.
+
 ## Hard-fail and self-verification semantics
 
 Every probe now calls `adv_alloc::require_installed()` and `adv_alloc::assert_instrument_live()`
