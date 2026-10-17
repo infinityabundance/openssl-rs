@@ -3,17 +3,17 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "e1a792488ac977e07778bac8966cf0993cded142",
+    "head_sha": "f111a346128cb2bf71f5f7e07dcd45e47bc0f24e",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "172c342a6136c6c19d3f5f5f8c13da30a05acaa883138299eea5ddfcf7d608b0",
+    "src_content_sha256": "044318348ea46e8a8786274fb30a98c538b92b5c12d6dd0d25248a06cdebd24d",
     "src_rs_files": 865
   },
   "census_crosscheck": {
     "closure_files_absent_from_frozen_census": 3,
-    "closure_files_changed_since_frozen_census": 214,
-    "closure_files_matched": 411,
+    "closure_files_changed_since_frozen_census": 231,
+    "closure_files_matched": 394,
     "note": "The census is the FROZEN Phase-25 atlas (earlier candidate). A changed file is candidate drift since that freeze, not a defect.",
     "source": "artifacts/phase25/source-census.json"
   },
@@ -670,7 +670,7 @@
   },
   "cohort_metrics": {
     "1_unique_closure_files": 628,
-    "2_files_ownership_reconstructed": 206,
+    "2_files_ownership_reconstructed": 218,
     "3_files_fully_discharged_obligations": 0,
     "3_note": "Obligations are discharged ONLY at the seal point (AGENTS.md \u00a77 SAFETY_DISCHARGED, \u00a718). No per-site validity contract has been proven for any closure file at this candidate, so this is honestly 0. A present seam is OWNERSHIP_RECONSTRUCTED, which is not discharge.",
     "4_unresolved_interior_raw_sites": {
@@ -678,15 +678,15 @@
         "src/runtime/mem.rs"
       ],
       "note": "Sites in no-seam files are unambiguously unconverted interior. Sites in seam-bearing files are mixed: they include legitimate seam-constructor sites and any remaining interior sites \u2014 this lightweight pass cannot separate them, so they are reported, not claimed clean.",
-      "seam_bearing_files_with_raw_sites": 192,
-      "seam_bearing_raw_sites_unclassified": 2861,
-      "unconverted_no_seam_files": 131,
-      "unconverted_no_seam_sites": 613,
-      "upper_bound_total": 3474
+      "seam_bearing_files_with_raw_sites": 202,
+      "seam_bearing_raw_sites_unclassified": 2924,
+      "unconverted_no_seam_files": 119,
+      "unconverted_no_seam_sites": 537,
+      "upper_bound_total": 3461
     },
     "5_consumers_safe_compatible": 0,
     "5_note": "0 by construction: no mechanism is SAFETY_DISCHARGED, so no consumer's dependency closure can be discharged. Functional re-testing is required before any graduation.",
-    "closure_raw_sites_total": 3532,
+    "closure_raw_sites_total": 3519,
     "per_consumer": [
       {
         "evidence": "fingerprint",
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-16T23:51:53Z",
+  "generated_utc": "2026-10-17T00:44:19Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1393,10 +1393,10 @@
       "category": "RAND/CMS/STORE/key formats",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 83,
-      "closure_no_seam_raw_files": 14,
-      "closure_raw_sites": 427,
-      "closure_seam_files": 32,
-      "closure_seam_raw_files": 32,
+      "closure_no_seam_raw_files": 13,
+      "closure_raw_sites": 431,
+      "closure_seam_files": 33,
+      "closure_seam_raw_files": 33,
       "closure_zero_raw_files": 37,
       "converted_files_on_branch": [
         "src/cms/cms_env.rs",
@@ -1410,7 +1410,7 @@
       "families_total": 33,
       "id": "RAND_CMS_STORE_KEYFMT",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 14,
+      "unconverted_interior_file_count": 13,
       "unconverted_interior_files": [
         "src/cmp/cmp_asn.rs",
         "src/cmp/cmp_genm.rs",
@@ -1418,7 +1418,6 @@
         "src/cmp/cmp_server.rs",
         "src/pem/key_legacy.rs",
         "src/pem/pem_info.rs",
-        "src/pem/pem_lib.rs",
         "src/pem/pem_oth.rs",
         "src/pkcs12/p12_key.rs",
         "src/pkcs12/p12_kiss.rs",
@@ -1427,16 +1426,16 @@
         "src/store/store_meth.rs",
         "src/store/store_register.rs"
       ],
-      "unconverted_interior_sites": 54
+      "unconverted_interior_sites": 48
     },
     {
       "category": "BIO/error",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 34,
-      "closure_no_seam_raw_files": 4,
-      "closure_raw_sites": 129,
-      "closure_seam_files": 16,
-      "closure_seam_raw_files": 11,
+      "closure_no_seam_raw_files": 3,
+      "closure_raw_sites": 123,
+      "closure_seam_files": 17,
+      "closure_seam_raw_files": 12,
       "closure_zero_raw_files": 19,
       "converted_files_on_branch": [],
       "crate_files_frozen": 40,
@@ -1446,23 +1445,22 @@
       "families_total": 32,
       "id": "BIO",
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_file_count": 4,
+      "unconverted_interior_file_count": 3,
       "unconverted_interior_files": [
         "src/runtime/bio/addr_info.rs",
         "src/runtime/bio/bio_sock2.rs",
-        "src/runtime/bio/bss_log.rs",
-        "src/runtime/bio/bss_mem.rs"
+        "src/runtime/bio/bss_log.rs"
       ],
-      "unconverted_interior_sites": 30
+      "unconverted_interior_sites": 21
     },
     {
       "category": "EVP/PKEY/digest/cipher/provider state",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 270,
-      "closure_no_seam_raw_files": 61,
-      "closure_raw_sites": 1884,
-      "closure_seam_files": 99,
-      "closure_seam_raw_files": 92,
+      "closure_no_seam_raw_files": 56,
+      "closure_raw_sites": 1888,
+      "closure_seam_files": 104,
+      "closure_seam_raw_files": 97,
       "closure_zero_raw_files": 117,
       "converted_files_on_branch": [
         "src/ec/smpl.rs",
@@ -1484,7 +1482,7 @@
       "families_total": 32,
       "id": "EVP_PKEY_PROVIDER",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 61,
+      "unconverted_interior_file_count": 56,
       "unconverted_interior_files": [
         "src/bn/bignum.rs",
         "src/bn/gf2m.rs",
@@ -1496,7 +1494,6 @@
         "src/dh/object.rs",
         "src/dsa/asn1.rs",
         "src/dsa/pmeth.rs",
-        "src/dsa/sign.rs",
         "src/ec/backend.rs",
         "src/ec/ctrl.rs",
         "src/ec/curve.rs",
@@ -1514,9 +1511,7 @@
         "src/evp/encode.rs",
         "src/evp/evp_pbe.rs",
         "src/evp/evp_pkey.rs",
-        "src/evp/kem.rs",
         "src/evp/keymgmt.rs",
-        "src/evp/keymgmt_lib.rs",
         "src/evp/p_legacy.rs",
         "src/evp/signature.rs",
         "src/params/from_text.rs",
@@ -1530,8 +1525,6 @@
         "src/provider/decode_pem2der.rs",
         "src/provider/decode_pvk2key.rs",
         "src/provider/decode_spki2typespki.rs",
-        "src/provider/ecx_exch.rs",
-        "src/provider/ecx_kem.rs",
         "src/provider/eddsa_sig.rs",
         "src/provider/encode_key2blob.rs",
         "src/provider/encode_key2ms.rs",
@@ -1548,7 +1541,7 @@
         "src/rsa/gen.rs",
         "src/rsa/mp.rs"
       ],
-      "unconverted_interior_sites": 307
+      "unconverted_interior_sites": 273
     },
     {
       "category": "runtime allocator/ownership",
@@ -1581,11 +1574,11 @@
       "category": "ASN.1",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 79,
-      "closure_no_seam_raw_files": 19,
-      "closure_raw_sites": 189,
-      "closure_seam_files": 15,
-      "closure_seam_raw_files": 13,
-      "closure_zero_raw_files": 47,
+      "closure_no_seam_raw_files": 15,
+      "closure_raw_sites": 183,
+      "closure_seam_files": 19,
+      "closure_seam_raw_files": 15,
+      "closure_zero_raw_files": 49,
       "converted_files_on_branch": [],
       "crate_files_frozen": 79,
       "crate_unsafe_operations_frozen": 10865,
@@ -1594,15 +1587,12 @@
       "families_total": 31,
       "id": "ASN1_OCSP",
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_file_count": 19,
+      "unconverted_interior_file_count": 15,
       "unconverted_interior_files": [
-        "src/asn1/a_digest.rs",
         "src/asn1/a_dup.rs",
-        "src/asn1/a_i2d_fp.rs",
         "src/asn1/a_mbstr.rs",
         "src/asn1/a_strex.rs",
         "src/asn1/a_strnid.rs",
-        "src/asn1/a_verify.rs",
         "src/asn1/bitstr.rs",
         "src/asn1/fre.rs",
         "src/asn1/new.rs",
@@ -1610,22 +1600,21 @@
         "src/asn1/p5_pbev2.rs",
         "src/asn1/t_pkey.rs",
         "src/asn1/time.rs",
-        "src/asn1/utl.rs",
         "src/asn1/x_algor.rs",
         "src/asn1/x_info.rs",
         "src/asn1/x_pkey.rs",
         "src/ts/ts_lib.rs"
       ],
-      "unconverted_interior_sites": 86
+      "unconverted_interior_sites": 64
     },
     {
       "category": "X.509 verify/policy",
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 97,
-      "closure_no_seam_raw_files": 21,
-      "closure_raw_sites": 438,
-      "closure_seam_files": 28,
-      "closure_seam_raw_files": 28,
+      "closure_no_seam_raw_files": 20,
+      "closure_raw_sites": 440,
+      "closure_seam_files": 29,
+      "closure_seam_raw_files": 29,
       "closure_zero_raw_files": 48,
       "converted_files_on_branch": [
         "src/x509/pcy_data.rs",
@@ -1642,7 +1631,7 @@
       "families_total": 31,
       "id": "X509_VERIFY_POLICY",
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_file_count": 21,
+      "unconverted_interior_file_count": 20,
       "unconverted_interior_files": [
         "src/x509/pcy_cache.rs",
         "src/x509/pcy_data.rs",
@@ -1655,7 +1644,6 @@
         "src/x509/v3_no_ass.rs",
         "src/x509/v3_no_rev_avail.rs",
         "src/x509/v3_prn.rs",
-        "src/x509/v3_san.rs",
         "src/x509/v3_single_use.rs",
         "src/x509/v3_soa_id.rs",
         "src/x509/v3_sxnet.rs",
@@ -1666,7 +1654,7 @@
         "src/x509/x509_obj.rs",
         "src/x509/x_attrib.rs"
       ],
-      "unconverted_interior_sites": 45
+      "unconverted_interior_sites": 41
     },
     {
       "category": "runtime concurrency",
@@ -1700,7 +1688,7 @@
       "closure_allocator_definition_files": [],
       "closure_files_recomputed": 44,
       "closure_no_seam_raw_files": 6,
-      "closure_raw_sites": 285,
+      "closure_raw_sites": 274,
       "closure_seam_files": 11,
       "closure_seam_raw_files": 11,
       "closure_zero_raw_files": 27,
@@ -1726,41 +1714,41 @@
         "src/ssl/statem/extensions_clnt.rs",
         "src/ssl/statem/extensions_srvr.rs"
       ],
-      "unconverted_interior_sites": 24
+      "unconverted_interior_sites": 23
     }
   ],
   "next_targets": [
     {
       "families_reaching": 32,
       "mechanism": "EVP_PKEY_PROVIDER",
-      "score": 9824,
+      "score": 8736,
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 61,
-      "unconverted_interior_sites": 307
+      "unconverted_interior_files": 56,
+      "unconverted_interior_sites": 273
     },
     {
       "families_reaching": 31,
       "mechanism": "ASN1_OCSP",
-      "score": 2666,
+      "score": 1984,
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 19,
-      "unconverted_interior_sites": 86
+      "unconverted_interior_files": 15,
+      "unconverted_interior_sites": 64
     },
     {
       "families_reaching": 33,
       "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "score": 1782,
+      "score": 1584,
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 14,
-      "unconverted_interior_sites": 54
+      "unconverted_interior_files": 13,
+      "unconverted_interior_sites": 48
     },
     {
       "families_reaching": 31,
       "mechanism": "X509_VERIFY_POLICY",
-      "score": 1395,
+      "score": 1271,
       "state": "OWNERSHIP_RECONSTRUCTED",
-      "unconverted_interior_files": 21,
-      "unconverted_interior_sites": 45
+      "unconverted_interior_files": 20,
+      "unconverted_interior_sites": 41
     },
     {
       "families_reaching": 31,
@@ -1773,10 +1761,10 @@
     {
       "families_reaching": 32,
       "mechanism": "BIO",
-      "score": 960,
+      "score": 672,
       "state": "UNSAFE_OPEN",
-      "unconverted_interior_files": 4,
-      "unconverted_interior_sites": 30
+      "unconverted_interior_files": 3,
+      "unconverted_interior_sites": 21
     },
     {
       "families_reaching": 25,
@@ -1789,10 +1777,10 @@
     {
       "families_reaching": 25,
       "mechanism": "SSL_SESSION",
-      "score": 600,
+      "score": 575,
       "state": "OWNERSHIP_RECONSTRUCTED",
       "unconverted_interior_files": 6,
-      "unconverted_interior_sites": 24
+      "unconverted_interior_sites": 23
     },
     {
       "families_reaching": 33,
@@ -1816,14 +1804,14 @@
     ],
     "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
     "files_total": 865,
-    "files_with_raw_sites": 393,
-    "files_with_seam": 250,
-    "files_zero_raw_sites": 472,
+    "files_with_raw_sites": 391,
+    "files_with_seam": 266,
+    "files_zero_raw_sites": 474,
     "raw_site_patterns": [
       "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
       "\\bCRYPTO_(?:free|clear_free)\\b"
     ],
-    "raw_sites_total": 4368,
+    "raw_sites_total": 4346,
     "seam_tokens": [
       "OwnedCtx",
       "OwnedBuf",
@@ -1846,15 +1834,15 @@
       },
       {
         "mechanism": "RAND_CMS_STORE_KEYFMT",
-        "unconverted_interior_files": 14
+        "unconverted_interior_files": 13
       },
       {
         "mechanism": "BIO",
-        "unconverted_interior_files": 4
+        "unconverted_interior_files": 3
       },
       {
         "mechanism": "EVP_PKEY_PROVIDER",
-        "unconverted_interior_files": 61
+        "unconverted_interior_files": 56
       },
       {
         "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
@@ -1862,11 +1850,11 @@
       },
       {
         "mechanism": "ASN1_OCSP",
-        "unconverted_interior_files": 19
+        "unconverted_interior_files": 15
       },
       {
         "mechanism": "X509_VERIFY_POLICY",
-        "unconverted_interior_files": 21
+        "unconverted_interior_files": 20
       },
       {
         "mechanism": "RUNTIME_CONCURRENCY",
