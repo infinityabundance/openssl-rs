@@ -27,7 +27,8 @@
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc,
+    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array, CRYPTO_memdup,
+    CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc,
 };
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
@@ -54,8 +55,9 @@ enum Release {
         line: c_int,
     },
     /// The authority's conditional release: cleansing over `num` bytes when `clear`, plain
-    /// `CRYPTO_free` otherwise. `clear` is fixed at construction (the fields are private and no
-    /// method changes it), so the release kind a handle was adopted with cannot drift.
+    /// `CRYPTO_free` otherwise. `num` is fixed at construction and at most the allocated
+    /// extent; only the release mode may be changed afterwards through `set_clear`, so the
+    /// cleansing write can never exceed the block.
     Conditional {
         num: usize,
         clear: bool,
@@ -109,7 +111,79 @@ impl OwnedBuf {
     /// `CRYPTO_zalloc(len, file, line)` for a plainly released block, or `None`
     /// when the allocator answers NULL.
     pub(crate) fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<Self> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
+        Self::new_zeroed_released(len, file, line, file, line)
+    }
+
+    /// `CRYPTO_zalloc(len, alloc_file, alloc_line)` for a plainly released block
+    /// whose `Drop` records `release_file`/`release_line`, or `None` when the
+    /// allocator answers NULL.
+    ///
+    /// The two coordinate pairs stay separate so a caller-installed
+    /// `CRYPTO_set_mem_functions` hook observes each at the authority's own site.
+    pub(crate) fn new_zeroed_released(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<Self> {
+        let raw = CRYPTO_zalloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            release: Release::Plain {
+                file: release_file,
+                line: release_line,
+            },
+        })
+    }
+
+    /// `CRYPTO_malloc_array(count, size, file, line)` -- `count * size` bytes -- for a
+    /// plainly released block, or `None` when the product overflows or the
+    /// allocator answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `count * size` is the extent the caller intends to use, and the caller's
+    /// subsequent accesses stay within the checked product. An overflowing product
+    /// is refused with `None` rather than allocated, so a caller must not treat
+    /// `None` as a zero-length success.
+    pub(crate) unsafe fn new_array(
+        count: usize,
+        size: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        // `CRYPTO_malloc_array` applies the authority's checked `ossl_size_mul`: an
+        // unrepresentable product raises `CRYPTO_R_INTEGER_OVERFLOW` and answers NULL,
+        // so no unchecked product is ever used as an allocation size.
+        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            release: Release::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_memdup(src, len, file, line)` for a plainly released copy at the same
+    /// coordinates, or `None` when the source is NULL or the allocator answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `src` is NULL or readable for `len` bytes.
+    pub(crate) unsafe fn new_memdup(
+        src: *const c_uchar,
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `src` is NULL or readable for `len` bytes per this function's
+        // contract.
+        let raw = unsafe { CRYPTO_memdup(src.cast::<c_void>(), len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -356,8 +430,9 @@ impl OwnedBuf {
     /// [`Self::adopt_cleansed`]: plain `CRYPTO_*` seam provenance (a secure-heap pointer is
     /// excluded), whole-block identity and extent with `num <= allocated extent`, alignment,
     /// initialization, exclusive ownership, and the exact `file`/`line` at which the authority
-    /// releases this block. `clear` must be the authority's own decision for this block and must
-    /// not change afterwards; the returned handle never mutates it.
+    /// releases this block. `clear` must be the authority's own decision for this block at
+    /// adoption. A later `set_clear` may change only the release mode; it cannot change `num`,
+    /// which this arm fixes at or below the allocation extent.
     pub(crate) unsafe fn adopt_conditional(
         ptr: *mut c_uchar,
         num: usize,
@@ -504,6 +579,39 @@ impl OwnedBuf {
         }
     }
 
+    /// Re-point the diagnostic line in the active release arm, preserving the file,
+    /// the release mode and any stored cleansing length. The line is metadata only:
+    /// no extent or ownership invariant depends on it.
+    pub(crate) fn set_release_line(&mut self, line: c_int) {
+        match &mut self.release {
+            Release::Plain { line: stored, .. }
+            | Release::Cleansed { line: stored, .. }
+            | Release::Conditional { line: stored, .. }
+            | Release::SecureCleansed { line: stored, .. } => *stored = line,
+        }
+    }
+
+    /// Set the `clear` flag of a `Conditional` release and answer whether this handle
+    /// carries that arm; other arms are left unchanged and answer `false`.
+    ///
+    /// Safe because `Conditional` can only be constructed with `num` at most the
+    /// allocated extent (the safe constructors or `adopt_conditional`'s contract), and
+    /// the arm already stores that `num`: changing only the mode cannot make the
+    /// cleansing write exceed the block.
+    // The conditional-release consumers that need to flip the mode (the `OwnedBlock`
+    // group's remaining exclusions) land after this API change; the guard keeps the
+    // ordinary library build warning-free until then.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn set_clear(&mut self, clear: bool) -> bool {
+        match &mut self.release {
+            Release::Conditional { clear: stored, .. } => {
+                *stored = clear;
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// The writable start of the block.
     pub(crate) fn as_ptr(&self) -> *mut c_uchar {
         self.ptr
@@ -584,8 +692,8 @@ impl Drop for OwnedBuf {
             } => {
                 // SAFETY: `self.ptr` is the block this handle owns and has not released. `num`
                 // was established by `adopt_conditional`'s contract as at most the allocated
-                // extent, so the cleansing write is in bounds. `clear` was fixed at construction,
-                // so this handle's release kind cannot have changed; both releases accept NULL.
+                // extent, so the cleansing write is in bounds. `set_clear` can change only the
+                // mode and leaves `num` intact; both releases accept NULL.
                 #[cfg(test)]
                 conditional_probe::LAST.with(|last| last.set(Some((clear, num))));
                 // SAFETY: both releases accept the block this handle owns; the preceding comment
@@ -775,6 +883,74 @@ mod tests {
             Some((false, 8)),
             "clear = false must take the plain release"
         );
+    }
+
+    #[test]
+    fn set_release_line_keeps_the_conditional_mode_and_length() {
+        // The line is diagnostic metadata: re-pointing it must not disturb the release arm's
+        // `clear` decision or its stored cleansing length.
+        // SAFETY: a fresh 8-byte allocation from this crate's seam, owned by this frame and
+        // released exactly once by `buf`.
+        let buf = unsafe {
+            OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 40).cast(), 8, true, FILE, 41)
+        };
+        assert!(buf.is_some(), "a fresh 8-byte block must be allocatable");
+        let Some(mut buf) = buf else { return };
+        conditional_probe::LAST.with(|last| last.set(None));
+        buf.set_release_line(99);
+        drop(buf);
+        assert_eq!(
+            conditional_probe::LAST.with(core::cell::Cell::take),
+            Some((true, 8)),
+            "re-pointing the line must preserve the mode and the cleansing length"
+        );
+    }
+
+    #[test]
+    fn set_clear_selects_the_release_mode_and_keeps_the_length() {
+        fn observed(initial: bool, set: bool) -> Option<(bool, Option<(bool, usize)>)> {
+            // SAFETY: a fresh 8-byte allocation from this crate's seam, owned by this frame and
+            // released exactly once by `buf`.
+            let mut buf = unsafe {
+                OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 42).cast(), 8, initial, FILE, 43)
+            }?;
+            let matched = buf.set_clear(set);
+            conditional_probe::LAST.with(|last| last.set(None));
+            drop(buf);
+            Some((
+                matched,
+                conditional_probe::LAST.with(core::cell::Cell::take),
+            ))
+        }
+
+        assert_eq!(
+            observed(true, false),
+            Some((true, Some((false, 8)))),
+            "clear = false must take the plain release over the stored length"
+        );
+        assert_eq!(
+            observed(false, true),
+            Some((true, Some((true, 8)))),
+            "clear = true must take the cleansing release over the stored length"
+        );
+    }
+
+    #[test]
+    fn set_clear_answers_false_on_other_arms() {
+        let buf = OwnedBuf::new(8, FILE, 44);
+        assert!(buf.is_some(), "an 8-byte block must be allocatable");
+        let Some(mut buf) = buf else { return };
+        assert!(!buf.set_clear(true), "a Plain arm has no clear flag");
+        assert!(!buf.set_clear(false), "a Plain arm has no clear flag");
+    }
+
+    #[test]
+    fn new_array_overflow_is_none() {
+        // SAFETY: the only precondition is that the checked product is the intended extent; this
+        // product overflows, so the seam reports the overflow and answers NULL before allocating,
+        // and no block is accessed.
+        let buf = unsafe { OwnedBuf::new_array(usize::MAX, 2, FILE, 45) };
+        assert!(buf.is_none(), "an overflowing product must answer None");
     }
 
     #[test]

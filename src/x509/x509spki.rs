@@ -19,14 +19,14 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, CStr};
 use core::ptr;
 
 use crate::asn1::x_spki::{d2i_NETSCAPE_SPKI, i2d_NETSCAPE_SPKI, NetScapeSpki};
 use crate::evp::encode::{EVP_DecodeBlock, EVP_EncodeBlock};
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{X509_PUBKEY_get, X509_PUBKEY_set};
 
 /// The `__FILE__` the authority's `OPENSSL_malloc` macro expands to in this unit.
@@ -34,68 +34,6 @@ const FILE_NAME: &CStr = c"crypto/x509/x509spki.c";
 /// The line the allocation-tracking record carries. Zero, as every landed allocator call site
 /// uses: the number is unobservable and only the file's identity is contract.
 const LINE: c_int = 0;
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// Each base64 pass keeps its temporary block a `CRYPTO_malloc`/`CRYPTO_malloc_array` at the
-/// authority's exact `file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its
-/// release from a caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is
-/// this type: [`Self::new`]/[`Self::new_array`] allocate it, `Drop` is its single release at the
-/// authority's own site, and [`Self::into_raw`] hands the base64 text to the C caller.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// `CRYPTO_malloc_array(count, size, file, line)`, or `None` when the allocator answers NULL.
-    fn new_array(count: usize, size: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the C caller.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `int NETSCAPE_SPKI_set_pubkey(NETSCAPE_SPKI *x, EVP_PKEY *pkey)` —
 /// `crypto/x509/x509spki.c:14-19`.
@@ -201,11 +139,13 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_b64_encode(spki: *mut NetScapeSpki) -> *m
         Some(buf) => buf,
         None => return ptr::null_mut(),
     };
-    // SAFETY: the authority allocates `der_len * 2` for the base64 expansion.
-    let b64_str = match OwnedBuf::new_array(der_len as usize, 2, FILE_NAME.as_ptr(), LINE) {
-        Some(buf) => buf,
-        None => return ptr::null_mut(),
-    };
+    // SAFETY: `der_len * 2` is the authority's exact base64 expansion extent; the product is
+    // checked and an overflow refuses the allocation.
+    let b64_str =
+        match unsafe { OwnedBuf::new_array(der_len as usize, 2, FILE_NAME.as_ptr(), LINE) } {
+            Some(buf) => buf,
+            None => return ptr::null_mut(),
+        };
     let mut p = der_spki.as_ptr();
     // SAFETY: `der_spki` has room for `der_len` bytes and `p` is this frame's cursor.
     unsafe { i2d_NETSCAPE_SPKI(spki, &raw mut p) };
