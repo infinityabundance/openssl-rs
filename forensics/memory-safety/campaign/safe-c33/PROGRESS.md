@@ -91,6 +91,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | 54 | stage/p25/sweep10 | evp/signature, provider/decode_spki2typespki | two files own their blocks |
 | 55 | stage/p25/sweep11 | asn1/{new,t_pkey,a_strex}, bn/intern, cmp/cmp_hdr, property/defn_cache | 13 interior alloc/release sites owned; 1 caller-side test release retained; two `checked_add` improvements; hidden 0 |
 | 56 | stage/p25/sweep12 | provider/{rsa_kmgmt,eddsa_sig,init}, dsa/object, dh/object, ml_dsa/poly | staged `RawCtx`→`OwnedCtx` for DSA/DH; block-only owners for RSA gen + EdDSA; `OwnedStr`/`OwnedBuf` path temporaries; `VectorBuf` members; checked array products; hidden 0 |
+| 57 | stage/p25/sweep13 | ec/depr, slh_dsa/hash_ctx, evp/evp_pbe, runtime/bio/bio_sock2, bn/bignum, asn1/fre | path-selected release lines; partial-init `OwnedHashCtx`; accepted-row ownership; socket-string order; ASN.1 embedded-free contracts retained; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
