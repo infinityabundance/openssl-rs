@@ -33,12 +33,13 @@
 
 #![allow(non_snake_case)] // the handlers carry the authority's `cmd_<Name>` spellings
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::conf::modparse::CONF_parse_list;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::ssl::ssl_ciph::{SSL_CTX_set_ciphersuites, SSL_set_ciphersuites};
 use crate::ssl::ssl_ciph_table as t;
@@ -111,67 +112,6 @@ pub struct SslConfCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the context block
 // ---------------------------------------------------------------------------------------------
-
-/// An owned heap block allocated through the crate's allocator seam.
-///
-/// The opaque [`SslConfCtx`] stays a `CRYPTO_zalloc` block at the authority's exact
-/// size/`file`/`line` -- a Rust `Box` would hide both the allocation and its release from a
-/// caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
-/// [`Self::new_zeroed`] allocates it, `Drop` is its single release, and
-/// [`Self::into_raw`]/[`Self::from_raw`] cross the C ABI at the exported constructor/destructor. The
-/// context's `prefix` and `cert_filename` member buffers stay on the raw `CRYPTO_*` seam, exactly as
-/// `SSL_SESSION_free` keeps the session's `ext_hostname`/`ext_tick`/... on it. A NULL pointer is a
-/// valid, empty block whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C ABI, for release by `Drop` at
-    /// the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released, and
-    /// `file` is NULL or a NUL-terminated C string.
-    unsafe fn from_raw(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, file, line })
-        }
-    }
-
-    /// Give up ownership of the block to the C ABI's out-pointer.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 fn flag_both(name: &'static [u8], value: u64) -> SslFlagTbl {
     SslFlagTbl {
@@ -1318,7 +1258,8 @@ pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
         // Reclaim the block a matching `SSL_CONF_CTX_new` handed out; its single release is `Drop`.
         // SAFETY: `cctx` is the live block `SSL_CONF_CTX_new` gave up per the caller's contract,
         // not released before.
-        drop(unsafe { OwnedBuf::from_raw(cctx.cast(), FILE, 1120) });
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE, 1120) });
     })
 }
 

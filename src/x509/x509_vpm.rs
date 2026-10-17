@@ -62,6 +62,7 @@ use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new,
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort,
@@ -353,69 +354,6 @@ unsafe impl CtxDestroy for X509VerifyParam {
     }
 }
 
-/// An owned C string (or byte block) allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_strdup`/`CRYPTO_strndup`/`CRYPTO_zalloc` at the authority's exact
-/// `file`/`line` -- a Rust `Box`/`CString` would hide both the allocation and its release from a
-/// caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
-/// [`Self::new_zeroed`] allocates it, [`Self::adopt`] takes a block the parameter already held back
-/// for release, `Drop` is its single release, and [`Self::into_raw`] hands it to the member that
-/// takes it over. A NULL pointer is a valid, empty block whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        // `CRYPTO_zalloc` is a safe function.
-        let raw = CRYPTO_zalloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Take back a block the authority allocated (or NULL), for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this file allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the member that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 // ---------------------------------------------------------------------------------------------
 // The `str_copy`/`str_free` adapters and the two stack element destructors — `x509_vpm.c:26-34`.
 // ---------------------------------------------------------------------------------------------
@@ -682,7 +620,12 @@ unsafe fn int_x509_param_set1(
     // SAFETY: `pdest` is live and `*pdest` is the old owned block.
     unsafe {
         // Release the old block through its owner (the authority's own `:255` free).
-        drop(OwnedBuf::adopt((*pdest).cast(), FILE.as_ptr(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*pdest).cast(),
+            FILE.as_ptr(),
+            0,
+        ));
         *pdest = tmp.map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
         if !pdestlen.is_null() {
             *pdestlen = srclen;
@@ -705,7 +648,12 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_set1_name(
     // SAFETY: `param` is live; `name` is NULL or NUL-terminated.
     unsafe {
         // Release the old name through its owner, then copy the new one (the authority's order).
-        drop(OwnedBuf::adopt((*param).name.cast(), FILE.as_ptr(), 0));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*param).name.cast(),
+            FILE.as_ptr(),
+            0,
+        ));
         (*param).name = CRYPTO_strdup(name, FILE.as_ptr(), 0);
         (!(*param).name.is_null()) as c_int
     }
@@ -1017,7 +965,7 @@ unsafe fn int_x509_param_set_hosts(
         // The host string owns the fresh copy: every early exit below releases it, and only a
         // successful push gives it up to `vpm->hosts`.
         // SAFETY: `raw` is a fresh, non-NULL block this file allocated.
-        let copy = OwnedBuf::adopt(raw.cast(), FILE.as_ptr(), 0);
+        let copy = OwnedBuf::adopt_plain_nullable(raw.cast(), FILE.as_ptr(), 0);
 
         if (*vpm).hosts.is_null() {
             (*vpm).hosts = OPENSSL_sk_new_null();
@@ -1148,7 +1096,12 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_move_peername(
         };
         if (*to).peername != peername {
             // Release the replaced peername through its owner (the authority's own `:426` free).
-            drop(OwnedBuf::adopt((*to).peername.cast(), FILE.as_ptr(), 0));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*to).peername.cast(),
+                FILE.as_ptr(),
+                0,
+            ));
             (*to).peername = peername;
         }
         if !from.is_null() {

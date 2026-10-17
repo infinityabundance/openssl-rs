@@ -140,6 +140,7 @@ use crate::runtime::err::{
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_x509::X509;
 
 /// `EVP_PKEY_PUBLIC_KEY` — `include/openssl/evp.h:110`, `KEY_PARAMETERS | SELECT_PUBLIC_KEY`.
@@ -193,47 +194,6 @@ const LINE_FREE_DER: c_int = 363;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_memdup` (or a helper's own `CRYPTO_malloc`) at the authority's exact
-/// size/`file`/`line` -- a Rust `Box`/`Vec` would hide both the allocation and its release from a
-/// caller-installed `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type:
-/// [`Self::adopt`] takes in a block the crate allocated inside a helper (`CRYPTO_memdup`, or
-/// `OSSL_ENCODER_to_data`), and `Drop` is its single release at the authority's own `file`/`line`.
-/// A NULL pointer is a valid, empty buffer whose release is the authority's own no-op
-/// `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block this crate allocated inside a helper, for release by `Drop` at the
-    /// authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns, and `file` is NULL
-    /// or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `struct X509_pubkey_st` — `X509_PUBKEY`, from `crypto/x509/x_pubkey.c:31-43`.
 ///
@@ -718,7 +678,9 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                 }
                 // The block is `CRYPTO_memdup`'s own; the handle is its single release.
                 // SAFETY: `raw` is a live block the crate allocated and no one else owns.
-                let buf = unsafe { OwnedBuf::adopt(raw, FILE.as_ptr(), LINE_FREE_TMPBUF) };
+                let buf =
+                    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                    unsafe { OwnedBuf::adopt_plain_nullable(raw, FILE.as_ptr(), LINE_FREE_TMPBUF) };
                 // SAFETY: `buf` owns `publen` bytes, so the first is writable.
                 unsafe { *buf.as_ptr() = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
                 in_data = buf.as_ptr();
@@ -1109,7 +1071,10 @@ pub unsafe extern "C" fn X509_PUBKEY_set(x: *mut *mut X509Pubkey, pkey: *mut Evp
         // line, when this arm returns.
         // SAFETY: `der` is NULL or the block `OSSL_ENCODER_to_data` allocated and no one else
         // owns.
-        let der = unsafe { OwnedBuf::adopt(der.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER) };
+        let der = unsafe {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            OwnedBuf::adopt_plain_nullable(der.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER)
+        };
         if encoded {
             // SAFETY: `der` owns `derlen` bytes.
             let mut pder: *const c_uchar = der.as_ptr();
