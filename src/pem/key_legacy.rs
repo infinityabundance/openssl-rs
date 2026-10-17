@@ -47,6 +47,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::layout::I2dOfVoid;
+use crate::asn1::owned::OwnedBlock;
 use crate::dh::asn1::{d2i_DHparams, d2i_DHxparams, i2d_DHparams, i2d_DHxparams};
 use crate::dh::Dh;
 use crate::dsa::asn1::{d2i_DSAparams, i2d_DSAPrivateKey, i2d_DSAparams};
@@ -72,7 +73,6 @@ use crate::rsa::Rsa;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_free;
 
 /// The `(d2i_of_void *)d2i_RSAPublicKey` cast the `IMPLEMENT_PEM_read_*` macros spell.
 ///
@@ -833,12 +833,23 @@ pub unsafe extern "C" fn PEM_read_bio_DHparams(
     {
         return ptr::null_mut();
     }
-    let mut p: *const c_uchar = data;
+    // `PEM_bytes_read_bio` handed this frame the name and the data blocks. `OwnedBlock`'s
+    // `Drop` is the authority's `OPENSSL_free` at `pem_all.c:202` for the name and `:203` for
+    // the data, in that order.
+    // SAFETY: `nm` is NULL or the NUL-terminated block the reader allocated for this call,
+    // owned exclusively here and not released elsewhere; `from_raw`'s handle is its single
+    // release.
+    let nm = unsafe { OwnedBlock::<c_char>::from_raw(nm, FILE, LINE_ALL_202) };
+    // SAFETY: as above, for the reader's data block (`len` readable bytes when non-NULL).
+    let data = unsafe { OwnedBlock::<c_uchar>::from_raw(data, FILE, LINE_ALL_203) };
 
-    // SAFETY: `nm` is the name the reader allocated and is NUL-terminated.
-    let ret = if unsafe { crate::runtime::bio::sys::strcmp(nm, PEM_STRING_DHXPARAMS) } == 0 {
-        // SAFETY: `x` is the destination, `p` is readable for `len` bytes, and the decoder is
-        // `d2i_DHxparams`.
+    let nm_ptr = nm.as_ref().map_or(ptr::null(), |b| b.as_ptr());
+    let mut p: *const c_uchar = data.as_ref().map_or(ptr::null_mut(), |b| b.as_ptr());
+
+    // SAFETY: `nm_ptr` is NUL-terminated when non-NULL (the reader's success contract); `x` is
+    // the destination, `p` is readable for `len` bytes, and the chosen decoder matches the name.
+    let ret = if unsafe { crate::runtime::bio::sys::strcmp(nm_ptr, PEM_STRING_DHXPARAMS) } == 0 {
+        // SAFETY: as above, with `d2i_DHxparams`.
         unsafe { d2i_DHxparams(x, &mut p, len) }
     } else {
         // SAFETY: as above, with `d2i_DHparams`.
@@ -849,11 +860,9 @@ pub unsafe extern "C" fn PEM_read_bio_DHparams(
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::PEM_ALL_201) };
     }
-    // SAFETY: `nm` and `data` are the reader's buffers for this call.
-    unsafe {
-        CRYPTO_free(nm.cast::<c_void>(), FILE, LINE_ALL_202);
-        CRYPTO_free(data.cast::<c_void>(), FILE, LINE_ALL_203);
-    }
+    // The authority's `err:` releases the name first, then the data.
+    drop(nm);
+    drop(data);
     ret
 }
 
