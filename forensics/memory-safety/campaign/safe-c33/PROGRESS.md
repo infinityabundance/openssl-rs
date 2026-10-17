@@ -74,6 +74,22 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | -- | stage/p25/memberbuf-propq | pkcs7/{pk7_lib,pk7_asn1}.rs | **member-buffer model** (MEMBER-BUFFER-MODEL.md); PropqSlot proven on PKCS7 |
 | -- | stage/p25/memberbuf-cms | cms/{cms_lib,cms_asn1}.rs, pkcs12/p12_asn.rs, pkcs7/pk7_mime.rs | CmsPropqSlot; **CmsCtx.propq now private** |
 | -- | stage/p25/memberbuf-x509 | x509/{x_x509,x_crl,x509_req,x_pubkey,x_req,x_all,x509_vfy}.rs | X509_CRL/REQ/PUBKEY propq fields **private** |
+| -- | stage/p25/memberbuf-sslstr | ssl/{ssl_asn1,ssl_lib,ssl_sess,ssl_txt}.rs | remaining `SslSession` C-strings + `Cert.psk_identity_hint` own their storage |
+| -- | stage/p25/adv-tests | runtime/bio/owned.rs, ssl/{adv_alloc,ssl_lib}.rs, ssl/statem/{statem_clnt,statem_srvr}.rs | **adversarial**: ticket allocation-refusal regression + member-buffer/partial-init negative controls |
+| -- | stage/p25/memberbuf-sslctx | ssl/{ssl_cert,ssl_ciph,ssl_lib}.rs, ssl/statem/extensions_clnt.rs | `SslCtx`/`Ssl` member buffers through the model |
+| 45 | stage/p25/sweep1 | decoder_meth, evp/evp_lib, evp/pkey_asn1, provider/{ml_dsa_kmgmt,rsa_kem}, rsa/object | six files own their blocks |
+| 46 | stage/p25/sweep2 | asn1/x_int64, provider/{ec_kem,ml_dsa_codecs,skeymgmt,sm2_enc}, srp/srp_lib | six files own their blocks |
+| 47 | stage/p25/sweep3 | cmp/cmp_client, ec/{ecx_meth,key}, encoder_{lib,meth}, rsa/pss | six files own their blocks |
+| 48 | stage/p25/sweep4 | asn1/tasn_prn, engine/eng_table, provider/ml_common_codecs, runtime/buffer, store/store_result, ts/ts_rsp_verify | six files own their blocks |
+| 49 | stage/p25/sweep5 | asn1/a_digest, evp/keymgmt_lib, http/http_lib, pem/pem_lib, provider/ecx_kem, ui/ui_util | six files own their blocks |
+| 50 | stage/p25/sweep6 | asn1/a_verify, ct/ct_policy, dsa/sign, provider/ecx_exch, runtime/bio/bss_mem | five files own their blocks |
+| 51 | stage/p25/sweep7 | asn1/{a_i2d_fp,utl}, evp/kem, modes/ocb, x509/v3_san | five files own their blocks |
+| -- | stage/p25/sslmb2 | 11 ssl files | complete `SslCtx`/`Ssl` member-buffer boundaries (propq readers, `serverinfo` realloc, handshake state) |
+| 52 | stage/p25/sweep8 | bn/primes, cmp/cmp_asn, provider/decode_pem2der, store/store_meth | four files own their blocks |
+| 53 | stage/p25/sweep9 | asn1/a_dup, evp/bio_ok, rsa/mp | three files own their blocks |
+| -- | stage/p25/adv-harden | ssl/{adv_alloc,ssl_lib}.rs, ssl/statem/{statem_clnt,statem_srvr}.rs, AGENTS.md, scripts/adv-probe.sh | **assurance**: hard-failing one-process probes + §21 protocol |
+| 54 | stage/p25/sweep10 | evp/signature, provider/decode_spki2typespki | two files own their blocks |
+| 55 | stage/p25/sweep11 | asn1/{new,t_pkey,a_strex}, bn/intern, cmp/cmp_hdr, property/defn_cache | 13 interior alloc/release sites owned; 1 caller-side test release retained; two `checked_add` improvements; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
