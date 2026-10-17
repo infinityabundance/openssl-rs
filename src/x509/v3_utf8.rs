@@ -34,9 +34,9 @@ use core::ptr;
 
 use crate::asn1::items::ASN1_UTF8STRING_it;
 use crate::asn1::layout::Asn1String;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{ASN1_STRING_set, ASN1_UTF8STRING_free, ASN1_UTF8STRING_new};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::obj::NID_subjectSignTool;
 use crate::x509::v3_lib::X509V3ExtMethod;
 
@@ -83,13 +83,22 @@ pub unsafe extern "C" fn i2s_ASN1_UTF8STRING(
             return ptr::null_mut();
         }
         let len = (*utf8).length as usize;
-        let tmp = CRYPTO_malloc(len + 1, FILE.as_ptr(), LINE_MALLOC).cast::<c_char>();
-        if tmp.is_null() {
+        // The authority's `OPENSSL_malloc(utf8->length + 1)`. The sum is `checked_add`-guarded so
+        // a wrapped request never reaches the allocator; overflow is the same refusal as the
+        // allocator's NULL.
+        let Some(count) = len.checked_add(1) else {
             return ptr::null_mut();
-        }
-        ptr::copy_nonoverlapping((*utf8).data, tmp.cast(), len);
-        *tmp.add(len) = 0;
-        tmp
+        };
+        let Some(tmp) = OwnedBlock::<c_char>::malloc(count, FILE.as_ptr(), LINE_MALLOC) else {
+            return ptr::null_mut();
+        };
+        let dst = tmp.as_ptr();
+        ptr::copy_nonoverlapping((*utf8).data, dst.cast(), len);
+        *dst.add(len) = 0;
+        // The returned block is the caller's: `i2s_ASN1_UTF8STRING` has always transferred a
+        // `CRYPTO_malloc` block to its caller, who releases it with `OPENSSL_free`. Only that
+        // transfer edge keeps this raw; there is no release inside this module.
+        tmp.into_raw()
     }
 }
 
