@@ -39,6 +39,8 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
+use core::ptr::NonNull;
+
 use crate::asn1::d2i_pr::{d2i_AutoPrivateKey, d2i_PrivateKey_ex};
 use crate::asn1::layout::D2iOfVoid;
 use crate::asn1::x_info::{X509Info, X509_INFO_free, X509_INFO_new};
@@ -97,6 +99,57 @@ const LINE_FREE_ERR_DATA: c_int = 213;
 /// `EVP_PKEY_NONE` — `include/openssl/evp.h`, spelled `NID_undef` = 0. The `ptype` sentinel the
 /// `PRIVATE KEY` arm sets when the header carries no key-type prefix.
 const EVP_PKEY_NONE: c_uint = 0;
+
+/// One `name`/`header`/`data` buffer the PEM reader publishes.
+///
+/// The authority frees each with a plain `OPENSSL_free`: the success loop at `:181`/`:183`/`:185`
+/// and the `err:` block at `:211`/`:212`/`:213`. This handle owns the block between those edges;
+/// its `err_line` is the `err:` coordinate and [`Self::release`] takes the success site's. `NULL`
+/// is the empty state, exactly as the authority's `OPENSSL_free(p); p = NULL` leaves it.
+struct PemBuf {
+    ptr: Option<NonNull<c_void>>,
+    err_line: c_int,
+}
+
+impl PemBuf {
+    /// Take ownership of one buffer `PEM_read_bio` published on its success return.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a block the crate's allocator seam produced that `PEM_read_bio` handed to
+    /// this frame and that no other owner will release; this handle's `release`/`Drop` is its
+    /// single release. `err_line` is the authority's own `err:` release coordinate for this buffer.
+    unsafe fn adopt(ptr: *mut c_void, err_line: c_int) -> PemBuf {
+        PemBuf {
+            ptr: NonNull::new(ptr),
+            err_line,
+        }
+    }
+
+    fn as_ptr<T>(&self) -> *mut T {
+        self.ptr.map_or(ptr::null_mut(), |p| p.as_ptr().cast::<T>())
+    }
+
+    /// Release the block at the authority's own success site and leave the slot empty.
+    fn release(&mut self, line: c_int) {
+        if let Some(p) = self.ptr.take() {
+            // SAFETY: `p` is the block this handle owns and has not released; this is its single
+            // release, at the authority's own `OPENSSL_free` coordinate.
+            unsafe { CRYPTO_free(p.as_ptr(), FILE, line) };
+        }
+    }
+
+    /// Hand the block to another owner (the `xi->enc_data` transfer) without releasing it.
+    fn relinquish(&mut self) -> *mut c_void {
+        self.ptr.take().map_or(ptr::null_mut(), NonNull::as_ptr)
+    }
+}
+
+impl Drop for PemBuf {
+    /// The authority's `err:` release for this buffer, if its slot is still occupied.
+    fn drop(&mut self) {
+        self.release(self.err_line);
+    }
+}
 
 /// `(d2i_of_void *)d2i_X509_AUX`.
 ///
@@ -225,9 +278,21 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
     propq: *const c_char,
 ) -> *mut OpenSslStack {
     let mut xi: *mut X509Info = ptr::null_mut();
-    let mut name: *mut c_char = ptr::null_mut();
-    let mut header: *mut c_char = ptr::null_mut();
-    let mut data: *mut c_uchar = ptr::null_mut();
+    let mut name_out: *mut c_char = ptr::null_mut();
+    let mut header_out: *mut c_char = ptr::null_mut();
+    let mut data_out: *mut c_uchar = ptr::null_mut();
+    // The owners live across the whole reader so a mid-loop failure releases them at the `err:`
+    // coordinates, in the authority's order (name, header, data) rather than Rust's reverse drop
+    // order.
+    // SAFETY: each starts in the empty (NULL) state, adopting nothing; later adoptions replace
+    // them only at the success edge of `PEM_read_bio`.
+    let (mut name, mut header, mut data) = unsafe {
+        (
+            PemBuf::adopt(ptr::null_mut(), LINE_FREE_ERR_NAME),
+            PemBuf::adopt(ptr::null_mut(), LINE_FREE_ERR_HEADER),
+            PemBuf::adopt(ptr::null_mut(), LINE_FREE_ERR_DATA),
+        )
+    };
     let mut len: c_long = 0;
     let mut ok = false;
     let mut ret: *mut OpenSslStack = sk;
@@ -255,7 +320,9 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
             // SAFETY: the mark functions take no arguments.
             ERR_set_mark();
             // SAFETY: `bp` is live and the four out-parameters are this frame's own.
-            let read = unsafe { PEM_read_bio(bp, &mut name, &mut header, &mut data, &mut len) };
+            let read = unsafe {
+                PEM_read_bio(bp, &mut name_out, &mut header_out, &mut data_out, &mut len)
+            };
             if read == 0 {
                 // SAFETY: no precondition; reads this thread's queue.
                 let error = peek_last_reason() as c_long;
@@ -271,15 +338,23 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
             // SAFETY: no preconditions.
             ERR_clear_last_mark();
 
+            // SAFETY: `PEM_read_bio`'s success return is the edge at which it publishes the three
+            // exclusively owned blocks; no other owner holds them.
+            unsafe {
+                name = PemBuf::adopt(name_out.cast(), LINE_FREE_ERR_NAME);
+                header = PemBuf::adopt(header_out.cast(), LINE_FREE_ERR_HEADER);
+                data = PemBuf::adopt(data_out.cast(), LINE_FREE_ERR_DATA);
+            }
+
             'start: loop {
                 // SAFETY: `name` is NUL-terminated by the reader.
-                let is_x509 = unsafe { strcmp(name, PEM_STRING_X509) } == 0
-                    || unsafe { strcmp(name, PEM_STRING_X509_OLD) } == 0
-                    || unsafe { strcmp(name, PEM_STRING_X509_TRUSTED) } == 0;
+                let is_x509 = unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_X509) } == 0
+                    || unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_X509_OLD) } == 0
+                    || unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_X509_TRUSTED) } == 0;
                 // SAFETY: `name` is NUL-terminated by the reader.
-                let is_crl = unsafe { strcmp(name, PEM_STRING_X509_CRL) } == 0;
+                let is_crl = unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_X509_CRL) } == 0;
                 // SAFETY: both strings are NUL-terminated.
-                let priv_suffix = unsafe { strstr(name, PEM_STRING_PKCS8INF) };
+                let priv_suffix = unsafe { strstr(name.as_ptr::<c_char>(), PEM_STRING_PKCS8INF) };
 
                 let d2i: Option<D2iOfVoid>;
                 let pp: *mut c_void;
@@ -299,7 +374,7 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
                         continue 'start;
                     }
                     // SAFETY: `name` is NUL-terminated.
-                    if unsafe { strcmp(name, PEM_STRING_X509_TRUSTED) } == 0 {
+                    if unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_X509_TRUSTED) } == 0 {
                         d2i = Some(d2i_void_x509_aux);
                     } else {
                         d2i = Some(d2i_void_x509);
@@ -345,14 +420,16 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
                         continue 'start;
                     }
                     // SAFETY: `name` is NUL-terminated.
-                    if priv_suffix == name || unsafe { strcmp(name, PEM_STRING_PKCS8) } == 0 {
+                    let is_pkcs8 =
+                        unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_PKCS8) } == 0;
+                    if priv_suffix == name.as_ptr::<c_char>() || is_pkcs8 {
                         ptype = EVP_PKEY_NONE;
                     } else {
                         /* chop " PRIVATE KEY" */
                         // SAFETY: `priv_suffix` points one past the space the suffix begins with.
                         unsafe { *priv_suffix.sub(1) = 0 };
                         // SAFETY: `name` is now NUL-terminated at the chopped position.
-                        ptype = unsafe { evp_pkey_name2type(name) } as c_uint;
+                        ptype = unsafe { evp_pkey_name2type(name.as_ptr::<c_char>()) } as c_uint;
                     }
                     // SAFETY: `xi` is live.
                     unsafe {
@@ -371,9 +448,10 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
                     pp = unsafe { ptr::addr_of_mut!((*(*xi).x_pkey).dec_pkey) }.cast::<c_void>();
                     /* assume encrypted */
                     // SAFETY: `header` is NUL-terminated by the reader.
-                    let header_long = unsafe { strlen(header) } > 10;
+                    let header_long = unsafe { strlen(header.as_ptr::<c_char>()) } > 10;
                     // SAFETY: `name` is NUL-terminated by the reader.
-                    let encrypted_name = unsafe { strcmp(name, PEM_STRING_PKCS8) } == 0;
+                    let encrypted_name =
+                        unsafe { strcmp(name.as_ptr::<c_char>(), PEM_STRING_PKCS8) } == 0;
                     if header_long || encrypted_name {
                         raw = 1;
                     }
@@ -390,14 +468,20 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
                             iv: [0; EVP_MAX_IV_LENGTH],
                         };
                         // SAFETY: `header` is NUL-terminated and `cipher` is this frame's.
-                        if unsafe { PEM_get_EVP_CIPHER_INFO(header, &mut cipher) } == 0 {
+                        if unsafe {
+                            PEM_get_EVP_CIPHER_INFO(header.as_ptr::<c_char>(), &mut cipher)
+                        } == 0
+                        {
                             break 'err;
                         }
                         // SAFETY: `data` is the reader's buffer for `len` bytes.
-                        if unsafe { PEM_do_header(&mut cipher, data, &mut len, cb, u) } == 0 {
+                        if unsafe {
+                            PEM_do_header(&mut cipher, data.as_ptr::<c_uchar>(), &mut len, cb, u)
+                        } == 0
+                        {
                             break 'err;
                         }
-                        let mut p: *const c_uchar = data;
+                        let mut p: *const c_uchar = data.as_ptr::<c_uchar>();
                         if ptype != 0 {
                             // SAFETY: `pp` is the decoder's destination and `p` is the cursor.
                             let r = unsafe {
@@ -428,30 +512,30 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
                         /* encrypted key data */
                         // SAFETY: `header` is NUL-terminated and `xi` is live.
                         if unsafe {
-                            PEM_get_EVP_CIPHER_INFO(header, ptr::addr_of_mut!((*xi).enc_cipher))
+                            PEM_get_EVP_CIPHER_INFO(
+                                header.as_ptr::<c_char>(),
+                                ptr::addr_of_mut!((*xi).enc_cipher),
+                            )
                         } == 0
                         {
                             break 'err;
                         }
-                        // SAFETY: `xi` is live; it takes ownership of `data`, which is cleared
-                        // below so the buffer is not freed twice.
+                        // SAFETY: `xi` is live; it takes ownership of `data`'s block, whose slot is
+                        // emptied below so the buffer is not released twice. The authority's own
+                        // store order (pointer, then length, then local NULL) is preserved.
                         unsafe {
-                            (*xi).enc_data = data.cast::<c_char>();
+                            (*xi).enc_data = data.as_ptr::<c_char>();
                             (*xi).enc_len = len as c_int;
                         }
-                        data = ptr::null_mut();
+                        data.relinquish();
                     }
                 }
 
-                // SAFETY: each buffer is this frame's own (or NULL when ownership moved).
-                unsafe {
-                    CRYPTO_free(name.cast::<c_void>(), FILE, LINE_FREE_NAME);
-                    name = ptr::null_mut();
-                    CRYPTO_free(header.cast::<c_void>(), FILE, LINE_FREE_HEADER);
-                    header = ptr::null_mut();
-                    CRYPTO_free(data.cast::<c_void>(), FILE, LINE_FREE_DATA);
-                    data = ptr::null_mut();
-                }
+                // The authority's three success-site releases, in its own order (name, header,
+                // data); each empties its slot, so the `err:` block's frees are no-ops.
+                name.release(LINE_FREE_NAME);
+                header.release(LINE_FREE_HEADER);
+                data.release(LINE_FREE_DATA);
                 break 'start;
             }
         }
@@ -497,12 +581,11 @@ pub unsafe extern "C" fn PEM_X509_INFO_read_bio_ex(
         ret = ptr::null_mut();
     }
 
-    // SAFETY: each is NULL or this frame's own buffer.
-    unsafe {
-        CRYPTO_free(name.cast::<c_void>(), FILE, LINE_FREE_ERR_NAME);
-        CRYPTO_free(header.cast::<c_void>(), FILE, LINE_FREE_ERR_HEADER);
-        CRYPTO_free(data.cast::<c_void>(), FILE, LINE_FREE_ERR_DATA);
-    }
+    // The authority's `err:` releases, in its own order (name, header, data); slots still
+    // occupied here were not released on the success path.
+    name.release(LINE_FREE_ERR_NAME);
+    header.release(LINE_FREE_ERR_HEADER);
+    data.release(LINE_FREE_ERR_DATA);
     ret
 }
 
