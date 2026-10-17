@@ -518,16 +518,16 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `e48a1b519` (atlas instrument revision 2)
+**Last observed HEAD:** `8bea24d49` (measurement revision 2; file-level conversion queue empty)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
 
 1. Check the actual integration-branch HEAD and working-tree state. Read `AGENTS.md`, this ledger, `MEMBER-BUFFER-MODEL.md`. Treat Git and committed evidence as authoritative.
 2. Reconcile the ledger with the landed sweep batches and the adversarial-test unit. The committed atlas may predate the most recent sweeps; regenerate the lightweight atlas (`python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py`) against the current candidate before publishing completion numbers. Do **not** run the full Phase-25 seal.
-3. Reproduce the residual-file inventory from current source, recording the exact command and file list. Treat any reported count as a checkpoint, not a newly verified count.
-4. Select the next coherent batch of at most six files, prioritizing Safe-33 dependency closure, ownership risk and reusable improvements. Continue the `stage/p25/sweepN` convention.
-5. Apply the standing conversion contract: preserve ABI/layout, allocator-hook coordinates and event order, initialization validity, failure semantics, and secret-cleansing guarantees. Account for eliminated, relocated, retained and introduced unsafe obligations; `hidden = 0` is mandatory.
+3. Reproduce the residual-file inventory with the exact snippet in “Current candidate-bound measurement”. At `8bea24d49` it is empty apart from the allocator seam; do not invent new conversion work.
+4. The remaining work is **obligation discharge**, not mechanical conversion. Execute the next subphase below (unsafe-operation census), then per-boundary evidence, one subagent at a time.
+5. Apply the standing conversion contract to any change: preserve ABI/layout, allocator-hook coordinates and event order, initialization validity, failure semantics, and secret-cleansing guarantees. Account for eliminated, relocated, retained and introduced unsafe obligations; `hidden = 0` is mandatory.
 6. Independently verify in the court container, one heavy command at a time:
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
@@ -541,8 +541,14 @@ SSL member buffers are **complete** except the deliberately retained
 `Ssl`/`SslCtx.supportedgroups` boundary (element-counted, raw-pointer writer —
 not forced into the byte-extent model). Do **not** re-do `SslCtx.propq`,
 `CertKey.serverinfo`, or the `Ssl` handshake-state writers: those are converted
-and their fields are private. The remaining campaign work is the residual
-conversion queue plus the member-buffer families named by the atlas.
+and their fields are private.
+
+`BN_RECP_CTX` and `CRYPTO_RWLOCK` now have authority-size hook parity;
+`OPENSSL_STACK` and `OPENSSL_LHASH` are deliberately option A
+(`OPAQUE-REPRESENTATIONS.md`). The file-level conversion queue is **empty**; the
+remaining work is per-site obligation evidence over
+`atlas-refresh/site-worklist.json` (1,669 production allocation/release calls)
+and the boundary families below.
 
 Preserve and expand the adversarial allocator-refusal tests as these ownership
 paths change. The TLS ticket double-free regression must remain covered, and
@@ -552,6 +558,53 @@ green. Reentrancy evidence is scoped: the `serverinfo` observer probe proves
 the new pair after), not soundness under arbitrary application callbacks that
 recurse back into the object — that remains a §21 boundary obligation to state
 and discharge explicitly.
+
+### Next executable subphase — obligation denominator (unsafe-operation census)
+
+**Why:** the campaign can count allocation sites but cannot state how many
+unsafe obligations exist, nor which of the 628 closure files contain none. Until
+that denominator exists, “file done” is not measurable.
+
+**Deliverables (one subagent, no `src/` edits):**
+
+1. `forensics/memory-safety/campaign/safe-c33/unsafe_census.py`, reusing the
+   comment/string stripper from `atlas_refresh.py` (import it; do not diverge).
+2. `atlas-refresh/unsafe-census.json` — deterministic; per file: closure
+   membership, seam status, production/test-only/seam totals, and every site as
+   `{line, kind, function}`.
+3. `atlas-refresh/UNSAFE-CENSUS.md` — totals by kind, top 25 production files,
+   and the count/list of closure files with **zero** production unsafe ops.
+4. A `--check` mode that re-derives totals from stripped source and exits
+   nonzero on mismatch.
+
+Kinds: `unsafe {}` blocks; `unsafe fn`; `unsafe impl`; `unsafe trait`;
+`unsafe extern`; high-risk calls (`transmute`, `assume_init`,
+`from_raw_parts[_mut]`, `Box::from_raw`, `NonNull::new_unchecked`,
+`get_unchecked[_mut]`, `unreachable_unchecked`, `set_len`); `extern "C"`
+definitions and non-allocator `CRYPTO_*`/`OPENSSL_*`/`ossl_*` calls; raw-pointer
+type declarations reported separately as a context metric, never as unsafe ops.
+Allocator calls stay in `site-worklist.json` so the two counts never
+overlap.
+
+Acceptance: two runs byte-identical; `--check` exit 0; production + test-only +
+seam counts reconcile with an independent stripped-source grep; residual
+limitations (macro expansion, `#[path]`, per-field `cfg`) stated explicitly.
+
+**Then, in order:** (a) boundary records and independent checks for
+`OwnedBlock`/`OwnedBuf`/`OwnedStr`/`OwnedRaw` adoption and release, member-buffer
+slots, and the `CtxDestroy`/`CipherDestroy` constructor contracts;
+(b) per-file audits in consumer-reachability order, using the unsafe census as
+the worklist; (c) seal evidence (ASan, loom, differential courts against
+`forensics/authorities/src/openssl-3.6.4/`, the 8 L7-functional consumers) and
+only then `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotions.
+
+**Session note (2026-10-17):** this session ended when subagent spawning became
+impossible — the conversation context (~822k tokens) plus the provider's 384k
+completion reserve exceeds the 1,048,576-token limit, and OpenRouter fallbacks
+have no credits. No project command was run on the host. Landed in this session:
+subphase 44 (`CRYPTO_RWLOCK`, HEAD `c66812cb4`), atlas regeneration at
+`893e4e6e2`, measurement revision 2 (`e48a1b519`), and this ledger
+reconciliation. Resume in a fresh session; the state above is committed.
 
 ### Non-negotiable evidence distinction
 
