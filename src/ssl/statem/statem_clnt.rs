@@ -206,7 +206,22 @@ struct OwnedCtx<T: FreeOnDrop> {
 
 impl<T: FreeOnDrop> OwnedCtx<T> {
     /// Own a `*_new` answer, or `None` when it answered NULL.
-    fn new(ptr: *mut T) -> Option<OwnedCtx<T>> {
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is either NULL, or the answer of the `*_new` whose matching `*_free` is
+    /// `T::free_on_drop`; in the latter case:
+    ///
+    /// * **provenance** -- it came from that constructor on this crate's allocator seam, not from a
+    ///   sub-pointer, an interior pointer, or another allocator;
+    /// * **identity and extent** -- it addresses the whole allocation the constructor returned, of
+    ///   at least `size_of::<T>()` bytes and aligned for `T`;
+    /// * **initialization** -- it is a live, fully constructed object valid for the release
+    ///   `T::free_on_drop` performs; the handle claims no zero-validity, so an all-zero block is not
+    ///   accepted merely because it is zeroed;
+    /// * **exclusive ownership** -- no other handle, field, or frame will release it: this handle's
+    ///   `Drop`, or the `into_raw` transfer it makes, is the object's single release.
+    unsafe fn new(ptr: *mut T) -> Option<OwnedCtx<T>> {
         core::ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
     }
 
@@ -1866,8 +1881,12 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     }
     pos += hash_len;
 
-    // SAFETY: no preconditions.
-    let Some(mctx_owner) = OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) else {
+    // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned `EVP_MD_CTX`
+    // block (or NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_MD_CTX_free` -- its single release.
+    let Some(mctx_owner) =
+        (unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) })
+    else {
         return 0;
     };
     // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
@@ -2013,6 +2032,9 @@ unsafe fn tls13_client_create_session(s: *mut Ssl) -> c_int {
         // The fresh session is owned here: its single release is the handle's `Drop` running
         // `SSL_SESSION_free`, so the RNG refusal releases it and success hands it to the field with
         // `into_raw`, whose own release is then the only one.
+        // SAFETY: `SSL_SESSION_new` is the matching constructor: it answered the whole, aligned
+        // session block (or NULL, which yields `None`), live and owned solely by this handle, whose
+        // `Drop` runs `SSL_SESSION_free` -- its single release.
         let Some(ss_owner) = OwnedCtx::<crate::ssl::ssl_lib::SslSession>::new(SSL_SESSION_new())
         else {
             return 0;
@@ -2605,9 +2627,17 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live.
     let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
-    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
-    let Some(pkey) = OwnedCtx::<EvpPkey>::new(unsafe {
-        evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr())
+    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; and
+    // `evp_pkey_keygen` is the matching constructor, answering the whole, aligned key block (or
+    // NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_PKEY_free` -- its single release.
+    let Some(pkey) = (unsafe {
+        OwnedCtx::<EvpPkey>::new(evp_pkey_keygen(
+            libctx,
+            c"X25519".as_ptr(),
+            propq,
+            params.as_mut_ptr(),
+        ))
     }) else {
         return 0;
     };

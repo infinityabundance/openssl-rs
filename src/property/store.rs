@@ -1258,13 +1258,20 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         }
 
         // `sizeof(QUERY) + strlen(prop_query)`, which is exactly enough for a header whose `body`
-        // already holds one `char` plus the text and its terminator.
+        // already holds one `char` plus the text and its terminator. A length that overflows the
+        // size computation takes the allocation-failure tail rather than wrapping.
         let len = c_strlen(prop_query);
+        let Some(size) = core::mem::size_of::<Query>().checked_add(len) else {
+            // The authority's error tail frees the still-NULL entry and reports 0.
+            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_MALLOC_QUERY));
+            res = 0;
+            ossl_property_unlock(store);
+            return res;
+        };
         // The cache entry is this frame's block, allocated through the crate's allocator seam at the
         // authority's own size/`file`/`line`; `Drop` is its single release, or `into_raw` hands it
         // to the table.
-        let Some(buf) = OwnedBuf::new(core::mem::size_of::<Query>() + len, FILE, LINE_MALLOC_QUERY)
-        else {
+        let Some(buf) = OwnedBuf::new(size, FILE, LINE_MALLOC_QUERY) else {
             // The authority's error tail frees the still-NULL entry and reports 0.
             drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_MALLOC_QUERY));
             res = 0;
