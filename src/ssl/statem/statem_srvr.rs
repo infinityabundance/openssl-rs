@@ -4119,9 +4119,10 @@ unsafe fn server_wait(s: *mut Ssl) -> c_int {
 // recorded safety improvement: the member is left `(NULL, 0)` rather than holding the just-freed
 // pointer, so the later session destructor cannot release a dangling block.
 //
-// Run alone, after installing the process-global allocator:
+// Run alone in its own process, under the gate, with the ignore-aware filter:
 //   OPENSSL_RS_ADV_PROBE=1 cargo test --lib \
-//     ssl::statem::statem_srvr::adv_probe -- --exact --test-threads=1 --nocapture
+//     ssl::statem::statem_srvr::adv_probe -- --ignored --exact --test-threads=1 --nocapture
+// or, for every probe one process at a time, `scripts/adv-probe.sh`.
 #[cfg(test)]
 mod adv_probe {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
@@ -4136,16 +4137,11 @@ mod adv_probe {
     /// member left empty. The allocator transcript is the authority's (one free, then the one
     /// refused request); the destruction performs no second release of the freed block.
     #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
     fn tls12_construct_refused_ticket_alloc_leaves_ext_tick_empty() {
-        if !adv_alloc::probe_enabled() {
-            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
-            return;
-        }
         let _g = crate::test_support::lock_global_state();
-        if !adv_alloc::install() {
-            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
-            return;
-        }
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
 
         // Let RAND initialise its DRBG before the measured window, so its one-off allocation is
         // not mistaken for the writer's own replacement request.
@@ -4226,16 +4222,11 @@ mod adv_probe {
     /// is meaningful. A block is released twice; the hook must flag it (and must not forward the
     /// second release, so the run continues to the assertion).
     #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
     fn canary_double_release_is_detected() {
-        if !adv_alloc::probe_enabled() {
-            eprintln!("skip: set OPENSSL_RS_ADV_PROBE=1 and run this test alone");
-            return;
-        }
         let _g = crate::test_support::lock_global_state();
-        if !adv_alloc::install() {
-            eprintln!("skip: allocator install refused; run this test alone (--test-threads=1)");
-            return;
-        }
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
         adv_alloc::reset();
         // SAFETY: `b` is a fresh block; the second release is the deliberate test-only defect.
         unsafe {
