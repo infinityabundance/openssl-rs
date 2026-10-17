@@ -153,6 +153,31 @@ converted module re-hosts several hand-written sites into one seam.
 - **Discharge evidence**: no file has a proven per-site validity contract yet;
   `SAFETY_DISCHARGED` and `SAFE_COMPATIBLE` remain 0 pending the seal.
 
+## Structural/no-seam tail (sweep-30 classification)
+
+The last census files are **not** mechanical allocator-owner targets. Each has been
+classified explicitly so the residual is auditable rather than implied:
+
+- `bn/ctx.rs`, `bn/mont.rs`, `rsa/asn1.rs` — deliberately Rust-owned internal /
+  test-layer representations; no exported C free contract. `bn/ctx` records the
+  hook-invisibility consequence.
+- `runtime/sparse_array.rs` — structural Rust-owned tree; header/nodes already use
+  the CRYPTO seam; the remaining unsafe edge is the opaque-handle-to-reference
+  conversion at each C entry point, stated there.
+- `runtime/thread.rs` (`CRYPTO_RWLOCK`), `runtime/stack.rs` (`OPENSSL_STACK`),
+  `runtime/lhash.rs` (`OPENSSL_LHASH`), `bn/recp.rs` (`BN_RECP_CTX`) — exported
+  opaque objects whose Rust representation (`Box`/`Vec`) is **not** the authority's
+  C struct size. Allocating them through `CRYPTO_zalloc(size_of::<Rust>())` would
+  make a caller-installed `CRYPTO_set_mem_functions` hook observe the wrong byte
+  count, violating §6's exact-size rule. They are retained as Rust-owned
+  representations; **compatibility residual P1**: allocator-hook byte-size parity
+  for these four opaque objects is not achieved. This is not hidden and does not
+  claim discharge. A future representation decision (e.g. an authority-size block
+  with an internal state pointer) must be made before claiming seam parity.
+- `bn/bn_srp.rs` — no interior CRYPTO allocation site; arithmetic-only.
+- `x509/v3_no_ass.rs` — returns a caller-owned `CRYPTO_strdup` block to the
+  extension machinery; the transfer contract is the boundary.
+
 ## Next queue
 
 The queue is **re-derived from Git + `artifacts/phase25/source-census.json`**
