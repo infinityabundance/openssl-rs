@@ -414,6 +414,30 @@ package.
 - Gate: `fmt` clean, clippy clean, **1222 passed / 18 ignored**, adv-probe
   **18/18**.
 
+### Subphase 47 — owner-helper inventory and adoption-contract repair
+
+- `OWNER-DUPLICATES.md` inventories **329** `Owned*`/`Raw*` definitions: 4
+  canonical and 325 module-local (**173 IDENTICAL**, 26 DIFFERENT, 126
+  MUST-STAY-LOCAL). All 56 local `OwnedCtx` and 5 local `RawCtx` are bound to 41
+  module-local `CtxDestroy` traits and cannot be unified before the trait
+  migration.
+- **STOP-2 fixed:** `OwnedCtx::new` in `ssl/statem/statem_clnt.rs` and
+  `statem_srvr.rs` was a **safe** ownership-adoption constructor whose `Drop`
+  calls `T::free_on_drop(ptr)`. It is now `unsafe fn` with a `# Safety` contract
+  (provenance, whole-block extent, alignment, init validity for the destructor,
+  exclusive ownership); all 11 call sites are unsafe-wrapped with
+  justifications.
+- **§3 fixed** at `property/strings.rs`, `property/parse.rs` (x2),
+  `property/store.rs` and `ssl/ssl_sess.rs`: checked arithmetic with the
+  existing failure tail, no allocation/partial write/panic, coordinates and
+  free order unchanged.
+- `SSL_set_session_ticket_ext` previously sized with `ext_len.max(0)` and then
+  copied `ext_len as usize`; a negative length reached a huge `memcpy` (UB). It
+  now refuses with `0` before allocating. The authority is undefined there, so
+  this is a §17 UB-elimination divergence (comment corrected after review).
+- Independent review: **PASS** (one comment correction applied). Gate: `fmt` 0,
+  clippy 0, **1222 passed / 18 ignored**, adv-probe **18/18**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -591,7 +615,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `8ae098c63` (RC-1 boundary evidence merged)
+**Last observed HEAD:** `147b4cb8a` (adoption contract + checked arithmetic merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -638,15 +662,15 @@ and discharge explicitly.
 `atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
 the unsafe-obligation denominator now exists.
 
-**Next in sequence:** the remaining reusable-abstraction boundaries, in order —
-(a) `OwnedBlock`/`OwnedBuf`/`OwnedStr`/`OwnedRaw` adoption and release;
-(b) member-buffer slots (`PropqSlot`, `MemberBufSlot`, `MemberCStrSlot`);
-(c) the `CtxDestroy`/`CipherDestroy` constructor contracts, starting with the
-highest-reuse `CtxDestroy` implementations. Each gets a boundary ID, an explicit
-contract, a caller inventory, adversarial tests, and a fresh independent review
-before the next one starts. Then per-file audits in consumer-reachability order
-using the unsafe census as the worklist, and finally the seal evidence before
-any `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
+**Next in sequence:** (a) consolidate the **173 IDENTICAL** module-local owner
+helpers in disjoint staged groups (start with the `OwnedBuf` groups: B-P, B-L,
+B-Z, B-CA-FL, B-CA-0, B-CF-FL, B-R1a, B-R1b, B-R3), preserving each group's
+stored allocator coordinates and NULL policy; do not touch the 26 DIFFERENT or
+126 MUST-STAY-LOCAL copies. (b) Then the `CtxDestroy`/`CipherDestroy` shared-trait
+migration that unblocks the 61 local `OwnedCtx`/`RawCtx` copies. (c) Then
+member-buffer slots. Each group needs a caller inventory and a fresh independent
+review; then per-file audits by consumer reachability, and finally seal evidence
+before any `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotion.
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until
