@@ -92,10 +92,9 @@ use crate::runtime::constant_time::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
-use crate::runtime::mem::{
-    cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::thread::CryptoRwlock;
 
@@ -1322,81 +1321,6 @@ pub unsafe extern "C" fn PKCS1_MGF1(
 /// `CRYPTO_set_mem_functions`, so the prefix is not cosmetic.
 const FILE_RSA_OAEP: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c".as_ptr();
 
-// ---------------------------------------------------------------------------------------------
-// Ownership of a scratch buffer
-// ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` -- a Rust
-/// `Box`/`Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `new`/`new_cleansed`
-/// allocate it and `Drop` is its single release. A NULL pointer is a valid, empty buffer whose
-/// release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`synthetic`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, ...)`, which zeroes `num` bytes first
-    /// (`db`, `em`, `dbmask`).
-    Cleansed { num: usize },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// `CRYPTO_malloc(len, file, line)` for a block whose release is the cleansing
-    /// `CRYPTO_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed { num: len },
-        })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, core::ptr::null(), 0) };
-            }
-        }
-    }
-}
-
 /// `int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen, const unsigned char *from,
 /// int flen, int num, const unsigned char *param, int plen)` — `rsa_oaep.c:160-166`.
 ///
@@ -1523,11 +1447,23 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         // allocator seam at the authority's own sizes and released by their handles' `Drop` -- the
         // authority's cleansing `CRYPTO_clear_free` -- at the `cleanup:` site below.
         // SAFETY: `dblen` is positive because `num >= 2 * mdlen + 2`.
-        let Some(db_owned) = OwnedBuf::new_cleansed(dblen as usize, FILE_RSA_OAEP, LINE) else {
+        let Some(db_owned) = OwnedBuf::new_cleansed_released(
+            dblen as usize,
+            FILE_RSA_OAEP,
+            LINE,
+            core::ptr::null(),
+            0,
+        ) else {
             return -1;
         };
         // SAFETY: `num` is positive.
-        let Some(em_owned) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OAEP, LINE) else {
+        let Some(em_owned) = OwnedBuf::new_cleansed_released(
+            num as usize,
+            FILE_RSA_OAEP,
+            LINE,
+            core::ptr::null(),
+            0,
+        ) else {
             return -1;
         };
         let db = db_owned.as_ptr();
@@ -1871,7 +1807,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
         // frame's scratch block, released by its handle's `Drop` -- the authority's cleansing
         // `CRYPTO_clear_free` -- at the `cleanup:` site below.
         // SAFETY: `num` is positive.
-        let Some(em_owned) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_PK1, LINE) else {
+        let Some(em_owned) =
+            OwnedBuf::new_cleansed_released(num as usize, FILE_RSA_PK1, LINE, core::ptr::null(), 0)
+        else {
             return -1;
         };
         // The copy below walks `em` as a cursor; it ends back at the block's start.
@@ -2575,8 +2513,13 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
             // `CRYPTO_clear_free` -- when this block exits.
             let dbmask_len = emlen - mdlen;
             // SAFETY: `dbmask_len > 0` because `emlen >= 2 * mdlen + 1` was checked above.
-            let Some(dbmask_buf) = OwnedBuf::new_cleansed(dbmask_len as usize, FILE_RSA_OAEP, LINE)
-            else {
+            let Some(dbmask_buf) = OwnedBuf::new_cleansed_released(
+                dbmask_len as usize,
+                FILE_RSA_OAEP,
+                LINE,
+                core::ptr::null(),
+                0,
+            ) else {
                 break 'body false;
             };
             let dbmask = dbmask_buf.as_ptr();

@@ -751,7 +751,7 @@ pub extern "C" fn CRYPTO_secure_used() -> usize {
 /// observed directly, without relying on a subsequent allocation returning the
 /// same chunk.
 #[cfg(test)]
-fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
+pub(crate) fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
     with_heap(|slot| match slot {
         Some(h)
             if offset
@@ -768,7 +768,7 @@ fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
 
 /// Arena-relative offset of `ptr`, if it is inside the arena (test-only).
 #[cfg(test)]
-fn test_offset_of(ptr: *const c_void) -> Option<usize> {
+pub(crate) fn test_offset_of(ptr: *const c_void) -> Option<usize> {
     with_heap(|slot| match slot {
         Some(h) if h.contains(ptr) => Some(ptr as usize - h.arena),
         _ => None,
