@@ -1,0 +1,206 @@
+//! Shared ownership for a crate-allocator C string.
+//!
+//! This is the one owner for the `S-P` duplicate group: an allocator-seam
+//! `char *` whose release is the authority's plain
+//! `CRYPTO_free(ptr, file, line)`. All ten members store the same
+//! `{ptr, file, line}` coordinates; the construction sites differ only in which
+//! seam call produced the block (`CRYPTO_malloc`, `CRYPTO_strdup`,
+//! `CRYPTO_strndup`, or an authority helper that allocates through one of them).
+//!
+//! The block stays a raw allocation through the crate's allocator seam: a Rust
+//! `String`/`CString` would hide both the allocation and its release from a
+//! caller-installed `CRYPTO_set_mem_functions` hook. Only *ownership* is this
+//! type. The constructors allocate or adopt the block and `Drop` performs its
+//! single release, at the exact authority coordinates the caller supplies.
+//!
+//! The pointer is a bare `*mut c_char`, not a [`core::ptr::NonNull`]: every
+//! member's authority path can observe a NULL `CRYPTO_strdup` refusal, and a
+//! NULL block is the authority's own no-op `free(NULL)`. [`OwnedStr::adopt`]
+//! answers `None` for it; [`OwnedStr::adopt_nullable`] keeps it as an empty
+//! handle whose `Drop` is that no-op release.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+use core::ffi::{c_char, c_int, c_void};
+
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
+/// An owned NUL-terminated (or, before its consumer fills it, writable) C
+/// string allocated through the crate's `CRYPTO_*` allocator seam.
+pub(crate) struct OwnedStr {
+    ptr: *mut c_char,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)` for a block whose `Drop`
+    /// releases at `release_file`/`release_line`, or `None` when the allocator
+    /// answers NULL.
+    ///
+    /// The two coordinate pairs stay separate so a caller-installed
+    /// `CRYPTO_set_mem_functions` hook observes each at the authority's own
+    /// site. The bytes are uninitialised; a consumer that reads the block as a
+    /// C string must write the terminator first.
+    pub(crate) fn new(
+        len: usize,
+        alloc_file: *const c_char,
+        alloc_line: c_int,
+        release_file: *const c_char,
+        release_line: c_int,
+    ) -> Option<Self> {
+        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_char>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            file: release_file,
+            line: release_line,
+        })
+    }
+
+    /// Adopt a block a helper or a field returned, or `None` for NULL -- the
+    /// authority's own no-op `free(NULL)`.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish:
+    ///
+    /// * **provenance** -- the block is a live allocation from this crate's
+    ///   `CRYPTO_*` allocator seam (`CRYPTO_malloc`/`CRYPTO_strdup`/
+    ///   `CRYPTO_strndup`, or an authority helper that allocates through one of
+    ///   them), not a pointer into a Rust `String`/`Vec` or an unrelated
+    ///   allocator;
+    /// * **allocation identity and extent** -- `ptr` is the base of the whole
+    ///   block, not an interior pointer or a sub-range;
+    /// * **alignment** -- it is aligned for `c_char` and for the seam's own
+    ///   release;
+    /// * **initialization** -- if any consumer reads the block as a C string,
+    ///   it is NUL-terminated within the allocation; `Drop` itself never reads
+    ///   the bytes;
+    /// * **exclusive ownership** -- no other owner will release the block; this
+    ///   handle's `Drop` is its single release;
+    /// * **exact release** -- `file`/`line` name the authority's own plain
+    ///   `CRYPTO_free` site for this block, and `file` is NULL or a
+    ///   NUL-terminated C string.
+    pub(crate) unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self { ptr, file, line })
+        }
+    }
+
+    /// Adopt a block while keeping NULL as the authority's empty string, so
+    /// `Drop` performs the authority's no-op `free(NULL)`.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish the same conditions as
+    /// [`Self::adopt`]: seam provenance, whole-block identity and extent,
+    /// alignment, NUL-termination for any string consumer, exclusive ownership,
+    /// and the exact plain `CRYPTO_free` release site.
+    pub(crate) unsafe fn adopt_nullable(
+        ptr: *mut c_char,
+        file: *const c_char,
+        line: c_int,
+    ) -> Self {
+        Self { ptr, file, line }
+    }
+
+    /// The start of the string. Writable, because crate constructors fill a
+    /// freshly allocated block through this handle.
+    pub(crate) fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    pub(crate) fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released
+        // (or NULL, which `CRYPTO_free` accepts as its no-op); the coordinates
+        // are the authority's own release site.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OwnedStr;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+    use core::ffi::{c_char, CStr};
+    use core::ptr;
+
+    const FILE: *const c_char = c"test/owned_str.rs".as_ptr();
+
+    #[test]
+    fn new_allocates_a_writable_block_of_the_requested_size() {
+        let owned = OwnedStr::new(6, FILE, 11, FILE, 12);
+        assert!(owned.is_some(), "a 6-byte block must be allocatable");
+        let Some(owned) = owned else { return };
+        // SAFETY: `owned` exclusively owns the 6-byte block and `as_ptr` is its
+        // writable start.
+        unsafe {
+            ptr::write_bytes(owned.as_ptr(), 0x5a, 6);
+        }
+        for i in 0..6 {
+            // SAFETY: `i` is within the requested 6-byte extent.
+            assert_eq!(unsafe { *owned.as_ptr().add(i) }, 0x5a);
+        }
+    }
+
+    #[test]
+    fn adopt_keeps_the_nul_terminated_contents() {
+        // SAFETY: the literal is NUL-terminated and the seam answers a fresh
+        // block owned by this frame.
+        let raw = unsafe { CRYPTO_strdup(c"owned-str".as_ptr(), FILE, 13) };
+        // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
+        // owner will release it.
+        let owned = unsafe { OwnedStr::adopt(raw, FILE, 14) };
+        assert!(owned.is_some(), "a successful strdup must be adopted");
+        let Some(owned) = owned else { return };
+        // SAFETY: the adopted block is NUL-terminated by `CRYPTO_strdup`.
+        assert_eq!(unsafe { CStr::from_ptr(owned.as_ptr()) }, c"owned-str");
+    }
+
+    #[test]
+    fn adopt_null_is_none() {
+        // SAFETY: NULL is explicitly permitted by the adoption contract.
+        let owned = unsafe { OwnedStr::adopt(ptr::null_mut(), FILE, 15) };
+        assert!(owned.is_none());
+    }
+
+    #[test]
+    fn null_handle_drop_is_the_noop_release() {
+        // SAFETY: NULL is explicitly permitted by the nullable adoption contract.
+        let owned = unsafe { OwnedStr::adopt_nullable(ptr::null_mut(), FILE, 16) };
+        assert!(owned.as_ptr().is_null());
+        drop(owned);
+    }
+
+    #[test]
+    fn into_raw_suppresses_release() {
+        // SAFETY: the literal is NUL-terminated and the seam answers a fresh
+        // block owned by this frame.
+        let raw = unsafe { CRYPTO_strdup(c"transfer".as_ptr(), FILE, 17) };
+        // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
+        // owner will release it.
+        let owned = unsafe { OwnedStr::adopt(raw, FILE, 18) };
+        assert!(owned.is_some(), "a successful strdup must be adopted");
+        let Some(owned) = owned else { return };
+        let raw = owned.into_raw();
+        assert!(!raw.is_null());
+        // SAFETY: `raw` is the whole block allocated above and is released here
+        // exactly once; no `OwnedStr` still owns it.
+        unsafe { CRYPTO_free(raw.cast(), FILE, 18) };
+    }
+}

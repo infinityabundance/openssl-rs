@@ -27,6 +27,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
@@ -310,52 +311,6 @@ unsafe impl CtxDestroy for CtlogStoreLoadCtx {
     }
 }
 
-/// An owned `char *` allocated through the crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam: a
-/// property query, a `CTLOG` name, and the temporary section name.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup`/`CRYPTO_strndup` result, or `None` for NULL; `file`/`line` are the
-    /// authority's release site for the string.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup`/`CRYPTO_strndup` seam; the caller owns it and no other owner will release it.
-    unsafe fn take(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-
-    /// The string's address, for the consumer that reads it.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the record that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the seam answered and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `void ctlog_free_void(void *p)` — the `FreeFn` thunk `CTLOG_STORE_free` installs.
 ///
 /// # Safety
@@ -437,7 +392,7 @@ pub unsafe extern "C" fn CTLOG_STORE_new_ex(
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::take(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
         // The authority's failure path runs the whole `CTLOG_STORE_free`; the handle's `Drop` is
         // that same release over the partially built record.
         let Some(propq_copy) = propq_copy else {
@@ -543,7 +498,7 @@ unsafe extern "C" fn ctlog_store_load_log(
 
     // SAFETY: `log_name` is readable for `log_name_len` bytes per the contract.
     let tmp = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strndup(log_name, log_name_len as usize, ptr::null(), 0),
             ptr::null(),
             0,
@@ -696,7 +651,7 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::take(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
         // The authority's failure path runs the whole `CTLOG_free`; the handle's `Drop` is that
         // same release over the partially built record.
         let Some(propq_copy) = propq_copy else {
@@ -707,7 +662,7 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     }
 
     // SAFETY: `name` is NUL-terminated per the contract.
-    let name_copy = unsafe { OwnedStr::take(CRYPTO_strdup(name, ptr::null(), 0), ptr::null(), 0) };
+    let name_copy = unsafe { OwnedStr::adopt(CRYPTO_strdup(name, ptr::null(), 0), ptr::null(), 0) };
     let Some(name_copy) = name_copy else {
         return ptr::null_mut();
     };
