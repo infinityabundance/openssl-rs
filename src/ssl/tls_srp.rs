@@ -32,7 +32,8 @@ use core::ptr;
 use crate::bn::bignum::{BN_bin2bn, BN_clear_free, BN_copy, BN_dup, BN_free};
 use crate::ffi::guard_ffi;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::srp::srp_lib::{SRP_Calc_A, SRP_Calc_B_ex, SRP_get_default_gN};
 use crate::srp::srp_vfy::SRP_create_verifier_BN_ex;
 use crate::ssl::ssl_lib::{Ssl, SslCtx, SSL_MAX_MASTER_KEY_LENGTH};
@@ -53,50 +54,6 @@ const SSL_ERROR_NONE: c_int = 0;
 // Ownership of the credential strings
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `CRYPTO_strdup` copy allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_strdup`/`CRYPTO_free` at the authority's exact `file`/`line` -- a Rust
-/// `CString` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: [`Self::adopt`] takes
-/// in a block a helper produced, `Drop` is its single release at the authority's own free site,
-/// and [`Self::into_raw`] hands it to the `SRP_CTX` field that takes it over (whose own destructor,
-/// `srp_ctx_free`, then releases it). A NULL pointer is a valid, empty string whose release is the
-/// authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut u8,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block a helper this file called produced, for release by `Drop` at the authority's
-    /// own `(file, line)`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated through the `CRYPTO_strdup` seam (a
-    /// NUL-terminated string) that no one else owns, and `file` is NULL or a NUL-terminated C
-    /// string. `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn adopt(ptr: *mut u8, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// Give up ownership of the block to the `SRP_CTX` field that takes it over.
-    fn into_raw(self) -> *mut u8 {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The string's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast(), self.file, self.line) };
-    }
-}
-
 /// `ssl_ctx_srp_ctx_free_intern` — `ssl/tls_srp.c:33-50`.
 ///
 /// # Safety
@@ -106,12 +63,14 @@ unsafe fn srp_ctx_free(srp: *mut crate::ssl::ssl_lib::SrpCtx) {
     unsafe {
         // SAFETY: `login`/`info` are NULL or the block this credential owns; the owners are their
         // single releases at the authority's own sites.
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
             (*srp).login.cast::<u8>(),
             c"ssl/tls_srp.c".as_ptr(),
             37,
         ));
-        drop(OwnedBuf::adopt(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
             (*srp).info.cast::<u8>(),
             c"ssl/tls_srp.c".as_ptr(),
             38,
@@ -233,7 +192,8 @@ pub(crate) unsafe fn ssl_srp_ctx_init_intern(s: *mut Ssl) -> c_int {
         if !(*src).login.is_null() {
             // The duplicate is a helper allocation the seam adopts; it becomes the connection's
             // field on success and is released by `srp_ctx_free` at line 37.
-            let d = OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let d = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup((*src).login, c"ssl/tls_srp.c".as_ptr(), 115).cast::<u8>(),
                 c"ssl/tls_srp.c".as_ptr(),
                 37,
@@ -245,7 +205,8 @@ pub(crate) unsafe fn ssl_srp_ctx_init_intern(s: *mut Ssl) -> c_int {
             }
         }
         if !(*src).info.is_null() {
-            let d = OwnedBuf::adopt(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let d = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup((*src).info, c"ssl/tls_srp.c".as_ptr(), 119).cast::<u8>(),
                 c"ssl/tls_srp.c".as_ptr(),
                 38,
@@ -514,7 +475,8 @@ pub unsafe extern "C" fn SSL_set_srp_server_param(
                 if !(*s).srp_ctx.info.is_null() {
                     // SAFETY: `(*s).srp_ctx.info` is the connection's own string; the owner is its
                     // single release at the authority's own site.
-                    drop(OwnedBuf::adopt(
+                    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                    drop(OwnedBuf::adopt_plain_nullable(
                         (*s).srp_ctx.info.cast::<u8>(),
                         c"ssl/tls_srp.c".as_ptr(),
                         290,
@@ -524,7 +486,8 @@ pub unsafe extern "C" fn SSL_set_srp_server_param(
                 // field, released by `srp_ctx_free` at line 38. The field is assigned (NULL on a
                 // refused duplicate) before the null test, so a refused duplicate leaves the field
                 // NULL rather than dangling -- the authority's own assignment order.
-                (*s).srp_ctx.info = OwnedBuf::adopt(
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                (*s).srp_ctx.info = OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(info, c"ssl/tls_srp.c".as_ptr(), 291).cast::<u8>(),
                     c"ssl/tls_srp.c".as_ptr(),
                     38,

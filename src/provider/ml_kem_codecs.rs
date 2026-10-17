@@ -33,7 +33,7 @@
 // publishes. The allow covers the former until those two units land.
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, CStr};
 use core::ptr;
 
 use crate::asn1::layout::V_ASN1_UNDEF;
@@ -59,8 +59,9 @@ use crate::provider::ml_kem_kmgmt::ossl_prov_ml_kem_new;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
+use crate::runtime::mem::CRYPTO_memcmp;
 use crate::runtime::obj::OBJ_obj2nid;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_malloc;
 
 /// The unit's own `__FILE__`. `ml_kem_codecs.c` is a plain `.c`, so the compiler records the
@@ -432,69 +433,6 @@ unsafe fn raise_one(site: &err_sites::ErrSite, prefix: &str, alg: *const c_char,
 /// the authority spells with a cast.
 type OsslSsizeT = i64;
 
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays the authority's own allocation -- a `CRYPTO_malloc` for the public/private
-/// encoding buffers and the slot list `ossl_ml_common_pkcs8_fmt_order` answers. Only its
-/// *ownership* is this type: [`Self::new`] allocates the encoder's buffer, [`Self::adopt`] takes up
-/// the helper's list, `Drop` is its single release at the authority's own `file`/`line`, and
-/// [`Self::into_raw`] hands the block to the caller's `out` at the C ABI edge. A Rust `Vec` would
-/// hide the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook,
-/// which is why only ownership moves.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Take up a plain block a helper allocated (the slot list `ossl_ml_common_pkcs8_fmt_order`
-    /// answers), for release by `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the caller's `out` pointer.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
-
 /// `ML_KEM_KEY *ossl_ml_kem_d2i_PUBKEY(const uint8_t *pubenc, int publen, int evp_type,`
 /// `PROV_CTX *provctx, const char *propq)` — `ml_kem_codecs.c:234-266`.
 ///
@@ -775,7 +713,8 @@ pub(crate) unsafe fn ossl_ml_kem_d2i_PKCS8(
 
     // SAFETY: `slots` is NULL or this frame's list; `p8inf` is live.
     unsafe {
-        drop(OwnedBuf::adopt(slots.cast(), FILE, 400));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(slots.cast(), FILE, 400));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
         if ret.is_null() {
             ossl_ml_kem_key_free(key);
@@ -1007,7 +946,7 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
     }
 
     // SAFETY: `fmt_slots` is NULL or this frame's list.
-    drop(unsafe { OwnedBuf::adopt(fmt_slots.cast(), FILE, 552) });
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE, 552) });
     ret
 }
 

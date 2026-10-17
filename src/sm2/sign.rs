@@ -51,7 +51,8 @@ use crate::evp::digest::{
     EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name, EVP_MD_get_size, EvpMd, EvpMdCtx,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `sm2_sign.c` is a source-tree file, so the compiler records the
 /// admitted build record's prefix.
@@ -60,63 +61,6 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c".as_
 /// `UINT16_MAX` — `include/internal/numbers.h`'s `0xffff`. The guard is `id_len >= UINT16_MAX / 8`,
 /// the largest user ID whose `ENTL = 8 * id_len` still fits a `uint16_t`.
 const UINT16_MAX: usize = 0xffff;
-
-/// An owned scratch/output block allocated through the crate's `CRYPTO_zalloc` seam (`buf`, `z`) or
-/// left by an encoder (`der`).
-///
-/// The block stays the authority's own allocation, at its exact size and `file`/`line`, because a
-/// Rust `Vec` would hide both the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type: [`Self::new_zalloc`] allocates
-/// a scratch buffer, [`Self::adopt`] takes up a block an encoder left for this frame, and `Drop` is
-/// its single release.
-struct OwnedBuf {
-    ptr: *mut u8,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_zalloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_zalloc(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_zalloc(len, file, line).cast::<u8>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Take up a plain block the crate allocated inside a helper (an `i2d_ECDSA_SIG`), for release by
-    /// `Drop` at the authority's own site.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file` is
-    /// NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut u8, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `BN_num_bytes(a)` — `include/openssl/bn.h`'s macro `((BN_num_bits(a) + 7) / 8)`. A macro has no
 /// symbol to call, so the expression is written out, the same way `src/ec/depr.rs` writes it.
@@ -219,7 +163,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             }
 
             let p_bytes = bn_num_bytes(p);
-            buf = OwnedBuf::new_zalloc(p_bytes as usize, FILE, 114);
+            buf = OwnedBuf::new_zeroed(p_bytes as usize, FILE, 114);
             let Some(buf) = buf.as_ref() else {
                 break 'done;
             };
@@ -299,7 +243,7 @@ unsafe fn sm2_compute_msg_hash(
                 break 'done;
             }
 
-            z = OwnedBuf::new_zalloc(md_size as usize, FILE, 174);
+            z = OwnedBuf::new_zeroed(md_size as usize, FILE, 174);
             let Some(z) = z.as_ref() else {
                 break 'done;
             };
@@ -739,7 +683,8 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
             ret = sm2_sig_verify(eckey, s, e);
         }
 
-        drop(OwnedBuf::adopt(der, FILE, 539));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(der, FILE, 539));
         BN_free(e);
         ECDSA_SIG_free(s);
     }
