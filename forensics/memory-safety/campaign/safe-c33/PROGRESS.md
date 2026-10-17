@@ -32,12 +32,13 @@ file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1216** passed
+`cargo test --lib` (must pass; the established baseline is **1217** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
-test added in subphase 42, and one isolated allocator-hook size/release test
-added in subphase 43) and the adversarial
+test added in subphase 42, one isolated allocator-hook size/release test
+added in subphase 43, and one isolated `CRYPTO_RWLOCK` allocator-hook
+size/release test added in subphase 44) and the adversarial
 probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
 sweep 35 there are **18** probes).
 
@@ -139,7 +140,7 @@ sweep 35 there are **18** probes).
 | 75 | stage/p25/sweep32 | runtime/{thread,stack,lhash}, bn/recp | final opaque-representation classification; P1 allocator-hook byte-size residual stated; documentation only; hidden 0 |
 | 76 | stage/p25/sweep33 | src/ssl/adv_alloc, dsa/object, dh/object, ec/ecx_backend, scripts/adv-probe.sh | **targeted court**: site-independent `arm_any`, cleansed-free detector + canary; DSA/DH/ECX allocation-refusal probes; 13/13 probes; hidden 0 |
 | 77 | stage/p25/sweep34 | src/ssl/d1_lib, src/pkcs12/p12_key, src/provider/activate, scripts/adv-probe.sh | **targeted court**: DTLS state refusal/lifecycle, PKCS#12 `OwnedUniPass` cleansed release, provider operation-bits publication ordering; 16/16 probes; hidden 0 |
-| 78 | stage/p25/sweep35 | src/dsa/object, src/dh/object, scripts/adv-probe.sh | **targeted court**: later initialisation failure (`meth->init` returns 0) runs the partial cleanup — method `finish` once, one forwarded context allocation, one release of the same block, default method restored and exercised; allocation-refusal arm already covered; lock-null (Box-based) and ex-data failure are unreachable/non-injectable and not claimed; 18/18 probes; hidden 0 |
+| 78 | stage/p25/sweep35 | src/dsa/object, src/dh/object, scripts/adv-probe.sh | **targeted court**: later initialisation failure (`meth->init` returns 0) runs the partial cleanup — method `finish` once, one forwarded context allocation, one release of the same block, default method restored and exercised; allocation-refusal arm already covered; lock-null (Box-based) and ex-data failure are unreachable/non-injectable and not claimed (superseded in subphase 44: the measured-target lock is option B and its allocation is seam-visible); 18/18 probes; hidden 0 |
 | 79 | stage/p25/sweep37 | provider/cipher, ec/lib, ssl/ssl_lib | **destructor zero-validity**: D1/D2 `hw` null guard and D3/D4 `meth` null guard make the clear bodies no-ops on the all-zero block; constructed-path order, layouts, coordinates and cleansing unchanged; Ssl `session_ticket` comment reconciled with the authority's raw release; 2 new deterministic zero-state negative controls; 18/18 probes; hidden 0 |
 | 80 | stage/p25/sweep38 | DESTRUCTOR-CONTRACTS.md, PROGRESS.md | **subphase 38 adjudication (docs only)**: 19 `CONTRACTED` `CtxDestroy` rows independently re-read against every constructor/publication path; **16 promoted to `ESTABLISHED`**, **3 retained `CONTRACTED`** (`SslCtx`, `Ssl`, `X509Store`), **0 STOP defects**; no `DISCHARGED`; residual callback/non-atomic-refcount obligations recorded |
 | 81 | stage/p25/sweep39 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **runtime/alias adjudication**: `X509Store` last-ref gate moved from plain `c_int` to layout-compatible `AtomicI32` (size 160 / offset 144 / align 8 asserts; relaxed fetch-add, release fetch-sub + acquire fence); concurrent up-ref test added; `SslCtx`/`Ssl`/`X509Store` retained `CONTRACTED` for reachable callback re-entrancy (ex-data / lookup `free` hook / `BIO_free_all`); 0 STOP; 1199 passed, 18 ignored; 18/18 probes; hidden 0 |
@@ -147,6 +148,7 @@ sweep 35 there are **18** probes).
 | 83 | stage/p25/sweep41 | src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **`Ssl`/`SslCtx` alias/lifecycle closure**: field-by-field ownership audit; fixed S1 session-cache `owner` dangling (UAF), S2 missing `ENGINE_finish`, S3 missing `dane_final`, S4 missing `ssl_clear_bad_session`; 7 deterministic tests; both rows promoted to `ESTABLISHED` (not `DISCHARGED`); no layout/ABI/allocator coordinates; 1214 passed, 18 ignored; 18/18 probes; hidden 0 |
 | 84 | stage/p25/sweep42 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **`X509Store` callback closure + D1/D2 re-adjudication**: deterministic lookup-`free` hook re-entry test (hook once, observes `REF_DESTROYING`, `up_ref` refused, sentinel survives); teardown order audited against `x509_lu.c:240-253`; ex-data partial-release path retained (authority parity) and cached-`sk_num` callback divergence recorded; `ProvAesSivCtx`/`ProvAesGcmSivCtx` promoted to `ESTABLISHED`; `X509Store` promoted to `ESTABLISHED`; nothing `DISCHARGED`; 1215 passed, 18 ignored; 18/18 probes; hidden 0 |
 | 85 | stage/p25/sweep43 | src/bn/recp.rs, OPAQUE-REPRESENTATIONS.md, PROGRESS.md | **P1 representation decision**: authority sizes measured in the court container (RWLOCK 56, STACK 40, LHASH 104, RECP 64; Rust 48/48/136/64); `BN_RECP_CTX` converted to option B (authority-size `CRYPTO_zalloc` block, inline Rust state, target-gated compile-time size/align asserts, exact 24/40 coordinates, single release); RWLOCK B feasible but deferred; STACK/LHASH retain A (B impossible); one deterministic isolated hook test; nothing `DISCHARGED`; 1216 passed, 18 ignored; 18/18 probes; hidden 0 |
+| 86 | stage/p25/sweep44 | src/runtime/thread.rs, src/dsa/object.rs, src/dh/object.rs, OPAQUE-REPRESENTATIONS.md, PROGRESS.md | **`CRYPTO_RWLOCK` option B**: 56-byte `CRYPTO_zalloc` block at `crypto/threads_pthread.c:910`, inline `RwlockInner`, `drop_in_place` and `CRYPTO_free` at `:1005`, NULL on seam refusal; target-gated compile-time pointer/int/size/align asserts; `Box` on unmeasured targets; one isolated child-process hook test (56 bytes, read/write/unlock, single release, no second allocation); DSA/DH partial-cleanup probes updated to the authority-parity second (lock) release without weakening the double-free check; STACK/LHASH remain option A; nothing `DISCHARGED`; 1217 passed, 18 ignored; 18/18 probes; hidden 0 |
 
 ### Subphase 38 — destructor-contract adjudication (docs only)
 
@@ -276,6 +278,41 @@ sweep 35 there are **18** probes).
 - Gate: `fmt` clean, clippy clean, **1216 passed / 18 ignored**, adv-probe
   **18/18**.
 
+### Subphase 44 — `CRYPTO_RWLOCK` option B (P1)
+
+- `CRYPTO_THREAD_lock_new` now calls
+  `CRYPTO_zalloc(56, c"crypto/threads_pthread.c", 910)` and writes
+  `RwlockInner` inline; a seam refusal returns NULL with no error, matching the
+  authority. `CRYPTO_THREAD_lock_free` runs `drop_in_place` and releases the
+  same 56-byte block at line 1005 through a release guard; NULL is still a no-op.
+- Target-gated compile-time asserts (`linux`/`x86_64`/64-bit) cover pointer
+  width, pointer size, C `int` size, and `size_of`/`align_of::<RwlockInner>()`;
+  unmeasured targets retain the `Box` representation.
+- Lock/read/write/unlock operate unchanged on the inline `Mutex`+`Condvar`. No
+  exported signature, layout, allocator coordinate or free order changed. A
+  tree-wide audit found no `Box::from_raw` of `CryptoRwlock` outside
+  `runtime/thread.rs`, so there is no second release path. There is no exported
+  `CRYPTO_THREAD_trylock` in the administered authority or this crate; the
+  try-lock primitive is `ossl_crypto_mutex_try_lock`, which this decision does
+  not touch.
+- Deterministic test
+  `runtime::thread::tests::lock_hook::hook_observes_authority_size_and_single_release`
+  (isolated child process) asserts one 56-byte allocation at line 910,
+  successful read-lock/write-lock/unlock, one release of the same pointer at
+  line 1005, and no second allocation.
+- The DSA/DH method-init-failure and restored-success probes now observe the
+  lock's `CRYPTO_free` in addition to the context block (two releases, as the
+  authority does). Their assertions were scoped and updated, not weakened: the
+  context block must still appear exactly once and `assert_no_double_free`
+  still runs.
+- `OPENSSL_STACK` and `OPENSSL_LHASH` remain **option A** (B impossible:
+  48 > 40 and 136 > 104); their headers stay hook-invisible. `CRYPTO_RWLOCK`'s
+  header now has authority-size hook parity. The reciprocal's limb storage and
+  the stack/lhash element storage remain Rust-owned. Nothing is
+  `SAFETY_DISCHARGED`.
+- Gate: `fmt` clean, clippy clean, **1217 passed / 18 ignored**, adv-probe
+  **18/18**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -313,13 +350,13 @@ classified explicitly so the residual is auditable rather than implied:
   conversion at each C entry point, stated there.
 - `runtime/thread.rs` (`CRYPTO_RWLOCK`), `runtime/stack.rs` (`OPENSSL_STACK`),
   `runtime/lhash.rs` (`OPENSSL_LHASH`), `bn/recp.rs` (`BN_RECP_CTX`) — exported
-  opaque objects. Subphase 43 measured all four and recorded the decision in
-  `OPAQUE-REPRESENTATIONS.md`: `BN_RECP_CTX` uses **option B** (authority-sized
-  `CRYPTO_*` block, inline Rust state, exact 64-byte hook event), while the other
-  three retain **option A** because `size_of::<Rust>() > size_of::<C>()` for the
-  stack and lhash, and the rwlock conversion is feasible but deferred. The
-  remaining **compatibility residual P1** is allocator-hook byte-size parity for
-  those three headers and for the reciprocal's limb storage; it is recorded, not
+  opaque objects. Subphases 43–44 measured all four and recorded the decision in
+  `OPAQUE-REPRESENTATIONS.md`: `BN_RECP_CTX` and `CRYPTO_RWLOCK` use **option B**
+  (authority-sized `CRYPTO_*` block, inline Rust state, exact 64/56-byte hook
+  events), while `OPENSSL_STACK` and `OPENSSL_LHASH` retain **option A** because
+  B is impossible (`size_of::<Rust>() > size_of::<C>()`). The remaining
+  **compatibility residual P1** is allocator-hook byte-size parity for those two
+  remaining headers and for the reciprocal's limb storage; it is recorded, not
   hidden, and does not claim discharge.
 - `bn/bn_srp.rs` — no interior CRYPTO allocation site; arithmetic-only.
 - `x509/v3_no_ass.rs` — returns a caller-owned `CRYPTO_strdup` block to the
@@ -327,15 +364,15 @@ classified explicitly so the residual is auditable rather than implied:
 
 ## Next queue
 
-**As of subphase 43 the residual census queue is fully classified and the P1
-representation decision is recorded.** Sweeps 11–29 converted or
-boundary-documented the mechanical tail; sweeps 30–32 classified the
-structural/no-seam set; subphase 43 measured the four opaque objects.
-`BN_RECP_CTX` now has authority-size hook parity for its context block, while
-`CRYPTO_RWLOCK`, `OPENSSL_STACK` and `OPENSSL_LHASH` remain Rust-owned where
-option B cannot be made sound or is deferred (`OPAQUE-REPRESENTATIONS.md`). The
-reciprocal's limb storage and those three headers remain hook-invisible; that is
-the remaining **P1 hook-size residual**, not a discharge claim.
+**As of subphase 44 the residual census queue is fully classified and the P1
+representation decision is recorded and partly implemented.** Sweeps 11–29
+converted or boundary-documented the mechanical tail; sweeps 30–32 classified
+the structural/no-seam set; subphases 43–44 measured the four opaque objects.
+`BN_RECP_CTX` and `CRYPTO_RWLOCK` now have authority-size hook parity for their
+header blocks, while `OPENSSL_STACK` and `OPENSSL_LHASH` remain option A because
+B is impossible (`OPAQUE-REPRESENTATIONS.md`). The reciprocal's limb storage and
+the stack/lhash element storage remain hook-invisible; that is the remaining
+**P1 hook-size residual**, not a discharge claim.
 
 The queue is re-derived from Git + `artifacts/phase25/source-census.json` with
 the snippet in the resume procedure; do not treat any list here as frozen. The

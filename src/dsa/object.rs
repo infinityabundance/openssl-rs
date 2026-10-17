@@ -1025,9 +1025,9 @@ mod adv_probe {
     /// partially built block exactly once.
     ///
     /// The allocation-refusal arm is `dsa_new_refused_alloc_returns_null_without_free`. The
-    /// lock-null arm is unreachable in this crate (`CRYPTO_THREAD_lock_new` is `Box`-based) and
-    /// `CRYPTO_new_ex_data` failure is not injectable through the CRYPTO hook; neither is claimed
-    /// here.
+    /// lock-null arm is reachable only by refusing the 56-byte lock allocation through the CRYPTO
+    /// hook on the measured target; this probe does not inject that refusal, and
+    /// `CRYPTO_new_ex_data` failure is likewise not injectable. Neither is claimed here.
     #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
     #[test]
     fn dsa_method_init_failure_runs_partial_cleanup() {
@@ -1097,7 +1097,7 @@ mod adv_probe {
         let ev = adv_alloc::events();
         // The method's `init` failure also raises an error site, whose debug strings allocate at the
         // `(NULL, 0)` coordinate. Those are error-queue bookkeeping, not context blocks, so the
-        // assertion is scoped to the context's own size and to the identity of the single release.
+        // assertion is scoped to the context's own size and to the identity of the context release.
         assert_eq!(
             ev.iter()
                 .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
@@ -1112,14 +1112,27 @@ mod adv_probe {
                 _ => None,
             })
             .collect();
+        // On the measured target the context's lock is an authority-sized block released through
+        // the CRYPTO seam too, so the partial cleanup emits two releases, exactly as the authority
+        // does. Other targets retain the invisible Box lock and emit one.
+        let expected_releases = if cfg!(all(
+            target_os = "linux",
+            target_arch = "x86_64",
+            target_pointer_width = "64"
+        )) {
+            2
+        } else {
+            1
+        };
         assert_eq!(
             freed.len(),
-            1,
-            "the partial cleanup must release exactly once"
+            expected_releases,
+            "the partial cleanup must release the context block and every seam-visible member"
         );
         assert_eq!(
-            freed[0], init_ctx,
-            "the sole release must be the partially built Dsa block"
+            freed.iter().filter(|p| **p == init_ctx).count(),
+            1,
+            "the partially built Dsa block must be released exactly once"
         );
         adv_alloc::assert_no_double_free();
 
@@ -1146,8 +1159,8 @@ mod adv_probe {
                 .iter()
                 .filter(|e| matches!(e, Ev::Free { .. }))
                 .count(),
-            1,
-            "the restored success path must release once"
+            expected_releases,
+            "the success path must release the Dsa block and every seam-visible member"
         );
         adv_alloc::assert_no_double_free();
     }

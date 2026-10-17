@@ -1,4 +1,4 @@
-# Opaque-representation decisions — the four P1 objects (subphase 43)
+# Opaque-representation decisions — the four P1 objects (subphases 43–44)
 
 Authority: pinned `openssl-3.6.4` under
 `forensics/authorities/src/openssl-3.6.4/`, installed headers under
@@ -16,8 +16,9 @@ as **P1** by the sweep-30/32 classification:
 - `OPENSSL_LHASH` (`src/runtime/lhash.rs`)
 - `BN_RECP_CTX` (`src/bn/recp.rs`)
 
-It records a decision and one prototype. It promotes **nothing** to
-`SAFETY_DISCHARGED` and claims **no** consumer graduation.
+It records the decisions and the two option-B prototypes (subphases 43 and
+44). It promotes **nothing** to `SAFETY_DISCHARGED` and claims **no** consumer
+graduation.
 
 ## 1. Measurements
 
@@ -27,11 +28,11 @@ The authority sizes were measured by compiling the exact authority field lists
 container. Rust sizes were printed by temporary `cargo test` probes in the same
 container, then the probes were removed; for `BN_RECP_CTX` the retained
 compile-time `size_of`/`align_of` asserts and the hook-size test pin the value
-permanently.
+permanently, and `CRYPTO_RWLOCK` does the same from subphase 44.
 
 | Type | Authority definition (fields) | Authority size / align | Rust representation | Rust size / align | `size_of::<Rust>() <= size_of::<C>()`? |
 |---|---|---|---|---:|---:|
-| `CRYPTO_RWLOCK` | opaque `typedef void`; on this target `USE_RWLOCK` ⇒ `pthread_rwlock_t` (glibc: readers/writers futex words, `__cur_writer`, `__shared`, pad, `__flags`) | **56 / 8** | `RwlockInner { state: Mutex<LockState>, cond: Condvar }`; `LockState { writer: bool, writer_id: Option<u64>, readers: usize }` | **48 / 8** | **yes** (48 ≤ 56) |
+| `CRYPTO_RWLOCK` | opaque `typedef void`; on this target `USE_RWLOCK` ⇒ `pthread_rwlock_t` (glibc: readers/writers futex words, `__cur_writer`, `__shared`, pad, `__flags`) | **56 / 8** | `RwlockInner { state: Mutex<LockState>, cond: Condvar }`; `LockState { writer: bool, writer_id: Option<u64>, readers: usize }` — inline in the 56-byte block on this target, `Box` elsewhere | **48 / 8** | **yes** (48 ≤ 56) |
 | `OPENSSL_STACK` | `int num; const void **data; int sorted; int num_alloc; OPENSSL_sk_compfunc comp; OPENSSL_sk_freefunc_thunk free_thunk;` | **40 / 8** | `Inner { items: Vec<*const c_void>, num_alloc: c_int, comp: Option<fn>, sorted: bool, free_thunk: Option<fn> }` | **48 / 8** | **no** (48 > 40) |
 | `OPENSSL_LHASH` | `OPENSSL_LH_NODE **b; comp; hash; hashw; compw; daw; daaw; unsigned int num_nodes, num_alloc_nodes, p, pmax; unsigned long up_load, down_load, num_items; int error;` | **104 / 8** | `Inner { b: Vec<Vec<Node>>, 8 × usize counters/limits, 6 × Option<fn> }` | **136 / 8** | **no** (136 > 104) |
 | `BN_RECP_CTX` | `struct bn_recp_ctx_st { BIGNUM N; BIGNUM Nr; int num_bits; int shift; int flags; }`; `BIGNUM` = `BN_ULONG *d; int top, dmax, neg, flags;` = 24 / 8 | **64 / 8** | `RecpCtx { n: Vec<Limb>, neg: bool, nr: Vec<Limb>, num_bits: c_int, shift: c_int }` | **64 / 8** | **yes** (64 ≤ 64) |
@@ -57,10 +58,10 @@ and `(file, line)`.
 
 | Type | Exported lifecycle | Authority header allocation | Authority release | Current candidate hook visibility |
 |---|---|---|---|---|
-| `CRYPTO_RWLOCK` | `CRYPTO_THREAD_lock_new` / `CRYPTO_THREAD_lock_free` | `OPENSSL_zalloc(sizeof(pthread_rwlock_t))` (`threads_pthread.c:910`) | `OPENSSL_free(lock)` (`:1005`) | **invisible** — `Box<RwlockInner>`; no `CRYPTO_*` call |
+| `CRYPTO_RWLOCK` | `CRYPTO_THREAD_lock_new` / `CRYPTO_THREAD_lock_free` | `OPENSSL_zalloc(sizeof(pthread_rwlock_t))` (`threads_pthread.c:910`) | `OPENSSL_free(lock)` (`:1005`) | **visible** on the measured target — one 56-byte block at `crypto/threads_pthread.c:910`, released at `:1005` (option B); `Box` elsewhere |
 | `OPENSSL_STACK` | `OPENSSL_sk_new*` / `OPENSSL_sk_free` / `OPENSSL_sk_pop_free` | `OPENSSL_zalloc(sizeof(OPENSSL_STACK))` (`stack.c:230`); `OPENSSL_malloc(sizeof(*ret))` in dup/deep_copy (`:53`,`:91`) | `OPENSSL_free(st->data); OPENSSL_free(st)` (`stack.c:463-464`) | **invisible** — `Box<Inner>` + `Vec` |
 | `OPENSSL_LHASH` | `OPENSSL_LH_new` / `OPENSSL_LH_free` | `OPENSSL_zalloc(sizeof(*ret))` (`lhash.c:67`) | `OPENSSL_free(lh->b); OPENSSL_free(lh)` (`lhash.c:92-93`) | **invisible** — `Box<Inner>` + `Vec` |
-| `BN_RECP_CTX` | `BN_RECP_CTX_new` / `BN_RECP_CTX_free` | `OPENSSL_zalloc(sizeof(*ret))` (`bn_recp.c:24`) | `BN_free(N); BN_free(Nr); OPENSSL_free(recp)` (`bn_recp.c:37-40`) | **visible for the context block** after this subphase (64 bytes, `crypto/bn/bn_recp.c:24/40`); limb `Vec` storage still invisible |
+| `BN_RECP_CTX` | `BN_RECP_CTX_new` / `BN_RECP_CTX_free` | `OPENSSL_zalloc(sizeof(*ret))` (`bn_recp.c:24`) | `BN_free(N); BN_free(Nr); OPENSSL_free(recp)` (`bn_recp.c:37-40`) | **visible for the context block** after subphase 43 (64 bytes, `crypto/bn/bn_recp.c:24/40`); limb `Vec` storage still invisible |
 
 The authority also makes secondary allocations the header model does not
 reproduce byte-for-byte: the stack's element array (`OPENSSL_calloc(4, 8)` for
@@ -71,7 +72,7 @@ header block; this record does not claim total-allocation parity.
 
 ## 3. Options considered
 
-### Option A — retain Rust-owned (current state for three types)
+### Option A — retain Rust-owned (current state for two types)
 
 - **Safety**: strongest and simplest. `Box`/`Vec` own their storage; one
   destructor; no size/alignment assumption and no raw adoption at the lifecycle
@@ -143,12 +144,14 @@ Rust-owned storage outside the C seam.
 
 | Type | Recommendation | Rationale |
 |---|---|---|
-| `CRYPTO_RWLOCK` | **B is feasible; retain A in this batch** | 48 ≤ 56 and 8 ≤ 8, so B can be made sound with compile-time asserts. It is not prototyped here because the subphase implements exactly one option-B type. A follow-up can adopt B; the size of `Mutex`/`Condvar` is toolchain-dependent, so the assert is load-bearing. |
+| `CRYPTO_RWLOCK` | **B, implemented in subphase 44** | 48 ≤ 56 and 8 ≤ 8, so B is sound with target-gated compile-time asserts. `Mutex`/`Condvar` sizes are toolchain-dependent, so the assert is load-bearing; targets without a measured authority layout retain A (`Box`). |
 | `OPENSSL_STACK` | **Retain A** | B is impossible (48 > 40). C buys only header-event parity while introducing hidden state memory and a second allocation; the stack's `Vec` element storage remains invisible either way. A is the sound, low-risk choice until the `Inner` representation can be made ≤ 40 bytes. |
 | `OPENSSL_LHASH` | **Retain A** | B is impossible (136 > 104). The gap (32 bytes) is too large for field packing without changing the representation substantially, and C again buys only header-event parity. A retained. |
 | `BN_RECP_CTX` | **B, implemented in subphase 43** | 64 == 64 and 8 == 8. The block is exclusively owned, `RecpCtx` is our own type (no std layout dependency), and one `CRYPTO_zalloc`/`CRYPTO_free` pair reproduces the authority's header event exactly. |
 
-## 5. The `BN_RECP_CTX` prototype
+## 5. The option-B prototypes
+
+### 5.1 `BN_RECP_CTX` (subphase 43)
 
 - `AUTHORITY_BN_RECP_CTX_SIZE = 64` and
   `AUTHORITY_BN_RECP_CTX_ALIGN = 8` are target-gated to
@@ -171,15 +174,44 @@ Rust-owned storage outside the C seam.
   allocation of **64** bytes, file `crypto/bn/bn_recp.c`, allocation line 24,
   exactly one free of the same pointer, file/line 40, and no second allocation.
 
+### 5.2 `CRYPTO_RWLOCK` (subphase 44)
+
+- `AUTHORITY_CRYPTO_RWLOCK_SIZE = 56` and `AUTHORITY_CRYPTO_RWLOCK_ALIGN = 8`
+  are target-gated to `linux`/`x86_64`/`64-bit` and protected by module-level
+  `const _: () = assert!(…)` for the pointer width, pointer size, C `int` size,
+  and `size_of`/`align_of` of `RwlockInner`.
+- `CRYPTO_THREAD_lock_new` calls
+  `CRYPTO_zalloc(56, c"crypto/threads_pthread.c", 910)` and writes the
+  fully-initialised `RwlockInner` into the block. A `CRYPTO_zalloc` refusal
+  returns NULL exactly as the authority does (no error is raised).
+- `CRYPTO_THREAD_lock_free` runs `drop_in_place` and releases the same block at
+  line 1005 through a guard, so the C block is released exactly once even if a
+  destructor ever unwinds. NULL remains a no-op.
+- No `RwlockInner` field is read from the zeroed block: the zeroing is not relied
+  on for validity, and `pthread_rwlock_t` is not used as the representation. The
+  lock is `Mutex` + `Condvar`, whose inline `write`/`drop_in_place` the option-B
+  contract permits.
+- The exported symbol, signature, opaque handle, and allocator/free coordinates
+  are unchanged. On any other target the module keeps option A (`Box`).
+- Deterministic test:
+  `runtime::thread::tests::lock_hook::hook_observes_authority_size_and_single_release`.
+  It re-enters the test binary in a child process, installs a recording allocator
+  first, and asserts exactly one 56-byte allocation at file
+  `crypto/threads_pthread.c` line 910, successful read/write lock and unlock, one
+  release of the same pointer at line 1005, and no second allocation.
+
 ## 6. Residuals and non-claims
 
-- **P1 status**: `BN_RECP_CTX` now has authority-size parity for its context
-  block. `CRYPTO_RWLOCK`, `OPENSSL_STACK` and `OPENSSL_LHASH` retain option A
-  and the hook-invisibility residual. This is a **partial** resolution of P1,
-  not a discharge.
-- The `n`/`nr` limb `Vec` storage of `BN_RECP_CTX` is still Rust-owned and
-  invisible to the hook. The authority allocates that storage through `BIGNUM`'s
-  own `CRYPTO_*` calls. Total allocation parity is not claimed.
+- **P1 status**: `BN_RECP_CTX` and `CRYPTO_RWLOCK` now have authority-size
+  parity for their header block on the measured target. `OPENSSL_STACK` and
+  `OPENSSL_LHASH` retain option A and the hook-invisibility residual. This is a
+  **partial** resolution of P1, not a discharge. `OPENSSL_STACK`/`OPENSSL_LHASH`
+  remain option A because B is impossible (`size_of::<Rust>() > size_of::<C>()`).
+- `CRYPTO_RWLOCK` has no secondary Rust-owned header state: its `Mutex`/`Condvar`
+  live inline in the same block, so the option-B header event covers the whole
+  object. The `n`/`nr` limb `Vec` storage of `BN_RECP_CTX` is still Rust-owned and
+  invisible to the hook. The stack element array and lhash bucket array remain
+  algorithm-level Rust storage. Total allocation parity is not claimed.
 - No type is promoted to `SAFETY_DISCHARGED`; the §7 independent-check package
   remains outstanding.
 - No change was made to `docker/`, the allocator seam, exported signatures,
