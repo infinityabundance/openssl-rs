@@ -69,6 +69,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
@@ -728,7 +729,8 @@ pub(crate) unsafe fn hpke_labeled_extract(
     // it answers has that provenance; this frame owns it and no other owner releases it. The
     // buffer is owned until this call returns; `Drop` is its release.
     let Some(labeled_ikm) = (unsafe {
-        OwnedBuf::take(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        OwnedBuf::adopt_plain(
             CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>(),
             FILE_HPKE_UTIL,
             338,
@@ -822,7 +824,8 @@ pub(crate) unsafe fn hpke_labeled_expand(
     // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `labeled_infolen`-byte block
     // it answers has that provenance; this frame owns it and no other owner releases it.
     let Some(labeled_info) = (unsafe {
-        OwnedBuf::take(
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        OwnedBuf::adopt_plain(
             CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>(),
             FILE_HPKE_UTIL,
             388,
@@ -1255,56 +1258,6 @@ impl Drop for OwnedCtx {
             destroy_ctx_body(self.ptr.as_ptr());
             CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_HPKE, self.line);
         }
-    }
-}
-
-/// An owned seam scratch buffer: `Drop` is its single release, a plain `CRYPTO_free` at the site
-/// that adopted it.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size on the crate's allocator seam,
-/// so a caller-installed `CRYPTO_set_mem_functions` hook observes it and its release as it observes
-/// the authority's. It is used for the two labelled-string buffers, which the authority cleanses
-/// before release (the cleanse stays an explicit call at the site, as in the authority), and for
-/// the imported public key a `set1_authpub` hands to the context's `authpub` member.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// Adopt a block the frame's seam answered, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a block this frame allocated through the crate's allocator seam
-    /// (`CRYPTO_malloc`), so it has that provenance; the caller owns it and no other owner will
-    /// release it. `Drop` performs its single `CRYPTO_free` at `(file, line)`.
-    unsafe fn take(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, file, line })
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
     }
 }
 
@@ -2677,7 +2630,8 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_authpub(
         // crate's allocator seam; this frame owns it until handed to `authpub` or released by its
         // `Drop` as this block is left.
         let Some(lpub) = (unsafe {
-            OwnedBuf::take(
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            OwnedBuf::adopt_plain(
                 CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>(),
                 FILE_HPKE,
                 1025,

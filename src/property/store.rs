@@ -63,7 +63,8 @@
 // restate this paragraph, and what retires it is 7.2.
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 
@@ -79,7 +80,7 @@ use crate::runtime::lhash::{
     OPENSSL_LH_num_items, OPENSSL_LH_retrieve, OPENSSL_LH_set_down_load, OPENSSL_LH_strhash,
     OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
 use crate::runtime::rdtsc::OPENSSL_rdtsc;
 use crate::runtime::sparse_array::{
     ossl_sa_doall, ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_num,
@@ -120,73 +121,6 @@ const LINE_MEMDUP_ALG: c_int = 563;
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size -- a Rust `Box`/`Vec` would hide
-/// both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook --
-/// and only its *ownership* is this type: [`Self::new`] allocates it, `Drop` is its single release,
-/// and [`Self::into_raw`] hands it to a consumer that takes it over (the query cache's `lh_QUERY`
-/// table in [`ossl_method_store_cache_set`]). [`Self::adopt`] takes an empty handle whose release is
-/// the authority's own no-op `free(NULL)` on the paths where the authority frees a still-NULL entry
-/// at its own `file`/`line`.
-///
-/// The other blocks this file allocates -- the `OSSL_METHOD_STORE` itself, each `IMPLEMENTATION`,
-/// each `ALGORITHM` and `alg_copy`'s snapshot header -- are released by a *structured* body
-/// ([`impl_free`], [`alg_cleanup`], [`ossl_method_store_free`], [`del_tmpalg`]) rather than a single
-/// `CRYPTO_free`, or are handed straight to another structure, so they keep their own release
-/// functions and are not owned here.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            file,
-            line,
-        })
-    }
-
-    /// Adopt a block this frame owns, for release by `Drop` at the authority's own site; with a
-    /// NULL `ptr` the handle is the authority's own no-op `free(NULL)` at `file`/`line`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate allocated that no one else owns; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to a consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `int (*up_ref)(void *)` and `void (*free)(void *)` — the reference count and the destructor a
 /// method carries, so the store can hold one without knowing what it is.
@@ -1231,7 +1165,12 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
             res = 0;
             // The authority's error tail frees the still-NULL cache entry; an empty handle is that
             // same no-op `free(NULL)` at the entry's own release line.
-            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_FREE_QUERY));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE,
+                LINE_FREE_QUERY,
+            ));
             ossl_property_unlock(store);
             return res;
         }
@@ -1263,7 +1202,12 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         let len = c_strlen(prop_query);
         let Some(size) = core::mem::size_of::<Query>().checked_add(len) else {
             // The authority's error tail frees the still-NULL entry and reports 0.
-            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_MALLOC_QUERY));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE,
+                LINE_MALLOC_QUERY,
+            ));
             res = 0;
             ossl_property_unlock(store);
             return res;
@@ -1273,7 +1217,12 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         // to the table.
         let Some(buf) = OwnedBuf::new(size, FILE, LINE_MALLOC_QUERY) else {
             // The authority's error tail frees the still-NULL entry and reports 0.
-            drop(OwnedBuf::adopt(ptr::null_mut(), FILE, LINE_MALLOC_QUERY));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE,
+                LINE_MALLOC_QUERY,
+            ));
             res = 0;
             ossl_property_unlock(store);
             return res;

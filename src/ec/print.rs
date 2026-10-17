@@ -28,6 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
@@ -37,7 +38,7 @@ use crate::ec::lib::{EC_POINT_clear_free, EC_POINT_new};
 use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcPoint, PointConversionForm};
 use crate::runtime::bio::sys::strlen;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 
 /// The translation unit every allocation and release below is attributed to, as the allocator
@@ -45,63 +46,6 @@ use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 /// build record's `../../src/openssl-3.6.4/` prefix — the spelling `src/packet.rs` and
 /// `src/dh/ctrl.rs` use.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_print.c".as_ptr();
-
-/// An owned seam block released with the authority's plain `CRYPTO_free` at its own `file`/`line`.
-///
-/// The block stays a `CRYPTO_*` allocation at the authority's exact site (observable to a
-/// caller-installed `CRYPTO_set_mem_functions` hook), but its *ownership* is this type:
-/// [`Self::new`] allocates it, [`Self::adopt`] takes in the block `EC_POINT_point2buf` allocated
-/// for this frame, `Drop` is its single release, and [`Self::into_raw`] hands `EC_POINT_point2hex`'s
-/// output to the C caller that will free it.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let ptr = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if ptr.is_null() {
-            return None;
-        }
-        Some(OwnedBuf { ptr, file, line })
-    }
-
-    /// Adopt a non-NULL block a helper allocated in full through the crate's `CRYPTO_*` seam, for
-    /// release by `Drop` at `file`/`line`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live, non-NULL block the crate's allocator seam allocated in full (not a
-    /// sub-range), owned by this caller and no other -- this handle's `Drop` is its single release;
-    /// `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> OwnedBuf {
-        OwnedBuf { ptr, file, line }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the C caller that will free it.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// An owned seam block released with the authority's *cleansing* `CRYPTO_clear_free` over a recorded
 /// length (`EC_POINT_hex2point`'s octet buffer), at its own `file`/`line`.
@@ -187,7 +131,8 @@ pub unsafe extern "C" fn EC_POINT_point2hex(
         // SAFETY: `EC_POINT_point2buf` answered this non-NULL `buf` as a `buf_len`-octet block the
         // crate's allocator produced in full, and this frame is its only owner; the authority
         // releases it with `OPENSSL_free` at line 39.
-        let buf = OwnedBuf::adopt(buf, FILE, 39);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        let buf = OwnedBuf::adopt_plain_nullable(buf, FILE, 39);
 
         // `OPENSSL_malloc(buf_len * 2 + 2)`, line 29.
         let Some(ret) = OwnedBuf::new(buf_len * 2 + 2, FILE, 29) else {
@@ -301,6 +246,7 @@ pub unsafe extern "C" fn EC_POINT_hex2point(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::mem::CRYPTO_free;
     use core::ffi::c_void;
     use core::ptr;
 
