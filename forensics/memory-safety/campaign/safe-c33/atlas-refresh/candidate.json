@@ -3,11 +3,11 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "c5879d76f5ed59aa2edee17c773c8651b3a7475c",
+    "head_sha": "fdc0ae2c011a9fbfcf67d324d6802e947d9e5877",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "3e0510d9d9c56c58739ae681c696c77a91bf7baedf107979b686f957f2ae2b60",
+    "src_content_sha256": "b1485b08530314eba43cf940e77cba07b98c854355592dddb0639dc11128be4e",
     "src_rs_files": 865
   },
   "census_crosscheck": {
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-17T06:58:26Z",
+  "generated_utc": "2026-10-17T13:58:47Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
