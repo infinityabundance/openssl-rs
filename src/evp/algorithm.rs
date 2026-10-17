@@ -353,6 +353,11 @@ pub(crate) unsafe extern "C" fn ossl_algorithm_do_all(
 /// # Safety
 /// `algo` must be a live `OSSL_ALGORITHM`.
 ///
+/// # Ownership
+/// The returned pointer is a fresh allocation transferred to the caller, which owns it and
+/// releases it exactly once with `CRYPTO_free`/`OPENSSL_free`. It is a C ABI transfer boundary,
+/// not an interior allocation: this function never releases it.
+///
 /// Not `#[no_mangle]`, and that is the crate's rule rather than an omission: this is an
 /// authority-**internal** name (`ossl_*`), libcrypto's version script hides it from the DSO, and
 /// the eight functions that call it — the `_meth.c` method constructors in 7.3 and 7.4 — are the
@@ -391,6 +396,8 @@ pub(crate) unsafe extern "C" fn ossl_algorithm_get1_first_name(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::asn1::owned::OwnedBlock;
     use crate::provider::activate::OsslAlgorithm;
     use core::ffi::c_int;
     use core::sync::atomic::{AtomicI32, Ordering};
@@ -661,8 +668,9 @@ mod tests {
         // SAFETY: `p` is a fresh NUL-terminated allocation.
         let s = unsafe { core::ffi::CStr::from_ptr(p) };
         assert_eq!(s.to_bytes(), b"SHA256", "the first alias, not the second");
-        // SAFETY: `p` came from `CRYPTO_strndup`, so this is the matching free.
-        unsafe { crate::runtime::mem::CRYPTO_free(p.cast::<c_void>(), FILE, L_STRNDUP) };
+        // SAFETY: `p` is the fresh block the function transferred to this test; the owner's
+        // `Drop` is its single release at the authority's own `strndup` site.
+        drop(unsafe { OwnedBlock::<c_char>::from_raw(p, FILE, L_STRNDUP) });
 
         // A list with no colon at all is copied whole.
         algo.algorithm_names = c"SHA1".as_ptr();
@@ -670,8 +678,8 @@ mod tests {
         let p = unsafe { ossl_algorithm_get1_first_name(&algo) };
         // SAFETY: `p` is a fresh NUL-terminated allocation.
         assert_eq!(unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes(), b"SHA1");
-        // SAFETY: matching free.
-        unsafe { crate::runtime::mem::CRYPTO_free(p.cast::<c_void>(), FILE, L_STRNDUP) };
+        // SAFETY: as above, the fresh block this test now owns.
+        drop(unsafe { OwnedBlock::<c_char>::from_raw(p, FILE, L_STRNDUP) });
 
         // NULL in, NULL out.
         algo.algorithm_names = ptr::null();
