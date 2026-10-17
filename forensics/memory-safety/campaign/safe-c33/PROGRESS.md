@@ -543,6 +543,18 @@ package.
   clippy 0, **1235 passed / 18 ignored**, adv-probe **18/18**. Progress: **109
   of 173**.
 
+### Subphase 55 — S-L and S-Z string groups
+
+- Twenty copies migrated (`S-L` 11, `S-Z` 9). Allocators, both coordinate
+  pairs, NUL semantics, release order and NULL behavior unchanged; `ui_lib`'s
+  const accessor keeps its exact pointer type; `conf/api`'s malloc keeps
+  `(NULL,0)` coordinates.
+- `http_lib` and `v3_akid` stay local because they re-point the release
+  coordinate at live call sites (verified by quoting the setters and call
+  sites); `bio_sock2` stays local because it needs `CRYPTO_zalloc`.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1235 passed / 18
+  ignored**, adv-probe **18/18**. Progress: **129 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -720,7 +732,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `3924e5ea0` (S-P string consolidation merged)
+**Last observed HEAD:** `691023373` (S-L/S-Z consolidation merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -771,9 +783,10 @@ the unsafe-obligation denominator now exists.
 helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
 `B-P` (39 of 52; 13 need shared-API extensions), `B-Z` (13), `B-L` (4 of 8;
 4 excluded), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (2 of 3; `bn/rand` needs an
-owner-derived slice accessor), `OwnedStr` S-P (10). Remaining: `B-P`
-exclusions (13), `B-L` exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr` S-L (13)
-and S-Z (10); then `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
+owner-derived slice accessor), `OwnedStr` (30 of 33; `http_lib`, `v3_akid`,
+`bio_sock2` excluded pending mutable-release/zalloc API). Remaining: `B-P`
+exclusions (13), `B-L` exclusions (4), `B-CF-FL` (`bn/rand`), `OwnedStr`
+exclusions (3); then `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
 OwnedScratch/constant-char* groups (8). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
 inventory, adversarial review and a fresh gate. Afterwards, the
