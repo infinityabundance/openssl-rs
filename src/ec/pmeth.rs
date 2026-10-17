@@ -65,11 +65,12 @@ use crate::evp::pkey_ctx::{
 use crate::rand::sys::atoi;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
 use crate::runtime::obj::{
     NID_ecdsa_with_SHA1, NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256,
     NID_sha3_384, NID_sha3_512, NID_sha512, NID_sm3, NID_undef, OBJ_ln2nid, OBJ_sn2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/ec/ec_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c".as_ptr();
@@ -151,95 +152,6 @@ unsafe impl CtxDestroy for EcPkeyCtx {
             EC_GROUP_free((*ptr).gen_group);
             EC_KEY_free((*ptr).co_key);
             CRYPTO_free((*ptr).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
-        }
-    }
-}
-
-/// An owned buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc`/`CRYPTO_clear_free` at the authority's exact size and
-/// `file`/`line` -- a Rust `Box`/`Vec` would hide both from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: the constructors
-/// allocate or adopt it and `Drop` is its single release. A NULL pointer is a valid, empty buffer
-/// whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut u8,
-    release: BufRelease,
-}
-
-/// How the authority releases a buffer [`OwnedBuf`] owns.
-enum BufRelease {
-    /// The authority's plain `OPENSSL_free(ptr)` (`pkey_ec_ctrl`'s replacement, `:341`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)` (`pkey_ec_kdf_derive`'s `ktmp`,
-    /// `:242`).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, alloc_line)` for a block whose `Drop` cleanses and releases it at
-    /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
-    fn new_cleansed(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<u8>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Cleansed {
-                num: len,
-                file,
-                line: release_line,
-            },
-        })
-    }
-
-    /// Adopt the block `ptr` for release by `Drop` at `file`/`release_line`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced (or that the caller handed
-    /// to this context for release by the authority's own `OPENSSL_free`) that no other owner will
-    /// release; `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut u8, file: *const c_char, release_line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain {
-                file,
-                line: release_line,
-            },
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own plain `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
         }
     }
 }
@@ -546,7 +458,7 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
     /* `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
      * authority's own cleansing `OPENSSL_clear_free` at `:242`. */
     let Some(ktmp_buf) =
-        OwnedBuf::new_cleansed(ktmplen, FILE, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
+        OwnedBuf::new_cleansed_at(ktmplen, FILE, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
     else {
         return 0;
     };
@@ -735,7 +647,7 @@ unsafe extern "C" fn pkey_ec_ctrl(
             // releases it; `Drop` performs its single release at the authority's own replacement
             // site.
             unsafe {
-                drop(OwnedBuf::adopt(
+                drop(OwnedBuf::adopt_plain(
                     (*dctx).kdf_ukm,
                     FILE,
                     LINE_FREE_KDF_UKM_CTRL,
