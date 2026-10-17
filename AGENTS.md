@@ -181,6 +181,36 @@ are **references for technique only**.
   remaining unsafe op has an explicit validity contract.
 - Defer full Phase-25 forensic regeneration to seal points; keep the local gate.
 
+### Execution discipline (mandatory — 2026-10-17)
+
+This is a context-preservation rule, not a preference.
+
+- **The orchestrator must not run project commands directly.** Outside a subagent, the
+  only permitted commands are the staging-branch `git add`/`git commit`, `git push`, and
+  a release/publish step. Everything else — reading large files, `grep`, `find`, builds,
+  tests, `fmt`, `clippy`, benchmarks, forensics generation, Docker/VM management, and
+  any diagnostic that can emit large output — MUST run inside a subagent.
+- **Run exactly one subagent at a time.** Do not launch concurrent subagents. One
+  subagent owns the court container/VM and its OOM budget; concurrency defeats the
+  context and memory discipline this rule exists to protect.
+- **All testing uses the minimal court container/VM**, never the host. Subagents must
+  use `docker/openssl-rs-court.sh` with `CARGO_BUILD_JOBS=4` and
+  `cargo test --lib -- --test-threads=4`, and must check `free -g` before a build. The
+  orchestrator must never run `cargo`, `rustc`, tests, or project scripts on the host.
+  The `docker/` directory remains out of scope for conversion agents; if the pinned image
+  is not minimal, record that as a standing infrastructure task rather than silently
+  running on the host.
+- **The orchestrator may make small documentation edits directly**, but must then commit
+  and push them through the staging branch; it must still use a subagent for any
+  verification that requires running code.
+- **Status reporting is mandatory.** After every merged subphase, report: current source
+  HEAD and docs tip, the subphase files/mechanisms, gate results (tests and probes),
+  atlas/probe figures, remaining blockers, and the next queued subphase. Do not claim a
+  gate passed unless a subagent ran it and reported the actual output.
+- **Subagents do not commit or push.** They return a short report; the orchestrator
+  commits the verified change on a `stage/p25/sweepN` branch, merges it into
+  `integrate/safe-c33`, pushes, and updates the ledger.
+
 ## 7. Graduation states
 
 - `OWNERSHIP_RECONSTRUCTED` — a safe ownership model exists and its residual
