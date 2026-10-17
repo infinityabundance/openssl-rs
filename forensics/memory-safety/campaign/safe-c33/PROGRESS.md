@@ -217,7 +217,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `586ee68cc9e1e1653f3387bce28655073b68821e`
+**Last observed HEAD:** `d45c08a34aeda13b0307de579e94ae2cfc592b87`
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
