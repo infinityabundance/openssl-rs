@@ -49,6 +49,21 @@
 //!   no thunk installed calls a NULL function pointer.
 //!
 //! Here they return NULL / skip the callback instead of faulting.
+//!
+//! ## Ownership classification (this batch)
+//!
+//! `OPENSSL_STACK` is a **deliberately Rust-owned representation**: the opaque
+//! [`OpenSslStack`] handle points at an `Inner` allocated by `Box::into_raw` in
+//! `from_boxes`, whose element array is a Rust `Vec`, and the exported
+//! `OPENSSL_sk_*` lifecycle (`OPENSSL_sk_free` / `OPENSSL_sk_pop_free`) owns and
+//! releases it with `Box::from_raw`. No allocation or release in this module
+//! crosses the `CRYPTO_*` seam. The consequence is explicit: an installed
+//! `CRYPTO_set_mem_functions` hook does not observe the header or the `Vec`
+//! element storage, and the Rust representation's byte size is not the
+//! authority's C `OPENSSL_STACK` size — allocating it at `size_of::<Inner>()`
+//! would make the hook observe the wrong byte count, violating §6's exact-size
+//! rule. This is the recorded compatibility residual **P1**, retained and **not**
+//! a `SAFETY_DISCHARGED` claim.
 
 use core::ffi::{c_int, c_void};
 
