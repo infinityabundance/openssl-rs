@@ -3,11 +3,31 @@
 Authority: this file records *landed* conversion batches on `integrate/safe-c33`.
 A batch is "landed" only when its local gate is green in the court container and
 it is merged. The full Phase-25 forensic regeneration stays deferred until the
-conversion campaign lands (see CLOSURE.md); the numbers below are the frozen
-Phase-25 atlas baseline, so they are a *lower bound* on real progress (converted
-modules still report their seam's `CRYPTO_*` sites).
+conversion campaign lands (see CLOSURE.md); the original Phase-25 site inventory
+is retained only as the frozen baseline below.
 
-Frozen atlas baseline: **2420** allocation sites (`artifacts/phase25/ownership-planes.json`).
+Frozen atlas baseline (original inventory): **2420** allocation sites
+(`artifacts/phase25/ownership-planes.json`).
+
+## Current candidate-bound measurement
+
+Regenerated at HEAD `e9e21d42ecd1b90e2fbe246d0ffa647ae2bfcd35` by
+`python3 forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (see
+`atlas-refresh/REPORT.md`; the generator is measurement-only and claims no
+discharge):
+
+- Safe-33 closure: **628** files; **291** have a recognised ownership seam
+  (**46.3%**); **0** files have fully discharged obligations; **0/33**
+  consumers are `SAFE_COMPATIBLE`.
+- Whole tree: **865** `src/**/*.rs`; **349** files have a seam; **367** still
+  contain raw allocator sites; **4,292** raw sites in total, which includes
+  legitimate seam constructors and is therefore **not** a residual count.
+- Closure raw sites: **3,431** (upper bound; **193** in files with no seam).
+  A seam is a file-level heuristic, not a per-site proof.
+
+The residual conversion queue is re-derived from the frozen census and Git by
+the snippet in the resume procedure; it is deliberately separate from this
+file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
@@ -120,23 +140,25 @@ converted module re-hosts several hand-written sites into one seam.
 ## Standing residuals (not yet addressed)
 
 - **Member buffers**: `#[repr(C)]` struct fields with cross-function ownership
-  (e.g. `PKCS7.ctx.propq`, `SSL_CONF_CTX` prefix/cert_filename,
-  `SslSession` ext_* buffers). These need a distinct owned handle type
-  (a `strdup`-backed C-string handle) — the **member-buffer unit**.
+  whose remaining cases are named by the atlas, not by a frozen list.
 - **Compound destructors**: objects freed by a multi-step body rather than one
   release (MlKemKey/MlDsaKey/MlxKey/ProvMlxKemGenCtx, RSA_METHOD).
 - **Interior representation rewrites** (the deeper class, like
   `src/runtime/sparse_array.rs`): raw graph traversal replaced by owned nodes.
+- **Discharge evidence**: no file has a proven per-site validity contract yet;
+  `SAFETY_DISCHARGED` and `SAFE_COMPATIBLE` remain 0 pending the seal.
 
-## Next queue (by remaining atlas sites)
+## Next queue
 
-provider/mod.rs, srp/srp_vfy.rs, apps/mac.rs, runtime/{conf/def.rs,mem.rs,
-confmod/mod.rs,rcu.rs}, async/async.rs, http/http_client.rs, decoder_pkey.rs,
-x509/{x_pubkey.rs,v3_ncons.rs}, asn1/{bio_asn1.rs,asn_mime.rs,text.rs},
-provider/{exchange.rs,ml_kem_kmgmt.rs,encode_key2any.rs}, crmf/*, cmp/*, ts/*,
-ct/*, txt_db/*, property/store.rs, rand/rand_lib.rs, engine/eng_dyn.rs,
-ssl/{ssl_rsa.rs,tls_srp.rs,ssl_cert_comp.rs,ssl_ciph.rs,...},
-then the member-buffer unit.
+The queue is **re-derived from Git + `artifacts/phase25/source-census.json`**
+with the snippet in the resume procedure; do not treat any list here as frozen.
+At the sweep-24 checkpoint, **46** baseline files still had interior sites,
+including `runtime/{sparse_array,thread,stack,lhash}.rs`, `bn/{ctx,recp,mont}.rs`,
+`rsa/asn1.rs`, `ct/ct_x509v3.rs`, `x509/{v3_single_use,v3_ia5,x509_acert}.rs`,
+`pem/{pem_pkey,pem_oth}.rs`, and the single-site tail (RSA/EC controls,
+provider codecs, PKCS#12/PBE, X509 extensions). Files already fully Rust-owned or
+structural (`bn/ctx`, `bn/mont`, `rsa/asn1`, `runtime/sparse_array`) stay out of
+the mechanical queue and are handled as representation work.
 
 ## Progress measurement (five dimensions — see AGENTS.md §19)
 
