@@ -513,6 +513,21 @@ package.
   grep). Gate: `fmt` 0, clippy 0, **1230 passed / 18 ignored**, adv-probe
   **18/18**. Progress: **87 of 173**.
 
+### Subphase 53 — always-cleanse groups consolidated
+
+- Twelve copies (`B-CA-FL` 5, `B-CA-0` 5, `B-CF-FL` 2 of 3) now use the shared
+  cleansing owner: asn1 a_sign/a_verify/t_pkey, dsa/sign, ec/ecx_meth, evp
+  evp_pkey/pem_bridge, provider/keymgmt, rsa ameth/ossl/sign, slh_dsa/dsa.
+  Release functions, both coordinate pairs, cleansing lengths and release order
+  are unchanged. `bn/rand` stays local (owner-derived mutable slice).
+- **§5 correction:** `evp_pkey` adopted PKCS#8 private-key DER with a plain
+  free. It now cleanses the same extent (`num` = the encoder BUF_MEM length) at
+  the authority's `(NULL, 0)` coordinates; the §17 divergence is recorded in
+  code. Public-key DER remains a plain release.
+- Adversarial review **FAILED** on that one point and **PASSED** after the fix.
+  Gate: `fmt` 0, clippy 0, **1230 passed / 18 ignored**, adv-probe **18/18**.
+  Progress: **99 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -690,7 +705,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `1688ee5d5` (B-Z/B-L consolidation merged)
+**Last observed HEAD:** `45f702415` (always-cleanse groups merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -740,8 +755,9 @@ the unsafe-obligation denominator now exists.
 **Next in sequence:** continue consolidating the IDENTICAL module-local owner
 helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
 `B-P` (39 of 52; 13 need shared-API extensions), `B-Z` (13), `B-L` (4 of 8;
-4 excluded). Remaining: `B-P` exclusions (13), `B-L` exclusions (4),
-`B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (3); then
+4 excluded), `B-CA-FL` (5), `B-CA-0` (5), `B-CF-FL` (2 of 3; `bn/rand` needs an
+owner-derived slice accessor). Remaining: `B-P` exclusions (13), `B-L`
+exclusions (4), `B-CF-FL` (`bn/rand`); then
 `OwnedStr` (33) and `OwnedBlock` (15), plus the small OwnedIkm/OwnedUniPass/
 OwnedScratch/constant-char* groups (8). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
