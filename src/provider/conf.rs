@@ -71,6 +71,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::conf::lib::{NCONF_get0_libctx, NCONF_get_section};
 use crate::runtime::conf::types::{Conf, ConfValue};
@@ -143,36 +144,11 @@ pub(crate) struct ProviderConfGlobal {
 // Ownership of the per-context state object
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's `ossl_prov_conf_ctx_free` destructor body, without the block's own release,
-/// which [`OwnedCtx`]'s `Drop` performs: the `activated_providers` list and the lock.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this module allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `ossl_prov_conf_ctx_free` member
-///   body **exactly once** for that object; it releases **exactly** the members the object owns (the
-///   `activated_providers` list and the lock, each releaser the authority's own and accepting the
-///   not-yet-set NULL state) and **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop`
-///   releases.
-///
-/// This contract carries **no** zero-validity claim: the block is built through the staged
-/// [`RawProviderConf`] route ([`RawProviderConf::assume_init`] makes the transition), so an all-zero
-/// block is **not** relied on as a valid `Self` -- [`OwnedCtx`] has no safe `zalloc` constructor.
-unsafe trait CtxDestroy: Sized {
-    /// `__LINE__` for the block release [`OwnedCtx`]'s `Drop` performs —
-    /// `ossl_prov_conf_ctx_free`'s `OPENSSL_free(pcgbl)`.
-    const LINE_FREE: c_int;
-
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this module allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 // SAFETY: (a) holds: `destroy_body` is `ossl_prov_conf_ctx_free` minus the block -- it releases the
-// `activated_providers` list and the lock, each NULL-tolerant, and never the enclosing block. The
-// trait makes no zero-validity claim: the object is built through the staged `RawProviderConf` route.
+// `activated_providers` list and the lock, each NULL-tolerant, and never the enclosing block. (b)
+// holds: `ProviderConfGlobal` is a `#[repr(C)]` record of two raw pointers, so an all-zero block is
+// a valid value and the body is sound on it (`OPENSSL_sk_pop_free(NULL)` returns early and
+// `CRYPTO_THREAD_lock_free(NULL)` is a no-op).
 unsafe impl CtxDestroy for ProviderConfGlobal {
     const LINE_FREE: c_int = L_PCGBL_FREE;
 

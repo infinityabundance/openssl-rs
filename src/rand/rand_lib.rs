@@ -72,6 +72,7 @@ use crate::rand::pool::{
     ossl_rand_pool_buffer, ossl_rand_pool_entropy, ossl_rand_pool_free, ossl_rand_pool_length,
     ossl_rand_pool_new, RAND_POOL_MAX_LENGTH,
 };
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::print::BIO_snprintf;
 // `stat`, `fstat`, `chmod`, `Stat` and `s_isreg` are `crate::rand::sys`'s -- they need the
 // `struct stat` layout, which has one home (D298/D312) and is tested there. The stdio calls
@@ -310,31 +311,6 @@ pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
 // Ownership of the per-context record and the names it holds
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's destructor body for a [`RandGlobal`], without the block's own release, which
-/// [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this unit allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `ossl_rand_ctx_free` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the
-///   lock, the two DRBG contexts and the seven owned names, each releaser the authority's own and
-///   accepting the not-yet-set NULL/zero state) and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the block is built through the staged
-/// [`RawGlobal`] route ([`RawGlobal::finish`] hands it to the lib-context slot), so an all-zero
-/// block is **not** relied on as a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `ossl_rand_ctx_free` body, without the block release [`OwnedCtx`]'s `Drop`
-    /// performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 /// An owned heap record of this unit.
 ///
 /// The block keeps the authority's layout and its exact allocator size/`file`/`line`, but its
@@ -374,7 +350,9 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 
 // SAFETY: (a) holds: `destroy_body` is `ossl_rand_ctx_free` minus the block -- the lock, the two
 // DRBG contexts and the seven owned names, each releaser NULL-tolerant, never the enclosing block.
-// The trait makes no zero-validity claim: the object is built through the staged `RawGlobal` route.
+// (b) holds: `RandGlobal` is a `#[repr(C)]` record of raw pointers, so an all-zero block is a valid
+// value, and the body is sound on it (`CRYPTO_THREAD_lock_free(NULL)`, `EVP_RAND_CTX_free(NULL)`
+// and seven nullable `OwnedStr::adopt` calls).
 unsafe impl CtxDestroy for RandGlobal {
     /// `ossl_rand_ctx_free`'s body: the lock, the two DRBG contexts and the seven owned names.
     unsafe fn destroy_body(ptr: *mut RandGlobal) {

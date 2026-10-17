@@ -58,6 +58,7 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::provider::util::{
     ossl_prov_cipher_copy, ossl_prov_cipher_load_from_params, ossl_prov_cipher_reset, ProvCipher,
 };
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc};
@@ -116,40 +117,6 @@ pub struct MacKey {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the key, generator and property blocks
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's `*_free` body for one `#[repr(C)]` object, without the block release
-/// [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::zalloc`] builds
-/// the owner and its `Drop` runs the implementer's body through a safe interface:
-///
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (the secure private
-///   key, the property query and the cipher for a `MAC_KEY`; whatever the generator context owns),
-///   every releaser the authority's own and accepting the not-yet-set NULL/zero state, and it
-///   **never** releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
-/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
-///   and every operation the owner performs are sound. This is the obligation the safe
-///   [`OwnedCtx::zalloc`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
-///
-/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// `__FILE__` for this unit's `CRYPTO_*` calls.
-    const FILE: *const c_char;
-    /// `__LINE__` for the block's allocation.
-    const LINE_ALLOC: c_int;
-    /// `__LINE__` for the block's release.
-    const LINE_FREE: c_int;
-
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this unit allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned `#[repr(C)]` object block.
 ///

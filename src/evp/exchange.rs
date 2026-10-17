@@ -64,6 +64,7 @@ use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string,
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
@@ -93,30 +94,6 @@ const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the fetched method object and of the derive buffer
 // ---------------------------------------------------------------------------------------------
-
-/// The authority's destructor body for one of this file's heap records, without the block's own
-/// release, which [`OwnedCtx`]'s `Drop` performs.
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this file allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
-///   once** for that object; it releases **exactly** the members the object owns (the method's owned
-///   `type_name` and the provider reference, each releaser the authority's own and accepting the
-///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
-///   `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the owner is built only by reclaiming a live
-/// record whose construction the authority completed before the owner exists ([`OwnedCtx::from_raw`]
-/// at `EVP_KEYEXCH_free`), so an all-zero block is **not** relied on as a valid `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is a live record this file allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
 
 /// An owned one of this file's heap records.
 ///
@@ -159,8 +136,9 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 /// the method's owned `type_name` and the provider reference it holds.
 // SAFETY: (a) holds: `destroy_body` is the authority's `EVP_KEYEXCH_free` body minus the block --
 // the method's owned `type_name` and the provider reference, each releaser NULL-tolerant, never the
-// enclosing block. The trait makes no zero-validity claim: the owner is built only by reclaiming a
-// live record via `OwnedCtx::from_raw`.
+// enclosing block. (b) holds: `EvpKeyExch` is a `#[repr(C)]` record of raw pointers, `Option<fn>`s
+// and an `AtomicI32`, so an all-zero block is a valid `EvpKeyExch`, and `destroy_body` is sound on
+// it (`CRYPTO_free(NULL)` and `ossl_provider_free(NULL)`, which returns early).
 unsafe impl CtxDestroy for EvpKeyExch {
     unsafe fn destroy_body(ptr: *mut EvpKeyExch) {
         // SAFETY: `ptr` is a live record per the trait contract; `type_name` is NULL or this file's

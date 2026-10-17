@@ -35,6 +35,7 @@ use core::sync::atomic::{fence, AtomicI32, Ordering};
 
 use crate::ec::curve25519::ossl_x25519;
 use crate::ec::curve448::ossl_x448;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
@@ -90,39 +91,11 @@ pub struct EcxKey {
 // Ownership of the ECX_KEY object
 // ---------------------------------------------------------------------------------------------
 
-/// The authority's `ossl_ecx_key_free` destructor body, without the block's own release, which
-/// [`OwnedCtx`]'s `Drop` performs: the `propq` duplicate (`:77`) and the secure private scalar
-/// (`:81`).
-///
-/// # Safety
-///
-/// An implementer must guarantee, for a live block this unit allocated:
-/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `ossl_ecx_key_free` member body
-///   **exactly once** for that object; it releases **exactly** the members the object owns (the
-///   `propq` duplicate and the secure private scalar, each releaser the authority's own and
-///   accepting the not-yet-set NULL/zero state) and **never** releases the enclosing block, which
-///   [`OwnedCtx`]'s `Drop` releases.
-///
-/// This contract carries **no** zero-validity claim: the block is built through the staged
-/// [`RawEcxKey`] route ([`RawEcxKey::assume_init`] makes the transition and requires every field
-/// `destroy_body` reads to have been written), so an all-zero block is **not** relied on as a valid
-/// `Self`.
-unsafe trait CtxDestroy: Sized {
-    /// `__LINE__` for the block release [`OwnedCtx`]'s `Drop` performs — `ossl_ecx_key_free`'s
-    /// `OPENSSL_free(key)` at `:83`.
-    const LINE_FREE: c_int;
-
-    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
-    ///
-    /// # Safety
-    /// `ptr` is a live object this unit allocated and has not released.
-    unsafe fn destroy_body(ptr: *mut Self);
-}
-
 // SAFETY: (a) holds: `destroy_body` is `ossl_ecx_key_free` minus the block -- the `propq`
 // duplicate and the secure private scalar (cleansed by `CRYPTO_secure_clear_free`), each
-// NULL-tolerant, never the enclosing block. The trait makes no zero-validity claim: the object is
-// built through the staged `RawEcxKey` route, so an all-zero block is not relied on as valid.
+// NULL-tolerant, never the enclosing block. (b) holds: `EcxKey` is a `#[repr(C)]` record of raw
+// pointers, integers, a byte array and an atomic, so an all-zero block is a valid `EcxKey`, and
+// `destroy_body` is sound on it (`CRYPTO_free(NULL)` and `CRYPTO_secure_clear_free(NULL, 0, ...)`).
 unsafe impl CtxDestroy for EcxKey {
     const LINE_FREE: c_int = 83;
 
