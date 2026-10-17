@@ -1157,7 +1157,7 @@ pub(crate) unsafe fn tls13_setup_cipher(s: *mut Ssl, cipher_id: u16) -> c_int {
     unsafe {
         if (*s).tls13_cipher.is_null() {
             let libctx = (*(*s).ctx).libctx;
-            let propq = (*(*s).ctx).propq;
+            let propq = (*(*s).ctx).propq();
             let c = EVP_CIPHER_fetch(libctx, name.as_ptr().cast::<c_char>(), propq);
             if c.is_null() {
                 return 0;
@@ -1194,7 +1194,7 @@ pub(crate) unsafe fn tls13_pkey_from_share(
     // SAFETY: `s` is live.
     unsafe {
         let libctx = (*(*s).ctx).libctx;
-        let propq = (*(*s).ctx).propq;
+        let propq = (*(*s).ctx).propq();
         EVP_PKEY_new_raw_public_key_ex(libctx, c"X25519".as_ptr(), propq, bytes, len).cast()
     }
 }
@@ -1217,7 +1217,7 @@ pub(crate) unsafe fn tls13_derive_shared(
         return 0;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     // SAFETY: `privkey` is live.
     let pctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, privkey.cast::<EvpPkey>(), propq) };
     if pctx.is_null() {

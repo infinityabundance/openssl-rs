@@ -357,7 +357,7 @@ unsafe fn srp_server_param_with_username(s: *mut Ssl, ad: *mut c_int) -> c_int {
         let propq = if ctx.is_null() {
             ptr::null()
         } else {
-            (*ctx).propq
+            (*ctx).propq()
         };
         let bn = SRP_Calc_B_ex(
             (*s).srp_ctx.b,
@@ -429,7 +429,7 @@ pub unsafe extern "C" fn SSL_set_srp_server_param_pw(
             let propq = if ctx.is_null() {
                 ptr::null()
             } else {
-                (*ctx).propq
+                (*ctx).propq()
             };
             if SRP_create_verifier_BN_ex(
                 user,

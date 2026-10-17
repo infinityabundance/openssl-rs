@@ -137,6 +137,30 @@ observationally identical to the authority's guarded free.
 The C-string variant (`MemberCStrSlot`) is the `propq` shape of §2.2 — one pointer, NUL-terminated,
 no companion; both variants share the §2.3 rules and are defined in the module that owns the struct.
 
+### 2.7 The in-place **regrow** (`realloc`) operation
+
+`clear`+`store` expresses "release the incumbent, then take a fresh block", but some members are
+regrown **in place**: the authority replaces the block with `CRYPTO_realloc`, and a refused regrow
+must **keep** the old block (standard `realloc` semantics) rather than free it. `CertKey::serverinfo`
+is set this way by `SSL_CTX_use_serverinfo_ex` (`ssl_rsa.c:839`). The model adds one operation for
+that shape:
+
+| operation | kind | contract |
+|-----------|------|----------|
+| `MemberBufSlot::realloc(new_len, file, line) -> *mut u8` | `unsafe fn` | the member currently obeys the invariant; `new_len > 0`. Regrows the block through the authority's own `CRYPTO_realloc` site, returns the (possibly moved) block on success (member becomes `(new, new_len)`), and on NULL leaves the member **unchanged** — the old block is kept and still owned. |
+
+The failure semantics are exactly `realloc`'s: a NULL return means the old allocation was **not**
+freed and the member still owns it, so the object destructor's later `clear` remains the single
+release. `realloc` is defined only for the byte-extent variant (`N = usize`), because the request is
+a byte count; element-counted lists (`supportedgroups`) are a retained raw boundary (§5.6), not a
+blob. The caller owns the returned pointer and must initialise the first `new_len` bytes before any
+of them are read.
+
+The operation publishes the pointer and the length together. The authority sets the pointer one
+statement before the length (after its `memcpy`); no allocator event or observer runs between them,
+so the allocator transcript and the observable final state are identical. Use `realloc` when the
+authority regrows in place; use `clear`+`store` only when it frees the old block first.
+
 ## 3. Applying the model to `PKCS7.ctx.propq`
 
 * `src/pkcs7/pk7_asn1.rs` — defines `PropqSlot` and `Pkcs7Ctx::propq()`; the writer sites
@@ -197,4 +221,11 @@ Adopt the model next, in this order:
    the first application of the §2.6 **blob** variant. The remaining C-string members
    `psk_identity_hint`, `psk_identity`, `srp_username` were converted in a later batch
    (all **private**, via `MemberCStrSlot`), as was `Cert.psk_identity_hint` (the
-   `SSL_CTX`/`SSL` cert). Remaining SSL work: the `SslCtx`/`Ssl` **blob** members.
+   `SSL_CTX`/`SSL` cert). The `SslCtx`/`Ssl` blob and C-string members were completed in a further
+   batch: `SslCtx::propq`, `CertKey::serverinfo` (through the §2.7 `realloc`), and
+   `Ssl::ext_hostname`/`s3_alpn_selected`/`s3_alpn_proposed`/`pha_context` are now converted and
+   **private**. `SslCtx`/`Ssl::supportedgroups` is a **retained raw boundary** (not a
+   `MemberBufSlot`): its length is an *element count*, not the allocation's byte extent, and its
+   writer `t1_lib::tls1_set_groups` takes the raw `*mut *mut u16`/`*mut usize` pair; it stays
+   `pub(crate)` with its three accesses (the `tls1_set_groups` regrow, `tls1_get_supported_groups`'s
+   slice, and the `SSL_new` copy) and two destructor frees enumerated in the batch report.
