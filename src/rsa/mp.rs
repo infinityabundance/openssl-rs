@@ -32,7 +32,7 @@ use core::ffi::{c_char, c_int, c_void};
 use crate::bn::arith::BN_mul;
 use crate::bn::bignum::{BN_clear_free, BN_free, BN_secure_new, BigNum};
 use crate::bn::ctx::{BN_CTX_free, BN_CTX_new, BnCtx};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 
 use super::{Rsa, RsaPrimeInfo};
@@ -45,11 +45,9 @@ use super::{Rsa, RsaPrimeInfo};
 /// the same check D279 and D280 applied to the cipher units. It matters here for the same
 /// reason it does in [`super`]: `file` reaches an application through
 /// `CRYPTO_set_mem_functions`.
-#[allow(dead_code)] // read by the four allocators below, whose first caller is the object layer
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_mp.c".as_ptr();
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-#[allow(dead_code)] // as `FILE`
 const LINE: c_int = 0;
 
 /// `RSA_MAX_PRIME_NUM` — `crypto/rsa/rsa_local.h:16`. The ceiling
@@ -60,6 +58,26 @@ const LINE: c_int = 0;
 /// refuses a stack wider than `RSA_MAX_PRIME_NUM - 2`. It is declared once, here, and imported
 /// there rather than restated.
 pub(crate) const RSA_MAX_PRIME_NUM: c_int = 5;
+
+// SAFETY: (a) `destroy_body` is the authority's `ossl_rsa_multip_info_free_ex` body *minus* the
+// block release `OwnedCtx`'s `Drop` performs -- it releases exactly this record's `pp` once (the
+// `BN_clear_free` accepts the not-yet-set NULL of a partially built record) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `RsaPrimeInfo` is a `#[repr(C)]` record of raw pointers, so
+// an all-zero block is a valid `RsaPrimeInfo` the body is sound on.
+unsafe impl CtxDestroy for RsaPrimeInfo {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    /// The authority's `_free_ex` member body, without the record's block release.
+    ///
+    /// # Safety
+    /// `ptr` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut RsaPrimeInfo) {
+        // SAFETY: `ptr` is a live record per the trait contract; `pp` is NULL or owned here.
+        unsafe { BN_clear_free((*ptr).pp) };
+    }
+}
 
 /// `void ossl_rsa_multip_info_free_ex(RSA_PRIME_INFO *pinfo)` —
 /// `crypto/rsa/rsa_mp.c:15-19`.
@@ -74,12 +92,11 @@ pub(crate) const RSA_MAX_PRIME_NUM: c_int = 5;
 /// owns, and whose `r`/`d`/`t` are owned elsewhere. The pointer must not be used again.
 #[allow(dead_code)] // reached through `ossl_rsa_multip_info_free` and the object layer's `err:` labels
 pub(crate) unsafe fn ossl_rsa_multip_info_free_ex(pinfo: *mut RsaPrimeInfo) {
-    // SAFETY: `pinfo` is live per this function's `# Safety` section, so both of its
-    // accesses below are in bounds; `BN_clear_free` accepts NULL.
-    unsafe {
-        BN_clear_free((*pinfo).pp);
-        CRYPTO_free(pinfo.cast::<c_void>(), FILE, LINE);
-    }
+    // SAFETY: `pinfo` is NULL or a live record from `ossl_rsa_multip_info_new` that no other owner
+    // will release; `OwnedCtx`'s `Drop` runs this unit's `_free_ex` member body (the
+    // `BN_clear_free(pinfo->pp)` above) and then releases the block at the authority's own
+    // `OPENSSL_free` site, through the same seam. `from_raw` accepts NULL.
+    unsafe { drop(OwnedCtx::<RsaPrimeInfo>::from_raw(pinfo)) };
 }
 
 /// `void ossl_rsa_multip_info_free(RSA_PRIME_INFO *pinfo)` —
@@ -126,18 +143,18 @@ pub(crate) unsafe fn ossl_rsa_multip_info_free(pinfo: *mut RsaPrimeInfo) {
 /// still the record's, or with [`ossl_rsa_multip_info_free_ex`] once they are not.
 #[allow(dead_code)] // the caller is `RSA_set0_multi_prime_params`, in the object layer
 pub(crate) unsafe fn ossl_rsa_multip_info_new() -> *mut RsaPrimeInfo {
-    // `CRYPTO_zalloc` is a safe function in this crate (D113), so this call is unguarded
-    // and the result is a fresh, zeroed, exclusively-owned record.
-    let pinfo =
-        CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE).cast::<RsaPrimeInfo>();
-    if pinfo.is_null() {
+    // `RawCtx::zalloc` performs the authority's `CRYPTO_zalloc(sizeof(RSA_PRIME_INFO), FILE, LINE)`
+    // (a safe function in this crate, D113) and owns storage that is not yet a valid record until
+    // the four primes are in.
+    let Some(ctx) = RawCtx::<RsaPrimeInfo>::zalloc() else {
         return core::ptr::null_mut();
-    }
+    };
+    let pinfo = ctx.as_ptr();
 
     let complete = 'err: {
-        // SAFETY: `pinfo` is the fresh, zeroed record allocated above and is not aliased,
-        // so each of the four writes below is to memory this call owns; each
-        // `BN_secure_new` takes no pointers.
+        // SAFETY: `pinfo` is the fresh, zeroed storage allocated above and is not aliased, so each
+        // of the four writes below is to memory this call owns; each `BN_secure_new` takes no
+        // pointers.
         unsafe {
             (*pinfo).r = BN_secure_new();
             if (*pinfo).r.is_null() {
@@ -160,18 +177,23 @@ pub(crate) unsafe fn ossl_rsa_multip_info_new() -> *mut RsaPrimeInfo {
     };
 
     if complete {
-        return pinfo;
+        // Every field `destroy_body` and the record's users read is set (the remaining `m` is
+        // zeroed, i.e. NULL), so the storage is a valid `RsaPrimeInfo`; the handle takes ownership
+        // and hands the raw pointer to the caller, who reclaims it through `OwnedCtx`.
+        // SAFETY: as just stated, and `ctx` is the sole owner of the block.
+        return unsafe { ctx.assume_init() }.into_raw();
     }
 
-    // The authority's `err:` label. Every member is NULL or one of the allocations above,
-    // and `BN_free` accepts NULL, so the four calls are correct at any prefix.
+    // The authority's `err:` label. Every member is NULL or one of the allocations above, and
+    // `BN_free` accepts NULL, so the four calls are correct at any prefix. The block itself is
+    // released by `ctx`'s `Drop` as it leaves scope -- the authority's own bare `OPENSSL_free`, not
+    // the `_free_ex` destructor, which would cleanse a `pp` the authority frees plainly here.
     // SAFETY: `pinfo` is the record allocated above and is still live and unaliased.
     unsafe {
         BN_free((*pinfo).r);
         BN_free((*pinfo).d);
         BN_free((*pinfo).t);
         BN_free((*pinfo).pp);
-        CRYPTO_free(pinfo.cast::<c_void>(), FILE, LINE);
     }
     core::ptr::null_mut()
 }
