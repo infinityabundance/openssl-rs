@@ -42,12 +42,12 @@ use crate::params::{
 use crate::pem::pvkfmt::{ossl_blob_length, ossl_do_PVK_header, ossl_do_blob_header};
 use crate::provider::activate::OsslAlgorithm;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::{BIO_free, BIO_read};
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new, BufMem};
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_dynamic, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::selftest::OsslCallback;
 
 /// `OSSL_MAX_CODEC_STRUCT_SIZE` — `include/internal/sizes.h`, the fixed capacity of the
@@ -87,19 +87,34 @@ struct Any2objCtx {
     data_structure: [c_char; OSSL_MAX_CODEC_STRUCT_SIZE],
 }
 
+/// [`OwnedCtx`]'s destructor body for [`Any2objCtx`], without the block's own release.
+///
+/// The context owns no member: `provctx` is borrowed and `data_structure` is an inline array, so
+/// the authority's `any2obj_freectx` is the block release alone (`file_store_any2obj.c:68-71`).
+// SAFETY: (a) `destroy_body` releases nothing -- there is no owned member and never the enclosing
+// block, which `OwnedCtx`'s `Drop` releases; (b) an all-zero block of this `#[repr(C)]` record (a
+// NULL `provctx` and a zeroed `c_char` array) is a valid context.
+unsafe impl CtxDestroy for Any2objCtx {
+    unsafe fn destroy_body(_ptr: *mut Any2objCtx) {}
+}
+
 /// `static void *any2obj_newctx(void *provctx)` — `file_store_any2obj.c:59-66`.
+///
+/// The block is allocated at the authority's own `CRYPTO_zalloc(size, NULL, 0)` through the
+/// staged [`RawCtx`] handle, so a refusal returns NULL without forming a value; once `provctx` is
+/// written the block is a valid context and `assume_init`/`into_raw` hand it to the C caller.
 ///
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe extern "C" fn any2obj_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the constructor asks only for a zeroed block of the object's size.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<Any2objCtx>(), ptr::null(), 0).cast::<Any2objCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is this call's fresh allocation.
-        unsafe { (*ctx).provctx = provctx };
-    }
-    ctx.cast::<c_void>()
+    let Some(ctx) = RawCtx::<Any2objCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx.as_ptr()` is this call's own fresh block.
+    unsafe { (*ctx.as_ptr()).provctx = provctx };
+    // SAFETY: both fields are now written (the array is the zeroed block's valid value), so the
+    // storage holds a valid `Any2objCtx` and this handle is its only owner.
+    unsafe { ctx.assume_init().into_raw().cast::<c_void>() }
 }
 
 /// `static void any2obj_freectx(void *ctx)` — `file_store_any2obj.c:68-71`.
@@ -107,8 +122,10 @@ unsafe extern "C" fn any2obj_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn any2obj_freectx(ctx: *mut c_void) {
-    // SAFETY: `ctx` is this unit's own allocation.
-    unsafe { CRYPTO_free(ctx, ptr::null(), 0) };
+    // SAFETY: `ctx` is NULL or a block a previous `newctx` handed out and no other owner has
+    // released; `from_raw` maps NULL to `None` and `Drop` performs the authority's block release at
+    // `NULL`/`0`.
+    drop(unsafe { OwnedCtx::<Any2objCtx>::from_raw(ctx.cast::<Any2objCtx>()) });
 }
 
 /// `struct any2obj_set_ctx_params_st` — `file_store_any2obj.c:82-86`, the `paramnames.pm`
