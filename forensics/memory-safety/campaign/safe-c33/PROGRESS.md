@@ -286,6 +286,18 @@ zalloc-wrap constructor relies on it. Traits were **not** consolidated
 (contracts kept module-local, as their construction/release semantics
 differ).
 
+### Destructor-contract obligation census
+
+`DESTRUCTOR-CONTRACTS.md` audits every destructor-contract implementation and
+the `Drop` owners that run them: **199** implementations (136 `CtxDestroy`,
+27 `CipherDestroy`, 14 `KdfDestroy`, 7 `MacDestroy`, 7 `FreeOnDrop`,
+5 `DrbgCtx`, 3 `GcmDestroy`) across **49 trait definitions** (46 `*Destroy`
+including 42 `CtxDestroy`, plus `DrbgCtx` and 2 `FreeOnDrop`). Result: **21 `CONTRACTED`, 178 `ESTABLISHED`, 0 `DISCHARGED`**;
+**4 STOP defect sites / 3 classes** (null `hw` dereference in
+`ProvAesSivCtx`/`ProvAesGcmSivCtx`; null `meth` dereference in
+`EcGroup`/`EcPoint::clear_destroy_body`). No mechanism is discharged by this
+audit; the defects are reported, not fixed.
+
 ## Receipts
 
 Each landed batch records a receipt (template `RECEIPT.template.md`) so a fresh

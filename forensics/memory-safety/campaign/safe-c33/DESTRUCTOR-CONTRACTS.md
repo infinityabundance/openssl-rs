@@ -1,0 +1,405 @@
+# Destructor-contract audit — reusable ownership boundaries
+
+**Source identity:** `integrate/safe-c33` at `3234cfe590e84fabd0d5747ba6d1f1172949c9b9`
+(working tree at audit time). **Scope:** every destructor-contract
+implementation in `src/`: `unsafe impl CtxDestroy`, `unsafe impl
+CipherDestroy`, every module-local `unsafe trait *Destroy`/`DrbgCtx`/
+`FreeOnDrop`, and the `Drop` owners that run those bodies or release
+member-buffer resources. **This is a contract audit, not a discharge.** No
+mechanism below is `SAFETY_DISCHARGED`; nothing here is
+`SAFE_COMPATIBLE`.
+
+## Method and inventory
+
+Static source review against AGENTS.md §§1, 2, 5, 7, 9, 14, 17, 21. For every
+implementation the audit records: type/module; construction path and whether
+an all-zero or partially initialised state can reach the destructor;
+`destroy_body`/`Drop` actions in order; whether it releases the enclosing
+block or a member more than once; zero-validity witness for the fields read;
+retained obligations; and status. Status uses only `CONTRACTED` or
+`ESTABLISHED`; `DISCHARGED` requires independent checking and is not claimed.
+
+**Inventory (source-grounded):**
+
+| family | trait definitions | implementations |
+|---|---:|---:|
+| `CtxDestroy` (1 shared + 41 module-local copies) | 42 | 136 |
+| `CipherDestroy` | 1 | 27 |
+| `KdfDestroy` | 1 | 14 |
+| `MacDestroy` | 1 | 7 |
+| `GcmDestroy` | 1 | 3 |
+| `DrbgCtx` | 1 | 5 |
+| `FreeOnDrop` | 2 | 7 |
+| **total** | **49 definitions (46 `*Destroy` + `DrbgCtx` + 2 `FreeOnDrop`)** | **199** |
+
+The 46 `*Destroy` definitions comprise 42 separate `CtxDestroy` definitions
+(one shared in `runtime::bio::owned`, 41 module-local copies) plus one each of
+`CipherDestroy`, `KdfDestroy`, `MacDestroy` and `GcmDestroy`; they are not one
+shared trait (AGENTS.md §21's dependency-closure rule still applies to each). `PROGRESS.md`'s "46 destructor traits" counts the
+`*Destroy` definitions; the true total including `DrbgCtx` and the two
+`FreeOnDrop` copies is **49 definitions**. This is an inventory correction,
+not a code defect.
+
+**Legend for construction path:** `Z` = safe zalloc owner (`OwnedCtx::new`,
+`OwnedCtx::zalloc`, `new_zeroed`); an all-zero block can reach `Drop`, so the
+implementer must satisfy the zero-validity half of the contract. `S` = staged
+construction (`RawCtx`/`Raw*`/`malloc` + explicit initialisation); zero or
+partial storage is released block-only and does not reach a destructor that
+reads uninitialised members. `R` = `OwnedCtx::from_raw`/`from_raw_clear` only
+after a completed authority construction; zero is not reachable. `N` =
+`*_new` answer wrapped by `FreeOnDrop`; no zero state. `B` = block-only owner
+(`GcmDestroy`, digest rows); no member destructor body.
+
+**Status rule used here.** `ESTABLISHED` means the audit found a source witness
+for the implementer's destructor and zero-validity obligations and for the
+owner's liveness/single-release precondition. `CONTRACTED` means the contract
+exists but at least one precondition is delegated to a callback, a reference
+count, a complex multi-member teardown, or a disputed zero-validity claim, and
+has not been independently checked. Every row retains the owner-level
+obligations "block is live" and "`Drop` runs once"; these are discharged by
+the owner type, not re-listed per row.
+
+## 1. Trait definitions
+
+All 49 definitions are `unsafe trait`. Every one has a `# Safety` implementer
+contract. The contract families are:
+
+| contract class | definitions | (a) destructor | (b) zero-validity |
+|---|---|---:|---|
+| shared `runtime::bio::owned::CtxDestroy` (`owned.rs:66`) | 1 | yes | stated |
+| module-local `CtxDestroy`, zalloc owner (`async_wait:102`, `ct_log:196`, `ct_sct:203`, `ct_sct_ctx:114`, `dso/mod:208`, `ec/lib:123` (both bodies), `evp/asymcipher:212`, `evp/bio_enc:172`, `evp/digest:234`, `evp/pkey_ctx:268`, `provider/decode_der2key:542`, `provider/ec_kem:159`, `provider/ecx_kmgmt:180`, `provider/encode_key2any:389`, `provider/file_store:237`, `provider/keymgmt:444`, `provider/mac_legacy_kmgmt:139`, `provider/seed_src:224`, `provider/skeymgmt:99`, `provider/slh_dsa_sig:163`, `provider/sm2_enc:90`, `store/store_lib:149`, `ui/ui_lib:301`, `x509/by_store:206`, `x509/x509_lu:553`, `x509/x509_vfy:240`, `x509/x509_vpm:262`) | 28 | yes | stated |
+| module-local `CtxDestroy`, staged/from-raw owner (`ec/ecx_key:110`, `engine/eng_dyn:368`, `evp/exchange:112`, `evp/pkey:401`, `provider/conf:161`, `rand/rand_lib:372`, `ssl/ssl_lib:563`, `x509/by_dir:234`, `x509/v3_lib:205`, `x509/v3_purp:419`, `x509/v3_utl:146`, `x509/x509_trust:159`, `x509/x_crl:198`) | 13 | yes | explicitly disclaimed (`no zero-validity claim`) |
+| `CipherDestroy` (`provider/cipher.rs:461`) | 1 | yes | stated |
+| `KdfDestroy` (`provider/kdf.rs:344`) | 1 | yes | stated |
+| `MacDestroy` (`provider/mac.rs:227`) | 1 | yes | stated |
+| `GcmDestroy` (`provider/cipher_gcm.rs:1705`) | 1 | block-only free | stated (block-validity only) |
+| `DrbgCtx` (`provider/rand.rs:239`) | 1 | yes | stated, plus `release` obligation |
+| `FreeOnDrop` (`ssl/statem/statem_srvr.rs:220`, `statem_clnt.rs:191`) | 2 | complete `*_free` | none; explicitly "no zero-validity claim" |
+
+No safe destructor trait remains. The 46 `*Destroy` definitions are
+deliberately module-local (their construction/release semantics differ); this
+audit does **not** treat the shared `CtxDestroy` as evidence for a module-local
+copy.
+
+## 2. `CtxDestroy` implementations (136)
+
+Rows are grouped by file; each type names its implementation line. `E` is an
+empty body (`destroy_body` touches no field). "All-zero" states whether the
+safe zalloc path can reach `Drop` and whether the body is sound for it; "staged"
+means the construction path releases block-only before the object is complete.
+
+| type (`file:line`) | path | destroy_body actions, in order | zero witness | status |
+|---|---|---|---|---|
+| `X509Info` (`asn1/x_info.rs:84`) | Z | `X509_free`, `X509_CRL_free`, `EVP_PKEY_free`, `OPENSSL_free(enc_data)` | all-zero slots NULL; each free NULL-tolerant | EST |
+| `X509Pkey` (`asn1/x_pkey.rs:92`) | Z | `X509_ALGOR_free`, `ASN1_OCTET_STRING_free`, `EVP_PKEY_free`, block fields | all-zero NULL | EST |
+| `AsyncWaitCtx` (`async/async_wait.rs:172`) | Z | walk `fds`; caller cleanup callback for live entries; release each node | zero `fds` skips loop | CON |
+| `OsslCmpCtx` (`cmp/cmp_ctx.rs:486`) | Z | 5 `OwnedStr`, 2 `X509`, name, store, 2 stacks, cert/chain/pkey, 2 octet strings, secret cleanse, digest, nonces, itavs, stacks, pkey/names/int, extensions, policies, cert/req, itavs; then remaining members | all fields NULL/zero; secret guarded by `!is_null` | EST |
+| `OsslCmpSrvCtx` (`cmp/cmp_server.rs:151`) | Z | `OSSL_CMP_CTX_free(ctx)` | zero `ctx` NULL | EST |
+| `BioCoreGlobals` (`context/core_bio.rs:107`) | E | none | E | EST |
+| `OsslLibCtx` (`context/mod.rs:318`) | S/R | child delegate (if `ischild`), `context_deinit` | zero/partial accepted by authority teardown | EST |
+| `OsslLibCtxThreads` (`context/thread_data.rs:100`) | Z | mutex free, condvar free | both NULL-tolerant | EST |
+| `CtlogStore` (`ct/ct_log.rs:268`) | Z | `CRYPTO_free(propq)`, `sk_pop_free(logs)` | zero NULL/empty | EST |
+| `Ctlog` (`ct/ct_log.rs:285`) | Z | `CRYPTO_free(name)`, `EVP_PKEY_free`, `CRYPTO_free(propq)` | zero NULL | EST |
+| `CtlogStoreLoadCtx` (`ct/ct_log.rs:304`) | Z | `NCONF_free(conf)` | zero NULL | EST |
+| `CtPolicyEvalCtx` (`ct/ct_policy.rs:117`) | Z | `X509_free(cert/issuer)`, `OwnedBlock::take(propq)` | zero NULL / `take` NULL | EST |
+| `Sct` (`ct/ct_sct.rs:273`) | Z | four `CRYPTO_free` | zero NULL | EST |
+| `SctCtx` (`ct/ct_sct_ctx.rs:185`) | Z | `EVP_PKEY_free`, 5 `CRYPTO_free`, remaining members | zero NULL | EST |
+| `OsslDecoderInstance` (`decoder_lib.rs:111`) | Z | if decoder: `freectx(decoderctx)`, `OSSL_DECODER_free` | zero decoder NULL | CON (provider callback) |
+| `OsslDecoderCtx` (`decoder_meth.rs:774`) | Z | optional `cleanup(construct_data)`, `sk_pop_free(decoder_insts)`, pwdata clear | zero callbacks/NULL | CON (cleanup hook) |
+| `Dh` (`dh/object.rs:326`) | Z | method `finish` (if any), `free_ex_data`, lock, FFC params, `BN_clear_free` keys | zero method NULL; releasers NULL-tolerant | CON (method hook) |
+| `DhPkeyCtx` (`dh/pmeth.rs:140`) | Z | `kdf_ukm` block, `kdf_oid` | zero NULL | EST |
+| `Dsa` (`dsa/object.rs:264`) | Z | method `finish`, ex_data, lock, FFC params, `BN_clear_free` keys | zero method NULL | CON (method hook) |
+| `DsaPkeyCtx` (`dsa/pmeth.rs:101`) | E | none | E | EST |
+| `Dso` (`dso/mod.rs:294`) | Z | `OPENSSL_sk_free(meth_data)`, 2 names | zero NULL/empty | EST |
+| `EcdsaSig` (`ec/ecdsa.rs:47`) | Z | `BN_clear_free(r)`, `BN_clear_free(s)` | zero NULL | EST |
+| `EcxKey` (`ec/ecx_key.rs:126`) | S | `CRYPTO_free(propq)`, `CRYPTO_secure_clear_free(privkey,keylen)` | staged; no zero claim | EST |
+| `EcGroup` (`ec/lib.rs:260`) | Z/R | plain: method `group_finish`, precomp, mont, generator, order, cofactor, seed, propq. **clear:** method `group_clear_finish`/`group_finish`, precomp, mont, `EC_POINT_clear_free`, `BN_clear_free`, seed | **defect D3:** clear body derefs null `meth` on all-zero | CON |
+| `EcPoint` (`ec/lib.rs:301`) | Z/R | plain: method `point_finish`. **clear:** `point_clear_finish`/`point_finish` | **defect D4:** clear body derefs null `meth` on all-zero | CON |
+| `EcPreCompSt` (`ec/mult.rs:69`) | Z | free each point, then points array | zero `points` NULL | EST |
+| `EcPkeyCtx` (`ec/pmeth.rs:139`) | Z | `gen_group`, `co_key`, `kdf_ukm` | zero NULL | EST |
+| `OsslEncoderInstance` (`encoder_lib.rs:494`) | Z | `freectx(encoderctx)`, `OSSL_ENCODER_free` | zero encoder NULL | CON (provider callback) |
+| `OsslEncoder` (`encoder_meth.rs:310`) | Z | name, parsed propdef, provider ref | zero NULL | EST |
+| `OsslEncoderCtx` (`encoder_meth.rs:1246`) | Z | `sk_pop_free(encoder_insts)`, `CRYPTO_free(construct_data)`, pwdata clear | zero NULL/empty | CON (element destructor callback) |
+| `ConstructDataPkey` (`encoder_pkey.rs:301`) | E | none | E | EST |
+| `DynamicDataCtx` (`engine/eng_dyn.rs:419`) | R | `DSO_free`, 2 names, `sk_pop_free(dirs)` | zero NULL | EST |
+| `EnginePile` (`engine/eng_table.rs:96`) | Z | `sk_pop_free(sk)`, `ENGINE_free(funct)` | zero NULL | EST |
+| `EvpAsymCipher` (`evp/asymcipher.rs:286`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `BioB64Ctx` (`evp/bio_enc.rs:267`) | Z | `EVP_ENCODE_CTX_free(base64)` | zero NULL | EST |
+| `BioEncCtx` (`evp/bio_enc.rs:280`) | Z | `EVP_CIPHER_CTX_free(cipher)` | zero NULL | EST |
+| `EvpCipher` (`evp/cipher.rs:404`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpCipherCtx` (`evp/cipher_ctx.rs:310`) | Z | `EVP_CIPHER_CTX_reset` | reset accepts zero | EST |
+| `EvpMd` (`evp/digest.rs:956`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpMdCtx` (`evp/digest.rs:2094`) | Z | `EVP_MD_CTX_reset` | reset accepts zero | EST |
+| `EvpEncodeCtx` (`evp/encode.rs:218`) | E | none | E | EST |
+| `EvpKeyExch` (`evp/exchange.rs:164`) | R | `CRYPTO_free(type_name)`, provider ref | no zero claim | EST |
+| `EvpKem` (`evp/kem.rs:199`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpKeyMgmt` (`evp/keymgmt.rs:320`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpPkey` (`evp/pkey.rs:452`) | S | `evp_pkey_free_it`, `free_ex_data`, lock | staged `RawPkey`; last-ref precondition | CON (refcount) |
+| `EvpPkeyAsn1Method` (`evp/pkey_asn1.rs:566`) | Z | `CRYPTO_free(pem_str/info)`, remaining member releases | zero NULL | EST |
+| `EvpPkeyCtx` (`evp/pkey_ctx.rs:1125`) | Z | free old ops/cached data, keymgmt, propquery, 2 keys, `BN_free(rsa_pubexp)` | zero NULL; old-op helpers handle zero | CON (freectx callbacks) |
+| `EvpPkeyMethod` (`evp/pkey_ctx.rs:2228`) | E | none | E | EST |
+| `EvpRand` (`evp/rand.rs:321`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpSignature` (`evp/signature.rs:359`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpSkeyMgmt` (`evp/skeymgmt.rs:228`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `HmacCtx` (`mac/hmac.rs:100`) | Z | `hmac_ctx_cleanup`, then free `i_ctx`/`o_ctx`/`md_ctx` | cleanup resets; free NULL-tolerant | EST |
+| `OcbCtx` (`modes/ocb.rs:89`) | Z | `CRYPTO_clear_free(l, max_l_index*16)`, cleanse context | zero `l` NULL, zero index | EST |
+| `Siv128Context` (`modes/siv128.rs:135`) | E | none | E | EST |
+| `OsslGlobalProperties` (`property/globals.rs:89`) | Z | `ossl_property_free(list)` | zero NULL | EST |
+| `ChildProvGlobals` (`provider/child.rs:197`) | Z | `CRYPTO_THREAD_lock_free(lock)` | zero NULL | EST |
+| `ProviderConfGlobal` (`provider/conf.rs:176`) | S | `sk_pop_free(activated_providers)`, lock | staged `RawProviderConf` | EST |
+| `ProvCtx` (`provider/ctx.rs:80`) | E | none | E | EST |
+| `BarePubkey` (`provider/decode_der2key.rs:595`) | Z | `ASN1_OBJECT_free`, `ASN1_BIT_STRING_free` | zero NULL | EST |
+| `Epki2pkiCtx` (`provider/decode_epki2pki.rs:104`) | E | none | E | EST |
+| `Pem2DerCtx` (`provider/decode_pem2der.rs:264`) | E | none | E | EST |
+| `Pvk2keyCtx` (`provider/decode_pvk2key.rs:125`) | E | none | E | EST |
+| `Spki2TypespkiCtx` (`provider/decode_spki2typespki.rs:95`) | E | none | E | EST |
+| `ProvEcCtx` (`provider/ec_kem.rs:177`) | Z | `CRYPTO_clear_free(ikm,ikmlen)`, clear 2 key refs | zero NULL | EST |
+| `EcxGenCtx` (`provider/ecx_kmgmt.rs:376`) | Z | `CRYPTO_clear_free(ikm)`, propq | zero NULL | EST |
+| `Key2anyCtx` (`provider/encode_key2any.rs:454`) | Z | pwdata clear, `EVP_CIPHER_free` | zero/embedded zero | EST |
+| `Key2msCtx` (`provider/encode_key2ms.rs:83`) | Z | pwdata clear | embedded zero | EST |
+| `FileCtxSt` (`provider/file_store.rs:351`) | Z | `CRYPTO_free(uri)`; if not `IS_DIR`: decoder ctx + propq + input type | zero type tag; NULL frees | EST |
+| `Any2objCtx` (`provider/file_store_any2obj.rs:97`) | E | none | E | EST |
+| `KdfData` (`provider/keymgmt.rs:521`) | E | none | E | EST |
+| `DhGenCtx` (`provider/keymgmt.rs:531`) | Z | `CRYPTO_free(mdname/mdprops)`, `CRYPTO_clear_free(seed,seedlen)` | zero NULL | EST |
+| `MacKey` (`provider/mac_legacy_kmgmt.rs:343`) | Z | secure clear private key, propq, cipher reset | zero NULL/embedded zero | EST |
+| `MacGenCtx` (`provider/mac_legacy_kmgmt.rs:841`) | Z | secure clear private key, cipher reset | zero NULL/embedded zero | EST |
+| `MlDsaGenCtx` (`provider/ml_dsa_kmgmt.rs:196`) | Z | cleanse entropy array, release propq, remaining members | embedded zero | EST |
+| `ProvMlKemCtx` (`provider/ml_kem_kem.rs:85`) | Z | cleanse entropy if non-NULL | zero pointer skips | EST |
+| `ProvMlxKemCtx` (`provider/mlx_kem.rs:84`) | E | none | E | EST |
+| `ProvRsaCtx` (`provider/rsa_kem.rs:103`) | Z | `RSA_free(rsa)` | zero NULL | EST |
+| `ProvSeedSrc` (`provider/seed_src.rs:337`) | E | none | E | EST |
+| `ProvTestRng` (`provider/seed_src.rs:351`) | Z | release entropy/nonce, lock | zero NULL | EST |
+| `ProvSkey` (`provider/skeymgmt.rs:116`) | Z | `CRYPTO_clear_free(data,length)` | zero NULL | EST |
+| `SlhDsaGenCtx` (`provider/slh_dsa_kmgmt.rs:167`) | Z | cleanse entropy, release propq | embedded zero | EST |
+| `ProvSlhDsaCtx` (`provider/slh_dsa_sig.rs:236`) | Z | free hash ctx, propq, cleanse add_random | zero NULL/embedded zero | EST |
+| `ProvSm2Ctx` (`provider/sm2_enc.rs:101`) | Z | `EC_KEY_free`, digest reset | zero NULL | EST |
+| `RandGlobal` (`rand/rand_lib.rs:422`) | R | lock, 2 DRBG ctx, 7 names | no zero claim; constructed global | EST |
+| `RsaPrimeInfo` (`rsa/mp.rs:67`) | Z | `BN_free(pp)`, coefficient members | zero NULL | EST |
+| `Rsa` (`rsa/object.rs:589`) | Z | method `finish`, ex_data, lock, `BN_free(n/e)`, `BN_clear_free(d,p,q,dmp1,dmq1,iqmp)`, prime infos, blinding | zero method NULL; NULL BNs | CON (method hook) |
+| `RsaPkeyCtx` (`rsa/pmeth.rs:189`) | Z | 5 member releases (including `BN_free` pubexp) | zero NULL | EST |
+| `BioBufferCtx` (`runtime/bio/bf_buff.rs:85`) | Z | `OwnedBlock::take(ibuf/obuf)` | zero NULL | EST |
+| `BioLineBufferCtx` (`runtime/bio/bf_lbuf.rs:58`) | Z | `OwnedBlock::take(obuf)` | zero NULL | EST |
+| `NbioTest` (`runtime/bio/bf_nbio.rs:70`) | E | none | E | EST |
+| `PrefixCtx` (`runtime/bio/bf_prefix.rs:58`) | Z | `CRYPTO_free(prefix)` if non-NULL | zero NULL | EST |
+| `BioAccept` (`runtime/bio/bss_acpt.rs:228`) | Z | 6 `OwnedBlock::take`, `BIO_ADDRINFO_free`, chain | zero NULL | EST |
+| `BioBioSt` (`runtime/bio/bss_bio.rs:87`) | Z | `OwnedBlock::take(buf)` | zero NULL | EST |
+| `BioConnect` (`runtime/bio/bss_conn.rs:240`) | Z | 2 `OwnedBlock::take`, `BIO_ADDRINFO_free` | zero NULL | EST |
+| `BioDgramData` (`runtime/bio/bss_dgram.rs:275`) | E | none | E | EST |
+| `BioDgramPairSt` (`runtime/bio/bss_dgram_pair.rs:259`) | Z | lock free | zero NULL | EST |
+| `BioBufMem` (`runtime/bio/bss_mem.rs:66`) | Z | `OwnedBlock::take(readp)` | zero NULL | EST |
+| `BssSockData` (`runtime/bio/bss_sock.rs:385`) | E | none | E | EST |
+| `CompCtx` (`runtime/bio/comp.rs:167`) | Z | method `finish` if present | zero method NULL | CON (method hook) |
+| `OsslCoreBio` (`runtime/bio/core_bio.rs:102`) | E | none | E | EST |
+| `BioMethod` (`runtime/bio/method.rs:64`) | Z | `CRYPTO_free(name)` | zero NULL | EST |
+| `ProbeCtx` (`runtime/bio/owned.rs:272`) | E (test) | records a call only | E; test-only | EST |
+| `CryptoThread` (`runtime/thread_arch.rs:166`) | Z | 2 mutexes, condvar, thread handle block | zero NULL | EST |
+| `IndicatorCb` (`selftest/indicator.rs:48`) | E | none | E | EST |
+| `SelfTestCb` (`selftest/mod.rs:112`) | E | none | E | EST |
+| `OsslSelfTest` (`selftest/mod.rs:175`) | E | none | E | EST |
+| `BioSsl` (`ssl/bio_ssl.rs:102`) | E | none | E | EST |
+| `Dtls1State` (`ssl/d1_lib.rs:107`) | E | none | E | EST |
+| `Cert` (`ssl/ssl_lib.rs:995`) | S | clear 12 cert-key slots, `drop_in_place(custext)`, psk hint slot, `dh_tmp` | raw `RawCtx`; `custext` written before `assume_init` | EST |
+| `SslCtx` (`ssl/ssl_lib.rs:3155`) | S/Z | 4 stacks, session cache, SRP, CA names, verify param, ex_data, store, `cert_free`, DANE, CT log, 4 member-buffer slots, supportedgroups, lock, propq slot | zero block validated before fallible members; NULL-tolerant | CON (multi-member, refcount) |
+| `Ssl` (`ssl/ssl_lib.rs:3520`) | S/Z | 5 stacks, CA names, session, SRP, ticket, DTLS, 2 BIOs, 4 EVP ctxs/ciphers, 2 keys, cert, 2 chains, verify param, `cert_free`, 8 slots, supportedgroups, pha, ex_data, 2 `SSL_CTX_free`, lock | zero block valid; two context refs balanced | CON (multi-member, refcount) |
+| `DanetlsRecord` (`ssl/ssl_lib.rs:11436`) | Z | `CRYPTO_free(data)`, `EVP_PKEY_free(spki)` | zero NULL | EST |
+| `SslSession` (`ssl/ssl_sess.rs:559`) | Z | ex_data, cleanse master key/id, peer, peer_rpk, chain, 7 member-buffer slots | zero NULL/arrays | CON (refcount) |
+| `OsslStoreCtx` (`store/store_lib.rs:262`) | E | none (`ossl_store_close_it` is explicit) | E | EST |
+| `OsslStoreSearch` (`store/store_lib.rs:272`) | E | none | E | EST |
+| `OsslStoreInfo` (`store/store_lib.rs:281`) | Z | switch on `type_`; one member per tag | zero tag is not a case | EST |
+| `OsslStoreLoader` (`store/store_meth.rs:163`) | Z | provider ref if non-NULL | zero NULL | EST |
+| `TsVerifyCtx` (`ts/ts_verify_ctx.rs:79`) | Z | `TS_VERIFY_CTX_cleanup` (re-zeroes) | zero/cleanup | EST |
+| `UiString` (`ui/ui_lib.rs:475`) | Z | free `out_string` iff `OUT_STRING_FREEABLE` | zero flags skip | EST |
+| `Ui` (`ui/ui_lib.rs:515`) | Z | if `UI_FLAG_DUPL_DATA`: `ui_destroy_data`; strings; ex_data; lock | zero flags skip | CON (callback) |
+| `UiMethod` (`ui/ui_lib.rs:545`) | Z | ex_data, name | zero NULL | EST |
+| `ByDirHash` (`x509/by_dir.rs:363`) | E | none | E | EST |
+| `ByDirEntry` (`x509/by_dir.rs:371`) | S | `CRYPTO_free(dir)`, `sk_pop_free(hashes)` | malloc + all read fields written before drop | EST |
+| `ByDir` (`x509/by_dir.rs:386`) | Z/S | `sk_pop_free(dirs)`, `BUF_MEM_free`, lock | zero NULL | EST |
+| `CachedStore` (`x509/by_store.rs:282`) | Z | `CRYPTO_free(uri)`, propq slot clear | zero NULL | EST |
+| `X509PolicyCache` (`x509/pcy_cache.rs:84`) | Z/S | `ossl_policy_data_free`, `sk_pop_free(data)` | zero NULL | EST |
+| `X509V3ExtMethod` (`x509/v3_lib.rs:278`) | E/R | none | E; row copied whole before drop | EST |
+| `X509Purpose` (`x509/v3_purp.rs:475`) | R | free name/sname iff dynamic flag | constructed row; no zero claim | EST |
+| `ConfValue` (`x509/v3_utl.rs:479`) | R | free name/value/section | constructed record; no zero claim | EST |
+| `X509Lookup` (`x509/x509_lu.rs:739`) | Z | method `free` hook if method non-NULL | zero method NULL | CON (method hook) |
+| `X509Object` (`x509/x509_lu.rs:758`) | Z | `x509_object_free_internal` by tag | zero tag `X509_LU_NONE` | EST |
+| `X509Store` (`x509/x509_lu.rs:770`) | Z | shutdown/free each lookup, free stack, objects, ex_data, param, lock | zero stack/objects/lock | CON (lookup free hooks) |
+| `X509Trust` (`x509/x509_trust.rs:215`) | R | free name iff dynamic flag | constructed row; no zero claim | EST |
+| `X509StoreCtx` (`x509/x509_vfy.rs:319`) | Z | `X509_STORE_CTX_cleanup`, propq slot clear | cleanup preserves propq; zero accepted | EST |
+| `X509VerifyParam` (`x509/x509_vpm.rs:342`) | Z/R | policies, hosts, peername, email, ip | zero NULL | EST |
+| `X509CrlMethod` (`x509/x_crl.rs:272`) | E/S | none | E | EST |
+
+**CtxDestroy subtotal: 136 = 117 EST + 19 CON.** The 19 `CONTRACTED` rows
+are `AsyncWaitCtx`, `OsslDecoderInstance`, `OsslDecoderCtx`, `Dh`, `Dsa`,
+`OsslEncoderInstance`, `OsslEncoderCtx`, `EvpPkey`, `EvpPkeyCtx`, `Rsa`,
+`CompCtx`, `SslCtx`, `Ssl`, `SslSession`, `Ui`, `X509Lookup`, `X509Store`,
+`EcGroup`, `EcPoint`. (`ProvAesSivCtx`/`ProvAesGcmSivCtx` are
+`CipherDestroy`, counted below.)
+
+## 3. `CipherDestroy` implementations (27)
+
+| type (`file:line`) | path | destroy_body actions | zero witness | status |
+|---|---|---|---|---|
+| `ProvAesCtx` (`provider/cipher.rs:592`) | Z | `ossl_cipher_generic_reset_ctx` (`tlsmac` if `alloced`) | zero `alloced` skips | EST |
+| `ProvCamelliaCtx` (`:603`) | Z | same | same | EST |
+| `ProvTdesCtx` (`:614`) | Z | same | same | EST |
+| `ProvAesWrapCtx` (`:625`) | Z | same | same | EST |
+| `ProvAesXtsCtx` (`:636`) | Z | same | same | EST |
+| `ProvSm4XtsCtx` (`:647`) | Z | same | same | EST |
+| `ProvAesOcbCtx` (`:658`) | Z | `CRYPTO_ocb128_cleanup(ocb)`, generic reset | zero `l` NULL | EST |
+| `ProvAesCcmCtx` (`:673`) | Z | E | E | EST |
+| `ProvAriaCcmCtx` (`:683`) | Z | E | E | EST |
+| `ProvSm4CcmCtx` (`:693`) | Z | E | E | EST |
+| `ProvAesSivCtx` (`:703`) | Z | `((*(*ptr).hw).cleanup)(ptr)` | **defect D1: null `hw` deref on all-zero** | CON |
+| `ProvNullCtx` (`:714`) | Z | E | E | EST |
+| `ProvAesHmacSha1Ctx` (`:724`) | Z | generic reset | zero `alloced` | EST |
+| `ProvAesHmacSha256Ctx` (`:735`) | Z | generic reset | zero `alloced` | EST |
+| `ProvAesGcmSivCtx` (`:746`) | Z | `CRYPTO_clear_free(aad,aad_len)`, `((*(*ptr).hw).clean_ctx)(ptr)` | **defect D2: null `hw` deref on all-zero** | CON |
+| `ProvChacha20Ctx` (`:761`) | Z | generic reset | zero `alloced` | EST |
+| `ProvChacha20Poly1305Ctx` (`:772`) | Z | generic reset | zero `alloced` | EST |
+| `ProvSm4Ctx` (`:783`) | Z | generic reset | zero `alloced` | EST |
+| `ProvAriaCtx` (`:794`) | Z | generic reset | zero `alloced` | EST |
+| `ProvCastCtx` (`:21935`) | Z | generic reset (legacy macro) | zero `alloced` | EST |
+| `ProvBlowfishCtx` (`:21946`) | Z | generic reset | zero `alloced` | EST |
+| `ProvIdeaCtx` (`:21957`) | Z | generic reset | zero `alloced` | EST |
+| `ProvSeedCtx` (`:21968`) | Z | generic reset | zero `alloced` | EST |
+| `ProvRc2Ctx` (`:21979`) | Z | generic reset | zero `alloced` | EST |
+| `ProvRc4Ctx` (`:21990`) | Z | generic reset | zero `alloced` | EST |
+| `ProvDesCtx` (`:22001`) | Z | generic reset | zero `alloced` | EST |
+| `ProvRc4HmacMd5Ctx` (`:22012`) | Z | generic reset | zero `alloced` | EST |
+
+**Subtotal: 27; EST 25, CON 2.**
+
+## 4. `KdfDestroy` (14), `MacDestroy` (7), `DrbgCtx` (5), `GcmDestroy` (3), `FreeOnDrop` (7)
+
+| family / types (`file:line`) | path | actions | zero witness | status |
+|---|---|---|---|---|
+| `KdfSskdf` (`kdf.rs:474`), `KdfX942` (`:485`), `KdfPkcs12` (`:496`), `KdfSshkdf` (`:507`), `KdfPbkdf2` (`:518`), `KdfHkdf` (`:529`), `Tls1Prf` (`:541`), `Kbkdf` (`:552`), `KdfScrypt` (`:563`), `Krb5kdfCtx` (`:579`), `KdfHmacDrbg` (`:590`), `KdfPbkdf1` (`:640`), `KdfPvk` (`:651`) | Z | per-row `reset`/`cleanup`: free digest/MAC/cipher, cleanse key material, zero struct | zero fields NULL/zero; resets accept zero | EST |
+| `KdfArgon2` (`kdf.rs:601`) | Z | clear-free pwd/salt/secret/ad (each non-NULL), free md/mac/propq, zero struct | zero NULL skips | EST |
+| **Kdf subtotal 14: EST 14** | | | | |
+| `CmacData` (`mac.rs:396`) | Z | `CMAC_CTX_free`, cipher reset | zero NULL/embedded | EST |
+| `GmacData` (`mac.rs:905`) | Z | `EVP_CIPHER_CTX_free`, cipher reset | zero NULL/embedded | EST |
+| `SiphashData` (`mac.rs:1373`) | Z | E | E | EST |
+| `HmacData` (`mac.rs:1817`) | Z | `HMAC_CTX_free`, digest reset, key clear-free | zero NULL/embedded | EST |
+| `MacData` BLAKE2 (`mac.rs:2453`) | Z | cleanse embedded key array | embedded zero | EST |
+| `Poly1305Data` (`mac.rs:2904`) | Z | E | E | EST |
+| `KmacData` (`mac.rs:3357`) | Z | `EVP_MD_CTX_free`, digest reset, cleanse key/custom arrays | zero NULL/embedded | EST |
+| **Mac subtotal 7: EST 7** | | | | |
+| `ProvDrbg` (`rand.rs:509`) | Z | lock free | zero NULL | EST |
+| `ProvDrbgNonceGlobal` (`rand.rs:544`) | Z | lock free | zero NULL | EST |
+| `ProvDrbgCtr` (`rand.rs:1900-area, impl at 1899`) | Z | free 3 cipher ctxs + 2 ciphers | zero NULL | EST |
+| `ProvDrbgHash` (`rand.rs:3346`) | Z | `EVP_MD_CTX_free`, digest reset | zero NULL | EST |
+| `ProvDrbgHmac` (`rand.rs:4437`) | Z | `EVP_MAC_CTX_free`, digest reset | zero NULL | EST |
+| **Drbg subtotal 5: EST 5** | | | | |
+| `ProvAesGcmCtx` (`cipher_gcm.rs:1820`), `ProvAriaGcmCtx` (`:1827`), `ProvSm4GcmCtx` (`:1834`) | B | none: owner's cleansing block release is the whole `*_gcm_freectx` | block-only; zero block valid | EST |
+| **Gcm subtotal 3: EST 3** | | | | |
+| `FreeOnDrop` impls: `EVP_MD_CTX` / `EVP_CIPHER_CTX` / `HMAC_CTX` / `EVP_PKEY` (srvr), `EVP_MD_CTX` / `SSL_SESSION` / `EVP_PKEY` (clnt) (`statem_srvr.rs:268-312`, `statem_clnt.rs:239-270`) | N | complete matching `*_free` | no zero claim; `*_new` answer only | EST |
+| **FreeOnDrop subtotal 7: EST 7** | | | | |
+
+**Grand total: 199 = EST 178, CON 21.**
+
+## 5. `Drop` owners of destructor/member-buffer resources
+
+| owner (`file:line`) | bodies | action | finding |
+|---|---:|---|---|
+| `impl<T: CtxDestroy> Drop for OwnedCtx` | 42 | `T::destroy_body` then `CRYPTO_free` at `T::FILE`/`T::LINE_FREE` | one body per module; block release exactly once; no owner frees the block inside `destroy_body` except the `DrbgCtx::release` split |
+| `impl<T: CtxDestroy> Drop for RawCtx` (`runtime/bio/owned.rs:201`, `ssl/ssl_lib.rs:685`, `provider/slh_dsa_sig.rs:296`, `provider/sm2_enc.rs:208`) | 4 | block-only release; never `destroy_body` | the staged-construction window; correct for partially built storage |
+| `impl<T: CipherDestroy> Drop for OwnedCtx` / `OwnedRaw` | 2 | body then `CRYPTO_clear_free(size_of::<T>())`; partial copies plain-free only | `OwnedRaw` deliberately skips the destructor on a partially repaired copy |
+| `impl<T: KdfDestroy> Drop for OwnedCtx` | 1 | body then plain free | single release |
+| `impl<T: MacDestroy> Drop for OwnedCtx` / `OwnedRaw` | 2 | body then plain free; partial copies block-only | single release |
+| `impl<T: DrbgCtx> Drop for OwnedCtx` / `OwnedRaw` | 2 | body then `T::release`; partial blocks `release` only | split is explicit |
+| `impl<T: GcmDestroy> Drop for OwnedCtx` / `OwnedRaw` | 2 | cleansing block release; partial copies plain-free | single release |
+| `impl<T: FreeOnDrop> Drop for OwnedCtx` | 2 | `T::free_on_drop` | no block/destructor split; object is a `*_new` answer |
+| non-generic `impl Drop for OwnedCtx` (`evp/bio_ok:278`, `bn/blinding:212`, `hpke:1248`, `provider/decode_msblob2key:151`, `provider/ecx_exch:133`, `provider/mac_legacy_sig:163`) | 6 | member frees then block release; HPKE calls `destroy_ctx_body` | audited: `destroy_ctx_body` is all-NULL-safe; `bn/blinding` uses `Box::from_raw` because its block is a `Box` (not the C seam); others single release |
+| `impl Drop for OwnedBlock` | 17 | one `CRYPTO_free` at stored `(file,line)` | single release; representative `runtime/bio/owned.rs:237`, `ssl/ssl_lib.rs:742` |
+| `impl Drop for OwnedBuf` / `OwnedStr` | 128 | one `CRYPTO_free` or `CRYPTO_clear_free` at stored coordinates | uniform pattern; no destructor body and no enclosing-block overlap |
+| `impl Drop for OwnedScratch` | 2 | one `CRYPTO_free` | single release |
+
+No `Drop` owner in this inventory calls `destroy_body` and then releases the
+same block again; the `OwnedRaw`/`RawCtx` split exists precisely to avoid that
+on partially built or partially repaired storage.
+
+## 6. Defects / inconsistencies (STOP findings)
+
+These are reported, not fixed. Each is a single case of a destructor accepting
+an invalid zero state; per the audit rule this is a STOP.
+
+1. **D1 — `ProvAesSivCtx` null `hw` dereference.**
+   `src/provider/cipher.rs:703-709`. The impl comment at `:700-702` claims
+   "(b) holds: an all-zero context is valid with every release a no-op", but
+   `destroy_body` executes `((*(*ptr).hw).cleanup)(ptr.cast())` with no NULL
+   test. The safe `OwnedCtx::<ProvAesSivCtx>::new()` at `:488-493` returns an
+   owner over a `CRYPTO_zalloc` block, and `Drop` (`:516-533`) runs
+   `destroy_body`; safe code in the module that drops the owner before
+   installing `hw` causes a null dereference. Current
+   `aes_siv_newctx` (`:9887-9897`) installs `hw` immediately before
+   `into_raw`, so no current call site reaches it — the defect is in the safe
+   abstraction's contract, not an observed path. Either the body must test
+   `hw` or the zero-validity claim must be removed and the safe zalloc
+   constructor replaced by a staged one.
+2. **D2 — `ProvAesGcmSivCtx` null `hw` dereference.**
+   `src/provider/cipher.rs:746-755`. Same contradiction (`:743-745` claim,
+   `:753` `((*(*ptr).hw).clean_ctx)(ptr.cast())`). `OwnedCtx::new` is the same
+   safe zalloc constructor; `ossl_aes_gcm_siv_newctx` installs `hw` at
+   `:13804` before `into_raw`, so no current path triggers it. Same required
+   fix.
+3. **D3 — `EcGroup::clear_destroy_body` null `meth` dereference.**
+   `src/ec/lib.rs:277-294`, specifically `:280-281`
+   (`let meth = (*ptr).meth; (*meth).group_clear_finish`). The trait
+   `ec::CtxDestroy` states at `:117-119` that *both* bodies are sound for an
+   all-zero block, and the impl comment repeats it at `:255-259`. An all-zero
+   `EcGroup` has `meth == NULL`. `OwnedCtx::new` (`:161-171`) is the safe
+   zalloc constructor, but it sets `cleansing = false`; `clear_destroy_body`
+   is selected only by the unsafe `from_raw_clear` (`:203-210`), which requires
+   a live block. The false claim is a latent soundness hole if a safe
+   cleansing constructor is ever added. The plain `destroy_body` is null-safe
+   because it uses `meth.as_ref()`.
+4. **D4 — `EcPoint::clear_destroy_body` null `meth` dereference.**
+   `src/ec/lib.rs:311-320`, specifically `:314-315`. Identical to D3; the
+   plain body at `:302-309` is null-safe, the clear body is not.
+
+**No other STOP was found in the audited set:** no `destroy_body` releases the
+enclosing block, no member is released twice by a body, and no body reads a
+field that the documented construction path leaves uninitialised. The four
+sites above are zero-state contract violations; D1/D2 are reachable by safe
+code inside their module, D3/D4 are latent behind an unsafe reclaim.
+
+**Non-soundness inconsistencies recorded (no STOP):**
+
+- `Ssl::destroy_body` (`src/ssl/ssl_lib.rs:3524-3529`) says `session_ticket`
+  is released through a `MemberBufSlot`, but the body releases it with a raw
+  `CRYPTO_free` at `:3541`. Single release, so not a double-free; the comment
+  overstates the member-buffer coverage.
+- `PROGRESS.md`'s "46 module-local destructor traits" counts the `*Destroy`
+  definitions; `DrbgCtx` and the two `FreeOnDrop` copies make the definition
+  total 49 (42 `CtxDestroy` + 4 other `*Destroy` + `DrbgCtx` + 2 `FreeOnDrop`).
+- `GcmDestroy` has no `destroy_body`; its only implementer obligation is the
+  `FILE` constant and the "block-only `*_gcm_freectx`" statement. This is
+  sound for the three GCM rows but is a different trait shape from the other
+  destructor traits; a future GCM row that owns a member would need a body.
+
+## 7. Status counts and residuals
+
+| status | count |
+|---|---:|
+| implementations audited | 199 |
+| `CONTRACTED` | 21 |
+| `ESTABLISHED` | 178 |
+| `DISCHARGED` | 0 |
+| defect sites (STOP) | 4 (3 classes) |
+
+**Retained obligations (global):**
+
+- Every owner retains "the block is live and exclusively owned; `Drop` runs
+  once". The owner types establish this; it is not independently checked here.
+- Callback-dispatching destructors retain the authority/provider callback
+  contract (D1/D2 are distinct: they are not callback obligations, they are
+  missing null tests).
+- Reference-counted destructors (`EvpPkey`, `SslCtx`, `Ssl`, `SslSession`)
+  retain the "last reference" precondition; the exported `*_free` wrappers
+  establish it, but no independent check was run.
+- `EcGroup`/`EcPoint` retain the clear/plain selection obligation and the
+  D3/D4 latent null dereference.
+- `CipherDestroy::OwnedCtx::new` retains the zero-validity obligation for all
+  27 implementers; D1/D2 show it is not uniformly met.
+- No Miri, sanitizer, negative-control, or differential run was performed for
+  this audit. `ESTABLISHED` is a source-witness status, not an independently
+  checked one, and nothing here is `SAFETY_DISCHARGED`.
