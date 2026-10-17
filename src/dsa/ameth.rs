@@ -57,10 +57,10 @@ use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free};
 use crate::runtime::obj::{
     NID_dsa, NID_dsaWithSHA, NID_dsaWithSHA1, NID_dsaWithSHA1_2, NID_dsa_2, NID_sha256, OBJ_nid2obj,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::t_x509::X509_signature_dump;
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param};
 
@@ -74,104 +74,6 @@ const EVP_PKEY_DSA3: c_int = NID_dsaWithSHA1;
 const EVP_PKEY_DSA4: c_int = NID_dsaWithSHA1_2;
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c".as_ptr();
-
-/// An owned buffer a helper allocated through the crate's `CRYPTO_*` seam.
-///
-/// The block stays the helper's own `CRYPTO_malloc` at the authority's exact `file`/`line` -- a Rust
-/// `Box`/`Vec` would hide the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook -- and only its *ownership* is this type: `adopt` takes the block
-/// `ASN1_item_i2d` answered and `Drop` is its single release, the authority's own plain
-/// `OPENSSL_free` (`dsa_pub_encode`, `:139`) or cleansing `OPENSSL_clear_free` (`dsa_priv_encode`,
-/// `:207`). A NULL pointer is a valid, empty buffer whose release is the authority's own no-op.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a buffer [`OwnedBuf`] owns.
-enum BufRelease {
-    /// The authority's plain `OPENSSL_free(ptr)` (`dsa_pub_encode`, `:139`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `OPENSSL_clear_free(ptr, num)` (`dsa_priv_encode`, `:207`).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// Adopt the block `ptr` for plain release by `Drop` at `file`/`release_line`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced (this unit's
-    /// `ASN1_item_i2d`) that no other owner will release; `file` is NULL or a NUL-terminated C
-    /// string.
-    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, release_line: c_int) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Plain {
-                file,
-                line: release_line,
-            },
-        }
-    }
-
-    /// Adopt the block `ptr` for cleansing release by `Drop` over `num` bytes at
-    /// `file`/`release_line`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced (this unit's
-    /// `ASN1_item_i2d`, holding the DER private key) that no other owner will release; `num` is that
-    /// block's length; `file` is NULL or a NUL-terminated C string.
-    unsafe fn adopt_cleansed(
-        ptr: *mut c_uchar,
-        num: usize,
-        file: *const c_char,
-        release_line: c_int,
-    ) -> OwnedBuf {
-        OwnedBuf {
-            ptr,
-            release: BufRelease::Cleansed {
-                num,
-                file,
-                line: release_line,
-            },
-        }
-    }
-
-    /// The start of the block, for the raw calls that read it.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Give up ownership of the block to the consumer that takes it over.
-    fn into_raw(self) -> *mut c_uchar {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own plain `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// `static int dsa_pub_decode(EVP_PKEY *pkey, const X509_PUBKEY *pubkey)` —
 /// `crypto/dsa/dsa_ameth.c:29-84`.
@@ -341,7 +243,7 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
     unsafe { ASN1_STRING_free(pubint) };
     // SAFETY: `penc_raw` is NULL or the block `ASN1_item_i2d` allocated through the crate's seam;
     // this frame owns it and no other owner releases it.
-    let penc = unsafe { OwnedBuf::adopt(penc_raw, FILE, 139) };
+    let penc = unsafe { OwnedBuf::adopt_plain(penc_raw, FILE, 139) };
 
     if penclen <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -361,11 +263,11 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
         return 0;
     }
 
+    let penc_ptr = penc.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     // SAFETY: `pk` is live and `str_`/`penc` are the objects the setter takes ownership of.
-    if unsafe { X509_PUBKEY_set0_param(pk, aobj, ptype, str_.cast(), penc.as_ptr(), penclen) } != 0
-    {
+    if unsafe { X509_PUBKEY_set0_param(pk, aobj, ptype, str_.cast(), penc_ptr, penclen) } != 0 {
         // Ownership of the DER block moves to the setter.
-        let _ = penc.into_raw();
+        let _ = penc.map(OwnedBuf::into_raw);
         return 1;
     }
 
@@ -475,6 +377,7 @@ unsafe extern "C" fn dsa_priv_encode(
         return 0;
     }
 
+    let dp_ptr = dp.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     // SAFETY: `p8` is live, the OID is a constant, and `params`/`dp` are the objects the setter
     // takes ownership of.
     if unsafe {
@@ -484,7 +387,7 @@ unsafe extern "C" fn dsa_priv_encode(
             0,
             V_ASN1_SEQUENCE,
             params.cast(),
-            dp.as_ptr(),
+            dp_ptr,
             dplen,
         )
     } == 0
@@ -496,7 +399,7 @@ unsafe extern "C" fn dsa_priv_encode(
         return 0;
     }
     // Ownership of the DER private key moves to the setter.
-    let _ = dp.into_raw();
+    let _ = dp.map(OwnedBuf::into_raw);
     1
 }
 

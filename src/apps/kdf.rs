@@ -46,7 +46,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::apps::openssl::not_landed;
@@ -62,7 +62,8 @@ use crate::runtime::bio::bss_file::{BIO_new_file, BIO_new_fp};
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::{stdin, stdout};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_buf2hexstr;
 
 /// `atoi(s)` — the `stdlib.h` decimal conversion `-keylen` uses
@@ -94,92 +95,6 @@ fn atoi(s: &str) -> c_int {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the derived key and its rendering
 // ---------------------------------------------------------------------------------------------
-
-/// An owned scratch buffer allocated through the crate's allocator seam.
-///
-/// The block stays a `CRYPTO_malloc` at the authority's exact size/`file`/`line` (**not** a Rust
-/// `Box`/`Vec`, which would hide the allocation and its release from a caller-installed
-/// `CRYPTO_set_mem_functions` hook), and only its *ownership* is this type: [`Self::new`] and
-/// [`Self::take`] acquire it and `Drop` is its single release, at the authority's own site: the
-/// cleansing `OPENSSL_clear_free(dkm_bytes, dkm_len)` at `apps/kdf.c:206` for the derived key, and
-/// the plain `OPENSSL_free(hexout)` at `:211` for the hex rendering. A NULL pointer is a valid,
-/// empty buffer whose release is the authority's own no-op `free(NULL)`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    release: BufRelease,
-}
-
-/// How the authority releases a scratch buffer.
-enum BufRelease {
-    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`hexout`).
-    Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which zeroes `num`
-    /// bytes first (`dkm_bytes`, the derived key material).
-    Cleansed {
-        num: usize,
-        file: *const c_char,
-        line: c_int,
-    },
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)` — the authority's `app_malloc` (`apps/kdf.c:182`) — or
-    /// `None` when the allocator answers NULL. The release defaults to the plain arm and is
-    /// re-pointed with [`Self::set_release`] before `Drop` when the path releases it as a secret.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
-        if raw.is_null() {
-            return None;
-        }
-        Some(OwnedBuf {
-            ptr: raw,
-            release: BufRelease::Plain { file, line },
-        })
-    }
-
-    /// Adopt a buffer a C call answered (`OPENSSL_buf2hexstr`), or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block the crate's allocator seam produced, owned by the caller, and
-    /// will not be freed or handed to any other owner — this handle's `Drop` is its single
-    /// release; `release` is that block's own release site.
-    unsafe fn take(ptr: *mut c_uchar, release: BufRelease) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, release })
-        }
-    }
-
-    /// The writable start of the buffer.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's own site for this block, on the path that reaches it
-    /// (`dkm_bytes` is the derived key, released with `OPENSSL_clear_free` on every exit).
-    fn set_release(&mut self, release: BufRelease) {
-        self.release = release;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The buffer's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        match self.release {
-            BufRelease::Plain { file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
-                // authority's own `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
-            }
-            BufRelease::Cleansed { num, file, line } => {
-                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
-                // for `num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
-            }
-        }
-    }
-}
 
 /// `app_params_new_from_opts(opts, paramdefs)` — `apps/lib/apps.c:3477-3523`,
 /// transcribed inline (see the header). Returns a `key`-terminated `OSSL_PARAM`
@@ -459,7 +374,9 @@ pub fn main(argv: &[String]) -> i32 {
     // `dkm_bytes = app_malloc(dkm_len, "out buffer"); if (dkm_bytes == NULL) goto
     // err;` — `apps/kdf.c:182-184`. The block is the derived key, so its release on every exit
     // below is the authority's own cleansing `OPENSSL_clear_free(dkm_bytes, dkm_len)` at `:206`.
-    let Some(mut dkm_bytes) = OwnedBuf::new(dkm_len as usize, c"apps/kdf.c".as_ptr(), 182) else {
+    let Some(dkm_bytes) =
+        OwnedBuf::new_cleansed_at(dkm_len as usize, c"apps/kdf.c".as_ptr(), 182, 206)
+    else {
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
         unsafe { BIO_free(out) };
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
@@ -468,11 +385,6 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { EVP_KDF_free(kdf) };
         return ret;
     };
-    dkm_bytes.set_release(BufRelease::Cleansed {
-        num: dkm_len as usize,
-        file: c"apps/kdf.c".as_ptr(),
-        line: 206,
-    });
 
     // `if (!EVP_KDF_derive(ctx, dkm_bytes, dkm_len, NULL)) { BIO_printf(bio_err,
     // "EVP_KDF_derive failed\n"); goto err; }` — `apps/kdf.c:186-189`.
@@ -501,16 +413,10 @@ pub fn main(argv: &[String]) -> i32 {
         // SAFETY: `dkm_bytes` is `dkm_len` readable bytes.
         let hexout = unsafe { OPENSSL_buf2hexstr(dkm_bytes.as_ptr(), dkm_len as c_long) };
         // The rendering is adopted under the authority's own plain `OPENSSL_free(hexout)` at
-        // `:211`; `take` answers `None` for the allocation's NULL, which is the failure branch.
+        // `:211`; `adopt` answers `None` for the allocation's NULL, which is the failure branch.
         // SAFETY: `hexout` is NULL or the one block this call's `OPENSSL_buf2hexstr` allocated.
         let Some(hexout) = (unsafe {
-            OwnedBuf::take(
-                hexout.cast::<c_uchar>(),
-                BufRelease::Plain {
-                    file: c"apps/kdf.c".as_ptr(),
-                    line: 211,
-                },
-            )
+            OwnedBuf::adopt_plain(hexout.cast::<c_uchar>(), c"apps/kdf.c".as_ptr(), 211)
         }) else {
             eprintln!("Memory allocation failure");
             drop(dkm_bytes);
