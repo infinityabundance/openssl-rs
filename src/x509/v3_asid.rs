@@ -84,6 +84,7 @@ use crate::runtime::err::err_reasons::{
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 use crate::runtime::obj::NID_sbgp_autonomousSysNum;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_reserve,
     OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -126,49 +127,6 @@ const LINE_V2I_FREE: c_int = 580;
 // ---------------------------------------------------------------------------------------------
 // Ownership of the helper-allocated strings and the canonize block
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `char *` string a crate allocation seam answered for this unit.
-///
-/// [`i2r_ASIdentifierChoice`] renders each bound through `i2s_ASN1_INTEGER` and [`v2i_ASIdentifiers`]
-/// duplicates each range value with `CRYPTO_strdup`; both are blocks this frame owns and releases at
-/// the authority's own `OPENSSL_free` sites. [`Self::take`] adopts one and `Drop` performs its
-/// single release.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a helper-answered string, or `None` for NULL. `line` is the authority's release site.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through one of the crate's
-    /// allocation seams; the caller owns it and no other owner will release it. `Drop` performs its
-    /// single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the caller's reads and the in-place split `v2i_ASIdentifiers`
-    /// performs.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the seam answered and has not handed out; its single
-        // release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
 
 /// An owned `AsRange` block still under construction.
 ///
@@ -755,7 +713,11 @@ unsafe fn i2r_ASIdentifierChoice(
                         // SAFETY: `id` is a live integer; `i2s_ASN1_INTEGER` accepts a NULL method
                         // and answers a string this frame owns (or NULL).
                         let s = unsafe {
-                            OwnedStr::take(i2s_ASN1_INTEGER(ptr::null_mut(), id), LINE_FREE_ID)
+                            OwnedStr::adopt(
+                                i2s_ASN1_INTEGER(ptr::null_mut(), id),
+                                FILE.as_ptr(),
+                                LINE_FREE_ID,
+                            )
                         };
                         let Some(s) = s else {
                             return 0;
@@ -778,8 +740,9 @@ unsafe fn i2r_ASIdentifierChoice(
                         // SAFETY: the range's `min` is a live integer; the seam answers a string this
                         // frame owns (or NULL).
                         let s = unsafe {
-                            OwnedStr::take(
+                            OwnedStr::adopt(
                                 i2s_ASN1_INTEGER(ptr::null_mut(), (*range).min),
+                                FILE.as_ptr(),
                                 LINE_FREE_RANGE_MIN,
                             )
                         };
@@ -801,8 +764,9 @@ unsafe fn i2r_ASIdentifierChoice(
                         // SAFETY: the range's `max` is a live integer; the seam answers a string
                         // this frame owns (or NULL).
                         let s = unsafe {
-                            OwnedStr::take(
+                            OwnedStr::adopt(
                                 i2s_ASN1_INTEGER(ptr::null_mut(), (*range).max),
+                                FILE.as_ptr(),
                                 LINE_FREE_RANGE_MAX,
                             )
                         };
@@ -1550,8 +1514,9 @@ unsafe extern "C" fn v2i_ASIdentifiers(
             // SAFETY: `value` is NUL-terminated; the seam answers a string this frame owns (or
             // NULL).
             let dup = unsafe {
-                OwnedStr::take(
+                OwnedStr::adopt(
                     CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP),
+                    FILE.as_ptr(),
                     LINE_V2I_FREE,
                 )
             };

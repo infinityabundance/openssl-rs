@@ -54,12 +54,13 @@ use crate::runtime::bio::sys::{strchr, strcmp, strlen};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+use crate::runtime::mem::CRYPTO_strndup;
 use crate::runtime::obj::{
     NID_NAIRealm, NID_SRVName, NID_XmppAddr, NID_certificate_issuer, NID_id_on_SmtpUTF8Mailbox,
     NID_issuer_alt_name, NID_ms_upn, NID_pkcs9_emailAddress, NID_subject_alt_name, OBJ_obj2nid,
     OBJ_obj2txt, OBJ_txt2obj,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_reserve, OPENSSL_sk_value, OpenSslStack,
@@ -88,47 +89,6 @@ use crate::x509::x_name::{X509_NAME_ENTRY_free, X509_NAME_free, X509_NAME_new};
 
 /// The authority file path this module's raises name.
 const FILE: &CStr = c"crypto/x509/v3_san.c";
-
-/// An owned `char *` allocated through the crate's allocator seam.
-///
-/// [`Self::adopt`] takes up a block a helper allocated (`ossl_ipaddr_to_asc`'s `CRYPTO_strdup`,
-/// `do_othername`'s `CRYPTO_strndup`), and the `Drop` impl is its single release at the authority's
-/// own line. The type is private to this module: every block it takes up is consumed within the
-/// call that adopted it, so `into_raw` is not needed.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a helper-allocated `char *`, or `None` for NULL. `line` is the authority's release
-    /// site, which the module records per call.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated block the crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam
-    /// produced; the caller owns it and no other owner will release it -- this handle's `Drop` is
-    /// its single `CRYPTO_free`.
-    unsafe fn adopt(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The NUL-terminated start of the block.
-    fn as_ptr(&self) -> *mut c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedStr {
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; its single release
-        // is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
 
 /// One `v3_san.c` raise coordinate, declared locally (see the module doc). The reason values are
 /// read from `include/openssl/x509v3err.h` and the two `ERR_R_*` codes; the reachable ones are
@@ -609,7 +569,13 @@ pub unsafe extern "C" fn i2v_GENERAL_NAME(
             let ip = unsafe { gen_ip(gen) };
             // SAFETY: `ip` is live and its content is readable for `length` bytes; the returned
             // block is this call's own allocation, released at the authority's site by `Drop`.
-            let tmp = unsafe { OwnedStr::adopt(ossl_ipaddr_to_asc((*ip).data, (*ip).length), 195) };
+            let tmp = unsafe {
+                OwnedStr::adopt(
+                    ossl_ipaddr_to_asc((*ip).data, (*ip).length),
+                    FILE.as_ptr(),
+                    195,
+                )
+            };
             if let Some(tmp) = tmp {
                 // SAFETY: `tmp` is NUL-terminated; `ret` is this call's own sink.
                 let added =
@@ -745,7 +711,13 @@ pub unsafe extern "C" fn GENERAL_NAME_print(out: *mut Bio, gen: *mut GeneralName
             let ip = unsafe { gen_ip(gen) };
             // SAFETY: `ip` is live and its content is readable for `length` bytes; the returned
             // block is this call's own allocation, released at the authority's site by `Drop`.
-            let tmp = unsafe { OwnedStr::adopt(ossl_ipaddr_to_asc((*ip).data, (*ip).length), 290) };
+            let tmp = unsafe {
+                OwnedStr::adopt(
+                    ossl_ipaddr_to_asc((*ip).data, (*ip).length),
+                    FILE.as_ptr(),
+                    290,
+                )
+            };
             let Some(tmp) = tmp else {
                 return 0;
             };
@@ -828,7 +800,13 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
     let objlen = (p as usize).wrapping_sub(value as usize);
     // SAFETY: `value` is NUL-terminated and `objlen <= strlen(value)`; the returned block is this
     // call's own allocation, released at the authority's site by `Drop`.
-    let objtmp = unsafe { OwnedStr::adopt(CRYPTO_strndup(value, objlen, FILE.as_ptr(), 649), 653) };
+    let objtmp = unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strndup(value, objlen, FILE.as_ptr(), 649),
+            FILE.as_ptr(),
+            653,
+        )
+    };
     let Some(objtmp) = objtmp else {
         // SAFETY: `gen`/`on` are live per this function's contract.
         unsafe { othername_err(gen, on) };

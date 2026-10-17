@@ -46,8 +46,9 @@ use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::{X509V3_R_BAD_OBJECT, X509V3_R_INVALID_SYNTAX};
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strndup};
 use crate::runtime::obj::{Asn1Object, NID_info_access, NID_sinfo_access, OBJ_txt2obj};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -112,48 +113,6 @@ const V3_INFO_138: crate::runtime::err::err_sites::ErrSite =
 // ---------------------------------------------------------------------------------------------
 // Ownership of the strings the two callbacks allocate
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `char *` block from this unit's `CRYPTO_malloc`/`CRYPTO_strndup` seam.
-///
-/// `i2v_AUTHORITY_INFO_ACCESS`'s rewritten `CONF_VALUE` name and
-/// `v2i_AUTHORITY_INFO_ACCESS`'s `;`-prefix duplicate are both `CRYPTO_*` blocks the authority
-/// releases by hand at its own `__LINE__`s. The block stays a `CRYPTO_*` allocation at that
-/// `file`/`line`; only its *ownership* is this handle, whose `Drop` is its single release.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_*` string, or `None` for NULL.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string the crate's `CRYPTO_*` seam allocated in full (not
-    /// a sub-range) and no other owner will release; `line` is the authority's own release site.
-    /// `Drop`'s `CRYPTO_free` is its only release.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the calls that read it.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own line.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block the handle adopted and `Drop` runs once; the authority's
-        // own `CRYPTO_free` accepts the block.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
 
 /// `struct ACCESS_DESCRIPTION_st` — `ACCESS_DESCRIPTION`, from `include/openssl/x509v3.h`.
 #[repr(C)]
@@ -407,7 +366,7 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
             // The authority's `OPENSSL_free(vtmp->name)` at `:88`: hand the old name to an owner
             // whose `Drop` is that release, then install the fresh block, which `vtmp->name` now
             // owns (released later by the `CONF_VALUE` destructor).
-            drop(OwnedStr::take((*vtmp).name, LINE_FREE_NAME));
+            drop(OwnedStr::adopt((*vtmp).name, FILE.as_ptr(), LINE_FREE_NAME));
             (*vtmp).name = ntmp;
         }
         i += 1;
@@ -502,13 +461,14 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
         // SAFETY: `cnf` is live and its `name` is NUL-terminated; the allocator answers NULL or a
         // fresh block the authority releases at its own `:140` site.
         let objtmp = unsafe {
-            OwnedStr::take(
+            OwnedStr::adopt(
                 CRYPTO_strndup(
                     (*cnf).name,
                     (ptmp as usize) - ((*cnf).name as usize),
                     FILE.as_ptr(),
                     LINE_STRNDUP,
                 ),
+                FILE.as_ptr(),
                 LINE_FREE_OBJ,
             )
         };

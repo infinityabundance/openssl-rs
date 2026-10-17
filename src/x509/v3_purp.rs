@@ -93,6 +93,7 @@ use crate::runtime::obj::{
     NID_sbgp_ipAddrBlock, NID_server_auth, NID_subject_alt_name, NID_subject_key_identifier,
     NID_time_stamp, NID_undef, OBJ_bsearch_, OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -538,56 +539,6 @@ impl Drop for RawPurpose {
                 LINE_ADD_ERR_PTMP,
             )
         };
-    }
-}
-
-/// An owned `char *` name allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// A dynamic row's names are blocks separate from the row: [`X509_PURPOSE_add`] strdups each,
-/// installs it into the row and hands it over on success; a failed install releases it at the
-/// authority's own `err:` sites (`:255`/`:256`), and replacing an existing row's names releases the
-/// old ones at `:219`/`:220`.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release site
-    /// for the string.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
-    /// its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-
-    /// The string's address, for the row that takes it over.
-    fn as_ptr(&self) -> *const c_char {
-        self.ptr
-    }
-
-    /// Give up ownership of the string to the row that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
     }
 }
 
@@ -1037,33 +988,39 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
         // SAFETY: `name`/`sname` are the row's own dynamic strings; no other owner will release
         // them.
         unsafe {
-            drop(OwnedStr::take((*ptmp).name, LINE_ADD_FREE_NAME));
-            drop(OwnedStr::take((*ptmp).sname, LINE_ADD_FREE_SNAME));
+            drop(OwnedStr::adopt(
+                (*ptmp).name,
+                FILE.as_ptr(),
+                LINE_ADD_FREE_NAME,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptmp).sname,
+                FILE.as_ptr(),
+                LINE_ADD_FREE_SNAME,
+            ));
         }
     }
     // Dup supplied name
     // SAFETY: `name` is NUL-terminated per the contract; the allocator takes file/line only.
     let dup_name = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADD_STRDUP_NAME),
+            FILE.as_ptr(),
             LINE_ADD_ERR_NAME,
         )
     };
     // SAFETY: `sname` is NUL-terminated per the contract; the allocator takes file/line only.
     let dup_sname = unsafe {
-        OwnedStr::take(
+        OwnedStr::adopt(
             CRYPTO_strdup(sname, FILE.as_ptr(), LINE_ADD_STRDUP_SNAME),
+            FILE.as_ptr(),
             LINE_ADD_ERR_SNAME,
         )
     };
     // SAFETY: `ptmp` is live and writable.
     unsafe {
-        (*ptmp).name = dup_name
-            .as_ref()
-            .map_or(ptr::null_mut(), |s| s.as_ptr().cast_mut());
-        (*ptmp).sname = dup_sname
-            .as_ref()
-            .map_or(ptr::null_mut(), |s| s.as_ptr().cast_mut());
+        (*ptmp).name = dup_name.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr());
+        (*ptmp).sname = dup_sname.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr());
     }
 
     let mut result = 1;

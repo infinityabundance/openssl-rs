@@ -48,6 +48,7 @@ use crate::runtime::confmod::{CONF_module_add, ConfFinishFn, ConfImodule, ConfIn
 use crate::runtime::err::err_sites::{CONF_SSL_75, CONF_SSL_94};
 use crate::runtime::err::raise_site_dynamic_data;
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`.
@@ -136,37 +137,6 @@ static SSL_NAMES_COUNT: AtomicUsize = AtomicUsize::new(0);
 // Ownership of the store and its strings
 // ---------------------------------------------------------------------------------------------
 
-/// An owned `CRYPTO_strdup` string of this store, released by `Drop` at the authority's own site.
-struct OwnedStr {
-    ptr: *mut c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL; `line` is the authority's release site.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it.
-    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, line })
-        }
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
-        // single release is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
-    }
-}
-
 /// The `ssl_names` store: the `CRYPTO_calloc` array of [`SslConfName`] and every string and command
 /// array its entries own.
 ///
@@ -228,11 +198,11 @@ impl Drop for OwnedStore {
             // NULL or a block this store owns.
             unsafe {
                 let tname = &mut *self.names.add(i);
-                drop(OwnedStr::take(tname.name, L_FREE_NAME));
+                drop(OwnedStr::adopt(tname.name, FILE, L_FREE_NAME));
                 for j in 0..tname.cmd_count {
                     let cmd = &mut *tname.cmds.add(j);
-                    drop(OwnedStr::take(cmd.cmd, L_FREE_CMD));
-                    drop(OwnedStr::take(cmd.arg, L_FREE_ARG));
+                    drop(OwnedStr::adopt(cmd.cmd, FILE, L_FREE_CMD));
+                    drop(OwnedStr::adopt(cmd.arg, FILE, L_FREE_ARG));
                 }
                 // SAFETY: `cmds` is this store's own array, and the loop above released its
                 // contents rather than the array.

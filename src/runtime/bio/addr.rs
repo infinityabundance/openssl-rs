@@ -60,6 +60,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BIO_ADDR_251, BIO_ADDR_256};
 use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::bss_sock::BIO_sock_init;
 use super::sys;
@@ -198,48 +199,6 @@ impl Drop for OwnedAddr {
                 ALLOC_LINE,
             )
         };
-    }
-}
-
-/// An owned `char *` name allocated through the crate's `CRYPTO_strdup` seam.
-///
-/// `addr_strings` strdups the two names `getnameinfo` produced and hands the requested one(s) to
-/// the C caller; between the allocation and that hand-out this handle owns the string, so the
-/// failure path (one strdup answered NULL) releases the other by `Drop` rather than by hand — the
-/// authority's own cleanup block (`bio_addr.c:288-296`).
-struct OwnedStr {
-    ptr: *mut c_char,
-}
-
-impl OwnedStr {
-    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
-    /// `CRYPTO_strdup` seam; the caller owns it and no other owner will release it. `Drop` performs
-    /// its single `CRYPTO_free`.
-    unsafe fn take(ptr: *mut c_char) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr })
-        }
-    }
-
-    /// Give up ownership of the string to the caller that takes it over.
-    fn into_raw(self) -> *mut c_char {
-        let p = self.ptr;
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The string's single release, through the same seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `take` adopted and has not handed out; its single release
-        // is the authority's own plain `CRYPTO_free`.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
     }
 }
 
@@ -850,11 +809,11 @@ unsafe fn addr_strings(
     // `getnameinfo`, or after the decimal fallback above.
     let hostname = unsafe {
         if want_host {
-            OwnedStr::take(CRYPTO_strdup(
-                host.as_ptr(),
+            OwnedStr::adopt(
+                CRYPTO_strdup(host.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
                 ALLOC_FILE.as_ptr(),
                 ALLOC_LINE,
-            ))
+            )
         } else {
             None
         }
@@ -862,11 +821,11 @@ unsafe fn addr_strings(
     // SAFETY: as above.
     let service = unsafe {
         if want_service {
-            OwnedStr::take(CRYPTO_strdup(
-                serv.as_ptr(),
+            OwnedStr::adopt(
+                CRYPTO_strdup(serv.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
                 ALLOC_FILE.as_ptr(),
                 ALLOC_LINE,
-            ))
+            )
         } else {
             None
         }
