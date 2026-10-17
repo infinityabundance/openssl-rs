@@ -484,7 +484,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `d73167c3cc187490efa6dc8b05b95e1f43ebf944`
+**Last observed HEAD:** `c66812cb4` (merge of `stage/p25/rwlock-repr`, subphase 44)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -498,7 +498,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1214** tests. Do not accept unexplained test loss. Check available memory before builds.
+   The most recent reported library baseline is **1217** tests (18 ignored; 18/18 adversarial probes via `scripts/adv-probe.sh`). Do not accept unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
 ### Outstanding targeted work
