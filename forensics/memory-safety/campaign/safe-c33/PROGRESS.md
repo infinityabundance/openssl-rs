@@ -32,10 +32,11 @@ file-level atlas metric.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1214** passed
+`cargo test --lib` (must pass; the established baseline is **1215** passed
 (one concurrent-refcount test added in subphase 39, eight
-reference-count/re-entrancy tests added in subphase 40, and seven
-alias/ownership tests added in subphase 41) and the adversarial
+reference-count/re-entrancy tests added in subphase 40, seven
+alias/ownership tests added in subphase 41, and one lookup-`free` re-entrancy
+test added in subphase 42) and the adversarial
 probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
 sweep 35 there are **18** probes).
 
@@ -143,6 +144,7 @@ sweep 35 there are **18** probes).
 | 81 | stage/p25/sweep39 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **runtime/alias adjudication**: `X509Store` last-ref gate moved from plain `c_int` to layout-compatible `AtomicI32` (size 160 / offset 144 / align 8 asserts; relaxed fetch-add, release fetch-sub + acquire fence); concurrent up-ref test added; `SslCtx`/`Ssl`/`X509Store` retained `CONTRACTED` for reachable callback re-entrancy (ex-data / lookup `free` hook / `BIO_free_all`); 0 STOP; 1199 passed, 18 ignored; 18/18 probes; hidden 0 |
 | 82 | stage/p25/sweep40 | src/runtime/refcount.rs, src/runtime/mod.rs, src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **callback-reentrancy repair**: shared `REF_DESTROYING` sentinel CAS in the existing `AtomicI32`; `*_free` claims the last reference `1 -> destroying` and a re-entrant/over-free is a defined no-op; `*_up_ref` refuses zero/destroying without resurrecting; applied to `Ssl`, `SslCtx`, `SslSession`, `X509Store`; 8 deterministic tests (4 protocol + 4 real ex-data re-entry); no layout/ABI/allocator/free-order change; 0 STOP; 1207 passed, 18 ignored; 18/18 probes; hidden 0 |
 | 83 | stage/p25/sweep41 | src/ssl/ssl_lib.rs, src/ssl/ssl_sess.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **`Ssl`/`SslCtx` alias/lifecycle closure**: field-by-field ownership audit; fixed S1 session-cache `owner` dangling (UAF), S2 missing `ENGINE_finish`, S3 missing `dane_final`, S4 missing `ssl_clear_bad_session`; 7 deterministic tests; both rows promoted to `ESTABLISHED` (not `DISCHARGED`); no layout/ABI/allocator coordinates; 1214 passed, 18 ignored; 18/18 probes; hidden 0 |
+| 84 | stage/p25/sweep42 | src/x509/x509_lu.rs, DESTRUCTOR-CONTRACTS.md, RUNTIME-ALIAS-EVIDENCE.md, PROGRESS.md | **`X509Store` callback closure + D1/D2 re-adjudication**: deterministic lookup-`free` hook re-entry test (hook once, observes `REF_DESTROYING`, `up_ref` refused, sentinel survives); teardown order audited against `x509_lu.c:240-253`; ex-data partial-release path retained (authority parity) and cached-`sk_num` callback divergence recorded; `ProvAesSivCtx`/`ProvAesGcmSivCtx` promoted to `ESTABLISHED`; `X509Store` promoted to `ESTABLISHED`; nothing `DISCHARGED`; 1215 passed, 18 ignored; 18/18 probes; hidden 0 |
 
 ### Subphase 38 — destructor-contract adjudication (docs only)
 
@@ -222,6 +224,31 @@ sweep 35 there are **18** probes).
   `shared_sigalgs`/`peer_sigalgs` members are an explicit future obligation).
 - Gate: `fmt` clean, clippy clean, **1214 passed / 18 ignored**, adv-probe
   **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md` §4.
+
+### Subphase 42 — `X509Store` callback closure and D1/D2 re-adjudication
+
+- Added `x509::x509_lu::tests::store_free_from_lookup_free_hook_is_defined_noop`:
+  a minimal `X509_LOOKUP_METHOD` installs only the `free` hook, which re-enters
+  `X509_STORE_free` on the store being torn down. It asserts the hook ran once,
+  `references == REF_DESTROYING` before re-entry, `X509_STORE_up_ref` answers 0
+  without resurrecting, and the sentinel survives the re-entrant call. The
+  single block release is the outer `OwnedCtx::<X509Store>` `Drop`.
+- Audited the body against the authority (`x509_lu.c:240-253`): lookups →
+  stack → objects → ex-data → param → lock → block, unchanged. The ex-data
+  `free_func` runs after `get_cert_methods`/`objs` are freed (authority order);
+  a callback that calls a store mutator reading them would see the freed stack.
+  Recorded as a retained caller-contract obligation, not a conversion defect.
+- Recorded one callback-mutation divergence: the candidate caches
+  `OPENSSL_sk_num` before the lookup loop, so a hook that pushes a new lookup is
+  freed by the authority but left on the freed stack here (leak only).
+- `X509Store` promoted to `ESTABLISHED`. Re-adjudicated D1/D2
+  (`ProvAesSivCtx`/`ProvAesGcmSivCtx`): both implementer obligations are now
+  source-witnessed and the zero-state control passes, so both are promoted to
+  `ESTABLISHED`. Nothing is `SAFETY_DISCHARGED`; the §7 independent-check
+  package remains outstanding.
+- Gate: `fmt` clean, clippy clean, **1215 passed / 18 ignored**, adv-probe
+  **18/18**. Full evidence: `RUNTIME-ALIAS-EVIDENCE.md` §5 and
+  `DESTRUCTOR-CONTRACTS.md` → “Subphase 42”.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
