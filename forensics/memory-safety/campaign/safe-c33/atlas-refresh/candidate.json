@@ -3,12 +3,12 @@
     "branch": "integrate/safe-c33",
     "crate_name": "openssl-rs",
     "crate_version": "0.0.27",
-    "head_sha": "86fa9b1351514fa4e7d10395cd53894240cd5c95",
+    "head_sha": "3bca5cc43460458c321cae32d79611d6f38f2428",
     "inventory_base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
     "inventory_head_sha_frozen": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
     "src_content_hash_rule": "sha256 over the byte string 'openssl-rs/src-rs/v1\\0' followed, for each src/**/*.rs in sorted relative-path order, by relpath\\0filebytes\\0",
-    "src_content_sha256": "ebb5eda3b301e5cd845f71ccd163c810d19f652226e5e758631e9edcdf3b449c",
-    "src_rs_files": 865
+    "src_content_sha256": "345f1e13a54f9f76c3cae7cb5dd3a086ab7bc7248148c1cac8119960d80b2e41",
+    "src_rs_files": 866
   },
   "census_crosscheck": {
     "closure_files_absent_from_frozen_census": 3,
@@ -1180,7 +1180,7 @@
       }
     ]
   },
-  "generated_utc": "2026-10-17T14:43:02Z",
+  "generated_utc": "2026-10-17T14:59:37Z",
   "generator": "forensics/memory-safety/campaign/safe-c33/atlas_refresh.py",
   "kind": "safe-c33-atlas-refresh",
   "ledger_seam_crosscheck": {
@@ -1257,7 +1257,7 @@
       "ml_dsa": 11,
       "ml_kem": 5,
       "modes": 7,
-      "runtime": 29,
+      "runtime": 30,
       "selftest": 2,
       "slh_dsa": 12,
       "sm2": 3,
@@ -1711,10 +1711,10 @@
       "src/runtime/mem.rs"
     ],
     "allocator_definition_note": "Files defining the CRYPTO_* allocator entry points (the seam itself); their raw sites are the seam being defined, not interior residuals, and are excluded from metric 4.",
-    "files_total": 865,
+    "files_total": 866,
     "files_with_raw_sites": 359,
     "files_with_seam": 374,
-    "files_zero_raw_sites": 506,
+    "files_zero_raw_sites": 507,
     "raw_site_patterns": [
       "\\bCRYPTO_(?:malloc|zalloc|calloc|strdup|memdup)\\b",
       "\\bCRYPTO_(?:free|clear_free)\\b"

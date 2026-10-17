@@ -1,12 +1,12 @@
 # Safe-33 atlas refresh — candidate-bound ownership-reconstruction status
 
-Generated 2026-10-17T14:43:02Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
+Generated 2026-10-17T14:59:37Z by `forensics/memory-safety/campaign/safe-c33/atlas_refresh.py` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
 
 ## Candidate pin
 
-- HEAD `86fa9b1351514fa4e7d10395cd53894240cd5c95` on `integrate/safe-c33`
+- HEAD `3bca5cc43460458c321cae32d79611d6f38f2428` on `integrate/safe-c33`
 - crate `openssl-rs 0.0.27`
-- `src/**/*.rs`: **865** files, content sha256 `ebb5eda3b301e5cd845f71ccd163c810d19f652226e5e758631e9edcdf3b449c`
+- `src/**/*.rs`: **866** files, content sha256 `345f1e13a54f9f76c3cae7cb5dd3a086ab7bc7248148c1cac8119960d80b2e41`
 - frozen inventory was at `67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34` (base `b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491`); this refresh re-pins the current tree
 
 ## The frozen 33 (authoritative: `state.json#cohort`)
@@ -84,7 +84,7 @@ Generated 2026-10-17T14:43:02Z by `forensics/memory-safety/campaign/safe-c33/atl
 ### Whole-tree scan (current candidate)
 
 - files with a seam: **374**
-- files with zero raw allocator sites: **506**
+- files with zero raw allocator sites: **507**
 - files with raw allocator sites remaining: **359**
 - raw allocator sites total (incl. legitimate seam ctors): **4290**
 - allocator-definition files (seam itself, excluded from metric 4): `src/runtime/mem.rs`
@@ -97,7 +97,7 @@ Seam tokens counted: `OwnedCtx`, `OwnedBuf`, `OwnedBlock`, `OwnedStr`, `PropqSlo
 
 src modules named by none of the nine mechanism directory rules (e.g. mac, sm2, modes, des, sm3). Their conversion work is real but is OUT of this nine-mechanism closure: a known coverage gap of this refresh, not a claim they are unconverted.
 
-Top-level modules outside the nine-mechanism closure (files): `apps`(59), `runtime`(29), `engine`(20), `digest`(14), `slh_dsa`(12), `ml_dsa`(11), `ct`(10), `modes`(7), `compat`(6), `mac`(6), `ml_kem`(5), `ui`(5), `async`(4), `ess`(3), `http`(3), `sm2`(3), `srp`(3), `dso`(2).
+Top-level modules outside the nine-mechanism closure (files): `apps`(59), `runtime`(30), `engine`(20), `digest`(14), `slh_dsa`(12), `ml_dsa`(11), `ct`(10), `modes`(7), `compat`(6), `mac`(6), `ml_kem`(5), `ui`(5), `async`(4), `ess`(3), `http`(3), `sm2`(3), `srp`(3), `dso`(2).
 
 ## Per-consumer mechanism status (metric 5)
 
