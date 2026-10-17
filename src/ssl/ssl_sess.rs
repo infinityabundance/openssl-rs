@@ -1937,7 +1937,18 @@ pub unsafe extern "C" fn SSL_set_session_ticket_ext(
             if (*s).version >= TLS1_VERSION {
                 CRYPTO_free((*s).session_ticket.cast(), FILE, 1237);
                 (*s).session_ticket = ptr::null_mut();
-                let base = core::mem::size_of::<TlsSessionTicketExt>() + ext_len.max(0) as usize;
+                // A negative `ext_len` is undefined in the authority: signed/unsigned wrap in
+                // `sizeof(*st) + ext_len` can yield a small allocation, followed by an oversized
+                // copy. This crate refuses with `0` before allocating (AGENTS §17 UB elimination,
+                // not an authority success/failure result); the checked add likewise refuses an
+                // overflowing size.
+                let Ok(ext_len) = usize::try_from(ext_len) else {
+                    return 0;
+                };
+                let Some(base) = core::mem::size_of::<TlsSessionTicketExt>().checked_add(ext_len)
+                else {
+                    return 0;
+                };
                 // SAFETY: a raw allocation of the authority's size.
                 let st = CRYPTO_zalloc(base, FILE, 1239).cast::<TlsSessionTicketExt>();
                 if st.is_null() {
@@ -1949,7 +1960,7 @@ pub unsafe extern "C" fn SSL_set_session_ticket_ext(
                         .cast::<u8>()
                         .add(core::mem::size_of::<TlsSessionTicketExt>());
                     (*st).data = data.cast();
-                    ptr::copy_nonoverlapping(ext_data.cast::<u8>(), data, ext_len as usize);
+                    ptr::copy_nonoverlapping(ext_data.cast::<u8>(), data, ext_len);
                 } else {
                     (*st).length = 0;
                     (*st).data = ptr::null_mut();

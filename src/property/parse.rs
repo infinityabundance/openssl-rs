@@ -824,16 +824,18 @@ unsafe fn stack_to_property_list(ctx: *mut c_void, sk: *mut OpenSslStack) -> *mu
     let tail = if n <= 0 {
         0
     } else {
-        (n - 1) as usize * defn_size
+        let Some(tail) = ((n - 1) as usize).checked_mul(defn_size) else {
+            return ptr::null_mut();
+        };
+        tail
+    };
+    let Some(size) = core::mem::size_of::<OsslPropertyList>().checked_add(tail) else {
+        return ptr::null_mut();
     };
     // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and answered a block or NULL.
     let Some(r) = (unsafe {
         OwnedBlock::take(
-            CRYPTO_malloc(
-                core::mem::size_of::<OsslPropertyList>() + tail,
-                FILE,
-                LINE_MALLOC_LIST,
-            ),
+            CRYPTO_malloc(size, FILE, LINE_MALLOC_LIST),
             FILE,
             LINE_FREE_LIST_DUP,
         )
@@ -1234,17 +1236,25 @@ pub(crate) unsafe fn ossl_property_merge(
             num_properties(b) as usize,
         )
     };
-    let t = na + nb;
+    let Some(t) = na.checked_add(nb) else {
+        return ptr::null_mut();
+    };
     let defn_size = core::mem::size_of::<OsslPropertyDefinition>();
-    let tail = if t == 0 { 0 } else { (t - 1) * defn_size };
+    let tail = if t == 0 {
+        0
+    } else {
+        let Some(tail) = (t - 1).checked_mul(defn_size) else {
+            return ptr::null_mut();
+        };
+        tail
+    };
+    let Some(size) = core::mem::size_of::<OsslPropertyList>().checked_add(tail) else {
+        return ptr::null_mut();
+    };
     // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and answered a block or NULL.
     let Some(r) = (unsafe {
         OwnedBlock::take(
-            CRYPTO_malloc(
-                core::mem::size_of::<OsslPropertyList>() + tail,
-                FILE,
-                LINE_MALLOC_MERGED,
-            ),
+            CRYPTO_malloc(size, FILE, LINE_MALLOC_MERGED),
             FILE,
             LINE_FREE_LIST,
         )

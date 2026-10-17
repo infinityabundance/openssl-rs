@@ -185,14 +185,10 @@ impl OwnedString {
     /// will be copied into the block, so `size_of + l` covers the header plus `l + 1` tail bytes.
     unsafe fn new(l: usize) -> Option<OwnedString> {
         // `CRYPTO_malloc` is the authority's `OPENSSL_malloc`; the sum is the authority's own
-        // `sizeof(*ps) + l`, and `l` is a real string's length (so no overflow is possible for a
-        // live C string).
-        let raw = CRYPTO_malloc(
-            core::mem::size_of::<PropertyString>() + l,
-            FILE,
-            LINE_MALLOC_PS,
-        )
-        .cast::<PropertyString>();
+        // `sizeof(*ps) + l`. A length that overflows the size computation cannot describe a live
+        // allocation, so it takes the allocator-failure arm (`None`) rather than wrapping.
+        let size = core::mem::size_of::<PropertyString>().checked_add(l)?;
+        let raw = CRYPTO_malloc(size, FILE, LINE_MALLOC_PS).cast::<PropertyString>();
         if raw.is_null() {
             None
         } else {
