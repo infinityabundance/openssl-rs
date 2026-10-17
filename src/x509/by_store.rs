@@ -34,12 +34,11 @@
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_char, c_int, c_long, c_void, CStr};
-use core::mem::size_of;
 use core::ptr;
 
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -149,7 +148,7 @@ impl<'a> PropqSlot<'a> {
     ///
     /// `store` is a live heap record this module allocated and owns; it is borrowed mutably for
     /// `'a` and its `propq` field currently obeys the member-buffer invariant. A record built by
-    /// [`OwnedCtx::zalloc`] satisfies this because it is zeroed at construction and the member is
+    /// [`OwnedCtx::zalloc_at`] satisfies this because it is zeroed at construction and the member is
     /// only ever mutated through this handle or released by [`CtxDestroy::destroy_body`].
     unsafe fn of(store: &'a mut CachedStore) -> PropqSlot<'a> {
         PropqSlot {
@@ -188,73 +187,12 @@ impl<'a> PropqSlot<'a> {
 // Ownership of the recorded stores
 // ---------------------------------------------------------------------------------------------
 
-/// An owned [`CachedStore`] record.
-///
-/// The block keeps the authority's layout, its exact `CRYPTO_zalloc` size/`file`/`line` and its
-/// stable address (the lookup's `method_data` stack holds it), but its *ownership* is this type:
-/// [`Self::zalloc`] allocates it (a zeroed record is exactly the authority's `OPENSSL_zalloc`
-/// result), `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`])
-/// followed by its single block release at the authority's own site, and [`Self::into_raw`] hands
-/// the block to the stack that takes it over.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
-    /// `alloc_line` is the authority's allocation site and `line` its release site.
-    fn zalloc(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the lookup's stack holds.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the stack that takes it over.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the lookup's stack, for release by
-    /// `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own `free_store` body
-    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
-    /// allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `zalloc` allocated (or `from_raw` reclaimed) and this is
-        // its single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `free_store` body, without the block release [`OwnedCtx`]'s `Drop` performs: a
 /// record's two owned strings.
 // SAFETY: (a) holds: `destroy_body` is `free_store` -- it releases exactly the record's own `uri`
 // and `propq` strings (each NULL-tolerant) and never the enclosing block. (b) holds: a zeroed
 // record (`uri`/`propq` NULL) is a valid `Self`, and both `destroy_body` and every owner operation
-// are sound for it -- the obligation the safe `OwnedCtx::zalloc` leans on.
+// are sound for it -- the obligation the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for CachedStore {
     unsafe fn destroy_body(ptr: *mut CachedStore) {
         // SAFETY: `ptr` is a live record per the trait contract; `uri` is NULL or this file's own
@@ -400,7 +338,9 @@ unsafe fn cache_objects(
 unsafe extern "C" fn free_store_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a record this module allocated; `from_raw` reclaims it and `Drop`
     // runs the authority's own release.
-    drop(unsafe { OwnedCtx::<CachedStore>::from_raw(elem.cast(), FILE.as_ptr(), LINE_FREE_STORE) });
+    drop(unsafe {
+        OwnedCtx::<CachedStore>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_STORE)
+    });
 }
 
 /// `static void by_store_free(X509_LOOKUP *ctx)` — `crypto/x509/by_store.c:121-125`.
@@ -448,9 +388,10 @@ unsafe extern "C" fn by_store_ctrl_ex(
                 // gives the block up to `stores`.
                 // SAFETY: the allocator takes the file/line for its mdbg record only; a zeroed
                 // `CachedStore` is the authority's own `OPENSSL_zalloc` result.
-                let Some(store) = OwnedCtx::<CachedStore>::zalloc(
+                let Some(store) = OwnedCtx::<CachedStore>::zalloc_at(
                     FILE.as_ptr(),
                     LINE_ZALLOC_STORE,
+                    FILE.as_ptr(),
                     LINE_FREE_STORE,
                 ) else {
                     return 0;

@@ -105,7 +105,7 @@ use crate::ocsp::ocsp_cl::{
 use crate::ocsp::ocsp_lib::{OCSP_cert_to_id, OCSP_id_cmp};
 use crate::ocsp::ocsp_srv::OCSP_id_get0_info;
 use crate::ocsp::ocsp_vfy::OCSP_basic_verify;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::time;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_reasons::{
@@ -120,7 +120,7 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
     CRYPTO_EX_INDEX_X509_STORE_CTX,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_commonName, NID_delta_crl,
     NID_issuing_distribution_point, NID_subject_alt_name, OBJ_nid2sn, OBJ_obj2nid,
@@ -222,77 +222,12 @@ const FILE: &CStr = c"crypto/x509/x509_vfy.c";
 // Ownership of the store-context block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned store-context block.
-///
-/// The block keeps the authority's `#[repr(C)]` layout (`X509StoreCtx` is `x509_lu.rs`'s type) and
-/// its stable address (the exported ABI hands it out and takes it back), but its *ownership* is this
-/// type: [`Self::new`] allocates it through the crate's allocator seam at the authority's own
-/// `(file, alloc_line)` and `Drop` releases it at the authority's own `(file, line)`. It stays a
-/// `CRYPTO_zalloc` at `size_of::<X509StoreCtx>()` rather than a Rust `Box` on purpose -- a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
-/// as it observes the authority's, which a Rust global allocation would hide.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
-    /// it answers NULL. `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The stable address the exported ABI hands out and takes back.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the C caller's out-pointer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Re-point the release at the authority's other site for this block, on the path that reaches
-    /// it (the `propq`-copy refusal releases at line 2704, the free at line 2726).
-    fn set_release_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-
-    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller, for release by `Drop`.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
-    /// by the block release, through the same allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `X509_STORE_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
 /// performs: the idempotent cleanup and the property query the cleanup preserves.
 // SAFETY: (a) holds: `destroy_body` is `X509_STORE_CTX_free` minus the block -- the idempotent
 // `X509_STORE_CTX_cleanup` and the `propq` clear (NULL-tolerant) -- and never the enclosing block.
 // (b) holds: a zeroed context is valid and both `cleanup` and the `propq` clear are sound for it --
-// the obligation the safe `OwnedCtx::<X509StoreCtx>::new` in `X509_STORE_CTX_new_ex` leans on.
+// the obligation the safe `OwnedCtx::<X509StoreCtx>::zalloc_at` in `X509_STORE_CTX_new_ex` leans on.
 unsafe impl CtxDestroy for X509StoreCtx {
     unsafe fn destroy_body(ptr: *mut X509StoreCtx) {
         // SAFETY: `ptr` is live per the trait contract.
@@ -1563,7 +1498,9 @@ pub unsafe extern "C" fn X509_STORE_CTX_new_ex(
 ) -> *mut X509StoreCtx {
     // The context block, allocated through the crate's allocator seam; `Drop` is its single release
     // on the refusal below and `into_raw` hands it out on success.
-    let Some(mut ctx) = OwnedCtx::<X509StoreCtx>::new(FILE.as_ptr(), 2695, 2726) else {
+    let Some(mut ctx) =
+        OwnedCtx::<X509StoreCtx>::zalloc_at(FILE.as_ptr(), 2695, FILE.as_ptr(), 2726)
+    else {
         return ptr::null_mut();
     };
     // SAFETY: `ctx` is a fresh zeroed block.
@@ -1602,7 +1539,13 @@ pub extern "C" fn X509_STORE_CTX_new() -> *mut X509StoreCtx {
 pub unsafe extern "C" fn X509_STORE_CTX_free(ctx: *mut X509StoreCtx) {
     // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
     // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
-    unsafe { drop(OwnedCtx::<X509StoreCtx>::from_raw(ctx, FILE.as_ptr(), 2726)) };
+    unsafe {
+        drop(OwnedCtx::<X509StoreCtx>::from_raw_at(
+            ctx,
+            FILE.as_ptr(),
+            2726,
+        ))
+    };
 }
 
 /// `void X509_STORE_CTX_cleanup(X509_STORE_CTX *ctx)` — `crypto/x509/x509_vfy.c:2884-2908`.

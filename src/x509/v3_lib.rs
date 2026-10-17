@@ -55,10 +55,9 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::layout::Asn1Item;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{NID_undef, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null,
@@ -188,65 +187,6 @@ unsafe impl Sync for X509V3ExtMethod {}
 // ---------------------------------------------------------------------------------------------
 // Ownership of the dynamic `X509V3_EXT_DYNAMIC` rows
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `X509V3_EXT_DYNAMIC` row.
-///
-/// The block keeps the authority's layout and its exact `CRYPTO_malloc` size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::new`] allocates it, `Drop` runs the authority's own destructor
-/// body ([`CtxDestroy::destroy_body`], empty for a row that owns nothing itself) followed by its
-/// single block release at the authority's own site, and [`Self::into_raw`] hands the row to the
-/// process-global `ext_list` that takes it over.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_malloc(sizeof(*T), file, alloc_line)`, or `None` when the allocator answers NULL.
-    /// `alloc_line` is the authority's allocation site and `line` its release site.
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
-        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Give up ownership of the block to the `ext_list` that takes it over.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-
-    /// Reclaim a block the `ext_list` holds, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The row's destructor: the authority's own `ext_list_free` body
-    /// ([`CtxDestroy::destroy_body`]) followed by its single block release, through the same
-    /// allocator seam and the authority's own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
-        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
 
 /// The authority's `ext_list_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
 /// a copied row owns nothing itself, so only the block release is left.
@@ -416,7 +356,7 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
             // row's single block release at the authority's own `:119` site.
             // SAFETY: `method` is a live DYNAMIC row this module allocated and has not released.
             drop(unsafe {
-                OwnedCtx::<X509V3ExtMethod>::from_raw(method, FILE.as_ptr(), LINE_FREE)
+                OwnedCtx::<X509V3ExtMethod>::from_raw_at(method, FILE.as_ptr(), LINE_FREE)
             });
         }
     }
@@ -596,17 +536,23 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
     // `tmpext` owns the fresh copy; a failed `X509V3_EXT_add` releases it at the authority's own
     // `:104` site, and a successful one gives the block up to the `ext_list`.
     // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
-    let Some(tmpext) =
-        OwnedCtx::<X509V3ExtMethod>::new(FILE.as_ptr(), LINE_MALLOC_ALIAS, LINE_FREE_ALIAS)
-    else {
+    let Some(raw) = RawCtx::<X509V3ExtMethod>::malloc_at(
+        FILE.as_ptr(),
+        LINE_MALLOC_ALIAS,
+        FILE.as_ptr(),
+        LINE_FREE_ALIAS,
+    ) else {
         return 0;
     };
-    // SAFETY: `tmpext.as_ptr()` is a fresh, unaliased allocation of one row; `ext` is a live row.
+    let p = raw.as_ptr();
+    // SAFETY: `p` is a fresh, unaliased allocation of one row; `ext` is a live row.
     unsafe {
-        ptr::write(tmpext.as_ptr(), ptr::read(ext));
-        (*tmpext.as_ptr()).ext_nid = nid_to;
-        (*tmpext.as_ptr()).ext_flags |= X509V3_EXT_DYNAMIC;
+        ptr::write(p, ptr::read(ext));
+        (*p).ext_nid = nid_to;
+        (*p).ext_flags |= X509V3_EXT_DYNAMIC;
     }
+    // SAFETY: every field of the row has been written above.
+    let tmpext = unsafe { raw.assume_init() };
     // SAFETY: `tmpext.as_ptr()` is this call's own row, so `X509V3_EXT_add`'s contract holds.
     if unsafe { X509V3_EXT_add(tmpext.as_ptr()) } == 0 {
         // `tmpext` drops here, at the authority's `:104` site.

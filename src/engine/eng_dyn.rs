@@ -75,7 +75,7 @@ use crate::engine::eng_lib::{
 };
 use crate::engine::eng_list::{engine_add_dynamic_id, engine_remove_dynamic_id, ENGINE_add};
 use crate::ffi::guard_ffi;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::{
     ENG_DYN_166, ENG_DYN_213, ENG_DYN_295, ENG_DYN_301, ENG_DYN_330, ENG_DYN_339, ENG_DYN_347,
     ENG_DYN_356, ENG_DYN_364, ENG_DYN_429, ENG_DYN_440, ENG_DYN_465, ENG_DYN_498, ENG_DYN_514,
@@ -302,44 +302,6 @@ static DYNAMIC_EX_DATA_IDX: AtomicI32 = AtomicI32::new(-1);
 // Ownership of the per-engine context and the strings it holds
 // ---------------------------------------------------------------------------------------------
 
-/// An owned heap record of this unit.
-///
-/// The block keeps the authority's layout and its exact allocator size/`file`/`line`, but its
-/// *ownership* is this type: [`Self::from_raw`] takes back the block the ENGINE's `ex_data`
-/// hands over and `Drop` runs the authority's own destructor body
-/// ([`CtxDestroy::destroy_body`]) followed by its single block release at the authority's own
-/// site.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a record the ENGINE's `ex_data` hands over, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body ([`CtxDestroy::destroy_body`])
-    /// followed by its single block release, through the same allocator seam and the authority's
-    /// own site.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 // SAFETY: (a) holds: `destroy_body` is `dynamic_data_ctx_free_func` minus the block -- the DSO, the
 // two owned names and the `dirs` stack, each releaser NULL-tolerant, never the enclosing block.
 // (b) holds: `DynamicDataCtx` is a `#[repr(C)]` record of raw pointers, integers and
@@ -439,7 +401,7 @@ unsafe extern "C" fn dynamic_data_ctx_free_func(
     // `ex_data`, released exactly once, here; `Drop` runs the authority's own free body and its
     // single block release.
     drop(unsafe {
-        OwnedCtx::<DynamicDataCtx>::from_raw(ptr.cast::<DynamicDataCtx>(), FILE, LINE_FREE_CTX)
+        OwnedCtx::<DynamicDataCtx>::from_raw_at(ptr.cast::<DynamicDataCtx>(), FILE, LINE_FREE_CTX)
     });
 }
 

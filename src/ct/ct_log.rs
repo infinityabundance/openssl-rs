@@ -35,7 +35,7 @@ use crate::ct::ct_b64::CTLOG_new_from_base64_ex;
 use crate::ct::ct_sct::CT_V1_HASHLEN;
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys;
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::conf::lib::{NCONF_free, NCONF_get_string, NCONF_load, NCONF_new};
@@ -48,7 +48,7 @@ use crate::runtime::err::err_reasons::{
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -176,69 +176,12 @@ struct CtlogStoreLoadCtx {
 // encoder scratch block
 // ---------------------------------------------------------------------------------------------
 
-/// An owned one of the file's heap records.
-///
-/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size, but its
-/// *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back the
-/// block the C ABI hands to `CTLOG_free`/`CTLOG_STORE_free`, and `Drop` runs the authority's own free
-/// body ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide
-/// both the release and the caller-installed `CRYPTO_set_mem_functions` hook.
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// `CRYPTO_zalloc(size_of::<T>(), file, line)`, or `None` when it answers NULL. The zeroed image
-    /// is the authority's own starting state -- every owned member is NULL -- so
-    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
-    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, line).cast::<T>();
-        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// The block's address, the C ABI's `CTLOG *`/`CTLOG_STORE *`/`CTLOG_STORE_LOAD_CTX *`.
-    fn as_ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
-
-    /// Reclaim the block the C ABI hands to a `*_free`, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live record this file allocated that `Drop` has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-
-    /// Give up ownership of the record to the C ABI's answer.
-    fn into_raw(self) -> *mut T {
-        let p = self.ptr.as_ptr();
-        core::mem::forget(self);
-        p
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The record's destructor: the authority's own free body followed by its single block release,
-    /// through the same allocator seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
-        // the authority's own free body and this is the block's single release.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
-
 /// The authority's `CTLOG_STORE_free` body (`crypto/ct/ct_log.c:131-138`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: the property query and the log stack.
 // SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_STORE_free` body minus the block --
 // the property query and the log stack, each releaser NULL-tolerant, never the enclosing block.
 // (b) holds: an all-zero store has both members NULL, so the body is the authority's own all-empty
-// teardown -- what the safe `OwnedCtx::new_zeroed` leans on.
+// teardown -- what the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for CtlogStore {
     unsafe fn destroy_body(ptr: *mut CtlogStore) {
         // SAFETY: `ptr` is a live record per the trait contract; its `propq` is NULL or this file's
@@ -255,7 +198,7 @@ unsafe impl CtxDestroy for CtlogStore {
 // SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_free` body minus the block -- the
 // name, the key reference and the property query, each releaser NULL-tolerant, never the enclosing
 // block. (b) holds: an all-zero log has every member NULL, so the body is the authority's own
-// all-empty teardown -- what the safe `OwnedCtx::new_zeroed` leans on.
+// all-empty teardown -- what the safe `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for Ctlog {
     unsafe fn destroy_body(ptr: *mut Ctlog) {
         // SAFETY: `ptr` is a live record per the trait contract; `name`/`propq` are NULL or this
@@ -274,7 +217,7 @@ unsafe impl CtxDestroy for Ctlog {
 // SAFETY: (a) holds: `destroy_body` is `ctlog_store_load_ctx_free`'s body (`NCONF_free(conf)`) minus
 // the block -- NULL-tolerant, never the enclosing block. (b) holds: an all-zero load context has a
 // NULL `conf`, so the body is the authority's own all-empty teardown -- what the safe
-// `OwnedCtx::new_zeroed` leans on.
+// `OwnedCtx::zalloc_at` leans on.
 unsafe impl CtxDestroy for CtlogStoreLoadCtx {
     unsafe fn destroy_body(ptr: *mut CtlogStoreLoadCtx) {
         // SAFETY: `ptr` is a live load context per the trait contract; its `conf` is NULL or a live
@@ -355,7 +298,7 @@ pub unsafe extern "C" fn CTLOG_STORE_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut CtlogStore {
-    let Some(store) = OwnedCtx::<CtlogStore>::new_zeroed(ptr::null(), 0) else {
+    let Some(store) = OwnedCtx::<CtlogStore>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
         return ptr::null_mut();
     };
 
@@ -404,7 +347,7 @@ pub unsafe extern "C" fn CTLOG_STORE_free(store: *mut CtlogStore) {
     // SAFETY: `store` is NULL or a live `CTLOG_STORE` this crate owns and that is not used
     // afterwards; `from_raw` reclaims it and `Drop` runs the authority's own free body and block
     // release.
-    drop(unsafe { OwnedCtx::<CtlogStore>::from_raw(store, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<CtlogStore>::from_raw_at(store, ptr::null(), 0) });
 }
 
 /// `static int ctlog_new_from_conf(CTLOG_STORE *store, CTLOG **ct_log, const CONF *conf, const char
@@ -526,7 +469,8 @@ pub unsafe extern "C" fn CTLOG_STORE_load_file(
     let ret: c_int = 0;
     // The load context owns its `CONF` and its block; `Drop` is the authority's own
     // `NCONF_free(conf)` + `ctlog_store_load_ctx_free` at every exit, in that order.
-    let Some(load_ctx) = OwnedCtx::<CtlogStoreLoadCtx>::new_zeroed(ptr::null(), 0) else {
+    let Some(load_ctx) = OwnedCtx::<CtlogStoreLoadCtx>::zalloc_at(ptr::null(), 0, ptr::null(), 0)
+    else {
         return ret;
     };
     // SAFETY: `load_ctx.as_ptr()` is a fresh zeroed load context.
@@ -614,7 +558,7 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut Ctlog {
-    let Some(ctlog) = OwnedCtx::<Ctlog>::new_zeroed(ptr::null(), 0) else {
+    let Some(ctlog) = OwnedCtx::<Ctlog>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
         return ptr::null_mut();
     };
 
@@ -672,7 +616,7 @@ pub unsafe extern "C" fn CTLOG_new(public_key: *mut EvpPkey, name: *const c_char
 pub unsafe extern "C" fn CTLOG_free(log: *mut Ctlog) {
     // SAFETY: `log` is NULL or a live `CTLOG` this crate owns and that is not used afterwards;
     // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
-    drop(unsafe { OwnedCtx::<Ctlog>::from_raw(log, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<Ctlog>::from_raw_at(log, ptr::null(), 0) });
 }
 
 /// `const char *CTLOG_get0_name(const CTLOG *log)` — `crypto/ct/ct_log.c:301-304`.

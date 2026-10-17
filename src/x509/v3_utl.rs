@@ -89,7 +89,7 @@ use crate::bn::bignum::{
     BN_bn2dec, BN_bn2hex, BN_dec2bn, BN_free, BN_hex2bn, BN_is_zero, BN_new, BN_num_bits, BigNum,
 };
 use crate::runtime::bio::iolib::BIO_puts;
-use crate::runtime::bio::owned::CtxDestroy;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
 use crate::runtime::bio::sys::{memchr, memcmp, memcpy, memset, strchr, strcmp, strlen, strncmp};
 use crate::runtime::bio::Bio;
@@ -130,39 +130,6 @@ use crate::x509::x_x509::X509;
 // ---------------------------------------------------------------------------
 // Ownership of a string or byte block, and of the `CONF_VALUE` object
 // ---------------------------------------------------------------------------
-
-/// An owned `#[repr(C)]` object block, reclaimed from the object's own destructor.
-///
-/// The block keeps the authority's layout and its stable address; its *ownership* is this type,
-/// reclaimed by [`Self::from_raw`] and released by `Drop` (the authority's own free body, then the
-/// block release at `(file, line)`).
-struct OwnedCtx<T: CtxDestroy> {
-    ptr: ptr::NonNull<T>,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl<T: CtxDestroy> OwnedCtx<T> {
-    /// Reclaim a block the object's destructor is about to release.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this file allocated and has not released.
-    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
-    }
-}
-
-impl<T: CtxDestroy> Drop for OwnedCtx<T> {
-    /// The object destructor: the authority's `*_free` body, then the block release.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `from_raw` reclaimed and this is its single release;
-        // `Drop` runs once, and `destroy_body` is the authority's own free body.
-        unsafe {
-            T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
-        }
-    }
-}
 
 /// `OPENSSL_FILE` for this unit's allocation expansions — `crypto/x509/v3_utl.c`.
 const FILE: &CStr = c"crypto/x509/v3_utl.c";
@@ -377,7 +344,7 @@ pub unsafe extern "C" fn x509v3_add_len_value_uchar(
 pub unsafe extern "C" fn X509V3_conf_free(conf: *mut ConfValue) {
     // SAFETY: `conf` is NULL or a live, uniquely-owned `CONF_VALUE`; `from_raw` reclaims it (NULL is
     // a no-op) and `Drop` runs the authority's own member releases followed by the block release.
-    unsafe { drop(OwnedCtx::<ConfValue>::from_raw(conf, FILE.as_ptr(), 111)) };
+    unsafe { drop(OwnedCtx::<ConfValue>::from_raw_at(conf, FILE.as_ptr(), 111)) };
 }
 
 /// The authority's `X509V3_conf_free` body, without the block release [`OwnedCtx`]'s `Drop`
