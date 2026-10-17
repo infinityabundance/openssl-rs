@@ -71,6 +71,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, OPENSSL_cleanse};
+use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 
 extern "C" {
@@ -144,46 +145,6 @@ struct MlDsaGenCtx {
 // ---------------------------------------------------------------------------------------------
 // Ownership of the generation context and its `propq` duplicate
 // ---------------------------------------------------------------------------------------------
-
-/// An owned `propq` duplicate: a block this unit's `OSSL_PARAM_get_utf8_string` leaves in the
-/// context, or one reclaimed from the field, released by `Drop` with a plain `CRYPTO_free` at the
-/// authority's own site.
-///
-/// The block stays the authority's own allocation, at its exact `file`/`line`, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes its release; only its *ownership* is
-/// this type.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a block a field still holds, for release by `Drop` at the authority's own site; NULL
-    /// answers `None`, which the callers treat as the authority's NULL release.
-    ///
-    /// # Safety
-    ///
-    /// `ptr` is NULL or a live block the crate's allocator seam produced in full and this caller
-    /// owns exclusively -- this handle's `Drop` is its single release; `file` is NULL or a
-    /// NUL-terminated C string.
-    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `ml_dsa_gen_cleanup`'s body (`ml_dsa_kmgmt.c.in:561-571`), without the block release
 /// [`OwnedCtx`]'s `Drop` performs: cleanse the entropy, then release the `propq` duplicate, in the

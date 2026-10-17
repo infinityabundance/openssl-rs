@@ -23,8 +23,8 @@ use crate::cmp::cmp_util::{ossl_cmp_log_str, OSSL_CMP_LOG_ERR, OSSL_CMP_LOG_WARN
 use crate::crmf::crmf_asn::CrmfCertTemplate;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_shift,
     OPENSSL_sk_value, OpenSslStack,
@@ -52,41 +52,6 @@ use crate::x509::x_x509::{X509_dup, X509_free, X509};
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_genm.c";
-
-/// An owned `char *` a helper allocated for this unit.
-///
-/// The block stays the helper's own allocator block; only its *ownership* is this type, whose
-/// `Drop` is the single `CRYPTO_free` at the authority's release site.
-struct OwnedStr {
-    ptr: *mut c_char,
-    file: *const c_char,
-    line: c_int,
-}
-
-impl OwnedStr {
-    /// Adopt a helper-produced block, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live NUL-terminated block the crate's allocator seam produced in full,
-    /// owned exclusively by this frame -- not borrowed or still owned by a caller. No other owner
-    /// will release it. `file`/`line` are the authority's own release site.
-    unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<OwnedStr> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedStr { ptr, file, line })
-        }
-    }
-}
-
-impl Drop for OwnedStr {
-    /// The block's single release, through the same seam and at the authority's own coordinates.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
-        // own `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
-    }
-}
 
 /// `ERR_LIB_CMP`.
 const ERR_LIB_CMP: c_int = 58;
@@ -181,7 +146,7 @@ unsafe fn cert_msg(
                 std::ffi::CStr::from_ptr(level_name).to_string_lossy(),
                 source.to_string_lossy(),
                 if let Some(subj) = subj.as_ref() {
-                    std::ffi::CStr::from_ptr(subj.ptr)
+                    std::ffi::CStr::from_ptr(subj.as_ptr())
                         .to_string_lossy()
                         .into_owned()
                 } else {
