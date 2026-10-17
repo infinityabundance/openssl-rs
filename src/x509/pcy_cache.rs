@@ -42,15 +42,15 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_long, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_void, CStr};
 
 use crate::asn1::layout::{Asn1String, V_ASN1_NEG_INTEGER};
 use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::asn1::string::ASN1_INTEGER_free;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{
     Asn1Object, NID_any_policy, NID_certificate_policies, NID_inhibit_any_policy,
     NID_policy_constraints, NID_policy_mappings, OBJ_cmp, OBJ_obj2nid,
@@ -70,6 +70,30 @@ use crate::x509::x_x509::X509;
 
 /// `OPENSSL_FILE` for this unit's allocator expansions.
 const FILE: &CStr = c"crypto/x509/pcy_cache.c";
+
+/// [`OwnedCtx`]'s destructor body for [`X509PolicyCache`], without the block's own release.
+///
+/// `ossl_policy_cache_free`'s body (`pcy_cache.c:180-187`) releases the anyPolicy datum and the
+/// sorted data stack; the enclosing block is released by [`OwnedCtx`]'s `Drop` at the authority's
+/// own `CRYPTO_free(cache, FILE, 0)` site.
+// SAFETY: (a) `destroy_body` releases exactly this cache's own two members, each through the
+// authority's own releaser (which accepts the NULL/empty state a failed build leaves), and never
+// the enclosing block; (b) an all-zero block of this `#[repr(C)]` record (two NULL pointers and
+// zero scalars) is a state the two NULL-tolerant releasers accept. The constructor is additionally
+// staged: the fields are written before `assume_init`, so no destructor runs on raw storage.
+unsafe impl CtxDestroy for X509PolicyCache {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    unsafe fn destroy_body(ptr: *mut X509PolicyCache) {
+        // SAFETY: `ptr` is a live cache per the trait contract; each member is NULL or owned by it.
+        unsafe {
+            ossl_policy_data_free((*ptr).anyPolicy);
+            OPENSSL_sk_pop_free((*ptr).data, Some(policy_data_free_void));
+        }
+    }
+}
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -264,12 +288,12 @@ unsafe fn policy_cache_new(x: *mut X509) -> c_int {
     if !unsafe { (*x).policy_cache }.is_null() {
         return 1;
     }
-    // A fresh block of the cache's own size, written below before it is read.
-    let cache = CRYPTO_malloc(core::mem::size_of::<X509PolicyCache>(), FILE.as_ptr(), 0)
-        .cast::<X509PolicyCache>();
-    if cache.is_null() {
+    // A fresh block of the cache's own size, through the staged owner: the authority's
+    // `CRYPTO_malloc(sizeof(*cache), FILE, 0)`. Its fields are written below before it is read.
+    let Some(raw) = RawCtx::<X509PolicyCache>::malloc() else {
         return 0;
-    }
+    };
+    let cache = raw.as_ptr();
     // SAFETY: `cache` is live and writable.
     unsafe {
         (*cache).anyPolicy = core::ptr::null_mut();
@@ -277,8 +301,12 @@ unsafe fn policy_cache_new(x: *mut X509) -> c_int {
         (*cache).any_skip = -1;
         (*cache).explicit_skip = -1;
         (*cache).map_skip = -1;
-        (*x).policy_cache = cache.cast::<c_void>();
     }
+    // SAFETY: every field the destructor reads (`anyPolicy`, `data`) is now written, so the block
+    // is a valid `X509PolicyCache`; `x` takes ownership of the one handle below.
+    let cache = unsafe { raw.assume_init().into_raw() };
+    // SAFETY: `x` is live and writable; the block's single owner is now the certificate.
+    unsafe { (*x).policy_cache = cache.cast::<c_void>() };
 
     let mut i: c_int = 0;
     // SAFETY: `x` is live; the `crit`/`idx` out-parameters are this frame's own.
@@ -417,15 +445,10 @@ unsafe fn policy_cache_new(x: *mut X509) -> c_int {
 /// `cache` must be NULL or a cache this crate owns and has not already freed.
 #[allow(dead_code)]
 pub(crate) unsafe fn ossl_policy_cache_free(cache: *mut X509PolicyCache) {
-    if cache.is_null() {
-        return;
-    }
-    // SAFETY: `cache` is live per the contract; each member is NULL or owned by it.
-    unsafe {
-        ossl_policy_data_free((*cache).anyPolicy);
-        OPENSSL_sk_pop_free((*cache).data, Some(policy_data_free_void));
-        CRYPTO_free(cache.cast(), FILE.as_ptr(), 0);
-    }
+    // SAFETY: `cache` is NULL or a live block this crate built and no other owner has released;
+    // `from_raw` maps NULL to `None`, and `Drop` runs `destroy_body` (the two member releases)
+    // followed by the authority's own block release at `FILE`/`0`.
+    drop(unsafe { OwnedCtx::<X509PolicyCache>::from_raw(cache) });
 }
 
 /// `const X509_POLICY_CACHE *ossl_policy_cache_set(X509 *x)` — `crypto/x509/pcy_cache.c:189-200`.
