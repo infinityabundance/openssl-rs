@@ -100,6 +100,7 @@ and the 9 adversarial probes are `#[ignore]`d and run separately via
 | 63 | stage/p25/sweep19 | context/mod, rsa/ameth, evp/evp_pkey, asn1/p5_pbe, ec/oct, x509/v3_usernotice | staged libctx; plain/cleansed DER owners at setter edges; salt and point-buffer owners; notice conversion owner; hidden 0 |
 | 64 | stage/p25/sweep20 | runtime/{threads_common,confmod/asn1}, x509/x509_obj, pem/pem_info, selftest/mod, mac/cmac | master-key owner; BUF_MEM data-transfer owner; PEM triple-buffer owners; staged self-test/CMAC contexts; checked conf length; hidden 0 |
 | 65 | stage/p25/sweep21 | asn1/{time,a_mbstr}, mac/hmac, property/globals, x509/v3_utf8, dh/ctrl | shortened-time/mbstr/UTF8 owners with checked lengths; `OwnedCtx` HMAC/global-properties; ukm custody contract; hidden 0 |
+| 66 | stage/p25/sweep22 | asn1/bitstr, cmp/cmp_genm, provider/{encode_key2blob,util}, x509/{v3_soa_id,v3_ind_iss} | bit-string owner + documented regrow; subject/blob owners; memdup transfer; returned strdup edges documented; hidden 0 |
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
