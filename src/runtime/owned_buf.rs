@@ -27,7 +27,7 @@
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
+    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc,
 };
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
@@ -277,6 +277,31 @@ impl OwnedBuf {
     ) -> Option<Self> {
         // SAFETY: `str_` is NULL or NUL-terminated per this function's contract.
         let raw = unsafe { CRYPTO_strdup(str_, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(Self {
+            ptr: raw,
+            release: Release::Plain { file, line },
+        })
+    }
+
+    /// `CRYPTO_strndup(str_, max, file, line)`: a NUL-terminated copy of at most
+    /// `max` bytes, or `None` when the helper answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `str_` is NULL or readable for `max` bytes; a non-NULL `str_` need not be
+    /// NUL-terminated within `max`.
+    pub(crate) unsafe fn new_strndup(
+        str_: *const c_char,
+        max: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `str_` is NULL or readable for `max` bytes per this function's
+        // contract.
+        let raw = unsafe { CRYPTO_strndup(str_, max, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
