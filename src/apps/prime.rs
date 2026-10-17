@@ -49,13 +49,13 @@ use core::ffi::{c_char, c_int};
 use crate::apps::openssl::not_landed;
 use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::PRIME_OPTIONS;
+use crate::asn1::owned::OwnedBlock;
 use crate::bn::bignum::{BN_dec2bn, BN_free, BN_hex2bn, BN_new, BN_print};
 use crate::bn::primes::{BN_check_prime, BN_generate_prime_ex};
 use crate::runtime::bio::bss_file::{BIO_new_file, BIO_new_fp};
 use crate::runtime::bio::iolib::{BIO_get_line, BIO_write};
 use crate::runtime::bio::sys::{stdin, stdout};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
-use crate::runtime::mem::CRYPTO_free;
 
 /// `#define BUFSIZE 4098` — `apps/prime.c:17`.
 const BUFSIZE: usize = 4098;
@@ -297,14 +297,20 @@ pub fn main(argv: &[String]) -> i32 {
                     if s.is_null() {
                         eprintln!("Out of memory.");
                     } else {
-                        // SAFETY: `s` is a NUL-terminated block `BN_bn2hex`/`BN_bn2dec` allocated.
-                        let text = unsafe { core::ffi::CStr::from_ptr(s) }
-                            .to_string_lossy()
-                            .into_owned();
-                        println!("{text}");
-                        // `OPENSSL_free(s);` — `apps/prime.c:179`.
-                        // SAFETY: `s` is the block just consumed and not freed again.
-                        unsafe { CRYPTO_free(s.cast(), core::ptr::null(), 0) };
+                        // `BN_bn2hex`/`BN_bn2dec` handed this frame one NUL-terminated block;
+                        // `OwnedBlock`'s `Drop` is the authority's `OPENSSL_free(s)` at
+                        // `apps/prime.c:179`, whose seam coordinate is (NULL, 0).
+                        // SAFETY: `s` is non-NULL (the guard above) and is a fresh block the
+                        // helper allocated through the crate's seam, owned exclusively here.
+                        let s = unsafe { OwnedBlock::<c_char>::from_raw(s, core::ptr::null(), 0) };
+                        // `from_raw` answers `None` only for NULL, which the guard excluded.
+                        if let Some(s) = s {
+                            // SAFETY: `s.as_ptr()` is the NUL-terminated block the helper produced.
+                            let text = unsafe { core::ffi::CStr::from_ptr(s.as_ptr()) }
+                                .to_string_lossy()
+                                .into_owned();
+                            println!("{text}");
+                        }
                     }
                 }
                 // SAFETY: `bn` is live and not freed again here (the `end:` label

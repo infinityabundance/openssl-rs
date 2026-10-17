@@ -28,7 +28,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::str::OPENSSL_strcasecmp;
 
 extern "C" {
@@ -64,19 +64,52 @@ pub(crate) struct ProvCtx {
     pub core_get_params: *mut c_void,
 }
 
+/// `PROV_CTX`'s owned-context contract.
+///
+/// The authority allocates the context with `OPENSSL_zalloc` and releases it with a bare
+/// `OPENSSL_free` (`provider_ctx.c:15-23`): it owns no members, so its destructor body is empty.
+///
+/// # Safety
+/// Zero is the authority's constructed state. Every field is a raw pointer (`*const c_void` or
+/// `*mut c_void`), for which the all-zero value is valid (NULL); the struct contains no
+/// references, `NonNull`s or range-restricted enums. `destroy_body` releases nothing, matching
+/// the authority's bare `OPENSSL_free`.
+// SAFETY: zero is the authority's constructed state (all fields are raw pointers, for which zero
+// is a valid NULL value) and `destroy_body` releases no member, so the trait's implementer
+// obligations hold.
+unsafe impl CtxDestroy for ProvCtx {
+    const FILE: *const c_char = crate::provider::ctx::FILE;
+    const LINE_ALLOC: c_int = crate::provider::ctx::LINE;
+    const LINE_FREE: c_int = crate::provider::ctx::LINE;
+
+    /// `ossl_prov_ctx_free`'s body before the block release: the authority releases no member.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this crate allocated and has not released (the trait contract).
+    unsafe fn destroy_body(_ptr: *mut Self) {}
+}
+
 /// `PROV_CTX *ossl_prov_ctx_new(void)` — `provider_ctx.c:15-18`.
 pub(crate) fn ossl_prov_ctx_new() -> *mut ProvCtx {
-    CRYPTO_zalloc(core::mem::size_of::<ProvCtx>(), FILE, LINE).cast::<ProvCtx>()
+    // A zeroed block is the authority's constructed state for `PROV_CTX` (see the `CtxDestroy`
+    // implementation above), so the valid-`T` transition is established; `into_raw` hands the
+    // stable address to the C caller.
+    match OwnedCtx::<ProvCtx>::zalloc() {
+        Some(ctx) => ctx.into_raw(),
+        None => ptr::null_mut(),
+    }
 }
 
 /// `void ossl_prov_ctx_free(PROV_CTX *ctx)` — `provider_ctx.c:20-23`. A bare `OPENSSL_free`: the
 /// context owns no references, which is why nothing is released first.
 ///
 /// # Safety
-/// `ctx` is NULL or a context this module allocated.
+/// `ctx` is NULL or a live context a previous [`ossl_prov_ctx_new`] allocated through the crate's
+/// seam and handed out with `into_raw`, which `Drop` has not released.
 pub(crate) unsafe fn ossl_prov_ctx_free(ctx: *mut ProvCtx) {
-    // SAFETY: the caller's contract.
-    unsafe { CRYPTO_free(ctx.cast(), FILE, LINE) };
+    // SAFETY: per the contract, `ctx` is NULL or a live block `ossl_prov_ctx_new` gave up; the
+    // handle's `Drop` runs the empty destructor body and the single block release at `FILE`/`LINE`.
+    drop(unsafe { OwnedCtx::<ProvCtx>::from_raw(ctx) });
 }
 
 /// `void ossl_prov_ctx_set0_libctx(PROV_CTX *ctx, OSSL_LIB_CTX *libctx)` —
