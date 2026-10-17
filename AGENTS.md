@@ -430,3 +430,73 @@ The claim FRF must earn: the `residual`/`full` arms outperform `coverage+compare
 on **held-out conversion defects**, and findings survive independent replay.
 Until then, do not claim frontier-level superiority. A preserved negative result
 is a valid result.
+
+---
+
+## 21. Safe-33 assurance protocol (read at relevant gates)
+
+**The existing §§0–20 remain authoritative.** Specialized procedures and
+research-grounded operational checklists live in
+`forensics/memory-safety/campaign/safe-c33/ASSURANCE_PLAYBOOK.md` §§21–32.
+This split keeps first-read agent context bounded. Load only the playbook
+sections required by the touched trust boundary; do not run its full suite on
+every mechanical conversion.
+
+### Mandatory new decisions for every changed unsafe *boundary*
+
+1. **State the exact external contract.** A C-valid hostile input or legitimate
+   application callback must not cause UB. A C-invalid pointer is not silently
+   assumed safe. State OpenSSL authority, ABI, target, object lifecycle and
+   candidate binary identity.
+2. **Prove the whole boundary, not the `unsafe` expression.** Assign a stable
+   boundary ID. Include every constructor, raw alias/escape, mutation, callback,
+   duplicate/up-ref, partial-init failure, release and safe caller. A private
+   field, `unsafe trait`, owner-token or `SAFETY:` comment is NOT discharge.
+3. **Treat FFI callbacks and hooks as reentrancy edges.** No unjustified `&mut`
+   or non-reentrant lock across an application-controlled callback, even when
+   owned member fields are private. Audit allocator hooks, BIO callbacks,
+   provider/ENGINE dispatch, ex_data and TLS callback families. A failure must
+   leave a valid reusable, rolled-back, or explicitly poisoned state.
+4. **Establish validity before references.** Prove provenance, alignment, extent,
+   initialization, lifetime alias exclusivity, `(ptr,len)` consistency and
+   `Send`/`Sync` claims. `debug_assert!` cannot uphold a safety invariant in
+   release. Preserve pointer provenance through transformations where needed.
+5. **Keep three independent evidence axes.** ABI/functional parity (including
+   loader and callback behavior), Rust soundness, and cryptographic/security
+   properties require different proofs and courts. Use negative controls.
+
+### Highest-value Safe-33 prioritization
+
+Retain the historical **33-family** cohort. Rank actionable obligations by
+**importance of the consumer × demonstrated reachability × security consequence
+÷ engineering effort**, never raw file/token/unsafe-block counts. First deepen
+current-candidate functional courts for curl, nginx, OpenSSH, HAProxy and Redis;
+recover the missing per-family symbol fingerprints. Preserve 25 L4-only
+families as build/link results until each earns meaningful L7 evidence.
+Additional candidates (Git/CPython/Apache HTTP Server) must first earn their
+own precise compatibility evidence and are not retroactively counted in 33.
+
+### New evidence promotion rule
+
+Every obligation has a candidate-bound lifecycle:
+`UNKNOWN -> CONTRACTED -> ESTABLISHED -> INDEPENDENTLY_CHECKED -> DISCHARGED`.
+Record an explicit source witness for each precondition, an independent reviewer,
+relevant runtime/static checks and negative controls, exact source/build hashes,
+and retained/unknown obligations. Unknown/unsupported instruments are NOT PASS.
+A method is not `SAFETY_DISCHARGED` because a document names it; the existing
+§7 full dependency-closure rule for `SAFE_COMPATIBLE` is unchanged.
+
+### Verification economics and stop conditions
+
+Continue the existing cheap per-batch court, one heavy command at a time. Add
+focused alias/callback/adversarial tests whenever a reusable safety boundary
+changes. Run native sanitizers and model tools where supported, protocol and
+cryptographic courts on corresponding changes, and the full forensic seal
+**only at the designed subsystem/promotion gates**. Never turn absent evidence
+into a green result. A counterexample, newly hidden assumption, ABI regression,
+weakened detector or newly unsafe safe-API is STOP even if 1,196+ unit tests pass.
+
+Before untrusted external pilots, fix the court container's documented writable
+host bind mount and prepare the maintainer-specific source/binary identity,
+replay/rollback and security-response evidence bundle. The precise court and
+bundle contracts are in the playbook §§24–32.
