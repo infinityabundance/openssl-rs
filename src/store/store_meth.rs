@@ -66,9 +66,9 @@ use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{
     ossl_provider_free, ossl_provider_libctx, ossl_provider_up_ref, OsslProvider,
 };
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::{
     OsslStoreLoader, StorePAttachFn, StorePCloseFn, StorePDeleteFn, StorePEofFn,
@@ -155,6 +155,24 @@ const STORE_METH_433: err_sites::ErrSite = meth_site(
 // The object — `store_meth.c:19-72`
 // ---------------------------------------------------------------------------
 
+// SAFETY: (a) `destroy_body` is the authority's own `OSSL_STORE_LOADER_free` member body -- it
+// releases exactly the loader's provider reference, if any, and never the enclosing block, which
+// `OwnedCtx`'s `Drop` releases; and (b) an all-zero `OsslStoreLoader` is a valid loader (a NULL
+// `prov`, a zero reference count and all-NULL callbacks), which is exactly the state the
+// authority's own `CRYPTO_zalloc` leaves it in.
+unsafe impl CtxDestroy for OsslStoreLoader {
+    /// The authority's `OSSL_STORE_LOADER_free` member body: the provider reference, if any.
+    unsafe fn destroy_body(ptr: *mut OsslStoreLoader) {
+        // SAFETY: `ptr` is a live loader per the trait contract; `prov` is NULL or the provider
+        // reference this loader holds.
+        unsafe {
+            if !(*ptr).prov.is_null() {
+                ossl_provider_free((*ptr).prov);
+            }
+        }
+    }
+}
+
 /// `int OSSL_STORE_LOADER_up_ref(OSSL_STORE_LOADER *loader)` — `store_meth.c:19-26`.
 ///
 /// Answers **1** unconditionally; the count is raised only when the loader is a provider
@@ -196,10 +214,12 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
             if last > 1 {
                 return;
             }
-            ossl_provider_free((*loader).prov);
         }
-        CRYPTO_free(loader.cast::<c_void>(), ptr::null(), 0);
     }
+    // The last reference (or a legacy loader): reclaim the owner, whose `Drop` runs the
+    // authority's own provider release and single block release.
+    // SAFETY: `loader` is a live loader this crate allocated and has not released.
+    drop(unsafe { OwnedCtx::<OsslStoreLoader>::from_raw(loader) });
 }
 
 /// `static OSSL_STORE_LOADER *new_loader(OSSL_PROVIDER *prov)` — `store_meth.c:46-62`.
@@ -211,24 +231,21 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
 /// # Safety
 /// `prov` must be live.
 unsafe fn new_loader(prov: *mut OsslProvider) -> *mut OsslStoreLoader {
-    // SAFETY: the constructor asks only for a zeroed block of the object's size.
-    let loader = CRYPTO_zalloc(core::mem::size_of::<OsslStoreLoader>(), ptr::null(), 0)
-        .cast::<OsslStoreLoader>();
-    if loader.is_null() {
+    let Some(loader) = OwnedCtx::<OsslStoreLoader>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `loader` is fresh and uniquely owned; `CRYPTO_NEW_REF` is the count-1 store.
-    unsafe { (*loader).refcnt.store(1, Ordering::Release) };
+    };
+    let p = loader.as_ptr();
+    // SAFETY: `p` is fresh and uniquely owned; `CRYPTO_NEW_REF` is the count-1 store.
+    unsafe { (*p).refcnt.store(1, Ordering::Release) };
     // SAFETY: `prov` is live per the contract.
     if unsafe { ossl_provider_up_ref(prov) } == 0 {
-        // SAFETY: `loader` is this function's own allocation, and the provider reference
-        // failed so nothing else holds the block.
-        unsafe { CRYPTO_free(loader.cast::<c_void>(), ptr::null(), 0) };
+        // `loader` drops here: `prov` is still NULL, so the destructor body releases no provider and
+        // the block alone is freed -- the authority's own error path.
         return ptr::null_mut();
     }
-    // SAFETY: `loader` is live.
-    unsafe { (*loader).prov = prov };
-    loader
+    // SAFETY: `p` is live.
+    unsafe { (*p).prov = prov };
+    loader.into_raw()
 }
 
 /// `static int up_ref_loader(void *method)` — `store_meth.c:64-67`.
