@@ -132,6 +132,61 @@ const HTTP_LIB_224: ErrSite = http_lib_site(224, c"OSSL_HTTP_parse_url", HTTP_R_
 // The four `static` helpers
 // ---------------------------------------------------------------------------
 
+/// An owned `char *` block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_strndup`/`CRYPTO_strdup`/`CRYPTO_malloc` at the authority's own
+/// size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook observes it; only its
+/// *ownership* is this type. [`Self::take`] adopts a block from a helper's result or a slot,
+/// [`Self::into_raw`] hands it back to a caller's output slot, `Drop` is its single release at the
+/// recorded site, and [`Self::release`] re-points that site when a path releases elsewhere.
+struct OwnedStr {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a block a helper or a slot produced, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit allocated through the crate's allocator seam that no
+    /// other owner will release -- this handle's `Drop` is its single release. `line` is the
+    /// authority's own release site for the path that reaches it.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedStr { ptr, line })
+        }
+    }
+
+    /// The block's address.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the caller's output slot.
+    fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Release the block at `line`, the authority's own site for the path that reaches it.
+    fn release(mut self, line: c_int) {
+        self.line = line;
+        // `self`'s `Drop` frees the block at `line` here.
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `static void init_pstring(char **pstr)` — `crypto/http/http_lib.c:26-31`.
 ///
 /// # Safety
@@ -192,9 +247,9 @@ unsafe fn copy_substring(
 /// `CRYPTO_strndup`/`CRYPTO_malloc` result.
 unsafe fn free_pstring(pstr: *mut *mut c_char) {
     if !pstr.is_null() {
-        // SAFETY: `pstr` is writable; `*pstr` is NULL or an allocation to release.
-        // `OPENSSL_free`'s expansion is at `http_lib.c:49`.
-        unsafe { CRYPTO_free((*pstr).cast(), FILE.as_ptr(), 49) };
+        // SAFETY: `pstr` is writable; `*pstr` is NULL or an allocation to release. `OPENSSL_free`'s
+        // expansion is at `http_lib.c:49`; the handle's `Drop` is its single release.
+        drop(unsafe { OwnedStr::take(*pstr, 49) });
         // SAFETY: `pstr` is writable per the contract.
         unsafe { *pstr = ptr::null_mut() };
     }
@@ -511,53 +566,71 @@ pub unsafe extern "C" fn OSSL_HTTP_parse_url(
             return 0;
         }
 
+        // After a successful split each slot holds this call's own `CRYPTO_strndup` block (or
+        // NULL): the handles release them at the authority's own sites below. The default sites are
+        // the two the success path uses; each failure path re-points its release.
+        // SAFETY: each slot is NULL or a live block `OSSL_parse_url` allocated and no other owner
+        // releases.
+        let mut scheme = OwnedStr::take(scheme, 229);
+        let mut port = OwnedStr::take(port, 233);
+
         'body: {
             // Check for optional HTTP scheme "http[s]".
-            if strcmp(scheme, OSSL_HTTPS_NAME.as_ptr()) == 0 {
+            // SAFETY: `scheme` is NULL or a NUL-terminated block.
+            let scheme_ptr = scheme.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr());
+            if strcmp(scheme_ptr, OSSL_HTTPS_NAME.as_ptr()) == 0 {
                 ssl = 1;
                 if !pssl.is_null() {
                     *pssl = ssl;
                 }
-            } else if *scheme != 0 && strcmp(scheme, OSSL_HTTP_NAME.as_ptr()) != 0 {
+            } else if *scheme_ptr != 0 && strcmp(scheme_ptr, OSSL_HTTP_NAME.as_ptr()) != 0 {
                 raise_site(&HTTP_LIB_224);
-                // SAFETY: `scheme` is `OSSL_parse_url`'s allocation.
-                CRYPTO_free(scheme.cast(), FILE.as_ptr(), 225);
-                // SAFETY: `port` is `OSSL_parse_url`'s allocation.
-                CRYPTO_free(port.cast(), FILE.as_ptr(), 226);
+                // Release each block at the authority's own site for this path.
+                if let Some(s) = scheme.take() {
+                    s.release(225);
+                }
+                if let Some(p) = port.take() {
+                    p.release(226);
+                }
                 break 'body;
             }
-            // SAFETY: `scheme` is `OSSL_parse_url`'s allocation.
-            CRYPTO_free(scheme.cast(), FILE.as_ptr(), 229);
+            if let Some(s) = scheme.take() {
+                s.release(229);
+            }
 
-            if strcmp(port, c"0".as_ptr()) == 0 {
+            // SAFETY: `port` is NULL or a NUL-terminated block.
+            let mut port_ptr = port.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
+            if strcmp(port_ptr, c"0".as_ptr()) == 0 {
                 // set default port
-                // SAFETY: `port` is `OSSL_parse_url`'s allocation.
-                CRYPTO_free(port.cast(), FILE.as_ptr(), 233);
-                port = (if ssl != 0 {
+                if let Some(p) = port.take() {
+                    p.release(233);
+                }
+                port_ptr = (if ssl != 0 {
                     OSSL_HTTPS_PORT
                 } else {
                     OSSL_HTTP_PORT
                 })
                 .as_ptr()
                 .cast_mut();
-                if ossl_assert(sscanf(port, c"%d".as_ptr(), &mut portnum) == 1) == 0 {
+                // SAFETY: `port_ptr` is a static NUL-terminated string.
+                if ossl_assert(sscanf(port_ptr, c"%d".as_ptr(), &mut portnum) == 1) == 0 {
                     break 'body;
                 }
                 if !pport_num.is_null() {
                     *pport_num = portnum;
                 }
                 if !pport.is_null() {
-                    // SAFETY: `port` is a static NUL-terminated string.
-                    *pport = CRYPTO_strdup(port, FILE.as_ptr(), 240).cast::<c_char>();
+                    // SAFETY: `port_ptr` is a static NUL-terminated string.
+                    *pport = CRYPTO_strdup(port_ptr, FILE.as_ptr(), 240).cast::<c_char>();
                     if (*pport).is_null() {
                         break 'body;
                     }
                 }
             } else if !pport.is_null() {
-                *pport = port;
-            } else {
-                // SAFETY: `port` is `OSSL_parse_url`'s allocation.
-                CRYPTO_free(port.cast(), FILE.as_ptr(), 248);
+                // Hand the splitter's own `port` block to the caller's slot.
+                *pport = port.take().map_or(ptr::null_mut(), |p| p.into_raw());
+            } else if let Some(p) = port.take() {
+                p.release(248);
             }
             return 1;
         }

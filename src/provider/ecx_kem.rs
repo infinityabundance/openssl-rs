@@ -114,6 +114,58 @@ fn is_running() -> c_int {
     1
 }
 
+/// The KEM context's owned `ikm` — the authority's `unsigned char *ikm` / `size_t ikmlen` pair,
+/// released with `OPENSSL_clear_free(ikm, ikmlen)`.
+///
+/// The block stays a `CRYPTO_*`-seam allocation at the authority's own `__FILE__`/`__LINE__` (the
+/// input is the `OSSL_PARAM_get_octet_string` helper's block; the context's replacement and its
+/// final release are `ecx_kem.c:321`/`:177`), so a caller-installed `CRYPTO_set_mem_functions` hook
+/// observes both ends. Only its *ownership* is this type: [`Self::take`] adopts the pair, `Drop` is
+/// the pair's single cleansing release at the recorded site, and [`Self::into_raw`] hands the `ikm`
+/// half back to the context field.
+struct OwnedIkm {
+    ptr: *mut u8,
+    len: usize,
+    /// The authority's `OPENSSL_clear_free` site for this block.
+    line: c_int,
+}
+
+impl OwnedIkm {
+    /// Adopt the context's `(ikm, ikmlen)` pair, or `None` for a NULL `ikm`.
+    ///
+    /// # Safety
+    /// `ikm` is NULL or a live block this unit allocated through the crate's allocator seam, owned
+    /// by the caller, `ikmlen` its exact byte count, and no other owner will release it -- this
+    /// handle's `Drop` is its single release.
+    unsafe fn take(ikm: *mut u8, ikmlen: usize, line: c_int) -> Option<OwnedIkm> {
+        if ikm.is_null() {
+            None
+        } else {
+            Some(OwnedIkm {
+                ptr: ikm,
+                len: ikmlen,
+                line,
+            })
+        }
+    }
+
+    /// Give up ownership of the block to the context field it is stored in.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedIkm {
+    /// The pair's single cleansing release at the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, readable for
+        // `self.len` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE_ECX_KEM, self.line) };
+    }
+}
+
 /// `PROV_ECX_CTX` — `ecx_kem.c:52-63`.
 #[repr(C)]
 struct ProvEcxCtx {
@@ -295,7 +347,8 @@ unsafe extern "C" fn ecxkem_freectx(vectx: *mut c_void) {
     // SAFETY: `ctx` is the caller's context; `recipient_key_set`/`sender_authkey_set` accept a
     // NULL key and release the held ones, and `ctx` is released last.
     unsafe {
-        CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_ECX_KEM, 177);
+        // The `ikm` pair's handle releases the field's own block at the authority's site.
+        drop(OwnedIkm::take((*ctx).ikm, (*ctx).ikmlen, 177));
         recipient_key_set(ctx, ptr::null_mut());
         sender_authkey_set(ctx, ptr::null_mut());
         CRYPTO_free(ctx.cast(), FILE_ECX_KEM, 180);
@@ -541,8 +594,11 @@ unsafe extern "C" fn ecxkem_set_ctx_params(vctx: *mut c_void, params: *const Oss
             {
                 return 0;
             }
-            CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_ECX_KEM, 321);
-            (*ctx).ikm = tmp.cast::<u8>();
+            // The old `ikm`'s handle releases it at the authority's own site; the replacement is
+            // the helper's fresh block, handed to the field through a second handle.
+            drop(OwnedIkm::take((*ctx).ikm, (*ctx).ikmlen, 321));
+            (*ctx).ikm = OwnedIkm::take(tmp.cast::<u8>(), tmplen, 321)
+                .map_or(ptr::null_mut(), |b| b.into_raw());
             (*ctx).ikmlen = tmplen;
         }
 
