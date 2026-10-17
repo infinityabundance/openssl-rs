@@ -475,6 +475,19 @@ package.
 - Gate: `fmt` 0, clippy 0, **1230 passed / 18 ignored**, adv-probe **18/18**.
   Progress: **31 of 173** identical helpers consolidated.
 
+### Subphase 50 — B-P plain buffers, first half
+
+- Twenty of the 52 `{ptr, file, line}` plain-free copies now use the shared
+  type: asn1 (mime, bio), async, cmp (hdr, protect), ct (b64, log, oct, sct,
+  sct_ctx), decoder_pkey, ec (key, print), evp_lib, hpke, pkcs7 smime, property
+  store, provider (dsa_sig, ecdsa_sig, init).
+- Allocator selection, separate allocation/release coordinates, NULL semantics,
+  release order and `into_raw` hand-offs preserved; six files with
+  `empty`/`realloc`/`clear_realloc`, path-dependent release-line setters or
+  `memdup` were deliberately left unchanged.
+- Adversarial review **PASS** on the inspected hunks. Gate: `fmt` 0, clippy 0,
+  **1230 passed / 18 ignored**, adv-probe **18/18**. Progress: **51 of 173**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -652,7 +665,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `c52f0937f` (B-R1b/B-R3 consolidation merged)
+**Last observed HEAD:** `64dd7e241` (B-P first half merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -700,9 +713,10 @@ and discharge explicitly.
 the unsafe-obligation denominator now exists.
 
 **Next in sequence:** continue consolidating the IDENTICAL module-local owner
-helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4).
-Remaining `OwnedBuf` groups: `B-P` (52), `B-L` (8), `B-Z` (13), `B-CA-FL` (5),
-`B-CA-0` (5), `B-CF-FL` (3); then `OwnedStr` (33) and `OwnedBlock` (15). Do not
+helpers in disjoint staged groups. Done: `B-R1a` (13), `B-R1b` (14), `B-R3` (4),
+`B-P` first half (20). Remaining: `B-P` second half (26 files listed in
+`OWNER-DUPLICATES.md`), `B-L` (8), `B-Z` (13), `B-CA-FL` (5), `B-CA-0` (5),
+`B-CF-FL` (3); then `OwnedStr` (33) and `OwnedBlock` (15). Do not
 touch the 26 DIFFERENT or 126 MUST-STAY-LOCAL copies. Each group needs a caller
 inventory, adversarial review and a fresh gate. Afterwards, the
 `CtxDestroy`/`CipherDestroy` shared-trait migration that unblocks the 61 local
