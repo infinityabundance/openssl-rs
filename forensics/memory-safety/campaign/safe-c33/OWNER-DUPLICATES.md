@@ -1,10 +1,18 @@
 # Module-local ownership-owner duplicates in `src/`
 
-**Status:** inventory and duplicate analysis only. **No consolidation performed.**
-**Source identity:** `integrate/safe-c33` at `7771a1c4f` (working tree at audit time).
-**Scope:** every `struct Owned*` / `struct Raw*` definition in `src/` (329 definitions).
-Read-only audit: no `src/` edit, no build, no test run. All figures come from
-`grep`/`sed`/`awk` over the working tree.
+**Status:** baseline inventory and duplicate analysis, with the current
+consolidation state recorded in §0a. No consolidation was performed at the
+baseline.
+**Baseline source identity:** `integrate/safe-c33` at HEAD `194021c97` (working
+tree at audit time).
+**Baseline scope:** every `struct Owned*` / `struct Raw*` definition in `src/`
+(329 definitions).
+Read-only baseline audit: no `src/` edit, no build, no test run. All baseline
+figures come from `grep`/`sed`/`awk` over the working tree.
+
+**All counts in §0–§10 are the BASELINE at HEAD `194021c97`; they are not the
+current working-tree state. See §0a for the post-consolidation state at HEAD
+`db5836ff6`.**
 
 This document answers one question: *which of the many per-module owner types are
 the same ownership mechanism copied into different files, and which only look
@@ -13,7 +21,9 @@ consumer family is `SAFE_COMPATIBLE`. Consolidation is a separate, reviewed chan
 
 ---
 
-## 0. Summary
+## 0. Summary — BASELINE at HEAD `194021c97`
+
+These are baseline counts, not current counts; see §0a.
 
 | family | definitions | shared/canonical | local | IDENTICAL | DIFFERENT | MUST-STAY-LOCAL |
 |---|---:|---:|---:|---:|---:|---:|
@@ -81,6 +91,40 @@ Release abbreviations: `P` = `CRYPTO_free` (plain), `C` = `CRYPTO_clear_free`,
    `property/parse.rs:833,1244`, `property/store.rs:1266`,
    `ssl/ssl_sess.rs:1940`). AGENTS §3 requires checked arithmetic for
    allocation sizes; these should be hardened in a separate batch.
+
+---
+
+## 0a. Consolidation status at 43370905-era HEAD `db5836ff6`
+
+The §0–§10 figures are the **baseline at HEAD `194021c97`** and are not current.
+The post-consolidation state is:
+
+* **170 of the 173 baseline IDENTICAL groups are consolidated** into the shared
+owners (`runtime::owned_buf::OwnedBuf`, `runtime::owned_str::OwnedStr`,
+`runtime::bio::owned::*`, and `asn1::owned::OwnedBlock<T>`).
+* **3 baseline IDENTICAL groups are reclassified MUST-STAY-LOCAL** — different
+abstractions, not duplicates:
+  * `bn/rand.rs` — owner-with-extent and a safe mutable-slice accessor
+    (`as_mut_slice(&mut self) -> &mut [u8]`).
+  * `asn1/string.rs` — growable buffer via `CRYPTO_realloc` /
+    `CRYPTO_clear_realloc`.
+  * `asn1/text.rs` — growable buffer plus a NULL-initialised empty handle.
+* **10 files migrated in this batch** at HEAD `db5836ff6`: `asn1/a_digest.rs`,
+  `ec/depr.rs`, `x509/dane.rs`, `x509/v3_pci.rs`, `x509/v3_utl.rs`,
+  `evp/pkey.rs`, `crmf/crmf_lib.rs`, `http/http_lib.rs`, `x509/v3_akid.rs`,
+  `runtime/bio/bio_sock2.rs`.
+* **Local owner definitions remaining: 157.** The exact count is:
+
+  ```sh
+  grep -rE '^[[:space:]]*(pub(\([^)]*\))?[[:space:]]+)?struct[[:space:]]+(Owned|Raw)[A-Za-z]*' src --include='*.rs' | wc -l
+  ```
+
+  which answers `161`; subtracting the 4 canonical definitions
+  (`runtime/bio/owned.rs`: `OwnedCtx`, `RawCtx`, `OwnedBlock`; `asn1/owned.rs`:
+  `OwnedBlock<T>`) leaves **157** local owner definitions.
+
+The historical `evp/pkey.rs:517` and `crmf/crmf_lib.rs:1579` OwnedBlock rows are
+retained in §4.2 and annotated there as migrated in this batch.
 
 ---
 
@@ -318,7 +362,10 @@ mechanism as `S-L`.
 * `take`/`from_raw` unsafe; `Drop` selects `C(ptr,len,file,line)` vs
   `P(ptr,file,line)` from `clear`. Secret when `clear`; length stored.
 * Members: `evp/digest.rs:304` (11), `evp/pkey_ctx.rs:343` (10),
-  `evp/pkey.rs:517` (11), `crmf/crmf_lib.rs:1579` (21).
+  `evp/pkey.rs:517` (11 — historical row; migrated in this batch to
+  `runtime::owned_buf`'s `Conditional` arm),
+  `crmf/crmf_lib.rs:1579` (21 — historical row; migrated in this batch to
+  `runtime::owned_buf`'s `Conditional` arm).
 
 ### 4.3 `OB-Z` — `{ptr}` plain free, constant coordinates — **IDENTICAL (3)**
 
@@ -335,6 +382,11 @@ mechanism as `S-L`.
 |---|---:|---|---|
 | `evp/asymcipher.rs:305` | 6 | `{ptr, len, file, line}` | always `C` (no plain arm), so `len` is mandatory — not the conditional `OB-Cond` |
 | `runtime/rcu.rs:269` | 22 | `OwnedBlock<T> {NonNull<T>, line}` | generic element type + only `line`; `Drop: P(ptr, CONST_FILE, line)` |
+
+Note: the historical `evp/pkey.rs:517` and `crmf/crmf_lib.rs:1579`
+`OwnedBlock` rows are in §4.2 (they are `OB-Cond`, not this DIFFERENT table).
+Both are annotated there as migrated in this batch to `runtime::owned_buf`'s
+`Conditional` arm; the historical rows are retained.
 
 ---
 
@@ -631,6 +683,9 @@ confined to `OwnedCtx`'s `Drop`, as the trait contract requires.
 
 ## 10. Consolidation candidates (IDENTICAL groups only)
 
+**These candidate counts are the baseline at HEAD `194021c97`, not the current
+state; see §0a for consolidation status.**
+
 Listed by expected value. Each requires a reviewed, separately gated change; do
 not treat this list as authorization to merge.
 
@@ -674,6 +729,10 @@ not treat this list as authorization to merge.
 * All `Raw*` uninitialised-construction windows: the block-only `Drop` and the
   `assume_init` transition are the semantic content; pooling them with
   `OwnedCtx` would erase the partially-initialised-state guarantee.
+* The two growable-buffer owners `asn1/string.rs` and `asn1/text.rs`, and the
+  extent-bearing `bn/rand.rs` with its safe mutable-slice accessor, are
+  different abstractions (growth / slice borrow), not duplicates. They stay
+  local even though their field shapes resemble the fixed-block groups.
 * Module-specific object owners (`OwnedDh/Dsa/Rsa/Sig/Method/Engine/Skey/
   Tree/Node/Store/...`) and record owners with custom destructor bodies
   (`OwnedValue`, `OwnedStore`, `OwnedTree`, `OwnedEngine`, `OwnedSkey`, …).

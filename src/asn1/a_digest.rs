@@ -51,7 +51,7 @@ use crate::evp::digest::{
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_free` expansions.
 const FILE: &CStr = c"crypto/asn1/a_digest.c";
@@ -63,71 +63,6 @@ const LINE_FREE_FAIL: c_int = 45;
 const LINE_FREE_OK: c_int = 48;
 /// `ossl_asn1_item_digest_ex`'s single `OPENSSL_free(str)` (`:81`).
 const LINE_FREE_ITEM: c_int = 81;
-
-/// An owned DER scratch buffer allocated through the crate's allocator seam.
-///
-/// Two of this unit's routines manage such a buffer by hand: `ASN1_digest`'s `str` (a block
-/// `OPENSSL_malloc(inl)` releases at `:45` on the failure path and `:48` on the success path) and
-/// `ossl_asn1_item_digest_ex`'s `str` (a block `ASN1_item_i2d` produced, released at `:81`). The
-/// block stays a `CRYPTO_*`-seam allocation at the authority's own size/`file`/`line`, so a
-/// caller-installed `CRYPTO_set_mem_functions` hook observes both ends -- a Rust `Box`/`Vec` would
-/// hide them. Only the *ownership* is this type: [`Self::malloc`] and [`Self::adopt`] acquire it,
-/// [`Self::as_ptr`] exposes it, and `Drop` is its single release at `self.line`.
-struct OwnedBuf {
-    ptr: *mut c_uchar,
-    line: c_int,
-}
-
-impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, alloc_line)`, released on `Drop` at `free_line`, or `None` when the
-    /// allocator answers NULL.
-    fn malloc(len: usize, alloc_line: c_int, free_line: c_int) -> Option<OwnedBuf> {
-        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
-        // bytes.
-        let raw = CRYPTO_malloc(len, FILE.as_ptr(), alloc_line).cast::<c_uchar>();
-        if raw.is_null() {
-            None
-        } else {
-            Some(OwnedBuf {
-                ptr: raw,
-                line: free_line,
-            })
-        }
-    }
-
-    /// Adopt a block an encoder produced, or `None` for NULL.
-    ///
-    /// # Safety
-    /// `ptr` is NULL or a live block this unit's encoder produced and this frame owns; no other
-    /// owner will release it, and this handle's `Drop` is its single release.
-    unsafe fn adopt(ptr: *mut c_uchar, line: c_int) -> Option<OwnedBuf> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(OwnedBuf { ptr, line })
-        }
-    }
-
-    /// The writable start of the block.
-    fn as_ptr(&self) -> *mut c_uchar {
-        self.ptr
-    }
-
-    /// Re-point the release at the authority's own site for the path that reaches it (the success
-    /// path of `ASN1_digest` releases at `:48`, its failure path at `:45`).
-    fn set_line(&mut self, line: c_int) {
-        self.line = line;
-    }
-}
-
-impl Drop for OwnedBuf {
-    /// The block's single release, through the same seam the authority uses.
-    fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
-        // `CRYPTO_free` accepts NULL.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
-    }
-}
 
 /// `int ASN1_digest(i2d_of_void *i2d, const EVP_MD *type, char *data, unsigned char *md,
 /// unsigned int *len)` — `crypto/asn1/a_digest.c:28-50`.
@@ -158,10 +93,16 @@ pub unsafe extern "C" fn ASN1_digest(
             unsafe { raise_site(&err_sites::A_DIGEST_36) };
             return 0;
         }
-        // The scratch is this frame's own block: `OwnedBuf::malloc` performs the authority's
-        // `CRYPTO_malloc(inl, FILE, LINE_MALLOC)` and the handle releases it at the authority's
-        // failure site, re-pointed to the success site on the path that reaches it.
-        let Some(mut buf) = OwnedBuf::malloc(inl as usize, LINE_MALLOC, LINE_FREE_FAIL) else {
+        // The scratch is this frame's own block: `OwnedBuf::new_plain_released` performs the
+        // authority's `CRYPTO_malloc(inl, FILE, LINE_MALLOC)` and the handle releases it at the
+        // authority's failure site, re-pointed to the success site on the path that reaches it.
+        let Some(mut buf) = OwnedBuf::new_plain_released(
+            inl as usize,
+            FILE.as_ptr(),
+            LINE_MALLOC,
+            FILE.as_ptr(),
+            LINE_FREE_FAIL,
+        ) else {
             return 0;
         };
         let mut p = buf.as_ptr();
@@ -185,7 +126,7 @@ pub unsafe extern "C" fn ASN1_digest(
             return 0;
         }
         // The success path releases the block at the authority's own success site.
-        buf.set_line(LINE_FREE_OK);
+        buf.set_release_line(LINE_FREE_OK);
         1
     })
 }
@@ -229,7 +170,7 @@ pub(crate) unsafe fn ossl_asn1_item_digest_ex(
     // every path below, including the early return when the fetch leaves `fetched_md` NULL.
     // SAFETY: `str_` is the block `ASN1_item_i2d` allocated for this call and no other owner will
     // release it.
-    let buf = unsafe { OwnedBuf::adopt(str_, LINE_FREE_ITEM) };
+    let buf = unsafe { OwnedBuf::adopt_plain(str_, FILE.as_ptr(), LINE_FREE_ITEM) };
 
     // SAFETY: `md` is live per the contract; a provider-less legacy method is the arm below.
     if unsafe { EVP_MD_get0_provider(md) }.is_null() {
