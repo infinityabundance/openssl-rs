@@ -1,0 +1,129 @@
+{
+  "receipt": "mechanism-sweep-M3",
+  "date": "2026-10-18",
+  "branch": "integrate/safe-c33",
+  "source_head": "d8153a349",
+  "worktree": "dirty: uncommitted conf/def.rs extent-arithmetic repair and cmp_server.rs error-path cleanup",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "verification_level": "BATCH",
+  "scope": "mechanism-contract sweep over the next eleven ordinary queue files (CONF/X.509/ASN.1/EVP-signature/CMP/UI/PKCS7); not full D-group enumeration",
+  "not_discharged": true,
+  "files": [
+    "src/runtime/conf/def.rs",
+    "src/x509/x_all.rs",
+    "src/asn1/prim.rs",
+    "src/x509/x509_lu.rs",
+    "src/evp/signature.rs",
+    "src/x509/v3_crld.rs",
+    "src/cmp/cmp_server.rs",
+    "src/x509/v3_cpols.rs",
+    "src/ui/ui_lib.rs",
+    "src/pkcs7/pk7_lib.rs",
+    "src/x509/v3_purp.rs"
+  ],
+  "dispositions": {
+    "src/runtime/conf/def.rs": "M3-D1 low: four allocation extents now checked (strlen+1, expansion newsize, include-path join, directory-file join); ownership/cleanup unchanged",
+    "src/x509/x_all.rs": "no defect: pure ASN.1/stream forwarding; simple_get_asn1 releases the response BIO at the authority's line; no owner/slot mechanism",
+    "src/asn1/prim.rs": "no defect: ASN1_OBJECT reuse/free, integer sizing and the a2d_ASN1_OBJECT heap slot match a_object.c/a_int.c; OwnedBlock/PCTX/SCTX single release",
+    "src/x509/x509_lu.rs": "no defect: RawLookup/RawStore partial release, three CtxDestroy bodies, store refcount and cache add/push ownership match x509_lu.c",
+    "src/evp/signature.rs": "no defect: OwnedCtx zalloc, provider up-ref refusal free, refcount destructor and callback dispatch (raw pointer, no &mut) match signature.c",
+    "src/x509/v3_crld.rs": "no defect: all five repr(C) layouts and template offsets/sizes match; dpn_cb NEW_POST/FREE_POST; every v2i error tail releases exactly once",
+    "src/cmp/cmp_server.rs": "M3-D2 low: process_cert_request error arms after the application callback now run the authority's err: tail instead of returning early and leaking si/cert/chain/caPubs",
+    "src/x509/v3_cpols.rs": "no defect: policy_section/notice_section/r2i_certpol ownership and push-failure releases match; i2r printers guarded",
+    "src/ui/ui_lib.rs": "no defect: Ui/UiString/UiMethod CtxDestroy on zero state, dup-prompt OwnedStr handover, UI_process callback phases use raw pointers only",
+    "src/pkcs7/pk7_lib.rs": "no defect: add_signer/add_crl/recipient/signer-info transfer and up-ref-on-success arms match pk7_lib.c",
+    "src/x509/v3_purp.rs": "no defect in the purpose-row ownership mechanisms: RawPurpose partial release, OwnedStr name adoption on the authority's err tail, xptable CtxDestroy"
+  },
+  "defects": [
+    {
+      "id": "M3-D1",
+      "file": "src/runtime/conf/def.rs",
+      "pre_fix_lines": [562, 696, 1374, 1849],
+      "post_fix_lines": [563, 706, 1390, 1885],
+      "severity": "low (defensive: unreachable with a representable in-memory config, but AGENTS.md section 3 requires local checked allocation arithmetic)",
+      "class": "four size/length sums used as allocation extents used unchecked usize arithmetic: strlen(from)+1 for the BUF_MEM grow, strlen(p)+buf->length-(e-from) for BUF_MEM_grow_clean, strlen(include_dir)+strlen(include)+2 for the joined include path, pathlen+namelen+2 for a directory entry",
+      "fix": "checked_add/checked_sub with the authority's own failure semantics: grow/join failures release the owned block and fail; the newsize overflow raises CONF_DEF_762 exactly as the C size_t wrap (caught by the MAX_CONF_VALUE_LENGTH test) does; a directory-entry overflow is treated as an unopenable name",
+      "witness": "existing conf::tests::loads_a_file_and_reports_the_line_of_a_failure plus the full library suite; no fixture can create a usize-overflowing in-memory string (bounds are now local rather than inferred)"
+    },
+    {
+      "id": "M3-D2",
+      "file": "src/cmp/cmp_server.rs",
+      "pre_fix_lines": [638, 662, 690],
+      "post_fix_lines": [607, 649, 675, 703, 738],
+      "severity": "low (resource leak / authority-fidelity; not UB)",
+      "class": "process_cert_request returned NULL directly after the application process_cert_request callback had filled certOut/chainOut/caPubs (callback-null arm and OSSL_CMP_CTX_set_option failure), where the authority's goto err frees si, certOut, chainOut and caPubs and clears ctx->newPkey; the proof-of-possession si==NULL arm correctly remains a direct return because cmp_server.c returns before err:",
+      "fix": "the post-callback body is a labelled block whose failure arms break to the shared authority err: tail; the pre-callback badPOP return is unchanged",
+      "witness": "cargo check --lib and the full library suite (cmp::cmp_server::zero_state_sweep_ossl_cmp_srv_ctx included); no error-injection fixture drives the callback-failure arm (NOT_RUN)"
+    }
+  ],
+  "retained_obligations": [
+    "src/cmp/cmp_server.rs: the seven OSSL_CMP_SRV_* callbacks are application-controlled reentrancy edges; dispatch copies the function pointer out of the raw object and never holds a Rust borrow across the call, under the authority callback contract",
+    "src/x509/x509_lu.rs: X509_LOOKUP method hooks (new_item/init/shutdown/ctrl/by_*) and the twelve store callbacks are application-controlled; the object is passed as a raw pointer",
+    "src/ui/ui_lib.rs: UI_METHOD ui_* callbacks are application-controlled; UI_process holds no Rust borrow across them",
+    "src/evp/signature.rs: provider newctx/freectx/dupctx/set_ctx_params callbacks; destroy_body runs ossl_provider_free, whose teardown may re-enter EVP_SIGNATURE_free (the refcount sentinel makes that a no-op)",
+    "src/x509/v3_crld.rs: v2i_crld ignores the sk_DIST_POINT_push return on the new_reserve path (capacity reserved for num, so the push cannot fail); a failure would leak point, not corrupt memory",
+    "src/asn1/prim.rs: a2d_ASN1_OBJECT keeps the authority's int-width BN_num_bits/(blsize+6)/7 arithmetic and tmpsize=blsize+32; reachable only for inputs far beyond practical memory, authority-faithful",
+    "src/runtime/conf/def.rs: bufnum + CONFBUFSIZE stays unchecked; bufnum <= the already-allocated BUF_MEM length, which is bounded by isize::MAX, so the sum cannot overflow",
+    "src/x509/v3_purp.rs: full ossl_x509v3_cache_extensions path (extension stack/name adoption) was not line-audited in this sweep"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": 0,
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "cargo_check_lib": "PASS",
+    "lib_serial": "1571 passed / 0 failed / 26 ignored (1597 run)",
+    "lib_test_threads_4": "1571 passed / 0 failed / 26 ignored (1597 run)",
+    "affected_adversarial_probes": "0 defined in the touched units; the cmp_server zero-state sweep and conf load tests ran in the full suite and passed"
+  },
+  "deferred": [
+    {
+      "gate": "full per-file D-group records for the eleven files",
+      "status": "NOT_RUN",
+      "runs_at": "next per-file audit pass"
+    },
+    {
+      "gate": "error-injection witness for the cmp_server callback-failure arms",
+      "status": "NOT_RUN",
+      "runs_at": "next CMP adversarial court"
+    },
+    {
+      "gate": "targeted Miri/ASan and non-affected probes",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY/SEAL"
+    },
+    {
+      "gate": "impact/dependency graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH integration checkpoint after the orchestrator commits this worktree"
+    },
+    {
+      "gate": "src/ml_dsa/encoders.rs (rank 43)",
+      "status": "NOT_RUN",
+      "reason": "genuinely new unsafe boundary: a file-local secure-memory OwnedBuf (CRYPTO_secure_malloc/clear_free) and secret-bearing ML-DSA key/signature serialisation; deferred to its own threshold/secret-memory boundary batch"
+    }
+  ],
+  "next_queue": {
+    "deferred_boundary_files": [
+      "src/ssl/ssl_lib.rs (rank 1, 1125 unattributed)",
+      "src/ssl/statem/statem_srvr.rs (rank 31, 262 unattributed)",
+      "src/ml_dsa/encoders.rs (rank 43, 225 unattributed)"
+    ],
+    "file": "src/x509/v3_san.rs",
+    "rank_in_attribution": 46,
+    "unattributed_sites": 220,
+    "then": [
+      "src/rsa/ameth.rs (219)",
+      "src/x509/v3_timespec.rs (219)",
+      "src/rand/rand_lib.rs (218)",
+      "src/ssl/statem/statem_clnt.rs (216)",
+      "src/x509/v3_conf.rs (214)",
+      "src/evp/rand.rs (212)"
+    ]
+  }
+}
