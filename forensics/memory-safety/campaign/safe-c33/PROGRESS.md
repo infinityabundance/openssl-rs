@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1268** passed
+`cargo test --lib` (must pass; the established baseline is **1272** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -820,6 +820,31 @@ package.
 - Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1268 passed / 18
   ignored**, adv-probe **18/18**.
 
+### Subphase 72 — `evp/cipher_ctx.rs` audit and fixes
+
+- Audit: 672 production sites in 181 groups — **35 ESTABLISHED, 129
+  CONTRACTED, 17 UNATTRIBUTED**.
+- Fixes:
+  1. `EVP_CIPHER_CTX_ctrl` refuses negative `arg` on the pointer-bearing arms
+     and requires `arg >= sizeof(MultiblockParam)` before the ENCRYPT deref (the
+     authority checks AAD but omits ENCRYPT). `MultiblockParam` is `repr(C)`, 32
+     bytes, matching the authority struct.
+  2. `EVP_CIPHER_CTX_set_cipher_data` documents the real ABI contract: NULL or
+     an exclusively owned seam block of `ctx_size` that reset cleanses and
+     frees. The extent is unenforceable at this ABI and remains a caller
+     obligation.
+  3. The four update/final exports bound `block_size` to `1..=32`
+     (`EVP_MAX_BLOCK_LENGTH`) before any `ctx.buf`/`final_` access; the
+     authority's fatal `OPENSSL_assert` becomes a clean 0.
+  4. `EVP_CIPHER_CTX_set_key_length` refuses a NULL cipher before the `prov`
+     dereference.
+- Tests: negative ctrl lengths, multiblock size-1/0/NULL/full, oversized
+  block_size through all four exports, fresh-context set_key_length.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1272 passed / 18
+  ignored**, adv-probe **18/18**. RT-CIPHER has one **pre-existing** residual
+  (`defltwrap.pad21`) reproduced on unpatched HEAD and recorded. Per-file
+  campaign: **4 of 761** PARTIAL files audited.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -997,7 +1022,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `69a9c66b9` (rwlock measured-profile predicate merged)
+**Last observed HEAD:** `1c13d13d6` (cipher_ctx soundness fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
