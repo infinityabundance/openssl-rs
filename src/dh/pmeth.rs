@@ -270,7 +270,11 @@ unsafe extern "C" fn pkey_dh_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
 /// `static int pkey_dh_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` — `:114`.
 ///
 /// # Safety
-/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`].
+/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
+/// `EVP_PKEY_CTRL_DH_KDF_UKM`, a non-NULL `p2` must be the whole, exclusively
+/// owned block from this crate's `CRYPTO_*` seam and `p1` its non-negative byte
+/// length; ownership transfers to the context. Other arms follow the authority's
+/// per-arm contract.
 unsafe extern "C" fn pkey_dh_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,

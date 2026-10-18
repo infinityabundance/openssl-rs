@@ -517,7 +517,11 @@ unsafe fn md_type_of(p2: *const c_void) -> c_int {
 /// `static int pkey_ec_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` — `:247`.
 ///
 /// # Safety
-/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`].
+/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
+/// `EVP_PKEY_CTRL_EC_KDF_UKM`, a non-NULL `p2` must be the whole, exclusively
+/// owned block from this crate's `CRYPTO_*` seam and `p1` its non-negative byte
+/// length; ownership transfers to the context. Other arms follow the authority's
+/// per-arm contract.
 unsafe extern "C" fn pkey_ec_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,

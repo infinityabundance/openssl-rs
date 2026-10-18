@@ -1201,6 +1201,25 @@ pub unsafe extern "C" fn EVP_KDF_CTX_set_SKEY(
     unsafe { f((*ctx).algctx, params.as_ptr()) }
 }
 
+/// Adopt the raw-path derived-key block on the provider's failure arm.
+///
+/// The block is the one [`OwnedBuf::new_zeroed_cleansed_at`] allocated above, so `keylen` is
+/// exactly its extent. The authority's own failure arm is a plain `OPENSSL_free(key)`
+/// (`kdf_lib.c:250`); reproducing that can leave key bytes in released storage, and release
+/// and cleansing are separate obligations (§5). The cleansing release is used instead, at the
+/// authority's failure-site coordinate; the change is unobservable in any OpenSSL result and is
+/// recorded as a deliberate §17 safety divergence.
+///
+/// # Safety
+///
+/// `raw` is NULL or the whole `keylen`-byte block this frame allocated and has not released.
+unsafe fn adopt_derived_key_on_failure(raw: *mut c_uchar, keylen: usize) -> Option<OwnedBuf> {
+    // SAFETY: the caller's contract makes `raw` a whole block of `keylen` bytes from the plain
+    // `CRYPTO_*` seam whose single release this call takes over; `keylen` is its allocation
+    // length, so the cleansing write stays inside the block.
+    unsafe { OwnedBuf::adopt_cleansed(raw, keylen, FILE_SEAM, LINE_FREE_DERIVE_SKEY_ON_FAIL) }
+}
+
 /// `EVP_SKEY *EVP_KDF_derive_SKEY(EVP_KDF_CTX *ctx, EVP_SKEYMGMT *mgmt, const char *key_type,
 /// const char *propquery, size_t keylen, const OSSL_PARAM params[])`.
 ///
@@ -1308,13 +1327,14 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `kp` is this
         // call's own block of `keylen` bytes and `params` is the caller's.
         if unsafe { derive(algctx, kp, keylen, params) } == 0 {
-            // The authority's failure release is the plain `CRYPTO_free` in its own order -- the
-            // block first, then the destination method's reference.
+            // The authority's failure arm frees the block first, then the destination method's
+            // reference. Its plain `CRYPTO_free` would leave possible key bytes behind, so the
+            // block is adopted with the cleansing release over its known allocation length.
             let raw = key.into_raw();
             // SAFETY: `raw` is the whole `keylen`-byte block this frame allocated through the
             // seam and has not released; `into_raw` transferred it here, and this failure path
-            // is its single release at the authority's plain site.
-            drop(unsafe { OwnedBuf::adopt_plain(raw, FILE_SEAM, LINE_FREE_DERIVE_SKEY_ON_FAIL) });
+            // is its single release.
+            drop(unsafe { adopt_derived_key_on_failure(raw, keylen) });
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1406,6 +1426,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
     use crate::params::{OSSL_PARAM_locate, OSSL_PARAM_set_size_t};
@@ -1697,6 +1718,29 @@ mod tests {
             assert!(EVP_KDF_CTX_gettable_params(ptr::addr_of_mut!(ctx)).is_null());
             assert!(EVP_KDF_CTX_settable_params(ptr::addr_of_mut!(ctx)).is_null());
         }
+    }
+
+    /// The raw path's failure arm must cleanse, not plainly free: a canary distinguishes the
+    /// cleansing release (and its exact length) from a plain release of the same block.
+    #[test]
+    fn the_derived_key_failure_release_is_cleansing() {
+        const KEYLEN: usize = 32;
+        let raw = OwnedBuf::new(KEYLEN, FILE_SEAM, LINE_ZALLOC_DERIVE_SKEY)
+            .expect("the test block must allocate")
+            .into_raw();
+        // SAFETY: `raw` is a live `KEYLEN`-byte block owned by this frame; it stands in for the
+        // derived-key buffer and is filled before adoption.
+        unsafe { ptr::write_bytes(raw, 0xA5, KEYLEN) };
+        // SAFETY: `raw` is the whole `KEYLEN`-byte block allocated above and not released.
+        let owned = unsafe { adopt_derived_key_on_failure(raw, KEYLEN) }
+            .expect("a non-NULL block is adopted");
+        assert_eq!(
+            owned.cleansed_num_for_test(),
+            Some(KEYLEN),
+            "the failure arm must carry the cleansing release over the allocation length"
+        );
+        // `Drop` performs the cleansing release over the same `KEYLEN` bytes.
+        drop(owned);
     }
 
     /// The reference count, which is the only ownership rule this class has.

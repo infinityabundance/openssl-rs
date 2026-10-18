@@ -303,7 +303,20 @@ pub unsafe extern "C" fn SCT_set_log_entry_type(sct: *mut Sct, entry_type: c_int
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `log_id` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `log_id` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), i.e. a block whose only valid release is
+/// `CRYPTO_free`; a secure-heap or foreign allocation is excluded. Its allocation
+/// extent is at least `log_id_len` bytes, and `log_id_len` is the length stored and
+/// later read.
+///
+/// On success the callee takes ownership: the pointer is stored in `sct`, and
+/// `SCT_free` releases it exactly once with `CRYPTO_free(ptr, NULL, 0)` (authority
+/// `OPENSSL_free(sct->log_id)`, `crypto/ct/ct_sct.c:85`/`:34-44`). No copy is made.
+/// The single non-adopting path is the V1 length refusal above: it returns 0 before
+/// touching `log_id`, ownership stays with the caller, and the callee does not
+/// release it.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_log_id(
     sct: *mut Sct,
@@ -431,7 +444,17 @@ pub unsafe extern "C" fn SCT_set_signature_nid(sct: *mut Sct, nid: c_int) -> c_i
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `ext` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `ext` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), releasable only by `CRYPTO_free`; a
+/// secure-heap or foreign allocation is excluded. Its allocation extent is at least
+/// `ext_len` bytes, and `ext_len` is the length stored and later read.
+///
+/// Ownership transfers unconditionally (there is no refusal path): the pointer is
+/// stored in `sct`, and `SCT_free` releases it exactly once with
+/// `CRYPTO_free(ptr, NULL, 0)` (authority `OPENSSL_free(sct->ext)`,
+/// `crypto/ct/ct_sct.c:140`/`:34-44`). No copy is made.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_extensions(sct: *mut Sct, ext: *mut c_uchar, ext_len: usize) {
     // SAFETY: `sct` is live; its old `ext` is NULL or an owned block, released through the seam.
@@ -493,7 +516,17 @@ pub unsafe extern "C" fn SCT_set1_extensions(
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `sig` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `sig` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), releasable only by `CRYPTO_free`; a
+/// secure-heap or foreign allocation is excluded. Its allocation extent is at least
+/// `sig_len` bytes, and `sig_len` is the length stored and later read.
+///
+/// Ownership transfers unconditionally (there is no refusal path): the pointer is
+/// stored in `sct`, and `SCT_free` releases it exactly once with
+/// `CRYPTO_free(ptr, NULL, 0)` (authority `OPENSSL_free(sct->sig)`,
+/// `crypto/ct/ct_sct.c:164`/`:34-44`). No copy is made.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_signature(sct: *mut Sct, sig: *mut c_uchar, sig_len: usize) {
     // SAFETY: `sct` is live; its old `sig` is NULL or an owned block, released through the seam;
