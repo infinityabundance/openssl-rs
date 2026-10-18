@@ -575,6 +575,7 @@ pub unsafe extern "C" fn X509_REQ_new_ex(
 mod tests {
     use super::*;
     use crate::runtime::stack::OPENSSL_sk_num;
+    use core::sync::atomic::Ordering;
 
     /// A blank request carries the authority's new-object state: a one-valued reference count, the
     /// mandatory `subject`/`pubkey` allocated by the item layer and the empty `attributes` stack
@@ -589,7 +590,7 @@ mod tests {
         unsafe {
             let req = X509_REQ_new();
             assert!(!req.is_null());
-            assert_eq!((*req).references, 1);
+            assert_eq!((*req).references.load(Ordering::Relaxed), 1);
             assert!(!(*req).req_info.subject.is_null());
             assert!(!(*req).req_info.pubkey.is_null());
             assert!(!(*req).req_info.attributes.is_null());

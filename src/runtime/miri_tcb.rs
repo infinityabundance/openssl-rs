@@ -379,22 +379,27 @@ fn miri_tcb_object_registry_lookup_round_trips() {
 fn miri_tcb_x509_lifetime_and_refcount() {
     use crate::x509::x509_set::X509_up_ref;
     use crate::x509::x_x509::{X509_free, X509_new};
+    use core::sync::atomic::Ordering;
     install();
     let x = X509_new();
     assert!(!x.is_null());
     // SAFETY: `x` is a freshly built X509 owned by this frame.
     unsafe {
-        assert_eq!((*x).references, 1, "a fresh X509 starts at reference 1");
+        assert_eq!(
+            (*x).references.load(Ordering::Relaxed),
+            1,
+            "a fresh X509 starts at reference 1"
+        );
         assert_eq!(
             X509_up_ref(x),
             1,
             "up_ref reports that the old count was >= 1"
         );
-        assert_eq!((*x).references, 2);
+        assert_eq!((*x).references.load(Ordering::Relaxed), 2);
         // The first free is a decrement, not a release.
         X509_free(x);
         assert_eq!(
-            (*x).references,
+            (*x).references.load(Ordering::Relaxed),
             1,
             "the item layer decrements under ASN1_AFLG_REFCOUNT"
         );

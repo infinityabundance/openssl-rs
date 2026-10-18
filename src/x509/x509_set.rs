@@ -250,8 +250,10 @@ pub unsafe extern "C" fn X509_SIG_INFO_set(
 
 /// `int X509_up_ref(X509 *x)` — `crypto/x509/x509_set.c:120-130`.
 ///
-/// `CRYPTO_UP_REF` followed by the authority's `i > 1` test. The count is the same field
-/// `X509_it`'s `ASN1_AFLG_REFCOUNT` initialises to 1 and `X509_free` decrements.
+/// The shared [`crate::runtime::refcount::up_ref`] protocol: a relaxed fetch-add that answers
+/// `1` when the new count is greater than one, and `0` without changing the count when the
+/// object is zero/being destroyed or the live count is already `i32::MAX`. The count is the
+/// same field `X509_it`'s `ASN1_AFLG_REFCOUNT` initialises to 1 and `X509_free` decrements.
 ///
 /// # Safety
 ///
@@ -259,10 +261,8 @@ pub unsafe extern "C" fn X509_SIG_INFO_set(
 #[no_mangle]
 pub unsafe extern "C" fn X509_up_ref(x: *mut X509) -> c_int {
     // SAFETY: `x` is live per the contract.
-    let i = unsafe { (*x).references.wrapping_add(1) };
-    // SAFETY: `x` is live and writable.
-    unsafe { (*x).references = i };
-    c_int::from(i > 1)
+    let refs = unsafe { &(*x).references };
+    crate::runtime::refcount::up_ref(refs)
 }
 
 /// `X509_SIG_INFO_VALID` — `include/openssl/x509.h.in:66`, the "`siginf` was filled" bit.
@@ -732,6 +732,12 @@ pub unsafe extern "C" fn X509_get_signature_info(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asn1::utl::do_lock;
+    use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData, CRYPTO_EX_INDEX_X509};
+    use crate::x509::x_x509::{X509_free, X509_it, X509_new, X509_set_ex_data};
+    use core::ffi::c_void;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+    use std::thread;
 
     /// The four fields land where the layout says, in the order the arguments name them.
     #[test]
@@ -767,5 +773,178 @@ mod tests {
         };
         assert_eq!((mdnid, pknid, secbits, flags), (672, 6, 128, 0x5));
         assert_eq!(valid, 1);
+    }
+
+    // ---- reference-count boundaries ----------------------------------------------------
+
+    /// `i32::MAX` is the one live count the shared protocol cannot increment. It must
+    /// report failure and leave the count unchanged rather than wrapping it into a
+    /// negative value (or into the destroying sentinel).
+    #[test]
+    fn up_ref_at_i32_max_reports_failure_and_leaves_count_unchanged() {
+        let x = X509_new();
+        assert!(!x.is_null());
+        // SAFETY: `x` is a live certificate and this test holds its only reference.
+        unsafe {
+            (*x).references.store(i32::MAX, Ordering::Release);
+            assert_eq!(X509_up_ref(x), 0);
+            assert_eq!((*x).references.load(Ordering::Acquire), i32::MAX);
+            // Restore a live count so the one release below is the unique destructor.
+            (*x).references.store(1, Ordering::Release);
+            X509_free(x);
+        }
+    }
+
+    /// The item layer's increment operation must report a refusal as `-1` (its failure
+    /// contract), never as `0` ("this item has no reference count").
+    #[test]
+    fn asn1_do_lock_up_ref_at_i32_max_reports_failure() {
+        let x = X509_new();
+        assert!(!x.is_null());
+        // SAFETY: `x` is live and `slot` is the item layer's value slot for that object.
+        unsafe {
+            (*x).references.store(i32::MAX, Ordering::Release);
+            let mut slot: *mut c_void = x.cast();
+            assert_eq!(
+                do_lock(&mut slot, 1, &*X509_it()),
+                -1,
+                "a refused increment is a failure, not 'no reference count'"
+            );
+            assert_eq!((*x).references.load(Ordering::Acquire), i32::MAX);
+            // Restore a live count so the one release below is the unique destructor.
+            (*x).references.store(1, Ordering::Release);
+            X509_free(x);
+        }
+    }
+
+    static X509_REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static X509_REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// An application `CRYPTO_EX_free` callback that re-enters `X509_free` with the
+    /// object whose destructor body is running.
+    unsafe extern "C" fn reenter_x509_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == X509_REENTER_TARGET.load(Ordering::Relaxed) {
+            X509_REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live certificate whose `FREE_POST` callback is running;
+            // the shared refcount protocol has already installed `REF_DESTROYING`, so this
+            // re-entry is a defined no-op.
+            unsafe { X509_free(obj.cast::<X509>()) };
+        }
+    }
+
+    struct ResetReenterTarget;
+    impl Drop for ResetReenterTarget {
+        fn drop(&mut self) {
+            X509_REENTER_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    /// The last releaser claims the sentinel before the ex-data callback runs, so a
+    /// re-entrant `X509_free` from that callback cannot start a second teardown.
+    #[test]
+    fn reentrant_x509_free_from_ex_data_is_defined_noop() {
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_X509,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(reenter_x509_free),
+        );
+        assert!(idx >= 1);
+        X509_REENTER_CALLS.store(0, Ordering::Relaxed);
+
+        let x = X509_new();
+        assert!(!x.is_null());
+        let _reset = ResetReenterTarget;
+        X509_REENTER_TARGET.store(x as usize, Ordering::Relaxed);
+
+        // SAFETY: `x` is live; `X509_free` runs the ex-data teardown this test observes.
+        unsafe {
+            assert_eq!(X509_set_ex_data(x, idx, x.cast()), 1);
+            X509_free(x);
+        }
+        assert_eq!(X509_REENTER_CALLS.load(Ordering::Acquire), 1);
+    }
+
+    static X509_DESTROY_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static X509_DESTROY_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// Counts destructor runs for one certificate via its ex-data `free` callback.
+    unsafe extern "C" fn count_x509_destroy(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == X509_DESTROY_TARGET.load(Ordering::Relaxed) {
+            X509_DESTROY_CALLS.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    struct ResetDestroyTarget;
+    impl Drop for ResetDestroyTarget {
+        fn drop(&mut self) {
+            X509_DESTROY_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    /// Eight threads race `up_ref`/`free` on one certificate while a base reference keeps it
+    /// alive. No increment may be lost, the count must return to the base value, and the
+    /// final release must run the destructor exactly once.
+    #[test]
+    fn concurrent_up_ref_and_free_runs_one_destructor() {
+        const THREADS: usize = 8;
+        const ITERATIONS: usize = 1_000;
+
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_X509,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(count_x509_destroy),
+        );
+        assert!(idx >= 1);
+        X509_DESTROY_CALLS.store(0, Ordering::Relaxed);
+
+        let x = X509_new();
+        assert!(!x.is_null());
+        let _reset = ResetDestroyTarget;
+        X509_DESTROY_TARGET.store(x as usize, Ordering::Relaxed);
+        let addr = x as usize;
+
+        thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(move || {
+                    // SAFETY: `addr` is the certificate created above. It stays live because
+                    // the base reference is held until every worker has joined, so each
+                    // increment is on a live object and each release is non-final.
+                    unsafe {
+                        let x = addr as *mut X509;
+                        for _ in 0..ITERATIONS {
+                            assert_eq!(X509_up_ref(x), 1);
+                            X509_free(x);
+                        }
+                    }
+                });
+            }
+        });
+
+        // SAFETY: every worker released its own reference; the base reference remains.
+        unsafe {
+            assert_eq!((*x).references.load(Ordering::Acquire), 1);
+            X509_free(x);
+        }
+        assert_eq!(X509_DESTROY_CALLS.load(Ordering::Acquire), 1);
     }
 }
