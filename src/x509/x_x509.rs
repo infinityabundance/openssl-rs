@@ -52,6 +52,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
+use core::sync::atomic::AtomicI32;
 
 use crate::asn1::a_dup::ASN1_item_dup;
 use crate::asn1::d2i::ASN1_item_d2i;
@@ -156,7 +157,11 @@ pub struct X509 {
     /// `X509_SIG_INFO siginf` — the cached signature strength, read by `X509_get_signature_info`.
     pub(crate) siginf: X509SigInfo,
     /// `CRYPTO_REF_COUNT references` — the count `X509_up_ref`/`X509_free` move.
-    pub(crate) references: c_int,
+    ///
+    /// The authority's `CRYPTO_REF_COUNT` is an atomic `int`; [`AtomicI32`] is the same size
+    /// and alignment, so this field stays at offset 192 while the exported refcount pair and
+    /// the ASN.1 item layer become race-free.
+    pub(crate) references: AtomicI32,
     /// `CRYPTO_EX_DATA ex_data` — the application extension block.
     pub(crate) ex_data: CryptoExData,
     /// `long ex_pathlen` — cached path length, or -1.
@@ -208,6 +213,10 @@ pub struct X509 {
 }
 
 const _: () = {
+    // `AtomicI32` must remain the authority's four-byte `int` so that `ref_offset = 192`
+    // addresses the same bytes for the ASN.1 item layer.
+    assert!(core::mem::size_of::<AtomicI32>() == core::mem::size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(core::mem::size_of::<X509>() == 384);
     assert!(core::mem::offset_of!(X509, cert_info) == 0);
     assert!(core::mem::offset_of!(X509, sig_alg) == 136);
@@ -990,6 +999,7 @@ pub unsafe extern "C" fn X509_get0_distinguishing_id(x: *mut X509) -> *mut Asn1S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::sync::atomic::Ordering;
 
     /// A blank certificate has the authority's layout: the sentinel path lengths, a one-valued
     /// reference count and a NULL cache.
@@ -999,7 +1009,7 @@ mod tests {
         unsafe {
             let x = X509_new();
             assert!(!x.is_null());
-            assert_eq!((*x).references, 1);
+            assert_eq!((*x).references.load(Ordering::Relaxed), 1);
             assert_eq!((*x).ex_pathlen, -1);
             assert_eq!((*x).ex_pcpathlen, -1);
             assert!((*x).skid.is_null());

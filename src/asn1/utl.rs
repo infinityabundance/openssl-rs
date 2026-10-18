@@ -25,11 +25,19 @@
 //!
 //! `CRYPTO_REF_COUNT` and the four operations on it are `internal/refcount.h`, chosen at
 //! compile time from five implementations. On the admitted build profile (gcc, x86-64,
-//! `__ATOMIC_RELAXED` available, `__GCC_ATOMIC_INT_LOCK_FREE > 0`) it is a bare `int`
-//! with `__atomic_fetch_add`/`__atomic_fetch_sub`, and `CRYPTO_NEW_REF`/`CRYPTO_FREE_REF`
-//! come from the header's fallback arm, which only assigns. Measured: the projection
-//! here is four bytes, which is what `ossl_asn1_do_lock`'s
-//! `offset2ptr(*pval, aux->ref_offset)` arithmetic assumes.
+//! `__ATOMIC_RELAXED` available, `__GCC_ATOMIC_INT_LOCK_FREE > 0`) it is a four-byte
+//! atomic `int`. The field is therefore projected as [`AtomicI32`] (same size and
+//! alignment as `c_int`, which is what `ossl_asn1_do_lock`'s
+//! `offset2ptr(*pval, aux->ref_offset)` arithmetic assumes), and this layer delegates
+//! the count operations to the shared [`crate::runtime::refcount`] protocol rather than
+//! doing a plain read-modify-write through `ref_offset`.
+//!
+//! The shared protocol reserves [`crate::runtime::refcount::REF_DESTROYING`] for the
+//! object whose destructor body is running, so a re-entrant `*_free` from an ASN.1
+//! callback (for `X509`, the ex-data free hook) observes the sentinel and is a defined
+//! no-op instead of starting a second teardown. It also refuses an increment at
+//! `i32::MAX` without wrapping the count into the sentinel. Both are §17 divergences
+//! from an over-free/overflow in the authority; see that module's documentation.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -40,6 +48,7 @@
 #![allow(dead_code)]
 
 use core::ffi::{c_int, c_long, c_uchar, c_void};
+use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::asn1::layout::*;
 use crate::asn1::owned::OwnedBlock;
@@ -47,6 +56,7 @@ use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 
 /// The authority translation unit for this layer.
@@ -86,53 +96,8 @@ pub(crate) unsafe fn call_item_exp(item: *mut c_void) -> *const c_void {
 // The reference count (`internal/refcount.h`)
 // ---------------------------------------------------------------------------
 
-/// `CRYPTO_REF_COUNT` — a bare `int` on the admitted build profile.
-pub(crate) type CryptoRefCount = c_int;
-
-/// `CRYPTO_UP_REF(refcnt, &ret)` — relaxed fetch-add, answering the new value.
-///
-/// # Safety
-///
-/// `p` must be a live `CRYPTO_REF_COUNT` and `ret` a writable slot.
-unsafe fn up_ref(p: *mut CryptoRefCount, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers.
-    unsafe { *ret = (*p).wrapping_add(1) };
-}
-
-/// `CRYPTO_DOWN_REF(refcnt, &ret)` — fetch-sub, with the release/acquire fence the
-/// header explains: without the release the object's other mutations would not be
-/// visible before the count reaches zero, and without the acquire the destructor could
-/// reorder ahead of them.
-///
-/// # Safety
-///
-/// As `up_ref`.
-unsafe fn down_ref(p: *mut CryptoRefCount, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers. The load and store are the
-    // authority's `__atomic_fetch_sub(&val, 1, __ATOMIC_RELEASE)`, and the fence is its
-    // conditional `__ATOMIC_ACQUIRE`. `atomic` is used rather than a plain write so the
-    // ordering matches even though this crate has one CPU-visible copy of the field.
-    // SAFETY: as above.
-    let old = unsafe { (*p).wrapping_sub(1) };
-    // SAFETY: as above.
-    unsafe { *p = old };
-    core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
-    if old == 0 {
-        core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
-    }
-    // SAFETY: the caller offers a writable slot.
-    unsafe { *ret = old };
-}
-
-/// `CRYPTO_NEW_REF(refcnt, n)` — the header's fallback arm, which only assigns.
-///
-/// # Safety
-///
-/// `p` must be a live `CRYPTO_REF_COUNT`.
-unsafe fn new_ref(p: *mut CryptoRefCount, n: c_int) {
-    // SAFETY: the caller guarantees `p`.
-    unsafe { *p = n };
-}
+/// `CRYPTO_REF_COUNT` — an atomic `int`, layout-compatible with the authority's.
+pub(crate) type CryptoRefCount = AtomicI32;
 
 // ---------------------------------------------------------------------------
 // The choice selector
@@ -188,13 +153,17 @@ pub(crate) unsafe fn set_choice_selector(
 /// `ossl_asn1_do_lock` — the reference count a `SEQUENCE` item may carry, keyed by
 /// operation.
 ///
-/// Returns 0 for an item that has no reference count at all, 1 or the new count
-/// otherwise, and **-1 on failure** — so a caller must test `< 0` rather than `== 0`
-/// unless it has already established that the item carries one.
+/// Returns 0 for an item that has no reference count at all, 1 otherwise, and **-1 on
+/// failure** — so a caller must test `< 0` rather than `== 0` unless it has already
+/// established that the item carries one. `op == 1` (increment) answers -1 when the
+/// shared protocol refuses (zero/destroying count or `i32::MAX`); no current caller uses
+/// that operation.
 ///
-/// `op == -1` at a count of zero releases the lock and the reference. That is the
-/// destructor path, and it is why `ossl_asn1_item_embed_free` refuses to go further
-/// while the count is still positive rather than freeing a value another owner holds.
+/// `op == -1` at a count of one claims the shared [`crate::runtime::refcount::REF_DESTROYING`]
+/// sentinel and returns 0: that caller alone may run the destructor body and release the
+/// lock. A positive remaining count, and a count already at zero or the sentinel (the
+/// re-entrant/over-free case), both return 1, so `ossl_asn1_item_embed_free` refuses to go
+/// further rather than freeing a value another owner holds (or tearing it down twice).
 ///
 /// # Safety
 ///
@@ -215,13 +184,15 @@ pub(crate) unsafe fn do_lock(pval: *mut *mut c_void, op: c_int, it: &Asn1Item) -
     }
     // SAFETY: `*pval` is live and both offsets are fields of it.
     let lock = unsafe { offset2ptr(*pval, c_long::from(aux.ref_lock)) } as *mut *mut c_void;
-    // SAFETY: as above.
+    // SAFETY: as above. Every item carrying `ASN1_AFLG_REFCOUNT` lays an `AtomicI32` at
+    // `ref_offset` (`X509`, `X509_CRL` and `X509_REQ` are the only three in the crate).
     let refcnt = unsafe { offset2ptr(*pval, c_long::from(aux.ref_offset)) } as *mut CryptoRefCount;
+    // SAFETY: that field is live and initialised (zeroed allocation, then `op == 0` below).
+    let refcnt = unsafe { &*refcnt };
 
     match op {
         0 => {
-            // SAFETY: `refcnt` is a live field of a live value.
-            unsafe { new_ref(refcnt, 1) };
+            refcnt.store(1, Ordering::Relaxed);
             // SAFETY: the lock field is writable.
             let fresh = CRYPTO_THREAD_lock_new();
             // SAFETY: the lock field is writable.
@@ -236,25 +207,33 @@ pub(crate) unsafe fn do_lock(pval: *mut *mut c_void, op: c_int, it: &Asn1Item) -
             1
         }
         1 => {
-            let mut ret: c_int = 0;
-            // SAFETY: `refcnt` and `ret` are both live.
-            unsafe { up_ref(refcnt, &mut ret) };
-            ret
+            // `CRYPTO_UP_REF`'s failure answer is `-1` here, and `0` is reserved for "this
+            // item carries no reference count". The shared protocol answers `0` when the
+            // increment is refused (zero/destroying count, or `i32::MAX`), so translate it
+            // rather than letting a caller read refusal as "no count".
+            if up_ref(refcnt) == 0 {
+                -1
+            } else {
+                1
+            }
         }
-        -1 => {
-            let mut ret: c_int = 0;
-            // SAFETY: `refcnt` and `ret` are both live.
-            unsafe { down_ref(refcnt, &mut ret) };
-            if ret == 0 {
+        -1 => match down_ref(refcnt) {
+            DownRef::Last => {
+                // This caller claimed the last reference (the count is now the shared
+                // `REF_DESTROYING` sentinel), so it alone runs the destructor body and
+                // releases the refcount lock.
                 // SAFETY: the lock field is live; the lock is ours to release.
                 unsafe { CRYPTO_THREAD_lock_free((*lock).cast::<CryptoRwlock>()) };
                 // SAFETY: the lock field is writable.
                 unsafe { *lock = core::ptr::null_mut() };
                 // `CRYPTO_FREE_REF` is a no-op on this profile: the header's fallback
                 // releases only the lock, which `CRYPTO_THREAD_lock_new` created.
+                0
             }
-            ret
-        }
+            // Another owner remains, or another thread/re-entrant callback is already
+            // destroying the object. Both are a defined no-op: release nothing.
+            DownRef::Remaining | DownRef::Retired => 1,
+        },
         _ => -1,
     }
 }
