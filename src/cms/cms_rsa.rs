@@ -46,6 +46,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{CmsRecipientInfo, CmsSignerInfo};
 use super::cms_lib::raise_cms;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `ERR_LIB_RSA` — `include/openssl/err.h.in:84`.
 const ERR_LIB_RSA: c_int = 4;
@@ -350,7 +351,7 @@ unsafe fn rsa_cms_decrypt(ri: *mut CmsRecipientInfo) -> c_int {
             // failure path below releases what it built at the authority's own site.
             // SAFETY: `dup_label_raw` is a live block `CRYPTO_memdup` allocated and no one owns.
             let dup_label = unsafe {
-                OwnedBuf::adopt_plain_nullable(dup_label_raw, c"cms_rsa.c".as_ptr(), 109)
+                OwnedBuf::adopt_plain_nullable(dup_label_raw, SeamFile::new(c"cms_rsa.c"), 109)
             };
             // SAFETY: `pkctx` is live; `dup_label` is `labellen` readable bytes.
             if unsafe {

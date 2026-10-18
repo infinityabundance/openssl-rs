@@ -95,6 +95,7 @@ use crate::runtime::err::err_sites::{
     BN_INTERN_97,
 };
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority's `__FILE__` for every raise site this unit defines, and the line the
@@ -146,7 +147,8 @@ pub(crate) unsafe fn bn_compute_wNAF(
     // SAFETY: `scalar` is null-or-live per this function's `# Safety` section.
     if unsafe { BN_is_zero(scalar) } != 0 {
         // The one-byte block is a local owner until it is handed to the caller.
-        let Some(r) = OwnedBuf::new_plain_released(1, FILE.as_ptr(), LINE, FILE.as_ptr(), LINE)
+        let Some(r) =
+            OwnedBuf::new_plain_released(1, SeamFile::new(FILE), LINE, SeamFile::new(FILE), LINE)
         else {
             return core::ptr::null_mut();
         };
@@ -199,7 +201,7 @@ pub(crate) unsafe fn bn_compute_wNAF(
     // `len + 1` is checked so an impossible wrapped request never reaches the allocator;
     // on that path no block is allocated and the answer is the authority's NULL.
     let Some(r_buf) = len.checked_add(1).and_then(|len| {
-        OwnedBuf::new_plain_released(len, FILE.as_ptr(), LINE, FILE.as_ptr(), LINE)
+        OwnedBuf::new_plain_released(len, SeamFile::new(FILE), LINE, SeamFile::new(FILE), LINE)
     }) else {
         return core::ptr::null_mut();
     };

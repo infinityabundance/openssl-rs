@@ -74,11 +74,13 @@ use crate::runtime::constant_time::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `rsa_enc.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
 const FILE: *const c_char = c"providers/implementations/asymciphers/rsa_enc.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/asymciphers/rsa_enc.c");
 
 /// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
@@ -359,7 +361,7 @@ unsafe extern "C" fn rsa_encrypt(
 
             // The scratch is this frame's own block; the handle releases it through the crate's
             // allocator seam on every path out of the arm.
-            let Some(tbuf) = OwnedBuf::new(rsasize as usize, FILE, 197) else {
+            let Some(tbuf) = OwnedBuf::new(rsasize as usize, FILE_SEAM, 197) else {
                 return 0;
             };
             if (*prsactx).oaep_md.is_null() {
@@ -459,7 +461,7 @@ unsafe extern "C" fn rsa_decrypt(
         {
             // The scratch is this frame's own block; the handle releases it through the crate's
             // allocator seam on every path out of the arm.
-            let Some(tbuf) = OwnedBuf::new(len, FILE, 272) else {
+            let Some(tbuf) = OwnedBuf::new(len, FILE_SEAM, 272) else {
                 return 0;
             };
             ret = RSA_private_decrypt(
@@ -544,7 +546,7 @@ unsafe extern "C" fn rsa_freectx(vprsactx: *mut c_void) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain(
             (*prsactx).oaep_label.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             332,
         ));
         CRYPTO_free(prsactx.cast(), FILE, 334);
@@ -601,7 +603,7 @@ unsafe extern "C" fn rsa_dupctx(vprsactx: *mut c_void) -> *mut c_void {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             let Some(dup) = OwnedBuf::adopt_plain(
                 CRYPTO_memdup(src_label.cast(), src_labellen, FILE, 369).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 369,
             ) else {
                 rsa_freectx(dstctx.cast());
@@ -1089,12 +1091,13 @@ unsafe extern "C" fn rsa_set_ctx_params(vprsactx: *mut c_void, params: *const Os
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*prsactx).oaep_label.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 576,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            (*prsactx).oaep_label = OwnedBuf::adopt_plain(tmp_label.cast::<c_uchar>(), FILE, 576)
-                .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
+            (*prsactx).oaep_label =
+                OwnedBuf::adopt_plain(tmp_label.cast::<c_uchar>(), FILE_SEAM, 576)
+                    .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*prsactx).oaep_labellen = tmp_labellen;
         }
 

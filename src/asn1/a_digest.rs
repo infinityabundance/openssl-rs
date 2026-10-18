@@ -51,6 +51,7 @@ use crate::evp::digest::{
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_free` expansions.
@@ -98,9 +99,9 @@ pub unsafe extern "C" fn ASN1_digest(
         // authority's failure site, re-pointed to the success site on the path that reaches it.
         let Some(mut buf) = OwnedBuf::new_plain_released(
             inl as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_MALLOC,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_FREE_FAIL,
         ) else {
             return 0;
@@ -170,7 +171,7 @@ pub(crate) unsafe fn ossl_asn1_item_digest_ex(
     // every path below, including the early return when the fetch leaves `fetched_md` NULL.
     // SAFETY: `str_` is the block `ASN1_item_i2d` allocated for this call and no other owner will
     // release it.
-    let buf = unsafe { OwnedBuf::adopt_plain(str_, FILE.as_ptr(), LINE_FREE_ITEM) };
+    let buf = unsafe { OwnedBuf::adopt_plain(str_, SeamFile::new(FILE), LINE_FREE_ITEM) };
 
     // SAFETY: `md` is live per the contract; a provider-less legacy method is the arm below.
     if unsafe { EVP_MD_get0_provider(md) }.is_null() {

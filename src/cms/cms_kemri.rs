@@ -36,6 +36,7 @@ use crate::x509::x_x509::X509;
 use super::cms_asn1::*;
 use super::cms_lib::{ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq};
 use super::cms_sd::{ossl_cms_SignerIdentifier_cert_cmp, ossl_cms_set1_SignerIdentifier};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_MAX_KEY_LENGTH` — `include/openssl/evp.h:35`.
 const EVP_MAX_KEY_LENGTH: usize = 64;
@@ -458,7 +459,8 @@ unsafe fn kdf_derive(
     // The encoded other-info is the helper's own `CRYPTO_malloc` block; `infoder` adopts it so the
     // failure paths below release what they built at the authority's own site.
     // SAFETY: `infoder` is NULL or a live block the helper allocated and no one else owns.
-    let infoder = unsafe { OwnedBuf::adopt_plain_nullable(infoder, c"cms_kemri.c".as_ptr(), 243) };
+    let infoder =
+        unsafe { OwnedBuf::adopt_plain_nullable(infoder, SeamFile::new(c"cms_kemri.c"), 243) };
 
     // SAFETY: `kemri` is live.
     kctx = unsafe { create_kdf_ctx(kemri) };
@@ -593,9 +595,9 @@ unsafe fn cms_kek_cipher(
     // SAFETY: `outsize > 0`.
     let Some(out) = OwnedBuf::new_cleansed_released(
         outsize,
-        c"cms_kemri.c".as_ptr(),
+        SeamFile::new(c"cms_kemri.c"),
         290,
-        core::ptr::null(),
+        SeamFile::NULL,
         0,
     ) else {
         // SAFETY: the context and key are live.
@@ -710,13 +712,13 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_encrypt(
     // through the crate's allocator seam; `kem_ct` is released by the authority's plain
     // `CRYPTO_free` and `kem_secret` by its cleansing `OPENSSL_clear_free`, both run by `Drop`.
     // SAFETY: both lengths are positive.
-    let kem_ct = OwnedBuf::new(kem_ct_len, c"cms_kemri.c".as_ptr(), 342);
+    let kem_ct = OwnedBuf::new(kem_ct_len, SeamFile::new(c"cms_kemri.c"), 342);
     // SAFETY: the length is non-zero.
     let kem_secret = OwnedBuf::new_cleansed_released(
         kem_secret_len,
-        c"cms_kemri.c".as_ptr(),
+        SeamFile::new(c"cms_kemri.c"),
         343,
-        core::ptr::null(),
+        SeamFile::NULL,
         0,
     );
     let (Some(kem_ct), Some(kem_secret)) = (kem_ct, kem_secret) else {
@@ -845,9 +847,9 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kemri_decrypt(
     // SAFETY: `kem_secret_len > 0`.
     let Some(kem_secret) = OwnedBuf::new_cleansed_released(
         kem_secret_len,
-        c"cms_kemri.c".as_ptr(),
+        SeamFile::new(c"cms_kemri.c"),
         404,
-        core::ptr::null(),
+        SeamFile::NULL,
         0,
     ) else {
         return ret;

@@ -82,6 +82,7 @@ use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::X509V3_R_INVALID_SYNTAX;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::CRYPTO_strndup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_commonName, NID_delegated_name_constraints, NID_holder_name_constraints,
     NID_id_on_SmtpUTF8Mailbox, NID_name_constraints, NID_pkcs9_emailAddress, OBJ_cmp, OBJ_obj2nid,
@@ -558,9 +559,11 @@ unsafe fn print_nc_ipadd(bp: *mut Bio, ip: *mut Asn1String) -> c_int {
     let ip2 = unsafe { ossl_ipaddr_to_asc((*ip).data.add(len1 as usize), len2) };
     // The two blocks are the helper's own; each handle is its single release.
     // SAFETY: `ip1` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
-    let ip1 = unsafe { OwnedBuf::adopt_plain_nullable(ip1.cast(), FILE.as_ptr(), LINE_FREE_IP1) };
+    let ip1 =
+        unsafe { OwnedBuf::adopt_plain_nullable(ip1.cast(), SeamFile::new(FILE), LINE_FREE_IP1) };
     // SAFETY: `ip2` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
-    let ip2 = unsafe { OwnedBuf::adopt_plain_nullable(ip2.cast(), FILE.as_ptr(), LINE_FREE_IP2) };
+    let ip2 =
+        unsafe { OwnedBuf::adopt_plain_nullable(ip2.cast(), SeamFile::new(FILE), LINE_FREE_IP2) };
     // SAFETY: `bp` is live; `ip1`/`ip2` are NULL or NUL-terminated.
     c_int::from(
         !ip1.as_ptr().is_null()
@@ -918,8 +921,9 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
     }
     // The copy is the seam's own; the handle is its single release as this frame returns.
     // SAFETY: `baseptr` is a live block `CRYPTO_strndup` allocated and no one else owns.
-    let baseptr_owned =
-        unsafe { OwnedBuf::adopt_plain_nullable(baseptr.cast(), FILE.as_ptr(), LINE_FREE_BASEPTR) };
+    let baseptr_owned = unsafe {
+        OwnedBuf::adopt_plain_nullable(baseptr.cast(), SeamFile::new(FILE), LINE_FREE_BASEPTR)
+    };
     let baseptr = baseptr_owned.as_ptr().cast::<c_char>();
     let mut ulabel = [0 as c_char; 256];
     let size = ulabel.len();
@@ -1079,7 +1083,7 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     // for the path that reaches it.
     // SAFETY: `uri_copy_raw` is a live block `CRYPTO_strndup` allocated and no one else owns.
     let mut uri_copy = unsafe {
-        OwnedBuf::adopt_plain_nullable(uri_copy_raw.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY)
+        OwnedBuf::adopt_plain_nullable(uri_copy_raw.cast(), SeamFile::new(FILE), LINE_FREE_URI_COPY)
     };
     let mut scheme: *mut c_char = ptr::null_mut();
     let mut host: *mut c_char = ptr::null_mut();
@@ -1105,11 +1109,11 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     // the parse failure above. Each handle is its single release.
     // SAFETY: `scheme` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
     let mut scheme = unsafe {
-        OwnedBuf::adopt_plain_nullable(scheme.cast(), FILE.as_ptr(), LINE_FREE_SCHEME_MISSING)
+        OwnedBuf::adopt_plain_nullable(scheme.cast(), SeamFile::new(FILE), LINE_FREE_SCHEME_MISSING)
     };
     // SAFETY: `host` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
     let host =
-        unsafe { OwnedBuf::adopt_plain_nullable(host.cast(), FILE.as_ptr(), LINE_FREE_HOST) };
+        unsafe { OwnedBuf::adopt_plain_nullable(host.cast(), SeamFile::new(FILE), LINE_FREE_HOST) };
     let hostptr = host.as_ptr().cast::<c_char>();
     // Make sure the scheme is there.
     let scheme_ptr = scheme.as_ptr().cast::<c_char>();
@@ -1302,7 +1306,11 @@ unsafe fn cn2dnsid(cn: *mut Asn1String, dnsid: *mut *mut c_uchar, idlen: *mut us
     // line for the path that reaches it.
     // SAFETY: `utf8_value` is a live block `ASN1_STRING_to_UTF8` allocated and no one else owns.
     let mut utf8 = unsafe {
-        OwnedBuf::adopt_plain_nullable(utf8_value.cast(), FILE.as_ptr(), LINE_FREE_UTF8_EMBEDDED)
+        OwnedBuf::adopt_plain_nullable(
+            utf8_value.cast(),
+            SeamFile::new(FILE),
+            LINE_FREE_UTF8_EMBEDDED,
+        )
     };
     let utf8_value = utf8.as_ptr();
     // Remove a trailing NUL run.
@@ -1487,8 +1495,9 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check_CN(
         // `cn2dnsid` gave the block up to this call; the handle is its single release. It is NULL
         // when `idlen` is 0, whose release is the authority's no-op `free(NULL)`.
         // SAFETY: `idval` is NULL or the block `cn2dnsid` allocated and no one else owns.
-        let idval =
-            unsafe { OwnedBuf::adopt_plain_nullable(idval.cast(), FILE.as_ptr(), LINE_FREE_IDVAL) };
+        let idval = unsafe {
+            OwnedBuf::adopt_plain_nullable(idval.cast(), SeamFile::new(FILE), LINE_FREE_IDVAL)
+        };
         // Only process attributes that look like hostnames.
         if idlen != 0 {
             // SAFETY: `gntmp.d.ia5` names the live `stmp` local, whose fields are writable.

@@ -90,6 +90,7 @@ use crate::provider::ctx::{ossl_prov_ctx_get_bool_param, ossl_prov_ctx_get_param
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
@@ -149,6 +150,7 @@ const OSSL_DER_OID_ID_ALG_HKDF_WITH_SHA256: [u8; 13] = [
 
 /// The generated unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char = c"providers/implementations/keymgmt/ml_kem_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/ml_kem_kmgmt.c");
 
 /// `ml_kem_kmgmt.c:115`, `ml_kem_pairwise_test`'s `OPENSSL_malloc(v->ctext_bytes)`.
 const LINE_PCT_CTEXT: c_int = 115;
@@ -267,7 +269,8 @@ unsafe fn ml_kem_pairwise_test(key: *const MlKemKey, key_flags: c_int) -> c_int 
         'err: {
             // The ciphertext scratch is this frame's own block; the handle releases it through
             // the authority's own cleansing free on every path out of the block.
-            let Some(buf) = OwnedBuf::new_cleansed((*v).ctext_bytes, FILE, LINE_PCT_CTEXT) else {
+            let Some(buf) = OwnedBuf::new_cleansed((*v).ctext_bytes, FILE_SEAM, LINE_PCT_CTEXT)
+            else {
                 break 'err;
             };
             let ctext = buf.as_ptr();
@@ -498,7 +501,8 @@ unsafe extern "C" fn ml_kem_export(
                     return 0;
                 }
             } else if selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY != 0 {
-                let Some(buf) = OwnedBuf::new_cleansed((*v).pubkey_bytes, FILE, LINE_EXPORT_PUB)
+                let Some(buf) =
+                    OwnedBuf::new_cleansed((*v).pubkey_bytes, FILE_SEAM, LINE_EXPORT_PUB)
                 else {
                     break 'err;
                 };
@@ -515,7 +519,7 @@ unsafe extern "C" fn ml_kem_export(
                 if ossl_ml_kem_have_seed(key) {
                     seedlen = ML_KEM_SEED_BYTES;
                     let Some(buf) =
-                        OwnedBuf::new_secure_zalloc_cleansed(seedlen, FILE, LINE_EXPORT_SEED)
+                        OwnedBuf::new_secure_zalloc_cleansed(seedlen, FILE_SEAM, LINE_EXPORT_SEED)
                     else {
                         break 'err;
                     };
@@ -528,7 +532,7 @@ unsafe extern "C" fn ml_kem_export(
                 if ossl_ml_kem_have_prvkey(key) {
                     prvlen = (*v).prvkey_bytes;
                     let Some(buf) =
-                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE, LINE_EXPORT_PRV)
+                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE_SEAM, LINE_EXPORT_PRV)
                     else {
                         break 'err;
                     };
@@ -540,7 +544,7 @@ unsafe extern "C" fn ml_kem_export(
                 } else if ossl_ml_kem_have_dkenc(key) {
                     prvlen = (*v).prvkey_bytes;
                     let Some(buf) =
-                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE, LINE_EXPORT_DKENC)
+                        OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE_SEAM, LINE_EXPORT_DKENC)
                     else {
                         break 'err;
                     };
@@ -918,7 +922,7 @@ unsafe fn check_prvenc(prvenc: *const u8, key: *mut MlKemKey) -> c_int {
     unsafe {
         // The scratch is this frame's own block; the handle releases it through the authority's own
         // cleansing free once the comparison is made.
-        let buf = OwnedBuf::new_cleansed(len, FILE, LINE_CHECK_PRVENC);
+        let buf = OwnedBuf::new_cleansed(len, FILE_SEAM, LINE_CHECK_PRVENC);
         let mut ret = 0;
         if let Some(b) = buf.as_ref() {
             let encoded = ossl_ml_kem_encode_private_key(b.as_ptr(), len, key) != 0;
@@ -1150,7 +1154,7 @@ unsafe extern "C" fn ml_kem_load(reference: *const c_void, reference_sz: usize) 
         drop(OwnedBuf::adopt_secure_cleansed(
             encoded_dk.cast::<c_uchar>(),
             prvkey_bytes,
-            FILE,
+            FILE_SEAM,
             LINE_LOAD_CLEAR,
         ));
         OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
@@ -1174,7 +1178,7 @@ unsafe fn load_err(
             drop(OwnedBuf::adopt_secure_cleansed(
                 encoded_dk.cast::<c_uchar>(),
                 prvkey_bytes,
-                FILE,
+                FILE_SEAM,
                 LINE_LOAD_CLEAR,
             ));
         }
@@ -1415,12 +1419,12 @@ unsafe extern "C" fn ml_kem_gen_set_params(vgctx: *mut c_void, params: *const Os
             // hands the block to the field.
             drop(OwnedBuf::adopt_plain(
                 (*gctx).propq.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_GEN_FREE_PROPQ,
             ));
             (*gctx).propq = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_FREE_PROPQ).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_GEN_FREE_PROPQ,
             )
             .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
@@ -1572,7 +1576,7 @@ unsafe extern "C" fn ml_kem_gen_cleanup(vgctx: *mut c_void) {
         // context block stays on the raw seam (its release is part of the destructor body).
         drop(OwnedBuf::adopt_plain(
             (*gctx).propq.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             LINE_GEN_CLEANUP_PROPQ,
         ));
         CRYPTO_free(gctx.cast(), FILE, LINE_GEN_CLEANUP_CTX);

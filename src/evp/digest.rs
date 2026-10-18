@@ -165,6 +165,7 @@ use crate::runtime::err::{
 };
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_DIGESTS};
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::{
     NID_hmacWithMD5, NID_hmacWithSHA1, NID_hmacWithSHA224, NID_hmacWithSHA256, NID_hmacWithSHA384,
@@ -204,6 +205,7 @@ pub(crate) const OBJ_NAME_TYPE_MD_METH: c_int = 0x01;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/digest.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/digest.c");
 /// `evp_md_new`'s `OPENSSL_zalloc(sizeof(*md))` (line 944).
 const LINE_ZALLOC_MD: c_int = 944;
 /// `evp_md_free_int`'s `OPENSSL_free(md->type_name)` (line 863), in `crypto/evp/evp_lib.c`.
@@ -434,7 +436,8 @@ unsafe impl Sync for StaticMd {}
 pub(crate) fn evp_md_new() -> *mut EvpMd {
     // The method block, allocated through the crate's allocator seam; `Drop` is its single release
     // on every refusal at a caller and `into_raw` hands it out on success.
-    let Some(md) = OwnedCtx::<EvpMd>::zalloc_at(FILE, LINE_ZALLOC_MD, FILE, LINE_FREE_MD) else {
+    let Some(md) = OwnedCtx::<EvpMd>::zalloc_at(FILE_SEAM, LINE_ZALLOC_MD, FILE_SEAM, LINE_FREE_MD)
+    else {
         return ptr::null_mut();
     };
     // SAFETY: `md` is a fresh zeroed block this call owns.
@@ -784,7 +787,7 @@ unsafe fn evp_md_free_int(md: *mut EvpMd) {
     // SAFETY: `md` is a live method this crate allocated and has not released; `from_raw` reclaims
     // it and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the
     // block release.
-    unsafe { drop(OwnedCtx::<EvpMd>::from_raw_at(md, FILE, LINE_FREE_MD)) };
+    unsafe { drop(OwnedCtx::<EvpMd>::from_raw_at(md, FILE_SEAM, LINE_FREE_MD)) };
 }
 
 /// The authority's `evp_md_free_int` body, without the block release [`OwnedCtx`]'s `Drop` performs:
@@ -1731,7 +1734,7 @@ unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
                 md_data.cast::<u8>(),
                 ctx_size as usize,
                 true,
-                FILE,
+                FILE_SEAM,
                 LINE_CLEAR_MD_DATA,
             ));
             (*ctx).md_data = ptr::null_mut();
@@ -1859,7 +1862,7 @@ pub unsafe extern "C" fn EVP_MD_CTX_reset(ctx: *mut EvpMdCtx) -> c_int {
 pub extern "C" fn EVP_MD_CTX_new() -> *mut EvpMdCtx {
     // The context block, allocated through the crate's allocator seam; `into_raw` hands it to the C
     // caller and `EVP_MD_CTX_free`'s `from_raw` reclaims it.
-    OwnedCtx::<EvpMdCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX)
+    OwnedCtx::<EvpMdCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
         .map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
@@ -1929,7 +1932,13 @@ pub unsafe extern "C" fn EVP_MD_CTX_free(ctx: *mut EvpMdCtx) {
     // SAFETY: `ctx` came from this crate's allocator; `from_raw` reclaims it (NULL is a no-op) and
     // `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block
     // release, so this is its last use.
-    unsafe { drop(OwnedCtx::<EvpMdCtx>::from_raw_at(ctx, FILE, LINE_FREE_CTX)) };
+    unsafe {
+        drop(OwnedCtx::<EvpMdCtx>::from_raw_at(
+            ctx,
+            FILE_SEAM,
+            LINE_FREE_CTX,
+        ))
+    };
 }
 
 /// The authority's `EVP_MD_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
@@ -2263,7 +2272,7 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
                     CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA).cast(),
                     ctx_size as usize,
                     true,
-                    FILE,
+                    FILE_SEAM,
                     LINE_CLEAR_MD_DATA,
                 )
             }) else {
@@ -3136,7 +3145,7 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
                     CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA).cast(),
                     ctx_size as usize,
                     false,
-                    FILE,
+                    FILE_SEAM,
                     LINE_CLEAR_MD_DATA,
                 )
             }) else {

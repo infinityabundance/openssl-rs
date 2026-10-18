@@ -139,6 +139,7 @@ use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_x509::X509;
@@ -680,7 +681,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                 // SAFETY: `raw` is a live block the crate allocated and no one else owns.
                 let buf =
                     // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-                    unsafe { OwnedBuf::adopt_plain_nullable(raw, FILE.as_ptr(), LINE_FREE_TMPBUF) };
+                    unsafe { OwnedBuf::adopt_plain_nullable(raw,SeamFile::new(FILE), LINE_FREE_TMPBUF) };
                 // SAFETY: `buf` owns `publen` bytes, so the first is writable.
                 unsafe { *buf.as_ptr() = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
                 in_data = buf.as_ptr();
@@ -1073,7 +1074,11 @@ pub unsafe extern "C" fn X509_PUBKEY_set(x: *mut *mut X509Pubkey, pkey: *mut Evp
         // owns.
         let der = unsafe {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            OwnedBuf::adopt_plain_nullable(der.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER)
+            OwnedBuf::adopt_plain_nullable(
+                der.cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                LINE_FREE_DER,
+            )
         };
         if encoded {
             // SAFETY: `der` owns `derlen` bytes.

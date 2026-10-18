@@ -56,6 +56,7 @@ use crate::runtime::obj::{
 use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{ossl_asn1_string_set_bits_left, CMS_SharedInfo_encode, CmsRecipientInfo};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:529`.
 const EVP_CIPH_WRAP_MODE: c_int = 0x10002;
@@ -446,7 +447,7 @@ unsafe fn ecdh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientI
     // The shared-info encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
     // failure paths below release what they built at the authority's own site.
     // SAFETY: `der_raw` is NULL or a live block the helper allocated and no one else owns.
-    der = Some(unsafe { OwnedBuf::adopt_plain_nullable(der_raw, c"cms_ec.c".as_ptr(), 222) });
+    der = Some(unsafe { OwnedBuf::adopt_plain_nullable(der_raw, SeamFile::new(c"cms_ec.c"), 222) });
 
     if plen <= 0 {
         // SAFETY: the context and cipher are live.
@@ -599,8 +600,9 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             // The encoded public key is the helper's own `CRYPTO_malloc` block; it is adopted so the
             // failure path below releases what it built at the authority's own site.
             // SAFETY: `penc2_raw` is NULL or a live block the helper allocated and no one else owns.
-            let penc2 =
-                unsafe { OwnedBuf::adopt_plain_nullable(penc2_raw, c"cms_ec.c".as_ptr(), 289) };
+            let penc2 = unsafe {
+                OwnedBuf::adopt_plain_nullable(penc2_raw, SeamFile::new(c"cms_ec.c"), 289)
+            };
             if enckeylen as c_long > INT_MAX || enckeylen == 0 {
                 // `penc2` releases its own block at the authority's own site on drop.
                 break 'body;
@@ -719,7 +721,7 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         // failure paths below release what they built at the authority's own site.
         // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
         let penc_owned =
-            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_ec.c".as_ptr(), 383) };
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_ec.c"), 383) };
 
         if penclen <= 0 {
             penc = Some(penc_owned);
@@ -744,7 +746,7 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         // failure paths below release what they built at the authority's own site.
         // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
         let penc_owned =
-            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_ec.c".as_ptr(), 383) };
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_ec.c"), 383) };
         if penclen <= 0 {
             penc = Some(penc_owned);
             break 'body;

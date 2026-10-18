@@ -41,6 +41,7 @@ use crate::bn::bignum::{
 use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit this module reconstructs.
@@ -326,7 +327,7 @@ pub unsafe extern "C" fn OSSL_PARAM_allocate_from_text(
         };
         // `OPENSSL_zalloc(buf_n > 0 ? buf_n : 1)` — never a zero-length request.
         let alloc = if buf_n > 0 { buf_n } else { 1 };
-        let Some(buf) = OwnedBuf::new_zeroed(alloc, FILE.as_ptr(), LINE) else {
+        let Some(buf) = OwnedBuf::new_zeroed(alloc, SeamFile::new(FILE), LINE) else {
             // SAFETY: as above.
             unsafe { BN_free(tmpbn) };
             return 0;

@@ -69,6 +69,7 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::{
     openssl_rs_err_add_data, raise_site, raise_site_data, raise_site_dynamic,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_txt2obj;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -1012,7 +1013,7 @@ unsafe fn asn1_multi(
         };
         // SAFETY: `der_slot` is NULL or the block the `i2d` call allocated for this call through
         // the crate's `CRYPTO_*` seam; no other owner will release it.
-        der = unsafe { OwnedBuf::adopt_plain(der_slot, FILE.as_ptr(), LINE_FREE_MULTI_DER) };
+        der = unsafe { OwnedBuf::adopt_plain(der_slot, SeamFile::new(FILE), LINE_FREE_MULTI_DER) };
         if derlen < 0 {
             break 'build;
         }
@@ -1128,7 +1129,7 @@ unsafe fn generate_v3(
     // SAFETY: `orig_der_slot` is NULL or the block the `i2d` call allocated for this call through
     // the crate's `CRYPTO_*` seam; no other owner will release it.
     let orig_der =
-        unsafe { OwnedBuf::adopt_plain(orig_der_slot, FILE.as_ptr(), LINE_FREE_ORIG_DER) };
+        unsafe { OwnedBuf::adopt_plain(orig_der_slot, SeamFile::new(FILE), LINE_FREE_ORIG_DER) };
     let orig_ptr = match orig_der.as_ref() {
         Some(buf) => buf.as_ptr(),
         // `new_der` is still None here, so nothing else is held.
@@ -1196,9 +1197,9 @@ unsafe fn generate_v3(
 
         new_der = OwnedBuf::new_plain_released(
             len as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_ALLOC_WRAP_DER,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_FREE_NEW_DER,
         );
         let Some(new_buf) = new_der.as_ref() else {
@@ -1355,7 +1356,7 @@ mod tests {
                 assert!(!out.is_null());
                 // SAFETY: `out` is the block the `i2d` call allocated for this test through the
                 // crate's `CRYPTO_*` seam; no other owner will release it.
-                let out = OwnedBuf::adopt_plain(out, FILE.as_ptr(), LINE_ALLOC_WRAP_DER);
+                let out = OwnedBuf::adopt_plain(out, SeamFile::new(FILE), LINE_ALLOC_WRAP_DER);
                 let mut p: *const c_uchar =
                     out.as_ref().map_or(ptr::null_mut(), |buf| buf.as_ptr());
                 let back = d2i_ASN1_TYPE(ptr::null_mut(), &mut p, n as c_long);

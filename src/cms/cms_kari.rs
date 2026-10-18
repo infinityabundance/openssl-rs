@@ -31,6 +31,7 @@ use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_ias_cert_cmp,
     ossl_cms_keyid_cert_cmp, ossl_cms_set1_ias, ossl_cms_set1_keyid, raise_cms,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_USE_KEYID` — `cms.h.in:100`.
 const CMS_USE_KEYID: c_uint = 0x10000;
@@ -491,9 +492,13 @@ unsafe fn cms_kek_cipher(
     // The ciphered key is this frame's scratch, allocated through the crate's allocator seam at
     // `outsize`; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `outsize > 0`.
-    let Some(out) =
-        OwnedBuf::new_cleansed_released(outsize, c"cms_kari.c".as_ptr(), 235, core::ptr::null(), 0)
-    else {
+    let Some(out) = OwnedBuf::new_cleansed_released(
+        outsize,
+        SeamFile::new(c"cms_kari.c"),
+        235,
+        SeamFile::NULL,
+        0,
+    ) else {
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
@@ -583,13 +588,15 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_decrypt(
         // The helper leaves no block in the slot on failure; the authority's `err:` release is a
         // plain `CRYPTO_free`, run here by `Drop`.
         // SAFETY: `cek` is NULL or a live block the helper allocated and no one else owns.
-        let cek_owned = unsafe { OwnedBuf::adopt_plain_nullable(cek, c"cms_kari.c".as_ptr(), 281) };
+        let cek_owned =
+            unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
         drop(cek_owned);
         return rv;
     }
     // The decrypted CEK is the helper's block; its release is the authority's plain `CRYPTO_free`.
     // SAFETY: `cek` is a live block the helper allocated and no one else owns.
-    let cek_owned = unsafe { OwnedBuf::adopt_plain_nullable(cek, c"cms_kari.c".as_ptr(), 281) };
+    let cek_owned =
+        unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
     // SAFETY: `cms` is live.
     let ec = unsafe { super::cms_env::ossl_cms_get0_env_enc_content(cms) };
     // SAFETY: `ec` is live.

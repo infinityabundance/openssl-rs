@@ -144,6 +144,7 @@ use super::{
     RSA_padding_check_PKCS1_type_2, RSA_padding_check_X931,
 };
 use super::{Rsa, RsaMethod};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -154,6 +155,8 @@ use super::{Rsa, RsaMethod};
 /// it does in `src/rsa/mod.rs`: `file` reaches an application through `CRYPTO_set_mem_functions`.
 #[allow(dead_code)] // read by the four crypt entry points' `OPENSSL_malloc`, none of which has a caller here yet
 const FILE_RSA_OSSL: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c".as_ptr();
+const FILE_RSA_OSSL_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c");
 
 /// The allocation-tracking `file` argument for `rsa_crpt.c`'s allocations — the `BN_BLINDING`
 /// lookup's and the constructor's, neither of which allocates: `rsa_get_public_exp`'s
@@ -792,7 +795,7 @@ unsafe extern "C" fn rsa_ossl_public_encrypt(
         let ret = BN_CTX_get(ctx);
         let num: c_int = bn_num_bytes((*rsa).n);
         // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
-        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL, LINE) else {
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
             return r;
@@ -933,7 +936,7 @@ unsafe extern "C" fn rsa_ossl_private_encrypt(
         let ret = BN_CTX_get(ctx);
         let num: c_int = bn_num_bytes((*rsa).n);
         // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
-        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL, LINE) else {
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
             return r;
@@ -1295,7 +1298,7 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
         }
         let num: c_int = bn_num_bytes((*rsa).n);
         // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
-        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL, LINE) else {
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
             return r;
@@ -1536,7 +1539,7 @@ unsafe extern "C" fn rsa_ossl_public_decrypt(
         }
         let num: c_int = bn_num_bytes((*rsa).n);
         // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
-        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL, LINE) else {
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
             return r;

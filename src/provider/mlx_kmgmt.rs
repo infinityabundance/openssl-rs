@@ -71,6 +71,7 @@ use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
@@ -229,6 +230,7 @@ struct ProvMlxKemGenCtx {
 
 /// The generated unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char = c"providers/implementations/keymgmt/mlx_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/mlx_kmgmt.c");
 
 /// `mlx_kmgmt.c:86`, `mlx_kem_key_new`'s `OPENSSL_malloc`.
 const LINE_KEY_NEW: c_int = 86;
@@ -288,7 +290,7 @@ unsafe extern "C" fn mlx_kem_key_free(vkey: *mut c_void) {
         // raw seam (its release is part of the key's destructor body).
         drop(OwnedBuf::adopt_plain(
             (*key).propq.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             LINE_KEY_FREE_PROPQ,
         ));
         EVP_PKEY_free((*key).mkey);
@@ -306,7 +308,8 @@ unsafe fn mlx_kem_key_new(v: c_uint, libctx: *mut c_void, propq: *mut c_char) ->
     // The handle owns the caller's `propq` until the key takes it over; a refusal below drops it at
     // the authority's own `err:` site.
     // SAFETY: `propq` is NULL or a live plain block the caller handed over.
-    let propq = unsafe { OwnedBuf::adopt_plain(propq.cast::<c_uchar>(), FILE, LINE_KEY_NEW_PROPQ) };
+    let propq =
+        unsafe { OwnedBuf::adopt_plain(propq.cast::<c_uchar>(), FILE_SEAM, LINE_KEY_NEW_PROPQ) };
     // SAFETY: the malloc answers NULL on failure, which is checked.
     unsafe {
         if is_running() == 0 || v as usize >= HYBRID_VTABLE.len() {
@@ -823,7 +826,7 @@ unsafe extern "C" fn mlx_kem_export(
         // The authority's `err:` label, as one labelled block.
         'err: {
             if selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY != 0 {
-                let Some(buf) = OwnedBuf::new_cleansed(publen, FILE, LINE_EXPORT_PUB) else {
+                let Some(buf) = OwnedBuf::new_cleansed(publen, FILE_SEAM, LINE_EXPORT_PUB) else {
                     break 'err;
                 };
                 sub_arg.pubenc = buf.as_ptr();
@@ -833,7 +836,8 @@ unsafe extern "C" fn mlx_kem_export(
             if mlx_kem_have_prvkey(key) && selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY != 0 {
                 // Allocated on the secure heap if configured; `ossl_param_build_set_octet_string`
                 // detects it and uses the secure heap too.
-                let Some(buf) = OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE, LINE_EXPORT_PRV)
+                let Some(buf) =
+                    OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE_SEAM, LINE_EXPORT_PRV)
                 else {
                     break 'err;
                 };
@@ -1319,7 +1323,7 @@ unsafe extern "C" fn mlx_kem_set_params(vkey: *mut c_void, params: *const OsslPa
             // authority's own site, then `OSSL_PARAM_get_utf8_string` allocates the replacement.
             drop(OwnedBuf::adopt_plain(
                 (*key).propq.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_SET_FREE_PROPQ,
             ));
             (*key).propq = ptr::null_mut();
@@ -1374,12 +1378,12 @@ unsafe extern "C" fn mlx_kem_gen_set_params(vgctx: *mut c_void, params: *const O
             // block the handle takes up, and a refusal leaves the field NULL.
             drop(OwnedBuf::adopt_plain(
                 (*gctx).propq.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_GEN_SET_PROPQ,
             ));
             let Some(buf) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_SET_PROPQ).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_GEN_SET_PROPQ,
             ) else {
                 (*gctx).propq = ptr::null_mut();
@@ -1539,7 +1543,7 @@ unsafe extern "C" fn mlx_kem_gen_cleanup(vgctx: *mut c_void) {
     unsafe {
         drop(OwnedBuf::adopt_plain(
             (*gctx).propq.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             LINE_GEN_CLEANUP_PROPQ,
         ));
         CRYPTO_free(vgctx, FILE, LINE_GEN_CLEANUP_CTX);
@@ -1573,7 +1577,7 @@ unsafe extern "C" fn mlx_kem_dup(vkey: *const c_void, selection: c_int) -> *mut 
             // key block at the authority's `err:` site.
             match OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*key).propq, FILE, LINE_DUP_MEMDUP).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_DUP_MEMDUP,
             ) {
                 Some(buf) => (*ret).propq = buf.into_raw().cast::<c_char>(),
@@ -1592,7 +1596,7 @@ unsafe extern "C" fn mlx_kem_dup(vkey: *const c_void, selection: c_int) -> *mut 
             // Fail if the source key is in an inconsistent state.
             drop(OwnedBuf::adopt_plain(
                 (*ret).propq.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_DUP_FREE,
             ));
             CRYPTO_free(ret.cast(), FILE, LINE_DUP_FREE);

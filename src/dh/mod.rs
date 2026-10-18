@@ -169,6 +169,7 @@ use crate::evp::pkey_asn1::Engine;
 use crate::ffc::FfcParams;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::thread::CryptoRwlock;
 
@@ -352,6 +353,7 @@ pub struct DhMethod {
 /// reaches an application through `CRYPTO_set_mem_functions`, so it is part of the contract and
 /// `RT-DH` compares it.
 const FILE_DH_METH: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_meth.c".as_ptr();
+const FILE_DH_METH_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dh/dh_meth.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -473,9 +475,13 @@ pub unsafe extern "C" fn DH_meth_new(name: *const c_char, flags: c_int) -> *mut 
     // SAFETY: `dhm` is this call's own fresh zeroed table, live and writable.
     unsafe { (*dhm.as_ptr()).flags = flags };
     // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
-    let Some(name) =
-        (unsafe { OwnedStr::adopt(CRYPTO_strdup(name, FILE_DH_METH, LINE), FILE_DH_METH, LINE) })
-    else {
+    let Some(name) = (unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup(name, FILE_DH_METH, LINE),
+            FILE_DH_METH_SEAM,
+            LINE,
+        )
+    }) else {
         // `dhm`'s `Drop` performs the authority's error-path release: the table alone.
         return core::ptr::null_mut();
     };
@@ -524,7 +530,7 @@ pub unsafe extern "C" fn DH_meth_dup(dhm: *const DhMethod) -> *mut DhMethod {
     let Some(name) = (unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup((*dhm).name, FILE_DH_METH, LINE),
-            FILE_DH_METH,
+            FILE_DH_METH_SEAM,
             LINE,
         )
     }) else {
@@ -559,16 +565,20 @@ pub unsafe extern "C" fn DH_meth_get0_name(dhm: *const DhMethod) -> *const c_cha
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_set1_name(dhm: *mut DhMethod, name: *const c_char) -> c_int {
     // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
-    let Some(new_name) =
-        (unsafe { OwnedStr::adopt(CRYPTO_strdup(name, FILE_DH_METH, LINE), FILE_DH_METH, LINE) })
-    else {
+    let Some(new_name) = (unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup(name, FILE_DH_METH, LINE),
+            FILE_DH_METH_SEAM,
+            LINE,
+        )
+    }) else {
         // A NULL argument answers 0 and leaves the old name in place.
         return 0;
     };
     // SAFETY: `dhm` is a live table per the contract; its `name` is NULL or this file's own block.
     // The duplicate is made first and the old name released second, the authority's order.
     unsafe {
-        drop(OwnedStr::adopt((*dhm).name, FILE_DH_METH, LINE));
+        drop(OwnedStr::adopt((*dhm).name, FILE_DH_METH_SEAM, LINE));
         (*dhm).name = new_name.into_raw();
     }
     1

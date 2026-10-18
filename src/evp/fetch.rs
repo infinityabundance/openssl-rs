@@ -85,11 +85,14 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use core::ptr;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 pub(crate) const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c".as_ptr();
+pub(crate) const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c");
 
 /// `evp_set_parsed_default_properties`'s `OPENSSL_malloc(strsz)` (line 483).
 const LINE_MALLOC_PROPSTR: c_int = 483;
@@ -165,9 +168,9 @@ unsafe fn evp_set_parsed_default_properties(
             let propstr = if strsz > 0 {
                 OwnedBuf::new_plain_released(
                     strsz,
-                    FILE,
+                    FILE_SEAM,
                     LINE_MALLOC_PROPSTR,
-                    FILE,
+                    FILE_SEAM,
                     LINE_MALLOC_PROPSTR,
                 )
             } else {
@@ -411,9 +414,13 @@ pub(crate) unsafe fn evp_get_global_properties_str(
         return core::ptr::null_mut();
     }
     // `CRYPTO_malloc` is a SAFE function in this crate (D113), so the constructor needs no block.
-    let Some(propstr) =
-        OwnedBuf::new_plain_released(sz, FILE, LINE_MALLOC_PROPSTR, FILE, LINE_MALLOC_PROPSTR)
-    else {
+    let Some(propstr) = OwnedBuf::new_plain_released(
+        sz,
+        FILE_SEAM,
+        LINE_MALLOC_PROPSTR,
+        FILE_SEAM,
+        LINE_MALLOC_PROPSTR,
+    ) else {
         return core::ptr::null_mut();
     };
     // SAFETY: `propstr` is `sz` bytes and the list is live.

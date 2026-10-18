@@ -48,6 +48,7 @@ use crate::evp::cipher_ctx::{
 use crate::evp::evp_pbe::EVP_PBE_CipherInit_ex;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_decr.c` — the authority's `__FILE__` string.
@@ -179,7 +180,8 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
     }
 
     /* `CRYPTO_zalloc` is the allocator `OPENSSL_zalloc` names; `max_out_len` is positive. */
-    let Some(mut out) = OwnedBuf::new_zeroed(max_out_len.max(0) as usize, FILE.as_ptr(), 81) else {
+    let Some(mut out) = OwnedBuf::new_zeroed(max_out_len.max(0) as usize, SeamFile::new(FILE), 81)
+    else {
         // SAFETY: `ctx` is live.
         unsafe { EVP_CIPHER_CTX_free(ctx) };
         return ptr::null_mut();
@@ -339,7 +341,7 @@ pub unsafe extern "C" fn PKCS12_item_decrypt_d2i_ex(
     // The PBE crypt handed this frame the block it allocated; `crypted` is it and `Drop` is its
     // single release at the authority's own site (`:171`).
     // SAFETY: `crypted` is the live block the PBE crypt allocated and handed over here.
-    let out = unsafe { OwnedBuf::adopt_plain_nullable(crypted, FILE.as_ptr(), 171) };
+    let out = unsafe { OwnedBuf::adopt_plain_nullable(crypted, SeamFile::new(FILE), 171) };
     let mut p: *const c_uchar = out.as_ptr();
     /* The authority's `OSSL_TRACE_BEGIN(PKCS12_DECRYPT)` block is a no-op on a build without
      * tracing, and reproducing the trace output is not part of this crate's surface. */
@@ -428,7 +430,7 @@ pub unsafe extern "C" fn PKCS12_item_i2d_encrypt_ex(
     // The ASN.1 encoder handed this frame its own encoding, released at `:216` on the success tail;
     // the crypt's failure tail releases it at `:211` instead.
     // SAFETY: `in_raw` is the live block `ASN1_item_i2d` allocated and handed over here.
-    let mut in_ = unsafe { OwnedBuf::adopt_plain_nullable(in_raw, FILE.as_ptr(), 216) };
+    let mut in_ = unsafe { OwnedBuf::adopt_plain_nullable(in_raw, SeamFile::new(FILE), 216) };
     // SAFETY: `algor` is live; `oct` is live, so its `data`/`length` slots are writable; `in_`
     // is readable for `inlen` bytes.
     let crypted = unsafe {

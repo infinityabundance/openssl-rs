@@ -115,6 +115,7 @@ use super::{
     OsslStoreLoader, OsslStoreLoaderCtx, OSSL_STORE_INFO_CERT, OSSL_STORE_INFO_CRL,
     OSSL_STORE_INFO_NAME, OSSL_STORE_INFO_PARAMS, OSSL_STORE_INFO_PKEY, OSSL_STORE_INFO_PUBKEY,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 extern "C" {
     /// Pull one general-purpose argument from a live `va_list`.
@@ -883,7 +884,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
             // context's `properties` member takes it over, and no other owner holds it.
             propq_copy = unsafe {
                 let copy = CRYPTO_strdup(propq, ptr::null(), 0);
-                OwnedBuf::adopt_plain(copy.cast::<u8>(), ptr::null(), 0)
+                OwnedBuf::adopt_plain(copy.cast::<u8>(), SeamFile::NULL, 0)
             };
             if propq_copy.is_none() {
                 break 'err;
@@ -1187,7 +1188,7 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         // `BN_free`.
         // SAFETY: `name_der` is NULL or the `i2d_X509_NAME` block this frame allocated on the
         // crate's allocator seam and owns; no other owner holds it.
-        let _name_der = unsafe { OwnedBuf::adopt_plain(name_der.cast::<u8>(), ptr::null(), 0) };
+        let _name_der = unsafe { OwnedBuf::adopt_plain(name_der.cast::<u8>(), SeamFile::NULL, 0) };
         // SAFETY: `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated.
         unsafe { BN_free(number) };
     } else {

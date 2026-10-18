@@ -39,13 +39,14 @@ use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_modified, OsslParam,
 };
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` — `include/openssl/core_names.h:546`, value
 /// `"algorithm-id"`. The key a signature provider answers the `AlgorithmIdentifier` DER under.
 const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
 
 /// `crypto/evp/evp_lib.c`, the unit's own path, for the two allocation coordinates.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c");
 /// `EVP_CIPHER_CTX_get_algor`'s `OPENSSL_malloc(aid_len)` (`evp_lib.c:1361`).
 const LINE_MALLOC_AID_CIPHER: c_int = 1361;
 /// Its `OPENSSL_free(aid)` (`evp_lib.c:1369`).
@@ -105,9 +106,9 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor(
         // no path below writes a `CRYPTO_free` by hand.
         if let Some(aid) = OwnedBuf::new_plain_released(
             aid_len,
-            FILE,
+            FILE_SEAM,
             LINE_MALLOC_AID_CIPHER,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_AID_CIPHER,
         ) {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds
@@ -182,9 +183,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor(
         // no path below writes a `CRYPTO_free` by hand.
         if let Some(aid) = OwnedBuf::new_plain_released(
             aid_len,
-            FILE,
+            FILE_SEAM,
             LINE_MALLOC_AID_PKEY,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_AID_PKEY,
         ) {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds

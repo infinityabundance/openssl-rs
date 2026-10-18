@@ -69,12 +69,14 @@ use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_OP_KEYEXCH` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KEYEXCH: c_int = 11;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/exchange.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/exchange.c");
 /// `evp_keyexch_new`'s `OPENSSL_zalloc(sizeof(EVP_KEYEXCH))` (line 34).
 const LINE_ZALLOC_KEYEXCH: c_int = 34;
 /// `EVP_KEYEXCH_free`'s `OPENSSL_free(exchange->type_name)` (line 170).
@@ -486,7 +488,7 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
     }
     // SAFETY: `exchange` is live and this decrement was the last reference; the object's `Drop`
     // releases its `type_name`, its provider reference and the block, at the authority's own sites.
-    drop(unsafe { OwnedCtx::from_raw_at(exchange, FILE, LINE_FREE_KEYEXCH) });
+    drop(unsafe { OwnedCtx::from_raw_at(exchange, FILE_SEAM, LINE_FREE_KEYEXCH) });
 }
 
 /// `int EVP_KEYEXCH_up_ref(EVP_KEYEXCH *exchange)`.

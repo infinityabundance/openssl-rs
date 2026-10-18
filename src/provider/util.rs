@@ -44,6 +44,7 @@ use crate::evp::mac::{
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_utf8_string_ptr,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_ORIG_GLOBAL` — `crypto/evp/evp_lib.c`'s method-origin values, as
 /// `src/evp/cipher.rs:85` declares it. Repeated rather than re-exported for the same reason the
@@ -682,7 +683,8 @@ pub(crate) unsafe fn ossl_prov_memdup(
             let copy = CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0).cast::<u8>();
             // SAFETY: the seam answered NULL or one fresh block this frame owns exclusively; it is
             // not borrowed from `src` and no other owner will release it.
-            let Some(copy) = OwnedBuf::adopt_plain(copy.cast::<c_uchar>(), ptr::null(), 0) else {
+            let Some(copy) = OwnedBuf::adopt_plain(copy.cast::<c_uchar>(), SeamFile::NULL, 0)
+            else {
                 return 0;
             };
             *dest = copy.into_raw().cast::<u8>();

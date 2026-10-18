@@ -119,6 +119,7 @@ use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_SLH_DSA_SHA2_128f, NID_SLH_DSA_SHA2_128s, NID_SLH_DSA_SHA2_192f,
     NID_SLH_DSA_SHA2_192s, NID_SLH_DSA_SHA2_256f, NID_SLH_DSA_SHA2_256s, NID_SLH_DSA_SHAKE_128f,
@@ -643,7 +644,7 @@ unsafe extern "C" fn der2key_decode(
     // The read's block is this frame's from here on; `Drop` is its single release on every tail.
     // SAFETY: `der_raw` is NULL or the live block `ossl_read_der` allocated through the crate's
     // `CRYPTO_*` seam and handed over here; no other owner will release it.
-    let der = unsafe { OwnedBuf::adopt_plain_nullable(der_raw, ptr::null(), 0) };
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(der_raw, SeamFile::NULL, 0) };
     if fatal {
         if let Some(fr) = desc.free_key {
             // SAFETY: `key` is NULL or live and the row's own free owns it.

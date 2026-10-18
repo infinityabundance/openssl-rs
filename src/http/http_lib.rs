@@ -50,6 +50,7 @@ use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 
 // `strpbrk`, `strstr` and `strncpy` are not among `runtime::bio::sys`'s declarations, so they
@@ -195,7 +196,7 @@ unsafe fn free_pstring(pstr: *mut *mut c_char) {
     if !pstr.is_null() {
         // SAFETY: `pstr` is writable; `*pstr` is NULL or an allocation to release. `OPENSSL_free`'s
         // expansion is at `http_lib.c:49`; the handle's `Drop` is its single release.
-        drop(unsafe { OwnedStr::adopt(*pstr, FILE.as_ptr(), 49) });
+        drop(unsafe { OwnedStr::adopt(*pstr, SeamFile::new(FILE), 49) });
         // SAFETY: `pstr` is writable per the contract.
         unsafe { *pstr = ptr::null_mut() };
     }
@@ -517,8 +518,8 @@ pub unsafe extern "C" fn OSSL_HTTP_parse_url(
         // the two the success path uses; each failure path re-points its release.
         // SAFETY: each slot is NULL or a live block `OSSL_parse_url` allocated and no other owner
         // releases.
-        let mut scheme = OwnedStr::adopt(scheme, FILE.as_ptr(), 229);
-        let mut port = OwnedStr::adopt(port, FILE.as_ptr(), 233);
+        let mut scheme = OwnedStr::adopt(scheme, SeamFile::new(FILE), 229);
+        let mut port = OwnedStr::adopt(port, SeamFile::new(FILE), 233);
 
         'body: {
             // Check for optional HTTP scheme "http[s]".

@@ -57,6 +57,7 @@ use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_dsa, NID_dsaWithSHA, NID_dsaWithSHA1, NID_dsaWithSHA1_2, NID_dsa_2, NID_sha256, OBJ_nid2obj,
 };
@@ -73,7 +74,7 @@ const EVP_PKEY_DSA3: c_int = NID_dsaWithSHA1;
 /// `EVP_PKEY_DSA4` — `include/openssl/evp.h:69`, `NID_dsaWithSHA1_2`.
 const EVP_PKEY_DSA4: c_int = NID_dsaWithSHA1_2;
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c");
 
 /// `static int dsa_pub_decode(EVP_PKEY *pkey, const X509_PUBKEY *pubkey)` —
 /// `crypto/dsa/dsa_ameth.c:29-84`.
@@ -243,7 +244,7 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
     unsafe { ASN1_STRING_free(pubint) };
     // SAFETY: `penc_raw` is NULL or the block `ASN1_item_i2d` allocated through the crate's seam;
     // this frame owns it and no other owner releases it.
-    let penc = unsafe { OwnedBuf::adopt_plain(penc_raw, FILE, 139) };
+    let penc = unsafe { OwnedBuf::adopt_plain(penc_raw, FILE_SEAM, 139) };
 
     if penclen <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -366,7 +367,7 @@ unsafe extern "C" fn dsa_priv_encode(
 
     // SAFETY: `dp_raw` is NULL or the block `ASN1_item_i2d` allocated through the crate's seam,
     // holding the DER private key; this frame owns it and no other owner releases it.
-    let dp = unsafe { OwnedBuf::adopt_cleansed(dp_raw, dplen.max(0) as usize, FILE, 207) };
+    let dp = unsafe { OwnedBuf::adopt_cleansed(dp_raw, dplen.max(0) as usize, FILE_SEAM, 207) };
 
     if dplen <= 0 {
         // SAFETY: a compile-time-constant site.

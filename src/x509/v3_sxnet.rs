@@ -54,6 +54,7 @@ use crate::runtime::err::err_reasons::{
     X509V3_R_USER_TOO_LONG,
 };
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_sxnet;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack};
@@ -373,7 +374,7 @@ unsafe extern "C" fn sxnet_i2r(
         let Some(tmp) = (unsafe {
             OwnedStr::adopt(
                 i2s_ASN1_INTEGER(ptr::null_mut(), (*id).zone),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_FREE_TMP,
             )
         }) else {

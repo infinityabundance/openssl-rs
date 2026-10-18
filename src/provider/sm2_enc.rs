@@ -49,13 +49,14 @@ use crate::provider::util::prov_digest::{
 };
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::sm2::crypt::{
     ossl_sm2_ciphertext_size, ossl_sm2_decrypt, ossl_sm2_encrypt, ossl_sm2_plaintext_size,
 };
 
 /// The unit's own `__FILE__`. `sm2_enc.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
-const FILE: *const c_char = c"providers/implementations/asymciphers/sm2_enc.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/asymciphers/sm2_enc.c");
 
 /// `OSSL_ASYM_CIPHER_PARAM_DIGEST` — `core_names.h`.
 const OSSL_ASYM_CIPHER_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
@@ -102,7 +103,7 @@ unsafe extern "C" fn sm2_newctx(provctx: *mut c_void) -> *mut c_void {
     // A fresh zeroed `PROV_SM2_CTX` is the authority's own starting state, so this is
     // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
     // `sm2_freectx`'s own site.
-    let Some(ctx) = OwnedCtx::<ProvSm2Ctx>::zalloc_at(FILE, 57, FILE, 135) else {
+    let Some(ctx) = OwnedCtx::<ProvSm2Ctx>::zalloc_at(FILE_SEAM, 57, FILE_SEAM, 135) else {
         return ptr::null_mut();
     };
     let p = ctx.as_ptr();
@@ -238,7 +239,7 @@ unsafe extern "C" fn sm2_freectx(vpsm2ctx: *mut c_void) {
     // SAFETY: `psm2ctx` is NULL or the caller's context and no other owner has released it;
     // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `sm2_freectx` body
     // (the key release and the digest reset) and block release at the authority's own site.
-    drop(unsafe { OwnedCtx::<ProvSm2Ctx>::from_raw_at(psm2ctx, FILE, 135) });
+    drop(unsafe { OwnedCtx::<ProvSm2Ctx>::from_raw_at(psm2ctx, FILE_SEAM, 135) });
 }
 
 /// `static void *sm2_dupctx(void *vpsm2ctx)` — `sm2_enc.c:138-161`.
@@ -254,7 +255,7 @@ unsafe extern "C" fn sm2_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
     // release is `sm2_freectx` (`:135`).
     // SAFETY: a fresh zeroed allocation of this call's own context at the authority's exact
     // size/`file`/`line`.
-    let Some(mut dst) = RawCtx::<ProvSm2Ctx>::zalloc_at(FILE, 143, FILE, 152) else {
+    let Some(mut dst) = RawCtx::<ProvSm2Ctx>::zalloc_at(FILE_SEAM, 143, FILE_SEAM, 152) else {
         return ptr::null_mut();
     };
     let dstctx = dst.as_ptr();

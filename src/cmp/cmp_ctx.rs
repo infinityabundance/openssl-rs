@@ -21,6 +21,7 @@ use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_get_type, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_hmac_sha1, NID_sha256, NID_subject_alt_name, OBJ_nid2sn};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
@@ -46,6 +47,7 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_ctx.c";
 
 /// This unit's `__FILE__` as the allocator seam's `file` argument.
 const FILE_C: *const c_char = FILE.as_ptr();
+const FILE_C_SEAM: SeamFile = SeamFile::new(c"crypto/cmp/cmp_ctx.c");
 
 /// `ERR_LIB_CMP`.
 const ERR_LIB_CMP: c_int = 58;
@@ -303,7 +305,7 @@ macro_rules! ctx_set1_char {
             // SAFETY: `ctx` is live; the incumbent member came from this allocator or is NULL and
             // this frame owns it exclusively.
             unsafe {
-                drop(OwnedStr::adopt((*ctx).$field, FILE.as_ptr(), 0));
+                drop(OwnedStr::adopt((*ctx).$field, SeamFile::new(FILE), 0));
                 (*ctx).$field = dup;
             }
             1
@@ -455,11 +457,11 @@ unsafe impl CtxDestroy for OsslCmpCtx {
         // SAFETY: `ctx` is a live context per the trait contract; each field is NULL or owned by the
         // context, and the `char` members came from this file's own `CRYPTO_strdup`.
         unsafe {
-            drop(OwnedStr::adopt((*ctx).propq, FILE_C, 196));
-            drop(OwnedStr::adopt((*ctx).server_path, FILE_C, 197));
-            drop(OwnedStr::adopt((*ctx).server, FILE_C, 198));
-            drop(OwnedStr::adopt((*ctx).proxy, FILE_C, 199));
-            drop(OwnedStr::adopt((*ctx).no_proxy, FILE_C, 200));
+            drop(OwnedStr::adopt((*ctx).propq, FILE_C_SEAM, 196));
+            drop(OwnedStr::adopt((*ctx).server_path, FILE_C_SEAM, 197));
+            drop(OwnedStr::adopt((*ctx).server, FILE_C_SEAM, 198));
+            drop(OwnedStr::adopt((*ctx).proxy, FILE_C_SEAM, 199));
+            drop(OwnedStr::adopt((*ctx).no_proxy, FILE_C_SEAM, 200));
 
             X509_free((*ctx).srv_cert);
             X509_free((*ctx).validated_srv_cert);

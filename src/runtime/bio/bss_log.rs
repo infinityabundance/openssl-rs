@@ -31,6 +31,7 @@ use crate::runtime::owned_str::OwnedStr;
 use super::method::bwrite_conv;
 use super::sys;
 use super::{Bio, BioMethod, BIO_CTRL_SET, BIO_TYPE_MEM};
+use crate::runtime::mem_coords::SeamFile;
 
 // The NUL-terminated copy `slg_write` makes of its input, owned by `OwnedStr`.
 //
@@ -165,7 +166,7 @@ unsafe extern "C" fn slg_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c
     let Some(len) = (inl as usize).checked_add(1) else {
         return 0;
     };
-    let Some(buf) = OwnedStr::new(len, ptr::null(), 0, ptr::null(), 0) else {
+    let Some(buf) = OwnedStr::new(len, SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return 0;
     };
     let buf = buf.as_ptr();

@@ -44,6 +44,7 @@ use crate::runtime::err::err_reasons::*;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::obj::{NID_cmKGA, NID_ext_key_usage};
 use crate::runtime::owned_buf::OwnedBuf;
@@ -1612,7 +1613,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_get1_pkey(
                     pkey,
                     &mut len,
                 ),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 685,
             )
         };
@@ -1924,7 +1925,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
                     CRYPTO_malloc(eksize, FILE.as_ptr(), 802).cast::<u8>(),
                     eksize,
                     false,
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     846,
                 );
                 if let Some(ek_ptr) = ek.as_ref().map(OwnedBuf::as_ptr) {
@@ -1963,7 +1964,13 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
     let iv_len = unsafe { crate::evp::cipher::EVP_CIPHER_get_iv_length(cipher) };
     // SAFETY: `iv_len` is the cipher's own length; allocate that many bytes.
     if iv_len > 0 {
-        iv = OwnedBuf::new_plain_released(iv_len as usize, FILE.as_ptr(), 817, FILE.as_ptr(), 847);
+        iv = OwnedBuf::new_plain_released(
+            iv_len as usize,
+            SeamFile::new(FILE),
+            817,
+            SeamFile::new(FILE),
+            847,
+        );
     }
     if iv.is_none()
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
@@ -1995,7 +2002,8 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
         let enc_value = (*enc).enc_value;
         let total = (*enc_value).length as usize
             + crate::evp::cipher::EVP_CIPHER_get_block_size(cipher) as usize;
-        out = OwnedBuf::new_plain_released(total, FILE.as_ptr(), 826, FILE.as_ptr(), 850);
+        out =
+            OwnedBuf::new_plain_released(total, SeamFile::new(FILE), 826, SeamFile::new(FILE), 850);
         evp_ctx = crate::evp::cipher_ctx::EVP_CIPHER_CTX_new();
         if out.is_none() || evp_ctx.is_null() {
             // tail
@@ -2088,7 +2096,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_get1_encCert(
     let buf = unsafe {
         OwnedBuf::adopt_plain(
             OSSL_CRMF_ENCRYPTEDVALUE_decrypt(ecert, libctx, propq, pkey, &mut len),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             881,
         )
     };

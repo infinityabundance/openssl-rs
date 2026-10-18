@@ -91,6 +91,7 @@ use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::err_reasons::X509_R_WRONG_TYPE;
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
 use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_ext_req, NID_ms_ext_req, NID_undef, OBJ_obj2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -430,7 +431,7 @@ pub unsafe extern "C" fn X509_to_X509_REQ(
      * own shape. */
     // `version_data` owns the fresh one-byte block; a failed allocation is the authority's own
     // free-and-NULL tail, and the block's ownership moves into the request's integer once written.
-    let Some(version_data) = OwnedBuf::new(1, FILE.as_ptr(), LINE_MALLOC_VERSION) else {
+    let Some(version_data) = OwnedBuf::new(1, SeamFile::new(FILE), LINE_MALLOC_VERSION) else {
         // SAFETY: `ret` is this call's own request.
         return unsafe { to_req_err(ret) };
     };
@@ -732,7 +733,7 @@ unsafe fn add_extensions_nid_tail(
     // `ext` is the block the item layer allocated above; the handle owns it and its `Drop` is the
     // authority's own single `OPENSSL_free` on every exit below.
     // SAFETY: `ext` is NULL or a block `ASN1_item_i2d` allocated that no one else owns.
-    let ext = unsafe { OwnedBuf::adopt_plain_nullable(ext, FILE.as_ptr(), LINE_FREE_EXT) };
+    let ext = unsafe { OwnedBuf::adopt_plain_nullable(ext, SeamFile::new(FILE), LINE_FREE_EXT) };
     if !mod_exts.is_null() {
         // SAFETY: `req` is live per the contract; `loc` is a live attribute index.
         let att = unsafe { X509at_delete_attr((*req).req_info.attributes, loc) };

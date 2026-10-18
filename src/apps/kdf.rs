@@ -63,6 +63,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::{stdin, stdout};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_buf2hexstr;
 
@@ -375,7 +376,7 @@ pub fn main(argv: &[String]) -> i32 {
     // err;` — `apps/kdf.c:182-184`. The block is the derived key, so its release on every exit
     // below is the authority's own cleansing `OPENSSL_clear_free(dkm_bytes, dkm_len)` at `:206`.
     let Some(dkm_bytes) =
-        OwnedBuf::new_cleansed_at(dkm_len as usize, c"apps/kdf.c".as_ptr(), 182, 206)
+        OwnedBuf::new_cleansed_at(dkm_len as usize, SeamFile::new(c"apps/kdf.c"), 182, 206)
     else {
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
         unsafe { BIO_free(out) };
@@ -416,7 +417,7 @@ pub fn main(argv: &[String]) -> i32 {
         // `:211`; `adopt` answers `None` for the allocation's NULL, which is the failure branch.
         // SAFETY: `hexout` is NULL or the one block this call's `OPENSSL_buf2hexstr` allocated.
         let Some(hexout) = (unsafe {
-            OwnedBuf::adopt_plain(hexout.cast::<c_uchar>(), c"apps/kdf.c".as_ptr(), 211)
+            OwnedBuf::adopt_plain(hexout.cast::<c_uchar>(), SeamFile::new(c"apps/kdf.c"), 211)
         }) else {
             eprintln!("Memory allocation failure");
             drop(dkm_bytes);

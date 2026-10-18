@@ -35,6 +35,7 @@ use crate::cmp::crmf_asn::{
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_crl_distribution_points, NID_id_it_caCerts,
     NID_id_it_caKeyUpdateInfo, NID_id_it_caProtEncCert, NID_id_it_certProfile,
@@ -1618,14 +1619,18 @@ pub(crate) unsafe fn ossl_cmp_msg_set0_libctx(
             (*msg).libctx = libctx;
             // The old `propq` block; the handle's `Drop` is the authority's own
             // `CRYPTO_free((*msg).propq, FILE, 46)`.
-            drop(OwnedStr::adopt((*msg).propq, FILE.as_ptr(), 46));
+            drop(OwnedStr::adopt((*msg).propq, SeamFile::new(FILE), 46));
             (*msg).propq = ptr::null_mut();
         }
         if !propq.is_null() {
             // SAFETY: `propq` is a NUL-terminated string per the contract; the handle is its only
             // owner until it is installed into the message.
             let Some(dup) = (unsafe {
-                OwnedStr::adopt(CRYPTO_strdup(propq, FILE.as_ptr(), 49), FILE.as_ptr(), 49)
+                OwnedStr::adopt(
+                    CRYPTO_strdup(propq, FILE.as_ptr(), 49),
+                    SeamFile::new(FILE),
+                    49,
+                )
             }) else {
                 return 0;
             };
@@ -1654,7 +1659,7 @@ unsafe extern "C" fn ossl_cmp_msg_cb(
         ASN1_OP_FREE_POST => {
             // SAFETY: `msg` is live; its `propq` is NULL or the block this unit strdup'd, and the
             // handle's `Drop` is the authority's own `CRYPTO_free((*msg).propq, FILE, 854)`.
-            unsafe { drop(OwnedStr::adopt((*msg).propq, FILE.as_ptr(), 854)) };
+            unsafe { drop(OwnedStr::adopt((*msg).propq, SeamFile::new(FILE), 854)) };
         }
         ASN1_OP_DUP_POST => {
             let old = exarg as *const CmpMsg;

@@ -64,6 +64,7 @@ use crate::runtime::owned_str::OwnedStr;
 
 use super::bss_sock::BIO_sock_init;
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The `file`/`line` recorded by an allocation, mirroring the authority's
 /// `__FILE__`/`__LINE__` so a leak report points at this module.
@@ -811,7 +812,7 @@ unsafe fn addr_strings(
         if want_host {
             OwnedStr::adopt(
                 CRYPTO_strdup(host.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
-                ALLOC_FILE.as_ptr(),
+                SeamFile::new(ALLOC_FILE),
                 ALLOC_LINE,
             )
         } else {
@@ -823,7 +824,7 @@ unsafe fn addr_strings(
         if want_service {
             OwnedStr::adopt(
                 CRYPTO_strdup(serv.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
-                ALLOC_FILE.as_ptr(),
+                SeamFile::new(ALLOC_FILE),
                 ALLOC_LINE,
             )
         } else {

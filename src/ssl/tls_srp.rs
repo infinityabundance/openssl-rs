@@ -33,6 +33,7 @@ use crate::bn::bignum::{BN_bin2bn, BN_clear_free, BN_copy, BN_dup, BN_free};
 use crate::ffi::guard_ffi;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::srp::srp_lib::{SRP_Calc_A, SRP_Calc_B_ex, SRP_get_default_gN};
 use crate::srp::srp_vfy::SRP_create_verifier_BN_ex;
@@ -66,13 +67,13 @@ unsafe fn srp_ctx_free(srp: *mut crate::ssl::ssl_lib::SrpCtx) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*srp).login.cast::<u8>(),
-            c"ssl/tls_srp.c".as_ptr(),
+            SeamFile::new(c"ssl/tls_srp.c"),
             37,
         ));
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*srp).info.cast::<u8>(),
-            c"ssl/tls_srp.c".as_ptr(),
+            SeamFile::new(c"ssl/tls_srp.c"),
             38,
         ));
         BN_free((*srp).n);
@@ -195,7 +196,7 @@ pub(crate) unsafe fn ssl_srp_ctx_init_intern(s: *mut Ssl) -> c_int {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             let d = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup((*src).login, c"ssl/tls_srp.c".as_ptr(), 115).cast::<u8>(),
-                c"ssl/tls_srp.c".as_ptr(),
+                SeamFile::new(c"ssl/tls_srp.c"),
                 37,
             );
             (*s).srp_ctx.login = d.into_raw().cast::<c_char>();
@@ -208,7 +209,7 @@ pub(crate) unsafe fn ssl_srp_ctx_init_intern(s: *mut Ssl) -> c_int {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             let d = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup((*src).info, c"ssl/tls_srp.c".as_ptr(), 119).cast::<u8>(),
-                c"ssl/tls_srp.c".as_ptr(),
+                SeamFile::new(c"ssl/tls_srp.c"),
                 38,
             );
             (*s).srp_ctx.info = d.into_raw().cast::<c_char>();
@@ -478,7 +479,7 @@ pub unsafe extern "C" fn SSL_set_srp_server_param(
                     // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                     drop(OwnedBuf::adopt_plain_nullable(
                         (*s).srp_ctx.info.cast::<u8>(),
-                        c"ssl/tls_srp.c".as_ptr(),
+                        SeamFile::new(c"ssl/tls_srp.c"),
                         290,
                     ));
                 }
@@ -489,7 +490,7 @@ pub unsafe extern "C" fn SSL_set_srp_server_param(
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                 (*s).srp_ctx.info = OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(info, c"ssl/tls_srp.c".as_ptr(), 291).cast::<u8>(),
-                    c"ssl/tls_srp.c".as_ptr(),
+                    SeamFile::new(c"ssl/tls_srp.c"),
                     38,
                 )
                 .into_raw()

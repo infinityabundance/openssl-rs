@@ -69,6 +69,7 @@ use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_X9_62_id_ecPublicKey, NID_sha256, NID_sm3, OBJ_length, OBJ_nid2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{
@@ -81,7 +82,7 @@ const EC_PKEY_NO_PARAMETERS: c_int = 0x001;
 /// `OSSL_PKEY_PARAM_USE_COFACTOR_ECDH` — `include/openssl/core_names.h:400`.
 const OSSL_PKEY_PARAM_USE_COFACTOR_ECDH: *const c_char = c"use-cofactor-ecdh".as_ptr();
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c");
 
 /// `static int eckey_param2type(int *pptype, void **ppval, const EC_KEY *ec_key)` —
 /// `crypto/ec/ec_ameth.c:29-66`.
@@ -187,7 +188,7 @@ unsafe extern "C" fn eckey_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey)
     // `penclen` and released by its handle's `Drop` -- the authority's plain `CRYPTO_free` -- at
     // the `err:` sites below, or handed to `X509_PUBKEY_set0_param` on success.
     // SAFETY: `penclen` is a positive size.
-    let Some(penc) = OwnedBuf::new(penclen as usize, FILE, 83) else {
+    let Some(penc) = OwnedBuf::new(penclen as usize, FILE_SEAM, 83) else {
         // goto err
         // SAFETY: `ptype` names what `pval` is.
         unsafe {
@@ -384,7 +385,7 @@ unsafe extern "C" fn eckey_priv_encode(
     // below releases it at the authority's own site and the success path hands it on.
     // SAFETY: `ep` is a live block `i2d_ECPrivateKey` allocated and no one else owns, readable for
     // `eplen` bytes.
-    let ep = unsafe { OwnedBuf::adopt_cleansed_nullable(ep, eplen as usize, core::ptr::null(), 0) };
+    let ep = unsafe { OwnedBuf::adopt_cleansed_nullable(ep, eplen as usize, SeamFile::NULL, 0) };
     // SAFETY: `p8` is live and `pval`/`ep` are the objects the setter takes ownership of.
     if unsafe {
         PKCS8_pkey_set0(
@@ -576,7 +577,7 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
             publen = EC_KEY_key2buf(x, EC_KEY_get_conv_form(x), &mut pub_buf, ptr::null_mut());
             // SAFETY: `pub_buf` is NULL or a live block `EC_KEY_key2buf` allocated and no one else
             // owns.
-            pub_owned = Some(OwnedBuf::adopt_plain_nullable(pub_buf, FILE, 343));
+            pub_owned = Some(OwnedBuf::adopt_plain_nullable(pub_buf, FILE_SEAM, 343));
             if publen == 0 {
                 // goto err
                 raise_site(&err_sites::EC_AMETH_341);
@@ -591,7 +592,7 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
             priv_owned = Some(OwnedBuf::adopt_cleansed_nullable(
                 priv_buf,
                 privlen,
-                core::ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             if privlen == 0 {
@@ -965,7 +966,7 @@ unsafe extern "C" fn ec_pkey_export_to(
     // below releases what it built -- the authority's plain `CRYPTO_free`.
     // SAFETY: `gen_buf` is NULL or a live block `ossl_ec_group_todata` allocated and no one else
     // owns.
-    let gen_owned = unsafe { OwnedBuf::adopt_plain_nullable(gen_buf, FILE, 602) };
+    let gen_owned = unsafe { OwnedBuf::adopt_plain_nullable(gen_buf, FILE_SEAM, 602) };
     // `pub_key_buf` is adopted only if the public point below is exported; its handle starts empty.
     let mut pub_key_owned: Option<OwnedBuf> = None;
     if !group_ok {
@@ -997,7 +998,8 @@ unsafe extern "C" fn ec_pkey_export_to(
         // `pub_key_buf` is the point the call allocated; the handle owns it.
         // SAFETY: `pub_key_buf` is NULL or a live block `EC_POINT_point2buf` allocated and no one
         // else owns.
-        pub_key_owned = Some(unsafe { OwnedBuf::adopt_plain_nullable(pub_key_buf, FILE, 601) });
+        pub_key_owned =
+            Some(unsafe { OwnedBuf::adopt_plain_nullable(pub_key_buf, FILE_SEAM, 601) });
         if pub_key_buflen == 0
             // SAFETY: `tmpl` is live and the buffer is `pub_key_buflen` long.
             || unsafe {

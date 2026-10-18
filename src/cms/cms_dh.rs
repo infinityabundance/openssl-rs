@@ -55,6 +55,7 @@ use crate::runtime::obj::{
 use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{ossl_asn1_string_set_bits_left, CmsRecipientInfo};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CIPHER_CTX` wrapping mode `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:529`.
 const EVP_CIPH_WRAP_MODE: c_int = 0x10002;
@@ -131,7 +132,7 @@ unsafe fn dh_cms_set_peerkey(
     // The padding scratch is this frame's block, allocated through the crate's allocator seam; its
     // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `plen >= 0` per the key size.
-    let Some(buf) = OwnedBuf::new(plen as usize, c"cms_dh.c".as_ptr(), 60) else {
+    let Some(buf) = OwnedBuf::new(plen as usize, SeamFile::new(c"cms_dh.c"), 60) else {
         // SAFETY: the arguments are live scalars.
         unsafe {
             ASN1_STRING_free(public_key);
@@ -305,7 +306,7 @@ unsafe fn dh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientInf
                                         150,
                                     )
                                     .cast::<c_uchar>(),
-                                    c"cms_dh.c".as_ptr(),
+                                    SeamFile::new(c"cms_dh.c"),
                                     163,
                                 )
                             });
@@ -473,8 +474,9 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             // The encoded key is the helper's own `CRYPTO_malloc` block; `penc` adopts it so the
             // failure path below releases what it built at the authority's own site.
             // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
-            let penc_owned =
-                unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_dh.c".as_ptr(), 330) };
+            let penc_owned = unsafe {
+                OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_dh.c"), 330)
+            };
             // SAFETY: `pubk` is owned here.
             unsafe { ASN1_STRING_free(pubk) };
             if penclen <= 0 {
@@ -596,7 +598,7 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
                         302,
                     )
                     .cast::<c_uchar>(),
-                    c"cms_dh.c".as_ptr(),
+                    SeamFile::new(c"cms_dh.c"),
                     332,
                 )
             });
@@ -623,7 +625,7 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         // failure paths below release what they built at the authority's own site.
         // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
         let penc_owned =
-            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, c"cms_dh.c".as_ptr(), 330) };
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_dh.c"), 330) };
         if penclen <= 0 {
             penc = Some(penc_owned);
             break 'body;

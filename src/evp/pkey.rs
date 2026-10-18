@@ -139,6 +139,7 @@ use crate::runtime::ex_data::{
     CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_EVP_PKEY,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_id_ecPublicKey, NID_X9_62_prime_field,
     NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_hmac, NID_poly1305, NID_rsaEncryption,
@@ -373,6 +374,7 @@ const _: () = {
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/p_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/p_lib.c");
 /// `EVP_PKEY_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 1491).
 const LINE_ZALLOC_PKEY: c_int = 1491;
 /// `EVP_PKEY_get_bn_param`'s `OPENSSL_zalloc(buf_sz)` (line 2232).
@@ -624,7 +626,13 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
     // SAFETY: `x` is a live key this crate allocated and this is its last reference; `from_raw`
     // reclaims the block and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`])
     // followed by the block release, so this is its last use.
-    unsafe { drop(OwnedCtx::<EvpPkey>::from_raw_at(x, FILE, LINE_ZALLOC_PKEY)) };
+    unsafe {
+        drop(OwnedCtx::<EvpPkey>::from_raw_at(
+            x,
+            FILE_SEAM,
+            LINE_ZALLOC_PKEY,
+        ))
+    };
 }
 
 /// `static int pkey_set_type(EVP_PKEY *pkey, ENGINE *e, int type, const char *str, int len,
@@ -1174,7 +1182,7 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
                 CRYPTO_zalloc(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER).cast::<c_uchar>(),
                 buf_sz,
                 false,
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_BN_BUFFER,
             )
         };
@@ -3654,9 +3662,9 @@ pub unsafe extern "C" fn EVP_PKEY_get1_encoded_public_key(
         // `CRYPTO_malloc` carries the authority's coordinates and its own failure raise.
         let Some(buf) = OwnedBuf::new_plain_released(
             return_size,
-            FILE,
+            FILE_SEAM,
             LINE_MALLOC_ENCODED_PUBKEY,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_ENCODED_PUBKEY,
         ) else {
             return 0;

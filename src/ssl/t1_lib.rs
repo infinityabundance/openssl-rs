@@ -59,6 +59,7 @@ use crate::evp::pkey_ctx::{
 use crate::runtime::err::err_reasons::SSL_R_SSL3_EXT_INVALID_MAX_FRAGMENT_LENGTH;
 use crate::runtime::err::raise_with;
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha512, NID_undef, OBJ_nid2ln,
 };
@@ -75,6 +76,7 @@ use crate::ssl::statem::statem_lib::{ssl_get_min_max_version, ssl_version_cmp};
 const ERR_LIB_SSL: c_int = 20;
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/t1_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/t1_lib.c");
 
 /// `TLSEXT_max_fragment_length_DISABLED` — `tls1.h:227`.
 const TLSEXT_max_fragment_length_DISABLED: u8 = 0;
@@ -548,7 +550,7 @@ pub unsafe extern "C" fn SSL_get1_builtin_sigalgs(libctx: *mut c_void) -> *mut c
     // exactly as the authority's `OPENSSL_malloc`/`OPENSSL_realloc` buffer is. `OwnedBuf::new`
     // allocates it at the authority's own size/file/line, and `into_raw` hands it to the caller.
     let bytes = out.as_bytes();
-    let Some(ret) = OwnedBuf::new(bytes.len() + 1, FILE, 2298) else {
+    let Some(ret) = OwnedBuf::new(bytes.len() + 1, FILE_SEAM, 2298) else {
         return ptr::null_mut();
     };
     // SAFETY: `ret` is a fresh block of at least `bytes.len() + 1` bytes.
@@ -783,7 +785,7 @@ pub(crate) unsafe fn tls1_set_groups(
         }
         list[i] = id;
     }
-    let Some(mem) = OwnedBuf::new(ngroups * core::mem::size_of::<u16>(), FILE, 0) else {
+    let Some(mem) = OwnedBuf::new(ngroups * core::mem::size_of::<u16>(), FILE_SEAM, 0) else {
         return 0;
     };
     for (i, g) in list[..ngroups].iter().enumerate() {
@@ -794,7 +796,11 @@ pub(crate) unsafe fn tls1_set_groups(
     // plain block this crate allocated that no one else owns.
     unsafe {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(OwnedBuf::adopt_plain_nullable((*grpext).cast(), FILE, 0));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*grpext).cast(),
+            FILE_SEAM,
+            0,
+        ));
         *grpext = mem.into_raw().cast();
         *grpextlen = ngroups;
     }

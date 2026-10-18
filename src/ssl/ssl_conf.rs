@@ -39,6 +39,7 @@ use core::ptr;
 use crate::ffi::guard_ffi;
 use crate::runtime::conf::modparse::CONF_parse_list;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::ssl::ssl_ciph::{SSL_CTX_set_ciphersuites, SSL_set_ciphersuites};
@@ -49,6 +50,7 @@ use crate::ssl::ssl_lib::{
 };
 
 const FILE: *const c_char = c"ssl/ssl_conf.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_conf.c");
 
 /// `SSL_TFLAG_INV` — `ssl_conf.c:40`.
 const SSL_TFLAG_INV: c_uint = 0x1;
@@ -1215,7 +1217,8 @@ pub unsafe extern "C" fn SSL_CONF_CTX_new() -> *mut SslConfCtx {
     guard_ffi(ptr::null_mut(), || {
         // The context block is a `CRYPTO_zalloc` at the authority's own size/site; `into_raw`
         // hands it to the caller, which returns it to `SSL_CONF_CTX_free`.
-        let Some(buf) = OwnedBuf::new_zeroed(core::mem::size_of::<SslConfCtx>(), FILE, 1059) else {
+        let Some(buf) = OwnedBuf::new_zeroed(core::mem::size_of::<SslConfCtx>(), FILE_SEAM, 1059)
+        else {
             return ptr::null_mut();
         };
         buf.into_raw().cast::<SslConfCtx>()
@@ -1259,7 +1262,7 @@ pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
         // SAFETY: `cctx` is the live block `SSL_CONF_CTX_new` gave up per the caller's contract,
         // not released before.
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE, 1120) });
+        drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE_SEAM, 1120) });
     })
 }
 

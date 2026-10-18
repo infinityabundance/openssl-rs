@@ -29,6 +29,7 @@ use crate::runtime::bio::sys::time;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_id_it_implicitConfirm, NID_undef, OBJ_nid2obj, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -260,7 +261,13 @@ pub(crate) unsafe fn ossl_cmp_hdr_update_messageTime(hdr: *mut CmpPkiHeader) -> 
 unsafe fn set_random(tgt: *mut *mut Asn1String, ctx: *mut OsslCmpCtx, len: c_int) -> c_int {
     let mut res = 0;
     // The local owner is the authority's single plain free on every path.
-    match OwnedBuf::new_plain_released(len as usize, FILE.as_ptr(), 117, FILE.as_ptr(), 124) {
+    match OwnedBuf::new_plain_released(
+        len as usize,
+        SeamFile::new(FILE),
+        117,
+        SeamFile::new(FILE),
+        124,
+    ) {
         // SAFETY: the site is a compile-time constant.
         None => unsafe { raise_cmp(121, c"set_random", 110) },
         Some(bytes) => {
@@ -479,7 +486,7 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
             OwnedBuf::adopt_plain(
                 i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 258,
             )
         };

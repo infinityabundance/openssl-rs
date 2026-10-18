@@ -48,6 +48,7 @@ use crate::runtime::confmod::{CONF_module_add, ConfFinishFn, ConfImodule, ConfIn
 use crate::runtime::err::err_sites::{CONF_SSL_75, CONF_SSL_94};
 use crate::runtime::err::raise_site_dynamic_data;
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 
@@ -66,6 +67,7 @@ const ERR_MAX_DATA_SIZE: usize = 1024;
 /// the **line the macro expands on** rather than the line of any definition — the same
 /// distinction `confmod/mod.rs` records for `conf_mod.c`.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/conf/conf_ssl.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/conf/conf_ssl.c");
 
 /// `OPENSSL_free(tname->name)` in `ssl_module_free`.
 const L_FREE_NAME: c_int = 49;
@@ -198,11 +200,11 @@ impl Drop for OwnedStore {
             // NULL or a block this store owns.
             unsafe {
                 let tname = &mut *self.names.add(i);
-                drop(OwnedStr::adopt(tname.name, FILE, L_FREE_NAME));
+                drop(OwnedStr::adopt(tname.name, FILE_SEAM, L_FREE_NAME));
                 for j in 0..tname.cmd_count {
                     let cmd = &mut *tname.cmds.add(j);
-                    drop(OwnedStr::adopt(cmd.cmd, FILE, L_FREE_CMD));
-                    drop(OwnedStr::adopt(cmd.arg, FILE, L_FREE_ARG));
+                    drop(OwnedStr::adopt(cmd.cmd, FILE_SEAM, L_FREE_CMD));
+                    drop(OwnedStr::adopt(cmd.arg, FILE_SEAM, L_FREE_ARG));
                 }
                 // SAFETY: `cmds` is this store's own array, and the loop above released its
                 // contents rather than the array.
