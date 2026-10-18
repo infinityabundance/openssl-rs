@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1293** passed,
+`cargo test --lib` (must pass; the established baseline is **1303** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -946,6 +946,30 @@ package.
   0, clippy 0, **1293 passed / 22 ignored**, **22/22** probes. Per-file
   campaign: **7 of 761**.
 
+### Subphase 77 — `x509/v3_addr.rs` audit and fixes
+
+- Audit: 498 production sites in 123 groups — **38 ESTABLISHED, 80
+  CONTRACTED, 5 UNATTRIBUTED**.
+- Fixes:
+  1. `validation_err` used `verify_cb.unwrap_unchecked()`; a callback may clear
+     itself. It now matches the authority (Some → call, None → default 0).
+  2. The path walk reused `chain`/`ext`/`child` across `verify_cb`, which may
+     free `ctx.chain`. A `ChainSnapshot` (stack dup + one up-ref per cert,
+     released by Drop) is used when `ctx` is present; `rfc3779_addr` is re-read
+     after each callback. The live-walk divergence and the unreachability of
+     up-ref failure for a live certificate are documented.
+  3. `prefixlen + 7` / `* 8` are checked on every exported path, failing closed.
+  4. `canonize`/`inherits`/`subset` validate both block shapes before any
+     comparator or find, handle NULL family/choice, and release `a`/`b` only
+     when no remaining slot references them (no double free for `a == b` or
+     duplicate aliases).
+  5. `v2i` uses checked offsets before every dereference; the `strtoul`
+     narrowing is authority parity.
+- Adversarial review **FAILED** on comparator ordering and an incorrect NULL
+  assumption; the ordering was fixed and the pinned authority confirmed the
+  existing `b == NULL` behaviour. Gate: `fmt` 0, clippy 0, **1303 passed / 22
+  ignored**, **22/22** probes. Per-file campaign: **8 of 761**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1123,7 +1147,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `9972658e2` (cms_env audit fixes merged)
+**Last observed HEAD:** `624f046df` (v3_addr audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1137,7 +1161,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1293** tests (22 ignored;
+   The most recent reported library baseline is **1303** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
