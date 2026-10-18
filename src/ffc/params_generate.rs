@@ -788,8 +788,8 @@ unsafe fn generate_q_fips186_2(
     _res: *mut c_int,
     cb: *mut BnGencb,
 ) -> c_int {
-    let mut buf2 = [0u8; SHA256_DIGEST_LENGTH];
-    let mut md = [0u8; SHA256_DIGEST_LENGTH];
+    let mut buf2 = [0u8; EVP_MAX_MD_SIZE];
+    let mut md = [0u8; EVP_MAX_MD_SIZE];
     let mut ret: c_int = 0;
     // SAFETY: `retm` is readable per the caller's contract.
     let mut m: c_int = unsafe { *retm };
@@ -2736,6 +2736,52 @@ mod tests {
                 FFC_PARAM_RET_STATUS_FAILED
             );
             assert_eq!(res6, FFC_CHECK_BAD_LN_PAIR);
+        }
+    }
+
+    /// **M6-D2: the 186-2 `q` generator's digest buffers are `EVP_MAX_MD_SIZE`.** The authority
+    /// declares both as `unsigned char buf2[EVP_MAX_MD_SIZE]` / `md[EVP_MAX_MD_SIZE]`; a narrower
+    /// transcription overflows when a caller names a digest wider than SHA-256 (a reachable
+    /// state: `params->mdname` is set from `OSSL_PKEY_PARAM_FFC_DIGEST`). `qsize` is one of
+    /// 20/28/32 here, so the *result* is unchanged — only the digest's write extent is exercised.
+    #[test]
+    fn the_186_2_q_generator_accepts_a_digest_wider_than_sha256() {
+        // SAFETY: every pointer below is this test's own live object; `md` is a fetched digest
+        // the crate's provider publishes and `q`/`ctx` are released on the same path.
+        unsafe {
+            let ctx = BN_CTX_new_ex(ptr::null_mut());
+            assert!(!ctx.is_null());
+            let q = BN_new();
+            assert!(!q.is_null());
+            let md = EVP_MD_fetch(ptr::null_mut(), c"SHA512".as_ptr(), ptr::null());
+            assert!(!md.is_null(), "SHA-512 is a built-in digest");
+            assert!(EVP_MD_get_size(md) as usize > SHA256_DIGEST_LENGTH);
+
+            let mut buf = [0u8; EVP_MAX_MD_SIZE];
+            let mut seed = [0u8; EVP_MAX_MD_SIZE];
+            let mut m: c_int = 0;
+            let mut res: c_int = 0;
+
+            assert_eq!(
+                generate_q_fips186_2(
+                    ctx,
+                    q,
+                    md,
+                    buf.as_mut_ptr(),
+                    seed.as_mut_ptr(),
+                    SHA256_DIGEST_LENGTH,
+                    0,
+                    &raw mut m,
+                    &raw mut res,
+                    ptr::null_mut(),
+                ),
+                1
+            );
+            assert_eq!(BN_num_bits(q), (SHA256_DIGEST_LENGTH * 8) as c_int);
+
+            EVP_MD_free(md);
+            BN_free(q);
+            BN_CTX_free(ctx);
         }
     }
 }

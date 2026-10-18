@@ -1,0 +1,143 @@
+{
+  "receipt": "mechanism-sweep-M6",
+  "branch": "integrate/safe-c33",
+  "source_head": "b43570606",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "worktree": true,
+  "date": "2026-10-18",
+  "verification_level": "FAST plus BATCH, with one targeted ASan boundary control for M6-D2",
+  "scope": "mechanism-contract sweep over attribution ranks 68-76; rsa/object.rs and ffc/params_generate.rs each yielded one defect (both fixed); pkcs7/pk7_smime.rs, evp/kdf.rs, evp/mac.rs and ec/lib.rs audited clean; BIO iolib and the OBJ_NAME callback registry deferred to a boundary batch; provider/file_store.rs and the two BIO bss files remain deferred from M5",
+  "files": [
+    "src/rsa/object.rs",
+    "src/pkcs7/pk7_smime.rs",
+    "src/evp/kdf.rs",
+    "src/evp/mac.rs",
+    "src/ffc/params_generate.rs",
+    "src/ec/lib.rs"
+  ],
+  "files_not_run": [
+    "src/runtime/bio/iolib.rs",
+    "src/runtime/obj.rs",
+    "src/provider/file_store.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_conn.rs"
+  ],
+  "defects": [
+    {
+      "id": "M6-D1",
+      "file": "src/rsa/object.rs",
+      "function": "RSA_free / <Rsa as CtxDestroy>::destroy_body and ossl_rsa_set0_pss_params",
+      "pre_fix_lines": [
+        638,
+        1513
+      ],
+      "post_fix_lines": [
+        641,
+        1527
+      ],
+      "severity": "medium (resource leak; ownership obligation, not UB)",
+      "class": "the D348-era reduction said r->pss was unreachable; the writer's caller chain has landed (rsa/backend.rs ossl_rsa_param_decode reached from provider/decode_der2key.rs PKCS#8 rows), so a PSS key carries r->pss and the omitted RSA_PSS_PARAMS_free leaked it, including on replacement",
+      "fix": "restore the authority's RSA_PSS_PARAMS_free in both the destructor body and the set0 replacement path",
+      "witness": "rsa::object::tests::set0_pss_params_replaces_the_old_value_and_rsa_free_releases_it (new) plus the 14 existing tests: 15 passed / 0 failed / 0 ignored (1586 filtered)"
+    },
+    {
+      "id": "M6-D2",
+      "file": "src/ffc/params_generate.rs",
+      "function": "generate_q_fips186_2",
+      "pre_fix_lines": [
+        791,
+        792
+      ],
+      "post_fix_lines": [
+        791,
+        792
+      ],
+      "severity": "high (memory-safety; stack out-of-bounds write introduced by the transcription)",
+      "class": "buf2/md were transcribed as [u8; SHA256_DIGEST_LENGTH] (32) where the authority declares unsigned char buf2[EVP_MAX_MD_SIZE] and md[EVP_MAX_MD_SIZE] (64); the digest is caller-named through OSSL_PKEY_PARAM_FFC_DIGEST (EVP_PKEY_fromdata/paramgen), so EVP_Digest writes EVP_MD_get_size(evpmd) bytes into 32 bytes on the legacy 186-2 generate/validate path",
+      "fix": "restore [u8; EVP_MAX_MD_SIZE] for both arrays, matching the authority",
+      "witness": "ffc::params_generate::tests::the_186_2_q_generator_accepts_a_digest_wider_than_sha256 (new); pre-fix ASan diagnosis stack-buffer-overflow 'WRITE of size 8' in generate_q_fips186_2 at src/ffc/params_generate.rs:832"
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "restored_authority_operations": [
+    "src/rsa/object.rs: RSA_PSS_PARAMS_free(r->pss) in destroy_body",
+    "src/rsa/object.rs: RSA_PSS_PARAMS_free(r->pss) before the store in ossl_rsa_set0_pss_params",
+    "src/ffc/params_generate.rs: generate_q_fips186_2 digest scratch arrays widened from 32 to EVP_MAX_MD_SIZE (64)"
+  ],
+  "contracts_reused": [
+    "OB-3: RawCtx/OwnedCtx + unsafe CtxDestroy with the zero-validity and exactly-once destructor contract (rsa/object.rs, ec/lib.rs)",
+    "OB-1: OwnedBuf/OwnedBlock scratch ownership, seam coordinates and cleansing release (pkcs7/pk7_smime.rs, evp/kdf.rs)",
+    "refcount::up_ref/down_ref with Last/Remaining/Retired (RSA, EVP_KDF, EVP_MAC)",
+    "provider dispatch and deref-by-OPTION function slots (EVP_KDF, EVP_MAC, EC_METHOD)",
+    "PKCS7/X509 stack ownership, up-ref/free transfer and BIO chain pop/free ordering",
+    "FFI ABI preconditions and OPENSSL_sk_* borrowed-element ownership",
+    "allocator seam at the authority's exact size/file/line"
+  ],
+  "retained_obligations": [
+    "evp/mac.rs EVP_MAC_CTX_dup answers NULL for a method without dupctx where the authority faults; already recorded as docs/SECURITY_DIVERGENCE_POLICY.md D-MAC-DUPCTX-NULL-1 and unchanged",
+    "rsa/object.rs RSA_set0_multi_prime_params discards a failed OPENSSL_sk_push (authority does the same), matching the authority's failure path",
+    "ec/lib.rs EC_GROUP_clear_free omits OPENSSL_free(group->propq), matching the authority's own clear-free body (a pre-existing authority leak, reproduced for compatibility and recorded here)",
+    "runtime/obj.rs OBJ_NAME_add/remove/cleanup invoke caller free callbacks while holding the registry mutex, matching the authority's own lock ordering; deferred with the file to a reentrancy boundary review"
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1575 passed / 0 failed / 26 ignored)",
+    "lib_test_threads_4": "PASS (1575 passed / 0 failed / 26 ignored; no secure-heap isolation failure on this run)",
+    "focused_tests": "PASS (rsa::object 15/0; ffc::params_generate 5/0)",
+    "affected_adversarial_probes": "M6-D2 targeted ASan control only; wider PSS-decoder and FFC probes NOT_RUN (BOUNDARY/SEAL)"
+  },
+  "boundary_control": {
+    "instrument": "docker/openssl-rs-asan.sh venue; nightly-2026-10-05; -Zsanitizer=address -Zbuild-std",
+    "fixed_source": "PASS (1 passed / 0 failed; detect_leaks=0 because the provider/object registries are process-lifetime allocations, not test residuals)",
+    "pre_fix_revert": "stack-buffer-overflow, WRITE of size 8, in generate_q_fips186_2 at src/ffc/params_generate.rs:832; test aborted (exit 1)",
+    "restoration": "fix restored byte-identically; fmt, clippy, focused tests and the ASan run pass again"
+  },
+  "deferred": [
+    {
+      "gate": "src/runtime/bio/iolib.rs (rank 71)",
+      "status": "NOT_RUN",
+      "reason": "BIO callback/reentrancy dispatch boundary",
+      "runs_at": "BOUNDARY (BIO reentrancy batch)"
+    },
+    {
+      "gate": "src/runtime/obj.rs (rank 74)",
+      "status": "NOT_RUN",
+      "reason": "OBJ_NAME destructor/comparator/do-all callback registry, including callbacks invoked under the registry mutex",
+      "runs_at": "BOUNDARY (callback/reentrancy batch)"
+    },
+    {
+      "gate": "independent boundary review of M6-D1 and M6-D2 and wider PSS-decoder replay",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "src/provider/file_store.rs (69), src/runtime/bio/bss_dgram_pair.rs (65), src/runtime/bio/bss_conn.rs (66)",
+      "status": "NOT_RUN",
+      "reason": "callback/ownership boundaries deferred from M5",
+      "runs_at": "BOUNDARY"
+    }
+  ],
+  "next_queue": {
+    "file": "src/ec/curve448.rs",
+    "rank_in_attribution": 77,
+    "unattributed_sites": 163,
+    "then": [
+      "src/cmp/cmp_genm.rs (78, 162)",
+      "src/srp/srp_vfy.rs (79, 161)",
+      "src/evp/e_aes.rs (80, 160)"
+    ]
+  }
+}

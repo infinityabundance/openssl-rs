@@ -397,6 +397,74 @@ records are also pending.
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M5.json`](atlas-refresh/mechanism-sweep-M5.json).
 
+## 3f. Mechanism-contract sweep M6 — 2026-10-18
+
+**Candidate:** `integrate/safe-c33` source HEAD `b43570606` (working tree; not
+committed). **Level:** FAST, then **BATCH** (including one targeted ASan
+boundary control for M6-D2).
+
+| file | rank | mechanisms | result |
+|---|---:|---|---|
+| `src/rsa/object.rs` | 68 | OB-3 `RawCtx`/`CtxDestroy`, refcount, member ownership, `set0` transactions | **M6-D1 (fixed): leak + stale reduction** |
+| `src/pkcs7/pk7_smime.rs` | 70 | OB-1 `OwnedBuf`, BIO chains, PKCS7/X509 stack ownership, FFI ABI | no defect |
+| `src/evp/kdf.rs` | 72 | OB-3 `OwnedCtx`, OB-1 `OwnedBuf` (cleansing), refcount, provider dispatch | no defect |
+| `src/evp/mac.rs` | 73 | OB-3 `OwnedCtx`, OB-1 `OwnedBuf`, refcount, provider dispatch | no defect; `D-MAC-DUPCTX-NULL-1` is the recorded safe divergence |
+| `src/ffc/params_generate.rs` | 75 | `SeedBuf`, `BN_CTX` pools, digest scratch extents, RNG paths, secret key material | **M6-D2 (fixed): stack-buffer-overflow** |
+| `src/ec/lib.rs` | 76 | local `OwnedCtx`/unsafe `CtxDestroy`, `OwnedBlock`, ex_data, method dispatch | no defect |
+
+**M6-D1 — `src/rsa/object.rs:638`, `:1513` (pre-fix).** The module
+documentation and `RSA_free`/`ossl_rsa_set0_pss_params` carried a D348-era
+reduction: `r->pss` was said to be unreachable because its only writer's only
+authority caller was an unlanded unit. The writer's caller chain has since
+landed (`src/rsa/backend.rs`'s `ossl_rsa_param_decode`, reached from the PKCS#8
+decoder rows in `src/provider/decode_der2key.rs`), so a live PSS key can carry
+`r->pss`. `RSA_free` then leaked the ASN.1 value, and `ossl_rsa_set0_pss_params`
+leaked a replaced value. Severity: **medium (resource leak; ownership
+obligation, not UB)**. Fix: restore both authority
+`RSA_PSS_PARAMS_free` calls. Witness:
+`rsa::object::tests::set0_pss_params_replaces_the_old_value_and_rsa_free_releases_it`
+(new) plus the 14 existing tests (15 passed / 0 failed).
+
+**M6-D2 — `src/ffc/params_generate.rs:791-792` (pre-fix).**
+`generate_q_fips186_2` declared its two digest scratch arrays as
+`[u8; SHA256_DIGEST_LENGTH]` (32 bytes), where the authority declares
+`unsigned char buf2[EVP_MAX_MD_SIZE]` and `md[EVP_MAX_MD_SIZE]` (64). The digest
+is caller-named through `OSSL_PKEY_PARAM_FFC_DIGEST` (including via
+`EVP_PKEY_fromdata`/paramgen), so `EVP_Digest` writes `EVP_MD_get_size(evpmd)`
+bytes — 64 for SHA-512 — into 32 bytes. Severity: **high (memory-safety; stack
+out-of-bounds write introduced by the transcription, reachable on the legacy
+186-2 generate/validate path)**. Fix: restore `EVP_MAX_MD_SIZE`, matching the
+authority. Witness:
+`ffc::params_generate::tests::the_186_2_q_generator_accepts_a_digest_wider_than_sha256`
+(new).
+
+**M6-D2 boundary control (ASan venue):** the new test passes on the fixed
+source (1 passed / 0 failed; leak detection disabled because the provider/object
+registries are deliberately process-lifetime allocations, not test residuals);
+the temporary pre-fix revert produced `stack-buffer-overflow` (`WRITE of size
+8`) in `generate_q_fips186_2` at `src/ffc/params_generate.rs:832` and the test
+aborted. The restored source is byte-identical to the recorded fix and passes
+again under ASan.
+
+**Skipped to a boundary batch (NOT_RUN):** `src/runtime/bio/iolib.rs`
+(rank 71) is the BIO callback/reentrancy dispatch layer; `src/runtime/obj.rs`
+(rank 74) is the `OBJ_NAME` callback registry (destructor/comparator/do-all
+callbacks, some invoked under the registry mutex). `src/provider/file_store.rs`
+(rank 69), `src/runtime/bio/bss_dgram_pair.rs` (65) and
+`src/runtime/bio/bss_conn.rs` (66) remain deferred from M5.
+
+**BATCH:** `cargo fmt --all -- --check` PASS; clippy `--all-targets -D warnings`
+PASS; library serial 1575 passed / 0 failed / 26 ignored; threaded run 1575
+passed / 0 failed / 26 ignored (no secure-heap isolation failure this time).
+Focused: `rsa::object::tests` 15/0, `ffc::params_generate::tests` 5/0.
+
+**Deferred / NOT_RUN:** independent boundary review of the fixed ownership
+sites and wider PSS-decoder replay (BOUNDARY); dependency-graph regeneration
+(BATCH checkpoint after commit); deterministic repeat of the threaded suite.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M6.json`](atlas-refresh/mechanism-sweep-M6.json).
+
 ## 4. Machine-readable index
 
 `atlas-refresh/perfile-index.json` mirrors table 3 as deterministic JSON:
