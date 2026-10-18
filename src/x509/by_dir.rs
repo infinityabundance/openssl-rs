@@ -72,6 +72,7 @@ use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -325,7 +326,9 @@ unsafe impl CtxDestroy for ByDir {
 unsafe extern "C" fn by_dir_hash_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a `BY_DIR_HASH` this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own release.
-    drop(unsafe { OwnedCtx::<ByDirHash>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_HASH) });
+    drop(unsafe {
+        OwnedCtx::<ByDirHash>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_FREE_HASH)
+    });
 }
 
 /// `static int by_dir_hash_cmp(const BY_DIR_HASH *const *a, const BY_DIR_HASH *const *b)` —
@@ -365,7 +368,7 @@ unsafe extern "C" fn by_dir_entry_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a `BY_DIR_ENTRY` this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own free body.
     drop(unsafe {
-        OwnedCtx::<ByDirEntry>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_ENTRY)
+        OwnedCtx::<ByDirEntry>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_FREE_ENTRY)
     });
 }
 
@@ -422,7 +425,7 @@ unsafe extern "C" fn free_dir(lu: *mut X509Lookup) {
     // SAFETY: `a` is this method's own record; reclaiming it runs `free_dir`'s destructor (the
     // directory list, the scratch buffer and the lock) and releases the block at the authority's own
     // `by_dir.c:163` site.
-    drop(unsafe { OwnedCtx::<ByDir>::from_raw_at(a, FILE.as_ptr(), LINE_FREE_DIR) });
+    drop(unsafe { OwnedCtx::<ByDir>::from_raw_at(a, SeamFile::new(FILE), LINE_FREE_DIR) });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -498,9 +501,9 @@ unsafe fn add_cert_dir(ctx: *mut ByDir, dir: *const c_char, type_: c_int) -> c_i
                 // SAFETY: the allocator answers NULL or a fresh block; every field is written
                 // before the validated transition below.
                 let Some(raw) = RawCtx::<ByDirEntry>::malloc_at(
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_MALLOC_ENTRY,
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_FREE_ENTRY,
                 ) else {
                     return 0;
@@ -738,9 +741,9 @@ unsafe extern "C" fn get_cert_by_subject_ex(
                     // SAFETY: the allocator answers NULL or a fresh block; both fields are
                     // written before the validated transition below.
                     let Some(raw) = RawCtx::<ByDirHash>::malloc_at(
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         LINE_MALLOC_HASH,
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         LINE_FREE_HASH,
                     ) else {
                         // SAFETY: `ctx->lock` is write-locked.

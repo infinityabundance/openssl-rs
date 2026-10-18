@@ -58,6 +58,7 @@ use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null,
@@ -356,7 +357,7 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
             // row's single block release at the authority's own `:119` site.
             // SAFETY: `method` is a live DYNAMIC row this module allocated and has not released.
             drop(unsafe {
-                OwnedCtx::<X509V3ExtMethod>::from_raw_at(method, FILE.as_ptr(), LINE_FREE)
+                OwnedCtx::<X509V3ExtMethod>::from_raw_at(method, SeamFile::new(FILE), LINE_FREE)
             });
         }
     }
@@ -537,9 +538,9 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
     // `:104` site, and a successful one gives the block up to the `ext_list`.
     // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
     let Some(raw) = RawCtx::<X509V3ExtMethod>::malloc_at(
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_MALLOC_ALIAS,
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_FREE_ALIAS,
     ) else {
         return 0;

@@ -121,6 +121,7 @@ use crate::evp::pkey_asn1::Engine;
 use crate::ffc::FfcParams;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::thread::CryptoRwlock;
 
@@ -360,6 +361,8 @@ pub struct DsaMethod {
 /// the two DH units. It reaches an application through `CRYPTO_set_mem_functions`, so it is part of
 /// the contract and `RT-DSA` compares it.
 const FILE_DSA_METH: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_meth.c".as_ptr();
+const FILE_DSA_METH_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/dsa/dsa_meth.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -484,7 +487,7 @@ pub unsafe extern "C" fn DSA_meth_new(name: *const c_char, flags: c_int) -> *mut
     let Some(name) = (unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(name, FILE_DSA_METH, LINE),
-            FILE_DSA_METH,
+            FILE_DSA_METH_SEAM,
             LINE,
         )
     }) else {
@@ -532,7 +535,7 @@ pub unsafe extern "C" fn DSA_meth_dup(dsam: *const DsaMethod) -> *mut DsaMethod 
     let Some(name) = (unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup((*dsam).name, FILE_DSA_METH, LINE),
-            FILE_DSA_METH,
+            FILE_DSA_METH_SEAM,
             LINE,
         )
     }) else {
@@ -570,7 +573,7 @@ pub unsafe extern "C" fn DSA_meth_set1_name(dsam: *mut DsaMethod, name: *const c
     let Some(new_name) = (unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(name, FILE_DSA_METH, LINE),
-            FILE_DSA_METH,
+            FILE_DSA_METH_SEAM,
             LINE,
         )
     }) else {
@@ -580,7 +583,7 @@ pub unsafe extern "C" fn DSA_meth_set1_name(dsam: *mut DsaMethod, name: *const c
     // SAFETY: `dsam` is a live table per the contract; its `name` is NULL or this file's own block.
     // The duplicate is made first and the old name released second, the authority's order.
     unsafe {
-        drop(OwnedStr::adopt((*dsam).name, FILE_DSA_METH, LINE));
+        drop(OwnedStr::adopt((*dsam).name, FILE_DSA_METH_SEAM, LINE));
         (*dsam).name = new_name.into_raw();
     }
     1

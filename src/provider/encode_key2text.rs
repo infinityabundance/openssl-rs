@@ -115,6 +115,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::{BIO_free, Bio};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_mgf1, NID_sha1, NID_undef, OBJ_nid2sn,
 };
@@ -684,7 +685,7 @@ unsafe extern "C" fn ec_to_text(out: *mut Bio, key: *const c_void, selection: c_
         // crate's allocator produced in full; this frame is its only owner.
         // SAFETY: `raw` is a live non-NULL block the crate's `CRYPTO_*` seam allocated in full
         // and this frame owns exclusively.
-        pub_buf = unsafe { OwnedBuf::adopt_plain(raw, ptr::null(), 0) };
+        pub_buf = unsafe { OwnedBuf::adopt_plain(raw, SeamFile::NULL, 0) };
     }
 
     let priv_ptr = priv_buf

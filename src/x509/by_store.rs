@@ -39,6 +39,7 @@ use core::ptr;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -339,7 +340,7 @@ unsafe extern "C" fn free_store_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a record this module allocated; `from_raw` reclaims it and `Drop`
     // runs the authority's own release.
     drop(unsafe {
-        OwnedCtx::<CachedStore>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_STORE)
+        OwnedCtx::<CachedStore>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_FREE_STORE)
     });
 }
 
@@ -389,9 +390,9 @@ unsafe extern "C" fn by_store_ctrl_ex(
                 // SAFETY: the allocator takes the file/line for its mdbg record only; a zeroed
                 // `CachedStore` is the authority's own `OPENSSL_zalloc` result.
                 let Some(store) = OwnedCtx::<CachedStore>::zalloc_at(
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_ZALLOC_STORE,
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_FREE_STORE,
                 ) else {
                     return 0;

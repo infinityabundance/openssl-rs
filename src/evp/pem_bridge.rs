@@ -120,6 +120,7 @@ use crate::runtime::ctype::ossl_ctype_check;
 use crate::runtime::ctype_table::mask::{MASK_BASE64, MASK_CNTRL};
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 use crate::runtime::str::OPENSSL_hexchar2int;
@@ -145,8 +146,10 @@ const TAILSTR: &[u8] = b"-----\n";
 
 /// `OPENSSL_FILE` at the allocation and free sites in `crypto/pem/pem_lib.c`.
 const FILE_PEM_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c".as_ptr();
+const FILE_PEM_LIB_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c");
 /// `OPENSSL_FILE` at the allocation site in `crypto/pem/pem_sign.c`.
-const FILE_PEM_SIGN: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_sign.c".as_ptr();
+const FILE_PEM_SIGN_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/pem/pem_sign.c");
 
 /// `ERR_R_EVP_LIB` — `err.h`'s `(ERR_LIB_EVP | ERR_RFLAG_COMMON)`, which is the reason
 /// `PEM_write_bio`'s single dynamic report carries on its first and fourth arms. Read from the
@@ -1306,9 +1309,9 @@ pub unsafe extern "C" fn PEM_write_bio(
     // authority's checked-multiply wrapper makes.
     let Some(buf_owner) = OwnedBuf::new_cleansed_released(
         (PEM_BUFSIZE as usize) * 8,
-        FILE_PEM_LIB,
+        FILE_PEM_LIB_SEAM,
         665,
-        FILE_PEM_LIB,
+        FILE_PEM_LIB_SEAM,
         699,
     ) else {
         // SAFETY: this frame's own context.
@@ -1439,9 +1442,13 @@ pub unsafe extern "C" fn PEM_SignFinal(
     // SAFETY: `pkey` is live per the contract.
     let size = unsafe { EVP_PKEY_get_size(pkey) };
     // SAFETY: the allocation validates its own argument; `size` is the key's signature length.
-    let Some(m_owner) =
-        OwnedBuf::new_plain_released(size as usize, FILE_PEM_SIGN, 35, FILE_PEM_SIGN, 47)
-    else {
+    let Some(m_owner) = OwnedBuf::new_plain_released(
+        size as usize,
+        FILE_PEM_SIGN_SEAM,
+        35,
+        FILE_PEM_SIGN_SEAM,
+        47,
+    ) else {
         return ret;
     };
     let m = m_owner.as_ptr();

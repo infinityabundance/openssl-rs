@@ -81,6 +81,7 @@ use crate::runtime::lhash::{
     OpenSslLhash,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::rdtsc::OPENSSL_rdtsc;
 use crate::runtime::sparse_array::{
     ossl_sa_doall, ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_num,
@@ -98,6 +99,7 @@ use crate::runtime::thread::{
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/property/property.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/property/property.c");
 
 /// `ossl_method_store_new`'s `OPENSSL_zalloc(sizeof(*res))` (line 247).
 const LINE_ZALLOC_STORE: c_int = 247;
@@ -1168,7 +1170,7 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 ptr::null_mut(),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_QUERY,
             ));
             ossl_property_unlock(store);
@@ -1205,7 +1207,7 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 ptr::null_mut(),
-                FILE,
+                FILE_SEAM,
                 LINE_MALLOC_QUERY,
             ));
             res = 0;
@@ -1215,12 +1217,12 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         // The cache entry is this frame's block, allocated through the crate's allocator seam at the
         // authority's own size/`file`/`line`; `Drop` is its single release, or `into_raw` hands it
         // to the table.
-        let Some(buf) = OwnedBuf::new(size, FILE, LINE_MALLOC_QUERY) else {
+        let Some(buf) = OwnedBuf::new(size, FILE_SEAM, LINE_MALLOC_QUERY) else {
             // The authority's error tail frees the still-NULL entry and reports 0.
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 ptr::null_mut(),
-                FILE,
+                FILE_SEAM,
                 LINE_MALLOC_QUERY,
             ));
             res = 0;

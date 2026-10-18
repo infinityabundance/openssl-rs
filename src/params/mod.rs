@@ -69,6 +69,7 @@ use crate::bn::bignum::BigNum;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::time::TimeT;
 
@@ -2288,7 +2289,7 @@ unsafe fn get_string_internal(
     if cur.is_null() {
         // `OPENSSL_malloc(alloc_sz)`, which is `CRYPTO_zalloc`'s sibling: the
         // authority uses malloc here, so the bytes are *not* zeroed.
-        let Some(fresh) = OwnedBuf::new(alloc_sz, FILE.as_ptr(), LINE) else {
+        let Some(fresh) = OwnedBuf::new(alloc_sz, SeamFile::new(FILE), LINE) else {
             return false;
         };
         cur = fresh.into_raw().cast();
@@ -2986,7 +2987,7 @@ pub(crate) unsafe fn ossl_param_get1_octet_string_from_param(
         drop(OwnedBuf::adopt_cleansed(
             *out,
             *out_len,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE,
         ));
         *out = buf.cast();
@@ -3122,7 +3123,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         // stays `sz` (zero)**, because the authority's `fin:` label writes `sz` and the early arm
         // jumps to it without changing it; a length of one here made `X963KDF` hash a stray zero
         // byte (D346).
-        let Some(z) = OwnedBuf::new_zeroed(1, FILE.as_ptr(), LINE) else {
+        let Some(z) = OwnedBuf::new_zeroed(1, SeamFile::new(FILE), LINE) else {
             return 0;
         };
         // SAFETY: `out`/`out_len` are writable and `*out` is releaseable.
@@ -3131,7 +3132,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
             drop(OwnedBuf::adopt_cleansed(
                 *out,
                 *out_len,
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE,
             ));
             *out = z.into_raw();
@@ -3139,7 +3140,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         }
         return 1;
     }
-    let Some(res) = OwnedBuf::new_zeroed_cleansed(sz, FILE.as_ptr(), LINE) else {
+    let Some(res) = OwnedBuf::new_zeroed_cleansed(sz, SeamFile::new(FILE), LINE) else {
         return 0;
     };
     // The concatenation is KDF material, so its release on the failure path and by the caller is
@@ -3158,7 +3159,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         drop(OwnedBuf::adopt_cleansed(
             *out,
             *out_len,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE,
         ));
         *out = res.into_raw();

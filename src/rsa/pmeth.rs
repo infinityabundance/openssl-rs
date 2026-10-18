@@ -85,6 +85,7 @@ use crate::runtime::constant_time::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_md2, NID_md4, NID_md5, NID_md5_sha1, NID_mdc2, NID_ripemd160, NID_sha1, NID_sha224,
     NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256, NID_sha3_384, NID_sha3_512, NID_sha512,
@@ -95,6 +96,7 @@ use crate::runtime::str::OPENSSL_hexstr2buf;
 
 /// `crypto/rsa/rsa_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c");
 
 /// `pkey_rsa_init`'s `OPENSSL_zalloc(sizeof(*rctx))` (`:64`).
 const LINE_ZALLOC_RCTX: c_int = 64;
@@ -298,7 +300,7 @@ unsafe extern "C" fn pkey_rsa_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx)
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*dctx).oaep_label,
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_OAEP_LABEL_COPY,
             ));
         }
@@ -335,8 +337,13 @@ unsafe fn setup_tbuf(ctx: *mut RsaPkeyCtx, pk: *mut EvpPkeyCtx) -> c_int {
     let size = unsafe { RSA_size(EVP_PKEY_get0_RSA((*pk).pkey)) };
     // `CRYPTO_malloc` is a safe entry point of this crate; the field takes the block over and the
     // authority's own plain `OPENSSL_free` releases it at `:128`.
-    match OwnedBuf::new_plain_released(size as usize, FILE, LINE_MALLOC_TBUF, FILE, LINE_FREE_TBUF)
-    {
+    match OwnedBuf::new_plain_released(
+        size as usize,
+        FILE_SEAM,
+        LINE_MALLOC_TBUF,
+        FILE_SEAM,
+        LINE_FREE_TBUF,
+    ) {
         Some(tbuf) => {
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).tbuf = tbuf.into_raw() };
@@ -1135,7 +1142,7 @@ unsafe extern "C" fn pkey_rsa_ctrl(
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                 drop(OwnedBuf::adopt_plain_nullable(
                     (*rctx).oaep_label,
-                    FILE,
+                    FILE_SEAM,
                     LINE_FREE_OAEP_LABEL_CTRL,
                 ));
                 if !p2.is_null() && p1 > 0 {
@@ -1352,7 +1359,7 @@ unsafe extern "C" fn pkey_rsa_ctrl_str(
         // SAFETY: `lab` is NULL or the block `OPENSSL_hexstr2buf` allocated through the crate's
         // seam; this frame owns it and no other owner releases it.
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        let lab = unsafe { OwnedBuf::adopt_plain_nullable(lab, FILE, LINE_FREE_LAB) };
+        let lab = unsafe { OwnedBuf::adopt_plain_nullable(lab, FILE_SEAM, LINE_FREE_LAB) };
         if lab.as_ptr().is_null() {
             return 0;
         }

@@ -65,6 +65,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 
 use super::FfcParams;
 use crate::ffc::{FFC_PARAM_FLAG_VALIDATE_PQG, FFC_UNVERIFIABLE_GINDEX};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -74,6 +75,8 @@ use crate::ffc::{FFC_PARAM_FLAG_VALIDATE_PQG, FFC_UNVERIFIABLE_GINDEX};
 /// `ossl_ffc_params_copy` both hand it to the allocator, so it is observable through
 /// `CRYPTO_set_mem_functions` once a DH caller reaches them.
 const FILE_FFC_PARAMS: *const c_char = c"../../src/openssl-3.6.4/crypto/ffc/ffc_params.c".as_ptr();
+const FILE_FFC_PARAMS_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/ffc/ffc_params.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -99,7 +102,7 @@ unsafe fn memdup(src: *const u8, len: usize) -> Option<OwnedBuf> {
         .cast::<c_uchar>();
     // SAFETY: `raw` is NULL or a live block the crate's `CRYPTO_*` seam allocated in full for
     // this duplicate and no other owner will release it.
-    unsafe { OwnedBuf::adopt_plain(raw, FILE_FFC_PARAMS, LINE) }
+    unsafe { OwnedBuf::adopt_plain(raw, FILE_FFC_PARAMS_SEAM, LINE) }
 }
 
 /// `void ossl_ffc_params_init(FFC_PARAMS *params)` — `crypto/ffc/ffc_params.c:20-26`.
@@ -157,7 +160,7 @@ pub(crate) unsafe fn ossl_ffc_params_cleanup(params: *mut FfcParams) {
         // or NULL, and no other owner will release it.
         drop(OwnedBuf::adopt_plain(
             (*params).seed.cast::<c_uchar>(),
-            FILE_FFC_PARAMS,
+            FILE_FFC_PARAMS_SEAM,
             LINE,
         ));
         ossl_ffc_params_init(params);
@@ -287,7 +290,7 @@ pub(crate) unsafe fn ossl_ffc_params_set_seed(
             // seam and no other owner will release it.
             drop(OwnedBuf::adopt_plain(
                 (*params).seed.cast::<c_uchar>(),
-                FILE_FFC_PARAMS,
+                FILE_FFC_PARAMS_SEAM,
                 LINE,
             ));
         }
@@ -563,7 +566,7 @@ pub(crate) unsafe fn ossl_ffc_params_copy(dst: *mut FfcParams, src: *const FfcPa
         // and no other owner will release it.
         drop(OwnedBuf::adopt_plain(
             (*dst).seed.cast::<c_uchar>(),
-            FILE_FFC_PARAMS,
+            FILE_FFC_PARAMS_SEAM,
             LINE,
         ));
         (*dst).seedlen = (*src).seedlen;

@@ -47,6 +47,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::CRYPTO_memcmp;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_obj2nid;
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -54,6 +55,9 @@ use crate::runtime::owned_buf::OwnedBuf;
 /// source-tree path with the build's relative prefix (D235).
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(
+    c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+);
 /// `ml_dsa_codecs.c:263`, the `end:` arm's `OPENSSL_free(fmt_slots)` in `ossl_ml_dsa_d2i_PKCS8`.
 const LINE_FREE_IN_SLOTS: c_int = 263;
 /// `ml_dsa_codecs.c:282`, `ossl_ml_dsa_i2d_pubkey`'s `OPENSSL_memdup(pk, params->pk_len)`.
@@ -671,7 +675,7 @@ pub(crate) unsafe fn ossl_ml_dsa_d2i_PKCS8(
     unsafe {
         drop(OwnedBuf::adopt_plain(
             slots.cast(),
-            FILE,
+            FILE_SEAM,
             LINE_FREE_IN_SLOTS,
         ));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
@@ -710,7 +714,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_pubkey(key: *const MlDsaKey, out: *mut *mut
     }
     // SAFETY: `pk` is readable for `pk_len` and the allocation is the authority's own.
     let Some(dup) =
-        (unsafe { OwnedBuf::new_memdup(pk.cast(), (*params).pk_len, FILE, LINE_MEMDUP_PUB) })
+        (unsafe { OwnedBuf::new_memdup(pk.cast(), (*params).pk_len, FILE_SEAM, LINE_MEMDUP_PUB) })
     else {
         return 0;
     };
@@ -817,9 +821,9 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
 
             let Some(b) = OwnedBuf::new_plain_released(
                 len as usize,
-                FILE,
+                FILE_SEAM,
                 LINE_MALLOC,
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_OUT_BUF,
             ) else {
                 break 'end;
@@ -904,7 +908,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
     }
 
     // SAFETY: `fmt_slots` is NULL or this frame's list.
-    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE, LINE_FREE_OUT_SLOTS) });
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE_SEAM, LINE_FREE_OUT_SLOTS) });
     // `buf` still holds the block only when it was not handed to the caller's `out`; its `Drop`
     // releases it at the authority's own `:405`.
     drop(buf);

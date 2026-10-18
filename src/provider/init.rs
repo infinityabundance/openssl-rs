@@ -70,10 +70,12 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_load_strings};
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::{CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_core.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/provider_core.c");
 
 // The provider-side dispatch ids `provider_init` looks for, from
 // `include/openssl/core_dispatch.h`'s 1024-series. Read from the header rather than derived
@@ -196,7 +198,7 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                     if dup.is_null() {
                         return 0;
                     }
-                    let owned = OwnedStr::adopt(dup, FILE, LINE_LOAD_DIR_FREE);
+                    let owned = OwnedStr::adopt(dup, FILE_SEAM, LINE_LOAD_DIR_FREE);
                     let ptr = owned
                         .as_ref()
                         .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
@@ -237,7 +239,7 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 // release at the authority's own free site.
                 let owned = unsafe {
                     let path = DSO_convert_filename(dso, (*prov).name);
-                    OwnedStr::adopt(path, FILE, LINE_ALLOCATED_PATH_FREE)
+                    OwnedStr::adopt(path, FILE_SEAM, LINE_ALLOCATED_PATH_FREE)
                 };
                 let ptr = owned
                     .as_ref()
@@ -253,7 +255,7 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 let merged = unsafe { DSO_merge(dso, module_path, load_dir) };
                 // SAFETY: `merged` is this call's fresh exclusive block from the seam; the
                 // handle's `Drop` is its single release at the authority's own free site.
-                merged_path = unsafe { OwnedStr::adopt(merged, FILE, LINE_MERGED_PATH_FREE) };
+                merged_path = unsafe { OwnedStr::adopt(merged, FILE_SEAM, LINE_MERGED_PATH_FREE) };
             }
             let merged_ptr = merged_path
                 .as_ref()
@@ -401,7 +403,7 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             // `Drop` is its single release at the authority's own free site.
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
             let Some(strings) = (unsafe {
-                OwnedBuf::adopt_plain(strings.cast::<c_uchar>(), FILE, LINE_REASON_STRINGS)
+                OwnedBuf::adopt_plain(strings.cast::<c_uchar>(), FILE_SEAM, LINE_REASON_STRINGS)
             }) else {
                 return 0;
             };

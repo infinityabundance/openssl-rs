@@ -76,6 +76,7 @@ use crate::runtime::ctype::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site_data;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort,
@@ -85,6 +86,8 @@ use crate::runtime::str::OPENSSL_strncasecmp;
 
 /// The authority's translation unit.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/property/property_parse.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/property/property_parse.c");
 
 /// `pd_free`'s `OPENSSL_free(pd)`.
 const LINE_FREE_PD: c_int = 302;
@@ -788,7 +791,7 @@ unsafe fn stack_to_property_list(ctx: *mut c_void, sk: *mut OpenSslStack) -> *mu
     let Some(r) = (unsafe {
         OwnedBuf::adopt_plain(
             CRYPTO_malloc(size, FILE, LINE_MALLOC_LIST).cast(),
-            FILE,
+            FILE_SEAM,
             LINE_FREE_LIST_DUP,
         )
     }) else {
@@ -858,7 +861,7 @@ pub(crate) unsafe fn ossl_parse_property(
                     LINE_MALLOC_PROP,
                 )
                 .cast(),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_PROP,
             );
             let Some(prop_ref) = prop.as_ref() else {
@@ -944,7 +947,7 @@ pub(crate) unsafe fn ossl_parse_query(
                     LINE_MALLOC_QPROP,
                 )
                 .cast(),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_QPROP,
             );
             let Some(prop_ref) = prop.as_ref() else {
@@ -1209,7 +1212,7 @@ pub(crate) unsafe fn ossl_property_merge(
     let Some(r) = (unsafe {
         OwnedBuf::adopt_plain(
             CRYPTO_malloc(size, FILE, LINE_MALLOC_MERGED).cast(),
-            FILE,
+            FILE_SEAM,
             LINE_FREE_LIST,
         )
     }) else {

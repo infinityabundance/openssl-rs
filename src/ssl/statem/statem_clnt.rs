@@ -60,6 +60,7 @@ use crate::packet::{
 use crate::rand::rand_lib::RAND_bytes;
 use crate::runtime::err::err_reasons::SSL_R_CERTIFICATE_VERIFY_FAILED;
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -2618,7 +2619,7 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
     // frame no longer writes a `CRYPTO_free` by hand.
     // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
-    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), core::ptr::null(), 0) })
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
     else {
         return 0;
     };

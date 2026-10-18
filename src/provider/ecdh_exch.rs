@@ -76,6 +76,7 @@ use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_KDF_NAME_X963KDF` — `core_names.h`, the name the X9.63 KDF is fetched by.
@@ -93,6 +94,8 @@ const PROV_ECDH_NAME_SIZE: usize = 80;
 
 /// The generated unit's own `__FILE__`.
 const FILE_ECDH_EXCH: *const c_char = c"providers/implementations/exchange/ecdh_exch.c".as_ptr();
+const FILE_ECDH_EXCH_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/exchange/ecdh_exch.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -261,7 +264,7 @@ unsafe extern "C" fn ecdh_freectx(vpecdhctx: *mut c_void) {
         drop(OwnedBuf::adopt_cleansed(
             (*pecdhctx).kdf_ukm.cast::<c_uchar>(),
             (*pecdhctx).kdf_ukmlen,
-            FILE_ECDH_EXCH,
+            FILE_ECDH_EXCH_SEAM,
             189,
         ));
 
@@ -335,7 +338,7 @@ unsafe extern "C" fn ecdh_dupctx(vpecdhctx: *mut c_void) -> *mut c_void {
                 )
                 .cast::<c_uchar>(),
                 (*srcctx).kdf_ukmlen,
-                FILE_ECDH_EXCH,
+                FILE_ECDH_EXCH_SEAM,
                 189,
             ) else {
                 ecdh_freectx(dstctx.cast());
@@ -551,11 +554,11 @@ unsafe extern "C" fn ecdh_set_ctx_params(
             // replacement is the helper's fresh block, handed to the field through a second handle.
             drop(OwnedBuf::adopt_plain(
                 (*pectx).kdf_ukm.cast::<c_uchar>(),
-                FILE_ECDH_EXCH,
+                FILE_ECDH_EXCH_SEAM,
                 350,
             ));
             (*pectx).kdf_ukm =
-                OwnedBuf::adopt_plain(tmp_ukm.cast::<c_uchar>(), FILE_ECDH_EXCH, 350)
+                OwnedBuf::adopt_plain(tmp_ukm.cast::<c_uchar>(), FILE_ECDH_EXCH_SEAM, 350)
                     .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*pectx).kdf_ukmlen = tmp_ukmlen;
         }
@@ -864,7 +867,8 @@ unsafe fn ecdh_X9_63_kdf_derive(
         }
         // The staging buffer is this frame's own secure-heap block; the handle cleanses and
         // releases it through the crate's allocator seam on every path below.
-        let Some(stmp_buf) = OwnedBuf::new_secure_cleansed(stmplen, FILE_ECDH_EXCH, 574) else {
+        let Some(stmp_buf) = OwnedBuf::new_secure_cleansed(stmplen, FILE_ECDH_EXCH_SEAM, 574)
+        else {
             return 0;
         };
         let stmp = stmp_buf.as_ptr().cast::<u8>();
@@ -944,7 +948,7 @@ unsafe extern "C" fn ecdh_derive_skey(
 
         // The secret is this frame's own block; the handle cleanses and releases it through the
         // crate's allocator seam on every path below.
-        let Some(secret) = OwnedBuf::new_cleansed(secretlen, FILE_ECDH_EXCH, 626) else {
+        let Some(secret) = OwnedBuf::new_cleansed(secretlen, FILE_ECDH_EXCH_SEAM, 626) else {
             return ptr::null_mut();
         };
 

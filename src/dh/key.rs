@@ -56,7 +56,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_ulong};
+use core::ffi::{c_int, c_uchar, c_ulong};
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
@@ -89,6 +89,7 @@ use super::{
     DH_FLAG_CACHE_MONT_P, DH_FLAG_FIPS_METHOD, DH_GENERATOR_2, DH_MIN_MODULUS_BITS,
     OPENSSL_DH_MAX_MODULUS_BITS,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`. The bit `ossl_dh_compute_key` and
 /// `ossl_dh_generate_public_key` set on the private key so the modular exponentiation below takes
@@ -105,7 +106,7 @@ const MIN_STRENGTH: c_int = 80;
 /// `../../src/openssl-3.6.4/` prefix — read out of the authority's own
 /// `build/.../crypto/dh/libcrypto-lib-dh_key.o`. It reaches an application through
 /// `CRYPTO_set_mem_functions`, so it is part of the contract and `RT-DH` compares it.
-const FILE_DH_KEY: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_key.c".as_ptr();
+const FILE_DH_KEY_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dh/dh_key.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -868,8 +869,13 @@ pub(crate) unsafe fn ossl_dh_key2buf(
             }
         } else {
             // The allocation's ownership is the local owner's until the transfer edge below.
-            pbuf_owner =
-                OwnedBuf::new_plain_released(p_size as usize, FILE_DH_KEY, LINE, FILE_DH_KEY, LINE);
+            pbuf_owner = OwnedBuf::new_plain_released(
+                p_size as usize,
+                FILE_DH_KEY_SEAM,
+                LINE,
+                FILE_DH_KEY_SEAM,
+                LINE,
+            );
             pbuf = match pbuf_owner.as_ref() {
                 Some(owner) => owner.as_ptr(),
                 None => ptr::null_mut(),

@@ -84,6 +84,7 @@ use crate::runtime::err::err_reasons::{
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_OCSP_sign, NID_anyExtendedKeyUsage, NID_authority_key_identifier,
     NID_basic_constraints, NID_certificate_policies, NID_client_auth, NID_code_sign,
@@ -667,7 +668,7 @@ unsafe extern "C" fn xptable_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a dynamic row this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own free body and block release.
     drop(unsafe {
-        OwnedCtx::<X509Purpose>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_XPFREE_P)
+        OwnedCtx::<X509Purpose>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_XPFREE_P)
     });
 }
 
@@ -934,12 +935,12 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
         unsafe {
             drop(OwnedStr::adopt(
                 (*ptmp).name,
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_ADD_FREE_NAME,
             ));
             drop(OwnedStr::adopt(
                 (*ptmp).sname,
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_ADD_FREE_SNAME,
             ));
         }
@@ -949,7 +950,7 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
     let dup_name = unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(name, FILE.as_ptr(), LINE_ADD_STRDUP_NAME),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_ADD_ERR_NAME,
         )
     };
@@ -957,7 +958,7 @@ pub unsafe extern "C" fn X509_PURPOSE_add(
     let dup_sname = unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(sname, FILE.as_ptr(), LINE_ADD_STRDUP_SNAME),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_ADD_ERR_SNAME,
         )
     };

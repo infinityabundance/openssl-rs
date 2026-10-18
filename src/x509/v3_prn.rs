@@ -46,6 +46,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::FILE;
 use crate::runtime::bio::{BIO_free, BIO_new_fp, Bio, BIO_NOCLOSE};
 use crate::runtime::conf::types::ConfValue;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier, OBJ_obj2nid};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
@@ -259,7 +260,8 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     if let Some(f) = i2s {
         // SAFETY: `method`/`ext_str` are the callback's contract; the result is the callback's
         // exclusively owned seam block (or NULL).
-        value = unsafe { OwnedStr::adopt(f(method, ext_str), FILE.as_ptr(), LINE_FREE_VALUE) };
+        value =
+            unsafe { OwnedStr::adopt(f(method, ext_str), SeamFile::new(FILE), LINE_FREE_VALUE) };
         if let Some(v) = value.as_ref() {
             // SAFETY: `out` is live; `v` is NUL-terminated.
             unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), v.as_ptr()) };

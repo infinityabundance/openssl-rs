@@ -56,6 +56,7 @@ use crate::runtime::bio::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_aes_128_cbc, NID_aes_192_cbc, NID_aes_256_cbc, NID_des_cbc, NID_des_ede3_cbc,
     NID_id_Gost28147_89, NID_id_GostR3411_2012_256, NID_id_GostR3411_2012_512, NID_id_GostR3411_94,
@@ -640,7 +641,7 @@ pub unsafe extern "C" fn PKCS7_verify(
     // The copy buffer is this frame's scratch, allocated through the crate's allocator seam at
     // `BUFFERSIZE` and owned by `buf`: every exit below releases it on drop.
     // SAFETY: `BUFFERSIZE > 0`.
-    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, FILE.as_ptr(), 320) else {
+    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, SeamFile::new(FILE), 320) else {
         // SAFETY: owned here.
         unsafe {
             if text {
@@ -964,7 +965,7 @@ pub unsafe extern "C" fn PKCS7_decrypt(
     // The copy buffer is this frame's scratch, allocated through the crate's allocator seam at
     // `BUFFERSIZE` and owned by `buf`: every exit below releases it on drop.
     // SAFETY: `BUFFERSIZE > 0`.
-    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, FILE.as_ptr(), 525) else {
+    let Some(buf) = OwnedBuf::new(BUFFERSIZE as usize, SeamFile::new(FILE), 525) else {
         // SAFETY: `tmpmem` is live and owned here.
         unsafe { BIO_free_all(tmpmem) };
         return 0;

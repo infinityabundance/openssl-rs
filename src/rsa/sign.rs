@@ -32,7 +32,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint};
+use core::ffi::{c_int, c_long, c_uchar, c_uint};
 
 use crate::asn1::layout::Asn1String;
 use crate::asn1::string::ASN1_OCTET_STRING_free;
@@ -52,6 +52,7 @@ use crate::runtime::obj::{
 use crate::evp::pkey_ctx::RSA_PKCS1_PADDING;
 use crate::rsa::object::{RSA_private_encrypt, RSA_public_decrypt, RSA_size};
 use crate::rsa::{Rsa, RSA_PKCS1_PADDING_SIZE};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
@@ -60,7 +61,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 /// `../../src/openssl-3.6.4/` prefix — measured with `strings` on
 /// `build/.../crypto/rsa/libcrypto-lib-rsa_sign.o`, the same check D279/D280 applied to the cipher
 /// units. `RSA_sign`'s `encode_pkcs1` buffer and `ossl_rsa_verify`'s two are attributed here.
-const FILE_SIGN: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c".as_ptr();
+const FILE_SIGN_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -387,7 +388,7 @@ unsafe fn encode_pkcs1(type_: c_int, m: *const c_uchar, m_len: usize) -> Option<
         }
         let dig_info_len = di_prefix_len + m_len;
         // SAFETY: `dig_info_len > 0` because `di_prefix_len >= 1`.
-        let dig_info = OwnedBuf::new_cleansed(dig_info_len, FILE_SIGN, LINE)?;
+        let dig_info = OwnedBuf::new_cleansed(dig_info_len, FILE_SIGN_SEAM, LINE)?;
         // SAFETY: `dig_info` is writable for `dig_info_len` bytes, `di_prefix` is readable for
         // `di_prefix_len` and `m` for `m_len`.
         core::ptr::copy_nonoverlapping(di_prefix, dig_info.as_ptr(), di_prefix_len);
@@ -542,7 +543,7 @@ pub(crate) unsafe fn ossl_rsa_verify(
         // It is declared before the body, so its release is the last of the call -- after the
         // `encode_pkcs1` buffer's -- which is the authority's own order.
         // SAFETY: `siglen == RSA_size(rsa)`, which is positive.
-        let decrypt_buf = OwnedBuf::new_cleansed(siglen, FILE_SIGN, LINE);
+        let decrypt_buf = OwnedBuf::new_cleansed(siglen, FILE_SIGN_SEAM, LINE);
 
         'body: {
             // Recover the encoded digest. A NULL allocation is the authority's first `goto err`.
@@ -761,7 +762,7 @@ pub unsafe extern "C" fn RSA_sign_ASN1_OCTET_STRING(
             return 0;
         }
         // SAFETY: `j > RSA_PKCS1_PADDING_SIZE` was checked above, so `j + 1 > 0`.
-        let Some(s) = OwnedBuf::new_cleansed((j as usize) + 1, FILE_SIGN, LINE) else {
+        let Some(s) = OwnedBuf::new_cleansed((j as usize) + 1, FILE_SIGN_SEAM, LINE) else {
             return 0;
         };
         let mut p = s.as_ptr();
@@ -831,7 +832,7 @@ pub unsafe extern "C" fn RSA_verify_ASN1_OCTET_STRING(
 
         'body: {
             // SAFETY: `siglen == RSA_size(rsa)`, which is positive.
-            let Some(buf) = OwnedBuf::new_cleansed(siglen as usize, FILE_SIGN, LINE) else {
+            let Some(buf) = OwnedBuf::new_cleansed(siglen as usize, FILE_SIGN_SEAM, LINE) else {
                 break 'body;
             };
             let s_ptr = buf.as_ptr();

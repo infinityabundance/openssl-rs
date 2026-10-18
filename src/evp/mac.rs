@@ -95,6 +95,7 @@ use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_OP_MAC` — `include/openssl/core_dispatch.h`. The third operation the walk visits, and
@@ -103,6 +104,7 @@ const OSSL_OP_MAC: c_int = 3;
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c");
 /// `evp_mac_new`'s `OPENSSL_zalloc(sizeof(*mac))` (line 49), in `mac_meth.c`.
 const LINE_ZALLOC_MAC: c_int = 49;
 /// `evp_mac_free`'s `OPENSSL_free(mac)`, in `mac_meth.c`.
@@ -926,9 +928,11 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     // The duplicate is this frame's block, allocated through the crate's allocator seam at the
     // authority's own size/`file`/`line`; `Drop` releases it on the failure tail and `into_raw`
     // hands it to the caller on success.
-    let Some(mut dst_buf) =
-        OwnedBuf::new(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_MALLOC_CTX_DUP)
-    else {
+    let Some(mut dst_buf) = OwnedBuf::new(
+        core::mem::size_of::<EvpMacCtx>(),
+        FILE_SEAM,
+        LINE_MALLOC_CTX_DUP,
+    ) else {
         return ptr::null_mut();
     };
     let dst = dst_buf.as_ptr().cast::<EvpMacCtx>();
@@ -1391,7 +1395,7 @@ pub unsafe extern "C" fn EVP_Q_mac(
             // The output buffer is this frame's block, allocated through the crate's allocator seam
             // at the authority's own size/`file`/`line`; `Drop` releases it if the final refuses
             // and `into_raw` hands it to the caller on success.
-            if let Some(mut buf) = OwnedBuf::new(len, FILE, LINE_MALLOC_Q_MAC) {
+            if let Some(mut buf) = OwnedBuf::new(len, FILE_SEAM, LINE_MALLOC_Q_MAC) {
                 // SAFETY: `buf` is the block just allocated, or NULL, and `ctx` is live.
                 if unsafe { EVP_MAC_final(ctx, buf.as_ptr(), ptr::null_mut(), len) } == 0 {
                     // The authority releases the half-filled block at its own site, `:301`.

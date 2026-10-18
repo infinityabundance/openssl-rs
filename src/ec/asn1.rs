@@ -102,6 +102,7 @@ use crate::ec::{EcGroup, EcKey, EcPoint, EcdsaSig};
 use crate::evp::pkey_ctx::{OPENSSL_EC_EXPLICIT_CURVE, OPENSSL_EC_NAMED_CURVE};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_X9_62_characteristic_two_field, NID_X9_62_onBasis, NID_X9_62_ppBasis,
     NID_X9_62_prime_field, NID_X9_62_tpBasis, NID_sm2, NID_undef, OBJ_length, OBJ_nid2obj,
@@ -118,6 +119,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 /// below is part of the recorded substitution rather than the authority's own. The parameter
 /// family's own allocations are attributed to the authority's line at each site.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c");
 
 /// The line the ECDSA encoder's one allocation is attributed to — `i2d_ECDSA_SIG`'s body.
 const LINE: c_int = 1231;
@@ -1461,8 +1463,8 @@ unsafe fn ec_asn1_group2curve(group: *const EcGroup, curve: *mut X9_62Curve) -> 
 
             // Per SEC 1 the coefficients are padded up to the field's octet width.
             len = (EC_GROUP_get_degree(group) + 7) / 8;
-            a_buf = OwnedBuf::new_plain_released(len as usize, FILE, 328, FILE, 365);
-            b_buf = OwnedBuf::new_plain_released(len as usize, FILE, 329, FILE, 366);
+            a_buf = OwnedBuf::new_plain_released(len as usize, FILE_SEAM, 328, FILE_SEAM, 365);
+            b_buf = OwnedBuf::new_plain_released(len as usize, FILE_SEAM, 329, FILE_SEAM, 366);
             let (Some(a), Some(b)) = (a_buf.as_ref(), b_buf.as_ref()) else {
                 // The authority raises nothing on this arm; the outer caller does.
                 break 'err;
@@ -1568,7 +1570,7 @@ pub unsafe extern "C" fn EC_GROUP_get_ecparameters(
             }
             // SAFETY: `EC_POINT_point2buf` allocated `buffer` through the seam and no other owner
             // holds it; its release is the authority's own `(FILE, 420)`.
-            let Some(buffer) = OwnedBuf::adopt_plain(buffer, FILE, 420) else {
+            let Some(buffer) = OwnedBuf::adopt_plain(buffer, FILE_SEAM, 420) else {
                 // A non-zero `len` from `EC_POINT_point2buf` implies a live block.
                 raise_site(&err_sites::EC_ASN1_416);
                 break 'err;
@@ -1852,7 +1854,7 @@ pub unsafe extern "C" fn EC_GROUP_new_from_ecparameters(
                 // it. A NULL seed is the authority's own no-op `free(NULL)`.
                 drop(OwnedBuf::adopt_plain(
                     (*ret).seed.cast::<c_uchar>(),
-                    FILE,
+                    FILE_SEAM,
                     687,
                 ));
                 (*ret).seed = CRYPTO_malloc((*(*(*params).curve).seed).length as usize, FILE, 688)
@@ -2339,9 +2341,9 @@ pub unsafe extern "C" fn i2d_ECPrivateKey(a: *const EcKey, out: *mut *mut c_ucha
         // SAFETY: `priv_` is NULL or a live secret block this call allocated through the seam
         // (`EC_KEY_priv2buf`) and, on the transfer path, has already been given up (`priv_` was
         // reset); its release is the authority's own cleansing one at `(FILE, 1070)`.
-        drop(OwnedBuf::adopt_cleansed(priv_, privlen, FILE, 1070));
+        drop(OwnedBuf::adopt_cleansed(priv_, privlen, FILE_SEAM, 1070));
         // SAFETY: as above for the public-key block, with the authority's own plain `(FILE, 1071)`.
-        drop(OwnedBuf::adopt_plain(pub_, FILE, 1071));
+        drop(OwnedBuf::adopt_plain(pub_, FILE_SEAM, 1071));
         EC_PRIVATEKEY_free(priv_key);
         if ok != 0 {
             ret
@@ -2432,7 +2434,7 @@ pub unsafe extern "C" fn i2o_ECPublicKey(a: *const EcKey, out: *mut *mut c_uchar
             if new_buffer != 0 {
                 // SAFETY: `*out` is the block `CRYPTO_malloc` allocated above, no other owner holds
                 // it, and its release is the authority's own `(FILE, 1172)`.
-                drop(OwnedBuf::adopt_plain(*out, FILE, 1172));
+                drop(OwnedBuf::adopt_plain(*out, FILE_SEAM, 1172));
                 *out = ptr::null_mut();
             }
             return 0;

@@ -98,6 +98,7 @@ use crate::runtime::ctype::ossl_isspace;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::lhash::OpenSslLhash;
 use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn, OBJ_sn2nid, OBJ_txt2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
@@ -600,8 +601,9 @@ unsafe fn do_ext_i2d(
     // The DER block, owned: `Drop` is the authority's own `CRYPTO_free(ext_der)` at its `err:`
     // site (`:184`).
     // SAFETY: the seed value is NULL, the empty block `adopt_plain_nullable` documents.
-    let mut ext_der =
-        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_DER) };
+    let mut ext_der = unsafe {
+        OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), LINE_FREE_DER)
+    };
     let mut ext_oct: *mut Asn1String = ptr::null_mut();
 
     /* Convert internal representation to DER. */
@@ -616,7 +618,11 @@ unsafe fn do_ext_i2d(
         let len = unsafe { ASN1_item_i2d(ext_struc, &raw mut raw, it()) };
         // SAFETY: `raw` is this call's own block or NULL, from the crate's `CRYPTO_*` seam.
         ext_der = unsafe {
-            OwnedBuf::adopt_plain_nullable(raw.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER)
+            OwnedBuf::adopt_plain_nullable(
+                raw.cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                LINE_FREE_DER,
+            )
         };
         if len < 0 {
             // SAFETY: the site is a declared constant.
@@ -648,7 +654,11 @@ unsafe fn do_ext_i2d(
         // SAFETY: `buf` is a fresh block of `len` bytes this call owns from the crate's
         // `CRYPTO_*` seam.
         ext_der = unsafe {
-            OwnedBuf::adopt_plain_nullable(buf.cast::<c_uchar>(), FILE.as_ptr(), LINE_FREE_DER)
+            OwnedBuf::adopt_plain_nullable(
+                buf.cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                LINE_FREE_DER,
+            )
         };
         let mut p = buf;
         if let Some(f) = i2d {
@@ -671,7 +681,8 @@ unsafe fn do_ext_i2d(
         (*ext_oct).data = ext_der.into_raw();
         // The owner is empty again so its `Drop` still emits the authority's own no-op
         // `CRYPTO_free(NULL, FILE, LINE_FREE_DER)` on the remaining paths.
-        ext_der = OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_DER);
+        ext_der =
+            OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), LINE_FREE_DER);
         (*ext_oct).length = ext_len;
     }
 
@@ -868,7 +879,7 @@ unsafe fn v3_generic_extension(
     // site (`:276`).
     // SAFETY: the seed value is NULL, the empty block `adopt_plain_nullable` documents.
     let mut ext_der = unsafe {
-        OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_GENERIC_DER)
+        OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), LINE_FREE_GENERIC_DER)
     };
     let mut ext_len: c_long = 0;
     let mut oct: *mut Asn1String = ptr::null_mut();
@@ -898,7 +909,7 @@ unsafe fn v3_generic_extension(
         ext_der = unsafe {
             OwnedBuf::adopt_plain_nullable(
                 OPENSSL_hexstr2buf(value, &raw mut ext_len).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_FREE_GENERIC_DER,
             )
         };
@@ -908,7 +919,7 @@ unsafe fn v3_generic_extension(
         ext_der = unsafe {
             OwnedBuf::adopt_plain_nullable(
                 generic_asn1(value, ctx, &raw mut ext_len).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_FREE_GENERIC_DER,
             )
         };
@@ -949,8 +960,11 @@ unsafe fn v3_generic_extension(
         (*oct).data = ext_der.into_raw();
         // The owner is empty again so its `Drop` still emits the authority's own no-op
         // `CRYPTO_free(NULL, FILE, LINE_FREE_GENERIC_DER)` at the tail.
-        ext_der =
-            OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_GENERIC_DER);
+        ext_der = OwnedBuf::adopt_plain_nullable(
+            ptr::null_mut(),
+            SeamFile::new(FILE),
+            LINE_FREE_GENERIC_DER,
+        );
         (*oct).length = ext_len as c_int;
     }
 

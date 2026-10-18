@@ -115,6 +115,7 @@ use crate::evp::rand::{
     OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS, OSSL_FUNC_RAND_SET_CTX_PARAMS,
     OSSL_FUNC_RAND_UNINSTANTIATE, OSSL_FUNC_RAND_UNLOCK, OSSL_FUNC_RAND_VERIFY_ZEROIZATION,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_OP_RAND` — `include/openssl/core_dispatch.h`.
 const OSSL_OP_RAND: c_int = 5;
@@ -232,13 +233,13 @@ unsafe impl CtxDestroy for ProvTestRng {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*ptr).entropy,
-                FILE_TEST_RNG,
+                FILE_TEST_RNG_SEAM,
                 LINE_TEST_RNG_FREE_ENTROPY,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*ptr).nonce,
-                FILE_TEST_RNG,
+                FILE_TEST_RNG_SEAM,
                 LINE_TEST_RNG_FREE_NONCE,
             ));
             CRYPTO_THREAD_lock_free((*ptr).lock);
@@ -687,6 +688,7 @@ pub(crate) static ossl_seed_src_functions: [OsslDispatch; 15] = [
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
 const FILE_TEST_RNG: *const c_char = c"providers/implementations/rands/test_rng.c".as_ptr();
+const FILE_TEST_RNG_SEAM: SeamFile = SeamFile::new(c"providers/implementations/rands/test_rng.c");
 /// `test_rng_new`'s `OPENSSL_zalloc(sizeof(*t))` (generated line 64).
 const LINE_TEST_RNG_ZALLOC: c_int = 64;
 /// `test_rng_free`'s `OPENSSL_free(t->entropy)` (generated line 80).
@@ -1092,7 +1094,7 @@ unsafe extern "C" fn test_rng_set_ctx_params(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*t).entropy,
-                FILE_TEST_RNG,
+                FILE_TEST_RNG_SEAM,
                 LINE_TEST_RNG_SET_FREE_ENTROPY,
             ));
             (*t).entropy = ptr.cast::<c_uchar>();
@@ -1110,7 +1112,7 @@ unsafe extern "C" fn test_rng_set_ctx_params(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*t).nonce,
-                FILE_TEST_RNG,
+                FILE_TEST_RNG_SEAM,
                 LINE_TEST_RNG_SET_FREE_NONCE,
             ));
             (*t).nonce = ptr.cast::<c_uchar>();

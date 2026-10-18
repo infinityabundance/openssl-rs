@@ -29,7 +29,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use crate::runtime::owned_buf::OwnedBuf;
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_int, c_uint, c_void};
 use core::mem::size_of;
 use core::ptr::{self, null_mut};
 
@@ -43,6 +43,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ASYNC};
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_reserve, OPENSSL_sk_pop, OPENSSL_sk_push, OpenSslStack,
 };
@@ -53,7 +54,7 @@ use crate::runtime::threads_common::{
 };
 
 /// The authority's `OPENSSL_FILE` for this unit.
-const FILE: *const c_char = c"crypto/async/async.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/async/async.c");
 /// `async_ctx_new`'s `OPENSSL_malloc(sizeof(*nctx))` (`:40`).
 const LINE_CTX: c_int = 40;
 /// `async_ctx_new`'s failure free and `async_ctx_free`'s `OPENSSL_free(ctx)` (`:53`, `:74`).
@@ -151,7 +152,7 @@ unsafe fn async_ctx_new() -> *mut AsyncCtx {
 
     // The context block is this frame's own; its handle's `Drop` is the single release of every
     // failure path below. Ownership moves to the caller on success.
-    let Some(nctx_buf) = OwnedBuf::new(size_of::<AsyncCtx>(), FILE, LINE_CTX) else {
+    let Some(nctx_buf) = OwnedBuf::new(size_of::<AsyncCtx>(), FILE_SEAM, LINE_CTX) else {
         return null_mut();
     };
     let nctx = nctx_buf.as_ptr().cast::<AsyncCtx>();
@@ -227,7 +228,7 @@ unsafe fn async_ctx_free() -> c_int {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 ctx.cast(),
-                FILE,
+                FILE_SEAM,
                 LINE_CTX_FREE,
             ));
         }
@@ -242,7 +243,7 @@ unsafe fn async_ctx_free() -> c_int {
 unsafe fn async_job_new() -> *mut AsyncJob {
     // The job block is this frame's own; its handle's `Drop` is the single release of the failure
     // path below. Ownership moves to the caller on success.
-    let Some(job_buf) = OwnedBuf::new_zeroed(size_of::<AsyncJob>(), FILE, LINE_JOB_NEW) else {
+    let Some(job_buf) = OwnedBuf::new_zeroed(size_of::<AsyncJob>(), FILE_SEAM, LINE_JOB_NEW) else {
         return null_mut();
     };
     let job = job_buf.as_ptr().cast::<AsyncJob>();
@@ -274,14 +275,14 @@ unsafe fn async_job_free(job: *mut AsyncJob) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*job).funcargs.cast(),
-            FILE,
+            FILE_SEAM,
             LINE_JOB_FREEARGS,
         ));
         async_fibre_release((*job).fibre);
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             job.cast(),
-            FILE,
+            FILE_SEAM,
             LINE_JOB_FREE,
         ));
     }
@@ -353,7 +354,7 @@ unsafe fn async_release_job(job: *mut AsyncJob) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*job).funcargs.cast(),
-            FILE,
+            FILE_SEAM,
             LINE_JOB_FREEARGS,
         ));
         (*job).funcargs = null_mut();
@@ -526,7 +527,7 @@ pub unsafe extern "C" fn ASYNC_start_job(
             }
             if !args.is_null() && size > 0 {
                 // The copied argument block is the job's own; `into_raw` hands it to `funcargs`.
-                let Some(funcargs) = OwnedBuf::new(size, FILE, LINE_JOB_ARGS) else {
+                let Some(funcargs) = OwnedBuf::new(size, FILE_SEAM, LINE_JOB_ARGS) else {
                     // SAFETY: `fresh` and `ctx` are live.
                     unsafe {
                         async_release_job(fresh);
@@ -659,7 +660,8 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         }
         // The pool block is this frame's own; its handle's `Drop` is the single release of every
         // failure path below. Ownership moves to this thread's local store on success.
-        let Some(pool_buf) = OwnedBuf::new_zeroed(size_of::<AsyncPool>(), FILE, LINE_POOL) else {
+        let Some(pool_buf) = OwnedBuf::new_zeroed(size_of::<AsyncPool>(), FILE_SEAM, LINE_POOL)
+        else {
             return 0;
         };
         let pool = pool_buf.as_ptr().cast::<AsyncPool>();
@@ -740,7 +742,7 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 pool.cast(),
-                FILE,
+                FILE_SEAM,
                 LINE_POOL_FREE,
             ));
             CRYPTO_THREAD_set_local_ex(

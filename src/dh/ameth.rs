@@ -72,6 +72,7 @@ use crate::params::OsslParam;
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_nid2obj;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param};
@@ -88,7 +89,7 @@ const DH_FLAG_TYPE_DH: c_int = 0x0000;
 const DH_FLAG_TYPE_DHX: c_int = 0x1000;
 /// The authority's translation unit, for the two `OPENSSL_free`/`OPENSSL_clear_free` sites below
 /// whose authority marks are recorded against it.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c");
 
 /// `static DH *d2i_dhp(const EVP_PKEY *pkey, const unsigned char **pp, long length)` —
 /// `crypto/dh/dh_ameth.c:34-46`.
@@ -264,7 +265,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is NULL and `str_` is NULL on this path.
         unsafe {
-            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
+            drop(OwnedBuf::adopt_plain(penc, FILE_SEAM, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -278,7 +279,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is the buffer `enc` bytes long and `str_` is live.
         unsafe {
-            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
+            drop(OwnedBuf::adopt_plain(penc, FILE_SEAM, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -291,7 +292,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: both are live.
         unsafe {
-            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
+            drop(OwnedBuf::adopt_plain(penc, FILE_SEAM, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -309,7 +310,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
         // goto err
         // SAFETY: `penc` is the buffer `enc` bytes long and `str_` is live.
         unsafe {
-            drop(OwnedBuf::adopt_plain(penc, FILE, 152));
+            drop(OwnedBuf::adopt_plain(penc, FILE_SEAM, 152));
             ASN1_STRING_free(str_);
         }
         return 0;
@@ -333,7 +334,7 @@ unsafe extern "C" fn dh_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) ->
 
     // SAFETY: no failure arm is reachable past the setter's own refusal.
     unsafe {
-        drop(OwnedBuf::adopt_plain(penc, FILE, 152));
+        drop(OwnedBuf::adopt_plain(penc, FILE_SEAM, 152));
         ASN1_STRING_free(str_);
     }
     0
@@ -446,7 +447,7 @@ unsafe extern "C" fn dh_priv_encode(
     } == 0
     {
         // SAFETY: `dp` is the buffer `dplen` long.
-        drop(unsafe { OwnedBuf::adopt_cleansed(dp, dplen as usize, FILE, 217) });
+        drop(unsafe { OwnedBuf::adopt_cleansed(dp, dplen as usize, FILE_SEAM, 217) });
         // goto err
         // SAFETY: `params` is live.
         unsafe { ASN1_STRING_free(params) };

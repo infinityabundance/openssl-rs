@@ -31,6 +31,7 @@ use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_authority_key_identifier, NID_ct_precert_poison, NID_ct_precert_scts,
 };
@@ -121,7 +122,7 @@ unsafe impl CtxDestroy for SctCtx {
 ///
 /// `libctx` is NULL or a live library context; `propq` is NULL or NUL-terminated.
 pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *mut SctCtx {
-    let Some(sctx) = OwnedCtx::<SctCtx>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
+    let Some(sctx) = OwnedCtx::<SctCtx>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return ptr::null_mut();
     };
     // SAFETY: `sctx.as_ptr()` is a fresh zeroed record; `libctx` is a pointer value.
@@ -129,7 +130,7 @@ pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
         // The authority frees the block alone when the duplicate fails; the handle's `Drop` is that
         // same release over the still-NULL members (its free body's own all-empty free).
         let Some(propq_copy) = propq_copy else {
@@ -150,7 +151,7 @@ pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *
 pub(crate) unsafe fn SCT_CTX_free(sctx: *mut SctCtx) {
     // SAFETY: `sctx` is NULL or a live `SCT_CTX` this crate owns and that is not used afterwards;
     // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
-    drop(unsafe { OwnedCtx::<SctCtx>::from_raw_at(sctx, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<SctCtx>::from_raw_at(sctx, SeamFile::NULL, 0) });
 }
 
 /// `static int ct_x509_get_ext(X509 *cert, int nid, int *is_duplicated)` —
@@ -287,7 +288,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             certderlen = unsafe { i2d_X509(cert, &mut der) };
             // The encoder's block is owned from here; `Drop` is the authority's `err:` release.
             // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-            certder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
+            certder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
             if certderlen < 0 {
                 break 'blk;
             }
@@ -323,7 +324,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             // SAFETY: `pretmp` is live; `der` is an out-slot.
             prederlen = unsafe { i2d_re_X509_tbs(pretmp, &mut der) };
             // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-            preder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
+            preder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
             if prederlen <= 0 {
                 break 'blk;
             }
@@ -341,7 +342,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*sctx).certder,
-                ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             (*sctx).certder = certder_owner
@@ -352,7 +353,7 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*sctx).preder,
-                ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             (*sctx).preder = preder_owner
@@ -429,7 +430,7 @@ unsafe fn ct_public_key_hash(
         // SAFETY: `pkey` is live per the contract; `der` is an out-slot.
         let der_len = unsafe { i2d_X509_PUBKEY(pkey, &mut der) };
         // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
-        der_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) });
+        der_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
         if der_len <= 0 {
             break 'blk;
         }

@@ -63,6 +63,7 @@ use super::cms_sd::{
     ossl_cms_SignerIdentifier_cert_cmp, ossl_cms_SignerIdentifier_get0_signer_id,
     ossl_cms_set1_SignerIdentifier,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_ENVELOPED_STANDARD` — `cms_env.c:33`.
 const CMS_ENVELOPED_STANDARD: c_int = 1;
@@ -1111,7 +1112,7 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
     // The encrypted key is this frame's scratch, allocated through the crate's allocator seam at
     // `eklen` and owned by `ek` -- the failure paths below release what they built on drop.
     // SAFETY: `eklen > 0`.
-    let Some(ek) = OwnedBuf::new(eklen, c"cms_env.c".as_ptr(), 568) else {
+    let Some(ek) = OwnedBuf::new(eklen, SeamFile::new(c"cms_env.c"), 568) else {
         // SAFETY: `pctx` is live.
         unsafe { EVP_PKEY_CTX_free(pctx) };
         return ret;
@@ -1293,7 +1294,7 @@ unsafe fn cms_RecipientInfo_ktri_decrypt(
     // The decrypted key is the helper's own `CRYPTO_malloc` block; `ek_owned` adopts it, so the
     // success path hands it to `ec.key` and any later exit releases what it built.
     // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns.
-    let ek_owned = unsafe { OwnedBuf::adopt_plain_nullable(ek, c"cms_env.c".as_ptr(), 663) };
+    let ek_owned = unsafe { OwnedBuf::adopt_plain_nullable(ek, SeamFile::new(c"cms_env.c"), 663) };
 
     ret = 1;
 
@@ -1679,7 +1680,7 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
     // `alloc` bytes and owned by `wkey` -- the failure paths below release what they built on
     // drop.
     // SAFETY: `alloc > 0`.
-    let Some(wkey) = OwnedBuf::new(alloc, c"cms_env.c".as_ptr(), 912) else {
+    let Some(wkey) = OwnedBuf::new(alloc, SeamFile::new(c"cms_env.c"), 912) else {
         // SAFETY: `cipher`/`ctx` are NULL or owned.
         unsafe {
             EVP_CIPHER_free(cipher);
@@ -1854,9 +1855,9 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
     // SAFETY: `ukey_alloc_len >= 8`.
     let Some(ukey) = OwnedBuf::new_cleansed_released(
         ukey_alloc_len,
-        c"cms_env.c".as_ptr(),
+        SeamFile::new(c"cms_env.c"),
         995,
-        core::ptr::null(),
+        SeamFile::NULL,
         0,
     ) else {
         // SAFETY: `cipher` is owned here.
@@ -2275,7 +2276,7 @@ unsafe fn cms_AuthEnvelopedData_set_aad(b: *mut Bio, auth_attrs: *mut OpenSslSta
     // The encoded attributes are `ASN1_item_i2d`'s own `CRYPTO_malloc` block; `aad` adopts it, so
     // every exit below releases what it built.
     // SAFETY: `aad` is NULL or a live block the helper allocated and no one else owns.
-    let aad = unsafe { OwnedBuf::adopt_plain_nullable(aad, c"cms_env.c".as_ptr(), 1266) };
+    let aad = unsafe { OwnedBuf::adopt_plain_nullable(aad, SeamFile::new(c"cms_env.c"), 1266) };
     if aadlen <= 0 || aad.as_ptr().is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(1257, c"cms_AuthEnvelopedData_set_aad", ERR_R_ASN1_LIB) };
@@ -2477,7 +2478,7 @@ pub(crate) unsafe extern "C" fn ossl_cms_AuthEnvelopedData_final(
     // The AEAD tag is this frame's scratch, allocated through the crate's allocator seam at
     // `taglen` bytes and owned by `tag`.
     // SAFETY: `taglen > 0`.
-    let Some(tag) = OwnedBuf::new(taglen as usize, c"cms_env.c".as_ptr(), 1379) else {
+    let Some(tag) = OwnedBuf::new(taglen as usize, SeamFile::new(c"cms_env.c"), 1379) else {
         // SAFETY: the site is a compile-time constant.
         unsafe {
             raise_cms(

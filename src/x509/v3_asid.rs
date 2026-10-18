@@ -83,6 +83,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_sbgp_autonomousSysNum;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
@@ -715,7 +716,7 @@ unsafe fn i2r_ASIdentifierChoice(
                         let s = unsafe {
                             OwnedStr::adopt(
                                 i2s_ASN1_INTEGER(ptr::null_mut(), id),
-                                FILE.as_ptr(),
+                                SeamFile::new(FILE),
                                 LINE_FREE_ID,
                             )
                         };
@@ -742,7 +743,7 @@ unsafe fn i2r_ASIdentifierChoice(
                         let s = unsafe {
                             OwnedStr::adopt(
                                 i2s_ASN1_INTEGER(ptr::null_mut(), (*range).min),
-                                FILE.as_ptr(),
+                                SeamFile::new(FILE),
                                 LINE_FREE_RANGE_MIN,
                             )
                         };
@@ -766,7 +767,7 @@ unsafe fn i2r_ASIdentifierChoice(
                         let s = unsafe {
                             OwnedStr::adopt(
                                 i2s_ASN1_INTEGER(ptr::null_mut(), (*range).max),
-                                FILE.as_ptr(),
+                                SeamFile::new(FILE),
                                 LINE_FREE_RANGE_MAX,
                             )
                         };
@@ -1516,7 +1517,7 @@ unsafe extern "C" fn v2i_ASIdentifiers(
             let dup = unsafe {
                 OwnedStr::adopt(
                     CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP),
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_V2I_FREE,
                 )
             };

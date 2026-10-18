@@ -62,6 +62,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -313,9 +314,9 @@ pub extern "C" fn X509_VERIFY_PARAM_new() -> *mut X509VerifyParam {
     // `OwnedCtx::zalloc_at` is the authority's own `OPENSSL_zalloc(sizeof(*param))`; it answers NULL when
     // the allocator does, else a fresh zeroed block of the parameter's size.
     let Some(param) = OwnedCtx::<X509VerifyParam>::zalloc_at(
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_ZALLOC_PARAM,
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_FREE_PARAM,
     ) else {
         return ptr::null_mut();
@@ -346,7 +347,7 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_free(param: *mut X509VerifyParam) {
     // authority's own free body (the policy set, the host set, the peername, the email and the IP)
     // and releases the block at the authority's own site.
     drop(unsafe {
-        OwnedCtx::<X509VerifyParam>::from_raw_at(param, FILE.as_ptr(), LINE_FREE_PARAM)
+        OwnedCtx::<X509VerifyParam>::from_raw_at(param, SeamFile::new(FILE), LINE_FREE_PARAM)
     });
 }
 
@@ -523,7 +524,7 @@ unsafe fn int_x509_param_set1(
         }
         // The fresh block is the authority's own `OPENSSL_zalloc(srclen + 1)`; it owns the copy
         // until the assignment below gives it to `*pdest`.
-        let Some(buf) = OwnedBuf::new_zeroed(srclen + 1, FILE.as_ptr(), 0) else {
+        let Some(buf) = OwnedBuf::new_zeroed(srclen + 1, SeamFile::new(FILE), 0) else {
             return 0;
         };
         // SAFETY: `buf` is `srclen + 1` bytes, `src` is `srclen` readable bytes.
@@ -541,7 +542,7 @@ unsafe fn int_x509_param_set1(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*pdest).cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             0,
         ));
         *pdest = tmp.map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
@@ -569,7 +570,7 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_set1_name(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*param).name.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             0,
         ));
         (*param).name = CRYPTO_strdup(name, FILE.as_ptr(), 0);
@@ -883,7 +884,7 @@ unsafe fn int_x509_param_set_hosts(
         // The host string owns the fresh copy: every early exit below releases it, and only a
         // successful push gives it up to `vpm->hosts`.
         // SAFETY: `raw` is a fresh, non-NULL block this file allocated.
-        let copy = OwnedBuf::adopt_plain_nullable(raw.cast(), FILE.as_ptr(), 0);
+        let copy = OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 0);
 
         if (*vpm).hosts.is_null() {
             (*vpm).hosts = OPENSSL_sk_new_null();
@@ -1017,7 +1018,7 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_move_peername(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*to).peername.cast(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 0,
             ));
             (*to).peername = peername;

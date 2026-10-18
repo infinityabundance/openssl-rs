@@ -46,6 +46,7 @@ use super::cms_att::{CMS_signed_add1_attr_by_NID, CMS_signed_get0_data_by_OBJ};
 use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, raise_cms, ERR_R_ASN1_LIB, ERR_R_CMS_LIB,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:43`.
 const EVP_MAX_MD_SIZE: usize = 64;
@@ -375,7 +376,8 @@ pub(crate) unsafe extern "C" fn CMS_add1_ReceiptRequest(
     // The encoded blob is the helper's block; its release is the authority's plain `CRYPTO_free`,
     // run by `Drop`.
     // SAFETY: `rrder` is NULL or a live block the helper allocated and no one else owns.
-    let rrder_owned = unsafe { OwnedBuf::adopt_plain_nullable(rrder, c"cms_ess.c".as_ptr(), 187) };
+    let rrder_owned =
+        unsafe { OwnedBuf::adopt_plain_nullable(rrder, SeamFile::new(c"cms_ess.c"), 187) };
     if rrderlen < 0 {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(174, c"CMS_add1_ReceiptRequest", ERR_R_CMS_LIB) };

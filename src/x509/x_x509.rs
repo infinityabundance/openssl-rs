@@ -68,6 +68,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_X509,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::thread::CryptoRwlock;
@@ -815,7 +816,7 @@ pub unsafe extern "C" fn i2d_X509_AUX(a: *const X509, pp: *mut *mut c_uchar) -> 
         }
         // `buf` owns the fresh `length`-byte block: the error tail below releases it at the
         // authority's own `:275` site, while a success hands it to `*pp`.
-        let mut buf = match OwnedBuf::new(length as usize, FILE.as_ptr(), LINE_MALLOC_AUX) {
+        let mut buf = match OwnedBuf::new(length as usize, SeamFile::new(FILE), LINE_MALLOC_AUX) {
             Some(b) => b,
             None => return -1,
         };

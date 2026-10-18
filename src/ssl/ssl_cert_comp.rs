@@ -46,11 +46,13 @@ use crate::ffi::guard_ffi;
 use crate::runtime::bio::{BIO_f_brotli, BIO_f_zlib, BIO_f_zstd};
 use crate::runtime::err::raise_with;
 use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_lib::{cert_active_key, Cert, CertKey, Ssl, SslCtx, TLSEXT_COMP_CERT_LIMIT};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_cert_comp.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_cert_comp.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 
@@ -142,14 +144,14 @@ unsafe fn OSSL_COMP_CERT_new(
     // SAFETY: `data` is NULL or the owned allocation the caller gives over per this function's
     // contract.
     // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-    let data = unsafe { OwnedBuf::adopt_plain_nullable(data, FILE, 0) };
+    let data = unsafe { OwnedBuf::adopt_plain_nullable(data, FILE_SEAM, 0) };
     // The predicate short-circuits the allocation, as the authority's `||` does; a NULL `data` or
     // an unsupported algorithm is the authority's first `err` arm.
     let ret = if !ossl_comp_has_alg(alg) || data.as_ptr().is_null() {
         None
     } else {
         // A fresh zeroed record at the authority's own site; `Drop` is its single release.
-        OwnedBuf::new_zeroed(core::mem::size_of::<OsslCompCert>(), FILE, 0)
+        OwnedBuf::new_zeroed(core::mem::size_of::<OsslCompCert>(), FILE_SEAM, 0)
     };
     let Some(ret) = ret else {
         // SAFETY: the error queue is thread-local state.
@@ -210,9 +212,13 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
         // destructor releases the `data` block first, then the record block, at the authority's
         // own sites.
         // SAFETY: `data` is NULL or this record's own block.
-        drop(OwnedBuf::adopt_plain_nullable((*cc).data, FILE, 0));
+        drop(OwnedBuf::adopt_plain_nullable((*cc).data, FILE_SEAM, 0));
         // SAFETY: `cc` is the record this frame exclusively owns.
-        drop(OwnedBuf::adopt_plain_nullable(cc.cast::<u8>(), FILE, 0));
+        drop(OwnedBuf::adopt_plain_nullable(
+            cc.cast::<u8>(),
+            FILE_SEAM,
+            0,
+        ));
     }
 }
 
@@ -309,7 +315,7 @@ unsafe fn ssl_compress_one_cert(ssl: *mut Ssl, cpk: *mut CertKey, alg: c_int) ->
     // The block `ssl_get_cert_to_compress` produced is this frame's; the owner is its single
     // release at the authority's own site, after the constructor has copied it.
     // SAFETY: `cert_data` is NULL or this frame's own allocation.
-    let cert_data = unsafe { OwnedBuf::adopt_plain_nullable(cert_data, FILE, 0) };
+    let cert_data = unsafe { OwnedBuf::adopt_plain_nullable(cert_data, FILE_SEAM, 0) };
     // SAFETY: `cert_data` is readable for `length` bytes; the constructor copies it.
     let comp_cert =
         unsafe { OSSL_COMP_CERT_from_compressed_data(cert_data.as_ptr(), length, length, alg) };

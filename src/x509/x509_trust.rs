@@ -56,6 +56,7 @@ use crate::runtime::err::err_reasons::X509_R_INVALID_TRUST;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_OCSP_sign, NID_ad_OCSP, NID_anyExtendedKeyUsage, NID_client_auth,
     NID_code_sign, NID_email_protect, NID_server_auth, NID_time_stamp, OBJ_obj2nid,
@@ -407,7 +408,7 @@ unsafe extern "C" fn trtable_free_thunk(elem: *mut c_void) {
     // SAFETY: `elem` is NULL or a dynamic row this module allocated; `from_raw` reclaims it and
     // `Drop` runs the authority's own free body and block release.
     drop(unsafe {
-        OwnedCtx::<X509Trust>::from_raw_at(elem.cast(), FILE.as_ptr(), LINE_FREE_DYN_P)
+        OwnedCtx::<X509Trust>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_FREE_DYN_P)
     });
 }
 
@@ -626,13 +627,13 @@ pub unsafe extern "C" fn X509_TRUST_add(
         // The row owned a name; handing it to an owner makes its `Drop` the authority's own
         // `OPENSSL_free` at `:150`.
         // SAFETY: `name` is the row's own dynamic string; no other owner will release it.
-        drop(unsafe { OwnedStr::adopt((*trtmp).name, FILE.as_ptr(), LINE_FREE_STD_NAME) });
+        drop(unsafe { OwnedStr::adopt((*trtmp).name, SeamFile::new(FILE), LINE_FREE_STD_NAME) });
     }
     // SAFETY: `name` is NUL-terminated per the contract; the allocator takes file/line only.
     let dup = unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_TRTMP_NAME),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_FREE_ERR_NAME,
         )
     };

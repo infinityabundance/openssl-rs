@@ -41,6 +41,7 @@ use crate::evp::pkey::EVP_PKEY_free;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::raise_with;
 use crate::runtime::mem::CRYPTO_strndup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_ciph::ssl3_get_cipher_by_id;
 use crate::ssl::ssl_lib::{
@@ -53,6 +54,7 @@ use crate::x509::x_x509::{X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_asn1.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_asn1.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `ERR_LIB_X509` — `include/openssl/err.h.in`.
@@ -659,7 +661,7 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
         // Release the DER block `i2d_PUBKEY` built through the seam's owner, at the authority's own
         // site.
         // SAFETY: `peer_rpk.data` is the allocation `i2d_PUBKEY` produced, NULL or owned.
-        drop(unsafe { OwnedBuf::adopt_plain_nullable(peer_rpk.data, FILE, 0) });
+        drop(unsafe { OwnedBuf::adopt_plain_nullable(peer_rpk.data, FILE_SEAM, 0) });
         ret
     })
 }
