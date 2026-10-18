@@ -276,7 +276,8 @@ pub type OsslI2dOfVoidCtx =
 /// The signature is exactly `pem_password_cb`'s, because the function is one.
 ///
 /// # Safety
-/// `buf` writable for `num` bytes; `userdata` NULL or a NUL-terminated string.
+/// `buf` writable for `num` bytes with `num >= 0`; `userdata` NULL or a NUL-terminated
+/// string.
 #[no_mangle]
 pub unsafe extern "C" fn PEM_def_callback(
     buf: *mut c_char,
@@ -286,13 +287,16 @@ pub unsafe extern "C" fn PEM_def_callback(
 ) -> c_int {
     if !userdata.is_null() {
         // SAFETY: `userdata` is NUL-terminated per the contract.
-        let mut i = unsafe { strlen(userdata.cast::<c_char>()) } as c_int;
-        if i > num {
-            i = num;
-        }
-        // SAFETY: `buf` is `num` writable bytes and `userdata` is `i` readable bytes.
-        unsafe { memcpy(buf.cast::<c_void>(), userdata, i as usize) };
-        return i;
+        let n = unsafe { strlen(userdata.cast::<c_char>()) };
+        // The authority stores `strlen` in an `int` and passes the truncated value to
+        // `memcpy`; a string longer than `INT_MAX` (or a negative `num`) therefore becomes
+        // an enormous `size_t`. Clamp instead: for every valid `(num >= 0, n <= INT_MAX)`
+        // the copied length is exactly the authority's.
+        let n = n.min(num.max(0) as usize);
+        // SAFETY: `buf` is `num` writable bytes (with `num >= 0`) and `userdata` is `n`
+        // readable bytes.
+        unsafe { memcpy(buf.cast::<c_void>(), userdata, n) };
+        return n as c_int;
     }
 
     // SAFETY: `EVP_get_pw_prompt` touches only its own static.
@@ -800,8 +804,9 @@ unsafe fn check_pem(nm: *const c_char, name: *const c_char) -> c_int {
 /// The `LONG_MAX > INT_MAX` guard is active on this platform.
 ///
 /// # Safety
-/// `cipher` live; `data` writable for `*plen` bytes plus a cipher block; `plen` writable; `cb`
-/// NULL or a `pem_password_cb`; `u` passed through to the callback.
+/// `cipher` live; `data` writable for `*plen` bytes plus a cipher block; `plen` writable and
+/// `*plen >= 0`; `cb` NULL or a `pem_password_cb` (which must answer at most `PEM_BUFSIZE`);
+/// `u` passed through to the callback.
 #[no_mangle]
 pub unsafe extern "C" fn PEM_do_header(
     cipher: *mut EvpCipherInfo,
@@ -815,7 +820,9 @@ pub unsafe extern "C" fn PEM_do_header(
     let mut key = [0 as c_uchar; EVP_MAX_KEY_LENGTH];
     let mut buf = [0 as c_char; PEM_BUFSIZE as usize];
 
-    if len > INT_MAX {
+    if !(0..=INT_MAX).contains(&len) {
+        // The authority tests only the upper bound; a negative `*plen` would reach
+        // `EVP_DecryptUpdate` as an invalid byte count, so it is rejected here too.
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::PEM_LIB_459) };
         return 0;
@@ -910,8 +917,9 @@ pub unsafe extern "C" fn PEM_do_header(
 ///
 /// # Safety
 /// `i2d`/`i2d_ctx` one non-NULL; `name` NUL-terminated; `bp` a live writable BIO; `x` the object
-/// the encoder reads; `enc` NULL or live; `kstr` NULL or `klen` readable bytes; `cb`/`u` as
-/// [`PEM_do_header`].
+/// the encoder reads, and the chosen encoder must answer a non-negative length on both passes
+/// (the second pass must not exceed the `dsize` the first reported); `enc` NULL or live; `kstr`
+/// NULL or `klen >= 0` readable bytes; `cb`/`u` as [`PEM_do_header`].
 #[allow(clippy::too_many_arguments)]
 #[allow(non_snake_case)]
 unsafe fn PEM_ASN1_write_bio_internal(
@@ -1005,6 +1013,11 @@ unsafe fn PEM_ASN1_write_bio_internal(
                 (None, None) => 0,
             }
         };
+        if i < 0 {
+            // A caller-supplied encoder that fails its second pass would otherwise reach
+            // `EVP_EncryptUpdate` or `PEM_write_bio` with a negative byte count.
+            break 'body;
+        }
 
         if !enc.is_null() {
             if kstr.is_null() {
@@ -1339,3 +1352,30 @@ const LINE_ASN1_WRITE_FREE: c_int = 424;
 /// and method-object types the `check_pem` signature reads in one place.
 #[allow(dead_code)]
 fn _method_types_are_named(_e: *const Engine, _m: *const EvpPkeyAsn1Method) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn def_callback_clamps_a_negative_length() {
+        let mut buf = [0 as c_char; 8];
+        let userdata = c"secret".as_ptr().cast_mut().cast::<c_void>();
+        // SAFETY: `buf` is eight writable bytes and `userdata` is NUL-terminated. A
+        // negative `num` is outside the documented contract; the clamp keeps the copy at
+        // zero bytes instead of turning the length into an enormous `size_t`.
+        let n = unsafe { PEM_def_callback(buf.as_mut_ptr(), -1, 0, userdata) };
+        assert_eq!(n, 0);
+        assert!(buf.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn def_callback_copies_at_most_num_bytes() {
+        let mut buf = [0 as c_char; 8];
+        let userdata = c"secret".as_ptr().cast_mut().cast::<c_void>();
+        // SAFETY: `buf` is eight writable bytes and `userdata` is NUL-terminated.
+        let n = unsafe { PEM_def_callback(buf.as_mut_ptr(), 3, 0, userdata) };
+        assert_eq!(n, 3);
+        assert_eq!(&buf[..3], &[b's' as c_char, b'e' as c_char, b'c' as c_char]);
+    }
+}

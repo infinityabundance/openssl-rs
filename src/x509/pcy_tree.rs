@@ -901,7 +901,8 @@ unsafe fn tree_add_auth_node(pnodes: *mut *mut OpenSslStack, pcy: *mut X509Polic
 ///
 /// # Safety
 ///
-/// `tree` is live; `pnodes` is writable.
+/// `tree` is live with at least two levels (`tree_init` builds `n + 1` for `n >= 1`);
+/// `pnodes` is writable.
 unsafe fn tree_calculate_authority_set(
     tree: *mut X509PolicyTree,
     pnodes: *mut *mut OpenSslStack,
@@ -970,8 +971,9 @@ unsafe fn tree_calculate_authority_set(
 ///
 /// # Safety
 ///
-/// `tree` is live; `policy_oids` is NULL or a live `STACK_OF(ASN1_OBJECT)`; `auth_nodes` is NULL
-/// or a live node stack.
+/// `tree` is live with at least two levels (`tree_init` builds `n + 1` for `n >= 1`);
+/// `policy_oids` is NULL or a live `STACK_OF(ASN1_OBJECT)`; `auth_nodes` is NULL or a live
+/// node stack.
 unsafe fn tree_calculate_user_set(
     tree: *mut X509PolicyTree,
     policy_oids: *mut OpenSslStack,
