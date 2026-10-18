@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1312** passed,
+`cargo test --lib` (must pass; the established baseline is **1320** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -996,6 +996,31 @@ package.
   ignored**, **22/22** probes; `rt-hpke` transcript matches the authority.
   Per-file campaign: **9 of 761**.
 
+### Subphase 79 — remaining mechanism candidates closed
+
+- `EVP_CIPHER_CTX_copy` and `CMAC_CTX_copy` now **refuse `out == in`**. The
+  authority resets the destination and dereferences a NULL cipher, so there is
+  no defined success to reproduce; the refusal is a §17 UB-elimination
+  divergence, documented in both `# Safety` contracts and tested with an armed
+  `dupctx`.
+- `EVP_ENCODE_CTX_copy` and `EVP_PKEY_asn1_copy` get identity guards preserving
+  the authority's defined self-copy; `CRYPTO_ocb128_copy_ctx` skips the
+  redundant L-table allocation on identity (avoiding the authority's leak) and
+  keeps the `keyenc`/`keydec` overrides.
+- `SyncCell` is narrowed to `SyncCell<[OsslAlgorithm; 140]>`; publication goes
+  through a `Once` shared by the writer and every reader, and the table test
+  reads through the accessor.
+- All eight legacy `CipherDestroy` bodies are proven zero-valid by executing
+  `destroy_body` and `Drop` on a zeroed context.
+- `aes_siv_dupctx` failure injection asserts both acquired refs return to 1 and
+  the source is unchanged.
+- `pkey_ec_copy` cleans the partially built destination on all three failure
+  returns (the authority leaks it); the test forces the UKM `memdup` failure.
+- Adversarial review **FAILED** on the documentation-only self-copy contracts
+  and **PASSED** after the refusals. Gate: `fmt` 0, clippy 0, **1320 passed /
+  22 ignored**, **22/22** probes; `rt-cipher` retains the one pre-existing
+  `defltwrap.pad21` residual.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1173,7 +1198,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `2aa5fdeeb` (hpke audit fixes merged)
+**Last observed HEAD:** `d90a583e3` (mechanism candidates closed)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1187,7 +1212,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1312** tests (22 ignored;
+   The most recent reported library baseline is **1320** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
