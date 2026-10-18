@@ -608,6 +608,18 @@ impl OwnedBuf {
         }
     }
 
+    /// Test-only observation of the release arm: the cleansing length when this handle releases
+    /// with the cleansing arm, `None` for every other arm. Exists so a canary can distinguish a
+    /// secret block adopted with [`Self::adopt_cleansed`] from one adopted with
+    /// [`Self::adopt_plain`]; it never changes the release.
+    #[cfg(test)]
+    pub(crate) fn cleansed_num_for_test(&self) -> Option<usize> {
+        match &self.release {
+            Release::Cleansed { num, .. } => Some(*num),
+            _ => None,
+        }
+    }
+
     /// The writable start of the block.
     pub(crate) fn as_ptr(&self) -> *mut c_uchar {
         self.ptr
