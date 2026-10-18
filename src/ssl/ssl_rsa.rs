@@ -1111,8 +1111,12 @@ fn extension_contextoff(version: c_uint) -> usize {
 
 /// `static size_t extension_append_length(unsigned int version, size_t extension_length)` —
 /// `ssl/ssl_rsa.c:775-778`.
-fn extension_append_length(version: c_uint, extension_length: usize) -> usize {
-    extension_length + extension_contextoff(version)
+///
+/// The authority's `+` wraps on overflow; the crate reports that as the same failure outcome a
+/// refused allocation has (`None`), so no wrapped, too-small length reaches the copy or the
+/// allocator (AGENTS.md §3).
+fn extension_append_length(version: c_uint, extension_length: usize) -> Option<usize> {
+    extension_length.checked_add(extension_contextoff(version))
 }
 
 /// `static void extension_append(unsigned int version, const unsigned char *extension,
@@ -1159,7 +1163,11 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
         // SAFETY: `ctx`/`serverinfo` are the caller's.
         unsafe {
             if version == SSL_SERVERINFOV1 {
-                let sinfo_length = extension_append_length(SSL_SERVERINFOV1, serverinfo_length);
+                let Some(sinfo_length) =
+                    extension_append_length(SSL_SERVERINFOV1, serverinfo_length)
+                else {
+                    return 0;
+                };
                 // The V1->V2 rebuild buffer, allocated at the authority's own site (`:818`) and
                 // released by `Drop` at its own site (`:827`).
                 let Some(sinfo) =
@@ -1193,6 +1201,32 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 return 0;
             }
             let cpk = crate::ssl::ssl_lib::cert_active_key((*ctx).cert);
+            let (incumbent, incumbent_len) = (*cpk).serverinfo();
+            // If the caller passed a range inside the member's incumbent block, `realloc` may move
+            // and release that block before the copy (and the validation callback below) read it.
+            // The authority reallocs and then copies from the caller's pointer (`ssl_rsa.c:839-844`)
+            // — a use-after-free for this caller; tee the bytes first. This is the §17 UB
+            // elimination recorded as D564.
+            let mut alias_copy: Vec<u8> = Vec::new();
+            let mut source = serverinfo;
+            if !incumbent.is_null() {
+                let inc_start = incumbent as usize;
+                let inc_end = inc_start.saturating_add(incumbent_len);
+                let src_start = serverinfo as usize;
+                let src_end = src_start.saturating_add(serverinfo_length);
+                if src_start < inc_end && inc_start < src_end {
+                    if alias_copy.try_reserve_exact(serverinfo_length).is_err() {
+                        return 0;
+                    }
+                    // SAFETY: `serverinfo` is readable for `serverinfo_length` bytes per the
+                    // caller's contract, and the range overlaps the live incumbent block.
+                    alias_copy.extend_from_slice(core::slice::from_raw_parts(
+                        serverinfo,
+                        serverinfo_length,
+                    ));
+                    source = alias_copy.as_ptr();
+                }
+            }
             // The block stays `CertKey`'s: the authority regrows its `serverinfo` in place through
             // `CRYPTO_realloc`, and on a refused regrowth the handle leaves the old block (and its
             // `cert_pkey_clear` release) intact.
@@ -1204,10 +1238,10 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 return 0;
             }
             // SAFETY: `new_serverinfo` is the (possibly moved) block `(*cpk).serverinfo` now owns,
-            // writable for `serverinfo_length` bytes; `serverinfo` is readable for that many per the
-            // caller's contract.
-            ptr::copy_nonoverlapping(serverinfo, new_serverinfo, serverinfo_length);
-            if serverinfo_process_buffer(version, serverinfo, serverinfo_length, ctx) == 0 {
+            // writable for `serverinfo_length` bytes; `source` is readable for that many (the
+            // caller's block, or the tee taken before the regrow).
+            ptr::copy_nonoverlapping(source, new_serverinfo, serverinfo_length);
+            if serverinfo_process_buffer(version, source, serverinfo_length, ctx) == 0 {
                 raise_ssl(SSL_R_INVALID_SERVERINFO_DATA, 853);
                 return 0;
             }
@@ -1427,3 +1461,121 @@ const _: unsafe extern "C" fn(*const Ssl) -> c_int = SSL_is_quic;
 // `SSL_CERT_INFO` and the constants document the table `ssl_cert_lookup_by_pkey` searches.
 const _: (usize, usize) = (SSL_CERT_INFO.len(), SSL_PKEY_NUM);
 const _: (usize, usize, usize) = (SSL_PKEY_RSA, NAME_PREFIX1.len(), NAME_PREFIX2.len());
+
+#[cfg(test)]
+mod checked_arithmetic_tests {
+    use super::*;
+
+    /// The `extension_length + contextoff` sum is checked: at the representable maximum the
+    /// authority's `+` wraps and then copies `extension_length` bytes into a too-small buffer.
+    #[test]
+    fn extension_append_length_rejects_usize_max() {
+        assert_eq!(extension_append_length(SSL_SERVERINFOV1, 1), Some(5));
+        assert_eq!(extension_append_length(SSL_SERVERINFOV2, 1), Some(1));
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX),
+            None,
+            "V1's +4 must not wrap"
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV2, usize::MAX),
+            Some(usize::MAX),
+            "the V2 arm adds zero and must not invent an overflow"
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX - 4),
+            Some(usize::MAX)
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX - 3),
+            None
+        );
+    }
+}
+
+/// Adversarial self-aliasing probe (`adv-probe.sh`, §16).
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{cert_active_key, SSL_CTX_free, SSL_CTX_new};
+
+    /// Passing the member's own block back to `SSL_CTX_use_serverinfo_ex` must not leave the copy
+    /// reading the block `realloc` just moved and released. The forced move makes the old order a
+    /// deterministic failure rather than allocator-luck.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn self_aliasing_serverinfo_is_teed_before_realloc() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // One V2 extension: context 0, type 0x1234, zero-length body.
+        let mut data = [0u8; 8];
+        data[4] = 0x12;
+        data[5] = 0x34;
+
+        // SAFETY: the method table is static; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+        assert_eq!(
+            // SAFETY: `data` is readable for eight bytes and `ctx` is live.
+            unsafe { SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, data.as_ptr(), data.len()) },
+            1,
+            "the first install must succeed"
+        );
+
+        // SAFETY: `ctx` is live and its certificate container is the context's own.
+        let cpk = unsafe { cert_active_key((*ctx).cert) };
+        assert!(!cpk.is_null());
+        // SAFETY: `cpk` is live and its member obeys the blob invariant.
+        let (member, member_len) = unsafe { (*cpk).serverinfo() };
+        assert_eq!(member_len, data.len());
+        assert!(!member.is_null());
+
+        // Change the extension type in place so the second (aliasing) install registers a fresh
+        // type rather than refusing a duplicate. Same length, same block.
+        data[5] = 0x36;
+        // SAFETY: `member` is the live eight-byte member block; byte 5 is in range.
+        unsafe { member.cast_mut().add(5).write(0x36) };
+
+        adv_alloc::reset();
+        // Force the regrow to move and zero the block it releases, so a post-realloc read through
+        // the caller's (now stale) pointer is deterministic.
+        adv_alloc::arm_move_realloc(member.cast_mut().cast(), data.len());
+        // SAFETY: `member` is readable for eight bytes (the caller's aliasing argument) and `ctx`
+        // is live.
+        let ret = unsafe { SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, member, data.len()) };
+        adv_alloc::disarm_move_realloc();
+
+        assert_eq!(
+            ret, 1,
+            "an aliasing install must copy before the regrow releases the source"
+        );
+        let ev = adv_alloc::events();
+        assert!(
+            ev.iter()
+                .any(|e| matches!(e, Ev::Realloc { n, refused: false } if *n == data.len())),
+            "the forced move must have been intercepted: {ev:?}"
+        );
+
+        // SAFETY: `cpk` is live and its member still obeys the invariant after the regrow.
+        let (moved, moved_len) = unsafe { (*cpk).serverinfo() };
+        assert_eq!(moved_len, data.len());
+        assert_ne!(moved, member, "the forced regrow must have moved the block");
+        // SAFETY: `moved` is the live member block of eight bytes.
+        let bytes = unsafe { core::slice::from_raw_parts(moved, data.len()) };
+        assert_eq!(
+            bytes,
+            data.as_slice(),
+            "the member must hold the pre-regrow bytes"
+        );
+
+        // SAFETY: `ctx` is live and owned by this frame.
+        unsafe { SSL_CTX_free(ctx) };
+        adv_alloc::assert_no_double_free();
+    }
+}

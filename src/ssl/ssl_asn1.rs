@@ -424,6 +424,43 @@ unsafe fn ssl_session_strndup_slot(dst: &mut MemberCStrSlot, src: *mut Asn1Strin
     1
 }
 
+/// Adopt an `ASN1_STRING`'s `data` block into a session blob member.
+///
+/// The authority takes `as->field->data` and nulls the string's own pointer. That is sound only
+/// while the string owns the block: [`ASN1_STRING_FLAG_EMBED`] says `data` points into storage
+/// the string does **not** own, and a negative `length` cannot describe a block. Neither is
+/// reachable for the `OCTET STRING`s this template produces, but both are rejected (and asserted)
+/// rather than allowed to transfer a non-owned or nonsensical pointer. On success the string's
+/// `data` is NULL and the returned block is the caller's to store; the decoded octet-string
+/// allocation is `len + 1` bytes, which satisfies `MemberBufSlot::store`'s "at least `len`"
+/// precondition.
+///
+/// # Safety
+/// `str_` must be NULL or a live `ASN1_STRING` owned by the decoded value.
+unsafe fn adopt_octet_string(str_: *mut Asn1String) -> Option<(*mut u8, usize)> {
+    if str_.is_null() {
+        return None;
+    }
+    // SAFETY: `str_` is live per the contract.
+    let (flags, length) = unsafe { ((*str_).flags, (*str_).length) };
+    // This is a release-mode assertion, not a `debug_assert!`: a hostile or corrupted decoded
+    // string must never transfer a non-owned or nonsensical pointer, and `debug_assert!` cannot
+    // uphold that invariant in release (AGENTS.md §21.4).
+    if length < 0 || flags & ASN1_STRING_FLAG_EMBED != 0 {
+        return None;
+    }
+    // SAFETY: `str_` is live; taking `data` hands the block over and nulls the string's own
+    // pointer, so the string's destructor will not release it.
+    unsafe {
+        let data = (*str_).data;
+        if data.is_null() && length != 0 {
+            return None;
+        }
+        (*str_).data = ptr::null_mut();
+        Some((data, length as usize))
+    }
+}
+
 /// `ssl_session_memcpy` — `ssl_asn1.c:243-255`: copy an octet string out, refusing oversize.
 ///
 /// # Safety
@@ -855,9 +892,10 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                 // unset, so this is `CRYPTO_free`'s no-op.
                 tick.clear(FILE, 0);
                 if !(*as_).tlsext_tick.is_null() {
-                    let data = (*(*as_).tlsext_tick).data;
-                    let len = (*(*as_).tlsext_tick).length as usize;
-                    (*(*as_).tlsext_tick).data = ptr::null_mut();
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).tlsext_tick) else {
+                        return d2i_err(as_, ret, a);
+                    };
                     // SAFETY: `data`/`len` are the octet string's block, whose ownership this call
                     // adopts; the member is empty after `clear`.
                     tick.store(data, len);
@@ -894,9 +932,10 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                 // unset, so this is `CRYPTO_free`'s no-op.
                 alpn.clear(FILE, 0);
                 if !(*as_).alpn_selected.is_null() {
-                    let data = (*(*as_).alpn_selected).data;
-                    let len = (*(*as_).alpn_selected).length as usize;
-                    (*(*as_).alpn_selected).data = ptr::null_mut();
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).alpn_selected) else {
+                        return d2i_err(as_, ret, a);
+                    };
                     // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
                     alpn.store(data, len);
                 }
@@ -912,9 +951,10 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                 // unset, so this is `CRYPTO_free`'s no-op.
                 appdata.clear(FILE, 0);
                 if !(*as_).ticket_appdata.is_null() {
-                    let data = (*(*as_).ticket_appdata).data;
-                    let len = (*(*as_).ticket_appdata).length as usize;
-                    (*(*as_).ticket_appdata).data = ptr::null_mut();
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).ticket_appdata) else {
+                        return d2i_err(as_, ret, a);
+                    };
                     // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
                     appdata.store(data, len);
                 }
@@ -984,3 +1024,59 @@ fn raise_crypto() {
 
 // `ERR_R_CRYPTO_LIB` is the coordinate the ex-data arms raise.
 const _: c_int = ERR_R_CRYPTO_LIB;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn string_with(data: *mut u8, length: c_int, flags: c_long) -> Asn1String {
+        Asn1String {
+            length,
+            type_: V_ASN1_OCTET_STRING,
+            data,
+            flags,
+        }
+    }
+
+    /// The adoption guard rejects a string that does not own its block (`EMBED`) or whose length
+    /// cannot describe one, and leaves the source untouched on rejection. On a valid string it
+    /// takes the block and NULLs the source. The two rejected states are unreachable for a decoded
+    /// octet string, which is exactly why the guard is an assertion rather than a behaviour change
+    /// on a reachable input.
+    #[test]
+    fn adopt_octet_string_rejects_embed_and_negative_length() {
+        let mut block = [1u8, 2, 3, 4];
+
+        // A valid string hands its block over.
+        let mut valid = string_with(block.as_mut_ptr(), 4, 0);
+        // SAFETY: `valid` is a live string whose `data` block is `block`, owned by this frame.
+        let adopted = unsafe { adopt_octet_string(&mut valid) };
+        assert_eq!(adopted, Some((block.as_mut_ptr(), 4)));
+        assert!(valid.data.is_null(), "the adopted source must be NULLed");
+
+        // EMBED says the string does not own `data`; ownership must not be transferred.
+        let mut embed = string_with(block.as_mut_ptr(), 4, ASN1_STRING_FLAG_EMBED);
+        // SAFETY: `embed` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut embed) }, None);
+        assert_eq!(
+            embed.data,
+            block.as_mut_ptr(),
+            "a rejected source is untouched"
+        );
+
+        // A negative length cannot describe a block.
+        let mut negative = string_with(block.as_mut_ptr(), -1, 0);
+        // SAFETY: `negative` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut negative) }, None);
+        assert_eq!(
+            negative.data,
+            block.as_mut_ptr(),
+            "a rejected source is untouched"
+        );
+
+        // NULL with a non-zero length violates the member invariant and is rejected too.
+        let mut null_block = string_with(core::ptr::null_mut(), 4, 0);
+        // SAFETY: `null_block` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut null_block) }, None);
+    }
+}

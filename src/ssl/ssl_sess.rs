@@ -1533,14 +1533,20 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
         // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
         // member-buffer invariant.
         let mut slot = unsafe { (*s).ext_hostname_slot() };
-        // Release the incumbent at the authority's own site (`ssl_sess.c:1083`); a NULL incumbent is
-        // a no-op, leaving the member unset.
-        slot.clear(FILE, 1083);
         if hostname.is_null() {
+            // A NULL argument leaves the member unset after releasing the incumbent, as the
+            // authority does at `ssl_sess.c:1083-1086`.
+            slot.clear(FILE, 1083);
             return 1;
         }
+        // Duplicate **before** releasing the incumbent: `hostname` may be the pointer
+        // `SSL_SESSION_get0_hostname` handed out, i.e. this very member. The authority frees the
+        // member first (`ssl_sess.c:1083`) and then calls `OPENSSL_strdup` on the caller's pointer
+        // (`:1088`), which is a use-after-free for that caller; this ordering is the §17 UB
+        // elimination recorded as D563. The release still happens at the same authority site.
         // SAFETY: `hostname` is NUL-terminated per the caller's contract.
         let dup = unsafe { CRYPTO_strdup(hostname, FILE, 1088) };
+        slot.clear(FILE, 1083);
         if dup.is_null() {
             0
         } else {
@@ -1669,13 +1675,20 @@ pub unsafe extern "C" fn SSL_SESSION_set1_alpn_selected(
         // SAFETY: `s` is live per the caller's contract and its `ext_alpn_selected` member obeys
         // the blob member-buffer invariant.
         let mut slot = unsafe { (*s).ext_alpn_selected_slot() };
-        // Release the incumbent at the authority's own site (`ssl_sess.c:1134`).
-        slot.clear(FILE, 1134);
         if alpn.is_null() || len == 0 {
+            // The authority clears the pair on this arm (`ssl_sess.c:1134-1138`).
+            slot.clear(FILE, 1134);
             return 1;
         }
+        // Duplicate before releasing the incumbent: `alpn` may be the pointer
+        // `SSL_SESSION_get0_alpn_selected` handed out, i.e. this very member. The authority frees
+        // first (`ssl_sess.c:1134`) and then calls `OPENSSL_memdup` on the caller's pointer
+        // (`:1140`), which is a use-after-free for that caller; this ordering is the §17 UB
+        // elimination recorded as D563. A refused duplicate still clears, matching the authority's
+        // post-failure `(NULL, 0)` state.
         // SAFETY: `alpn` is readable for `len` bytes per the caller's contract.
         let dup = unsafe { CRYPTO_memdup(alpn.cast(), len, FILE, 1140).cast::<u8>() };
+        slot.clear(FILE, 1134);
         if dup.is_null() {
             0
         } else {
@@ -2102,14 +2115,20 @@ pub unsafe extern "C" fn SSL_SESSION_set1_ticket_appdata(
         // SAFETY: `ss` is live per the caller's contract and its `ticket_appdata` member obeys the
         // blob member-buffer invariant.
         let mut slot = unsafe { (*ss).ticket_appdata_slot() };
-        // Release the incumbent at the authority's own site (`ssl_sess.c:1484`), leaving the member
-        // `(NULL, 0)`.
-        slot.clear(FILE, 1484);
         if data.is_null() || len == 0 {
+            // The authority clears the pair on this arm (`ssl_sess.c:1484-1489`).
+            slot.clear(FILE, 1484);
             return 1;
         }
+        // Duplicate before releasing the incumbent: `data` may be the pointer
+        // `SSL_SESSION_get0_ticket_appdata` handed out, i.e. this very member. The authority frees
+        // first (`ssl_sess.c:1484`) and then calls `OPENSSL_memdup` on the caller's pointer
+        // (`:1490`), which is a use-after-free for that caller; this ordering is the §17 UB
+        // elimination recorded as D563. A refused duplicate still clears, matching the authority's
+        // post-failure `(NULL, 0)` state.
         // SAFETY: `data` is readable for `len` bytes per the caller's contract.
         let dup = unsafe { CRYPTO_memdup(data, len, FILE, 1490).cast::<u8>() };
+        slot.clear(FILE, 1484);
         if dup.is_null() {
             0
         } else {
@@ -2446,3 +2465,141 @@ mod alias_ownership_tests {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(SslSession => zero_state_sweep_ssl_session);
+
+/// Adversarial self-aliasing probes (`adv-probe.sh`, §16).
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    /// The duplicate must be allocated **before** the incumbent is released. On the old order the
+    /// release precedes the allocation; with poison-on-free the duplicate then reads zeros.
+    fn assert_duplicate_precedes_release(ev: &[Ev], released: usize) {
+        let first_malloc = ev.iter().position(|e| matches!(e, Ev::Malloc { .. }));
+        let release = ev
+            .iter()
+            .position(|e| matches!(e, Ev::Free { p } if *p == released));
+        assert!(first_malloc.is_some(), "no allocation was observed: {ev:?}");
+        assert!(release.is_some(), "the incumbent was not released: {ev:?}");
+        assert!(
+            first_malloc < release,
+            "the copy must be allocated before the incumbent is released: {ev:?}"
+        );
+    }
+
+    /// Each of the three setters must survive being handed the pointer its own getter answered.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn self_aliasing_session_setters_copy_before_clearing() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: no arguments; the returned session is owned by this frame.
+        let s = unsafe { SSL_SESSION_new() };
+        assert!(!s.is_null(), "SSL_SESSION_new must succeed");
+
+        // --- hostname -----------------------------------------------------------------------
+        let name = c"example.test";
+        // SAFETY: `s` is live and `name` is NUL-terminated.
+        assert_eq!(unsafe { SSL_SESSION_set1_hostname(s, name.as_ptr()) }, 1);
+        // SAFETY: `s` is live.
+        let original = unsafe { SSL_SESSION_get0_hostname(s) };
+        assert!(!original.is_null());
+        adv_alloc::reset();
+        adv_alloc::arm_poison_on_free();
+        // SAFETY: `s` is live and `original` is NUL-terminated (it names the member itself).
+        assert_eq!(unsafe { SSL_SESSION_set1_hostname(s, original) }, 1);
+        adv_alloc::disarm_poison_on_free();
+        // SAFETY: `s` is live.
+        let after = unsafe { SSL_SESSION_get0_hostname(s) };
+        assert!(!after.is_null());
+        assert_eq!(
+            // SAFETY: `after` is a live NUL-terminated member.
+            unsafe { core::ffi::CStr::from_ptr(after) }.to_bytes(),
+            b"example.test",
+            "an aliasing hostname setter must preserve the value"
+        );
+        assert_duplicate_precedes_release(&adv_alloc::events(), original as usize);
+
+        // --- ALPN ---------------------------------------------------------------------------
+        let alpn = b"h2";
+        assert_eq!(
+            // SAFETY: `s` is live and `alpn` is readable for two bytes.
+            unsafe { SSL_SESSION_set1_alpn_selected(s, alpn.as_ptr(), alpn.len()) },
+            1
+        );
+        let mut original_ptr: *const u8 = core::ptr::null();
+        let mut original_len = 0usize;
+        // SAFETY: `s` is live and both out-params are writable.
+        unsafe { SSL_SESSION_get0_alpn_selected(s, &mut original_ptr, &mut original_len) };
+        assert!(!original_ptr.is_null());
+        adv_alloc::reset();
+        adv_alloc::arm_poison_on_free();
+        assert_eq!(
+            // SAFETY: `s` is live; `original_ptr` is readable for `original_len` bytes (it is the
+            // member itself).
+            unsafe { SSL_SESSION_set1_alpn_selected(s, original_ptr, original_len) },
+            1
+        );
+        adv_alloc::disarm_poison_on_free();
+        let mut after_ptr: *const u8 = core::ptr::null();
+        let mut after_len = 0usize;
+        // SAFETY: `s` is live and both out-params are writable.
+        unsafe { SSL_SESSION_get0_alpn_selected(s, &mut after_ptr, &mut after_len) };
+        assert!(!after_ptr.is_null());
+        assert_eq!(
+            // SAFETY: `after_ptr` is readable for `after_len` bytes.
+            unsafe { core::slice::from_raw_parts(after_ptr, after_len) },
+            alpn.as_slice(),
+            "an aliasing ALPN setter must preserve the value"
+        );
+        assert_duplicate_precedes_release(&adv_alloc::events(), original_ptr as usize);
+
+        // --- ticket application data --------------------------------------------------------
+        let appdata = b"abcd";
+        assert_eq!(
+            // SAFETY: `s` is live and `appdata` is readable for four bytes.
+            unsafe { SSL_SESSION_set1_ticket_appdata(s, appdata.as_ptr().cast(), appdata.len()) },
+            1
+        );
+        let mut original_ptr: *mut c_void = core::ptr::null_mut();
+        let mut original_len = 0usize;
+        assert_eq!(
+            // SAFETY: `s` is live and both out-params are writable.
+            unsafe { SSL_SESSION_get0_ticket_appdata(s, &mut original_ptr, &mut original_len) },
+            1
+        );
+        assert!(!original_ptr.is_null());
+        adv_alloc::reset();
+        adv_alloc::arm_poison_on_free();
+        assert_eq!(
+            // SAFETY: `s` is live; `original_ptr` is readable for `original_len` bytes (it is the
+            // member itself).
+            unsafe { SSL_SESSION_set1_ticket_appdata(s, original_ptr, original_len) },
+            1
+        );
+        adv_alloc::disarm_poison_on_free();
+        let mut after_ptr: *mut c_void = core::ptr::null_mut();
+        let mut after_len = 0usize;
+        assert_eq!(
+            // SAFETY: `s` is live and both out-params are writable.
+            unsafe { SSL_SESSION_get0_ticket_appdata(s, &mut after_ptr, &mut after_len) },
+            1
+        );
+        assert!(!after_ptr.is_null());
+        assert_eq!(
+            // SAFETY: `after_ptr` is readable for `after_len` bytes.
+            unsafe { core::slice::from_raw_parts(after_ptr.cast::<u8>(), after_len) },
+            appdata.as_slice(),
+            "an aliasing ticket-appdata setter must preserve the value"
+        );
+        assert_duplicate_precedes_release(&adv_alloc::events(), original_ptr as usize);
+
+        // SAFETY: `s` is live and this releases this frame's reference.
+        unsafe { SSL_SESSION_free(s) };
+        adv_alloc::assert_no_double_free();
+    }
+}
