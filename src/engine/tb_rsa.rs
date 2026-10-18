@@ -37,7 +37,7 @@ static RSA_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 static DUMMY_NID: c_int = 1;
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn rsa_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn rsa_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(RSA_TABLE) as *mut *mut OpenSslLhash
 }
 

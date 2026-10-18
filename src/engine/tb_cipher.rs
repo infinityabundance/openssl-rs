@@ -38,7 +38,7 @@ const LINE_SELECT: c_int = 68;
 static CIPHER_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn cipher_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn cipher_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(CIPHER_TABLE) as *mut *mut OpenSslLhash
 }
 

@@ -50,7 +50,7 @@ const LINE_SELECT: c_int = 69;
 static DIGEST_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn digest_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn digest_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(DIGEST_TABLE) as *mut *mut OpenSslLhash
 }
 
