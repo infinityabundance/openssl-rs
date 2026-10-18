@@ -58,7 +58,9 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -739,9 +741,10 @@ pub unsafe extern "C" fn EVP_KEYMGMT_fetch(
 /// `keymgmt` must be a live `EvpKeyMgmt`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_up_ref(keymgmt: *mut EvpKeyMgmt) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `keymgmt` is live per the contract.
-    unsafe { (*keymgmt).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*keymgmt).refcnt })
 }
 
 /// `void EVP_KEYMGMT_free(EVP_KEYMGMT *keymgmt)`.
@@ -754,9 +757,12 @@ pub unsafe extern "C" fn EVP_KEYMGMT_free(keymgmt: *mut EvpKeyMgmt) {
         return;
     }
     // SAFETY: `keymgmt` is live per the contract.
-    let last = unsafe { (*keymgmt).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*keymgmt).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEYMGMT_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference. The block was handed out by
     // `keymgmt_from_algorithm`'s `into_raw`, and `OwnedCtx`'s `Drop` runs the authority's member

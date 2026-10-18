@@ -50,7 +50,6 @@
 use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
-use core::sync::atomic::Ordering;
 
 use crate::bn::arith::{BN_cmp, BN_sub};
 use crate::bn::bignum::{
@@ -230,15 +229,15 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&r->references, &i)`: a release fetch-sub, then the header's conditional
-    // acquire fence when the count reaches zero.
+    // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
+    // the destroying sentinel. `EC_KEY_free`'s body calls `meth->finish`, the group's `keyfinish`
+    // and `CRYPTO_free_ex_data`, so a re-entrant `EC_KEY_free` from one of those callbacks must be
+    // a defined no-op rather than a second teardown.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    if i > 0 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*r).references }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
 
@@ -431,14 +430,10 @@ pub unsafe extern "C" fn EC_KEY_dup(ec_key: *const EcKey) -> *mut EcKey {
 /// `r` is a live object.
 #[no_mangle]
 pub unsafe extern "C" fn EC_KEY_up_ref(r: *mut EcKey) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add.
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    crate::runtime::refcount::up_ref(unsafe { &(*r).references })
 }
 
 /// `ENGINE *EC_KEY_get0_engine(const EC_KEY *eckey)` — `crypto/ec/ec_key.c:204-207`.

@@ -128,16 +128,22 @@ unsafe fn engine_list_add(e: *mut Engine) -> c_int {
     }
 
     // Having the engine in the list assumes a structural reference.
-    let mut r: c_int = 0;
-    // SAFETY: `e` is live and `struct_ref` is its refcount.
-    unsafe { up_ref(ptr::addr_of_mut!((*e).struct_ref), &mut r) };
+    // `engine_list_add`'s contract (`:108-109`) is that the caller holds the engine
+    // lock; its only caller, `ENGINE_add`, takes it at `:484` and unlocks at `:494`
+    // on every path, including this refusal. Returning 0 here therefore does not
+    // leak the lock.
+    // SAFETY: `e` is live and `struct_ref` is its refcount. A refused increment (a zero,
+    // destroying or overflowing count) cannot insert the engine.
+    if unsafe { up_ref(ptr::addr_of_mut!((*e).struct_ref)) } == 0 {
+        return 0;
+    }
     let head = ENGINE_LIST_HEAD.load(Ordering::Acquire);
     if head.is_null() {
         // Adding to an empty list.
         let tail = ENGINE_LIST_TAIL.load(Ordering::Acquire);
         if !tail.is_null() {
             // SAFETY: `e` is live; its structural reference is dropped back.
-            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref), &mut r) };
+            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref)) };
             // SAFETY: `ENG_LIST_89` is a generated constant whose strings are static.
             unsafe { raise_site(&ENG_LIST_89) };
             return 0;
@@ -146,7 +152,7 @@ unsafe fn engine_list_add(e: *mut Engine) -> c_int {
         // SAFETY: `engine_list_cleanup` is a valid `extern "C" fn()` callback.
         if unsafe { engine_cleanup_add_last(Some(engine_list_cleanup)) } == 0 {
             // SAFETY: `e` is live; its structural reference is dropped back.
-            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref), &mut r) };
+            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref)) };
             // SAFETY: `ENG_LIST_97` is a generated constant whose strings are static.
             unsafe { raise_site(&ENG_LIST_97) };
             return 0;
@@ -163,7 +169,7 @@ unsafe fn engine_list_add(e: *mut Engine) -> c_int {
         };
         if bad {
             // SAFETY: `e` is live; its structural reference is dropped back.
-            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref), &mut r) };
+            unsafe { crate::engine::eng_lib::down_ref(ptr::addr_of_mut!((*e).struct_ref)) };
             // SAFETY: `ENG_LIST_106` is a generated constant whose strings are static.
             unsafe { raise_site(&ENG_LIST_106) };
             return 0;
@@ -358,9 +364,12 @@ pub extern "C" fn ENGINE_get_first() -> *mut Engine {
         }
         let ret = ENGINE_LIST_HEAD.load(Ordering::Acquire);
         if !ret.is_null() {
-            let mut r: c_int = 0;
-            // SAFETY: `ret` is a live list member and `struct_ref` its refcount.
-            unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref), &mut r) };
+            // SAFETY: `ret` is a live list member and `struct_ref` its refcount. If the
+            // increment is refused, no reference was handed out: answer NULL.
+            if unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref)) } == 0 {
+                unlock();
+                return ptr::null_mut();
+            }
         }
         unlock();
         ret
@@ -382,9 +391,12 @@ pub extern "C" fn ENGINE_get_last() -> *mut Engine {
         }
         let ret = ENGINE_LIST_TAIL.load(Ordering::Acquire);
         if !ret.is_null() {
-            let mut r: c_int = 0;
-            // SAFETY: `ret` is a live list member and `struct_ref` its refcount.
-            unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref), &mut r) };
+            // SAFETY: `ret` is a live list member and `struct_ref` its refcount. If the
+            // increment is refused, no reference was handed out: answer NULL.
+            if unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref)) } == 0 {
+                unlock();
+                return ptr::null_mut();
+            }
         }
         unlock();
         ret
@@ -407,11 +419,13 @@ pub unsafe extern "C" fn ENGINE_get_next(e: *mut Engine) -> *mut Engine {
             return ptr::null_mut();
         }
         // SAFETY: `e` is a live list member.
-        let ret = unsafe { (*e).next };
+        let mut ret = unsafe { (*e).next };
         if !ret.is_null() {
-            let mut r: c_int = 0;
-            // SAFETY: `ret` is a live list member and `struct_ref` its refcount.
-            unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref), &mut r) };
+            // SAFETY: `ret` is a live list member and `struct_ref` its refcount. A refused
+            // increment means no reference can be returned; the list keeps its own.
+            if unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref)) } == 0 {
+                ret = ptr::null_mut();
+            }
         }
         unlock();
         // Release the structural reference to the previous ENGINE.
@@ -437,11 +451,13 @@ pub unsafe extern "C" fn ENGINE_get_prev(e: *mut Engine) -> *mut Engine {
             return ptr::null_mut();
         }
         // SAFETY: `e` is a live list member.
-        let ret = unsafe { (*e).prev };
+        let mut ret = unsafe { (*e).prev };
         if !ret.is_null() {
-            let mut r: c_int = 0;
-            // SAFETY: `ret` is a live list member and `struct_ref` its refcount.
-            unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref), &mut r) };
+            // SAFETY: `ret` is a live list member and `struct_ref` its refcount. A refused
+            // increment means no reference can be returned; the list keeps its own.
+            if unsafe { up_ref(ptr::addr_of_mut!((*ret).struct_ref)) } == 0 {
+                ret = ptr::null_mut();
+            }
         }
         unlock();
         // SAFETY: `ENGINE_free` accepts a live ENGINE.
@@ -556,10 +572,9 @@ pub unsafe extern "C" fn ENGINE_up_ref(e: *mut Engine) -> c_int {
             unsafe { raise_site(&ENG_LIST_479) };
             return 0;
         }
-        let mut i: c_int = 0;
-        // SAFETY: `e` is live and `struct_ref` is its refcount.
-        unsafe { up_ref(ptr::addr_of_mut!((*e).struct_ref), &mut i) };
-        1
+        // SAFETY: `e` is live and `struct_ref` is its refcount. The shared protocol refuses
+        // a zero, destroying or `i32::MAX` count without changing it.
+        unsafe { up_ref(ptr::addr_of_mut!((*e).struct_ref)) }
     })
 }
 
@@ -617,9 +632,12 @@ pub unsafe extern "C" fn ENGINE_by_id(id: *const c_char) -> *mut Engine {
                     iterator = cp;
                 }
             } else {
-                let mut r: c_int = 0;
-                // SAFETY: `iterator` is a live list member and `struct_ref` its refcount.
-                unsafe { up_ref(ptr::addr_of_mut!((*iterator).struct_ref), &mut r) };
+                // SAFETY: `iterator` is a live list member and `struct_ref` its refcount. A
+                // refused increment cannot yield a structural reference: take the not-found
+                // path without a reference.
+                if unsafe { up_ref(ptr::addr_of_mut!((*iterator).struct_ref)) } == 0 {
+                    iterator = ptr::null_mut();
+                }
             }
         }
         unlock();

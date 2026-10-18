@@ -185,8 +185,9 @@ pub struct Engine {
     pub(crate) cmd_defns: *const EngineCmdDefn,
     /// `int flags`
     pub(crate) flags: c_int,
-    /// `CRYPTO_REF_COUNT struct_ref` — the structural reference count.
-    pub(crate) struct_ref: c_int,
+    /// `CRYPTO_REF_COUNT struct_ref` — the structural reference count. `CRYPTO_REF_COUNT` is
+    /// the authority's C11 `_Atomic int`; [`AtomicI32`] is its layout-compatible Rust form.
+    pub(crate) struct_ref: AtomicI32,
     /// `int funct_ref` — the functional reference count; `funct_ref <= struct_ref`.
     pub(crate) funct_ref: c_int,
     /// `CRYPTO_EX_DATA ex_data` — the per-ENGINE data block.
@@ -204,6 +205,8 @@ pub struct Engine {
 }
 
 const _: () = {
+    assert!(size_of::<AtomicI32>() == size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(size_of::<Engine>() == 224);
     assert!(core::mem::offset_of!(Engine, id) == 0);
     assert!(core::mem::offset_of!(Engine, name) == 8);
@@ -383,41 +386,36 @@ pub(crate) unsafe fn run_engine_lock_init() -> bool {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The reference count — `internal/refcount.h`, the `#ifndef CRYPTO_NEW_FREE_DEFINED` arm
+// The reference count — `internal/refcount.h`, shared destroying-sentinel protocol
 // ---------------------------------------------------------------------------------------------
+//
+// `Engine::struct_ref` is the authority's `CRYPTO_REF_COUNT` (a C11 `_Atomic int`). The
+// authority moves it with a plain fetch-add/fetch-sub, which cannot distinguish "the count
+// reached zero" from "the destructor is running". `Engine_free`'s last-reference body calls
+// the `destroy` hook and `CRYPTO_free_ex_data`, so an application callback can re-enter
+// `ENGINE_free` while the object is being torn down; a second teardown would be a double free.
+// The crate's shared protocol (`runtime::refcount`) reserves `i32::MIN` for that state and
+// refuses both a re-entrant release and a resurrection.
 
-/// `CRYPTO_UP_REF(refcnt, &ret)` — relaxed fetch-add, answering the **new** value.
+/// `CRYPTO_UP_REF` with the shared checked/sentinel protocol.
+///
+/// Answers 1 when the reference was taken and 0 without changing the count when the count is
+/// zero, negative, destroying, or `i32::MAX`.
 ///
 /// # Safety
-/// `p` must be a live refcount and `ret` a writable slot.
-pub(crate) unsafe fn up_ref(p: *mut c_int, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers.
-    let new = unsafe { (*p).wrapping_add(1) };
-    // SAFETY: as above.
-    unsafe { *p = new };
-    // SAFETY: the caller offers a writable slot.
-    unsafe { *ret = new };
+/// `p` must be a live `AtomicI32` refcount.
+pub(crate) unsafe fn up_ref(p: *mut AtomicI32) -> c_int {
+    // SAFETY: the caller guarantees `p` is a live refcount.
+    crate::runtime::refcount::up_ref(unsafe { &*p })
 }
 
-/// `CRYPTO_DOWN_REF(refcnt, &ret)` — fetch-sub, answering the **new** value.
-///
-/// The fallback `CRYPTO_NEW_FREE_DEFINED` arm has no fence; the release/acquire fence the
-/// atomic arm carries is reproduced anyway, because `engine_free_util` depends on the
-/// destructor seeing every earlier mutation.
+/// `CRYPTO_DOWN_REF` with the shared checked/sentinel protocol.
 ///
 /// # Safety
 /// As [`up_ref`].
-pub(crate) unsafe fn down_ref(p: *mut c_int, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers.
-    let new = unsafe { (*p).wrapping_sub(1) };
-    // SAFETY: as above.
-    unsafe { *p = new };
-    core::sync::atomic::fence(Ordering::Release);
-    if new == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    // SAFETY: the caller offers a writable slot.
-    unsafe { *ret = new };
+pub(crate) unsafe fn down_ref(p: *mut AtomicI32) -> crate::runtime::refcount::DownRef {
+    // SAFETY: the caller guarantees `p` is a live refcount.
+    crate::runtime::refcount::down_ref(unsafe { &*p })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -441,7 +439,7 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
         // `CRYPTO_NEW_REF(&ret->struct_ref, 1)` — the fallback arm assigns.
         // SAFETY: `ret` is a fresh zeroed `Engine` and its `ex_data` block is in place.
         let ok = unsafe {
-            (*ret).struct_ref = 1;
+            (*ret).struct_ref.store(1, Ordering::Relaxed);
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_ENGINE,
                 ret.cast::<c_void>(),
@@ -497,11 +495,14 @@ pub(crate) unsafe fn engine_free_util(e: *mut Engine, not_locked: c_int) -> c_in
     if e.is_null() {
         return 1;
     }
-    let mut i: c_int = 0;
-    // SAFETY: `e` is live and `struct_ref` is its refcount; `i` is a local slot.
-    unsafe { down_ref(ptr::addr_of_mut!((*e).struct_ref), &mut i) };
-    if i > 0 {
-        return 1;
+    // SAFETY: `e` is live and `struct_ref` is its refcount.
+    match unsafe { down_ref(ptr::addr_of_mut!((*e).struct_ref)) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // A zero/negative/destroying count is a defined no-op. The destroying arm is the
+        // re-entrant `ENGINE_free` issued by an ex-data or `destroy` callback, which must not
+        // run the destructor body a second time.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return 1,
     }
     // SAFETY: `e` is live and this is its last structural reference, so no other owner will release
     // it; `Drop` runs the authority's own destructor body and this is the block's single release.
@@ -946,4 +947,140 @@ pub unsafe extern "C" fn ENGINE_get_cmd_defns(e: *const Engine) -> *const Engine
 pub extern "C" fn ENGINE_get_static_state() -> *mut c_void {
     static INTERNAL_STATIC_HACK: AtomicI32 = AtomicI32::new(0);
     INTERNAL_STATIC_HACK.as_ptr().cast::<c_void>()
+}
+
+#[cfg(test)]
+mod refcount_tests {
+    use super::*;
+    use crate::engine::eng_list::ENGINE_up_ref;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::runtime::refcount::REF_DESTROYING;
+    use core::sync::atomic::AtomicUsize;
+    use std::sync::Barrier;
+    use std::thread;
+
+    static DESTROY_CALLS_MT: AtomicUsize = AtomicUsize::new(0);
+    static DESTROY_CALLS_RE: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static SAW_SENTINEL: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn counting_destroy_mt(_e: *mut Engine) -> c_int {
+        DESTROY_CALLS_MT.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    unsafe extern "C" fn counting_destroy_re(_e: *mut Engine) -> c_int {
+        DESTROY_CALLS_RE.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// The ex-data free hook runs inside `ENGINE_free`'s last-reference body, before the block
+    /// release. Re-entering `ENGINE_free` from it must observe the destroying sentinel.
+    unsafe extern "C" fn reenter_free(
+        parent: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        let e = REENTER_TARGET.load(Ordering::SeqCst) as *mut Engine;
+        if e.is_null() || parent.cast::<Engine>() != e {
+            return;
+        }
+        REENTER_CALLS.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: `parent` is the still-allocated ENGINE whose ex-data is being torn down.
+        let count = unsafe { (*e).struct_ref.load(Ordering::Acquire) };
+        if count == REF_DESTROYING {
+            SAW_SENTINEL.fetch_add(1, Ordering::SeqCst);
+        }
+        // SAFETY: the target is the ENGINE whose ex-data is being torn down; the block is
+        // still allocated at this point.
+        unsafe { ENGINE_free(e) };
+    }
+
+    #[test]
+    fn up_ref_refuses_overflow_without_changing_the_count() {
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its only structural reference.
+        unsafe {
+            (*e).struct_ref.store(i32::MAX, Ordering::Relaxed);
+            assert_eq!(ENGINE_up_ref(e), 0);
+            assert_eq!((*e).struct_ref.load(Ordering::Relaxed), i32::MAX);
+            (*e).struct_ref.store(1, Ordering::Relaxed);
+            assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    #[test]
+    fn eight_threads_share_the_count_and_run_one_destructor() {
+        DESTROY_CALLS_MT.store(0, Ordering::SeqCst);
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its initial structural reference.
+        unsafe { ENGINE_set_destroy_function(e, Some(counting_destroy_mt)) };
+
+        const THREADS: usize = 8;
+        let addr = e as usize;
+        let barrier = Barrier::new(THREADS);
+        thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(|| {
+                    let e = addr as *mut Engine;
+                    barrier.wait();
+                    // SAFETY: the object carries a live reference throughout the race.
+                    unsafe {
+                        assert_eq!(ENGINE_up_ref(e), 1);
+                        assert_eq!(ENGINE_free(e), 1);
+                    }
+                });
+            }
+        });
+
+        // SAFETY: `e` is live; every worker returned its reference.
+        unsafe {
+            assert_eq!((*e).struct_ref.load(Ordering::Acquire), 1);
+            assert_eq!(DESTROY_CALLS_MT.load(Ordering::SeqCst), 0);
+            // The final release is the unique last reference, so it alone tears down.
+            assert_eq!(ENGINE_free(e), 1);
+        }
+        assert_eq!(DESTROY_CALLS_MT.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn reentrant_free_from_an_ex_data_callback_is_a_defined_noop() {
+        REENTER_CALLS.store(0, Ordering::SeqCst);
+        SAW_SENTINEL.store(0, Ordering::SeqCst);
+        DESTROY_CALLS_RE.store(0, Ordering::SeqCst);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_ENGINE,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(reenter_free),
+        );
+        assert!(idx >= 1, "an engine ex-data index must be available");
+
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its only structural reference.
+        unsafe {
+            ENGINE_set_destroy_function(e, Some(counting_destroy_re));
+            assert_eq!(ENGINE_set_ex_data(e, idx, ptr::dangling_mut::<c_void>()), 1);
+            REENTER_TARGET.store(e as usize, Ordering::SeqCst);
+
+            assert_eq!(ENGINE_free(e), 1);
+        }
+        REENTER_TARGET.store(0, Ordering::SeqCst);
+        assert_eq!(REENTER_CALLS.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            SAW_SENTINEL.load(Ordering::SeqCst),
+            1,
+            "the re-entrant callback observes the destroying sentinel"
+        );
+        assert_eq!(DESTROY_CALLS_RE.load(Ordering::SeqCst), 1);
+    }
 }

@@ -687,16 +687,15 @@ pub unsafe extern "C" fn RSA_free(r: *mut Rsa) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&r->references, &i)`: a release fetch-sub, then the header's conditional
-    // acquire fence when the count reaches zero — the object's other mutations must be visible to
-    // the destructor, and the destructor must not be reordered ahead of them.
+    // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
+    // the destroying sentinel. `RSA_free`'s body calls `meth->finish` and
+    // `CRYPTO_free_ex_data`, so a re-entrant `RSA_free` from one of those callbacks must be a
+    // defined no-op rather than a second teardown.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    if i > 0 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*r).references }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
 
     // SAFETY: `r` is a live object whose last reference this call released; `destroy_body` is the
@@ -718,15 +717,10 @@ pub unsafe extern "C" fn RSA_free(r: *mut Rsa) {
 /// `r` is a live object.
 #[no_mangle]
 pub unsafe extern "C" fn RSA_up_ref(r: *mut Rsa) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add, and the relaxedness is deliberate: the caller is
-    // about to use only those writes it can already see.
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    crate::runtime::refcount::up_ref(unsafe { &(*r).references })
 }
 
 /// `OSSL_LIB_CTX *ossl_rsa_get0_libctx(RSA *r)` — `rsa_lib.c:205-208`. Internal
