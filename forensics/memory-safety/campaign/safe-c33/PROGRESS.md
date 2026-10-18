@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1303** passed,
+`cargo test --lib` (must pass; the established baseline is **1312** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -970,6 +970,32 @@ package.
   existing `b == NULL` behaviour. Gate: `fmt` 0, clippy 0, **1303 passed / 22
   ignored**, **22/22** probes. Per-file campaign: **8 of 761**.
 
+### Subphase 78 — `hpke/mod.rs` audit and fixes
+
+- Audit: 416 production sites in 93 groups — **17 ESTABLISHED, 69 CONTRACTED,
+  7 UNATTRIBUTED**.
+- Fixes:
+  1. `kem/kdf/aead_info_find_random` were **safe** fns forwarding a caller
+     pointer to the RNG; they are now `unsafe fn` with live-libctx contracts.
+  2. `OSSL_HPKE_export` bounds `secretlen` at `255*Nh` and uses checked sums,
+     avoiding the authority's wrapping sum and 16-bit truncation. Exactly
+     `255*Nh` still derives; larger lengths return 0 with `HPKE_1300`. The
+     error-stack difference is documented.
+  3. The 512-byte secret/ks_context scratch uses `CleansedScratch` guards that
+     cleanse on every exit.
+  4. KEM tails are cleansed through a frame-local extent only; **no persistent
+     field**, so `size_of::<OsslHpkeCtx>()` stays **208**, matching the
+     authority's `struct ossl_hpke_ctx_st` field-for-field. A write past
+     capacity is rejected before the tail cleanse.
+  5. `set1_psk`/`set1_ikme` build replacements first and commit atomically;
+     failure preserves the previous state (the authority loses it —
+     documented divergence).
+  6. `CtxDestroy` verified for all eleven members and the all-zero state.
+- Adversarial review **FAILED** on an extra struct field (allocator parity)
+  and **PASSED** after removal. Gate: `fmt` 0, clippy 0, **1312 passed / 22
+  ignored**, **22/22** probes; `rt-hpke` transcript matches the authority.
+  Per-file campaign: **9 of 761**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1147,7 +1173,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `624f046df` (v3_addr audit fixes merged)
+**Last observed HEAD:** `2aa5fdeeb` (hpke audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1161,7 +1187,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1303** tests (22 ignored;
+   The most recent reported library baseline is **1312** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
