@@ -229,3 +229,55 @@ Adopt the model next, in this order:
    writer `t1_lib::tls1_set_groups` takes the raw `*mut *mut u16`/`*mut usize` pair; it stays
    `pub(crate)` with its three accesses (the `tls1_set_groups` regrow, `tls1_get_supported_groups`'s
    slice, and the `SSL_new` copy) and two destructor frees enumerated in the batch report.
+
+## 6. The five `OwnedBlock` families — retained, deliberately not merged
+
+OB-4b audited five same-named `OwnedBlock` types. They are **not** one abstraction: each
+has a different destructive arm, a different coordinate source, or a different allocation
+shape. Merging any pair would hide a release difference, so all five are retained and
+documented here. The `release_probe` test guard (below) records the arm and coordinates
+each `Drop` selects, so a silent D1-style drift fails a test.
+
+| family | representation | constructors | release arm | release coordinates |
+|--------|----------------|--------------|-------------|---------------------|
+| `asn1::owned::OwnedBlock<T>` | typed `NonNull<T>` | `malloc`/`zalloc(count)` with `checked_mul` | plain `CRYPTO_free` | caller-supplied per-instance `file`/`line` (`set_release_line` may move the line) |
+| `runtime::bio::owned::OwnedBlock` | untyped `*mut c_void` | `take` an already-allocated seam block | plain `CRYPTO_free` | fixed `(NULL, 0)` |
+| `asn1::string::OwnedBlock` | untyped `*mut u8` | `new`/`new_zeroed`/`take`/`resize` | plain `CRYPTO_free` | module constants `FILE`/`LINE` (`crypto/asn1/asn1_lib.c`, `0`) |
+| `evp::asymcipher::OwnedBlock` | `*mut c_void` + `len` + `file`/`line` | `take` | **`CRYPTO_clear_free` over `len`** | caller-supplied per-instance `file`/`line` |
+| `runtime::rcu::OwnedBlock<T>` | typed `NonNull<T>` | `zalloc`/`calloc` (fixed `FILE`) | plain `CRYPTO_free` | module `FILE` + per-instance release `line` |
+
+What must never change silently:
+
+* the `evp::asymcipher` family is the **only** secret-bearing family here and the only one
+  using the cleansed arm; its `len` is the cleanse extent and must stay the allocation's
+  length;
+* `asn1::owned` and `rcu` are both plain but differ in allocation shape and coordinate
+  source (`file` stored per instance vs module constant); they are not merged;
+* `runtime::bio::owned` releases at `(NULL, 0)` because the authority passes no coordinate
+  for those blocks;
+* `asn1::string` is the only family with in-place `resize` (`CRYPTO_realloc`), which is a
+  distinct operation, not a replacement for the other families.
+
+**Guard.** Each family's `Drop` calls `runtime::release_probe::record(arm, file, line)` in
+`#[cfg(test)]` builds only, and a `release_family_tests` module in each owning file asserts
+the recorded arm and coordinates. The probe is thread-local and compiled out of release
+builds; a future edit that changes a release function or a coordinate without updating the
+assertion fails the suite.
+
+## 7. The shared C-string slot, and the retained exceptions
+
+OB-4b replaced the eight per-type `PropqSlot` copies, `CmsPropqSlot` and
+`MemberCStrSlot` with thin wrappers or aliases over one
+[`runtime::member_slot::CStrSlot`](../../../src/runtime/member_slot.rs). The shared type
+carries the invariant, `clear -> EmptyCStrSlot` token, owner-consuming `store(OwnedStr)`, the
+audited `unsafe store_raw` foreign-transfer route, and `assume_empty` for freshly zeroed
+objects. Two things are deliberately *not* unified:
+
+* **`x509::by_store::CachedStore`** — its stack-local records borrow the caller's `uri` and
+  `propq` (D7). The owned heap record uses the shared slot through an `unsafe of` whose
+  contract names the owned-record restriction; the borrowed records use a separate
+  `BorrowedStore` typestate with readers only and **no slot**, so there is no safe
+  clear/store path for them.
+* **`MemberBufSlot`** — the `(ptr, len)` blob variant, including the in-place
+  `CRYPTO_realloc` regrow (§2.7), stays local: its operation set is genuinely different
+  from a C-string slot.

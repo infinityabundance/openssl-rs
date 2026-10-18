@@ -372,9 +372,39 @@ impl OwnedBlock {
 
 impl Drop for OwnedBlock {
     fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            ptr::null(),
+            0,
+        );
         // SAFETY: `self.ptr` is a block this seam allocated and has not handed out; its single
         // release is the authority's own plain `CRYPTO_free`.
         unsafe { CRYPTO_free(self.ptr, ptr::null(), 0) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+
+    /// D1-style drift guard: this family's release is the plain `CRYPTO_free` at the
+    /// seam's inert `(NULL, 0)` coordinate.
+    #[test]
+    fn release_is_plain_at_the_null_coordinates() {
+        release_probe::clear();
+        let raw = CRYPTO_malloc(8, ptr::null(), 0);
+        assert!(!raw.is_null());
+        // SAFETY: `raw` is the fresh seam block this test owns.
+        let block = unsafe { OwnedBlock::take(raw) }.expect("a non-NULL block is owned");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert!(call.file.is_null());
+        assert_eq!(call.line, 0);
     }
 }
 

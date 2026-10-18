@@ -106,11 +106,41 @@ impl<T> OwnedBlock<T> {
 impl<T> Drop for OwnedBlock<T> {
     /// Release the block through the same allocator seam it was allocated on.
     fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            self.file,
+            self.line,
+        );
         // SAFETY: `self.ptr` is the exclusively owned block this handle allocated
         // (`malloc`/`zalloc`, or reclaimed by `from_raw`) and has not released; the
         // stored release coordinates, which `set_release_line` may update, are the
         // authority's release site for this block; `Drop` runs once, so this is its
         // single release.
         unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+
+    const FILE: &core::ffi::CStr = c"test/asn1_owned.rs";
+
+    /// D1-style drift guard: this family's release is the plain `CRYPTO_free` at the
+    /// caller-supplied per-instance `(file, line)`, not the module constants or a
+    /// cleansed arm.
+    #[test]
+    fn release_is_plain_at_the_instance_coordinates() {
+        release_probe::clear();
+        let block = OwnedBlock::<u8>::malloc(4, FILE.as_ptr(), 7).expect("4 bytes allocate");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert_eq!(call.file, FILE.as_ptr());
+        assert_eq!(call.line, 7);
     }
 }
