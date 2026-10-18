@@ -48,14 +48,14 @@
 //! else, and D325 records why.
 //!
 //! **2. `RSA_PSS_PARAMS_free`.** [`RSA_free`] and [`ossl_rsa_set0_pss_params`] call it
-//! (`rsa_lib.c:186`, `:702`). No state this crate can reach has a non-NULL `r->pss`: the field's
-//! only writer is [`ossl_rsa_set0_pss_params`], whose only authority caller is
-//! `crypto/rsa/rsa_backend.c:669` — `ossl_rsa_param_decode` — and that unit has no crate module, so
-//! the writer is never reached. `d2i_RSA_PSS_PARAMS` and `RSA_PSS_PARAMS_free` themselves **are**
-//! now landed (D348), which changes nothing about the reachability: a decoder that nothing calls
-//! still leaves the field NULL. Both omitted calls are `free(NULL)`, which
-//! `ossl_asn1_item_embed_free` answers by returning immediately (`tasn_fre.c:36-39`). The calls are
-//! restored the day `crypto/rsa/rsa_backend.c`'s `ossl_rsa_param_decode` is transcribed.
+//! (`rsa_lib.c:186`, `:702`). The field has three writers in this crate:
+//! [`ossl_rsa_set0_pss_params`] (`src/rsa/backend.rs`'s `ossl_rsa_param_decode`, reached through
+//! the PKCS#8 decoder rows in `src/provider/decode_der2key.rs`), `src/rsa/pmeth.rs`'s
+//! `pkey_rsa_ctrl` and `src/rsa/ameth.rs`'s keygen path. The latter two write a fresh key with no
+//! previous value, but the decoder path gives a live object a PSS parameter set that [`RSA_free`]
+//! must release. Both calls are therefore transcribed (M6-D1): omitting them leaked the ASN.1
+//! value on every PSS PKCS#8 decode and on every replacement through
+//! [`ossl_rsa_set0_pss_params`].
 //!
 //! Neither reduction is a `forensics/prerequisites.json` `divergences` row: the gate resolves
 //! **internal** symbols only, so a row covering an export is refused with
@@ -221,6 +221,7 @@ use core::sync::atomic::Ordering;
 use crate::bn::bignum::{BN_clear_free, BN_free, BN_num_bits, BN_set_flags, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::evp::pkey_asn1::Engine;
+use crate::rsa::asn1::RSA_PSS_PARAMS_free;
 use crate::rsa::mp::{
     multip_info_free_ex_thunk, multip_info_free_thunk, ossl_rsa_multip_calc_product,
     ossl_rsa_multip_cap, ossl_rsa_multip_info_free, ossl_rsa_multip_info_new,
@@ -635,10 +636,9 @@ unsafe impl CtxDestroy for Rsa {
             BN_clear_free((*ptr).iqmp);
         }
 
-        // The authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted: `r->pss` is NULL on every state
-        // this crate can reach -- its only writer's only authority caller is `rsa_backend.c:669`, a
-        // unit with no crate module -- so the call is `free(NULL)`, which returns immediately
-        // (`tasn_fre.c:36-39`). See the module documentation and D348.
+        // SAFETY: `pss` is NULL or a live value this object owns; the decoder path
+        // (`ossl_rsa_param_decode` through the PKCS#8 decoder rows) and `set0` are its writers.
+        unsafe { RSA_PSS_PARAMS_free((*ptr).pss) };
 
         // SAFETY: `prime_infos` is NULL or the object's own stack, whose elements are
         // `RSA_PRIME_INFO` records this object owns in their entirety -- the *full* destructor,
@@ -669,14 +669,13 @@ unsafe impl CtxDestroy for Rsa {
 ///
 /// The `REF_ASSERT_ISNT(i < 0)` between (1) and (2) is empty under this profile's `NDEBUG`.
 ///
-/// **Two calls the authority makes between (2) and (6) are reduced, and both reductions are
-/// reachable answers rather than omissions.** `ENGINE_finish(r->engine)` (step 3) is not a call:
-/// there is no engine registry in this crate, so `r->engine` is NULL and `ENGINE_finish(NULL)`
-/// returns 1 without touching anything (`eng_init.c:108-111`) — the
-/// `src/evp/pkey_asn1.rs:54-60` reduction. `RSA_PSS_PARAMS_free(r->pss)` is not a call either: no
-/// state this crate can reach has a non-NULL `r->pss` — its only writer's only authority caller is
-/// `crypto/rsa/rsa_backend.c:669`, a unit with no crate module — so it is `free(NULL)`, which
-/// returns immediately (`tasn_fre.c:36-39`, and D348 for the re-measurement).
+/// **One call the authority makes between (2) and (6) is reduced, and it is a reachable
+/// answer rather than an omission.** `ENGINE_finish(r->engine)` (step 3) is not a call: there is
+/// no engine registry in this crate, so `r->engine` is NULL and `ENGINE_finish(NULL)` returns 1
+/// without touching anything (`eng_init.c:108-111`) — the `src/evp/pkey_asn1.rs:54-60`
+/// reduction. `RSA_PSS_PARAMS_free(r->pss)` **is** transcribed: the PKCS#8 decoder rows reach
+/// `ossl_rsa_param_decode`, which gives a live key a PSS parameter set (see the module
+/// documentation and M6-D1).
 ///
 /// # Safety
 /// `r` is NULL or a live object, and must not be used again after this call unless a reference
@@ -1509,13 +1508,10 @@ pub unsafe extern "C" fn RSA_get0_pss_params(r: *const Rsa) -> *const RsaPssPara
 /// Always answers 1 on this profile: the `#ifdef FIPS_MODULE` arm that answers 0 is not compiled.
 /// The old parameters are released first, so a caller replacing them does not leak the old set.
 ///
-/// **The release is written as the reachable answer.** The authority calls
-/// `RSA_PSS_PARAMS_free(r->pss)`, which would be `free(NULL)` on every state this crate can reach —
-/// this function's own store is the only way `r->pss` becomes non-NULL, and its only authority
-/// caller is `crypto/rsa/rsa_backend.c:669`, a unit with no crate module. `d2i_RSA_PSS_PARAMS` and
-/// `RSA_PSS_PARAMS_free` themselves landed in D348, but a decoder nothing calls does not make the
-/// field non-NULL, so the re-measurement leaves the call omitted. It is restored the day
-/// `rsa_backend.c`'s `ossl_rsa_param_decode` is transcribed. See the module documentation.
+/// The old parameters are released first, exactly as the authority does, so a caller replacing
+/// them does not leak the old set. That path is reachable: `ossl_rsa_param_decode`
+/// (`src/rsa/backend.rs`) is called through the PKCS#8 decoder rows in
+/// `src/provider/decode_der2key.rs`, which makes `r->pss` non-NULL on a live key.
 ///
 /// `#[allow(dead_code)]`'s reason: **the first reader is Phase 9's**
 /// `ossl_rsa_set0_all_params`/`rsa_backend.c` key loader (`:669`); nothing in this commit calls it.
@@ -1524,11 +1520,12 @@ pub unsafe extern "C" fn RSA_get0_pss_params(r: *const Rsa) -> *const RsaPssPara
 /// `r` is a live object; on return `r` owns `pss`.
 #[allow(dead_code)] // read by rsa_backend.c's key loader, which is Phase 9's
 pub(crate) unsafe fn ossl_rsa_set0_pss_params(r: *mut Rsa, pss: *mut RsaPssParams) -> c_int {
-    // SAFETY: `r` is live and `pss` is the caller's, whose ownership this call takes. The
-    // authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted — it is `free(NULL)` on every reachable
-    // state, because the only authority caller of this function is a unit with no crate module
-    // (`tasn_fre.c:36-39`, D348).
-    unsafe { (*r).pss = pss };
+    // SAFETY: `r` is live, `r->pss` is NULL or a live value the object owns, and `pss` is the
+    // caller's, whose ownership this call takes.
+    unsafe {
+        RSA_PSS_PARAMS_free((*r).pss);
+        (*r).pss = pss;
+    }
     1
 }
 
@@ -2851,6 +2848,33 @@ mod tests {
             BN_free(qm1);
             BN_free(phi);
             BN_CTX_free(ctx);
+        }
+    }
+
+    /// **M6-D1: the PSS parameter slot is owned, replaced and released.** The old reduction left
+    /// both releases out because the writer looked unreachable; `ossl_rsa_param_decode` is now
+    /// reachable through the PKCS#8 decoder rows, so a live key can carry a `pss`. This arm walks
+    /// the replacement path (which must release the old value rather than overwrite it) and then
+    /// the object's own release, so a mistaken double release aborts here.
+    #[test]
+    fn set0_pss_params_replaces_the_old_value_and_rsa_free_releases_it() {
+        use crate::rsa::asn1::RSA_PSS_PARAMS_new;
+
+        // SAFETY: `rsa` is this test's object; each `pss` is a fresh ASN.1 item whose ownership
+        // passes to the object on success, and `RSA_free` releases the last one.
+        unsafe {
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            let first = RSA_PSS_PARAMS_new();
+            let second = RSA_PSS_PARAMS_new();
+            assert!(!first.is_null() && !second.is_null());
+
+            assert_eq!(ossl_rsa_set0_pss_params(rsa, first), 1);
+            assert_eq!((*rsa).pss, first);
+            assert_eq!(ossl_rsa_set0_pss_params(rsa, second), 1);
+            assert_eq!((*rsa).pss, second);
+
+            RSA_free(rsa);
         }
     }
 }
