@@ -518,6 +518,66 @@ GENM/caCerts differential replay (BOUNDARY); dependency-graph regeneration
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M7.json`](atlas-refresh/mechanism-sweep-M7.json).
 
+## 3h. Mechanism-contract sweep M8 — 2026-10-18
+
+**Candidate:** `integrate/safe-c33` source HEAD `8fd9d3a79` (working tree; not
+committed). **Level:** FAST, then **BATCH**, plus targeted ASan controls for
+M8-D1 and M8-D2.
+
+| file | rank | mechanisms | result |
+|---|---:|---|---|
+| `src/decoder_pkey.rs` | 85 | OB-1 `OwnedBuf`, `OwnedCtx`-style construct-data transfer, cache table ownership, stack/context ownership | no defect |
+| `src/asn1/asn1_gen.rs` | 86 | OB-1 adoption, `ASN1_TYPE`/string ownership, `i2d` out-pointers, callback parsers | no defect |
+| `src/dh/ameth.rs` | 87 | `EVP_PKEY_ASN1_METHOD` callbacks, `OwnedBuf` adoption/cleansed release, FFC parameter ownership | no defect |
+| `src/ec/ameth.rs` | 88 | `EVP_PKEY_ASN1_METHOD` callbacks, `EcKey` by-value copy (no `Drop`), `OwnedBuf` adoption/cleansed release | no defect |
+| `src/evp/skeymgmt.rs` | 89 | OB-3 `OwnedCtx`, local `OwnedSkey`, provider callback dispatch, refcount re-entry | **M8-D1 (fixed): provider destructor called with NULL** |
+| `src/bn/bignum.rs` | 90 | `Box`-owned `BIGNUM`, `BN_FLG_STATIC_DATA`, byte-conversion extents, cleansing | **M8-D2 (fixed): `BN_copy(a, a)` aliasing** |
+| `src/evp/asymcipher.rs` | 91 | OB-3 `OwnedCtx`, `OwnedBlock` cleansed release, provider fetch/export ownership | no defect |
+| `src/evp/kem.rs` | 92 | OB-3 `OwnedCtx`, refcount dispatch, provider fetch/export ownership | no defect |
+
+**M8-D1 — `src/evp/skeymgmt.rs:328-341` (pre-fix).**
+`OwnedSkey::drop` called `evp_skeymgmt_freedata(skeymgmt, keydata)`
+unconditionally, where the authority's `EVP_SKEY_free` guards
+`skey->keydata != NULL`. The failure paths of `EVP_SKEY_import`,
+`EVP_SKEY_import_SKEYMGMT` and `EVP_SKEY_generate` free a key whose
+`keydata` was never produced, so the crate invoked a caller-supplied,
+mandatory provider `free(NULL)` in a state the authority never invokes it.
+Severity: **high (unsafe provider-callback invocation outside the
+authority's contract; any provider whose `free` dereferences its key data
+faults).** Fix: restore the authority's guard. The existing re-entrancy
+test was updated to give its fixture non-NULL key data, and a new test
+pins that a data-less key does not reach the provider destructor.
+
+**M8-D2 — `src/bn/bignum.rs:496-509` (pre-fix).**
+`BN_copy` formed `(as_mut(a), as_ref(b))` before testing identity; the
+authority returns `a` for `a == b` (`bn_lib.c:341-342`). A C-valid
+`BN_copy(a, a)` therefore created aliasing `&mut`/`&` borrows (UB) and,
+because the destination was cleared before the copy, emptied the number.
+Severity: **high (aliasing UB on a C-valid call, plus value corruption).**
+Fix: the authority's early return, before any borrow is formed; a
+regression test asserts identity and value preservation.
+
+**Skipped to a boundary batch (NOT_RUN):** none of the eight files
+presented a new reusable unsafe boundary; the previously deferred
+callback/ownership files remain deferred.
+
+**BATCH:** `cargo fmt --all -- --check` PASS; clippy `--all-targets -D warnings`
+PASS; library serial 1577 passed / 0 failed / 26 ignored; threaded run
+1577 passed / 0 failed / 26 ignored. Focused: `bn::bignum` 5/0,
+`evp::skeymgmt` 11/0, `decoder_pkey` 3/0, `asn1_gen` 3/0, `dh::ameth` 5/0,
+`evp::asymcipher` 5/0, `evp::kem` 4/0.
+
+**ASan venue:** both repaired tests pass under
+`-Zsanitizer=address -Zbuild-std` (nightly-2026-10-05; leak detection
+disabled), with no sanitizer finding.
+
+**Deferred / NOT_RUN:** independent boundary review of M8-D1/M8-D2, a
+real third-party-provider NULL-free differential, and dependency-graph
+regeneration (BATCH checkpoint after commit).
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M8.json`](atlas-refresh/mechanism-sweep-M8.json).
+
 ## 4. Machine-readable index
 
 `atlas-refresh/perfile-index.json` mirrors table 3 as deterministic JSON:
