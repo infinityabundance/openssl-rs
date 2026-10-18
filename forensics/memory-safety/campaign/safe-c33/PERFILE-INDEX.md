@@ -814,3 +814,83 @@ writer. Machine-readable receipt:
 **Next boundary position:** `src/rsa/object.rs` (rank 68), then
 `src/ssl/ssl_sess.rs` (rank 61), `src/ssl/statem/statem_clnt.rs` (rank 50) and
 `src/ml_dsa/encoders.rs`. No third file was started in B3.
+
+## 9. Boundary sweep B4 — the deferred SSL session and client state-machine files
+
+**Source identity:** `integrate/safe-c33` at `05457b479`; working-tree blobs
+`ssl_sess.rs` `84ffa4649…` and `statem_clnt.rs` `65776490a…`. **STOP:** repaired —
+one high-severity memory-safety defect and three lower-severity defects were
+found and fixed. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| file | boundary IDs | disposition | defects repaired |
+|---|---|---|---|
+| `src/ssl/ssl_sess.rs` | `B4-SL-1..5` | `CONTRACTED` | `B4-D3` (partially overlapping id sources used `copy_nonoverlapping`), `B4-D4` (refused cache push leaked its reference and reported success) |
+| `src/ssl/statem/statem_clnt.rs` | `B4-SC-1..7` | `CONTRACTED` | `B4-D1` (unbounded TLS1.2 ServerHello session id written into the 32-byte session field), `B4-D2` (missing TLS1.3 bound / wrong alert-reason parity) |
+
+**B4-D1 — `statem_clnt.rs` (pre-fix 2145), high.** The TLS1.2 ServerHello
+session-id length is one wire byte (`0..=255`). It was published as
+`session_id_length` and copied into `SslSession::session_id`, a 32-byte field
+inside the heap session block. A hostile ServerHello with a 33–255-byte id
+overran the field into `sid_ctx_length`/`sid_ctx`/the member pointers, and the
+inflated length made later `session_cmp` reads run past the array. Both
+ServerHello parsers now reject `sid_len > SSL_MAX_SSL_SESSION_ID_LENGTH` with
+the authority's `SSL_AD_ILLEGAL_PARAMETER` / `SSL_R_SSL3_SESSION_ID_TOO_LONG`
+(`statem_clnt.c:1519-1524`) before a session is created or mutated. The TLS1.3
+parser was safe only by the `sid_len != tmp_len` short-circuit; the explicit
+bound now supplies the authority's alert and reason (`B4-D2`).
+
+**B4-D3 — `ssl_sess.rs` (pre-fix 1339/1756), low.** `SSL_SESSION_set1_id` and
+`SSL_SESSION_set1_id_context` skip only the exact self-pointer and used
+`copy_nonoverlapping`. Their stated contract accepts any source readable for
+the length, including a pointer into the same array, so a partial overlap was
+UB (as it is for the authority's `memcpy`). Both now use `ptr::copy`
+(memmove), preserving the in-place result while eliminating the overlap UB per
+AGENTS §17.
+
+**B4-D4 — `ssl_sess.rs` (pre-fix 700), low.** `SSL_CTX_add_session` ignored
+`OPENSSL_sk_push`. On a refused stack allocation it leaked the reference taken
+for the cache, claimed `owner`, and returned 1 although the session was not
+cached. It now checks the push, releases the cache reference on refusal, and
+returns 0, matching the authority's OOM arm (`ssl_sess.c:756-765`); the
+caller's own reference is untouched.
+
+**Client analogues of B3.** The client uses no fixed certificate DER buffers:
+both certificate flights parse directly from the message slice with `d2i_X509`,
+and certificate/ticket bodies are dynamically allocated. The ticket path hashes
+into a 32-byte digest and copies exactly 32 bytes into the 32-byte id, and the
+ClientHello/public-key/signature bodies all carry explicit capacity checks. The
+B3 stack-write classes have no reachable client equivalent.
+
+**Contracts and residuals.** Twelve boundaries (five session, seven client),
+all `CONTRACTED`, with 46 residuals in the machine-readable receipt. The
+load-bearing external ones are: a C caller owns the reference it releases;
+cache callbacks run under the context write lock during eviction (authority
+parity) and must not re-enter the cache; `new_session_cb` owns its extra
+reference when it returns nonzero; every application callback must not free the
+SSL/SSL_CTX/SSL_SESSION it receives; and the reduced reader delivers exactly
+one length-delimited message per call. Recorded divergences: eviction processes
+insertion order, not timeout order; `SSL_CTX_free` releases the cache without
+invoking `remove_session_cb` (the authority flushes and invokes it — wiring it
+requires reordering `SslCtx::destroy_body`, outside this batch); the client
+read/ticket cap is 16384 bytes; and the TLS1.2 ticket is the reduced stateful
+form. Hidden obligations: 0.
+
+**Evidence.** FAST: fmt clean; `ssl::ssl_sess` 6 passed / 1 ignored and the two
+new ServerHello bounds controls. BATCH: clippy `--all-targets -D warnings`
+PASS; library **1586 passed / 0 failed / 26 ignored** serially (287.31 s) and
+with `--test-threads=4` (95.05 s). Affected probes, one process each: the two
+`ssl_lib` realloc probes, the `ssl_sess` self-alias probe and the cleansed-free
+canary all PASS. The 64-byte ServerHello controls assert refusal, a NULL
+session and a poisoned state for both versions; the overlap control asserts the
+deterministic memmove result.
+
+**Residuals and NOT_RUN.** Miri, Loom/threaded handshake interleavings, the
+pre-fix binary under ASan, an authority differential for the oversized
+ServerHello, `SSL_CTX_free` callback parity and the full SEAL closure are
+`NOT_RUN` at BOUNDARY/SEAL. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B4.json`](atlas-refresh/boundary-sweep-B4.json).
+
+**Next boundary position:** `src/rsa/object.rs` (rank 68), then
+`src/ml_dsa/encoders.rs`; the `ssl_lib` context-teardown ordering needed for
+`remove_session_cb` parity is a recorded follow-up. No third file was started
+in B4.

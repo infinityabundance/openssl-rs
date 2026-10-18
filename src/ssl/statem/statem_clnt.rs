@@ -134,6 +134,8 @@ const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
 const SSL_R_BAD_SIGNATURE: c_int = 148;
 /// `SSL_R_BAD_KEY_SHARE` — `sslerr.h`.
 const SSL_R_BAD_KEY_SHARE: c_int = 384;
+/// `SSL_R_SSL3_SESSION_ID_TOO_LONG` — `sslerr.h:300`.
+const SSL_R_SSL3_SESSION_ID_TOO_LONG: c_int = 300;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -1169,6 +1171,13 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     if p + sid_len + 2 + 1 > b.len() {
         return 0;
     }
+    // The authority bounds the echoed id before using it (`statem_clnt.c:1519-1524`);
+    // `tmp_session_id` is `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes.
+    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
+        return 0;
+    }
     // The TLS1.3 ServerHello echoes the ClientHello session id (`statem_clnt.c:1568`).
     let sid = &b[p..p + sid_len];
     // SAFETY: `s` is live; `tmp_session_id` is a 32-byte array.
@@ -2076,6 +2085,15 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     let sid_len = b[p] as usize;
     p += 1;
     if p + sid_len + 2 + 1 > b.len() {
+        return 0;
+    }
+    // The authority bounds the server's session id before copying it into the
+    // `SSL_MAX_SSL_SESSION_ID_LENGTH`-byte `session_id` (`statem_clnt.c:1519-1524`); without
+    // this check a hostile ServerHello length (up to 255) overruns the field and the
+    // session block it lives in.
+    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
     let session_id = &b[p..p + sid_len];
@@ -3509,5 +3527,81 @@ mod adv_probe {
             1,
             "the refusal must be recorded exactly once: {ev:?}"
         );
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// ServerHello session-id bounds (§16 negative control for the B4-D1 write)
+// -------------------------------------------------------------------------------------------
+//
+// RFC 8446/RFC 5246 bound `legacy_session_id_echo`/`session_id` at 32 bytes. The authority rejects
+// a longer value before any use (`statem_clnt.c:1519-1524`, `SSL_R_SSL3_SESSION_ID_TOO_LONG`), so
+// a hostile ServerHello cannot reach the fixed `SslSession::session_id` array. These tests assert
+// the refusal happens before the session is created or mutated.
+#[cfg(test)]
+mod server_hello_bounds {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+
+    /// `type || body_len || version(2) || random(32) || sid_len(1) || sid || cipher(2) || 0`.
+    fn server_hello(sid: &[u8]) -> Vec<u8> {
+        let body_len = 2 + SSL3_RANDOM_SIZE + 1 + sid.len() + 2 + 1;
+        let mut msg = vec![
+            SSL3_MT_SERVER_HELLO as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&[0x03, 0x03]);
+        msg.extend_from_slice(&[0u8; SSL3_RANDOM_SIZE]);
+        msg.push(sid.len() as u8);
+        msg.extend_from_slice(sid);
+        // `TLS_RSA_WITH_AES_128_CBC_SHA256` (0x003C): a table row, so the size check is the
+        // only refusal this input reaches.
+        msg.extend_from_slice(&[0x00, 0x3c]);
+        msg.push(0);
+        msg
+    }
+
+    #[test]
+    fn tls12_oversized_server_session_id_is_refused_without_partial_state() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[0xA5; 64]);
+        // SAFETY: the connection is this test's own zeroed allocation; the server id is rejected
+        // before a session is created, so nothing else owns state here.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            let r = tls12_process_server_hello(s, &msg);
+            assert_eq!(r, 0, "a 64-byte session id must be refused");
+            assert!(
+                (*s).session.is_null(),
+                "the refusal must not publish a partially built session"
+            );
+            assert_eq!(
+                (*s).statem_state,
+                MSG_FLOW_ERROR_13,
+                "the refusal poisons the connection"
+            );
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_oversized_server_session_id_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[0x5A; 64]);
+        // SAFETY: as above.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            let r = tls_process_server_hello(s, &msg);
+            assert_eq!(r, 0, "a 64-byte echoed session id must be refused");
+            assert!((*s).session.is_null(), "no session is created on refusal");
+            assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
     }
 }
