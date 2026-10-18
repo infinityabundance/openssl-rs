@@ -1426,13 +1426,19 @@ mod sha3 {
         // SAFETY: as above.
         let size =
             unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE) };
-        if !xoflen.is_null() && !size.is_null() {
-            return 0;
+        // The authority's generated get-decoder maps the two keys to separate fields and its
+        // body sets every field that was located ("Size is an alias of xoflen but separate them
+        // for compatibility"), so a request carrying both sets both.
+        if !xoflen.is_null() {
+            // SAFETY: `xoflen` is the caller's own writable entry.
+            if unsafe { crate::params::OSSL_PARAM_set_size_t(xoflen.cast_mut(), (*c).md_size) } == 0
+            {
+                return 0;
+            }
         }
-        let p = if !xoflen.is_null() { xoflen } else { size };
-        if !p.is_null() {
-            // SAFETY: `p` is the caller's own writable entry.
-            if unsafe { crate::params::OSSL_PARAM_set_size_t(p.cast_mut(), (*c).md_size) } == 0 {
+        if !size.is_null() {
+            // SAFETY: `size` is the caller's own writable entry.
+            if unsafe { crate::params::OSSL_PARAM_set_size_t(size.cast_mut(), (*c).md_size) } == 0 {
                 return 0;
             }
         }
@@ -1714,6 +1720,39 @@ mod sha3 {
         KMAC_FLAGS,
         refuse_squeeze
     );
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// A get request carrying both `xoflen` and `size` fills both slots: the authority's
+        /// generated decoder maps the two keys to separate fields and its body sets every located
+        /// field ("Size is an alias of xoflen but separate them for compatibility").
+        #[test]
+        fn shake_get_ctx_params_sets_both_aliases() {
+            // SAFETY: `KeccakCtx` is a `#[repr(C)]` aggregate of integers and byte arrays, so an
+            // all-zero value is valid; the field written here is the one the call reads.
+            let mut ctx: KeccakCtx = unsafe { core::mem::zeroed() };
+            ctx.md_size = 64;
+            let mut xoflen: usize = 0;
+            let mut size: usize = 0;
+            let mut params: [OsslParam; 3] = [END; 3];
+            // SAFETY: each slot is this frame's own and the constructor only records its address;
+            // the array is terminated below.
+            unsafe {
+                params[0] =
+                    crate::params::OSSL_PARAM_construct_size_t(c"xoflen".as_ptr(), &mut xoflen);
+                params[1] = crate::params::OSSL_PARAM_construct_size_t(c"size".as_ptr(), &mut size);
+            }
+            params[2] = crate::params::OSSL_PARAM_construct_end();
+            // SAFETY: `ctx` is live, the array is terminated and every buffer it names is this
+            // frame's own writable slot.
+            let ok =
+                unsafe { shake_get_ctx_params(ptr::addr_of_mut!(ctx).cast(), params.as_mut_ptr()) };
+            assert_eq!(ok, 1);
+            assert_eq!((xoflen, size), (64, 64));
+        }
+    }
 }
 
 /// `blake2_prov.c`'s `IMPLEMENT_BLAKE_functions` body — the two rows `defltprov.c:140-141`
