@@ -1,0 +1,89 @@
+{
+  "candidate_head": "d5255e262c602383645fcae2adc43e04faf9d4a3",
+  "files": [
+    {
+      "file": "src/evp/cipher_ctx.rs",
+      "groups": 181,
+      "not_discharged": true,
+      "production_sites": 672,
+      "record": "per-file/src__evp__cipher_ctx.rs.md",
+      "reviewer": "PASS (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 129,
+        "ESTABLISHED": 35,
+        "UNATTRIBUTED": 17
+      }
+    },
+    {
+      "file": "src/evp/digest.rs",
+      "groups": 254,
+      "not_discharged": true,
+      "production_sites": 711,
+      "record": "per-file/src__evp__digest.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 158,
+        "ESTABLISHED": 95,
+        "UNATTRIBUTED": 1
+      }
+    },
+    {
+      "file": "src/evp/pkey.rs",
+      "groups": 238,
+      "not_discharged": true,
+      "production_sites": 568,
+      "record": "per-file/src__evp__pkey.rs.md",
+      "reviewer": "PASS (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 236,
+        "ESTABLISHED": 1,
+        "UNATTRIBUTED": 1
+      }
+    },
+    {
+      "file": "src/evp/pkey_ctx.rs",
+      "groups": 462,
+      "not_discharged": true,
+      "production_sites": 1024,
+      "record": "per-file/src__evp__pkey_ctx.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 277,
+        "ESTABLISHED": 178,
+        "UNATTRIBUTED": 7
+      }
+    },
+    {
+      "file": "src/provider/cipher.rs",
+      "groups": 930,
+      "not_discharged": true,
+      "production_sites": 1098,
+      "record": "per-file/src__provider__cipher.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 848,
+        "ESTABLISHED": 65,
+        "UNATTRIBUTED": 17
+      }
+    },
+    {
+      "file": "src/provider/kdf.rs",
+      "groups": 541,
+      "not_discharged": true,
+      "production_sites": 716,
+      "record": "per-file/src__provider__kdf.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 519,
+        "ESTABLISHED": 20,
+        "UNATTRIBUTED": 2
+      }
+    }
+  ],
+  "totals": {
+    "audited": 6,
+    "boundary_covered": 0,
+    "partial_files": 6,
+    "zero_unsafe": 0
+  }
+}
