@@ -651,3 +651,40 @@ The former cumulative `PERFILE-AUDIT.md` was split into these records on
 section verbatim, minus only the inter-section `---` separators and their
 surrounding blank padding. The cumulative file is now a pointer to this index so
 existing links continue to resolve.
+
+## 6. Boundary sweep B1 — the four deferred callback/global-state files
+
+**Source identity:** `integrate/safe-c33` at `9715fec62`, 2026-10-18. **STOP:**
+none. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| file | boundary IDs | disposition | defect repaired |
+|---|---|---|---|
+| `src/provider/file_store.rs` | `B1-FS-1..3` | `CONTRACTED` | none found |
+| `src/runtime/bio/iolib.rs` | `B1-BIO-1..2` | `CONTRACTED` | `B1-D1` long-lived `&mut Bio` invalidated by the raw-pointer callback/method path (eight sites) |
+| `src/runtime/obj.rs` | `B1-OBJ-1..3` | `CONTRACTED` | `B1-D2` caller destructor under the registry mutex; `B1-D3` `do_all` snapshot freed by a recursive removal; `B1-D4` intermediate read-lock self-deadlock, removed in-batch |
+| `src/x509/x509_vpm.rs` | `B1-VPM-1..3` | `CONTRACTED` | `B1-D5` `UnsafeCell` over the const default table; `B1-D6` unsynchronised `PARAM_TABLE` stack mutation; `B1-D7` negative-id OOB pointer; `B1-D8` NULL key in `strcmp` |
+
+`OBJ_NAME` iteration now takes a snapshot and defers the destructor of any
+record removed during the walk to a RAII walk guard, so no lock is held across a
+visitor and the snapshot's borrowed `name`/`data` remain valid. This is a
+deliberate divergence from the authority, whose read lock makes re-entrant
+mutation a deadlock. The `X509_VERIFY_PARAM` table is serialised by one mutex;
+`get0`/`lookup` still return borrowed table pointers, so callers must not race
+`table_cleanup` (authority parity, stated as an external precondition).
+
+**Evidence.** FAST: fmt clean; 71 `runtime::bio`, 16 `runtime::obj`, 8
+`x509::x509_vpm` tests. BATCH: clippy `--all-targets -D warnings` PASS; library
+**1581 passed / 0 failed / 26 ignored** serially and with `--test-threads=4`;
+**26/26** adversarial probes. Negative control `NC-B1-1`: the intermediate
+read-lock design hung `bn::blinding:: --test-threads=4` (EXIT=124) and the final
+design passed it (EXIT=0, 11 tests).
+
+**Residuals and NOT_RUN.** ASan pre-fix canary for the `do_all` UAF, Miri
+(no component; libc externs) and Loom/TSan are `NOT_RUN` at BOUNDARY/SEAL. The
+remaining registry contracts (custom comparator purity, borrowed-data lifetime,
+const default rows, BIO-callback non-invalidation) are external preconditions,
+not hidden obligations. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B1.json`](atlas-refresh/boundary-sweep-B1.json).
+
+**Next boundary position:** `src/runtime/bio/bss_dgram_pair.rs` (rank 65), then
+`src/runtime/bio/bss_conn.rs` (rank 66). No fifth file was started.

@@ -2004,6 +2004,22 @@ struct NameDb {
     entries: Vec<NameRec>,
     funcs: Vec<NameFuncs>,
     type_num: c_int,
+    /// Number of registry walks that have released the lock but not yet run
+    /// their last callback. Removed or replaced records stay allocated while
+    /// this is non-zero, so a walk's borrowed `name`/`data` pointers remain
+    /// valid even if the callback mutates the registry.
+    active_walks: usize,
+    /// Records the registry no longer references, whose destructor is deferred
+    /// until the last active walk ends.
+    deferred: Vec<DeferredFree>,
+}
+
+/// A removed record plus the destructor that owns its borrowed strings. The
+/// destructor is resolved when the record leaves the registry, because
+/// `OBJ_NAME_cleanup(-1)` also drops the function table that named it.
+struct DeferredFree {
+    rec: NameRec,
+    free: Option<ObjNameFreeFn>,
 }
 
 impl NameDb {
@@ -2012,6 +2028,8 @@ impl NameDb {
             entries: Vec::new(),
             funcs: Vec::new(),
             type_num: OBJ_NAME_TYPE_NUM,
+            active_walks: 0,
+            deferred: Vec::new(),
         }
     }
 }
@@ -2021,19 +2039,60 @@ static NAMES: Mutex<NameDb> = Mutex::new(NameDb::new());
 fn lock_names() -> MutexGuard<'static, NameDb> {
     match NAMES.lock() {
         Ok(guard) => guard,
+        // Poisoning records a defect; the registry is never left half-written.
         Err(poisoned) => poisoned.into_inner(),
     }
 }
 
-/// Call the registered destructor for a removed/replaced entry, if any.
-fn call_name_free(funcs: &[NameFuncs], type_: c_int, name: *const c_char, data: *const c_char) {
+/// Resolve the registered destructor for a name type, if one exists.
+fn free_fn_for(funcs: &[NameFuncs], type_: c_int) -> Option<ObjNameFreeFn> {
     if type_ < 0 {
-        return;
+        return None;
     }
-    if let Some(f) = funcs.get(type_ as usize).and_then(|f| f.free) {
-        // SAFETY: `f` is the caller-registered destructor for this type, and
-        // `name`/`data` are exactly the pointers it was handed.
-        unsafe { f(name, type_, data) };
+    funcs.get(type_ as usize).and_then(|f| f.free)
+}
+
+/// Run a deferred destructor. Called without the registry lock held, so a
+/// destructor that re-enters the registry cannot deadlock on it.
+fn run_deferred(free: Option<ObjNameFreeFn>, rec: NameRec) {
+    if let Some(f) = free {
+        // SAFETY: `f` is the caller-registered destructor for `rec.type_`, and
+        // `name`/`data` are exactly the pointers it was handed. The record has
+        // left the registry and no walk can still observe it.
+        unsafe { f(rec.name, rec.type_, rec.data) };
+    }
+}
+
+/// Queue the destructor for a record that has left the registry: immediately
+/// after the lock is dropped when no walk is live, otherwise at the end of the
+/// last live walk.
+fn retire(db: &mut NameDb, free: Option<ObjNameFreeFn>, rec: NameRec) -> Option<DeferredFree> {
+    if db.active_walks == 0 {
+        Some(DeferredFree { rec, free })
+    } else {
+        db.deferred.push(DeferredFree { rec, free });
+        None
+    }
+}
+
+/// Runs at the end of an `OBJ_NAME_do_all*` walk, including on unwind. The
+/// last walk out releases every record whose destruction was deferred.
+struct WalkGuard;
+
+impl Drop for WalkGuard {
+    fn drop(&mut self) {
+        let pending: Vec<DeferredFree> = {
+            let mut db = lock_names();
+            db.active_walks -= 1;
+            if db.active_walks == 0 {
+                core::mem::take(&mut db.deferred)
+            } else {
+                Vec::new()
+            }
+        };
+        for d in pending {
+            run_deferred(d.free, d.rec);
+        }
     }
 }
 
@@ -2157,24 +2216,39 @@ pub unsafe extern "C" fn OBJ_NAME_add(
         }
         let alias = type_ & OBJ_NAME_ALIAS;
         let plain = type_ & !OBJ_NAME_ALIAS;
-        let mut db = lock_names();
-        let funcs = db.funcs.clone();
-        if let Some(i) = name_find(&db, plain, name) {
-            let old = db.entries[i];
-            call_name_free(&funcs, old.type_, old.name, old.data);
-            db.entries[i] = NameRec {
-                type_: plain,
-                alias,
-                name,
-                data,
+        // Publish the new entry (or the replacement) under the lock, then retire the
+        // old record after releasing it. The authority installs the new entry before
+        // invoking the old one's destructor. Retiring rather than freeing here keeps
+        // a live `do_all` snapshot's pointers valid (see `NameDb::active_walks`).
+        let (_funcs, retired) = {
+            let mut db = lock_names();
+            let funcs = db.funcs.clone();
+            let old = if let Some(i) = name_find(&db, plain, name) {
+                let old = db.entries[i];
+                db.entries[i] = NameRec {
+                    type_: plain,
+                    alias,
+                    name,
+                    data,
+                };
+                Some(old)
+            } else {
+                db.entries.push(NameRec {
+                    type_: plain,
+                    alias,
+                    name,
+                    data,
+                });
+                None
             };
-        } else {
-            db.entries.push(NameRec {
-                type_: plain,
-                alias,
-                name,
-                data,
+            let retired = old.and_then(|old| {
+                let free = free_fn_for(&funcs, old.type_);
+                retire(&mut db, free, old)
             });
+            (funcs, retired)
+        };
+        if let Some(d) = retired {
+            run_deferred(d.free, d.rec);
         }
         1
     })
@@ -2193,16 +2267,21 @@ pub unsafe extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c
             return 0;
         }
         let plain = type_ & !OBJ_NAME_ALIAS;
-        let mut db = lock_names();
-        let funcs = db.funcs.clone();
-        match name_find(&db, plain, name) {
-            Some(i) => {
-                let rec = db.entries.remove(i);
-                call_name_free(&funcs, rec.type_, rec.name, rec.data);
-                1
+        let (removed, retired) = {
+            let mut db = lock_names();
+            let funcs = db.funcs.clone();
+            match name_find(&db, plain, name).map(|i| db.entries.remove(i)) {
+                Some(rec) => {
+                    let free = free_fn_for(&funcs, rec.type_);
+                    (true, retire(&mut db, free, rec))
+                }
+                None => (false, None),
             }
-            None => 0,
+        };
+        if let Some(d) = retired {
+            run_deferred(d.free, d.rec);
         }
+        c_int::from(removed)
     })
 }
 
@@ -2224,14 +2303,23 @@ pub unsafe extern "C" fn OBJ_NAME_do_all(
         let Some(f) = f else {
             return;
         };
+        // Take a snapshot and mark a walk live, then release the lock before calling
+        // the visitor. A callback may look entries up (`prepopulate_legacy_names`
+        // does), which a lock held across the callback would deadlock against once a
+        // writer is queued; a record the callback removes stays allocated until the
+        // last walk ends (`NameDb::active_walks`), so these pointers remain valid.
         let list: Vec<NameRec> = {
-            let db = lock_names();
-            db.entries
+            let mut db = lock_names();
+            let list: Vec<NameRec> = db
+                .entries
                 .iter()
                 .filter(|e| e.type_ == type_)
                 .copied()
-                .collect()
+                .collect();
+            db.active_walks += 1;
+            list
         };
+        let _walk = WalkGuard;
         for rec in list {
             let on = ObjName {
                 type_: rec.type_,
@@ -2239,7 +2327,8 @@ pub unsafe extern "C" fn OBJ_NAME_do_all(
                 name: rec.name,
                 data: rec.data,
             };
-            // SAFETY: `f` is the caller's callback for `ObjName`.
+            // SAFETY: `f` is the caller's callback for `ObjName`; the record's
+            // borrowed strings outlive the walk.
             unsafe { f(&on, arg) };
         }
     })
@@ -2262,16 +2351,22 @@ pub unsafe extern "C" fn OBJ_NAME_do_all_sorted(
         let Some(f) = f else {
             return;
         };
+        // As in `OBJ_NAME_do_all`: a snapshot plus a live walk, with the lock
+        // released before the first callback.
         let mut list: Vec<NameRec> = {
-            let db = lock_names();
-            db.entries
+            let mut db = lock_names();
+            let list: Vec<NameRec> = db
+                .entries
                 .iter()
                 .filter(|e| e.type_ == type_)
                 .copied()
-                .collect()
+                .collect();
+            db.active_walks += 1;
+            list
         };
+        let _walk = WalkGuard;
         list.sort_by(|a, b| {
-            // SAFETY: both names are NUL-terminated.
+            // SAFETY: both names are NUL-terminated and pinned for this walk.
             unsafe { c_strcmp(a.name, b.name) }.cmp(&0)
         });
         for rec in list {
@@ -2281,7 +2376,8 @@ pub unsafe extern "C" fn OBJ_NAME_do_all_sorted(
                 name: rec.name,
                 data: rec.data,
             };
-            // SAFETY: `f` is the caller's callback for `ObjName`.
+            // SAFETY: `f` is the caller's callback for `ObjName`; the record's
+            // borrowed strings outlive the walk.
             unsafe { f(&on, arg) };
         }
     })
@@ -2295,24 +2391,40 @@ pub unsafe extern "C" fn OBJ_NAME_do_all_sorted(
 #[no_mangle]
 pub extern "C" fn OBJ_NAME_cleanup(type_: c_int) {
     guard_ffi((), || {
-        let mut db = lock_names();
-        let funcs = db.funcs.clone();
-        if type_ < 0 {
-            let all: Vec<NameRec> = core::mem::take(&mut db.entries);
-            for rec in all {
-                call_name_free(&funcs, rec.type_, rec.name, rec.data);
-            }
-            db.funcs.clear();
-        } else {
-            let mut kept = Vec::new();
-            for rec in db.entries.drain(..) {
-                if rec.type_ == type_ {
-                    call_name_free(&funcs, rec.type_, rec.name, rec.data);
-                } else {
-                    kept.push(rec);
+        // Drain the registry under the lock, then run (or defer) the caller's
+        // destructors after releasing it: the records are no longer reachable through
+        // the registry, so a destructor that re-enters it cannot deadlock.
+        let immediate: Vec<DeferredFree> = {
+            let mut db = lock_names();
+            let funcs = db.funcs.clone();
+            let removed: Vec<NameRec> = if type_ < 0 {
+                let all = core::mem::take(&mut db.entries);
+                db.funcs.clear();
+                all
+            } else {
+                let mut removed = Vec::new();
+                let mut kept = Vec::new();
+                for rec in db.entries.drain(..) {
+                    if rec.type_ == type_ {
+                        removed.push(rec);
+                    } else {
+                        kept.push(rec);
+                    }
+                }
+                db.entries = kept;
+                removed
+            };
+            let mut immediate = Vec::new();
+            for rec in removed {
+                let free = free_fn_for(&funcs, rec.type_);
+                if let Some(d) = retire(&mut db, free, rec) {
+                    immediate.push(d);
                 }
             }
-            db.entries = kept;
+            immediate
+        };
+        for d in immediate {
+            run_deferred(d.free, d.rec);
         }
     })
 }
@@ -2859,6 +2971,127 @@ mod tests {
             assert_eq!(count_sorted, 1);
             OBJ_NAME_cleanup(idx);
         }
+    }
+
+    /// A `do_all` callback may look entries up and even remove one: the walk holds
+    /// no registry lock, and a removed entry's destructor is deferred until the walk
+    /// ends so the snapshot's borrowed pointers stay valid. This is the
+    /// `prepopulate_legacy_names` pattern that would deadlock under a read lock.
+    #[test]
+    fn name_do_all_admits_reentry_and_defers_removal() {
+        use core::sync::atomic::{AtomicI32, Ordering};
+        static FREED: AtomicI32 = AtomicI32::new(0);
+
+        struct Ctx {
+            b_name: *const c_char,
+            seen: usize,
+            removed: usize,
+        }
+
+        unsafe extern "C" fn counting_free(
+            _name: *const c_char,
+            _type_: c_int,
+            _data: *const c_char,
+        ) {
+            FREED.fetch_add(1, Ordering::SeqCst);
+        }
+
+        unsafe extern "C" fn walk_cb(on: *const ObjName, arg: *mut c_void) {
+            let ctx = unsafe { &mut *(arg as *mut Ctx) };
+            ctx.seen += 1;
+            // The production callback does exactly this nested read.
+            let got = unsafe { OBJ_NAME_get((*on).name, (*on).type_) };
+            assert!(!got.is_null(), "a nested lookup must still resolve");
+            if unsafe { (*on).name } == ctx.b_name {
+                ctx.removed += unsafe { OBJ_NAME_remove(ctx.b_name, (*on).type_) } as usize;
+                assert_eq!(
+                    FREED.load(Ordering::SeqCst),
+                    0,
+                    "the destructor ran while a walk still held the snapshot"
+                );
+            }
+        }
+
+        let _g = lock();
+        FREED.store(0, Ordering::SeqCst);
+        let idx = OBJ_NAME_new_index(None, None, Some(counting_free));
+        let a_name = std::ffi::CString::new("zedtest-doall-a").unwrap();
+        let a_data = std::ffi::CString::new("zedtest-doall-a-data").unwrap();
+        let b_name = std::ffi::CString::new("zedtest-doall-b").unwrap();
+        let b_data = std::ffi::CString::new("zedtest-doall-b-data").unwrap();
+        let mut ctx = Ctx {
+            b_name: b_name.as_ptr(),
+            seen: 0,
+            removed: 0,
+        };
+        // SAFETY: live strings and valid callbacks; cleanup releases what remains.
+        unsafe {
+            assert_eq!(OBJ_NAME_add(a_name.as_ptr(), idx, a_data.as_ptr()), 1);
+            assert_eq!(OBJ_NAME_add(b_name.as_ptr(), idx, b_data.as_ptr()), 1);
+            OBJ_NAME_do_all(idx, Some(walk_cb), &mut ctx as *mut Ctx as *mut c_void);
+            assert_eq!(ctx.seen, 2, "both snapshot entries were visited");
+            assert_eq!(ctx.removed, 1, "the nested removal succeeded");
+            assert_eq!(
+                FREED.load(Ordering::SeqCst),
+                1,
+                "the deferred destructor ran when the walk ended"
+            );
+            OBJ_NAME_cleanup(idx);
+        }
+        assert_eq!(
+            FREED.load(Ordering::SeqCst),
+            2,
+            "cleanup released the survivor"
+        );
+    }
+
+    #[test]
+    fn name_destructor_runs_outside_the_registry_lock() {
+        use core::sync::atomic::{AtomicBool, Ordering};
+        static UNLOCKED: AtomicBool = AtomicBool::new(false);
+        static QUERIES: AtomicI32 = AtomicI32::new(0);
+
+        unsafe extern "C" fn observing_free(
+            name: *const c_char,
+            type_: c_int,
+            _data: *const c_char,
+        ) {
+            // Negative control for the old ordering: with the registry lock held,
+            // `try_lock` answers `WouldBlock` immediately, so this fails instead of
+            // deadlocking. Retry briefly because an unrelated thread may hold the
+            // lock at the instant the destructor runs.
+            let mut unlocked = false;
+            for _ in 0..1000 {
+                if NAMES.try_lock().is_ok() {
+                    unlocked = true;
+                    break;
+                }
+                std::thread::yield_now();
+            }
+            UNLOCKED.store(unlocked, Ordering::SeqCst);
+            // A destructor that re-enters the registry must not deadlock. The
+            // re-entry is exercised only when the control proves the lock is
+            // released, so a regression fails the assertion instead of hanging.
+            if unlocked && !name.is_null() {
+                let _ = unsafe { OBJ_NAME_get(name, type_) };
+                QUERIES.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        let _g = lock();
+        let idx = OBJ_NAME_new_index(None, None, Some(observing_free));
+        let name = std::ffi::CString::new("zedtest-destructor").unwrap();
+        let data = std::ffi::CString::new("zedtest-destructor-data").unwrap();
+        // SAFETY: live strings; the destructor observes rather than frees them.
+        unsafe {
+            assert_eq!(OBJ_NAME_add(name.as_ptr(), idx, data.as_ptr()), 1);
+            assert_eq!(OBJ_NAME_remove(name.as_ptr(), idx), 1);
+        }
+        assert!(
+            UNLOCKED.load(Ordering::SeqCst),
+            "the destructor ran with the registry lock held"
+        );
+        assert_eq!(QUERIES.load(Ordering::SeqCst), 1, "no re-entrant read");
     }
 
     #[test]

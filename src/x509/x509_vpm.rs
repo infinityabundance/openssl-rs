@@ -52,10 +52,9 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Mutex, MutexGuard};
 
 use crate::asn1::prim::ASN1_OBJECT_free;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -1252,12 +1251,18 @@ const fn vpm_row(
 /// Six rows in `name` order: `code_sign`, `default`, `pkcs7`, `smime_sign`, `ssl_client`,
 /// `ssl_server`. The `default` row carries `X509_V_FLAG_TRUSTED_FIRST` and `depth = 100`; the
 /// others default `depth`/`auth_level` to `-1`.
-struct DefaultTable(UnsafeCell<[X509VerifyParam; 6]>);
-// SAFETY: the table is written once at load and read-only thereafter; the authority's own table is
-// `static const`.
+///
+/// No `UnsafeCell`: the authority's table is `static const`, and every access here goes
+/// through [`default_table_ptr`], which yields a `*const`. A C caller that casts the
+/// returned pointer and writes to a row is outside the authority's contract (it is writing
+/// a `const` object); keeping the storage immutable makes that fault instead of silently
+/// mutating process-global state shared by every verifier.
+struct DefaultTable([X509VerifyParam; 6]);
+// SAFETY: the table is never mutated. `default_table_ptr` hands out `*const`, and the
+// authority's own table is `static const`.
 unsafe impl Sync for DefaultTable {}
 
-static DEFAULT_TABLE: DefaultTable = DefaultTable(UnsafeCell::new([
+static DEFAULT_TABLE: DefaultTable = DefaultTable([
     vpm_row(
         c"code_sign".as_ptr() as *mut c_char,
         0,
@@ -1312,14 +1317,14 @@ static DEFAULT_TABLE: DefaultTable = DefaultTable(UnsafeCell::new([
         X509_TRUST_SSL_SERVER,
         -1,
     ),
-]));
+]);
 
 /// `OSSL_NELEM(default_table)` — `x509_vpm.c:612`.
 const DEFAULT_TABLE_LEN: usize = 6;
 
 /// The `default_table[]` base pointer.
 fn default_table_ptr() -> *const X509VerifyParam {
-    DEFAULT_TABLE.0.get().cast::<X509VerifyParam>()
+    core::ptr::addr_of!(DEFAULT_TABLE.0).cast::<X509VerifyParam>()
 }
 
 /// `static int table_cmp(const X509_VERIFY_PARAM *a, const X509_VERIFY_PARAM *b)` —
@@ -1350,7 +1355,44 @@ unsafe extern "C" fn param_cmp(a: *const c_void, b: *const c_void) -> c_int {
 }
 
 /// `static STACK_OF(X509_VERIFY_PARAM) *param_table` — `crypto/x509/x509_vpm.c:572`.
-static PARAM_TABLE: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
+///
+/// The authority declares this slot and then calls `sk_X509_VERIFY_PARAM_sort`/`_find`/
+/// `_delete`/`_push` on it with no synchronisation at all. Those calls read and mutate a
+/// single process-global stack, so in Rust they are a data race (UB) as soon as two
+/// threads use the table. The slot and every stack operation on it are therefore
+/// serialised by one mutex here.
+///
+/// What the mutex does **not** cover is the lifetime of a parameter pointer handed back to
+/// a caller: `X509_VERIFY_PARAM_get0`/`_lookup` return a pointer into the table, and
+/// [`X509_VERIFY_PARAM_table_cleanup`] frees the table's rows. The authority has the same
+/// contract (these entry points are documented as not thread safe with cleanup); a caller
+/// must not race a cleanup against a live lookup. That is an external precondition, not a
+/// hidden aliasing assumption of this module.
+struct ParamTable {
+    table: *mut OpenSslStack,
+}
+
+// SAFETY: `table` is only dereferenced while the `PARAM_TABLE` mutex is held, and the
+// stack it names is only mutated under that mutex. The parameters it points at are
+// allocated and freed through the CRYPTO seam and are the caller's objects.
+unsafe impl Send for ParamTable {}
+
+static PARAM_TABLE: Mutex<ParamTable> = Mutex::new(ParamTable {
+    table: ptr::null_mut(),
+});
+
+/// The registry guard. The lock is never held across a caller-supplied callback: the only
+/// functions reachable under it are the stack helpers, this module's `param_cmp`
+/// (`strcmp` over caller strings) and its own destructor thunks. Releases that can reach a
+/// caller's allocator hook are performed after the guard is dropped.
+fn lock_param_table() -> MutexGuard<'static, ParamTable> {
+    match PARAM_TABLE.lock() {
+        Ok(guard) => guard,
+        // Poisoning records a defect; the pointer slot itself is never left in a
+        // half-written state (the stack is either installed or not).
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
 
 /// `int X509_VERIFY_PARAM_add0_table(X509_VERIFY_PARAM *param)` —
 /// `crypto/x509/x509_vpm.c:588-608`.
@@ -1360,42 +1402,53 @@ static PARAM_TABLE: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 /// `param` must be a live parameter whose ownership transfers to the table.
 #[no_mangle]
 pub unsafe extern "C" fn X509_VERIFY_PARAM_add0_table(param: *mut X509VerifyParam) -> c_int {
-    let table = PARAM_TABLE.load(Ordering::SeqCst);
-    if table.is_null() {
-        // SAFETY: none needed; `OPENSSL_sk_new` is a safe constructor taking the comparator;
-        // `param_cmp` matches the element type.
-        let table = OPENSSL_sk_new(Some(param_cmp));
-        if table.is_null() {
-            return 0;
-        }
-        PARAM_TABLE.store(table, Ordering::SeqCst);
-    } else {
-        // SAFETY: `table` is the live registry; `param` is live per the contract.
-        let idx = unsafe { OPENSSL_sk_find(table, param.cast()) };
-        if idx >= 0 {
-            // SAFETY: the registry is live and `idx` names one of its rows.
-            let ptmp = unsafe { OPENSSL_sk_delete(table, idx) }.cast::<X509VerifyParam>();
-            // SAFETY: `ptmp` was owned by the table and is not aliased.
-            unsafe { X509_VERIFY_PARAM_free(ptmp) };
-        }
-    }
-
-    let table = PARAM_TABLE.load(Ordering::SeqCst);
-    // SAFETY: `table` is live; `param` is live per the contract.
-    if unsafe { OPENSSL_sk_push(table, param.cast()) } <= 0 {
+    if param.is_null() {
         return 0;
     }
-    1
+    // The table's key is `param->name`; the authority's `param_cmp` calls `strcmp` on it and
+    // would dereference NULL. An unnamed parameter has no place in the name-keyed table.
+    // SAFETY: `param` is non-NULL per the check above.
+    if unsafe { (*param).name }.is_null() {
+        return 0;
+    }
+    let mut old: *mut X509VerifyParam = ptr::null_mut();
+    let pushed = {
+        let mut slot = lock_param_table();
+        if slot.table.is_null() {
+            // SAFETY: none needed; `OPENSSL_sk_new` is a safe constructor taking the
+            // comparator; `param_cmp` matches the element type.
+            let fresh = OPENSSL_sk_new(Some(param_cmp));
+            if fresh.is_null() {
+                return 0;
+            }
+            slot.table = fresh;
+        } else {
+            // SAFETY: `slot.table` is the live registry; `param` is live per the contract.
+            let idx = unsafe { OPENSSL_sk_find(slot.table, param.cast()) };
+            if idx >= 0 {
+                // SAFETY: the registry is live and `idx` names one of its rows.
+                old = unsafe { OPENSSL_sk_delete(slot.table, idx) }.cast::<X509VerifyParam>();
+            }
+        }
+        // SAFETY: `slot.table` is live; `param` is live per the contract.
+        (unsafe { OPENSSL_sk_push(slot.table, param.cast()) }) > 0
+    };
+
+    // The replaced row's release runs outside the registry lock: `X509_VERIFY_PARAM_free`
+    // reaches `CRYPTO_free`, which may call a caller-installed allocator hook.
+    // SAFETY: `old` is NULL or the row the table removed; it is no longer reachable.
+    unsafe { X509_VERIFY_PARAM_free(old) };
+    c_int::from(pushed)
 }
 
 /// `int X509_VERIFY_PARAM_get_count(void)` — `crypto/x509/x509_vpm.c:610-617`.
 #[no_mangle]
 pub extern "C" fn X509_VERIFY_PARAM_get_count() -> c_int {
+    let slot = lock_param_table();
     let mut num = DEFAULT_TABLE_LEN as c_int;
-    let table = PARAM_TABLE.load(Ordering::SeqCst);
-    if !table.is_null() {
-        // SAFETY: `table` is the live registry.
-        num += unsafe { OPENSSL_sk_num(table) };
+    if !slot.table.is_null() {
+        // SAFETY: `slot.table` is the live registry, held under the lock.
+        num += unsafe { OPENSSL_sk_num(slot.table) };
     }
     num
 }
@@ -1403,14 +1456,20 @@ pub extern "C" fn X509_VERIFY_PARAM_get_count() -> c_int {
 /// `const X509_VERIFY_PARAM *X509_VERIFY_PARAM_get0(int id)` — `crypto/x509/x509_vpm.c:619-626`.
 #[no_mangle]
 pub extern "C" fn X509_VERIFY_PARAM_get0(id: c_int) -> *const X509VerifyParam {
+    if id < 0 {
+        // The authority computes `default_table + id`, forming an out-of-bounds pointer
+        // for a negative id; that is UB even when the pointer is never read. Refuse it.
+        return ptr::null();
+    }
     let num = DEFAULT_TABLE_LEN as c_int;
     if id < num {
-        // SAFETY: `id` names a row of the static table.
+        // SAFETY: `id` is in `0..6` and names a row of the static table.
         return unsafe { default_table_ptr().add(id as usize) };
     }
-    let table = PARAM_TABLE.load(Ordering::SeqCst);
-    // SAFETY: `table` is NULL or live; `OPENSSL_sk_value` handles NULL.
-    unsafe { OPENSSL_sk_value(table, id - num).cast::<X509VerifyParam>() }
+    let slot = lock_param_table();
+    // SAFETY: `slot.table` is NULL or live and held under the lock; `OPENSSL_sk_value`
+    // handles NULL.
+    unsafe { OPENSSL_sk_value(slot.table, id - num).cast::<X509VerifyParam>() }
 }
 
 /// `const X509_VERIFY_PARAM *X509_VERIFY_PARAM_lookup(const char *name)` —
@@ -1424,6 +1483,11 @@ pub extern "C" fn X509_VERIFY_PARAM_get0(id: c_int) -> *const X509VerifyParam {
 /// `name` must be NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn X509_VERIFY_PARAM_lookup(name: *const c_char) -> *const X509VerifyParam {
+    // The comparator is `strcmp(param->name, name)`; the authority dereferences a NULL
+    // query. Refuse it rather than reproducing the UB.
+    if name.is_null() {
+        return ptr::null();
+    }
     // A stack-shaped query row, as the authority's local `X509_VERIFY_PARAM pm` (`:631`).
     let pm = X509VerifyParam {
         name: name as *mut c_char,
@@ -1444,16 +1508,23 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_lookup(name: *const c_char) -> *const
         iplen: 0,
     };
 
-    let table = PARAM_TABLE.load(Ordering::SeqCst);
-    if !table.is_null() {
-        // SAFETY: `table` is the live registry; sorting is the authority's `:636`.
-        unsafe { OPENSSL_sk_sort(table) };
-        // SAFETY: `table` is live; the comparator orders by name.
-        let idx = unsafe { OPENSSL_sk_find(table, ptr::from_ref(&pm).cast()) };
-        if idx >= 0 {
-            // SAFETY: `table` is live.
-            return unsafe { OPENSSL_sk_value(table, idx) }.cast::<X509VerifyParam>();
+    let mut found: *const X509VerifyParam = ptr::null();
+    {
+        let slot = lock_param_table();
+        if !slot.table.is_null() {
+            // SAFETY: `slot.table` is the live registry, held under the lock; sorting is
+            // the authority's `:636` and is a mutation, which is why it needs the lock.
+            unsafe { OPENSSL_sk_sort(slot.table) };
+            // SAFETY: `slot.table` is live; the comparator orders by name.
+            let idx = unsafe { OPENSSL_sk_find(slot.table, ptr::from_ref(&pm).cast()) };
+            if idx >= 0 {
+                // SAFETY: `slot.table` is live and `idx` is in range.
+                found = unsafe { OPENSSL_sk_value(slot.table, idx) }.cast::<X509VerifyParam>();
+            }
         }
+    }
+    if !found.is_null() {
+        return found;
     }
     // SAFETY: the static table is live; the query `pm` is live.
     unsafe { obj_bsearch_table(ptr::from_ref(&pm), default_table_ptr(), DEFAULT_TABLE_LEN) }
@@ -1492,8 +1563,14 @@ unsafe fn obj_bsearch_table(
 /// `void X509_VERIFY_PARAM_table_cleanup(void)` — `crypto/x509/x509_vpm.c:644-648`.
 #[no_mangle]
 pub extern "C" fn X509_VERIFY_PARAM_table_cleanup() {
-    let table = PARAM_TABLE.swap(ptr::null_mut(), Ordering::SeqCst);
-    // SAFETY: `table` is the live registry (or NULL); its rows are heap parameters.
+    let table = {
+        let mut slot = lock_param_table();
+        core::mem::replace(&mut slot.table, ptr::null_mut())
+    };
+    // The rows are released after the guard is dropped: `X509_VERIFY_PARAM_free` reaches
+    // `CRYPTO_free`, which may call a caller-installed allocator hook, and no registry
+    // operation can observe the old stack once the slot has been cleared.
+    // SAFETY: `table` is the registry's old stack (or NULL); its rows are heap parameters.
     unsafe { OPENSSL_sk_pop_free(table, Some(verify_param_free_void)) };
 }
 
@@ -1640,6 +1717,49 @@ mod tests {
             assert_eq!(X509_VERIFY_PARAM_get_depth(d), 100);
             assert!(X509_VERIFY_PARAM_lookup(c"no.such.row".as_ptr()).is_null());
         }
+    }
+
+    /// A negative index never forms a pointer before the static table, and the
+    /// null-key paths do not reach `strcmp`/`sk_find`.
+    #[test]
+    fn a_negative_index_is_refused() {
+        let _guard = crate::test_support::lock_global_state();
+        assert!(X509_VERIFY_PARAM_get0(-1).is_null());
+        assert!(X509_VERIFY_PARAM_get0(c_int::MIN).is_null());
+        // SAFETY: the query is NULL; the guard returns before `strcmp`.
+        assert!(unsafe { X509_VERIFY_PARAM_lookup(ptr::null()) }.is_null());
+        // SAFETY: NULL and an unnamed live parameter are both refused; ownership of the
+        // unnamed parameter never moves into the table, so it is freed here.
+        unsafe {
+            assert_eq!(X509_VERIFY_PARAM_add0_table(ptr::null_mut()), 0);
+            let p = X509_VERIFY_PARAM_new();
+            assert!(!p.is_null());
+            assert_eq!(X509_VERIFY_PARAM_add0_table(p), 0);
+            X509_VERIFY_PARAM_free(p);
+        }
+    }
+
+    /// The writable registry accepts, finds, replaces and releases a row.
+    #[test]
+    fn the_writable_table_registers_and_cleans_up() {
+        let _guard = crate::test_support::lock_global_state();
+        X509_VERIFY_PARAM_table_cleanup();
+        assert_eq!(X509_VERIFY_PARAM_get_count(), 6);
+        let p = X509_VERIFY_PARAM_new();
+        assert!(!p.is_null());
+        // SAFETY: `p` is live; the name is a `'static` C literal. Ownership of `p` moves
+        // into the table below, whose cleanup releases it.
+        unsafe {
+            assert_eq!(X509_VERIFY_PARAM_set1_name(p, c"zedtest-vpm".as_ptr()), 1);
+            assert_eq!(X509_VERIFY_PARAM_add0_table(p), 1);
+            assert_eq!(X509_VERIFY_PARAM_get_count(), 7);
+            assert_eq!(X509_VERIFY_PARAM_get0(6), p);
+            assert_eq!(X509_VERIFY_PARAM_lookup(c"zedtest-vpm".as_ptr()), p);
+            X509_VERIFY_PARAM_table_cleanup();
+        }
+        assert_eq!(X509_VERIFY_PARAM_get_count(), 6);
+        // SAFETY: the query is a `'static` literal and the table is empty afterwards.
+        assert!(unsafe { X509_VERIFY_PARAM_lookup(c"zedtest-vpm".as_ptr()) }.is_null());
     }
 }
 
