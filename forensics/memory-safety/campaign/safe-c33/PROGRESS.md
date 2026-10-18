@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1320** passed,
+`cargo test --lib` (must pass; the established baseline is **1325** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1021,6 +1021,30 @@ package.
   22 ignored**, **22/22** probes; `rt-cipher` retains the one pre-existing
   `defltwrap.pad21` residual.
 
+### Subphase 80 — X509-family reference-count protocol
+
+- `X509`, `X509_CRL` and `X509_REQ` used a plain `c_int` read-modify-write
+  with `wrapping_add`; concurrent up_ref/free was a data race and `i32::MAX`
+  wrapped negative. The count is now `AtomicI32` (same size/alignment/offsets;
+  compile-time asserts) and the ASN.1 item-lock path delegates to
+  `runtime::refcount`'s sentinel protocol.
+- `do_lock` op 1 returns `1` on success and **`-1`** on refusal (`0` stays
+  reserved for “no refcount”), matching `ossl_asn1_do_lock`; op -1 claims
+  `1 -> REF_DESTROYING`, so a reentrant `X509_free` from an ex-data hook is a
+  defined no-op; non-final release returns 1.
+- `X509_up_ref` refuses `i32::MAX` without changing the count; `X509_free`
+  keeps the NULL no-op. `ChainSnapshot::take` checks `up_ref` and rolls back
+  the taken refs plus the duplicated stack on refusal.
+- Tests: overflow, reentrant ex-data free, 8-thread up_ref/free with exactly one
+  destructor, partial-snapshot rollback, `do_lock` refusal. The `cfg(miri)` path
+  compiles; Miri itself is unavailable on the pinned toolchain.
+- Adversarial review **FAILED** on the `do_lock` failure mapping and a
+  `cfg(miri)` compile break, and **PASSED** after both fixes. Gate: `fmt` 0,
+  clippy 0, **1325 passed / 22 ignored**, **22/22** probes.
+- **Remaining refcount work:** `Engine.struct_ref` is still a plain `c_int`;
+  the atomic DH/DSA/EC/RSA/ECX/EVP/BIO/DSO/provider-method families use atomic
+  counts but without the destroying sentinel. Both are queued.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1198,7 +1222,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `d90a583e3` (mechanism candidates closed)
+**Last observed HEAD:** `f35e9859d` (X509 refcount protocol merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1212,7 +1236,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1320** tests (22 ignored;
+   The most recent reported library baseline is **1325** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
