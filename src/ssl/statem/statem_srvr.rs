@@ -1907,46 +1907,68 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
     if unsafe { (*cpk).x509 }.is_null() {
         return 0;
     }
-    let mut der = [0u8; 8192];
-    let mut p = der.as_mut_ptr();
-    // SAFETY: `cpk.x509` is live; `p` points at `der`'s storage.
-    let derlen = unsafe { i2d_X509((*cpk).x509, &mut p) };
+    // Size the DER first (the authority's `i2d_X509(x, NULL)` before
+    // `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer writes
+    // the whole encoding and takes no capacity argument, so a fixed stack buffer would
+    // be overflowed by any certificate larger than it. Encoding into a block sized from
+    // this first pass is the authority's own ordering.
+    // SAFETY: `cpk.x509` is live; a NULL out-pointer asks only for the length.
+    let derlen = unsafe { i2d_X509((*cpk).x509, ptr::null_mut()) };
     if derlen <= 0 {
         return 0;
     }
     let derlen = derlen as usize;
-    if derlen > der.len() {
-        return 0;
-    }
     // `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>` (`ssl3.h`,
     // RFC 8446 §4.4.2): the six-byte entry prefix plus the empty two-byte extension block.
-    let entry_len = 3 + derlen + 2;
-    let clen = entry_len;
-    let body_len = 1 + ctx_len + 3 + clen;
-    let mut body = [0u8; 8200];
-    if body_len > body.len() {
+    let Some(body_len) = 1usize
+        .checked_add(ctx_len)
+        .and_then(|n| n.checked_add(3))
+        .and_then(|n| n.checked_add(3))
+        .and_then(|n| n.checked_add(derlen))
+        .and_then(|n| n.checked_add(2))
+    else {
+        return 0;
+    };
+    // `write_handshake_message` frames `4 + body_len` bytes in a 17000-byte block; keep
+    // the allocation bounded by the same reduced boundary.
+    if body_len > 17000 - 4 {
         return 0;
     }
-    body[0] = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
-    body[1..1 + ctx_len].copy_from_slice(context);
-    let mut p = 1 + ctx_len;
-    body[p] = (clen >> 16) as u8;
-    body[p + 1] = (clen >> 8) as u8;
-    body[p + 2] = clen as u8;
-    p += 3;
-    body[p] = (derlen >> 16) as u8;
-    body[p + 1] = (derlen >> 8) as u8;
-    body[p + 2] = derlen as u8;
-    p += 3;
-    // SAFETY: `body[p..]` has room for `derlen` bytes.
-    unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), derlen) };
-    p += derlen;
-    // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
-    body[p] = 0;
-    body[p + 1] = 0;
-    // SAFETY: `s` is live; `body` is `body_len` initialised bytes.
+    // The body block, allocated through the crate's allocator seam; its single release
+    // is the handle's `Drop` on every refusal below.
+    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    // Every byte below is written before the block is read or released.
+    let body_ptr = body.as_ptr();
+    let clen = 3 + derlen + 2;
+    // SAFETY: `body_ptr` is writable for `body_len` bytes (checked above); `context` is
+    // readable for `ctx_len`; the DER slot has `derlen` writable bytes.
     unsafe {
-        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), body_len)
+        *body_ptr = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
+        core::ptr::copy_nonoverlapping(context.as_ptr(), body_ptr.add(1), ctx_len);
+        let mut p = 1 + ctx_len;
+        *body_ptr.add(p) = (clen >> 16) as u8;
+        *body_ptr.add(p + 1) = (clen >> 8) as u8;
+        *body_ptr.add(p + 2) = clen as u8;
+        p += 3;
+        *body_ptr.add(p) = (derlen >> 16) as u8;
+        *body_ptr.add(p + 1) = (derlen >> 8) as u8;
+        *body_ptr.add(p + 2) = derlen as u8;
+        p += 3;
+        // The authority encodes into the exact reservation it sized above; the slot holds
+        // a pointer with `derlen` writable bytes, so the whole encoding fits.
+        let mut out = body_ptr.add(p);
+        if i2d_X509((*cpk).x509, &mut out) != derlen as c_int {
+            return 0;
+        }
+        p += derlen;
+        // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
+        *body_ptr.add(p) = 0;
+        *body_ptr.add(p + 1) = 0;
+        debug_assert_eq!(p + 2, body_len);
+
+        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body_ptr, body_len)
     }
 }
 
@@ -2615,62 +2637,139 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
     use crate::x509::x_x509::{i2d_X509, X509};
     // SAFETY: `s` is live.
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
-    let mut body = [0u8; 8300];
+    let leaf = if cpk.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: `cpk` is a live slot.
+        unsafe { (*cpk).x509 }
+    };
+    // SAFETY: `cpk` is NULL or a live certificate container.
+    let chain = if cpk.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: the `else` arm runs only when `cpk` is non-NULL and live.
+        unsafe { (*cpk).chain }
+    };
+    let n = if chain.is_null() {
+        0
+    } else {
+        // SAFETY: `chain` is a live stack.
+        unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) }
+    };
+
+    // First pass: size every DER blob exactly (the authority's `i2d_X509(x, NULL)`
+    // before `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer
+    // writes the whole encoding and takes no capacity argument, so a fixed stack buffer
+    // would be overflowed by a certificate larger than it.
+    let mut list_len = 0usize;
+    if !leaf.is_null() {
+        // SAFETY: `leaf` is a live certificate; a NULL out-pointer asks only for the length.
+        let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let Some(next) = list_len
+            .checked_add(3)
+            .and_then(|v| v.checked_add(dlen as usize))
+        else {
+            return 0;
+        };
+        list_len = next;
+    }
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
+        if x.is_null() {
+            continue;
+        }
+        // SAFETY: `x` is a live certificate; a NULL out-pointer asks for the length.
+        let dlen = unsafe { i2d_X509(x, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let Some(next) = list_len
+            .checked_add(3)
+            .and_then(|v| v.checked_add(dlen as usize))
+        else {
+            return 0;
+        };
+        list_len = next;
+    }
+    // `certificate_list<0..2^24-1>`, and the handshake writer's 17000-byte framing bound.
+    if list_len > 0xFF_FFFF {
+        return 0;
+    }
+    let Some(body_len) = 3usize.checked_add(list_len) else {
+        return 0;
+    };
+    if body_len > 17000 - 4 {
+        return 0;
+    }
+    // The body block, allocated through the crate's allocator seam; its single release is
+    // the handle's `Drop` on every refusal below. Every byte is written by the second pass.
+    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let body_ptr = body.as_ptr();
     let mut p = 3usize;
-    let mut der = [0u8; 8192];
-    let mut derptr = der.as_mut_ptr();
-    // SAFETY: `s` is live; `cpk` is a live certificate container.
-    if !cpk.is_null() && !unsafe { (*cpk).x509 }.is_null() {
-        // SAFETY: `cpk.x509` is live; `derptr` points at `der`'s storage.
-        let dlen = unsafe { i2d_X509((*cpk).x509, &mut derptr) };
-        if dlen <= 0 || dlen as usize > der.len() || p + 3 + dlen as usize > body.len() {
+    // Second pass: encode each certificate into its exact reservation.
+    if !leaf.is_null() {
+        // SAFETY: `leaf` is a live certificate.
+        let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
+        if dlen <= 0 {
             return 0;
         }
         let dlen = dlen as usize;
-        body[p] = (dlen >> 16) as u8;
-        body[p + 1] = (dlen >> 8) as u8;
-        body[p + 2] = dlen as u8;
-        p += 3;
-        // SAFETY: `body` has room for `dlen` bytes at `p`.
-        unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), dlen) };
-        p += dlen;
-    }
-    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
-    // SAFETY: `s`/`cpk` are live.
-    if !cpk.is_null() && !unsafe { (*cpk).chain }.is_null() {
-        // SAFETY: `cpk.chain` is a live stack of certificates.
-        let chain = unsafe { (*cpk).chain };
-        // SAFETY: `chain` is a live stack.
-        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) };
-        for i in 0..n {
-            // SAFETY: `i` is in range.
-            let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
-            if x.is_null() {
-                continue;
-            }
-            let mut d2 = [0u8; 8192];
-            let mut d2p = d2.as_mut_ptr();
-            // SAFETY: `x` is a live certificate.
-            let dlen = unsafe { i2d_X509(x, &mut d2p) };
-            if dlen <= 0 || dlen as usize > d2.len() || p + 3 + dlen as usize > body.len() {
+        // SAFETY: `body_ptr` is writable for `body_len` bytes; `p + 3 + dlen <= body_len`
+        // follows from the first pass and the `checked_add`s above.
+        unsafe {
+            *body_ptr.add(p) = (dlen >> 16) as u8;
+            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
+            *body_ptr.add(p + 2) = dlen as u8;
+            p += 3;
+            let mut out = body_ptr.add(p);
+            if i2d_X509(leaf, &mut out) != dlen as c_int {
                 return 0;
             }
-            let dlen = dlen as usize;
-            body[p] = (dlen >> 16) as u8;
-            body[p + 1] = (dlen >> 8) as u8;
-            body[p + 2] = dlen as u8;
-            p += 3;
-            // SAFETY: `body` has room for `dlen` bytes at `p`.
-            unsafe { core::ptr::copy_nonoverlapping(d2.as_ptr(), body.as_mut_ptr().add(p), dlen) };
             p += dlen;
         }
     }
-    let list_len = p - 3;
-    body[0] = (list_len >> 16) as u8;
-    body[1] = (list_len >> 8) as u8;
-    body[2] = list_len as u8;
-    // SAFETY: `s` is live; `body` is `p` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body.as_ptr(), p) }
+    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
+        if x.is_null() {
+            continue;
+        }
+        // SAFETY: `x` is a live certificate.
+        let dlen = unsafe { i2d_X509(x, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let dlen = dlen as usize;
+        // SAFETY: `body_ptr` is writable for `body_len` bytes; the first pass reserved
+        // exactly `3 + dlen` for this entry.
+        unsafe {
+            *body_ptr.add(p) = (dlen >> 16) as u8;
+            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
+            *body_ptr.add(p + 2) = dlen as u8;
+            p += 3;
+            let mut out = body_ptr.add(p);
+            if i2d_X509(x, &mut out) != dlen as c_int {
+                return 0;
+            }
+            p += dlen;
+        }
+    }
+    debug_assert_eq!(p - 3, list_len);
+    debug_assert_eq!(p, body_len);
+    // SAFETY: `body_ptr` is writable for `body_len` bytes; `body_start` is the list body.
+    unsafe {
+        *body_ptr = (list_len >> 16) as u8;
+        *body_ptr.add(1) = (list_len >> 8) as u8;
+        *body_ptr.add(2) = list_len as u8;
+        write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body_ptr, body_len)
+    }
 }
 
 /// `tls_construct_server_key_exchange` (`statem_srvr.c:2699-2860`) for the reduced ECDHE path:
@@ -2965,6 +3064,11 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
             return None;
         }
         let iv_len = iv_len as usize;
+        // The callback's `iv` is `EVP_MAX_IV_LENGTH` bytes (the authority's buffer); a
+        // cipher reporting a longer IV would make the copy below read past it.
+        if iv_len > EVP_MAX_IV_LENGTH {
+            return None;
+        }
         // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`).
         let mut enc = [0u8; 0xFF00 + 32];
         let mut enc1: c_int = 0;
@@ -2981,9 +3085,17 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         {
             return None;
         }
-        let enclen = enc1 as usize + enc2 as usize;
-        // ticket = key_name || iv || ciphertext, then HMAC over that prefix.
-        let mut ticket = vec![0u8; TLSEXT_KEYNAME_LENGTH + iv_len + enclen + 32];
+        let enclen = (enc1 as usize).checked_add(enc2 as usize)?;
+        // ticket = key_name || iv || ciphertext, then HMAC over that prefix. The MAC tail
+        // is reserved as `EVP_MAX_MD_SIZE`: the application's `ticket_key_cb` chooses the
+        // HMAC digest, so the write length is not known here, and the authority reserves
+        // `EVP_MAX_MD_SIZE` for exactly this `HMAC_Final` (`statem_srvr.c:4314-4317`). A
+        // 32-byte reservation would be overflowed by SHA-384/512.
+        let ticket_cap = TLSEXT_KEYNAME_LENGTH
+            .checked_add(iv_len)
+            .and_then(|n| n.checked_add(enclen))
+            .and_then(|n| n.checked_add(crate::ssl::ssl_lib::EVP_MAX_MD_SIZE))?;
+        let mut ticket = vec![0u8; ticket_cap];
         ticket[..TLSEXT_KEYNAME_LENGTH].copy_from_slice(&key_name);
         ticket[TLSEXT_KEYNAME_LENGTH..TLSEXT_KEYNAME_LENGTH + iv_len]
             .copy_from_slice(&iv[..iv_len]);
@@ -2996,7 +3108,11 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         {
             return None;
         }
-        ticket.truncate(mac_at + hlen as usize);
+        let hlen = hlen as usize;
+        if hlen > crate::ssl::ssl_lib::EVP_MAX_MD_SIZE {
+            return None;
+        }
+        ticket.truncate(mac_at + hlen);
         Some(ticket)
     }
 }
@@ -3064,7 +3180,10 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
         }
         let ivlen = ivlen as usize;
         let mlen = crate::mac::hmac::HMAC_size(hctx.as_ptr());
-        if mlen == 0 || etick.len() <= TLSEXT_KEYNAME_LENGTH + ivlen + mlen {
+        if mlen == 0
+            || mlen > crate::ssl::ssl_lib::EVP_MAX_MD_SIZE
+            || etick.len() <= TLSEXT_KEYNAME_LENGTH + ivlen + mlen
+        {
             return core::ptr::null_mut();
         }
         let enc_end = etick.len() - mlen;
@@ -4106,5 +4225,138 @@ mod adv_probe {
             adv_alloc::double_free(),
             "the instrument must flag a double release (negative control)"
         );
+    }
+
+    /// Build a certificate whose DER exceeds the old fixed 8192-byte stack buffer.
+    ///
+    /// `i2d_X509` writes the whole encoding into a non-NULL out-pointer without a
+    /// capacity argument, so this is the input that made the pre-fix flight writers
+    /// overflow their stack buffers.
+    unsafe fn oversized_certificate() -> *mut crate::x509::x_x509::X509 {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free};
+        use crate::x509::x509_set::{
+            X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+        };
+        use crate::x509::x509_vfy::X509_gmtime_adj;
+        use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+        use crate::x509::x_all::X509_sign;
+        use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+        use crate::x509::x_x509::{i2d_X509, X509_new};
+        // SAFETY: every pointer below is this frame's own fresh object.
+        unsafe {
+            // A complete self-signed certificate is needed: the ASN.1 encoder refuses a
+            // certificate whose mandatory issuer/key/validity fields are unset, and an
+            // incomplete synthetic object would not exercise `i2d_X509` at all.
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                ptr::null_mut(),
+                ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                c"prime256v1".as_ptr(),
+            );
+            assert!(!pkey.is_null(), "an EC key must be generatable");
+            let x = X509_new();
+            assert!(!x.is_null(), "X509_new must answer a certificate");
+            let name = X509_NAME_new();
+            assert!(!name.is_null(), "X509_NAME_new must answer a name");
+            let big = [b'A'; 60];
+            // `CN` has the authority's 64-byte string-table bound, so build the oversized
+            // DER from many valid entries rather than one invalid one. Seventy entries keep
+            // the control above the old 8192-byte buffer but below this reduction's
+            // 17000-byte handshake-message writer bound.
+            for _ in 0..70 {
+                assert_eq!(
+                    X509_NAME_add_entry_by_txt(
+                        name,
+                        c"CN".as_ptr(),
+                        MBSTRING_UTF8,
+                        big.as_ptr(),
+                        big.len() as c_int,
+                        -1,
+                        0,
+                    ),
+                    1,
+                    "the large name must be accepted"
+                );
+            }
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(
+                ASN1_INTEGER_set(ptr::addr_of_mut!((*x).cert_info.serialNumber), 1),
+                1
+            );
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            EVP_PKEY_free(pkey);
+            let derlen = i2d_X509(x, ptr::null_mut());
+            assert!(
+                derlen > 8192,
+                "the control certificate must exceed the old 8192-byte buffer, got {derlen}"
+            );
+            x
+        }
+    }
+
+    unsafe fn construct_tls13(s: *mut Ssl) -> c_int {
+        // SAFETY: `s` is the live connection the helper built.
+        unsafe { tls13_construct_certificate(s, &[]) }
+    }
+
+    unsafe fn construct_tls12(s: *mut Ssl) -> c_int {
+        // SAFETY: `s` is the live connection the helper built.
+        unsafe { tls12_construct_certificate(s) }
+    }
+
+    /// Drive one flight writer over the oversized certificate with a memory BIO, so a
+    /// successful return proves the whole body was encoded and written. The certificate
+    /// is installed as a borrow and cleared before `SSL_free` releases the container.
+    fn oversized_cert_flight(construct: unsafe fn(*mut Ssl) -> c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: all objects are created and released by this frame.
+        unsafe {
+            let ctx = crate::ssl::ssl_lib::SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null(), "a TLS context must be allocatable");
+            let s = crate::ssl::ssl_lib::SSL_new(ctx);
+            assert!(!s.is_null(), "a TLS connection must be allocatable");
+            let x = oversized_certificate();
+            let cpk = crate::ssl::ssl_lib::cert_active_key((*s).cert);
+            assert!(
+                !cpk.is_null(),
+                "the connection must carry a certificate slot"
+            );
+            (*cpk).x509 = x;
+            let bio = crate::runtime::bio::BIO_new(crate::runtime::bio::bss_mem::BIO_s_mem());
+            assert!(!bio.is_null(), "a memory BIO must be allocatable");
+            (*s).wbio = bio; // ownership transferred; `SSL_free` releases it
+            assert_eq!(
+                construct(s),
+                1,
+                "the oversized certificate must be framed, not refused or overflowed"
+            );
+            (*cpk).x509 = ptr::null_mut();
+            crate::x509::x_x509::X509_free(x);
+            crate::ssl::ssl_lib::SSL_free(s);
+            crate::ssl::ssl_lib::SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn oversized_certificate_does_not_overflow_the_tls13_flight_buffer() {
+        oversized_cert_flight(construct_tls13);
+    }
+
+    #[test]
+    fn oversized_certificate_does_not_overflow_the_tls12_flight_buffer() {
+        oversized_cert_flight(construct_tls12);
     }
 }

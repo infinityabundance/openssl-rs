@@ -1,0 +1,401 @@
+{
+  "receipt": "boundary-sweep-B3",
+  "date": "2026-10-18",
+  "candidate": {
+    "base_head": "4511ad3d3",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ssl/ssl_lib.rs",
+      "src/ssl/statem/statem_srvr.rs"
+    ],
+    "working_tree_blob": {
+      "src/ssl/ssl_lib.rs": "cdba5c9cbd27b061c11ec4c5b0e31a56b99dc63a",
+      "src/ssl/statem/statem_srvr.rs": "ff22a00590a04b0a9134c636f2555a7d24ea72f1"
+    }
+  },
+  "stop_status": "REPAIRED - two high-severity memory-safety defects (unbounded i2d_X509 writes in both certificate flights; 32-byte HMAC tail for the application-chosen ticket digest) were found and fixed. Focused BATCH and ASan controls pass. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4",
+    "abi": "C ABI unchanged; no export, signature, #[repr(C)] layout, method-table slot, exported symbol or CRYPTO_* seam coordinate changed.",
+    "external_contracts": [
+      "A C caller passes live object pointers to every exported entry point; a stale or double-released pointer is outside the C contract. Reference counts turn a destructor-time reentrant release into a defined no-op (REF_DESTROYING), not an arbitrary stale-pointer detector.",
+      "A transferred object (BIO, X509_STORE, CTLOG_STORE, EVP_PKEY, SSL_SESSION, X509 chain) carries exactly one owned reference; the set0 transfer consumes it and the caller must not also release it. Passing the incumbent pointer as the new transfer is a caller contract violation (authority parity; latent self-alias recorded, not reproduced as a new obligation).",
+      "An application callback (client_hello_cb, servername_cb, alpn_select_cb, ticket_key_cb, msg_callback, ex_data free callbacks) must not free or invalidate the SSL/SSL_CTX it receives. Callback pointers are raw and stored verbatim; arguments are application-owned.",
+      "Handshake input is a length-delimited byte slice; every field read is checked against the slice bounds. The reduced server does not model several authority length policy checks (recorded divergences).",
+      "ticket_key_cb initialises the supplied EVP_CIPHER_CTX and HMAC_CTX. The IV is bounded by EVP_MAX_IV_LENGTH and the MAC by EVP_MAX_MD_SIZE; the authority reserves EVP_MAX_MD_SIZE for the MAC."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B3-SL-1",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "object ownership model: OwnedCtx/RawCtx/CtxDestroy, SSL_CTX_new_ex, SSL_new, cert_new, ssl_cert_dup, cert_free",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every constructor/free is unsafe extern C and requires a live or owned caller pointer; the returned object is owned by the caller.",
+        "OwnedCtx::from_raw and release_block remain unsafe proofs; their callers are internal and each is a single release.",
+        "Constructors deliberately skip the destructor on the authority's pre-live refusal arms and release exactly the members acquired so far; the DTLS d1 leak on the ex_data refusal is fixed."
+      ]
+    },
+    {
+      "id": "B3-SL-2",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "refcount lifecycle and reentrancy: SSL_CTX_up_ref/free, SSL_up_ref/free, SSL_dup fast path, ex_data free callbacks",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "up_ref/free dereference a caller-guaranteed live pointer; there is no NULL check (authority parity).",
+        "The destructor runs with the count at REF_DESTROYING; a reentrant free is a defined no-op, while any other reentrant use observes partially torn-down state.",
+        "The caller must own the reference it releases; an arbitrary stale pointer is not detected."
+      ]
+    },
+    {
+      "id": "B3-SL-3",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "ownership transfers: SSL_set_SSL_CTX, SSL_CTX_set_cert_store/set1_cert_store, SSL_CTX_set0_ctlog_store, SSL_set0_tmp_dh_pkey, SSL_set_bio/set0_rbio/set0_wbio, SSL_set_fd/wfd/rfd",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "SSL_CTX_set_cert_store, SSL_CTX_set0_ctlog_store and SSL_set0_tmp_dh_pkey free then store the same field; passing the incumbent as the transferred pointer is a caller contract violation (authority parity, latent self-alias).",
+        "SSL_set_SSL_CTX assigns ssl->ctx after SSL_CTX_free(old); an ex_data free callback that re-enters and reads ssl->ctx in that window observes the old pointer (authority parity).",
+        "Transferred BIO references and the rbio == wbio two-slot rule are caller obligations; a refused BIO_up_ref would leak the freshly created BIO (unreachable for a live BIO).",
+        "SSL_set_fd/wfd/rfd adopt the descriptor with BIO_NOCLOSE; the caller must not close or reuse it while the BIO lives."
+      ]
+    },
+    {
+      "id": "B3-SL-4",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "member-buffer/member-slot mediation: MemberBufSlot, MemberCStrSlot, SSL_new/SSL_dup copies, psk_identity_hint, serverinfo, cert-type/ALPN/hostname/pha/ticket members",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "MemberBufSlot::store's emptiness precondition is a debug_assert; release builds rely on every caller clearing first.",
+        "supportedgroups remains an element-counted raw boundary with three accesses and two destructor frees, bounded by tls1_set_groups (<= 64 entries).",
+        "The (ptr,len) pairs stay raw #[repr(C)] fields; validity is an internal constructor invariant, not a type-level one."
+      ]
+    },
+    {
+      "id": "B3-SL-5",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "session/certificate/chain accessors and DANE/CT: SSL_get0/1_peer_certificate, SSL_get_peer_cert_chain, SSL_get0_verified_chain, SSL_get0_peer_rpk, dane_tlsa_add/dane_final/ssl_dane_dup",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Peer certificate, verified chain and RPK pointers are borrowed and expire on the next mutation or free.",
+        "Session ownership internals live in ssl_sess.rs (rank 61, deferred); this is an unresolved dependency for the session family.",
+        "Certificate/chain loaders live in ssl_rsa.rs; their transfer contracts are not re-audited in this batch."
+      ]
+    },
+    {
+      "id": "B3-SL-6",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "ClientHello publication and readers: s->clienthello, SSL_client_hello_get0_* and get1_extensions_present/get_extension_order/get0_ext",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The readers are valid only during client_hello_cb; outside it s->clienthello is NULL and they return 0/empty.",
+        "The published message points into the caller's handshake slice for the callback duration; the callback must not retain it."
+      ]
+    },
+    {
+      "id": "B3-SL-7",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "callback/ex_data setters: verify, msg, cert, client_hello, keylog, PSK, ALPN/NPN, servername, ticket, record padding, async, early data, CT validation",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Raw function pointers and arguments are stored verbatim; the application owns the argument and must not free the SSL/SSL_CTX from a destructor-time callback.",
+        "CRYPTO_set_ex_data can replace a slot without a callback; the free callback observes the value current at destruction."
+      ]
+    },
+    {
+      "id": "B3-SL-8",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "DANE record/context lifecycle: dane_ctx_enable/final, tlsa_free/DanetlsRecord destroy_body, dane_tlsa_add, ssl_dane_dup",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "tlsa data is readable for dlen; the record owns a copy and releases it at the authority site.",
+        "trecs ordering indexes dctx->mdord by the validated matching type; the digest table is allocated for DANETLS_MATCHING_LAST + 1."
+      ]
+    },
+    {
+      "id": "B3-SL-9",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "reduced lifecycle bodies: SSL_clear, SSL_copy_session_id, SSL_dup",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "SSL_clear is a method guard only (no reset) and SSL_copy_session_id copies security attributes rather than sharing the certificate container; both are documented reductions.",
+        "SSL_dup up-refs the same object when not quiescent and duplicates it when quiescent; the caller owns one reference in both arms."
+      ]
+    },
+    {
+      "id": "B3-SS-1",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "server transition surface: read/write transitions and max_message_size",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Transition writes are reached only with a live connection; an unknown state calls ossl_statem_fatal."
+      ]
+    },
+    {
+      "id": "B3-SS-2",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "ClientHello parse: tls_process_client_hello, extension walk, PSK/key-share/ALPN/SNI extraction",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "hs must be the full handshake message; every read is bounds-checked against it before use.",
+        "A missing supported_groups extension is not rejected by the reduced parser (recorded divergence from SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION)."
+      ]
+    },
+    {
+      "id": "B3-SS-3",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "application callback reentrancy: client_hello_cb, servername_cb, alpn_select_cb, ticket_key_cb, msg_callback",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "client_hello_cb must not free or invalidate s; SSL_CLIENT_HELLO_RETRY is a wait boundary with no resumption.",
+        "servername_cb and alpn_select_cb must not free s; on SSL_TLSEXT_ERR_OK the selected ALPN pointer is readable for selected_len.",
+        "msg_callback must not free s; the message buffer is stack-local for the duration of the call."
+      ]
+    },
+    {
+      "id": "B3-SS-4",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "certificate flight DER encoding: tls13_construct_certificate, tls12_construct_certificate",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B3-D1",
+        "B3-D2"
+      ],
+      "residuals": [
+        "write_handshake_message frames at most 17000 bytes, so a certificate-flight body larger than 16996 bytes is refused; the authority's WPACKET is unbounded. This pre-existing reduced boundary is now explicit and safe.",
+        "The chain stack must contain live X509 objects; every DER blob is sized first and encoded into an exact reservation."
+      ]
+    },
+    {
+      "id": "B3-SS-5",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "ticket construction/decryption: construct_stateless_ticket, tls13_decrypt_ticket, tls12/tls13_construct_new_session_ticket",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B3-D3",
+        "B3-D4"
+      ],
+      "residuals": [
+        "ticket_key_cb must initialise the supplied cipher/HMAC contexts; iv_len > EVP_MAX_IV_LENGTH and MAC length > EVP_MAX_MD_SIZE are now refused rather than overflowing.",
+        "A context without ticket_key_cb suppresses ticket construction (the reduced default-key boundary).",
+        "Decryption reads key_name(16) and the IV from etick; the callback must not retain those pointers."
+      ]
+    },
+    {
+      "id": "B3-SS-6",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "ephemeral key exchange and signature construction: tls12_construct_server_key_exchange, tls12_sign, tls12_verify, tls13_construct_cert_verify",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The active certificate slot's privatekey must be a live signing key able to produce the selected scheme.",
+        "EVP_MD_CTX/EVP_PKEY owners are released exactly once on success and every refusal arm."
+      ]
+    },
+    {
+      "id": "B3-SS-7",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "record read/write and drivers: tls12_read_handshake, tls12_write_change_cipher_spec, tls12_server_drive, tls13_server_drive, server_wait",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "A failure poisons the connection through ossl_statem_fatal plus rwstate; there is no rollback to a reusable pre-message state (authority parity).",
+        "pending_cipher is assumed non-NULL at two TLS1.3 driver sites; it is set by tls_process_client_hello and is unreachable unset from the public entry."
+      ]
+    },
+    {
+      "id": "B3-SS-8",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "session creation and PSK resumption ownership: ssl_get_new_session calls, tls13_decrypt_ticket result adoption, ssl_update_cache",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "A looked-up session is either transferred to the connection or freed exactly once on the rejection arm.",
+        "Session internals in ssl_sess.rs (rank 61) remain deferred and block family graduation."
+      ]
+    },
+    {
+      "id": "B3-SS-9",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "bounded message construction: server hello (TLS1.2/1.3), encrypted extensions, certificate request, CCS, Finished",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every body is built in a fixed buffer after explicit length checks (server hello 96, EE 514, cert request 256, SKE 2048, Finished 12)."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B3-D1",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "pre_fix_line": 1910,
+      "severity": "high",
+      "class": "stack-buffer-overflow (unbounded encoder write)",
+      "description": "tls13_construct_certificate encoded the leaf with i2d_X509 into der[0u8; 8192] and checked derlen > der.len() only afterwards. i2d_X509 with a non-NULL out-pointer writes the whole DER and has no capacity argument, so a certificate >= 8192 bytes overflowed the stack buffer.",
+      "fix": "Size first with i2d_X509(cert, NULL), compute body_len with checked_add, allocate the body through OwnedBuf, and encode into the exact reservation.",
+      "regression": "ssl::statem::statem_srvr::adv_probe::oversized_certificate_does_not_overflow_the_tls13_flight_buffer (DER > 8192, normal and ASan)"
+    },
+    {
+      "id": "B3-D2",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "pre_fix_line": 2620,
+      "severity": "high",
+      "class": "stack-buffer-overflow (unbounded encoder write)",
+      "description": "tls12_construct_certificate encoded the leaf into der[0u8; 8192] and each chain certificate into a fresh d2[0u8; 8192], checking the length only after each write; the 8300-byte body was also fixed. A certificate or chain element >= 8192 bytes overflowed the stack.",
+      "fix": "Two-pass construction: size every DER blob with i2d_X509(x, NULL), sum with checked_add, allocate the exact body through OwnedBuf, then encode each certificate into its reservation.",
+      "regression": "ssl::statem::statem_srvr::adv_probe::oversized_certificate_does_not_overflow_the_tls12_flight_buffer (DER > 8192, normal and ASan)"
+    },
+    {
+      "id": "B3-D3",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "pre_fix_line": 2986,
+      "severity": "high",
+      "class": "heap-buffer-overflow (under-reserved MAC tail)",
+      "description": "construct_stateless_ticket reserved 32 bytes for the HMAC tail, but ticket_key_cb chooses the HMAC digest; HMAC_Final writes the digest length (up to EVP_MAX_MD_SIZE = 64). A SHA-384/512 callback overflowed the Vec. The authority reserves EVP_MAX_MD_SIZE (statem_srvr.c:4314-4317).",
+      "fix": "Reserve EVP_MAX_MD_SIZE in the ticket capacity (checked_add chain) and refuse hlen > EVP_MAX_MD_SIZE before truncate.",
+      "regression": "source/authority differential; the affected srvr ticket probe and the full SSL member-buffer probe set were re-run"
+    },
+    {
+      "id": "B3-D4",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "pre_fix_line": 3062,
+      "severity": "low",
+      "class": "panic / authority over-read on a contract-violating cipher IV length",
+      "description": "After ticket_key_cb, iv_len was cast to usize and used to slice iv[..iv_len] without bounding it by EVP_MAX_IV_LENGTH. A callback installing a cipher with a longer IV made the slice panic (caught by guard_ffi) after the callback had already written into the 16-byte iv buffer.",
+      "fix": "Refuse iv_len > EVP_MAX_IV_LENGTH with the suppression path.",
+      "regression": "covered by the ticket probe and source review; a dedicated long-IV callback control is NOT_RUN"
+    },
+    {
+      "id": "B3-D5",
+      "file": "src/ssl/ssl_lib.rs",
+      "pre_fix_line": 3230,
+      "severity": "low",
+      "class": "leak on a constructor refusal arm",
+      "description": "SSL_new allocated the DTLS state before CRYPTO_new_ex_data, but the ex_data refusal branch ran the authority's bare-block teardown (lock + block only) at ssl_lib.c:731, which skipped the destructor and leaked d1. The authority allocates d1 only after ossl_ssl_init succeeds.",
+      "fix": "dtls1_free(s) on the ex_data refusal branch before the lock/block release.",
+      "regression": "source/authority ordering differential; not reachable through the current DTLS court (allocator-refusal control NOT_RUN)"
+    },
+    {
+      "id": "B3-D6",
+      "file": "src/ssl/ssl_lib.rs",
+      "pre_fix_line": 3336,
+      "severity": "informational",
+      "class": "unchecked allocation arithmetic (defence in depth)",
+      "description": "The supportedgroups copy used supportedgroups_len * size_of::<u16>() without checked_mul. The only writer, tls1_set_groups, bounds the length to 64, so no reachable overflow exists; the standard nevertheless requires the checked form for an allocation extent.",
+      "fix": "checked_mul; an unrepresentable product refuses the SSL_new allocation path.",
+      "regression": "source review; no reachable input exists to drive the overflow arm"
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (test-profile build of the touched target)",
+      "focused_tests": [
+        "ssl::ssl_lib: 21 passed / 0 failed / 4 ignored (member-slot, realloc, alias, refcount, cert-dup)",
+        "ssl::statem::statem_srvr: 2 passed / 0 failed / 2 ignored (the new oversized controls and the ticket probe filter)"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1583 passed / 0 failed / 26 ignored (233.10 s, --test-threads=1)",
+      "threaded4": "1583 passed / 0 failed / 26 ignored (94.96 s, --test-threads=4)",
+      "probes": [
+        "ssl::statem::statem_srvr::adv_probe::tls12_construct_refused_ticket_alloc_leaves_ext_tick_empty PASS",
+        "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner PASS",
+        "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_reentrancy_reads_member PASS",
+        "ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing PASS",
+        "the full scripts/adv-probe.sh suite is NOT_RUN; only the affected SSL member-buffer/member-slot set was run"
+      ]
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh, nightly-2026-10-05, -Zsanitizer=address -Zbuild-std",
+      "canary": "forensics/tools/asan_canary.c built with clang -fsanitize=address and run: ERROR: AddressSanitizer: heap-use-after-free, exit 1 - the instrument fires.",
+      "focused": "ssl::statem::statem_srvr::adv_probe::oversized (2 tests) PASS with no ASan report.",
+      "limits": "The pre-fix binary was not rebuilt for a before/after ASan comparison (NOT_RUN). The stack-write class the control targets is instrumented by this venue; the control's DER exceeds the old 8192-byte buffer."
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B3-1",
+        "class": "stack-buffer-overflow from unbounded i2d",
+        "control": "The oversized-certificate controls build a real self-signed EC certificate whose DER exceeds 8192 bytes and drive both flight writers with a memory BIO; both return 1. Pre-fix, the same DER was written into the 8192-byte stack buffers."
+      },
+      {
+        "id": "NC-B3-2",
+        "class": "double release / member-buffer refusal",
+        "control": "ssl::statem::statem_srvr::adv_probe::canary_double_release_is_detected PASS; ssl_lib realloc refusal/reentrancy canaries PASS; ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue PASS."
+      },
+      {
+        "id": "NC-B3-3",
+        "class": "ASan venue liveness",
+        "control": "asan_canary heap-use-after-free, exit 1 (above)."
+      }
+    ],
+    "not_run": [
+      {
+        "id": "NR-B3-1",
+        "control": "Miri over the certificate/ticket ownership paths",
+        "gate": "BOUNDARY/SEAL; no Miri component is installed in the court, and the ASan venue is the available dynamic instrument."
+      },
+      {
+        "id": "NR-B3-2",
+        "control": "Loom/threaded state-machine interleavings",
+        "gate": "BOUNDARY/SEAL; no concurrent handshake model exists for the reduced synchronous driver."
+      },
+      {
+        "id": "NR-B3-3",
+        "control": "Authority differential for certificates whose flight body exceeds 16996 bytes",
+        "gate": "BOUNDARY; the reduced write_handshake_message caps at 17000, so these are refused here while the authority sends them. Recorded compatibility divergence."
+      },
+      {
+        "id": "NR-B3-4",
+        "control": "Pre-fix negative control (old stack buffers under ASan)",
+        "gate": "BOUNDARY; the base binary was not rebuilt. The new control exceeds the old buffer size and ASan stack instrumentation is enabled."
+      },
+      {
+        "id": "NR-B3-5",
+        "control": "Independent reviewer not the author; full dependency-closure audit; SEAL forensic regeneration",
+        "gate": "BOUNDARY/SEAL; this receipt is authored by the conversion subagent."
+      }
+    ]
+  },
+  "unsafe_accounting": {
+    "eliminated": [],
+    "relocated": [
+      "The two unbounded i2d_X509 writes moved from fixed stack buffers to exact reservations derived from a first sizing pass (the i2d FFI call remains unsafe and now has a valid extent contract).",
+      "The TLS1.3 ticket MAC write moved from a 32-byte tail inside a Vec to an EVP_MAX_MD_SIZE reservation, matching the authority's WPACKET reservation."
+    ],
+    "hidden": 0,
+    "new_obligations": [],
+    "behavior_delta": "Certificate flights now allocate their body through OwnedBuf/CRYPTO_malloc at (NULL, 0) and refuse a body > 16996 bytes; the old port used stack buffers (and overflowed above 8192). Tickets accept SHA-384/512 ticket_key_cb digests safely and refuse iv_len > 16. SSL_new releases d1 on the ex_data refusal path and refuses an unrepresentable supportedgroups byte extent.",
+    "safe_caller_ub": "none known: every exported entry point in both files is unsafe extern C with a stated contract or a private helper reached from one; the safe interior helpers (MemberBufSlot::clear, refcount accessors, read-only getters) do not accept raw pointers. The repaired oversize paths are covered by safe test callers only through the internal unsafe test helpers."
+  },
+  "residuals_total": 42,
+  "dispositions": {
+    "src/ssl/ssl_lib.rs": "CONTRACTED",
+    "src/ssl/statem/statem_srvr.rs": "CONTRACTED",
+    "safety_discharged": [],
+    "safe_compatible": []
+  },
+  "next": {
+    "queue": [
+      "src/rsa/object.rs (rank 68)",
+      "src/ssl/ssl_sess.rs (rank 61)",
+      "src/ssl/statem/statem_clnt.rs (rank 50)",
+      "src/ml_dsa/encoders.rs"
+    ],
+    "note": "B3 closes the two explicitly deferred SSL boundary files. Both are CONTRACTED, not SAFETY_DISCHARGED: session internals (ssl_sess rank 61), ssl_rsa certificate/chain loaders, Miri/Loom, the broad authority differential, the >16996-byte certificate compatibility divergence and the pre-fix dynamic control remain pending. No third file was started."
+  }
+}
