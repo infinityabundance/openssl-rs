@@ -33,7 +33,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -492,9 +492,12 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
         return;
     }
     // SAFETY: `exchange` is live per the contract.
-    let last = unsafe { (*exchange).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*exchange).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEYEXCH_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: `exchange` is live and this decrement was the last reference; the object's `Drop`
     // releases its `type_name`, its provider reference and the block, at the authority's own sites.
@@ -507,9 +510,10 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
 /// `exchange` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYEXCH_up_ref(exchange: *mut EvpKeyExch) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `exchange` is live per the contract.
-    unsafe { (*exchange).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*exchange).refcnt })
 }
 
 /// `OSSL_PROVIDER *EVP_KEYEXCH_get0_provider(const EVP_KEYEXCH *exchange)`.

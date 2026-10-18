@@ -41,7 +41,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -395,9 +395,12 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
         return;
     }
     // SAFETY: `kem` is live per the contract.
-    let last = unsafe { (*kem).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*kem).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEM_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
     // `Drop` runs the type-name and provider releases (`:443`) then the block release at `:446`.
@@ -410,9 +413,10 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
 /// `kem` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEM_up_ref(kem: *mut EvpKem) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `kem` is live per the contract.
-    unsafe { (*kem).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*kem).refcnt })
 }
 
 /// `OSSL_PROVIDER *EVP_KEM_get0_provider(const EVP_KEM *kem)`.

@@ -116,6 +116,241 @@ pub(crate) fn up_ref(refs: &AtomicI32) -> c_int {
 }
 
 #[cfg(test)]
+mod family_reentrancy_tests {
+    //! Re-entrancy evidence for the families whose destructor bodies invoke
+    //! application/provider callbacks. Each callback re-enters the same `*_free` from the
+    //! ex-data teardown; the shared destroying sentinel must make that a defined no-op.
+
+    use core::ffi::{c_int, c_long, c_void};
+    use core::ptr;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    use crate::dh::object::{DH_free, DH_new, DH_set_ex_data};
+    use crate::dh::Dh;
+    use crate::dsa::object::{DSA_free, DSA_new, DSA_set_ex_data};
+    use crate::dsa::Dsa;
+    use crate::ec::key::{EC_KEY_free, EC_KEY_new};
+    use crate::ec::lib::EC_KEY_set_ex_data;
+    use crate::ec::EcKey;
+    use crate::evp::pkey::EvpPkey;
+    use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EVP_PKEY_set_ex_data};
+    use crate::rsa::object::{RSA_free, RSA_new, RSA_set_ex_data};
+    use crate::rsa::Rsa;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{
+        BIO_free, BIO_new, BIO_set_callback_ex, BIO_set_ex_data, Bio, BioCallbackExFn, BIO_CB_FREE,
+    };
+    use crate::runtime::ex_data::{
+        CRYPTO_get_ex_new_index, CryptoExData, CRYPTO_EX_INDEX_BIO, CRYPTO_EX_INDEX_DH,
+        CRYPTO_EX_INDEX_DSA, CRYPTO_EX_INDEX_EC_KEY, CRYPTO_EX_INDEX_EVP_PKEY, CRYPTO_EX_INDEX_RSA,
+    };
+
+    type FreeCb = unsafe extern "C" fn(
+        *mut c_void,
+        *mut c_void,
+        *mut CryptoExData,
+        c_int,
+        c_long,
+        *mut c_void,
+    );
+
+    macro_rules! reentry_test {
+        ($name:ident, $target:ident, $calls:ident, $cb:ident, $class:expr, $new:path, $set:path,
+         $free:path, $ty:ty) => {
+            static $target: AtomicUsize = AtomicUsize::new(0);
+            static $calls: AtomicUsize = AtomicUsize::new(0);
+
+            unsafe extern "C" fn $cb(
+                parent: *mut c_void,
+                _ptr: *mut c_void,
+                _ad: *mut CryptoExData,
+                _idx: c_int,
+                _argl: c_long,
+                _argp: *mut c_void,
+            ) {
+                let target = $target.load(Ordering::SeqCst) as *mut $ty;
+                if !target.is_null() && parent.cast::<$ty>() == target {
+                    $calls.fetch_add(1, Ordering::SeqCst);
+                    // SAFETY: the target is the object whose ex-data is being torn down and
+                    // whose block is still allocated here.
+                    unsafe { $free(target) };
+                }
+            }
+
+            #[test]
+            fn $name() {
+                let idx = CRYPTO_get_ex_new_index(
+                    $class,
+                    0,
+                    ptr::null_mut(),
+                    None,
+                    None,
+                    Some($cb as FreeCb),
+                );
+                assert!(idx >= 1, "an ex-data index must be available");
+                // SAFETY: constructors and setters take live objects; `free` owns the only
+                // reference.
+                unsafe {
+                    let p = $new();
+                    assert!(!p.is_null());
+                    assert_eq!($set(p, idx, ptr::dangling_mut::<c_void>()), 1);
+                    $target.store(p as usize, Ordering::SeqCst);
+                    $calls.store(0, Ordering::SeqCst);
+                    $free(p);
+                }
+                $target.store(0, Ordering::SeqCst);
+                assert_eq!(
+                    $calls.load(Ordering::SeqCst),
+                    1,
+                    "the callback ran exactly once"
+                );
+            }
+        };
+    }
+
+    reentry_test!(
+        dh_reentry_is_a_noop,
+        DH_TARGET,
+        DH_CALLS,
+        dh_free_cb,
+        CRYPTO_EX_INDEX_DH,
+        DH_new,
+        DH_set_ex_data,
+        DH_free,
+        Dh
+    );
+    reentry_test!(
+        dsa_reentry_is_a_noop,
+        DSA_TARGET,
+        DSA_CALLS,
+        dsa_free_cb,
+        CRYPTO_EX_INDEX_DSA,
+        DSA_new,
+        DSA_set_ex_data,
+        DSA_free,
+        Dsa
+    );
+    reentry_test!(
+        rsa_reentry_is_a_noop,
+        RSA_TARGET,
+        RSA_CALLS,
+        rsa_free_cb,
+        CRYPTO_EX_INDEX_RSA,
+        RSA_new,
+        RSA_set_ex_data,
+        RSA_free,
+        Rsa
+    );
+    reentry_test!(
+        ec_key_reentry_is_a_noop,
+        EC_TARGET,
+        EC_CALLS,
+        ec_free_cb,
+        CRYPTO_EX_INDEX_EC_KEY,
+        EC_KEY_new,
+        EC_KEY_set_ex_data,
+        EC_KEY_free,
+        EcKey
+    );
+    reentry_test!(
+        evp_pkey_reentry_is_a_noop,
+        PKEY_TARGET,
+        PKEY_CALLS,
+        pkey_free_cb,
+        CRYPTO_EX_INDEX_EVP_PKEY,
+        EVP_PKEY_new,
+        EVP_PKEY_set_ex_data,
+        EVP_PKEY_free,
+        EvpPkey
+    );
+
+    static BIO_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static BIO_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn bio_free_cb(
+        parent: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        let target = BIO_TARGET.load(Ordering::SeqCst) as *mut Bio;
+        if !target.is_null() && parent.cast::<Bio>() == target {
+            BIO_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: the target is the BIO whose ex-data is being torn down and whose block
+            // is still allocated here.
+            let _ = unsafe { BIO_free(target) };
+        }
+    }
+
+    #[test]
+    fn bio_reentry_is_a_noop() {
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_BIO,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(bio_free_cb as FreeCb),
+        );
+        assert!(idx >= 1);
+        // SAFETY: `BIO_s_mem` is a static method table and `BIO_new` takes a reference to it.
+        unsafe {
+            let b = BIO_new(BIO_s_mem());
+            assert!(!b.is_null());
+            assert_eq!(BIO_set_ex_data(b, idx, ptr::dangling_mut::<c_void>()), 1);
+            BIO_TARGET.store(b as usize, Ordering::SeqCst);
+            BIO_CALLS.store(0, Ordering::SeqCst);
+            assert_eq!(BIO_free(b), 1);
+        }
+        BIO_TARGET.store(0, Ordering::SeqCst);
+        assert_eq!(BIO_CALLS.load(Ordering::SeqCst), 1);
+    }
+
+    static BIO_CB_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static BIO_CB_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The modern BIO callback sees `BIO_CB_FREE` with the count already claimed by the
+    /// destroying sentinel. Re-entering `BIO_free` from it must be a defined no-op.
+    unsafe extern "C" fn bio_free_callback(
+        bio: *mut Bio,
+        oper: c_int,
+        _argp: *const core::ffi::c_char,
+        _len: usize,
+        _argi: c_int,
+        _argl: c_long,
+        _ret: c_int,
+        _processed: *mut usize,
+    ) -> c_long {
+        let target = BIO_CB_TARGET.load(Ordering::SeqCst) as *mut Bio;
+        if oper == BIO_CB_FREE && !target.is_null() && bio == target {
+            BIO_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: `bio` is the BIO whose free callback is running; the block is still
+            // allocated here.
+            let _ = unsafe { BIO_free(bio) };
+        }
+        1
+    }
+
+    #[test]
+    fn bio_free_callback_reentry_is_a_noop() {
+        // SAFETY: `BIO_s_mem` is a static method table and this test owns the BIO.
+        unsafe {
+            let b = BIO_new(BIO_s_mem());
+            assert!(!b.is_null());
+            let cb: BioCallbackExFn = bio_free_callback;
+            BIO_set_callback_ex(b, Some(cb));
+            BIO_CB_TARGET.store(b as usize, Ordering::SeqCst);
+            BIO_CB_CALLS.store(0, Ordering::SeqCst);
+            assert_eq!(BIO_free(b), 1);
+            BIO_CB_TARGET.store(0, Ordering::SeqCst);
+            assert_eq!(BIO_CB_CALLS.load(Ordering::SeqCst), 1);
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;

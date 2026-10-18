@@ -40,7 +40,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -463,9 +465,10 @@ pub unsafe extern "C" fn EVP_KDF_fetch(
 /// `kdf` must be a live `EvpKdf`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KDF_up_ref(kdf: *mut EvpKdf) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `kdf` is live per the contract.
-    unsafe { (*kdf).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*kdf).refcnt })
 }
 
 /// `void EVP_KDF_free(EVP_KDF *kdf)`.
@@ -480,9 +483,12 @@ pub unsafe extern "C" fn EVP_KDF_free(kdf: *mut EvpKdf) {
         return;
     }
     // SAFETY: `kdf` is live per the contract.
-    let last = unsafe { (*kdf).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*kdf).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KDF_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
     unsafe {

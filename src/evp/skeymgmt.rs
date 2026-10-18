@@ -66,7 +66,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -545,9 +547,10 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_fetch(
 /// `keymgmt` must be a live `EvpSkeyMgmt`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_SKEYMGMT_up_ref(keymgmt: *mut EvpSkeyMgmt) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `keymgmt` is live per the contract.
-    unsafe { (*keymgmt).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*keymgmt).refcnt })
 }
 
 /// `void EVP_SKEYMGMT_free(EVP_SKEYMGMT *keymgmt)`.
@@ -562,9 +565,12 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_free(keymgmt: *mut EvpSkeyMgmt) {
         return;
     }
     // SAFETY: `keymgmt` is live per the contract.
-    let last = unsafe { (*keymgmt).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*keymgmt).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_SKEYMGMT_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
     // `Drop` runs the name and provider releases (`:169`) then the block release at `:172`.
@@ -1200,13 +1206,11 @@ pub unsafe extern "C" fn EVP_SKEY_import_raw_key(
 /// `skey` must be a live `EvpSkey`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_SKEY_up_ref(skey: *mut EvpSkey) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it (the §17 divergence recorded in
+    // `runtime::refcount`; the authority would wrap zero to one and report failure).
     // SAFETY: `skey` is live per the contract.
-    let previous = unsafe { (*skey).references.fetch_add(1, Ordering::AcqRel) };
-    if previous + 1 > 1 {
-        1
-    } else {
-        0
-    }
+    crate::runtime::refcount::up_ref(unsafe { &(*skey).references })
 }
 
 /// `void EVP_SKEY_free(EVP_SKEY *skey)`.
@@ -1224,9 +1228,12 @@ pub unsafe extern "C" fn EVP_SKEY_free(skey: *mut EvpSkey) {
         return;
     }
     // SAFETY: `skey` is live per the contract.
-    let new = unsafe { (*skey).references.fetch_sub(1, Ordering::AcqRel) } - 1;
-    if new > 0 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*skey).references }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The destructor calls the provider's `free(keydata)` callback; a re-entrant
+        // `EVP_SKEY_free` from it observes the destroying sentinel and stops.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
     // `Drop` runs the authority's own destructor body (key data, method, lock) then the block
@@ -1478,6 +1485,39 @@ pub unsafe extern "C" fn EVP_SKEY_to_provider(
 mod tests {
     use super::*;
     use core::ffi::CStr;
+    use core::sync::atomic::AtomicUsize;
+
+    static SKEY_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static SKEY_REENTERS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The method's `free(keydata)` hook is provider-controlled. Re-entering `EVP_SKEY_free`
+    /// from it must observe the destroying sentinel, not tear the key down twice.
+    unsafe extern "C" fn reentrant_key_free(_keydata: *mut c_void) {
+        let key = SKEY_TARGET.load(Ordering::SeqCst) as *mut EvpSkey;
+        if !key.is_null() {
+            SKEY_REENTERS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: the target is the key whose destructor body is running; its block is
+            // still allocated here.
+            unsafe { EVP_SKEY_free(key) }
+        }
+    }
+
+    #[test]
+    fn free_reentry_from_the_provider_key_destructor_is_a_noop() {
+        // SAFETY: the method is a live stack object and `evp_skey_alloc` takes its own
+        // reference; the returned key owns the only key-data reference.
+        unsafe {
+            let mut mgmt = a_hand_built_skeymgmt();
+            mgmt.free = Some(reentrant_key_free);
+            let key = evp_skey_alloc(&mut mgmt);
+            assert!(!key.is_null());
+            SKEY_TARGET.store(key as usize, Ordering::SeqCst);
+            SKEY_REENTERS.store(0, Ordering::SeqCst);
+            EVP_SKEY_free(key);
+            SKEY_TARGET.store(0, Ordering::SeqCst);
+            assert_eq!(SKEY_REENTERS.load(Ordering::SeqCst), 1);
+        }
+    }
 
     /// A method built by hand, so the arms of this file that are not about fetching can be read
     /// without a provider.
@@ -1598,11 +1638,12 @@ mod tests {
         unsafe {
             assert_eq!(EVP_SKEY_up_ref(sp), 1);
             assert_eq!(skey.references.load(Ordering::Acquire), 2);
-            /* A count of zero is not brought back to life: `CRYPTO_UP_REF` would make it 1 and the
-             * authority's answer is `new > 1`. */
+            /* A count of zero is not brought back to life. The authority's `CRYPTO_UP_REF`
+             * would make it 1 and answer `new > 1` (0); this crate's shared checked protocol
+             * refuses without changing the count, which is the recorded §17 divergence. */
             skey.references.store(0, Ordering::Release);
             assert_eq!(EVP_SKEY_up_ref(sp), 0);
-            assert_eq!(skey.references.load(Ordering::Acquire), 1);
+            assert_eq!(skey.references.load(Ordering::Acquire), 0);
         }
     }
 

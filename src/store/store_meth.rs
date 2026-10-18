@@ -186,7 +186,9 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_up_ref(loader: *mut OsslStoreLoader) 
     // SAFETY: `loader` is live per the contract.
     unsafe {
         if !(*loader).prov.is_null() {
-            (*loader).refcnt.fetch_add(1, Ordering::AcqRel);
+            // The shared protocol refuses a zero, destroying or `i32::MAX` count without
+            // changing it.
+            return crate::runtime::refcount::up_ref(&(*loader).refcnt);
         }
     }
     1
@@ -210,9 +212,12 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
     // SAFETY: `loader` is non-NULL per the guard above.
     unsafe {
         if !(*loader).prov.is_null() {
-            let last = (*loader).refcnt.fetch_sub(1, Ordering::AcqRel);
-            if last > 1 {
-                return;
+            match crate::runtime::refcount::down_ref(&(*loader).refcnt) {
+                crate::runtime::refcount::DownRef::Last => {}
+                // The provider release can run a provider teardown callback; a re-entrant
+                // `OSSL_STORE_LOADER_free` observes the sentinel.
+                crate::runtime::refcount::DownRef::Remaining
+                | crate::runtime::refcount::DownRef::Retired => return,
             }
         }
     }
