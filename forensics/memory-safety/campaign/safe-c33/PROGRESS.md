@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1325** passed,
+`cargo test --lib` (must pass; the established baseline is **1338** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1046,6 +1046,33 @@ package.
   the atomic DH/DSA/EC/RSA/ECX/EVP/BIO/DSO/provider-method families use atomic
   counts but without the destroying sentinel. Both are queued.
 
+### Subphase 81 — reference-count class closed across all reentrant families
+
+- `Engine.struct_ref` (the last plain `c_int`) is now `AtomicI32` with a
+  checked increment and the destroying sentinel around its destroy hook and
+  ex-data free.
+- The same protocol is applied to every family whose free body can invoke
+  application code after the count reaches zero: `EVP_PKEY`, `EVP_SKEY`,
+  DH/DSA/RSA/EC_KEY, BIO, DSO, and every provider method/loader/rand-ctx.
+  Teardown runs only on `DownRef::Last`; `Remaining`/`Retired` return without
+  touching members. Families with no reachable callback
+  (`OsslCompCert`, ECX key, `KdfData`, `MacKey`) keep the authority's plain
+  down-ref with the reason recorded.
+- Every converted constructor publishes count 1 (verified by initializer
+  search). `up_ref` refuses zero/destroying/`i32::MAX` without changing the
+  count; the divergence is recorded as **D562** in `DECISIONS.md`.
+- Tests: Engine overflow, 8-thread exactly-one-destructor, ex-data reentrancy,
+  refused increment; DH/DSA/RSA/EC/EVP_PKEY/EVP_SKEY/BIO ex-data reentrancy;
+  BIO `callback_ex` re-entry; DSO finish re-entry; provider teardown re-entry.
+- Adversarial review found a missing `do_lock` failure mapping and a
+  `cfg(miri)` break (fixed), then a verification-budget gap that was closed by
+  direct inspection (BIO callback test and constructor initializers). Gate:
+  `fmt` 0, clippy 0, **1338 passed / 22 ignored**, **22/22** probes.
+- **Next design step:** `refcount::up_ref`/`down_ref` are still safe
+  `pub(crate)` functions, so safe crate code can release a reference it does
+  not own. They must become `unsafe fn` with ownership contracts before RC-1
+  can be considered for `SAFETY_DISCHARGED`.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1223,7 +1250,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `f35e9859d` (X509 refcount protocol merged)
+**Last observed HEAD:** `56f31274c` (reference-count class closed)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1237,7 +1264,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1325** tests (22 ignored;
+   The most recent reported library baseline is **1338** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
