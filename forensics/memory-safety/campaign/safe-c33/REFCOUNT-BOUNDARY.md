@@ -2,13 +2,15 @@
 
 **Source identity:** `integrate/safe-c33` at
 `c74f87d1babf8e7f9ffa305c0bcfb8731d662089` (working tree at audit time).
-**Boundary ID:** `RC-1`. **Instrument:** bounded deterministic concurrency
-tests plus the existing consumer re-entrancy tests. **Status:** `ESTABLISHED`
-(bounded, independently checkable); the Rust API is now `unsafe` and the
-ownership obligation is explicit at every call site. **Not**
-`SAFETY_DISCHARGED`; **not** `INDEPENDENTLY_CHECKED` until the separate check
-package lands; **not** `SAFE_COMPATIBLE`. No dependency-closure or
-consumer-compatibility claim is made here.
+**Boundary ID:** `RC-1`. **Conversion instrument:** bounded deterministic
+concurrency tests plus the existing consumer re-entrancy tests. **Independent
+check:** Loom model checking of the real generic protocol plus an exhaustive
+bounded interleaving model with three mutant negative controls; see
+`REFCOUNT-CHECKS.md`. **Status:** `INDEPENDENTLY_CHECKED` (checked at
+`56ba89459` plus the check-package working tree). **Not** `SAFETY_DISCHARGED`:
+the exported free wrappers still rely on the C-ABI caller contract, and no
+global/unbounded proof exists. **Not** `SAFE_COMPATIBLE`: no dependency-closure
+or consumer-compatibility claim is made here.
 
 ## 1. The object and the contract
 
@@ -301,7 +303,9 @@ Environment: court container, `x86_64`, `rustc 1.98.1`, dev profile,
 The suite grew; no test was removed or newly ignored. The 22 ignored tests
 are the pre-existing allocator probes, run one per process by `adv-probe.sh`.
 The compiler check is the structural evidence that no safe in-tree caller of
-the refcount API remains.
+the refcount API remains. These figures are the conversion-time record; the
+independent check re-ran the gates at `56ba89459` (see §5.1), so the suite
+count differs from this audit's snapshot without any test being removed.
 
 ### Test-to-invariant map
 
@@ -323,20 +327,44 @@ the refcount API remains.
 | `x509_lu::tests::store_free_from_lookup_free_hook_is_defined_noop` | re-entrant `X509_STORE_free` from the lookup free hook sees the sentinel and is a no-op |
 | `x509_lu::tests::store_refcount_is_atomic_under_concurrent_up_ref` | the consumer's `up_ref` path loses no concurrent increments |
 
+### Independent check (2026-10-18)
+
+The verification package is `REFCOUNT-CHECKS.md`. It runs the *real* generic
+protocol bodies over Loom `0.7.2` atomics (`cfg(loom)`) and an exhaustive bounded
+interleaving model with three negative controls. Full commands, identities and
+residual gaps are in that file; the headline results are:
+
+| instrument | result |
+|---|---|
+| Loom, four models (base reference, last-release race, sentinel absorption, `i32::MAX`) | `4 passed; 0 failed` |
+| Exhaustive model, four scenarios, all micro-step interleavings | real protocol: zero violations; three-actor scenario: 226 executions |
+| Mutant (a) non-atomic RMW | detected by `LastWithOutstandingRefs` |
+| Mutant (b) unchecked increment without the sentinel guard | detected by `Resurrection` |
+| Mutant (c) free on any zero/negative | detected by `MultipleLast` |
+| `cargo fmt --all -- --check` / `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo test --lib -- --test-threads=4` | `1346 passed; 0 failed; 22 ignored` |
+
 ## 6. What is not proven
 
-- **No model checking or exhaustive interleaving proof.** No Loom, no Miri,
-  no TSan/ASan run for this boundary. The tests are bounded (8 threads;
-  1000 iterations; 2000 barrier rounds) and sample scheduler interleavings;
-  they do not enumerate them. The linearization arguments in §3 are prose
-  proofs, not machine-checked ones.
-- **No independent review yet.** The package is `ESTABLISHED` under the §21
-  lifecycle; it has not reached `INDEPENDENTLY_CHECKED` or `DISCHARGED`.
+- **Bounded model checking, not a global proof.** Loom now checks the real
+  protocol over modelled atomics, and the exhaustive model enumerates every
+  micro-step interleaving of its small scenarios. Both are bounded: Loom explores
+  its configured models only, and the exhaustive model covers at most three
+  actors, two operations per actor, and 128 micro-steps. The conversion tests
+  still sample 8 threads / 1000 iterations / 2000 barrier rounds. No Miri, TSan
+  or ASan run was performed for this boundary, and the linearization arguments in
+  §3 remain prose proofs rather than unbounded machine-checked ones.
+- **Independent check exists, with open caller obligations.** The protocol state
+  machine is `INDEPENDENTLY_CHECKED`; the caller inventory, each `// SAFETY:`
+  assertion and the exported `*_free` wrappers were not re-audited by the check
+  package. §7 retains those obligations, which is why the boundary is not
+  `SAFETY_DISCHARGED`.
 - **`unsafe fn` does not prove the caller's ownership.** Each `// SAFETY:`
   comment is an assertion. The per-site argument — which reference is owned,
   or which owner is acted for — is reviewed prose, not a machine-checked proof;
-  a wrong assertion remains a soundness bug the compiler cannot catch. The
-  separate check package must audit these sites before any promotion.
+  a wrong assertion remains a soundness bug the compiler cannot catch. The check
+  package did not audit these sites; they must be audited before
+  `SAFETY_DISCHARGED`.
 - **Ordering adequacy is not proved.** Relaxed is sufficient for the count
   invariant and matches the authority, but no claim is made about publication
   of surrounding object state beyond the existing caller lock discipline.
@@ -383,6 +411,7 @@ Introduced:
 - the API is `unsafe`, so any future safe wrapper must repeat the contract at
   its own boundary rather than exposing a safe-looking call.
 
-Graduation: RC-1 remains `ESTABLISHED`. It is not `INDEPENDENTLY_CHECKED`
-(that requires the separate check package) and not `SAFETY_DISCHARGED` or
-`SAFE_COMPATIBLE`.
+Graduation: RC-1 is `INDEPENDENTLY_CHECKED` for the protocol state machine. It
+is not `SAFETY_DISCHARGED`: the exported free wrappers still rely on the C-ABI
+caller contract, and no global/unbounded proof exists; that judgment needs a
+separate adjudication. It is not `SAFE_COMPATIBLE`.

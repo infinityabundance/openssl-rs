@@ -127,6 +127,13 @@ crate-type = ["rlib", "staticlib"]
 
 [build-dependencies]
 
+# Loom model-checking harness for the refcount protocol's independent check.
+# It is enabled only when the test build sets `--cfg loom`; ordinary builds and
+# ordinary test runs never link it. See docs and
+# forensics/memory-safety/campaign/safe-c33/REFCOUNT-CHECKS.md.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7"
+
 # Lints are part of the contract, not decoration (docs/UNSAFE.md,
 # docs/RELEASE_GATES.md §6): no panic may unwind across the C ABI, and unsafe
 # is confined and documented.
@@ -134,6 +141,7 @@ crate-type = ["rlib", "staticlib"]
 unsafe_op_in_unsafe_fn = "deny"
 missing_docs = "deny"
 unreachable_pub = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(loom)"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "deny"
