@@ -36,6 +36,44 @@
 use core::ffi::c_int;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+/// The atomic operations the protocol below relies on.
+///
+/// This is a crate-private seam so the `cfg(loom)` harness can run the *same*
+/// protocol over modelled atomics. Every product and ordinary-test build has
+/// exactly one implementor, [`core::sync::atomic::AtomicI32`], and the generic
+/// instantiation compiles to the same load/compare-exchange calls as a direct
+/// call would. It is test instrumentation, not an extension point.
+pub(crate) trait RefAtomic {
+    /// Atomically read the count with `order`.
+    fn load_ref(&self, order: Ordering) -> i32;
+
+    /// Atomically replace `current` with `new` when the count still equals
+    /// `current`, answering the observed value.
+    fn compare_exchange_ref(
+        &self,
+        current: i32,
+        new: i32,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<i32, i32>;
+}
+
+impl RefAtomic for AtomicI32 {
+    fn load_ref(&self, order: Ordering) -> i32 {
+        self.load(order)
+    }
+
+    fn compare_exchange_ref(
+        &self,
+        current: i32,
+        new: i32,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<i32, i32> {
+        self.compare_exchange(current, new, success, failure)
+    }
+}
+
 /// The reserved count that marks an object whose destructor body is running.
 ///
 /// A legitimate reference count is always positive, so `i32::MIN` can never collide with
@@ -76,9 +114,9 @@ pub(crate) enum DownRef {
 ///
 /// `DownRef::Retired` covers a re-entrant release of an already-retired object; it is not a
 /// licence to call this function on an object the caller does not own.
-pub(crate) unsafe fn down_ref(refs: &AtomicI32) -> DownRef {
+pub(crate) unsafe fn down_ref<A: RefAtomic>(refs: &A) -> DownRef {
     loop {
-        let n = refs.load(Ordering::Acquire);
+        let n = refs.load_ref(Ordering::Acquire);
         // A zero or negative count means the object is already retired; `REF_DESTROYING`
         // is the explicit state installed by the last reference. Neither may be released
         // again.
@@ -86,14 +124,15 @@ pub(crate) unsafe fn down_ref(refs: &AtomicI32) -> DownRef {
             return DownRef::Retired;
         }
         if n == 1 {
-            match refs.compare_exchange(1, REF_DESTROYING, Ordering::AcqRel, Ordering::Acquire) {
+            match refs.compare_exchange_ref(1, REF_DESTROYING, Ordering::AcqRel, Ordering::Acquire)
+            {
                 Ok(_) => return DownRef::Last,
                 // Another thread changed the count between the load and the swap; re-read
                 // and retry so the racing reference is accounted for.
                 Err(_) => continue,
             }
         }
-        match refs.compare_exchange(n, n - 1, Ordering::Release, Ordering::Acquire) {
+        match refs.compare_exchange_ref(n, n - 1, Ordering::Release, Ordering::Acquire) {
             Ok(_) => return DownRef::Remaining,
             Err(_) => continue,
         }
@@ -121,9 +160,9 @@ pub(crate) unsafe fn down_ref(refs: &AtomicI32) -> DownRef {
 /// On success the caller owns exactly one new reference and is responsible for releasing it
 /// exactly once through [`down_ref`] or the object's `*_free` path. On refusal the caller
 /// acquires nothing, so it owes no release.
-pub(crate) unsafe fn up_ref(refs: &AtomicI32) -> c_int {
+pub(crate) unsafe fn up_ref<A: RefAtomic>(refs: &A) -> c_int {
     loop {
-        let n = refs.load(Ordering::Relaxed);
+        let n = refs.load_ref(Ordering::Relaxed);
         if n == REF_DESTROYING || n <= 0 {
             return 0;
         }
@@ -136,7 +175,7 @@ pub(crate) unsafe fn up_ref(refs: &AtomicI32) -> c_int {
         let Some(next) = n.checked_add(1) else {
             return 0;
         };
-        match refs.compare_exchange(n, next, Ordering::Relaxed, Ordering::Relaxed) {
+        match refs.compare_exchange_ref(n, next, Ordering::Relaxed, Ordering::Relaxed) {
             // `compare_exchange` answers the *previous* value. A positive `n` makes the new
             // count greater than one, which is the authority's `1` answer.
             Ok(_) => return 1,
@@ -683,5 +722,655 @@ mod tests {
             assert_eq!(up_ref(&refs), 0);
             assert!(matches!(down_ref(&refs), DownRef::Retired));
         }
+    }
+}
+
+/// Loom model checking of the *real* protocol over modelled atomics.
+///
+/// Run with `RUSTFLAGS="--cfg loom" cargo test --lib runtime::refcount::loom_tests`.
+/// The module is absent from ordinary builds, and the crate's other tests keep using
+/// `core::sync::atomic::AtomicI32` through the same generic functions.
+#[cfg(all(test, loom))]
+mod loom_tests {
+    use super::*;
+    use loom::sync::atomic::AtomicI32;
+    use loom::sync::Arc;
+    use loom::thread;
+
+    impl RefAtomic for AtomicI32 {
+        fn load_ref(&self, order: Ordering) -> i32 {
+            self.load(order)
+        }
+
+        fn compare_exchange_ref(
+            &self,
+            current: i32,
+            new: i32,
+            success: Ordering,
+            failure: Ordering,
+        ) -> Result<i32, i32> {
+            self.compare_exchange(current, new, success, failure)
+        }
+    }
+
+    fn code(outcome: DownRef) -> i32 {
+        match outcome {
+            DownRef::Remaining => 0,
+            DownRef::Last => 1,
+            DownRef::Retired => 2,
+        }
+    }
+
+    /// A base reference held across two workers that each acquire and release one
+    /// reference: the base release is the unique `Last`, and no worker may retire
+    /// the object while the base reference is held.
+    #[test]
+    fn loom_base_reference_yields_one_last() {
+        loom::model(|| {
+            let refs = Arc::new(AtomicI32::new(1));
+            let mut workers = Vec::new();
+            for _ in 0..2 {
+                let refs = refs.clone();
+                workers.push(thread::spawn(move || {
+                    // SAFETY: the test owns this reference and the base reference keeps
+                    // the object live for the duration of both calls.
+                    assert_eq!(unsafe { up_ref(&*refs) }, 1);
+                    // SAFETY: only the reference just acquired is released here.
+                    assert!(matches!(unsafe { down_ref(&*refs) }, DownRef::Remaining));
+                }));
+            }
+            for worker in workers {
+                assert!(worker.join().is_ok());
+            }
+            // SAFETY: the test owns the remaining base reference; the final release
+            // claims the sentinel and the extra call models a re-entrant free.
+            unsafe {
+                assert!(matches!(down_ref(&*refs), DownRef::Last));
+                assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                assert!(matches!(down_ref(&*refs), DownRef::Retired));
+            }
+        });
+    }
+
+    /// The release of a single reference races an increment. Either the release wins
+    /// (and the increment is refused) or the increment wins (and the release is
+    /// non-final). No execution may resurrect the object after the sentinel is set.
+    #[test]
+    fn loom_last_release_race_never_resurrects() {
+        loom::model(|| {
+            let refs = Arc::new(AtomicI32::new(1));
+            let release = {
+                let refs = refs.clone();
+                // SAFETY: this thread owns the single initial reference.
+                thread::spawn(move || code(unsafe { down_ref(&*refs) }))
+            };
+            let increment = {
+                let refs = refs.clone();
+                // SAFETY: the increment acts while the initial owner exists; if it
+                // succeeds it acquires the reference this thread then releases below.
+                thread::spawn(move || unsafe { up_ref(&*refs) })
+            };
+            let down_code = release.join().unwrap_or(-1);
+            let up_result = increment.join().unwrap_or(-1);
+
+            assert_ne!(down_code, 2, "the release cannot observe a retired object");
+            assert!(
+                up_result == 0 || up_result == 1,
+                "up_ref must answer exactly 0 or 1"
+            );
+            if down_code == 1 {
+                assert_eq!(up_result, 0, "a winning release must refuse the increment");
+                assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                // SAFETY: the storage is live but the object is destroying; both calls
+                // are defined no-ops under the protocol.
+                unsafe {
+                    assert_eq!(up_ref(&*refs), 0);
+                    assert!(matches!(down_ref(&*refs), DownRef::Retired));
+                }
+            } else {
+                assert_eq!(down_code, 0, "the release must be non-final");
+                assert_eq!(up_result, 1, "a non-final release means the increment won");
+                // SAFETY: the increment's reference is the surviving one; releasing it
+                // is the unique final release, and the extra call models re-entrancy.
+                unsafe {
+                    assert!(matches!(down_ref(&*refs), DownRef::Last));
+                    assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                    assert!(matches!(down_ref(&*refs), DownRef::Retired));
+                }
+            }
+        });
+    }
+
+    /// The sentinel absorbs a second release of the same count: exactly one `Last`
+    /// and one `Retired`, never two destructor runners.
+    #[test]
+    fn loom_sentinel_absorbs_a_second_release() {
+        loom::model(|| {
+            let refs = Arc::new(AtomicI32::new(1));
+            let first = {
+                let refs = refs.clone();
+                // SAFETY: the count models a reference held by this caller.
+                thread::spawn(move || code(unsafe { down_ref(&*refs) }))
+            };
+            let second = {
+                let refs = refs.clone();
+                // SAFETY: the storage stays live; the call models a re-entrant free.
+                thread::spawn(move || code(unsafe { down_ref(&*refs) }))
+            };
+            let mut codes = [first.join().unwrap_or(-1), second.join().unwrap_or(-1)];
+            codes.sort_unstable();
+            assert_eq!(codes, [1, 2], "one Last and one Retired, never two Lasts");
+            assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+        });
+    }
+
+    /// `i32::MAX` is refused without changing the count and without wrapping into
+    /// the destroying sentinel.
+    #[test]
+    fn loom_up_ref_refuses_i32_max() {
+        loom::model(|| {
+            let refs = AtomicI32::new(i32::MAX);
+            // SAFETY: the storage is live; a refused increment acquires nothing.
+            unsafe {
+                assert_eq!(up_ref(&refs), 0);
+            }
+            assert_eq!(refs.load(Ordering::Relaxed), i32::MAX);
+        });
+    }
+}
+
+/// Exhaustive, bounded interleaving model of the refcount protocol.
+///
+/// This mirrors [`up_ref`] and [`down_ref`] over plain integers and enumerates every
+/// interleaving of their atomic micro-steps with a deterministic step scheduler. It is
+/// a model of the algorithm, not a proof about the compiled code; the `loom_tests`
+/// module runs the same algorithm over modelled atomics. The three mutants are
+/// negative controls: each is selected through the same harness and must make it
+/// report a violation.
+#[cfg(test)]
+mod exhaustive_model_tests {
+    use super::REF_DESTROYING;
+    use std::collections::BTreeMap;
+
+    /// A bounded run; caps livelock exploration and is reported if reached.
+    const MAX_STEPS: usize = 128;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum Proto {
+        Real,
+        /// (a) Read-modify-write without a compare-and-swap: lost updates.
+        NonAtomicRmw,
+        /// (b) `n + 1` without the zero/sentinel guard: resurrection and wrap.
+        UncheckedUp,
+        /// (c) Free on any zero/negative instead of claiming the sentinel.
+        ZeroFree,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum Op {
+        Up,
+        DownOwned,
+        DownReentrant,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum Phase {
+        Load,
+        Commit,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+    enum Violation {
+        MultipleLast,
+        LastWithOutstandingRefs,
+        Resurrection,
+        UpProducedNonPositive,
+        NegativeLiveCount,
+        ReentrantDownClaimedLast,
+        ReentrantDownReleasedReference,
+        OwnedDownObservedRetired,
+        OutstandingUnderflow,
+        LastCountMismatch,
+        FinalCountMismatch,
+        ConservationMismatch,
+        OutstandingAtEnd,
+        StuckState,
+        StepBoundExceeded,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum DownResult {
+        Remaining,
+        Last,
+    }
+
+    const UP_THEN_DOWN: &[Op] = &[Op::Up, Op::DownOwned];
+    const DOWN_OWNED: &[Op] = &[Op::DownOwned];
+    const DOWN_REENTRANT: &[Op] = &[Op::DownReentrant];
+    const UP_ONLY: &[Op] = &[Op::Up];
+
+    #[derive(Clone, Debug)]
+    struct Actor {
+        program: &'static [Op],
+        pc: usize,
+        phase: Phase,
+        loaded: i32,
+        loaded_retired: bool,
+        held: bool,
+        done: bool,
+        eligible_after_last: bool,
+        eligible_after_others_done: bool,
+    }
+
+    fn actor(
+        program: &'static [Op],
+        held: bool,
+        eligible_after_last: bool,
+        eligible_after_others_done: bool,
+    ) -> Actor {
+        Actor {
+            program,
+            pc: 0,
+            phase: Phase::Load,
+            loaded: 0,
+            loaded_retired: false,
+            held,
+            done: false,
+            eligible_after_last,
+            eligible_after_others_done,
+        }
+    }
+
+    struct Scenario {
+        name: &'static str,
+        initial: i32,
+        actors: Vec<Actor>,
+        expect_lasts: u32,
+        expect_final_count: i32,
+    }
+
+    fn scenarios() -> Vec<Scenario> {
+        vec![
+            Scenario {
+                name: "base-plus-two-workers",
+                initial: 1,
+                actors: vec![
+                    actor(UP_THEN_DOWN, false, false, false),
+                    actor(UP_THEN_DOWN, false, false, false),
+                    actor(DOWN_OWNED, true, false, true),
+                ],
+                expect_lasts: 1,
+                expect_final_count: REF_DESTROYING,
+            },
+            Scenario {
+                name: "last-release-race",
+                initial: 1,
+                actors: vec![
+                    actor(DOWN_OWNED, true, false, false),
+                    actor(UP_THEN_DOWN, false, false, false),
+                ],
+                expect_lasts: 1,
+                expect_final_count: REF_DESTROYING,
+            },
+            Scenario {
+                name: "reentrant-double-down",
+                initial: 1,
+                actors: vec![
+                    actor(DOWN_OWNED, true, false, false),
+                    actor(DOWN_REENTRANT, false, true, false),
+                ],
+                expect_lasts: 1,
+                expect_final_count: REF_DESTROYING,
+            },
+            Scenario {
+                name: "i32-max-refusal",
+                initial: i32::MAX,
+                actors: vec![actor(UP_ONLY, false, false, false)],
+                expect_lasts: 0,
+                expect_final_count: i32::MAX,
+            },
+        ]
+    }
+
+    #[derive(Clone, Debug)]
+    struct Sim {
+        count: i32,
+        outstanding: i32,
+        lasts: u32,
+        ups: u32,
+        downs: u32,
+        sentinel_installed: bool,
+        steps: usize,
+        violations: BTreeMap<Violation, usize>,
+    }
+
+    #[derive(Default)]
+    struct Report {
+        executions: usize,
+        violations: BTreeMap<Violation, usize>,
+    }
+
+    impl Report {
+        fn count(&self, violation: Violation) -> usize {
+            *self.violations.get(&violation).unwrap_or(&0)
+        }
+    }
+
+    fn record(sim: &mut Sim, violation: Violation) {
+        *sim.violations.entry(violation).or_insert(0) += 1;
+    }
+
+    fn merge(report: &mut Report, sim: &Sim) {
+        for (violation, count) in &sim.violations {
+            *report.violations.entry(*violation).or_insert(0) += count;
+        }
+    }
+
+    fn advance(actor: &mut Actor) {
+        actor.pc += 1;
+        actor.phase = Phase::Load;
+        actor.loaded = 0;
+        actor.loaded_retired = false;
+        if actor.pc >= actor.program.len() {
+            actor.done = true;
+        }
+    }
+
+    fn check_count(sim: &mut Sim) {
+        if sim.count < 0 && sim.count != REF_DESTROYING {
+            record(sim, Violation::NegativeLiveCount);
+        }
+    }
+
+    fn complete_up(sim: &mut Sim, actor: &mut Actor) {
+        sim.ups += 1;
+        sim.outstanding += 1;
+        actor.held = true;
+        if actor.loaded_retired || sim.sentinel_installed {
+            record(sim, Violation::Resurrection);
+        }
+        if sim.count <= 0 {
+            record(sim, Violation::UpProducedNonPositive);
+        }
+        check_count(sim);
+    }
+
+    fn complete_down(sim: &mut Sim, actor: &mut Actor, result: DownResult, reentrant: bool) {
+        if reentrant {
+            match result {
+                DownResult::Last => record(sim, Violation::ReentrantDownClaimedLast),
+                DownResult::Remaining => record(sim, Violation::ReentrantDownReleasedReference),
+            }
+        } else {
+            sim.downs += 1;
+            actor.held = false;
+            sim.outstanding -= 1;
+            if sim.outstanding < 0 {
+                record(sim, Violation::OutstandingUnderflow);
+            }
+        }
+        if result == DownResult::Last {
+            sim.lasts += 1;
+            if sim.lasts > 1 {
+                record(sim, Violation::MultipleLast);
+            }
+            if !reentrant && sim.outstanding != 0 {
+                record(sim, Violation::LastWithOutstandingRefs);
+            }
+        }
+        check_count(sim);
+    }
+
+    /// Apply a write for an atomic protocol only when the observed count is still
+    /// `expected`; the non-atomic mutant writes unconditionally.
+    fn apply_write(sim: &mut Sim, proto: Proto, expected: i32, next: i32) -> bool {
+        if proto == Proto::NonAtomicRmw || sim.count == expected {
+            sim.count = next;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn run_step(actor: &mut Actor, sim: &mut Sim, proto: Proto) {
+        sim.steps += 1;
+        let op = actor.program[actor.pc];
+        match op {
+            Op::Up => match actor.phase {
+                Phase::Load => {
+                    let n = sim.count;
+                    let retired = n == REF_DESTROYING || n <= 0;
+                    let refuse =
+                        proto != Proto::UncheckedUp && (retired || n.checked_add(1).is_none());
+                    if refuse {
+                        advance(actor);
+                    } else {
+                        actor.loaded = n;
+                        actor.loaded_retired = retired;
+                        actor.phase = Phase::Commit;
+                    }
+                }
+                Phase::Commit => {
+                    let n = actor.loaded;
+                    let next = n.wrapping_add(1);
+                    if !apply_write(sim, proto, n, next) {
+                        actor.phase = Phase::Load;
+                        return;
+                    }
+                    complete_up(sim, actor);
+                    advance(actor);
+                }
+            },
+            Op::DownOwned | Op::DownReentrant => {
+                let reentrant = op == Op::DownReentrant;
+                if !reentrant && !actor.held {
+                    advance(actor);
+                    return;
+                }
+                match actor.phase {
+                    Phase::Load => {
+                        let n = sim.count;
+                        if proto == Proto::ZeroFree && (n == REF_DESTROYING || n <= 0) {
+                            // The mutant frees on any zero/negative count instead of
+                            // requiring the sentinel claim.
+                            complete_down(sim, actor, DownResult::Last, reentrant);
+                            advance(actor);
+                            return;
+                        }
+                        if n == REF_DESTROYING || n <= 0 {
+                            if reentrant {
+                                advance(actor);
+                            } else {
+                                record(sim, Violation::OwnedDownObservedRetired);
+                                advance(actor);
+                            }
+                            return;
+                        }
+                        actor.loaded = n;
+                        actor.phase = Phase::Commit;
+                    }
+                    Phase::Commit => {
+                        let n = actor.loaded;
+                        if proto == Proto::ZeroFree {
+                            let next = n - 1;
+                            if sim.count != n {
+                                actor.phase = Phase::Load;
+                                return;
+                            }
+                            sim.count = next;
+                            let result = if next <= 0 {
+                                DownResult::Last
+                            } else {
+                                DownResult::Remaining
+                            };
+                            complete_down(sim, actor, result, reentrant);
+                            advance(actor);
+                            return;
+                        }
+                        let (next, result) = if n == 1 {
+                            (REF_DESTROYING, DownResult::Last)
+                        } else {
+                            (n - 1, DownResult::Remaining)
+                        };
+                        if !apply_write(sim, proto, n, next) {
+                            actor.phase = Phase::Load;
+                            return;
+                        }
+                        if result == DownResult::Last {
+                            sim.sentinel_installed = true;
+                        }
+                        complete_down(sim, actor, result, reentrant);
+                        advance(actor);
+                    }
+                }
+            }
+        }
+    }
+
+    fn eligible(index: usize, actors: &[Actor], sim: &Sim) -> bool {
+        let actor = &actors[index];
+        if actor.done {
+            return false;
+        }
+        if actor.eligible_after_last && sim.lasts == 0 {
+            return false;
+        }
+        if actor.eligible_after_others_done
+            && actors
+                .iter()
+                .enumerate()
+                .any(|(other_index, other)| other_index != index && !other.done)
+        {
+            return false;
+        }
+        true
+    }
+
+    fn walk(sim: Sim, actors: Vec<Actor>, scenario: &Scenario, proto: Proto, report: &mut Report) {
+        if actors.iter().all(|actor| actor.done) {
+            let mut sim = sim;
+            finalize(&mut sim, scenario);
+            merge(report, &sim);
+            report.executions += 1;
+            return;
+        }
+        if sim.steps >= MAX_STEPS {
+            let mut sim = sim;
+            record(&mut sim, Violation::StepBoundExceeded);
+            merge(report, &sim);
+            return;
+        }
+        let mut ran_any = false;
+        for index in 0..actors.len() {
+            if !eligible(index, &actors, &sim) {
+                continue;
+            }
+            ran_any = true;
+            let mut next_sim = sim.clone();
+            let mut next_actors = actors.clone();
+            run_step(&mut next_actors[index], &mut next_sim, proto);
+            walk(next_sim, next_actors, scenario, proto, report);
+        }
+        if !ran_any {
+            *report.violations.entry(Violation::StuckState).or_insert(0) += 1;
+        }
+    }
+
+    fn finalize(sim: &mut Sim, scenario: &Scenario) {
+        if sim.lasts != scenario.expect_lasts {
+            record(sim, Violation::LastCountMismatch);
+        }
+        if sim.count != scenario.expect_final_count {
+            record(sim, Violation::FinalCountMismatch);
+        }
+        if sim.outstanding != 0 {
+            record(sim, Violation::OutstandingAtEnd);
+        }
+        // Every modelled reference is either released, still live, or retired with
+        // the whole object. The count and the operation log must agree.
+        let live = if sim.count == REF_DESTROYING {
+            0i64
+        } else {
+            i64::from(sim.count)
+        };
+        if i64::from(scenario.initial) + i64::from(sim.ups) - i64::from(sim.downs) != live {
+            record(sim, Violation::ConservationMismatch);
+        }
+    }
+
+    fn explore(scenario: &Scenario, proto: Proto) -> Report {
+        let outstanding = scenario.actors.iter().filter(|actor| actor.held).count() as i32;
+        let sim = Sim {
+            count: scenario.initial,
+            outstanding,
+            lasts: 0,
+            ups: 0,
+            downs: 0,
+            sentinel_installed: false,
+            steps: 0,
+            violations: BTreeMap::new(),
+        };
+        let mut report = Report::default();
+        walk(sim, scenario.actors.clone(), scenario, proto, &mut report);
+        report
+    }
+
+    #[test]
+    fn exhaustive_real_protocol_has_no_violations() {
+        for scenario in scenarios() {
+            let report = explore(&scenario, Proto::Real);
+            assert!(
+                report.executions > 0,
+                "{}: the scheduler explored no execution",
+                scenario.name
+            );
+            assert!(
+                report.violations.is_empty(),
+                "{}: the real protocol violated {:?} over {} executions",
+                scenario.name,
+                report.violations,
+                report.executions
+            );
+        }
+    }
+
+    #[test]
+    fn exhaustive_scheduler_explores_racing_interleavings() {
+        let report = explore(&scenarios()[0], Proto::Real);
+        assert_eq!(
+            report.executions, 226,
+            "the three-actor scenario must enumerate all 226 interleavings, explored {}",
+            report.executions
+        );
+    }
+
+    #[test]
+    fn mutant_non_atomic_rmw_is_detected() {
+        let report = explore(&scenarios()[0], Proto::NonAtomicRmw);
+        assert!(
+            report.count(Violation::LastWithOutstandingRefs) > 0,
+            "lost updates must let a release claim Last while a reference is outstanding: {:?}",
+            report.violations
+        );
+    }
+
+    #[test]
+    fn mutant_unchecked_up_is_detected() {
+        let report = explore(&scenarios()[1], Proto::UncheckedUp);
+        assert!(
+            report.count(Violation::Resurrection) > 0,
+            "an unguarded increment must resurrect the sentinel: {:?}",
+            report.violations
+        );
+    }
+
+    #[test]
+    fn mutant_zero_free_is_detected() {
+        let report = explore(&scenarios()[2], Proto::ZeroFree);
+        assert!(
+            report.count(Violation::MultipleLast) > 0,
+            "freeing on zero must produce a second destructor claim: {:?}",
+            report.violations
+        );
     }
 }
