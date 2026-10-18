@@ -49,6 +49,7 @@ use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -248,7 +249,7 @@ unsafe fn ct_v1_log_id_from_pkey(log: *mut Ctlog, pkey: *mut EvpPkey) -> c_int {
     let pkey_der_len = unsafe { i2d_PUBKEY(pkey, &mut pkey_der) };
     // The encoder's block is owned from here; `Drop` is the authority's own tail release.
     // SAFETY: `pkey_der` is NULL or a live block this crate allocated that no one else owns.
-    let pkey_der_owner = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, ptr::null(), 0) };
+    let pkey_der_owner = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, SeamFile::NULL, 0) };
     let mut len: c_uint = 0;
     let mut sha256: *mut EvpMd = ptr::null_mut();
 
@@ -298,7 +299,8 @@ pub unsafe extern "C" fn CTLOG_STORE_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut CtlogStore {
-    let Some(store) = OwnedCtx::<CtlogStore>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
+    let Some(store) = OwnedCtx::<CtlogStore>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0)
+    else {
         return ptr::null_mut();
     };
 
@@ -307,7 +309,7 @@ pub unsafe extern "C" fn CTLOG_STORE_new_ex(
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
         // The authority's failure path runs the whole `CTLOG_STORE_free`; the handle's `Drop` is
         // that same release over the partially built record.
         let Some(propq_copy) = propq_copy else {
@@ -347,7 +349,7 @@ pub unsafe extern "C" fn CTLOG_STORE_free(store: *mut CtlogStore) {
     // SAFETY: `store` is NULL or a live `CTLOG_STORE` this crate owns and that is not used
     // afterwards; `from_raw` reclaims it and `Drop` runs the authority's own free body and block
     // release.
-    drop(unsafe { OwnedCtx::<CtlogStore>::from_raw_at(store, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<CtlogStore>::from_raw_at(store, SeamFile::NULL, 0) });
 }
 
 /// `static int ctlog_new_from_conf(CTLOG_STORE *store, CTLOG **ct_log, const CONF *conf, const char
@@ -415,7 +417,7 @@ unsafe extern "C" fn ctlog_store_load_log(
     let tmp = unsafe {
         OwnedStr::adopt(
             CRYPTO_strndup(log_name, log_name_len as usize, ptr::null(), 0),
-            ptr::null(),
+            SeamFile::NULL,
             0,
         )
     };
@@ -469,7 +471,8 @@ pub unsafe extern "C" fn CTLOG_STORE_load_file(
     let ret: c_int = 0;
     // The load context owns its `CONF` and its block; `Drop` is the authority's own
     // `NCONF_free(conf)` + `ctlog_store_load_ctx_free` at every exit, in that order.
-    let Some(load_ctx) = OwnedCtx::<CtlogStoreLoadCtx>::zalloc_at(ptr::null(), 0, ptr::null(), 0)
+    let Some(load_ctx) =
+        OwnedCtx::<CtlogStoreLoadCtx>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0)
     else {
         return ret;
     };
@@ -558,7 +561,7 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut Ctlog {
-    let Some(ctlog) = OwnedCtx::<Ctlog>::zalloc_at(ptr::null(), 0, ptr::null(), 0) else {
+    let Some(ctlog) = OwnedCtx::<Ctlog>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return ptr::null_mut();
     };
 
@@ -567,7 +570,7 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy =
-            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), ptr::null(), 0) };
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
         // The authority's failure path runs the whole `CTLOG_free`; the handle's `Drop` is that
         // same release over the partially built record.
         let Some(propq_copy) = propq_copy else {
@@ -578,7 +581,8 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     }
 
     // SAFETY: `name` is NUL-terminated per the contract.
-    let name_copy = unsafe { OwnedStr::adopt(CRYPTO_strdup(name, ptr::null(), 0), ptr::null(), 0) };
+    let name_copy =
+        unsafe { OwnedStr::adopt(CRYPTO_strdup(name, ptr::null(), 0), SeamFile::NULL, 0) };
     let Some(name_copy) = name_copy else {
         return ptr::null_mut();
     };
@@ -616,7 +620,7 @@ pub unsafe extern "C" fn CTLOG_new(public_key: *mut EvpPkey, name: *const c_char
 pub unsafe extern "C" fn CTLOG_free(log: *mut Ctlog) {
     // SAFETY: `log` is NULL or a live `CTLOG` this crate owns and that is not used afterwards;
     // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
-    drop(unsafe { OwnedCtx::<Ctlog>::from_raw_at(log, ptr::null(), 0) });
+    drop(unsafe { OwnedCtx::<Ctlog>::from_raw_at(log, SeamFile::NULL, 0) });
 }
 
 /// `const char *CTLOG_get0_name(const CTLOG *log)` — `crypto/ct/ct_log.c:301-304`.

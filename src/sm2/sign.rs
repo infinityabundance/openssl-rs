@@ -26,7 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
 
 use crate::bn::arith::{BN_add, BN_cmp, BN_mod_add, BN_mod_mul, BN_sub};
@@ -52,11 +52,12 @@ use crate::evp::digest::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `sm2_sign.c` is a source-tree file, so the compiler records the
 /// admitted build record's prefix.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c");
 
 /// `UINT16_MAX` — `include/internal/numbers.h`'s `0xffff`. The guard is `id_len >= UINT16_MAX / 8`,
 /// the largest user ID whose `ENTL = 8 * id_len` still fits a `uint16_t`.
@@ -163,7 +164,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             }
 
             let p_bytes = bn_num_bytes(p);
-            buf = OwnedBuf::new_zeroed(p_bytes as usize, FILE, 114);
+            buf = OwnedBuf::new_zeroed(p_bytes as usize, FILE_SEAM, 114);
             let Some(buf) = buf.as_ref() else {
                 break 'done;
             };
@@ -243,7 +244,7 @@ unsafe fn sm2_compute_msg_hash(
                 break 'done;
             }
 
-            z = OwnedBuf::new_zeroed(md_size as usize, FILE, 174);
+            z = OwnedBuf::new_zeroed(md_size as usize, FILE_SEAM, 174);
             let Some(z) = z.as_ref() else {
                 break 'done;
             };
@@ -684,7 +685,7 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
         }
 
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(OwnedBuf::adopt_plain(der, FILE, 539));
+        drop(OwnedBuf::adopt_plain(der, FILE_SEAM, 539));
         BN_free(e);
         ECDSA_SIG_free(s);
     }

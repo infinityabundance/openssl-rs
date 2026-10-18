@@ -113,6 +113,7 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_ppBasis, NID_X9_62_tpBasis, NID_sm2,
 };
@@ -196,6 +197,8 @@ const P_DHKEM_IKM: *const c_char = c"dhkem-ikm".as_ptr();
 /// The unit's own `__FILE__`. `ec_kmgmt.c` is a plain `.c`, so it carries the source-tree prefix.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -703,8 +706,8 @@ unsafe extern "C" fn ec_export(
 
         // The two scratch blocks the to-params helpers wrote into; each handle releases its own
         // block at the authority's own site on either the refusal or the success path below.
-        let pub_key = OwnedBuf::adopt_plain(pub_key.cast::<c_uchar>(), FILE, 503);
-        let genbuf = OwnedBuf::adopt_plain(genbuf.cast::<c_uchar>(), FILE, 504);
+        let pub_key = OwnedBuf::adopt_plain(pub_key.cast::<c_uchar>(), FILE_SEAM, 503);
+        let genbuf = OwnedBuf::adopt_plain(genbuf.cast::<c_uchar>(), FILE_SEAM, 504);
 
         let params = if ok == 0 {
             ptr::null_mut()
@@ -1155,8 +1158,16 @@ unsafe fn common_get_params(key: *mut c_void, params: *mut OsslParam, sm2: c_int
 
         // The two scratch blocks the to-params helpers wrote into; each handle releases its own
         // block at the authority's own site.
-        drop(OwnedBuf::adopt_plain(genbuf.cast::<c_uchar>(), FILE, 745));
-        drop(OwnedBuf::adopt_plain(pub_key.cast::<c_uchar>(), FILE, 746));
+        drop(OwnedBuf::adopt_plain(
+            genbuf.cast::<c_uchar>(),
+            FILE_SEAM,
+            745,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            pub_key.cast::<c_uchar>(),
+            FILE_SEAM,
+            746,
+        ));
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
@@ -1517,7 +1528,7 @@ unsafe extern "C" fn sm2_gen_init(
             // the field NULL, exactly as the authority's failed `OPENSSL_strdup` does.
             (*gctx).group_name = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(c"sm2".as_ptr(), FILE, 1005).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 1005,
             )
             .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
@@ -1610,12 +1621,12 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
                 // handle, and a refusal leaves the field NULL.
                 drop(OwnedBuf::adopt_plain(
                     (*field).cast::<c_uchar>(),
-                    FILE,
+                    FILE_SEAM,
                     1090,
                 ));
                 let Some(buf) = OwnedBuf::adopt_plain(
                     CRYPTO_strdup((*p).data.cast(), FILE, 1090).cast::<c_uchar>(),
-                    FILE,
+                    FILE_SEAM,
                     1090,
                 ) else {
                     *field = ptr::null_mut();
@@ -1668,13 +1679,13 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
                 // second handle, and a refusal leaves the field NULL.
                 drop(OwnedBuf::adopt_plain(
                     (*field).cast::<c_uchar>(),
-                    FILE,
+                    FILE_SEAM,
                     1063,
                 ));
                 *len = (*p).data_size;
                 let Some(buf) = OwnedBuf::adopt_plain(
                     CRYPTO_memdup((*p).data, (*p).data_size, FILE, 1065).cast::<c_uchar>(),
-                    FILE,
+                    FILE_SEAM,
                     1063,
                 ) else {
                     *field = ptr::null_mut();
@@ -2065,7 +2076,7 @@ unsafe extern "C" fn ec_gen_cleanup(genctx: *mut c_void) {
         drop(OwnedBuf::adopt_cleansed(
             (*gctx).dhkem_ikm.cast::<c_uchar>(),
             (*gctx).dhkem_ikmlen,
-            FILE,
+            FILE_SEAM,
             1373,
         ));
         EC_GROUP_free((*gctx).gen_group);
@@ -2076,32 +2087,32 @@ unsafe extern "C" fn ec_gen_cleanup(genctx: *mut c_void) {
         crate::bn::bignum::BN_free((*gctx).cofactor);
         drop(OwnedBuf::adopt_plain(
             (*gctx).group_name.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1380,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).field_type.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1381,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).pt_format.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1382,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).encoding.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1383,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).seed.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1384,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).gen.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             1385,
         ));
         CRYPTO_free(gctx.cast(), FILE, 1386);

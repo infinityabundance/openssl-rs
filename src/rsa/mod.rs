@@ -93,6 +93,7 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
@@ -1319,7 +1320,8 @@ pub unsafe extern "C" fn PKCS1_MGF1(
 /// Like `crypto/rsa/rsa_meth.c` above, `rsa_oaep.c` is a source-tree file, so its `__FILE__`
 /// carries the `../../src/openssl-3.6.4/` prefix. The string is observable through
 /// `CRYPTO_set_mem_functions`, so the prefix is not cosmetic.
-const FILE_RSA_OAEP: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c".as_ptr();
+const FILE_RSA_OAEP_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c");
 
 /// `int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen, const unsigned char *from,
 /// int flen, int num, const unsigned char *param, int plen)` — `rsa_oaep.c:160-166`.
@@ -1449,9 +1451,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         // SAFETY: `dblen` is positive because `num >= 2 * mdlen + 2`.
         let Some(db_owned) = OwnedBuf::new_cleansed_released(
             dblen as usize,
-            FILE_RSA_OAEP,
+            FILE_RSA_OAEP_SEAM,
             LINE,
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         ) else {
             return -1;
@@ -1459,9 +1461,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         // SAFETY: `num` is positive.
         let Some(em_owned) = OwnedBuf::new_cleansed_released(
             num as usize,
-            FILE_RSA_OAEP,
+            FILE_RSA_OAEP_SEAM,
             LINE,
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         ) else {
             return -1;
@@ -1657,7 +1659,7 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
 /// `forensics/authorities/build/openssl-3.6.4-production/crypto/rsa/libcrypto-lib-rsa_pk1.o`
 /// carries the `../../src/openssl-3.6.4/` prefix. The string reaches an application through
 /// `CRYPTO_set_mem_functions`, so the prefix is part of the observable contract and not cosmetic.
-const FILE_RSA_PK1: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c".as_ptr();
+const FILE_RSA_PK1_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c");
 
 /// `int ossl_rsa_padding_add_PKCS1_type_2_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
 /// const unsigned char *from, int flen)` — `rsa_pk1.c:124-162`. Internal, and declared in
@@ -1807,9 +1809,13 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
         // frame's scratch block, released by its handle's `Drop` -- the authority's cleansing
         // `CRYPTO_clear_free` -- at the `cleanup:` site below.
         // SAFETY: `num` is positive.
-        let Some(em_owned) =
-            OwnedBuf::new_cleansed_released(num as usize, FILE_RSA_PK1, LINE, core::ptr::null(), 0)
-        else {
+        let Some(em_owned) = OwnedBuf::new_cleansed_released(
+            num as usize,
+            FILE_RSA_PK1_SEAM,
+            LINE,
+            SeamFile::NULL,
+            0,
+        ) else {
             return -1;
         };
         // The copy below walks `em` as a cursor; it ends back at the block's start.
@@ -2131,7 +2137,7 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
         }
 
         // SAFETY: `flen > 0`, checked above.
-        let Some(synthetic_owned) = OwnedBuf::new(flen as usize, FILE_RSA_PK1, LINE) else {
+        let Some(synthetic_owned) = OwnedBuf::new(flen as usize, FILE_RSA_PK1_SEAM, LINE) else {
             raise_site(&err_sites::RSA_PK1_426);
             return -1;
         };
@@ -2515,9 +2521,9 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
             // SAFETY: `dbmask_len > 0` because `emlen >= 2 * mdlen + 1` was checked above.
             let Some(dbmask_buf) = OwnedBuf::new_cleansed_released(
                 dbmask_len as usize,
-                FILE_RSA_OAEP,
+                FILE_RSA_OAEP_SEAM,
                 LINE,
-                core::ptr::null(),
+                SeamFile::NULL,
                 0,
             ) else {
                 break 'body false;

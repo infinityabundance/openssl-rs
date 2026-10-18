@@ -63,6 +63,7 @@ use crate::provider::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`. The fourth operation the walk visits.
@@ -74,6 +75,7 @@ pub(crate) const OSSL_KDF_PARAM_KEY: *const c_char = c"key".as_ptr();
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c");
 /// `evp_kdf_new`'s `OPENSSL_zalloc(sizeof(*kdf))` (line 50), in `kdf_meth.c`.
 const LINE_ZALLOC_KDF: c_int = 50;
 /// `evp_kdf_free`'s `OPENSSL_free(kdf->type_name)`, in `kdf_meth.c`.
@@ -894,9 +896,9 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
     // hands it to the caller on success.
     let Some(dst_buf) = OwnedBuf::new_plain_released(
         core::mem::size_of::<EvpKdfCtx>(),
-        FILE,
+        FILE_SEAM,
         LINE_MALLOC_CTX_DUP,
-        FILE,
+        FILE_SEAM,
         LINE_FREE_CTX_ON_DUP,
     ) else {
         return ptr::null_mut();
@@ -1283,7 +1285,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         // release re-pointed to the authority's own site.
         let Some(key) = OwnedBuf::new_zeroed_cleansed_at(
             keylen,
-            FILE,
+            FILE_SEAM,
             LINE_ZALLOC_DERIVE_SKEY,
             LINE_FREE_DERIVE_SKEY,
         ) else {
@@ -1304,7 +1306,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
             // SAFETY: `raw` is the whole `keylen`-byte block this frame allocated through the
             // seam and has not released; `into_raw` transferred it here, and this failure path
             // is its single release at the authority's plain site.
-            drop(unsafe { OwnedBuf::adopt_plain(raw, FILE, LINE_FREE_DERIVE_SKEY_ON_FAIL) });
+            drop(unsafe { OwnedBuf::adopt_plain(raw, FILE_SEAM, LINE_FREE_DERIVE_SKEY_ON_FAIL) });
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };

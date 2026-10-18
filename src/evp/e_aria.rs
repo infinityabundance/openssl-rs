@@ -66,6 +66,7 @@ use crate::modes::{
 use crate::rand::rand_lib::RAND_bytes;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_memcmp, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_aria_128_cbc, NID_aria_128_ccm, NID_aria_128_cfb1, NID_aria_128_cfb128, NID_aria_128_cfb8,
     NID_aria_128_ctr, NID_aria_128_ecb, NID_aria_128_gcm, NID_aria_128_ofb128, NID_aria_192_cbc,
@@ -709,14 +710,14 @@ unsafe extern "C" fn aria_gcm_ctrl(
                         // `Drop`, at the authority's own release line.
                         // SAFETY: `(*gctx).iv` is a live block this context owns and has not
                         // released.
-                        drop(OwnedBuf::adopt_plain((*gctx).iv, FILE.as_ptr(), LINE));
+                        drop(OwnedBuf::adopt_plain((*gctx).iv, SeamFile::new(FILE), LINE));
                     }
                     // The fresh block, allocated through the crate's allocator seam at the
                     // authority's own size and site; the context owns it, so the handle is handed
                     // to the `iv` field with `into_raw` and released by `aria_gcm_cleanup`.
                     let Some(fresh) = OwnedBuf::adopt_plain(
                         CRYPTO_malloc(arg as usize, FILE.as_ptr(), LINE).cast(),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         LINE,
                     ) else {
                         return 0;
@@ -882,7 +883,7 @@ unsafe extern "C" fn aria_gcm_ctrl(
                     // the field with `into_raw` and released by `aria_gcm_cleanup`.
                     let Some(fresh) = OwnedBuf::adopt_plain(
                         CRYPTO_malloc((*gctx).ivlen as usize, FILE.as_ptr(), LINE).cast(),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         LINE,
                     ) else {
                         return 0;
@@ -915,7 +916,7 @@ unsafe extern "C" fn aria_gcm_cleanup(c: *mut c_void) -> c_int {
             // `Drop`, at the authority's own release line.
             // SAFETY: `(*gctx).iv` is a live block `SET_IVLEN`/`COPY` allocated and has not been
             // released.
-            drop(OwnedBuf::adopt_plain((*gctx).iv, FILE.as_ptr(), LINE));
+            drop(OwnedBuf::adopt_plain((*gctx).iv, SeamFile::new(FILE), LINE));
         }
     }
     1

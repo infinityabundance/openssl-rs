@@ -58,6 +58,7 @@ use crate::runtime::err::err_sites::CONF_MOD_734;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 
 // Open obligations, recorded here because only this module may be edited for the
@@ -203,8 +204,9 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         if !from_env.is_null() {
             // SAFETY: `from_env` is NUL-terminated, and the block `CRYPTO_strdup` answers is
             // this frame's until it is handed to the caller below.
-            let dup =
-                unsafe { OwnedStr::adopt(CRYPTO_strdup(from_env, ptr::null(), 0), ptr::null(), 0) };
+            let dup = unsafe {
+                OwnedStr::adopt(CRYPTO_strdup(from_env, ptr::null(), 0), SeamFile::NULL, 0)
+            };
             return dup.map_or(ptr::null_mut(), OwnedStr::into_raw);
         }
 
@@ -219,8 +221,13 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         // SAFETY: `c""` is a static NUL-terminated string, `ptr::null()` is the
         // documented "no file/line" argument, flag 0 is the default, and the block
         // `CRYPTO_strdup` answers is this frame's until it is handed to the caller below.
-        let dup =
-            unsafe { OwnedStr::adopt(CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0), ptr::null(), 0) };
+        let dup = unsafe {
+            OwnedStr::adopt(
+                CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0),
+                SeamFile::NULL,
+                0,
+            )
+        };
         dup.map_or(ptr::null_mut(), OwnedStr::into_raw)
     })
 }
@@ -343,7 +350,7 @@ mod tests {
         );
         // SAFETY: `p` is the string `CONF_get1_default_config_file` returned this frame and
         // has not been released; `OwnedStr`'s `Drop` performs its single `CRYPTO_free`.
-        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
     }
 
     #[test]
@@ -356,7 +363,7 @@ mod tests {
         let got = unsafe { core::ffi::CStr::from_ptr(p) };
         assert_eq!(got.to_str(), Ok("/tmp/openssl-rs-probe.cnf"));
         // SAFETY: `p` is the string the function returned this frame; `Drop` releases it.
-        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
 
         std::env::remove_var("OPENSSL_CONF");
         let p = CONF_get1_default_config_file();
@@ -364,6 +371,6 @@ mod tests {
         // SAFETY: as above.
         assert_eq!(unsafe { core::ffi::CStr::from_ptr(p) }.to_str(), Ok(""));
         // SAFETY: as above.
-        drop(unsafe { OwnedStr::adopt(p, ptr::null(), 0) });
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
     }
 }

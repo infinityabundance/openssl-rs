@@ -30,6 +30,7 @@ use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array, CRYPTO_memdup,
     CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
 };
@@ -46,12 +47,12 @@ pub(crate) struct OwnedBuf {
 /// whose `num` exceeds the allocated extent.
 enum Release {
     /// The authority's plain `CRYPTO_free(ptr, file, line)`.
-    Plain { file: *const c_char, line: c_int },
+    Plain { file: SeamFile, line: c_int },
     /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)`, which
     /// zeroes `num` bytes before releasing the block.
     Cleansed {
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     },
     /// The authority's conditional release: cleansing over `num` bytes when `clear`, plain
@@ -61,7 +62,7 @@ enum Release {
     Conditional {
         num: usize,
         clear: bool,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     },
     /// The authority's secure-heap cleansing
@@ -69,7 +70,7 @@ enum Release {
     /// usable allocation and releases it through the secure allocator.
     SecureCleansed {
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     },
 }
@@ -88,7 +89,7 @@ mod conditional_probe {
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for a plainly released block, or `None`
     /// when the allocator answers NULL.
-    pub(crate) fn new(len: usize, file: *const c_char, line: c_int) -> Option<Self> {
+    pub(crate) fn new(len: usize, file: SeamFile, line: c_int) -> Option<Self> {
         Self::alloc_plain(len, file, line, file, line)
     }
 
@@ -100,9 +101,9 @@ impl OwnedBuf {
     /// `CRYPTO_set_mem_functions` hook observes each at the authority's own site.
     pub(crate) fn new_plain_released(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
         Self::alloc_plain(len, alloc_file, alloc_line, release_file, release_line)
@@ -110,7 +111,7 @@ impl OwnedBuf {
 
     /// `CRYPTO_zalloc(len, file, line)` for a plainly released block, or `None`
     /// when the allocator answers NULL.
-    pub(crate) fn new_zeroed(len: usize, file: *const c_char, line: c_int) -> Option<Self> {
+    pub(crate) fn new_zeroed(len: usize, file: SeamFile, line: c_int) -> Option<Self> {
         Self::new_zeroed_released(len, file, line, file, line)
     }
 
@@ -122,12 +123,12 @@ impl OwnedBuf {
     /// `CRYPTO_set_mem_functions` hook observes each at the authority's own site.
     pub(crate) fn new_zeroed_released(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_zalloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        let raw = CRYPTO_zalloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -153,13 +154,13 @@ impl OwnedBuf {
     pub(crate) unsafe fn new_array(
         count: usize,
         size: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         // `CRYPTO_malloc_array` applies the authority's checked `ossl_size_mul`: an
         // unrepresentable product raises `CRYPTO_R_INTEGER_OVERFLOW` and answers NULL,
         // so no unchecked product is ever used as an allocation size.
-        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
+        let raw = CRYPTO_malloc_array(count, size, file.as_ptr(), line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -178,12 +179,13 @@ impl OwnedBuf {
     pub(crate) unsafe fn new_memdup(
         src: *const c_uchar,
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         // SAFETY: `src` is NULL or readable for `len` bytes per this function's
         // contract.
-        let raw = unsafe { CRYPTO_memdup(src.cast::<c_void>(), len, file, line) }.cast::<c_uchar>();
+        let raw = unsafe { CRYPTO_memdup(src.cast::<c_void>(), len, file.as_ptr(), line) }
+            .cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -195,7 +197,7 @@ impl OwnedBuf {
 
     /// `CRYPTO_malloc(len, file, line)` for a block whose `Drop` cleanses exactly
     /// its allocation length, or `None` when the allocator answers NULL.
-    pub(crate) fn new_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<Self> {
+    pub(crate) fn new_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<Self> {
         Self::alloc_cleansed(len, len, file, line, file, line)
     }
 
@@ -204,7 +206,7 @@ impl OwnedBuf {
     /// allocator answers NULL.
     pub(crate) fn new_cleansed_at(
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<Self> {
@@ -223,9 +225,9 @@ impl OwnedBuf {
     /// differ from the allocation site, so the two pairs stay separate.
     pub(crate) fn new_cleansed_released(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
         Self::alloc_cleansed(len, len, alloc_file, alloc_line, release_file, release_line)
@@ -233,11 +235,7 @@ impl OwnedBuf {
 
     /// `CRYPTO_zalloc(len, file, line)` for a block whose `Drop` cleanses exactly
     /// its allocation length, or `None` when the allocator answers NULL.
-    pub(crate) fn new_zeroed_cleansed(
-        len: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<Self> {
+    pub(crate) fn new_zeroed_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<Self> {
         Self::new_zeroed_cleansed_at(len, file, line, line)
     }
 
@@ -246,11 +244,11 @@ impl OwnedBuf {
     /// allocator answers NULL.
     pub(crate) fn new_zeroed_cleansed_at(
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_zalloc(len, file, alloc_line).cast::<c_uchar>();
+        let raw = CRYPTO_zalloc(len, file.as_ptr(), alloc_line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -272,13 +270,10 @@ impl OwnedBuf {
     /// When the secure heap is not initialised the secure allocator falls back to
     /// the plain seam, exactly as the authority does;
     /// `CRYPTO_secure_clear_free` routes both provenances correctly.
-    pub(crate) fn new_secure_cleansed(
-        len: usize,
-        file: *const c_char,
-        line: c_int,
-    ) -> Option<Self> {
-        // SAFETY: `file` is NULL or a NUL-terminated C string at every call site.
-        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
+    pub(crate) fn new_secure_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<Self> {
+        // SAFETY: `file.as_ptr()` is NULL or a NUL-terminated C string with static
+        // storage, enforced by `SeamFile`.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file.as_ptr(), line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -298,11 +293,12 @@ impl OwnedBuf {
     /// allocator answers NULL.
     pub(crate) fn new_secure_zalloc_cleansed(
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
-        // SAFETY: `file` is NULL or a NUL-terminated C string at every call site.
-        let raw = unsafe { CRYPTO_secure_zalloc(len, file, line) }.cast::<c_uchar>();
+        // SAFETY: `file.as_ptr()` is NULL or a NUL-terminated C string with static
+        // storage, enforced by `SeamFile`.
+        let raw = unsafe { CRYPTO_secure_zalloc(len, file.as_ptr(), line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -328,7 +324,7 @@ impl OwnedBuf {
     pub(crate) unsafe fn new_cleansed_num(
         len: usize,
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<Self> {
@@ -346,11 +342,11 @@ impl OwnedBuf {
     /// `str_` is NULL or points at a NUL-terminated C string.
     pub(crate) unsafe fn new_strdup(
         str_: *const c_char,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         // SAFETY: `str_` is NULL or NUL-terminated per this function's contract.
-        let raw = unsafe { CRYPTO_strdup(str_, file, line) }.cast::<c_uchar>();
+        let raw = unsafe { CRYPTO_strdup(str_, file.as_ptr(), line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -370,12 +366,12 @@ impl OwnedBuf {
     pub(crate) unsafe fn new_strndup(
         str_: *const c_char,
         max: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         // SAFETY: `str_` is NULL or readable for `max` bytes per this function's
         // contract.
-        let raw = unsafe { CRYPTO_strndup(str_, max, file, line) }.cast::<c_uchar>();
+        let raw = unsafe { CRYPTO_strndup(str_, max, file.as_ptr(), line) }.cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -407,7 +403,7 @@ impl OwnedBuf {
     ///   `CRYPTO_free` site for this block.
     pub(crate) unsafe fn adopt_plain(
         ptr: *mut c_uchar,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         if ptr.is_null() {
@@ -437,7 +433,7 @@ impl OwnedBuf {
         ptr: *mut c_uchar,
         num: usize,
         clear: bool,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         if ptr.is_null() {
@@ -480,7 +476,7 @@ impl OwnedBuf {
     pub(crate) unsafe fn adopt_cleansed(
         ptr: *mut c_uchar,
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         if ptr.is_null() {
@@ -505,7 +501,7 @@ impl OwnedBuf {
     /// pointer is excluded here for the same reason as in [`Self::adopt_plain`].
     pub(crate) unsafe fn adopt_plain_nullable(
         ptr: *mut c_uchar,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Self {
         Self {
@@ -529,7 +525,7 @@ impl OwnedBuf {
     pub(crate) unsafe fn adopt_cleansed_nullable(
         ptr: *mut c_uchar,
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Self {
         Self {
@@ -566,7 +562,7 @@ impl OwnedBuf {
     pub(crate) unsafe fn adopt_secure_cleansed(
         ptr: *mut c_uchar,
         num: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<Self> {
         if ptr.is_null() {
@@ -626,12 +622,12 @@ impl OwnedBuf {
 
     fn alloc_plain(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        let raw = CRYPTO_malloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -647,12 +643,12 @@ impl OwnedBuf {
     fn alloc_cleansed(
         len: usize,
         num: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_uchar>();
+        let raw = CRYPTO_malloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -674,7 +670,7 @@ impl Drop for OwnedBuf {
             Release::Plain { file, line } => {
                 // SAFETY: `self.ptr` is the block this handle owns and has not
                 // released; the authority's `CRYPTO_free` accepts NULL.
-                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file.as_ptr(), line) };
             }
             Release::Cleansed { num, file, line } => {
                 // SAFETY: `self.ptr` is the block this handle owns and has not
@@ -682,7 +678,7 @@ impl Drop for OwnedBuf {
                 // constructor or established by `adopt_cleansed`'s contract, so it
                 // is readable for `num` bytes. `CRYPTO_clear_free` zeroes then
                 // releases it and accepts NULL.
-                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file.as_ptr(), line) };
             }
             Release::Conditional {
                 num,
@@ -700,9 +696,9 @@ impl Drop for OwnedBuf {
                 // establishes its provenance, extent and single-release obligation.
                 unsafe {
                     if clear {
-                        CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line);
+                        CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file.as_ptr(), line);
                     } else {
-                        CRYPTO_free(self.ptr.cast::<c_void>(), file, line);
+                        CRYPTO_free(self.ptr.cast::<c_void>(), file.as_ptr(), line);
                     }
                 }
             }
@@ -713,7 +709,9 @@ impl Drop for OwnedBuf {
                 // not released it. `CRYPTO_secure_clear_free` cleanses
                 // the whole usable secure chunk, routes its documented plain fallback,
                 // and accepts NULL.
-                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+                unsafe {
+                    CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file.as_ptr(), line)
+                };
             }
         }
     }
@@ -724,18 +722,19 @@ mod tests {
     use super::conditional_probe;
     use super::OwnedBuf;
     use crate::runtime::mem::CRYPTO_malloc;
+    use crate::runtime::mem_coords::SeamFile;
     use crate::runtime::secure::{
         test_arena_bytes, test_offset_of, CRYPTO_secure_actual_size, CRYPTO_secure_malloc_done,
         CRYPTO_secure_malloc_init, CRYPTO_secure_used,
     };
-    use core::ffi::c_char;
+    use core::ffi::CStr;
     use core::ptr;
 
-    const FILE: *const c_char = c"test/owned_buf.rs".as_ptr();
+    const FILE: &CStr = c"test/owned_buf.rs";
 
     #[test]
     fn new_allocates_and_plain_releases() {
-        let buf = OwnedBuf::new(16, FILE, 11);
+        let buf = OwnedBuf::new(16, SeamFile::new(FILE), 11);
         assert!(buf.is_some(), "a 16-byte block must be allocatable");
         let Some(buf) = buf else { return };
         assert!(!buf.as_ptr().is_null());
@@ -744,7 +743,7 @@ mod tests {
 
     #[test]
     fn new_zeroed_allocates() {
-        let buf = OwnedBuf::new_zeroed(16, FILE, 12);
+        let buf = OwnedBuf::new_zeroed(16, SeamFile::new(FILE), 12);
         assert!(buf.is_some(), "a 16-byte block must be allocatable");
         let Some(buf) = buf else { return };
         // SAFETY: `as_ptr` is the block's writable start, 16 bytes long.
@@ -753,7 +752,7 @@ mod tests {
 
     #[test]
     fn new_cleansed_uses_the_allocation_length() {
-        let buf = OwnedBuf::new_cleansed(8, FILE, 15);
+        let buf = OwnedBuf::new_cleansed(8, SeamFile::new(FILE), 15);
         assert!(buf.is_some(), "an 8-byte block must be allocatable");
         let Some(buf) = buf else { return };
         // SAFETY: the block is 8 bytes and exclusively owned by `buf`; the
@@ -765,10 +764,11 @@ mod tests {
     #[test]
     fn adopt_null_is_none_for_both_releases() {
         // SAFETY: NULL is explicitly permitted by the adoption contract.
-        let plain = unsafe { OwnedBuf::adopt_plain(ptr::null_mut(), FILE, 13) };
+        let plain = unsafe { OwnedBuf::adopt_plain(ptr::null_mut(), SeamFile::new(FILE), 13) };
         assert!(plain.is_none());
         // SAFETY: NULL is explicitly permitted by the adoption contract.
-        let cleansed = unsafe { OwnedBuf::adopt_cleansed(ptr::null_mut(), 0, FILE, 14) };
+        let cleansed =
+            unsafe { OwnedBuf::adopt_cleansed(ptr::null_mut(), 0, SeamFile::new(FILE), 14) };
         assert!(cleansed.is_none());
     }
 
@@ -776,7 +776,8 @@ mod tests {
     fn adopt_secure_null_is_none() {
         // SAFETY: NULL is explicitly permitted by the adoption contract; no secure
         // heap needs to be initialised for it.
-        let adopted = unsafe { OwnedBuf::adopt_secure_cleansed(ptr::null_mut(), 0, FILE, 23) };
+        let adopted =
+            unsafe { OwnedBuf::adopt_secure_cleansed(ptr::null_mut(), 0, SeamFile::new(FILE), 23) };
         assert!(adopted.is_none());
     }
 
@@ -789,7 +790,7 @@ mod tests {
             init == 1 || init == 2,
             "the secure heap must initialise for this test (init returned {init})"
         );
-        let buf = OwnedBuf::new_secure_cleansed(64, FILE, 24);
+        let buf = OwnedBuf::new_secure_cleansed(64, SeamFile::new(FILE), 24);
         assert!(
             buf.is_some(),
             "a 64-byte allocation from an initialised secure heap must succeed"
@@ -831,7 +832,7 @@ mod tests {
             init == 1 || init == 2,
             "the secure heap must initialise for this test (init returned {init})"
         );
-        let buf = OwnedBuf::new_secure_cleansed(0, FILE, 25);
+        let buf = OwnedBuf::new_secure_cleansed(0, SeamFile::new(FILE), 25);
         assert!(
             buf.is_some(),
             "a zero-length request from an initialised secure heap still allocates"
@@ -866,7 +867,13 @@ mod tests {
             // SAFETY: the block is a fresh 8-byte allocation from this crate's seam, owned by this
             // frame and released exactly once by `buf`.
             let buf = unsafe {
-                OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 18).cast(), 8, clear, FILE, 19)
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_malloc(8, FILE.as_ptr(), 18).cast(),
+                    8,
+                    clear,
+                    SeamFile::new(FILE),
+                    19,
+                )
             }?;
             conditional_probe::LAST.with(|last| last.set(None));
             drop(buf);
@@ -892,7 +899,13 @@ mod tests {
         // SAFETY: a fresh 8-byte allocation from this crate's seam, owned by this frame and
         // released exactly once by `buf`.
         let buf = unsafe {
-            OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 40).cast(), 8, true, FILE, 41)
+            OwnedBuf::adopt_conditional(
+                CRYPTO_malloc(8, FILE.as_ptr(), 40).cast(),
+                8,
+                true,
+                SeamFile::new(FILE),
+                41,
+            )
         };
         assert!(buf.is_some(), "a fresh 8-byte block must be allocatable");
         let Some(mut buf) = buf else { return };
@@ -912,7 +925,13 @@ mod tests {
             // SAFETY: a fresh 8-byte allocation from this crate's seam, owned by this frame and
             // released exactly once by `buf`.
             let mut buf = unsafe {
-                OwnedBuf::adopt_conditional(CRYPTO_malloc(8, FILE, 42).cast(), 8, initial, FILE, 43)
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_malloc(8, FILE.as_ptr(), 42).cast(),
+                    8,
+                    initial,
+                    SeamFile::new(FILE),
+                    43,
+                )
             }?;
             let matched = buf.set_clear(set);
             conditional_probe::LAST.with(|last| last.set(None));
@@ -937,7 +956,7 @@ mod tests {
 
     #[test]
     fn set_clear_answers_false_on_other_arms() {
-        let buf = OwnedBuf::new(8, FILE, 44);
+        let buf = OwnedBuf::new(8, SeamFile::new(FILE), 44);
         assert!(buf.is_some(), "an 8-byte block must be allocatable");
         let Some(mut buf) = buf else { return };
         assert!(!buf.set_clear(true), "a Plain arm has no clear flag");
@@ -949,19 +968,19 @@ mod tests {
         // SAFETY: the only precondition is that the checked product is the intended extent; this
         // product overflows, so the seam reports the overflow and answers NULL before allocating,
         // and no block is accessed.
-        let buf = unsafe { OwnedBuf::new_array(usize::MAX, 2, FILE, 45) };
+        let buf = unsafe { OwnedBuf::new_array(usize::MAX, 2, SeamFile::new(FILE), 45) };
         assert!(buf.is_none(), "an overflowing product must answer None");
     }
 
     #[test]
     fn into_raw_suppresses_release() {
-        let buf = OwnedBuf::new(4, FILE, 17);
+        let buf = OwnedBuf::new(4, SeamFile::new(FILE), 17);
         assert!(buf.is_some(), "a 4-byte block must be allocatable");
         let Some(buf) = buf else { return };
         let raw = buf.into_raw();
         assert!(!raw.is_null());
         // SAFETY: `raw` is the whole block allocated above and is released here
         // exactly once; no `OwnedBuf` still owns it.
-        unsafe { crate::runtime::mem::CRYPTO_free(raw.cast(), FILE, 17) };
+        unsafe { crate::runtime::mem::CRYPTO_free(raw.cast(), FILE.as_ptr(), 17) };
     }
 }

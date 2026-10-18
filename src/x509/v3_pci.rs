@@ -62,6 +62,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::{openssl_rs_err_add_data, raise_site};
 use crate::runtime::mem::CRYPTO_realloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_Independent, NID_id_ppl_inheritAll, NID_proxyCertInfo, OBJ_obj2nid, OBJ_txt2obj,
 };
@@ -132,7 +133,8 @@ unsafe fn policy_grow(
     // Take the accumulated buffer into an owner whose `Drop` is the authority's failure-arm
     // release at `free_line`.
     // SAFETY: `(*str_).data` is NULL or this unit's block per the contract.
-    let buf = unsafe { OwnedBuf::adopt_plain_nullable((*str_).data, FILE.as_ptr(), free_line) };
+    let buf =
+        unsafe { OwnedBuf::adopt_plain_nullable((*str_).data, SeamFile::new(FILE), free_line) };
     // The owner holds the block now; the string gets it back only on success.
     // SAFETY: `str_` is live.
     unsafe {
@@ -434,7 +436,7 @@ unsafe fn process_pci_value(
             let mut data2 = unsafe {
                 OwnedBuf::adopt_plain_nullable(
                     OPENSSL_hexstr2buf(valp, &raw mut val_len),
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_FREE_HEX2_FAIL,
                 )
             };

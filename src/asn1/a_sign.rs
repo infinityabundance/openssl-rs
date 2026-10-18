@@ -70,6 +70,7 @@ use crate::ffi::guard_ffi;
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_dsaWithSHA1, NID_sm2, OBJ_find_sigid_by_algs, OBJ_nid2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -199,12 +200,13 @@ pub unsafe extern "C" fn ASN1_sign(
             return 0;
         }
         let inll = inl as usize;
-        let buf_in = OwnedBuf::new_cleansed_at(inll, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN);
+        let buf_in =
+            OwnedBuf::new_cleansed_at(inll, SeamFile::new(FILE), LINE_MALLOC_IN, LINE_CLEAR_IN);
         // SAFETY: `pkey` is a live key.
         outl = unsafe { EVP_PKEY_get_size(pkey) };
         let outll = outl as usize;
         let buf_out =
-            OwnedBuf::new_cleansed_at(outll, FILE.as_ptr(), LINE_MALLOC_OUT, LINE_CLEAR_OUT);
+            OwnedBuf::new_cleansed_at(outll, SeamFile::new(FILE), LINE_MALLOC_OUT, LINE_CLEAR_OUT);
         if buf_in.is_none() || buf_out.is_none() {
             // The authority's `err:` tail on a refused allocation: release whichever buffer the
             // seam produced (a `None` is the authority's own no-op `clear_free(NULL)`) and the
@@ -539,8 +541,9 @@ pub unsafe extern "C" fn ASN1_item_sign_ctx(
         // SAFETY: `buf_in_raw` is a live block `ASN1_item_i2d` allocated in full through the
         // crate's allocator seam and no one else owns; `inl` is the length that encoder returned,
         // i.e. both the allocation extent and the cleansing length.
-        let buf_in =
-            unsafe { OwnedBuf::adopt_cleansed(buf_in_raw, inl, FILE.as_ptr(), LINE_CLEAR_SIGN_IN) };
+        let buf_in = unsafe {
+            OwnedBuf::adopt_cleansed(buf_in_raw, inl, SeamFile::new(FILE), LINE_CLEAR_SIGN_IN)
+        };
         let buf_in_ptr = buf_in.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         // SAFETY: `ctx` is live; a null signature buffer asks for the length.
@@ -552,8 +555,12 @@ pub unsafe extern "C" fn ASN1_item_sign_ctx(
             return 0;
         }
         outl = outll;
-        let buf_out =
-            OwnedBuf::new_cleansed_at(outll, FILE.as_ptr(), LINE_MALLOC_SIGN, LINE_CLEAR_SIGN_OUT);
+        let buf_out = OwnedBuf::new_cleansed_at(
+            outll,
+            SeamFile::new(FILE),
+            LINE_MALLOC_SIGN,
+            LINE_CLEAR_SIGN_OUT,
+        );
         if buf_in.is_none() || buf_out.is_none() {
             drop(buf_in);
             drop(buf_out);

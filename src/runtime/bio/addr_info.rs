@@ -53,6 +53,7 @@ use crate::runtime::owned_str::OwnedStr;
 use super::addr::{make_from_sockaddr, BIO_ADDR_new, BIO_ADDR_rawmake, BioAddr};
 use super::bss_sock::BIO_sock_init;
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `BIO_LOOKUP_CLIENT`.
 pub const BIO_LOOKUP_CLIENT: c_int = 0;
@@ -681,7 +682,7 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 let Some(copied) = (unsafe {
                     OwnedStr::adopt(
                         CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
-                        ALLOC_FILE.as_ptr(),
+                        SeamFile::new(ALLOC_FILE),
                         ALLOC_LINE,
                     )
                 }) else {
@@ -705,7 +706,7 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 let Some(copied) = (unsafe {
                     OwnedStr::adopt(
                         CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
-                        ALLOC_FILE.as_ptr(),
+                        SeamFile::new(ALLOC_FILE),
                         ALLOC_LINE,
                     )
                 }) else {
@@ -722,8 +723,9 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                         let existing = unsafe { *host };
                         // SAFETY: `existing` is NULL or the block `CRYPTO_strndup` produced
                         // above, which this call owns and no one else will release.
-                        let owner =
-                            unsafe { OwnedStr::adopt(existing, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+                        let owner = unsafe {
+                            OwnedStr::adopt(existing, SeamFile::new(ALLOC_FILE), ALLOC_LINE)
+                        };
                         if let Some(owner) = owner {
                             drop(owner);
                             // SAFETY: `host` is writable per the caller's contract;

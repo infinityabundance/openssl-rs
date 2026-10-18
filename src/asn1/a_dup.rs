@@ -31,6 +31,7 @@ use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strnlen;
 
@@ -81,9 +82,9 @@ pub unsafe extern "C" fn ASN1_dup(i2d: I2dOfVoid, d2i: D2iOfVoid, x: *const c_vo
         // is its single release.
         let Some(buf) = OwnedBuf::new_plain_released(
             sized as usize + 10,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE,
         ) else {
             return core::ptr::null_mut();
@@ -187,7 +188,7 @@ pub unsafe extern "C" fn ASN1_item_dup(it: *const Asn1Item, x: *const c_void) ->
         // end, keeping the free ahead of the `DUP_POST` callback.
         // SAFETY: `b` is the block `ASN1_item_i2d` allocated for this call and no other owner
         // will release it.
-        let buf = unsafe { OwnedBuf::adopt_plain(b, FILE.as_ptr(), LINE) };
+        let buf = unsafe { OwnedBuf::adopt_plain(b, SeamFile::new(FILE), LINE) };
         let mut p: *const c_uchar = b;
         // SAFETY: the block holds `n` bytes and `p` is advanced by the decode.
         let ret = unsafe {

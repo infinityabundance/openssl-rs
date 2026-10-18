@@ -41,6 +41,10 @@ pub mod getenv;
 pub mod init;
 pub mod lhash;
 pub mod mem;
+// The static-lifetime allocator coordinate a safe owner constructor accepts.
+// Keeping the pointer in this one type makes a temporary C-string pointer
+// inexpressible through the safe constructors.
+pub(crate) mod mem_coords;
 // Phase 18's Miri-admitted TCB suite. Test-only and Miri-only: `cargo test` does not
 // compile it, `cargo +nightly miri test --lib miri_tcb` does. It installs a
 // Rust-backed allocator shim so the `CRYPTO_*` ownership and container paths run

@@ -48,6 +48,7 @@ use crate::runtime::mem::CRYPTO_zalloc;
 use crate::runtime::owned_buf::OwnedBuf;
 
 use crate::runtime::bio::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `DEFAULT_SEPARATOR` — the `:` the two convenience entry points separate with.
 const DEFAULT_SEPARATOR: c_char = b':' as c_char;
@@ -376,7 +377,7 @@ unsafe fn ossl_hexstr2buf_sep(
         return core::ptr::null_mut();
     }
     buf_n /= 2;
-    let Some(buf) = OwnedBuf::new(buf_n, core::ptr::null(), 0) else {
+    let Some(buf) = OwnedBuf::new(buf_n, SeamFile::NULL, 0) else {
         return core::ptr::null_mut();
     };
     if !buflen.is_null() {
@@ -538,7 +539,7 @@ unsafe fn ossl_buf2hexstr_sep(buf: *const c_uchar, buflen: c_long, sep: c_char) 
     }
 
     let tmp_n = if has_sep { wide * 3 } else { 1 + wide * 2 };
-    let Some(tmp) = OwnedBuf::new(tmp_n, core::ptr::null(), 0) else {
+    let Some(tmp) = OwnedBuf::new(tmp_n, SeamFile::NULL, 0) else {
         return core::ptr::null_mut();
     };
 

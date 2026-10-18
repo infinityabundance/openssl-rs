@@ -71,6 +71,7 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push,
@@ -86,6 +87,8 @@ extern "C" {
 
 /// The authority's translation unit.
 pub(crate) const FILE_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c".as_ptr();
+pub(crate) const FILE_LIB_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c");
 
 /// `DSO_new_method`'s `OPENSSL_zalloc`.
 const LINE_ZALLOC: c_int = 17;
@@ -226,7 +229,8 @@ unsafe impl CtxDestroy for Dso {
 unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
     // Allocation and validity are separate states: `RawCtx::zalloc_at` is the authority's
     // `OPENSSL_zalloc` and its `Drop` releases the block alone until every field is written.
-    let Some(mut raw) = RawCtx::<Dso>::zalloc_at(FILE_LIB, LINE_ZALLOC, FILE_LIB, LINE_FREE_DSO)
+    let Some(mut raw) =
+        RawCtx::<Dso>::zalloc_at(FILE_LIB_SEAM, LINE_ZALLOC, FILE_LIB_SEAM, LINE_FREE_DSO)
     else {
         return ptr::null_mut();
     };
@@ -331,7 +335,7 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
         }
         // The last reference is gone: reclaim the block and run the object's destructor body.
         // SAFETY: `dso` is a live object a previous `into_raw` gave up and `Drop` has not released.
-        if let Some(owned) = unsafe { OwnedCtx::from_raw_at(dso, FILE_LIB, LINE_FREE_DSO) } {
+        if let Some(owned) = unsafe { OwnedCtx::from_raw_at(dso, FILE_LIB_SEAM, LINE_FREE_DSO) } {
             drop(owned);
         }
         1
@@ -605,13 +609,13 @@ pub unsafe extern "C" fn DSO_set_filename(dso: *mut Dso, filename: *const c_char
                 return 0;
             }
             // SAFETY: `copied` is a live duplicate no one else owns.
-            let dup = OwnedStr::adopt_nullable(copied, FILE_LIB, LINE_FREE_FILENAME);
+            let dup = OwnedStr::adopt_nullable(copied, FILE_LIB_SEAM, LINE_FREE_FILENAME);
             if !(*dso).filename.is_null() {
                 // SAFETY: the object's current name is a live block this unit owns; release it at
                 // the authority's own site.
                 drop(OwnedStr::adopt_nullable(
                     (*dso).filename,
-                    FILE_LIB,
+                    FILE_LIB_SEAM,
                     LINE_FREE_FILENAME,
                 ));
             }
@@ -752,9 +756,9 @@ pub unsafe extern "C" fn DSO_dsobyaddr(addr: *mut c_void, flags: c_int) -> *mut 
         // SAFETY: `len` is a positive length, so the allocation is at least a byte.
         let filename = OwnedStr::new(
             len as usize,
-            FILE_LIB,
+            FILE_LIB_SEAM,
             LINE_MALLOC_BYADDR,
-            FILE_LIB,
+            FILE_LIB_SEAM,
             LINE_FREE_BYADDR,
         );
         let mut ret = ptr::null_mut();

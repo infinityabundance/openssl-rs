@@ -51,6 +51,7 @@ use crate::evp::pkey::EvpPkey;
 use crate::runtime::bio::sys::memcmp;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::x509_lu::X509StoreCtx;
@@ -476,8 +477,9 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
     let mut ordinal: c_uint = DANETLS_NONE;
     let mut mtype: c_uint = DANETLS_NONE;
     // SAFETY: the seed value is NULL, the empty block `OwnedBuf::adopt` documents.
-    let mut i2dbuf =
-        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), LINE_FREE_CERT) };
+    let mut i2dbuf = unsafe {
+        OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), LINE_FREE_CERT)
+    };
     let mut i2dlen: c_uint = 0;
     let mut mdbuf = [0u8; EVP_MAX_MD_SIZE];
     let mut cmpbuf: *mut c_uchar = ptr::null_mut();
@@ -542,7 +544,7 @@ pub(crate) unsafe extern "C" fn dane_match_cert(
             i2dbuf = unsafe {
                 OwnedBuf::adopt_plain_nullable(
                     dane_i2d(cert, (*t).selector, &raw mut i2dlen),
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     LINE_FREE_CERT,
                 )
             };
@@ -782,7 +784,8 @@ pub(crate) unsafe extern "C" fn dane_match_rpk(ctx: *mut X509StoreCtx, rpk: *mut
     // The encoding is owned: `Drop` is the authority's own tail release at `:3377`.
     // SAFETY: `i2dbuf` is the block `i2d_PUBKEY` just answered (or NULL) and is not owned
     // elsewhere.
-    let i2dbuf = unsafe { OwnedBuf::adopt_plain_nullable(i2dbuf, FILE.as_ptr(), LINE_FREE_RPK) };
+    let i2dbuf =
+        unsafe { OwnedBuf::adopt_plain_nullable(i2dbuf, SeamFile::new(FILE), LINE_FREE_RPK) };
     let i2dlen = len as c_uint;
     let mut cmplen = len as c_uint;
     let mut cmpbuf = i2dbuf.as_ptr();

@@ -39,6 +39,7 @@ use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcPoint, PointConversionForm};
 use crate::runtime::bio::sys::strlen;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 
 /// The translation unit every allocation and release below is attributed to, as the allocator
@@ -46,6 +47,7 @@ use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 /// build record's `../../src/openssl-3.6.4/` prefix — the spelling `src/packet.rs` and
 /// `src/dh/ctrl.rs` use.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_print.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_print.c");
 
 /// An owned seam block released with the authority's *cleansing* `CRYPTO_clear_free` over a recorded
 /// length (`EC_POINT_hex2point`'s octet buffer), at its own `file`/`line`.
@@ -132,10 +134,10 @@ pub unsafe extern "C" fn EC_POINT_point2hex(
         // crate's allocator produced in full, and this frame is its only owner; the authority
         // releases it with `OPENSSL_free` at line 39.
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        let buf = OwnedBuf::adopt_plain_nullable(buf, FILE, 39);
+        let buf = OwnedBuf::adopt_plain_nullable(buf, FILE_SEAM, 39);
 
         // `OPENSSL_malloc(buf_len * 2 + 2)`, line 29.
-        let Some(ret) = OwnedBuf::new(buf_len * 2 + 2, FILE, 29) else {
+        let Some(ret) = OwnedBuf::new(buf_len * 2 + 2, FILE_SEAM, 29) else {
             // goto err: `buf` is released by its own `Drop` -- no `CRYPTO_free` written here.
             return ptr::null_mut();
         };

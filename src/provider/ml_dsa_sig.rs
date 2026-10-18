@@ -84,6 +84,7 @@ use crate::provider::der_ml_dsa_key::ossl_DER_w_algorithmIdentifier_ML_DSA;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `ML_DSA_MESSAGE_ENCODE_RAW` — `ml_dsa_sig.c.in:32`.
@@ -111,6 +112,8 @@ const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr(
 /// The unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c");
 /// `ml_dsa_sig.c:78`, the `OPENSSL_free(ctx->sig)` in `ml_dsa_freectx`.
 const LINE_FREE_SIG: c_int = 78;
 /// `ml_dsa_sig.c:79`, the `OPENSSL_free(ctx)` in `ml_dsa_freectx`.
@@ -187,7 +190,7 @@ unsafe extern "C" fn ml_dsa_freectx(vctx: *mut c_void) {
         // (or NULL), and no other owner will release it.
         drop(OwnedBuf::adopt_plain(
             (*ctx).sig.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             LINE_FREE_SIG,
         ));
         CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX);
@@ -269,7 +272,7 @@ unsafe extern "C" fn ml_dsa_dupctx(vctx: *mut c_void) -> *mut c_void {
                     LINE_MEMDUP_SIG,
                 )
                 .cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_SIG,
             ) else {
                 (*dstctx).sig = ptr::null_mut();
@@ -970,7 +973,7 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
             // seam (or NULL), and no other owner will release it.
             drop(OwnedBuf::adopt_plain(
                 (*pctx).sig.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_SET_SIG,
             ));
             (*pctx).sig = ptr::null_mut();

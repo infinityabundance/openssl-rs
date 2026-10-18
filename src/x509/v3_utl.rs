@@ -98,6 +98,7 @@ use crate::runtime::conf::types::ConfValue;
 use crate::runtime::ctype::{ossl_isdigit, ossl_isspace};
 use crate::runtime::err::{err_sites, openssl_rs_err_add_data, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_ad_OCSP, NID_commonName, NID_id_on_SmtpUTF8Mailbox, NID_info_access,
     NID_pkcs9_emailAddress, NID_subject_alt_name, NID_undef, OBJ_obj2nid,
@@ -344,7 +345,13 @@ pub unsafe extern "C" fn x509v3_add_len_value_uchar(
 pub unsafe extern "C" fn X509V3_conf_free(conf: *mut ConfValue) {
     // SAFETY: `conf` is NULL or a live, uniquely-owned `CONF_VALUE`; `from_raw` reclaims it (NULL is
     // a no-op) and `Drop` runs the authority's own member releases followed by the block release.
-    unsafe { drop(OwnedCtx::<ConfValue>::from_raw_at(conf, FILE.as_ptr(), 111)) };
+    unsafe {
+        drop(OwnedCtx::<ConfValue>::from_raw_at(
+            conf,
+            SeamFile::new(FILE),
+            111,
+        ))
+    };
 }
 
 /// The authority's `X509V3_conf_free` body, without the block release [`OwnedCtx`]'s `Drop`

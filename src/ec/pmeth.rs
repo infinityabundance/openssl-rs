@@ -66,6 +66,7 @@ use crate::rand::sys::atoi;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_ecdsa_with_SHA1, NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256,
     NID_sha3_384, NID_sha3_512, NID_sha512, NID_sm3, NID_undef, OBJ_ln2nid, OBJ_sn2nid,
@@ -74,6 +75,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/ec/ec_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c");
 
 /// `pkey_ec_init`'s `OPENSSL_zalloc(sizeof(*dctx))` (`:51`).
 const LINE_ZALLOC_DCTX: c_int = 51;
@@ -458,7 +460,7 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
     /* `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
      * authority's own cleansing `OPENSSL_clear_free` at `:242`. */
     let Some(ktmp_buf) =
-        OwnedBuf::new_cleansed_at(ktmplen, FILE, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
+        OwnedBuf::new_cleansed_at(ktmplen, FILE_SEAM, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
     else {
         return 0;
     };
@@ -649,7 +651,7 @@ unsafe extern "C" fn pkey_ec_ctrl(
             unsafe {
                 drop(OwnedBuf::adopt_plain(
                     (*dctx).kdf_ukm,
-                    FILE,
+                    FILE_SEAM,
                     LINE_FREE_KDF_UKM_CTRL,
                 ));
                 (*dctx).kdf_ukm = p2.cast::<u8>();

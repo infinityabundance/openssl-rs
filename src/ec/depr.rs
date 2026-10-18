@@ -27,7 +27,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar};
+use core::ffi::{c_int, c_uchar};
 use core::ptr;
 
 use crate::bn::bignum::{BN_bin2bn, BN_bn2binpad, BN_num_bits, BigNum};
@@ -35,11 +35,12 @@ use crate::bn::ctx::BnCtx;
 use crate::ec::lib::{EC_POINT_clear_free, EC_POINT_new};
 use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcPoint, PointConversionForm};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The translation unit the four allocation pairs below are attributed to, with the admitted
 /// build record's `../../src/openssl-3.6.4/` prefix `ec_deprecated.c`'s compiled `__FILE__` carries.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_deprecated.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_deprecated.c");
 
 /// `int`'s maximum, the bound the authority puts on the encoding `BN_bin2bn` accepts. Written as
 /// `i32::MAX` rather than an `INT_MAX` constant because the authority's build defines it to
@@ -90,7 +91,7 @@ pub unsafe extern "C" fn EC_POINT_point2bn(
 
         // SAFETY: `buf_len` is non-zero and in range, so `EC_POINT_point2buf` produced a live
         // octet block this frame owns and no other owner will release.
-        let buf = OwnedBuf::adopt_plain(buf, FILE, 36);
+        let buf = OwnedBuf::adopt_plain(buf, FILE_SEAM, 36);
         let buf_ptr = buf.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         // `ret = BN_bin2bn(buf, (int)buf_len, ret)`, line 34. `buf`'s `Drop` performs the
@@ -125,7 +126,8 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
 
         // `buf = OPENSSL_malloc(buf_len)`, line 50. The handle releases it at line 54 on the
         // serialisation failure path below.
-        let Some(mut buf) = OwnedBuf::new_plain_released(buf_len as usize, FILE, 50, FILE, 54)
+        let Some(mut buf) =
+            OwnedBuf::new_plain_released(buf_len as usize, FILE_SEAM, 50, FILE_SEAM, 54)
         else {
             return ptr::null_mut();
         };

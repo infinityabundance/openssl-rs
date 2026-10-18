@@ -70,6 +70,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_UI, CRYPTO_EX_INDEX_UI_METHOD,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -82,6 +83,7 @@ use crate::ui::ui_openssl::UI_get_default_method;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c");
 
 /// `UI_METHOD` — `include/openssl/ui.h:294`'s `struct ui_method_st` (`crypto/ui/ui_local.h:20-59`).
 ///
@@ -412,9 +414,12 @@ pub unsafe extern "C" fn UI_new_method(method: *const UiMethod) -> *mut Ui {
     // is handed to the caller below. Its abandoned-block release is the authority's own bare
     // `OPENSSL_free(ret)` on the lock failure, which is why this is a [`RawCtx`] and not the full
     // [`OwnedCtx`] `UI_free` uses.
-    let Some(ret) =
-        RawCtx::<Ui>::zalloc_at(FILE, LINE_NEW_METHOD_ZALLOC, FILE, LINE_NEW_METHOD_FREE)
-    else {
+    let Some(ret) = RawCtx::<Ui>::zalloc_at(
+        FILE_SEAM,
+        LINE_NEW_METHOD_ZALLOC,
+        FILE_SEAM,
+        LINE_NEW_METHOD_FREE,
+    ) else {
         return ptr::null_mut();
     };
 
@@ -473,7 +478,7 @@ unsafe extern "C" fn free_string(uis: *mut c_void) {
     unsafe {
         drop(OwnedCtx::<UiString>::from_raw_at(
             uis.cast::<UiString>(),
-            FILE,
+            FILE_SEAM,
             LINE_FREE_STRING_FREE,
         ))
     };
@@ -491,7 +496,7 @@ unsafe extern "C" fn free_string(uis: *mut c_void) {
 pub unsafe extern "C" fn UI_free(ui: *mut Ui) {
     // SAFETY: `ui` is NULL or a live object; `from_raw` reclaims it (NULL is a no-op) and `Drop`
     // runs the authority's own `UI_free` body followed by the block release.
-    unsafe { drop(OwnedCtx::<Ui>::from_raw_at(ui, FILE, LINE_FREE_UI)) };
+    unsafe { drop(OwnedCtx::<Ui>::from_raw_at(ui, FILE_SEAM, LINE_FREE_UI)) };
 }
 
 /// `static int allocate_string_stack(UI *ui)` — `crypto/ui/ui_lib.c:84-93`.
@@ -546,9 +551,9 @@ unsafe fn general_allocate_prompt(
         unsafe { raise_site(&err_sites::UI_LIB_107) };
     } else {
         ret = OwnedCtx::<UiString>::zalloc_at(
-            FILE,
+            FILE_SEAM,
             LINE_ALLOCATE_PROMPT,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_STRING_FREE,
         );
         if let Some(s) = ret.as_ref() {
@@ -755,7 +760,7 @@ pub unsafe extern "C" fn UI_dup_input_string(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_INPUT_FREE)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_INPUT_FREE)
         } {
             Some(copy) => Some(copy),
             None => return 0,
@@ -838,7 +843,7 @@ pub unsafe extern "C" fn UI_dup_verify_string(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_VERIFY_FREE)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_VERIFY_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -932,7 +937,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -946,7 +951,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -960,7 +965,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -974,7 +979,7 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_BOOL_ERR)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1051,7 +1056,7 @@ pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) ->
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_INFO_FREE)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_INFO_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1124,7 +1129,7 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
         // `OwnedStr`'s `Drop`.
         match unsafe {
             let copy = CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT);
-            OwnedStr::adopt(copy, FILE, LINE_DUP_ERROR_FREE)
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_ERROR_FREE)
         } {
             Some(copy) => Some(copy),
             None => return -1,
@@ -1643,9 +1648,9 @@ pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod 
     // handed to the caller; the refusal path's release is the authority's own bare block free plus
     // the name free, so the abandoned block uses a [`RawCtx`] and the name an [`OwnedStr`].
     let Some(ui_method) = RawCtx::<UiMethod>::zalloc_at(
-        FILE,
+        FILE_SEAM,
         LINE_CREATE_METHOD_ZALLOC,
-        FILE,
+        FILE_SEAM,
         LINE_CREATE_METHOD_FREE,
     ) else {
         return ptr::null_mut();
@@ -1656,7 +1661,7 @@ pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod 
     // `OwnedStr`'s `Drop`.
     let name_copy = unsafe {
         let copy = CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP);
-        OwnedStr::adopt(copy, FILE, LINE_CREATE_METHOD_FREE_NAME)
+        OwnedStr::adopt(copy, FILE_SEAM, LINE_CREATE_METHOD_FREE_NAME)
     };
 
     let ex_ok = if let Some(copy) = name_copy.as_ref() {
@@ -1706,7 +1711,7 @@ pub unsafe extern "C" fn UI_destroy_method(ui_method: *mut UiMethod) {
     unsafe {
         drop(OwnedCtx::<UiMethod>::from_raw_at(
             ui_method,
-            FILE,
+            FILE_SEAM,
             LINE_DESTROY_METHOD,
         ))
     };

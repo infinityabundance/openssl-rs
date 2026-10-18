@@ -47,6 +47,7 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::{raise_with, ERR_clear_error, ERR_peek_error};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::ssl::ssl_cert::{ssl_cert_lookup_by_pkey, ssl_security_cert, SSL_CERT_INFO};
@@ -64,6 +65,7 @@ use crate::x509::x_x509::{d2i_X509, X509_free, X509_new_ex, X509};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_rsa.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_rsa.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `ERR_LIB_PEM` — `err.h:81`.
@@ -1160,7 +1162,8 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 let sinfo_length = extension_append_length(SSL_SERVERINFOV1, serverinfo_length);
                 // The V1->V2 rebuild buffer, allocated at the authority's own site (`:818`) and
                 // released by `Drop` at its own site (`:827`).
-                let Some(sinfo) = OwnedBuf::new_zeroed_released(sinfo_length, FILE, 818, FILE, 827)
+                let Some(sinfo) =
+                    OwnedBuf::new_zeroed_released(sinfo_length, FILE_SEAM, 818, FILE_SEAM, 827)
                 else {
                     return 0;
                 };

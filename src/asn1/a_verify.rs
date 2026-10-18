@@ -63,6 +63,7 @@ use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_get0_pkey, EVP_PKEY_R
 use crate::ffi::guard_ffi;
 use crate::rsa::ameth::ossl_rsa_pss_to_ctx;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -144,9 +145,12 @@ pub unsafe extern "C" fn ASN1_verify(
         }
         // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_IN` are the authority's, and the
         // handle's `Drop` is the authority's own `OPENSSL_clear_free` at `LINE_CLEAR_IN`.
-        let Some(buf_in) =
-            OwnedBuf::new_cleansed_at(inl as usize, FILE.as_ptr(), LINE_MALLOC_IN, LINE_CLEAR_IN)
-        else {
+        let Some(buf_in) = OwnedBuf::new_cleansed_at(
+            inl as usize,
+            SeamFile::new(FILE),
+            LINE_MALLOC_IN,
+            LINE_CLEAR_IN,
+        ) else {
             // SAFETY: `ctx` is this call's own.
             unsafe { EVP_MD_CTX_free(ctx) };
             return ret;
@@ -432,7 +436,7 @@ pub unsafe extern "C" fn ASN1_item_verify_ctx(
         // SAFETY: `buf_in` is the non-NULL block the helper above allocated in full and no other
         // owner releases; `inll` is its extent; `FILE` is a NUL-terminated literal.
         let Some(buf_in) =
-            (unsafe { OwnedBuf::adopt_cleansed(buf_in, inll, FILE.as_ptr(), LINE_CLEAR_IN) })
+            (unsafe { OwnedBuf::adopt_cleansed(buf_in, inll, SeamFile::new(FILE), LINE_CLEAR_IN) })
         else {
             return -1;
         };

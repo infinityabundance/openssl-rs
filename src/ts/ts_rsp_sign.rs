@@ -86,6 +86,7 @@ use super::ts_rsp_utils::{
 use super::{
     raise_ts, ERR_R_ASN1_LIB, ERR_R_CRYPTO_LIB, ERR_R_OBJ_LIB, ERR_R_PKCS7_LIB, ERR_R_TS_LIB,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/ts/ts_rsp_sign.c";
@@ -1477,7 +1478,7 @@ unsafe fn ossl_ess_add1_signing_cert(si: *mut Pkcs7SignerInfo, sc: *const EssSig
     // the authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own
     // site.
     // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:637`.
-    let Some(mut pp) = OwnedBuf::new(len as usize, FILE.as_ptr(), 637) else {
+    let Some(mut pp) = OwnedBuf::new(len as usize, SeamFile::new(FILE), 637) else {
         return 0;
     };
     // The authority releases the encoding at its error tail (`:648`) or, on success, at `:650`.
@@ -1535,7 +1536,7 @@ unsafe fn ossl_ess_add1_signing_cert_v2(
     // the authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own
     // site.
     // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:664`.
-    let Some(mut pp) = OwnedBuf::new(len as usize, FILE.as_ptr(), 664) else {
+    let Some(mut pp) = OwnedBuf::new(len as usize, SeamFile::new(FILE), 664) else {
         return 0;
     };
     // The authority releases the encoding at its error tail (`:675`) or, on success, at `:677`.

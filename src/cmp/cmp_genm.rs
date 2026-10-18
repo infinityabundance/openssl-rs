@@ -23,6 +23,7 @@ use crate::cmp::cmp_util::{ossl_cmp_log_str, OSSL_CMP_LOG_ERR, OSSL_CMP_LOG_WARN
 use crate::crmf::crmf_asn::CrmfCertTemplate;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
@@ -126,7 +127,7 @@ unsafe fn cert_msg(
     let subj = unsafe { X509_NAME_oneline(X509_get_subject_name(cert), ptr::null_mut(), 0) };
     // SAFETY: `X509_NAME_oneline` answers NULL or one allocator block this frame owns; its single
     // release is the authority's own `(FILE, 31)`.
-    let subj = unsafe { OwnedStr::adopt(subj, FILE.as_ptr(), 31) };
+    let subj = unsafe { OwnedStr::adopt(subj, SeamFile::new(FILE), 31) };
     // SAFETY: `ctx` is live.
     let level_name = if level == OSSL_CMP_LOG_WARNING {
         c"WARN".as_ptr()

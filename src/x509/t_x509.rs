@@ -85,6 +85,7 @@ use crate::runtime::err::{
     raise_site, ERR_add_error_mem_bio, ERR_pop_to_mark, ERR_print_errors, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_find_sigid_algs, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
@@ -1256,7 +1257,7 @@ pub unsafe extern "C" fn X509_STORE_CTX_print_verify_cb(
                         // `X509_VERIFY_PARAM_get1_ip_asc` block.
                         let ip_asc = OwnedStr::adopt(
                             X509_VERIFY_PARAM_get1_ip_asc(vpm),
-                            FILE.as_ptr(),
+                            SeamFile::new(FILE),
                             LINE_FREE_IP_ASC,
                         );
                         if let Some(s) = ip_asc.as_ref() {

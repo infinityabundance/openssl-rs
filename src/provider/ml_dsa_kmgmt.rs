@@ -71,6 +71,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 
@@ -112,6 +113,7 @@ const OSSL_PKEY_PARAM_ML_DSA_PREFER_SEED: *const c_char = c"ml-dsa.prefer_seed".
 
 /// The unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char = c"providers/implementations/keymgmt/ml_dsa_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/ml_dsa_kmgmt.c");
 /// `ml_dsa_kmgmt.c:730`, `ml_dsa_gen_init`'s `OPENSSL_zalloc(sizeof(*gctx))`.
 const LINE_GEN_ZALLOC: c_int = 730;
 /// `ml_dsa_kmgmt.c:733`, `ml_dsa_gen_init`'s `OPENSSL_free(gctx)` failure path.
@@ -164,7 +166,11 @@ unsafe impl CtxDestroy for MlDsaGenCtx {
         // context `propq` block.
         unsafe {
             OPENSSL_cleanse((*ptr).entropy.as_mut_ptr().cast(), (*ptr).entropy.len());
-            drop(OwnedStr::adopt((*ptr).propq, FILE, LINE_GEN_CLEANUP_PROPQ));
+            drop(OwnedStr::adopt(
+                (*ptr).propq,
+                FILE_SEAM,
+                LINE_GEN_CLEANUP_PROPQ,
+            ));
         }
     }
 }
@@ -1016,7 +1022,7 @@ unsafe extern "C" fn ml_dsa_gen_set_params(genctx: *mut c_void, params: *const O
             // the authority's `OPENSSL_free(gctx->propq)`, line 844.
             drop(OwnedStr::adopt(
                 (*gctx).propq,
-                FILE,
+                FILE_SEAM,
                 LINE_GEN_SET_FREE_PROPQ,
             ));
             (*gctx).propq = ptr::null_mut();

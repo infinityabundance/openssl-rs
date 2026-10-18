@@ -59,6 +59,7 @@ use core::ffi::{c_int, c_uint};
 use core::ptr;
 
 use crate::packet::Wpacket;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_lib::Ssl;
@@ -2845,7 +2846,7 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
     // frame no longer writes a `CRYPTO_free` by hand.
     // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
-    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), core::ptr::null(), 0) })
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
     else {
         return 0;
     };
@@ -3041,7 +3042,7 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
         let senc = OwnedBuf::adopt_plain(
             CRYPTO_malloc(slen, core::ptr::null(), 0).cast(),
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         )?;
         let mut p = senc.as_ptr();
@@ -3214,7 +3215,7 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
         // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
         let Some(sdec) = OwnedBuf::adopt_plain(
             CRYPTO_malloc(ct_len + 16, core::ptr::null(), 0).cast(),
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         ) else {
             return core::ptr::null_mut();

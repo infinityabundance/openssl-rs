@@ -31,6 +31,7 @@ use crate::runtime::err::err_reasons::*;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -92,7 +93,7 @@ pub unsafe extern "C" fn OSSL_CRMF_pbmp_new(
     // The salt is this frame's block, allocated through the crate's allocator seam at the
     // authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own site.
     // SAFETY: `slen` is the caller's requested salt length.
-    let Some(mut salt) = OwnedBuf::new(slen, FILE.as_ptr(), 42) else {
+    let Some(mut salt) = OwnedBuf::new(slen, SeamFile::new(FILE), 42) else {
         // SAFETY: `pbm` is live; the free accepts NULL salt.
         unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
         return ptr::null_mut();
@@ -196,7 +197,7 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
     // The MAC result is this frame's block, allocated through the crate's allocator seam at the
     // authority's own size/`file`/`line`; its release is run by `Drop`, or handed to the caller.
     // SAFETY: `EVP_MAX_MD_SIZE` is the authority's upper bound.
-    let Some(mut mac_res) = OwnedBuf::new(EVP_MAX_MD_SIZE, FILE.as_ptr(), 137) else {
+    let Some(mut mac_res) = OwnedBuf::new(EVP_MAX_MD_SIZE, SeamFile::new(FILE), 137) else {
         return 0;
     };
     // The authority releases the result at its `:214` cleanup, or hands it to the caller on success.

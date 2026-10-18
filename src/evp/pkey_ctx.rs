@@ -130,6 +130,7 @@ use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
     NID_rsassaPss, NID_sm2, NID_undef, NID_ED25519, NID_ED448, NID_X25519, NID_X448,
@@ -227,6 +228,7 @@ pub(crate) const EVP_PKEY_CTRL_SET1_ID: c_int = 15;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c");
 /// `int_ctx_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 297).
 const LINE_ZALLOC_CTX: c_int = 297;
 /// `int_ctx_new`'s `OPENSSL_free(ret)` after a failed `OPENSSL_strdup` (line 312).
@@ -623,7 +625,8 @@ unsafe fn int_ctx_new(
 
     // The context block, allocated through the crate's allocator seam; `Drop` is its single release
     // on every refusal below and `into_raw` hands it out on success.
-    let Some(ret) = OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX)
+    let Some(ret) =
+        OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
     else {
         // SAFETY: `keymgmt` is live and holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
@@ -973,7 +976,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
     unsafe {
         drop(OwnedCtx::<EvpPkeyCtx>::from_raw_at(
             ctx,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_CTX,
         ))
     };
@@ -1057,7 +1060,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
 
     // The copy's context block, allocated through the crate's allocator seam; `Drop` is its single
     // release on every refusal below and `into_raw` hands it out on success.
-    let Some(rctx) = OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX)
+    let Some(rctx) =
+        OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
     else {
         return ptr::null_mut();
     };
@@ -2088,9 +2092,12 @@ pub unsafe extern "C" fn EVP_PKEY_meth_get0(idx: usize) -> *const EvpPkeyMethod 
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpPkeyMethod {
     // The method block, allocated through the crate's allocator seam; `into_raw` hands it out.
-    let Some(pmeth) =
-        OwnedCtx::<EvpPkeyMethod>::zalloc_at(FILE, LINE_ZALLOC_PMETH, FILE, LINE_FREE_PMETH)
-    else {
+    let Some(pmeth) = OwnedCtx::<EvpPkeyMethod>::zalloc_at(
+        FILE_SEAM,
+        LINE_ZALLOC_PMETH,
+        FILE_SEAM,
+        LINE_FREE_PMETH,
+    ) else {
         return ptr::null_mut();
     };
     // SAFETY: `pmeth` is this call's own allocation.
@@ -2134,7 +2141,7 @@ pub unsafe extern "C" fn EVP_PKEY_meth_free(pmeth: *mut EvpPkeyMethod) {
     unsafe {
         drop(OwnedCtx::<EvpPkeyMethod>::from_raw_at(
             pmeth,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_PMETH,
         ))
     };
@@ -9890,7 +9897,7 @@ unsafe extern "C" fn evp_pkey_ctx_add1_octet_string(
             CRYPTO_zalloc(info_alloc, FILE, LINE_ZALLOC_XLAT_BN_BUF).cast(),
             info_alloc,
             true,
-            FILE,
+            FILE_SEAM,
             LINE_FREE_XLAT_ADD1,
         )
     }) else {
@@ -10915,7 +10922,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_hex2ctrl(
     // SAFETY: `bin` is the block `OPENSSL_hexstr2buf` allocated for this frame and no other owner
     // holds it.
     let Some(_bin) = (unsafe {
-        OwnedBuf::adopt_conditional(bin.cast::<u8>(), 0, false, FILE, LINE_FREE_HEXCTRL)
+        OwnedBuf::adopt_conditional(bin.cast::<u8>(), 0, false, FILE_SEAM, LINE_FREE_HEXCTRL)
     }) else {
         return 0;
     };
@@ -10988,6 +10995,7 @@ const OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS: *const c_char = c"algorithm-id-params
 /// The authority's translation unit for `evp_lib.c`, which is where the two `X509_ALGOR` codecs
 /// live and therefore what a failing allocation records.
 const FILE_EVP_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_EVP_LIB_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c");
 /// `EVP_PKEY_CTX_set_algor_params`'s `OPENSSL_free(der)` (line 1393).
 const LINE_FREE_ALGOR_SET: c_int = 1393;
 /// `EVP_PKEY_CTX_get_algor_params`'s `OPENSSL_malloc(derl)` (line 1433).
@@ -11185,7 +11193,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_algor_params(
             der.cast::<u8>(),
             0,
             false,
-            FILE_EVP_LIB,
+            FILE_EVP_LIB_SEAM,
             LINE_FREE_ALGOR_SET,
         )
     };
@@ -11250,7 +11258,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
                 CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET).cast(),
                 0,
                 false,
-                FILE_EVP_LIB,
+                FILE_EVP_LIB_SEAM,
                 LINE_FREE_ALGOR_GET,
             )
         };
@@ -11661,7 +11669,12 @@ mod tests {
     fn an_owned_ctx() -> *mut EvpPkeyCtx {
         // The allocator seam and its coordinates are the ones `EVP_PKEY_CTX_dup` uses; the
         // constructor's own safety argument covers the zeroed block's validity.
-        match OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE, LINE_ZALLOC_CTX, FILE, LINE_FREE_CTX) {
+        match OwnedCtx::<EvpPkeyCtx>::zalloc_at(
+            FILE_SEAM,
+            LINE_ZALLOC_CTX,
+            FILE_SEAM,
+            LINE_FREE_CTX,
+        ) {
             Some(ctx) => ctx.into_raw(),
             None => ptr::null_mut(),
         }

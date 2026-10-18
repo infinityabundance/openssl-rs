@@ -124,6 +124,7 @@ use crate::provider::seeding::{
 };
 use crate::provider::util::ossl_prov_macctx_load;
 use crate::runtime::bio::sys::time;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::openssl_get_fork_id;
 
 // =============================================================================================
@@ -140,6 +141,7 @@ const FILE_DRBG: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c".as_ptr();
 /// `providers/implementations/rands/drbg_ctr.c` (generated from `drbg_ctr.c.in`).
 const FILE_DRBG_CTR: *const c_char = c"providers/implementations/rands/drbg_ctr.c".as_ptr();
+const FILE_DRBG_CTR_SEAM: SeamFile = SeamFile::new(c"providers/implementations/rands/drbg_ctr.c");
 /// `providers/implementations/rands/drbg_hash.c` (generated from `drbg_hash.c.in`).
 const FILE_DRBG_HASH: *const c_char = c"providers/implementations/rands/drbg_hash.c".as_ptr();
 /// `providers/implementations/rands/drbg_hmac.c` (generated from `drbg_hmac.c.in`).
@@ -3130,7 +3132,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCt
             // The "ECB" copy is this unit's own scratch, held by `ecb` and released in scope by
             // `Drop` with the authority's own `CRYPTO_strndup`/`CRYPTO_free` pair.
             let Some(ecb) =
-                OwnedBuf::new_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR, LINE)
+                OwnedBuf::new_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR_SEAM, LINE)
             else {
                 return 0;
             };

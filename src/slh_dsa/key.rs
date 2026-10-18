@@ -66,6 +66,7 @@ use super::hash_ctx::{
 use super::params::ossl_slh_dsa_params_get;
 use super::xmss::ossl_slh_xmss_node;
 use super::{SlhDsaHashCtx, SlhDsaKey, SLH_DSA_MAX_N};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `core_dispatch.h:649`, `PRIVATE_KEY | PUBLIC_KEY`.
 ///
@@ -78,6 +79,7 @@ pub(crate) const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
 
 /// The unit's own `__FILE__` — `slh_dsa_key.c` is a plain `.c`.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c");
 /// `slh_dsa_key.c:106`, the `OPENSSL_zalloc(sizeof(*ret))` in `..._new`.
 const LINE_ZALLOC_NEW: c_int = 106;
 /// `slh_dsa_key.c:152`, the `OPENSSL_zalloc` in `..._dup`.
@@ -92,7 +94,7 @@ const LINE_FREE_KEY: c_int = 134;
 pub(crate) unsafe fn slh_dsa_key_hash_cleanup(key: *mut SlhDsaKey) {
     // SAFETY: `key` is live per the contract.
     unsafe {
-        drop(OwnedStr::adopt((*key).propq, FILE, LINE_FREE_PROPQ));
+        drop(OwnedStr::adopt((*key).propq, FILE_SEAM, LINE_FREE_PROPQ));
         if (*key).md_big != (*key).md {
             EVP_MD_free((*key).md_big);
         }
@@ -176,7 +178,7 @@ pub(crate) unsafe fn ossl_slh_dsa_key_new(
             // SAFETY: `propq` is NULL or a NUL-terminated C string per the contract.
             let Some(q) = OwnedStr::adopt(
                 CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_PROPQ,
             ) else {
                 ossl_slh_dsa_key_free(ret);
@@ -245,7 +247,7 @@ pub(crate) unsafe fn ossl_slh_dsa_key_dup(
             // strdup'd and no other owner releases.
             let Some(q) = OwnedStr::adopt(
                 CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ),
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_PROPQ,
             ) else {
                 ossl_slh_dsa_key_free(ret);

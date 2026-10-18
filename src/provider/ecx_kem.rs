@@ -70,6 +70,7 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `MAX_ECX_KEYLEN` — `ecx_kem.c:43`, the value of `X448_KEYLEN`.
@@ -108,6 +109,7 @@ const OSSL_PKEY_PARAM_PUB_KEY: *const c_char = c"pub".as_ptr();
 /// The generated unit's own `__FILE__`. `ecx_kem.c.in` is `.c.in`-generated, so it is the bare
 /// build-relative path.
 const FILE_ECX_KEM: *const c_char = c"providers/implementations/kem/ecx_kem.c".as_ptr();
+const FILE_ECX_KEM_SEAM: SeamFile = SeamFile::new(c"providers/implementations/kem/ecx_kem.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -310,7 +312,7 @@ unsafe extern "C" fn ecxkem_freectx(vectx: *mut c_void) {
         drop(OwnedBuf::adopt_cleansed(
             (*ctx).ikm.cast::<c_uchar>(),
             (*ctx).ikmlen,
-            FILE_ECX_KEM,
+            FILE_ECX_KEM_SEAM,
             177,
         ));
         recipient_key_set(ctx, ptr::null_mut());
@@ -563,11 +565,12 @@ unsafe extern "C" fn ecxkem_set_ctx_params(vctx: *mut c_void, params: *const Oss
             drop(OwnedBuf::adopt_cleansed(
                 (*ctx).ikm.cast::<c_uchar>(),
                 (*ctx).ikmlen,
-                FILE_ECX_KEM,
+                FILE_ECX_KEM_SEAM,
                 321,
             ));
-            (*ctx).ikm = OwnedBuf::adopt_cleansed(tmp.cast::<c_uchar>(), tmplen, FILE_ECX_KEM, 321)
-                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<u8>());
+            (*ctx).ikm =
+                OwnedBuf::adopt_cleansed(tmp.cast::<c_uchar>(), tmplen, FILE_ECX_KEM_SEAM, 321)
+                    .map_or(ptr::null_mut(), |b| b.into_raw().cast::<u8>());
             (*ctx).ikmlen = tmplen;
         }
 

@@ -55,6 +55,7 @@ use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::CRYPTO_strndup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_NAIRealm, NID_SRVName, NID_XmppAddr, NID_certificate_issuer, NID_id_on_SmtpUTF8Mailbox,
     NID_issuer_alt_name, NID_ms_upn, NID_pkcs9_emailAddress, NID_subject_alt_name, OBJ_obj2nid,
@@ -572,7 +573,7 @@ pub unsafe extern "C" fn i2v_GENERAL_NAME(
             let tmp = unsafe {
                 OwnedStr::adopt(
                     ossl_ipaddr_to_asc((*ip).data, (*ip).length),
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     195,
                 )
             };
@@ -714,7 +715,7 @@ pub unsafe extern "C" fn GENERAL_NAME_print(out: *mut Bio, gen: *mut GeneralName
             let tmp = unsafe {
                 OwnedStr::adopt(
                     ossl_ipaddr_to_asc((*ip).data, (*ip).length),
-                    FILE.as_ptr(),
+                    SeamFile::new(FILE),
                     290,
                 )
             };
@@ -803,7 +804,7 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
     let objtmp = unsafe {
         OwnedStr::adopt(
             CRYPTO_strndup(value, objlen, FILE.as_ptr(), 649),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             653,
         )
     };

@@ -48,6 +48,7 @@ use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
 use crate::runtime::bio::{BIO_free, BIO_read};
 use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::selftest::OsslCallback;
 
@@ -273,7 +274,8 @@ unsafe extern "C" fn msblob2key_decode(
         return 1;
     }
     // SAFETY: `length` bytes as a raw allocation.
-    let Some(buf) = OwnedBuf::new_plain_released(length as usize, ptr::null(), 0, ptr::null(), 0)
+    let Some(buf) =
+        OwnedBuf::new_plain_released(length as usize, SeamFile::NULL, 0, SeamFile::NULL, 0)
     else {
         // SAFETY: `in_` is this decode's own reference.
         unsafe { BIO_free(in_) };

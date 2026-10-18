@@ -71,6 +71,7 @@ use crate::runtime::err::{
     raise_site, raise_site_data, ERR_clear_last_mark, ERR_peek_error, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strncasecmp};
@@ -817,9 +818,11 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_new(
 
         // The context block's `Drop` is the single release of the buffer-failure path; ownership
         // passes to the caller at the return.
-        let Some(rctx_buf) =
-            OwnedBuf::new_zeroed(core::mem::size_of::<OsslHttpReqCtx>(), FILE.as_ptr(), 117)
-        else {
+        let Some(rctx_buf) = OwnedBuf::new_zeroed(
+            core::mem::size_of::<OsslHttpReqCtx>(),
+            SeamFile::new(FILE),
+            117,
+        ) else {
             return ptr::null_mut();
         };
         let rctx = rctx_buf.as_ptr().cast::<OsslHttpReqCtx>();
@@ -829,7 +832,7 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_new(
         } else {
             OSSL_HTTP_DEFAULT_MAX_LINE_LEN
         };
-        let buf_owned = OwnedBuf::new((*rctx).buf_size as usize, FILE.as_ptr(), 121);
+        let buf_owned = OwnedBuf::new((*rctx).buf_size as usize, SeamFile::new(FILE), 121);
         (*rctx).buf = buf_owned
             .as_ref()
             .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_uchar>());
@@ -871,30 +874,30 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_free(rctx: *mut OsslHttpReqCtx) {
         BIO_free((*rctx).req);
         drop(OwnedBuf::adopt_plain(
             (*rctx).buf.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             148,
         ));
         drop(OwnedBuf::adopt_plain(
             (*rctx).proxy.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             149,
         ));
         drop(OwnedBuf::adopt_plain(
             (*rctx).server.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             150,
         ));
         drop(OwnedBuf::adopt_plain(
             (*rctx).port.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             151,
         ));
         drop(OwnedBuf::adopt_plain(
             (*rctx).expected_ct.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             152,
         ));
-        drop(OwnedBuf::adopt_plain(rctx.cast(), FILE.as_ptr(), 153));
+        drop(OwnedBuf::adopt_plain(rctx.cast(), SeamFile::new(FILE), 153));
     }
 }
 
@@ -1112,7 +1115,7 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_set_expected(
 
         drop(OwnedBuf::adopt_plain(
             (*rctx).expected_ct.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             284,
         ));
         (*rctx).expected_ct = ptr::null_mut();
@@ -1121,7 +1124,7 @@ pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_set_expected(
             // released by `OSSL_HTTP_REQ_CTX_free` at line 152.
             let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(content_type, FILE.as_ptr(), 287).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 152,
             );
             (*rctx).expected_ct = dup
@@ -1349,7 +1352,7 @@ unsafe fn http_req_ctx_new(
             // released by `OSSL_HTTP_REQ_CTX_free` at line 149.
             let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(proxy, FILE.as_ptr(), 428).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 149,
             );
             (*rctx).proxy = dup
@@ -1365,7 +1368,7 @@ unsafe fn http_req_ctx_new(
             // released by `OSSL_HTTP_REQ_CTX_free` at line 150.
             let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(server, FILE.as_ptr(), 431).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 150,
             );
             (*rctx).server = dup
@@ -1381,7 +1384,7 @@ unsafe fn http_req_ctx_new(
             // released by `OSSL_HTTP_REQ_CTX_free` at line 151.
             let dup = OwnedBuf::adopt_plain(
                 CRYPTO_strdup(port, FILE.as_ptr(), 434).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 151,
             );
             (*rctx).port = dup
@@ -2137,7 +2140,11 @@ unsafe fn explict_or_default_port(
                     c"80".as_ptr()
                 };
             }
-            drop(OwnedBuf::adopt_plain(service.cast(), FILE.as_ptr(), 1013));
+            drop(OwnedBuf::adopt_plain(
+                service.cast(),
+                SeamFile::new(FILE),
+                1013,
+            ));
         } /* otherwise take the explicitly given port */
         port
     }
@@ -2312,12 +2319,12 @@ pub unsafe extern "C" fn OSSL_HTTP_open(
             cbio = http_new_bio(server, port, use_ssl, proxy_host, proxy_port);
             drop(OwnedBuf::adopt_plain(
                 proxy_host.cast(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 1131,
             ));
             drop(OwnedBuf::adopt_plain(
                 proxy_port.cast(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 1132,
             ));
             if cbio.is_null() {
@@ -2465,7 +2472,7 @@ pub unsafe extern "C" fn OSSL_HTTP_exchange(
                     *redirection_url = OwnedBuf::adopt_plain(
                         CRYPTO_strdup((*rctx).redirection_url, FILE.as_ptr(), 1229)
                             .cast::<c_uchar>(),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         1357,
                     )
                     .map_or(ptr::null_mut(), OwnedBuf::into_raw)
@@ -2604,7 +2611,7 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
         }
         let current_url_blk = OwnedBuf::adopt_plain(
             CRYPTO_strdup(url, FILE.as_ptr(), 1303).cast::<c_uchar>(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             1367,
         );
         let mut current_url = current_url_blk
@@ -2666,7 +2673,11 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
                         resp = OSSL_HTTP_exchange(rctx, &mut redirection_url);
                     }
                 }
-                drop(OwnedBuf::adopt_plain(path.cast(), FILE.as_ptr(), 1332));
+                drop(OwnedBuf::adopt_plain(
+                    path.cast(),
+                    SeamFile::new(FILE),
+                    1332,
+                ));
                 if resp.is_null() && !redirection_url.is_null() {
                     n_redirs += 1;
                     if redirection_ok(n_redirs, current_url, redirection_url) != 0
@@ -2675,7 +2686,7 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
                         bio_reset(bio);
                         drop(OwnedBuf::adopt_plain(
                             current_url.cast(),
-                            FILE.as_ptr(),
+                            SeamFile::new(FILE),
                             1337,
                         ));
                         current_url = redirection_url;
@@ -2684,40 +2695,64 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
                             let path_blk = OwnedBuf::adopt_plain(
                                 CRYPTO_strdup(redirection_url, FILE.as_ptr(), 1340)
                                     .cast::<c_uchar>(),
-                                FILE.as_ptr(),
+                                SeamFile::new(FILE),
                                 1332,
                             );
                             path = path_blk
                                 .map_or(ptr::null_mut(), OwnedBuf::into_raw)
                                 .cast::<c_char>();
                             if path.is_null() {
-                                drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1342));
-                                drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1343));
+                                drop(OwnedBuf::adopt_plain(
+                                    host.cast(),
+                                    SeamFile::new(FILE),
+                                    1342,
+                                ));
+                                drop(OwnedBuf::adopt_plain(
+                                    port.cast(),
+                                    SeamFile::new(FILE),
+                                    1343,
+                                ));
                                 let _ = OSSL_HTTP_close(rctx, 1);
                                 BIO_free(resp);
                                 drop(OwnedBuf::adopt_plain(
                                     current_url.cast(),
-                                    FILE.as_ptr(),
+                                    SeamFile::new(FILE),
                                     1346,
                                 ));
                                 return ptr::null_mut();
                             }
                             continue 'new_rpath;
                         }
-                        drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1351));
-                        drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1352));
+                        drop(OwnedBuf::adopt_plain(
+                            host.cast(),
+                            SeamFile::new(FILE),
+                            1351,
+                        ));
+                        drop(OwnedBuf::adopt_plain(
+                            port.cast(),
+                            SeamFile::new(FILE),
+                            1352,
+                        ));
                         let _ = OSSL_HTTP_close(rctx, 1);
                         continue 'outer;
                     }
                     /* if redirection not allowed, ignore it */
                     drop(OwnedBuf::adopt_plain(
                         redirection_url.cast(),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         1357,
                     ));
                 }
-                drop(OwnedBuf::adopt_plain(host.cast(), FILE.as_ptr(), 1359));
-                drop(OwnedBuf::adopt_plain(port.cast(), FILE.as_ptr(), 1360));
+                drop(OwnedBuf::adopt_plain(
+                    host.cast(),
+                    SeamFile::new(FILE),
+                    1359,
+                ));
+                drop(OwnedBuf::adopt_plain(
+                    port.cast(),
+                    SeamFile::new(FILE),
+                    1360,
+                ));
                 if OSSL_HTTP_close(rctx, c_int::from(!resp.is_null())) == 0 {
                     BIO_free(resp);
                     resp = ptr::null_mut();
@@ -2727,7 +2762,7 @@ pub unsafe extern "C" fn OSSL_HTTP_get(
         }
         drop(OwnedBuf::adopt_plain(
             current_url.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             1367,
         ));
         resp
@@ -2868,7 +2903,7 @@ unsafe fn base64encode(buf: *const c_void, len: usize) -> *mut c_char {
         }
         outl <<= 2;
         // The block's `Drop` is the single release of the failure path; ownership is the return.
-        let Some(out_buf) = OwnedBuf::new(outl + 1, FILE.as_ptr(), 1441) else {
+        let Some(out_buf) = OwnedBuf::new(outl + 1, SeamFile::new(FILE), 1441) else {
             return ptr::null_mut();
         };
         let out = out_buf.as_ptr().cast::<c_char>();
@@ -2924,7 +2959,7 @@ pub unsafe extern "C" fn OSSL_HTTP_proxy_connect(
             return finish_proxy_connect(fbio, mbuf_buf, ret);
         }
 
-        mbuf_buf = OwnedBuf::new(BUF_SIZE, FILE.as_ptr(), 1482);
+        mbuf_buf = OwnedBuf::new(BUF_SIZE, SeamFile::new(FILE), 1482);
         let mbuf = mbuf_buf
             .as_ref()
             .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_char>());
@@ -2982,7 +3017,7 @@ pub unsafe extern "C" fn OSSL_HTTP_proxy_connect(
             // credentials (the extra byte is the NUL terminator), so
             // `num = len <= alloc_len` is the allocation extent.
             let proxyauth_buf =
-                OwnedBuf::new_cleansed_num(alloc_len, len, FILE.as_ptr(), 1508, 1508);
+                OwnedBuf::new_cleansed_num(alloc_len, len, SeamFile::new(FILE), 1508, 1508);
             let proxyauth = proxyauth_buf
                 .as_ref()
                 .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_char>());
@@ -3012,7 +3047,7 @@ pub unsafe extern "C" fn OSSL_HTTP_proxy_connect(
                     drop(OwnedBuf::adopt_cleansed(
                         proxyauthenc.cast(),
                         str_len(proxyauthenc),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         1518,
                     ));
                 }

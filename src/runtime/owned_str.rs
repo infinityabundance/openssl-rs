@@ -24,12 +24,13 @@
 use core::ffi::{c_char, c_int, c_void};
 
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// An owned NUL-terminated (or, before its consumer fills it, writable) C
 /// string allocated through the crate's `CRYPTO_*` allocator seam.
 pub(crate) struct OwnedStr {
     ptr: *mut c_char,
-    file: *const c_char,
+    file: SeamFile,
     line: c_int,
 }
 
@@ -44,12 +45,12 @@ impl OwnedStr {
     /// C string must write the terminator first.
     pub(crate) fn new(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_malloc(len, alloc_file, alloc_line).cast::<c_char>();
+        let raw = CRYPTO_malloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_char>();
         if raw.is_null() {
             return None;
         }
@@ -71,12 +72,12 @@ impl OwnedStr {
     /// zeroed first byte to be its terminator.
     pub(crate) fn new_zeroed(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_zalloc(len, alloc_file, alloc_line).cast::<c_char>();
+        let raw = CRYPTO_zalloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_char>();
         if raw.is_null() {
             return None;
         }
@@ -109,9 +110,9 @@ impl OwnedStr {
     /// * **exclusive ownership** -- no other owner will release the block; this
     ///   handle's `Drop` is its single release;
     /// * **exact release** -- `file`/`line` name the authority's own plain
-    ///   `CRYPTO_free` site for this block, and `file` is NULL or a
-    ///   NUL-terminated C string.
-    pub(crate) unsafe fn adopt(ptr: *mut c_char, file: *const c_char, line: c_int) -> Option<Self> {
+    ///   `CRYPTO_free` site for this block. `SeamFile` establishes that the file
+    ///   coordinate names static storage.
+    pub(crate) unsafe fn adopt(ptr: *mut c_char, file: SeamFile, line: c_int) -> Option<Self> {
         if ptr.is_null() {
             None
         } else {
@@ -128,11 +129,7 @@ impl OwnedStr {
     /// [`Self::adopt`]: seam provenance, whole-block identity and extent,
     /// alignment, NUL-termination for any string consumer, exclusive ownership,
     /// and the exact plain `CRYPTO_free` release site.
-    pub(crate) unsafe fn adopt_nullable(
-        ptr: *mut c_char,
-        file: *const c_char,
-        line: c_int,
-    ) -> Self {
+    pub(crate) unsafe fn adopt_nullable(ptr: *mut c_char, file: SeamFile, line: c_int) -> Self {
         Self { ptr, file, line }
     }
 
@@ -163,7 +160,7 @@ impl Drop for OwnedStr {
         // SAFETY: `self.ptr` is the block this handle owns and has not released
         // (or NULL, which `CRYPTO_free` accepts as its no-op); the coordinates
         // are the authority's own release site.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file.as_ptr(), self.line) };
     }
 }
 
@@ -171,14 +168,15 @@ impl Drop for OwnedStr {
 mod tests {
     use super::OwnedStr;
     use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
-    use core::ffi::{c_char, CStr};
+    use crate::runtime::mem_coords::SeamFile;
+    use core::ffi::CStr;
     use core::ptr;
 
-    const FILE: *const c_char = c"test/owned_str.rs".as_ptr();
+    const FILE: &CStr = c"test/owned_str.rs";
 
     #[test]
     fn new_allocates_a_writable_block_of_the_requested_size() {
-        let owned = OwnedStr::new(6, FILE, 11, FILE, 12);
+        let owned = OwnedStr::new(6, SeamFile::new(FILE), 11, SeamFile::new(FILE), 12);
         assert!(owned.is_some(), "a 6-byte block must be allocatable");
         let Some(owned) = owned else { return };
         // SAFETY: `owned` exclusively owns the 6-byte block and `as_ptr` is its
@@ -194,19 +192,23 @@ mod tests {
 
     #[test]
     fn set_release_line_keeps_the_file_and_changes_only_the_line() {
-        let mut owned = OwnedStr::new(4, FILE, 21, FILE, 22);
+        let mut owned = OwnedStr::new(4, SeamFile::new(FILE), 21, SeamFile::new(FILE), 22);
         assert!(owned.is_some(), "a 4-byte block must be allocatable");
         let Some(ref mut owned) = owned else { return };
-        assert_eq!(owned.file, FILE);
+        assert_eq!(owned.file.as_ptr(), FILE.as_ptr());
         assert_eq!(owned.line, 22);
         owned.set_release_line(23);
-        assert_eq!(owned.file, FILE, "the release file must be preserved");
+        assert_eq!(
+            owned.file.as_ptr(),
+            FILE.as_ptr(),
+            "the release file must be preserved"
+        );
         assert_eq!(owned.line, 23);
     }
 
     #[test]
     fn new_zeroed_allocates_a_zeroed_writable_block() {
-        let owned = OwnedStr::new_zeroed(8, FILE, 24, FILE, 25);
+        let owned = OwnedStr::new_zeroed(8, SeamFile::new(FILE), 24, SeamFile::new(FILE), 25);
         assert!(
             owned.is_some(),
             "an 8-byte zeroed block must be allocatable"
@@ -228,10 +230,10 @@ mod tests {
     fn adopt_keeps_the_nul_terminated_contents() {
         // SAFETY: the literal is NUL-terminated and the seam answers a fresh
         // block owned by this frame.
-        let raw = unsafe { CRYPTO_strdup(c"owned-str".as_ptr(), FILE, 13) };
+        let raw = unsafe { CRYPTO_strdup(c"owned-str".as_ptr(), FILE.as_ptr(), 13) };
         // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
         // owner will release it.
-        let owned = unsafe { OwnedStr::adopt(raw, FILE, 14) };
+        let owned = unsafe { OwnedStr::adopt(raw, SeamFile::new(FILE), 14) };
         assert!(owned.is_some(), "a successful strdup must be adopted");
         let Some(owned) = owned else { return };
         // SAFETY: the adopted block is NUL-terminated by `CRYPTO_strdup`.
@@ -241,14 +243,14 @@ mod tests {
     #[test]
     fn adopt_null_is_none() {
         // SAFETY: NULL is explicitly permitted by the adoption contract.
-        let owned = unsafe { OwnedStr::adopt(ptr::null_mut(), FILE, 15) };
+        let owned = unsafe { OwnedStr::adopt(ptr::null_mut(), SeamFile::new(FILE), 15) };
         assert!(owned.is_none());
     }
 
     #[test]
     fn null_handle_drop_is_the_noop_release() {
         // SAFETY: NULL is explicitly permitted by the nullable adoption contract.
-        let owned = unsafe { OwnedStr::adopt_nullable(ptr::null_mut(), FILE, 16) };
+        let owned = unsafe { OwnedStr::adopt_nullable(ptr::null_mut(), SeamFile::new(FILE), 16) };
         assert!(owned.as_ptr().is_null());
         drop(owned);
     }
@@ -257,16 +259,16 @@ mod tests {
     fn into_raw_suppresses_release() {
         // SAFETY: the literal is NUL-terminated and the seam answers a fresh
         // block owned by this frame.
-        let raw = unsafe { CRYPTO_strdup(c"transfer".as_ptr(), FILE, 17) };
+        let raw = unsafe { CRYPTO_strdup(c"transfer".as_ptr(), FILE.as_ptr(), 17) };
         // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
         // owner will release it.
-        let owned = unsafe { OwnedStr::adopt(raw, FILE, 18) };
+        let owned = unsafe { OwnedStr::adopt(raw, SeamFile::new(FILE), 18) };
         assert!(owned.is_some(), "a successful strdup must be adopted");
         let Some(owned) = owned else { return };
         let raw = owned.into_raw();
         assert!(!raw.is_null());
         // SAFETY: `raw` is the whole block allocated above and is released here
         // exactly once; no `OwnedStr` still owns it.
-        unsafe { CRYPTO_free(raw.cast(), FILE, 18) };
+        unsafe { CRYPTO_free(raw.cast(), FILE.as_ptr(), 18) };
     }
 }

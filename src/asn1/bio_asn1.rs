@@ -65,6 +65,7 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the filter BIO.
@@ -188,7 +189,7 @@ fn asn1_bio_init(ctx: &mut BioAsn1BufCtx, size: c_int) -> c_int {
         unsafe { raise_site(&err_sites::BIO_ASN1_118) };
         return 0;
     }
-    let Some(buf) = OwnedBuf::new(size as usize, FILTER_FILE.as_ptr(), LINE) else {
+    let Some(buf) = OwnedBuf::new(size as usize, SeamFile::new(FILTER_FILE), LINE) else {
         return 0;
     };
     ctx.buf = buf.into_raw();
@@ -207,7 +208,7 @@ fn asn1_bio_init(ctx: &mut BioAsn1BufCtx, size: c_int) -> c_int {
 unsafe extern "C" fn asn1_bio_new(b: *mut Bio) -> c_int {
     let Some(ctx_buf) = OwnedBuf::new_zeroed(
         core::mem::size_of::<BioAsn1BufCtx>(),
-        FILTER_FILE.as_ptr(),
+        SeamFile::new(FILTER_FILE),
         LINE,
     ) else {
         return 0;
@@ -266,12 +267,14 @@ unsafe extern "C" fn asn1_bio_free(b: *mut Bio) -> c_int {
         };
     }
     // SAFETY: `buf` came from this allocator and is not owned elsewhere.
-    drop(unsafe { OwnedBuf::adopt_plain_nullable(ctx.buf.cast(), FILTER_FILE.as_ptr(), LINE) });
+    drop(unsafe {
+        OwnedBuf::adopt_plain_nullable(ctx.buf.cast(), SeamFile::new(FILTER_FILE), LINE)
+    });
     let p: *mut BioAsn1BufCtx = ctx;
     // SAFETY: the context came from this allocator, is not owned elsewhere, and the BIO is about
     // to forget it.
     // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-    drop(unsafe { OwnedBuf::adopt_plain_nullable(p.cast(), FILTER_FILE.as_ptr(), LINE) });
+    drop(unsafe { OwnedBuf::adopt_plain_nullable(p.cast(), SeamFile::new(FILTER_FILE), LINE) });
     // SAFETY: `b` is a live BIO.
     unsafe {
         BIO_set_data(b, core::ptr::null_mut());
@@ -829,7 +832,7 @@ pub unsafe extern "C" fn BIO_new_NDEF(
         // passes to the ASN.1 BIO at the `BIO_C_SET_EX_ARG` control.
         let ndef_buf = OwnedBuf::new_zeroed(
             core::mem::size_of::<NdefSupport>(),
-            NDEF_FILE.as_ptr(),
+            SeamFile::new(NDEF_FILE),
             LINE,
         );
         let ndef_aux = ndef_buf
@@ -851,7 +854,9 @@ pub unsafe extern "C" fn BIO_new_NDEF(
             // allocating handle gives its block up to one that frees even a NULL.
             let raw = ndef_buf.map_or(core::ptr::null_mut(), OwnedBuf::into_raw);
             // SAFETY: `raw` is NULL or this frame's own block, given up by the handle above.
-            drop(unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), NDEF_FILE.as_ptr(), LINE) });
+            drop(unsafe {
+                OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(NDEF_FILE), LINE)
+            });
             return core::ptr::null_mut();
         }
 
@@ -970,7 +975,7 @@ unsafe extern "C" fn ndef_prefix(
     if derlen < 0 {
         return 0;
     }
-    let Some(derbuf) = OwnedBuf::new(derlen as usize, NDEF_FILE.as_ptr(), LINE) else {
+    let Some(derbuf) = OwnedBuf::new(derlen as usize, SeamFile::new(NDEF_FILE), LINE) else {
         return 0;
     };
     let p = derbuf.as_ptr();
@@ -1020,7 +1025,7 @@ unsafe extern "C" fn ndef_prefix_free(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             aux.derbuf.cast(),
-            NDEF_FILE.as_ptr(),
+            SeamFile::new(NDEF_FILE),
             LINE,
         ));
         aux.derbuf = core::ptr::null_mut();
@@ -1058,7 +1063,9 @@ unsafe extern "C" fn ndef_suffix_free(
         // SAFETY: `block` came from `CRYPTO_zalloc` in `BIO_new_NDEF` and is not
         // owned elsewhere once the pointer is cleared.
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(unsafe { OwnedBuf::adopt_plain_nullable(block.cast(), NDEF_FILE.as_ptr(), LINE) });
+        drop(unsafe {
+            OwnedBuf::adopt_plain_nullable(block.cast(), SeamFile::new(NDEF_FILE), LINE)
+        });
         // SAFETY: `slot` is the caller's live `ex_arg` slot.
         unsafe {
             *slot = core::ptr::null_mut();
@@ -1128,7 +1135,7 @@ unsafe extern "C" fn ndef_suffix(
     if derlen < 0 {
         return 0;
     }
-    let Some(derbuf) = OwnedBuf::new(derlen as usize, NDEF_FILE.as_ptr(), LINE) else {
+    let Some(derbuf) = OwnedBuf::new(derlen as usize, SeamFile::new(NDEF_FILE), LINE) else {
         return 0;
     };
     let p = derbuf.as_ptr();

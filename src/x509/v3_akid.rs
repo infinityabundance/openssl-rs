@@ -44,6 +44,7 @@ use crate::asn1::string::{ASN1_INTEGER_free, ASN1_OCTET_STRING_free, ASN1_STRING
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
@@ -286,7 +287,7 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
         let Some(mut tmp) = (unsafe {
             OwnedStr::adopt(
                 i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).keyid),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 58,
             )
         }) else {
@@ -334,7 +335,7 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
         let Some(mut tmp) = (unsafe {
             OwnedStr::adopt(
                 i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).serial),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 78,
             )
         }) else {

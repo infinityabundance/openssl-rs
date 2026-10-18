@@ -67,6 +67,7 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::provider::der_sm2_sig::ossl_DER_w_algorithmIdentifier_SM2_with_MD;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strlcpy;
 use crate::sm2::sign::{
@@ -202,7 +203,7 @@ unsafe extern "C" fn sm2sig_newctx(provctx: *mut c_void, propq: *const c_char) -
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             match OwnedBuf::adopt_plain(
                 CRYPTO_strdup(propq, FILE, 133).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 351,
             ) {
                 Some(buf) => (*ctx).propq = buf.into_raw().cast::<c_char>(),
@@ -428,7 +429,7 @@ unsafe fn sm2sig_compute_z_digest(ctx: *mut ProvSm2SigCtx) -> c_int {
             /* get hashed prefix 'z' of tbs message */
             // The `Z` prefix is this frame's own zeroed block; the handle releases it through the
             // crate's allocator seam on both the success and the refusal path.
-            let z = OwnedBuf::new_zeroed((*ctx).mdsize, FILE, 276);
+            let z = OwnedBuf::new_zeroed((*ctx).mdsize, FILE_SEAM, 276);
             let ok = match z.as_ref() {
                 Some(buf) => {
                     ossl_sm2_compute_z_digest(
@@ -581,13 +582,13 @@ unsafe extern "C" fn sm2sig_freectx(vpsm2ctx: *mut c_void) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain(
             (*ctx).propq.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             351,
         ));
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain(
             (*ctx).id.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             352,
         ));
         CRYPTO_free(ctx.cast(), FILE, 353);
@@ -628,7 +629,7 @@ unsafe extern "C" fn sm2sig_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             match OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*srcctx).propq, FILE, 377).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 351,
             ) {
                 Some(buf) => (*dstctx).propq = buf.into_raw().cast::<c_char>(),
@@ -658,7 +659,7 @@ unsafe extern "C" fn sm2sig_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
         if !(*srcctx).id.is_null() {
             // The ID copy is this frame's own block, handed to `dstctx->id`; `sm2sig_freectx`
             // releases the field at the authority's own site.
-            let Some(id) = OwnedBuf::new((*srcctx).id_len, FILE, 394) else {
+            let Some(id) = OwnedBuf::new((*srcctx).id_len, FILE_SEAM, 394) else {
                 sm2sig_freectx(dstctx.cast());
                 return ptr::null_mut();
             };
@@ -915,11 +916,11 @@ unsafe extern "C" fn sm2sig_set_ctx_params(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain(
                 (*psm2ctx).id.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 475,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            (*psm2ctx).id = OwnedBuf::adopt_plain(tmp_id.cast::<c_uchar>(), FILE, 475)
+            (*psm2ctx).id = OwnedBuf::adopt_plain(tmp_id.cast::<c_uchar>(), FILE_SEAM, 475)
                 .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*psm2ctx).id_len = tmp_idlen;
         }
@@ -945,11 +946,19 @@ unsafe extern "C" fn sm2sig_set_ctx_params(
             // refusal path records one line and the success path the other.
             if sm2sig_set_mdname(psm2ctx, mdname) == 0 {
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-                drop(OwnedBuf::adopt_plain(mdname.cast::<c_uchar>(), FILE, 496));
+                drop(OwnedBuf::adopt_plain(
+                    mdname.cast::<c_uchar>(),
+                    FILE_SEAM,
+                    496,
+                ));
                 return 0;
             }
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            drop(OwnedBuf::adopt_plain(mdname.cast::<c_uchar>(), FILE, 498));
+            drop(OwnedBuf::adopt_plain(
+                mdname.cast::<c_uchar>(),
+                FILE_SEAM,
+                498,
+            ));
         }
 
         1
@@ -1047,6 +1056,7 @@ unsafe extern "C" fn sm2sig_settable_ctx_md_params(vpsm2ctx: *mut c_void) -> *co
 
 /// The unit's own `__FILE__` — the bare build-relative path (D235's finding).
 const FILE: *const c_char = c"providers/implementations/signature/sm2_sig.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/signature/sm2_sig.c");
 
 /// `const OSSL_DISPATCH ossl_sm2_signature_functions[]` — `sm2_sig.c:550-585`.
 pub(crate) static SM2_SIGNATURE_FUNCTIONS: [OsslDispatch; 22] = [

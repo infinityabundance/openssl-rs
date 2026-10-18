@@ -96,6 +96,7 @@ use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::init::OPENSSL_INIT_BASE_ONLY;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strlcpy};
@@ -117,6 +118,7 @@ use crate::runtime::time::TimeT;
 
 /// `crypto/rand/rand_lib.c`, as the authority's compiler spelled it.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c");
 // `FILE_METH` is **not** declared: `rand_meth.c` is not a separate translation unit in this crate
 // (D312) -- `ossl_rand_meth`'s callbacks are `drbg_seed`/`drbg_bytes`/`drbg_add`/`drbg_status`,
 // which `rand_lib.c`'s own transcription carries. `FILE_RANDFILE` is not declared either: every
@@ -327,33 +329,37 @@ unsafe impl CtxDestroy for RandGlobal {
             EVP_RAND_CTX_free((*ptr).seed);
             drop(OwnedStr::adopt(
                 (*ptr).random_provider_name,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_PROVIDER_NAME,
             ));
-            drop(OwnedStr::adopt((*ptr).rng_name, FILE, L_CTX_FREE_RNG_NAME));
+            drop(OwnedStr::adopt(
+                (*ptr).rng_name,
+                FILE_SEAM,
+                L_CTX_FREE_RNG_NAME,
+            ));
             drop(OwnedStr::adopt(
                 (*ptr).rng_cipher,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_RNG_CIPHER,
             ));
             drop(OwnedStr::adopt(
                 (*ptr).rng_digest,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_RNG_DIGEST,
             ));
             drop(OwnedStr::adopt(
                 (*ptr).rng_propq,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_RNG_PROPQ,
             ));
             drop(OwnedStr::adopt(
                 (*ptr).seed_name,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_SEED_NAME,
             ));
             drop(OwnedStr::adopt(
                 (*ptr).seed_propq,
-                FILE,
+                FILE_SEAM,
                 L_CTX_FREE_SEED_PROPQ,
             ));
         }
@@ -424,7 +430,7 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
     let name = unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),
-            FILE,
+            FILE_SEAM,
             L_CTX_ERR_PROVIDER_NAME,
         )
     };
@@ -456,7 +462,7 @@ pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
     // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly
     // once, here; `Drop` runs the authority's own free body and its single block release.
     drop(unsafe {
-        OwnedCtx::<RandGlobal>::from_raw_at(vdgbl.cast::<RandGlobal>(), FILE, L_CTX_FREE)
+        OwnedCtx::<RandGlobal>::from_raw_at(vdgbl.cast::<RandGlobal>(), FILE_SEAM, L_CTX_FREE)
     });
 }
 
@@ -1594,7 +1600,7 @@ unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
         // SAFETY: `s` is NUL-terminated per the contract.
         let dup = unsafe { CRYPTO_strdup(s, FILE, L_RANDOM_SET_STRING_DUP) };
         // SAFETY: `dup` is this call's own `CRYPTO_strdup` answer or NULL.
-        match unsafe { OwnedStr::adopt(dup, FILE, L_RANDOM_SET_STRING_FREE) } {
+        match unsafe { OwnedStr::adopt(dup, FILE_SEAM, L_RANDOM_SET_STRING_FREE) } {
             // A failed strdup leaves the slot as it was, which is the authority's early return.
             None => return 0,
             Some(dup) => Some(dup),
@@ -1602,7 +1608,7 @@ unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
     };
     // SAFETY: `p` is a live slot holding NULL or this module's own `CRYPTO_strdup` block; the
     // seam performs the authority's own plain release.
-    drop(unsafe { OwnedStr::adopt(*p, FILE, L_RANDOM_SET_STRING_FREE) });
+    drop(unsafe { OwnedStr::adopt(*p, FILE_SEAM, L_RANDOM_SET_STRING_FREE) });
     // SAFETY: `p` is live per the contract.
     unsafe { *p = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw) };
     1
@@ -1850,12 +1856,12 @@ unsafe fn set_random_provider_name(dgbl: *mut RandGlobal, name: *const c_char) -
     }
     // SAFETY: `existing` is NULL or this field's own `CRYPTO_strdup` block; the seam performs
     // the authority's own plain release.
-    drop(unsafe { OwnedStr::adopt(existing, FILE, L_PROVIDER_NAME_DUP) });
+    drop(unsafe { OwnedStr::adopt(existing, FILE_SEAM, L_PROVIDER_NAME_DUP) });
     // SAFETY: `name` is NUL-terminated per the contract.
     let fresh = unsafe {
         OwnedStr::adopt(
             CRYPTO_strdup(name, FILE, L_PROVIDER_NAME_DUP),
-            FILE,
+            FILE_SEAM,
             L_PROVIDER_NAME_DUP,
         )
     };
@@ -1884,7 +1890,7 @@ pub unsafe extern "C" fn RAND_set1_random_provider(
         unsafe {
             drop(OwnedStr::adopt(
                 (*dgbl).random_provider_name,
-                FILE,
+                FILE_SEAM,
                 L_PROVIDER_NAME_DUP,
             ));
             (*dgbl).random_provider_name = ptr::null_mut();

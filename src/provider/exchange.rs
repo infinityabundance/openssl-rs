@@ -67,6 +67,7 @@ use crate::provider::keymgmt::{ossl_kdf_data_free, ossl_kdf_data_up_ref, KdfData
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 // ---------------------------------------------------------------------------------------------
@@ -607,6 +608,7 @@ const DH_EXCH_NAME_SIZE: usize = 80;
 
 /// `FILE_DH_EXCH` — the generated unit's own `__FILE__`, which carries no source-tree prefix.
 const FILE_DH_EXCH: *const c_char = c"providers/implementations/exchange/dh_exch.c".as_ptr();
+const FILE_DH_EXCH_SEAM: SeamFile = SeamFile::new(c"providers/implementations/exchange/dh_exch.c");
 
 /// `enum kdf_type` — `dh_exch.c:57-60`.
 const PROV_DH_KDF_NONE: c_int = 0;
@@ -829,7 +831,7 @@ unsafe fn dh_X9_42_kdf_derive(
         // allocator seam at `stmplen`; its release is the authority's cleansing
         // `CRYPTO_secure_clear_free`, run by `Drop` at the authority's own site.
         // SAFETY: `stmplen` is the size the previous call measured.
-        let Some(stmp) = OwnedBuf::new_secure_cleansed(stmplen, FILE_DH_EXCH, 239) else {
+        let Some(stmp) = OwnedBuf::new_secure_cleansed(stmplen, FILE_DH_EXCH_SEAM, 239) else {
             return 0;
         };
         if dh_plain_derive(vpdhctx, stmp.as_ptr(), &mut stmplen, stmplen, 1) == 0 {
@@ -900,7 +902,7 @@ unsafe extern "C" fn dh_freectx(vpdhctx: *mut c_void) {
     unsafe {
         drop(OwnedBuf::adopt_plain(
             (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
-            FILE_DH_EXCH,
+            FILE_DH_EXCH_SEAM,
             286,
         ));
         DH_free((*pdhctx).dh);
@@ -909,7 +911,7 @@ unsafe extern "C" fn dh_freectx(vpdhctx: *mut c_void) {
         drop(OwnedBuf::adopt_cleansed(
             (*pdhctx).kdf_ukm.cast::<c_uchar>(),
             (*pdhctx).kdf_ukmlen,
-            FILE_DH_EXCH,
+            FILE_DH_EXCH_SEAM,
             290,
         ));
         CRYPTO_free(pdhctx.cast(), FILE_DH_EXCH, 292);
@@ -973,7 +975,7 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
                 )
                 .cast::<c_uchar>(),
                 (*srcctx).kdf_ukmlen,
-                FILE_DH_EXCH,
+                FILE_DH_EXCH_SEAM,
                 331,
             );
             let Some(ukm) = ukm else {
@@ -986,7 +988,7 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
         if !(*srcctx).kdf_cekalg.is_null() {
             let Some(cekalg) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*srcctx).kdf_cekalg, FILE_DH_EXCH, 338).cast::<c_uchar>(),
-                FILE_DH_EXCH,
+                FILE_DH_EXCH_SEAM,
                 338,
             ) else {
                 dh_freectx(dstctx.cast());
@@ -1181,7 +1183,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
 
             drop(OwnedBuf::adopt_plain(
                 (*pdhctx).kdf_ukm.cast::<c_uchar>(),
-                FILE_DH_EXCH,
+                FILE_DH_EXCH_SEAM,
                 435,
             ));
             (*pdhctx).kdf_ukm = ptr::null_mut();
@@ -1196,7 +1198,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
                 let ukm = OwnedBuf::adopt_cleansed(
                     tmp_ukm.cast::<c_uchar>(),
                     tmp_ukmlen,
-                    FILE_DH_EXCH,
+                    FILE_DH_EXCH_SEAM,
                     435,
                 );
                 (*pdhctx).kdf_ukm = ukm.map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
@@ -1214,7 +1216,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
         if !p.cekalg.is_null() {
             drop(OwnedBuf::adopt_plain(
                 (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
-                FILE_DH_EXCH,
+                FILE_DH_EXCH_SEAM,
                 456,
             ));
             (*pdhctx).kdf_cekalg = ptr::null_mut();
@@ -1225,7 +1227,7 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
                 }
                 let Some(cekalg) = OwnedBuf::adopt_plain(
                     CRYPTO_strdup(name.as_ptr(), FILE_DH_EXCH, 461).cast::<c_uchar>(),
-                    FILE_DH_EXCH,
+                    FILE_DH_EXCH_SEAM,
                     461,
                 ) else {
                     return 0;

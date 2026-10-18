@@ -138,6 +138,7 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free, BIO_write, Bio};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_memdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_length, OBJ_nid2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::slh_dsa::key::{
@@ -363,7 +364,7 @@ unsafe fn key_to_p8info(
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
         // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
         // it.
-        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
         // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
@@ -496,7 +497,7 @@ unsafe fn key_to_pubkey(
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
         // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
         // it.
-        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
         // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
@@ -820,7 +821,7 @@ unsafe extern "C" fn key_to_type_specific_der_bio(
 
     // SAFETY: `k2d` succeeded, so `der` is a live block it allocated through the seam and no other
     // owner holds it.
-    let der = unsafe { OwnedBuf::adopt_plain_nullable(der, ptr::null(), 0) };
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
     // SAFETY: `out` is live and `der` is `derlen` readable bytes.
     let ret = unsafe { BIO_write(out, der.as_ptr().cast::<c_void>(), derlen) };
     // `der` is released by its `Drop` at this unit's own `(NULL, 0)`.
@@ -1702,7 +1703,8 @@ unsafe extern "C" fn prepare_rsa_params(
                     }
                 } else {
                     // SAFETY: `str_sz` is the length the first pass measured.
-                    str = OwnedBuf::new_plain_released(str_sz, ptr::null(), 0, ptr::null(), 0);
+                    str =
+                        OwnedBuf::new_plain_released(str_sz, SeamFile::NULL, 0, SeamFile::NULL, 0);
                     let init_ok = match str.as_ref() {
                         Some(buf) => {
                             // SAFETY: `pkt` is live, `buf` is `str_sz` writable bytes.

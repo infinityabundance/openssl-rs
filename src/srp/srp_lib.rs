@@ -49,6 +49,7 @@ use crate::runtime::bio::sys::{strcmp, strlen};
 use crate::runtime::owned_buf::OwnedBuf;
 
 use super::SrpGN;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &CStr = c"crypto/srp/srp_lib.c";
@@ -121,9 +122,9 @@ unsafe fn srp_Calc_xy(
         // The allocation is `numN * 2` bytes, the authority's `OPENSSL_malloc_array`.
         let Some(buf) = OwnedBuf::new_plain_released(
             (numN as usize) * 2,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_MALLOC_TMP,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_FREE_TMP,
         ) else {
             break 'done;
@@ -390,9 +391,9 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
         // SAFETY: `s` is NULL or live; the allocation is `BN_num_bytes(s)` bytes.
         let Some(buf) = OwnedBuf::new_plain_released(
             unsafe { bn_num_bytes(s) } as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_MALLOC_CS,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             LINE_FREE_CS,
         ) else {
             break 'done;

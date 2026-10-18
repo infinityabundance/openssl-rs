@@ -79,6 +79,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
@@ -148,6 +149,8 @@ const OSSL_PKEY_PARAM_DHKEM_IKM: *const c_char = c"dhkem-ikm".as_ptr();
 /// The generated unit's own `__FILE__`. `ecx_kmgmt.c.in` is `.c.in`-generated, so it is the bare
 /// build-relative path.
 const FILE_ECX_KMGMT: *const c_char = c"providers/implementations/keymgmt/ecx_kmgmt.c".as_ptr();
+const FILE_ECX_KMGMT_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/keymgmt/ecx_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -923,13 +926,13 @@ unsafe fn set_property_query(ecxkey: *mut EcxKey, propq: *const c_char) -> c_int
     unsafe {
         drop(OwnedBuf::adopt_plain(
             (*ecxkey).propq.cast(),
-            FILE_ECX_KMGMT,
+            FILE_ECX_KMGMT_SEAM,
             848,
         ));
         (*ecxkey).propq = ptr::null_mut();
         if !propq.is_null() {
             // SAFETY: `propq` is NUL-terminated per the contract.
-            let Some(buf) = OwnedBuf::new_strdup(propq, FILE_ECX_KMGMT, 851) else {
+            let Some(buf) = OwnedBuf::new_strdup(propq, FILE_ECX_KMGMT_SEAM, 851) else {
                 return 0;
             };
             (*ecxkey).propq = buf.into_raw().cast();
@@ -1007,7 +1010,7 @@ unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) 
             drop(OwnedBuf::adopt_cleansed(
                 (*ecxkey).privkey.cast(),
                 (*ecxkey).keylen,
-                FILE_ECX_KMGMT,
+                FILE_ECX_KMGMT_SEAM,
                 930,
             ));
             (*ecxkey).privkey = ptr::null_mut();
@@ -1291,12 +1294,13 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
             }
             drop(OwnedBuf::adopt_plain(
                 (*gctx).propq.cast(),
-                FILE_ECX_KMGMT,
+                FILE_ECX_KMGMT_SEAM,
                 1152,
             ));
             (*gctx).propq = ptr::null_mut();
             // SAFETY: `p.kdfpropq`'s UTF8 value is NUL-terminated.
-            let Some(buf) = OwnedBuf::new_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT, 1153)
+            let Some(buf) =
+                OwnedBuf::new_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT_SEAM, 1153)
             else {
                 return 0;
             };
@@ -1307,7 +1311,7 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
             // Release the member's previous block, then let the helper write the replacement.
             drop(OwnedBuf::adopt_plain(
                 (*gctx).dhkem_ikm.cast(),
-                FILE_ECX_KMGMT,
+                FILE_ECX_KMGMT_SEAM,
                 1160,
             ));
             (*gctx).dhkem_ikm = ptr::null_mut();

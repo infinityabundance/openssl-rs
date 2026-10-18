@@ -52,6 +52,7 @@ use super::adrs::SLH_ADRS_TYPE_FORS_TREE;
 use super::fors::{ossl_slh_fors_pk_from_sig, ossl_slh_fors_sign};
 use super::hypertree::{ossl_slh_ht_sign, ossl_slh_ht_verify};
 use super::{SlhDsaHashCtx, SlhDsaKey, SLH_DSA_MAX_CONTEXT_STRING_LEN, SLH_MAX_N};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `SLH_MAX_M` — `slh_dsa.c:17`, the largest `H_MSG` output (see `slh_params.c`).
 const SLH_MAX_M: usize = 49;
@@ -485,7 +486,7 @@ unsafe fn msg_encode(
     } else {
         Some(OwnedBuf::new_zeroed_cleansed_at(
             encoded_len,
-            FILE,
+            FILE_SEAM,
             LINE_MSG_ENCODE,
             LINE_CLEAR_FREE,
         )?)
@@ -525,6 +526,7 @@ unsafe fn msg_encode(
 
 /// The unit's own `__FILE__` — `slh_dsa.c` is a plain `.c`.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c");
 /// `slh_dsa.c:267`, the `OPENSSL_zalloc(encoded_len)` in `msg_encode`.
 const LINE_MSG_ENCODE: c_int = 267;
 /// `slh_dsa.c:309`/`:339`, the two `OPENSSL_clear_free(m, m_len)` call sites.

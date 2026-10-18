@@ -49,6 +49,7 @@ use crate::evp::signature::{EVP_SIGNATURE_fetch, EVP_SIGNATURE_free};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::comp::{COMP_get_name, COMP_get_type, CompMethod};
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -1218,7 +1219,8 @@ pub unsafe extern "C" fn SSL_CIPHER_description(
         if out.is_null() {
             out_len = 128;
             // The authority's own `CRYPTO_malloc(128, FILE, 1683)`.
-            let Some(desc) = OwnedBuf::new_plain_released(128, FILE, 1683, FILE, 1683) else {
+            let Some(desc) = OwnedBuf::new_plain_released(128, FILE_SEAM, 1683, FILE_SEAM, 1683)
+            else {
                 return ptr::null_mut();
             };
             out = desc.as_ptr().cast::<c_char>();
@@ -1721,7 +1723,8 @@ pub unsafe extern "C" fn SSL_COMP_add_compression_method(id: c_int, cm: *mut Com
         }
         // The authority's own `CRYPTO_zalloc` (`:2037`); the owner hands the block to the stack
         // below.
-        let Some(comp) = OwnedBuf::new_zeroed(core::mem::size_of::<SslComp>(), FILE, 2037) else {
+        let Some(comp) = OwnedBuf::new_zeroed(core::mem::size_of::<SslComp>(), FILE_SEAM, 2037)
+        else {
             return 1;
         };
         // The authority sets only `comp->id` here (`ssl_ciph.c:2041`); `name`/`method` are left
@@ -1779,4 +1782,4 @@ pub unsafe extern "C" fn SSL_COMP_get_id(comp: *const SslComp) -> c_int {
 }
 
 /// The file name the authority's `OPENSSL_malloc`/`OPENSSL_free` sites carry.
-const FILE: *const c_char = c"ssl_ciph.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl_ciph.c");

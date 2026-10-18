@@ -65,6 +65,7 @@ use crate::txt_db::{TXT_DB_free, TXT_DB_read, TxtDb};
 
 use super::srp_lib::{SRP_Calc_x_ex, SRP_get_default_gN};
 use super::{SrpGN, SrpGNCache, SrpUserPwd, SrpVbase};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &CStr = c"crypto/srp/srp_vfy.c";
@@ -329,17 +330,17 @@ pub unsafe extern "C" fn SRP_user_pwd_free(user_pwd: *mut SrpUserPwd) {
         BN_clear_free((*user_pwd).v);
         drop(OwnedBuf::adopt_plain_nullable(
             (*user_pwd).id.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             184,
         ));
         drop(OwnedBuf::adopt_plain_nullable(
             (*user_pwd).info.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             185,
         ));
         drop(OwnedBuf::adopt_plain_nullable(
             user_pwd.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             186,
         ));
     }
@@ -353,7 +354,7 @@ pub unsafe extern "C" fn SRP_user_pwd_free(user_pwd: *mut SrpUserPwd) {
 #[no_mangle]
 pub unsafe extern "C" fn SRP_user_pwd_new() -> *mut SrpUserPwd {
     // The allocation is one `SRP_user_pwd`, the authority's `OPENSSL_malloc`, through the seam.
-    let Some(buf) = OwnedBuf::new(size_of::<SrpUserPwd>(), FILE.as_ptr(), 193) else {
+    let Some(buf) = OwnedBuf::new(size_of::<SrpUserPwd>(), SeamFile::new(FILE), 193) else {
         return ptr::null_mut();
     };
     let ret = buf.as_ptr().cast::<SrpUserPwd>();
@@ -406,12 +407,12 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
     unsafe {
         drop(OwnedBuf::adopt_plain_nullable(
             (*vinfo).id.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             214,
         ));
         drop(OwnedBuf::adopt_plain_nullable(
             (*vinfo).info.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             215,
         ));
         (*vinfo).id = ptr::null_mut();
@@ -421,7 +422,7 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
             // on success and is released by `SRP_user_pwd_free` at line 184.
             let id_buf = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup(id, FILE.as_ptr(), 218).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 184,
             );
             (*vinfo).id = id_buf.into_raw().cast::<c_char>();
@@ -434,7 +435,7 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
         }
         let info_buf = OwnedBuf::adopt_plain_nullable(
             CRYPTO_strdup(info, FILE.as_ptr(), 220).cast::<c_uchar>(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             185,
         );
         (*vinfo).info = info_buf.into_raw().cast::<c_char>();
@@ -552,7 +553,7 @@ unsafe fn srp_user_pwd_dup(src: *mut SrpUserPwd) -> *mut SrpUserPwd {
 pub unsafe extern "C" fn SRP_VBASE_new(seed_key: *mut c_char) -> *mut SrpVbase {
     // The allocation is one `SRP_VBASE`, the authority's `OPENSSL_malloc`, through the seam; its
     // `Drop` is the single release of every failure path below.
-    let Some(vb_buf) = OwnedBuf::new(size_of::<SrpVbase>(), FILE.as_ptr(), 279) else {
+    let Some(vb_buf) = OwnedBuf::new(size_of::<SrpVbase>(), SeamFile::new(FILE), 279) else {
         return ptr::null_mut();
     };
     let vb = vb_buf.as_ptr().cast::<SrpVbase>();
@@ -575,7 +576,7 @@ pub unsafe extern "C" fn SRP_VBASE_new(seed_key: *mut c_char) -> *mut SrpVbase {
             // on success (released by `SRP_VBASE_free` at line 307).
             let seed_buf = OwnedBuf::adopt_plain_nullable(
                 CRYPTO_strdup(seed_key, FILE.as_ptr(), 292).cast::<c_uchar>(),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 307,
             );
             (*vb).seed_key = seed_buf.into_raw().cast::<c_char>();
@@ -608,12 +609,12 @@ pub unsafe extern "C" fn SRP_VBASE_free(vb: *mut SrpVbase) {
         OPENSSL_sk_free((*vb).gN_cache);
         drop(OwnedBuf::adopt_plain_nullable(
             (*vb).seed_key.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             307,
         ));
         drop(OwnedBuf::adopt_plain_nullable(
             vb.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             308,
         ));
     }
@@ -698,7 +699,8 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
             if unsafe { **pp.add(DB_SRPTYPE as usize) } == DB_SRP_INDEX {
                 // The object is this frame's until it is inserted; the seam's `Drop` is the
                 // single release of every failure path below (the id first, then the object).
-                let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGN>(), FILE.as_ptr(), 438) else {
+                let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGN>(), SeamFile::new(FILE), 438)
+                else {
                     break 'err;
                 };
                 let gn = gn_buf.as_ptr().cast::<SrpGN>();
@@ -708,7 +710,7 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
                     let buf = OwnedBuf::adopt_plain_nullable(
                         CRYPTO_strdup(*pp.add(DB_SRPID as usize), FILE.as_ptr(), 441)
                             .cast::<c_uchar>(),
-                        FILE.as_ptr(),
+                        SeamFile::new(FILE),
                         498,
                     );
                     (*gn).id = buf.as_ptr().cast::<c_char>();
@@ -834,7 +836,7 @@ unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     let mut tmp = [0u8; MAX_LEN];
     // The object is this frame's until it is handed back; the seam's `Drop` is the single release
     // of every failure path below.
-    let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGNCache>(), FILE.as_ptr(), 315) else {
+    let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGNCache>(), SeamFile::new(FILE), 315) else {
         return ptr::null_mut();
     };
     let newgN = gn_buf.as_ptr().cast::<SrpGNCache>();
@@ -850,7 +852,7 @@ unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     let b64_buf = unsafe {
         let buf = OwnedBuf::adopt_plain_nullable(
             CRYPTO_strdup(ch, FILE.as_ptr(), 324).cast::<c_uchar>(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             330,
         );
         (*newgN).b64_bn = buf.as_ptr().cast::<c_char>();
@@ -889,13 +891,13 @@ unsafe fn SRP_gN_free(gN_cache: *mut SrpGNCache) {
     unsafe {
         drop(OwnedBuf::adopt_plain_nullable(
             (*gN_cache).b64_bn.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             340,
         ));
         BN_free((*gN_cache).bn);
         drop(OwnedBuf::adopt_plain_nullable(
             gN_cache.cast(),
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             342,
         ));
     }
@@ -1260,9 +1262,9 @@ pub unsafe extern "C" fn SRP_create_verifier_ex(
         // `*verifier` below.
         let Some(vf) = OwnedBuf::new_cleansed_released(
             vfsize as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             670,
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         ) else {
             break 'done;
@@ -1279,7 +1281,7 @@ pub unsafe extern "C" fn SRP_create_verifier_ex(
             // authority's own size/`file`/`line` (`OPENSSL_malloc_array`); its release is the
             // authority's plain `OPENSSL_free`, and ownership moves to `*salt` on success.
             let Some(tmp_salt) =
-                OwnedBuf::new((SRP_RANDOM_SALT_LEN as usize) * 2, FILE.as_ptr(), 678)
+                OwnedBuf::new((SRP_RANDOM_SALT_LEN as usize) * 2, SeamFile::new(FILE), 678)
             else {
                 break 'done;
             };

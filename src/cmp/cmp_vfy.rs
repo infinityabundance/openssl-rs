@@ -41,6 +41,7 @@ use crate::runtime::err::{
     raise_site, ERR_add_error_mem_bio, ERR_add_error_txt, ERR_clear_last_mark, ERR_peek_last_error,
     ERR_pop_to_mark, ERR_set_mark,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::t_x509::{ossl_x509_print_ex_brief, OSSL_STACK_OF_X509_free};
@@ -408,7 +409,7 @@ unsafe fn check_name(
     // The string is the printer's own; the handle releases it at the authority's own line for the
     // path that reaches it.
     // SAFETY: `str_` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
-    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), FILE.as_ptr(), 176) };
+    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 176) };
     // SAFETY: both names are live.
     if unsafe { X509_NAME_cmp(actual_name, expect_name) } == 0 {
         if log_success != 0 && !str_.as_ptr().is_null() {
@@ -454,7 +455,7 @@ unsafe fn check_name(
     let str2 = unsafe { X509_NAME_oneline(expect_name, ptr::null_mut(), 0) };
     // The string is the printer's own; the handle is its single release at the authority's own line.
     // SAFETY: `str2` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
-    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), FILE.as_ptr(), 185) };
+    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), SeamFile::new(FILE), 185) };
     if !str2.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str2` is NUL-terminated.
         unsafe {
@@ -507,7 +508,7 @@ unsafe fn check_kid(
     // path that reaches it.
     // SAFETY: `str_` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
     // owns.
-    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), FILE.as_ptr(), 208) };
+    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 208) };
     // SAFETY: both are live.
     if unsafe { ASN1_OCTET_STRING_cmp(ckid, skid) } == 0 {
         if !str_.as_ptr().is_null() {
@@ -551,7 +552,7 @@ unsafe fn check_kid(
     // The string is the helper's own; the handle is its single release at the authority's own line.
     // SAFETY: `str2` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
     // owns.
-    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), FILE.as_ptr(), 217) };
+    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), SeamFile::new(FILE), 217) };
     if !str2.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str2` is NUL-terminated.
         unsafe {
@@ -639,7 +640,8 @@ unsafe fn cert_acceptable(
         // line.
         // SAFETY: `sname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else
         // owns.
-        let sname = unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), FILE.as_ptr(), 256) };
+        let sname =
+            unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), SeamFile::new(FILE), 256) };
         if !sname.as_ptr().is_null() {
             // SAFETY: `ctx` is live; `sname` is NUL-terminated.
             unsafe {
@@ -664,7 +666,8 @@ unsafe fn cert_acceptable(
         // line.
         // SAFETY: `iname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else
         // owns.
-        let iname = unsafe { OwnedBuf::adopt_plain_nullable(iname.cast(), FILE.as_ptr(), 261) };
+        let iname =
+            unsafe { OwnedBuf::adopt_plain_nullable(iname.cast(), SeamFile::new(FILE), 261) };
         if !iname.as_ptr().is_null() {
             // SAFETY: `ctx` is live; `iname` is NUL-terminated.
             unsafe {
@@ -1177,10 +1180,10 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
     let sname = unsafe { X509_NAME_oneline((*sender).d.directoryName, ptr::null_mut(), 0) };
     // The string is the printer's own; the handle is its single release at the authority's own line.
     // SAFETY: `sname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
-    let sname = unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), FILE.as_ptr(), 534) };
+    let sname = unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), SeamFile::new(FILE), 534) };
     let skid_str = if skid.is_null() {
         // SAFETY: the slot takes a NULL block, whose release is the no-op `free(NULL)`.
-        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), 535) }
+        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), 535) }
     } else {
         // SAFETY: `skid` is live.
         let raw = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), skid) };
@@ -1188,7 +1191,7 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
         // line.
         // SAFETY: `raw` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
         // owns.
-        unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), FILE.as_ptr(), 535) }
+        unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 535) }
     };
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).log_cb }.is_some() {
@@ -1485,11 +1488,12 @@ unsafe fn check_transactionID_or_nonce(
         // line.
         // SAFETY: `expected_str` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no
         // one else owns.
-        let expected_str =
-            unsafe { OwnedBuf::adopt_plain_nullable(expected_str.cast(), FILE.as_ptr(), 668) };
+        let expected_str = unsafe {
+            OwnedBuf::adopt_plain_nullable(expected_str.cast(), SeamFile::new(FILE), 668)
+        };
         let actual_str = if actual.is_null() {
             // SAFETY: the slot takes a NULL block, whose release is the no-op `free(NULL)`.
-            unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), FILE.as_ptr(), 669) }
+            unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), 669) }
         } else {
             // SAFETY: `actual` is live.
             let raw = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), actual) };
@@ -1497,7 +1501,7 @@ unsafe fn check_transactionID_or_nonce(
             // own line.
             // SAFETY: `raw` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one
             // else owns.
-            unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), FILE.as_ptr(), 669) }
+            unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 669) }
         };
         // The authority releases both strings at its own `:668`/`:669` sites, in that order.
         drop(expected_str);
@@ -1562,7 +1566,7 @@ pub(crate) unsafe fn ossl_cmp_msg_check_update(
             // own line.
             // SAFETY: `str_` is NULL or a live C string `X509_NAME_oneline` allocated and no one
             // else owns.
-            drop(unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), FILE.as_ptr(), 730) });
+            drop(unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 730) });
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cmp(728, c"ossl_cmp_msg_check_update", 106) };
             return 0;

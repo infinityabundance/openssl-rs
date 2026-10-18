@@ -68,12 +68,14 @@ use crate::runtime::err::{
     ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_OP_ASYM_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_ASYM_CIPHER: c_int = 13;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c");
 /// The buffer size the authority's `ERR_raise_data` messages are formatted into —
 /// `ERR_MAX_DATA_SIZE`, `include/internal/err.h`.
 const ERR_DATA_BUFFER: usize = 1024;
@@ -285,9 +287,12 @@ unsafe extern "C" fn evp_asym_cipher_up_ref(data: *mut c_void) -> c_int {
 /// # Safety
 /// `prov` must be live.
 unsafe fn evp_asym_cipher_new(prov: *mut OsslProvider) -> *mut EvpAsymCipher {
-    let Some(cipher) =
-        OwnedCtx::<EvpAsymCipher>::zalloc_at(FILE, LINE_ZALLOC_CIPHER, FILE, LINE_ZALLOC_CIPHER)
-    else {
+    let Some(cipher) = OwnedCtx::<EvpAsymCipher>::zalloc_at(
+        FILE_SEAM,
+        LINE_ZALLOC_CIPHER,
+        FILE_SEAM,
+        LINE_ZALLOC_CIPHER,
+    ) else {
         return ptr::null_mut();
     };
     // SAFETY: `cipher` is this call's own object and `prov` is live.
@@ -449,7 +454,7 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
     }
     // SAFETY: `cipher` is live and this was its last reference, so no other owner will release it;
     // `Drop` runs the authority's own free body and this is the block's single release.
-    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw_at(cipher, FILE, LINE_FREE_CIPHER) });
+    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw_at(cipher, FILE_SEAM, LINE_FREE_CIPHER) });
 }
 
 /// `int EVP_ASYM_CIPHER_up_ref(EVP_ASYM_CIPHER *cipher)`.

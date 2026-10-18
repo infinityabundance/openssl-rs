@@ -161,14 +161,15 @@ use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 
 /// The generated unit's own `__FILE__`, for `OPENSSL_zalloc`'s allocation attribution.
-const FILE_KDF_LEGACY_KMGMT: *const core::ffi::c_char =
-    c"providers/implementations/keymgmt/kdf_legacy_kmgmt.c".as_ptr();
+const FILE_KDF_LEGACY_KMGMT_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/keymgmt/kdf_legacy_kmgmt.c");
 
 /// `struct kdf_data_st` — `providers/implementations/include/prov/kdfexchange.h:14-17`. A legacy KDF
 /// key-manager handle is nothing but the library context it was created in and a reference count;
@@ -204,9 +205,12 @@ pub unsafe extern "C" fn ossl_kdf_data_new(provctx: *mut c_void) -> *mut KdfData
             return ptr::null_mut();
         }
 
-        let Some(kdfdata) =
-            OwnedCtx::<KdfData>::zalloc_at(FILE_KDF_LEGACY_KMGMT, 0, FILE_KDF_LEGACY_KMGMT, 61)
-        else {
+        let Some(kdfdata) = OwnedCtx::<KdfData>::zalloc_at(
+            FILE_KDF_LEGACY_KMGMT_SEAM,
+            0,
+            FILE_KDF_LEGACY_KMGMT_SEAM,
+            61,
+        ) else {
             return ptr::null_mut();
         };
         let kdfdata_ptr = kdfdata.as_ptr();
@@ -246,7 +250,7 @@ pub unsafe extern "C" fn ossl_kdf_data_free(kdfdata: *mut KdfData) {
     // `CRYPTO_FREE_REF(&kdfdata->refcnt)` is empty on this profile's arm of the header.
     // SAFETY: this is the last reference to the handle; `from_raw` reclaims the block for its
     // single release by `Drop`.
-    drop(unsafe { OwnedCtx::<KdfData>::from_raw_at(kdfdata, FILE_KDF_LEGACY_KMGMT, 61) });
+    drop(unsafe { OwnedCtx::<KdfData>::from_raw_at(kdfdata, FILE_KDF_LEGACY_KMGMT_SEAM, 61) });
 }
 
 /// `int ossl_kdf_data_up_ref(KDF_DATA *kdfdata)` — `kdf_legacy_kmgmt.c:64-80`. The one guard the
@@ -373,6 +377,7 @@ const OSSL_GEN_PARAM_ITERATION: *const c_char = c"iteration".as_ptr();
 
 /// `FILE_DH_KMGMT` — the generated unit's own `__FILE__`.
 const FILE_DH_KMGMT: *const c_char = c"providers/implementations/keymgmt/dh_kmgmt.c".as_ptr();
+const FILE_DH_KMGMT_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/dh_kmgmt.c");
 
 /// `struct dh_gen_ctx` — `dh_kmgmt.c:56-80`. The parameter-generation context, zero-allocated and
 /// filled by `dh_gen_init_base` and the two `*_gen_set_params`; it is opaque in the authority
@@ -1147,7 +1152,7 @@ unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) ->
         drop(OwnedBuf::adopt_cleansed(
             (*gctx).seed,
             (*gctx).seedlen,
-            FILE_DH_KMGMT,
+            FILE_DH_KMGMT_SEAM,
             517,
         ));
         (*gctx).seed = ptr::null_mut();
@@ -1158,7 +1163,7 @@ unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) ->
             let Some(dup) = OwnedBuf::adopt_cleansed(
                 CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast::<u8>(),
                 seedlen,
-                FILE_DH_KMGMT,
+                FILE_DH_KMGMT_SEAM,
                 521,
             ) else {
                 return 0;
@@ -1324,10 +1329,10 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             // The field's previous name is released through its owner at the authority's own site,
             // then the new duplicate is installed (NULL, as the authority leaves it, on a strdup
             // refusal).
-            drop(OwnedStr::adopt((*gctx).mdname, FILE_DH_KMGMT, 635));
+            drop(OwnedStr::adopt((*gctx).mdname, FILE_DH_KMGMT_SEAM, 635));
             (*gctx).mdname = OwnedStr::adopt(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636),
-                FILE_DH_KMGMT,
+                FILE_DH_KMGMT_SEAM,
                 636,
             )
             .map_or(ptr::null_mut(), OwnedStr::into_raw);
@@ -1340,10 +1345,10 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            drop(OwnedStr::adopt((*gctx).mdprops, FILE_DH_KMGMT, 644));
+            drop(OwnedStr::adopt((*gctx).mdprops, FILE_DH_KMGMT_SEAM, 644));
             (*gctx).mdprops = OwnedStr::adopt(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645),
-                FILE_DH_KMGMT,
+                FILE_DH_KMGMT_SEAM,
                 645,
             )
             .map_or(ptr::null_mut(), OwnedStr::into_raw);
@@ -1617,7 +1622,7 @@ unsafe extern "C" fn dh_gen_cleanup(genctx: *mut c_void) {
     // `dh_gen_cleanup` body (the two names and the cleansed seed) and its block release; a NULL
     // answers `None` (no release).
     // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base` and not released.
-    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw_at(gctx, FILE_DH_KMGMT, 828) });
+    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw_at(gctx, FILE_DH_KMGMT_SEAM, 828) });
 }
 
 /// `static void *dh_load(const void *reference, size_t reference_sz)` — `dh_kmgmt.c:831-843`.
