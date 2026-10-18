@@ -2912,14 +2912,31 @@ impl ChainSnapshot {
             // SAFETY: `i` is in bounds.
             let x = unsafe { OPENSSL_sk_value(stack, i) }.cast::<X509>();
             if !x.is_null() {
-                // `X509_up_ref` increments `X509::references` with `wrapping_add` and reports
-                // `i > 1`. A live non-NULL certificate carries at least the chain's reference, so
-                // the increment yields 2.. and the report is non-zero; it can only report 0 at
-                // `i32::MAX` references, a state unreachable in this port because every counted
-                // reference is an owned reference held by this process. The return value is not a
-                // failure channel here; `Drop` releases exactly the references taken below.
+                // The shared refcount protocol reports `0` only if the count cannot be
+                // incremented: a zero/destroying object, or a live count already at
+                // `i32::MAX` (where it leaves the count unchanged instead of wrapping it
+                // into the destroying sentinel). A live certificate from the caller's chain
+                // normally increments successfully, but the snapshot must not keep walking
+                // if one does not: release the references it already took and report the
+                // failure so the walk can take the authority's out-of-memory path.
                 // SAFETY: `x` is a live certificate from the caller's chain.
-                let _ = unsafe { X509_up_ref(x) };
+                if unsafe { X509_up_ref(x) } == 0 {
+                    let mut j: c_int = 0;
+                    while j < i {
+                        // SAFETY: `j` is in bounds of the duplicate just built.
+                        let taken = unsafe { OPENSSL_sk_value(stack, j) }.cast::<X509>();
+                        if !taken.is_null() {
+                            // SAFETY: `taken` is live and `take` acquired exactly one
+                            // reference to it above; this releases that reference.
+                            unsafe { X509_free(taken) };
+                        }
+                        j += 1;
+                    }
+                    // SAFETY: `stack` is this call's own shallow duplicate; the elements'
+                    // references were all released by the loop above.
+                    unsafe { OPENSSL_sk_free(stack) };
+                    return None;
+                }
             }
             i += 1;
         }
@@ -3631,6 +3648,39 @@ mod tests {
             X509_free(first);
             X509_free(second);
             free_blocks(first_ext);
+        }
+    }
+
+    /// A certificate at `i32::MAX` cannot be up-referenced. The snapshot must fail, release
+    /// the references it already took (here the first certificate's), and leave both
+    /// certificates to their original owners without a double free.
+    #[test]
+    fn chain_snapshot_refuses_up_ref_overflow_and_releases_partial_refs() {
+        // SAFETY: every object is live and released before the test ends.
+        unsafe {
+            let first = X509_new();
+            let second = X509_new();
+            assert!(!first.is_null());
+            assert!(!second.is_null());
+            let chain = OPENSSL_sk_new_null();
+            assert!(!chain.is_null());
+            assert_eq!(OPENSSL_sk_push(chain, first.cast::<c_void>()), 1);
+            assert_eq!(OPENSSL_sk_push(chain, second.cast::<c_void>()), 2);
+
+            // The first increment succeeds, the second is refused at `i32::MAX`.
+            (*second).references.store(i32::MAX, Ordering::Release);
+            assert!(ChainSnapshot::take(chain).is_none());
+
+            // `take` released the reference it acquired on `first`; `second` was never
+            // incremented and is still at `i32::MAX`.
+            assert_eq!((*first).references.load(Ordering::Acquire), 1);
+            assert_eq!((*second).references.load(Ordering::Acquire), i32::MAX);
+
+            // Restore a live count and release each certificate exactly once.
+            (*second).references.store(1, Ordering::Release);
+            X509_free(first);
+            X509_free(second);
+            OPENSSL_sk_free(chain);
         }
     }
 

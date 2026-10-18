@@ -42,7 +42,7 @@
 //!     X509_REQ_INFO req_info;     /* signed certificate request data, embedded    */
 //!     X509_ALGOR sig_alg;         /* signature algorithm, embedded                */
 //!     ASN1_BIT_STRING *signature;
-//!     CRYPTO_REF_COUNT references;/* struct { _Atomic int val; } -- modelled c_int */
+//!     CRYPTO_REF_COUNT references;/* struct { _Atomic int val; } -- modelled AtomicI32 */
 //!     CRYPTO_RWLOCK *lock;
 //!     ASN1_OCTET_STRING *distinguishing_id;
 //!     OSSL_LIB_CTX *libctx;
@@ -51,7 +51,8 @@
 //! ```
 //!
 //! `CRYPTO_REF_COUNT` is `struct { _Atomic int val; }` (`include/internal/refcount.h:35-37`), so
-//! its field is `c_int`, exactly as [`crate::x509::x_crl::X509Crl`]'s is. `sig_alg` is embedded
+//! its field is [`AtomicI32`] (four bytes, four-byte aligned, exactly as `c_int`), exactly as
+//! [`crate::x509::x_crl::X509Crl`]'s is. `sig_alg` is embedded
 //! **by value**, as it is in `X509_CRL_INFO`, so it contributes 16 bytes at 56 rather than a
 //! pointer. The sizes and every offset below were read from a measurement program compiled against
 //! the pinned authority's own internal headers (`courts/layout`'s include set): `X509_REQ_INFO` is
@@ -79,6 +80,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
+use core::sync::atomic::AtomicI32;
 
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::i2d::ASN1_item_i2d;
@@ -161,8 +163,9 @@ pub struct X509Req {
     pub(crate) sig_alg: X509Algor,
     /// `ASN1_BIT_STRING *signature` -- the signature over `req_info`.
     pub(crate) signature: *mut Asn1String,
-    /// `CRYPTO_REF_COUNT references` -- `struct { _Atomic int val; }`, so `c_int`.
-    pub(crate) references: c_int,
+    /// `CRYPTO_REF_COUNT references` -- the authority's atomic `int`; [`AtomicI32`] keeps
+    /// the four-byte field at offset 80 while the item layer moves it atomically.
+    pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` -- guards the reference count (type opaque here).
     pub(crate) lock: *mut c_void,
     /// `ASN1_OCTET_STRING *distinguishing_id` -- the authentication stamp, optional.
@@ -178,6 +181,10 @@ pub struct X509Req {
 }
 
 const _: () = {
+    // `AtomicI32` must remain the authority's four-byte `int` so that `ref_offset = 80`
+    // addresses the same bytes for the ASN.1 item layer.
+    assert!(core::mem::size_of::<AtomicI32>() == core::mem::size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(core::mem::size_of::<X509Req>() == 120);
     assert!(core::mem::offset_of!(X509Req, req_info) == 0);
     assert!(core::mem::offset_of!(X509Req, sig_alg) == 56);
