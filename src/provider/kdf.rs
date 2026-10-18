@@ -596,14 +596,19 @@ unsafe impl KdfDestroy for KdfHmacDrbg {
 }
 
 // SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
-// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
-// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block -- plus the
+// matrix a failed derivation may have left (the authority leaks it; see `argon2_release_memory`).
+// (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::new` leans on.
 unsafe impl KdfDestroy for KdfArgon2 {
     const FILE: *const c_char = FILE_ARGON2;
     unsafe fn destroy_body(ptr: *mut KdfArgon2) {
         // SAFETY: `ptr` is a live context per the trait contract; the four buffers are the
         // authority's `kdf_argon2_free` releases, each a clear-free over its own length.
         unsafe {
+            // The matrix is not part of the authority's `*_free` body, but a failed derivation
+            // can leave it live; release it before the members and the enclosing block.
+            argon2_release_memory(ptr);
             if !(*ptr).pwd.is_null() {
                 CRYPTO_clear_free((*ptr).pwd.cast(), (*ptr).pwdlen as usize, FILE_ARGON2, LINE);
             }
@@ -978,14 +983,13 @@ unsafe fn kmac_init(
         }
     }
 
-    if kmac_out_len == 0 {
-        kmac_out_len = derived_key_len;
-    } else if !(kmac_out_len == derived_key_len
-        || kmac_out_len == 20
-        || kmac_out_len == 28
-        || kmac_out_len == 32
-        || kmac_out_len == 48
-        || kmac_out_len == 64)
+    kmac_out_len = sskdf_kmac_alloc_len(kmac_out_len, derived_key_len);
+    if kmac_out_len != derived_key_len
+        && !(kmac_out_len == 20
+            || kmac_out_len == 28
+            || kmac_out_len == 32
+            || kmac_out_len == 48
+            || kmac_out_len == 64)
     {
         return 0;
     }
@@ -1006,6 +1010,20 @@ unsafe fn kmac_init(
         }
     }
     1
+}
+
+/// The length `kmac_init` allocates the KMAC output buffer at: the caller's `kmac_out_len` when
+/// set, otherwise `derived_key_len` (`sskdf.c:189-191`). The authority's defaulting is local to
+/// `kmac_init` (its parameter is by value), so after it returns the caller's `kmac_out_len` is
+/// still zero when the parameter was defaulted. The authority's `end:` label then clear-frees the
+/// buffer with that zero and cleanses nothing; this helper is the length that was actually
+/// allocated, which is what the release here must use.
+fn sskdf_kmac_alloc_len(kmac_out_len: usize, derived_key_len: usize) -> usize {
+    if kmac_out_len == 0 {
+        derived_key_len
+    } else {
+        kmac_out_len
+    }
 }
 
 /// `static int SSKDF_mac_kdm(...)` — `sskdf.c:225-297`.
@@ -1060,7 +1078,12 @@ unsafe fn sskdf_mac_kdm(
         // SAFETY: the locals are this frame's.
         unsafe {
             if !kmac_buffer.is_null() {
-                CRYPTO_clear_free(kmac_buffer.cast(), derived_key_len, FILE_SSKDF, LINE);
+                CRYPTO_clear_free(
+                    kmac_buffer.cast(),
+                    sskdf_kmac_alloc_len(kmac_out_len, derived_key_len),
+                    FILE_SSKDF,
+                    LINE,
+                );
             }
         }
         return 0;
@@ -1073,7 +1096,13 @@ unsafe fn sskdf_mac_kdm(
     if unsafe { EVP_MAC_init(ctx_init, salt, salt_len, ptr::null()) } == 0 {
         // SAFETY: the two locals are this frame's.
         return unsafe {
-            sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr())
+            sskdf_mac_kdm_cleanup(
+                ret,
+                kmac_buffer,
+                kmac_out_len,
+                derived_key_len,
+                mac_buf.as_mut_ptr(),
+            )
         };
     }
 
@@ -1083,7 +1112,13 @@ unsafe fn sskdf_mac_kdm(
     if out_len == 0 || (mac == mac_buf.as_mut_ptr() && out_len > mac_buf.len()) {
         // SAFETY: the two locals are this frame's.
         return unsafe {
-            sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr())
+            sskdf_mac_kdm_cleanup(
+                ret,
+                kmac_buffer,
+                kmac_out_len,
+                derived_key_len,
+                mac_buf.as_mut_ptr(),
+            )
         };
     }
 
@@ -1144,24 +1179,45 @@ unsafe fn sskdf_mac_kdm(
     }
 
     // SAFETY: the two locals are this frame's.
-    unsafe { sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr()) }
+    unsafe {
+        sskdf_mac_kdm_cleanup(
+            ret,
+            kmac_buffer,
+            kmac_out_len,
+            derived_key_len,
+            mac_buf.as_mut_ptr(),
+        )
+    }
 }
 
 /// The `end:` label of `sskdf.c`'s `SSKDF_mac_kdm`: release the KMAC buffer if one was taken,
 /// otherwise cleanse the stack buffer, and answer `ret`.
 ///
+/// §17 divergence: the authority's `end:` label clear-frees `kmac_buffer` with the caller's
+/// `kmac_out_len`, which is still zero when that parameter was defaulted (the defaulting in
+/// `kmac_init` modifies its by-value copy only). That frees the block without cleansing it. Here
+/// the allocation length is computed at the point of use, so the cleanse covers the block that
+/// was allocated.
+///
 /// # Safety
-/// `kmac_buffer` NULL or an allocation this crate owns; `mac_buf` a live 64-byte buffer.
+/// `kmac_buffer` NULL or an allocation this crate owns at `sskdf_kmac_alloc_len(kmac_out_len,
+/// derived_key_len)` bytes; `mac_buf` a live 64-byte buffer.
 unsafe fn sskdf_mac_kdm_cleanup(
     ret: c_int,
     kmac_buffer: *mut u8,
     kmac_out_len: usize,
+    derived_key_len: usize,
     mac_buf: *mut u8,
 ) -> c_int {
     // SAFETY: the two pointers are per the contract.
     unsafe {
         if !kmac_buffer.is_null() {
-            CRYPTO_clear_free(kmac_buffer.cast(), kmac_out_len, FILE_SSKDF, LINE);
+            CRYPTO_clear_free(
+                kmac_buffer.cast(),
+                sskdf_kmac_alloc_len(kmac_out_len, derived_key_len),
+                FILE_SSKDF,
+                LINE,
+            );
         } else {
             cleanse(mac_buf, EVP_MAX_MD_SIZE);
         }
@@ -2844,6 +2900,7 @@ unsafe fn pkcs12kdf_derive(
         let mut b: *mut u8 = ptr::null_mut();
         let mut d: *mut u8 = ptr::null_mut();
         let mut i_buf: *mut u8 = ptr::null_mut();
+        let mut i_buf_len: usize = 0;
         let mut ai: *mut u8 = ptr::null_mut();
         let mut ret: c_int = 0;
         let mut n = n_in;
@@ -2871,6 +2928,7 @@ unsafe fn pkcs12kdf_derive(
                     0
                 };
                 let ilen = slen + plen;
+                i_buf_len = ilen;
                 i_buf = CRYPTO_malloc(ilen, FILE_PKCS12KDF, LINE).cast();
                 if d.is_null() || ai.is_null() || b.is_null() || i_buf.is_null() {
                     break 'end;
@@ -2936,7 +2994,9 @@ unsafe fn pkcs12kdf_derive(
         CRYPTO_free(ai.cast(), FILE_PKCS12KDF, LINE);
         CRYPTO_free(b.cast(), FILE_PKCS12KDF, LINE);
         CRYPTO_free(d.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(i_buf.cast(), FILE_PKCS12KDF, LINE);
+        /* §17 divergence: `i_buf` holds the password/salt concatenation (secret material). The
+         * authority plain-frees it; clear it over the length it was allocated at. */
+        CRYPTO_clear_free(i_buf.cast(), i_buf_len, FILE_PKCS12KDF, LINE);
         EVP_MD_CTX_free(ctx);
         ret
     }
@@ -6931,9 +6991,11 @@ unsafe extern "C" fn kbkdf_free(vctx: *mut c_void) {
     unsafe { drop(OwnedCtx::<Kbkdf>::from_raw(vctx.cast())) };
 }
 
-/// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`. `EVP_MAC_CTX_dup` is called
-/// unconditionally, exactly as the authority does: a NULL `ctx_init` faults on both sides, which
-/// is the authority's own contract (`EVP_MAC_CTX_dup` dereferences its argument).
+/// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`.
+///
+/// The MAC context is duplicated only when the source has one: an un-derived but otherwise
+/// parameterized KBKDF context is validly duplicable, and its duplicate keeps `ctx_init == NULL`.
+/// A non-NULL `ctx_init` that cannot be duplicated refuses the whole duplication.
 ///
 /// # Safety
 /// The dispatch contract.
@@ -6945,14 +7007,19 @@ unsafe extern "C" fn kbkdf_dup(vctx: *mut c_void) -> *mut c_void {
         if dest.is_null() {
             return ptr::null_mut();
         }
-        (*dest).ctx_init = EVP_MAC_CTX_dup((*src).ctx_init);
-        if (*dest).ctx_init.is_null()
-            || ossl_prov_memdup(
-                (*src).ki.cast(),
-                (*src).ki_len,
-                ptr::addr_of_mut!((*dest).ki),
-                ptr::addr_of_mut!((*dest).ki_len),
-            ) == 0
+        if !(*src).ctx_init.is_null() {
+            (*dest).ctx_init = EVP_MAC_CTX_dup((*src).ctx_init);
+            if (*dest).ctx_init.is_null() {
+                kbkdf_free(dest.cast());
+                return ptr::null_mut();
+            }
+        }
+        if ossl_prov_memdup(
+            (*src).ki.cast(),
+            (*src).ki_len,
+            ptr::addr_of_mut!((*dest).ki),
+            ptr::addr_of_mut!((*dest).ki_len),
+        ) == 0
             || ossl_prov_memdup(
                 (*src).label.cast(),
                 (*src).label_len,
@@ -7831,9 +7898,17 @@ unsafe extern "C" fn kdf_scrypt_dup(vctx: *mut c_void) -> *mut c_void {
         if dest.is_null() {
             return ptr::null_mut();
         }
-        if !(*src).sha256.is_null() && EVP_MD_up_ref((*src).sha256) == 0 {
-            kdf_scrypt_free(dest.cast());
-            return ptr::null_mut();
+        if !(*src).sha256.is_null() {
+            if EVP_MD_up_ref((*src).sha256) == 0 {
+                kdf_scrypt_free(dest.cast());
+                return ptr::null_mut();
+            }
+            /* The acquired reference is published on `dest` immediately, so every later failure
+             * (`propq` or either `ossl_prov_memdup`) releases it through `kdf_scrypt_free`.
+             * §17: the authority assigns `dest->sha256 = src->sha256` only after those copies, so
+             * its failure paths leak the up-ref; the fix is a resource-safety improvement and
+             * does not change any successful result. */
+            (*dest).sha256 = (*src).sha256;
         }
         if !(*src).propq.is_null() {
             (*dest).propq = CRYPTO_strdup((*src).propq, FILE_SCRYPT, LINE);
@@ -7862,7 +7937,6 @@ unsafe extern "C" fn kdf_scrypt_dup(vctx: *mut c_void) -> *mut c_void {
         (*dest).r = (*src).r;
         (*dest).p = (*src).p;
         (*dest).maxmem_bytes = (*src).maxmem_bytes;
-        (*dest).sha256 = (*src).sha256;
         dest.cast()
     }
 }
@@ -8500,6 +8574,17 @@ unsafe fn krb5kdf_alg(
             }
 
             if EVP_CIPHER_get_nid(cipher) == NID_des_ede3_cbc && des3_no_fixup == 0 {
+                /* §17 divergence: the authority's `fixup_des3_key` writes a fixed 24 bytes, so an
+                 * `okey_len` below 24 overflows the caller's buffer. That is a latent C overflow,
+                 * not a defined behaviour, and is not reproduced here: refuse the derivation with
+                 * the authority's own failure value (0) instead. The extent is otherwise reachable
+                 * with a variable-key-length 3DES method (the default provider's fixed 24-byte key
+                 * length is refused earlier by `cipher_init`). */
+                if okey_len < 24 {
+                    raise_site(&err_sites::PROV_KRB5KDF_618);
+                    ret = 0;
+                    break 'out;
+                }
                 ret = krb5kdf_fixup_des3_key(okey);
                 if ret == 0 {
                     raise_site(&err_sites::PROV_KRB5KDF_618);
@@ -10428,6 +10513,35 @@ unsafe fn argon2_initialize(ctx: *mut KdfArgon2) -> c_int {
     }
 }
 
+/// Release the Argon2 matrix, exactly as `finalize` does, and clear the member so a second call
+/// is a no-op.
+///
+/// The authority releases the matrix only in `finalize`, so an `initialize`/`fill_memory_blocks`
+/// failure leaves it allocated and neither `reset` nor `free` releases it: that is a leak of
+/// secret-bearing storage on a failure path. This helper is the single release for the matrix on
+/// every path (success, failure, reset and free), and the NULL assignment is what makes the
+/// release exactly once. The clear-free pair matches the authority's `finalize`: the plain
+/// allocator for `ARGON2_D`, the secure one for `ARGON2_I`/`ARGON2_ID`.
+///
+/// # Safety
+/// `ctx` is NULL or a live context; a non-NULL `memory` is a live allocation of
+/// `memory_blocks * ARGON2_BLOCK_SIZE` bytes from the allocator selected by `type_`.
+unsafe fn argon2_release_memory(ctx: *mut KdfArgon2) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ctx.is_null() || (*ctx).memory.is_null() {
+            return;
+        }
+        let len = (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE;
+        if (*ctx).type_ != ARGON2_D {
+            CRYPTO_secure_clear_free((*ctx).memory.cast(), len, FILE_ARGON2, LINE);
+        } else {
+            CRYPTO_clear_free((*ctx).memory.cast(), len, FILE_ARGON2, LINE);
+        }
+        (*ctx).memory = ptr::null_mut();
+    }
+}
+
 /// `static void finalize(const KDF_ARGON2 *ctx, void *out)` — `argon2.c:757-788`.
 ///
 /// XORs the last block of every lane, then folds the result through `blake2b_long` into the
@@ -10476,21 +10590,9 @@ unsafe fn argon2_finalize(ctx: *const KdfArgon2, out: *mut c_void) {
         cleanse(blockhash.v.as_mut_ptr().cast::<u8>(), ARGON2_BLOCK_SIZE);
         cleanse(blockhash_bytes.as_mut_ptr(), ARGON2_BLOCK_SIZE);
 
-        if (*ctx).type_ != ARGON2_D {
-            CRYPTO_secure_clear_free(
-                (*ctx).memory.cast(),
-                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
-                FILE_ARGON2,
-                LINE,
-            );
-        } else {
-            CRYPTO_clear_free(
-                (*ctx).memory.cast(),
-                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
+        // SAFETY: `ctx` is live with an allocated matrix per the contract; the helper clears the
+        // member so the later `reset`/`free` cannot release it a second time.
+        argon2_release_memory(ctx.cast_mut());
     }
 }
 
@@ -10966,10 +11068,16 @@ unsafe extern "C" fn kdf_argon2_derive(
         (*ctx).lane_length = segment_length * ARGON2_SYNC_POINTS;
 
         if argon2_initialize(ctx) != 1 {
+            // The matrix may be NULL (allocation refused) or, defensively, live; release either.
+            argon2_release_memory(ctx);
             return 0;
         }
 
         if fill_memory_blocks(ctx) != 1 {
+            /* The authority returns here without releasing `ctx->memory`, leaking the
+             * secret-bearing matrix and leaving it for `reset`/`free` (which do not release it
+             * either). This is a §17 safety divergence: cleanse and release it exactly once. */
+            argon2_release_memory(ctx);
             return 0;
         }
 
@@ -10990,6 +11098,9 @@ unsafe extern "C" fn kdf_argon2_reset(vctx: *mut c_void) {
     unsafe {
         let type_ = (*ctx).type_;
         let libctx = (*ctx).libctx;
+
+        // A matrix left by a failed derivation (or any earlier path) is released here too.
+        argon2_release_memory(ctx);
 
         EVP_MD_free((*ctx).md);
         EVP_MAC_free((*ctx).mac);
@@ -12385,11 +12496,14 @@ unsafe extern "C" fn pbkdf1_derive_skey(
         if keylen == 0 {
             return ptr::null_mut();
         }
+        /* §17 divergence: the authority releases the derived secret with `OPENSSL_free`. The
+         * key is secret material, so use the clearing release (`OPENSSL_clear_free`) with its
+         * true length; the value, the return and the import call are unchanged. */
         let Some(key) = OwnedBuf::take(
             CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>(),
             keylen,
             FILE_PBKDF1,
-            false,
+            true,
         ) else {
             return ptr::null_mut();
         };
@@ -13248,5 +13362,360 @@ mod tests {
 
         assert_eq!(derived, 12, "the file's derivable cases");
         assert_eq!(refused, 11, "the file's bound cases");
+    }
+
+    /// §17 divergence regression: KRB5KDF with 3DES used to hand `okey` to a fixup that writes a
+    /// fixed 24 bytes. A hand-built variable-key-length method lets the derivation reach that
+    /// point with `okey_len` 16 and 23; the refusal must leave the bytes past `okey_len`
+    /// untouched, and 24 must still derive.
+    #[test]
+    fn krb5kdf_refuses_a_3des_output_shorter_than_the_fixup_extent() {
+        use crate::evp::cipher::{
+            EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EVP_CIPHER_meth_set_do_cipher,
+            EVP_CIPHER_meth_set_init,
+        };
+
+        unsafe extern "C" fn init(
+            _ctx: *mut c_void,
+            _key: *const u8,
+            _iv: *const u8,
+            _enc: c_int,
+        ) -> c_int {
+            1
+        }
+
+        unsafe extern "C" fn do_cipher(
+            _ctx: *mut c_void,
+            out: *mut u8,
+            in_: *const u8,
+            inl: usize,
+        ) -> c_int {
+            for i in 0..inl {
+                // A block-to-block transform that makes successive 3DES rounds distinct, so the
+                // 24-byte fixup does not collapse to a single-DES key and refuse.
+                // SAFETY: the caller's buffer contract covers `inl` readable/writable bytes.
+                unsafe { *out.add(i) = *in_.add(i) ^ 0x5a_u8.wrapping_add(i as u8) };
+            }
+            1
+        }
+
+        // SAFETY: this test owns every object it touches.
+        unsafe {
+            for key_len in [16usize, 23, 24] {
+                let cipher = EVP_CIPHER_meth_new(NID_des_ede3_cbc, 8, key_len as c_int);
+                assert!(!cipher.is_null(), "the method was built");
+                assert_eq!(EVP_CIPHER_meth_set_init(cipher, Some(init)), 1);
+                assert_eq!(EVP_CIPHER_meth_set_do_cipher(cipher, Some(do_cipher)), 1);
+
+                let key = [0x11u8; 24];
+                let constant = [0x02u8; 8];
+                // The tail is the canary: a fixed 24-byte write would change it for 16 and 23.
+                let mut out = [0xAAu8; 48];
+                let ret = krb5kdf_alg(
+                    cipher,
+                    ptr::null_mut(),
+                    key.as_ptr(),
+                    key_len,
+                    constant.as_ptr(),
+                    constant.len(),
+                    out.as_mut_ptr(),
+                    key_len,
+                );
+
+                assert!(
+                    out[key_len..].iter().all(|&b| b == 0xAA),
+                    "okey_len {key_len}: nothing may be written past the output extent"
+                );
+                if key_len < 24 {
+                    assert_eq!(ret, 0, "okey_len {key_len}: refused with the failure value");
+                } else {
+                    assert_eq!(ret, 1, "okey_len 24: the derivation still succeeds");
+                }
+
+                EVP_CIPHER_meth_free(cipher);
+            }
+        }
+    }
+
+    /// `kdf_scrypt_dup` publishes the digest reference it takes on `dest` immediately, so a later
+    /// `propq`/`memdup` failure releases it. `CRYPTO_memdup` refuses `siz >= INT_MAX` before
+    /// reading, which drives that failure deterministically: the test observes the reference
+    /// count return to one instead of leaking the up-ref.
+    #[test]
+    fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
+        use core::sync::atomic::Ordering;
+
+        // SAFETY: this test owns every object it touches.
+        unsafe {
+            let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+            assert!(!md.is_null(), "SHA256 fetches");
+
+            let src = kdf_scrypt_new_inner(ptr::null_mut()).cast::<KdfScrypt>();
+            assert!(!src.is_null(), "a SCRYPT context");
+            (*src).sha256 = md;
+
+            // A one-byte live block with a length `CRYPTO_memdup` refuses before touching it.
+            let salt = CRYPTO_malloc(1, FILE_SCRYPT, LINE).cast::<u8>();
+            assert!(!salt.is_null());
+            (*src).salt = salt;
+            (*src).salt_len = i32::MAX as usize;
+
+            // The method store may already hold references to a fetched digest, so the test
+            // asserts the count is unchanged rather than assuming a particular absolute value.
+            let before = (*md).refcnt.load(Ordering::Acquire);
+            assert!(before >= 1);
+            assert!(
+                kdf_scrypt_dup(src.cast()).is_null(),
+                "the memdup failure refuses the duplicate"
+            );
+            assert_eq!(
+                (*md).refcnt.load(Ordering::Acquire),
+                before,
+                "the duplicate's up-ref was released on the failure path"
+            );
+
+            // `src` owns the fetched digest, so this releases it; no second `EVP_MD_free`.
+            kdf_scrypt_free(src.cast());
+        }
+    }
+
+    /// An un-derived but parameterized KBKDF context is duplicable: the duplicate succeeds with a
+    /// NULL `ctx_init`. When the source has a MAC context, the duplicate owns a distinct one.
+    #[test]
+    fn kbkdf_dup_copies_uninitialised_and_initialised_mac_states() {
+        // SAFETY: this test owns every context it creates.
+        unsafe {
+            let bare = kbkdf_new(ptr::null_mut());
+            assert!(!bare.is_null(), "a KBKDF context");
+            assert!((*bare.cast::<Kbkdf>()).ctx_init.is_null());
+            let bare_dup = kbkdf_dup(bare);
+            assert!(!bare_dup.is_null(), "an uninitialised duplicate succeeds");
+            assert!((*bare_dup.cast::<Kbkdf>()).ctx_init.is_null());
+            kbkdf_free(bare_dup);
+            kbkdf_free(bare);
+
+            let mac = EVP_MAC_fetch(ptr::null_mut(), c"HMAC".as_ptr(), ptr::null());
+            assert!(!mac.is_null(), "HMAC fetches");
+            let macctx = EVP_MAC_CTX_new(mac);
+            assert!(!macctx.is_null(), "an HMAC context");
+            // `EVP_MAC_CTX_new` holds its own method reference.
+            EVP_MAC_free(mac);
+
+            // Initialise the HMAC state so its `dupctx` has a digest context to copy.
+            let mut mac_params = [
+                OSSL_PARAM_construct_utf8_string(
+                    c"digest".as_ptr(),
+                    c"SHA256".as_ptr().cast_mut(),
+                    0,
+                ),
+                OSSL_PARAM_construct_end(),
+            ];
+            assert_ne!(EVP_MAC_CTX_set_params(macctx, mac_params.as_mut_ptr()), 0);
+            let key = [0x33u8; 16];
+            assert_eq!(
+                EVP_MAC_init(macctx, key.as_ptr(), key.len(), ptr::null()),
+                1
+            );
+
+            let src = kbkdf_new(ptr::null_mut()).cast::<Kbkdf>();
+            assert!(!src.is_null());
+            (*src).ctx_init = macctx;
+            let dup = kbkdf_dup(src.cast()).cast::<Kbkdf>();
+            assert!(!dup.is_null(), "an initialised duplicate succeeds");
+            assert!(!(*dup).ctx_init.is_null());
+            assert_ne!(
+                (*dup).ctx_init,
+                (*src).ctx_init,
+                "the duplicate owns a distinct MAC context"
+            );
+            kbkdf_free(dup.cast());
+            kbkdf_free(src.cast());
+        }
+    }
+
+    /// §17 divergence regression: a failed Argon2 fill used to leave the secret matrix allocated.
+    /// `threads == 0` (an internal state the derivation does not otherwise reject) drives
+    /// `fill_memory_blocks`' threaded arm to its `join(NULL)` refusal *after* the matrix exists,
+    /// so the failure path must cleanse/release it and `free` must not release it again.
+    #[test]
+    fn argon2_failed_fill_releases_the_secret_matrix() {
+        // SAFETY: this test owns the context and its matrix.
+        unsafe {
+            let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+            assert!(!ctx.is_null(), "an Argon2d context");
+
+            (*ctx).salt = CRYPTO_zalloc(16, FILE_ARGON2, LINE).cast::<u8>();
+            assert!(!(*ctx).salt.is_null());
+            (*ctx).saltlen = 16;
+            (*ctx).outlen = 32;
+            (*ctx).t_cost = 1;
+            (*ctx).m_cost = 8;
+            (*ctx).lanes = 1;
+            (*ctx).threads = 0;
+
+            let mut out = [0u8; 32];
+            assert_eq!(
+                kdf_argon2_derive(ctx.cast(), out.as_mut_ptr(), out.len(), ptr::null()),
+                0,
+                "the threaded fill refuses an unusable worker count"
+            );
+            assert!(
+                (*ctx).memory.is_null(),
+                "the failure path released and cleared the matrix"
+            );
+
+            // A second release would be a double free; `memory` being NULL makes this a no-op.
+            kdf_argon2_free(ctx.cast());
+        }
+    }
+
+    /// The defaulted KMAC output length is the allocation length, not the caller's zero.
+    #[test]
+    fn sskdf_defaulted_kmac_length_is_the_allocation_length() {
+        assert_eq!(sskdf_kmac_alloc_len(0, 80), 80);
+        assert_eq!(sskdf_kmac_alloc_len(20, 80), 20);
+        assert_eq!(sskdf_kmac_alloc_len(64, 80), 64);
+    }
+
+    /// Allocator-injection probes: the process-global seam is one-way, so each runs alone via
+    /// `scripts/adv-probe.sh` (one process per probe). The ordinary suite reports them ignored.
+    mod adv_probe {
+        use super::*;
+        use crate::ssl::adv_alloc;
+
+        /// The Argon2 matrix is cleansed over its full extent before release -- the canary bytes
+        /// must be zero in the allocator hook -- and a second release is a no-op.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn argon2_matrix_release_cleanses_the_whole_block() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: this probe owns the context and the matrix it installs.
+            unsafe {
+                let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+                assert!(!ctx.is_null());
+                (*ctx).type_ = ARGON2_D;
+                (*ctx).memory_blocks = 4;
+                let len = 4 * ARGON2_BLOCK_SIZE;
+                let matrix = CRYPTO_calloc(4, ARGON2_BLOCK_SIZE, FILE_ARGON2, LINE).cast::<Block>();
+                assert!(!matrix.is_null());
+                // The canary: a cleanse of zero bytes would leave this residue visible.
+                ptr::write_bytes(matrix.cast::<u8>(), 0xA5, len);
+                (*ctx).memory = matrix;
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(len);
+                argon2_release_memory(ctx);
+
+                assert!((*ctx).memory.is_null(), "the member is cleared");
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the matrix was not cleansed over its allocation length"
+                );
+                assert!(!adv_alloc::double_free());
+
+                // Exactly once: the NULL member makes the second call a no-op.
+                argon2_release_memory(ctx);
+                assert!(!adv_alloc::double_free());
+                kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// A defaulted `kmac_out_len` still cleanses the whole `derived_key_len` allocation.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn sskdf_defaulted_kmac_cleanse_uses_the_allocation_length() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            const DERIVED_LEN: usize = 80;
+            // SAFETY: the buffer is allocated through the same seam and released once below.
+            unsafe {
+                let len = sskdf_kmac_alloc_len(0, DERIVED_LEN);
+                assert_eq!(len, DERIVED_LEN);
+                let buf = CRYPTO_zalloc(len, FILE_SSKDF, LINE).cast::<u8>();
+                assert!(!buf.is_null());
+                // Non-zero residue: the hook must see all of it zeroed before the release.
+                ptr::write_bytes(buf, 0x5A, len);
+                let mut mac_buf = [0u8; EVP_MAX_MD_SIZE];
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(len);
+                // The caller's `kmac_out_len` is 0 (defaulted); cleanup must use `DERIVED_LEN`.
+                assert_eq!(
+                    sskdf_mac_kdm_cleanup(1, buf, 0, DERIVED_LEN, mac_buf.as_mut_ptr()),
+                    1
+                );
+
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the defaulted KMAC buffer was not cleansed over its allocation"
+                );
+                assert!(!adv_alloc::double_free());
+            }
+        }
+
+        const PBKDF1_KEY_LEN: usize = 20;
+
+        unsafe extern "C" fn import_and_arm(
+            _provctx: *mut c_void,
+            _selection: c_int,
+            _params: *const OsslParam,
+        ) -> *mut c_void {
+            // The key is dropped immediately after the import returns, with no intervening
+            // release, so arming here observes exactly that release.
+            // SAFETY: `pbkdf1_derive_skey` allocated `PBKDF1_KEY_LEN` bytes and has not released
+            // them at this point.
+            unsafe { adv_alloc::arm_cleansed_free(PBKDF1_KEY_LEN) };
+            core::ptr::NonNull::<u8>::dangling().as_ptr().cast()
+        }
+
+        /// The PBKDF1 `derive_skey` key is secret material: the authority plain-frees it.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn pbkdf1_derived_key_is_cleansed_before_release() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: this probe owns the context, its members and the import result is unused.
+            unsafe {
+                let ctx = pbkdf1_new(ptr::null_mut()).cast::<KdfPbkdf1>();
+                assert!(!ctx.is_null());
+                let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+                assert!(!md.is_null());
+                (*ctx).digest.md = md;
+                (*ctx).digest.alloc_md = md;
+                (*ctx).pass = CRYPTO_zalloc(8, FILE_PBKDF1, LINE).cast::<u8>();
+                (*ctx).salt = CRYPTO_zalloc(8, FILE_PBKDF1, LINE).cast::<u8>();
+                assert!(!(*ctx).pass.is_null() && !(*ctx).salt.is_null());
+                ptr::write_bytes((*ctx).pass, 0x11, 8);
+                ptr::write_bytes((*ctx).salt, 0x22, 8);
+                (*ctx).pass_len = 8;
+                (*ctx).salt_len = 8;
+                (*ctx).iter = 1;
+
+                adv_alloc::reset();
+                let ret = pbkdf1_derive_skey(
+                    ctx.cast(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    Some(import_and_arm),
+                    PBKDF1_KEY_LEN,
+                    ptr::null(),
+                );
+                assert!(!ret.is_null(), "the import ran");
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the derived key was released without being cleansed"
+                );
+                assert!(!adv_alloc::double_free());
+
+                pbkdf1_free(ctx.cast());
+            }
+        }
     }
 }
