@@ -578,6 +578,55 @@ regeneration (BATCH checkpoint after commit).
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M8.json`](atlas-refresh/mechanism-sweep-M8.json).
 
+## 3i. Mechanism-contract sweep M9 — 2026-10-18
+
+**Candidate:** `integrate/safe-c33` source HEAD `92f6bb672` (working tree; M9-D1
+fix not committed). **Level:** FAST, then **BATCH**.
+
+| file | rank | mechanisms | result |
+|---|---:|---|---|
+| `src/store/store_result.rs` | 93 | OB-1 adoption, object-abstraction `set0`/`new_*` ownership, PKCS#12 stack transfer, loader callback contract | no defect |
+| `src/ec/pmeth.rs` | 94 | OB-3 `OwnedCtx<EcPkeyCtx>`, OB-1 cleansed KDF temp, partial-copy cleanup, ctrl ownership | no defect |
+| `src/dsa/ameth.rs` | 95 | `EVP_PKEY_ASN1_METHOD` callbacks, OB-1 plain/cleansed DER owners, PKCS#8/X509 set0 transfer | no defect |
+| `src/evp/keymgmt.rs` | 96 | OB-3 `OwnedCtx`, RC-1 refcount sentinel, provider up-ref order, 22 callback call-throughs | no defect |
+| `src/evp/bio_ok.rs` | 97 | `RawCtx` -> `OwnedCtx` staged construction, plain/cleansed split, record parser bounds | no defect |
+| `src/x509/x509_cmp.rs` | 98 | comparison/fingerprint extents, `X509_chain_up_ref` unwind, `X509_add_cert` ownership | no defect |
+| `src/x509/v3_admis.rs` | 99 | ASN.1 item templates, `set0` replacement ownership, stack destructor thunks | no defect |
+| `src/asn1/der.rs` | 100 | DER length/tag bounds, recursion depth, parser pointer extents, prefix-BIO ownership | **M9-D1 (fixed): prefix BIO leaked** |
+
+**M9-D1 — `src/asn1/der.rs:604-615` (pre-fix, also `:653-656` and
+`:713-718`).** When a sink did not accept `BIO_CTRL_SET_PREFIX`,
+`asn1_print_info` pushed a fresh `BIO_f_prefix()` BIO and later detached it
+with `BIO_pop`, but never released it. The authority's `asn1_print_info`
+calls `BIO_free(bio)` after `BIO_pop` on every exit (`asn1_parse.c:75-85`).
+Each printed ASN.1 element on a plain memory/file BIO therefore leaked one
+BIO and its method reference, without bound under repeated
+`ASN1_parse`/`ASN1_parse_dump`. Severity: **medium (resource leak; not
+UB).** Fix: track the pushed BIO in a frame-local handle and free it after
+the pop on both exits, and free the fresh BIO when `BIO_push` refuses it.
+No allocation coordinate, layout, export or signature changed.
+
+**Skipped to a boundary batch (NOT_RUN):** `src/x509/x509_vpm.rs` (rank 121)
+was inspected and deferred: its writable `X509_VERIFY_PARAM` registry is an
+`AtomicPtr<OpenSslStack>` with unsynchronized sort/find/delete/push
+mutation plus a static `UnsafeCell` table, a shared-mutable-state and
+concurrency boundary, not an ordinary file. The previously deferred
+callback/ownership files remain deferred.
+
+**BATCH:** `cargo fmt --all -- --check` PASS; clippy `--all-targets -D warnings`
+PASS; library serial 1577 passed / 0 failed / 26 ignored; threaded run
+1577 passed / 0 failed / 26 ignored. Focused: `store` 33/0, `ec::pmeth` 2/0,
+`dsa` 35/0 (2 ignored), `evp::keymgmt` 10/0, `evp::bio_ok` 0 tests, `x509` 73/0,
+`asn1` 36/0 (1 ignored).
+
+**Deferred / NOT_RUN:** a targeted leak control for M9-D1 (the ASan venue
+disables leak detection and no in-tree test drives `ASN1_parse_dump`); the
+`x509_vpm` concurrency boundary; independent boundary review; and
+dependency-graph regeneration (BATCH checkpoint after commit).
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M9.json`](atlas-refresh/mechanism-sweep-M9.json).
+
 ## 4. Machine-readable index
 
 `atlas-refresh/perfile-index.json` mirrors table 3 as deterministic JSON:
