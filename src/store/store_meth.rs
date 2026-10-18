@@ -188,6 +188,9 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_up_ref(loader: *mut OsslStoreLoader) 
         if !(*loader).prov.is_null() {
             // The shared protocol refuses a zero, destroying or `i32::MAX` count without
             // changing it.
+            // SAFETY: `loader` is live, this is the provider-loader arm (`prov != NULL`) so
+            // its count is published and positive, and the C-ABI caller holds the reference
+            // this call acts for; the acquired reference is owned once by that caller.
             return crate::runtime::refcount::up_ref(&(*loader).refcnt);
         }
     }
@@ -212,6 +215,8 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
     // SAFETY: `loader` is non-NULL per the guard above.
     unsafe {
         if !(*loader).prov.is_null() {
+            // SAFETY: `loader` is live and this frame owns the reference it releases; on
+            // `Last` it is the unique destructor runner.
             match crate::runtime::refcount::down_ref(&(*loader).refcnt) {
                 crate::runtime::refcount::DownRef::Last => {}
                 // The provider release can run a provider teardown callback; a re-entrant

@@ -309,8 +309,9 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
         }
         // SAFETY: `dso` is live per the contract. The shared gate claims the last reference
         // with the destroying sentinel; `dso_unload` and `finish` are method callbacks and a
-        // re-entrant `DSO_free` from one must not run the teardown a second time.
-        match crate::runtime::refcount::down_ref(unsafe { &(*dso).references }) {
+        // re-entrant `DSO_free` from one must not run the teardown a second time. This frame
+        // owns the reference being released and, on `Last`, is the unique destructor runner.
+        match unsafe { crate::runtime::refcount::down_ref(&(*dso).references) } {
             crate::runtime::refcount::DownRef::Last => {}
             crate::runtime::refcount::DownRef::Remaining => return 1,
             // The authority answers 0 when its down-ref observed an already-zero count.
@@ -376,8 +377,9 @@ pub unsafe extern "C" fn DSO_up_ref(dso: *mut Dso) -> c_int {
             return 0;
         }
         // SAFETY: `dso` is live. The shared protocol takes a relaxed increment on a live
-        // count and refuses a zero, destroying or `i32::MAX` count without changing it.
-        crate::runtime::refcount::up_ref(unsafe { &(*dso).references })
+        // count and refuses a zero, destroying or `i32::MAX` count without changing it. This
+        // call acts for the caller's existing reference and acquires exactly one new one.
+        unsafe { crate::runtime::refcount::up_ref(&(*dso).references) }
     })
 }
 

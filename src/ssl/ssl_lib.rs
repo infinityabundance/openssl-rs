@@ -3053,8 +3053,10 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_up_ref(ctx: *mut SslCtx) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: the caller guarantees `ctx` is live.
-        up_ref(unsafe { &(*ctx).references })
+        // SAFETY: the C-ABI caller guarantees `ctx` is live and holds the reference this
+        // call acts for (a caller obligation, not something this wrapper can check); this
+        // call acquires exactly one new reference for the caller.
+        unsafe { up_ref(&(*ctx).references) }
     })
 }
 
@@ -3077,8 +3079,10 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
         if ctx.is_null() {
             return;
         }
-        // SAFETY: the caller guarantees `ctx` is live.
-        match down_ref(unsafe { &(*ctx).references }) {
+        // SAFETY: the C-ABI caller guarantees `ctx` is live and owns the one reference this
+        // free releases (the caller's obligation); on `Last` this frame is the unique
+        // destructor runner.
+        match unsafe { down_ref(&(*ctx).references) } {
             DownRef::Last => {}
             DownRef::Remaining | DownRef::Retired => return,
         }
@@ -3426,8 +3430,10 @@ pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_up_ref(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: the caller guarantees `s` is live.
-        up_ref(unsafe { &(*s).references })
+        // SAFETY: the C-ABI caller guarantees `s` is live and holds the reference this call
+        // acts for (a caller obligation, not something this wrapper can check); this call
+        // acquires exactly one new reference for the caller.
+        unsafe { up_ref(&(*s).references) }
     })
 }
 
@@ -3441,8 +3447,10 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
         if s.is_null() {
             return;
         }
-        // SAFETY: the caller guarantees `s` is live.
-        match down_ref(unsafe { &(*s).references }) {
+        // SAFETY: the C-ABI caller guarantees `s` is live and owns the one reference this
+        // free releases (the caller's obligation); on `Last` this frame is the unique
+        // destructor runner.
+        match unsafe { down_ref(&(*s).references) } {
             DownRef::Last => {}
             DownRef::Remaining | DownRef::Retired => return,
         }
@@ -12098,8 +12106,15 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
         // from it or from the fresh `SSL_new` it allocates.
         unsafe {
             // If we are not quiescent, just up_ref. The guarded increment refuses a
-            // connection that is already retiring instead of resurrecting it.
+            // connection that is already retiring instead of resurrecting it. The reference
+            // acted for is the C-ABI caller's outstanding `SSL *` reference passed in as
+            // `s`; the caller keeps that reference and must still `SSL_free` it, and it is
+            // not released during this call.
             if SSL_in_init(s) == 0 || SSL_in_before(s) == 0 {
+                // SAFETY: `s` is live per the caller's contract and its count is published
+                // and positive. `SSL_dup` acts for the caller's reference above and acquires
+                // exactly one additional reference, which the caller owns as the returned
+                // handle.
                 if up_ref(&(*s).references) == 0 {
                     return ptr::null_mut();
                 }

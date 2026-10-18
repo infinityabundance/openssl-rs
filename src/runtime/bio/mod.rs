@@ -1048,9 +1048,9 @@ pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
             return 0;
         }
         // SAFETY: `bio` is non-NULL and live; `references` is an atomic owned by
-        // this object. The shared protocol takes a relaxed increment on a live count and
-        // refuses a zero, destroying or `i32::MAX` count without changing it.
-        crate::runtime::refcount::up_ref(unsafe { &(*bio).references })
+        // this object. This call acts for the caller's outstanding reference and acquires
+        // exactly one new reference for the caller.
+        unsafe { crate::runtime::refcount::up_ref(&(*bio).references) }
     })
 }
 
@@ -1079,7 +1079,10 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
         // method's `destroy`, the BIO free callback and `CRYPTO_free_ex_data` can all
         // re-enter `BIO_free`; the sentinel makes that a defined no-op instead of a second
         // teardown of the same block.
-        match crate::runtime::refcount::down_ref(&b.references) {
+        // SAFETY: `bio` is live and this frame owns the caller's one reference, which it
+        // releases here; on `Last` it is the unique destructor runner and must not use the
+        // object after the teardown below.
+        match unsafe { crate::runtime::refcount::down_ref(&b.references) } {
             crate::runtime::refcount::DownRef::Last => {}
             crate::runtime::refcount::DownRef::Remaining => return 1,
             // A zero/negative/destroying count: the authority's `fetch_sub` arm also answers

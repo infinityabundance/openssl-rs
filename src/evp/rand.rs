@@ -684,8 +684,9 @@ pub unsafe extern "C" fn EVP_RAND_up_ref(rand: *mut EvpRand) -> c_int {
     }
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `rand` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*rand).refcnt })
+    // SAFETY: `rand` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*rand).refcnt) }
 }
 
 /// `void EVP_RAND_free(EVP_RAND *rand)`.
@@ -697,8 +698,9 @@ pub unsafe extern "C" fn EVP_RAND_free(rand: *mut EvpRand) {
     if rand.is_null() {
         return;
     }
-    // SAFETY: `rand` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*rand).refcnt }) {
+    // SAFETY: `rand` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*rand).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `EVP_RAND_free` observes the sentinel.
@@ -937,8 +939,9 @@ pub unsafe extern "C" fn EVP_RAND_names_do_all(
 pub unsafe extern "C" fn EVP_RAND_CTX_up_ref(ctx: *mut EvpRandCtx) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `ctx` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*ctx).refcnt })
+    // SAFETY: `ctx` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*ctx).refcnt) }
 }
 
 /// `EVP_RAND_CTX *EVP_RAND_CTX_new(EVP_RAND *rand, EVP_RAND_CTX *parent)`.
@@ -1062,8 +1065,9 @@ pub unsafe extern "C" fn EVP_RAND_CTX_free(ctx: *mut EvpRandCtx) {
     if ctx.is_null() {
         return;
     }
-    // SAFETY: `ctx` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*ctx).refcnt }) {
+    // SAFETY: `ctx` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*ctx).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // The destructor calls the method's provider `freectx` callback; a re-entrant
         // `EVP_RAND_CTX_free` observes the sentinel.
