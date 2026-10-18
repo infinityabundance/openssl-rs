@@ -558,8 +558,15 @@ unsafe fn str_copy(
     }
     // SAFETY: `from` is NUL-terminated per the caller's contract.
     let from_len = unsafe { sys::strlen(from) };
+    // The authority's `len = strlen(from) + 1` is a `size_t`; an unrepresentable
+    // length is treated as an allocation failure rather than wrapping.
+    let Some(alloc_len) = from_len.checked_add(1) else {
+        // SAFETY: `buf` is a live, still-empty `BUF_MEM`.
+        unsafe { BUF_MEM_free(buf) };
+        return 0;
+    };
     // SAFETY: `buf` is live; a failed grow leaves it empty and reports 0.
-    if unsafe { BUF_MEM_grow(buf, from_len + 1) } == 0 {
+    if unsafe { BUF_MEM_grow(buf, alloc_len) } == 0 {
         // SAFETY: `buf` is a live, still-empty `BUF_MEM`.
         unsafe { BUF_MEM_free(buf) };
         return 0;
@@ -693,7 +700,16 @@ unsafe fn str_copy(
                     raise_site(&CONF_DEF_757);
                     bail!();
                 }
-                let newsize = sys::strlen(p) + (*buf).length - ((e as usize) - (from as usize));
+                // The authority's `strlen(p) + buf->length - (e - from)` is `size_t`
+                // arithmetic that wraps on underflow; the wrapped value is then caught by
+                // the `MAX_CONF_VALUE_LENGTH` test, so refuse through that same site.
+                let Some(newsize) = sys::strlen(p)
+                    .checked_add((*buf).length)
+                    .and_then(|total| total.checked_sub((e as usize) - (from as usize)))
+                else {
+                    raise_site(&CONF_DEF_762);
+                    bail!();
+                };
                 if newsize > MAX_CONF_VALUE_LENGTH {
                     raise_site(&CONF_DEF_762);
                     bail!();
@@ -1371,7 +1387,24 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                 let include_path: *mut c_char =
                     if !include_dir.is_null() && unsafe { ossl_is_absolute_path(include) } == 0 {
                         // SAFETY: both are NUL-terminated paths.
-                        let newlen = unsafe { sys::strlen(include_dir) + sys::strlen(include) + 2 };
+                        let Some(newlen) = (unsafe { sys::strlen(include_dir) })
+                            .checked_add(unsafe { sys::strlen(include) })
+                            .and_then(|n| n.checked_add(2))
+                        else {
+                            // An unrepresentable path length is an allocation failure: release
+                            // the `str_copy` buffer and fail the parse, as the `OwnedBuf::new`
+                            // refusal below does.
+                            // SAFETY: `include` is a `str_copy` buffer owned here.
+                            unsafe {
+                                drop(OwnedBuf::adopt_plain_nullable(
+                                    include.cast(),
+                                    SeamFile::NULL,
+                                    0,
+                                ))
+                            };
+                            failed = true;
+                            break 'outer;
+                        };
                         // The joined path is this frame's own until `into_raw` hands it to
                         // `include_path`; the handle's `Drop` is its release on the error below.
                         let Some(joined) = OwnedBuf::new(newlen, SeamFile::NULL, 0) else {
@@ -1846,7 +1879,12 @@ unsafe fn get_next_file(path: *const c_char, dirctx: *mut *mut OpenSslDirCtx) ->
         if !(is_conf || is_cnf) {
             continue;
         }
-        let newlen = pathlen + namelen + 2;
+        // The authority's `pathlen + namelen + 2` is `size_t`; an unrepresentable
+        // length is treated like a name whose file cannot be opened, which its caller
+        // already handles by moving on to the next entry.
+        let Some(newlen) = pathlen.checked_add(namelen).and_then(|n| n.checked_add(2)) else {
+            continue;
+        };
         // SAFETY: `newlen` zeroed bytes.
         let Some(newpath) = OwnedBuf::new_zeroed(newlen, SeamFile::NULL, 0) else {
             break;

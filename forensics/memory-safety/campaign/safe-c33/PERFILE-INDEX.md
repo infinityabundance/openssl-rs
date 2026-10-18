@@ -16,11 +16,12 @@ post-census delta — exactly as it appeared in the former cumulative
 > dependency-closure and independent-evidence gates.
 
 **Campaign progress: 9 of 761 PARTIAL files have full group records; a further
-12 files have mechanism-contract sweeps (batch M1) and 10 files have
-mechanism-contract sweeps (batch M2), neither with full group records.** The
-761 denominator is the `PARTIAL` file population in `ATTRIBUTION.md`; it is not a
+12 files have mechanism-contract sweeps (batch M1), 10 files have
+mechanism-contract sweeps (batch M2) and 11 files have mechanism-contract
+sweeps (batch M3), none with full group records.** The 761 denominator is the
+`PARTIAL` file population in `ATTRIBUTION.md`; it is not a
 count of files that have graduated. The nine full records cover 6,252 production
-unsafe sites in 2,949 groups. The M1 and M2 sweeps are obligation checks over the
+unsafe sites in 2,949 groups. The M1–M3 sweeps are obligation checks over the
 known owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
 
 ## 1. Reusable template
@@ -214,6 +215,66 @@ the exact candidate (BATCH checkpoint after commit). `src/ssl/statem/statem_srvr
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M2.json`](atlas-refresh/mechanism-sweep-M2.json).
+
+## 3c. Mechanism-contract sweep M3 — 2026-10-18
+
+**Source identity:** `integrate/safe-c33` at `d8153a349` plus the uncommitted
+worktree state (the `conf/def.rs` extent-arithmetic repair and the
+`cmp_server.rs` error-path cleanup). The census counts quoted in
+`ATTRIBUTION.md` remain bound to candidate
+`c09eef8b94ce068c92557d9940decf50e8413c8c`; this sweep read HEAD source.
+
+**Scope:** the same mechanism-contract procedure as M1/M2 — classify the
+applicable RC-1 / OB-1 `OwnedBuf` / OB-2 `OwnedStr` / OB-3 `OwnedCtx`–`RawCtx` /
+OB-4 member-slot mechanisms, check caller preconditions and unusual transitions,
+repair genuine defects, run FAST for the changed units — over the next eleven
+ordinary files in the queue (CONF, the X.509 object/store/extension layer, ASN.1
+primitives, the EVP signature method, the CMP server, UI and PKCS#7). This is
+**not** the full per-file `D###` group record: every row remains `CONTRACTED` at
+file level, no row is `INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED`, and the
+full group census for these eleven files is `NOT_RUN` (queued).
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/runtime/conf/def.rs` | OB-1 `OwnedBuf` new/adopt/into_raw, `BUF_MEM` ownership, allocator seam | **M3-D1 fixed (low):** four allocation extents now use checked arithmetic — `strlen(from)+1`, the expansion `newsize = strlen(p)+buf->length-(e-from)`, the joined include path `strlen+strlen+2`, and the directory entry `pathlen+namelen+2`. Ownership, release order and error sites unchanged. |
+| `src/x509/x_all.rs` | ASN.1 stream forwarding, `simple_get_asn1` response BIO | No defect: every face forwards the caller contract; `simple_get_asn1` decodes then `BIO_free`s at `x_all.c:130`. |
+| `src/asn1/prim.rs` | `OwnedBlock` PCTX/SCTX, `ASN1_OBJECT` reuse/free, integer sizing, `a2d_ASN1_OBJECT` heap slot | No defect: the reuse-vs-realloc arm, the conditional `object_free` on failed malloc, and the `ASN1_STRING_set0` handoff match `a_object.c`/`a_int.c`; no added unsafe operation. |
+| `src/x509/x509_lu.rs` | OB-3 `OwnedCtx`/`RawLookup`/`RawStore`, three `CtxDestroy` bodies, RC-1 store refcount, stack ownership | No defect: partial-construction releases match `X509_LOOKUP_new`/`X509_STORE_new`; the destroy bodies never release the enclosing block; `x509_store_add` frees only on a failed push. |
+| `src/evp/signature.rs` | OB-3 `OwnedCtx`/`CtxDestroy`, RC-1, provider callback dispatch | No defect: the zalloc/up-ref failure arm frees at the authority coordinate without assigning `prov`; `EVP_SIGNATURE_free` uses the shared sentinel; callbacks receive a raw object. |
+| `src/x509/v3_crld.rs` | five `#[repr(C)]` item layouts, ADB/templates, `dpn_cb`, `v2i` ownership | No defect: assertion offsets and every template offset/tag/item match `v3_crld.c`; all error tails release `point`/`gen`/`gens` exactly once; `DIST_POINT_set_dpname` reproduces `i ? 0 : 1`. |
+| `src/cmp/cmp_server.rs` | OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy`, application callback reentrancy | **M3-D2 fixed (low):** `process_cert_request` now runs the authority's `err:` tail on the callback-null and `set_option`-failure arms, releasing `si`, the certificate and the two stacks; the pre-callback badPOP return is unchanged. Callbacks remain raw-pointer reentrancy edges. |
+| `src/x509/v3_cpols.rs` | ASN.1 item groups, `policy_section`/`notice_section`/`r2i_certpol` | No defect: every push-failure and parse-failure tail releases the partially built value once, matching `v3_cpols.c`. |
+| `src/ui/ui_lib.rs` | OB-3 `OwnedCtx`/`RawCtx` for `UI`/`UI_STRING`/`UI_METHOD`, OB-2 `OwnedStr` dup prompts, callback phases | No defect: zero-state destroy bodies hold; dup-prompt ownership transfers only on a successful push and is released otherwise; `UI_process` calls the method hooks through raw pointers with no live borrow. |
+| `src/pkcs7/pk7_lib.rs` | ownership transfers, `set0`/`set1`, up-refs, stack pushes, `OwnedCStr` propq | No defect in the checked paths: signer/digest/certificate/CRL/recipient adoption and up-ref-on-success match `pk7_lib.c`; failed pushes release the up-ref. |
+| `src/x509/v3_purp.rs` | OB-2 `OwnedStr`, OB-3 `OwnedCtx`/`RawPurpose`/`CtxDestroy` | No defect in the purpose-row mechanisms: the strdup-into-existing-row error arm leaves the names installed exactly as the authority, and the fresh-row arm releases names and block. The full `ossl_x509v3_cache_extensions` path is not line-audited in this sweep. |
+
+**New unsafe assumptions: none.** The repairs are checked safe arithmetic and an
+error-path restructure; no new `unsafe` operation, adoption, release site,
+allocator coordinate, `#[repr(C)]` layout or exported symbol changed.
+
+**Defects:**
+
+| id | file | severity | class | fix / witness |
+|---|---|---|---|---|
+| M3-D1 | `src/runtime/conf/def.rs` | low (defensive) | four unchecked length sums used as allocation extents (AGENTS.md §3) | `checked_add`/`checked_sub` with the authority's failure semantics (post-fix 563, 706, 1390, 1885); conf load tests + full suite |
+| M3-D2 | `src/cmp/cmp_server.rs` | low (leak / fidelity, not UB) | two post-callback failure arms returned before the authority's `err:` cleanup | labelled reply block breaks to the shared tail (post-fix 607/649/675/703/738); full suite; error-injection witness `NOT_RUN` |
+
+**Gates (final source):** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D warnings`
+PASS; `cargo test --lib -- --test-threads=1` **1571 passed / 0 failed / 26 ignored**;
+`cargo test --lib -- --test-threads=4` **1571 passed / 0 failed / 26 ignored**; no
+affected adversarial probe is defined in the touched units (the `cmp_server`
+zero-state sweep and the CONF load tests ran in the full suite).
+
+**Deferred / NOT_RUN:** full `D###` records for these eleven files; the
+callback-failure error-injection witness; targeted Miri/ASan (BOUNDARY/SEAL);
+dependency-graph regeneration against the exact candidate (BATCH checkpoint after
+commit); `src/ml_dsa/encoders.rs` (rank 43) is **NOT_RUN** because its file-local
+secure-memory `OwnedBuf` (`CRYPTO_secure_malloc`/`CRYPTO_secure_clear_free`) and
+secret-bearing key/signature serialisation are a genuinely new boundary, deferred
+to its own boundary batch.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M3.json`](atlas-refresh/mechanism-sweep-M3.json).
 
 ## 4. Machine-readable index
 
