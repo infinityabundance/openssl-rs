@@ -1,0 +1,116 @@
+{
+  "receipt": "mechanism-sweep-M9",
+  "branch": "integrate/safe-c33",
+  "source_head": "92f6bb672",
+  "worktree": true,
+  "date": "2026-10-18",
+  "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression or hidden obligation); one resource-leak defect repaired",
+  "scope": "mechanism-contract sweep over attribution ranks 93-100 (unattributed-site ranking). Seven files audited clean; src/asn1/der.rs yielded one ownership defect (prefix filter BIO leak, repaired). src/x509/x509_vpm.rs was inspected and deferred as a global-mutable-registry/concurrency boundary (rank 121; not in the 93-100 slice).",
+  "files": [
+    "src/store/store_result.rs",
+    "src/ec/pmeth.rs",
+    "src/dsa/ameth.rs",
+    "src/evp/keymgmt.rs",
+    "src/evp/bio_ok.rs",
+    "src/x509/x509_cmp.rs",
+    "src/x509/v3_admis.rs",
+    "src/asn1/der.rs"
+  ],
+  "files_not_run": [
+    "src/x509/x509_vpm.rs",
+    "src/provider/file_store.rs",
+    "src/runtime/bio/iolib.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_conn.rs",
+    "src/runtime/bio/bss_dgram.rs",
+    "src/runtime/obj.rs",
+    "src/ml_dsa/encoders.rs",
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/statem/statem_srvr.rs",
+    "src/ssl/statem/statem_clnt.rs"
+  ],
+  "defects": [
+    {
+      "id": "M9-D1",
+      "file": "src/asn1/der.rs",
+      "lines_pre_fix": "604-615, 653-656, 713-718",
+      "line_post_fix": 605,
+      "severity": "medium",
+      "class": "ownership release omission (resource leak; not UB)",
+      "description": "asn1_print_info pushed a fresh BIO_f_prefix() BIO when the sink did not accept BIO_CTRL_SET_PREFIX, then detached it with BIO_pop on both the success and error exits without releasing it. The authority's asn1_print_info calls BIO_free(bio) after BIO_pop (asn1_parse.c:75-85). Every printed ASN.1 element whose sink is a plain memory/file BIO therefore leaked one BIO (and its method reference). Repeated ASN1_parse/ASN1_parse_dump calls leak without bound.",
+      "fix": "Track the pushed prefix BIO in a frame-local handle, free it after BIO_pop on both exits, and free the freshly allocated BIO when BIO_push refuses it. Allocation/release coordinates are unchanged (BIO_new/BIO_free are the same calls the authority makes).",
+      "witness": "authority differential by inspection: asn1_parse.c:64-85 err tail calls BIO_free(bio) after BIO_pop(bp). No unit test drives ASN1_parse_dump in-tree, so the repair is code-reviewed rather than runtime-witnessed (recorded as a residual)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [
+    "src/asn1/der.rs: two new crates-seam BIO_free calls (BIO_push failure and post-BIO_pop release), each inside an existing SAFETY-annotated unsafe block; they release this frame's own fresh/pushed BIO."
+  ],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "RC-1 refcount protocol with destroy sentinel and re-entrant free refusal (evp/keymgmt.rs)",
+    "OB-1 OwnedBuf plain/cleansed adoption at authority coordinates (ec/pmeth.rs KDF UKM/temp, dsa/ameth.rs public/private DER)",
+    "OB-3 OwnedCtx/CtxDestroy with zero-validity destroy bodies (ec/pmeth.rs EcPkeyCtx, evp/keymgmt.rs EvpKeyMgmt)",
+    "RawCtx -> OwnedCtx staged construction and distinct plain/cleansed release paths (evp/bio_ok.rs)",
+    "EVP_PKEY_ASN1_METHOD / EVP_KEYMGMT / BIO method callback dispatch contracts, including provider method ownership (dsa/ameth.rs, evp/keymgmt.rs, evp/bio_ok.rs)",
+    "provider fetch/up-ref/export ownership and structural-validation-before-publication (evp/keymgmt.rs)",
+    "PKCS#8/X509 set0 and OSSL_STORE_INFO ownership transfer with authority-order failure tails (store/store_result.rs, dsa/ameth.rs)",
+    "ASN.1 d2i/i2d cursor and destination-extent contracts, plus the parser's length/recursion bounds (x509/v3_admis.rs, asn1/der.rs)"
+  ],
+  "residuals": [
+    "src/x509/x509_vpm.rs: the writable X509_VERIFY_PARAM registry is an AtomicPtr<OpenSslStack> with unsynchronized stack mutation (sort/find/delete/push) and a static UnsafeCell table. It is authority-parity but is a shared-mutable-state/concurrency boundary; deferred to a boundary batch rather than modelled here.",
+    "src/asn1/der.rs: no in-tree unit test calls ASN1_parse/ASN1_parse_dump, so M9-D1 has no runtime leak witness; targeted ASan leak detection and an allocator-hook negative control are NOT_RUN (the ASan venue disables leak detection).",
+    "src/asn1/der.rs: parse2 mirrors the authority's pointer arithmetic for constructed/indefinite values; the 0x80 length-overrun flag from ASN1_get_object is checked before every out-of-extent pointer advance, but no Miri run covers the parser this batch."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1577 passed / 0 failed / 26 ignored; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1577 passed / 0 failed / 26 ignored; no secure-heap isolation failure)",
+    "focused_tests": "PASS (store 33/0; ec::pmeth 2/0; dsa 35/0 with 2 ignored; evp::keymgmt 10/0; evp::bio_ok 0 tests; x509 73/0; asn1 36/0 with 1 ignored)",
+    "affected_adversarial_probes": "NOT_RUN (no phase5 probe runner is wired into scripts/; the repair is output-neutral so the existing ASN1 transcripts are not expected to change)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M9-D1 is a leak, not a Rust UB or ABI defect. The ASan venue disables leak detection and no in-tree test drives ASN1_parse_dump; a dedicated allocator-hook or LeakSanitizer control belongs to the BOUNDARY batch."
+  },
+  "next_queue": {
+    "file": "src/pem/pem_lib.rs",
+    "rank_in_attribution": 101,
+    "unattributed_sites": 136,
+    "then": [
+      "src/property/parse.rs (102, 136)",
+      "src/x509/pcy_tree.rs (103, 135)",
+      "src/x509/x509_acert.rs (104, 134)",
+      "src/ssl/bio_ssl.rs (105, 133; BIO callback boundary, likely NOT_RUN)"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/x509/x509_vpm.rs shared-mutable-param-table concurrency boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "targeted leak control for M9-D1 (allocator hook or LeakSanitizer) and an ASN1_parse/ASN1_parse_dump exercised test",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "src/provider/file_store.rs, src/runtime/bio/{iolib,bss_dgram_pair,bss_conn,bss_dgram}.rs, src/runtime/obj.rs, src/ml_dsa/encoders.rs, src/ssl/ssl_lib.rs, src/ssl/statem/{statem_srvr,statem_clnt}.rs",
+      "status": "NOT_RUN",
+      "reason": "callback/reentrancy and ownership boundaries deferred to a boundary batch",
+      "runs_at": "BOUNDARY"
+    }
+  ]
+}
