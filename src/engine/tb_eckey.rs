@@ -36,7 +36,7 @@ static EC_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 static DUMMY_NID: c_int = 1;
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn ec_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn ec_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(EC_TABLE) as *mut *mut OpenSslLhash
 }
 
