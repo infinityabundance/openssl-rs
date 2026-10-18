@@ -1,0 +1,311 @@
+{
+  "receipt": "boundary-sweep-B1",
+  "date": "2026-10-18",
+  "candidate": {
+    "base_head": "9715fec62",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/provider/file_store.rs",
+      "src/runtime/bio/iolib.rs",
+      "src/runtime/obj.rs",
+      "src/x509/x509_vpm.rs"
+    ]
+  },
+  "stop_status": "NONE",
+  "authority": {
+    "source": "openssl-3.6.4",
+    "abi": "C ABI unchanged; no export, signature, #[repr(C)] layout or CRYPTO_* seam coordinate changed",
+    "external_contracts": [
+      "All entry points are unsafe extern \"C\" or safe functions over private Rust state; no safe Rust caller can reach an unchecked raw operation.",
+      "The process-global registries (OBJ_NAME, X509_VERIFY_PARAM) must not be cleaned up concurrently with a live lookup that is still using a returned borrowed pointer (authority documents these as not thread safe).",
+      "A BIO callback must not free or otherwise invalidate the BIO while a dispatch operation is in progress.",
+      "The OBJ_NAME per-type cmp/hash callbacks must be pure; they run under the registry mutex, as in the authority.",
+      "Default-table rows are const objects; a caller must not const-cast and write them."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B1-FS-1",
+      "file": "src/provider/file_store.rs",
+      "mechanism": "FileCtxSt allocation/release through OwnedCtx + CtxDestroy",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Zero-state destructor correctness rests on the established CtxDestroy obligation (all releases NULL-tolerant); exercised by zero_state_sweep_file_ctx_st."
+      ]
+    },
+    {
+      "id": "B1-FS-2",
+      "file": "src/provider/file_store.rs",
+      "mechanism": "loader callbacks (open/attach/load/eof/close) and object-callback delivery",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The object callback is the store's internal ossl_store_handle_load_result, not application code; application post-process/passphrase callbacks run outside this unit under OSSL_STORE_load's contract.",
+        "OSSL_STORE_load must not be re-entered via OSSL_STORE_close from a callback; authority-wide external precondition."
+      ]
+    },
+    {
+      "id": "B1-FS-3",
+      "file": "src/provider/file_store.rs",
+      "mechanism": "URI/path parsing and fixed two-slot path array",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "X509_NAME_oneline may return NULL on allocation failure and is passed to BIO_snprintf \"%s\"; glibc prints \"(null)\", authority-inherited, not Rust UB."
+      ]
+    },
+    {
+      "id": "B1-BIO-1",
+      "file": "src/runtime/bio/iolib.rs",
+      "mechanism": "bio_call_callback legacy/modern translation; has_callback",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The pre-call passes processed = NULL; the legacy branch dereferences it only on the RETURN leg, and the modern callback contract admits NULL on the pre-call."
+      ]
+    },
+    {
+      "id": "B1-BIO-2",
+      "file": "src/runtime/bio/iolib.rs",
+      "mechanism": "BIO field access across method and callback edges",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D1",
+          "severity": "high (Rust aliasing soundness)",
+          "sites": [
+            "src/runtime/bio/iolib.rs:157",
+            "src/runtime/bio/iolib.rs:296",
+            "src/runtime/bio/iolib.rs:437",
+            "src/runtime/bio/iolib.rs:535",
+            "src/runtime/bio/iolib.rs:612",
+            "src/runtime/bio/iolib.rs:683",
+            "src/runtime/bio/iolib.rs:889",
+            "src/runtime/bio/iolib.rs:957"
+          ],
+          "description": "Each dispatch function formed let b = &mut *bio and then touched the same allocation through the raw bio pointer (has_callback, the method call, the callback) before using b again (init/num_read/num_write). Under Stacked/Tree Borrows the parent raw access invalidates the live &mut, so the later field access is UB.",
+          "repair": "Removed the long-lived &mut; method/init/counter fields are re-read or written through the raw pointer with a SAFETY contract, matching the file's existing BIO_get_line pattern. No ABI or behaviour change."
+        }
+      ],
+      "residuals": [
+        "A callback that frees or invalidates the BIO mid-operation is outside the callback contract; the dispatch layer re-reads fields but cannot make a freed allocation live."
+      ]
+    },
+    {
+      "id": "B1-OBJ-1",
+      "file": "src/runtime/obj.rs",
+      "mechanism": "dynamic ASN1_OBJECT database (OBJ_DB) and NID counter",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "alloc_oid_object narrows data.len() to c_int; the ASN.1 OID content is bounded by the caller's string, and the authority's length field is int, so the truncation is not reachable through the decoder's accepted OID sizes."
+      ]
+    },
+    {
+      "id": "B1-OBJ-2",
+      "file": "src/runtime/obj.rs",
+      "mechanism": "OBJ_NAME registry: add/get/remove/new_index/cleanup; per-type destructor and comparator",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D2",
+          "severity": "medium (non-reentrant lock across application callback)",
+          "sites": [
+            "src/runtime/obj.rs (OBJ_NAME_add/remove/cleanup, pre-fix)"
+          ],
+          "description": "The caller-registered free_func ran while the registry mutex was held. A destructor that re-enters the registry deadlocks; the authority also runs it under its lock.",
+          "repair": "Destructors are resolved when the record leaves the registry and are run after the lock is dropped (or deferred to the end of a live walk)."
+        }
+      ],
+      "residuals": [
+        "A user cmp callback runs under the registry mutex (authority parity). The callback must be pure; re-entry that needs the same mutex deadlocks. No production type registers a custom comparator or hash."
+      ]
+    },
+    {
+      "id": "B1-OBJ-3",
+      "file": "src/runtime/obj.rs",
+      "mechanism": "OBJ_NAME_do_all / do_all_sorted iteration and borrowed pointers",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D3",
+          "severity": "high (use-after-free of callback arguments)",
+          "sites": [
+            "src/runtime/obj.rs (OBJ_NAME_do_all / do_all_sorted, pre-fix)"
+          ],
+          "description": "The walk snapshotted NameRec and released the lock before calling the visitor. A callback that removed/replaced another entry ran that entry's destructor, freeing the name/data pointers still held by the snapshot; the authority instead holds its read lock across the walk (and would deadlock rather than hand out freed pointers).",
+          "repair": "Snapshot + active_walks counter + deferred destructor list, released by a RAII WalkGuard at the end of the last live walk (including on unwind). The lock is never held across a callback, a callback may re-enter the registry, and snapshot pointers stay valid because destruction is deferred.",
+          "divergence": "Destructor timing is deferred to the end of the walk instead of running inside it; observable only through allocator-hook timing. Authority behaviour on re-entrant mutation is a deadlock, so this is a deliberate safety improvement."
+        },
+        {
+          "id": "B1-D4",
+          "severity": "high (self-deadlock; regression introduced and removed within this batch)",
+          "sites": [
+            "src/runtime/obj.rs (read-lock variant, intermediate)"
+          ],
+          "description": "Holding the registry read lock across the visitor deadlocks against the production callback context::namemap::prepopulate_legacy_names, whose get_legacy_* visitors call OBJ_NAME_get (nested read) while concurrent first-use initialization queues a writer.",
+          "repair": "The snapshot + deferred-destructor design above holds no lock across the visitor."
+        }
+      ],
+      "residuals": [
+        "OBJ_NAME_get returns a borrowed data pointer after unlocking; a concurrent remove/cleanup may free it before the caller uses it (authority contract: the caller keeps the entry alive).",
+        "Deferred frees are pinned until the last walk ends; a long-running walk can delay allocator-observable release."
+      ]
+    },
+    {
+      "id": "B1-VPM-1",
+      "file": "src/x509/x509_vpm.rs",
+      "mechanism": "static default_table[] rows",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D5",
+          "severity": "low (representation, not memory corruption)",
+          "sites": [
+            "src/x509/x509_vpm.rs (DefaultTable)"
+          ],
+          "description": "The table was wrapped in UnsafeCell while documented as write-once/read-only, advertising interior mutability the authority's static const does not have.",
+          "repair": "Removed UnsafeCell; the table is a plain static accessed through addr_of! and *const, so a const-cast write faults instead of silently mutating shared verifier state."
+        }
+      ],
+      "residuals": [
+        "A C caller that casts get0/lookup to mutable and writes a default row is outside the authority's const contract."
+      ]
+    },
+    {
+      "id": "B1-VPM-2",
+      "file": "src/x509/x509_vpm.rs",
+      "mechanism": "process-global PARAM_TABLE (AtomicPtr + unsynchronised sk_sort/find/delete/push)",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D6",
+          "severity": "high (Rust data race / use-after-free)",
+          "sites": [
+            "src/x509/x509_vpm.rs:1353-1497 (pre-fix)"
+          ],
+          "description": "The table pointer was an AtomicPtr but the stack it names was sorted, searched, mutated and freed without any lock. Concurrent first-use/verification was a data race, and table_cleanup could free a stack another thread had just loaded.",
+          "repair": "The slot and every stack operation are serialised by a Mutex<ParamTable>; the pointer is never dereferenced outside the guard. Releases that can reach a caller allocator hook run after the guard is dropped."
+        }
+      ],
+      "residuals": [
+        "get0/lookup return pointers into the table after unlocking; table_cleanup must not race a live use (authority documents these entry points as not thread safe). External precondition."
+      ]
+    },
+    {
+      "id": "B1-VPM-3",
+      "file": "src/x509/x509_vpm.rs",
+      "mechanism": "table add0/lookup/get0 ownership and null-key guards",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B1-D7",
+          "severity": "high (out-of-bounds pointer formation)",
+          "sites": [
+            "src/x509/x509_vpm.rs X509_VERIFY_PARAM_get0 (pre-fix)"
+          ],
+          "description": "id < 0 computed default_table_ptr().add(id as usize), forming a pointer before the static array; UB even without a read.",
+          "repair": "A negative id returns NULL."
+        },
+        {
+          "id": "B1-D8",
+          "severity": "medium (NULL dereference in strcmp)",
+          "sites": [
+            "src/x509/x509_vpm.rs X509_VERIFY_PARAM_lookup / add0_table (pre-fix)"
+          ],
+          "description": "A NULL lookup key or an unnamed param reached param_cmp/strcmp(NULL, ...).",
+          "repair": "lookup(NULL) returns NULL; add0_table refuses NULL and unnamed params without transferring ownership."
+        }
+      ],
+      "residuals": [
+        "add0_table still consumes a NID on OBJ_create's collision path (authority parity)."
+      ]
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "focused_tests": [
+        "runtime::bio: 71 passed / 0 failed",
+        "runtime::obj: 16 passed / 0 failed",
+        "x509::x509_vpm: 8 passed / 0 failed"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1581 passed / 0 failed / 26 ignored (267.01s)",
+      "threaded4": "1581 passed / 0 failed / 26 ignored (83.89s)",
+      "probes": "26/26 passed (scripts/adv-probe.sh)"
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B1-1",
+        "class": "registry read-lock re-entrancy deadlock",
+        "control": "cargo test --lib bn::blinding:: -- --test-threads=4 against the intermediate read-lock design: EXIT=124 (hang); against the final design: EXIT=0, 11 passed. The defect class fired before the repair."
+      },
+      {
+        "id": "NC-B1-2",
+        "class": "deferred destructor ordering",
+        "control": "name_do_all_admits_reentry_and_defers_removal: nested OBJ_NAME_get succeeds, nested remove returns 1, destructor count is 0 during the walk, 1 at walk end, 2 after cleanup."
+      },
+      {
+        "id": "NC-B1-3",
+        "class": "destructor outside the registry lock",
+        "control": "name_destructor_runs_outside_the_registry_lock: try_lock succeeds at destructor time and a re-entrant read succeeds; a reintroduced lock fails the assertion instead of hanging."
+      }
+    ],
+    "not_run": [
+      {
+        "id": "NR-B1-1",
+        "control": "ASan pre-fix canary for the do_all snapshot UAF",
+        "gate": "BOUNDARY (ASan venue, temporary pre-fix revert) or SEAL"
+      },
+      {
+        "id": "NR-B1-2",
+        "control": "Miri aliasing around the BIO dispatch and registry types",
+        "gate": "BOUNDARY/SEAL dedicated harness; the court image has no Miri component and the crate executes libc externs"
+      },
+      {
+        "id": "NR-B1-3",
+        "control": "Loom/TSan concurrency model of OBJ_NAME and PARAM_TABLE",
+        "gate": "SEAL (no existing Loom harness; threaded suite is the current control)"
+      }
+    ]
+  },
+  "unsafe_accounting": {
+    "eliminated": [
+      "eight long-lived &mut Bio borrows spanning callbacks/method calls (B1-BIO-2)",
+      "unsynchronised raw stack mutation through AtomicPtr<OpenSslStack> (B1-VPM-2)",
+      "UnsafeCell interior mutability over the const default table (B1-VPM-1)",
+      "out-of-bounds pointer formation for negative table ids (B1-VPM-3)"
+    ],
+    "relocated": [
+      "raw BIO field reads/writes now each carry an explicit validity contract (same raw pointer, no long-lived reference)",
+      "registry mutation and iteration serialised by short-lived mutex guards; release outside the guard",
+      "table slot + stack operations serialised by one mutex"
+    ],
+    "hidden": 0,
+    "new_obligations": [
+      "OBJ_NAME do_all visitors may read and mutate the registry; removals are deferred and destructor timing moves to walk end",
+      "PARAM_TABLE/get0/lookup callers must not race table_cleanup (external, authority parity)"
+    ],
+    "safe_caller_ub": "none known: no safe Rust interface in these files performs an unchecked raw operation, and returned raw pointers require unsafe to dereference"
+  },
+  "residuals_total": 13,
+  "dispositions": {
+    "src/provider/file_store.rs": "CONTRACTED",
+    "src/runtime/bio/iolib.rs": "CONTRACTED",
+    "src/runtime/obj.rs": "CONTRACTED",
+    "src/x509/x509_vpm.rs": "CONTRACTED",
+    "safety_discharged": [],
+    "safe_compatible": []
+  },
+  "next": {
+    "queue": [
+      "src/runtime/bio/bss_dgram_pair.rs (boundary rank 65)",
+      "src/runtime/bio/bss_conn.rs (boundary rank 66)"
+    ],
+    "note": "No fifth file was started; this batch closes boundary sweep B1."
+  }
+}
