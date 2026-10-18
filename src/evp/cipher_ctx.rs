@@ -282,6 +282,12 @@ pub struct EvpCipherCtx {
     /// become an owned Rust block without changing the layout the ABI publishes or the release
     /// coordinate a caller's `CRYPTO_set_mem_functions` hook observes, so it stays a raw pointer
     /// released by the authority's own `CRYPTO_free`/`CRYPTO_clear_free` at those sites.
+    ///
+    /// The allocation provenance and extent come from one of two places: this file's own
+    /// `CRYPTO_zalloc` in `evp_cipher_init_legacy_internal` (where the size is exactly
+    /// `cipher->ctx_size`), or the caller of `EVP_CIPHER_CTX_set_cipher_data` (whose contract
+    /// requires a seam-allocated block of at least that size). Both release sites rely on that
+    /// contract; see the setter's `# Safety` section.
     pub(crate) cipher_data: *mut c_void,
     /// `int final_used`.
     pub(crate) final_used: c_int,
@@ -306,7 +312,10 @@ pub struct EvpCipherCtx {
 // reference and legacy data once (the member tests are the authority's own) and never the enclosing
 // block, which `OwnedCtx` releases; (b) `EvpCipherCtx` is a `#[repr(C)]` record of raw pointers,
 // integers, byte arrays and `usize`s, so an all-zero block is a valid `EvpCipherCtx` the body is
-// sound on.
+// sound on; (c) the `cipher_data` release is sound for every block that can occupy the field: this
+// file installs an exact `ctx_size` `CRYPTO_zalloc` block, and `EVP_CIPHER_CTX_set_cipher_data`'s
+// `# Safety` contract admits only NULL or a seam-allocated block of at least that extent that this
+// context exclusively owns. The boundary, not this destructor, discharges that caller obligation.
 unsafe impl CtxDestroy for EvpCipherCtx {
     const FILE: *const c_char = FILE_ENC;
     const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
@@ -348,6 +357,11 @@ pub extern "C" fn EVP_CIPHER_CTX_new() -> *mut EvpCipherCtx {
 /// The cleanse is the one security-relevant line here: `cipher_data` may hold key schedule
 /// material, and `OPENSSL_free` alone would leave it in the heap.
 ///
+///   * `EVP_CIPHER_CTX_set_cipher_data` may have replaced the block: the caller's contract requires
+///     a seam-allocated block of at least `cipher->ctx_size` bytes that this context exclusively
+///     owns, so the cleanse below covers a valid allocation. A NULL block skips the cleanse and the
+///     `CRYPTO_free` below is the seam's own no-op.
+///
 /// # Safety
 /// `ctx` must be NULL or a live `EvpCipherCtx`.
 #[no_mangle]
@@ -380,13 +394,16 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_reset(ctx: *mut EvpCipherCtx) -> c_int {
             // SAFETY: `cipher` is live.
             let (cipher_data, ctx_size) = unsafe { ((*ctx).cipher_data, (*cipher).ctx_size) };
             if !cipher_data.is_null() && ctx_size != 0 {
-                // SAFETY: `cipher_data` is this context's own block of `ctx_size` bytes.
+                // SAFETY: `cipher_data` is this context's own seam-allocated block of at least
+                // `ctx_size` bytes: either the exact block this file allocated at the legacy init,
+                // or the block `EVP_CIPHER_CTX_set_cipher_data`'s contract admitted.
                 unsafe { crate::runtime::mem::OPENSSL_cleanse(cipher_data, ctx_size as usize) };
             }
         }
         // SAFETY: `ctx` is live.
         let cipher_data = unsafe { (*ctx).cipher_data };
-        // SAFETY: `cipher_data` is NULL or the block `cipher_data` was set from.
+        // SAFETY: `cipher_data` is NULL or the seam-allocated block described above; the free is
+        // the same `CRYPTO_free` seam the authority uses at this line.
         unsafe { CRYPTO_free(cipher_data, FILE_ENC, 76) };
         // `ENGINE_finish(ctx->engine)` follows in the authority under `!OPENSSL_NO_ENGINE`; see
         // the module documentation for why the call is omitted and why that is not observable.
@@ -617,8 +634,40 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_cipher_data(ctx: *const EvpCipherCtx
 /// **Answers the old value**, which is the whole reason it is not a `void` setter: a legacy
 /// implementation that replaces its own data block has to be able to release what it replaced.
 ///
+/// The authority has no size argument and no ownership flag, but `EVP_CIPHER_CTX_reset` treats the
+/// stored pointer as its own:
+///
+/// ```text
+/// OPENSSL_cleanse(ctx->cipher_data, ctx->cipher->ctx_size);   /* when both are non-NULL/non-zero */
+/// OPENSSL_free(ctx->cipher_data);
+/// ```
+///
+/// so the only pointers this setter may accept are blocks the same allocator seam produced, sized
+/// for that release. The man page states the application-facing half of the contract: the data is
+/// "automatically allocated and freed by OpenSSL", a replaced block is returned and "should be
+/// freed through a call to OPENSSL_free()". It does **not** state the extent, and the ABI gives
+/// this function no way to learn it, so the extent remains a caller obligation. This port can
+/// check neither provenance nor extent and does not pretend to; it records the obligation here
+/// (the boundary's contract) and at the release site (`EVP_CIPHER_CTX_reset`).
+///
 /// # Safety
 /// `ctx` must be a live `EvpCipherCtx`.
+///
+/// `cipher_data` must be NULL or a block this context may release:
+///
+///   * **provenance** — allocated by the crate's `CRYPTO_malloc`/`CRYPTO_zalloc` seam (including
+///     any `CRYPTO_set_mem_functions` hooks installed for that seam), never `Box`, `Vec`, a
+///     stack/static object, or memory from an unrelated allocator;
+///   * **extent** — at least `(*ctx).cipher->ctx_size` bytes when the context has a cipher with a
+///     non-zero `ctx_size` (reset cleanses exactly that many bytes); when either is NULL/zero the
+///     cleanse is skipped but the block is still freed, so it must still be a complete allocation
+///     from the seam;
+///   * **exclusivity** — this context is the only owner that will release it, and the caller must
+///     not use it after the call. Ownership of the returned old pointer passes back to the
+///     caller, who may release it with `CRYPTO_free`/`OPENSSL_free`.
+///
+/// A NULL `cipher_data` is valid: it detaches the current block (which is returned) without
+/// transferring a new one.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_CIPHER_CTX_set_cipher_data(
     ctx: *mut EvpCipherCtx,
@@ -1350,6 +1399,12 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_rand_key(
 /// "has never been defined by any built-in cipher", so the branch that consults it is written and
 /// unreachable.
 ///
+/// # Deliberate safety divergence (§17)
+/// The authority dereferences `c->cipher` unconditionally, so a fresh or just-reset context (where
+/// the field is NULL) faults before any check runs. This port refuses that state with 0. A context
+/// with no cipher has no key length to set, so the refusal cannot reject a valid request; it only
+/// replaces the authority's fault.
+///
 /// # Safety
 /// `c` must be a live `EvpCipherCtx`.
 #[no_mangle]
@@ -1359,6 +1414,11 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_key_length(
 ) -> c_int {
     // SAFETY: `c` is live per the contract.
     let cipher = unsafe { (*c).cipher };
+    if cipher.is_null() {
+        // §17: the authority would dereference this NULL; a context with no cipher has no key
+        // length to set.
+        return 0;
+    }
     // SAFETY: `cipher` is live.
     let prov = unsafe { (*cipher).prov };
     if !prov.is_null() {
@@ -1473,6 +1533,20 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_padding(ctx: *mut EvpCipherCtx, pad:
 ///     answers 0, and `EVP_CTRL_AEAD_TLS1_AAD`'s `sz > INT_MAX` answers 0 after a *successful*
 ///     pair of calls.
 ///
+/// # Deliberate safety divergences from the authority (§17)
+///
+/// The authority initialises `size_t sz = arg` and then hands `sz` to the provider as a buffer
+/// length. Five pointer-bearing commands (`randkey`, `tag` in both directions, `tlsivfixed`,
+/// `tlsaad`) have **no negative-length check**, so `arg < 0` becomes a `SIZE_MAX` length and the
+/// provider reads or writes that many bytes through the caller's pointer. Only `mackey` refuses a
+/// negative length (with -1). A negative length is never a valid call, so refusing it here cannot
+/// reject a valid one; it prevents the authority's fault rather than reproducing it.
+///
+/// `EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT` is the other asymmetry: the `_AAD` arm checks
+/// `arg >= sizeof(EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM)` but the `_ENCRYPT` arm dereferences the same
+/// struct without that check. Both arms now refuse an undersized `arg`; again the check only
+/// rejects a call that would have read outside the caller's object.
+///
 /// # Safety
 /// `ctx` must be a live `EvpCipherCtx`; `ptr` must be whatever the command's contract says, and
 /// NULL for the commands that take none.
@@ -1537,6 +1611,12 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     (*ctx).key_len = -1;
                 }
                 EVP_CTRL_RAND_KEY => {
+                    // §17: the authority converts a negative `arg` to `SIZE_MAX` and lets the
+                    // provider write that many random bytes through `ptr`. A negative length is
+                    // not a valid call, so this refusal cannot reject one.
+                    if arg < 0 {
+                        return 0;
+                    }
                     set_params = false;
                     params[0] = OSSL_PARAM_construct_octet_string(c"randkey".as_ptr(), ptr_, sz);
                 }
@@ -1561,6 +1641,10 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     (*ctx).iv_len = -1;
                 }
                 EVP_CTRL_AEAD_SET_IV_FIXED => {
+                    // §17: no negative-length check in the authority; `sz` would be `SIZE_MAX`.
+                    if arg < 0 {
+                        return 0;
+                    }
                     params[0] = OSSL_PARAM_construct_octet_string(c"tlsivfixed".as_ptr(), ptr_, sz);
                 }
                 EVP_CTRL_GCM_IV_GEN => {
@@ -1595,12 +1679,22 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     params[0] = OSSL_PARAM_construct_uint(c"speed".as_ptr(), &mut i);
                 }
                 EVP_CTRL_AEAD_GET_TAG | EVP_CTRL_AEAD_SET_TAG => {
+                    // §17: `GET_TAG` writes and `SET_TAG` reads `sz` bytes through `ptr`; the
+                    // authority has no negative-length check on either arm.
+                    if arg < 0 {
+                        return 0;
+                    }
                     if type_ == EVP_CTRL_AEAD_GET_TAG {
                         set_params = false;
                     }
                     params[0] = OSSL_PARAM_construct_octet_string(c"tag".as_ptr(), ptr_, sz);
                 }
                 EVP_CTRL_AEAD_TLS1_AAD => {
+                    // §17: the provider's AAD arm reads `data_size` bytes; the authority does not
+                    // reject a negative one.
+                    if arg < 0 {
+                        return 0;
+                    }
                     params[0] = OSSL_PARAM_construct_octet_string(c"tlsaad".as_ptr(), ptr_, sz);
                     ret = evp_do_ciph_ctx_setparams(cipher, (*ctx).algctx, params.as_ptr());
                     if ret <= 0 {
@@ -1673,6 +1767,12 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     return packlen as c_int;
                 }
                 EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT => {
+                    // §17: unlike the `_AAD` arm above, the authority's `_ENCRYPT` arm omits the
+                    // size check and then dereferences the struct. Refuse exactly the calls that
+                    // would have read outside it; a valid call passes `sizeof` here.
+                    if arg < core::mem::size_of::<MultiblockParam>() as c_int {
+                        return 0;
+                    }
                     let p = ptr_.cast::<MultiblockParam>();
                     params[0] = OSSL_PARAM_construct_octet_string(
                         c"tls1multi_enc".as_ptr(),
@@ -3524,6 +3624,14 @@ unsafe fn evp_EncryptDecryptUpdate(
         return 0;
     }
 
+    // The authority asserts `bl <= sizeof(ctx->buf)` here (`OPENSSL_assert`, which is fatal in
+    // both debug and release builds). A block size outside that bound would index past `buf` in
+    // the copies below; refuse it instead of reproducing a process abort. The same guard covers
+    // `bl < 1`, which would make `bl - 1` wrap and copy the whole input into `buf`. Every valid
+    // legacy method has block size 1, 8 or 16, so this cannot reject a valid call.
+    if bl < 1 || bl as usize > EVP_MAX_BLOCK_LENGTH {
+        return 0;
+    }
     let mut i = buf_len;
     let mut out = out;
     let mut inl = inl;
@@ -3837,6 +3945,12 @@ pub unsafe extern "C" fn EVP_EncryptFinal_ex(
 
     // SAFETY: `cipher` is live.
     let b = unsafe { (*cipher).block_size } as c_uint;
+    // §17: the authority's `OPENSSL_assert(b <= sizeof(ctx->buf))` aborts; refuse instead. This
+    // also refuses `b == 0`, which the assertion lets through but which cannot describe a block
+    // cipher and which makes the padding count wrap. Valid methods have block size 1, 8 or 16.
+    if b == 0 || b as usize > EVP_MAX_BLOCK_LENGTH {
+        return 0;
+    }
     if b == 1 {
         // SAFETY: `outl` is the caller's slot.
         unsafe { *outl = 0 };
@@ -4035,6 +4149,13 @@ pub unsafe extern "C" fn EVP_DecryptUpdate(
     }
 
     let mut out = out;
+    // §17: the authority asserts `b <= sizeof(ctx->final)` just below (`OPENSSL_assert`, fatal);
+    // the hold-back copies below index `final` by `b`. Refuse instead of aborting. `b == 0` is
+    // already handled by the `b > 1` test that gates the assertion in the authority, but this
+    // check is placed before the first use so no path can index with it.
+    if b as usize > EVP_MAX_BLOCK_LENGTH {
+        return 0;
+    }
     let mut fix_len: c_int;
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).final_used } != 0 {
@@ -4237,6 +4358,11 @@ pub unsafe extern "C" fn EVP_DecryptFinal_ex(
         return 1;
     }
     if b > 1 {
+        // §17: the authority's `OPENSSL_assert(b <= sizeof(ctx->final))` aborts; refuse instead,
+        // before `final_[b - 1]` is read. Valid methods have block size 1, 8 or 16.
+        if b as usize > EVP_MAX_BLOCK_LENGTH {
+            return 0;
+        }
         // SAFETY: `ctx` is live.
         let (buf_len, final_used) = unsafe { ((*ctx).buf_len, (*ctx).final_used) };
         if buf_len != 0 || final_used == 0 {
@@ -4699,6 +4825,212 @@ mod tests {
                 0,
                 "the same refusal as an unknown command, because neither is reached"
             );
+        }
+    }
+
+    /// A provider method for the control tests: all-zero is a valid `EvpCipher` (every pointer is
+    /// NULL, every callback `None`, the atomic is zero), and the provider pointer only has to be
+    /// non-NULL for the provider arm to be selected. The callbacks never dereference it.
+    fn provider_control_cipher() -> EvpCipher {
+        // SAFETY: the all-zero block is a valid `EvpCipher`; the `CtxDestroy` comment in
+        // `evp/cipher.rs` records why.
+        let mut cipher: EvpCipher = unsafe { core::mem::zeroed() };
+        cipher.prov = core::ptr::dangling_mut::<crate::provider::OsslProvider>();
+        cipher.set_ctx_params = Some(fake_set_ctx_params);
+        cipher.get_ctx_params = Some(fake_get_ctx_params);
+        cipher
+    }
+
+    /// Returns 1 and records that it ran by flipping the `bool` the context carries as `algctx`.
+    unsafe extern "C" fn fake_set_ctx_params(
+        _algctx: *mut c_void,
+        _params: *const OsslParam,
+    ) -> c_int {
+        1
+    }
+
+    /// The get side answers the `MULTIBLOCK_ENCRYPT` length parameter with a recognisable value,
+    /// so the test can tell a dispatch from a refusal, and records that it ran.
+    unsafe extern "C" fn fake_get_ctx_params(algctx: *mut c_void, params: *mut OsslParam) -> c_int {
+        // SAFETY: `algctx` is the `bool` a test installed.
+        unsafe {
+            if !algctx.is_null() {
+                *algctx.cast::<bool>() = true;
+            }
+        }
+        // SAFETY: `params` is the ctrl frame's own terminated array; the locate either finds the
+        // entry or answers NULL, and the setter checks its own buffer.
+        unsafe {
+            let p = crate::params::OSSL_PARAM_locate(params, c"tls1multi_enclen".as_ptr());
+            if !p.is_null() {
+                crate::params::OSSL_PARAM_set_size_t(p, 9);
+            }
+        }
+        1
+    }
+
+    /// §17 divergence: the authority turns a negative `arg` into `SIZE_MAX` on these
+    /// pointer-bearing provider arms; each one must refuse before touching `ptr`. `SET_MAC_KEY`
+    /// keeps the authority's distinct -1.
+    #[test]
+    fn control_refuses_negative_lengths_on_pointer_bearing_provider_arms() {
+        let cipher = provider_control_cipher();
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live and the fake method is live for the duration of the test.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            for (command, expected) in [
+                (EVP_CTRL_RAND_KEY, 0),
+                (EVP_CTRL_AEAD_GET_TAG, 0),
+                (EVP_CTRL_AEAD_SET_TAG, 0),
+                (EVP_CTRL_AEAD_SET_IV_FIXED, 0),
+                (EVP_CTRL_AEAD_TLS1_AAD, 0),
+                (EVP_CTRL_AEAD_SET_MAC_KEY, -1),
+            ] {
+                assert_eq!(
+                    EVP_CIPHER_CTX_ctrl(ctx.0, command, -1, ptr::null_mut()),
+                    expected,
+                    "command {command:#x} must refuse a negative length"
+                );
+            }
+        }
+    }
+
+    /// §17 divergence: `MULTIBLOCK_ENCRYPT` dereferences its parameter struct, so `arg` smaller
+    /// than the struct is refused before the pointer is read. NULL stands in for an undersized
+    /// object: if the guard were missing the dereference would be observable immediately.
+    #[test]
+    fn multiblock_encrypt_validates_its_parameter_extent() {
+        let cipher = provider_control_cipher();
+        let mut dispatched = false;
+        let ctx = Ctx::new();
+        let size = core::mem::size_of::<MultiblockParam>() as c_int;
+        // SAFETY: `ctx.0` is live; `dispatched` outlives the context's drop; the final call uses a
+        // fully initialised `MultiblockParam`.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).algctx = (&mut dispatched as *mut bool).cast();
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(
+                    ctx.0,
+                    EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT,
+                    -1,
+                    ptr::null_mut()
+                ),
+                0
+            );
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(
+                    ctx.0,
+                    EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT,
+                    0,
+                    ptr::null_mut()
+                ),
+                0
+            );
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(
+                    ctx.0,
+                    EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT,
+                    size - 1,
+                    ptr::null_mut()
+                ),
+                0
+            );
+            assert!(!dispatched, "no refusal may reach the provider");
+
+            let mut out = [0u8; 32];
+            let inp = [0u8; 32];
+            let mut param = MultiblockParam {
+                out: out.as_mut_ptr(),
+                inp: inp.as_ptr(),
+                len: 0,
+                interleave: 0,
+            };
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(
+                    ctx.0,
+                    EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT,
+                    size,
+                    (&mut param as *mut MultiblockParam).cast()
+                ),
+                9,
+                "a full-size parameter is dispatched and its answer returned"
+            );
+            assert!(dispatched);
+        }
+    }
+
+    /// §17 divergence: the authority indexes `ctx.buf`/`ctx.final` under an `OPENSSL_assert`
+    /// bound that aborts the process. Each use site refuses a block size past
+    /// `EVP_MAX_BLOCK_LENGTH` first, so no indexing can run with it.
+    #[test]
+    fn oversized_legacy_block_size_is_refused_before_ctx_buffers_are_indexed() {
+        // SAFETY: the all-zero block is a valid `EvpCipher`; the method below is legacy (prov is
+        // NULL) and its `do_cipher` is only a stub because every call must be refused first.
+        let mut cipher: EvpCipher = unsafe { core::mem::zeroed() };
+        cipher.block_size = (EVP_MAX_BLOCK_LENGTH + 1) as c_int;
+        cipher.do_cipher = Some(fake_do_cipher);
+        let inp = [0u8; 64];
+        let mut out = [0u8; 64];
+
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live and the fake method outlives it.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).encrypt = 1;
+            (*ctx.0).block_mask = cipher.block_size - 1;
+            let mut outl = -1;
+            assert_eq!(
+                EVP_EncryptUpdate(ctx.0, out.as_mut_ptr(), &mut outl, inp.as_ptr(), 33),
+                0
+            );
+            assert_eq!(outl, 0);
+            (*ctx.0).buf_len = 0;
+            assert_eq!(EVP_EncryptFinal_ex(ctx.0, out.as_mut_ptr(), &mut outl), 0);
+            assert_eq!(outl, 0);
+        }
+
+        // The decrypt half indexes `final_` with `b` before its buffering loop. `final_used` is
+        // set so the hold-back path is the one under test.
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live and the fake method outlives it.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).encrypt = 0;
+            (*ctx.0).block_mask = cipher.block_size - 1;
+            (*ctx.0).final_used = 1;
+            let mut outl = -1;
+            assert_eq!(
+                EVP_DecryptUpdate(ctx.0, out.as_mut_ptr(), &mut outl, inp.as_ptr(), 33),
+                0
+            );
+            assert_eq!(outl, 0);
+            (*ctx.0).buf_len = 0;
+            assert_eq!(EVP_DecryptFinal_ex(ctx.0, out.as_mut_ptr(), &mut outl), 0);
+            assert_eq!(outl, 0);
+        }
+    }
+
+    unsafe extern "C" fn fake_do_cipher(
+        _ctx: *mut c_void,
+        _out: *mut c_uchar,
+        _in: *const c_uchar,
+        _len: usize,
+    ) -> c_int {
+        1
+    }
+
+    /// §17 divergence: the authority dereferences `c->cipher` unconditionally. A fresh or reset
+    /// context has no cipher, so this port refuses with 0 rather than faulting.
+    #[test]
+    fn set_key_length_refuses_a_context_without_a_cipher() {
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live.
+        unsafe {
+            assert!((*ctx.0).cipher.is_null());
+            assert_eq!(EVP_CIPHER_CTX_set_key_length(ctx.0, 16), 0);
+            assert_eq!(EVP_CIPHER_CTX_set_key_length(ctx.0, -1), 0);
         }
     }
 }
