@@ -33,7 +33,7 @@ use crate::runtime::stack::{
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_purp::X509_get_extension_flags;
 use crate::x509::x509_cmp::{
-    ossl_x509_add_cert_new, ossl_x509_add_certs_new, X509_add_cert, X509_get_subject_name,
+    ossl_x509_add_cert_new, X509_add_cert, X509_add_certs, X509_get_subject_name,
 };
 use crate::x509::x509_lu::{
     X509Store, X509StoreCtx, X509_STORE_CTX_get0_store, X509_STORE_add_cert, X509_STORE_free,
@@ -407,14 +407,14 @@ pub unsafe extern "C" fn OSSL_CMP_get1_caCerts(
     }
     // SAFETY: no preconditions.
     let out_stack = OPENSSL_sk_new_reserve(None, unsafe { OPENSSL_sk_num(certs) });
-    // SAFETY: `out` is writable.
-    unsafe { *out = out_stack };
-    // SAFETY: `out_stack` is NULL or a fresh stack; `certs` is live.
+    // SAFETY: `out_stack` is NULL or a fresh stack; `certs` is live. The authority calls
+    // `X509_add_certs(*out, ...)`, whose slot is the stack itself; `X509_add_certs` answers 0
+    // on the NULL stack.
     if out_stack.is_null()
         // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
         || unsafe {
-            ossl_x509_add_certs_new(
-                out_stack as *mut *mut OpenSslStack,
+            X509_add_certs(
+                out_stack,
                 certs,
                 X509_ADD_FLAG_UP_REF | X509_ADD_FLAG_NO_DUP,
             )
@@ -425,6 +425,9 @@ pub unsafe extern "C" fn OSSL_CMP_get1_caCerts(
         // SAFETY: `out` is writable.
         unsafe { *out = ptr::null_mut() };
         ret = 0;
+    } else {
+        // SAFETY: `out` is writable.
+        unsafe { *out = out_stack };
     }
     // SAFETY: `itav` is live.
     unsafe { OSSL_CMP_ITAV_free(itav) };
