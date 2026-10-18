@@ -18,9 +18,9 @@ comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
-  (**50.0%**); **0** files have fully discharged obligations; **1 shared
-  mechanism** (RC-1 reference counting) is `SAFETY_DISCHARGED`; **0/33**
-  consumers are `SAFE_COMPATIBLE`.
+  (**50.0%**); **0** files have fully discharged obligations; **2 shared
+  mechanisms** (RC-1 reference counting, OB-1 `OwnedBuf`) are
+  `SAFETY_DISCHARGED`; **0/33** consumers are `SAFE_COMPATIBLE`.
 - Whole tree: **868** `src/**/*.rs`; **377** files have a seam.
 - Disjoint call-site classes: **700** production allocation calls in **240**
   files; **657** production release calls in **212** files; **123** test-only;
@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1357** passed,
+`cargo test --lib` (must pass; the established baseline is **1381** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1148,6 +1148,34 @@ package.
   Miri/ASan/differential race replay. All enumerated.
 - Gate: `fmt` 0, clippy 0, **1357 passed / 22 ignored**, **22/22** probes.
 
+### Subphase 85 — OB-1 (`OwnedBuf`) `SAFETY_DISCHARGED`
+
+- Caller audit `OWNER-CALLERS.md`: **459 unsafe construction/adoption sites**
+  (456 production, 3 test), **455/455 production ESTABLISHED, 0 UNATTRIBUTED,
+  0 DEFECT** after fixes.
+- Defects fixed:
+  1. `ecx_kmgmt` adopted a `CRYPTO_secure_zalloc` block with a plain
+     clear-free; now uses the secure cleansing release. The authority has an
+     invalid free there — §17 divergence.
+  2. `x509spki` allocated `2*n` for `EVP_EncodeBlock`, which writes
+     `4*ceil(n/3)+1` (overrun for n≤4); now computes the exact checked extent
+     and allocates it safely — §17 overrun fix.
+  3. The KDF failure path plain-adopted a block allocated by a cleansing
+     constructor; now adopts with the cleansing release over the known length.
+- Contract completion: `ecx_set_params`, `load_err`, `finish_with_error`,
+  `asn1_write_micalg`, `SCT_set0_*` and `OSSL_COMP_CERT_new` now state the exact
+  seam, extent and ownership transfer; `PkeyMethCtrlFn` documents the EC/DH UKM
+  and RSA OAEP-label arms.
+- Evidence: five-boundary release-state model (2,340 transitions) with a
+  `TransitionChangedBound` algebraic check over all `usize` and three mutants;
+  ASan on the production paths (owned_buf 13/13, ecx 2/2, x509spki 4/4, kdf
+  1/1) with no address errors.
+- **Adjudication: `SAFETY_DISCHARGED`**, source `70cfe8381`. Retained:
+  source-audited provenance/alignment/exclusivity (no safe-Rust caller), focused
+  ASan and no Miri, and the unrelated 18-byte `ErrState` thread-local leak.
+- Gate: `fmt` 0, clippy 0, **1381 passed / 22 ignored**, **22/22** probes,
+  model **17/17**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1230,13 +1258,13 @@ Not one percentage; report each axis honestly.
    module-local destructor traits are `unsafe trait`** with explicit contracts.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
-3. **Discharged safety obligations** — **RC-1 (shared reference counting) is
-   `SAFETY_DISCHARGED`** (subphase 84): contracts, a per-caller audit with 0
-   unattributed rows, loom, an exhaustive bounded model and three mutant
-   negative controls, with the engine-table and certificate-duplication blockers
-   fixed rather than documented. All other mechanisms remain `ESTABLISHED` or
-   `CONTRACTED`; a converted site is not a discharged obligation. Full file-level
-   discharge still awaits the per-file campaign and the seal.
+3. **Discharged safety obligations** — **RC-1 (shared reference counting) and
+   OB-1 (`OwnedBuf` release state) are `SAFETY_DISCHARGED`** (subphases 84–85):
+   complete contracts, per-caller audits with 0 unattributed rows, independent
+   models and mutation negative controls, with every blocker fixed rather than
+   documented. All other mechanisms remain `ESTABLISHED` or `CONTRACTED`; a
+   converted site is not a discharged obligation. Full file-level discharge still
+   awaits the per-file campaign and the seal.
 4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
    (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
 5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
@@ -1326,7 +1354,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `544222da4` (RC-1 SAFETY_DISCHARGED)
+**Last observed HEAD:** `70cfe8381` (OB-1 SAFETY_DISCHARGED)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1340,7 +1368,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1357** tests (22 ignored;
+   The most recent reported library baseline is **1381** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
