@@ -1852,7 +1852,12 @@ unsafe fn ts_TST_INFO_content_new(p7: *mut Pkcs7) -> c_int {
 /// `long sec, long usec, unsigned precision)` — `ts_rsp_sign.c:830-896`.
 ///
 /// # Safety
-/// `asn1_time` is NULL or a live value owned by the caller.
+///
+/// `asn1_time` is NULL or a live value owned by the caller. A non-NULL value is
+/// **consumed on both outcomes**: it is returned on success and freed here on
+/// failure (the authority's own `ASN1_GENERALIZEDTIME_free(asn1_time); goto err`),
+/// so a caller that receives NULL must not release it again. The only caller in
+/// this unit passes NULL.
 unsafe fn ts_resp_set_gentime_with_precision(
     asn1_time: *mut Asn1String,
     sec: c_long,
