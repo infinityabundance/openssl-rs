@@ -67,6 +67,19 @@
       }
     },
     {
+      "file": "src/hpke/mod.rs",
+      "groups": 93,
+      "not_discharged": true,
+      "production_sites": 416,
+      "record": "per-file/src__hpke__mod.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 69,
+        "ESTABLISHED": 17,
+        "UNATTRIBUTED": 7
+      }
+    },
+    {
       "file": "src/provider/cipher.rs",
       "groups": 930,
       "not_discharged": true,
@@ -107,9 +120,9 @@
     }
   ],
   "totals": {
-    "audited": 8,
+    "audited": 9,
     "boundary_covered": 0,
-    "partial_files": 8,
+    "partial_files": 9,
     "zero_unsafe": 0
   }
 }

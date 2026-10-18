@@ -15,9 +15,9 @@ post-census delta — exactly as it appeared in the former cumulative
 > `INDEPENDENTLY_CHECKED` result. A file graduates only through the AGENTS.md §7
 > dependency-closure and independent-evidence gates.
 
-**Campaign progress: 8 of 761 PARTIAL files audited.** The 761 denominator is the
+**Campaign progress: 9 of 761 PARTIAL files audited.** The 761 denominator is the
 `PARTIAL` file population in `ATTRIBUTION.md`; it is not a count of files that
-have graduated. The audits cover 5,836 production unsafe sites in 2,856 groups.
+have graduated. The audits cover 6,252 production unsafe sites in 2,949 groups.
 
 ## 1. Reusable template
 
@@ -84,17 +84,21 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 | `src/provider/kdf.rs` | `182b0b81dbf345f31b880ce824ae928bf92715909f153cf34560fc82cff22512` | 716 | 541 | 20 | 519 | 2 | `per-file/src__provider__kdf.rs.md` | PASS after correction (not `INDEPENDENTLY_CHECKED`) |
 | `src/evp/pkey.rs` | `b0d36d170c5ae823960c96d1d5b35c703c0306c222c4470f4202793cbbdccfd4` | 568 | 238 | 1 | 236 | 1 | `per-file/src__evp__pkey.rs.md` | PASS (not `INDEPENDENTLY_CHECKED`) |
 | `src/x509/v3_addr.rs` | `fd18ebfe54c23b86747da6a0500f8f231508c0101d06d48cfbf9d29c52b046e2` | 498 | 123 | 38 | 80 | 5 | `per-file/src__x509__v3_addr.rs.md` | pending adversarial review (not `INDEPENDENTLY_CHECKED`) |
-| **Total** | — | **5,836** | **2,856** | **432** | **2,370** | **54** | 8 records | — |
+| `src/hpke/mod.rs` | `14eb47fae70128bfd4bd96b77d086b5b28d29fea3e5c013b62ac600bc0747405` | 416 | 93 | 17 | 69 | 7 | `per-file/src__hpke__mod.rs.md` | pending adversarial review (not `INDEPENDENTLY_CHECKED`) |
+| **Total** | — | **6,252** | **2,949** | **449** | **2,439** | **61** | 9 records | — |
 
 ### Record notes
 
 - The candidate SHA is the `Source SHA-256` recorded in each record's candidate
-  identity. The census candidate for all seven is
+  identity. The census candidate for all nine is
   `c09eef8b94ce068c92557d9940decf50e8413c8c`; the per-record *audit HEAD* differs
-  because the audits landed at different campaign commits. `src/evp/pkey.rs` and
-  `src/cms/cms_env.rs` are the files whose audited source differs from the census
-  (the `SeamFile` deltas recorded in their §1; `pkey.rs` also has a post-census
-  section); their candidate SHA is the audited source.
+  because the audits landed at different campaign commits. `src/evp/pkey.rs`,
+  `src/cms/cms_env.rs` and `src/hpke/mod.rs` are the files whose audited source
+  differs from the census (the `SeamFile` deltas recorded in their §1; `pkey.rs`
+  also has a post-census section). For `src/hpke/mod.rs` the delta is 43
+  insertions and 9 deletions (net +34 lines), including two failure-path
+  `CRYPTO_free` → `CRYPTO_clear_free` changes; its candidate SHA is the audited
+  source.
 - `src/evp/digest.rs` carries the reusable template in its record (§1). The
   template is reproduced above so it remains discoverable without reading a
   record.
@@ -107,6 +111,10 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 - Counts in this table are transcribed from each record's own "Census totals"
   and "Group state summary"; they are checked against the group rows by
   `PERFILE-INDEX` verification (every row appears exactly once per file).
+- `src/hpke/mod.rs` was audited at HEAD `2e7ac013c`; its source hash differs from
+  the census because of the post-census `SeamFile` and cleanse changes recorded
+  in its §7. It has 11 test-only operations, excluded from its 416 production
+  sites.
 
 ## 4. Machine-readable index
 
@@ -116,13 +124,13 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 {
   "candidate_head": "d5255e262c602383645fcae2adc43e04faf9d4a3",
   "files": [ ],
-  "totals": { "audited": 8, "partial_files": 8, "zero_unsafe": 0, "boundary_covered": 0 }
+  "totals": { "audited": 9, "partial_files": 9, "zero_unsafe": 0, "boundary_covered": 0 }
 }
 ```
 
 `files` is sorted by `file`. `totals.audited` is the number of audited files;
 `partial_files`, `zero_unsafe` and `boundary_covered` are their status counts in
-the `ATTRIBUTION.md` vocabulary (all eight are `PARTIAL`). Every entry carries
+the `ATTRIBUTION.md` vocabulary (all nine are `PARTIAL`). Every entry carries
 `not_discharged: true`.
 
 ## 5. Provenance
