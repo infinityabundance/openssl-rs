@@ -535,3 +535,7 @@ pub(crate) unsafe fn async_wait_ctx_reset_counts(ctx: *mut AsyncWaitCtx) {
         curr = next;
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(AsyncWaitCtx => zero_state_sweep_async_wait_ctx);

@@ -25,10 +25,10 @@ use crate::selftest::OsslIndicatorCallback;
 /// The authority's translation unit, so a failing allocation records the
 /// coordinates a consumer would see from the authority.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/indicator_core.c".as_ptr();
-/// `OPENSSL_zalloc(sizeof(*cb))` is at `crypto/indicator_core.c:20` and
-/// `OPENSSL_free(cb)` at 25.
-const LINE_ZALLOC: c_int = 20;
-const LINE_FREE: c_int = 25;
+/// `OPENSSL_zalloc(sizeof(*cb))` is at `crypto/indicator_core.c:24` and
+/// `OPENSSL_free(cb)` at 30.
+const LINE_ZALLOC: c_int = 24;
+const LINE_FREE: c_int = 30;
 
 /// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
 /// `FILE` would otherwise shadow the module constant inside its own definition.
@@ -202,3 +202,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(IndicatorCb => zero_state_sweep_indicator_cb);

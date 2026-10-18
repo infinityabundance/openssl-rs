@@ -1640,3 +1640,7 @@ pub(crate) unsafe extern "C" fn ossl_rsa_pkey_method() -> *const EvpPkeyMethod {
 pub(crate) unsafe extern "C" fn ossl_rsa_pss_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(RSA_PSS_PKEY_METH)
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(RsaPkeyCtx => zero_state_sweep_rsa_pkey_ctx);

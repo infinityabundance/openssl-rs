@@ -2464,3 +2464,7 @@ pub unsafe extern "C" fn X509_get_proxy_pathlen(x: *mut X509) -> c_long {
     // SAFETY: `x` is live and cached.
     unsafe { (*x).ex_pcpathlen }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Purpose => zero_state_sweep_x509_purpose);

@@ -588,3 +588,7 @@ pub(crate) unsafe fn ossl_policy_cache_set_mapping(x: *mut X509, maps: *mut Open
     unsafe { OPENSSL_sk_pop_free(maps, Some(policy_mapping_free_void)) };
     ret
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509PolicyCache => zero_state_sweep_x509_policy_cache);

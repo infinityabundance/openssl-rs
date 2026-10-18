@@ -125,3 +125,7 @@ pub unsafe extern "C" fn X509_INFO_free(x: *mut X509Info) {
     // `:35`) and then the record's own release at `:36`, each exactly once.
     drop(unsafe { OwnedCtx::<X509Info>::from_raw(x) });
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Info => zero_state_sweep_x509_info);

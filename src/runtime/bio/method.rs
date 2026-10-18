@@ -611,3 +611,7 @@ pub unsafe extern "C" fn BIO_meth_get_recvmmsg(biom: *const BioMethod) -> Option
     // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.recvmmsg))
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioMethod => zero_state_sweep_bio_method);

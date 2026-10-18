@@ -2473,3 +2473,7 @@ mod tests {
         unsafe { UI_free(ui) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(UiString => zero_state_sweep_ui_string, Ui => zero_state_sweep_ui, UiMethod => zero_state_sweep_ui_method);

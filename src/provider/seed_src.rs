@@ -1422,3 +1422,7 @@ unsafe extern "C" fn base_query(
 // reads them, and the provider census reads them out of that table rather than out of prose.
 // `providers/defltprov.c:404-414` is the authority's table and `src/provider/rand.rs` carries
 // its five rows.
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSeedSrc => zero_state_sweep_prov_seed_src, ProvTestRng => zero_state_sweep_prov_test_rng);

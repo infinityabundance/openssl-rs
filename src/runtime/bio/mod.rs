@@ -82,10 +82,14 @@ pub mod iolib;
 pub mod legacy_host;
 pub mod method;
 pub(crate) mod owned;
+
 pub mod print;
 pub mod print_engine;
 pub mod retry;
 pub mod sys;
+/// Executable zero-state sweep for the shared `CtxDestroy` impls (test-only).
+#[cfg(test)]
+pub(crate) mod zero_state;
 
 // ---------------------------------------------------------------------------
 // Constants, from the installed `bio.h`

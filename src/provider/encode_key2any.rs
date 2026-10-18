@@ -6631,3 +6631,7 @@ mod tests {
         assert_eq!(MASK_NO_PUB, 0x85);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Key2anyCtx => zero_state_sweep_key2any_ctx);

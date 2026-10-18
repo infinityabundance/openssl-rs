@@ -548,3 +548,7 @@ implement_ms!(
     Some(rsa_adjust),
     rsa_free_void
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Pvk2keyCtx => zero_state_sweep_pvk2key_ctx);
