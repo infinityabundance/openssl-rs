@@ -1201,6 +1201,8 @@ package.
   static hazards (blockers only for caller-family/`SAFE_COMPATIBLE` claims).
 - Gate: `fmt` 0, clippy 0, **1391 passed / 22 ignored**.
 
+Converted files
+
 ### Subphase 87 — OB-3 (`OwnedCtx`/`RawCtx`) `SAFETY_DISCHARGED`
 
 - Caller audit `OB3-CALLERS.md`: **304 production transitions**
@@ -1236,6 +1238,59 @@ package.
   from the inventory) → DISCHARGE.
 - Gate: `fmt` 0, clippy 0, **1536 passed / 0 failed / 22 ignored**,
   **22/22** adversarial probes.
+
+### Subphase 88 — OB-4a (member-buffer defect repairs)
+
+- Contract analysis of the member-buffer boundary found 16 slot/owner
+  definitions in 14 files and five concrete defects; all five repaired with a
+  discriminating regression each.
+  - **D1 (HIGH, conversion-introduced regression)** `asn1/utl.rs` freed the
+    cached encoding but left the pointer in the field; a refused realloc left
+    a dangling member, so a later `enc_free` double-freed and `enc_restore`
+    copied from freed memory. Now publishes `(NULL, 0, modified=1)` before the
+    fallible allocation. The authority's stale-length failure arm would copy
+    from NULL; that UB is not reproduced.
+  - **D2 (HIGH, §17)** session setters copied after clearing the incumbent, so
+    a C caller passing a getter result hit a UAF. Copy-before-clear in
+    `ssl_sess.rs` ×3 and the `s3_lib.rs` SNI control. Divergence **D563**.
+  - **D3 (§17)** `ssl_rsa.rs` serverinfo regrow could realloc the incumbent and
+    then copy from an aliasing caller pointer. Range-overlap detection + tee.
+    Divergence **D564**.
+  - **D4** `MemberBufSlot` required an allocation of exactly `len`, but the
+    ASN.1 adoption sites pass `len+1` blocks. Contract weakened to the true
+    precondition; the three sites reject `EMBED`, negative length and
+    NULL-with-nonzero-length in release code.
+  - **D5 (§3)** checked arithmetic for three allocation-length sums.
+- Gate: `fmt` 0, clippy 0, **1540 passed / 0 failed / 26 ignored**,
+  **26/26** probes. Adjudication: DISCHARGE-OF-OB-4a (ASan build predates the
+  final edits, so the fixed-tree evidence is the probe set).
+
+### Subphase 89 — OB-4b (member-slot unification + `OwnedCStr`)
+
+- New `runtime/member_slot.rs`: `CStrSlot` + non-`Copy` `EmptyCStrSlot`
+  token; `clear` consumes the slot, `store` consumes the token, so double
+  store / store-into-occupied / leaked incumbent are inexpressible. `clear`
+  nulls before freeing.
+- New `OwnedCStr` proof type: always non-NULL and NUL-terminated; only the
+  unsafe `dup`/`strndup` and the unsafe `adopt` contract construct it; no
+  `From<OwnedStr>` (no extent, so termination is uncheckable). `store` takes
+  `OwnedCStr`; `store_raw` stays unsafe. `OwnedStr`/OB-2 unchanged.
+- Seven `PropqSlot` copies + `CmsPropqSlot` unified; `of(&mut enclosing)` is
+  safe only where the field is private and the accessors are the sole writer.
+  `by_store::CachedStore` is borrowed and keeps an unsafe `of` plus a
+  read-only `BorrowedStore` typestate. `MemberBufSlot` retained.
+- Persisted coordinates are now `SeamFile` (`&'static CStr`), as OB-1 did for
+  `OwnedBuf`.
+- Six statem `OwnedCtx/FreeOnDrop` copies moved to `runtime::foreign`
+  (5 unique destructors; no exported symbol changed).
+- Five `OwnedBlock` families documented in `MEMBER-BUFFER-MODEL.md` §6 with
+  release-family assertions.
+- `unsafe fn` 4552 → 4542 (net −10). No allocator call/size/file/line changed.
+- Gate: `fmt` 0, clippy 0, **1554 passed / 0 failed / 26 ignored**,
+  **26/26** probes. Miri: `member_slot` 7/7, `owned_str` 16/16, both Stacked
+  and Tree Borrows. Adjudication: RETAIN (safe `store` accepted an
+  unterminated `OwnedStr`; raw file pointer) → ACCEPT after `OwnedCStr` and
+  `SeamFile`.
 
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
@@ -1416,7 +1471,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `3e9ebd582` (OB-3 SAFETY_DISCHARGED; source `bfe27c84b`)
+**Last observed HEAD:** `52fb41554` (OB-4b slots unified; OB-4a repairs `a46dbfd68`)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
