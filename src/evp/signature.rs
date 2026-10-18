@@ -102,6 +102,8 @@ const LINE_ZALLOC_SIGNATURE: c_int = 35;
 const LINE_FREE_TYPE_NAME: c_int = 464;
 /// `EVP_SIGNATURE_free`'s `OPENSSL_free(signature)` (line 467).
 const LINE_FREE_SIGNATURE: c_int = 467;
+/// `evp_signature_new`'s `OPENSSL_free(signature)` when the up-ref fails (line 43).
+const LINE_FREE_SIGNATURE_UP_REF: c_int = 43;
 
 /// The buffer an `ERR_raise_data` message is formatted into — the authority's `ERR_MAX_DATA_SIZE`.
 const ERR_DATA_BUFFER: usize = 1024;
@@ -400,7 +402,19 @@ unsafe fn evp_signature_new(prov: *mut OsslProvider) -> Option<OwnedCtx<EvpSigna
     // SAFETY: `signature.as_ptr()` is this call's own object and `prov` is live.
     unsafe {
         (*signature.as_ptr()).refcnt = AtomicI32::new(1);
-        ossl_provider_up_ref(prov);
+        // The authority refuses on a failed up-ref before publishing the object
+        // (`signature.c:40-47`). `ossl_provider_up_ref` rolls the increment back only on its
+        // child-provider arm; assigning `prov` would double-release there. The non-child overflow
+        // arm returns 0 without rollback, so its increment is retained (a practically unreachable
+        // i32-wrap leak, as in the authority's callers).
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            // The authority's failure arm frees the fresh block directly, at its own coordinate
+            // (`signature.c:43`); no member has been assigned yet.
+            let p = signature.as_ptr();
+            core::mem::forget(signature);
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_SIGNATURE_UP_REF);
+            return None;
+        }
         (*signature.as_ptr()).prov = prov;
     }
     Some(signature)

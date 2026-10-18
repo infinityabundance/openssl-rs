@@ -428,10 +428,11 @@ macro_rules! digest_impl {
             }
 
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-                // SAFETY: both regions are `size_of::<$ctx>()` bytes and distinct per the
-                // caller's contract.
+                // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
+                // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
+                // `copyctx(algctx, algctx)`, so `ptr::copy` (defined for overlap) is required.
                 unsafe {
-                    ptr::copy_nonoverlapping(
+                    ptr::copy(
                         inctx.cast::<u8>(),
                         outctx.cast::<u8>(),
                         core::mem::size_of::<$ctx>(),
@@ -615,9 +616,10 @@ mod sha1 {
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-        // SAFETY: both regions are `size_of::<ShaCtx>()` bytes and distinct.
+        // SAFETY: both regions are valid for `size_of::<ShaCtx>()` bytes and may be the same
+        // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
         unsafe {
-            ptr::copy_nonoverlapping(
+            ptr::copy(
                 inctx.cast::<u8>(),
                 outctx.cast::<u8>(),
                 core::mem::size_of::<ShaCtx>(),
@@ -726,6 +728,31 @@ mod sha1 {
             function: ptr::null_mut(),
         },
     ];
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// `EVP_MD_CTX_copy_ex`'s in-place provider arm calls `copyctx(algctx, algctx)`
+        /// (`src/evp/digest.rs`), so identical source and destination are a supported call.
+        #[test]
+        fn copyctx_tolerates_a_self_copy() {
+            let owner = OwnedCtx::<ShaCtx>::new();
+            assert!(owner.is_some(), "the allocator refused a digest context");
+            let Some(owner) = owner else { return };
+            let len = core::mem::size_of::<ShaCtx>();
+            let p = owner.as_ptr().cast::<u8>();
+            // SAFETY: `owner` is a live block of exactly `len` bytes, written and read only as
+            // bytes here.
+            unsafe {
+                ptr::write_bytes(p, 0xa5, len);
+                copyctx(owner.as_ptr().cast(), owner.as_ptr().cast());
+                for i in 0..len {
+                    assert_eq!(*p.add(i), 0xa5, "byte {i} changed in a self-copy");
+                }
+            }
+        }
+    }
 }
 
 digest_impl!(
@@ -902,9 +929,10 @@ mod nullmd {
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-        // SAFETY: both regions are `size_of::<NullMdCtx>()` bytes and distinct.
+        // SAFETY: both regions are valid for `size_of::<NullMdCtx>()` bytes and may be the same
+        // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
         unsafe {
-            ptr::copy_nonoverlapping(
+            ptr::copy(
                 inctx.cast::<u8>(),
                 outctx.cast::<u8>(),
                 core::mem::size_of::<NullMdCtx>(),
@@ -1084,9 +1112,10 @@ mod md5_sha1 {
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-        // SAFETY: both regions are `size_of::<Md5Sha1Ctx>()` bytes and distinct.
+        // SAFETY: both regions are valid for `size_of::<Md5Sha1Ctx>()` bytes and may be the same
+        // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
         unsafe {
-            ptr::copy_nonoverlapping(
+            ptr::copy(
                 inctx.cast::<u8>(),
                 outctx.cast::<u8>(),
                 core::mem::size_of::<Md5Sha1Ctx>(),
@@ -1258,9 +1287,10 @@ mod sha3 {
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-        // SAFETY: both regions are `size_of::<KeccakCtx>()` bytes and distinct.
+        // SAFETY: both regions are valid for `size_of::<KeccakCtx>()` bytes and may be the same
+        // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
         unsafe {
-            ptr::copy_nonoverlapping(
+            ptr::copy(
                 inctx.cast::<u8>(),
                 outctx.cast::<u8>(),
                 core::mem::size_of::<KeccakCtx>(),
@@ -1744,9 +1774,10 @@ mod blake2 {
                 }
 
                 unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-                    // SAFETY: both regions are the same size and distinct.
+                    // SAFETY: both regions are valid for the same size and may be the same
+                    // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
                     unsafe {
-                        ptr::copy_nonoverlapping(
+                        ptr::copy(
                             inctx.cast::<u8>(),
                             outctx.cast::<u8>(),
                             core::mem::size_of::<$flavour::MdData>(),

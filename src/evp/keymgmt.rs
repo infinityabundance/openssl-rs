@@ -646,15 +646,22 @@ unsafe extern "C" fn keymgmt_from_algorithm(
         return ptr::null_mut();
     }
 
-    // The provider reference is taken **after** the check, and the two are not symmetric: the
-    // authority assigns the field first and then up-refs conditionally, so a NULL provider is stored
-    // and not referenced.
-    // SAFETY: `keymgmt` is live.
-    unsafe { (*keymgmt_ptr).prov = prov };
+    // The provider reference is taken **after** the check, and a NULL provider is stored and not
+    // referenced. The authority ignores a failed up-ref here (`keymgmt_meth.c:255-257`), but the
+    // rollback on failure happens only on `ossl_provider_up_ref`'s child-provider arm; returning
+    // the object after a child-arm refusal would make its `Drop` release a reference it does not
+    // hold. Refusing instead is a deliberate safety improvement over the authority (not a
+    // compatibility-preserving transcription). The non-child overflow arm returns 0 without
+    // rollback, so its increment is retained (practically unreachable i32-wrap leak, matching the
+    // authority's callers).
     if !prov.is_null() {
         // SAFETY: `prov` is live.
-        unsafe { ossl_provider_up_ref(prov) };
+        if unsafe { ossl_provider_up_ref(prov) } == 0 {
+            return ptr::null_mut();
+        }
     }
+    // SAFETY: `keymgmt` is live.
+    unsafe { (*keymgmt_ptr).prov = prov };
 
     // The legacy NID the method's names imply. `evp_pkey_name2type` is `p_lib.c`'s and is partially
     // landed in `src/evp/pkey.rs`: its twelve-name table is there and its `EVP_PKEY_type` fallback
