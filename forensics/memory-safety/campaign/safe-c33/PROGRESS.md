@@ -18,8 +18,8 @@ comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
-  (**50.0%**); **0** files have fully discharged obligations; **2 shared
-  mechanisms** (RC-1 reference counting, OB-1 `OwnedBuf`) are
+  (**50.0%**); **0** files have fully discharged obligations; **3 shared
+  mechanisms** (RC-1 reference counting, OB-1 `OwnedBuf`, OB-2 `OwnedStr`) are
   `SAFETY_DISCHARGED`; **0/33** consumers are `SAFE_COMPATIBLE`.
 - Whole tree: **868** `src/**/*.rs`; **377** files have a seam.
 - Disjoint call-site classes: **700** production allocation calls in **240**
@@ -79,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1381** passed,
+`cargo test --lib` (must pass; the established baseline is **1391** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1176,6 +1176,31 @@ package.
 - Gate: `fmt` 0, clippy 0, **1381 passed / 22 ignored**, **22/22** probes,
   model **17/17**.
 
+### Subphase 86 — OB-2 (`OwnedStr`) `SAFETY_DISCHARGED`
+
+- Caller audit `OB2-CALLERS.md`: **131 sites** (120 production, 11 test),
+  **120/120 production ESTABLISHED, 0 UNATTRIBUTED**.
+- Contract completion:
+  1. `ERR_set_error_data`: with `ERR_TXT_MALLOCED` the pointer is a whole
+     `CRYPTO_malloc`/`strdup` block of `strlen+1` bytes, exclusively owned and
+     released once by ERR; without the flag it is borrowed.
+  2. `X509V3ExtI2s` / `X509V3_EXT_add`: an application `i2s` must return a
+     NUL-terminated seam block whose ownership transfers to the extension
+     machinery.
+  3. `random_set_string`: NULL or an exclusive `CRYPTO_strdup` block of exactly
+     `strlen+1` bytes, released once.
+- Model: `Absent/Null/Owned/Released/Transferred`, 124 traces / 392
+  transitions; NULL adopt releases nothing, non-NULL releases exactly once,
+  `into_raw` suppresses Drop. Mutants `DoubleRelease`, `IntoRawReleases` and
+  `NullReleaseCounted` each detected.
+- Focused ASan on `owned_str`, `err` and `v3_prn` production paths is clean
+  (venue canary observed).
+- **Adjudication: `SAFETY_DISCHARGED`**, scoped to `OwnedStr`; source
+  `4f3093ad0`. Retained: no Miri, violating C callers outside the contract,
+  focused ASan, and the mutable `X509_TRUST`/`X509_PURPOSE`/`DSO_METHOD`
+  static hazards (blockers only for caller-family/`SAFE_COMPATIBLE` claims).
+- Gate: `fmt` 0, clippy 0, **1391 passed / 22 ignored**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1258,13 +1283,14 @@ Not one percentage; report each axis honestly.
    module-local destructor traits are `unsafe trait`** with explicit contracts.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
-3. **Discharged safety obligations** — **RC-1 (shared reference counting) and
-   OB-1 (`OwnedBuf` release state) are `SAFETY_DISCHARGED`** (subphases 84–85):
-   complete contracts, per-caller audits with 0 unattributed rows, independent
-   models and mutation negative controls, with every blocker fixed rather than
-   documented. All other mechanisms remain `ESTABLISHED` or `CONTRACTED`; a
-   converted site is not a discharged obligation. Full file-level discharge still
-   awaits the per-file campaign and the seal.
+3. **Discharged safety obligations** — **RC-1 (shared reference counting),
+   OB-1 (`OwnedBuf` release state) and OB-2 (`OwnedStr`) are
+   `SAFETY_DISCHARGED`** (subphases 84–86): complete contracts, per-caller
+   audits with 0 unattributed rows, independent models and mutation negative
+   controls, with every blocker fixed rather than documented. All other
+   mechanisms remain `ESTABLISHED` or `CONTRACTED`; a converted site is not a
+   discharged obligation. Full file-level discharge still awaits the per-file
+   campaign and the seal.
 4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
    (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
 5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
@@ -1354,7 +1380,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `70cfe8381` (OB-1 SAFETY_DISCHARGED)
+**Last observed HEAD:** `4f3093ad0` (OB-2 SAFETY_DISCHARGED)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1368,7 +1394,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1381** tests (22 ignored;
+   The most recent reported library baseline is **1391** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
