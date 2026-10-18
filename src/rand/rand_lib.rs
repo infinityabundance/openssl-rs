@@ -140,6 +140,10 @@ const L_CTX_FREE: c_int = 567;
 const L_RANDOM_SET_STRING_DUP: c_int = 951;
 const L_RANDOM_SET_STRING_FREE: c_int = 955;
 const L_PROVIDER_NAME_DUP: c_int = 113;
+/// `set_random_provider_name`'s `OPENSSL_free(dgbl->random_provider_name)` at `rand_lib.c:112`.
+const L_PROVIDER_NAME_SET_FREE: c_int = 112;
+/// `RAND_set1_random_provider`'s `OPENSSL_free(dgbl->random_provider_name)` at `rand_lib.c:1090`.
+const L_PROVIDER_NAME_SET1_FREE: c_int = 1090;
 
 // ---------------------------------------------------------------------------------------------
 // Constants
@@ -1875,7 +1879,7 @@ unsafe fn set_random_provider_name(dgbl: *mut RandGlobal, name: *const c_char) -
     }
     // SAFETY: `existing` is NULL or this field's own `CRYPTO_strdup` block; the seam performs
     // the authority's own plain release.
-    drop(unsafe { OwnedStr::adopt(existing, FILE_SEAM, L_PROVIDER_NAME_DUP) });
+    drop(unsafe { OwnedStr::adopt(existing, FILE_SEAM, L_PROVIDER_NAME_SET_FREE) });
     // SAFETY: `name` is NUL-terminated per the contract.
     let fresh = unsafe {
         OwnedStr::adopt(
@@ -1910,7 +1914,7 @@ pub unsafe extern "C" fn RAND_set1_random_provider(
             drop(OwnedStr::adopt(
                 (*dgbl).random_provider_name,
                 FILE_SEAM,
-                L_PROVIDER_NAME_DUP,
+                L_PROVIDER_NAME_SET1_FREE,
             ));
             (*dgbl).random_provider_name = ptr::null_mut();
             (*dgbl).random_provider = ptr::null_mut();
