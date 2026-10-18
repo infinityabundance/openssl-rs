@@ -1009,8 +1009,16 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_ktri_cert_cmp(
 /// `int CMS_RecipientInfo_set0_pkey(CMS_RecipientInfo *ri, EVP_PKEY *pkey)` —
 /// `cms_env.c:517-526`.
 ///
+/// **Ownership.** The authority stores `pkey` without an up-ref and releases the old
+/// `ktri->pkey` first, so this is a transfer of one reference, not a borrow: on success the
+/// caller must not free or reuse `pkey`, and the recipient releases it exactly once (here on
+/// replacement, or in `cms_ri_cb`'s `FREE_PRE`). A NULL `pkey` is accepted and clears the slot.
+/// Passing the pointer already stored would be a caller contract violation (the authority
+/// frees it before storing it again); callers that merely re-assert the same key must not call
+/// this function.
+///
 /// # Safety
-/// `ri` is live; `pkey` is NULL or live.
+/// `ri` is live; `pkey` is NULL or a live key whose ownership the caller transfers.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_pkey(
     ri: *mut CmsRecipientInfo,
@@ -1136,6 +1144,23 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
         (*ktri).pctx = ptr::null_mut();
     }
     ret
+}
+
+/// Adopt the content key [`evp_pkey_decrypt_alloc`] produced.
+///
+/// The helper allocates one `CRYPTO_malloc` block of the length the provider first reported and
+/// writes the produced length into `num`, which is therefore at most the allocated extent. The
+/// block is secret key material handed to `ec.key`; the authority releases that field with
+/// `OPENSSL_clear_free(ec->key, ec->keylen)` (`cms_asn1.c:88`), so this adopts with the cleansing
+/// release over exactly the produced length.
+///
+/// # Safety
+/// `ptr` is NULL or the whole, exclusively owned block `evp_pkey_decrypt_alloc` returned;
+/// `num` is the produced length it wrote, not larger than the allocation.
+unsafe fn adopt_decrypted_key(ptr: *mut c_uchar, num: usize) -> OwnedBuf {
+    // SAFETY: the caller establishes provenance, whole-block identity, exclusivity and the
+    // extent relation `num <= allocated length`.
+    unsafe { OwnedBuf::adopt_cleansed_nullable(ptr, num, SeamFile::new(c"cms_asn1.c"), 88) }
 }
 
 /// `static int cms_RecipientInfo_ktri_decrypt(CMS_ContentInfo *cms,`
@@ -1291,10 +1316,14 @@ unsafe fn cms_RecipientInfo_ktri_decrypt(
         return ret;
     }
 
-    // The decrypted key is the helper's own `CRYPTO_malloc` block; `ek_owned` adopts it, so the
-    // success path hands it to `ec.key` and any later exit releases what it built.
-    // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns.
-    let ek_owned = unsafe { OwnedBuf::adopt_plain_nullable(ek, SeamFile::new(c"cms_env.c"), 663) };
+    // The decrypted key is the helper's own `CRYPTO_malloc` block: `evp_pkey_decrypt_alloc`
+    // allocated exactly the length the first provider call reported and returns the produced
+    // length in `eklen` (never more than that extent). The block becomes secret key material as
+    // `ec.key`, which the authority releases with `OPENSSL_clear_free` at `cms_asn1.c:88`; adopt it
+    // through the cleansing arm so any earlier exit also cleanses the produced bytes.
+    // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns;
+    // `eklen` is the produced length, at most the allocated extent.
+    let ek_owned = unsafe { adopt_decrypted_key(ek, eklen) };
 
     ret = 1;
 
@@ -1360,10 +1389,61 @@ fn aes_wrap_keylen(nid: c_int) -> usize {
 /// `ASN1_GENERALIZEDTIME *date, ASN1_OBJECT *otherTypeId, ASN1_TYPE *otherType)` —
 /// `cms_env.c:706-807`.
 ///
+/// The adopted buffers (`key`, `id`, `date`, the `other` fields) become the recipient's on
+/// success and are released by its item destructor.
+///
 /// # Safety
 /// `cms` is live; the buffers are the caller's and adopted.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn CMS_add0_recipient_key(
+    cms: *mut CmsContentInfo,
+    nid: c_int,
+    key: *mut c_uchar,
+    keylen: usize,
+    id: *mut c_uchar,
+    idlen: usize,
+    date: *mut Asn1String,
+    other_type_id: *mut Asn1Object,
+    other_type: *mut Asn1Type,
+) -> *mut CmsRecipientInfo {
+    // SAFETY: the arguments are forwarded under this function's contract; the ordinary publish
+    // step is `OPENSSL_sk_push`.
+    unsafe {
+        cms_add0_recipient_key_with_push(
+            cms,
+            nid,
+            key,
+            keylen,
+            id,
+            idlen,
+            date,
+            other_type_id,
+            other_type,
+            OPENSSL_sk_push,
+        )
+    }
+}
+
+/// The push step of [`CMS_add0_recipient_key`], parameterised so a test can force the one
+/// fallible operation that remains after the recipient has been allocated.
+type RecipientInfoPushFn = unsafe extern "C" fn(*mut OpenSslStack, *const c_void) -> c_int;
+
+/// Body of [`CMS_add0_recipient_key`].
+///
+/// **Recorded divergence (failure atomicity).** The authority pushes `ri` onto
+/// `recipientInfos` *before* assigning the adopted fields, relying on “after this point no calls
+/// can fail”. That leaves a published, partially initialised recipient if the push itself fails.
+/// Here every infallible assignment is made first and the single fallible publish comes last. On
+/// failure the adopted fields are detached again and `ri`'s destructor releases only the
+/// recipient's own skeleton, so the caller keeps ownership of `key`, `id`, `date` and the `other`
+/// values — the same ownership the authority's failure arm leaves with the caller. The success
+/// state is identical.
+///
+/// # Safety
+/// `cms` is live; the buffers are the caller's and adopted; `push` is a stack-push operation
+/// valid for `ris` (the exported entry point passes `OPENSSL_sk_push`).
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature plus the testable push step
+unsafe fn cms_add0_recipient_key_with_push(
     cms: *mut CmsContentInfo,
     mut nid: c_int,
     key: *mut c_uchar,
@@ -1373,6 +1453,7 @@ pub(crate) unsafe extern "C" fn CMS_add0_recipient_key(
     date: *mut Asn1String,
     other_type_id: *mut Asn1Object,
     other_type: *mut Asn1Type,
+    push: RecipientInfoPushFn,
 ) -> *mut CmsRecipientInfo {
     let mut ri: *mut CmsRecipientInfo = ptr::null_mut();
     // SAFETY: `cms` is live.
@@ -1468,16 +1549,8 @@ pub(crate) unsafe extern "C" fn CMS_add0_recipient_key(
         }
     }
 
-    // SAFETY: `ris`/`ri` are live.
-    if unsafe { OPENSSL_sk_push(ris, ri.cast()) } == 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cms(779, c"CMS_add0_recipient_key", ERR_R_CRYPTO_LIB) };
-        // SAFETY: `ri` is owned here.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
-        return ptr::null_mut();
-    }
-
-    // After this point no calls can fail.
+    // Install every adopted field before the one fallible operation. The authority publishes
+    // first; see the function's failure-atomicity note. No call below can fail.
 
     // SAFETY: `kekri` is live; the buffers are the caller's and adopted.
     unsafe {
@@ -1497,15 +1570,43 @@ pub(crate) unsafe extern "C" fn CMS_add0_recipient_key(
         }
     }
 
-    // SAFETY: `kekri` is live.
+    // SAFETY: `kekri` is live. With `V_ASN1_UNDEF` this only replaces the OID and cannot fail
+    // (the authority discards the result for the same reason).
     unsafe {
-        X509_ALGOR_set0(
+        let _ = X509_ALGOR_set0(
             (*kekri).key_encryption_algorithm,
             OBJ_nid2obj(nid),
             V_ASN1_UNDEF,
             ptr::null_mut(),
-        )
-    };
+        );
+    }
+
+    // SAFETY: `ris`/`ri` are live; on failure `ri` has never been published.
+    if unsafe { push(ris, ri.cast()) } == 0 {
+        // SAFETY: the site is a compile-time constant.
+        unsafe { raise_cms(779, c"CMS_add0_recipient_key", ERR_R_CRYPTO_LIB) };
+        // The authority adopts the caller's buffers only on success: its failure arm frees `ri`
+        // before any of them are installed. Detach the values installed above (without releasing
+        // them) so the destructor releases only the recipient's own skeleton and the caller keeps
+        // ownership of `key`, `id`, `date` and the `other` values.
+        //
+        // SAFETY: `ri`/`kekri` are live and owned here; every write is to a field this frame set.
+        unsafe {
+            (*kekri).key = ptr::null_mut();
+            (*kekri).keylen = 0;
+            let kid = (*kekri).kekid;
+            (*(*kid).key_identifier).data = ptr::null_mut();
+            (*(*kid).key_identifier).length = 0;
+            (*kid).date = ptr::null_mut();
+            if !(*kid).other.is_null() {
+                (*(*kid).other).key_attr_id = ptr::null_mut();
+                (*(*kid).other).key_attr = ptr::null_mut();
+            }
+        }
+        // SAFETY: `ri` is owned here; its adopted fields have been detached.
+        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
+        return ptr::null_mut();
+    }
 
     ri
 }
@@ -1573,8 +1674,31 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kekri_get0_id(
 /// `int CMS_RecipientInfo_set0_key(CMS_RecipientInfo *ri, unsigned char *key,`
 /// `size_t keylen)` — `cms_env.c:843-856`.
 ///
+/// **Association, not unconditional ownership transfer.** The authority stores `key`/`keylen`
+/// in `kekri`; while it remains associated, the recipient's destructor releases it with
+/// `OPENSSL_clear_free(kekri->key, kekri->keylen)`. But `set0_key` itself does **not** release the
+/// previously stored pointer. That is deliberate and load-bearing: the authority's own
+/// `CMS_decrypt_set1_key` (`cms_smime.c:859-861`) associates the caller's borrowed buffer, calls
+/// `CMS_RecipientInfo_decrypt`, then detaches it with `set0_key(ri, NULL, 0)` so the caller keeps
+/// ownership. Releasing the incumbent here (including in the NULL arm) would free that borrowed
+/// buffer and double-free it when its owner releases it.
+///
+/// The real contract is therefore:
+///
+/// * the pointer must stay valid while associated; the recipient frees the associated value when
+///   it is destroyed, so a caller that wants to keep ownership must detach with
+///   `set0_key(ri, NULL, 0)` before releasing it;
+/// * replacing or clearing the association does not release the previous value. A caller that did
+///   transfer ownership of an earlier key must release that earlier block itself; the authority
+///   has no way to distinguish it from a borrowed pointer. This port preserves that behaviour
+///   rather than introduce a double-free.
+///
 /// # Safety
-/// `ri` is live; `key` is NULL or readable for `keylen`.
+/// `ri` is live; `key` is NULL or a live block of at least `keylen` bytes that remains valid for
+/// the whole association. A non-NULL block is released by the recipient's destructor if it is
+/// still associated; if it came from the caller and the caller retains ownership, detach first.
+/// Any block the recipient does release must come from the `CRYPTO_*` seam, because the release is
+/// `OPENSSL_clear_free`.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_key(
     ri: *mut CmsRecipientInfo,
@@ -1588,7 +1712,8 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_key(
         return 0;
     }
 
-    // SAFETY: `ri` is live.
+    // SAFETY: `ri` is live. The authority overwrites the slot without releasing the incumbent;
+    // `CMS_decrypt_set1_key` relies on that to detach a borrowed buffer with a NULL assignment.
     let kekri = unsafe { (*ri).d.cast::<CmsKekRecipientInfo>() };
     // SAFETY: `kekri` is live.
     unsafe {
@@ -2601,8 +2726,29 @@ pub(crate) unsafe extern "C" fn ossl_cms_pkey_is_ri_type_supported(
 /// `int ossl_cms_RecipientInfo_wrap_init(CMS_RecipientInfo *ri, const EVP_CIPHER *cipher)` —
 /// `cms_env.c:1478-1552`.
 ///
+/// **Legacy `EVP_CTRL_GET_WRAP_CIPHER` contract.** The authority really does invoke the cipher's
+/// method ctrl with a NULL `EVP_CIPHER_CTX` (`cms_env.c:1515-1516`), so this call is faithful, not
+/// a defect to “fix” by inventing a context. The callback, when the cipher carries
+/// `EVP_CIPH_FLAG_GET_WRAP_CIPHER`, must therefore:
+///
+/// * accept a NULL first argument and not consult it (it is a static method query, not a
+///   per-context operation);
+/// * treat `arg` as a writable `const EVP_CIPHER **`, initialised to NULL by this caller, and
+///   either leave it NULL or store a **borrowed**, live wrap cipher owned by the callback's
+///   provider/method (no up-ref is taken here and none is released);
+/// * return > 0, and must not re-enter `ri`, CMS or this function: the callback runs between the
+///   NULL-context query and the fetch/`EVP_EncryptInit_ex` sequence, with no lock held but while
+///   the caller still relies on `cms_ctx` and `ctx` remaining valid.
+///
+/// The non-NULL `kk` is then read only through `EVP_CIPHER_get_mode`/`get0_name` and must have
+/// wrap mode. A callback that stores an arbitrary or dangling pointer violates its own contract;
+/// there is no runtime check that can establish that a pointer chosen by an application callback
+/// is live, so none is pretended here. The three null/`None` guards below are what can be
+/// guarded: a missing ctrl, a NULL result and a non-wrap result all fail cleanly.
+///
 /// # Safety
-/// `ri` is live; `cipher` is NULL or live.
+/// `ri` is live; `cipher` is NULL or a live method cipher whose ctrl callback obeys the contract
+/// above.
 pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_wrap_init(
     ri: *mut CmsRecipientInfo,
     cipher: *const EvpCipher,
@@ -2768,3 +2914,273 @@ const ERR_CMS_R_NOT_KEY_TRANSPORT: c_int =
     crate::runtime::err::err_reasons::CMS_R_NOT_KEY_TRANSPORT;
 /// `CMS_R_NOT_KEK` — `include/openssl/cmserr.h`.
 const ERR_CMS_R_NOT_KEK: c_int = crate::runtime::err::err_reasons::CMS_R_NOT_KEK;
+
+#[cfg(test)]
+#[allow(clippy::panic, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::evp::pkey::EVP_PKEY_new;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use core::sync::atomic::{AtomicBool, Ordering};
+
+    /// A KEK wrap key length the authority accepts: `NID_id_aes192_wrap` is exactly 24 bytes.
+    const WRAP_KEY_LEN: usize = 24;
+    /// A deterministic non-empty key identifier; the authority's KEK arm expects one.
+    const KEY_ID_LEN: usize = 8;
+
+    fn key_block(len: usize) -> *mut c_uchar {
+        // A test allocation; the recipient under test takes ownership or it is freed below.
+        CRYPTO_malloc(len, c"cms_env.rs".as_ptr(), 0).cast::<c_uchar>()
+    }
+
+    /// A deterministic, initialised block of `len` bytes.
+    fn filled_block(len: usize, byte: u8) -> *mut c_uchar {
+        let p = key_block(len);
+        assert!(!p.is_null());
+        // SAFETY: `p` is `len` writable bytes from the allocator.
+        unsafe { ptr::write_bytes(p, byte, len) };
+        p
+    }
+
+    /// A live `CMS_RecipientInfo` in the KEK arm, built by the item layer so its destructor runs
+    /// the authority's own `cms_ri_cb` release.
+    ///
+    /// # Safety
+    /// The caller owns the returned recipient and must free it with `cms_recipientinfo_it`.
+    unsafe fn kek_recipient() -> (*mut CmsRecipientInfo, *mut CmsKekRecipientInfo) {
+        // SAFETY: the item answers a fresh recipient; a CHOICE starts with no arm selected.
+        let ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
+        assert!(!ri.is_null());
+        // SAFETY: `ri` is live with no selected arm; install a fresh KEK arm.
+        unsafe {
+            let kekri = m_asn1_new(cms_kekrecipientinfo_it()).cast::<CmsKekRecipientInfo>();
+            assert!(!kekri.is_null());
+            (*ri).d = kekri.cast();
+            (*ri).encoded_type = CMS_RECIPINFO_KEK;
+            (*ri).type_ = CMS_RECIPINFO_KEK;
+            (ri, kekri)
+        }
+    }
+
+    /// A live `CMS_RecipientInfo` in the KTRI arm.
+    ///
+    /// # Safety
+    /// The caller owns the returned recipient and must free it with `cms_recipientinfo_it`.
+    unsafe fn trans_recipient() -> (*mut CmsRecipientInfo, *mut CmsKeyTransRecipientInfo) {
+        // SAFETY: the item answers a fresh recipient; a CHOICE starts with no arm selected.
+        let ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
+        assert!(!ri.is_null());
+        // SAFETY: `ri` is live with no selected arm; install a fresh KTRI arm.
+        unsafe {
+            let ktri =
+                m_asn1_new(cms_keytransrecipientinfo_it()).cast::<CmsKeyTransRecipientInfo>();
+            assert!(!ktri.is_null());
+            (*ri).d = ktri.cast();
+            (*ri).encoded_type = CMS_RECIPINFO_TRANS;
+            (*ri).type_ = CMS_RECIPINFO_TRANS;
+            (ri, ktri)
+        }
+    }
+
+    #[test]
+    fn set0_key_replacement_leaves_the_previous_pointer_with_its_owner() {
+        // SAFETY: the helper establishes a live recipient. The previous key is borrowed from the
+        // caller (the shape `CMS_decrypt_set1_key` uses), so replacing it must not release it;
+        // the caller frees it here, then the recipient releases only the new key.
+        unsafe {
+            let (ri, kekri) = kek_recipient();
+            let old = key_block(16);
+            let new = key_block(16);
+            (*kekri).key = old;
+            (*kekri).keylen = 16;
+            assert_eq!(CMS_RecipientInfo_set0_key(ri, new, 16), 1);
+            assert_eq!((*kekri).key, new);
+            assert_eq!((*kekri).keylen, 16);
+            CRYPTO_free(old.cast(), ptr::null(), 0);
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    #[test]
+    fn set0_key_null_detaches_without_releasing_the_borrowed_key() {
+        // SAFETY: this is the `CMS_decrypt_set1_key` pattern: associate, then detach with NULL so
+        // the caller keeps and releases the buffer. The recipient must not free it.
+        unsafe {
+            let (ri, kekri) = kek_recipient();
+            let key = key_block(16);
+            assert_eq!(CMS_RecipientInfo_set0_key(ri, key, 16), 1);
+            assert_eq!(CMS_RecipientInfo_set0_key(ri, ptr::null_mut(), 0), 1);
+            assert!((*kekri).key.is_null());
+            assert_eq!((*kekri).keylen, 0);
+            CRYPTO_free(key.cast(), ptr::null(), 0);
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    #[test]
+    fn set0_key_with_the_same_pointer_does_not_double_release() {
+        // SAFETY: the same block is associated twice; the recipient owns it for the destructor
+        // and releases it exactly once at free.
+        unsafe {
+            let (ri, kekri) = kek_recipient();
+            let key = key_block(16);
+            assert_eq!(CMS_RecipientInfo_set0_key(ri, key, 16), 1);
+            assert_eq!(CMS_RecipientInfo_set0_key(ri, key, 16), 1);
+            assert_eq!((*kekri).key, key);
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    #[test]
+    fn set0_pkey_replacement_frees_the_old_key_exactly_once() {
+        // SAFETY: the helper establishes a live KTRI recipient; the two keys are fresh
+        // `EVP_PKEY_new` allocations transferred to it.
+        unsafe {
+            let (ri, ktri) = trans_recipient();
+            let old = EVP_PKEY_new();
+            let new = EVP_PKEY_new();
+            assert!(!old.is_null() && !new.is_null());
+            (*ktri).pkey = old;
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, new), 1);
+            assert_eq!((*ktri).pkey, new);
+            // `old` was released inside the call; `new` is released by the recipient.
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    #[test]
+    fn set0_pkey_null_clears_and_releases_the_incumbent() {
+        // SAFETY: as above; NULL clears the slot.
+        unsafe {
+            let (ri, ktri) = trans_recipient();
+            let old = EVP_PKEY_new();
+            assert!(!old.is_null());
+            (*ktri).pkey = old;
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, ptr::null_mut()), 1);
+            assert!((*ktri).pkey.is_null());
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    #[test]
+    fn add0_recipient_key_installs_every_field_before_publishing() {
+        // Deterministic, authority-accepted inputs: a real wrap NID, its exact key length, and a
+        // non-empty key identifier.
+        // SAFETY: the container is a fresh envelope; the key/id are initialised test allocations
+        // transferred to the recipient, and the container releases them.
+        unsafe {
+            let cms = CMS_EnvelopedData_create(ptr::null());
+            assert!(!cms.is_null());
+            assert!(!CMS_get0_RecipientInfos(cms).is_null());
+            let key = filled_block(WRAP_KEY_LEN, 0xA5);
+            let id = filled_block(KEY_ID_LEN, 0x5A);
+            let ri = CMS_add0_recipient_key(
+                cms,
+                NID_id_aes192_wrap,
+                key,
+                WRAP_KEY_LEN,
+                id,
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            assert!(!ri.is_null());
+            let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();
+            assert_eq!((*ri).type_, CMS_RECIPINFO_KEK);
+            assert_eq!((*kekri).version, 4);
+            assert_eq!((*kekri).key, key);
+            assert_eq!((*kekri).keylen, WRAP_KEY_LEN);
+            let kid = (*(*kekri).kekid).key_identifier;
+            assert_eq!((*kid).data, id);
+            assert_eq!((*kid).length, KEY_ID_LEN as c_int);
+            assert_eq!(OPENSSL_sk_num(CMS_get0_RecipientInfos(cms)), 1);
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// Negative control: force the one post-allocation failure (the publish step). Inputs are the
+    /// same valid shape as the success test, so no earlier validation can return first, and
+    /// `reject_push` records that it actually ran.
+    static PUSH_REJECTED: AtomicBool = AtomicBool::new(false);
+
+    unsafe extern "C" fn reject_push(_st: *mut OpenSslStack, _data: *const c_void) -> c_int {
+        PUSH_REJECTED.store(true, Ordering::SeqCst);
+        0
+    }
+
+    #[test]
+    fn add0_recipient_key_push_failure_leaves_no_published_recipient() {
+        // SAFETY: the container is fresh and the inputs are the valid shape; `key` and `id` are
+        // test allocations the failed call must leave with the caller, who releases them here (a
+        // double release aborts).
+        unsafe {
+            PUSH_REJECTED.store(false, Ordering::SeqCst);
+            let cms = CMS_EnvelopedData_create(ptr::null());
+            assert!(!cms.is_null());
+            assert!(!CMS_get0_RecipientInfos(cms).is_null());
+            let key = filled_block(WRAP_KEY_LEN, 0xC3);
+            let id = filled_block(KEY_ID_LEN, 0x3C);
+            let ri = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes192_wrap,
+                key,
+                WRAP_KEY_LEN,
+                id,
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                reject_push,
+            );
+            assert!(ri.is_null());
+            assert!(
+                PUSH_REJECTED.load(Ordering::SeqCst),
+                "the forced failure must reach the publish step"
+            );
+            assert_eq!(OPENSSL_sk_num(CMS_get0_RecipientInfos(cms)), 0);
+            CRYPTO_free(key.cast(), ptr::null(), 0);
+            CRYPTO_free(id.cast(), ptr::null(), 0);
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// An arm/length canary: the adopted owner records the cleansing arm over the produced
+    /// length. This does **not** itself observe zeroization — `Drop` performs the cleanse and the
+    /// ignored allocator probe below observes the released bytes; this test only pins the arm a
+    /// regression to `adopt_plain` would lose.
+    #[test]
+    fn decrypted_key_adoption_records_the_cleansing_arm_and_length() {
+        let raw = filled_block(32, 0xA5);
+        // SAFETY: `raw` is a whole, initialised test allocation; `20` is within its extent and
+        // stands in for the produced length.
+        let owned = unsafe { adopt_decrypted_key(raw, 20) };
+        assert_eq!(owned.cleansed_num_for_test(), Some(20));
+        // Drop performs the cleansing release.
+        drop(owned);
+    }
+
+    /// Zeroization evidence for the secret key adoption. Runs alone with the process-global
+    /// recording allocator installed (`scripts/adv-probe.sh`): the block is filled with residue,
+    /// adopted through [`adopt_decrypted_key`], and the installed free hook inspects the bytes
+    /// immediately before forwarding the release.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn adv_probe_decrypted_key_release_cleanses_before_free() {
+        let _g = crate::test_support::lock_global_state();
+        crate::ssl::adv_alloc::require_installed();
+        crate::ssl::adv_alloc::assert_instrument_live();
+
+        let raw = filled_block(32, 0xA5);
+        assert!(!raw.is_null());
+        crate::ssl::adv_alloc::reset();
+        // SAFETY: the next forwarded release is `raw`, which has 32 readable bytes and will be
+        // adopted with the cleansing arm over the first 20.
+        unsafe { crate::ssl::adv_alloc::arm_cleansed_free(20) };
+        // SAFETY: `raw` is the whole block from the installed seam, exclusively owned; `20` is
+        // within its extent and stands in for the produced length.
+        let owned = unsafe { adopt_decrypted_key(raw, 20) };
+        drop(owned);
+        crate::ssl::adv_alloc::assert_not_cleansed();
+    }
+}
