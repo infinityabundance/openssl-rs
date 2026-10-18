@@ -461,8 +461,9 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
     if cipher.is_null() {
         return;
     }
-    // SAFETY: `cipher` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*cipher).refcnt }) {
+    // SAFETY: `cipher` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*cipher).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `EVP_ASYM_CIPHER_free` observes the sentinel.
@@ -482,8 +483,9 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
 pub unsafe extern "C" fn EVP_ASYM_CIPHER_up_ref(cipher: *mut EvpAsymCipher) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `cipher` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*cipher).refcnt })
+    // SAFETY: `cipher` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*cipher).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_ASYM_CIPHER_get0_provider(const EVP_ASYM_CIPHER *cipher)`.

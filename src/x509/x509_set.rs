@@ -260,9 +260,12 @@ pub unsafe extern "C" fn X509_SIG_INFO_set(
 /// `x` is a live `X509`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_up_ref(x: *mut X509) -> c_int {
-    // SAFETY: `x` is live per the contract.
+    // SAFETY: `x` is live per the contract and owns the reference it is acting for; this
+    // call acquires exactly one new reference for the caller.
     let refs = unsafe { &(*x).references };
-    crate::runtime::refcount::up_ref(refs)
+    // SAFETY: `refs` is the live count field of the live object; the caller owns the
+    // existing reference this call acts for, and the acquired reference is owned once.
+    unsafe { crate::runtime::refcount::up_ref(refs) }
 }
 
 /// `X509_SIG_INFO_VALID` — `include/openssl/x509.h.in:66`, the "`siginf` was filled" bit.

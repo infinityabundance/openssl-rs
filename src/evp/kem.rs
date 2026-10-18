@@ -394,8 +394,9 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
     if kem.is_null() {
         return;
     }
-    // SAFETY: `kem` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*kem).refcnt }) {
+    // SAFETY: `kem` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*kem).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `EVP_KEM_free` observes the sentinel.
@@ -415,8 +416,9 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
 pub unsafe extern "C" fn EVP_KEM_up_ref(kem: *mut EvpKem) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `kem` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*kem).refcnt })
+    // SAFETY: `kem` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*kem).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_KEM_get0_provider(const EVP_KEM *kem)`.

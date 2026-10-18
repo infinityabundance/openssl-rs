@@ -385,8 +385,9 @@ pub unsafe extern "C" fn DH_free(r: *mut Dh) {
     // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
     // the destroying sentinel, so a re-entrant `DH_free` from the method's `finish` hook or an
     // ex-data callback is a defined no-op instead of a second teardown.
-    // SAFETY: `r` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*r).references }) {
+    // SAFETY: `r` is live per the contract and this frame owns the reference it releases;
+    // on `Last` it is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*r).references) } {
         crate::runtime::refcount::DownRef::Last => {}
         crate::runtime::refcount::DownRef::Remaining
         | crate::runtime::refcount::DownRef::Retired => return,
@@ -413,8 +414,9 @@ pub unsafe extern "C" fn DH_free(r: *mut Dh) {
 pub unsafe extern "C" fn DH_up_ref(r: *mut Dh) -> c_int {
     // The shared protocol uses the authority's relaxed increment on a live count and refuses a
     // zero, destroying or `i32::MAX` count without changing it.
-    // SAFETY: `r` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*r).references })
+    // SAFETY: `r` is live per the contract; this call acts for the caller's existing
+    // reference and acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*r).references) }
 }
 
 /// `void ossl_dh_set0_libctx(DH *d, OSSL_LIB_CTX *libctx)` — `dh_lib.c:179-182`. Internal.

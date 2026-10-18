@@ -61,7 +61,22 @@ pub(crate) enum DownRef {
 /// The caller that claims the last reference does so with an `AcqRel`
 /// compare-and-swap, which supplies both the release of its own reference and the acquire
 /// ordering the authority obtains from `fence(Acquire)` when the count reaches zero.
-pub(crate) fn down_ref(refs: &AtomicI32) -> DownRef {
+///
+/// # Safety
+///
+/// The caller must own exactly one reference to the object whose count `refs` is, and must
+/// establish all of the following:
+///
+/// - the object's storage (and therefore `refs`) is live, and remains live until this call
+///   returns;
+/// - no other caller releases this same reference (each reference is released exactly once);
+/// - if the result is [`DownRef::Last`], this caller is the unique destructor runner: it may
+///   run the destructor body exactly once and must not use the object afterwards, except
+///   that the storage stays readable until the body has finished and is released.
+///
+/// `DownRef::Retired` covers a re-entrant release of an already-retired object; it is not a
+/// licence to call this function on an object the caller does not own.
+pub(crate) unsafe fn down_ref(refs: &AtomicI32) -> DownRef {
     loop {
         let n = refs.load(Ordering::Acquire);
         // A zero or negative count means the object is already retired; `REF_DESTROYING`
@@ -91,7 +106,22 @@ pub(crate) fn down_ref(refs: &AtomicI32) -> DownRef {
 /// answer (`1`, because the new count is greater than one) and uses the authority's
 /// relaxed ordering. Zero and [`REF_DESTROYING`] are never incremented: the call reports
 /// failure (`0`) without resurrecting an object that is being, or has been, retired.
-pub(crate) fn up_ref(refs: &AtomicI32) -> c_int {
+///
+/// # Safety
+///
+/// The caller must establish all of the following:
+///
+/// - a published positive count exists: the object's constructor has published a count of
+///   at least one, and that publication is visible to this call (a count still being
+///   initialised, or one already retired, is not a live object);
+/// - the caller holds a reference, or acts on behalf of an owner whose reference will not
+///   be released for the duration of the call (as `SSL_dup` does for its caller);
+/// - the object's storage (and therefore `refs`) is live for the duration of the call.
+///
+/// On success the caller owns exactly one new reference and is responsible for releasing it
+/// exactly once through [`down_ref`] or the object's `*_free` path. On refusal the caller
+/// acquires nothing, so it owes no release.
+pub(crate) unsafe fn up_ref(refs: &AtomicI32) -> c_int {
     loop {
         let n = refs.load(Ordering::Relaxed);
         if n == REF_DESTROYING || n <= 0 {
@@ -357,6 +387,12 @@ mod tests {
     use std::sync::Barrier;
     use std::thread;
 
+    // SAFETY (every `up_ref`/`down_ref` call in this module): each test owns the
+    // `AtomicI32` it passes, the storage outlives every call, the count is initialised
+    // to the number of references the test models, and every modelled reference is
+    // released exactly once. These are protocol-level tests, not conforming-C-caller
+    // evidence.
+
     #[test]
     fn ref_destroying_never_matches_a_live_count() {
         let live = AtomicI32::new(1);
@@ -366,38 +402,60 @@ mod tests {
     #[test]
     fn down_ref_claims_last_reference_then_retires() {
         let refs = AtomicI32::new(2);
-        assert!(matches!(down_ref(&refs), DownRef::Remaining));
-        assert!(matches!(down_ref(&refs), DownRef::Last));
-        assert_eq!(refs.load(Ordering::Relaxed), REF_DESTROYING);
-        // A re-entrant release must not produce a second destructor.
-        assert!(matches!(down_ref(&refs), DownRef::Retired));
+        // SAFETY: the test owns both modelled references and releases each once; the
+        // storage outlives all three calls (the last is the defined re-entrant no-op).
+        unsafe {
+            assert!(matches!(down_ref(&refs), DownRef::Remaining));
+            assert!(matches!(down_ref(&refs), DownRef::Last));
+            assert_eq!(refs.load(Ordering::Relaxed), REF_DESTROYING);
+            // A re-entrant release must not produce a second destructor.
+            assert!(matches!(down_ref(&refs), DownRef::Retired));
+        }
         assert_eq!(refs.load(Ordering::Relaxed), REF_DESTROYING);
     }
 
     #[test]
     fn up_ref_refuses_zero_and_destroying() {
         let zero = AtomicI32::new(0);
-        assert_eq!(up_ref(&zero), 0);
+        // SAFETY: the storage is live for both calls. The zero and destroying counts
+        // model refusals: no reference is acquired and no release is owed.
+        unsafe {
+            assert_eq!(up_ref(&zero), 0);
+        }
         assert_eq!(zero.load(Ordering::Relaxed), 0);
 
         let destroying = AtomicI32::new(REF_DESTROYING);
-        assert_eq!(up_ref(&destroying), 0);
+        // SAFETY: as above; a destroying count is live storage but not a live object.
+        unsafe {
+            assert_eq!(up_ref(&destroying), 0);
+        }
         assert_eq!(destroying.load(Ordering::Relaxed), REF_DESTROYING);
     }
 
     #[test]
     fn up_ref_refuses_overflow_without_changing_count() {
         let refs = AtomicI32::new(i32::MAX);
-        assert_eq!(up_ref(&refs), 0);
+        // SAFETY: the test owns the one live reference; the refused increment acquires
+        // nothing, so no release is owed.
+        unsafe {
+            assert_eq!(up_ref(&refs), 0);
+        }
         assert_eq!(refs.load(Ordering::Relaxed), i32::MAX);
     }
 
     #[test]
     fn up_ref_preserves_positive_count_answer() {
         let refs = AtomicI32::new(1);
-        assert_eq!(up_ref(&refs), 1);
+        // SAFETY: the test owns the base reference and then the two acquired references;
+        // the storage outlives both calls.
+        unsafe {
+            assert_eq!(up_ref(&refs), 1);
+        }
         assert_eq!(refs.load(Ordering::Relaxed), 2);
-        assert_eq!(up_ref(&refs), 1);
+        // SAFETY: the caller acts for the base owner and acquires a second reference.
+        unsafe {
+            assert_eq!(up_ref(&refs), 1);
+        }
         assert_eq!(refs.load(Ordering::Relaxed), 3);
     }
 
@@ -422,7 +480,10 @@ mod tests {
             for _ in 0..THREADS {
                 scope.spawn(|| {
                     barrier.wait();
-                    match down_ref(&refs) {
+                    // SAFETY: this thread owns exactly one of the `THREADS` modelled
+                    // references, and the scoped thread keeps `refs` live across the call.
+                    let outcome = unsafe { down_ref(&refs) };
+                    match outcome {
                         DownRef::Last => {
                             last.fetch_add(1, Ordering::Relaxed);
                         }
@@ -453,7 +514,11 @@ mod tests {
             "no holder may observe a retired object"
         );
         assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
-        assert!(matches!(down_ref(&refs), DownRef::Retired));
+        // SAFETY: a thread still owns no reference now, but the storage is live; this
+        // models a re-entrant release, which must observe `Retired`.
+        unsafe {
+            assert!(matches!(down_ref(&refs), DownRef::Retired));
+        }
         assert_eq!(refs.load(Ordering::Relaxed), REF_DESTROYING);
     }
 
@@ -478,13 +543,16 @@ mod tests {
                 scope.spawn(|| {
                     barrier.wait();
                     for _ in 0..ITERATIONS {
-                        assert_eq!(
-                            up_ref(&refs),
-                            1,
-                            "increment with a live base reference must succeed"
-                        );
+                        // SAFETY: the base reference is held for the whole test, so a
+                        // live owner exists; the worker releases only the reference it
+                        // just acquired. The scope keeps `refs` live.
+                        let took = unsafe { up_ref(&refs) };
+                        assert_eq!(took, 1, "increment with a live base reference must succeed");
+                        // SAFETY: the worker releases only the reference it just acquired,
+                        // while the base reference keeps the object live.
+                        let outcome = unsafe { down_ref(&refs) };
                         assert!(
-                            matches!(down_ref(&refs), DownRef::Remaining),
+                            matches!(outcome, DownRef::Remaining),
                             "a worker holding the base reference must not retire the object"
                         );
                     }
@@ -492,9 +560,13 @@ mod tests {
             }
         });
 
-        assert!(matches!(down_ref(&refs), DownRef::Last));
-        assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
-        assert!(matches!(down_ref(&refs), DownRef::Retired));
+        // SAFETY: the test owns the base reference; releasing it is the unique final
+        // release, and the follow-up models a re-entrant no-op on live storage.
+        unsafe {
+            assert!(matches!(down_ref(&refs), DownRef::Last));
+            assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+            assert!(matches!(down_ref(&refs), DownRef::Retired));
+        }
     }
 
     /// A release racing an increment must end in one of two consistent states: either the
@@ -522,7 +594,9 @@ mod tests {
             thread::scope(|scope| {
                 scope.spawn(|| {
                     barrier.wait();
-                    let code = match down_ref(&refs) {
+                    // SAFETY: this thread owns the single reference released here; the
+                    // scoped thread keeps `refs` live across the call.
+                    let code = match unsafe { down_ref(&refs) } {
                         DownRef::Remaining => 0,
                         DownRef::Last => 1,
                         DownRef::Retired => 2,
@@ -531,7 +605,11 @@ mod tests {
                 });
                 scope.spawn(|| {
                     barrier.wait();
-                    up_result.store(up_ref(&refs), Ordering::Release);
+                    // SAFETY: the release racing this increment models an existing owner
+                    // (the initial reference); the increment, if granted, is the one this
+                    // thread owns. The scope keeps `refs` live.
+                    let took = unsafe { up_ref(&refs) };
+                    up_result.store(took, Ordering::Release);
                 });
             });
 
@@ -551,12 +629,16 @@ mod tests {
                 // later increment may resurrect the object.
                 assert_eq!(up_result, 0, "a winning release must refuse the increment");
                 assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
-                assert_eq!(
-                    up_ref(&refs),
-                    0,
-                    "a destroying object must not be resurrected"
-                );
-                assert!(matches!(down_ref(&refs), DownRef::Retired));
+                // SAFETY: the storage is live and holds the destroying sentinel; a
+                // refused increment acquires nothing and the release is a no-op.
+                unsafe {
+                    assert_eq!(
+                        up_ref(&refs),
+                        0,
+                        "a destroying object must not be resurrected"
+                    );
+                    assert!(matches!(down_ref(&refs), DownRef::Retired));
+                }
                 last_rounds += 1;
             } else {
                 // The increment landed first, so the release was non-final and the
@@ -564,9 +646,13 @@ mod tests {
                 // unique `Last`.
                 assert_eq!(down_code, 0);
                 assert_eq!(up_result, 1, "a non-final release means the increment won");
-                assert!(matches!(down_ref(&refs), DownRef::Last));
-                assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
-                assert!(matches!(down_ref(&refs), DownRef::Retired));
+                // SAFETY: the increment won, so this thread owns the surviving reference;
+                // the follow-up models a re-entrant no-op on live storage.
+                unsafe {
+                    assert!(matches!(down_ref(&refs), DownRef::Last));
+                    assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+                    assert!(matches!(down_ref(&refs), DownRef::Retired));
+                }
                 increment_rounds += 1;
             }
         }
@@ -585,13 +671,17 @@ mod tests {
     fn up_ref_down_ref_outcome_classes_are_reachable() {
         let refs = AtomicI32::new(1);
 
-        assert_eq!(up_ref(&refs), 1);
-        assert_eq!(refs.load(Ordering::Relaxed), 2);
-        assert!(matches!(down_ref(&refs), DownRef::Remaining));
-        assert_eq!(refs.load(Ordering::Relaxed), 1);
-        assert!(matches!(down_ref(&refs), DownRef::Last));
-        assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
-        assert_eq!(up_ref(&refs), 0);
-        assert!(matches!(down_ref(&refs), DownRef::Retired));
+        // SAFETY: the test owns the base reference; each successful increment is owned
+        // and released exactly once, and the storage outlives every call.
+        unsafe {
+            assert_eq!(up_ref(&refs), 1);
+            assert_eq!(refs.load(Ordering::Relaxed), 2);
+            assert!(matches!(down_ref(&refs), DownRef::Remaining));
+            assert_eq!(refs.load(Ordering::Relaxed), 1);
+            assert!(matches!(down_ref(&refs), DownRef::Last));
+            assert_eq!(refs.load(Ordering::Acquire), REF_DESTROYING);
+            assert_eq!(up_ref(&refs), 0);
+            assert!(matches!(down_ref(&refs), DownRef::Retired));
+        }
     }
 }

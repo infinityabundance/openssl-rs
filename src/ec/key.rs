@@ -233,8 +233,9 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
     // the destroying sentinel. `EC_KEY_free`'s body calls `meth->finish`, the group's `keyfinish`
     // and `CRYPTO_free_ex_data`, so a re-entrant `EC_KEY_free` from one of those callbacks must be
     // a defined no-op rather than a second teardown.
-    // SAFETY: `r` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*r).references }) {
+    // SAFETY: `r` is live per the contract and this frame owns the reference it releases;
+    // on `Last` it is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*r).references) } {
         crate::runtime::refcount::DownRef::Last => {}
         crate::runtime::refcount::DownRef::Remaining
         | crate::runtime::refcount::DownRef::Retired => return,
@@ -432,8 +433,9 @@ pub unsafe extern "C" fn EC_KEY_dup(ec_key: *const EcKey) -> *mut EcKey {
 pub unsafe extern "C" fn EC_KEY_up_ref(r: *mut EcKey) -> c_int {
     // The shared protocol uses the authority's relaxed increment on a live count and refuses a
     // zero, destroying or `i32::MAX` count without changing it.
-    // SAFETY: `r` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*r).references })
+    // SAFETY: `r` is live per the contract; this call acts for the caller's existing
+    // reference and acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*r).references) }
 }
 
 /// `ENGINE *EC_KEY_get0_engine(const EC_KEY *eckey)` — `crypto/ec/ec_key.c:204-207`.

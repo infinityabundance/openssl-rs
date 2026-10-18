@@ -1005,6 +1005,9 @@ pub unsafe extern "C" fn EVP_CIPHER_up_ref(cipher: *mut EvpCipher) -> c_int {
         if (*cipher).origin == EVP_ORIG_DYNAMIC {
             // The shared protocol refuses a zero, destroying or `i32::MAX` count without
             // changing it.
+            // SAFETY: `cipher` is live, its `EVP_ORIG_DYNAMIC` origin means this refcount is
+            // published and positive, and the C-ABI caller holds the reference this call
+            // acts for; the acquired reference is owned once by that caller.
             return crate::runtime::refcount::up_ref(&(*cipher).refcnt);
         }
     }
@@ -1028,8 +1031,9 @@ pub unsafe extern "C" fn EVP_CIPHER_free(cipher: *mut EvpCipher) {
     if unsafe { (*cipher).origin } != EVP_ORIG_DYNAMIC {
         return;
     }
-    // SAFETY: `cipher` is live.
-    match crate::runtime::refcount::down_ref(unsafe { &(*cipher).refcnt }) {
+    // SAFETY: `cipher` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*cipher).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // The method's `type_name` release and `ossl_provider_free` can run a provider
         // teardown callback; a re-entrant `EVP_CIPHER_free` observes the sentinel.

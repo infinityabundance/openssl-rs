@@ -1,19 +1,21 @@
 # Refcount boundary RC-1 — `runtime::refcount`
 
 **Source identity:** `integrate/safe-c33` at
-`66192b437f6deda27a5b2c190a6a9d9a9c6aa2d7` (working tree at audit time).
+`c74f87d1babf8e7f9ffa305c0bcfb8731d662089` (working tree at audit time).
 **Boundary ID:** `RC-1`. **Instrument:** bounded deterministic concurrency
 tests plus the existing consumer re-entrancy tests. **Status:** `ESTABLISHED`
-(bounded, independently checkable). **Not** `SAFETY_DISCHARGED`; **not**
-`SAFE_COMPATIBLE`. No dependency-closure or consumer-compatibility claim is
-made here.
+(bounded, independently checkable); the Rust API is now `unsafe` and the
+ownership obligation is explicit at every call site. **Not**
+`SAFETY_DISCHARGED`; **not** `INDEPENDENTLY_CHECKED` until the separate check
+package lands; **not** `SAFE_COMPATIBLE`. No dependency-closure or
+consumer-compatibility claim is made here.
 
 ## 1. The object and the contract
 
-`src/runtime/refcount.rs` implements one atomic count shared by four consumer
-families. The count is the object's existing `AtomicI32` field; the sentinel
-`REF_DESTROYING = i32::MIN` is stored in that same field and changes no
-`#[repr(C)]` layout or exported signature.
+`src/runtime/refcount.rs` implements one atomic count shared by the consumer
+families listed in §2. The count is the object's existing `AtomicI32` field;
+the sentinel `REF_DESTROYING = i32::MIN` is stored in that same field and
+changes no `#[repr(C)]` layout or exported signature.
 
 ### Shared preconditions (both operations)
 
@@ -30,6 +32,37 @@ families. The count is the object's existing `AtomicI32` field; the sentinel
   no separate per-thread token requirement. The caller acquires exactly one new reference.
 - For `down_ref`, the caller releases exactly one reference it acquired, and that reference
   is released exactly once.
+
+### The Rust API is `unsafe` (the ownership obligation is at the call site)
+
+`up_ref` and `down_ref` are `pub(crate) unsafe fn`. Safe crate code cannot call
+them, so the previous soundness defect — a safe `*_free` wrapper in safe code
+could release a reference it did not own, or `*_up_ref` could acquire on behalf
+of nobody — is no longer expressible through these functions. Every call is an
+`unsafe { ... }` expression carrying a `// SAFETY:` comment naming the reference
+owned or the owner acted for.
+
+`down_ref`'s caller must establish:
+
+- it owns exactly one reference to the object whose count this is;
+- the object's storage is live and remains live until the call returns;
+- no other caller releases this same reference;
+- when the result is `Last`, it is the unique destructor runner and must not
+  use the object afterwards (running the destructor body and releasing the
+  block are its single responsibility).
+
+`up_ref`'s caller must establish:
+
+- a published positive count exists: the object's constructor has published a count
+  of at least one and that publication is visible to the call (a count still being
+  initialised, or one already retired, is not a live object);
+- it holds a reference, or acts on behalf of an owner whose reference will not be
+  released for the duration of the call (as `SSL_dup` does for its caller);
+- the object's storage is live for the duration of the call.
+
+`unsafe fn` transfers these proof obligations; it does not discharge them.
+The compiler rejects any in-tree safe caller, so what remains is an explicit,
+reviewable assertion at each ownership boundary rather than an implicit one.
 
 ### `up_ref(&AtomicI32) -> c_int`
 
@@ -60,23 +93,50 @@ block is released.
 
 ## 2. Caller inventory
 
-There are **9 direct call sites** across the **four converted families**
-(`Ssl`, `SslCtx`, `SslSession`, `X509Store`). Every other public
-`*_up_ref`/`*_free` path is **not** claimed to funnel through these functions;
-the crate has independent refcount implementations (see the out-of-scope list
-below).
+At this revision the shared protocol serves the **four original converted
+families** plus the families that have adopted it since. There are **62 direct
+`runtime::refcount` calls** in production code; the ENGINE family routes a
+further **12 calls** through the shared `engine::eng_lib::{up_ref, down_ref}`
+wrapper. That wrapper is one auditable boundary whose callers all hold the
+engine's structural reference. The module's own tests are additional call
+sites and carry a module-level `SAFETY` note.
 
-| file:line | function | object / field | operation |
-|---|---|---|---|
-| `src/ssl/ssl_lib.rs:3102` | `SSL_CTX_up_ref` | `SslCtx.references` | `up_ref` |
-| `src/ssl/ssl_lib.rs:3126` | `SSL_CTX_free` | `SslCtx.references` | `down_ref` |
-| `src/ssl/ssl_lib.rs:3475` | `SSL_up_ref` | `Ssl.references` | `up_ref` |
-| `src/ssl/ssl_lib.rs:3490` | `SSL_free` | `Ssl.references` | `down_ref` |
-| `src/ssl/ssl_lib.rs:12148` | `SSL_dup` | `Ssl.references` | `up_ref` (returns the same connection) |
-| `src/ssl/ssl_sess.rs:594` | `SSL_SESSION_up_ref` | `SslSession.references` | `up_ref` |
-| `src/ssl/ssl_sess.rs:532` | `SSL_SESSION_free` | `SslSession.references` | `down_ref` |
-| `src/x509/x509_lu.rs:1959` | `X509_STORE_up_ref` | `X509Store.references` | `up_ref` |
-| `src/x509/x509_lu.rs:1896` | `X509_STORE_free` | `X509Store.references` | `down_ref` |
+### 2.1 The four original families
+
+| family | file | operation |
+|---|---|---|
+| `SslCtx` | `src/ssl/ssl_lib.rs` | `SSL_CTX_up_ref`, `SSL_CTX_free` |
+| `Ssl` | `src/ssl/ssl_lib.rs` | `SSL_up_ref`, `SSL_free`, `SSL_dup` |
+| `SslSession` | `src/ssl/ssl_sess.rs` | `SSL_SESSION_up_ref`, `SSL_SESSION_free` |
+| `X509Store` | `src/x509/x509_lu.rs` | `X509_STORE_up_ref`, `X509_STORE_free` |
+
+### 2.2 Families added to RC-1
+
+| family / object | file(s) | operation(s) |
+|---|---|---|
+| ASN.1 refcounted items (`X509`, `X509_CRL`, `X509_REQ`) | `src/asn1/utl.rs`, `src/x509/x509_set.rs`, `src/x509/x_crl.rs` | `*_do_lock` up/down; `X509_up_ref`, `X509_CRL_up_ref` |
+| `Engine` | `src/engine/eng_lib.rs`, `eng_init.rs`, `eng_list.rs`, `tb_asnmth.rs` | helper up/down, `engine_free_util`, list add/fetch, `ENGINE_up_ref`, `ENGINE_by_id` |
+| `Dso` | `src/dso/mod.rs` | `DSO_up_ref`, `DSO_free` |
+| `Bio` | `src/runtime/bio/mod.rs` | `BIO_up_ref`, `BIO_free` |
+| `Dh` | `src/dh/object.rs` | `DH_up_ref`, `DH_free` |
+| `Dsa` | `src/dsa/object.rs` | `DSA_up_ref`, `DSA_free` |
+| `Rsa` | `src/rsa/object.rs` | `RSA_up_ref`, `RSA_free` |
+| `EcKey` | `src/ec/key.rs` | `EC_KEY_up_ref`, `EC_KEY_free` |
+| `EvpAsymCipher` | `src/evp/asymcipher.rs` | `EVP_ASYM_CIPHER_up_ref`, `_free` |
+| `EvpCipher` | `src/evp/cipher.rs` | `EVP_CIPHER_up_ref`, `_free` |
+| `EvpMd` | `src/evp/digest.rs` | `EVP_MD_up_ref`, `_free` |
+| `EvpKeyExch` | `src/evp/exchange.rs` | `EVP_KEYEXCH_up_ref`, `_free` |
+| `EvpKdf` | `src/evp/kdf.rs` | `EVP_KDF_up_ref`, `_free` |
+| `EvpKem` | `src/evp/kem.rs` | `EVP_KEM_up_ref`, `_free` |
+| `EvpKeyMgmt` | `src/evp/keymgmt.rs` | `EVP_KEYMGMT_up_ref`, `_free` |
+| `EvpMac` | `src/evp/mac.rs` | `EVP_MAC_up_ref`, `_free` |
+| `EvpPkey` | `src/evp/pkey.rs` | `EVP_PKEY_up_ref`, `_free` |
+| `EvpRand`, `EvpRandCtx` | `src/evp/rand.rs` | `EVP_RAND_up_ref`/`_free`, `EVP_RAND_CTX_up_ref`/`_free` |
+| `EvpSignature` | `src/evp/signature.rs` | `EVP_SIGNATURE_up_ref`, `_free` |
+| `EvpSkeyMgmt`, `EvpSkey` | `src/evp/skeymgmt.rs` | `EVP_SKEYMGMT_up_ref`/`_free`, `EVP_SKEY_up_ref`/`_free` |
+| `OsslStoreLoader` (provider loaders only) | `src/store/store_meth.rs` | `OSSL_STORE_LOADER_up_ref`, `_free` |
+| `OsslDecoder` | `src/decoder_meth.rs` | `OSSL_DECODER_up_ref`, `_free` |
+| `OsslEncoder` | `src/encoder_meth.rs` | `OSSL_ENCODER_up_ref`, `_free` |
 
 Callers of the public wrappers (for example `SSL_new`, `SSL_set_SSL_CTX`,
 `SSL_CTX_add_session`, `SSL_get1_session`, `SSL_set_session`,
@@ -85,18 +145,18 @@ They do not add call sites to RC-1.
 
 ### Out of scope: other refcount implementations
 
-The following paths were checked by grep during this review. They are outside
+The following paths were checked by grep at this revision. They are outside
 RC-1 and retain their own contracts.
 
 | path | mechanism at this revision | relation to RC-1 |
 |---|---|---|
-| `src/evp/cipher.rs` | `EvpCipher.refcnt: AtomicI32`, direct `fetch_add`/`fetch_sub` guarded by `origin`; `EVP_CIPHER_up_ref`/`EVP_CIPHER_free` | independent method refcount |
-| `src/store/store_meth.rs` | `OsslStoreLoader.refcnt: AtomicI32`, direct `fetch_add`/`fetch_sub`; `OSSL_STORE_LOADER_up_ref`/`_free` | independent method refcount |
-| `src/ml_dsa/key.rs` | no refcount of its own; `ossl_ml_dsa_key_dup` calls `EVP_MD_up_ref` | caller of the `EvpMd` mechanism, not an RC-1 call site |
-| `src/evp/digest.rs` | `EvpMd.refcnt: AtomicI32`, direct `fetch_add`/`fetch_sub` guarded by `origin` | the implementation reached from `ml_dsa/key.rs` |
-| `src/asn1/utl.rs` | `CryptoRefCount` helpers | independent |
-| `src/engine/eng_lib.rs` | `struct_ref` helpers | independent |
-| `src/dso/mod.rs` | `references: AtomicI32` | independent |
+| `src/ssl/ssl_cert_comp.rs` | local `up_ref`/`down_ref` over `OsslCompCert.references` | independent record count |
+| `src/ec/ecx_key.rs` | direct `fetch_add`/`fetch_sub` over `EcxKey.references` | independent key count |
+| `src/ec/mult.rs` | direct `fetch_add`/`fetch_sub` over the pre-computation count | independent |
+| `src/provider/mod.rs`, `src/provider/activate.rs`, `src/provider/keymgmt.rs`, `src/provider/mac_legacy_kmgmt.rs` | direct provider/data counts | independent provider mechanism |
+| `src/runtime/bio/core_bio.rs` | direct `ref_cnt` count | independent core-BIO count |
+| `src/context/core_bio.rs`, `src/provider/child.rs` | C callback pointers (`c_bio_up_ref`, `c_prov_up_ref`) | the callback object's contract |
+| `src/runtime/rcu.rs` | `users` reader count | not an object reference count |
 
 ## 3. Concurrency analysis
 
@@ -169,7 +229,33 @@ acquire fence). This boundary makes **no** claim that `up_ref` publishes other
 object state; callers' existing locking discipline remains responsible for
 that, as in the authority.
 
-## 4. `i32::MAX` and the §17 divergence
+## 4. `i32::MAX`, the zero-count divergence, and §17 classification
+
+### 4.1 `CRYPTO_UP_REF` on a zero count — §17 classification
+
+The authority's `CRYPTO_UP_REF` is an unconditional `fetch_add(1)`: a count
+at zero is incremented to one and the public wrapper then reports failure only
+because the new value is not greater than one. The failed call therefore
+leaves a **positive** count behind. That is the mechanism by which a count
+that was never published, or whose last reference was already released, can be
+resurrected and a later `CRYPTO_DOWN_REF` can run a second destructor.
+
+This crate reports failure **without changing the count** and requires
+`up_ref`'s caller to establish a published positive count (§1).
+
+- **Compatibility:** the public failure answer is preserved — `0` from this
+  module, translated to `-1` by the ASN.1 lock path — so a caller that tests
+  the answer sees the authority's result.
+- **Divergence:** the internal count differs after a failed call (`0` here,
+  `1` in the authority). No in-tree caller reads the count after a refusal or
+  assumes the increment happened.
+- **§17 category:** elimination of a known vulnerability mechanism (premature
+  destruction / second teardown), not reproduction of authority behaviour.
+  The authority's arithmetic is defined; the use-after-free it enables is not
+  reproduced.
+- **State effect:** none. RC-1 remains `ESTABLISHED`, not `SAFETY_DISCHARGED`.
+
+### 4.2 `i32::MAX`
 
 `up_ref` uses `checked_add(1)`. At `i32::MAX` it answers `0` and leaves the
 count at `i32::MAX`.
@@ -191,14 +277,12 @@ wraparound plus a safety improvement, not reproduction of UB. The
 `OPENSSL_THREADS`-absent non-atomic fallback (`refcnt->val++`) would be UB on
 overflow, but that profile is not the one this gate serves.
 
-Related deliberate divergences, already recorded in the module:
+### 4.3 Over-free
 
-- **Zero:** the authority increments `0 -> 1` and then reports failure; this
-  protocol reports failure and leaves the count at zero.
-- **Over-free:** the authority drives the count negative (the atomic
-  arithmetic is defined; the second teardown it enables is UB) and its
-  `REF_ASSERT_ISNT(i < 0)` diagnostic is compiled out under `NDEBUG`. This
-  protocol returns `Retired` and performs no teardown.
+The authority drives the count negative (the atomic arithmetic is defined; the
+second teardown it enables is UB) and its `REF_ASSERT_ISNT(i < 0)` diagnostic
+is compiled out under `NDEBUG`. This protocol returns `Retired` and performs
+no teardown.
 
 ## 5. Evidence
 
@@ -209,13 +293,15 @@ Environment: court container, `x86_64`, `rustc 1.98.1`, dev profile,
 |---|---|
 | `cargo fmt --all -- --check` | clean (no output) |
 | `cargo clippy --all-targets -- -D warnings` | clean (`Finished dev profile`) |
-| `cargo test --lib -- --test-threads=4` | `test result: ok. 1222 passed; 0 failed; 18 ignored` |
+| `cargo check --all-targets` | clean; no safe caller remains (`E0133` would reject one) |
+| `cargo test --lib -- --test-threads=4` | `test result: ok. 1338 passed; 0 failed; 22 ignored` |
 | `cargo test --lib runtime::refcount::tests -- --test-threads=4` | `9 passed; 0 failed` |
-| `bash scripts/adv-probe.sh` | `adv-probe: all 18 probes passed` |
+| `bash scripts/adv-probe.sh` | `adv-probe: all 22 probes passed` |
 
-The suite grew by the four tests added here; no test was removed or newly
-ignored. The 18 ignored tests are the pre-existing allocator probes, run one
-per process by `adv-probe.sh`.
+The suite grew; no test was removed or newly ignored. The 22 ignored tests
+are the pre-existing allocator probes, run one per process by `adv-probe.sh`.
+The compiler check is the structural evidence that no safe in-tree caller of
+the refcount API remains.
 
 ### Test-to-invariant map
 
@@ -246,6 +332,11 @@ per process by `adv-probe.sh`.
   proofs, not machine-checked ones.
 - **No independent review yet.** The package is `ESTABLISHED` under the §21
   lifecycle; it has not reached `INDEPENDENTLY_CHECKED` or `DISCHARGED`.
+- **`unsafe fn` does not prove the caller's ownership.** Each `// SAFETY:`
+  comment is an assertion. The per-site argument — which reference is owned,
+  or which owner is acted for — is reviewed prose, not a machine-checked proof;
+  a wrong assertion remains a soundness bug the compiler cannot catch. The
+  separate check package must audit these sites before any promotion.
 - **Ordering adequacy is not proved.** Relaxed is sufficient for the count
   invariant and matches the authority, but no claim is made about publication
   of surrounding object state beyond the existing caller lock discipline.
@@ -257,28 +348,41 @@ per process by `adv-probe.sh`.
   validate provenance, alignment or liveness. The obligation is that the
   object is live and not retiring; `up_ref` may increment on behalf of a
   caller that already holds the reference (`SSL_dup`), so no per-thread token
-  is required. A `down_ref` without a matching acquired reference is an
-  over-release and may start destruction early; an `up_ref` on freed storage
-  is invalid before the call.
+  is required. The unsafe signature now makes an over-release or a
+  use-after-release an explicit caller violation rather than something a safe
+  function could cause; the protocol's `Retired` answer is a defined no-op for
+  a re-entrant free, not permission to release a reference that was never
+  owned.
 - **Only the free path's re-entrancy is protected.** A callback that calls
   `*_up_ref` during destruction receives `0`; a callback that calls `*_free`
   receives `Retired`. The protocol does not make arbitrary concurrent use of
   an object whose last reference is being released safe, and does not protect
   every callback family beyond the ex-data and lookup-free paths exercised by
   the consumer tests.
-- **No claim for other refcount implementations.** `ASN.1`, `ENGINE`, `DSO`
-  and the numerous object-local counts are separate mechanisms with their own
-  boundaries.
 - **No compatibility claim.** The tests exercise the candidate's own module;
   no differential court replayed these races against the authority binary.
 
 ## 7. Residual obligations
 
-Retained: the four consumer families must continue to synchronise object
-state independently of the count (authority lock discipline); callers must
-release each reference exactly once; the storage must remain live until the
-destructor runner completes.
+Retained:
 
-Introduced: none. The only new code is test code, and the §17 wording was
-corrected to classify the authority's atomic wraparound as defined rather than
-UB (the divergence itself is unchanged).
+- every consumer family must continue to synchronise object state
+  independently of the count (authority lock discipline);
+- each caller must release each reference exactly once;
+- storage must remain live until the destructor runner completes;
+- callers of the internal `engine::eng_lib::{up_ref, down_ref}` wrapper must
+  hold the structural reference they pass to it;
+- `SSL_dup`'s `up_ref` acts for the caller's existing reference, which the
+  caller must hold at the call.
+
+Introduced:
+
+- every production call site now carries a `SAFETY` assertion that must be
+  independently audited; this is an honestly reported obligation, not a
+  discharged one;
+- the API is `unsafe`, so any future safe wrapper must repeat the contract at
+  its own boundary rather than exposing a safe-looking call.
+
+Graduation: RC-1 remains `ESTABLISHED`. It is not `INDEPENDENTLY_CHECKED`
+(that requires the separate check package) and not `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
