@@ -962,5 +962,61 @@ coefficients; no timing claim is made), FRF-Fuzz replay, dependency-closure
 audit, independent review and SEAL regeneration are `NOT_RUN`. Machine-readable
 receipt: [`atlas-refresh/boundary-sweep-B5.json`](atlas-refresh/boundary-sweep-B5.json).
 
-**Next ordinary queue position:** `src/pem/pem_lib.rs` (rank 101), then
-`src/property/parse.rs` (rank 102), `src/x509/pcy_tree.rs` (rank 103).
+## Batch M11 — mechanism-contract sweep (attribution ranks 101–108)
+
+**Audited (ordinary):** `src/pem/pem_lib.rs` (101, 136 sites),
+`src/property/parse.rs` (102, 136), `src/x509/pcy_tree.rs` (103, 135),
+`src/x509/x509_acert.rs` (104, 134), `src/ssl/ssl_ciph.rs` (107, 130),
+`src/x509/x509_att.rs` (108, 129).
+**NOT_RUN (BOUNDARY):** `src/ssl/bio_ssl.rs` (105, 133) and
+`src/runtime/bio/bss_bio.rs` (106, 131) — BIO method/callback boundaries, deferred
+without inspecting their interiors.
+
+**M11-D1 (fixed, medium, STOP-and-clear).** `ossl_parse_query`'s `-name` override arm
+left `OsslPropertyDefinition::type_` uninitialized. `stack_to_property_list` and
+`ossl_property_merge` copy the definition as a whole, so the copy read an
+uninitialized scalar (Rust UB even though every current reader tests `oper` first).
+Both parsers now seed each fresh definition with a fully initialized zero
+(`definition_zeroed()`); a focused assertion pins the override clause's `type_` to
+`OSSL_PROPERTY_TYPE_STRING` (the zero the authority's `type`-ignoring readers
+expect). Recorded divergence: deterministic zero replaces the authority's unset
+field, which is unobservable to every reader.
+
+**M11-D2 (fixed, medium).** `PEM_def_callback` stored `strlen(userdata)` in a
+`c_int` and passed it to `memcpy`; a string longer than `INT_MAX`, or a negative
+`num`, became an enormous `size_t`. The copy length is clamped to `num >= 0` and the
+`strlen` result. Two controls cover truncation and the negative-`num` clamp.
+
+**M11-D3/D4 (fixed, low).** `PEM_do_header` rejects a negative `*plen` instead of
+passing it to `EVP_DecryptUpdate`; `PEM_ASN1_write_bio_internal` refuses a negative
+second-pass encoder result instead of passing it to `EVP_EncryptUpdate` /
+`PEM_write_bio`. Both are caller-contract violations, hardened rather than assumed.
+
+**M11-D5 (fixed, low).** `X509_ACERT_add_attr_nconf`'s `c_strlen` now reports a
+length that does not fit `c_int` instead of truncating it; `ciphersuite_cb` now
+requires `len > 0`.
+
+**M11-D6 (contract).** `tree_calculate_authority_set` and `tree_calculate_user_set`
+now state the `nlevel >= 2` precondition `tree_init` establishes; their
+`levels[len - 1]` index would otherwise underflow.
+
+**Contracts reused.** OB-1 `OwnedBuf` (property definitions, `AttDataBuf`,
+`OwnedBuf` in the SSL description path); the module-local `PemBuf`/`OwnedDer`
+owners; the `OwnedTree`/`OwnedLevels`/`OwnedNode` policy-graph model with
+`tree_levels`/`level_ptr` as the only level-address arithmetic; the category-B
+BIO callback contracts (deferred files only); C-ABI getter/destructor contracts.
+No new unsafe abstraction, no ABI/layout change, no allocator-coordinate change.
+
+**Evidence.** FAST: fmt clean; focused `property::parse` 7/0, `pem::pem_lib` 2/0,
+`pem::` 3/0, `pcy_tree`, `x509_acert`, `ssl_ciph` have no in-module tests. BATCH:
+clippy `--all-targets -D warnings` PASS; library **1590 passed / 0 failed /
+26 ignored** serially (256.43 s) and with `--test-threads=4` (97.04 s).
+Hidden obligations: 0. Miri/ASan controls for D1/D2, an authority differential for
+the override-clause `type_` divergence, the two deferred BIO boundaries, and SEAL
+evidence are `NOT_RUN`.
+
+**Next ordinary queue position:** `src/dh/pmeth.rs` (rank 109, 126), then
+`src/runtime/confmod/mod.rs` (110, 126), `src/bn/gf2m.rs` (111, 125),
+`src/decoder_meth.rs` (112, 125). `src/ssl/bio_ssl.rs` (105) and
+`src/runtime/bio/bss_bio.rs` (106) remain queued for a boundary batch.
+Machine-readable receipt: [`atlas-refresh/mechanism-sweep-M11.json`](atlas-refresh/mechanism-sweep-M11.json).

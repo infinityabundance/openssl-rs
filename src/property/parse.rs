@@ -303,7 +303,8 @@ unsafe fn raise_unknown_name(site: &err_sites::ErrSite, p: *const c_char) {
 /// The bytes of a NUL-terminated C string, without the terminator.
 ///
 /// # Safety
-/// `p` must be NUL-terminated.
+/// `p` must be NUL-terminated, and the returned slice must not outlive the allocation `p`
+/// points into: the lifetime parameter is chosen by the caller and is not tied to `p`.
 unsafe fn c_bytes<'a>(p: *const c_char) -> &'a [u8] {
     let mut n = 0usize;
     // SAFETY: the caller guarantees a terminator, so the walk stops.
@@ -825,6 +826,23 @@ unsafe fn stack_to_property_list(ctx: *mut c_void, sk: *mut OpenSslStack) -> *mu
     r.into_raw().cast::<OsslPropertyList>()
 }
 
+/// A fully initialized definition — the state both parsers start from.
+///
+/// A definition is copied as a whole by `stack_to_property_list` and `ossl_property_merge`,
+/// and the authority's `-name` override clause assigns `oper`/`optional`/`name_idx` but no
+/// `type`. The candidate must still hold a valid struct, so every allocation starts from
+/// this value; the parser's per-field assignments below are the authority's own and
+/// overwrite what they name.
+fn definition_zeroed() -> OsslPropertyDefinition {
+    OsslPropertyDefinition {
+        name_idx: 0,
+        type_: OSSL_PROPERTY_TYPE_STRING,
+        oper: OSSL_PROPERTY_OPER_EQ,
+        optional: 0,
+        v: PropertyValue { int_val: 0 },
+    }
+}
+
 /// `OSSL_PROPERTY_LIST *ossl_parse_property(OSSL_LIB_CTX *ctx, const char *defn)`
 ///
 /// # Safety
@@ -868,8 +886,9 @@ pub(crate) unsafe fn ossl_parse_property(
                 break;
             };
             let prop_ptr = prop_ref.as_ptr().cast::<OsslPropertyDefinition>();
-            (*prop_ptr).v = PropertyValue { int_val: 0 };
-            (*prop_ptr).optional = 0;
+            // SAFETY: `prop_ptr` is this frame's fresh, uniquely-owned definition block and
+            // `definition_zeroed()` is a valid `OsslPropertyDefinition` value.
+            ptr::write(prop_ptr, definition_zeroed());
             if !parse_name(ctx, &mut s, 1, ptr::addr_of_mut!((*prop_ptr).name_idx)) {
                 break;
             }
@@ -954,7 +973,11 @@ pub(crate) unsafe fn ossl_parse_query(
                 break;
             };
             let prop_ptr = prop_ref.as_ptr().cast::<OsslPropertyDefinition>();
-            (*prop_ptr).v = PropertyValue { int_val: 0 };
+            // SAFETY: `prop_ptr` is this frame's fresh, uniquely-owned definition block and
+            // `definition_zeroed()` is a valid `OsslPropertyDefinition` value. The `-name`
+            // arm below never assigns `type`, so the zero (STRING) value is the one the
+            // struct copies in `stack_to_property_list`/`ossl_property_merge` observe.
+            ptr::write(prop_ptr, definition_zeroed());
 
             if match_ch(&mut c, b'-') {
                 (*prop_ptr).oper = OSSL_PROPERTY_OVERRIDE;
@@ -1624,6 +1647,10 @@ mod tests {
                 let p = &*properties_ptr(q).add(i);
                 if p.oper == OSSL_PROPERTY_OVERRIDE {
                     saw_override = true;
+                    assert_eq!(
+                        p.type_, OSSL_PROPERTY_TYPE_STRING,
+                        "an override clause still carries a valid initialized type"
+                    );
                 }
                 if p.oper == OSSL_PROPERTY_OPER_NE && p.optional == 1 {
                     saw_optional_ne = true;
