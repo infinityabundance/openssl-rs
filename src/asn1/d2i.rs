@@ -984,6 +984,17 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
     n
 }
 
+/// Accumulate the joined length with `checked_add`, answering `None` on overflow. The
+/// authority's failure semantics for this diagnostic path are "no additional data", so
+/// overflow takes the same silent arm as a refused allocation.
+fn checked_sum_len(lengths: impl Iterator<Item = usize>) -> Option<usize> {
+    let mut total = 0usize;
+    for n in lengths {
+        total = total.checked_add(n)?;
+    }
+    Some(total)
+}
+
 /// Join NUL-terminated pieces and append them to the queue's top entry, the way
 /// `ERR_add_error_data(n, ...)` does.
 ///
@@ -1001,18 +1012,20 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
 ///
 /// Every element of `parts` must be null or a NUL-terminated C string.
 unsafe fn add_error_data(parts: &[*const c_char]) {
-    // SAFETY: the caller's contract covers every element.
-    let total: usize = parts
-        .iter()
-        .map(|p| {
-            if p.is_null() {
-                0
-            } else {
-                // SAFETY: each element is NUL-terminated.
-                unsafe { c_strlen(*p) }
-            }
-        })
-        .sum();
+    // The sum is the allocation's byte length, so it is a §3 checked sum: an overflow
+    // takes the module's existing failure arm (no allocation, no error data) rather than
+    // wrapping to a too-small request. Unreachable on the 64-bit target, but every
+    // allocation length sum is checked.
+    let Some(total) = checked_sum_len(parts.iter().filter_map(|p| {
+        if p.is_null() {
+            None
+        } else {
+            // SAFETY: each element is NUL-terminated per the caller's contract.
+            Some(unsafe { c_strlen(*p) })
+        }
+    })) else {
+        return;
+    };
     if total == 0 {
         return;
     }
@@ -2250,6 +2263,18 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// §3 boundary: the diagnostic buffer length is a checked sum, and overflow takes
+    /// the no-additional-data arm instead of wrapping to a too-small request.
+    #[test]
+    fn checked_error_length_sums_translate_overflow_to_failure() {
+        assert_eq!(checked_sum_len([1usize, 2, 3].into_iter()), Some(6));
+        assert_eq!(checked_sum_len([usize::MAX, 1].into_iter()), None);
+        assert_eq!(
+            checked_sum_len([usize::MAX / 2, 1, usize::MAX / 2, 1].into_iter()),
+            None
+        );
+    }
 
     #[test]
     fn error_buffer_length_rejects_usize_max() {

@@ -40,9 +40,9 @@ use crate::asn1::x_int64::{INT32_it, UINT32_it, ZINT32_it, ZINT64_it, ZUINT32_it
 use crate::evp::pkey::EVP_PKEY_free;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::CRYPTO_strndup;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::ssl::ssl_ciph::ssl3_get_cipher_by_id;
 use crate::ssl::ssl_lib::{
     MemberCStrSlot, SslSession, SSL3_MAX_SSL_SESSION_ID_LENGTH, SSL_MAX_SID_CTX_LENGTH,
@@ -408,19 +408,18 @@ unsafe fn libc_strlen(s: *const c_char) -> usize {
 /// `dst` is the member handle of a live session whose member obeys the member-buffer invariant;
 /// `src` may be NULL.
 unsafe fn ssl_session_strndup_slot(dst: &mut MemberCStrSlot, src: *mut Asn1String) -> c_int {
-    dst.clear(FILE, 0);
+    let empty = dst.clear(FILE_SEAM, 0);
     if src.is_null() {
         return 1;
     }
-    // SAFETY: `src` is a live `ASN1_OCTET_STRING` per the caller's contract.
-    let dup = unsafe {
-        CRYPTO_strndup((*src).data.cast(), (*src).length as usize, FILE, 0).cast::<c_char>()
-    };
-    if dup.is_null() {
+    // SAFETY: `src` is a live `ASN1_OCTET_STRING` per the caller's contract; the seam
+    // answers a fresh block this call owns.
+    let Some(dup) =
+        (unsafe { OwnedCStr::strndup((*src).data.cast(), (*src).length as usize, FILE_SEAM, 0) })
+    else {
         return 0;
-    }
-    // SAFETY: `dup` is this call's fresh block; the member is empty after `clear`.
-    unsafe { dst.store(dup) };
+    };
+    empty.store(dup);
     1
 }
 

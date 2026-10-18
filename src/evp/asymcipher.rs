@@ -258,10 +258,44 @@ impl Drop for OwnedBlock {
     /// The buffer's single release: the authority's own `OPENSSL_clear_free`, which cleanses `len`
     /// bytes and then frees through the same seam.
     fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Cleansed { len: self.len },
+            self.file,
+            self.line,
+        );
         // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
         // released before; `self.len` is its cleanse length and the authority's own
         // `CRYPTO_clear_free` accepts NULL.
         unsafe { CRYPTO_clear_free(self.ptr, self.len, self.file, self.line) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+    use core::ffi::CStr;
+
+    const FILE_TEST: &CStr = c"test/evp_asymcipher.rs";
+
+    /// D1-style drift guard: this family's release is the **cleansed** arm over its
+    /// stored length, at its per-instance coordinates -- never a plain free.
+    #[test]
+    fn release_is_cleansed_over_the_stored_length() {
+        release_probe::clear();
+        let raw = CRYPTO_malloc(16, FILE_TEST.as_ptr(), 11);
+        assert!(!raw.is_null());
+        // SAFETY: `raw` is the fresh seam block this test owns; `len` is its extent.
+        let block = unsafe { OwnedBlock::take(raw, 16, FILE_TEST.as_ptr(), 12) }
+            .expect("a non-NULL block is owned");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Cleansed { len: 16 });
+        assert_eq!(call.file, FILE_TEST.as_ptr());
+        assert_eq!(call.line, 12);
     }
 }
 

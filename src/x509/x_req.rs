@@ -65,7 +65,8 @@ use crate::asn1::string::ASN1_OCTET_STRING_free;
 use crate::asn1::x_algor::X509_ALGOR_it;
 use crate::evp::pkey::{EVP_PKEY_dup, EVP_PKEY_free};
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
-use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::OPENSSL_sk_new_null;
 use crate::x509::x509_req::{PropqSlot, X509Req, X509ReqInfo};
 use crate::x509::x_attrib::X509_ATTRIBUTE_it;
@@ -301,7 +302,7 @@ unsafe extern "C" fn req_cb(
                 // `ret` is live and its `propq` obeys the member-buffer invariant, so `clear` is
                 // that block's one release at the authority's own site (`:63`); a NULL incumbent
                 // makes it a no-op.
-                PropqSlot::of(&mut *ret).clear(FILE.as_ptr(), LINE_FREE_PROPQ_FREE_POST);
+                PropqSlot::of(&mut *ret).clear(SeamFile::new(FILE), LINE_FREE_PROPQ_FREE_POST);
             }
         }
         ASN1_OP_DUP_POST => {
@@ -529,17 +530,17 @@ pub unsafe extern "C" fn ossl_x509_req_set0_libctx(
             (*x).libctx = libctx;
             let mut slot = PropqSlot::of(&mut *x);
             // Release any incumbent at the authority's own site (`:146`), leaving it unset. A NULL
-            // incumbent makes this a no-op, exactly as the authority's NULL guard does.
-            slot.clear(FILE.as_ptr(), LINE_FREE_PROPQ);
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does. The
+            // returned token is the only way to store into the now-empty field.
+            let empty = slot.clear(SeamFile::new(FILE), LINE_FREE_PROPQ);
             if !propq.is_null() {
-                // SAFETY: `propq` is NUL-terminated per the contract.
-                let copy = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
-                if copy.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract; the seam answers a
+                // fresh block this call owns.
+                let Some(copy) = OwnedCStr::dup(propq, SeamFile::new(FILE), LINE_STRDUP_PROPQ)
+                else {
                     return 0;
-                }
-                // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the slot is
-                // unset.
-                slot.store(copy);
+                };
+                empty.store(copy);
             }
         }
     }
