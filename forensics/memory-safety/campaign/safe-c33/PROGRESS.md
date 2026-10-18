@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1338** passed,
+`cargo test --lib` (must pass; the established baseline is **1341** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1073,6 +1073,30 @@ package.
   not own. They must become `unsafe fn` with ownership contracts before RC-1
   can be considered for `SAFETY_DISCHARGED`.
 
+### Subphase 82 — refcount protocol is now an unsafe ownership boundary
+
+- `up_ref`/`down_ref` are `unsafe fn` with contracts: `down_ref` requires
+  exactly one owned reference, live storage, no duplicate release, and makes
+  `Last` the unique destructor runner; `up_ref` requires a published positive
+  count, a live reference or an owner acted for whose reference is not released
+  during the call, and live storage.
+- **74 call sites in 31 files** updated with adjacent SAFETY notes naming the
+  owned reference or owner. Exported `*_free`/`*_up_ref` wrappers state that
+  ownership is the C-ABI caller obligation; `SSL_dup` states it acts for the
+  caller's reference and acquires one more; ENGINE helpers state one boundary
+  contract and `eng_list` releases only the reference acquired at entry.
+- `ssl_cert_comp` was the last local `fetch_add`/`fetch_sub` refcount; it now
+  uses the shared sentinel protocol, so double free is a defined no-op and
+  `up_ref` refuses zero/destroying/`i32::MAX` without changing the count.
+- `CRYPTO_UP_REF`'s zero-count divergence is recorded in
+  `REFCOUNT-BOUNDARY.md` §4.1. RC-1 remains **ESTABLISHED**, not promoted.
+- Adversarial review **FAILED** on missing per-site notes and unproven SSL
+  paths, and **PASSED** after the notes and contracts were added and inspected.
+  Gate: `fmt` 0, clippy 0, **1341 passed / 22 ignored**, **22/22** probes.
+- **Next:** the RC-1 independent-check package (bounded interleaving model,
+  mutation negative controls, source witnesses) before any
+  `INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED` claim.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1250,7 +1274,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `56f31274c` (reference-count class closed)
+**Last observed HEAD:** `e3892b0c4` (refcount unsafe boundary merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1264,7 +1288,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1338** tests (22 ignored;
+   The most recent reported library baseline is **1341** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
