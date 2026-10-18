@@ -211,29 +211,40 @@ pub(crate) unsafe fn do_lock(pval: *mut *mut c_void, op: c_int, it: &Asn1Item) -
             // item carries no reference count". The shared protocol answers `0` when the
             // increment is refused (zero/destroying count, or `i32::MAX`), so translate it
             // rather than letting a caller read refusal as "no count".
-            if up_ref(refcnt) == 0 {
+            // SAFETY: `refcnt` is the item's live count field (established above from the
+            // aux table) and the count is published and positive. The reference acted for
+            // belongs to the item's owner, who does not release it during this call; the
+            // acquired reference is owned once by that caller.
+            if unsafe { up_ref(refcnt) } == 0 {
                 -1
             } else {
                 1
             }
         }
-        -1 => match down_ref(refcnt) {
-            DownRef::Last => {
-                // This caller claimed the last reference (the count is now the shared
-                // `REF_DESTROYING` sentinel), so it alone runs the destructor body and
-                // releases the refcount lock.
-                // SAFETY: the lock field is live; the lock is ours to release.
-                unsafe { CRYPTO_THREAD_lock_free((*lock).cast::<CryptoRwlock>()) };
-                // SAFETY: the lock field is writable.
-                unsafe { *lock = core::ptr::null_mut() };
-                // `CRYPTO_FREE_REF` is a no-op on this profile: the header's fallback
-                // releases only the lock, which `CRYPTO_THREAD_lock_new` created.
-                0
+        -1 => {
+            // SAFETY: `refcnt` is the item's live count field. This is the item's free
+            // path; ownership of the reference it releases is the calling owner's
+            // obligation (the C-ABI owner or an internal owner dropping its own
+            // reference). On `Last` this frame is the unique destructor runner and releases
+            // only the object's own lock before returning.
+            match unsafe { down_ref(refcnt) } {
+                DownRef::Last => {
+                    // This caller claimed the last reference (the count is now the shared
+                    // `REF_DESTROYING` sentinel), so it alone runs the destructor body and
+                    // releases the refcount lock.
+                    // SAFETY: the lock field is live; the lock is ours to release.
+                    unsafe { CRYPTO_THREAD_lock_free((*lock).cast::<CryptoRwlock>()) };
+                    // SAFETY: the lock field is writable.
+                    unsafe { *lock = core::ptr::null_mut() };
+                    // `CRYPTO_FREE_REF` is a no-op on this profile: the header's fallback
+                    // releases only the lock, which `CRYPTO_THREAD_lock_new` created.
+                    0
+                }
+                // Another owner remains, or another thread/re-entrant callback is already
+                // destroying the object. Both are a defined no-op: release nothing.
+                DownRef::Remaining | DownRef::Retired => 1,
             }
-            // Another owner remains, or another thread/re-entrant callback is already
-            // destroying the object. Both are a defined no-op: release nothing.
-            DownRef::Remaining | DownRef::Retired => 1,
-        },
+        }
         _ => -1,
     }
 }

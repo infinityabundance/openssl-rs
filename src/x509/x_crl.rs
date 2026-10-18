@@ -1347,9 +1347,12 @@ pub unsafe extern "C" fn X509_CRL_get_meth_data(crl: *mut X509Crl) -> *mut c_voi
 /// `crl` is live.
 #[no_mangle]
 pub unsafe extern "C" fn X509_CRL_up_ref(crl: *mut X509Crl) -> c_int {
-    // SAFETY: `crl` is live per the contract.
+    // SAFETY: `crl` is live per the contract and owns the reference it is acting for; this
+    // call acquires exactly one new reference for the caller.
     let refs = unsafe { &(*crl).references };
-    crate::runtime::refcount::up_ref(refs)
+    // SAFETY: `refs` is the live count field of the live object; the caller owns the
+    // existing reference this call acts for, and the acquired reference is owned once.
+    unsafe { crate::runtime::refcount::up_ref(refs) }
 }
 
 /// `int ossl_x509_crl_set0_libctx(X509_CRL *x, OSSL_LIB_CTX *libctx, const char *propq)` —

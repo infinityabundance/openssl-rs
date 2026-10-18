@@ -293,8 +293,9 @@ pub(crate) unsafe fn ossl_encoder_new() -> *mut OsslEncoder {
 pub unsafe extern "C" fn OSSL_ENCODER_up_ref(encoder: *mut OsslEncoder) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `encoder` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*encoder).base.refcnt })
+    // SAFETY: `encoder` is live per the contract; this call acts for the caller's existing
+    // reference and acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*encoder).base.refcnt) }
 }
 
 /// [`OSSL_ENCODER_free`]'s member body (`encoder_meth.c:60-75`), without the block release
@@ -336,8 +337,9 @@ pub unsafe extern "C" fn OSSL_ENCODER_free(encoder: *mut OsslEncoder) {
         return;
     }
 
-    // SAFETY: `encoder` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*encoder).base.refcnt }) {
+    // SAFETY: `encoder` is live per the contract and this frame owns the reference it
+    // releases; on `Last` it is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*encoder).base.refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `OSSL_ENCODER_free` observes the sentinel.

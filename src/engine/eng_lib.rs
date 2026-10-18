@@ -403,19 +403,26 @@ pub(crate) unsafe fn run_engine_lock_init() -> bool {
 /// zero, negative, destroying, or `i32::MAX`.
 ///
 /// # Safety
-/// `p` must be a live `AtomicI32` refcount.
+/// `p` must be a live `AtomicI32` refcount of a live `ENGINE` whose count is published
+/// and positive, and the caller must hold the structural reference it acts for (or act
+/// for an owner that will not release it during the call), acquiring exactly one new
+/// reference.
 pub(crate) unsafe fn up_ref(p: *mut AtomicI32) -> c_int {
-    // SAFETY: the caller guarantees `p` is a live refcount.
-    crate::runtime::refcount::up_ref(unsafe { &*p })
+    // SAFETY: the caller guarantees `p` is a live refcount belonging to a live object and
+    // acts for an existing owner; the new reference is owned exactly once by that caller.
+    unsafe { crate::runtime::refcount::up_ref(&*p) }
 }
 
 /// `CRYPTO_DOWN_REF` with the shared checked/sentinel protocol.
 ///
 /// # Safety
-/// As [`up_ref`].
+/// As [`up_ref`], plus: the caller owns exactly one reference to the object whose
+/// `struct_ref` is `p`, and on [`crate::runtime::refcount::DownRef::Last`] it is the
+/// unique destructor runner and must not use the object afterwards.
 pub(crate) unsafe fn down_ref(p: *mut AtomicI32) -> crate::runtime::refcount::DownRef {
-    // SAFETY: the caller guarantees `p` is a live refcount.
-    crate::runtime::refcount::down_ref(unsafe { &*p })
+    // SAFETY: the caller guarantees `p` is a live refcount of a live object and owns the
+    // reference this call releases; on `Last` it alone runs the destructor body.
+    unsafe { crate::runtime::refcount::down_ref(&*p) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -495,7 +502,8 @@ pub(crate) unsafe fn engine_free_util(e: *mut Engine, not_locked: c_int) -> c_in
     if e.is_null() {
         return 1;
     }
-    // SAFETY: `e` is live and `struct_ref` is its refcount.
+    // SAFETY: `e` is live, `struct_ref` is its refcount, and this frame owns the structural
+    // reference it releases; on `Last` it is the unique destructor runner.
     match unsafe { down_ref(ptr::addr_of_mut!((*e).struct_ref)) } {
         crate::runtime::refcount::DownRef::Last => {}
         // A zero/negative/destroying count is a defined no-op. The destroying arm is the

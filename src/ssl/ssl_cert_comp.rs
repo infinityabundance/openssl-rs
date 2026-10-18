@@ -40,7 +40,7 @@
 
 use core::ffi::{c_char, c_int};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::{BIO_f_brotli, BIO_f_zlib, BIO_f_zstd};
@@ -48,6 +48,7 @@ use crate::runtime::err::raise_with;
 use crate::runtime::mem::CRYPTO_memdup;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::ssl::ssl_lib::{cert_active_key, Cert, CertKey, Ssl, SslCtx, TLSEXT_COMP_CERT_LIMIT};
 
 /// `OPENSSL_FILE` of this translation unit.
@@ -78,16 +79,6 @@ pub struct OsslCompCert {
     pub orig_len: usize,
     /// `int alg` — the `TLSEXT_comp_cert_*` algorithm.
     pub alg: c_int,
-}
-
-/// `CRYPTO_DOWN_REF` — the release fetch-sub the authority's header defines.
-fn down_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_sub(1, Ordering::Release) - 1
-}
-
-/// `CRYPTO_UP_REF` — the relaxed fetch-add the authority's header defines.
-fn up_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_add(1, Ordering::Relaxed) + 1
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -202,15 +193,18 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
     if cc.is_null() {
         return;
     }
-    // SAFETY: `cc` is live per the caller's contract.
+    // SAFETY: `cc` is live per this function's contract, and the caller owns the one reference
+    // this call releases. On `Last` this frame is the unique destructor runner; `Remaining` and
+    // `Retired` owe no teardown, so a re-entrant or over-release is a defined no-op while the
+    // block is still live.
     unsafe {
-        let i = down_ref(&(*cc).references);
-        if i > 0 {
-            return;
+        match down_ref(&(*cc).references) {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // The count reached zero, so this frame holds the record's exclusive ownership; its
-        // destructor releases the `data` block first, then the record block, at the authority's
-        // own sites.
+        // The count moved `1 -> REF_DESTROYING`, so this frame holds the record's exclusive
+        // ownership; its destructor releases the `data` block first, then the record block, at the
+        // authority's own sites.
         // SAFETY: `data` is NULL or this record's own block.
         drop(OwnedBuf::adopt_plain_nullable((*cc).data, FILE_SEAM, 0));
         // SAFETY: `cc` is the record this frame exclusively owns.
@@ -227,16 +221,11 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
 /// # Safety
 /// `cc` must be a live `OsslCompCert`.
 pub unsafe fn OSSL_COMP_CERT_up_ref(cc: *mut OsslCompCert) -> c_int {
-    // SAFETY: `cc` is live per the caller's contract.
-    let i = unsafe { up_ref(&(*cc).references) };
-    if i <= 0 {
-        return 0;
-    }
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `cc` is live per the contract; this call acts for an existing owner and acquires
+    // exactly one new reference, which that owner must release exactly once.
+    unsafe { up_ref(&(*cc).references) }
 }
 
 /// `static int ssl_set_cert_comp_pref(int *prefs, int *algs, size_t len)` —
@@ -580,3 +569,65 @@ pub unsafe extern "C" fn SSL_set1_compressed_cert(
 const _: () = {
     assert!(core::mem::size_of::<*mut OsslCompCert>() > 0);
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::refcount::REF_DESTROYING;
+
+    /// A record whose count is already retired: the storage is the test's own and stays live, so
+    /// both releases legitimately observe `Retired` and neither runs a teardown.
+    fn retired_record(count: i32) -> OsslCompCert {
+        OsslCompCert {
+            references: AtomicI32::new(count),
+            data: ptr::null_mut(),
+            len: 0,
+            orig_len: 0,
+            alg: TLSEXT_COMP_CERT_NONE,
+        }
+    }
+
+    #[test]
+    fn double_free_of_a_retired_record_is_a_defined_noop() {
+        for count in [0, REF_DESTROYING] {
+            let mut cc = retired_record(count);
+            // SAFETY: `cc` is a live stack record; the zero and destroying counts model a record
+            // already released. Both calls are the protocol's defined `Retired` no-op and read
+            // only the still-live count.
+            unsafe {
+                OSSL_COMP_CERT_free(&mut cc);
+                OSSL_COMP_CERT_free(&mut cc);
+            }
+            assert_eq!(
+                cc.references.load(core::sync::atomic::Ordering::Relaxed),
+                count
+            );
+        }
+    }
+
+    #[test]
+    fn up_ref_refuses_zero_and_destroying_without_changing_the_count() {
+        for count in [0, REF_DESTROYING] {
+            let mut cc = retired_record(count);
+            // SAFETY: `cc` is a live stack record; a refused increment acquires no reference, so
+            // the test owes no release.
+            assert_eq!(unsafe { OSSL_COMP_CERT_up_ref(&mut cc) }, 0);
+            assert_eq!(
+                cc.references.load(core::sync::atomic::Ordering::Relaxed),
+                count
+            );
+        }
+    }
+
+    #[test]
+    fn up_ref_refuses_i32_max_without_changing_the_count() {
+        let mut cc = retired_record(i32::MAX);
+        // SAFETY: `cc` is a live stack record; a refused increment acquires no reference, so the
+        // test owes no release.
+        assert_eq!(unsafe { OSSL_COMP_CERT_up_ref(&mut cc) }, 0);
+        assert_eq!(
+            cc.references.load(core::sync::atomic::Ordering::Relaxed),
+            i32::MAX
+        );
+    }
+}

@@ -526,8 +526,9 @@ pub unsafe extern "C" fn EVP_PKEY_new() -> *mut EvpPkey {
 pub unsafe extern "C" fn EVP_PKEY_up_ref(pkey: *mut EvpPkey) -> c_int {
     // The shared protocol uses the authority's relaxed increment on a live count and refuses a
     // zero, destroying or `i32::MAX` count without changing it.
-    // SAFETY: `pkey` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*pkey).references })
+    // SAFETY: `pkey` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*pkey).references) }
 }
 
 /// `static void evp_pkey_free_it(EVP_PKEY *x)` — release the key data, keeping the object.
@@ -620,8 +621,9 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
         return;
     }
 
-    // SAFETY: `x` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*x).references }) {
+    // SAFETY: `x` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*x).references) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `evp_keymgmt_freedata` and `CRYPTO_free_ex_data` are provider/application callbacks;
         // a re-entrant `EVP_PKEY_free` from one observes the destroying sentinel and stops.
