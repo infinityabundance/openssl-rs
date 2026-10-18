@@ -26,6 +26,24 @@ use core::ffi::{c_char, c_int, c_void};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::mem_coords::SeamFile;
 
+/// Test-only observation of the release `Drop` selected, for the `OwnedStr`
+/// model-correspondence tests. Thread-local so concurrent tests cannot perturb
+/// each other.
+#[cfg(test)]
+mod drop_probe {
+    use core::cell::Cell;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(super) struct Call {
+        /// `Drop` was asked to release a NULL handle (the authority's `free(NULL)`).
+        pub(super) null: bool,
+    }
+
+    thread_local! {
+        pub(super) static LAST: Cell<Option<Call>> = const { Cell::new(None) };
+    }
+}
+
 /// An owned NUL-terminated (or, before its consumer fills it, writable) C
 /// string allocated through the crate's `CRYPTO_*` allocator seam.
 pub(crate) struct OwnedStr {
@@ -157,6 +175,12 @@ impl OwnedStr {
 impl Drop for OwnedStr {
     /// The block's single release, through the same seam the authority uses.
     fn drop(&mut self) {
+        #[cfg(test)]
+        drop_probe::LAST.with(|last| {
+            last.set(Some(drop_probe::Call {
+                null: self.ptr.is_null(),
+            }))
+        });
         // SAFETY: `self.ptr` is the block this handle owns and has not released
         // (or NULL, which `CRYPTO_free` accepts as its no-op); the coordinates
         // are the authority's own release site.
@@ -272,3 +296,9 @@ mod tests {
         unsafe { CRYPTO_free(raw.cast(), FILE.as_ptr(), 18) };
     }
 }
+
+// The exhaustive ownership-transition model and the production correspondence
+// tests. Test-only: nothing here is compiled into the library.
+#[cfg(test)]
+#[path = "owned_str_model.rs"]
+mod release_model_tests;

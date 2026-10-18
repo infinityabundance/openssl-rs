@@ -102,7 +102,31 @@ pub type X509V3ExtI2v = Option<
 pub type X509V3ExtV2i = Option<
     unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void,
 >;
-/// `X509V3_EXT_I2S` — `include/openssl/x509v3.h:54-55`.
+/// `X509V3_EXT_I2S` — `include/openssl/x509v3.h.in:54-55`.
+///
+/// # ABI contract for an application-supplied `i2s`
+///
+/// On a non-NULL return the callback must hand over the **base pointer of one
+/// whole allocation from the process's active OpenSSL allocator seam**:
+/// `OPENSSL_malloc`/`CRYPTO_malloc`, `CRYPTO_strdup`, or an authority helper that
+/// allocates through one of them. The block must be NUL-terminated within its
+/// allocated extent and contain a C string of `strlen + 1` bytes (exactly the
+/// allocation extent when produced by `CRYPTO_strdup`; a larger `CRYPTO_malloc`
+/// block is valid when the terminator is inside it).
+///
+/// Ownership transfers to the extension machinery: `X509V3_EXT_print` consumes
+/// the result as a C string and releases it exactly once with
+/// `OPENSSL_free(value)` at `crypto/x509/v3_prn.c:130`. The callback must not
+/// free, retain, cache, or otherwise reuse the block, and must not return a
+/// pointer to static, stack, borrowed, or non-seam storage. Returning NULL
+/// transfers nothing and is reported by `X509V3_EXT_print` as a print failure.
+///
+/// Authority: `X509V3_EXT_print` assigns `method->i2s(method, ext_str)` to
+/// `char *value` and its `err:` label runs `OPENSSL_free(value)`
+/// (`crypto/x509/v3_prn.c:106,130`); the public `i2s_ASN1_*` family documents
+/// "It is the caller's responsibility to free the returned string"
+/// (`doc/man3/s2i_ASN1_IA5STRING.pod`). Registration through
+/// [`X509V3_EXT_add`] accepts rows whose `i2s` slot carries this contract.
 pub type X509V3ExtI2s =
     Option<unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char>;
 /// `X509V3_EXT_S2I` — `include/openssl/x509v3.h:56-57`.
@@ -366,11 +390,20 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
 /// `int X509V3_EXT_add(X509V3_EXT_METHOD *ext)` — `crypto/x509/v3_lib.c:25-37`.
 ///
 /// Lazily creates the list with [`ext_cmp`], then pushes the caller's row (the list does not own
-/// it unless it is `X509V3_EXT_DYNAMIC`).
+/// it unless it is `X509V3_EXT_DYNAMIC`). The authority's body is only the list creation and
+/// `sk_X509V3_EXT_METHOD_push` (`crypto/x509/v3_lib.c:25-37`); it does not inspect or take over
+/// the row's callbacks.
 ///
 /// # Safety
 ///
 /// `ext` is a live `X509V3_EXT_METHOD` that outlives the list or is `X509V3_EXT_DYNAMIC`.
+///
+/// In addition, when `ext.i2s` is `Some`, the callback must satisfy the ownership contract on
+/// [`X509V3ExtI2s`]: every non-NULL result is the base of a whole `OPENSSL_malloc`/
+/// `CRYPTO_strdup` block, NUL-terminated within its `strlen + 1`-byte C-string extent, whose
+/// ownership transfers to `X509V3_EXT_print` and is released once there. Registering a callback
+/// that returns borrowed or static storage makes the later `OPENSSL_free` invalid; this function
+/// cannot verify the callback.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_add(ext: *mut X509V3ExtMethod) -> c_int {
     if EXT_LIST.load(Ordering::Acquire).is_null() {
