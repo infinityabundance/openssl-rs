@@ -570,7 +570,17 @@ pub unsafe extern "C" fn PEM_get_EVP_CIPHER_INFO(
         }
     }
 
-    // SAFETY: `h` is the IV's hex string and `cipher->iv` is writable for `ivlen` bytes.
+    // `EVP_CIPHER_INFO::iv` is the authority's fixed `EVP_MAX_IV_LENGTH` array, while a
+    // caller-registered method (`EVP_CIPHER_meth_set_iv_length`) may declare a longer IV.
+    // The authority's `load_iv` trusts `iv_len` and writes past that array; refuse here
+    // instead of reproducing the out-of-bounds write. This is a deliberate safety
+    // divergence with no observable difference for any cipher the authority ships.
+    if ivlen > EVP_MAX_IV_LENGTH as c_int {
+        return 0;
+    }
+
+    // SAFETY: `h` is the IV's hex string and `cipher->iv` is writable for `ivlen` bytes,
+    // which the guard above bounds by `EVP_MAX_IV_LENGTH`.
     if unsafe { load_iv(h, (*cipher).iv.as_mut_ptr(), ivlen) } == 0 {
         return 0;
     }
@@ -1547,12 +1557,11 @@ mod tests {
     use crate::runtime::bio::bss_mem::BIO_s_mem;
     use crate::runtime::bio::{BIO_free, BIO_new};
 
-    /// Takes the crate-wide global-state lock. Only
-    /// `cipher_info_skips_the_whitespace_before_the_dek_info_name` needs it: it
-    /// writes the process-global object-name table through `EVP_add_cipher`,
-    /// whereas the other tests here read it. [`crate::test_support::lock_global_state`]
-    /// is the one lock every global-touching test shares, not a lock local to
-    /// this module.
+    /// Takes the crate-wide global-state lock. The two `cipher_info_*` tests that
+    /// register a method need it: they write the process-global object-name table
+    /// through `EVP_add_cipher`, whereas the other tests here read it.
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module.
     fn lock() -> std::sync::MutexGuard<'static, ()> {
         crate::test_support::lock_global_state()
     }
@@ -1683,6 +1692,49 @@ mod tests {
             );
             assert_eq!(info.cipher, cipher);
             assert_eq!(&info.iv[..9], &[0, 1, 2, 3, 4, 5, 6, 7, 0]);
+        }
+    }
+
+    /// A method may declare an IV longer than the fixed `EVP_CIPHER_INFO::iv`
+    /// array. The authority's `load_iv` would write past it; the guard refuses
+    /// instead, leaving the (already zeroed) IV untouched and the resolved cipher
+    /// in place.
+    #[test]
+    fn cipher_info_refuses_an_iv_longer_than_the_fixed_array() {
+        let _g = lock();
+        // SAFETY: the method is this test's own object, every buffer is its own storage, and the
+        // header below is NUL-terminated.
+        unsafe {
+            let nid = crate::runtime::obj::OBJ_create(
+                c"1.3.6.1.4.1.99999.1".as_ptr(),
+                c"PEM-OVERSIZE-IV-CIPHER".as_ptr(),
+                c"pem oversize iv test".as_ptr(),
+            );
+            assert_ne!(nid, 0, "the test object is registered under a fresh NID");
+
+            let cipher = EVP_CIPHER_meth_new(nid, 1, 8);
+            assert!(!cipher.is_null());
+            assert_eq!(
+                EVP_CIPHER_meth_set_iv_length(cipher, (EVP_MAX_IV_LENGTH + 1) as c_int),
+                1
+            );
+            assert_eq!(EVP_add_cipher(cipher), 1);
+
+            let mut info = EvpCipherInfo {
+                cipher: ptr::null(),
+                iv: [0u8; EVP_MAX_IV_LENGTH],
+            };
+            let mut hdr = *b"Proc-Type: 4,ENCRYPTED\nDEK-Info: PEM-OVERSIZE-IV-CIPHER,000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F\n\0";
+
+            assert_eq!(
+                PEM_get_EVP_CIPHER_INFO(hdr.as_mut_ptr().cast(), &mut info),
+                0
+            );
+            assert_eq!(info.cipher, cipher, "the name resolved before the IV check");
+            assert_eq!(
+                info.iv, [0u8; EVP_MAX_IV_LENGTH],
+                "the refusal happens before any IV byte is written"
+            );
         }
     }
 

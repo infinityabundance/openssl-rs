@@ -342,6 +342,61 @@ TLS state-machine batch. `src/ml_dsa/encoders.rs`, `src/ssl/ssl_lib.rs` and
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M4.json`](atlas-refresh/mechanism-sweep-M4.json).
 
+## 3e. Mechanism-contract sweep M5 — 2026-10-18
+
+**Candidate:** `integrate/safe-c33` source HEAD `a8d3661ba` (working tree; not
+committed). **Level:** FAST, then **STOP**.
+
+| file | rank | mechanisms | result |
+|---|---:|---|---|
+| `src/cms/cms_lib.rs` | 62 | OB-4 `CmsPropqSlot`, FFI ABI, stack/refcount ownership | no defect |
+| `src/evp/cipher.rs` | 63 | OB-3 `OwnedCtx`/`RawCtx`, `CtxDestroy`, refcount, provider dispatch | no defect |
+| `src/provider/mac.rs` | 64 | OB-3 `OwnedCtx`/`OwnedRaw`, unsafe `MacDestroy`, OB-1 `OwnedBuf`, secret cleansing | no defect; Poly1305/SipHash no-cleanse is the authority's documented asymmetry |
+| `src/evp/pem_bridge.rs` | 67 | PemBuf seam owner, FFI ABI, C-string parsing, `EVP_CIPHER_INFO` | **M5-D1 (fixed): OOB write** |
+
+**M5-D1 — `src/evp/pem_bridge.rs:578` (pre-fix `load_iv` call at `:586`).**
+`PEM_get_EVP_CIPHER_INFO` took `ivlen` from `EVP_CIPHER_get_iv_length` and passed
+it to `load_iv`, which zeroes and fills that many bytes into the fixed
+`EVP_CIPHER_INFO::iv[EVP_MAX_IV_LENGTH]` array. A caller-registered method
+(`EVP_CIPHER_meth_new` + `EVP_CIPHER_meth_set_iv_length` > 16 + `EVP_add_cipher`)
+is reachable through `EVP_get_cipherbyname`, so the write could exceed 16 bytes.
+Severity: **high (memory-safety, authority-inherited)**. Fix: refuse
+`ivlen > EVP_MAX_IV_LENGTH` before `load_iv`; the resolved cipher remains in
+place and the zeroed IV is untouched. This is a deliberate divergence from the
+C authority's out-of-bounds write. Witness:
+`evp::pem_bridge::tests::cipher_info_refuses_an_iv_longer_than_the_fixed_array`
+(new) and the four existing `evp::pem_bridge::tests`; 5 passed / 0 failed.
+
+**Skipped to a boundary batch (NOT_RUN):** `src/runtime/bio/bss_dgram_pair.rs`
+(rank 65), `src/runtime/bio/bss_conn.rs` (66) — BIO callback/ownership
+boundaries; `src/provider/file_store.rs` (69) — loader callback boundary.
+`src/rsa/object.rs` (68) was queued next and is **NOT_RUN** because the STOP
+condition halted the sweep.
+
+**BATCH:** `cargo fmt` PASS; clippy `--all-targets -D warnings` PASS; library
+serial 1573 passed / 0 failed / 26 ignored. Threaded run 1 was 1557 passed /
+16 failed / 26 ignored, all `runtime::secure` global secure-heap init tests;
+the rerun was 1573 passed / 0 failed / 26 ignored, and a run with only the new
+test skipped was 1572 passed / 0 failed / 26 ignored. `runtime::secure::tests`
+alone threaded was 15 passed / 0 failed. The first-run failures are a
+pre-existing parallel secure-heap isolation race (other modules allocate secure
+memory without the module's lock); record it as a test-isolation batch item,
+not as an M5 regression.
+
+**M5-D1 boundary control (ASan venue):** sensitivity canary diagnosed its
+deliberate use-after-free; the temporary pre-fix revert produced
+`stack-buffer-overflow` in `load_iv` (`src/evp/pem_bridge.rs:404`) and the test
+aborted; the restored fixed source passed under ASan (1/1). Guard restoration
+is byte-identical to the recorded fix and no temporary marker remains.
+
+**Deferred / NOT_RUN:** deterministic threaded suite (secure-heap isolation),
+independent boundary review and broader M5-D1 probes (BOUNDARY),
+dependency-graph regeneration (BATCH checkpoint after commit). Full `D###`
+records are also pending.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M5.json`](atlas-refresh/mechanism-sweep-M5.json).
+
 ## 4. Machine-readable index
 
 `atlas-refresh/perfile-index.json` mirrors table 3 as deterministic JSON:
