@@ -1471,7 +1471,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `52fb41554` (OB-4b slots unified; OB-4a repairs `a46dbfd68`)
+**Last observed HEAD:** `258bcca51` (verification-scheduling merge; OB-4b slots unified at `52fb41554`, OB-4a repairs `a46dbfd68`)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1534,6 +1534,22 @@ are real defects, as the `evp/digest.rs` pilot did (three soundness defects
 fixed). After the file audits: seal evidence (ASan, loom, differential courts
 against `forensics/authorities/src/openssl-3.6.4/`, the 8 L7-functional
 consumers) and only then `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotions.
+
+**Mechanism-contract batch M1 (2026-10-18, HEAD `258bcca51` + worktree):** the
+next coherent ASN.1/X.509/CMS/PKCS7/params cluster (12 ordinary files) was swept
+under the established mechanisms: `params/mod.rs`, `pkcs7/pk7_doit.rs`,
+`x509/v3_utl.rs`, `pem/pvkfmt.rs`, `cms/cms_sd.rs`, `x509/x509_vfy.rs`,
+`evp/bio_enc.rs`, `store/store_lib.rs`, `x509/x_pubkey.rs`, `x509/v3_asid.rs`,
+`asn1/asn_mime.rs`, `rsa/pmeth.rs`. Seven defects/contract gaps were repaired
+(one STOP-class wrapping-extent out-of-bounds write in the reachable
+`setbuf_fromparams` chain used by `provider/kdf.rs:1558/5281/7290`, five §3
+extent sums, one ownership-contract statement); details are in
+`PERFILE-INDEX.md` §3a and `atlas-refresh/mechanism-sweep-M1.json`. The OB-4b
+test model was completed and now enforces its own ownership/phase invariant.
+Gate: fmt 0, clippy 0, **1571 passed / 0 failed / 26 ignored** both serially and
+with `--test-threads=4`, **13/13** affected probes. These files still have no
+full `D###` record and are not `SAFETY_DISCHARGED`. Next queue position:
+`src/cmp/cmp_msg.rs` (372 unattributed), then `src/ssl/t1_trce.rs` (353).
 
 **Why:** the campaign can count allocation sites but cannot state how many
 unsafe obligations exist, nor which of the 628 closure files contain none. Until

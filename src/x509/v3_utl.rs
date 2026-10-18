@@ -457,7 +457,13 @@ unsafe fn bignum_to_string(bn: *const BigNum) -> *mut c_char {
         return ptr::null_mut();
     };
     // SAFETY: `tmp` is a NUL-terminated allocation.
-    let len = unsafe { strlen(tmp.as_ptr().cast::<c_char>()) } + 3;
+    // The authority computes `strlen(tmp) + 3` in C; make the allocation extent checked so a
+    // wrapped sum cannot become a short buffer for the copies below (§3).
+    let Some(len) = unsafe { strlen(tmp.as_ptr().cast::<c_char>()) }.checked_add(3) else {
+        // The authority frees `tmp` at its own line 150 on its refusal path.
+        tmp.set_release_line(150);
+        return ptr::null_mut();
+    };
     let ret = CRYPTO_malloc(len, FILE.as_ptr(), 148).cast::<c_char>();
     if ret.is_null() {
         // The authority frees `tmp` at its own line 150 on this refusal.
