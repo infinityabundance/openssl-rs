@@ -1,0 +1,133 @@
+{
+  "receipt": "mechanism-sweep-M2",
+  "date": "2026-10-18",
+  "branch": "integrate/safe-c33",
+  "source_head": "d7265a503",
+  "worktree": "dirty: uncommitted crmf_lib.rs repair and ts_rsp_sign.rs contract repair",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "verification_level": "BATCH",
+  "scope": "mechanism-contract sweep over the next ten ordinary queue files (CMP/SSL-trace/TS/CMS/CRMF/provider/ASN.1); not full D-group enumeration",
+  "not_discharged": true,
+  "files": [
+    "src/cmp/cmp_msg.rs",
+    "src/ssl/t1_trce.rs",
+    "src/cmp/cmp_asn.rs",
+    "src/ts/ts_rsp_sign.rs",
+    "src/cms/cms_smime.rs",
+    "src/crmf/crmf_lib.rs",
+    "src/provider/encode_key2any.rs",
+    "src/cmp/cmp_client.rs",
+    "src/cmp/cmp_vfy.rs",
+    "src/asn1/d2i.rs"
+  ],
+  "dispositions": {
+    "src/cmp/cmp_msg.rs": "no defect: OB-3 item/stack ownership, set0/set1 transfers and up-refs balanced on every arm",
+    "src/ssl/t1_trce.rs": "no defect: every parser dereference is guarded by the authority's own bound; trace_list vlen==0 refusal is a recorded UB-elimination divergence",
+    "src/cmp/cmp_asn.rs": "no defect: all template offsets/sizes match the in-file repr(C) structs; SyncAux is read-only",
+    "src/ts/ts_rsp_sign.rs": "M2-D2 contract repair (free-on-failure ownership); no memory-safety defect",
+    "src/cms/cms_smime.rs": "no defect: OwnedChainArray checked_mul, index checks, one release per slot at :529",
+    "src/crmf/crmf_lib.rs": "M2-D1 high secret-cleansing repair; M2-D3 error-path fidelity repair",
+    "src/provider/encode_key2any.rs": "no defect: DER transfer only on success, OPENSSL_cleanse(kstr,klen) matches authority",
+    "src/cmp/cmp_client.rs": "no defect: CbPtr transmutes reverse matching setters; set0_newCert ownership respected",
+    "src/cmp/cmp_vfy.rs": "no defect: full-length constant-time PBMAC compare; adopted strings released at authority lines",
+    "src/asn1/d2i.rs": "no defect in collector/check_tlen/primitive paths; full item-template loop not line-audited"
+  },
+  "defects": [
+    {
+      "id": "M2-D1",
+      "file": "src/crmf/crmf_lib.rs",
+      "pre_fix_line": 1954,
+      "post_fix_lines": [1984, 2030, 2051],
+      "severity": "high (secret cleansing, repaired in this batch)",
+      "class": "AGENTS.md section 5: after ek = OwnedBuf::adopt_conditional(..., clear=false, ...), the decrypt-failure, malformed-IV and output/context-allocation-failure arms dropped the decrypted symmetric key with a plain CRYPTO_free, while the authority's end: calls OPENSSL_clear_free(ek, eksize) at crmf_lib.c:846",
+      "fix": "select the conditional cleansing release with set_clear(true) before every post-allocation drop",
+      "witness": "OB-1 OwnedBuf conditional-cleanse model tests plus cms::cms_env::tests::adv_probe_decrypted_key_release_cleanses_before_free (analogous path); a direct crmf error-arm fixture is NOT_RUN"
+    },
+    {
+      "id": "M2-D2",
+      "file": "src/ts/ts_rsp_sign.rs",
+      "pre_fix_line": 1854,
+      "post_fix_line": 1857,
+      "severity": "low (safety-contract hidden obligation)",
+      "class": "AGENTS.md section 1: the # Safety of ts_resp_set_gentime_with_precision said only that asn1_time was caller-owned; on failure the implementation (and the authority) frees it, so a caller following the old text could double-free",
+      "fix": "the contract now states the value is consumed on both outcomes and must not be released after a NULL return",
+      "witness": "review; no behaviour changed"
+    },
+    {
+      "id": "M2-D3",
+      "file": "src/crmf/crmf_lib.rs",
+      "pre_fix_lines": [1912, 1924],
+      "post_fix_lines": [1904, 1922, 1949],
+      "severity": "medium (error-path fidelity; not UB)",
+      "class": "decrypt-init, sizing-decrypt and CRYPTO_malloc failures fell through into IV allocation/output/decrypt work instead of the authority's goto end",
+      "fix": "return through the authority's tail (free pkctx and cipher) on each arm",
+      "witness": "cargo check --lib plus the full library suite; no error-injection fixture"
+    }
+  ],
+  "retained_obligations": [
+    "src/cmp/cmp_asn.rs: ossl_cmp_msg_set0_libctx clears propq before CRYPTO_strdup, exactly as cmp_msg.c; latent self-alias hazard with no exported getter",
+    "src/ts/ts_rsp_sign.rs: TS_RESP_CTX_set_def_policy frees before OBJ_dup, exactly as ts_rsp_sign.c; latent self-alias hazard with no getter",
+    "src/provider/encode_key2any.rs: a refused X509_PUBKEY_set0_param leaves the caller's paramstring unfreed, matching the authority (leak, not UB)",
+    "src/ssl/t1_trce.rs: SSL_trace retains the C ABI precondition that buf is readable for msglen; ssl_get_keyex is unmodeled and always 0",
+    "src/crmf/crmf_lib.rs: the conditional cleanse length is the sizing extent; this is a safe superset of the authority's final eksize",
+    "src/asn1/d2i.rs: the primitive/content codecs are transcribed, but the complete item/template loop was not line-audited in this sweep"
+  ],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "cargo_check_lib": "PASS",
+    "lib_serial": "1571 passed / 0 failed / 26 ignored",
+    "lib_test_threads_4": "1571 passed / 0 failed / 26 ignored",
+    "affected_adversarial_probes": "2/2 exact probes passed (cms decrypted-key cleanse, ssl cleansed-free instrument)"
+  },
+  "observations": [
+    "One filtered `ts::` invocation reported 17 failures; the identical rerun and both full serial/threaded runs passed 0 failed, so it is recorded as a non-reproducible environment observation, not a gate."
+  ],
+  "deferred": [
+    {
+      "gate": "full per-file D-group records for the ten files",
+      "status": "NOT_RUN",
+      "runs_at": "next per-file audit pass"
+    },
+    {
+      "gate": "direct runtime witness for the three crmf error arms",
+      "status": "NOT_RUN",
+      "runs_at": "next CRMF/CMP adversarial court"
+    },
+    {
+      "gate": "targeted Miri/ASan and the non-affected probes",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY/SEAL"
+    },
+    {
+      "gate": "impact/dependency graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH integration checkpoint after the orchestrator commits this worktree"
+    },
+    {
+      "gate": "src/ssl/statem/statem_srvr.rs (rank 31)",
+      "status": "NOT_RUN",
+      "reason": "deferred to its own callback/handshake boundary batch"
+    }
+  ],
+  "next_queue": {
+    "deferred_boundary_file": "src/ssl/statem/statem_srvr.rs (rank 31, 262 unattributed)",
+    "file": "src/runtime/conf/def.rs",
+    "rank_in_attribution": 33,
+    "unattributed_sites": 248,
+    "then": [
+      "src/x509/x_all.rs (247)",
+      "src/asn1/prim.rs (246)",
+      "src/x509/x509_lu.rs (246)",
+      "src/evp/signature.rs (241)",
+      "src/x509/v3_crld.rs (241)",
+      "src/cmp/cmp_server.rs (237)"
+    ],
+    "note": "src/ssl/ssl_lib.rs (rank 1, 1125 unattributed) remains a deliberately deferred boundary file."
+  }
+}

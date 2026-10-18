@@ -1850,7 +1850,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
     // The C's `EVP_CIPHER *cipher`, `EVP_CIPHER_CTX *evp_ctx`, `EVP_PKEY_CTX *pkctx` are owned
     // pointers; the `end:` tail releases each.
     let evp_ctx: *mut crate::evp::cipher_ctx::EvpCipherCtx;
-    let mut ek: Option<OwnedBuf> = None;
+    let mut ek: Option<OwnedBuf>;
     let mut eksize: usize = 0;
     let mut cipher: *mut crate::evp::cipher::EvpCipher;
     let mut iv: Option<OwnedBuf> = None;
@@ -1898,67 +1898,100 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
     let cikeysize = unsafe { crate::evp::cipher::EVP_CIPHER_get_key_length(cipher) };
     // SAFETY: `libctx`/`pkey`/`propq` are the caller's.
     let pkctx = unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_pkey(libctx, pkey, propq) };
-    // SAFETY: `pkctx` is NULL or live.
-    if !pkctx.is_null() && unsafe { crate::evp::asymcipher::EVP_PKEY_decrypt_init(pkctx) } > 0 {
-        // SAFETY: `enc` is live and its `enc_symm_key` is a live BIT STRING.
+    // The authority's `else { goto end; }` after the decrypt-init test: with `ek`,
+    // `iv`, `out` and `evp_ctx` still NULL, the tail is just the two releases.
+    // SAFETY: `pkctx` is NULL or live; `cipher` is live.
+    if pkctx.is_null() || unsafe { crate::evp::asymcipher::EVP_PKEY_decrypt_init(pkctx) } <= 0 {
+        // SAFETY: `pkctx` is NULL or live; `cipher` is live.
         unsafe {
-            let enc_key = (*enc).enc_symm_key;
-            if crate::evp::asymcipher::EVP_PKEY_decrypt(
-                pkctx,
-                ptr::null_mut(),
-                &mut eksize,
-                (*enc_key).data,
-                (*enc_key).length as usize,
-            ) <= 0
-            {
-                // fall to the exit path
-            } else {
-                // The decrypted symmetric key, allocated through the crate's allocator seam; `ek`'s
-                // `Drop` is its single release, plain unless the end path selects the cleansing
-                // form.
-                // The conditional arm fixes `num` at the whole allocation extent (`eksize`) and
-                // starts plain; the end path's `set_clear(true)` selects the authority's
-                // cleansing release.
-                // SAFETY: the block is the seam's fresh, exclusively owned allocation of
-                // `eksize` bytes, which is its whole extent.
-                ek = OwnedBuf::adopt_conditional(
-                    CRYPTO_malloc(eksize, FILE.as_ptr(), 802).cast::<u8>(),
-                    eksize,
-                    false,
-                    SeamFile::new(FILE),
-                    846,
-                );
-                if let Some(ek_ptr) = ek.as_ref().map(OwnedBuf::as_ptr) {
-                    let retval = crate::evp::asymcipher::EVP_PKEY_decrypt(
-                        pkctx,
-                        ek_ptr,
-                        &mut eksize,
-                        (*enc_key).data,
-                        (*enc_key).length as usize,
-                    );
-                    let failure = !constant_time_is_zero_s(
-                        (constant_time_msb_u32(retval as u32)
-                            | constant_time_is_zero_u32(retval as u32))
-                            as usize,
-                    );
-                    let failure = failure | !constant_time_eq_s(eksize, cikeysize as usize);
-                    if failure != 0 {
-                        ERR_clear_error();
-                        raise_crmf(
-                            810,
-                            c"OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
-                            CRMF_R_ERROR_DECRYPTING_SYMMETRIC_KEY,
-                        );
-                        // `ek` drops here: the authority's own plain release at 846, before
-                        // `pkctx`/`cipher`.
-                        drop(ek.take());
-                        crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
-                        crate::evp::cipher::EVP_CIPHER_free(cipher);
-                        return ptr::null_mut();
-                    }
-                }
-            }
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
         }
+        return ptr::null_mut();
+    }
+    // SAFETY: `enc` is live and its `enc_symm_key` is a live BIT STRING.
+    let enc_key = unsafe { (*enc).enc_symm_key };
+    // SAFETY: `pkctx`/`enc_key` are live; `eksize` is this frame's out-parameter.
+    if unsafe {
+        crate::evp::asymcipher::EVP_PKEY_decrypt(
+            pkctx,
+            ptr::null_mut(),
+            &mut eksize,
+            (*enc_key).data,
+            (*enc_key).length as usize,
+        )
+    } <= 0
+    {
+        // The authority's `|| (ek = OPENSSL_malloc(eksize)) == NULL` arm jumps to
+        // `end:` with no buffer acquired, so only the two contexts are released.
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
+    }
+    // The decrypted symmetric key, allocated through the crate's allocator seam; `ek`'s
+    // `Drop` is its single release, plain until the end path selects the cleansing
+    // form. The conditional arm fixes `num` at the whole allocation extent (`eksize`)
+    // and starts plain; every path after allocation below selects the authority's
+    // cleansing release.
+    // SAFETY: the block is the seam's fresh, exclusively owned allocation of
+    // `eksize` bytes, which is its whole extent.
+    ek = unsafe {
+        OwnedBuf::adopt_conditional(
+            CRYPTO_malloc(eksize, FILE.as_ptr(), 802).cast::<u8>(),
+            eksize,
+            false,
+            SeamFile::new(FILE),
+            846,
+        )
+    };
+    // SAFETY: `ek` is `Some` exactly when the seam answered a non-NULL block.
+    let Some(ek_ptr) = ek.as_ref().map(OwnedBuf::as_ptr) else {
+        // The authority's refused-`OPENSSL_malloc` arm: `goto end` with `ek == NULL`.
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
+    };
+    // SAFETY: `pkctx`/`ek_ptr`/`enc_key` are live.
+    let retval = unsafe {
+        crate::evp::asymcipher::EVP_PKEY_decrypt(
+            pkctx,
+            ek_ptr,
+            &mut eksize,
+            (*enc_key).data,
+            (*enc_key).length as usize,
+        )
+    };
+    let failure = !constant_time_is_zero_s(
+        (constant_time_msb_u32(retval as u32) | constant_time_is_zero_u32(retval as u32)) as usize,
+    );
+    let failure = failure | !constant_time_eq_s(eksize, cikeysize as usize);
+    if failure != 0 {
+        // SAFETY: the queue clear and the raise site carry no pointer obligations.
+        unsafe {
+            ERR_clear_error();
+            raise_crmf(
+                810,
+                c"OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
+                CRMF_R_ERROR_DECRYPTING_SYMMETRIC_KEY,
+            );
+        };
+        // `end:` clears the decrypted key at 846 before releasing the contexts.
+        if let Some(block) = ek.as_mut() {
+            block.set_clear(true);
+        }
+        drop(ek.take());
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
     }
     // SAFETY: `cipher` is live.
     let iv_len = unsafe { crate::evp::cipher::EVP_CIPHER_get_iv_length(cipher) };
@@ -1994,6 +2027,11 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
             crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
             EVP_CIPHER_free(cipher);
         };
+        // The authority's `end:` clears the decrypted key at 846 on this arm too.
+        if let Some(block) = ek.as_mut() {
+            block.set_clear(true);
+        }
+        drop(ek.take());
         // `iv` drops here: the authority's only IV release path is the plain one at 847.
         return ptr::null_mut();
     }
@@ -2010,7 +2048,11 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
             crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(evp_ctx);
             EVP_CIPHER_free(cipher);
-            // `ek`, `iv` and `out` drop here, plain, in the authority's own tail order.
+            // The authority's `end:` clears the decrypted key at 846; `iv`/`out` are
+            // plain releases at 847/850.
+            if let Some(block) = ek.as_mut() {
+                block.set_clear(true);
+            }
             drop(ek.take());
             drop(iv.take());
             drop(out.take());

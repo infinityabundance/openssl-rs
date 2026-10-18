@@ -16,11 +16,12 @@ post-census delta — exactly as it appeared in the former cumulative
 > dependency-closure and independent-evidence gates.
 
 **Campaign progress: 9 of 761 PARTIAL files have full group records; a further
-12 files have mechanism-contract sweeps (batch M1, not full group records).** The
+12 files have mechanism-contract sweeps (batch M1) and 10 files have
+mechanism-contract sweeps (batch M2), neither with full group records.** The
 761 denominator is the `PARTIAL` file population in `ATTRIBUTION.md`; it is not a
 count of files that have graduated. The nine full records cover 6,252 production
-unsafe sites in 2,949 groups. The M1 sweep is an obligation check over the known
-owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
+unsafe sites in 2,949 groups. The M1 and M2 sweeps are obligation checks over the
+known owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
 
 ## 1. Reusable template
 
@@ -155,6 +156,64 @@ coordinate, `#[repr(C)]` layout or exported symbol changed.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M1.json`](atlas-refresh/mechanism-sweep-M1.json).
+
+## 3b. Mechanism-contract sweep M2 — 2026-10-18
+
+**Source identity:** `integrate/safe-c33` at `d7265a503` plus the uncommitted
+worktree state (the `crmf_lib.rs` repair and the `ts_rsp_sign.rs` contract
+repair). The census counts quoted in `ATTRIBUTION.md` remain bound to candidate
+`c09eef8b94ce068c92557d9940decf50e8413c8c`; this sweep read HEAD source.
+
+**Scope:** the same mechanism-contract procedure as M1 — classify the applicable
+RC-1 / OB-1 `OwnedBuf` / OB-2 `OwnedStr` / OB-3 `OwnedCtx`–`RawCtx` / OB-4
+member-slot mechanisms, check caller preconditions and unusual transitions,
+repair genuine defects, run FAST for the changed units — over the next ten
+ordinary files in the queue (including two parser boundaries and one
+secret-bearing decryption path). This is **not** the full per-file `D###` group
+record: every row remains `CONTRACTED` at file level, no row is
+`INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED`, and the full group census for
+these ten files is `NOT_RUN` (queued).
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/cmp/cmp_msg.rs` | OB-3 item-owned values, `OPENSSL_sk_push` ownership, `set0`/`set1` transfers, `X509_up_ref`/`X509_chain_up_ref` | No defect: every success/failure arm has one owner; `local_crm`/`rd`/`resp`/`cert_status` are nulled after a successful push and freed on the failure arms; `enc_privkey`'s recipient stack is up-ref'ed and released after `ossl_cms_sign_encrypt`. |
+| `src/ssl/t1_trce.rs` | attacker-controlled trace cursor `(p,len)`, extension walk, per-message printers | No defect: every dereference is preceded by the authority's own bounds check; verified `ssl_print_hexbuf`, `ssl_print_version`, `ssl_print_random`, `ssl_print_signature`, the extension ADB arms, hello/keyex/certificate/cert-request/ticket printers and `SSL_trace`. Divergence retained: `trace_list` refuses `vlen == 0` (the C `% 0` is UB) and `ssl_print_raw_public_key` tolerates a NULL `sc->ctx`; the QUIC arm is unmodeled as the module records. |
+| `src/cmp/cmp_asn.rs` | hand-expanded ASN.1 templates/ADB, `SyncAux` read-only aux, OB-2 `propq` | No defect: every template offset/size matches the in-file `#[repr(C)]` struct field order (0/8/16/… and the 8-byte union arm), including `CMP_ITAV`'s ADB at offset 8 and `CMP_PKIBODY`'s 27 choices. `SyncAux` is never written (same established pattern as `asn1/p8_pkey.rs`). `ossl_cmp_msg_set0_libctx` clears `propq` before duplicating, exactly as the authority (latent self-alias; no getter). |
+| `src/ts/ts_rsp_sign.rs` | OB-3 `TS_RESP_CTX` zalloc/free, OB-1 ESS scratch encodings, `set1` duplicates, callbacks | **M2-D2 fixed (contract):** `ts_resp_set_gentime_with_precision` did not state that a non-NULL `asn1_time` is consumed (freed) on failure, matching the authority's `ASN1_GENERALIZEDTIME_free(asn1_time)`. The old wording let a caller double-free. Retained: `TS_RESP_CTX_set_def_policy` frees before `OBJ_dup` exactly as the authority (latent self-alias, no getter). |
+| `src/cms/cms_smime.rs` | custom CAdES chain owner `OwnedChainArray`, stack ownership, BIO chain teardown | No defect: `checked_mul` allocation, index-checked `slot`/`chain`, one `sk_X509_pop_free` per filled slot and one `CRYPTO_free` at `:529`, ordered before the `untrusted`/`crls` releases exactly as the authority. |
+| `src/crmf/crmf_lib.rs` | OB-1 `OwnedBuf` conditional cleansing, secret classification, error-path ownership | **M2-D1 fixed (high, secret):** three error paths released the decrypted symmetric key with a plain `CRYPTO_free` although the authority's `end:` calls `OPENSSL_clear_free(ek, eksize)` at `crmf_lib.c:846` — the decrypt-failure arm, the malformed-IV arm, and the output/context allocation-failure tail. All three now select the cleansing release. **M2-D3 fixed (medium, fidelity):** decrypt-init/sizing/allocation failures fell through into IV/output work instead of the authority's `goto end`; they now return through the tail. |
+| `src/provider/encode_key2any.rs` | OB-1 new/adopt/`into_raw`, OB-3 `OwnedCtx`/`CtxDestroy`, `CRYPTO_memdup`, passphrase cleanse | No defect: `key_to_p8info`/`key_to_pubkey` transfer the DER block only on success and release it on every failure; `OPENSSL_cleanse(kstr, klen)` matches the authority; the context destroy body releases only the passphrase data and cipher. Retained: the authority-faithful `str` leak when `X509_PUBKEY_set0_param` refuses (a leak, not UB). |
+| `src/cmp/cmp_client.rs` | OB-2 `OwnedStr`, callback storage `CbPtr`, `set0_newCert` | No defect: every `transmute` reverses a setter that stored the same function-pointer signature; `set0_newCert` refuses only on a NULL context and the caller then frees the certificate. Retained: transfer/certConf callbacks are application-controlled reentrancy edges under the authority's callback contract. |
+| `src/cmp/cmp_vfy.rs` | OB-1 `adopt_plain_nullable`, constant-time PBMAC compare, release coordinates | No defect: `verify_PBMAC` compares lengths before the full-length `CRYPTO_memcmp`; each adopted `X509_NAME_oneline`/`i2s_ASN1_OCTET_STRING` block has one handle and the authority's own release line. |
+| `src/asn1/d2i.rs` | `OwnedBlock`/`Collected`, realloc collector, parser cursor, checked sums, `ASN1_STRING_set0` handoff | No defect in the collector/`check_tlen`/`d2i_ex_primitive` paths: the resulting-length test matches the authority, `hdrlen + plen` is reached only after `ASN1_get_object` has cleared its error bit, the collect extent is checked, and `take_raw`/`adopt` leaves one owner across the content codec. |
+
+**New unsafe assumptions: none.** The repairs are a secret-release selection, error-path returns
+and one safety-contract statement; no new `unsafe` operation, adoption, release site, allocator
+coordinate, `#[repr(C)]` layout or exported symbol changed.
+
+**Defects:**
+
+| id | file | severity | class | fix / witness |
+|---|---|---|---|---|
+| M2-D1 | `src/crmf/crmf_lib.rs` | high (secret cleansing) | three post-allocation error arms used plain `CRYPTO_free` for the decrypted symmetric key; authority uses `OPENSSL_clear_free(…, eksize)` at `:846` | `set_clear(true)` before each drop (post-fix lines 1984, 2030, 2051); witness: OB-1 conditional-cleanse model tests + `cms::cms_env` analogous probe; no fixture exercises these exact arms (`NOT_RUN`) |
+| M2-D2 | `src/ts/ts_rsp_sign.rs` | low (contract) | `ts_resp_set_gentime_with_precision` omitted the authority's free-on-failure ownership transfer for a non-NULL `asn1_time` | safety contract now states the consumption (post-fix 1857); review only |
+| M2-D3 | `src/crmf/crmf_lib.rs` | medium (error-path fidelity) | decrypt-init/sizing/`CRYPTO_malloc` failures fell through into later work instead of `goto end` | early returns through the authority's tail (post-fix 1904-1910, 1922-1932, 1949-1958); full library suite |
+
+**Gates (final source):** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D warnings`
+PASS; `cargo test --lib -- --test-threads=1` **1571 passed / 0 failed / 26 ignored**;
+`cargo test --lib -- --test-threads=4` **1571 passed / 0 failed / 26 ignored**;
+affected adversarial probes **2/2** (`cms::cms_env::tests::adv_probe_decrypted_key_release_cleanses_before_free`,
+`ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue`). A first filtered
+`ts::` invocation reported 17 failures; the identical rerun and both full runs passed, so it is
+recorded as a non-reproducible environment observation, not a gate result.
+
+**Deferred / NOT_RUN:** full `D###` records for these ten files; a direct runtime witness for the
+three `crmf` error arms; targeted Miri/ASan (BOUNDARY/SEAL); dependency-graph regeneration against
+the exact candidate (BATCH checkpoint after commit). `src/ssl/statem/statem_srvr.rs` (rank 31) is
+**NOT_RUN**: deferred to its own callback/handshake boundary batch.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M2.json`](atlas-refresh/mechanism-sweep-M2.json).
 
 ## 4. Machine-readable index
 
