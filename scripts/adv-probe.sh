@@ -44,6 +44,9 @@ probes=(
   "ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free"
   "ssl::d1_lib::adv_probe::dtls_state_refusal_and_lifecycle"
   "pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release"
+  "provider::kdf::tests::adv_probe::argon2_matrix_release_cleanses_the_whole_block"
+  "provider::kdf::tests::adv_probe::sskdf_defaulted_kmac_cleanse_uses_the_allocation_length"
+  "provider::kdf::tests::adv_probe::pbkdf1_derived_key_is_cleansed_before_release"
   "provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair"
 )
 
