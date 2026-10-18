@@ -367,9 +367,18 @@ pub(crate) unsafe fn enc_save(
     // this allocator and the handle's `Drop` is that block's single release at the authority's site.
     // SAFETY: `enc` is live.
     drop(unsafe { OwnedBlock::<u8>::from_raw((*enc).enc, FILE.as_ptr(), LINE) });
+    // `ossl_asn1_enc_save` assigns the allocation's answer to the field, so a refused allocation
+    // leaves `enc->enc` NULL (`tasn_utl.c:174-178`). The authority leaves `len`/`modified` stale on
+    // that arm, which would let `ossl_asn1_enc_restore` copy a previous length from a NULL pointer;
+    // publish the post-free state (`ossl_asn1_enc_free`'s NULL/0/1) before the fallible allocation
+    // so the refusal is observably "no cached encoding" and a restore answers 0.
+    // SAFETY: `enc` is live.
+    unsafe {
+        (*enc).enc = core::ptr::null_mut();
+        (*enc).len = 0;
+        (*enc).modified = 1;
+    }
     if inlen <= 0 {
-        // SAFETY: `enc` is live.
-        unsafe { (*enc).enc = core::ptr::null_mut() };
         return 0;
     }
     // SAFETY: `inlen` is positive.
@@ -556,4 +565,111 @@ pub(crate) unsafe fn do_adb(
         return core::ptr::null();
     }
     adb.default_tt
+}
+
+// ---------------------------------------------------------------------------
+// Adversarial encoding-cache probe (`adv-probe.sh`, §16 negative control)
+// ---------------------------------------------------------------------------
+// The allocator hook is process-global, so this is `#[ignore]`d and runs one process per probe.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc;
+
+    /// A value whose first field is the `ASN1_ENCODING` the item's aux points at.
+    #[repr(C)]
+    struct EncodingValue {
+        encoding: Asn1Encoding,
+    }
+
+    fn encoding_item(aux: &Asn1Aux) -> Asn1Item {
+        Asn1Item {
+            itype: ASN1_ITYPE_SEQUENCE,
+            utype: 0,
+            templates: core::ptr::null(),
+            tcount: 0,
+            funcs: (aux as *const Asn1Aux).cast::<c_void>(),
+            size: core::mem::size_of::<EncodingValue>() as c_long,
+            sname: core::ptr::null(),
+        }
+    }
+
+    /// A refused replacement allocation must leave the member NULL (not dangling), a second free
+    /// a no-op, and `enc_restore` the documented failure rather than reading the released block.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn refused_encoding_malloc_leaves_a_null_member_and_safe_restore() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let aux = Asn1Aux {
+            app_data: core::ptr::null_mut(),
+            flags: ASN1_AFLG_ENCODING,
+            ref_offset: 0,
+            ref_lock: 0,
+            asn1_cb: None,
+            enc_offset: 0,
+            asn1_const_cb: None,
+        };
+        let it = encoding_item(&aux);
+        let mut value = EncodingValue {
+            encoding: Asn1Encoding {
+                enc: core::ptr::null_mut(),
+                len: 0,
+                modified: 1,
+            },
+        };
+        // SAFETY: `pval_slot` is a live slot naming `value`, whose first field is the encoding the
+        // item's `enc_offset` selects; `it.funcs` points at the live `aux` for this frame.
+        let mut pval: *mut c_void = (&mut value as *mut EncodingValue).cast();
+        let pval_slot: *mut *mut c_void = &mut pval;
+
+        let first = [1u8, 2, 3, 4];
+        // SAFETY: `first` is readable for four bytes, `pval_slot`/`it` are live.
+        assert_eq!(unsafe { enc_save(pval_slot, first.as_ptr(), 4, &it) }, 1);
+        assert_eq!(value.encoding.len, 4);
+        assert_eq!(value.encoding.modified, 0);
+
+        // Refuse exactly the replacement allocation. The error report the seam makes runs at
+        // `(NULL, 0)`, so a size-only arm is consumed by this request before it reaches that path.
+        adv_alloc::reset();
+        adv_alloc::arm_any(8);
+        let second = [9u8; 8];
+        // SAFETY: `second` is readable for eight bytes, `pval_slot`/`it` are live.
+        assert_eq!(unsafe { enc_save(pval_slot, second.as_ptr(), 8, &it) }, 0);
+        adv_alloc::disarm_any();
+
+        // The old code left the released block in the field here.
+        assert!(
+            value.encoding.enc.is_null(),
+            "a refused allocation must leave the field NULL, not dangling"
+        );
+        assert_eq!(value.encoding.len, 0);
+        assert_ne!(
+            value.encoding.modified, 0,
+            "a restore must not treat a refused save as a cache hit"
+        );
+
+        let mut out = [0xAAu8; 8];
+        let mut out_ptr = out.as_mut_ptr();
+        let mut reported: c_int = -1;
+        assert_eq!(
+            // SAFETY: `pval_slot` is a live const slot, `out`/`reported` are writable, and `it`
+            // is the live item whose aux names the local encoding.
+            unsafe { enc_restore(&mut reported, &mut out_ptr, pval_slot.cast(), &it) },
+            0,
+            "a refused save leaves nothing to restore"
+        );
+        assert_eq!(out, [0xAAu8; 8], "a failed restore must not copy bytes");
+        assert_eq!(reported, -1, "a failed restore must not report a length");
+
+        // A second free must be a no-op: the member is NULL.
+        // SAFETY: `pval_slot`/`it` are live and `enc_free` accepts a NULL member.
+        unsafe { enc_free(pval_slot, &it) };
+        adv_alloc::assert_no_double_free();
+        assert!(value.encoding.enc.is_null());
+    }
 }

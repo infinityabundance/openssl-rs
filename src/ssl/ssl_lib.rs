@@ -2746,11 +2746,18 @@ impl<'a> MemberCStrSlot<'a> {
 /// ## Blob member-buffer invariant (stated once)
 /// The `(ptr, len)` pair is always either `(NULL, 0)` or a single owned block produced by the
 /// crate's allocator seam (`CRYPTO_memdup`/`CRYPTO_malloc`/adopted from the ASN.1 item layer)
-/// whose allocation is exactly `len` bytes and which the enclosing `SSL_SESSION` owns. That object
-/// is the block's *only* owner: the block is released **exactly once**, by `ssl_sess.rs`'s
-/// `CtxDestroy` body or by the next [`MemberBufSlot::clear`]/[`MemberBufSlot::store`] that replaces
-/// it. Nothing else frees or aliases it, and `len` always equals the live allocation (0 when the
-/// pointer is NULL).
+/// whose allocation is **at least** `len` bytes and writable for `len`, and which the enclosing
+/// `SSL_SESSION` owns. That object is the block's *only* owner: the block is released **exactly
+/// once**, by `ssl_sess.rs`'s `CtxDestroy` body or by the next
+/// [`MemberBufSlot::clear`]/[`MemberBufSlot::store`] that replaces it. Nothing else frees or
+/// aliases it, and `len` is the live logical length (0 when the pointer is NULL).
+///
+/// **Why the allocation need not be exactly `len`.** A release (`CRYPTO_free`) needs only the base
+/// pointer; the allocator knows the real extent. A regrow (`CRYPTO_realloc`) also needs only a
+/// pointer that came from this allocator. Neither operation reads or frees beyond the logical
+/// length, so a larger allocation is sound. The ASN.1 adoption sites do exactly this: an
+/// `ASN1_STRING`'s `data` block is allocated with a trailing NUL (`len + 1`, `asn1/string.rs` and
+/// `asn1/d2i.rs`), and its ownership is transferred here with `len` as the logical length.
 ///
 /// ## Why the fields stay raw
 /// The `#[repr(C)]` layout is the authority's, so the two fields must remain `*mut u8`/`usize` at
@@ -2776,7 +2783,7 @@ impl<'a, N: Copy + Default + PartialEq> MemberBufSlot<'a, N> {
     ///
     /// `ptr`/`len` are the two member fields of a live object and currently obey the blob
     /// member-buffer invariant: `*ptr` is NULL with `*len` equal to zero, or a single owned block
-    /// of exactly `*len` bytes.
+    /// of **at least** `*len` bytes, writable for `*len`.
     pub(crate) unsafe fn of(ptr: &'a mut *mut u8, len: &'a mut N) -> MemberBufSlot<'a, N> {
         MemberBufSlot { ptr, len }
     }
@@ -2796,10 +2803,11 @@ impl<'a, N: Copy + Default + PartialEq> MemberBufSlot<'a, N> {
     ///
     /// # Safety
     ///
-    /// `new` is NULL or a live block this caller owns exclusively whose allocation is exactly `len`
-    /// bytes (produced by the crate's allocator seam, or adopted from a block whose ownership this
-    /// caller gives up) and no other owner will release it; the field is currently unset
-    /// (`(NULL, 0)`).
+    /// `new` is NULL or a live block this caller owns exclusively whose allocation is **at least**
+    /// `len` bytes and writable for `len` (produced by the crate's allocator seam, or adopted from
+    /// a block whose ownership this caller gives up) and no other owner will release it; the field
+    /// is currently unset (`(NULL, 0)`). Exactness is not required: `clear`/destruction release
+    /// only the base pointer, and `realloc` operates on the allocator's own block.
     pub(crate) unsafe fn store(&mut self, new: *mut u8, len: N) {
         debug_assert!(
             (*self.ptr).is_null() && *self.len == N::default(),
@@ -2829,8 +2837,8 @@ impl<'a> MemberBufSlot<'a> {
     ///
     /// `new_len > 0`. `self` was built by [`MemberBufSlot::of`], so the pair currently obeys the
     /// blob member-buffer invariant: the incumbent is NULL or the object's own single block of
-    /// exactly its current length, live for a `realloc`. The caller owns the returned pointer and
-    /// must initialise the first `new_len` bytes before any of them are read.
+    /// **at least** its current length, live for a `realloc`. The caller owns the returned pointer
+    /// and must initialise the first `new_len` bytes before any of them are read.
     pub(crate) unsafe fn realloc(
         &mut self,
         new_len: usize,

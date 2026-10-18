@@ -660,6 +660,14 @@ unsafe fn bignum_to_string(bn: *const crate::bn::bignum::BigNum) -> *mut c_char 
     unsafe { prepend_radix(tmp) }
 }
 
+/// The prefix buffer's length, `len + 3`.
+///
+/// The authority's unchecked `+` cannot overflow for a real string, but the size is derived from
+/// the input and must not wrap; `None` is the printer's failure outcome (the caller returns NULL).
+fn radix_buffer_len(len: usize) -> Option<usize> {
+    len.checked_add(3)
+}
+
 /// The `"0x"` prefix, placed after the sign.
 ///
 /// The authority computes `len = strlen(tmp) + 3`, which is exactly enough for
@@ -682,7 +690,10 @@ unsafe fn prepend_radix(tmp: *mut c_char) -> *mut c_char {
     // SAFETY: `OPENSSL_strnlen` measured at least one byte, so `p[0]` is a live
     // byte of that string.
     let neg = unsafe { *p.cast::<u8>() } == b'-';
-    let out_len = len + 3;
+    let Some(out_len) = radix_buffer_len(len) else {
+        // `tmp`'s handle drops here, running the authority's own `OPENSSL_free(tmp)`.
+        return core::ptr::null_mut();
+    };
     // SAFETY: a strictly positive size is requested and the file/line are statics.
     // The prefix buffer is the authority's own `OPENSSL_malloc(out_len)`; the handle's
     // `Drop` is its `OPENSSL_free` at the same site.
@@ -996,4 +1007,17 @@ unsafe fn asn1_primitive_print(
         }
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn radix_buffer_length_rejects_usize_max() {
+        assert_eq!(radix_buffer_len(0), Some(3));
+        assert_eq!(radix_buffer_len(usize::MAX - 3), Some(usize::MAX));
+        assert_eq!(radix_buffer_len(usize::MAX - 2), None);
+        assert_eq!(radix_buffer_len(usize::MAX), None);
+    }
 }

@@ -70,6 +70,9 @@ struct State {
     cleansed_observed: bool,
     /// Whether the last armed cleansed-free check found a non-zero byte in the released block.
     cleansed_violation: bool,
+    /// Live allocations and their requested sizes, so the poison-on-free probe can zero exactly
+    /// the block it is releasing. Entries are removed on release and updated across a move.
+    sizes: Vec<(usize, usize)>,
 }
 
 static STATE: Mutex<State> = Mutex::new(State {
@@ -79,6 +82,7 @@ static STATE: Mutex<State> = Mutex::new(State {
     reenter_obs: None,
     cleansed_observed: false,
     cleansed_violation: false,
+    sizes: Vec::new(),
 });
 
 /// One-shot refusal: set by [`arm`], consumed by the first matching request in `hook_malloc`.
@@ -109,6 +113,18 @@ static REALLOC_REFUSE: AtomicBool = AtomicBool::new(false);
 static REENTER_ARMED: AtomicBool = AtomicBool::new(false);
 static REENTER_PTR: AtomicUsize = AtomicUsize::new(0);
 static REENTER_LEN: AtomicUsize = AtomicUsize::new(0);
+
+/// Poison-on-free: zero a released block before forwarding the release. This makes a
+/// use-after-free read deterministic (a C string reads as empty, a byte blob as zeros) so a probe
+/// can prove that a copy happened *before* the release rather than relying on allocator luck.
+static POISON_ON_FREE: AtomicBool = AtomicBool::new(false);
+
+/// Forced-move realloc: when armed, the next `realloc` of exactly `MOVE_PTR` is emulated as
+/// allocate-new + copy + poison-old + free-old. `realloc` is allowed (but not required) to move; a
+/// probe that needs the move uses this arm instead of hoping for one.
+static MOVE_ARMED: AtomicBool = AtomicBool::new(false);
+static MOVE_PTR: AtomicUsize = AtomicUsize::new(0);
+static MOVE_OLD_LEN: AtomicUsize = AtomicUsize::new(0);
 
 /// Run `f` with the instrument's state locked (poison recovered: a panic already failed the run).
 fn with_state<R>(f: impl FnOnce(&mut State) -> R) -> R {
@@ -159,6 +175,10 @@ unsafe extern "C" fn hook_malloc(n: usize, file: *const c_char, line: c_int) -> 
             if let Some(i) = s.freed.iter().position(|&x| x == key) {
                 s.freed.swap_remove(i);
             }
+            if let Some(i) = s.sizes.iter().position(|&(k, _)| k == key) {
+                s.sizes.swap_remove(i);
+            }
+            s.sizes.push((key, n));
         }
     });
     p
@@ -172,6 +192,42 @@ unsafe extern "C" fn hook_realloc(
     _file: *const c_char,
     _line: c_int,
 ) -> *mut c_void {
+    // Forced move: emulate `realloc` as a guaranteed relocation, poisoning the old block so a
+    // caller that keeps reading through the pre-realloc pointer observes the released state.
+    if MOVE_ARMED.load(Ordering::SeqCst) && p as usize == MOVE_PTR.load(Ordering::SeqCst) {
+        MOVE_ARMED.store(false, Ordering::SeqCst);
+        let old_len = MOVE_OLD_LEN.load(Ordering::SeqCst);
+        // SAFETY: `malloc` has no preconditions and answers NULL or a block of at least `n` bytes.
+        let q = unsafe { malloc(n) };
+        if q.is_null() {
+            return q;
+        }
+        let copy_len = old_len.min(n);
+        // SAFETY: `p` is the live block the caller is regrowing (the test armed its address and
+        // extent); `q` is a fresh `n`-byte block, and `copy_len <= n`.
+        unsafe {
+            ptr::copy_nonoverlapping(p.cast::<u8>(), q.cast::<u8>(), copy_len);
+            // The released extent: zero it before the real free so a stale read is deterministic.
+            ptr::write_bytes(p.cast::<u8>(), 0, old_len);
+        }
+        with_state(|s| {
+            s.log.push(Ev::Realloc { n, refused: false });
+            s.freed.push(p as usize);
+            if let Some(i) = s.sizes.iter().position(|&(k, _)| k == p as usize) {
+                s.sizes.swap_remove(i);
+            }
+            if let Some(i) = s.sizes.iter().position(|&(k, _)| k == q as usize) {
+                s.sizes.swap_remove(i);
+            }
+            s.sizes.push((q as usize, n));
+            if let Some(i) = s.freed.iter().position(|&x| x == q as usize) {
+                s.freed.swap_remove(i);
+            }
+        });
+        // SAFETY: `p` is the block this hook owns and has now copied and poisoned.
+        unsafe { free(p) };
+        return q;
+    }
     let intercept =
         REALLOC_ARMED.load(Ordering::SeqCst) && n == REALLOC_SIZE.load(Ordering::SeqCst);
     if intercept {
@@ -208,6 +264,16 @@ unsafe extern "C" fn hook_realloc(
                 }
             }
         }
+        if !q.is_null() {
+            // A successful realloc consumes `p` and the block now lives at `q` with extent `n`.
+            if let Some(i) = s.sizes.iter().position(|&(k, _)| k == p as usize) {
+                s.sizes.swap_remove(i);
+            }
+            if let Some(i) = s.sizes.iter().position(|&(k, _)| k == q as usize) {
+                s.sizes.swap_remove(i);
+            }
+            s.sizes.push((q as usize, n));
+        }
     });
     q
 }
@@ -220,14 +286,19 @@ unsafe extern "C" fn hook_free(p: *mut c_void, _file: *const c_char, _line: c_in
         return;
     }
     let key = p as usize;
-    let already = with_state(|s| {
+    let (already, block_len) = with_state(|s| {
         s.log.push(Ev::Free { p: key });
+        let size = if let Some(i) = s.sizes.iter().position(|&(k, _)| k == key) {
+            Some(s.sizes.swap_remove(i).1)
+        } else {
+            None
+        };
         if s.freed.contains(&key) {
             s.double_free = true;
-            true
+            (true, size)
         } else {
             s.freed.push(key);
-            false
+            (false, size)
         }
     });
     // A double release is not forwarded, so its storage may already be invalid: consume the
@@ -249,6 +320,14 @@ unsafe extern "C" fn hook_free(p: *mut c_void, _file: *const c_char, _line: c_in
                     s.cleansed_violation = true;
                 }
             });
+        }
+        if POISON_ON_FREE.load(Ordering::SeqCst) {
+            if let Some(len) = block_len {
+                // SAFETY: `p` is the live block whose requested size was recorded by
+                // `hook_malloc`/`hook_realloc`; those `len` bytes are readable and writable until
+                // the `free` below. Zeroing them makes a post-release read deterministic.
+                unsafe { ptr::write_bytes(p.cast::<u8>(), 0, len) };
+            }
         }
         // SAFETY: `p` is a block `hook_malloc` returned and has not been released yet.
         unsafe { free(p) };
@@ -384,6 +463,30 @@ pub(crate) fn disarm_realloc() {
     REALLOC_ARMED.store(false, Ordering::SeqCst);
 }
 
+/// Zero every block before it is released, so a use-after-free read is deterministic.
+pub(crate) fn arm_poison_on_free() {
+    POISON_ON_FREE.store(true, Ordering::SeqCst);
+}
+
+/// Stop poisoning released blocks.
+pub(crate) fn disarm_poison_on_free() {
+    POISON_ON_FREE.store(false, Ordering::SeqCst);
+}
+
+/// Force the next `CRYPTO_realloc` of `ptr` to move: the hook allocates a fresh block, copies the
+/// first `old_len` bytes, poisons those bytes in the incumbent, releases it, and returns the new
+/// block. `ptr` must be a live allocation of at least `old_len` bytes when the call is made.
+pub(crate) fn arm_move_realloc(ptr: *mut c_void, old_len: usize) {
+    MOVE_PTR.store(ptr as usize, Ordering::SeqCst);
+    MOVE_OLD_LEN.store(old_len, Ordering::SeqCst);
+    MOVE_ARMED.store(true, Ordering::SeqCst);
+}
+
+/// Disarm a forced move that was not consumed.
+pub(crate) fn disarm_move_realloc() {
+    MOVE_ARMED.store(false, Ordering::SeqCst);
+}
+
 /// Arm the reentrancy observer for the next intercepted realloc. `ptr_field`/`len_field` are the
 /// addresses of the member pair the observer reads during the call.
 pub(crate) fn arm_reenter(ptr_field: *mut *mut u8, len_field: *mut usize) {
@@ -407,6 +510,8 @@ pub(crate) fn reset() {
     REENTER_ARMED.store(false, Ordering::SeqCst);
     ANY_ARMED.store(false, Ordering::SeqCst);
     CLEANSED_ARMED.store(false, Ordering::SeqCst);
+    POISON_ON_FREE.store(false, Ordering::SeqCst);
+    MOVE_ARMED.store(false, Ordering::SeqCst);
     with_state(|s| {
         s.log.clear();
         s.freed.clear();
