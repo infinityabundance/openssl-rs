@@ -63,7 +63,7 @@ pub mod dlfcn;
 
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::dso::dlfcn::DSO_METHOD_openssl;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
@@ -307,13 +307,14 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
         if dso.is_null() {
             return 1;
         }
-        // SAFETY: `dso` is live per the contract.
-        let now = unsafe { (*dso).references.fetch_sub(1, Ordering::AcqRel) };
-        if now <= 0 {
-            return 0;
-        }
-        if now > 1 {
-            return 1;
+        // SAFETY: `dso` is live per the contract. The shared gate claims the last reference
+        // with the destroying sentinel; `dso_unload` and `finish` are method callbacks and a
+        // re-entrant `DSO_free` from one must not run the teardown a second time.
+        match crate::runtime::refcount::down_ref(unsafe { &(*dso).references }) {
+            crate::runtime::refcount::DownRef::Last => {}
+            crate::runtime::refcount::DownRef::Remaining => return 1,
+            // The authority answers 0 when its down-ref observed an already-zero count.
+            crate::runtime::refcount::DownRef::Retired => return 0,
         }
         // SAFETY: `dso` is live, so its method pointer is a `'static` method.
         unsafe {
@@ -374,9 +375,9 @@ pub unsafe extern "C" fn DSO_up_ref(dso: *mut Dso) -> c_int {
             unsafe { raise_site(&err_sites::DSO_LIB_92) };
             return 0;
         }
-        // SAFETY: `dso` is live.
-        let i = unsafe { (*dso).references.fetch_add(1, Ordering::AcqRel) } + 1;
-        c_int::from(i > 1)
+        // SAFETY: `dso` is live. The shared protocol takes a relaxed increment on a live
+        // count and refuses a zero, destroying or `i32::MAX` count without changing it.
+        crate::runtime::refcount::up_ref(unsafe { &(*dso).references })
     })
 }
 
@@ -932,6 +933,43 @@ pub(crate) unsafe fn meth_data_value(dso: *mut Dso, i: c_int) -> *mut c_void {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    static FINISH_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The method's `finish` hook is application-controlled. Re-entering `DSO_free` from it
+    /// must observe the destroying sentinel, not run the teardown a second time.
+    unsafe extern "C" fn reentrant_finish(dso: *mut Dso) -> c_int {
+        let target = FINISH_TARGET.load(Ordering::SeqCst) as *mut Dso;
+        if dso == target {
+            FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: `dso` is the object whose last reference is being released and whose
+            // block is still allocated here.
+            let _ = unsafe { DSO_free(dso) };
+        }
+        1
+    }
+
+    #[test]
+    fn free_reentry_from_the_finish_hook_is_a_noop() {
+        // SAFETY: the test builds and releases one object it exclusively owns.
+        unsafe {
+            let d = DSO_new();
+            assert!(!d.is_null());
+            let mut meth: DsoMethod = core::mem::zeroed();
+            meth.finish = Some(reentrant_finish);
+            let meth = Box::into_raw(Box::new(meth));
+            (*d).meth = meth;
+            FINISH_TARGET.store(d as usize, Ordering::SeqCst);
+            FINISH_CALLS.store(0, Ordering::SeqCst);
+            assert_eq!(DSO_free(d), 1);
+            FINISH_TARGET.store(0, Ordering::SeqCst);
+            assert_eq!(FINISH_CALLS.load(Ordering::SeqCst), 1);
+            // The method table is this test's own heap block; `Dso` borrowed it.
+            drop(Box::from_raw(meth));
+        }
+    }
 
     #[test]
     fn a_new_object_has_the_openssl_method_a_null_name_and_flag_zero() {

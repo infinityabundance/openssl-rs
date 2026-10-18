@@ -1048,13 +1048,9 @@ pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
             return 0;
         }
         // SAFETY: `bio` is non-NULL and live; `references` is an atomic owned by
-        // this object.
-        let now = unsafe { &*bio }.references.fetch_add(1, Ordering::AcqRel) + 1;
-        if now > 1 {
-            1
-        } else {
-            0
-        }
+        // this object. The shared protocol takes a relaxed increment on a live count and
+        // refuses a zero, destroying or `i32::MAX` count without changing it.
+        crate::runtime::refcount::up_ref(unsafe { &(*bio).references })
     })
 }
 
@@ -1079,11 +1075,16 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
         }
         // SAFETY: `bio` is non-NULL and live for the caller's reference.
         let b = unsafe { &mut *bio };
-        // The count is decremented once whatever the outcome. The authority's
-        // down-ref yields the *previous* value, and a count above one means other
-        // references remain, so the object survives.
-        if b.references.fetch_sub(1, Ordering::AcqRel) != 1 {
-            return 1;
+        // The shared gate claims the last reference with the destroying sentinel. The
+        // method's `destroy`, the BIO free callback and `CRYPTO_free_ex_data` can all
+        // re-enter `BIO_free`; the sentinel makes that a defined no-op instead of a second
+        // teardown of the same block.
+        match crate::runtime::refcount::down_ref(&b.references) {
+            crate::runtime::refcount::DownRef::Last => {}
+            crate::runtime::refcount::DownRef::Remaining => return 1,
+            // A zero/negative/destroying count: the authority's `fetch_sub` arm also answers
+            // 1 without releasing anything.
+            crate::runtime::refcount::DownRef::Retired => return 1,
         }
         if b.callback_ex.is_some() || b.callback.is_some() {
             // SAFETY: the callback was installed by the caller for this BIO class

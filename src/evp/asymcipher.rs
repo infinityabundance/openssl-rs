@@ -39,7 +39,7 @@
 
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -462,9 +462,12 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
         return;
     }
     // SAFETY: `cipher` is live per the contract.
-    let last = unsafe { (*cipher).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*cipher).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_ASYM_CIPHER_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: `cipher` is live and this was its last reference, so no other owner will release it;
     // `Drop` runs the authority's own free body and this is the block's single release.
@@ -477,9 +480,10 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
 /// `cipher` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_ASYM_CIPHER_up_ref(cipher: *mut EvpAsymCipher) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `cipher` is live per the contract.
-    unsafe { (*cipher).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*cipher).refcnt })
 }
 
 /// `OSSL_PROVIDER *EVP_ASYM_CIPHER_get0_provider(const EVP_ASYM_CIPHER *cipher)`.

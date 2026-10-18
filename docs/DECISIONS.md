@@ -36289,3 +36289,21 @@ authority's check already covers, so no accepted decrypt case changes. This is a
 memory-safety divergence, not a transcription slip: no under-sized destination reaches the wrap
 function and no buffer is written through.
 
+## D562 -- Reference increments refuse a retired or overflowing count instead of wrapping
+
+The crate's shared reference-count gate (`runtime::refcount`) deliberately diverges from the
+pinned authority in one direction, recorded here as the §17 classification rather than only in
+code comments. The authority's `CRYPTO_UP_REF` increments the count first and tests the *new*
+value: on a zero count it makes the count 1 and returns 0 (failure), and at `i32::MAX` the C11
+atomic fetch-add wraps to `i32::MIN` (defined two's-complement behaviour on the atomic arm) while
+the public wrapper reports failure. The crate's `up_ref` performs a checked compare-and-swap: a
+zero, negative, destroying, or `i32::MAX` count is refused with answer 0 and **the count is left
+unchanged**. No live object is observable differently: every successful increment on a positive
+live count keeps the authority's relaxed ordering and answer 1, and the same public callers still
+test the answer rather than assuming success. The divergence removes two unsafe outcomes -- the
+resurrection of an object whose last reference was already released, and a wrapped count that
+would fabricate the `REF_DESTROYING` sentinel -- and is applied uniformly to `ENGINE` and to every
+family converted to the shared gate. It is documented in `AGENTS.md` §17 terms: this is an
+elimination of a known-unsafe mechanism, not a compatibility defect, and no accepted positive-count
+call changes behaviour.
+

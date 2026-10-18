@@ -320,15 +320,14 @@ pub unsafe extern "C" fn DSA_free(r: *mut Dsa) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&r->references, &i)`: a release fetch-sub, then the header's conditional
-    // acquire fence when the count reaches zero.
+    // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
+    // the destroying sentinel, so a re-entrant `DSA_free` from the method's `finish` hook or an
+    // ex-data callback is a defined no-op instead of a second teardown.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    if i > 0 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*r).references }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
 
     // `CRYPTO_FREE_REF(&r->references)` is empty on this profile's arm of the header.
@@ -350,14 +349,10 @@ pub unsafe extern "C" fn DSA_free(r: *mut Dsa) {
 /// `r` is a live object.
 #[no_mangle]
 pub unsafe extern "C" fn DSA_up_ref(r: *mut Dsa) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add, and the relaxedness is deliberate.
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
     // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    crate::runtime::refcount::up_ref(unsafe { &(*r).references })
 }
 
 /// `void ossl_dsa_set0_libctx(DSA *d, OSSL_LIB_CTX *libctx)` — `dsa_lib.c:245-248`. Internal.

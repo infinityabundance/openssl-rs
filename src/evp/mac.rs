@@ -78,7 +78,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -497,9 +499,10 @@ pub unsafe extern "C" fn EVP_MAC_fetch(
 /// `mac` must be a live `EvpMac`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MAC_up_ref(mac: *mut EvpMac) -> c_int {
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
     // SAFETY: `mac` is live per the contract.
-    unsafe { (*mac).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*mac).refcnt })
 }
 
 /// `void EVP_MAC_free(EVP_MAC *mac)`.
@@ -517,9 +520,12 @@ pub unsafe extern "C" fn EVP_MAC_free(mac: *mut EvpMac) {
         return;
     }
     // SAFETY: `mac` is live per the contract.
-    let last = unsafe { (*mac).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*mac).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_MAC_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
     unsafe {

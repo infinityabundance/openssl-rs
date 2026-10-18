@@ -852,7 +852,9 @@ pub unsafe extern "C" fn EVP_MD_up_ref(md: *mut EvpMd) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
         if (*md).origin == EVP_ORIG_DYNAMIC {
-            (*md).refcnt.fetch_add(1, Ordering::AcqRel);
+            // The shared protocol refuses a zero, destroying or `i32::MAX` count without
+            // changing it.
+            return crate::runtime::refcount::up_ref(&(*md).refcnt);
         }
     }
     1
@@ -876,9 +878,12 @@ pub unsafe extern "C" fn EVP_MD_free(md: *mut EvpMd) {
         return;
     }
     // SAFETY: `md` is live.
-    let last = unsafe { (*md).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*md).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The method's `type_name` release and `ossl_provider_free` can run a provider
+        // teardown callback; a re-entrant `EVP_MD_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference.
     unsafe { evp_md_free_int(md) };

@@ -116,3 +116,50 @@ The committed Phase 8 probe binaries (not rebuilt for this batch) were executed:
 pre-existing D561 encrypt-extent refusal for a padded key-wrap update whose
 provider `outsize` is the EVP-computed `inl + blocksize`; it is not touched by
 this addendum and is recorded rather than silently re-baselined.
+
+## Addendum — 2026-10-18, reference-count sentinel sweep (uncommitted review fix)
+
+### Decision D562 — checked increments refuse instead of wrapping
+
+The shared gate `runtime::refcount` now applied to `ENGINE` and the converted
+families refuses a zero, negative, destroying, or `i32::MAX` count without
+changing it. The authority increments first and answers failure (`zero -> 1`,
+answer 0; `MAX -> MIN` on the atomic arm). Every positive live-count increment
+keeps the authority's relaxed ordering and answer 1. This is a §17
+UB-mechanism elimination recorded in `docs/DECISIONS.md` D562; the
+`EVP_SKEY_up_ref` unit test now asserts the unchanged count.
+
+### Families
+
+Sentinel added where the last-reference body reaches a callback: `ENGINE`,
+`EVP_PKEY`, `EVP_SKEY`, `DH`, `DSA`, `RSA`, `EC_KEY`, `BIO`, `DSO`, and the
+provider methods (`EVP_CIPHER`/`MD`/`KDF`/`MAC`/`RAND`/`KEYMGMT`/`SKEYMGMT`/
+`SIGNATURE`/`ASYM_CIPHER`/`KEYEXCH`/`KEM`, `OSSL_ENCODER`/`DECODER`,
+`OSSL_STORE_LOADER`, `EVP_RAND_CTX`). `X509_STORE`, `SSL`, `SSL_CTX` and
+`SSL_SESSION` already had it. No sentinel is added where the body has no
+callback (`OsslCompCert`, `ECX_KEY`, `KDF_DATA`, `MAC_KEY`) or where the free
+path is not refcount-gated (`Cert`, a unique owner); the provider's own
+`refcnt` returns before teardown on any non-zero post-decrement, so a repeated
+release cannot re-run teardown.
+
+### Constructor counts
+
+Every converted constructor publishes a count of 1 before the object escapes:
+`ENGINE_new`, `EVP_PKEY_new`, `evp_skey_alloc`, `dh_new_intern`, `dsa_new_intern`,
+`rsa_new_intern`, `ossl_ec_key_new_method_int`, `BIO_new_ex`, `new_method` (DSO),
+and each provider-method constructor (`evp_cipher_new`, `evp_md_new`,
+`evp_kdf_new`, `evp_mac_new`, `evp_rand_new`, `evp_rand_ctx_new`, `keymgmt_new`,
+`skeymgmt_new`, `evp_signature_new`, `evp_asym_cipher_new`, `evp_keyexch_new`,
+`evp_kem_new`, `ossl_encoder_new`, `ossl_decoder_new`, `new_loader`). No
+converted object starts at 0.
+
+### Evidence
+
+Re-entrancy tests cover the ex-data path for `ENGINE`, `DH`, `DSA`, `RSA`,
+`EC_KEY`, `EVP_PKEY` and `BIO`, the BIO `callback_ex` path, the DSO `finish`
+hook, the `EVP_SKEY` provider key destructor, and an `EVP_CIPHER` provider
+teardown re-entering its own free. `engine_list_add`'s refusal returns to
+`ENGINE_add`, which owns and releases the engine lock on every path.
+
+Court: fmt, clippy `-D warnings`, library tests and all 22 adversarial probes
+are rerun for this addendum.

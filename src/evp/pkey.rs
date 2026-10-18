@@ -71,7 +71,9 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::asn1::layout::{Asn1Pctx, Asn1String};
 use crate::bn::bignum::BigNum;
@@ -522,9 +524,10 @@ pub unsafe extern "C" fn EVP_PKEY_new() -> *mut EvpPkey {
 /// `pkey` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_up_ref(pkey: *mut EvpPkey) -> c_int {
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
     // SAFETY: `pkey` is live per the contract.
-    unsafe { (*pkey).references.fetch_add(1, Ordering::AcqRel) };
-    1
+    crate::runtime::refcount::up_ref(unsafe { &(*pkey).references })
 }
 
 /// `static void evp_pkey_free_it(EVP_PKEY *x)` — release the key data, keeping the object.
@@ -618,9 +621,12 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
     }
 
     // SAFETY: `x` is live per the contract.
-    let last = unsafe { (*x).references.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*x).references }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `evp_keymgmt_freedata` and `CRYPTO_free_ex_data` are provider/application callbacks;
+        // a re-entrant `EVP_PKEY_free` from one observes the destroying sentinel and stops.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
 
     // SAFETY: `x` is a live key this crate allocated and this is its last reference; `from_raw`
