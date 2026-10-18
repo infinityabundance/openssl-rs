@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1281** passed,
+`cargo test --lib` (must pass; the established baseline is **1285** passed,
 **21 ignored**, and **21/21** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -893,6 +893,34 @@ package.
 - Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1281 passed / 21
   ignored**, **21/21** probes. Per-file campaign: **6 of 761**.
 
+### Subphase 75 — mechanism-class sweep and fixes
+
+- `MECHANISM-SWEEP.md` + `mechanism-candidates.json`: **167 candidates** in
+  seven classes — self-aliasing copies (81), publication before acquisition
+  (20), safe-fn raw derefs (52), destination extent (3), secret cleanse gaps
+  (7), failure-path release (4), shallow owned copies (0). Candidates are
+  explicitly not confirmed defects.
+- Fixed 7 mechanisms across 10 files:
+  1. **Provider digest/legacy copyctx self-copy (8 sites).** The deliberate
+     `EVP_MD_CTX_copy_ex(ctx, ctx)` arm calls `copyctx(algctx, algctx)`; all
+     whole-context copies now use `ptr::copy`. `dup()` destinations remain
+     fresh allocations.
+  2. **TDES wrap extent (2 sites).** `outsize < inl` did not cover
+     `inl + IV + ICV`; the derived extent is enforced before the store,
+     preserving the NULL-out query and error precedence (D562).
+  3. **CMP secret cleanse (2 sites).** `secret_value` is `OPENSSL_cleanse`d over
+     its length before free.
+  4. **Provider method constructors (5 sites).** `ossl_provider_up_ref` is now
+     checked; the fresh block is freed without publishing `prov` on failure.
+     Only the child-provider arm rolls back; the non-child overflow arm's
+     retained reference is stated as an obligation.
+  5. **HPKE failure cleanse (2 sites).** `shared_secret` is clear-freed with the
+     saved allocation lengths on encap/decap failure.
+- Adversarial review **PASS** (three non-blocking notes: comment accuracy,
+  keymgmt's documented divergence, NULL-tolerant `clear_free` confirmed at
+  `src/runtime/mem.rs:430-433`). Gate: `fmt` 0, clippy 0, **1285 passed / 21
+  ignored**, **21/21** probes.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1070,7 +1098,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `478e18911` (pkey audit fixes merged)
+**Last observed HEAD:** `e56cb78cd` (mechanism-class fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1084,7 +1112,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1281** tests (21 ignored;
+   The most recent reported library baseline is **1285** tests (21 ignored;
    21/21 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
