@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1341** passed,
+`cargo test --lib` (must pass; the established baseline is **1346** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1097,6 +1097,30 @@ package.
   mutation negative controls, source witnesses) before any
   `INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED` claim.
 
+### Subphase 83 — RC-1 independently checked (first mechanism)
+
+- `loom 0.7.2` is a **cfg(loom)-only** dev-dependency; a crate-private
+  `RefAtomic` seam lets the real `up_ref`/`down_ref` bodies run over loom
+  atomics with no product signature, layout or call-site change.
+- Evidence:
+  1. Four loom models (base+2 workers, last-release race, sentinel absorption,
+     `i32::MAX`) pass on a forced fresh compile.
+  2. An exhaustive bounded model enumerates all interleavings for up to three
+     actors (**226** in the base+2 case) and asserts at most one `Last`, no
+     resurrection after the sentinel, no count below zero except the sentinel,
+     conservation of acquired/released references, and `MAX` refusal.
+  3. Three mutants — non-atomic RMW, unchecked increment, free-on-zero — are
+     each detected by the same harness while the real protocol is clean.
+- `REFCOUNT-CHECKS.md` records scope, hashes, commands, results and the honest
+  limits: mutants drive the integer mirror (loom is the production negative
+  control), the model is bounded, and the exported free wrappers still depend on
+  the C-ABI caller contract.
+- **State: RC-1 = `INDEPENDENTLY_CHECKED`.** It is **not** `SAFETY_DISCHARGED`:
+  that adjudication requires the C-ABI caller obligation to be accepted as an
+  external contract and the per-site evidence to be reviewed as such.
+- Adjudication review **PASS**. Gate: `fmt` 0, clippy 0, **1346 passed / 22
+  ignored**, **22/22** probes, loom **4/4**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1274,7 +1298,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `e3892b0c4` (refcount unsafe boundary merged)
+**Last observed HEAD:** `43b9071cf` (RC-1 independently checked)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1288,7 +1312,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1341** tests (22 ignored;
+   The most recent reported library baseline is **1346** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
