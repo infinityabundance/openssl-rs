@@ -1216,19 +1216,25 @@ pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
 fn bn_param_cleanup(
     mut buf: Option<OwnedBuf>,
     params: &mut [crate::params::OsslParam; 2],
-    buffer: &mut [u8; 2048],
+    buffer: &mut [u8],
     ret: c_int,
 ) -> c_int {
     // SAFETY: `params` is a live array of two.
     let modified = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } != 0;
     if let Some(block) = buf.as_mut() {
+        // The owner's extent is the `buf_sz` actually allocated, never the provider's
+        // `data_size` (which a provider may rewrite): `set_clear` cleanses exactly the
+        // block the allocator returned.
         let _ = block.set_clear(modified);
     } else if modified {
-        // SAFETY: `buffer` is a live 2048-byte buffer and the provider wrote
-        // `params[0].data_size` bytes into it.
-        unsafe {
-            crate::runtime::mem::OPENSSL_cleanse(buffer.as_mut_ptr().cast(), params[0].data_size)
-        };
+        /* `data_size` lives in the caller-visible `OSSL_PARAM` and a provider's
+         * `get_params` may rewrite it. The authority cleanses that value directly
+         * (`OPENSSL_cleanse(buffer, params[0].data_size)`), which an untrusted or
+         * merely buggy provider can push past the stack array. Bound the cleanse by
+         * the allocation this function actually holds: the stack buffer's extent. */
+        let written = params[0].data_size.min(buffer.len());
+        // SAFETY: `buffer` is a live allocation and `written` is at most its length.
+        unsafe { crate::runtime::mem::OPENSSL_cleanse(buffer.as_mut_ptr().cast(), written) };
     }
     ret
 }
@@ -1448,6 +1454,9 @@ pub unsafe extern "C" fn EVP_PKEY_set_size_t_param(
     unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
 }
 
+/// The scratch extent shared by [`EVP_PKEY_set_bn_param`] and its test seam.
+const BN_PARAM_BUFFER_LEN: usize = 2048;
+
 /// `int EVP_PKEY_set_bn_param(EVP_PKEY *pkey, const char *key_name, const BIGNUM *bn)`.
 ///
 /// The one setter with a **length** and the one with a **NULL test on the key**: an unassigned key
@@ -1460,6 +1469,11 @@ pub unsafe extern "C" fn EVP_PKEY_set_size_t_param(
 /// past the buffer. The crate refuses for the same reason, by the same test, so the two agree; the
 /// measurement is in `docs/DECISIONS.md` D167.
 ///
+/// **Deliberate safety improvement.** The authority's `EVP_PKEY_set_bn_param`
+/// (`crypto/evp/p_lib.c:2355`) leaves the native magnitude in its stack buffer. This crate cleanses
+/// the written extent on every path after conversion, successful or not, because that buffer holds
+/// key material (§5). The provider has already copied what it needs when `set_params` returns.
+///
 /// # Safety
 /// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `bn` NULL or live.
 #[no_mangle]
@@ -1468,8 +1482,26 @@ pub unsafe extern "C" fn EVP_PKEY_set_bn_param(
     key_name: *const c_char,
     bn: *const BigNum,
 ) -> c_int {
+    let mut buffer = [0u8; BN_PARAM_BUFFER_LEN];
+    // SAFETY: as this function's contract; `buffer` is this frame's own scratch extent.
+    unsafe { evp_pkey_set_bn_param_in(pkey, key_name, bn, &mut buffer) }
+}
+
+/// The body of [`EVP_PKEY_set_bn_param`], over a caller-supplied scratch buffer.
+///
+/// Separated so a test can observe the cleanse without reading a dead stack frame: the caller
+/// retains the buffer and inspects it after the call, which is the only sound way to test that the
+/// secret was removed. Production passes a frame-local `[u8; 2048]`.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `bn` NULL or live.
+unsafe fn evp_pkey_set_bn_param_in(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    bn: *const BigNum,
+    buffer: &mut [u8; BN_PARAM_BUFFER_LEN],
+) -> c_int {
     let mut params = [crate::params::END; 2];
-    let mut buffer = [0u8; 2048];
 
     if key_name.is_null() || bn.is_null() || pkey.is_null() {
         return 0;
@@ -1484,9 +1516,13 @@ pub unsafe extern "C" fn EVP_PKEY_set_bn_param(
     if bsize <= 0 || bsize as usize > buffer.len() {
         return 0;
     }
+    let written = bsize as usize;
 
     // SAFETY: `bn` is live and `buffer` is `bsize` writable bytes.
     if unsafe { crate::bn::bignum::BN_bn2nativepad(bn, buffer.as_mut_ptr(), bsize) } < 0 {
+        /* The failed conversion may still have written part of the magnitude. */
+        // SAFETY: `buffer` is a live allocation and `written` is at most its length.
+        unsafe { crate::runtime::mem::OPENSSL_cleanse(buffer.as_mut_ptr().cast(), written) };
         return 0;
     }
     // SAFETY: `key_name` is NUL-terminated and `buffer` is live for `bsize` bytes.
@@ -1496,7 +1532,14 @@ pub unsafe extern "C" fn EVP_PKEY_set_bn_param(
         params[1] = crate::params::OSSL_PARAM_construct_end();
     }
     // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
-    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+    let ret = unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) };
+    /* The provider has consumed the parameter; the magnitude is secret-bearing scratch and must not
+     * survive the call. The authority does not cleanse here; this is the deliberate improvement the
+     * function documentation records. Cleansing after the call covers both the success and the
+     * failure answer. */
+    // SAFETY: `buffer` is a live allocation and `written` is at most its length.
+    unsafe { crate::runtime::mem::OPENSSL_cleanse(buffer.as_mut_ptr().cast(), written) };
+    ret
 }
 
 /// `int EVP_PKEY_set_utf8_string_param(EVP_PKEY *pkey, const char *key_name, const char *str)`.
@@ -1786,6 +1829,13 @@ pub(crate) unsafe fn evp_pkey_export_to_provider(
 /// The `EVP_KEYMGMT_free(tmp_keymgmt)` before the cache lookup balances the `up_ref` above it; the
 /// caller's own reference (the one that arrived in `*keymgmt`) keeps the method alive across it.
 ///
+/// **The write-lock failure is the one exit where ownership is split.** The authority returns the
+/// newly created (uncached) `keydata` and hands its extra `up_ref` to the caller through the
+/// `*keymgmt` out-parameter. This helper has no such out-parameter, so reproducing that shape would
+/// both leak the `up_ref` (when the outer call has no `keymgmt` slot) and return an object that no
+/// owner will release. It instead treats the failure as a failed export: the keydata and the
+/// reference are released, and `NULL` is returned. The lock itself was never acquired.
+///
 /// # Safety
 /// `pk` live and a legacy origin whose `ameth` has both `dirty_cnt` and `export_to`; `tmp_keymgmt` live.
 unsafe fn evp_pkey_export_legacy(
@@ -1860,7 +1910,13 @@ unsafe fn evp_pkey_export_legacy(
     let lock = unsafe { (*pk).lock };
     // SAFETY: `lock` is the key's own lock.
     if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
-        return keydata;
+        /* No cache entry was made, so the new keydata has no owner and the `up_ref` above would be
+         * unbalanced. Release both rather than let a partial object escape; see the function doc. */
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own new data.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        // SAFETY: `tmp_keymgmt` is live; the `up_ref` above is returned here.
+        unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+        return ptr::null_mut();
     }
     // SAFETY: `pk` is live.
     if unsafe { dirty_cnt(pk) } != unsafe { (*pk).dirty_cnt_copy }
@@ -3908,8 +3964,23 @@ unsafe fn detect_foreign_key(pkey: *mut EvpPkey) {
 /// and any other is `EVP_PKEY_EC`, whichever was asked for — which is why `EVP_PKEY_type` is
 /// consulted (and must answer) before the type is stored.
 ///
+/// **Ownership and the caller contract.** This is the raw assignment primitive: on success the
+/// caller's reference to `key` is *transferred* to `pkey` (the authority's own documentation says
+/// `key` "will be freed when the parent pkey is freed"), so the caller must not also free it. On a
+/// zero return the reference stays with the caller. The ABI cannot check either half: `key` is
+/// stored in the `pkey` union and [`detect_foreign_key`] dereferences it immediately according to
+/// `type_`, and the EC arm reads its curve before that. A non-NULL `key` that is not a live object
+/// of the named type is therefore undefined behaviour, exactly as in the authority. There is no
+/// safe Rust path to this function: it is an `unsafe extern "C"` entry point, and every in-crate
+/// caller (`EVP_PKEY_set1_*`, the ameth `import_from`/`copy` bodies) is itself unsafe and derives
+/// the object from a constructor or a `*_up_ref`. The defined cases are exercised by
+/// [`tests::assign_takes_ownership_and_reads_the_key_it_stores`].
+///
 /// # Safety
-/// `pkey` must be live; `key` must be NULL or a live low-level key of the type named.
+/// `pkey` must be live; `key` must be NULL or a live, properly aligned, allocated object of the
+/// type named (an `EC_KEY`/`SM2` key on those two types), owned exclusively by the caller. On a
+/// non-zero return, ownership passes to `pkey`; the caller must not release it. On zero, ownership
+/// stays with the caller.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_assign(
     pkey: *mut EvpPkey,
@@ -4069,8 +4140,23 @@ pub(crate) unsafe fn evp_pkey_copy_downgraded(
 /// the origin `pkey`, and the `pkey` half of a temporary copy is stolen into it so the copy's
 /// destructor does not take the key back.
 ///
+/// **Concurrency and the lifetime of the returned alias.** The authority supports concurrent
+/// callers: the cache is read under the read lock, then published under the write lock with a
+/// second NULL check, so at most one downgrade is installed and every caller sees the same pointer.
+/// The lock is released before return, so it does **not** cover the caller's use of the pointer.
+/// What covers it is ownership: both `pkey` and `legacy_cache_pkey` are owned by `pk`, and the
+/// cache is written only while NULL, so the value is immutable once published and is released when
+/// `pk` is freed (the `evp_pkey_free_legacy` refind arm). The returned pointer is a **borrowed
+/// alias with no reference of its own** — the `get1` wrappers take the reference. It is valid only
+/// while `pk` is alive, and callers must not free it.
+///
+/// Residual: the C ABI cannot enforce that lifetime. A caller that frees `pk` while another thread
+/// still uses the alias creates a use-after-free; the authority has the same caller obligation, and
+/// this crate records it rather than inventing a lock that would outlive the call.
+///
 /// # Safety
-/// `pk` must be live.
+/// `pk` must be live. The returned pointer is NULL or borrowed from `pk`; it must not be freed, and
+/// it must not be used after `pk` is freed.
 pub(crate) unsafe fn evp_pkey_get_legacy(pk: *mut EvpPkey) -> *mut c_void {
     let mut tmp_copy: *mut EvpPkey = ptr::null_mut();
 
@@ -5133,5 +5219,247 @@ mod tests {
         // SAFETY: the argument is a NUL-terminated constant.
         let unknown = unsafe { evp_pkey_name2type(c"openssl-rs-not-a-key-type".as_ptr()) };
         assert_eq!(unknown, NID_undef);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // `EVP_PKEY_set_bn_param`'s cleanse, `bn_param_cleanup`'s bound, assignment ownership and
+    // the legacy-export write-lock exit.
+    // ---------------------------------------------------------------------------------------
+
+    static SET_PARAMS_ANSWER: AtomicI32 = AtomicI32::new(1);
+    static OBSERVED_NATIVE_BN: core::sync::atomic::AtomicU64 =
+        core::sync::atomic::AtomicU64::new(0);
+
+    /// Records the first eight native bytes the provider is handed, then answers the test's
+    /// configured result. Eight bytes are enough to prove the magnitude was still present when
+    /// `set_params` ran; the cleanse is observed on the caller-owned buffer afterwards.
+    unsafe extern "C" fn observe_bn_set_params(
+        _keydata: *mut c_void,
+        params: *const crate::params::OsslParam,
+    ) -> c_int {
+        // SAFETY: `params` is the terminated array `EVP_PKEY_set_params` was handed.
+        let p = unsafe { &*params };
+        if p.data.is_null() || p.data_size < 8 {
+            OBSERVED_NATIVE_BN.store(0, Ordering::SeqCst);
+            return SET_PARAMS_ANSWER.load(Ordering::SeqCst);
+        }
+        let src = p.data.cast::<u8>();
+        let mut v = 0u64;
+        for i in 0..8 {
+            // SAFETY: `data_size` is at least eight, so the first eight bytes are readable.
+            v |= (unsafe { *src.add(i) } as u64) << (8 * i);
+        }
+        OBSERVED_NATIVE_BN.store(v, Ordering::SeqCst);
+        SET_PARAMS_ANSWER.load(Ordering::SeqCst)
+    }
+
+    /// The native magnitude is present when the provider sees it and zero in the buffer after the
+    /// call returns -- on success **and** on the provider's failure answer. The test owns the
+    /// buffer, so this observes the real cleanse rather than a dead stack frame.
+    #[test]
+    fn set_bn_param_cleanses_the_native_buffer_on_both_outcomes() {
+        // SAFETY: every pointer below is this test's own live object.
+        unsafe {
+            let bn = crate::bn::bignum::BN_new();
+            assert!(!bn.is_null());
+            assert_eq!(crate::bn::bignum::BN_set_word(bn, 0x0102_0304_0506_0708), 1);
+
+            let mut keymgmt: EvpKeyMgmt = core::mem::zeroed();
+            keymgmt.refcnt = AtomicI32::new(1);
+            keymgmt.set_params = Some(observe_bn_set_params);
+            let mut pkey: EvpPkey = core::mem::zeroed();
+            pkey.keymgmt = ptr::addr_of_mut!(keymgmt);
+
+            for answer in [1, 0] {
+                SET_PARAMS_ANSWER.store(answer, Ordering::SeqCst);
+                OBSERVED_NATIVE_BN.store(0, Ordering::SeqCst);
+                let mut buffer = [0u8; BN_PARAM_BUFFER_LEN];
+
+                // SAFETY: the key is assigned, `bn` is live and the buffer is this frame's.
+                let ret = evp_pkey_set_bn_param_in(
+                    ptr::addr_of_mut!(pkey),
+                    c"n".as_ptr(),
+                    bn,
+                    &mut buffer,
+                );
+
+                assert_eq!(ret, answer);
+                assert_eq!(
+                    OBSERVED_NATIVE_BN.load(Ordering::SeqCst),
+                    0x0102_0304_0506_0708,
+                    "the provider observed the magnitude while it was live"
+                );
+                assert_eq!(
+                    &buffer[..8],
+                    &[0u8; 8],
+                    "the written extent is cleansed after the call, answer {answer}"
+                );
+            }
+
+            // SAFETY: `bn` is this test's own live BIGNUM.
+            crate::bn::bignum::BN_free(bn);
+        }
+    }
+
+    /// The stack cleanup uses the provider's claimed written length only up to the allocation it
+    /// actually holds. A `data_size` larger than the buffer must not touch the canary that follows
+    /// it; a smaller one cleanses exactly that prefix.
+    #[test]
+    fn bn_cleanup_bounds_the_provider_size_by_the_stack_allocation() {
+        let mut storage = [0xAAu8; BN_PARAM_BUFFER_LEN + 32];
+        let (buffer, canary) = storage.split_at_mut(BN_PARAM_BUFFER_LEN);
+        let mut params = [crate::params::END; 2];
+        /* `OSSL_PARAM_modified` is the `return_size` test; any non-sentinel value is modified. */
+        params[0].return_size = 1;
+
+        params[0].data_size = BN_PARAM_BUFFER_LEN * 2;
+        assert_eq!(bn_param_cleanup(None, &mut params, buffer, 0), 0);
+        assert!(
+            buffer.iter().all(|b| *b == 0),
+            "the whole allocation is cleansed"
+        );
+        assert!(
+            canary.iter().all(|b| *b == 0xAA),
+            "a provider-supplied size cannot reach past the allocation"
+        );
+
+        buffer.fill(0xAA);
+        params[0].data_size = 16;
+        assert_eq!(bn_param_cleanup(None, &mut params, buffer, 0), 0);
+        assert!(buffer[..16].iter().all(|b| *b == 0));
+        assert!(
+            buffer[16..].iter().all(|b| *b == 0xAA),
+            "a smaller written extent cleanses only itself"
+        );
+    }
+
+    /// The defined cases of the raw assignment: success transfers the caller's key reference to
+    /// the key (which `EVP_PKEY_free` then releases), a NULL key still types the key but answers
+    /// zero, and a NULL `pkey` refuses before taking ownership of anything.
+    #[test]
+    fn assign_takes_ownership_and_reads_the_key_it_stores() {
+        // SAFETY: every object is constructed here and has exactly the type named.
+        unsafe {
+            let pkey = EVP_PKEY_new();
+            let dsa = crate::dsa::object::DSA_new();
+            assert!(!pkey.is_null() && !dsa.is_null());
+
+            assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_DSA, dsa.cast()), 1);
+            assert_eq!((*pkey).pkey, dsa.cast::<c_void>());
+            assert_eq!((*pkey).foreign, 0, "a fresh DSA is not foreign");
+            /* `pkey` owns `dsa` now; freeing the key releases it. Calling `DSA_free` here as
+             * well would be the double release the contract forbids. */
+            EVP_PKEY_free(pkey);
+
+            let unconsumed = crate::dsa::object::DSA_new();
+            assert_eq!(
+                EVP_PKEY_assign(ptr::null_mut(), EVP_PKEY_DSA, unconsumed.cast()),
+                0
+            );
+            /* The NULL-`pkey` refusal happens before assignment, so the caller keeps and frees
+             * its own reference. */
+            DSA_free(unconsumed);
+
+            let typed = EVP_PKEY_new();
+            assert_eq!(EVP_PKEY_assign(typed, EVP_PKEY_DSA, ptr::null_mut()), 0);
+            EVP_PKEY_free(typed);
+        }
+    }
+
+    static EXPORT_TO_CALLS: AtomicI32 = AtomicI32::new(0);
+    static FREEDATA_CALLS: AtomicI32 = AtomicI32::new(0);
+
+    unsafe extern "C" fn test_legacy_dirty_cnt(_pk: *const EvpPkey) -> usize {
+        0
+    }
+
+    /// Injects a write-lock failure: the read lock has already been taken and released, so nulling
+    /// the lock here makes the export's *second* lock request fail without disturbing the first.
+    unsafe extern "C" fn test_legacy_export_to(
+        pk: *const EvpPkey,
+        _keydata: *mut c_void,
+        _importer: Option<crate::evp::keymgmt::KeymgmtImportFn>,
+        _libctx: *mut c_void,
+        _propq: *const c_char,
+    ) -> c_int {
+        EXPORT_TO_CALLS.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: `pk` is the live key the export was called for.
+        unsafe { (*(pk as *mut EvpPkey)).lock = ptr::null_mut() };
+        1
+    }
+
+    unsafe extern "C" fn test_keydata_new(_provctx: *mut c_void) -> *mut c_void {
+        Box::into_raw(Box::new(0xA5u8)).cast()
+    }
+
+    unsafe extern "C" fn test_keydata_free(keydata: *mut c_void) {
+        if !keydata.is_null() {
+            // SAFETY: `test_keydata_new` produced this Box exactly once.
+            drop(unsafe { Box::from_raw(keydata.cast::<u8>()) });
+        }
+        FREEDATA_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// The write-lock failure is the split-ownership exit. The authority returns the uncached
+    /// keydata and transfers its extra `up_ref` through `*keymgmt`; this helper has no such
+    /// out-parameter, so it must release both. (`EVP_KEYMGMT_up_ref` answers a constant 1, so the
+    /// sibling `up_ref` failure cannot be injected; that arm is a plain `freedata` + NULL.)
+    #[test]
+    fn export_legacy_releases_keydata_and_the_up_ref_when_the_write_lock_fails() {
+        // SAFETY: every object below is this test's own live stack or heap object.
+        unsafe {
+            let nid = crate::runtime::obj::OBJ_create(
+                c"1.3.6.1.4.1.57264.9.3.1".as_ptr(),
+                c"openssl-rs legacy export test sn".as_ptr(),
+                c"openssl-rs legacy export test ln".as_ptr(),
+            );
+            assert_ne!(nid, 0);
+
+            let mut ameth: EvpPkeyAsn1Method = core::mem::zeroed();
+            ameth.dirty_cnt = Some(test_legacy_dirty_cnt);
+            ameth.export_to = Some(test_legacy_export_to);
+
+            let mut keymgmt: EvpKeyMgmt = core::mem::zeroed();
+            keymgmt.refcnt = AtomicI32::new(1);
+            keymgmt.new = Some(test_keydata_new);
+            keymgmt.free = Some(test_keydata_free);
+
+            let lock = CRYPTO_THREAD_lock_new();
+            assert!(!lock.is_null());
+            let mut pk: EvpPkey = core::mem::zeroed();
+            pk.type_ = nid;
+            pk.lock = lock;
+            pk.ameth = ptr::addr_of_mut!(ameth);
+
+            EXPORT_TO_CALLS.store(0, Ordering::SeqCst);
+            FREEDATA_CALLS.store(0, Ordering::SeqCst);
+
+            // SAFETY: `pk` is a live legacy origin with both callbacks and `keymgmt` is live.
+            let ret = evp_pkey_export_legacy(
+                ptr::addr_of_mut!(pk),
+                ptr::addr_of_mut!(keymgmt),
+                ptr::null_mut(),
+                ptr::null(),
+                OSSL_KEYMGMT_SELECT_ALL,
+            );
+
+            assert!(ret.is_null(), "a failed write lock is a failed export");
+            assert_eq!(EXPORT_TO_CALLS.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                FREEDATA_CALLS.load(Ordering::SeqCst),
+                1,
+                "the uncached keydata is released exactly once"
+            );
+            assert_eq!(
+                keymgmt.refcnt.load(Ordering::SeqCst),
+                1,
+                "the temporary up_ref is released"
+            );
+            assert!(pk.legacy_cache_pkey.is_null());
+            assert!(pk.operation_cache.is_null());
+
+            /* `export_to` nulled `pk.lock` to inject the failure; the real lock is still ours. */
+            CRYPTO_THREAD_lock_free(lock);
+        }
     }
 }
