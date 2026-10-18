@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1277** passed,
+`cargo test --lib` (must pass; the established baseline is **1281** passed,
 **21 ignored**, and **21/21** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -870,6 +870,29 @@ package.
   conditional-duplication correction. Gate: `fmt` 0, clippy 0, **1277 passed /
   21 ignored**, **21/21** probes. Per-file campaign: **5 of 761**.
 
+### Subphase 74 — `evp/pkey.rs` audit and fixes
+
+- Audit: 568 production sites in 238 groups — **1 ESTABLISHED, 236 CONTRACTED,
+  1 UNATTRIBUTED**.
+- Fixes:
+  1. `EVP_PKEY_set_bn_param` now cleanses its 2048-byte stack buffer over the
+     written extent on success, `set_params` failure and conversion failure. The
+     authority does not cleanse here; recorded §5 divergence.
+  2. `EVP_PKEY_get_bn_param` bounds the stack cleanse by the actual allocation
+     (`min(provider data_size, buffer len)`) instead of trusting the provider
+     size; the heap arm already used the buffer extent.
+  3. `evp_pkey_export_legacy` leaked the extra `keymgmt` up-ref and escaped an
+     unowned keydata when the write lock failed; the failure path now frees
+     keydata and releases the up-ref exactly once and returns NULL.
+  4. `EVP_PKEY_assign` documents the authority's ownership contract (success
+     transfers, failure retains) and the live-object/type precondition of the
+     union read; it is `unsafe extern "C"` only.
+  5. `get_legacy` documents the borrowed-alias lifetime as a caller obligation.
+- Four tests: cleanse on both outcomes, bounded provider size with canaries,
+  export-lock failure releases, assign ownership/NULL cases.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1281 passed / 21
+  ignored**, **21/21** probes. Per-file campaign: **6 of 761**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1047,7 +1070,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `05513496b` (KDF audit fixes merged)
+**Last observed HEAD:** `478e18911` (pkey audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1061,7 +1084,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1277** tests (21 ignored;
+   The most recent reported library baseline is **1281** tests (21 ignored;
    21/21 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
