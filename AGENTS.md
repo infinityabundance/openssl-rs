@@ -211,6 +211,67 @@ This is a context-preservation rule, not a preference.
   commits the verified change on a `stage/p25/sweepN` branch, merges it into
   `integrate/safe-c33`, pushes, and updates the ledger.
 
+### Verification scheduling: FAST / BATCH / BOUNDARY / SEAL (additive, 2026-10-18)
+
+This subsection governs **how often** evidence is generated. It changes scheduling, not
+ the standard: §7 discharge criteria, §§8–20 evidence axes, and the playbook gates are
+unchanged. Where the per-batch local gate or the per-subphase reporting rule above
+conflicts with this subsection, this subsection governs.
+
+| Level | Trigger | Required evidence |
+|---|---|---|
+| **FAST** | every source edit | `cargo fmt --all -- --check`; incremental compile/check of the touched target; focused, name-filtered tests for the changed units; structural guards (allocator seam, `#[repr(C)]`, exported symbols, unsafe lint attributes, and a `SAFETY:` contract for every new unsafe op). |
+| **BATCH** | each coherent audit/repair group, before an integration checkpoint | full `cargo test --lib` **both serially and with `--test-threads=4`**; `cargo clippy --all-targets -- -D warnings`; the *affected* adversarial probes; the *affected* compatibility courts; compact receipt committed. |
+| **BOUNDARY** | before a shared mechanism is independently discharged, or when a critical trust boundary changes | independent caller/dependency-closure audit; targeted ASan/Miri/Loom/mutation controls; authority differential for changed semantics; negative-control canary; reviewer must not be the author. |
+| **SEAL** | consumer graduation, major milestone, release candidate | full applicable dependency closure; complete probe suite; full forensic regeneration; held-out and broad compatibility/cryptographic assurance against the exact candidate. |
+
+Rules:
+
+1. **FAST is development feedback, not a safety certificate.** Nothing becomes
+   `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE` because it passed FAST or BATCH. A batch may
+   be merged into `integrate/safe-c33` with BATCH evidence while its remaining
+   BOUNDARY/SEAL obligations are explicitly `PENDING` or `NOT_RUN`.
+2. **Deferred is never `PASS`.** Every check not run at the current level is recorded as
+   `NOT_RUN` together with the gate that will run it. Only observed output counts as
+   evidence.
+3. **STOP conditions are level-independent.** A confirmed memory-safety defect, an
+   unexplained ABI regression, a weakened detector, a new hidden obligation, or a
+   safe-Rust interface that can cause UB stops the batch immediately and invokes the
+   narrowest BOUNDARY check capable of establishing the failure — regardless of the
+   schedule.
+4. **Reuse established evidence; invalidate conservatively.** A discharged mechanism's
+   evidence is bound to its exact source identity and declared contract scope. An
+   unrelated edit preserves it. An edit to the shared owner, its contract, or a
+   precondition it relies on invalidates that mechanism and its dependent closure. If
+   non-impact cannot be proven, treat the evidence as invalid: a dependency graph's
+   failure to prove non-impact is not evidence of non-impact.
+5. **Batch by mechanism/dependency cluster, not by raw file count.** Aim for roughly
+   10–25 ordinary files per integration checkpoint, adjusting downward or splitting to
+   one file when a genuinely new unsafe boundary, callback/reentrancy edge, or ownership
+   transition appears. Per-file accounting is retained for completeness, but repeated
+   instances of an established contract do not require a new model or a new full gate.
+6. **Per-file work is contract checking.** For an ordinary file: classify applicable
+   mechanisms → check caller preconditions and unusual transitions → repair genuine
+   defects → run FAST → emit the compact receipt → queue the next file. Reserve deep
+   analysis for novel boundaries and for any counterexample.
+7. **Reporting cadence.** Emit a compact receipt after every subphase (source identity,
+   files/mechanisms, contracts reused, new unsafe assumptions, defects, tests run,
+   obligations discharged/retained/new, and deferred gates marked `NOT_RUN`). Update the
+   human-readable campaign summary only at batch checkpoints, not after every file.
+8. **Execution economics.** Run one heavy command at a time; reuse the court's compiled
+   artifacts; build a probe/test binary once and re-execute it per isolated case rather
+   than invoking the cargo driver once per case; skip Rust rebuilds for documentation-only
+   changes. Before deleting or deferring any existing gate, measure its cold and warm
+   wall time and confirm that its unique defect-detection role is preserved elsewhere.
+9. **Impact analysis is itself evidence.** The dependency graph used for evidence reuse
+   must be regenerated or validated at each BATCH checkpoint from the exact candidate.
+   Any unresolved dependency is treated as affected.
+10. **CI mirrors these levels.** Use branch-aware FAST (debug/incremental, affected
+    tests), BATCH (full suite, clippy, affected probes) and SEAL (release build, full
+    courts) profiles. Do not run a release build or the complete probe suite on every
+    integration push. CI and container changes remain infrastructure work requiring
+    their own measured justification; they are not conversion-agent scope.
+
 ## 7. Graduation states
 
 - `OWNERSHIP_RECONSTRUCTED` — a safe ownership model exists and its residual
