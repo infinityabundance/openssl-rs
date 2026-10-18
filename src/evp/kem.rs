@@ -78,6 +78,8 @@ const LINE_ZALLOC_KEM: c_int = 287;
 const LINE_FREE_TYPE_NAME: c_int = 443;
 /// `EVP_KEM_free`'s `OPENSSL_free(kem)` (line 446).
 const LINE_FREE_KEM: c_int = 446;
+/// `evp_kem_new`'s `OPENSSL_free(kem)` when the up-ref fails (line 295).
+const LINE_FREE_KEM_UP_REF: c_int = 295;
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the thirteen function-pointer types.
@@ -243,8 +245,19 @@ unsafe fn evp_kem_new(prov: *mut OsslProvider) -> *mut EvpKem {
     // SAFETY: `p` is a fresh zeroed block this call owns and `prov` is live.
     unsafe {
         (*p).refcnt = AtomicI32::new(1);
+        // The authority refuses on a failed up-ref before assigning `prov` (`kem.c:292-298`).
+        // `ossl_provider_up_ref` rolls the increment back only on its child-provider arm; the
+        // non-child overflow arm returns 0 without rollback. Assigning `prov` would double-release
+        // on the child arm; the overflow arm's increment is retained (practically unreachable i32
+        // wrap leak, as in the authority's callers).
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            // The authority's failure arm frees the fresh block directly, at its own coordinate
+            // (`kem.c:295`); no member has been assigned yet.
+            core::mem::forget(kem);
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_KEM_UP_REF);
+            return ptr::null_mut();
+        }
         (*p).prov = prov;
-        ossl_provider_up_ref(prov);
     }
     kem.into_raw()
 }

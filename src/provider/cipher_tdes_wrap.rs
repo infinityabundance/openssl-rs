@@ -354,6 +354,43 @@ unsafe fn tdes_wrap_cipher_internal(
     }
 }
 
+/// The extent `tdes_wrap_cipher_internal` writes when it reaches its write, or `None` when the
+/// authority's own precedence refuses before writing.
+///
+/// `des_ede3_wrap` writes `inl + ivlen + icvlen` bytes (`cipher_tdes_wrap.c:86,105-108`);
+/// `des_ede3_unwrap` writes only `inl - 16`, which the authority's `outsize < inl` check already
+/// covers. That check (`:139`) lets an encrypting call with `inl <= outsize < inl + 16` overrun the
+/// caller's buffer, so the crate keeps it and adds this one — a deliberate memory-safety
+/// improvement, following the D561 precedent in `provider/cipher.rs`.
+///
+/// # Safety
+/// `ctx` is live; `out`/`in_` are NULL or as the dispatch contract requires.
+unsafe fn required_write_extent(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> Option<usize> {
+    // `out == NULL` is `des_ede3_wrap`'s size-query arm (`:90-91`), which returns before the first
+    // store; a NULL `in` is left to the pre-existing input contract.
+    if out.is_null() || in_.is_null() {
+        return None;
+    }
+    // `tdes_wrap_cipher_internal`'s guard (`:120`), which precedes either body.
+    if inl >= EVP_MAXCHUNK || !inl.is_multiple_of(8) {
+        return None;
+    }
+    // Only encryption writes beyond `inl`. `des_ede3_wrap`'s `len > INT_MAX` refusal (`:88-89`)
+    // also returns before writing, and without an error, so it keeps that result.
+    // SAFETY: `ctx` is live per the function's contract.
+    if unsafe { (*ctx).bits } & CTX_ENC == 0 {
+        return None;
+    }
+    inl.checked_add(TDES_IVLEN)
+        .and_then(|n| n.checked_add(TDES_IVLEN))
+        .filter(|&n| n <= INT_MAX)
+}
+
 /// `tdes_wrap_cipher` — `cipher_tdes_wrap.c:128-150`.
 ///
 /// # Safety
@@ -376,6 +413,11 @@ unsafe extern "C" fn tdes_wrap_cipher(
 
         if outsize < inl {
             return fail_at(&WRAP_140);
+        }
+        if let Some(required) = required_write_extent(ctx, out, in_, inl) {
+            if outsize < required {
+                return fail_at(&WRAP_140);
+            }
         }
 
         let ret = tdes_wrap_cipher_internal(ctx, out, in_, inl);
@@ -408,6 +450,11 @@ unsafe extern "C" fn tdes_wrap_update(
         }
         if outsize < inl {
             return fail_at(&WRAP_160);
+        }
+        if let Some(required) = required_write_extent(vctx.cast(), out, in_, inl) {
+            if outsize < required {
+                return fail_at(&WRAP_160);
+            }
         }
 
         if tdes_wrap_cipher(vctx, out, outl, outsize, in_, inl) == 0 {
@@ -555,3 +602,60 @@ pub(crate) static TDES_WRAP_CBC_FUNCTIONS: [OsslDispatch; 14] = [
         function: ptr::null_mut(),
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The encrypting arm writes `IV || 3DES-CBC(in) || ICV`, i.e. `inl + 2 * TDES_IVLEN` bytes.
+    /// The authority's only guard is `outsize < inl` (`cipher_tdes_wrap.c:139`), so an `outsize`
+    /// in `[inl, inl + 16)` would overrun. The derived check must refuse before the first write and
+    /// leave the caller's buffer untouched, on both dispatch entry points.
+    #[test]
+    fn wrap_refuses_an_output_buffer_too_small_for_the_iv_and_icv() {
+        let tctx = OwnedCtx::<ProvTdesCtx>::new();
+        assert!(tctx.is_some(), "the allocator refused a TDES context");
+        let Some(tctx) = tctx else { return };
+        // SAFETY: `tctx` is a live zeroed `PROV_TDES_CTX`; its first member is the base the
+        // dispatch receives, and neither call below reaches the (uninstalled) hardware path.
+        unsafe {
+            let base = tctx.as_ptr().cast::<ProvCipherCtx>();
+            (*base).bits = CTX_ENC;
+
+            let input = [0x11u8; 8];
+            let mut out = [0xa5u8; 24];
+            let mut outl = usize::MAX;
+            let ret = tdes_wrap_cipher(
+                base.cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                input.len() + TDES_IVLEN,
+                input.as_ptr(),
+                input.len(),
+            );
+            assert_eq!(ret, 0, "the cipher entry point must refuse");
+            assert_eq!(outl, 0);
+            assert!(
+                out.iter().all(|&b| b == 0xa5),
+                "the cipher entry point wrote before refusing"
+            );
+
+            let mut out = [0xa5u8; 24];
+            let mut outl = usize::MAX;
+            let ret = tdes_wrap_update(
+                base.cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                input.len() + TDES_IVLEN,
+                input.as_ptr(),
+                input.len(),
+            );
+            assert_eq!(ret, 0, "the update entry point must refuse");
+            assert_eq!(outl, 0);
+            assert!(
+                out.iter().all(|&b| b == 0xa5),
+                "the update entry point wrote before refusing"
+            );
+        }
+    }
+}
