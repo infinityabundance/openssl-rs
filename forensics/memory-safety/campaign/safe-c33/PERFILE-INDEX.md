@@ -894,3 +894,73 @@ ServerHello, `SSL_CTX_free` callback parity and the full SEAL closure are
 `src/ml_dsa/encoders.rs`; the `ssl_lib` context-teardown ordering needed for
 `remove_session_cb` parity is a recorded follow-up. No third file was started
 in B4.
+
+---
+## 10. Boundary sweep B5 — ML-DSA key/signature encoders and the secure seam
+
+**Candidate:** `integrate/safe-c33` source HEAD `c12d9915c` (working tree; not
+committed). **Level:** FAST, BATCH and targeted ASan. **Scope:** exactly
+`src/ml_dsa/encoders.rs`; no second file started.
+
+Seven boundaries (`B5-ML-1`–`B5-ML-7`), all `CONTRACTED`: the file-local OB-1
+`OwnedBuf` over the plain and secure allocator seams; pk encode/decode; sk
+encode/decode (seed cleanse, secure scratch, `priv_encoding == in_` load path);
+the twelve bit-packing primitives; hint/signature serialisation; the diagnostic
+extent; `expand_mask`/`w1`.
+
+**B5-D1 (fixed, medium, ASan-confirmed).** `hint_bits_encode` wrote each set
+coefficient at `data[coeff_index++]` in the `omega + k`-byte packet while the
+FIPS 204 weight bound (at most `omega` ones) was only an unstated caller
+assumption. An over-weight in-memory hint overran the allocation. The encoder
+now refuses the `(omega+1)`th set coefficient before writing; valid signatures
+are unchanged. The pre-fix body was rebuilt in the ASan venue and the control
+produced `stack-buffer-overflow` in `hint_bits_encode`; the fixed body passes.
+
+**B5-D2 (fixed, low).** `hint_bits_decode` derived `end = p + k` and entered its
+do/while unconditionally; for `k == 0` it read one byte past the limit span and
+wrote through a possibly-NULL polynomial pointer. It now refuses `k == 0` (no
+static parameter set produces it).
+
+**B5-D3 (fixed, low, §3).** The hint packet extent (`omega + k`) and
+`raise_with_alg`'s three-piece message capacity now use `checked_add`; both
+operands are bounded statics, so reachable behaviour is identical.
+
+**Contracts.** Every key-serialiser `# Safety` section now states the encoded
+member ownership invariant it relies on (`pub_encoding` plain-owned,
+`priv_encoding`/`seed` secure-owned at the parameter set's exact length), the
+`priv_encoding == in_` alias path, and that a public-hash mismatch releases
+`in_` when it is the key's own encoded block. The hint weight bound is stated
+on both `hint_bits_encode` and `ossl_ml_dsa_sig_encode`.
+
+**Secure seam (verified separately, not inferred from OB-1).** The secure arm is
+sound on both provenances: with a secure heap the whole usable allocation is
+cleansed on release; without one `CRYPTO_secure_malloc` falls back to the plain
+seam and `CRYPTO_secure_clear_free` recognises that provenance, cleanses the
+`len` bytes and releases through `CRYPTO_free`. `runtime::secure`'s
+whole-allocation-cleanse, fallback and zero-length tests all pass.
+
+**Secret cleaning.** `priv_encoding` and `seed` are `SECRET_DATA` +
+`CLEANSING_REQUIRED`: the incumbent is secure-cleared at `:744`, the failed
+scratch block at `:750`, and the seed at `:773`; decoded `s1/s2/t0` live in the
+key's secure block and are cleansed by `key_reset`/`key_free`. `rho`, `tr`,
+`c_tilde`, the hint and the signature bytes are public; `input_tr` is the public
+key hash. Every secret allocation is cleansed on success, failure and
+partial-initialisation paths that release it.
+
+**Evidence.** FAST: fmt clean; `ml_dsa` 14 passed / 0 failed (12 existing + 2
+new controls). BATCH: clippy `--all-targets -D warnings` PASS; library **1588
+passed / 0 failed / 26 ignored** serially (268.13 s) and with
+`--test-threads=4` (80.84 s); `runtime::secure` 15/0 as the affected seam probe.
+ASan venue: the temporary pre-fix body fired `stack-buffer-overflow` at
+`encoders.rs:1445`; the restored fixed body passes both controls. The file was
+restored byte-identically (sha256 `61fb7560…`).
+
+**Residuals and NOT_RUN.** Hidden obligations: 0; no safe caller can cause UB.
+Miri over the hint paths, a paired authority differential for the impossible
+`k == 0`/over-weight states, timing/dudect (the new branch tests public hint
+coefficients; no timing claim is made), FRF-Fuzz replay, dependency-closure
+audit, independent review and SEAL regeneration are `NOT_RUN`. Machine-readable
+receipt: [`atlas-refresh/boundary-sweep-B5.json`](atlas-refresh/boundary-sweep-B5.json).
+
+**Next ordinary queue position:** `src/pem/pem_lib.rs` (rank 101), then
+`src/property/parse.rs` (rank 102), `src/x509/pcy_tree.rs` (rank 103).
