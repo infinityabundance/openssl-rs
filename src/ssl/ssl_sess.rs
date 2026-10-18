@@ -446,8 +446,10 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
         if ss.is_null() {
             return;
         }
-        // SAFETY: `ss` is live per the caller's contract.
-        match down_ref(unsafe { &(*ss).references }) {
+        // SAFETY: the C-ABI caller guarantees `ss` is live and owns the one reference this
+        // free releases (the caller's obligation); on `Last` this frame is the unique
+        // destructor runner.
+        match unsafe { down_ref(&(*ss).references) } {
             DownRef::Last => {}
             DownRef::Remaining | DownRef::Retired => return,
         }
@@ -508,8 +510,10 @@ unsafe impl CtxDestroy for SslSession {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_up_ref(ss: *mut SslSession) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `ss` is live per the caller's contract.
-        up_ref(unsafe { &(*ss).references })
+        // SAFETY: the C-ABI caller guarantees `ss` is live and holds the reference this
+        // call acts for (a caller obligation, not something this wrapper can check); this
+        // call acquires exactly one new reference for the caller.
+        unsafe { up_ref(&(*ss).references) }
     })
 }
 

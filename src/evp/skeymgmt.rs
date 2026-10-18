@@ -549,8 +549,9 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_fetch(
 pub unsafe extern "C" fn EVP_SKEYMGMT_up_ref(keymgmt: *mut EvpSkeyMgmt) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `keymgmt` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*keymgmt).refcnt })
+    // SAFETY: `keymgmt` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*keymgmt).refcnt) }
 }
 
 /// `void EVP_SKEYMGMT_free(EVP_SKEYMGMT *keymgmt)`.
@@ -564,8 +565,9 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_free(keymgmt: *mut EvpSkeyMgmt) {
     if keymgmt.is_null() {
         return;
     }
-    // SAFETY: `keymgmt` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*keymgmt).refcnt }) {
+    // SAFETY: `keymgmt` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*keymgmt).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `EVP_SKEYMGMT_free` observes the sentinel.
@@ -1209,8 +1211,9 @@ pub unsafe extern "C" fn EVP_SKEY_up_ref(skey: *mut EvpSkey) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it (the §17 divergence recorded in
     // `runtime::refcount`; the authority would wrap zero to one and report failure).
-    // SAFETY: `skey` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*skey).references })
+    // SAFETY: `skey` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*skey).references) }
 }
 
 /// `void EVP_SKEY_free(EVP_SKEY *skey)`.
@@ -1227,8 +1230,9 @@ pub unsafe extern "C" fn EVP_SKEY_free(skey: *mut EvpSkey) {
     if skey.is_null() {
         return;
     }
-    // SAFETY: `skey` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*skey).references }) {
+    // SAFETY: `skey` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*skey).references) } {
         crate::runtime::refcount::DownRef::Last => {}
         // The destructor calls the provider's `free(keydata)` callback; a re-entrant
         // `EVP_SKEY_free` from it observes the destroying sentinel and stops.

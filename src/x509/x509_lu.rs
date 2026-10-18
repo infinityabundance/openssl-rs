@@ -1806,8 +1806,10 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
     // release with the authority's release ordering and claims the last reference with the
     // destroying sentinel. A zero/negative/destroying count is a defined no-op; see
     // `runtime::refcount` for the §17 divergence from the authority's over-free UB.
-    // SAFETY: `xs` is live per the contract.
-    match down_ref(unsafe { &(*xs).references }) {
+    // SAFETY: the C-ABI caller guarantees `xs` is live and owns the one reference this
+    // free releases (the caller's obligation); on `Last` this frame is the unique
+    // destructor runner.
+    match unsafe { down_ref(&(*xs).references) } {
         DownRef::Last => {}
         DownRef::Remaining | DownRef::Retired => return,
     }
@@ -1869,8 +1871,10 @@ pub unsafe extern "C" fn X509_STORE_unlock(xs: *mut X509Store) -> c_int {
 pub unsafe extern "C" fn X509_STORE_up_ref(xs: *mut X509Store) -> c_int {
     // The shared gate uses the authority's relaxed increment for a positive count and
     // refuses to resurrect a zero or destroying store.
-    // SAFETY: `xs` is live per the contract.
-    up_ref(unsafe { &(*xs).references })
+    // SAFETY: the C-ABI caller guarantees `xs` is live and holds the reference this call
+    // acts for (a caller obligation, not something this wrapper can check); this call
+    // acquires exactly one new reference for the caller.
+    unsafe { up_ref(&(*xs).references) }
 }
 
 /// `X509_LOOKUP *X509_STORE_add_lookup(X509_STORE *xs, X509_LOOKUP_METHOD *m)` —

@@ -491,8 +491,9 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
     if exchange.is_null() {
         return;
     }
-    // SAFETY: `exchange` is live per the contract.
-    match crate::runtime::refcount::down_ref(unsafe { &(*exchange).refcnt }) {
+    // SAFETY: `exchange` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*exchange).refcnt) } {
         crate::runtime::refcount::DownRef::Last => {}
         // `ossl_provider_free` can run a provider teardown callback; a re-entrant
         // `EVP_KEYEXCH_free` observes the sentinel.
@@ -512,8 +513,9 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
 pub unsafe extern "C" fn EVP_KEYEXCH_up_ref(exchange: *mut EvpKeyExch) -> c_int {
     // The shared protocol takes a relaxed increment on a live count and refuses a zero,
     // destroying or `i32::MAX` count without changing it.
-    // SAFETY: `exchange` is live per the contract.
-    crate::runtime::refcount::up_ref(unsafe { &(*exchange).refcnt })
+    // SAFETY: `exchange` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*exchange).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_KEYEXCH_get0_provider(const EVP_KEYEXCH *exchange)`.
