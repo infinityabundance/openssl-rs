@@ -745,3 +745,72 @@ families are the SSL session ownership batch (`ssl_sess`, rank 61), the TLS
 state-machine batch (`statem_clnt`, rank 50), and the explicitly deferred
 `ml_dsa/encoders.rs`, `ssl/ssl_lib.rs` and `ssl/statem/statem_srvr.rs`. No
 fourth file was started in B2.
+
+## 8. Boundary sweep B3 — the two deferred SSL lifecycle/state-machine files
+
+**Source identity:** `integrate/safe-c33` at `4511ad3d3`; working-tree blobs
+`ssl_lib.rs` `cdba5c9cb…` and `statem_srvr.rs` `ff22a0059…`.**STOP:** repaired —
+two high-severity memory-safety defects were found and fixed. Nothing is
+promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| file | boundary IDs | disposition | defects repaired |
+|---|---|---|---|
+| `src/ssl/ssl_lib.rs` | `B3-SL-1..9` | `CONTRACTED` | `B3-D5` (DTLS `d1` leak on the ex_data refusal arm), `B3-D6` (unchecked supportedgroups extent) |
+| `src/ssl/statem/statem_srvr.rs` | `B3-SS-1..9` | `CONTRACTED` | `B3-D1`/`B3-D2` (unbounded `i2d_X509` writes into 8192-byte stack buffers in both certificate flights), `B3-D3` (32-byte HMAC tail for the application-chosen ticket digest), `B3-D4` (unbounded callback IV length) |
+
+**B3-D1/D2 — `statem_srvr.rs` (pre-fix 1910/2620/2651), high.** `i2d_X509` with
+a non-NULL out-pointer writes the whole encoding and takes no capacity
+argument, yet both flight writers encoded into `[u8; 8192]` stack buffers and
+checked the length only afterwards. Any application certificate of 8192 bytes
+or more overflowed the stack. Both now size first with `i2d_X509(cert, NULL)`,
+compute the body with `checked_add`, allocate the exact body through `OwnedBuf`,
+and encode into that reservation (the authority's WPACKET ordering).
+
+**B3-D3 — `statem_srvr.rs` (pre-fix 2986), high.** The TLS1.3 stateless ticket
+reserved only 32 bytes for the HMAC tail, but `ticket_key_cb` chooses the
+digest; `HMAC_Final` writes up to `EVP_MAX_MD_SIZE` (64), so a SHA-384/512
+callback produced a heap overflow. The tail now reserves `EVP_MAX_MD_SIZE`,
+matching `statem_srvr.c:4314-4317`, and refuses a longer report.
+
+**B3-D4/D5/D6 — low/informational.** The ticket path now refuses
+`iv_len > EVP_MAX_IV_LENGTH` before slicing the 16-byte callback IV;
+`SSL_new` releases its early-allocated DTLS state on the ex_data refusal arm
+(the authority allocates it only after `ossl_ssl_init` succeeds); and the
+`supportedgroups` copy uses `checked_mul` (the setter bounds it to 64, so the
+overflow arm is unreachable).
+
+**Contracts and residuals.** Nine boundaries per file, all `CONTRACTED`, with 42
+residuals in the machine-readable receipt. The load-bearing ones are external:
+the C caller owns the reference it releases; transferred objects carry one
+reference; callback code must not free the SSL/SSL_CTX it receives; the
+ClientHello readers are valid only during the callback; a destructor-time
+reentrant free is a defined no-op while other reentrant use observes partial
+teardown (authority ordering); and a ticket callback must initialise the
+supplied cipher/HMAC contexts. Latent self-alias setters (`SSL_CTX_set_cert_store`,
+`SSL_CTX_set0_ctlog_store`, `SSL_set0_tmp_dh_pkey`) and the `SSL_set_SSL_CTX`
+free-before-assign window are authority parity, recorded not restructured.
+Session internals (`ssl_sess`, rank 61) and the `ssl_rsa` chain loaders remain
+delegated. Hidden obligations: 0.
+
+**Evidence.** FAST: fmt clean; focused `ssl::ssl_lib` 21 passed / 4 ignored and
+the new oversized controls. BATCH: clippy `--all-targets -D warnings` PASS;
+library **1583 passed / 0 failed / 26 ignored** serially (233.10 s) and with
+`--test-threads=4` (94.96 s). Affected probes: the srvr ticket probe and
+double-release canary, the four `ssl_lib` realloc probes, the `ssl_sess`
+self-alias probe and the cleansed-free canary all PASS. ASan: the venue canary
+reports `heap-use-after-free` (exit 1), and the two new oversized-certificate
+controls pass with no ASan report. The controls build a real self-signed EC
+certificate whose DER exceeds 8192 bytes and drive each writer with a memory
+BIO; pre-fix, the same DER was written into the fixed stack buffers.
+
+**Residuals and NOT_RUN.** Miri, Loom/threaded state-machine interleavings, the
+pre-fix binary under ASan, an authority differential for certificate bodies
+above 16996 bytes (the reduced writer caps at 17000; the authority does not),
+independent review and the full SEAL closure are `NOT_RUN` at BOUNDARY/SEAL.
+The >16996-byte refusal is a recorded compatibility divergence of the reduced
+writer. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B3.json`](atlas-refresh/boundary-sweep-B3.json).
+
+**Next boundary position:** `src/rsa/object.rs` (rank 68), then
+`src/ssl/ssl_sess.rs` (rank 61), `src/ssl/statem/statem_clnt.rs` (rank 50) and
+`src/ml_dsa/encoders.rs`. No third file was started in B3.
