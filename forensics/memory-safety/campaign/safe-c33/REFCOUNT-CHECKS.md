@@ -12,8 +12,8 @@ the crate-private test seam described in §3.
 | item | value |
 |---|---|
 | branch | `integrate/safe-c33` |
-| source HEAD | `56ba894594ed3df0fdf117a15747d205b4f0ecd9` |
-| working tree | uncommitted check package: `Cargo.toml`, `Cargo.lock`, `src/runtime/refcount.rs`, this file, and `REFCOUNT-BOUNDARY.md` |
+| source HEAD | `43b9071cf6a9b14159af6b75a7e334f548688140` (merge of `stage/p25/rc1-checks`) |
+| working tree | clean after the merge; the check package is in the committed tree |
 | working-tree diff | `sha256:a3e07d0458865d61cdb3988e67f59a2d916ad8a7cd0f670d278bc988d7046a0c` (`git diff \| sha256sum`, tracked files) |
 | `src/runtime/refcount.rs` | `sha256:063c5ab907cce57ae1c93d67be770575ffbd384e3b297534eaba1bb2b7991ae8` |
 | `Cargo.toml` | `sha256:21dc5024678cc35d893f6749f2f692d4fa468aa626fd2fd7bc1b30003ed3b765` |
@@ -22,8 +22,9 @@ the crate-private test seam described in §3.
 | venue | `openssl-rs-court:1` (Docker), `x86_64`, `rustc 1.98.1`, dev profile |
 | toolchain record | `/court/toolchain.txt` in the court image |
 
-These hashes pin the *checked* candidate. They are not a commit; the orchestrator
-must commit the package and re-record the commit identity at merge time.
+These hashes pin the *checked* candidate. The source commit is
+`43b9071cf6a9b14159af6b75a7e334f548688140`; the file hashes above are the same
+content that commit carries (committing does not change them).
 
 ## 2. What was checked
 
