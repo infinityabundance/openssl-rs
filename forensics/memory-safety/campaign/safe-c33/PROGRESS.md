@@ -78,7 +78,8 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1272** passed
+`cargo test --lib` (must pass; the established baseline is **1277** passed,
+**21 ignored**, and **21/21** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -86,7 +87,7 @@ test added in subphase 42, one isolated allocator-hook size/release test
 added in subphase 43, and one isolated `CRYPTO_RWLOCK` allocator-hook
 size/release test added in subphase 44) and the adversarial
 probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
-sweep 35 there are **18** probes).
+subphase 73 there are **21** probes).
 
 ## Open STOP blockers
 
@@ -845,6 +846,30 @@ package.
   (`defltwrap.pad21`) reproduced on unpatched HEAD and recorded. Per-file
   campaign: **4 of 761** PARTIAL files audited.
 
+### Subphase 73 — `provider/kdf.rs` audit and fixes
+
+- Audit: 716 production sites in 541 groups — **20 ESTABLISHED, 519
+  CONTRACTED, 2 UNATTRIBUTED**.
+- Fixes:
+  1. krb5kdf's DES3 fixup writes a fixed 24 bytes; a shorter output extent now
+     refuses with the authority's failure value instead of reproducing the
+     latent C overflow (recorded divergence).
+  2. `kdf_scrypt_dup` publishes the digest reference immediately so every later
+     failure releases it exactly once (forced memdup-refusal test).
+  3. `kbkdf_dup` duplicates `ctx_init` only when non-NULL; an uninitialised but
+     parameterised context now duplicates successfully, matching the authority's
+     guard (the first refusal was rejected in review).
+  4. Argon2 releases and cleanses the memory matrix on initialize/fill failure,
+     reset and destroy, exactly once via a NULLed member.
+  5. SSKDF computes the KMAC allocation length at use, so a defaulted
+     `kmac_out_len` no longer skips the cleanse.
+  6. PBKDF1's derived key and PKCS12KDF's `I` buffer are clear-freed with their
+     allocation lengths; the single cleanup tail is confirmed.
+- Three new isolated allocator probes, **21 total**, all passing.
+- Adversarial review **FAILED** the first KBKDF refusal and **PASSED** after the
+  conditional-duplication correction. Gate: `fmt` 0, clippy 0, **1277 passed /
+  21 ignored**, **21/21** probes. Per-file campaign: **5 of 761**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1022,7 +1047,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `1c13d13d6` (cipher_ctx soundness fixes merged)
+**Last observed HEAD:** `05513496b` (KDF audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1036,7 +1061,9 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1218** tests (18 ignored; 18/18 adversarial probes via `scripts/adv-probe.sh`). Do not accept unexplained test loss. Check available memory before builds.
+   The most recent reported library baseline is **1277** tests (21 ignored;
+   21/21 adversarial probes via `scripts/adv-probe.sh`). Do not accept
+   unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
 ### Outstanding targeted work
