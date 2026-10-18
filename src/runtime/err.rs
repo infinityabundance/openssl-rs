@@ -289,6 +289,31 @@ impl ErrState {
     /// `err_clear_data`. With `deall` the buffer is released; without it a
     /// malloced buffer is kept but truncated, which is how the authority reuses
     /// data buffers across clears.
+    ///
+    /// ## The `MALLOCED` slot contract
+    ///
+    /// The authority's `ERR_TXT_MALLOCED` (`include/openssl/err.h.in:52`) is the
+    /// flag that selects `OPENSSL_free(es->err_data[i])` here
+    /// (`crypto/err/err_local.h:25`); `err_set_data` selects the same release for
+    /// the incumbent buffer at `:79`. That release is only sound when every
+    /// writer establishes the matching precondition:
+    ///
+    /// * with `ERR_TXT_MALLOCED` set, a non-NULL pointer is the base of one whole block
+    ///   from the crate's `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+    ///   `CRYPTO_strdup`, or an authority helper that allocates through one of
+    ///   them), its NUL-terminated contents fit within the allocated extent
+    ///   (`strlen + 1` for the `ERR_set_error_data` path, which is also the exact
+    ///   extent of a `CRYPTO_strdup` block), this state is its exclusive owner,
+    ///   and the release below is its single `CRYPTO_free`;
+    /// * without the flag the pointer is **borrowed**: it is never released here
+    ///   and must remain valid and NUL-terminated until the entry is cleared or
+    ///   replaced.
+    ///
+    /// Internal buffers are built by [`slot_buf_alloc`]. The only external
+    /// writer is [`ERR_set_error_data`], whose `# Safety` states the same
+    /// contract. The authority's own comment on that function records the
+    /// ownership transfer: "callers should be advised that this function takes
+    /// over ownership of the allocated memory" (`crypto/err/err.c:803-804`).
     pub(crate) fn clear_data(&mut self, i: usize, deall: bool) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             if deall {
@@ -373,6 +398,14 @@ impl ErrState {
     }
 
     /// `err_set_data`.
+    ///
+    /// Replacing a slot that already carries `ERR_TXT_MALLOCED` releases the
+    /// incumbent block first, then installs `data`/`size`/`flags`. The new value
+    /// must satisfy the slot contract documented on [`Self::clear_data`]: with
+    /// `ERR_TXT_MALLOCED`, a non-NULL `data` is the base of one whole seam block with
+    /// `strlen + 1` bytes of NUL-terminated contents, exclusively owned by this
+    /// state and released exactly once by this state; without the flag, `data` is
+    /// borrowed and must outlive the entry.
     pub(crate) fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             // Release the buffer this slot already owned before adopting the new one.
@@ -1106,11 +1139,38 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
 /// `void ERR_set_error_data(char *data, int flags)`
 ///
 /// Takes ownership of `data`, which is the documented and slightly surprising
-/// part of this API: the caller must not free it afterwards.
+/// part of this API: the caller must not free it afterwards. The authority's own
+/// comment says "callers should be advised that this function takes over
+/// ownership of the allocated memory, i.e. they can't count on the pointer to
+/// remain valid" (`crypto/err/err.c:803-806`), and it stores the caller's `flags`
+/// unchanged after estimating the extent as `strlen(data) + 1`
+/// (`crypto/err/err.c:807`).
 ///
 /// # Safety
-/// `data` must be NULL or a NUL-terminated C string, and the caller must not use
-/// it again after this call.
+///
+/// `data` must be NULL or NUL-terminated within a readable allocation. The
+/// caller must not use or release the pointer after this call.
+///
+/// When `flags & ERR_TXT_MALLOCED` is set and `data` is non-NULL, the caller
+/// additionally guarantees:
+///
+/// * `data` is the base of one whole allocation from the process's active
+///   `CRYPTO_malloc`/`CRYPTO_strdup` seam (not an interior pointer, stack
+///   buffer, literal, or unrelated allocator block);
+/// * its extent is at least `strlen(data) + 1` bytes (exactly that for a
+///   `CRYPTO_strdup` block), so the cached size is valid for the allocation;
+/// * this call receives exclusive ownership: no other owner will release it, and
+///   the error queue's `CRYPTO_free` is its single release, now or when the slot
+///   is later cleared/replaced.
+///
+/// A NULL `data` with `ERR_TXT_MALLOCED` owns nothing: the slot stores NULL and
+/// the later release is the authority's no-op `free(NULL)`.
+///
+/// Without `ERR_TXT_MALLOCED`, the pointer is borrowed rather than owned: it is
+/// never released by the error queue and must remain valid and NUL-terminated
+/// until the entry is cleared or replaced. Passing a non-seam pointer *with* the
+/// flag, or releasing a MALLOCED pointer after this call, violates the C ABI
+/// contract and is not made safe by the Rust type system.
 #[no_mangle]
 pub unsafe extern "C" fn ERR_set_error_data(data: *mut c_char, flags: c_int) {
     guard_ffi((), || {
