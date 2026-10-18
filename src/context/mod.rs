@@ -81,8 +81,9 @@
 //!
 //! ## Allocation coordinates
 //!
-//! The context is allocated with [`CRYPTO_zalloc`] and released with
-//! [`CRYPTO_free`], not with a Rust `Box`, so that an application which installs
+//! The context is allocated with [`CRYPTO_zalloc`](crate::runtime::mem::CRYPTO_zalloc)
+//! and released with [`CRYPTO_free`](crate::runtime::mem::CRYPTO_free), not with a Rust `Box`, so
+//! that an application which installs
 //! its own allocator through `CRYPTO_set_mem_functions` sees these allocations
 //! exactly as it sees the authority's. The reported source coordinates are the
 //! authority's own, from `crypto/context.c`, because they are what a failing
@@ -109,8 +110,8 @@ use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 
 use crate::ffi::guard_ffi;
-use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::{
     CRYPTO_THREAD_cleanup_local, CRYPTO_THREAD_get_local, CRYPTO_THREAD_init_local,
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock,
@@ -192,6 +193,7 @@ pub(crate) const OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX: c_int = 15;
 /// Derived from the admitted build record (`forensics/authorities/`), never
 /// hand-typed.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/context.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/context.c");
 
 /// `OPENSSL_zalloc(sizeof(*ctx))` is at `crypto/context.c:436`, `OPENSSL_free(ctx)`
 /// at 439 (the failed-`context_init` arm) and at 495 (`OSSL_LIB_CTX_free`).
@@ -310,11 +312,11 @@ impl OsslLibCtx {
 // NULL). (b) an all-zero block is the authority's own constructed input: `context_init` reads no
 // field before writing it, and `context_deinit` on it is a no-op set of NULL releases.
 //
-// `LINE_FREE` is the authority's failed-`context_init` arm (`crypto/context.c:439`), the only
-// release this owner performs: success publishes with `RawCtx::into_raw`, and the C lifecycle's
-// `OSSL_LIB_CTX_free` then uses its own `:495` site. `RawCtx` -- which never runs
-// `destroy_body` -- is the sole consumer in this module, so a failed initialisation still drops
-// the block alone at `:439` with no slot teardown.
+// `LINE_FREE_INIT_FAILURE` is the authority's failed-`context_init` arm
+// (`crypto/context.c:439`), the only release a `RawCtx` performs when initialisation refuses.
+// Success validates the block with `RawCtx::assume_init` and publishes it with `OwnedCtx::into_raw`;
+// `OSSL_LIB_CTX_free` then reclaims it with `OwnedCtx::from_raw_at(.., :495)`, so the same
+// `destroy_body` runs for both the shared owner and the C lifecycle.
 unsafe impl CtxDestroy for OsslLibCtx {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
@@ -1090,8 +1092,11 @@ pub extern "C" fn OSSL_LIB_CTX_new() -> *mut c_void {
             return ptr::null_mut();
         }
         // Success publishes the stable address; the C lifecycle then owns it until
-        // `OSSL_LIB_CTX_free` releases it at its own `:495` site.
-        ctx.into_raw().cast::<c_void>()
+        // `OSSL_LIB_CTX_free` reclaims it through `OwnedCtx::from_raw_at(.., :495)`.
+        // SAFETY: `context_init` wrote every slot this crate builds and the allocator zeroed
+        // the rest, so the block holds a fully initialised `OsslLibCtx`; `destroy_body` is sound
+        // on it and only this frame hands it out.
+        unsafe { ctx.assume_init() }.into_raw().cast::<c_void>()
     })
 }
 
@@ -1279,18 +1284,17 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_free(ctx: *mut c_void) {
         }
         // `if (ctx->ischild) ossl_provider_deinit_child(ctx);` -- before the slot objects
         // are released, because the deregistration tells the parent that this child is
-        // gone and the parent may reach back through the globals it stored in slot 18.
-        // SAFETY: `ctx` is live and not the default, so this call owns it.
-        if unsafe { (*ctx).ischild } != 0 {
-            // SAFETY: `ctx` is live; the callee reads slot 18, which is still allocated at
-            // this point in the teardown.
-            unsafe { crate::provider::child::ossl_provider_deinit_child(ctx.cast::<c_void>()) };
-        }
-        context_deinit(ctx);
-        // SAFETY: `ctx` is not the default, so this call owns it, and
-        // `context_deinit` has released everything it held. It is freed exactly
-        // once.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE) };
+        // gone and the parent may reach back through the globals it stored in slot 18. The
+        // reclaim runs the authority's own `destroy_body` (that branch and `context_deinit`)
+        // and `Drop` releases the block at `crypto/context.c:495`.
+        // SAFETY: `ctx` is not the default, so this call owns it; `from_raw_at` reclaims the
+        // block a previous `into_raw` published, and `Drop` runs the destructor body followed
+        // by the block release. It is freed exactly once.
+        unsafe {
+            drop(OwnedCtx::<OsslLibCtx>::from_raw_at(
+                ctx, FILE_SEAM, LINE_FREE,
+            ))
+        };
     })
 }
 
@@ -1613,3 +1617,7 @@ mod tests {
         assert_eq!(gd, OSSL_LIB_CTX_get0_global_default());
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslLibCtx => zero_state_sweep_ossl_lib_ctx);

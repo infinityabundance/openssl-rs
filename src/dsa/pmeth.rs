@@ -533,3 +533,7 @@ pub(crate) static DSA_PKEY_METH: EvpPkeyMethod = EvpPkeyMethod {
 pub(crate) unsafe extern "C" fn ossl_dsa_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(DSA_PKEY_METH)
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(DsaPkeyCtx => zero_state_sweep_dsa_pkey_ctx);

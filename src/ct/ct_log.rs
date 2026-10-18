@@ -697,3 +697,7 @@ pub unsafe extern "C" fn CTLOG_STORE_get0_log_by_id(
     }
     ptr::null()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CtlogStore => zero_state_sweep_ctlog_store, Ctlog => zero_state_sweep_ctlog, CtlogStoreLoadCtx => zero_state_sweep_ctlog_store_load_ctx);

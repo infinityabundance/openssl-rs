@@ -359,6 +359,12 @@ static mut APP_METHODS: *mut OpenSslStack = ptr::null_mut();
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/asn1/ameth_lib.c".as_ptr();
 /// `EVP_PKEY_asn1_new`'s `OPENSSL_zalloc(sizeof(*ameth))` (line 227).
 const LINE_ZALLOC_AMETH: c_int = 227;
+/// `EVP_PKEY_asn1_free`'s `OPENSSL_free(ameth->pem_str)` (line 277).
+const LINE_FREE_PEM_STR: c_int = 277;
+/// `EVP_PKEY_asn1_free`'s `OPENSSL_free(ameth->info)` (line 278).
+const LINE_FREE_INFO: c_int = 278;
+/// `EVP_PKEY_asn1_free`'s `OPENSSL_free(ameth)` (line 279).
+const LINE_FREE_AMETH: c_int = 279;
 /// `EVP_PKEY_asn1_new`'s `OPENSSL_strdup(info)` (line 237).
 const LINE_DUP_INFO: c_int = 237;
 /// `EVP_PKEY_asn1_new`'s `OPENSSL_strdup(pem_str)` (line 243).
@@ -566,14 +572,14 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get0_info(
 unsafe impl CtxDestroy for EvpPkeyAsn1Method {
     const FILE: *const c_char = FILE;
     const LINE_ALLOC: c_int = LINE_ZALLOC_AMETH;
-    const LINE_FREE: c_int = LINE_ZALLOC_AMETH;
+    const LINE_FREE: c_int = LINE_FREE_AMETH;
 
     unsafe fn destroy_body(ptr: *mut EvpPkeyAsn1Method) {
         // SAFETY: `ptr` is a live record per the trait contract; both strings are NULL or this
         // record's own `CRYPTO_strdup` blocks.
         unsafe {
-            CRYPTO_free((*ptr).pem_str.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
-            CRYPTO_free((*ptr).info.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
+            CRYPTO_free((*ptr).pem_str.cast::<c_void>(), FILE, LINE_FREE_PEM_STR);
+            CRYPTO_free((*ptr).info.cast::<c_void>(), FILE, LINE_FREE_INFO);
         }
     }
 }
@@ -703,7 +709,7 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_free(ameth: *mut EvpPkeyAsn1Method) {
     // authority's own site.
     unsafe {
         <EvpPkeyAsn1Method as CtxDestroy>::destroy_body(ameth);
-        CRYPTO_free(ameth.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
+        CRYPTO_free(ameth.cast::<c_void>(), FILE, LINE_FREE_AMETH);
     }
 }
 
@@ -1231,3 +1237,7 @@ mod tests {
         unsafe { EVP_PKEY_asn1_free(ameth) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpPkeyAsn1Method => zero_state_sweep_evp_pkey_asn1_method);

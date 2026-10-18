@@ -90,9 +90,9 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_child.c".a
 
 /// `return OPENSSL_zalloc(sizeof(struct child_prov_globals))` in
 /// `ossl_child_prov_ctx_new`.
-const L_GLOBALS: c_int = 29;
+const L_GLOBALS: c_int = 39;
 /// `OPENSSL_free(gbl)` in `ossl_child_prov_ctx_free`.
-const L_GLOBALS_FREE: c_int = 37;
+const L_GLOBALS_FREE: c_int = 47;
 
 /// `OSSL_LIB_CTX_CHILD_PROVIDER_INDEX` — `include/internal/cryptlib.h`.
 const OSSL_LIB_CTX_CHILD_PROVIDER_INDEX: c_int = 18;
@@ -740,3 +740,7 @@ pub(crate) unsafe fn ossl_provider_set_child(
     }
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ChildProvGlobals => zero_state_sweep_child_prov_globals);

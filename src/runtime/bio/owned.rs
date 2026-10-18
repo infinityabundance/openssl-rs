@@ -37,6 +37,24 @@ use core::ptr::{self, NonNull};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::mem_coords::SeamFile;
 
+/// Test-only observation of which owner's `Drop` ran, for the OB-3 model
+/// correspondence tests. Thread-local so concurrent tests cannot see each other's
+/// drops. It is compiled out of every non-test build.
+#[cfg(test)]
+mod drop_probe {
+    use core::cell::Cell;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(super) enum Call {
+        Raw,
+        Owned,
+    }
+
+    thread_local! {
+        pub(super) static LAST: Cell<Option<Call>> = const { Cell::new(None) };
+    }
+}
+
 /// The authority's `*_free` body for one `#[repr(C)]` context, without the block release
 /// [`OwnedCtx`]'s `Drop` performs. One impl per context type, so the owner runs the right
 /// destructor from `Drop` without a `CRYPTO_free` written at any call site.
@@ -181,6 +199,8 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
     /// The context destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`])
     /// followed by the block's release, through the same allocator seam the block was allocated on.
     fn drop(&mut self) {
+        #[cfg(test)]
+        drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Owned)));
         // SAFETY: `self.ptr` is the block this handle allocated (or `from_raw` reclaimed) and this
         // is its single release; `Drop` runs once, and `destroy_body` is the authority's own
         // `*_free` body.
@@ -310,6 +330,8 @@ impl<T: CtxDestroy> Drop for RawCtx<T> {
     /// Releases the **block alone**: `T` is not (yet) a valid value, so its destructor body must not
     /// run. Same allocator, size and `T::FILE`/`T::LINE_FREE` as [`OwnedCtx`]'s block release.
     fn drop(&mut self) {
+        #[cfg(test)]
+        drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Raw)));
         // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
         // single release, and the authority's own bare `CRYPTO_free` is the whole release.
         unsafe {
@@ -467,3 +489,9 @@ mod adv_partial_init_tests {
         assert!(unsafe { OwnedBlock::take(p) }.is_some());
     }
 }
+
+// The exhaustive ownership-transition model and the production correspondence tests. Test-only:
+// nothing here is compiled into the library, and it never changes the production rules.
+#[cfg(test)]
+#[path = "owned_ctx_model.rs"]
+mod release_model_tests;

@@ -1039,3 +1039,7 @@ make_keymgmt_functions!(
     slh_dsa_shake_256f_new_key,
     slh_dsa_shake_256f_gen
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SlhDsaGenCtx => zero_state_sweep_slh_dsa_gen_ctx);

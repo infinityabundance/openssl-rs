@@ -875,3 +875,7 @@ unsafe extern "C" fn obj_trust(id: c_int, x: *mut X509, flags: c_int) -> c_int {
     // SAFETY: `x` is live per the contract; `trust_compat` ignores its first argument.
     unsafe { trust_compat(ptr::null_mut(), x, flags) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Trust => zero_state_sweep_x509_trust);

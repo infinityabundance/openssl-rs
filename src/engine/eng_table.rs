@@ -98,8 +98,8 @@ unsafe impl CtxDestroy for EnginePile {
     const FILE: *const c_char = c"crypto/engine/eng_table.c".as_ptr();
     /// `OPENSSL_LINE` of the pile `OPENSSL_malloc` (`:106`).
     const LINE_ALLOC: c_int = 106;
-    /// `OPENSSL_LINE` of the pile `OPENSSL_free` (`:113`).
-    const LINE_FREE: c_int = 113;
+    /// `OPENSSL_LINE` of the pile's normal `OPENSSL_free` (`int_cleanup_cb_doall`, `:184`).
+    const LINE_FREE: c_int = 184;
 
     unsafe fn destroy_body(ptr: *mut EnginePile) {
         // SAFETY: `ptr` is a live pile per the trait contract; `sk` is this pile's own stack
@@ -253,8 +253,10 @@ pub(crate) unsafe fn engine_table_register(
             // SAFETY: `raw.as_ptr()` is live.
             if unsafe { (*raw.as_ptr()).sk.is_null() } {
                 // The pile's `sk` failed to allocate, so the pile is not yet a valid
-                // `EnginePile`; the raw handle's `Drop` releases the block alone -- the
-                // authority's own `OPENSSL_free(fnd)` at `:113`.
+                // `EnginePile`; the raw handle's `Drop` releases the block alone at the
+                // authority's failure site (`OPENSSL_free(fnd)` at `:113`).
+                let mut raw = raw;
+                raw.set_release_line(113);
                 drop(raw);
                 // SAFETY: the engine lock is held by the caller.
                 unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
@@ -266,7 +268,7 @@ pub(crate) unsafe fn engine_table_register(
             unsafe { (*raw.as_ptr()).funct = ptr::null_mut() };
             // SAFETY: all four fields are written and `raw` is the only owner, so the storage is a
             // valid `EnginePile` whose destructor body is sound.
-            let raw = unsafe { raw.assume_init() };
+            let mut raw = unsafe { raw.assume_init() };
             // SAFETY: `raw.as_ptr()` is live; the lhash stores the pile as its node.
             unsafe { OPENSSL_LH_insert(lh, raw.as_ptr().cast::<c_void>()) };
             // SAFETY: the lhash is live and holds the node `raw` inserted.
@@ -274,7 +276,9 @@ pub(crate) unsafe fn engine_table_register(
                 .cast::<EnginePile>();
             if again != raw.as_ptr() {
                 // The lhash kept a different node; the handle's `Drop` runs the authority's own
-                // `sk_ENGINE_free(fnd->sk)` + `OPENSSL_free(fnd)` at `:113` (funct is still NULL).
+                // `sk_ENGINE_free(fnd->sk)` + `OPENSSL_free(fnd)` at the failed-insert site
+                // `:113` (funct is still NULL).
+                raw.set_release_line(113);
                 drop(raw);
                 // SAFETY: the engine lock is held by the caller.
                 unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
@@ -728,3 +732,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EnginePile => zero_state_sweep_engine_pile);

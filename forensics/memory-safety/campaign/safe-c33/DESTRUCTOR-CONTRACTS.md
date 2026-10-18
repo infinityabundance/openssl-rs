@@ -128,14 +128,14 @@ means the construction path releases block-only before the object is complete.
 | `BioEncCtx` (`evp/bio_enc.rs:280`) | Z | `EVP_CIPHER_CTX_free(cipher)` | zero NULL | EST |
 | `EvpCipher` (`evp/cipher.rs:404`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
 | `EvpCipherCtx` (`evp/cipher_ctx.rs:310`) | Z | `EVP_CIPHER_CTX_reset` | reset accepts zero | EST |
-| `EvpMd` (`evp/digest.rs:956`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
-| `EvpMdCtx` (`evp/digest.rs:2094`) | Z | `EVP_MD_CTX_reset` | reset accepts zero | EST |
+| `EvpMd` (`evp/digest.rs:965`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
+| `EvpMdCtx` (`evp/digest.rs:2103`) | Z | `EVP_MD_CTX_reset` | reset accepts zero | EST |
 | `EvpEncodeCtx` (`evp/encode.rs:218`) | E | none | E | EST |
 | `EvpKeyExch` (`evp/exchange.rs:164`) | R | `CRYPTO_free(type_name)`, provider ref | no zero claim | EST |
 | `EvpKem` (`evp/kem.rs:199`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
 | `EvpKeyMgmt` (`evp/keymgmt.rs:320`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
-| `EvpPkey` (`evp/pkey.rs:452`) | S | `evp_pkey_free_it`, `free_ex_data`, lock | staged `RawPkey`; last-ref precondition | EST (subphase 38) |
-| `EvpPkeyAsn1Method` (`evp/pkey_asn1.rs:566`) | Z | `CRYPTO_free(pem_str/info)`, remaining member releases | zero NULL | EST |
+| `EvpPkey` (`evp/pkey.rs:421`) | S | `evp_pkey_free_it`, `free_ex_data`, lock, `sk_X509_ATTRIBUTE_pop_free(attributes)` | staged `RawPkey`; last-ref precondition; zero NULL (attributes stack no-op) | EST (subphase 38) |
+| `EvpPkeyAsn1Method` (`evp/pkey_asn1.rs:572`) | Z | `CRYPTO_free(pem_str/info)`, remaining member releases | zero NULL | EST |
 | `EvpPkeyCtx` (`evp/pkey_ctx.rs:1125`) | Z | free old ops/cached data, keymgmt, propquery, 2 keys, `BN_free(rsa_pubexp)` | zero NULL; old-op helpers handle zero | EST (subphase 38) |
 | `EvpPkeyMethod` (`evp/pkey_ctx.rs:2228`) | E | none | E | EST |
 | `EvpRand` (`evp/rand.rs:321`) | Z | `CRYPTO_free(type_name)`, provider ref | zero NULL | EST |
@@ -446,7 +446,7 @@ differential or independent §7 package was run.
 | `Dsa` | body `src/dsa/object.rs:264-304`; `meth` guard `:272-279`; staged constructor `:168-256`; same FFC cleanup witness; last-ref gate `:318-339` |
 | `OsslEncoderInstance` | body `src/encoder_lib.rs:494-511`; zero `encoder` skips `:498`; construction `:384-469`; error arm `:477-480`; free wrapper `:525-532` |
 | `OsslEncoderCtx` | body `src/encoder_meth.rs:1246-1256`; `zalloc` constructor `:1269-1274`; same stack and pwdata witnesses; free wrapper `:1339-1345` |
-| `EvpPkey` | body `src/evp/pkey.rs:452-465`; staged `RawPkey` is `unsafe`-only and releases the block alone `:474-507`; `EVP_PKEY_new` writes all members before `finish` `:611-655`; last-ref gate `:758-772`; the trait makes no zero-validity claim `:391-400` |
+| `EvpPkey` | body `src/evp/pkey.rs:421-448`; staged `RawPkey` is `unsafe`-only and releases the block alone `:474-486`; `EVP_PKEY_new` writes all members before `finish`; last-ref gate `:650-674`; zero-validity witness: all-pointer/scalar record, NULL lock/ex-data/attributes accepted; attributes released by `sk_X509_ATTRIBUTE_pop_free` (`p_lib.c:1849`) |
 | `EvpPkeyCtx` | body `src/evp/pkey_ctx.rs:1125-1156`; safe `OwnedCtx::new` zero state `:291-299`; `free_old_ops` dispatches from `operation` (zero selects no arm) `:904-947`; cached data is two NULL frees `:1006-1016`; free wrapper `:1111-1114` |
 | `Rsa` | body `src/rsa/object.rs:589-651`; `meth` guard `:597-603`; staged constructor `:371-471`; blinding release is NULL-safe `src/runtime/sparse_array.rs:488-498,558-568`; last-ref gate `:685-707` |
 | `CompCtx` | body `src/runtime/bio/comp.rs:167-180`; zero `meth` skips `:171`; constructor sets `meth` before `init` `:271-293`; free wrapper `:343-346` |

@@ -1019,3 +1019,7 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_settable_ctx_params(
     }
     ptr::null()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslStoreLoader => zero_state_sweep_ossl_store_loader);

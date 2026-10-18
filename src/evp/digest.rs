@@ -206,12 +206,22 @@ pub(crate) const OBJ_NAME_TYPE_MD_METH: c_int = 0x01;
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/digest.c".as_ptr();
 const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/digest.c");
+/// The authority's translation unit for `evp_md_free_int`, which is `evp_lib.c` and not
+/// `digest.c`: the method's block and its `type_name` are released there (`:866`/`:863`).
+const FILE_EVP_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_EVP_LIB_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c");
 /// `evp_md_new`'s `OPENSSL_zalloc(sizeof(*md))` (line 944).
 const LINE_ZALLOC_MD: c_int = 944;
 /// `evp_md_free_int`'s `OPENSSL_free(md->type_name)` (line 863), in `crypto/evp/evp_lib.c`.
 const LINE_FREE_TYPE_NAME: c_int = 863;
-/// `evp_md_free_int`'s `OPENSSL_free(md)` (line 867), in the same file.
-const LINE_FREE_MD: c_int = 867;
+/// `evp_md_free_int`'s `OPENSSL_free(md)` (line 866), in the same file.
+const LINE_FREE_MD: c_int = 866;
+/// `evp_md_new`'s constructor-refusal `OPENSSL_free(md)` (line 947), in
+/// `crypto/evp/digest.c`. The converted constructor has no fallible step after the zeroed
+/// allocation (`CRYPTO_NEW_REF` cannot fail), so this release coordinate is **unreachable**; it
+/// is kept distinct from [`LINE_FREE_MD`] so a future fallible step records the authority's own
+/// failure site rather than the object's success release site.
+const LINE_FREE_MD_ON_NEW: c_int = 947;
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of the method and context blocks, and of the legacy `md_data` buffer
@@ -436,7 +446,11 @@ unsafe impl Sync for StaticMd {}
 pub(crate) fn evp_md_new() -> *mut EvpMd {
     // The method block, allocated through the crate's allocator seam; `Drop` is its single release
     // on every refusal at a caller and `into_raw` hands it out on success.
-    let Some(md) = OwnedCtx::<EvpMd>::zalloc_at(FILE_SEAM, LINE_ZALLOC_MD, FILE_SEAM, LINE_FREE_MD)
+    // The release coordinate is `evp_md_new`'s own failure arm (`digest.c:947`). It is
+    // unreachable here because nothing after the allocation can fail, but the owner would report
+    // the authority's failure site if that ever changed.
+    let Some(md) =
+        OwnedCtx::<EvpMd>::zalloc_at(FILE_SEAM, LINE_ZALLOC_MD, FILE_SEAM, LINE_FREE_MD_ON_NEW)
     else {
         return ptr::null_mut();
     };
@@ -787,7 +801,13 @@ unsafe fn evp_md_free_int(md: *mut EvpMd) {
     // SAFETY: `md` is a live method this crate allocated and has not released; `from_raw` reclaims
     // it and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the
     // block release.
-    unsafe { drop(OwnedCtx::<EvpMd>::from_raw_at(md, FILE_SEAM, LINE_FREE_MD)) };
+    unsafe {
+        drop(OwnedCtx::<EvpMd>::from_raw_at(
+            md,
+            FILE_EVP_LIB_SEAM,
+            LINE_FREE_MD,
+        ))
+    };
 }
 
 /// The authority's `evp_md_free_int` body, without the block release [`OwnedCtx`]'s `Drop` performs:
@@ -800,7 +820,11 @@ unsafe impl CtxDestroy for EvpMd {
     unsafe fn destroy_body(ptr: *mut EvpMd) {
         // SAFETY: `ptr` is live per the trait contract.
         unsafe {
-            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            CRYPTO_free(
+                (*ptr).type_name.cast::<c_void>(),
+                FILE_EVP_LIB,
+                LINE_FREE_TYPE_NAME,
+            );
             ossl_provider_free((*ptr).prov);
         }
     }
@@ -5918,9 +5942,11 @@ mod tests {
             assert!((*dst).md_data.is_null());
 
             (*fake).prov = ptr::null_mut();
-            EVP_MD_free(fake);
+            // The contexts hold `fake` as `digest`, so they must be released first: `src`'s reset
+            // reads `(*digest).cleanup`/`ctx_size` and would be a use-after-free otherwise.
             EVP_MD_CTX_free(src);
             EVP_MD_CTX_free(dst);
+            EVP_MD_free(fake);
         }
     }
 
@@ -6348,3 +6374,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpMd => zero_state_sweep_evp_md, EvpMdCtx => zero_state_sweep_evp_md_ctx);

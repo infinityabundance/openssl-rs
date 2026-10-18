@@ -1003,3 +1003,7 @@ const _: () = {
             == core::mem::size_of::<*const c_void>()
     );
 };
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(DynamicDataCtx => zero_state_sweep_dynamic_data_ctx);

@@ -560,3 +560,7 @@ make_msblob_encoder!(
     rsa_set1,
     err_sites::PROV_ENCODE_KEY2MS_275
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Key2msCtx => zero_state_sweep_key2ms_ctx);

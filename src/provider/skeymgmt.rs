@@ -393,3 +393,7 @@ pub(crate) static DEFLT_SKEYMGMT: [OsslAlgorithm; 3] = [
         algorithm_description: ptr::null(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSkey => zero_state_sweep_prov_skey);

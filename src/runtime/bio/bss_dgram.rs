@@ -2063,3 +2063,7 @@ mod tests {
         assert!(!is_v4_mapped(&almost));
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioDgramData => zero_state_sweep_bio_dgram_data);

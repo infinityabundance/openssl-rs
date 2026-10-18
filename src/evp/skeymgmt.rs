@@ -1780,3 +1780,7 @@ mod tests {
         assert!(unsafe { evp_skey_alloc(ptr::null_mut()) }.is_null());
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpSkeyMgmt => zero_state_sweep_evp_skey_mgmt);

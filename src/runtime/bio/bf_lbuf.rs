@@ -564,3 +564,7 @@ unsafe extern "C" fn linebuffer_puts(b: *mut Bio, str_: *const c_char) -> c_int 
     // SAFETY: `b` is live and `str_` is readable for `len` bytes.
     unsafe { linebuffer_write(b, str_, len as c_int) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioLineBufferCtx => zero_state_sweep_bio_line_buffer_ctx);

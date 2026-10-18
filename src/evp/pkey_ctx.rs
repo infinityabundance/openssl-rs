@@ -231,8 +231,21 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c".as
 const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c");
 /// `int_ctx_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 297).
 const LINE_ZALLOC_CTX: c_int = 297;
+/// `int_ctx_new`'s `OPENSSL_strdup(propquery)` (line 310).
+const LINE_ZALLOC_CTX_PROPQUERY: c_int = 310;
 /// `int_ctx_new`'s `OPENSSL_free(ret)` after a failed `OPENSSL_strdup` (line 312).
-const LINE_FREE_CTX: c_int = 312;
+const LINE_FREE_CTX_CTOR: c_int = 312;
+/// `EVP_PKEY_CTX_free`'s `OPENSSL_free(ctx)` (line 410).
+const LINE_FREE_CTX: c_int = 410;
+/// `EVP_PKEY_CTX_free`'s `OPENSSL_free(ctx->propquery)` (line 403).
+const LINE_FREE_CTX_PROPQUERY: c_int = 403;
+/// `EVP_PKEY_CTX_dup`'s `OPENSSL_zalloc(sizeof(*rctx))` (line 463).
+const LINE_ZALLOC_CTX_DUP: c_int = 463;
+/// `EVP_PKEY_CTX_dup`'s `OPENSSL_strdup(pctx->propquery)` (line 476).
+const LINE_ZALLOC_CTX_DUP_PROPQUERY: c_int = 476;
+/// `evp_pkey_ctx_free_cached_data`'s two frees (lines 1521 and 1522).
+const LINE_FREE_CACHED_DIST_ID: c_int = 1521;
+const LINE_FREE_CACHED_DIST_ID_NAME: c_int = 1522;
 /// `evp_pkey_ctx_add1_octet_string`'s `OPENSSL_zalloc(info_alloc)` (line 1069).
 const LINE_ZALLOC_XLAT_BN_BUF: c_int = 1069;
 /// Its `OPENSSL_clear_free(info, info_alloc)`, at both the error label and the success exit
@@ -624,17 +637,22 @@ unsafe fn int_ctx_new(
     }
 
     // The context block, allocated through the crate's allocator seam; `Drop` is its single release
-    // on every refusal below and `into_raw` hands it out on success.
-    let Some(ret) =
-        OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
-    else {
+    // on every refusal below and `into_raw` hands it out on success. The propquery refusal releases
+    // it at `pmeth_lib.c:312`; every later refusal runs `EVP_PKEY_CTX_free`'s body and releases the
+    // block at `:410`, so the release site is re-pointed before that point below.
+    let Some(mut ret) = OwnedCtx::<EvpPkeyCtx>::zalloc_at(
+        FILE_SEAM,
+        LINE_ZALLOC_CTX,
+        FILE_SEAM,
+        LINE_FREE_CTX_CTOR,
+    ) else {
         // SAFETY: `keymgmt` is live and holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
         return ptr::null_mut();
     };
     if !propquery.is_null() {
         // SAFETY: `propquery` is NUL-terminated.
-        let dup = unsafe { CRYPTO_strdup(propquery, FILE, LINE_FREE_CTX) };
+        let dup = unsafe { CRYPTO_strdup(propquery, FILE, LINE_ZALLOC_CTX_PROPQUERY) };
         if dup.is_null() {
             // `ret` is released by its `Drop` as this frame returns; `keymgmt` by the authority's
             // own free.
@@ -655,6 +673,9 @@ unsafe fn int_ctx_new(
     }
 
     if !pkey.is_null() {
+        /* Every refusal from here on is the authority's `EVP_PKEY_CTX_free(ret)`, whose block
+         * release is `pmeth_lib.c:410`. */
+        ret.set_release_line(LINE_FREE_CTX);
         // SAFETY: `pkey` is live.
         if unsafe { EVP_PKEY_up_ref(pkey) } == 0 {
             // `ret` is released by its `Drop` as this frame returns.
@@ -870,8 +891,12 @@ unsafe fn evp_pkey_ctx_free_cached_data(ctx: *mut EvpPkeyCtx) {
     let c = unsafe { &mut *ctx };
     // SAFETY: both pointers are NULL or allocations this context owns.
     unsafe {
-        CRYPTO_free(c.cached_parameters.dist_id, FILE, LINE_FREE_CTX);
-        CRYPTO_free(c.cached_parameters.dist_id_name.cast(), FILE, LINE_FREE_CTX);
+        CRYPTO_free(c.cached_parameters.dist_id, FILE, LINE_FREE_CACHED_DIST_ID);
+        CRYPTO_free(
+            c.cached_parameters.dist_id_name.cast(),
+            FILE,
+            LINE_FREE_CACHED_DIST_ID_NAME,
+        );
     }
     c.cached_parameters.dist_id = ptr::null_mut();
     c.cached_parameters.dist_id_name = ptr::null_mut();
@@ -1008,7 +1033,7 @@ unsafe impl CtxDestroy for EvpPkeyCtx {
         // SAFETY: `keymgmt` is NULL or a method holding this context's reference.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
         // SAFETY: `propquery` is NULL or an allocation this context owns.
-        unsafe { CRYPTO_free(propquery.cast(), FILE, LINE_FREE_CTX) };
+        unsafe { CRYPTO_free(propquery.cast(), FILE, LINE_FREE_CTX_PROPQUERY) };
         // SAFETY: both keys are NULL or hold a reference taken by `int_ctx_new` or by the peer
         // setter.
         unsafe {
@@ -1059,9 +1084,11 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
     let src = unsafe { &*pctx };
 
     // The copy's context block, allocated through the crate's allocator seam; `Drop` is its single
-    // release on every refusal below and `into_raw` hands it out on success.
+    // release on every refusal below and `into_raw` hands it out on success. The authority
+    // allocates the duplicate at `pmeth_lib.c:463` and all its refusals release through
+    // `EVP_PKEY_CTX_free` (`:410`).
     let Some(rctx) =
-        OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
+        OwnedCtx::<EvpPkeyCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX_DUP, FILE_SEAM, LINE_FREE_CTX)
     else {
         return ptr::null_mut();
     };
@@ -1085,7 +1112,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
     if !src.propquery.is_null() {
         // SAFETY: `propquery` is NUL-terminated.
         // SAFETY: `propquery` is NUL-terminated.
-        let dup = unsafe { CRYPTO_strdup(src.propquery, FILE, LINE_FREE_CTX) };
+        let dup = unsafe { CRYPTO_strdup(src.propquery, FILE, LINE_ZALLOC_CTX_DUP_PROPQUERY) };
         if dup.is_null() {
             // `rctx` is released by its `Drop` as this frame returns.
             return ptr::null_mut();
@@ -11694,7 +11721,7 @@ mod tests {
         // constructor's own safety argument covers the zeroed block's validity.
         match OwnedCtx::<EvpPkeyCtx>::zalloc_at(
             FILE_SEAM,
-            LINE_ZALLOC_CTX,
+            LINE_ZALLOC_CTX_DUP,
             FILE_SEAM,
             LINE_FREE_CTX,
         ) {
@@ -12015,3 +12042,7 @@ mod tests {
         unsafe { crate::evp::pkey::EVP_PKEY_free(peer) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpPkeyCtx => zero_state_sweep_evp_pkey_ctx, EvpPkeyMethod => zero_state_sweep_evp_pkey_method);

@@ -976,3 +976,7 @@ pub unsafe extern "C" fn BIO_new_accept(str_: *const c_char) -> *mut Bio {
         ptr::null_mut()
     })
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioAccept => zero_state_sweep_bio_accept);

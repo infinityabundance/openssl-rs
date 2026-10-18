@@ -1292,3 +1292,7 @@ pub(crate) unsafe extern "C" fn ossl_ec_wNAF_have_precompute_mult(group: *const 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe { c_int::from((*group).pre_comp_type == Pct::Ec && !(*group).pre_comp.ec.is_null()) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcPreCompSt => zero_state_sweep_ec_pre_comp_st);

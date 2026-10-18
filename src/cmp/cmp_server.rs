@@ -1530,3 +1530,7 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_server_perform(
     // SAFETY: `srv_ctx`/`req` are live.
     unsafe { OSSL_CMP_SRV_process_request(srv_ctx, req) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslCmpSrvCtx => zero_state_sweep_ossl_cmp_srv_ctx);

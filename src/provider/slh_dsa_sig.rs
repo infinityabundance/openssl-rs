@@ -1047,3 +1047,7 @@ make_signature_functions!(
 /// `SLH_DSA_MESSAGE_ENCODE_RAW` is the value `set_ctx_params` writes for a raw message; named here
 /// so a reader sees both encodings the unit carries.
 const _: c_int = SLH_DSA_MESSAGE_ENCODE_RAW;
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSlhDsaCtx => zero_state_sweep_prov_slh_dsa_ctx);
