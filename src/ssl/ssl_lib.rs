@@ -3225,6 +3225,12 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             }
 
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
+                // The authority allocates the DTLS state only after `ossl_ssl_init`'s
+                // `CRYPTO_new_ex_data` succeeds (`ossl_ssl_connection_new_int` calls
+                // `dtls1_new` afterwards), so its refusal path has no `d1` to release.
+                // This port allocates `d1` earlier in the constructor; release that one
+                // member here rather than leaking it through the bare-block teardown.
+                dtls1_free(s);
                 SSL_CTX_free(ctx);
                 CRYPTO_THREAD_lock_free((*s).lock);
                 // The authority's partial refusal releases the lock and the block only.
@@ -3331,13 +3337,16 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 (*s).ext_alpn_slot().store(dup, apl);
             }
             if !(*ctx).supportedgroups.is_null() {
-                (*s).supportedgroups = CRYPTO_memdup(
-                    (*ctx).supportedgroups.cast(),
-                    (*ctx).supportedgroups_len * core::mem::size_of::<u16>(),
-                    FILE,
-                    893,
-                )
-                .cast::<u16>();
+                // The allocation size is `len * size_of::<u16>()`; an unrepresentable
+                // product refuses the way a failed allocation does instead of wrapping.
+                let Some(sg_bytes) = (*ctx)
+                    .supportedgroups_len
+                    .checked_mul(core::mem::size_of::<u16>())
+                else {
+                    return ptr::null_mut();
+                };
+                (*s).supportedgroups =
+                    CRYPTO_memdup((*ctx).supportedgroups.cast(), sg_bytes, FILE, 893).cast::<u16>();
                 if (*s).supportedgroups.is_null() {
                     return ptr::null_mut();
                 }
