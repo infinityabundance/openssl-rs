@@ -50,6 +50,9 @@ pub mod mem;
 pub(crate) mod mem_coords;
 // The one shared validated handle over an object-owned C-string member buffer.
 pub(crate) mod member_slot;
+// Test-only exhaustive lifecycle model for the member-buffer slots (OB-4).
+#[cfg(test)]
+pub(crate) mod member_slot_model;
 // Phase 18's Miri-admitted TCB suite. Test-only and Miri-only: `cargo test` does not
 // compile it, `cargo +nightly miri test --lib miri_tcb` does. It installs a
 // Rust-backed allocator shim so the `CRYPTO_*` ownership and container paths run

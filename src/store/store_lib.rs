@@ -1800,7 +1800,10 @@ pub unsafe extern "C" fn openssl_rs_store_vctrl(
 /// `OSSL_STORE_INFO *OSSL_STORE_INFO_new(int type, void *data)` — `store_lib.c:614-624`.
 ///
 /// # Safety
-/// `data` is stored as-is; ownership is transferred to the returned object.
+///
+/// `data` is stored as-is. On success its ownership transfers to the returned object;
+/// on a refused allocation no object exists and the caller retains it (the authority's
+/// own `:619-621` failure arm leaks it, and that behaviour is preserved).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_new(
     type_: c_int,
@@ -1822,7 +1825,10 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_new(
 /// `OSSL_STORE_INFO *OSSL_STORE_INFO_new_NAME(char *name)` — `store_lib.c:626-639`.
 ///
 /// # Safety
-/// `name` is NULL or an allocation whose ownership transfers to the object.
+///
+/// `name` is NULL or an allocation whose ownership transfers to the returned object.
+/// On a refused allocation no object exists and the caller retains `name`; the
+/// authority's `:631-633` arm returns without releasing it, which is preserved.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_new_NAME(name: *mut c_char) -> *mut OsslStoreInfo {
     // SAFETY: `OSSL_STORE_INFO_new` stores a NULL union member.
