@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1263** passed
+`cargo test --lib` (must pass; the established baseline is **1266** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -787,6 +787,24 @@ package.
   ignored**, adv-probe **18/18**; cipher authority/candidate probes **0 diffs**.
   Per-file campaign: **3 of 761** PARTIAL files audited.
 
+### Subphase 70 — static lifetime for allocator file coordinates
+
+- **Safe-API soundness fix:** the shared owner constructors took a raw
+  `*const c_char` and stored it for release, so a safe caller could pass a
+  pointer into a temporary `CString` that an allocator hook would later
+  dereference. New `SeamFile` (`src/runtime/mem_coords.rs`) has one safe
+  constructor, `new(&'static CStr)`, a `NULL` constant and `as_ptr`; the single
+  unsafe constructor `from_static_ptr` documents the static-storage obligation.
+- 32 constructors in `owned_buf.rs`, `owned_str.rs` and `runtime/bio/owned.rs`
+  now take `SeamFile`; **823 call sites in 179 files** pass a `c"..."` literal or
+  an audited `*_SEAM` constant. No coordinate value, allocator, release mode,
+  control flow or exported symbol changed.
+- `CtxDestroy` now states the third implementer obligation: `const FILE` is
+  NULL or a NUL-terminated static C string valid for the whole program.
+- Adversarial review **PASS** (one incomplete contract paragraph and a constant
+  count corrected). Gate: `fmt` 0, clippy 0, **1266 passed / 18 ignored**,
+  adv-probe **18/18**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -964,7 +982,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `3c5c5e9f6` (cipher audit fixes merged)
+**Last observed HEAD:** `031874cb9` (static seam coordinates merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
