@@ -42,13 +42,15 @@ use crate::runtime::err::err_reasons::{
     SSL_R_SSL3_EXT_INVALID_SERVERNAME, SSL_R_SSL3_EXT_INVALID_SERVERNAME_TYPE,
 };
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::ssl::record::rec_layer_s3::{record_layer_read_pending, record_layer_write_pending};
 use crate::ssl::ssl_lib::{Ssl, SslCtx, TicketKeyEvpCb};
 use crate::ssl::statem::statem::{ossl_statem_set_renegotiate, SSL_in_init};
 
 /// `OPENSSL_FILE` of this translation unit, used on `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/s3_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/s3_lib.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
@@ -87,33 +89,32 @@ pub(crate) unsafe fn ssl3_ctrl_set_tlsext_host_name(
     // (`ssl/ssl_lib.c`'s `ssl3_ctrl` arm at `s3_lib.c:4029`) and then reads `parg` (`:4043`),
     // which is a use-after-free for that caller; this ordering is the §17 UB elimination recorded
     // as D563. Every release still happens at the authority's own site.
-    let mut host: *mut c_char = core::ptr::null_mut();
+    let mut host: Option<OwnedCStr> = None;
     if !parg.is_null() {
         // SAFETY: `parg` is a NUL-terminated name per the contract.
         let len = unsafe { strlen(parg.cast::<c_char>()) };
         if len == 0 || len > TLSEXT_MAXLEN_HOST_NAME {
             // The authority has already freed the incumbent on this arm; keep that final state.
             // SAFETY: `s` is live and its `ext_hostname` member obeys the member-buffer invariant.
-            unsafe { (*s).ext_hostname_slot().clear(FILE, 4029) };
+            unsafe { (*s).ext_hostname_slot().clear(FILE_SEAM, 4029) };
             raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME, 4040);
             return 0;
         }
-        // SAFETY: `parg` is the NUL-terminated name.
-        host = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4043) };
+        // SAFETY: `parg` is the NUL-terminated name; the seam answers a fresh block.
+        host = unsafe { OwnedCStr::dup(parg.cast::<c_char>(), FILE_SEAM, 4043) };
     }
     // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
     // member-buffer invariant, so the handle releases the object's own single block at this site.
-    unsafe { (*s).ext_hostname_slot().clear(FILE, 4029) };
+    let mut slot = unsafe { (*s).ext_hostname_slot() };
+    let empty = slot.clear(FILE_SEAM, 4029);
     if parg.is_null() {
         return 1;
     }
-    if host.is_null() {
+    let Some(host) = host else {
         raise_ssl(ERR_R_INTERNAL_ERROR, 4044);
         return 0;
-    }
-    // SAFETY: `s` is live and its `ext_hostname` member is empty (cleared above); `host` is this
-    // call's fresh exclusive `CRYPTO_strdup` block.
-    unsafe { (*s).ext_hostname_slot().store(host) };
+    };
+    empty.store(host);
     1
 }
 

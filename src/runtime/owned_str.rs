@@ -19,11 +19,29 @@
 //! answers `None` for it; [`OwnedStr::adopt_nullable`] keeps it as an empty
 //! handle whose `Drop` is that no-op release.
 //!
+//! ## `OwnedStr` vs [`OwnedCStr`]
+//!
+//! [`OwnedStr`] is the **general** byte/string owner. Its [`OwnedStr::new`] and
+//! [`OwnedStr::new_zeroed`] constructors deliberately do not establish a NUL
+//! terminator (a zero-length or unterminated writable block is legitimate for a
+//! consumer that tracks its own length or fills the terminator itself). It is
+//! therefore **not** a proof that a block is readable as a C string.
+//!
+//! [`OwnedCStr`] is the narrower **proof type**: exclusively owned,
+//! seam-allocated, and NUL-terminated. Every safe-visible constructor is an
+//! operation that establishes termination (`CRYPTO_strdup`/`CRYPTO_strndup`, or
+//! an explicitly contracted adoption), so a consumer such as an object's C-string
+//! member may rely on the invariant without re-checking it. The two types must
+//! not be conflated: installing an `OwnedStr` where a C string is required would
+//! silence exactly the obligation `OwnedCStr` exists to carry.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{
+    CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc,
+};
 use crate::runtime::mem_coords::SeamFile;
 
 /// Test-only observation of the release `Drop` selected, for the `OwnedStr`
@@ -151,6 +169,43 @@ impl OwnedStr {
         Self { ptr, file, line }
     }
 
+    /// `CRYPTO_strdup(s, file, line)` as an owned block whose `Drop` releases at the
+    /// same coordinates, or `None` when the allocator answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `s` is NULL or a NUL-terminated C string. The block is fresh, so no other
+    /// owner will release it.
+    pub(crate) unsafe fn dup(s: *const c_char, file: SeamFile, line: c_int) -> Option<Self> {
+        // SAFETY: `s` is NUL-terminated per the contract and the seam answers NULL
+        // or a fresh block this call owns; `file` is a static coordinate.
+        let raw = unsafe { CRYPTO_strdup(s, file.as_ptr(), line) };
+        // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
+        // owner will release it.
+        unsafe { Self::adopt(raw, file, line) }
+    }
+
+    /// `CRYPTO_strndup(s, max, file, line)` as an owned block whose `Drop` releases
+    /// at the same coordinates, or `None` when the allocator answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `s` is NULL or readable for `max` bytes with a NUL terminator at or before
+    /// `max`; the copy this constructor returns is always NUL-terminated.
+    pub(crate) unsafe fn strndup(
+        s: *const c_char,
+        max: usize,
+        file: SeamFile,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `s` is readable for `max` bytes per the contract and the seam
+        // answers NULL or a fresh block this call owns.
+        let raw = unsafe { CRYPTO_strndup(s, max, file.as_ptr(), line) };
+        // SAFETY: `raw` is NULL or the fresh seam block just allocated; no other
+        // owner will release it.
+        unsafe { Self::adopt(raw, file, line) }
+    }
+
     /// Re-point the release diagnostic at the authority's other site for this
     /// string, preserving the release file. The line is metadata only: no
     /// extent, ownership or initialization invariant depends on it.
@@ -169,6 +224,136 @@ impl OwnedStr {
         let p = self.ptr;
         core::mem::forget(self);
         p
+    }
+}
+
+/// An owned, seam-allocated, **NUL-terminated** C string.
+///
+/// This is a proof type, distinct from the general byte/string owner
+/// [`OwnedStr`]. Constructing one (other than through the explicitly unsafe
+/// adoption route) goes through `CRYPTO_strdup`/`CRYPTO_strndup`, whose contract
+/// establishes that the block ends in a NUL byte. The type holds a **non-NULL**
+/// pointer: a refused allocation is `None`, never an empty handle.
+///
+/// Unlike [`OwnedStr`], whose `new`/`new_zeroed` constructors may produce an
+/// unterminated or zero-length block, `OwnedCStr` carries the termination
+/// invariant to every consumer. There is deliberately **no safe conversion from
+/// `OwnedStr`**: `OwnedStr` does not record the allocation extent, so termination
+/// cannot be validated from it without already assuming the answer. A caller that
+/// genuinely has a foreign unterminated block must use the explicitly `unsafe`
+/// adoption route (or write the terminator itself before adopting).
+///
+/// The release is unchanged from [`OwnedStr`]: the block's single plain
+/// `CRYPTO_free` at the coordinates the constructor was given.
+pub(crate) struct OwnedCStr {
+    inner: OwnedStr,
+}
+
+impl OwnedCStr {
+    /// `CRYPTO_strdup(s, file, line)` as a NUL-terminated owned block whose
+    /// `Drop` releases at the same coordinates, or `None` when the allocator
+    /// answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `s` is NULL or a NUL-terminated C string. The operation itself establishes
+    /// the copy's terminator; the caller's obligation is only the readability of
+    /// `s`.
+    pub(crate) unsafe fn dup(s: *const c_char, file: SeamFile, line: c_int) -> Option<Self> {
+        // SAFETY: `s` is NULL or NUL-terminated per the contract; `OwnedStr::dup`
+        // performs the seam's own `CRYPTO_strdup` call at these coordinates.
+        let inner = unsafe { OwnedStr::dup(s, file, line) }?;
+        Some(Self { inner })
+    }
+
+    /// `CRYPTO_strndup(s, max, file, line)` as a NUL-terminated owned block whose
+    /// `Drop` releases at the same coordinates, or `None` when the allocator
+    /// answers NULL.
+    ///
+    /// `CRYPTO_strndup` copies at most `max` bytes and always appends the
+    /// terminator, so the result is readable as a C string even when `s` has no
+    /// NUL at or before `max`.
+    ///
+    /// # Safety
+    ///
+    /// `s` is NULL or readable for `max` bytes.
+    pub(crate) unsafe fn strndup(
+        s: *const c_char,
+        max: usize,
+        file: SeamFile,
+        line: c_int,
+    ) -> Option<Self> {
+        // SAFETY: `s` is readable for `max` bytes per the contract; the seam's
+        // own `CRYPTO_strndup` call and its coordinates are unchanged.
+        let inner = unsafe { OwnedStr::strndup(s, max, file, line) }?;
+        Some(Self { inner })
+    }
+
+    /// Adopt a foreign seam block of `len` bytes total whose final byte is the
+    /// terminator, for a genuine transfer where the caller (not this module)
+    /// allocated the block.
+    ///
+    /// # Safety
+    ///
+    /// For a non-NULL `ptr` the caller must establish everything [`OwnedStr::adopt`]
+    /// requires, plus termination:
+    ///
+    /// * **provenance** -- a live allocation from this crate's `CRYPTO_*` seam;
+    /// * **identity and extent** -- `ptr` is the base of the **whole** block;
+    /// * **alignment** -- valid for `c_char` and the seam's release;
+    /// * **initialization and termination** -- `len` is the block's extent in
+    ///   bytes, `len > 0`, and `ptr[len - 1]` (and therefore the first NUL at or
+    ///   before it) terminates the readable string;
+    /// * **exclusive ownership** -- no other owner will release it; this handle's
+    ///   `Drop` is its single release at `file`/`line`.
+    ///
+    /// A NULL `ptr` answers `None` (the authority's empty state); a non-NULL
+    /// `ptr` always becomes the owner, so a failed conversion cannot leak.
+    #[allow(dead_code)] // Contracted foreign-transfer route; no in-tree caller needs it yet.
+    pub(crate) unsafe fn adopt(
+        ptr: *mut c_char,
+        len: usize,
+        file: SeamFile,
+        line: c_int,
+    ) -> Option<Self> {
+        if ptr.is_null() {
+            return None;
+        }
+        // The contract proves the extent and the terminator; these checks make a
+        // violating caller fail loudly in debug/test builds rather than install an
+        // unterminated member.
+        debug_assert!(len > 0, "a non-NULL C string includes its terminator");
+        // SAFETY: `ptr` is readable for `len` bytes and `len > 0` per the contract.
+        let last = unsafe { *ptr.add(len - 1) };
+        debug_assert_eq!(last, 0, "block is not NUL-terminated");
+        // SAFETY: `ptr` is non-NULL and the caller establishes the `OwnedStr::adopt`
+        // preconditions above; ownership is transferred once.
+        let inner = unsafe { OwnedStr::adopt(ptr, file, line) }?;
+        Some(Self { inner })
+    }
+
+    /// The start of the string. Always non-NULL and NUL-terminated for the life of
+    /// the handle.
+    pub(crate) fn as_ptr(&self) -> *const c_char {
+        self.inner.as_ptr()
+    }
+
+    /// Borrow the contents as a `CStr`; the borrow cannot outlive this owner.
+    pub(crate) fn as_c_str(&self) -> &CStr {
+        // SAFETY: `as_ptr` is non-NULL and NUL-terminated by the type's constructors,
+        // and the borrow is tied to `&self`.
+        unsafe { CStr::from_ptr(self.as_ptr()) }
+    }
+
+    /// Give up ownership of the block to a consumer that takes it over.
+    pub(crate) fn into_raw(self) -> *mut c_char {
+        self.inner.into_raw()
+    }
+}
+
+impl AsRef<CStr> for OwnedCStr {
+    fn as_ref(&self) -> &CStr {
+        self.as_c_str()
     }
 }
 

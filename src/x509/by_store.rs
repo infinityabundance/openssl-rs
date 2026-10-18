@@ -40,6 +40,8 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -114,73 +116,73 @@ impl CachedStore {
     }
 }
 
-/// A validated handle over the object-owned C-string member of an [`OwnedCtx`]'s `CachedStore`.
+/// The `propq` member handle for a **heap-owned** [`OwnedCtx<CachedStore>`].
 ///
-/// ## Member-buffer invariant (stated once)
-/// On a heap record this module allocated (`OwnedCtx<CachedStore>`), `CachedStore::propq` is always
-/// either NULL or a single NUL-terminated block produced by the crate's `CRYPTO_strdup` seam and
-/// owned by that record. The record is the block's *only* owner: the block is released **exactly
-/// once**, by [`CtxDestroy::destroy_body`] (`free_store`, `by_store.c:116`) or by the next
-/// [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it (`by_store_ctrl_ex`). Nothing else
-/// frees or aliases it. The stack-local borrows ([`cache_objects`]' `substore`,
-/// [`by_store_ctrl_ex`]'s `X509_L_LOAD_STORE`) never use this handle.
-///
-/// ## Why the field stays raw
-/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
-/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
-/// the field — the resident-member counterpart of the per-module `OwnedStr`, and the `by_store.c`
-/// analogue of `x_x509.rs`'s `PropqSlot` (see [`MEMBER-BUFFER-MODEL.md`]).
-///
-/// [`MEMBER-BUFFER-MODEL.md`]: ../../forensics/memory-safety/campaign/safe-c33/MEMBER-BUFFER-MODEL.md
-///
-/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
-/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
-/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
-/// the record's own single block.
-struct PropqSlot<'a> {
-    /// Borrow of the record's member field; its value obeys the invariant for `'a`.
-    slot: &'a mut *mut c_char,
-}
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. This handle stays **unsafe to construct** (D7):
+/// `CachedStore` is also built as a stack-local **borrow** over the caller's `uri`/`propq`
+/// ([`BorrowedStore`]), and clearing such a record would free the caller's pointer. The
+/// `of` contract names that restriction, and the borrowed typestate exposes no slot at all.
+struct PropqSlot<'a>(CStrSlot<'a>);
 
 impl<'a> PropqSlot<'a> {
-    /// Derive the handle from a live owned record.
+    /// Derive the handle from a live **owned** heap record.
     ///
     /// # Safety
     ///
-    /// `store` is a live heap record this module allocated and owns; it is borrowed mutably for
-    /// `'a` and its `propq` field currently obeys the member-buffer invariant. A record built by
-    /// [`OwnedCtx::zalloc_at`] satisfies this because it is zeroed at construction and the member is
-    /// only ever mutated through this handle or released by [`CtxDestroy::destroy_body`].
+    /// `store` is a live heap record this module allocated and owns (`OwnedCtx<CachedStore>`),
+    /// borrowed mutably for `'a`; its `propq` field is NULL or the record's own single seam block.
+    /// A [`BorrowedStore`] must never be passed: its `propq` is the caller's borrowed pointer.
     unsafe fn of(store: &'a mut CachedStore) -> PropqSlot<'a> {
-        PropqSlot {
-            slot: &mut store.propq,
+        // SAFETY: the caller establishes the owned-record contract above.
+        PropqSlot(unsafe { CStrSlot::of(&mut store.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+
+    /// Assert that the freshly zeroed record's field is empty and answer the store token.
+    ///
+    /// # Safety
+    /// The caller establishes that the owned record's `propq` is currently NULL.
+    unsafe fn assume_empty(self) -> EmptyCStrSlot<'a> {
+        // SAFETY: the caller establishes the field is NULL.
+        unsafe { self.0.assume_empty() }
+    }
+}
+
+/// A stack-local, **borrowed** `CACHED_STORE`: the authority's `cache_objects` substore and
+/// `by_store_ctrl_ex`'s `X509_L_LOAD_STORE` record.
+///
+/// Its `uri` and `propq` are the caller's pointers, not blocks this record owns, so it
+/// deliberately exposes only readers and no member-slot handle: there is no safe clear or
+/// store path. Only an [`OwnedCtx<CachedStore>`] may be adopted by [`PropqSlot::of`].
+struct BorrowedStore {
+    record: CachedStore,
+}
+
+impl BorrowedStore {
+    /// Build the stack-local view over the caller's borrowed pointers.
+    ///
+    /// # Safety
+    /// `uri`/`propq` are NULL or readable for the call; no owner releases them.
+    unsafe fn new(uri: *mut c_char, libctx: *mut c_void, propq: *mut c_char) -> BorrowedStore {
+        BorrowedStore {
+            record: CachedStore { uri, libctx, propq },
         }
     }
 
-    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
-    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
-    /// no-op for `CRYPTO_free`, so the release is total.
-    fn clear(&mut self, file: *const c_char, line: c_int) {
-        let old = core::mem::replace(self.slot, ptr::null_mut());
-        // SAFETY: by the member-buffer invariant the incumbent is NULL or the record's own single
-        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
-        unsafe { CRYPTO_free(old.cast(), file, line) };
+    /// The record's property-query string (the caller's borrowed pointer).
+    #[allow(dead_code)] // Reader for the borrowed typestate; no in-tree caller reads it today.
+    fn propq(&self) -> *const c_char {
+        self.record.propq()
     }
 
-    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
-    /// of it to the record.
-    ///
-    /// # Safety
-    ///
-    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
-    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
-    /// unset (NULL).
-    unsafe fn store(&mut self, new: *mut c_char) {
-        debug_assert!(
-            (*self.slot).is_null(),
-            "propq member slot must be empty before store"
-        );
-        *self.slot = new;
+    /// The address `cache_objects` reads; the call never releases or mutates the record.
+    fn as_ptr(&self) -> *mut CachedStore {
+        (&raw const self.record).cast_mut()
     }
 }
 
@@ -207,7 +209,7 @@ unsafe impl CtxDestroy for CachedStore {
             // `ptr` is live and its `propq` obeys the member-buffer invariant, so `clear` is that
             // block's one release at the authority's own `free_store` site (`:116`); a NULL
             // incumbent makes it a no-op.
-            PropqSlot::of(&mut *ptr).clear(FILE.as_ptr(), LINE_FREE_STORE_PROPQ);
+            PropqSlot::of(&mut *ptr).clear(SeamFile::new(FILE), LINE_FREE_STORE_PROPQ);
         }
     }
 }
@@ -282,18 +284,16 @@ unsafe fn cache_objects(
             // An entry in the "directory" the current URI represents; dive into it if depth allows.
             if depth > 0 {
                 // SAFETY: `info` is a `NAME`, so `get0_NAME` answers its own name, and `store` is
-                // live; the substore borrows both for the recursive call.
+                // live; the substore borrows both for the recursive call and releases nothing.
                 let substore = unsafe {
-                    CachedStore {
-                        uri: OSSL_STORE_INFO_get0_NAME(info).cast_mut(),
-                        libctx: (*store).libctx,
-                        propq: (*store).propq().cast_mut(),
-                    }
+                    BorrowedStore::new(
+                        OSSL_STORE_INFO_get0_NAME(info).cast_mut(),
+                        (*store).libctx,
+                        (*store).propq().cast_mut(),
+                    )
                 };
                 // SAFETY: `substore` is a live local for the call, as the authority's stack copy is.
-                ok = unsafe {
-                    cache_objects(lctx, (&raw const substore).cast_mut(), criterion, depth - 1)
-                };
+                ok = unsafe { cache_objects(lctx, substore.as_ptr(), criterion, depth - 1) };
             }
         } else {
             // `X509_STORE_add_{cert|crl}` increments the object's refcount, so the borrowed
@@ -405,9 +405,14 @@ unsafe extern "C" fn by_store_ctrl_ex(
                     (*store.as_ptr()).libctx = libctx;
                     if !propq.is_null() {
                         // `propq` is NUL-terminated per the contract; the record is freshly
-                        // zeroed, so the field is empty and `store` takes ownership of the dup.
-                        let dup = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
-                        PropqSlot::of(&mut *store.as_ptr()).store(dup);
+                        // zeroed, so the field is empty and the token takes ownership of the dup.
+                        if let Some(dup) =
+                            OwnedCStr::dup(propq, SeamFile::new(FILE), LINE_STRDUP_PROPQ)
+                        {
+                            // SAFETY: the record was allocated zeroed, so its `propq` is NULL.
+                            let empty = PropqSlot::of(&mut *store.as_ptr()).assume_empty();
+                            empty.store(dup);
+                        }
                     }
                 }
                 // Open this now to check for errors, so they can be reported early.
@@ -465,13 +470,10 @@ unsafe extern "C" fn by_store_ctrl_ex(
         }
         X509_L_LOAD_STORE => {
             // This is a shortcut for quick loading of specific containers.
-            let store = CachedStore {
-                uri: argp.cast_mut(),
-                libctx,
-                propq: propq.cast_mut(),
-            };
+            // SAFETY: `argp`/`propq` are the caller's borrowed strings and are not released.
+            let store = unsafe { BorrowedStore::new(argp.cast_mut(), libctx, propq.cast_mut()) };
             // SAFETY: `store` is a live local for the call; `ctx` is live per the contract.
-            unsafe { cache_objects(ctx, (&raw const store).cast_mut(), ptr::null(), 0) }
+            unsafe { cache_objects(ctx, store.as_ptr(), ptr::null(), 0) }
         }
         // Unsupported command.
         _ => 0,
@@ -655,3 +657,33 @@ pub unsafe extern "C" fn X509_LOOKUP_store() -> *mut X509LookupMethod {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(CachedStore => zero_state_sweep_cached_store);
+
+#[cfg(test)]
+mod borrowed_store_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    /// Regression (D7): the borrowed typestate owns nothing and exposes no slot. After
+    /// the `BorrowedStore` is dropped, the caller's `propq` block is still live, and a
+    /// release here is its **first**. There is no safe `clear`/`store` path on the
+    /// borrowed type; the only clearable handle is `PropqSlot::of`, whose `unsafe`
+    /// contract explicitly excludes a borrowed record.
+    #[test]
+    fn a_borrowed_record_releases_nothing() {
+        #[cfg(miri)]
+        crate::runtime::miri_tcb::install();
+        // SAFETY: the literal is NUL-terminated; the seam answers a fresh block.
+        let text = unsafe { CRYPTO_strdup(c"borrowed-prop".as_ptr(), FILE.as_ptr(), 900) };
+        assert!(!text.is_null());
+        {
+            // SAFETY: `text` is this test's block and stays live for the whole test; the
+            // record borrows it and must not release it.
+            let borrowed = unsafe { BorrowedStore::new(text, ptr::null_mut(), text) };
+            assert_eq!(borrowed.propq(), text);
+        }
+        // The block survived the borrowed view; this is its first release.
+        // SAFETY: `text` is the block allocated above and no owner released it.
+        unsafe { CRYPTO_free(text.cast(), FILE.as_ptr(), 900) };
+    }
+}

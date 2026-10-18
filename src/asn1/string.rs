@@ -111,9 +111,36 @@ impl OwnedBlock {
 impl Drop for OwnedBlock {
     /// The block's single release, through the same seam.
     fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            FILE.as_ptr(),
+            LINE,
+        );
         // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
         // `CRYPTO_free` accepts NULL.
         unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+
+    /// D1-style drift guard: this family's release is the plain `CRYPTO_free` at the
+    /// module's own `FILE`/`LINE` constants.
+    #[test]
+    fn release_is_plain_at_the_module_coordinates() {
+        release_probe::clear();
+        let block = OwnedBlock::new(4).expect("4 bytes allocate");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert_eq!(call.file, FILE.as_ptr());
+        assert_eq!(call.line, LINE);
     }
 }
 

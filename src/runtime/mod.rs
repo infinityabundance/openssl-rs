@@ -37,6 +37,9 @@ pub mod dso_shared;
 pub mod err;
 pub mod err_state;
 pub mod ex_data;
+// Ownership of a foreign `*_new` object the caller's own `*_free` releases. Shared by
+// the two `ssl/statem` modules; distinct from `bio::owned::OwnedCtx` (allocator seam).
+pub(crate) mod foreign;
 pub mod getenv;
 pub mod init;
 pub mod lhash;
@@ -45,13 +48,19 @@ pub mod mem;
 // Keeping the pointer in this one type makes a temporary C-string pointer
 // inexpressible through the safe constructors.
 pub(crate) mod mem_coords;
+// The one shared validated handle over an object-owned C-string member buffer.
+pub(crate) mod member_slot;
 // Phase 18's Miri-admitted TCB suite. Test-only and Miri-only: `cargo test` does not
 // compile it, `cargo +nightly miri test --lib miri_tcb` does. It installs a
 // Rust-backed allocator shim so the `CRYPTO_*` ownership and container paths run
 // under Miri's strict-provenance model without touching libc. See the module docs.
 #[cfg(all(test, miri))]
 pub(crate) mod miri_tcb;
+// Test-only observation of the release arm and coordinates each owned-block family
+// selects, so a silent D1-style drift becomes a failing regression.
 pub mod obj;
+#[cfg(test)]
+pub(crate) mod release_probe;
 // The shared owner for the `B-R1a` `{ptr, release}` byte-buffer group. Internal:
 // the callers are module-local transcription paths, not the exported ABI.
 pub(crate) mod owned_buf;

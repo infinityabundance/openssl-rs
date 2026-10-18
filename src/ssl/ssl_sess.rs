@@ -80,8 +80,9 @@ use crate::runtime::ex_data::{
     CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
     CRYPTO_set_ex_data, CRYPTO_EX_INDEX_SSL_SESSION,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
 use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
@@ -325,22 +326,23 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         }
         let hint = s.psk_identity_hint();
         if !hint.is_null() {
-            let dup = CRYPTO_strdup(hint, FILE, 210);
-            if dup.is_null() {
+            // SAFETY: `hint` is NUL-terminated; the seam answers a fresh block.
+            let Some(dup) = OwnedCStr::dup(hint, FILE_SEAM, 210) else {
                 return ptr::null_mut();
-            }
-            // SAFETY: `dup` is this call's fresh `CRYPTO_strdup` block; `dest` is freshly zeroed,
-            // so its `psk_identity_hint` member is empty.
-            (*dest).psk_identity_hint_slot().store(dup);
+            };
+            // SAFETY: `dest` is freshly zeroed, so its `psk_identity_hint` is empty.
+            let empty = (*dest).psk_identity_hint_slot().assume_empty();
+            empty.store(dup);
         }
         let identity = s.psk_identity();
         if !identity.is_null() {
-            let dup = CRYPTO_strdup(identity, FILE, 215);
-            if dup.is_null() {
+            // SAFETY: `identity` is NUL-terminated; the seam answers a fresh block.
+            let Some(dup) = OwnedCStr::dup(identity, FILE_SEAM, 215) else {
                 return ptr::null_mut();
-            }
-            // SAFETY: `dup` is this call's fresh block; `dest`'s `psk_identity` member is empty.
-            (*dest).psk_identity_slot().store(dup);
+            };
+            // SAFETY: `dest`'s `psk_identity` member is empty.
+            let empty = (*dest).psk_identity_slot().assume_empty();
+            empty.store(dup);
         }
         if CRYPTO_dup_ex_data(
             CRYPTO_EX_INDEX_SSL_SESSION,
@@ -352,13 +354,13 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         }
         let hostname = s.ext_hostname();
         if !hostname.is_null() {
-            let dup = CRYPTO_strdup(hostname, FILE, 227);
-            if dup.is_null() {
+            // SAFETY: `hostname` is NUL-terminated; the seam answers a fresh block.
+            let Some(dup) = OwnedCStr::dup(hostname, FILE_SEAM, 227) else {
                 return ptr::null_mut();
-            }
-            // SAFETY: `dup` is this call's fresh `CRYPTO_strdup` block; `dest` is freshly zeroed,
-            // so its `ext_hostname` member is empty.
-            (*dest).ext_hostname_slot().store(dup);
+            };
+            // SAFETY: `dest` is freshly zeroed, so its `ext_hostname` is empty.
+            let empty = (*dest).ext_hostname_slot().assume_empty();
+            empty.store(dup);
         }
         if ticket != 0 && !s.ext_tick().0.is_null() {
             let (tick_ptr, tick_len) = s.ext_tick();
@@ -384,12 +386,13 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         }
         let srp = s.srp_username();
         if !srp.is_null() {
-            let dup = CRYPTO_strdup(srp, FILE, 250);
-            if dup.is_null() {
+            // SAFETY: `srp` is NUL-terminated; the seam answers a fresh block.
+            let Some(dup) = OwnedCStr::dup(srp, FILE_SEAM, 250) else {
                 return ptr::null_mut();
-            }
-            // SAFETY: `dup` is this call's fresh block; `dest`'s `srp_username` member is empty.
-            (*dest).srp_username_slot().store(dup);
+            };
+            // SAFETY: `dest`'s `srp_username` member is empty.
+            let empty = (*dest).srp_username_slot().assume_empty();
+            empty.store(dup);
         }
         let (appdata_ptr, appdata_len) = s.ticket_appdata();
         if !appdata_ptr.is_null() {
@@ -492,11 +495,11 @@ unsafe impl CtxDestroy for SslSession {
             // The session's object-owned C-string and blob member buffers: each is released exactly
             // once here through its validated handle, at the authority's own `file`/`line`. A NULL
             // incumbent is `CRYPTO_free`'s own no-op. The release order is the authority's.
-            (*ptr).ext_hostname_slot().clear(FILE, 918);
+            (*ptr).ext_hostname_slot().clear(FILE_SEAM, 918);
             (*ptr).ext_tick_slot().clear(FILE, 919);
-            (*ptr).psk_identity_hint_slot().clear(FILE, 921);
-            (*ptr).psk_identity_slot().clear(FILE, 922);
-            (*ptr).srp_username_slot().clear(FILE, 925);
+            (*ptr).psk_identity_hint_slot().clear(FILE_SEAM, 921);
+            (*ptr).psk_identity_slot().clear(FILE_SEAM, 922);
+            (*ptr).srp_username_slot().clear(FILE_SEAM, 925);
             (*ptr).ext_alpn_selected_slot().clear(FILE, 927);
             (*ptr).ticket_appdata_slot().clear(FILE, 928);
         }
@@ -1536,7 +1539,7 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
         if hostname.is_null() {
             // A NULL argument leaves the member unset after releasing the incumbent, as the
             // authority does at `ssl_sess.c:1083-1086`.
-            slot.clear(FILE, 1083);
+            slot.clear(FILE_SEAM, 1083);
             return 1;
         }
         // Duplicate **before** releasing the incumbent: `hostname` may be the pointer
@@ -1545,14 +1548,14 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
         // (`:1088`), which is a use-after-free for that caller; this ordering is the §17 UB
         // elimination recorded as D563. The release still happens at the same authority site.
         // SAFETY: `hostname` is NUL-terminated per the caller's contract.
-        let dup = unsafe { CRYPTO_strdup(hostname, FILE, 1088) };
-        slot.clear(FILE, 1083);
-        if dup.is_null() {
-            0
-        } else {
-            // SAFETY: `dup` is this call's fresh block; the member is empty after `clear`.
-            unsafe { slot.store(dup) };
-            1
+        let dup = unsafe { OwnedCStr::dup(hostname, FILE_SEAM, 1088) };
+        let empty = slot.clear(FILE_SEAM, 1083);
+        match dup {
+            Some(dup) => {
+                empty.store(dup);
+                1
+            }
+            None => 0,
         }
     })
 }

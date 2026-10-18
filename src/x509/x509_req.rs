@@ -92,8 +92,8 @@ use crate::evp::digest::EvpMd;
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::err_reasons::X509_R_WRONG_TYPE;
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
-use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
 use crate::runtime::obj::{Asn1Object, NID_ext_req, NID_ms_ext_req, NID_undef, OBJ_obj2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -205,70 +205,27 @@ impl X509Req {
     }
 }
 
-/// A validated handle over the object-owned C-string member `X509_REQ::propq`.
+/// The `X509_REQ::propq` member handle.
 ///
-/// ## Member-buffer invariant (stated once)
-/// `X509_REQ::propq` is always either NULL or a single NUL-terminated block produced by the
-/// crate's `CRYPTO_strdup` seam and owned by the enclosing `X509_REQ`. That object is the block's
-/// *only* owner: the block is released **exactly once**, by `req_cb`'s `FREE_POST` arm
-/// (`x_req.rs`) or by the next [`PropqSlot::clear`]/[`PropqSlot::store`] that replaces it
-/// (`ossl_x509_req_set0_libctx`). Nothing else frees or aliases it.
-///
-/// ## Why the field stays raw
-/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
-/// offset; a Rust owner type cannot live in the struct. This handle is a transient **borrow** over
-/// the field -- the resident-member counterpart of the per-module `OwnedStr`, and the X.509
-/// analogue of `pk7_asn1.rs`'s `PropqSlot` and `cms_asn1.rs`'s `CmsPropqSlot`. The struct is
-/// defined here; its lifecycle (`ossl_x509_req_set0_libctx`, `req_cb`) lives in `x_req.rs` and
-/// uses this handle, so the field is module-private and its writers are enumerable.
-///
-/// `unsafe` appears only at the two proof boundaries: [`PropqSlot::of`] (which asserts the field
-/// currently obeys the invariant) and [`PropqSlot::store`] (which accepts an externally-allocated
-/// block). `clear` is safe because a handle built by [`PropqSlot::of`] guarantees the incumbent is
-/// the object's own single block.
-pub(crate) struct PropqSlot<'a> {
-    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
-    slot: &'a mut *mut c_char,
-}
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. `X509_REQ::propq` is private, the item layer zeroes the
+/// object at construction, and the member is written only through this handle, so [`Self::of`]
+/// is **safe**. The struct is defined here; its lifecycle (`ossl_x509_req_set0_libctx`,
+/// `req_cb`) lives in `x_req.rs` and uses this handle.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
 
 impl<'a> PropqSlot<'a> {
     /// Derive the handle from a live object.
-    ///
-    /// # Safety
-    ///
-    /// `x` is a live `X509_REQ` and is borrowed mutably for `'a`; its `propq` field currently
-    /// obeys the member-buffer invariant. A live `X509_REQ` satisfies this because the ASN.1 item
-    /// layer zeroes the object at construction and the member is only ever mutated through this
-    /// handle (`X509_REQ_new_ex`, `ossl_x509_req_set0_libctx`) or released by `req_cb`'s
-    /// `FREE_POST` arm.
-    pub(crate) unsafe fn of(x: &'a mut X509Req) -> PropqSlot<'a> {
-        PropqSlot { slot: &mut x.propq }
+    pub(crate) fn of(x: &'a mut X509Req) -> PropqSlot<'a> {
+        // SAFETY: `x` is live; `propq` is private to this module, constructed NULL by
+        // the item layer and written only by this handle, so the invariant holds and
+        // the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut x.propq) })
     }
 
-    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
-    /// field NULL. This is the authority's `OPENSSL_free(p)` followed by `p = NULL`; NULL is a
-    /// no-op for `CRYPTO_free`, so the release is total.
-    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
-        let old = core::mem::replace(self.slot, ptr::null_mut());
-        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
-        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
-        unsafe { CRYPTO_free(old.cast(), file, line) };
-    }
-
-    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
-    /// of it to the enclosing object.
-    ///
-    /// # Safety
-    ///
-    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
-    /// crate's `CRYPTO_strdup` seam) and no other owner will release it; the field is currently
-    /// unset (NULL).
-    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
-        debug_assert!(
-            (*self.slot).is_null(),
-            "propq member slot must be empty before store"
-        );
-        *self.slot = new;
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
     }
 }
 
@@ -1117,6 +1074,7 @@ pub unsafe extern "C" fn i2d_re_X509_REQ_tbs(req: *mut X509Req, pp: *mut *mut c_
 mod tests {
     use super::*;
     use crate::asn1::string::ASN1_BIT_STRING_new;
+    use crate::runtime::mem::CRYPTO_free;
     use crate::x509::x_exten::{d2i_X509_EXTENSIONS, i2d_X509_EXTENSIONS};
     use crate::x509::x_req::{X509_REQ_free, X509_REQ_new};
 
