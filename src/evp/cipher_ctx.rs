@@ -1058,13 +1058,21 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_dup(in_: *const EvpCipherCtx) -> *mut Ev
 /// refusals set `out->cipher = NULL`, which is what stops a half-copied context from being used.
 ///
 /// # Safety
-/// `out` must be a live `EvpCipherCtx`; `in` must be NULL or a live `EvpCipherCtx`. `out` and `in`
-/// must be distinct (the authority's `memcpy` assumes it).
+/// `out` must be a live `EvpCipherCtx`; `in` must be NULL or a live `EvpCipherCtx`.
+///
+/// `out == in` is **refused** (answers 0 without touching `out`). The authority has no defined
+/// success for it: `EVP_CIPHER_CTX_reset(out)` clears `cipher` (and, for a provider context,
+/// `memset`s the whole object) before the `*out = *in` assignment, after which `in->cipher->dupctx`
+/// dereferences the now-NULL `cipher`. Since the authority's outcome is UB, the crate eliminates
+/// it by refusal rather than reproducing it (AGENTS.md §17; recorded in the safe-c33 campaign).
 #[no_mangle]
 pub unsafe extern "C" fn EVP_CIPHER_CTX_copy(
     out: *mut EvpCipherCtx,
     in_: *const EvpCipherCtx,
 ) -> c_int {
+    if ptr::eq(out.cast_const(), in_) {
+        return 0;
+    }
     if in_.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::EVP_ENC_1785) };
@@ -4791,6 +4799,43 @@ mod tests {
             // The other direction, with no provider to answer either.
             assert_eq!(EVP_CIPHER_CTX_set_padding(ctx.0, 1), 0);
             assert_eq!((*ctx.0).flags & EVP_CIPH_NO_PADDING, 0);
+        }
+    }
+
+    /// A self-copy is refused before any read: the authority would reset the destination (which is
+    /// the source here) and then dereference the cleared `cipher`. The input must be untouched.
+    #[test]
+    fn copying_a_context_onto_itself_is_refused() {
+        // A refusing provider duplicator, so an implementation without the identity guard would
+        // reset the shared context and then return 0 -- observable in the fields below.
+        // SAFETY: the dispatch signature only; the body dereferences nothing.
+        unsafe extern "C" fn refusing_dupctx(_algctx: *mut c_void) -> *mut c_void {
+            ptr::null_mut()
+        }
+
+        let ctx = EVP_CIPHER_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `EvpCipher` is a `#[repr(C)]` record whose zero image is valid; `prov` only has
+        // to be non-NULL so the provider arm would be selected without the guard.
+        let mut cipher: EvpCipher = unsafe { core::mem::zeroed() };
+        cipher.block_size = 16;
+        cipher.prov = core::ptr::dangling_mut::<crate::provider::OsslProvider>();
+        cipher.dupctx = Some(refusing_dupctx);
+        // SAFETY: `ctx` is this test's live context; the dummy is a live local and is never
+        // dereferenced on the guarded path.
+        unsafe {
+            (*ctx).cipher = &cipher;
+            (*ctx).encrypt = 1;
+            (*ctx).iv_len = 16;
+            assert_eq!(EVP_CIPHER_CTX_copy(ctx, ctx), 0, "self-copy is refused");
+            assert!(
+                ptr::eq((*ctx).cipher, &cipher),
+                "the source cipher was not reset"
+            );
+            assert_eq!((*ctx).encrypt, 1, "the source was not reset");
+            assert_eq!((*ctx).iv_len, 16, "the source was not reset");
+            (*ctx).cipher = ptr::null();
+            EVP_CIPHER_CTX_free(ctx);
         }
     }
 

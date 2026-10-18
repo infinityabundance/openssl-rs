@@ -92,3 +92,34 @@ This class could not be searched exhaustively without a dataflow pass. The heuri
 
 **Every entry in this sweep is a candidate, not a confirmed defect.** Severity expresses the priority for investigation. No code was edited, built, or tested; no source/authority hash was re-derived; no Miri/ASan/refcount/instrumentation evidence exists for any row. A `HIGH` row still requires the stated witness (self-copy reachability for class 1, guard-page/ASan for class 5, optimised-build canary for class 6) before it can be reported as a real defect, and each confirmation still needs the §21 boundary proof before any `SAFETY_DISCHARGED` claim.
 
+## Resolution addendum — 2026-10-18, `integrate/safe-c33` @ `3db95b793`
+
+Authority read from `forensics/authorities/src/openssl-3.6.4/`.
+
+### Class 1 MEDIUM (five exported copy APIs)
+
+| Site | Authority | Self-copy disposition |
+|---|---|---|
+| `src/evp/cipher_ctx.rs:1095` | `evp_enc.c:1782-1809` | **Not permitted.** `EVP_CIPHER_CTX_reset(out)` memsets the object (provider arm) before `*out = *in`; `in->cipher` is then NULL and `in->cipher->dupctx` dereferences it. The entry now refuses `out == in` with 0, leaving the input untouched (AGENTS §17 UB elimination); `copying_a_context_onto_itself_is_refused`. |
+| `src/mac/cmac.rs:314` | `cmac.c:93-109` | **Not permitted.** The nested `EVP_CIPHER_CTX_copy(out->cctx, in->cctx)` has the same NULL-dereference self-copy as above. `CMAC_CTX_copy` now refuses `out == in` with 0 before reading either context; `copy_refuses_the_identity_and_leaves_the_source_alone`. |
+| `src/evp/encode.rs:295` | `encode.c:128-133` | **Permitted as identity** (`memcpy` of a whole object, constant 1 answer). Identity guard added; `encode_ctx_copy_accepts_the_identity`. |
+| `src/evp/pkey_asn1.rs:665` | `ameth_lib.c:255-272` | **Permitted as identity** (`*dst = *src` is defined when equal; five restores make it a no-op). Identity guard added; `asn1_copy_accepts_the_identity`. |
+| `src/modes/ocb.rs:286` | `ocb128.c:194-208` | **Permitted as identity** for the header/`memcpy`, but the authority then allocates a second L-table and leaks the original. Guard added, preserving the `keyenc`/`keydec` overrides and skipping the leak; `ocb_copy_ctx_accepts_the_identity`. |
+
+### Class 7 MEDIUM (`pkey_ec_copy`)
+
+`ec_pmeth.c:60-90` acquires `dctx`, `gen_group`, `co_key` and `kdf_ukm` into
+`dst->data` and returns 0 without releasing earlier acquisitions.
+`EVP_PKEY_CTX_dup` (`pmeth_lib.c:608-610`) clears `rctx->pmeth` before
+`EVP_PKEY_CTX_free`, so the method cleanup is never called and the partial state
+leaks. Fixed by calling `pkey_ec_cleanup(dst)` on each failure return; executed
+witness `copy_failure_releases_the_partially_built_destination`. This is a
+recorded divergence (the authority leaks) and not a compatibility change to the
+success path.
+
+### Still open
+
+No Miri/ASan run is claimed for the identity guards; the tests are functional
+and refcount witnesses only. The class-5 TDES extent rows and class-6 cleanse
+rows were not touched by this addendum.
+
