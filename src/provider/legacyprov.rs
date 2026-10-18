@@ -318,9 +318,11 @@ macro_rules! legacy_digest_impl {
             }
 
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-                // SAFETY: both regions are `size_of::<$ctx>()` bytes and distinct.
+                // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
+                // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
+                // `copyctx(algctx, algctx)`, so `ptr::copy` (defined for overlap) is required.
                 unsafe {
-                    ptr::copy_nonoverlapping(
+                    ptr::copy(
                         inctx.cast::<u8>(),
                         outctx.cast::<u8>(),
                         core::mem::size_of::<$ctx>(),
@@ -516,9 +518,10 @@ mod mdc2 {
     }
 
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
-        // SAFETY: both regions are `size_of::<Mdc2Ctx>()` bytes and distinct.
+        // SAFETY: both regions are valid for `size_of::<Mdc2Ctx>()` bytes and may be the same
+        // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
         unsafe {
-            ptr::copy_nonoverlapping(
+            ptr::copy(
                 inctx.cast::<u8>(),
                 outctx.cast::<u8>(),
                 core::mem::size_of::<Mdc2Ctx>(),
@@ -612,6 +615,31 @@ mod mdc2 {
             function: ptr::null_mut(),
         },
     ];
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// The legacy provider's `copyctx` is reached by the same in-place arm as the default
+        /// provider's, so a self-copy must not assume distinct regions.
+        #[test]
+        fn copyctx_tolerates_a_self_copy() {
+            let owner = OwnedCtx::<Mdc2Ctx>::new();
+            assert!(owner.is_some(), "the allocator refused a digest context");
+            let Some(owner) = owner else { return };
+            let len = core::mem::size_of::<Mdc2Ctx>();
+            let p = owner.ptr.as_ptr().cast::<u8>();
+            // SAFETY: `owner` is a live block of exactly `len` bytes, written and read only as
+            // bytes here.
+            unsafe {
+                ptr::write_bytes(p, 0x5a, len);
+                copyctx(owner.ptr.as_ptr().cast(), owner.ptr.as_ptr().cast());
+                for i in 0..len {
+                    assert_eq!(*p.add(i), 0x5a, "byte {i} changed in a self-copy");
+                }
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

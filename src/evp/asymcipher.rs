@@ -85,6 +85,8 @@ const LINE_ZALLOC_CIPHER: c_int = 352;
 const LINE_FREE_TYPE_NAME: c_int = 494;
 /// `EVP_ASYM_CIPHER_free`'s `OPENSSL_free(cipher)` (line 497).
 const LINE_FREE_CIPHER: c_int = 497;
+/// `evp_asym_cipher_new`'s `OPENSSL_free(cipher)` when the up-ref fails (line 360).
+const LINE_FREE_CIPHER_UP_REF: c_int = 360;
 /// `evp_pkey_decrypt_alloc`'s `OPENSSL_malloc(*outlenp)` (line 337).
 const LINE_MALLOC_DECRYPT_ALLOC: c_int = 337;
 /// `evp_pkey_decrypt_alloc`'s `OPENSSL_clear_free(*outp, *outlenp)` (line 343).
@@ -299,8 +301,20 @@ unsafe fn evp_asym_cipher_new(prov: *mut OsslProvider) -> *mut EvpAsymCipher {
     unsafe {
         let p = cipher.as_ptr();
         (*p).refcnt = AtomicI32::new(1);
+        // The authority refuses on a failed up-ref *before* assigning `prov`
+        // (`asymcipher.c:357-363`). Only the child-provider arm of `ossl_provider_up_ref` rolls
+        // the increment back (via `ossl_provider_free`); the non-child overflow arm returns 0
+        // without rollback. Assigning `prov` here would double-release on the child arm; on the
+        // (practically unreachable i32-wrap) overflow arm it retains the increment as a leak,
+        // matching the authority's callers.
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            // The authority's failure arm frees the fresh block directly, at its own coordinate
+            // (`asymcipher.c:360`); no member has been assigned yet.
+            core::mem::forget(cipher);
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_CIPHER_UP_REF);
+            return ptr::null_mut();
+        }
         (*p).prov = prov;
-        ossl_provider_up_ref(prov);
     }
     cipher.into_raw()
 }

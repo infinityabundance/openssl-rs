@@ -20,7 +20,7 @@ use crate::cmp::cmp_util::{
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_get_type, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
-use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_hmac_sha1, NID_sha256, NID_subject_alt_name, OBJ_nid2sn};
 use crate::runtime::owned_str::OwnedStr;
@@ -440,6 +440,28 @@ unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int)
     1
 }
 
+/// The authority's `OPENSSL_cleanse(ctx->secretValue->data,
+/// ctx->secretValue->length)` — `cmp_ctx.c:212-213` (free) and `:439-440` (replacement).
+///
+/// `OPENSSL_cleanse`, not `write_bytes`: the latter is a dead store once the block is freed and
+/// may be removed by the optimiser.
+///
+/// # Safety
+/// `value` is NULL or a live `ASN1_OCTET_STRING`; when it has a non-NULL `data`, that buffer is
+/// writable for `length` bytes.
+unsafe fn cleanse_secret_value(value: *mut Asn1String) {
+    if value.is_null() {
+        return;
+    }
+    // SAFETY: `value` is live per the contract.
+    let (data, length) = unsafe { ((*value).data, (*value).length) };
+    if !data.is_null() && length > 0 {
+        // SAFETY: `data` is the string's content buffer, writable for `length` bytes. The cleanse
+        // covers the secret extent the authority names; the trailing NUL is not secret.
+        unsafe { OPENSSL_cleanse(data.cast::<c_void>(), length as usize) };
+    }
+}
+
 /// `OSSL_CMP_CTX_free`'s body (`cmp_ctx.c:185-245`), without the block release [`OwnedCtx`]'s
 /// `Drop` performs: every member the authority releases there, in the authority's own order --
 /// including the two `secret_value` cleansing arms, which are kept as the authority writes them.
@@ -473,12 +495,7 @@ unsafe impl CtxDestroy for OsslCmpCtx {
             OSSL_STACK_OF_X509_free((*ctx).chain);
             EVP_PKEY_free((*ctx).pkey);
             ASN1_OCTET_STRING_free((*ctx).reference_value);
-            if !(*ctx).secret_value.is_null() {
-                let len = (*(*ctx).secret_value).length as usize;
-                if len > 0 && !(*(*ctx).secret_value).data.is_null() {
-                    ptr::write_bytes((*(*ctx).secret_value).data, 0, len);
-                }
-            }
+            cleanse_secret_value((*ctx).secret_value);
             ASN1_OCTET_STRING_free((*ctx).secret_value);
             EVP_MD_free((*ctx).pbm_owf);
 
@@ -1057,10 +1074,7 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_set1_secretValue(
     // SAFETY: `ctx` is live.
     unsafe {
         if !(*ctx).secret_value.is_null() {
-            let l = (*(*ctx).secret_value).length as usize;
-            if l > 0 && !(*(*ctx).secret_value).data.is_null() {
-                ptr::write_bytes((*(*ctx).secret_value).data, 0, l);
-            }
+            cleanse_secret_value((*ctx).secret_value);
             ASN1_OCTET_STRING_free((*ctx).secret_value);
         }
         (*ctx).secret_value = secret_value;
@@ -1727,3 +1741,34 @@ pub(crate) unsafe fn ossl_cmp_print_log(
 /// Keeps the message-engine severity names reachable.
 #[allow(dead_code)]
 const _LOG_DEBUG: c_int = OSSL_CMP_LOG_DEBUG;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::{ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
+
+    /// Both release paths (`destroy_body` and `OSSL_CMP_CTX_set1_secretValue`) call the cleanser.
+    /// The canary reads the bytes after the call: `OPENSSL_cleanse`, unlike a plain `write_bytes`
+    /// whose store is dead once the block is freed, is required to survive optimisation.
+    #[test]
+    fn a_secret_value_is_cleansed_before_release() {
+        // SAFETY: the ASN.1 constructors own their buffers and this test is single-threaded.
+        unsafe {
+            let value = ASN1_OCTET_STRING_new();
+            assert!(!value.is_null());
+            let secret = [0x5au8; 16];
+            assert_eq!(
+                ASN1_OCTET_STRING_set(value, secret.as_ptr(), secret.len() as c_int),
+                1
+            );
+            assert_eq!(*(*value).data, 0x5a, "the canary starts unzeroed");
+            cleanse_secret_value(value);
+            let data = (*value).data;
+            assert!(!data.is_null());
+            for i in 0..secret.len() {
+                assert_eq!(*data.add(i), 0, "byte {i} was not cleansed");
+            }
+            ASN1_OCTET_STRING_free(value);
+        }
+    }
+}
