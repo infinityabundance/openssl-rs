@@ -83,6 +83,8 @@ const LINE_ZALLOC_KEYEXCH: c_int = 34;
 const LINE_FREE_TYPE_NAME: c_int = 170;
 /// `EVP_KEYEXCH_free`'s `OPENSSL_free(exchange)` (line 173).
 const LINE_FREE_KEYEXCH: c_int = 173;
+/// `evp_keyexch_new`'s `OPENSSL_free(exchange)` when the up-ref fails (line 42).
+const LINE_FREE_KEYEXCH_UP_REF: c_int = 42;
 /// `EVP_PKEY_derive_SKEY`'s `key = OPENSSL_zalloc(keylen)` (line 605).
 const LINE_ZALLOC_DERIVE_SKEY: c_int = 605;
 /// `EVP_PKEY_derive_SKEY`'s `OPENSSL_free(key)` when the provider's derive fails (line 613).
@@ -348,7 +350,15 @@ unsafe fn evp_keyexch_new(prov: *mut OsslProvider) -> *mut EvpKeyExch {
     // SAFETY: `exchange` is this call's own object and `prov` is live.
     unsafe {
         (*exchange).refcnt = AtomicI32::new(1);
-        ossl_provider_up_ref(prov);
+        // The authority refuses on a failed up-ref and frees the fresh object without giving back
+        // a provider reference (`exchange.c:39-45`). `ossl_provider_up_ref` rolls the increment
+        // back only on its child-provider arm, so the block is released here without assigning
+        // `prov`; the non-child overflow arm returns 0 without rollback and retains its increment
+        // (practically unreachable i32 wrap, as in the authority's callers).
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            CRYPTO_free(exchange.cast::<c_void>(), FILE, LINE_FREE_KEYEXCH_UP_REF);
+            return ptr::null_mut();
+        }
         (*exchange).prov = prov;
     }
     exchange

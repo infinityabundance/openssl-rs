@@ -1828,10 +1828,19 @@ unsafe fn hpke_encap(
             )
         } != 1
         {
-            // SAFETY: `ctx` is live and `shared_secret` is this call's own.
+            // The authority plainly frees here (`hpke.c:532`), but this is a failure path of a
+            // secret-bearing buffer: cleanse the whole allocation (the size query's `lsslen`)
+            // before release. Deliberate safety improvement over the authority, which the
+            // destructor's own `OPENSSL_clear_free` (`:873`) already implies.
+            // SAFETY: `ctx` is live and `shared_secret` is this call's own block of `lsslen` bytes.
             unsafe {
                 (*ctx).shared_secretlen = 0;
-                CRYPTO_free((*ctx).shared_secret.cast::<c_void>(), FILE_HPKE, 532);
+                CRYPTO_clear_free(
+                    (*ctx).shared_secret.cast::<c_void>(),
+                    lsslen,
+                    FILE_HPKE,
+                    532,
+                );
                 (*ctx).shared_secret = ptr::null_mut();
             }
             // SAFETY: a compile-time-constant site.
@@ -1861,6 +1870,9 @@ unsafe fn hpke_decap(
     let mut erv = 0;
     let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
     let mut lsslen: usize = 0;
+    // The allocated extent, retained separately because `EVP_PKEY_decapsulate` may rewrite
+    // `lsslen`. `0` is the no-allocation state the failure release tolerates.
+    let mut alloc_len: usize = 0;
     let mut spub: *mut EvpPkey = ptr::null_mut();
 
     if ctx.is_null() || enc.is_null() || enclen == 0 || priv_.is_null() {
@@ -1954,6 +1966,7 @@ unsafe fn hpke_decap(
         // `shared_secret` is a `#[repr(C)]` member buffer the ABI reads back; it stays a raw seam
         // allocation, released by `destroy_ctx_body` (`hpke_decap`'s own refusal frees it in place).
         // SAFETY: `lsslen` was filled by the size query.
+        alloc_len = lsslen;
         let ss = CRYPTO_malloc(lsslen, FILE_HPKE, 620).cast::<c_uchar>();
         if ss.is_null() {
             break 'body;
@@ -1978,9 +1991,18 @@ unsafe fn hpke_decap(
         EVP_PKEY_free(spub);
     }
     if erv == 0 {
-        // SAFETY: `ctx` is live and `shared_secret` is NULL or this call's own block.
+        // The authority plainly frees here (`hpke.c:636`), leaving a partially written KEM output
+        // in released memory; cleanse the allocated extent instead. Deliberate safety improvement
+        // over the authority, consistent with the destructor's `OPENSSL_clear_free` (`:873`).
+        // SAFETY: `ctx` is live and `shared_secret` is NULL or this call's own block of
+        // `alloc_len` bytes.
         unsafe {
-            CRYPTO_free((*ctx).shared_secret.cast::<c_void>(), FILE_HPKE, 636);
+            CRYPTO_clear_free(
+                (*ctx).shared_secret.cast::<c_void>(),
+                alloc_len,
+                FILE_HPKE,
+                636,
+            );
             (*ctx).shared_secret = ptr::null_mut();
             (*ctx).shared_secretlen = 0;
         }
