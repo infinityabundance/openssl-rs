@@ -134,12 +134,14 @@ use crate::runtime::stack::{
 use crate::runtime::thread::CRYPTO_THREAD_run_once;
 
 use crate::context::{OSSL_LIB_CTX_get_conf_diagnostics, OSSL_LIB_CTX_set_conf_diagnostics};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/conf/conf_mod.c`, for the coordinates of every allocation this module makes.
 ///
 /// The authority's own string, which `OPENSSL_FILE` expands to — including the `../../` prefix,
 /// because the object file was compiled from inside the build tree.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/conf/conf_mod.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/conf/conf_mod.c");
 
 // The authority's allocation coordinates, one per call site. `OPENSSL_zalloc`,
 // `OPENSSL_malloc` and `OPENSSL_strdup` are macros over `CRYPTO_*` that fill in
@@ -379,13 +381,13 @@ unsafe fn module_free(md: *mut ConfModule) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*md).name.cast(),
-            FILE,
+            FILE_SEAM,
             L_MODULE_FREE,
         ));
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             md.cast(),
-            FILE,
+            FILE_SEAM,
             L_MODULE_FREE,
         ));
     }
@@ -421,19 +423,19 @@ unsafe fn module_finish(imod: *mut ConfImodule) {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*imod).name.cast(),
-            FILE,
+            FILE_SEAM,
             L_IMODULE_FREE,
         ));
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*imod).value.cast(),
-            FILE,
+            FILE_SEAM,
             L_IMODULE_FREE,
         ));
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             imod.cast(),
-            FILE,
+            FILE_SEAM,
             L_IMODULE_FREE,
         ));
     }
@@ -868,7 +870,7 @@ unsafe fn module_add(
     // The entry block is this frame's own; its handle's `Drop` is the single release of every
     // failure path below. Ownership passes to the registry only on a successful push.
     let Some(tmod_buf) =
-        OwnedBuf::new_zeroed(core::mem::size_of::<ConfModule>(), FILE, L_MODULE_NEW)
+        OwnedBuf::new_zeroed(core::mem::size_of::<ConfModule>(), FILE_SEAM, L_MODULE_NEW)
     else {
         // SAFETY: the local list is this thread's own and is discarded here; the write lock is
         // held by this thread.
@@ -908,7 +910,7 @@ unsafe fn module_add(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*tmod).name.cast(),
-                FILE,
+                FILE_SEAM,
                 L_MODULE_FREE_ERR,
             ));
             drop(tmod_buf);
@@ -1049,8 +1051,11 @@ unsafe fn module_init(
 
     // The record block is this frame's own; its handle's `Drop` is the single release of every
     // failure path below. Ownership passes to the registry only on a successful publish.
-    let Some(imod_buf) = OwnedBuf::new(core::mem::size_of::<ConfImodule>(), FILE, L_IMODULE_NEW)
-    else {
+    let Some(imod_buf) = OwnedBuf::new(
+        core::mem::size_of::<ConfImodule>(),
+        FILE_SEAM,
+        L_IMODULE_NEW,
+    ) else {
         return -1;
     };
     let imod = imod_buf.as_ptr().cast::<ConfImodule>();
@@ -1075,13 +1080,13 @@ unsafe fn module_init(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).name.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).value.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             drop(imod_buf);
@@ -1104,13 +1109,13 @@ unsafe fn module_init(
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                 drop(OwnedBuf::adopt_plain_nullable(
                     (*imod).name.cast(),
-                    FILE,
+                    FILE_SEAM,
                     L_IMODULE_FREE,
                 ));
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                 drop(OwnedBuf::adopt_plain_nullable(
                     (*imod).value.cast(),
-                    FILE,
+                    FILE_SEAM,
                     L_IMODULE_FREE,
                 ));
                 drop(imod_buf);
@@ -1133,13 +1138,13 @@ unsafe fn module_init(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).name.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).value.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             drop(imod_buf);
@@ -1179,13 +1184,13 @@ unsafe fn module_init(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).name.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).value.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             drop(imod_buf);
@@ -1208,13 +1213,13 @@ unsafe fn module_init(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).name.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*imod).value.cast(),
-                FILE,
+                FILE_SEAM,
                 L_IMODULE_FREE,
             ));
             drop(imod_buf);
@@ -1595,7 +1600,7 @@ pub unsafe extern "C" fn CONF_modules_load_file_ex(
         // The authority frees the filename only when it allocated it.
         if filename.is_null() {
             // SAFETY: `owned` is NULL or this call's own allocation.
-            unsafe { drop(OwnedBuf::adopt_plain_nullable(owned.cast(), FILE, 0)) };
+            unsafe { drop(OwnedBuf::adopt_plain_nullable(owned.cast(), FILE_SEAM, 0)) };
         }
         // SAFETY: `conf` is NULL or this call's own configuration; `NCONF_free` accepts NULL.
         unsafe { NCONF_free(conf) };

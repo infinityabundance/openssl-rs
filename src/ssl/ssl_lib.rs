@@ -82,6 +82,7 @@ use crate::runtime::mem::{
     CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc, CRYPTO_realloc_array,
     CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
@@ -145,6 +146,7 @@ use crate::x509::x_x509::{d2i_X509, X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit, used on allocation and `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/ssl_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_lib.c");
 
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
@@ -7894,7 +7896,7 @@ pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_in
                 // refusal line.
                 // SAFETY: `old_ip` is the live string `X509_VERIFY_PARAM_get1_ip_asc` just handed
                 // over (or NULL), which this frame owns and has not released.
-                let old_ip = unsafe { OwnedBuf::adopt_plain(old_ip.cast::<u8>(), FILE, 1175) };
+                let old_ip = unsafe { OwnedBuf::adopt_plain(old_ip.cast::<u8>(), FILE_SEAM, 1175) };
                 if old_ip.is_some() {
                     // SAFETY: a constant site.
                     unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };
@@ -12068,7 +12070,7 @@ pub unsafe extern "C" fn SSL_add_expected_rpk(s: *mut Ssl, rpk: *mut EvpPkey) ->
             }
             // The DER copy `i2d_PUBKEY` hands over is owned here on the crate's allocator seam
             // (authority size and file); `Drop` is its single release.
-            let data = OwnedBuf::adopt_plain_nullable(data.cast::<u8>(), FILE, 8206);
+            let data = OwnedBuf::adopt_plain_nullable(data.cast::<u8>(), FILE_SEAM, 8206);
             let ok = SSL_dane_tlsa_add(
                 s,
                 DANETLS_USAGE_DANE_EE,

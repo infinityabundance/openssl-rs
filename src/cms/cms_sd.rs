@@ -78,6 +78,7 @@ use super::cms_lib::{
     ERR_R_CRYPTO_LIB, ERR_R_EVP_LIB, ERR_R_PASSED_NULL_PARAMETER, ERR_R_X509_LIB,
 };
 use super::cms_rsa::ossl_cms_rsa_sign;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_USE_KEYID` — `cms.h.in:100`.
 const CMS_USE_KEYID: c_uint = 0x10000;
@@ -553,7 +554,7 @@ unsafe fn ossl_cms_add1_signing_cert(si: *mut CmsSignerInfo, sc: *const c_void) 
     // The DER scratch is this frame's block, allocated through the crate's allocator seam; its
     // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `len > 0`.
-    let Some(pp) = OwnedBuf::new(len as usize, c"cms_sd.c".as_ptr(), 302) else {
+    let Some(pp) = OwnedBuf::new(len as usize, SeamFile::new(c"cms_sd.c"), 302) else {
         return 0;
     };
     let mut p = pp.as_ptr();
@@ -598,7 +599,7 @@ unsafe fn ossl_cms_add1_signing_cert_v2(si: *mut CmsSignerInfo, sc: *const c_voi
     // The DER scratch is this frame's block, allocated through the crate's allocator seam; its
     // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `len > 0`.
-    let Some(pp) = OwnedBuf::new(len as usize, c"cms_sd.c".as_ptr(), 327) else {
+    let Some(pp) = OwnedBuf::new(len as usize, SeamFile::new(c"cms_sd.c"), 327) else {
         return 0;
     };
     let mut p = pp.as_ptr();
@@ -1349,7 +1350,7 @@ unsafe fn cms_SignerInfo_content_sign(
             }
             // The signature scratch is this frame's block, allocated through the crate's allocator
             // seam; its release is the authority's plain `CRYPTO_free`, run by `Drop`.
-            let Some(sig) = OwnedBuf::new(siglen, c"cms_sd.c".as_ptr(), 796) else {
+            let Some(sig) = OwnedBuf::new(siglen, SeamFile::new(c"cms_sd.c"), 796) else {
                 break 'body;
             };
             // SAFETY: `pctx`/`sig`/`md` are live.
@@ -1380,7 +1381,7 @@ unsafe fn cms_SignerInfo_content_sign(
             }
             // The signature scratch is this frame's block, allocated through the crate's allocator
             // seam; its release is the authority's plain `CRYPTO_free`, run by `Drop`.
-            let Some(sig) = OwnedBuf::new(siglen as usize, c"cms_sd.c".as_ptr(), 812) else {
+            let Some(sig) = OwnedBuf::new(siglen as usize, SeamFile::new(c"cms_sd.c"), 812) else {
                 break 'body;
             };
             // SAFETY: `mctx`/`sig`/`si` are live.
@@ -1553,7 +1554,8 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
     // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
     // failure paths below release what it built at the authority's own site.
     // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
-    let mut abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, c"cms_sd.c".as_ptr(), 920) };
+    let mut abuf =
+        unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, SeamFile::new(c"cms_sd.c"), 920) };
     let mut siglen: usize = 0;
     'body: {
         if alen < 0 || abuf.as_ptr().is_null() {
@@ -1569,7 +1571,7 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_sign(si: *mut CmsSignerInfo) -> c
         }
         // The signature buffer is this frame's block, allocated through the crate's allocator seam;
         // its release is the authority's plain `CRYPTO_free`, run by `Drop`.
-        let Some(sig) = OwnedBuf::new(siglen, c"cms_sd.c".as_ptr(), 907) else {
+        let Some(sig) = OwnedBuf::new(siglen, SeamFile::new(c"cms_sd.c"), 907) else {
             // SAFETY: `mctx` is live.
             unsafe { EVP_MD_CTX_reset(mctx) };
             return 0;
@@ -1750,7 +1752,8 @@ pub(crate) unsafe extern "C" fn CMS_SignerInfo_verify(si: *mut CmsSignerInfo) ->
         // The attributes encoding is the helper's own `CRYPTO_malloc` block; it is adopted so the
         // failure paths below release what it built at the authority's own site.
         // SAFETY: `abuf_raw` is NULL or a live block the helper allocated and no one else owns.
-        let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, c"cms_sd.c".as_ptr(), 996) };
+        let abuf =
+            unsafe { OwnedBuf::adopt_plain_nullable(abuf_raw, SeamFile::new(c"cms_sd.c"), 996) };
         if abuf.as_ptr().is_null() || alen < 0 {
             break 'body;
         }
@@ -2078,7 +2081,8 @@ pub(crate) unsafe extern "C" fn CMS_add_smimecap(
     // The encoded algorithms are the helper's own `CRYPTO_malloc` block; it is adopted so the
     // release below runs at the authority's own site.
     // SAFETY: `smder_raw` is NULL or a live block the helper allocated and no one else owns.
-    let smder = unsafe { OwnedBuf::adopt_plain_nullable(smder_raw, c"cms_sd.c".as_ptr(), 1172) };
+    let smder =
+        unsafe { OwnedBuf::adopt_plain_nullable(smder_raw, SeamFile::new(c"cms_sd.c"), 1172) };
     // SAFETY: `si`/`smder` are live.
     let r = unsafe {
         CMS_signed_add1_attr_by_NID(

@@ -70,6 +70,7 @@ use crate::runtime::err::err_reasons::X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -1264,9 +1265,9 @@ pub unsafe extern "C" fn X509_CRL_METHOD_new(
     // SAFETY: the allocator answers NULL or a fresh block, and every field is written below
     // before the validated transition.
     let Some(raw) = RawCtx::<X509CrlMethod>::malloc_at(
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_METHOD_NEW,
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_METHOD_FREE,
     ) else {
         return ptr::null_mut();
@@ -1301,7 +1302,9 @@ pub unsafe extern "C" fn X509_CRL_METHOD_free(m: *mut X509CrlMethod) {
     }
     // SAFETY: `m` is the caller's `X509_CRL_METHOD_new` block; reclaiming it releases the block at
     // the authority's own `OPENSSL_free` site.
-    drop(unsafe { OwnedCtx::<X509CrlMethod>::from_raw_at(m, FILE.as_ptr(), LINE_METHOD_FREE) });
+    drop(unsafe {
+        OwnedCtx::<X509CrlMethod>::from_raw_at(m, SeamFile::new(FILE), LINE_METHOD_FREE)
+    });
 }
 
 /// `void X509_CRL_set_meth_data(X509_CRL *crl, void *dat)` -- `crypto/x509/x_crl.c:518-521`.

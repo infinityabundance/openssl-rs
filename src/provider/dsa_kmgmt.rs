@@ -102,6 +102,7 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
@@ -149,6 +150,8 @@ const OSSL_GEN_PARAM_ITERATION: *const c_char = c"iteration".as_ptr();
 /// The unit's own `__FILE__`. `dsa_kmgmt.c` is a plain `.c`, so it carries the source-tree prefix.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -862,7 +865,7 @@ unsafe fn dsa_set_gen_seed(gctx: *mut DsaGenCtx, seed: *mut u8, seedlen: usize) 
         drop(OwnedBuf::adopt_cleansed(
             (*gctx).seed.cast::<c_uchar>(),
             (*gctx).seedlen,
-            FILE,
+            FILE_SEAM,
             454,
         ));
         (*gctx).seed = ptr::null_mut();
@@ -871,7 +874,7 @@ unsafe fn dsa_set_gen_seed(gctx: *mut DsaGenCtx, seed: *mut u8, seedlen: usize) 
             let Some(buf) = OwnedBuf::adopt_cleansed(
                 CRYPTO_memdup(seed.cast(), seedlen, FILE, 458).cast::<c_uchar>(),
                 seedlen,
-                FILE,
+                FILE_SEAM,
                 458,
             ) else {
                 return 0;
@@ -961,12 +964,12 @@ unsafe extern "C" fn dsa_gen_set_params(genctx: *mut c_void, params: *const Ossl
             // handle, and a refusal leaves the field NULL.
             drop(OwnedBuf::adopt_plain(
                 (*gctx).mdname.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 513,
             ));
             let Some(buf) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 514).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 514,
             ) else {
                 (*gctx).mdname = ptr::null_mut();
@@ -982,12 +985,12 @@ unsafe extern "C" fn dsa_gen_set_params(genctx: *mut c_void, params: *const Ossl
             // As above, for the digest-properties string.
             drop(OwnedBuf::adopt_plain(
                 (*gctx).mdprops.cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 523,
             ));
             let Some(buf) = OwnedBuf::adopt_plain(
                 CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 524).cast::<c_uchar>(),
-                FILE,
+                FILE_SEAM,
                 524,
             ) else {
                 (*gctx).mdprops = ptr::null_mut();
@@ -1262,18 +1265,18 @@ unsafe extern "C" fn dsa_gen_cleanup(genctx: *mut c_void) {
         // raw seam (its release is part of this destructor body).
         drop(OwnedBuf::adopt_plain(
             (*gctx).mdname.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             706,
         ));
         drop(OwnedBuf::adopt_plain(
             (*gctx).mdprops.cast::<c_uchar>(),
-            FILE,
+            FILE_SEAM,
             707,
         ));
         drop(OwnedBuf::adopt_cleansed(
             (*gctx).seed.cast::<c_uchar>(),
             (*gctx).seedlen,
-            FILE,
+            FILE_SEAM,
             708,
         ));
         CRYPTO_free(gctx.cast(), FILE, 709);

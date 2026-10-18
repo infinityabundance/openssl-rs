@@ -60,6 +60,7 @@ use crate::rsa::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_mgf1, NID_sha1};
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -70,6 +71,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 /// It reaches an application through `CRYPTO_set_mem_functions`, which is why the string is
 /// reproduced rather than normalised.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -327,7 +329,7 @@ pub(crate) unsafe fn ossl_rsa_verify_PKCS1_PSS_mgf1(
         // `DB` is NULL when the first one is taken, which `OPENSSL_free` tolerates; the handle's
         // `Drop` is that release at the authority's own site.
         // SAFETY: `db` is NULL or this call's own allocation.
-        drop(OwnedBuf::adopt_plain(db, FILE, LINE));
+        drop(OwnedBuf::adopt_plain(db, FILE_SEAM, LINE));
         // SAFETY: `ctx` is NULL or this call's own object.
         EVP_MD_CTX_free(ctx);
 
@@ -544,7 +546,12 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_PSS_mgf1(
         // `Drop` is the authority's own cleansing `OPENSSL_clear_free(salt, sLen)` at that site.
         EVP_MD_CTX_free(ctx);
         // SAFETY: `salt` is NULL or this call's own block, readable for `s_len` bytes.
-        drop(OwnedBuf::adopt_cleansed(salt, s_len as usize, FILE, LINE));
+        drop(OwnedBuf::adopt_cleansed(
+            salt,
+            s_len as usize,
+            FILE_SEAM,
+            LINE,
+        ));
         if completed {
             1
         } else {

@@ -113,6 +113,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_X509_STORE,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_find, OPENSSL_sk_find_all, OPENSSL_sk_free,
@@ -969,7 +970,9 @@ pub unsafe extern "C" fn X509_LOOKUP_new(method: *mut X509LookupMethod) -> *mut 
 pub unsafe extern "C" fn X509_LOOKUP_free(ctx: *mut X509Lookup) {
     // SAFETY: `ctx` is NULL or a live lookup; reclaiming it runs the method's `free` hook and
     // releases the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Lookup>::from_raw_at(ctx, FILE.as_ptr(), LINE_FREE_LOOKUP) });
+    drop(unsafe {
+        OwnedCtx::<X509Lookup>::from_raw_at(ctx, SeamFile::new(FILE), LINE_FREE_LOOKUP)
+    });
 }
 
 /// `int X509_LOOKUP_init(X509_LOOKUP *ctx)` — `crypto/x509/x509_lu.c:57-65`.
@@ -1307,9 +1310,9 @@ pub unsafe extern "C" fn X509_OBJECT_new() -> *mut X509Object {
     // `OwnedCtx::zalloc_at` is the authority's own `OPENSSL_zalloc(sizeof(*ret))`; it answers NULL when
     // the allocator does, else a fresh zeroed object.
     let Some(ret) = OwnedCtx::<X509Object>::zalloc_at(
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_ZALLOC_OBJECT,
-        FILE.as_ptr(),
+        SeamFile::new(FILE),
         LINE_FREE_OBJECT,
     ) else {
         return ptr::null_mut();
@@ -1351,7 +1354,7 @@ unsafe fn x509_object_free_internal(a: *mut X509Object) {
 pub unsafe extern "C" fn X509_OBJECT_free(a: *mut X509Object) {
     // SAFETY: `a` is NULL or a live object; reclaiming it releases the object the union names (via
     // `x509_object_free_internal`) and the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Object>::from_raw_at(a, FILE.as_ptr(), LINE_FREE_OBJECT) });
+    drop(unsafe { OwnedCtx::<X509Object>::from_raw_at(a, SeamFile::new(FILE), LINE_FREE_OBJECT) });
 }
 
 /// `int X509_OBJECT_up_ref_count(X509_OBJECT *a)` — `crypto/x509/x509_lu.c:447-458`.
@@ -1623,9 +1626,9 @@ unsafe fn x509_object_dup(obj: *const X509Object) -> *mut X509Object {
     // `X509_LU_NONE`) and the block free, at the authority's own site.
     // SAFETY: `ret_raw` is NULL or the fresh object `X509_OBJECT_new` allocated and no one else
     // owns.
-    let Some(mut ret) =
-        (unsafe { OwnedCtx::<X509Object>::from_raw_at(ret_raw, FILE.as_ptr(), LINE_FREE_OBJECT) })
-    else {
+    let Some(mut ret) = (unsafe {
+        OwnedCtx::<X509Object>::from_raw_at(ret_raw, SeamFile::new(FILE), LINE_FREE_OBJECT)
+    }) else {
         return ptr::null_mut();
     };
     // SAFETY: `ret` is live; `obj` is live per the contract.
@@ -1812,7 +1815,7 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
     // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`); reclaiming `xs` runs
     // `X509_STORE_free`'s own body (each lookup, the object cache, the extension block, the verify
     // parameters and the lock) and releases the block at the authority's own site.
-    drop(unsafe { OwnedCtx::<X509Store>::from_raw_at(xs, FILE.as_ptr(), LINE_FREE_STORE) });
+    drop(unsafe { OwnedCtx::<X509Store>::from_raw_at(xs, SeamFile::new(FILE), LINE_FREE_STORE) });
 }
 
 /// `int X509_STORE_lock(X509_STORE *xs)` — `crypto/x509/x509_lu.c:42-45`.

@@ -43,6 +43,7 @@ use crate::evp::pkey::{
 };
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x509_att::{
@@ -218,7 +219,7 @@ pub(crate) unsafe fn ossl_evp_pkey2pkcs8(pkey: *const EvpPkey) -> *mut Pkcs8Priv
         // Divergence (§17): the authority plain-frees this private-key encoding at `(NULL, 0)`.
         // This crate cleanses the same DER extent before release, because the PKCS#8 private-key
         // DER is secret-bearing (§5); the release coordinates are unchanged.
-        let der_owned = unsafe { OwnedBuf::adopt_cleansed(der, derlen, ptr::null(), 0) };
+        let der_owned = unsafe { OwnedBuf::adopt_cleansed(der, derlen, SeamFile::NULL, 0) };
         let pp: *const c_uchar = der_owned
             .as_ref()
             .map_or(ptr::null(), |buf| buf.as_ptr().cast_const());
@@ -335,9 +336,9 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
     // SAFETY: `encoded_data` is the block `i2d_PKCS8_PRIV_KEY_INFO` allocated in full,
     // `encoded_len` is its exact extent (the authority's own cleansing length), and this frame
     // owns it exclusively.
-    let Some(encoded) =
-        (unsafe { OwnedBuf::adopt_cleansed(encoded_data, encoded_len as usize, ptr::null(), 0) })
-    else {
+    let Some(encoded) = (unsafe {
+        OwnedBuf::adopt_cleansed(encoded_data, encoded_len as usize, SeamFile::NULL, 0)
+    }) else {
         return ptr::null_mut();
     };
 

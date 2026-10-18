@@ -64,6 +64,7 @@ use crate::runtime::ctype::{ossl_ctype_check, ossl_isascii, ossl_isspace, ossl_t
 use crate::runtime::ctype_table::mask::MASK_UPPER;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
@@ -1018,7 +1019,8 @@ pub unsafe extern "C" fn X509_NAME_print(
     // The string is the printer's own; the handle is its single release, at the authority's own
     // line for the path that reaches it.
     // SAFETY: `b` is a live string `X509_NAME_oneline` allocated and no one else owns.
-    let mut b = unsafe { OwnedBuf::adopt_plain_nullable(b.cast(), FILE.as_ptr(), LINE_FREE_PRINT) };
+    let mut b =
+        unsafe { OwnedBuf::adopt_plain_nullable(b.cast(), SeamFile::new(FILE), LINE_FREE_PRINT) };
     // SAFETY: `b` is a NUL-terminated string the printer returned.
     if unsafe { *b.as_ptr().cast::<c_char>() } == 0 {
         return 1;

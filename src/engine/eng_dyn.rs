@@ -83,6 +83,7 @@ use crate::runtime::err::err_sites::{
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData, CRYPTO_EX_INDEX_ENGINE};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_get_mem_functions, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
@@ -98,6 +99,7 @@ extern "C" {
 /// `OPENSSL_FILE` for the allocations and frees this unit makes, so a caller's
 /// `CRYPTO_set_mem_functions` sees the authority's own coordinate.
 const FILE: *const c_char = c"crypto/engine/eng_dyn.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/engine/eng_dyn.c");
 
 /// `dynamic_set_data_ctx`'s `OPENSSL_zalloc(sizeof(*c))` (`:159`).
 const LINE_SET_CTX_ZALLOC: c_int = 159;
@@ -317,10 +319,14 @@ unsafe impl CtxDestroy for DynamicDataCtx {
             DSO_free((*ptr).dynamic_dso);
             drop(OwnedStr::adopt(
                 (*ptr).DYNAMIC_LIBNAME,
-                FILE,
+                FILE_SEAM,
                 LINE_FREE_LIBNAME,
             ));
-            drop(OwnedStr::adopt((*ptr).engine_id, FILE, LINE_FREE_ENGINE_ID));
+            drop(OwnedStr::adopt(
+                (*ptr).engine_id,
+                FILE_SEAM,
+                LINE_FREE_ENGINE_ID,
+            ));
             OPENSSL_sk_pop_free((*ptr).dirs, Some(int_free_str));
         }
     }
@@ -382,7 +388,7 @@ impl Drop for RawDataCtx {
 unsafe extern "C" fn int_free_str(s: *mut c_void) {
     // SAFETY: `s` is NULL or one of this module's `CRYPTO_strdup` answers, per the caller's
     // contract; the seam's `Drop` performs its single plain release at the authority's own site.
-    drop(unsafe { OwnedStr::adopt(s.cast::<c_char>(), FILE, LINE_INT_FREE_STR) });
+    drop(unsafe { OwnedStr::adopt(s.cast::<c_char>(), FILE_SEAM, LINE_INT_FREE_STR) });
 }
 
 /// `static void dynamic_data_ctx_free_func(...)` — `crypto/engine/eng_dyn.c:137-149`.
@@ -401,7 +407,11 @@ unsafe extern "C" fn dynamic_data_ctx_free_func(
     // `ex_data`, released exactly once, here; `Drop` runs the authority's own free body and its
     // single block release.
     drop(unsafe {
-        OwnedCtx::<DynamicDataCtx>::from_raw_at(ptr.cast::<DynamicDataCtx>(), FILE, LINE_FREE_CTX)
+        OwnedCtx::<DynamicDataCtx>::from_raw_at(
+            ptr.cast::<DynamicDataCtx>(),
+            FILE_SEAM,
+            LINE_FREE_CTX,
+        )
     });
 }
 
@@ -599,7 +609,9 @@ unsafe extern "C" fn dynamic_ctrl(
                 }
                 // SAFETY: `ctx` is live and `DYNAMIC_LIBNAME` is NULL or its own `CRYPTO_strdup`
                 // block; the seam performs the authority's own plain release.
-                drop(unsafe { OwnedStr::adopt((*ctx).DYNAMIC_LIBNAME, FILE, LINE_FREE_SO_PATH) });
+                drop(unsafe {
+                    OwnedStr::adopt((*ctx).DYNAMIC_LIBNAME, FILE_SEAM, LINE_FREE_SO_PATH)
+                });
                 // The new value is this call's own fresh block or NULL.
                 let fresh: Option<OwnedStr> = if p.is_null() {
                     None
@@ -609,7 +621,7 @@ unsafe extern "C" fn dynamic_ctrl(
                     unsafe {
                         OwnedStr::adopt(
                             CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_SO_PATH),
-                            FILE,
+                            FILE_SEAM,
                             LINE_FREE_SO_PATH,
                         )
                     }
@@ -633,7 +645,7 @@ unsafe extern "C" fn dynamic_ctrl(
                 }
                 // SAFETY: `ctx` is live and `engine_id` is NULL or its own `CRYPTO_strdup`
                 // block; the seam performs the authority's own plain release.
-                drop(unsafe { OwnedStr::adopt((*ctx).engine_id, FILE, LINE_FREE_ID) });
+                drop(unsafe { OwnedStr::adopt((*ctx).engine_id, FILE_SEAM, LINE_FREE_ID) });
                 // The new value is this call's own fresh block or NULL.
                 let fresh: Option<OwnedStr> = if p.is_null() {
                     None
@@ -643,7 +655,7 @@ unsafe extern "C" fn dynamic_ctrl(
                     unsafe {
                         OwnedStr::adopt(
                             CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_ID),
-                            FILE,
+                            FILE_SEAM,
                             LINE_FREE_ID,
                         )
                     }
@@ -689,7 +701,7 @@ unsafe extern "C" fn dynamic_ctrl(
                 let Some(tmp) = (unsafe {
                     OwnedStr::adopt(
                         CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_DIR),
-                        FILE,
+                        FILE_SEAM,
                         LINE_STRDUP_DIR,
                     )
                 }) else {
@@ -758,11 +770,11 @@ unsafe fn int_load(ctx: *mut DynamicDataCtx) -> c_int {
         let loaded = unsafe { DSO_load(dso, merge, ptr::null_mut(), 0) };
         if !loaded.is_null() {
             // SAFETY: `merge` is this iteration's allocation, released here exactly once.
-            drop(unsafe { OwnedStr::adopt(merge, FILE, LINE_FREE_MERGE_FOUND) });
+            drop(unsafe { OwnedStr::adopt(merge, FILE_SEAM, LINE_FREE_MERGE_FOUND) });
             return 1;
         }
         // SAFETY: as above, on the not-found path.
-        drop(unsafe { OwnedStr::adopt(merge, FILE, LINE_FREE_MERGE_MISS) });
+        drop(unsafe { OwnedStr::adopt(merge, FILE_SEAM, LINE_FREE_MERGE_MISS) });
     }
     0
 }

@@ -17,9 +17,11 @@ use core::ptr::null_mut;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority's `OPENSSL_FILE` for this unit.
 const FILE: *const c_char = c"crypto/async/async_wait.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/async/async_wait.c");
 /// `ASYNC_WAIT_CTX_new`'s `OPENSSL_zalloc` (`:17`).
 const LINE_NEW: c_int = 17;
 /// `ASYNC_WAIT_CTX_free`'s `OPENSSL_free(curr)` (`:37`).
@@ -176,7 +178,7 @@ impl Drop for OwnedFdLookup {
 #[no_mangle]
 pub extern "C" fn ASYNC_WAIT_CTX_new() -> *mut AsyncWaitCtx {
     guard_ffi(null_mut(), || {
-        OwnedCtx::<AsyncWaitCtx>::zalloc_at(FILE, LINE_NEW, FILE, LINE_NEW)
+        OwnedCtx::<AsyncWaitCtx>::zalloc_at(FILE_SEAM, LINE_NEW, FILE_SEAM, LINE_NEW)
             .map_or_else(null_mut, |ctx| ctx.into_raw())
     })
 }
@@ -190,7 +192,7 @@ pub unsafe extern "C" fn ASYNC_WAIT_CTX_free(ctx: *mut AsyncWaitCtx) {
     guard_ffi((), || {
         // SAFETY: `ctx` is NULL or a live object this file allocated per the contract; `Drop` runs
         // the authority's own free body and this is its single block release.
-        drop(unsafe { OwnedCtx::<AsyncWaitCtx>::from_raw_at(ctx, FILE, LINE_FREE_CTX) });
+        drop(unsafe { OwnedCtx::<AsyncWaitCtx>::from_raw_at(ctx, FILE_SEAM, LINE_FREE_CTX) });
     })
 }
 

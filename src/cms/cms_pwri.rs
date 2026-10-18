@@ -31,6 +31,7 @@ use crate::runtime::stack::OPENSSL_sk_push;
 
 use super::cms_asn1::*;
 use super::cms_lib::{ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_CIPH_FLAG_AEAD_CIPHER` — `include/openssl/evp.h:531`.
 const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
@@ -479,9 +480,13 @@ unsafe fn kek_unwrap_key(
     // The decrypted scratch is this frame's block, allocated through the crate's allocator seam;
     // its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `inlen > 0`.
-    let Some(tmp) =
-        OwnedBuf::new_cleansed_released(inlen, c"cms_pwri.c".as_ptr(), 219, core::ptr::null(), 0)
-    else {
+    let Some(tmp) = OwnedBuf::new_cleansed_released(
+        inlen,
+        SeamFile::new(c"cms_pwri.c"),
+        219,
+        SeamFile::NULL,
+        0,
+    ) else {
         return 0;
     };
     // Setup IV by decrypting last two blocks.
@@ -839,9 +844,9 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
             // SAFETY: `keylen > 0`.
             let Some(key_buf) = OwnedBuf::new_cleansed_released(
                 keylen,
-                c"cms_pwri.c".as_ptr(),
+                SeamFile::new(c"cms_pwri.c"),
                 392,
-                core::ptr::null(),
+                SeamFile::NULL,
                 0,
             ) else {
                 break 'body;
@@ -876,9 +881,9 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
             // SAFETY: `elen >= 0`.
             let Some(key_buf) = OwnedBuf::new_cleansed_released(
                 elen as usize,
-                c"cms_pwri.c".as_ptr(),
+                SeamFile::new(c"cms_pwri.c"),
                 403,
-                core::ptr::null(),
+                SeamFile::NULL,
                 0,
             ) else {
                 break 'body;

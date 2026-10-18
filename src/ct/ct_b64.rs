@@ -36,6 +36,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::x509::x_pubkey::d2i_PUBKEY_ex;
 
 /// `ERR_LIB_CT` — `include/openssl/err.h.in:115`.
@@ -107,7 +108,7 @@ unsafe fn ct_base64_decode(in_: *const c_char, out: *mut *mut c_uchar) -> c_int 
 
     let outlen: c_int = ((inlen / 4) * 3) as c_int;
     // SAFETY: `outlen` is non-negative (`3 * (inlen/4) <= 3 * INT_MAX/4`).
-    let Some(buf) = OwnedBuf::new(outlen as usize, ptr::null(), 0) else {
+    let Some(buf) = OwnedBuf::new(outlen as usize, SeamFile::NULL, 0) else {
         return -1;
     };
 
@@ -189,7 +190,7 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         return ptr::null_mut();
     }
     // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
-    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, ptr::null(), 0) };
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
     // SAFETY: `sct` is live; `dec` is handed to it only when the setter answers non-zero.
     if unsafe { SCT_set0_log_id(sct, dec.as_ptr(), declen as usize) } == 0 {
         // The setter kept ownership, so release the block and the half-built value.
@@ -213,7 +214,7 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         return ptr::null_mut();
     }
     // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
-    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, ptr::null(), 0) };
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
     // SAFETY: `sct` is live; the setter takes the block over.
     unsafe { SCT_set0_extensions(sct, dec.as_ptr(), declen as usize) };
     // The value owns the extensions now.
@@ -231,7 +232,7 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         return ptr::null_mut();
     }
     // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
-    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, ptr::null(), 0) };
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
     let mut p: *const c_uchar = dec.as_ptr();
     // SAFETY: `sct` is live; `p` is readable for `declen` bytes.
     if unsafe { o2i_SCT_signature(sct, &mut p, declen as usize) } <= 0 {
@@ -289,7 +290,7 @@ pub unsafe extern "C" fn CTLOG_new_from_base64_ex(
     }
 
     // SAFETY: `pkey_der` is the decoder's block, left for this frame and owned by no one else.
-    let der = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, ptr::null(), 0) };
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, SeamFile::NULL, 0) };
     let mut p: *const c_uchar = der.as_ptr();
     // SAFETY: `p` is readable for `pkey_der_len` bytes; the optional args are checked values.
     let pkey = unsafe {

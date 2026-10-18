@@ -139,6 +139,7 @@ use crate::provider::util::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The allocation-tracking `file` argument for CMAC's allocations.
@@ -3296,6 +3297,7 @@ const OSSL_DIGEST_NAME_KECCAK_KMAC256_SIZE: usize = 16;
 /// unit is generated from `kmac_prov.c.in` and the compiler spells a generated file build-relative.
 /// D235's rule, and the same one `FILE_POLY1305` records.
 const FILE_KMAC: *const c_char = c"providers/implementations/macs/kmac_prov.c".as_ptr();
+const FILE_KMAC_SEAM: SeamFile = SeamFile::new(c"providers/implementations/macs/kmac_prov.c");
 
 /// `struct kmac_data_st` — `kmac_prov.c:123-142` **without** its `#ifdef FIPS_MODULE` field, which
 /// `OSSL_FIPS_IND_DECLARE` expands to nothing here.
@@ -3944,7 +3946,7 @@ unsafe extern "C" fn kmac_init(
         }
         // The scratch buffer the authority `OPENSSL_malloc`s sized, fills and releases before it
         // returns; it is owned by `out` and released by `Drop` at the end of this scope.
-        let Some(out) = OwnedBuf::new(out_len, FILE_KMAC, LINE) else {
+        let Some(out) = OwnedBuf::new(out_len, FILE_KMAC_SEAM, LINE) else {
             return 0;
         };
         let res = bytepad(

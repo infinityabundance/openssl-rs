@@ -26,6 +26,7 @@ use crate::asn1::x_spki::{d2i_NETSCAPE_SPKI, i2d_NETSCAPE_SPKI, NetScapeSpki};
 use crate::evp::encode::{EVP_DecodeBlock, EVP_EncodeBlock};
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{X509_PUBKEY_get, X509_PUBKEY_set};
 
@@ -101,7 +102,7 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_b64_decode(
     };
     // `spki_der` owns the fresh `len + 1`-byte scratch block; every exit below drops it, which is
     // the authority's own `OPENSSL_free` at this unit's line.
-    let spki_der = match OwnedBuf::new(len as usize + 1, FILE_NAME.as_ptr(), LINE) {
+    let spki_der = match OwnedBuf::new(len as usize + 1, SeamFile::new(FILE_NAME), LINE) {
         Some(buf) => buf,
         None => return ptr::null_mut(),
     };
@@ -135,14 +136,14 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_b64_encode(spki: *mut NetScapeSpki) -> *m
     }
     // `der_spki` owns the fresh `der_len`-byte DER scratch block and `b64_str` the doubled base64
     // block; a failed allocation drops the other, which is the authority's own `OPENSSL_free`.
-    let der_spki = match OwnedBuf::new(der_len as usize, FILE_NAME.as_ptr(), LINE) {
+    let der_spki = match OwnedBuf::new(der_len as usize, SeamFile::new(FILE_NAME), LINE) {
         Some(buf) => buf,
         None => return ptr::null_mut(),
     };
     // SAFETY: `der_len * 2` is the authority's exact base64 expansion extent; the product is
     // checked and an overflow refuses the allocation.
     let b64_str =
-        match unsafe { OwnedBuf::new_array(der_len as usize, 2, FILE_NAME.as_ptr(), LINE) } {
+        match unsafe { OwnedBuf::new_array(der_len as usize, 2, SeamFile::new(FILE_NAME), LINE) } {
             Some(buf) => buf,
             None => return ptr::null_mut(),
         };

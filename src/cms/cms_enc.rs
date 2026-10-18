@@ -40,6 +40,7 @@ use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_get0_cmsctx, raise_cms,
     ERR_R_ASN1_LIB, ERR_R_EVP_LIB,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_CIPH_FLAG_AEAD_CIPHER` — `include/openssl/evp.h:531`.
 const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
@@ -323,9 +324,9 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             // SAFETY: `tkeylen > 0`.
             let Some(key) = OwnedBuf::new_cleansed_released(
                 tkeylen,
-                c"cms_enc.c".as_ptr(),
+                SeamFile::new(c"cms_enc.c"),
                 130,
-                core::ptr::null(),
+                SeamFile::NULL,
                 0,
             ) else {
                 break 'body;
@@ -479,7 +480,7 @@ pub(crate) unsafe fn ossl_cms_EncryptedContent_init(
         // The session key is this frame's scratch, allocated through the crate's allocator seam at
         // the authority's own size/`file`/`line`; ownership of the block moves into `ec->key`.
         // SAFETY: `key` is non-NULL and readable for `keylen`.
-        let Some(owned) = OwnedBuf::new(keylen, c"cms_enc.c".as_ptr(), 218) else {
+        let Some(owned) = OwnedBuf::new(keylen, SeamFile::new(c"cms_enc.c"), 218) else {
             return 0;
         };
         // SAFETY: `key` is readable for `keylen`; `owned` is `keylen` writable bytes.

@@ -69,6 +69,7 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::CRYPTO_malloc_array;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_X9_62_prime_field;
 use crate::runtime::owned_buf::OwnedBuf;
 
@@ -1857,7 +1858,7 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_points_make_affine(
                 1229,
             )
             .cast::<*mut BigNum>();
-            prod_z_owner = OwnedBuf::adopt_plain_nullable(prod_z.cast(), FILE.as_ptr(), 1357);
+            prod_z_owner = OwnedBuf::adopt_plain_nullable(prod_z.cast(), SeamFile::new(FILE), 1357);
             if prod_z.is_null() {
                 break 'err;
             }

@@ -38,6 +38,7 @@ use crate::evp::digest::EVP_MD_get_type;
 use crate::evp::pkey::EVP_PKEY_get_default_digest_name;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::obj::{NID_id_PasswordBasedMAC, OBJ_obj2nid};
 use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_num};
@@ -144,8 +145,9 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
         // The encoding is the helper's own block; the handle releases it at the authority's own
         // `:99` site on every path below.
         // SAFETY: `prot_part_der` is NULL or a live block the helper allocated and no one else owns.
-        let prot_part_der =
-            unsafe { OwnedBuf::adopt_plain_nullable(prot_part_der.cast(), FILE.as_ptr(), 99) };
+        let prot_part_der = unsafe {
+            OwnedBuf::adopt_plain_nullable(prot_part_der.cast(), SeamFile::new(FILE), 99)
+        };
         if len < 0 || prot_part_der.as_ptr().is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cmp(69, c"ossl_cmp_calc_protection", 115) };
@@ -188,7 +190,7 @@ pub(crate) unsafe fn ossl_cmp_calc_protection(
         // `:98` site on every path below.
         // SAFETY: `protection` is NULL or a live block the helper allocated and no one else owns.
         let protection =
-            unsafe { OwnedBuf::adopt_plain_nullable(protection.cast(), FILE.as_ptr(), 98) };
+            unsafe { OwnedBuf::adopt_plain_nullable(protection.cast(), SeamFile::new(FILE), 98) };
         if ok == 0 {
             // SAFETY: the failure path owns the parameter object.
             unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
@@ -435,7 +437,8 @@ unsafe fn pbmac_algor(ctx: *const OsslCmpCtx) -> *mut crate::asn1::x_algor::X509
     // The encoding is the helper's own block; the handle releases it at the authority's own `:212`
     // site on every path below.
     // SAFETY: `pbm_der` is NULL or a live block the helper allocated and no one else owns.
-    let pbm_der = unsafe { OwnedBuf::adopt_plain_nullable(pbm_der.cast(), FILE.as_ptr(), 212) };
+    let pbm_der =
+        unsafe { OwnedBuf::adopt_plain_nullable(pbm_der.cast(), SeamFile::new(FILE), 212) };
     if pbm_der_len < 0 {
         // SAFETY: `pbm_str` is this call's own.
         unsafe { ASN1_STRING_free(pbm_str) };

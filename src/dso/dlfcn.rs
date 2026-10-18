@@ -66,6 +66,7 @@ use crate::runtime::bio::sys::{errno, set_errno};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 
 extern "C" {
@@ -139,7 +140,7 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
     // authority's own error-path site.
     // SAFETY: `filename` is NULL or the live `CRYPTO_strdup` block the converter allocated and no
     // one else owns.
-    let filename = unsafe { OwnedStr::adopt_nullable(filename, FILE, LINE_FREE_TRANSLATED) };
+    let filename = unsafe { OwnedStr::adopt_nullable(filename, FILE_SEAM, LINE_FREE_TRANSLATED) };
     // SAFETY: `dso` is live.
     if unsafe { (*dso).flags } & DSO_FLAG_GLOBAL_SYMBOLS != 0 {
         flags |= RTLD_GLOBAL;
@@ -175,6 +176,7 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
 
 /// The authority's translation unit.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c");
 /// `dlfcn_load`'s error-path `OPENSSL_free(filename)`.
 const LINE_FREE_TRANSLATED: c_int = 133;
 /// `dlfcn_merger`'s joins.

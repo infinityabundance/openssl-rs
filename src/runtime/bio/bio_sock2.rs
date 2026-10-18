@@ -64,6 +64,7 @@ use super::addr_info::{
 };
 use super::bss_sock::{BIO_closesocket, BIO_sock_init, BIO_sock_should_retry, BIO_socket_nbio};
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `INVALID_SOCKET`.
 const INVALID_SOCKET: c_int = -1;
@@ -552,9 +553,9 @@ pub unsafe extern "C" fn BIO_get_accept_socket(host: *mut c_char, bind_mode: c_i
 
         // SAFETY: on success each out-parameter is NULL or a `CRYPTO_strndup` block this frame
         // owns; no other owner holds either string.
-        let h = unsafe { OwnedStr::adopt(h_raw, ptr::null(), 0) };
+        let h = unsafe { OwnedStr::adopt(h_raw, SeamFile::NULL, 0) };
         // SAFETY: as above for the service half.
-        let p = unsafe { OwnedStr::adopt(p_raw, ptr::null(), 0) };
+        let p = unsafe { OwnedStr::adopt(p_raw, SeamFile::NULL, 0) };
         let h_ptr = h.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
         let p_ptr = p.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
 
@@ -666,7 +667,7 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
             let host = unsafe {
                 OwnedStr::adopt(
                     BIO_ADDR_hostname_string(ptr::addr_of!(res), 1),
-                    ptr::null(),
+                    SeamFile::NULL,
                     0,
                 )
             };
@@ -674,7 +675,7 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
             let port = unsafe {
                 OwnedStr::adopt(
                     BIO_ADDR_service_string(ptr::addr_of!(res), 1),
-                    ptr::null(),
+                    SeamFile::NULL,
                     0,
                 )
             };
@@ -686,8 +687,9 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
                 // A wrapped size would be a too-small allocation; treat it as the allocator's
                 // refusal arm instead of reproducing that overflow (§17).
                 let size = hl.checked_add(pl).and_then(|n| n.checked_add(2));
-                let buf =
-                    size.and_then(|len| OwnedStr::new_zeroed(len, ptr::null(), 0, ptr::null(), 0));
+                let buf = size.and_then(|len| {
+                    OwnedStr::new_zeroed(len, SeamFile::NULL, 0, SeamFile::NULL, 0)
+                });
                 if let Some(ref buf) = buf {
                     // SAFETY: `buf` has room for `hl + pl + 2` bytes including the
                     // terminator and the colon.

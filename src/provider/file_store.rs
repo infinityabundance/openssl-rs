@@ -79,6 +79,7 @@ use crate::runtime::err::{
     ERR_clear_last_mark, ERR_peek_last_error, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strncasecmp};
 use crate::selftest::OsslCallback;
@@ -635,7 +636,7 @@ unsafe extern "C" fn file_set_ctx_params(
             unsafe {
                 drop(OwnedBuf::adopt_plain(
                     (*ctx).file.propq.cast::<u8>(),
-                    ptr::null(),
+                    SeamFile::NULL,
                     0,
                 ));
                 (*ctx).file.propq = ptr::null_mut();
@@ -650,7 +651,7 @@ unsafe extern "C" fn file_set_ctx_params(
             unsafe {
                 drop(OwnedBuf::adopt_plain(
                     (*ctx).file.input_type.cast::<u8>(),
-                    ptr::null(),
+                    SeamFile::NULL,
                     0,
                 ));
                 (*ctx).file.input_type = ptr::null_mut();
@@ -711,7 +712,7 @@ unsafe extern "C" fn file_set_ctx_params(
             // SAFETY: the site is a compile-time constant; `msg` is NUL-terminated.
             unsafe { raise_site_data(&err_sites::PROV_FILE_STORE_426, msg.as_ptr()) };
             // SAFETY: `str_` was allocated by the printer above; `Drop` is its single release.
-            unsafe { drop(OwnedBuf::adopt_plain(str_.cast::<u8>(), ptr::null(), 0)) };
+            unsafe { drop(OwnedBuf::adopt_plain(str_.cast::<u8>(), SeamFile::NULL, 0)) };
             // SAFETY: `x509_name` is live and this call owns it.
             unsafe { X509_NAME_free(x509_name) };
             return 0;
@@ -1032,7 +1033,7 @@ unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> Option<O
     let data = unsafe {
         OwnedBuf::adopt_plain(
             CRYPTO_zalloc(calculated_length, ptr::null(), 0).cast(),
-            ptr::null(),
+            SeamFile::NULL,
             0,
         )
     }?;

@@ -72,6 +72,7 @@ use crate::runtime::bio::{
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_pkcs9_messageDigest, NID_pkcs9_signingTime, OBJ_obj2nid, OBJ_obj2txt,
 };
@@ -400,7 +401,7 @@ unsafe fn pkcs7_encode_rinfo(ri: *mut Pkcs7RecipInfo, key: *mut u8, keylen: c_in
     // owned by `ek`: the success path hands the block to the `ASN1_STRING`, and the failure path
     // below releases what it built on drop.
     // SAFETY: `eklen > 0`.
-    let Some(ek) = OwnedBuf::new(eklen, FILE.as_ptr(), 170) else {
+    let Some(ek) = OwnedBuf::new(eklen, SeamFile::new(FILE), 170) else {
         // SAFETY: `pctx` is live and owned here.
         unsafe { EVP_PKEY_CTX_free(pctx) };
         return 0;
@@ -479,7 +480,7 @@ unsafe fn pkcs7_decrypt_rinfo(
     // the caller's `ek`, whose `Drop` is its single release.
     // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns,
     // readable for `eklen` bytes.
-    *pek = Some(unsafe { OwnedBuf::adopt_cleansed_nullable(ek, eklen, core::ptr::null(), 0) });
+    *pek = Some(unsafe { OwnedBuf::adopt_cleansed_nullable(ek, eklen, SeamFile::NULL, 0) });
     *peklen = eklen as c_int;
     // SAFETY: `pctx` is live and owned here.
     unsafe { EVP_PKEY_CTX_free(pctx) };
@@ -1178,9 +1179,9 @@ pub unsafe extern "C" fn PKCS7_dataDecode(
         // SAFETY: `tkeylen > 0`.
         tkey = OwnedBuf::new_cleansed_released(
             tkeylen as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             642,
-            core::ptr::null(),
+            SeamFile::NULL,
             0,
         );
         if tkey.is_none() {
@@ -1521,7 +1522,7 @@ pub unsafe extern "C" fn PKCS7_dataFinal(p7: *mut Pkcs7, bio: *mut Bio) -> c_int
                 // allocator seam at `abuflen` and owned by `abuf`: the failure path below releases
                 // what it built on drop and the success path hands the block to the `ASN1_STRING`.
                 // SAFETY: `abuflen > 0`.
-                let Some(abuf) = OwnedBuf::new(abuflen as usize, FILE.as_ptr(), 893) else {
+                let Some(abuf) = OwnedBuf::new(abuflen as usize, SeamFile::new(FILE), 893) else {
                     // SAFETY: `ctx_tmp` is live and owned here.
                     unsafe { EVP_MD_CTX_free(ctx_tmp) };
                     return 0;
@@ -1665,7 +1666,7 @@ pub unsafe extern "C" fn PKCS7_SIGNER_INFO_sign(si: *mut Pkcs7SignerInfo) -> c_i
     // The encoded auth attrs are the helper's own block; `abuf` adopts it so every exit below
     // releases what it built at the authority's own site.
     // SAFETY: `abuf` is NULL or a live block `ASN1_item_i2d` allocated and no one else owns.
-    let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf, FILE.as_ptr(), 982) };
+    let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf, SeamFile::new(FILE), 982) };
     if alen < 0 || abuf.as_ptr().is_null() {
         // SAFETY: `mctx` is live and owned here.
         unsafe { EVP_MD_CTX_free(mctx) };
@@ -1690,7 +1691,7 @@ pub unsafe extern "C" fn PKCS7_SIGNER_INFO_sign(si: *mut Pkcs7SignerInfo) -> c_i
     // at `siglen` and owned by `abuf`: every exit below releases what it built on drop and the
     // success path hands the block to the `ASN1_STRING`.
     // SAFETY: `siglen > 0`.
-    let Some(abuf) = OwnedBuf::new(siglen, FILE.as_ptr(), 986) else {
+    let Some(abuf) = OwnedBuf::new(siglen, SeamFile::new(FILE), 986) else {
         // SAFETY: `mctx` is live and owned here.
         unsafe { EVP_MD_CTX_free(mctx) };
         return 0;
@@ -1932,7 +1933,7 @@ pub unsafe extern "C" fn PKCS7_signatureVerify(
         // The encoded auth attrs are the helper's own block; `abuf` adopts it so every exit below
         // releases what it built at the authority's own site.
         // SAFETY: `abuf` is NULL or a live block `ASN1_item_i2d` allocated and no one else owns.
-        let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf, FILE.as_ptr(), 1164) };
+        let abuf = unsafe { OwnedBuf::adopt_plain_nullable(abuf, SeamFile::new(FILE), 1164) };
         if alen <= 0 || abuf.as_ptr().is_null() {
             // SAFETY: `fetched_md`/`mdc_tmp` are owned here.
             unsafe {

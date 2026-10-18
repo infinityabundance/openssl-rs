@@ -39,9 +39,11 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_zalloc};
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c");
 
 /// `X25519_KEYLEN` — `include/crypto/ecx.h:26`.
 pub(crate) const X25519_KEYLEN: usize = 32;
@@ -131,7 +133,7 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
     haspubkey: c_int,
     propq: *const c_char,
 ) -> *mut EcxKey {
-    let Some(mut raw) = RawCtx::<EcxKey>::zalloc_at(FILE, 23, FILE, 60) else {
+    let Some(mut raw) = RawCtx::<EcxKey>::zalloc_at(FILE_SEAM, 23, FILE_SEAM, 60) else {
         return ptr::null_mut();
     };
     let ret = raw.as_ptr();
@@ -200,7 +202,7 @@ pub unsafe extern "C" fn ossl_ecx_key_free(key: *mut EcxKey) {
 
     // SAFETY: `key` is live, this is its last reference, and `OwnedCtx`'s `Drop` runs the
     // authority's own member release (`:77`, `:81`) followed by the block release (`:83`).
-    let _owner = unsafe { OwnedCtx::<EcxKey>::from_raw_at(key, FILE, 83) };
+    let _owner = unsafe { OwnedCtx::<EcxKey>::from_raw_at(key, FILE_SEAM, 83) };
 }
 
 /// `void ossl_ecx_key_set0_libctx(ECX_KEY *key, OSSL_LIB_CTX *libctx)` —

@@ -64,6 +64,7 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 use crate::slh_dsa::hash_ctx::{ossl_slh_dsa_hash_ctx_free, ossl_slh_dsa_hash_ctx_new};
@@ -104,6 +105,8 @@ const SLH_DSA_POSSIBLE_SELECTIONS: c_int = OSSL_KEYMGMT_SELECT_KEYPAIR;
 /// The unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c");
 /// `slh_dsa_kmgmt.c:297`, the `OPENSSL_zalloc(sizeof(*gctx))` in `slh_dsa_gen_init`.
 const LINE_ZALLOC_GCTX: c_int = 297;
 /// `slh_dsa_kmgmt.c:111`, the `OPENSSL_strdup(p.propq->data)` in `slh_dsa_gen_set_params`.
@@ -135,7 +138,7 @@ unsafe impl CtxDestroy for SlhDsaGenCtx {
         // `CRYPTO_strdup` block.
         unsafe {
             OPENSSL_cleanse((*ptr).entropy.as_mut_ptr().cast(), (*ptr).entropy.len());
-            drop(OwnedStr::adopt((*ptr).propq, FILE, LINE_FREE_PROPQ));
+            drop(OwnedStr::adopt((*ptr).propq, FILE_SEAM, LINE_FREE_PROPQ));
         }
     }
 }
@@ -805,7 +808,7 @@ unsafe extern "C" fn slh_dsa_gen_set_params(
             }
             // The incumbent duplicate is released by its own `Drop` before the new one is stored;
             // the authority's `OPENSSL_free(gctx->propq)`, line 452.
-            drop(OwnedStr::adopt((*gctx).propq, FILE, LINE_FREE_PROPQ));
+            drop(OwnedStr::adopt((*gctx).propq, FILE_SEAM, LINE_FREE_PROPQ));
             (*gctx).propq =
                 CRYPTO_strdup((*p.propq).data.cast::<c_char>(), FILE, LINE_STRDUP_PROPQ);
             if (*gctx).propq.is_null() {

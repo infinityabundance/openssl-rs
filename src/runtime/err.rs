@@ -80,6 +80,7 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use crate::ffi::guard_ffi;
 use crate::runtime::init;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 
 #[path = "err_strings.rs"]
@@ -294,7 +295,7 @@ impl ErrState {
                 // Release the buffer this slot owns; the handle's `Drop` is the release.
                 // SAFETY: the MALLOCED flag says this state owns the pointer, and no other
                 // handle has released it.
-                unsafe { drop(OwnedStr::adopt(self.err_data[i], ERR_FILE, ERR_LINE)) };
+                unsafe { drop(OwnedStr::adopt(self.err_data[i], SeamFile::NULL, ERR_LINE)) };
                 self.err_data[i] = core::ptr::null_mut();
                 self.err_data_size[i] = 0;
                 self.err_data_flags[i] = 0;
@@ -321,9 +322,9 @@ impl ErrState {
         // SAFETY: these pointers are always either NULL or owned by this state, and no
         // other handle has released them.
         unsafe {
-            drop(OwnedStr::adopt(self.err_file[i], ERR_FILE, ERR_LINE));
+            drop(OwnedStr::adopt(self.err_file[i], SeamFile::NULL, ERR_LINE));
             self.err_file[i] = core::ptr::null_mut();
-            drop(OwnedStr::adopt(self.err_func[i], ERR_FILE, ERR_LINE));
+            drop(OwnedStr::adopt(self.err_func[i], SeamFile::NULL, ERR_LINE));
             self.err_func[i] = core::ptr::null_mut();
         }
     }
@@ -357,12 +358,12 @@ impl ErrState {
         // fresh duplicate is taken through the seam and stored raw, and the slot's previous
         // buffer is released by `Drop`. The release-then-allocate order is the authority's.
         unsafe {
-            drop(OwnedStr::adopt(self.err_file[i], ERR_FILE, ERR_LINE));
+            drop(OwnedStr::adopt(self.err_file[i], SeamFile::NULL, ERR_LINE));
             self.err_file[i] = match dup_c(file) {
                 Some(buf) => buf.into_raw(),
                 None => core::ptr::null_mut(),
             };
-            drop(OwnedStr::adopt(self.err_func[i], ERR_FILE, ERR_LINE));
+            drop(OwnedStr::adopt(self.err_func[i], SeamFile::NULL, ERR_LINE));
             self.err_func[i] = match dup_c(func) {
                 Some(buf) => buf.into_raw(),
                 None => core::ptr::null_mut(),
@@ -377,7 +378,7 @@ impl ErrState {
             // Release the buffer this slot already owned before adopting the new one.
             // SAFETY: the MALLOCED flag says this state owns the pointer and no other
             // handle has released it; the new `data` is adopted raw below.
-            unsafe { drop(OwnedStr::adopt(self.err_data[i], ERR_FILE, ERR_LINE)) };
+            unsafe { drop(OwnedStr::adopt(self.err_data[i], SeamFile::NULL, ERR_LINE)) };
         }
         self.err_data[i] = data;
         self.err_data_size[i] = size;
@@ -534,7 +535,7 @@ const ERR_LINE: c_int = 0;
 /// `NULL`/`0` coordinates, or `None` when it answers NULL (the authority's refused
 /// `CRYPTO_malloc`).
 pub(crate) fn slot_buf_alloc(len: usize) -> Option<OwnedStr> {
-    OwnedStr::new(len, ERR_FILE, ERR_LINE, ERR_FILE, ERR_LINE)
+    OwnedStr::new(len, SeamFile::NULL, ERR_LINE, SeamFile::NULL, ERR_LINE)
 }
 
 /// A NUL-terminated duplicate of `s`, or `None` for NULL or empty input — the rule

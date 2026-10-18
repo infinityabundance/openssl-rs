@@ -60,6 +60,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::CRYPTO_memcmp;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_obj2nid;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_malloc;
@@ -68,6 +69,9 @@ use crate::runtime::secure::CRYPTO_secure_malloc;
 /// source-tree path with the build's relative prefix (D235).
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(
+    c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+);
 /// `ml_kem_codecs.c:388`, `ossl_ml_kem_d2i_PKCS8`'s `OPENSSL_secure_malloc(p8fmt->priv_length)`.
 const LINE_SECURE_MALLOC: c_int = 388;
 /// `ml_kem_codecs.c:421`, `ossl_ml_kem_i2d_pubkey`'s `OPENSSL_malloc(publen)`.
@@ -714,7 +718,7 @@ pub(crate) unsafe fn ossl_ml_kem_d2i_PKCS8(
     // SAFETY: `slots` is NULL or this frame's list; `p8inf` is live.
     unsafe {
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(OwnedBuf::adopt_plain(slots.cast(), FILE, 400));
+        drop(OwnedBuf::adopt_plain(slots.cast(), FILE_SEAM, 400));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
         if ret.is_null() {
             ossl_ml_kem_key_free(key);
@@ -751,7 +755,7 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_pubkey(key: *const MlKemKey, out: *mut *mut
         return 0;
     }
     // SAFETY: `out` is writable and the allocation is the authority's own.
-    let Some(p) = OwnedBuf::new(publen, FILE, LINE_MALLOC_PUB) else {
+    let Some(p) = OwnedBuf::new(publen, FILE_SEAM, LINE_MALLOC_PUB) else {
         return 0;
     };
     // SAFETY: `out` is writable per the contract.
@@ -864,7 +868,7 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
                 break 'end;
             }
 
-            let Some(buf_owned) = OwnedBuf::new(len as usize, FILE, LINE_MALLOC) else {
+            let Some(buf_owned) = OwnedBuf::new(len as usize, FILE_SEAM, LINE_MALLOC) else {
                 break 'end;
             };
             let buf = buf_owned.as_ptr();
@@ -946,7 +950,7 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
     }
 
     // SAFETY: `fmt_slots` is NULL or this frame's list.
-    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE, 552) });
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE_SEAM, 552) });
     ret
 }
 
@@ -997,7 +1001,7 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     }
                 }
                 if ossl_ml_kem_have_prvkey(key) {
-                    let Some(b) = OwnedBuf::new(prvlen, FILE, LINE_MALLOC_TO_TEXT_PRV) else {
+                    let Some(b) = OwnedBuf::new(prvlen, FILE_SEAM, LINE_MALLOC_TO_TEXT_PRV) else {
                         break 'end;
                     };
                     if ossl_ml_kem_encode_private_key(b.as_ptr(), prvlen, key) == 0 {
@@ -1018,7 +1022,7 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     break 'end;
                 }
 
-                let Some(b) = OwnedBuf::new(publen, FILE, LINE_MALLOC_TO_TEXT_PUB) else {
+                let Some(b) = OwnedBuf::new(publen, FILE_SEAM, LINE_MALLOC_TO_TEXT_PUB) else {
                     break 'end;
                 };
                 if ossl_ml_kem_encode_public_key(b.as_ptr(), publen, key) == 0

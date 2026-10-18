@@ -35,6 +35,7 @@ use core::mem::MaybeUninit;
 use core::ptr::{self, NonNull};
 
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority's `*_free` body for one `#[repr(C)]` context, without the block release
 /// [`OwnedCtx`]'s `Drop` performs. One impl per context type, so the owner runs the right
@@ -58,13 +59,23 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 ///     every operation the owner performs on it are sound for that value. This is the obligation
 ///     the safe [`OwnedCtx::zalloc`] leans on: it validates an authority `CRYPTO_zalloc` block with
 ///     no caller assertion, so `Self` must be a type whose zeroed state the authority's own
-///     constructor leaves.
+///     constructor leaves; and
+/// (c) **coordinate lifetime** — [`FILE`](CtxDestroy::FILE) is NULL or points at a NUL-terminated
+///     C string with static storage that remains valid for the entire program, because a
+///     caller-installed `CRYPTO_set_mem_functions` hook may read it during any release.
+///     [`SeamFile::from_static_ptr`] relies on this and cannot establish it.
 ///
 /// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
-/// `destroy_body` on a value that is not a valid `Self`. Either is undefined behaviour reachable
-/// without `unsafe` at the call site.
+/// `destroy_body` on a value that is not a valid `Self`; breaking (c) lets an allocator hook read a
+/// dangling file string during release. Each is undefined behaviour reachable without `unsafe` at
+/// the call site.
 pub(crate) unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this context's `CRYPTO_*` calls, or NULL where the authority passes none.
+    ///
+    /// An implementer must ensure this is NULL or a NUL-terminated string with static storage
+    /// that remains valid for the lifetime of every owner made from it. The owner converts it
+    /// once through [`SeamFile::from_static_ptr`], so the obligation stays at the unsafe trait
+    /// boundary rather than on a safe caller.
     const FILE: *const c_char = ptr::null();
     /// `__LINE__` for the context's allocation.
     const LINE_ALLOC: c_int = 0;
@@ -86,7 +97,7 @@ pub(crate) unsafe trait CtxDestroy: Sized {
 pub(crate) struct OwnedCtx<T: CtxDestroy> {
     ptr: NonNull<T>,
     /// The authority's `__FILE__` for this block's release.
-    file: *const c_char,
+    file: SeamFile,
     /// The authority's `__LINE__` for this block's release.
     line: c_int,
 }
@@ -108,9 +119,9 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// distinct site (`alloc_file`/`alloc_line` and `release_file`/`release_line` are the
     /// authority's own `CRYPTO_zalloc` and `CRYPTO_free` sites).
     pub(crate) fn zalloc_at(
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<OwnedCtx<T>> {
         // SAFETY: as `zalloc` -- the allocator zeroes the block, and implementer obligation (b)
@@ -138,8 +149,9 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// # Safety
     /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
     pub(crate) unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
-        // SAFETY: the caller establishes this function's contract.
-        unsafe { Self::from_raw_at(ptr, T::FILE, T::LINE_FREE) }
+        // SAFETY: the caller establishes this function's contract; `T: CtxDestroy`
+        // establishes that `T::FILE` is NULL or static, NUL-terminated storage.
+        unsafe { Self::from_raw_at(ptr, SeamFile::from_static_ptr(T::FILE), T::LINE_FREE) }
     }
 
     /// Reclaim a block handed to the C caller, releasing it at the given authority site.
@@ -148,7 +160,7 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
     pub(crate) unsafe fn from_raw_at(
         ptr: *mut T,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<OwnedCtx<T>> {
         NonNull::new(ptr).map(|ptr| OwnedCtx {
@@ -174,7 +186,11 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
         // `*_free` body.
         unsafe {
             T::destroy_body(self.ptr.as_ptr());
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                self.file.as_ptr(),
+                self.line,
+            );
         }
     }
 }
@@ -191,7 +207,7 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
 pub(crate) struct RawCtx<T: CtxDestroy> {
     ptr: NonNull<MaybeUninit<T>>,
     /// The authority's `__FILE__` for this block's release.
-    file: *const c_char,
+    file: SeamFile,
     /// The authority's `__LINE__` for this block's release.
     line: c_int,
 }
@@ -201,20 +217,23 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// `None` when it answers NULL -- the authority's `CRYPTO_malloc` for the blocks it does not
     /// zero (`ossl_core_bio.c`'s handle and `linebuffer.c`'s context).
     pub(crate) fn malloc() -> Option<RawCtx<T>> {
-        Self::malloc_at(T::FILE, T::LINE_ALLOC, T::FILE, T::LINE_FREE)
+        // SAFETY: `T: CtxDestroy` establishes that `T::FILE` is NULL or static,
+        // NUL-terminated storage.
+        let file = unsafe { SeamFile::from_static_ptr(T::FILE) };
+        Self::malloc_at(file, T::LINE_ALLOC, file, T::LINE_FREE)
     }
 
     /// Allocate a fresh, **uninitialised** block at the caller's allocation and release
     /// coordinates (`CRYPTO_malloc`'s `file`/`line` and the later `CRYPTO_free`'s).
     pub(crate) fn malloc_at(
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<RawCtx<T>> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), alloc_file, alloc_line)
+        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
             .cast::<MaybeUninit<T>>();
         NonNull::new(raw).map(|ptr| RawCtx {
             ptr,
@@ -228,20 +247,23 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// `RawCtx`: zeroing is not, by itself, a valid `T` for every context, so the caller still
     /// validates it with [`RawCtx::assume_init`].
     pub(crate) fn zalloc() -> Option<RawCtx<T>> {
-        Self::zalloc_at(T::FILE, T::LINE_ALLOC, T::FILE, T::LINE_FREE)
+        // SAFETY: `T: CtxDestroy` establishes that `T::FILE` is NULL or static,
+        // NUL-terminated storage.
+        let file = unsafe { SeamFile::from_static_ptr(T::FILE) };
+        Self::zalloc_at(file, T::LINE_ALLOC, file, T::LINE_FREE)
     }
 
     /// Allocate a fresh, zeroed block at the caller's allocation and release coordinates
     /// (`CRYPTO_zalloc`'s `file`/`line` and the later `CRYPTO_free`'s).
     pub(crate) fn zalloc_at(
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<RawCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), alloc_file, alloc_line)
+        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
             .cast::<MaybeUninit<T>>();
         NonNull::new(raw).map(|ptr| RawCtx {
             ptr,
@@ -290,7 +312,13 @@ impl<T: CtxDestroy> Drop for RawCtx<T> {
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
         // single release, and the authority's own bare `CRYPTO_free` is the whole release.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                self.file.as_ptr(),
+                self.line,
+            )
+        };
     }
 }
 

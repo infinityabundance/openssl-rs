@@ -121,6 +121,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_X509_STORE_CTX,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_commonName, NID_delta_crl,
     NID_issuing_distribution_point, NID_subject_alt_name, OBJ_nid2sn, OBJ_obj2nid,
@@ -1499,7 +1500,7 @@ pub unsafe extern "C" fn X509_STORE_CTX_new_ex(
     // The context block, allocated through the crate's allocator seam; `Drop` is its single release
     // on the refusal below and `into_raw` hands it out on success.
     let Some(mut ctx) =
-        OwnedCtx::<X509StoreCtx>::zalloc_at(FILE.as_ptr(), 2695, FILE.as_ptr(), 2726)
+        OwnedCtx::<X509StoreCtx>::zalloc_at(SeamFile::new(FILE), 2695, SeamFile::new(FILE), 2726)
     else {
         return ptr::null_mut();
     };
@@ -1542,7 +1543,7 @@ pub unsafe extern "C" fn X509_STORE_CTX_free(ctx: *mut X509StoreCtx) {
     unsafe {
         drop(OwnedCtx::<X509StoreCtx>::from_raw_at(
             ctx,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             2726,
         ))
     };

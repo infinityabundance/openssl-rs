@@ -43,6 +43,7 @@ use crate::runtime::err::err_reasons::{
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -434,7 +435,7 @@ pub(crate) unsafe fn i2o_SCT_signature(sct: *const Sct, out: *mut *mut c_uchar) 
                 p
             } else {
                 // The block is this call's own until it is handed to the caller's slot below.
-                let Some(buf) = OwnedBuf::new(len, ptr::null(), 0) else {
+                let Some(buf) = OwnedBuf::new(len, SeamFile::NULL, 0) else {
                     return -1;
                 };
                 let p = buf.into_raw();
@@ -498,16 +499,16 @@ pub unsafe extern "C" fn i2o_SCT(sct: *const Sct, out: *mut *mut c_uchar) -> c_i
             let p = *out;
             *out = p.add(len);
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            pstart = OwnedBuf::adopt_plain_nullable(ptr::null_mut(), ptr::null(), 0);
+            pstart = OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::NULL, 0);
             p
         } else {
-            let Some(buf) = OwnedBuf::new(len, ptr::null(), 0) else {
+            let Some(buf) = OwnedBuf::new(len, SeamFile::NULL, 0) else {
                 // The authority's failure tail frees the still-NULL `pstart`; an empty handle is
                 // that same no-op `free(NULL)`.
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                 drop(OwnedBuf::adopt_plain_nullable(
                     ptr::null_mut(),
-                    ptr::null(),
+                    SeamFile::NULL,
                     0,
                 ));
                 return -1;
@@ -712,7 +713,7 @@ pub unsafe extern "C" fn i2o_SCT_LIST(a: *const OpenSslStack, pp: *mut *mut c_uc
                     raise_site(&CT_OCT_328);
                     return -1;
                 }
-                let Some(buf) = OwnedBuf::new(len as usize, ptr::null(), 0) else {
+                let Some(buf) = OwnedBuf::new(len as usize, SeamFile::NULL, 0) else {
                     return -1;
                 };
                 *pp = buf.as_ptr();
@@ -846,7 +847,7 @@ pub unsafe extern "C" fn i2d_SCT_LIST(a: *const OpenSslStack, out: *mut *mut c_u
     // The block `i2o_SCT_LIST` left in the octet string's `data` is this call's own; the handle
     // releases it here.
     // SAFETY: `(*octp).data` is NULL or the block `i2o_SCT_LIST` allocated and no one else owns.
-    let data = unsafe { OwnedBuf::adopt_plain_nullable((*octp).data.cast(), ptr::null(), 0) };
+    let data = unsafe { OwnedBuf::adopt_plain_nullable((*octp).data.cast(), SeamFile::NULL, 0) };
     drop(data);
     len
 }

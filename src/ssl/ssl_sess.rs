@@ -81,6 +81,7 @@ use crate::runtime::ex_data::{
     CRYPTO_set_ex_data, CRYPTO_EX_INDEX_SSL_SESSION,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
@@ -105,6 +106,7 @@ use crate::x509::x_x509::{X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_sess.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_sess.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `SSL_R_SSL_SESSION_ID_TOO_LONG` — `sslerr.h:296`.
@@ -215,7 +217,8 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
         // The session block, allocated through the crate's allocator seam; `Drop` is its single
         // release on the refusal below and `into_raw` hands it out on success. `ss` is the block's
         // stable address.
-        let Some(ss_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE, 109, FILE, 930) else {
+        let Some(ss_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE_SEAM, 109, FILE_SEAM, 930)
+        else {
             return ptr::null_mut();
         };
         let ss = ss_owner.as_ptr();
@@ -259,7 +262,7 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
     // on every refusal below and `into_raw` hands it out on success. `dest` is the block's stable
     // address, and the authority's `goto err` ladder reaches its destructor (`SSL_SESSION_free`),
     // which is `OwnedCtx`'s `Drop`.
-    let Some(dest_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE, 140, FILE, 930) else {
+    let Some(dest_owner) = OwnedCtx::<SslSession>::zalloc_at(FILE_SEAM, 140, FILE_SEAM, 930) else {
         return ptr::null_mut();
     };
     let dest = dest_owner.as_ptr();
@@ -451,7 +454,7 @@ pub unsafe extern "C" fn SSL_SESSION_free(ss: *mut SslSession) {
         // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `ss` is owned
         // here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own
         // `SSL_SESSION_free` body followed by the block release.
-        unsafe { drop(OwnedCtx::<SslSession>::from_raw_at(ss, FILE, 930)) };
+        unsafe { drop(OwnedCtx::<SslSession>::from_raw_at(ss, FILE_SEAM, 930)) };
     })
 }
 

@@ -47,6 +47,7 @@ use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::{X509V3_R_BAD_OBJECT, X509V3_R_INVALID_SYNTAX};
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_info_access, NID_sinfo_access, OBJ_txt2obj};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
@@ -366,7 +367,11 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
             // The authority's `OPENSSL_free(vtmp->name)` at `:88`: hand the old name to an owner
             // whose `Drop` is that release, then install the fresh block, which `vtmp->name` now
             // owns (released later by the `CONF_VALUE` destructor).
-            drop(OwnedStr::adopt((*vtmp).name, FILE.as_ptr(), LINE_FREE_NAME));
+            drop(OwnedStr::adopt(
+                (*vtmp).name,
+                SeamFile::new(FILE),
+                LINE_FREE_NAME,
+            ));
             (*vtmp).name = ntmp;
         }
         i += 1;
@@ -468,7 +473,7 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
                     FILE.as_ptr(),
                     LINE_STRNDUP,
                 ),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 LINE_FREE_OBJ,
             )
         };

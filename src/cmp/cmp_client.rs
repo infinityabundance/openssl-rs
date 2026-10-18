@@ -70,6 +70,7 @@ use crate::x509::x_x509::{X509_free, X509};
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_client.c";
 
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 
 /// `OSSL_CMP_PKIFAILUREINFO_incorrectData` — `include/openssl/cmp.h:118`.
@@ -666,7 +667,7 @@ unsafe fn send_receive_check(
             // The joined error-details text is the authority's own `OPENSSL_free(text)` at line
             // 243; the handle's `Drop` is that release.
             // SAFETY: `text` is NULL or this call's own.
-            let _text = unsafe { OwnedStr::adopt(text, FILE.as_ptr(), 243) };
+            let _text = unsafe { OwnedStr::adopt(text, SeamFile::new(FILE), 243) };
         }
         // SAFETY: `ctx` is live.
         if unsafe { (*ctx).status } != OSSL_CMP_PKISTATUS_rejection {
@@ -1193,7 +1194,7 @@ unsafe fn cert_response(
         let _subj = unsafe {
             OwnedStr::adopt(
                 X509_NAME_oneline(X509_get_subject_name((*ctx).new_cert), ptr::null_mut(), 0),
-                FILE.as_ptr(),
+                SeamFile::new(FILE),
                 801,
             )
         };

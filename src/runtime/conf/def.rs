@@ -68,6 +68,7 @@ use crate::runtime::err::{
 };
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push,
@@ -725,13 +726,17 @@ unsafe fn str_copy(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             (*pto).cast(),
-            ptr::null(),
+            SeamFile::NULL,
             0,
         ));
         *pto = (*buf).data;
         // Only the `BufMem` header is released: `data` now belongs to `*pto`.
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(OwnedBuf::adopt_plain_nullable(buf.cast(), ptr::null(), 0));
+        drop(OwnedBuf::adopt_plain_nullable(
+            buf.cast(),
+            SeamFile::NULL,
+            0,
+        ));
     }
     1
 }
@@ -834,7 +839,7 @@ pub extern "C" fn NCONF_WIN32() -> *mut ConfMethod {
 unsafe extern "C" fn def_create(meth: *mut ConfMethod) -> *mut Conf {
     // The `CONF` block is this frame's own; its handle's `Drop` is the single release of the
     // failure path below.
-    let Some(ret) = OwnedBuf::new(core::mem::size_of::<Conf>(), ptr::null(), 0) else {
+    let Some(ret) = OwnedBuf::new(core::mem::size_of::<Conf>(), SeamFile::NULL, 0) else {
         return ptr::null_mut();
     };
     let conf = ret.as_ptr().cast::<Conf>();
@@ -909,7 +914,13 @@ unsafe extern "C" fn def_destroy(conf: *mut Conf) -> c_int {
     // SAFETY: `conf` is live per the caller's contract.
     if unsafe { def_destroy_data(conf) } != 0 {
         // SAFETY: `conf` came from `def_create`'s seam allocation and no one else owns it.
-        unsafe { drop(OwnedBuf::adopt_plain_nullable(conf.cast(), ptr::null(), 0)) };
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                conf.cast(),
+                SeamFile::NULL,
+                0,
+            ))
+        };
         return 1;
     }
     0
@@ -1092,7 +1103,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                             drop(OwnedBuf::adopt_plain_nullable(
                                 dirpath.cast(),
-                                ptr::null(),
+                                SeamFile::NULL,
                                 0,
                             ))
                         };
@@ -1308,7 +1319,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                         drop(OwnedBuf::adopt_plain_nullable(
                             (*conf).includedir.cast(),
-                            ptr::null(),
+                            SeamFile::NULL,
                             0,
                         ));
                         (*conf).includedir = CRYPTO_strdup(pval, ptr::null(), 0);
@@ -1363,13 +1374,13 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                         let newlen = unsafe { sys::strlen(include_dir) + sys::strlen(include) + 2 };
                         // The joined path is this frame's own until `into_raw` hands it to
                         // `include_path`; the handle's `Drop` is its release on the error below.
-                        let Some(joined) = OwnedBuf::new(newlen, ptr::null(), 0) else {
+                        let Some(joined) = OwnedBuf::new(newlen, SeamFile::NULL, 0) else {
                             // SAFETY: `include` is a `str_copy` buffer owned here.
                             unsafe {
                                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                                 drop(OwnedBuf::adopt_plain_nullable(
                                     include.cast(),
-                                    ptr::null(),
+                                    SeamFile::NULL,
                                     0,
                                 ))
                             };
@@ -1387,7 +1398,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                             drop(OwnedBuf::adopt_plain_nullable(
                                 include.cast(),
-                                ptr::null(),
+                                SeamFile::NULL,
                                 0,
                             ));
                         }
@@ -1409,7 +1420,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                         drop(OwnedBuf::adopt_plain_nullable(
                             include_path.cast(),
-                            ptr::null(),
+                            SeamFile::NULL,
                             0,
                         ))
                     };
@@ -1426,7 +1437,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
                         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
                         drop(OwnedBuf::adopt_plain_nullable(
                             include_path.cast(),
-                            ptr::null(),
+                            SeamFile::NULL,
                             0,
                         ))
                     };
@@ -1490,7 +1501,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
             // The entry block is this frame's own until `_CONF_add_string` takes it over; the
             // error path (`finish_with_error`) releases it through the seam. `into_raw` hands it
             // to `v`.
-            let Some(fresh) = OwnedBuf::new(core::mem::size_of::<ConfValue>(), ptr::null(), 0)
+            let Some(fresh) = OwnedBuf::new(core::mem::size_of::<ConfValue>(), SeamFile::NULL, 0)
             else {
                 failed = true;
                 break 'outer;
@@ -1553,7 +1564,7 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 section.cast(),
-                ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             OPENSSL_sk_free(biosk);
@@ -1617,7 +1628,7 @@ unsafe fn finish_with_error(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             section.cast(),
-            ptr::null(),
+            SeamFile::NULL,
             0,
         ));
         // The first element of the stack is the caller's BIO, so it is popped and
@@ -1631,7 +1642,7 @@ unsafe fn finish_with_error(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         drop(OwnedBuf::adopt_plain_nullable(
             dirpath.cast(),
-            ptr::null(),
+            SeamFile::NULL,
             0,
         ));
         if !(*dirctx).is_null() {
@@ -1657,17 +1668,17 @@ unsafe fn finish_with_error(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*v).name.cast(),
-                ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
             drop(OwnedBuf::adopt_plain_nullable(
                 (*v).value.cast(),
-                ptr::null(),
+                SeamFile::NULL,
                 0,
             ));
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-            drop(OwnedBuf::adopt_plain_nullable(v.cast(), ptr::null(), 0));
+            drop(OwnedBuf::adopt_plain_nullable(v.cast(), SeamFile::NULL, 0));
         }
     }
     0
@@ -1817,7 +1828,7 @@ unsafe fn get_next_file(path: *const c_char, dirctx: *mut *mut OpenSslDirCtx) ->
         }
         let newlen = pathlen + namelen + 2;
         // SAFETY: `newlen` zeroed bytes.
-        let Some(newpath) = OwnedBuf::new_zeroed(newlen, ptr::null(), 0) else {
+        let Some(newpath) = OwnedBuf::new_zeroed(newlen, SeamFile::NULL, 0) else {
             break;
         };
         let newpath_ptr = newpath.as_ptr().cast::<c_char>();

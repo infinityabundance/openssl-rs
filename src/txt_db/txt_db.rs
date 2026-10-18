@@ -72,6 +72,7 @@ use crate::runtime::lhash::{
     OpenSslLhash,
 };
 use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
@@ -81,6 +82,7 @@ use crate::runtime::stack::{
 /// The authority's `OPENSSL_FILE` for this unit, so an allocation a caller's
 /// `CRYPTO_set_mem_functions` sees carries the authority's coordinate.
 const FILE: *const c_char = c"crypto/txt_db/txt_db.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/txt_db/txt_db.c");
 
 /// `BUFSIZE` — `crypto/txt_db/txt_db.c:18`.
 const BUFSIZE: c_int = 512;
@@ -180,17 +182,17 @@ unsafe fn read_err(buf: *mut BufMem, ret: *mut TxtDb) -> *mut TxtDb {
             OPENSSL_sk_free((*ret).data);
             drop(OwnedBuf::adopt_plain_nullable(
                 (*ret).index.cast(),
-                FILE,
+                FILE_SEAM,
                 READ_FREE_INDEX,
             ));
             drop(OwnedBuf::adopt_plain_nullable(
                 (*ret).qual.cast(),
-                FILE,
+                FILE_SEAM,
                 READ_FREE_QUAL,
             ));
             drop(OwnedBuf::adopt_plain_nullable(
                 ret.cast(),
-                FILE,
+                FILE_SEAM,
                 READ_FREE_DB,
             ));
         }
@@ -322,7 +324,8 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             // A fresh block of `add + offset` bytes: the pointer array and the
             // NUL-terminated line packed after it. The handle owns the block and releases it on
             // every exit below that does not hand it to the row's stack.
-            let Some(mut row) = OwnedBuf::new((add + offset) as usize, FILE, MALLOC_ROW) else {
+            let Some(mut row) = OwnedBuf::new((add + offset) as usize, FILE_SEAM, MALLOC_ROW)
+            else {
                 // SAFETY: `buf` and `ret` are live.
                 break 'err unsafe { read_err(buf, ret) };
             };
@@ -765,7 +768,7 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
             unsafe {
                 drop(OwnedBuf::adopt_plain_nullable(
                     (*db).index.cast(),
-                    FILE,
+                    FILE_SEAM,
                     FREE_INDEX,
                 ))
             };
@@ -774,7 +777,7 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
         unsafe {
             drop(OwnedBuf::adopt_plain_nullable(
                 (*db).qual.cast(),
-                FILE,
+                FILE_SEAM,
                 FREE_QUAL,
             ))
         };
@@ -796,7 +799,7 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                         unsafe {
                             drop(OwnedBuf::adopt_plain_nullable(
                                 (*p.add(n as usize)).cast(),
-                                FILE,
+                                FILE_SEAM,
                                 FREE_FIELD_NEW,
                             ))
                         };
@@ -812,7 +815,7 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                             unsafe {
                                 drop(OwnedBuf::adopt_plain_nullable(
                                     field.cast(),
-                                    FILE,
+                                    FILE_SEAM,
                                     FREE_FIELD_EXT,
                                 ))
                             };
@@ -820,13 +823,25 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                     }
                 }
                 // SAFETY: the row block is this object's own allocation.
-                unsafe { drop(OwnedBuf::adopt_plain_nullable(p.cast(), FILE, FREE_ROW)) };
+                unsafe {
+                    drop(OwnedBuf::adopt_plain_nullable(
+                        p.cast(),
+                        FILE_SEAM,
+                        FREE_ROW,
+                    ))
+                };
                 i -= 1;
             }
             // SAFETY: `data` is a live stack whose elements are released above.
             unsafe { OPENSSL_sk_free((*db).data) };
         }
         // SAFETY: `db` was allocated by `CRYPTO_malloc` in `TXT_DB_read`.
-        unsafe { drop(OwnedBuf::adopt_plain_nullable(db.cast(), FILE, FREE_DB)) };
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                db.cast(),
+                FILE_SEAM,
+                FREE_DB,
+            ))
+        };
     });
 }

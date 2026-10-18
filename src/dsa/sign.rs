@@ -45,6 +45,7 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::owned_buf::OwnedBuf;
 
 use super::{Dsa, DsaSig};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -52,6 +53,8 @@ use super::{Dsa, DsaSig};
 /// `../../src/openssl-3.6.4/` prefix. It reaches an application through
 /// `CRYPTO_set_mem_functions`, so it is part of the contract and `RT-DSA` compares it.
 const FILE_DSA_SIGN: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_sign.c".as_ptr();
+const FILE_DSA_SIGN_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/dsa/dsa_sign.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -589,7 +592,7 @@ pub unsafe extern "C" fn DSA_verify(
         drop(OwnedBuf::adopt_cleansed(
             der,
             derlen.max(0) as usize,
-            FILE_DSA_SIGN,
+            FILE_DSA_SIGN_SEAM,
             LINE,
         ));
     }

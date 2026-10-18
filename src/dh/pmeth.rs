@@ -68,11 +68,13 @@ use crate::rand::sys::atoi;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_dup, OBJ_sn2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/dh/dh_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c");
 
 /// `pkey_dh_init`'s `OPENSSL_zalloc(sizeof(*dctx))` (`:58`).
 const LINE_ZALLOC_DCTX: c_int = 58;
@@ -381,7 +383,7 @@ unsafe extern "C" fn pkey_dh_ctrl(
             unsafe {
                 drop(OwnedBuf::adopt_plain(
                     (*dctx).kdf_ukm,
-                    FILE,
+                    FILE_SEAM,
                     LINE_FREE_KDF_UKM_CTRL,
                 ));
                 (*dctx).kdf_ukm = p2.cast::<u8>();
@@ -755,7 +757,7 @@ unsafe extern "C" fn pkey_dh_derive(
         // `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
         // authority's own cleansing `OPENSSL_clear_free` at `:453`.
         let Some(z_buf) =
-            OwnedBuf::new_cleansed_at(zlen as usize, FILE, LINE_MALLOC_Z, LINE_CLEAR_FREE_Z)
+            OwnedBuf::new_cleansed_at(zlen as usize, FILE_SEAM, LINE_MALLOC_Z, LINE_CLEAR_FREE_Z)
         else {
             return 0;
         };

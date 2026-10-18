@@ -108,6 +108,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 // ---------------------------------------------------------------------------------------------
 // The constants — `include/openssl/hpke.h`, `include/internal/hpke_util.h` and `core_names.h`.
@@ -215,7 +216,10 @@ const SECRET_LABEL: &[u8] = b"secret";
 /// `crypto/hpke/hpke.c` and `crypto/hpke/hpke_util.c` — the two coordinates the crate's
 /// allocations are attributed to. The raises carry their own sites.
 const FILE_HPKE: *const c_char = c"../../src/openssl-3.6.4/crypto/hpke/hpke.c".as_ptr();
+const FILE_HPKE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/hpke/hpke.c");
 const FILE_HPKE_UTIL: *const c_char = c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c".as_ptr();
+const FILE_HPKE_UTIL_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c");
 
 // ---------------------------------------------------------------------------------------------
 // The information tables — `hpke_util.c:63`, `:88`, `:104`.
@@ -733,7 +737,7 @@ pub(crate) unsafe fn hpke_labeled_extract(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
         OwnedBuf::adopt_plain(
             CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>(),
-            FILE_HPKE_UTIL,
+            FILE_HPKE_UTIL_SEAM,
             338,
         )
     }) else {
@@ -828,7 +832,7 @@ pub(crate) unsafe fn hpke_labeled_expand(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
         OwnedBuf::adopt_plain(
             CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>(),
-            FILE_HPKE_UTIL,
+            FILE_HPKE_UTIL_SEAM,
             388,
         )
     }) else {
@@ -2291,7 +2295,9 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
     }
     // SAFETY: the block is allocated through the crate's allocator seam and owned until handed to
     // the caller below; on either refusal `ctx_owner`'s `Drop` is the authority's `goto err`.
-    let Some(ctx_owner) = OwnedCtx::<OsslHpkeCtx>::zalloc_at(FILE_HPKE, 831, FILE_HPKE, 858) else {
+    let Some(ctx_owner) =
+        OwnedCtx::<OsslHpkeCtx>::zalloc_at(FILE_HPKE_SEAM, 831, FILE_HPKE_SEAM, 858)
+    else {
         return ptr::null_mut();
     };
     let ctx = ctx_owner.as_ptr();
@@ -2340,7 +2346,13 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_HPKE_CTX_free(ctx: *mut OsslHpkeCtx) {
     // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
-    unsafe { drop(OwnedCtx::<OsslHpkeCtx>::from_raw_at(ctx, FILE_HPKE, 878)) };
+    unsafe {
+        drop(OwnedCtx::<OsslHpkeCtx>::from_raw_at(
+            ctx,
+            FILE_HPKE_SEAM,
+            878,
+        ))
+    };
 }
 
 /// `int OSSL_HPKE_CTX_set1_psk(OSSL_HPKE_CTX *ctx, const char *pskid,
@@ -2582,7 +2594,7 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_authpub(
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
             OwnedBuf::adopt_plain(
                 CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>(),
-                FILE_HPKE,
+                FILE_HPKE_SEAM,
                 1025,
             )
         }) else {

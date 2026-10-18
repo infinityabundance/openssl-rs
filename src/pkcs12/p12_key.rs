@@ -59,6 +59,7 @@ use crate::params::{
 };
 use crate::pkcs12::p12_utl::{OPENSSL_asc2uni, OPENSSL_utf82uni};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_key.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
@@ -124,8 +125,9 @@ pub unsafe extern "C" fn PKCS12_key_gen_asc_ex(
     }
     // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
     // owner's `Drop` is its single, cleansing release at `p12_key.c:37`.
-    let unipass =
-        unsafe { OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, FILE.as_ptr(), 37) };
+    let unipass = unsafe {
+        OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, SeamFile::new(FILE), 37)
+    };
     // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
     // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
@@ -222,8 +224,9 @@ pub unsafe extern "C" fn PKCS12_key_gen_utf8_ex(
     }
     // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
     // owner's `Drop` is its single, cleansing release at `p12_key.c:67`.
-    let unipass =
-        unsafe { OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, FILE.as_ptr(), 67) };
+    let unipass = unsafe {
+        OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, SeamFile::new(FILE), 67)
+    };
     // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
     // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
@@ -504,7 +507,7 @@ mod adv_probe {
         unsafe { adv_alloc::arm_cleansed_free(LEN) };
         // SAFETY: `p` is the live `LEN`-byte block and the shared owner becomes its sole owner;
         // `Drop` releases it exactly once through the authority's `CRYPTO_clear_free`.
-        drop(unsafe { OwnedBuf::adopt_cleansed(p, LEN, FILE.as_ptr(), 37) });
+        drop(unsafe { OwnedBuf::adopt_cleansed(p, LEN, SeamFile::new(FILE), 37) });
 
         adv_alloc::assert_not_cleansed();
         adv_alloc::assert_no_double_free();

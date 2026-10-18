@@ -99,12 +99,14 @@ use super::{
     ossl_provider_new, ossl_provider_set_module_path, OsslProvider, OsslProviderInfo,
 };
 use crate::context::lib_ctx_get_data;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/provider_conf.c`, for the coordinates of every allocation this module makes.
 ///
 /// `OPENSSL_zalloc` and `OPENSSL_strdup` are macros over the `CRYPTO_*` family that fill in
 /// `OPENSSL_FILE`/`OPENSSL_LINE` at the call site.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_conf.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/provider_conf.c");
 
 /// `PROVIDER_CONF_GLOBAL *pcgbl = OPENSSL_zalloc(sizeof(*pcgbl))` in
 /// `ossl_prov_conf_ctx_new`.
@@ -182,7 +184,8 @@ unsafe impl CtxDestroy for ProviderConfGlobal {
 /// `libctx` is accepted and unused; the authority's argument is the context being built, which
 /// the caller in `context_init` is holding, so it is live.
 pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut ProviderConfGlobal {
-    let Some(mut raw) = RawCtx::<ProviderConfGlobal>::zalloc_at(FILE, L_PCGBL, FILE, L_PCGBL_ERR)
+    let Some(mut raw) =
+        RawCtx::<ProviderConfGlobal>::zalloc_at(FILE_SEAM, L_PCGBL, FILE_SEAM, L_PCGBL_ERR)
     else {
         return ptr::null_mut();
     };
@@ -222,7 +225,7 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_free(vpcgbl: *mut c_void) {
     // has not already released; `OwnedCtx`'s `Drop` runs the authority's own member release
     // (`activated_providers`, the lock) followed by the block release. NULL is `None` and a no-op,
     // matching the authority's own `free(NULL)`.
-    drop(unsafe { OwnedCtx::<ProviderConfGlobal>::from_raw_at(pcgbl, FILE, L_PCGBL_FREE) });
+    drop(unsafe { OwnedCtx::<ProviderConfGlobal>::from_raw_at(pcgbl, FILE_SEAM, L_PCGBL_FREE) });
 }
 
 /// The `ossl_provider_free` callback in the shape `OPENSSL_sk_pop_free` takes. The authority

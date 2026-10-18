@@ -93,6 +93,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::OpenSslStack;
 use crate::selftest::OsslCallback;
@@ -275,7 +276,7 @@ pub unsafe extern "C" fn OSSL_DECODER_free(decoder: *mut OsslDecoder) {
     unsafe {
         // The name block is adopted here so its single release is the handle's `Drop`, at the
         // authority's own site.
-        drop(OwnedStr::adopt((*decoder).base.name, ptr::null(), 0));
+        drop(OwnedStr::adopt((*decoder).base.name, SeamFile::NULL, 0));
         crate::property::parse::ossl_property_free((*decoder).base.parsed_propdef);
         crate::provider::ossl_provider_free((*decoder).base.prov);
         CRYPTO_free(decoder.cast(), ptr::null(), 0);
@@ -317,7 +318,7 @@ pub(crate) unsafe fn ossl_decoder_from_algorithm(
     // The name is a member buffer released by `OSSL_DECODER_free`; adopt it, then hand it to the
     // field, so no path here writes a `CRYPTO_free`.
     // SAFETY: `name` is NULL or the helper's fresh block.
-    let Some(name) = (unsafe { OwnedStr::adopt(name, ptr::null(), 0) }) else {
+    let Some(name) = (unsafe { OwnedStr::adopt(name, SeamFile::NULL, 0) }) else {
         // SAFETY: `decoder` is live and owned here.
         unsafe { OSSL_DECODER_free(decoder) };
         return ptr::null_mut();

@@ -44,6 +44,7 @@ use crate::runtime::stack::{
 };
 
 use super::types::{Conf, ConfValue};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The `HashFunc` type `OPENSSL_LH_new` expects.
 type LhHash = unsafe extern "C" fn(*const c_void) -> core::ffi::c_ulong;
@@ -475,7 +476,7 @@ pub(crate) unsafe fn _CONF_free_data(conf: *mut Conf) {
         return;
     }
     // SAFETY: `conf` is live; `includedir` is NULL or a `CRYPTO_malloc` buffer.
-    drop(unsafe { OwnedStr::adopt((*conf).includedir, ptr::null(), 0) });
+    drop(unsafe { OwnedStr::adopt((*conf).includedir, SeamFile::NULL, 0) });
     // SAFETY: `conf` is live.
     let data = unsafe { (*conf).data };
     if data.is_null() {
@@ -520,7 +521,7 @@ pub(crate) unsafe fn _CONF_new_section(conf: *mut Conf, section: *const c_char) 
     };
     // SAFETY: `section` is NUL-terminated per the caller's contract.
     let len = unsafe { sys::strlen(section) } + 1;
-    let Some(name) = OwnedStr::new(len, ptr::null(), 0, ptr::null(), 0) else {
+    let Some(name) = OwnedStr::new(len, SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         // SAFETY: `sk` is a live empty stack. The authority's path would free the
         // *uninitialised* `v->section` here; not doing so is the recorded safer divergence.
         // `v`'s `Drop` is the authority's own `err:`-label release of the block alone.

@@ -87,10 +87,12 @@ use crate::selftest::{
 };
 
 use crate::ec::backend::ossl_ec_key_dup;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The translation-unit coordinate the `OPENSSL_free`/`OPENSSL_clear_free`/`OPENSSL_malloc` sites
 /// in this unit are attributed to, as the allocator reports them.
 const FILE: *const c_char = c"crypto/ec/ec_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/ec/ec_key.c");
 
 /// `OSSL_SELF_TEST_TYPE_PCT` — `include/openssl/self_test.h:32`.
 const OSSL_SELF_TEST_TYPE_PCT: &core::ffi::CStr = c"Conditional_PCT";
@@ -278,7 +280,7 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         BN_clear_free((*r).priv_key);
         // `OPENSSL_free(r->propq)`, line 101; the handle's `Drop` is that release.
         // SAFETY: `(*r).propq` is NULL or this object's own block.
-        drop(OwnedBuf::adopt_plain((*r).propq.cast(), FILE, 101));
+        drop(OwnedBuf::adopt_plain((*r).propq.cast(), FILE_SEAM, 101));
         // `OPENSSL_clear_free((void *)r, sizeof(EC_KEY))`, line 103.
         CRYPTO_clear_free(r.cast(), core::mem::size_of::<EcKey>(), FILE, 103);
     }
@@ -1837,7 +1839,7 @@ pub unsafe extern "C" fn EC_KEY_priv2buf(eckey: *const EcKey, pbuf: *mut *mut c_
         // The buffer, allocated through the crate's allocator seam at the authority's own line 1019;
         // its release is the authority's `OPENSSL_free(buf)` at line 1023, run by the handle's `Drop`
         // on the failure path below and given up to `*pbuf` on success.
-        let Some(buf) = OwnedBuf::new_plain_released(len, FILE, 1019, FILE, 1023) else {
+        let Some(buf) = OwnedBuf::new_plain_released(len, FILE_SEAM, 1019, FILE_SEAM, 1023) else {
             return 0;
         };
         len = EC_KEY_priv2oct(eckey, buf.as_ptr(), len);

@@ -35,6 +35,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for the two printers.
@@ -181,7 +182,7 @@ pub unsafe extern "C" fn ASN1_bn_print(
 
         let buflen = nbytes as usize + 1;
         // The local owner is the authority's single cleansing free on both exit paths.
-        let Some(buf) = OwnedBuf::new_cleansed(buflen, FILE.as_ptr(), LINE) else {
+        let Some(buf) = OwnedBuf::new_cleansed(buflen, SeamFile::new(FILE), LINE) else {
             return 0;
         };
         // SAFETY: `buf` owns `buflen` bytes and `buflen >= 2`.

@@ -56,6 +56,7 @@ use crate::runtime::err::{
     peek_last_lib, peek_last_reason, raise_site, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::CRYPTO_calloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
@@ -99,6 +100,7 @@ const BN_R_NO_INVERSE: c_int = 108;
 /// unreachable on this profile (`pairwise_test` is always 0 outside `FIPS_MODULE`),
 /// but the constant is the one the authority's own call site would report.
 const FILE_RSA_GEN: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c".as_ptr();
+const FILE_RSA_GEN_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -113,7 +115,7 @@ fn calloc(num: usize, size: usize) -> Option<OwnedBuf> {
     let raw = CRYPTO_calloc(num, size, FILE_RSA_GEN, LINE).cast::<c_uchar>();
     // SAFETY: `raw` is NULL or a live zeroed block the crate's `CRYPTO_*` seam allocated in full
     // and no other owner will release it.
-    unsafe { OwnedBuf::adopt_plain(raw, FILE_RSA_GEN, LINE) }
+    unsafe { OwnedBuf::adopt_plain(raw, FILE_RSA_GEN_SEAM, LINE) }
 }
 
 /// `##__VA_ARGS__`-free `OPENSSL_FILE`/`OPENSSL_LINE` for the two `OPENSSL_free`

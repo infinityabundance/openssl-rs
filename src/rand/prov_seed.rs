@@ -45,11 +45,13 @@ use crate::rand::unix::{ossl_pool_acquire_entropy, ossl_pool_add_nonce_data};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 
 /// `crypto/rand/prov_seed.c`, as the authority's compiler spelled it.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c");
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
@@ -218,7 +220,7 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         return unsafe { ossl_rand_get_nonce(ctx, pout, min_len, max_len, salt, salt_len) };
     }
 
-    let buf = match OwnedBuf::new_plain_released(min_len, FILE, LINE, FILE, LINE) {
+    let buf = match OwnedBuf::new_plain_released(min_len, FILE_SEAM, LINE, FILE_SEAM, LINE) {
         Some(buf) => buf,
         None => return 0,
     };
