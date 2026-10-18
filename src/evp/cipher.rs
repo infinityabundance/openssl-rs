@@ -1003,7 +1003,9 @@ pub unsafe extern "C" fn EVP_CIPHER_up_ref(cipher: *mut EvpCipher) -> c_int {
     // SAFETY: `cipher` is live per the contract.
     unsafe {
         if (*cipher).origin == EVP_ORIG_DYNAMIC {
-            (*cipher).refcnt.fetch_add(1, Ordering::AcqRel);
+            // The shared protocol refuses a zero, destroying or `i32::MAX` count without
+            // changing it.
+            return crate::runtime::refcount::up_ref(&(*cipher).refcnt);
         }
     }
     1
@@ -1027,9 +1029,12 @@ pub unsafe extern "C" fn EVP_CIPHER_free(cipher: *mut EvpCipher) {
         return;
     }
     // SAFETY: `cipher` is live.
-    let last = unsafe { (*cipher).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    match crate::runtime::refcount::down_ref(unsafe { &(*cipher).refcnt }) {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The method's `type_name` release and `ossl_provider_free` can run a provider
+        // teardown callback; a re-entrant `EVP_CIPHER_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference.
     unsafe { evp_cipher_free_int(cipher) };
@@ -1989,6 +1994,48 @@ pub unsafe extern "C" fn EVP_CIPHER_do_all_sorted(fn_: Option<CipherDoAllFn>, ar
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::sync::atomic::AtomicUsize;
+
+    static TEARDOWN_CIPHER: AtomicUsize = AtomicUsize::new(0);
+    static TEARDOWN_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The provider's `teardown` hook is application/provider-controlled. Re-entering
+    /// `EVP_CIPHER_free` for the method whose release triggered it must observe the destroying
+    /// sentinel and stop.
+    unsafe extern "C" fn reentrant_teardown(_provctx: *mut c_void) {
+        let cipher = TEARDOWN_CIPHER.load(Ordering::SeqCst) as *mut EvpCipher;
+        if !cipher.is_null() {
+            TEARDOWN_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: the target method is the one whose last reference is being released; its
+            // block is still allocated here.
+            unsafe { EVP_CIPHER_free(cipher) }
+        }
+    }
+
+    #[test]
+    fn free_reentry_from_provider_teardown_is_a_noop() {
+        // SAFETY: every object below is allocated by this test and handed to its owning API.
+        unsafe {
+            let prov = crate::provider::provider_new(
+                c"cipher-reentrancy-test".as_ptr(),
+                None,
+                ptr::null_mut(),
+            );
+            assert!(!prov.is_null());
+            (*prov).flags |= crate::provider::FLAG_INITIALIZED;
+            (*prov).teardown = reentrant_teardown as *mut c_void;
+
+            let cipher = evp_cipher_new();
+            assert!(!cipher.is_null());
+            (*cipher).origin = EVP_ORIG_DYNAMIC;
+            (*cipher).prov = prov;
+            TEARDOWN_CIPHER.store(cipher as usize, Ordering::SeqCst);
+            TEARDOWN_CALLS.store(0, Ordering::SeqCst);
+            EVP_CIPHER_free(cipher);
+            TEARDOWN_CIPHER.store(0, Ordering::SeqCst);
+            assert_eq!(TEARDOWN_CALLS.load(Ordering::SeqCst), 1);
+        }
+    }
 
     /// `EVP_CIPH_ECB_MODE` and `EVP_CIPH_CBC_MODE` — `include/openssl/evp.h`.
     ///

@@ -407,9 +407,11 @@ pub unsafe extern "C" fn ENGINE_pkey_asn1_find_str(
     }
     // SAFETY: `fstr.e` is NULL or an engine the walk found.
     if !fstr.e.is_null() {
-        let mut r: c_int = 0;
-        // SAFETY: `fstr.e` is a live engine and `struct_ref` its refcount.
-        unsafe { up_ref(ptr::addr_of_mut!((*fstr.e).struct_ref), &mut r) };
+        // SAFETY: `fstr.e` is a live engine and `struct_ref` its refcount. A refused
+        // increment cannot hand out a structural reference, so the output slot gets NULL.
+        if unsafe { up_ref(ptr::addr_of_mut!((*fstr.e).struct_ref)) } == 0 {
+            fstr.e = ptr::null_mut();
+        }
     }
     // SAFETY: `pe` is the caller's output slot.
     unsafe { *pe = fstr.e };
