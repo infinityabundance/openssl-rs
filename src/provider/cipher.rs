@@ -14996,20 +14996,35 @@ static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 140]> = SyncCell(UnsafeCell::n
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
-/// authority does with `exported_ciphers`. The invariant is that the sole write precedes every
-/// read, which is `ossl_default_provider_init`'s contract rather than a property of the type.
-struct SyncCell<T>(UnsafeCell<T>);
-// SAFETY: see `SyncCell`'s own note: one write at init, then read-only sharing, which is the
-// authority's own discipline for the same object.
-unsafe impl<T> Sync for SyncCell<T> {}
-
-/// `void ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` — `defltprov.c:804`,
-/// called from `ossl_default_provider_init`.
+/// authority does with `exported_ciphers`.
 ///
-/// # Safety
-/// Called once, before the provider is published.
-pub(crate) unsafe fn cache_exported_ciphers() {
-    // SAFETY: the caller's contract, and the destination is this module's own array.
+/// **Invariant witness.** Stored: the fixed `[OsslAlgorithm; 140]` table whose pointers name
+/// `'static` literals and `'static` dispatch tables. Writer: [`fill_exported_ciphers`], reached
+/// only through [`EXPORTED_CIPHERS_INIT`]'s `Once`, so there is exactly one write and it is
+/// serialised against every other caller. Readers: [`exported_ciphers`] also enters the same
+/// `Once`; `Once::call_once` publishes with release semantics and every returning caller has the
+/// acquire edge, after which the cell is never mutated. `Sync` is therefore sound for this
+/// concrete array: shared access is either the serialised initialisation or the immutable
+/// post-initialisation read, never a concurrent write/read pair. The impl is deliberately not
+/// generic over `T`, because that would claim the discipline for types whose access patterns the
+/// module cannot see.
+struct SyncCell<T>(UnsafeCell<T>);
+// SAFETY: the field is written only inside `EXPORTED_CIPHERS_INIT`'s `Once` initialiser and is
+// read-only afterwards; see the invariant witness above.
+unsafe impl Sync for SyncCell<[OsslAlgorithm; 140]> {}
+
+/// Serialises the single fill of [`EXPORTED_CIPHERS`]. The authority has no lock here and relies
+/// on `ossl_default_provider_init` running before publication; this crate keeps that ordering but
+/// makes it a property of the cell rather than a caller comment, because two concurrent
+/// `OSSL_PROVIDER` constructions can each call the init function before either is inserted into
+/// the provider store.
+static EXPORTED_CIPHERS_INIT: std::sync::Once = std::sync::Once::new();
+
+/// The one write of [`EXPORTED_CIPHERS`]; `Once` guarantees it runs once and never concurrently
+/// with a reader.
+fn fill_exported_ciphers() {
+    // SAFETY: `DEFLT_CIPHERS` is the module's own NULL-named terminated table and the destination
+    // is the module's own array of the same length; `Once` makes this the sole writer.
     unsafe {
         ossl_prov_cache_exported_algorithms(
             DEFLT_CIPHERS.as_ptr(),
@@ -15018,12 +15033,24 @@ pub(crate) unsafe fn cache_exported_ciphers() {
     }
 }
 
+/// `void ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` — `defltprov.c:804`,
+/// called from `ossl_default_provider_init`.
+///
+/// The authority's caller obligation (fill once, before publication) is enforced here by
+/// [`EXPORTED_CIPHERS_INIT`], so this is a safe function.
+pub(crate) fn cache_exported_ciphers() {
+    EXPORTED_CIPHERS_INIT.call_once(fill_exported_ciphers);
+}
+
 /// The `OSSL_OP_CIPHER` arm's table: the capability-filtered copy, once
 /// [`cache_exported_ciphers`] has run.
 ///
 /// Before that call its first row is `NULL`-named, which is the authority's own state and the
-/// reason `ossl_prov_cache_exported_algorithms`'s guard is the test it is.
+/// reason `ossl_prov_cache_exported_algorithms`'s guard is the test it is. Entering the same
+/// `Once` here gives the reader the acquire edge from the writer (and lets a reader that races
+/// ahead of provider publication perform the idempotent fill itself).
 pub(crate) fn exported_ciphers() -> *const OsslAlgorithm {
+    EXPORTED_CIPHERS_INIT.call_once(fill_exported_ciphers);
     EXPORTED_CIPHERS.0.get().cast()
 }
 
@@ -22239,10 +22266,12 @@ mod tests {
             unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[138].alg.algorithm_names) };
         assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
         // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
-        // cannot drift apart silently.
-        // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
-        let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
-        assert_eq!(filtered.len(), 140);
+        // cannot drift apart silently. Read it through the `Once`-guarded accessor: going through
+        // the cell directly would bypass the publication edge the `Sync` impl relies on.
+        let filtered = exported_ciphers();
+        // SAFETY: `exported_ciphers` answers the Once-initialised 140-row table; row 139 is its
+        // terminator (`DEFLT_CIPHERS` is 139 named rows plus the NULL row).
+        assert!(unsafe { (*filtered.add(139)).algorithm_names.is_null() });
     }
 
     #[test]
@@ -23082,6 +23111,44 @@ mod tests {
         }
     }
 
+    /// The eight legacy `CipherDestroy` bodies are all `ossl_cipher_generic_reset_ctx`: their
+    /// only releasable member is `base.tlsmac`, and `reset_ctx` tests `base.alloced` before
+    /// touching it. An all-zero block is therefore a valid input whose release is a no-op. This
+    /// runs each body directly on the zero state (then again through `Drop`) so the witness is
+    /// executed, not asserted from the table.
+    #[test]
+    fn every_legacy_cipher_destroy_body_is_zero_valid() {
+        macro_rules! zero_valid {
+            ($t:ty) => {{
+                let Some(ctx) = OwnedCtx::<$t>::new() else {
+                    panic!("CRYPTO_zalloc answered NULL");
+                };
+                let p = ctx.as_ptr();
+                // SAFETY: `ctx` owns a live, freshly zeroed `$t`; the trait contract is satisfied.
+                unsafe { <$t as CipherDestroy>::destroy_body(p) };
+                // SAFETY: `p` is still owned by `ctx` and has not been released.
+                unsafe {
+                    assert_eq!((*p).base.alloced, 0, "the zero state has nothing allocated");
+                    assert!(
+                        (*p).base.tlsmac.is_null(),
+                        "the zero state owns no TLS-MAC block"
+                    );
+                }
+                // `Drop` runs the same body again: with `alloced == 0` it must stay a no-op.
+                drop(ctx);
+            }};
+        }
+
+        zero_valid!(legacy::ProvCastCtx);
+        zero_valid!(legacy::ProvBlowfishCtx);
+        zero_valid!(legacy::ProvIdeaCtx);
+        zero_valid!(legacy::ProvSeedCtx);
+        zero_valid!(legacy::ProvRc2Ctx);
+        zero_valid!(legacy::ProvRc4Ctx);
+        zero_valid!(legacy::ProvDesCtx);
+        zero_valid!(legacy::ProvRc4HmacMd5Ctx);
+    }
+
     /// C463/C464: a duplicate onto its own block would clear the source's embedded SIV pointers
     /// after the copy. A zeroed context would also fail later in `ossl_siv128_copy_ctx`, so this
     /// test installs a real `cipher_ctx` sentinel: the guard must return before clearing it, which
@@ -23111,5 +23178,64 @@ mod tests {
         );
         // SAFETY: the sentinel is this frame's allocation and has not been handed out.
         unsafe { EVP_CIPHER_CTX_free(sentinel) };
+    }
+
+    /// C463/C464 failure arm: `aes_siv_dupctx` takes the two cipher references before
+    /// `ossl_siv128_copy_ctx`, and that function returns 0 on an unarmed source `cipher_ctx`
+    /// (`EVP_CIPHER_CTX_copy` refuses a NULL `in->cipher`). The failure path must release exactly
+    /// the two references it took — the refcounts returning to 1 prove both the release and the
+    /// absence of a second release (a double free would drive one to 0 and destroy the dummy).
+    #[test]
+    fn siv_dupctx_failure_releases_only_the_refs_it_acquired() {
+        use core::sync::atomic::{AtomicI32, Ordering};
+
+        fn dummy_dynamic_cipher() -> EvpCipher {
+            // SAFETY: `EvpCipher` is a `#[repr(C)]` record of raw pointers, function options and
+            // an `AtomicI32`; the all-zero image is valid, and the two fields written below are
+            // the ones `EVP_CIPHER_up_ref`/`free` inspect.
+            let mut cipher: EvpCipher = unsafe { core::mem::zeroed() };
+            // `EVP_ORIG_DYNAMIC` is `0` (`include/crypto/evp.h`, and private to `evp::cipher`).
+            cipher.origin = 0;
+            cipher.refcnt = AtomicI32::new(1);
+            cipher
+        }
+
+        let _g = crate::test_support::lock_global_state();
+        let cbc = Box::new(dummy_dynamic_cipher());
+        let ctr = Box::new(dummy_dynamic_cipher());
+        // SAFETY: a source `PROV_AES_SIV_CTX`; the all-zero image is the state `OwnedCtx::new`
+        // produces, and every field the duplicate reads is written below.
+        let mut src: ProvAesSivCtx = unsafe { core::mem::zeroed() };
+        let unarmed = EVP_CIPHER_CTX_new();
+        assert!(
+            !unarmed.is_null(),
+            "the unarmed source context must allocate"
+        );
+        src.hw = &AES_SIV_HW;
+        src.cbc = (&*cbc as *const EvpCipher).cast_mut();
+        src.ctr = (&*ctr as *const EvpCipher).cast_mut();
+        // An unarmed `EVP_CIPHER_CTX` (`cipher == NULL`) makes `ossl_siv128_copy_ctx` return 0
+        // **after** `aes_siv_dupctx` has taken both cipher references.
+        src.siv.cipher_ctx = unarmed;
+
+        // SAFETY: `src` is a live root for the duration of the call; its `hw` and cipher pointers
+        // are installed above.
+        let dup = unsafe { siv_dupctx((&mut src as *mut ProvAesSivCtx).cast()) };
+        assert!(
+            dup.is_null(),
+            "the duplicate must be refused when the embedded copy fails"
+        );
+        assert_eq!(
+            cbc.refcnt.load(Ordering::Acquire),
+            1,
+            "the CBC reference taken before the failure came back"
+        );
+        assert_eq!(
+            ctr.refcnt.load(Ordering::Acquire),
+            1,
+            "the CTR reference taken before the failure came back"
+        );
+        // SAFETY: `unarmed` is this frame's allocation and the duplicate did not take it.
+        unsafe { EVP_CIPHER_CTX_free(unarmed) };
     }
 }

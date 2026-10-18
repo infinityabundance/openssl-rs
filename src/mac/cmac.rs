@@ -293,8 +293,17 @@ pub unsafe extern "C" fn CMAC_CTX_free(ctx: *mut CmacCtx) {
 ///
 /// # Safety
 /// `out` and `in` must be live contexts.
+///
+/// `out == in` is **refused** (answers 0 without touching `out`). The authority passes the two
+/// contexts to `EVP_CIPHER_CTX_copy`, which resets `out->cctx` (clearing `cipher`) before it
+/// dereferences `in->cipher`; with `out == in` that is a NULL dereference, so the authority has no
+/// defined success to preserve. The crate eliminates the UB by refusal (AGENTS.md §17; recorded in
+/// the safe-c33 campaign).
 #[no_mangle]
 pub unsafe extern "C" fn CMAC_CTX_copy(out: *mut CmacCtx, in_: *const CmacCtx) -> c_int {
+    if ptr::eq(out.cast_const(), in_) {
+        return 0;
+    }
     // SAFETY: `in_` is live per the contract.
     if unsafe { (*in_).nlast_block } == -1 {
         return 0;
@@ -770,6 +779,21 @@ mod tests {
             CMAC_CTX_free(dst);
             CMAC_CTX_free(src);
             CMAC_CTX_free(ptr::null_mut());
+        }
+    }
+
+    /// A self-copy is refused before the source is read: the nested `EVP_CIPHER_CTX_copy` would
+    /// otherwise reset the shared cipher context and dereference its cleared `cipher`.
+    #[test]
+    fn copy_refuses_the_identity_and_leaves_the_source_alone() {
+        let ctx = CMAC_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is this test's live context.
+        unsafe {
+            (*ctx).nlast_block = 3;
+            assert_eq!(CMAC_CTX_copy(ctx, ctx), 0, "self-copy is refused");
+            assert_eq!((*ctx).nlast_block, 3, "the source was not touched");
+            CMAC_CTX_free(ctx);
         }
     }
 }
