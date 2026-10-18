@@ -1452,9 +1452,13 @@ pub unsafe extern "C" fn X509_ACERT_add_attr_nconf(
                 return 0;
             }
         } else {
-            // `strlen(value)`, the octet-string arm's length.
+            // `strlen(value)`, the octet-string arm's length. A CONF value cannot reach
+            // `INT_MAX`, but converting the length fallibly keeps a hostile/oversized input
+            // from being truncated into a negative `int`.
             // SAFETY: `value` is a live NUL-terminated string.
-            let vlen = unsafe { c_strlen(value) };
+            let Some(vlen) = (unsafe { c_strlen(value) }) else {
+                return 0;
+            };
             // SAFETY: `acert` is live; `v->name` and `value` are the caller's strings.
             let ret = unsafe {
                 X509_ACERT_add1_attr_by_txt(
@@ -1496,17 +1500,18 @@ unsafe fn push_cstr(out: &mut Vec<u8>, s: *const c_char) {
     }
 }
 
-/// `strlen` over a NUL-terminated C string.
+/// `strlen` over a NUL-terminated C string, or `None` when the length does not fit the
+/// authority's `int` parameter.
 ///
 /// # Safety
 ///
 /// `s` points at a NUL-terminated string.
-unsafe fn c_strlen(s: *const c_char) -> c_int {
-    let mut i = 0isize;
+unsafe fn c_strlen(s: *const c_char) -> Option<c_int> {
+    let mut i = 0usize;
     loop {
         // SAFETY: `s` is NUL-terminated per the contract.
-        if unsafe { *s.offset(i) } == 0 {
-            return i as c_int;
+        if unsafe { *s.add(i) } == 0 {
+            return c_int::try_from(i).ok();
         }
         i += 1;
     }
