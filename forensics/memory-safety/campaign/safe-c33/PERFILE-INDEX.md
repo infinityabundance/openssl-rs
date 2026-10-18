@@ -688,3 +688,60 @@ not hidden obligations. Machine-readable receipt:
 
 **Next boundary position:** `src/runtime/bio/bss_dgram_pair.rs` (rank 65), then
 `src/runtime/bio/bss_conn.rs` (rank 66). No fifth file was started.
+
+## 7. Boundary sweep B2 — the three deferred BIO ownership/callback files
+
+**Source identity:** `integrate/safe-c33` at `60c852eb0`; source blobs
+`bss_dgram_pair.rs` `a9e7d54c3…`, `bss_conn.rs` `64234baaf…`,
+`bss_dgram.rs` `7b9240577…`. **STOP:** none. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| file | boundary IDs | disposition | defect repaired |
+|---|---|---|---|
+| `src/runtime/bio/bss_dgram_pair.rs` | `B2-DP-1..7` | `CONTRACTED` | `B2-D1` unchecked `req_buf_len + sz` ring-growth target (panic/lock-leak) |
+| `src/runtime/bio/bss_conn.rs` | `B2-CN-1..7` | `CONTRACTED` | none found |
+| `src/runtime/bio/bss_dgram.rs` | `B2-DG-1..7` | `CONTRACTED` | none found |
+
+**B2-D1 — `bss_dgram_pair.rs` (pre-fix line 1257), low severity.**
+`dgram_pair_write_inner` computed the resize target as `req_buf_len + sz`
+without a checked add. The crate builds with `overflow-checks = true`, so a
+caller-supplied `BIO_MSG.data_len` that overflows panics inside the write path
+while the pair write lock is held; `guard_ffi` converts the panic to an error
+but does not release the lock, leaving the BIO permanently blocked. Without
+overflow checks the target wraps and can leave the growth loop spinning on an
+unchanged ring. The fix maps an unrepresentable target to the existing
+"no space" rollback path. The C authority has the same unchecked addition; this
+is a deliberate divergence on a contract-violating length only.
+
+**Contracts and residuals.** All three files were compared at their ownership,
+callback and out-parameter seams against
+`forensics/authorities/src/openssl-3.6.4`. Every boundary is `CONTRACTED`, with
+37 residual obligations enumerated in the machine-readable receipt. The
+load-bearing ones are external, not hidden: a BIO callback must not free or
+invalidate the BIO (reused from B1); `BIO_MSG` arrays and their data/peer/local
+pointers obey the documented layout; ctrl out-parameters are writable and
+non-NULL where the authority writes; `SET0_LOCAL_ADDR` transfers ownership
+once; borrowed `GET_CONNECT` pointers expire on the next mutation; and a
+datagram BIO is not safe to free/control concurrently with an in-flight
+data operation (ctrl fields are not ring-locked, authority parity). Self-pairing
+is accepted as in the authority; the port's recursive-write detection makes the
+read fail with 0 rather than deadlock, so no lock repair was retained.
+
+**Evidence.** FAST: fmt clean; 71 `runtime::bio` tests (including the
+`BioDgramPairSt`, `BioConnect` and `BioDgramData` zero-state sweeps). BATCH:
+clippy `--all-targets -D warnings` PASS; library
+**1581 passed / 0 failed / 26 ignored** serially (301.05 s) and with
+`--test-threads=4` (87.18 s) on the recorded `a9e7d54c3…` blob. No affected
+adversarial probe is defined for these three files. Ownership controls
+`canary_destroy_instrument_is_live` and the five release-model mutants pass.
+
+**Residuals and NOT_RUN.** ASan (the B2-D1 panic path and the free paths), Miri,
+Loom/TSan, an executable authority differential and a pre-fix B2-D1 canary are
+`NOT_RUN` at BOUNDARY/SEAL. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B2.json`](atlas-refresh/boundary-sweep-B2.json).
+
+**Next boundary position:** `src/rsa/object.rs` (rank 68). Remaining deferred
+families are the SSL session ownership batch (`ssl_sess`, rank 61), the TLS
+state-machine batch (`statem_clnt`, rank 50), and the explicitly deferred
+`ml_dsa/encoders.rs`, `ssl/ssl_lib.rs` and `ssl/statem/statem_srvr.rs`. No
+fourth file was started in B2.
