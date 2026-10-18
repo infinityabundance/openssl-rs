@@ -975,14 +975,41 @@ unsafe impl CtxDestroy for Cert {
 /// Copy the security-attribute half of a certificate container (the authority's `ssl_cert_dup`
 /// copies `sec_level`/`sec_cb`/`sec_ex`/`cert_flags`; the leaf key is 14.7's).
 ///
+/// Both up-refs are checked before the destination is touched. A refusal leaves `to` unchanged
+/// and releases the reference the earlier arm already took, which is the caller-visible half of
+/// the authority's `err:` cleanup for the pair. Answers 1 on success, 0 on refusal.
+///
 /// # Safety
 /// `to` must be a live `Cert`; `from` must be NULL or a live `Cert`.
-unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
+unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) -> c_int {
     if from.is_null() {
-        return;
+        return 1;
     }
     // SAFETY: both pointers are live per the caller's contract.
     let (f, t) = unsafe { (&*from, &mut *to) };
+    let fslot = &f.pkeys[f.key_index];
+
+    // Take both references first, so a refusal cannot leave the destination holding an
+    // unowned pointer or a half-updated half-copy.
+    let took_x509 = !fslot.x509.is_null();
+    if took_x509 {
+        // SAFETY: `fslot.x509` is a live certificate; the copy owns the new reference.
+        if unsafe { X509_up_ref(fslot.x509) } == 0 {
+            return 0;
+        }
+    }
+    if !fslot.privatekey.is_null() {
+        // SAFETY: `fslot.privatekey` is a live key; the copy owns the new reference.
+        if unsafe { crate::evp::pkey::EVP_PKEY_up_ref(fslot.privatekey.cast()) } == 0 {
+            if took_x509 {
+                // SAFETY: this frame took that reference above and the destination never saw
+                // it, so this is its one release (the authority's `err:` rollback).
+                unsafe { X509_free(fslot.x509) };
+            }
+            return 0;
+        }
+    }
+
     t.sec_level = f.sec_level;
     t.sec_cb = f.sec_cb;
     t.sec_ex = f.sec_ex;
@@ -991,24 +1018,22 @@ unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
     // The active leaf pair is **up-reffed** into the copy, so the copy owns its own references
     // and `cert_free` can release them (the authority's `ssl_cert_dup` reference-counts every
     // slot; this reduced copy handles the active one).
-    let fslot = &f.pkeys[f.key_index];
     let tslot = &mut t.pkeys[f.key_index];
-    if !fslot.x509.is_null() {
-        // SAFETY: `fslot.x509` is a live certificate.
-        unsafe { X509_up_ref(fslot.x509) };
+    if took_x509 {
         tslot.x509 = fslot.x509;
     }
     if !fslot.privatekey.is_null() {
-        // SAFETY: `fslot.privatekey` is a live key.
-        unsafe { crate::evp::pkey::EVP_PKEY_up_ref(fslot.privatekey.cast()) };
         tslot.privatekey = fslot.privatekey;
     }
+    1
 }
 
 /// `CERT *ssl_cert_dup(CERT *cert)` — `ssl/ssl_cert.c:95-236`.
 ///
 /// The authority's per-slot duplication in full: every `pkeys[]` entry up-refs its
-/// certificate, private key, chain, serverinfo block and compressed forms, and the container's
+/// certificate, private key, chain, serverinfo block and compressed forms (each up-ref's
+/// result is checked, and a refusal returns NULL through the owner's `Drop`, which runs the
+/// authority's `ssl_cert_free` failure path), and the container's
 /// `dh_tmp`, flag word, certificate callback, security attributes, custom-extension table and PSK
 /// identity hint are copied. The fields this crate's `Cert` does not model — the authority's
 /// `conf_sigalgs`/`client_sigalgs`/`ctype`, `verify_store`/`chain_store` and `dh_tmp_auto` — are
@@ -1047,11 +1072,19 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
             let cpk = &(*cert).pkeys[i];
             let rpk = &mut (*ret).pkeys[i];
             if !cpk.x509.is_null() {
-                X509_up_ref(cpk.x509);
+                // Every authority arm checks the up-ref and jumps to `err` on refusal
+                // (`ssl_cert.c:133-137`); a refused increment must not leave the duplicate
+                // holding an unowned pointer.
+                if X509_up_ref(cpk.x509) == 0 {
+                    return ptr::null_mut();
+                }
                 rpk.x509 = cpk.x509;
             }
             if !cpk.privatekey.is_null() {
-                EVP_PKEY_up_ref(cpk.privatekey.cast());
+                // `ssl_cert.c:139-143`.
+                if EVP_PKEY_up_ref(cpk.privatekey.cast()) == 0 {
+                    return ptr::null_mut();
+                }
                 rpk.privatekey = cpk.privatekey;
             }
             if !cpk.chain.is_null() {
@@ -1072,7 +1105,11 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
             }
             for j in 0..TLSEXT_COMP_CERT_LIMIT {
                 if !cpk.comp_cert[j].is_null() {
-                    crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]);
+                    // `ssl_cert.c:159-166`: the authority's guard-off `comp_cert[]` loop
+                    // checks `OSSL_COMP_CERT_up_ref` too.
+                    if crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]) == 0 {
+                        return ptr::null_mut();
+                    }
                     rpk.comp_cert[j] = cpk.comp_cert[j];
                 }
             }
@@ -3414,7 +3451,9 @@ pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
     }
     // SAFETY: both pointers are live per the caller's contract.
     unsafe {
-        cert_copy_security((*t).cert, (*f).cert);
+        if cert_copy_security((*t).cert, (*f).cert) == 0 {
+            return 0;
+        }
         let len = (*f).sid_ctx_length;
         if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
             return 0;
@@ -11252,7 +11291,9 @@ pub unsafe extern "C" fn SSL_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_in
             if (*t).method != (*f).method {
                 (*t).method = (*f).method;
             }
-            cert_copy_security((*t).cert, (*f).cert);
+            if cert_copy_security((*t).cert, (*f).cert) == 0 {
+                return 0;
+            }
             let len = (*f).sid_ctx_length;
             if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
                 return 0;
@@ -13285,5 +13326,257 @@ mod refcount_reentrancy_tests {
 
         // SAFETY: the connection released its two context references; this releases ours.
         unsafe { SSL_CTX_free(ctx) };
+    }
+}
+
+/// Failure injection for the `ssl_cert_dup` up-ref ladder.
+///
+/// The source counts are set to `i32::MAX` directly: the fields are this crate's own
+/// (`pub(crate)`), and `i32::MAX` is the one value the shared protocol refuses without
+/// changing the count, so it is the only way to make a checked `*_up_ref` answer 0 on a
+/// live object. These are protocol-level tests, not conforming-C-caller evidence.
+#[cfg(test)]
+mod cert_dup_refusal_tests {
+    use super::*;
+    use crate::evp::pkey::EVP_PKEY_new;
+    use crate::ssl::ssl_cert_comp::{OsslCompCert, TLSEXT_COMP_CERT_NONE};
+    use crate::x509::x_x509::X509_new;
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    #[test]
+    fn refused_x509_up_ref_returns_null_and_keeps_the_source_count() {
+        // SAFETY: the test builds and releases the two objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            assert_eq!((*x).references.load(Ordering::Relaxed), 1);
+            (*x).references.store(i32::MAX, Ordering::Relaxed);
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused X509_up_ref must refuse the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the source count is unchanged"
+            );
+
+            // Restore the count so the source container's own release reclaims `x` exactly once.
+            (*x).references.store(1, Ordering::Relaxed);
+            drop(cert_owner);
+        }
+    }
+
+    #[test]
+    fn refused_comp_cert_up_ref_releases_the_partial_duplicate() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+
+            let mut record = Box::new(OsslCompCert {
+                references: AtomicI32::new(i32::MAX),
+                data: ptr::null_mut(),
+                len: 0,
+                orig_len: 0,
+                alg: TLSEXT_COMP_CERT_NONE,
+            });
+            let record_ptr: *mut OsslCompCert = &mut *record;
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+            (*cert).pkeys[0].comp_cert[0] = record_ptr;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "the refused compressed-form reference refuses the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released by the duplicate's Drop"
+            );
+            assert_eq!(
+                (*record_ptr).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the refused increment left the source count unchanged"
+            );
+
+            // The source container must not release the test-owned record; detach it first.
+            (*cert).pkeys[0].comp_cert[0] = ptr::null_mut();
+            drop(cert_owner);
+            drop(record);
+        }
+    }
+
+    /// `cert_copy_security`'s X509 arm: a refused `X509_up_ref` leaves the destination
+    /// untouched and takes no reference.
+    #[test]
+    fn refused_cert_copy_security_x509_up_ref_returns_zero() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            (*x).references.store(i32::MAX, Ordering::Relaxed);
+
+            let src_owner = cert_new();
+            assert!(src_owner.is_some(), "the source container allocates");
+            let Some(src_owner) = src_owner else { return };
+            let src = src_owner.as_ptr();
+            (*src).pkeys[0].x509 = x;
+            (*src).sec_level = 7;
+
+            let dst_owner = cert_new();
+            assert!(dst_owner.is_some(), "the destination container allocates");
+            let Some(dst_owner) = dst_owner else { return };
+            let dst = dst_owner.as_ptr();
+
+            assert_eq!(cert_copy_security(dst, src), 0);
+            assert!(
+                (*dst).pkeys[0].x509.is_null(),
+                "no unowned pointer is stored"
+            );
+            assert_eq!(
+                (*dst).sec_level,
+                2,
+                "the destination is untouched on refusal"
+            );
+            assert_eq!((*x).references.load(Ordering::Relaxed), i32::MAX);
+
+            // Restore the count so the source container's own release reclaims `x` once.
+            (*x).references.store(1, Ordering::Relaxed);
+            drop(src_owner);
+            drop(dst_owner);
+        }
+    }
+
+    /// `cert_copy_security`'s private-key arm: after the X509 reference was taken, a refused
+    /// `EVP_PKEY_up_ref` must release it and leave both destination slots empty.
+    #[test]
+    fn refused_cert_copy_security_pkey_up_ref_rolls_back_the_x509_reference() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            let pkey = EVP_PKEY_new();
+            assert!(!x.is_null() && !pkey.is_null());
+            (*pkey).references.store(i32::MAX, Ordering::Relaxed);
+
+            let src_owner = cert_new();
+            assert!(src_owner.is_some(), "the source container allocates");
+            let Some(src_owner) = src_owner else { return };
+            let src = src_owner.as_ptr();
+            (*src).pkeys[0].x509 = x;
+            (*src).pkeys[0].privatekey = pkey.cast();
+
+            let dst_owner = cert_new();
+            assert!(dst_owner.is_some(), "the destination container allocates");
+            let Some(dst_owner) = dst_owner else { return };
+            let dst = dst_owner.as_ptr();
+
+            assert_eq!(cert_copy_security(dst, src), 0);
+            assert!((*dst).pkeys[0].x509.is_null());
+            assert!((*dst).pkeys[0].privatekey.is_null());
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released"
+            );
+            assert_eq!((*pkey).references.load(Ordering::Relaxed), i32::MAX);
+
+            // Restore the count so the source container's own release reclaims the key once.
+            (*pkey).references.store(1, Ordering::Relaxed);
+            drop(src_owner);
+            drop(dst_owner);
+        }
+    }
+
+    /// A chain up-ref refusal: `X509_chain_up_ref` duplicates the stack and up-refs every
+    /// element. The second element refuses, so the helper must release the first element's
+    /// reference and the duplicate stack; `ssl_cert_dup` then returns NULL through the partial
+    /// container's `Drop`. The source stack is untouched and owns both elements.
+    #[test]
+    fn refused_chain_up_ref_returns_null_and_rolls_back_the_partial_stack() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let first = X509_new();
+            let refusing = X509_new();
+            assert!(!first.is_null() && !refusing.is_null());
+            let chain = OPENSSL_sk_new_null();
+            assert!(!chain.is_null(), "the source chain allocates");
+            assert_eq!(OPENSSL_sk_push(chain, first.cast()), 1);
+            // `sk_push` answers the resulting element count, not a boolean.
+            assert_eq!(OPENSSL_sk_push(chain, refusing.cast()), 2);
+            (*refusing).references.store(i32::MAX, Ordering::Relaxed);
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].chain = chain;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused chain up-ref must refuse the duplicate"
+            );
+            assert_eq!(
+                (*first).references.load(Ordering::Relaxed),
+                1,
+                "the already-taken element reference was rolled back"
+            );
+            assert_eq!(
+                (*refusing).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the refused increment left the source count unchanged"
+            );
+
+            // Restore the count so the source container's own release reclaims both elements
+            // exactly once.
+            (*refusing).references.store(1, Ordering::Relaxed);
+            drop(cert_owner);
+        }
+    }
+
+    /// A serverinfo duplication refusal. `CRYPTO_memdup` refuses `siz >= i32::MAX` before
+    /// allocating, which is the forced-allocation arm reachable without a custom allocator. The
+    /// length is injected after a real small block is installed; no operation reads the block at
+    /// this injected length, and the source's `Drop` releases the block by pointer alone.
+    #[test]
+    fn refused_serverinfo_dup_returns_null_and_releases_the_partial_duplicate() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+            let block = (*cert).pkeys[0].serverinfo_slot().realloc(8, FILE, 0);
+            assert!(!block.is_null(), "the source serverinfo block allocates");
+            (*cert).pkeys[0].serverinfo_length = i32::MAX as usize;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused serverinfo allocation must refuse the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released by the duplicate's Drop"
+            );
+
+            drop(cert_owner);
+        }
     }
 }

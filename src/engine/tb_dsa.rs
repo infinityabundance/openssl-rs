@@ -36,7 +36,7 @@ static DSA_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 static DUMMY_NID: c_int = 1;
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn dsa_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn dsa_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(DSA_TABLE) as *mut *mut OpenSslLhash
 }
 

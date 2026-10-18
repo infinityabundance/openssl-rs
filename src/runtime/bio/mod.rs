@@ -1061,12 +1061,19 @@ pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
 /// released. A failing (`<= 0`) free callback suppresses destruction and returns
 /// 0, which is the authority's contract for using the callback as a veto.
 ///
+/// The reference is consumed **before** the callback runs: the last release moves
+/// the count to the destroying sentinel, and the authority likewise decrements
+/// before invoking `BIO_CB_FREE` (`bio_lib.c:126-138`). A veto therefore does not
+/// leave ownership unchanged. The count is already retired, so a retry observes
+/// `Retired`, returns 1 without running the teardown, and does not restore the
+/// caller's reference; the block is leaked by the veto in both implementations.
+///
 /// # Safety
 /// `bio` must be NULL or a live BIO for which the caller owns exactly one
-/// reference to release. When the count reaches zero the method's `destroy` and
-/// the `ex_data` teardown run and the object is freed, so `bio` must not be used
-/// again — unless the free callback vetoes destruction, leaving ownership
-/// unchanged.
+/// reference to release. This call consumes that reference even when a free-callback
+/// veto makes it answer 0; after a veto the object cannot be released by retrying.
+/// When the count reaches zero the method's `destroy` and the `ex_data` teardown
+/// run and the object is freed, so `bio` must not be used again.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
     guard_ffi(0, || {
@@ -1923,3 +1930,79 @@ pub use method::{
 };
 pub use print::BIO_indent;
 pub use retry::{BIO_dgram_non_fatal_error, BIO_fd_non_fatal_error, BIO_fd_should_retry};
+
+/// Free-callback veto semantics.
+#[cfg(test)]
+mod free_veto_tests {
+    use super::*;
+    use crate::runtime::refcount::REF_DESTROYING;
+    use core::sync::atomic::Ordering;
+
+    static VETO_CALLS: AtomicI32 = AtomicI32::new(0);
+
+    unsafe extern "C" fn veto_free(
+        _bio: *mut Bio,
+        oper: c_int,
+        _argp: *const c_char,
+        _argi: c_int,
+        _argl: c_long,
+        _inret: c_long,
+    ) -> c_long {
+        if oper == BIO_CB_FREE {
+            VETO_CALLS.fetch_add(1, Ordering::SeqCst);
+        }
+        0
+    }
+
+    /// `BIO_free` decrements before the callback (`bio_lib.c:126-138`), so a `<= 0`
+    /// veto returns 0 with the caller's reference already consumed. A retry sees the
+    /// retired count and is a defined no-op; it must not run the callback or free twice.
+    #[test]
+    fn veto_consumes_the_reference_and_a_retry_is_a_noop() {
+        VETO_CALLS.store(0, Ordering::SeqCst);
+        // The test builds the block it will reclaim; a veto never frees it.
+        let bio = Box::into_raw(Box::new(Bio {
+            method: ptr::null(),
+            libctx: ptr::null_mut(),
+            callback_ex: None,
+            callback: Some(veto_free),
+            cb_arg: ptr::null_mut(),
+            init: 1,
+            shutdown: 1,
+            flags: 0,
+            retry_reason: 0,
+            num: 0,
+            ptr: ptr::null_mut(),
+            next_bio: ptr::null_mut(),
+            prev_bio: ptr::null_mut(),
+            references: AtomicI32::new(1),
+            num_read: 0,
+            num_write: 0,
+            ex_data: CryptoExData {
+                ctx: ptr::null_mut(),
+                sk: ptr::null_mut(),
+            },
+        }));
+
+        // SAFETY: `bio` is the live block allocated above and carries the caller's one
+        // reference; the veto leaves it allocated, so the test can reclaim it below.
+        unsafe {
+            assert_eq!(BIO_free(bio), 0, "the veto reports failure");
+            assert_eq!(VETO_CALLS.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                (*bio).references.load(Ordering::Relaxed),
+                REF_DESTROYING,
+                "the reference was consumed before the callback"
+            );
+            assert_eq!(BIO_free(bio), 1, "a retry observes Retired: a no-op");
+            assert_eq!(
+                VETO_CALLS.load(Ordering::SeqCst),
+                1,
+                "the veto callback does not run a second time"
+            );
+            // The veto leaked the block in both implementations; this test owns its only
+            // allocation and reclaims it without another `BIO_free`.
+            drop(Box::from_raw(bio));
+        }
+    }
+}

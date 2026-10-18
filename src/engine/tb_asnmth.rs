@@ -51,7 +51,7 @@ const LINE_SELECT: c_int = 80;
 static PKEY_ASN1_METH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn pkey_asn1_meth_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn pkey_asn1_meth_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(PKEY_ASN1_METH_TABLE) as *mut *mut OpenSslLhash
 }
 
@@ -408,9 +408,13 @@ pub unsafe extern "C" fn ENGINE_pkey_asn1_find_str(
     // SAFETY: `fstr.e` is NULL or an engine the walk found.
     if !fstr.e.is_null() {
         // SAFETY: `fstr.e` is a live engine found by the table walk and `struct_ref` its
-        // refcount. The table holds the existing reference this call acts for; the caller
-        // receives exactly one new reference. A refused increment cannot hand out a
-        // structural reference, so the output slot gets NULL.
+        // refcount. The table stores a **borrowed** `ENGINE *`; the structural reference
+        // this call acts for is the one `engine_list_add` took for the global engine list
+        // (`ENGINE_add`), not a reference held by the table. `engine_list_remove` retires
+        // that borrow (`engine_unregister_from_all_tables`) under the write lock before it
+        // drops the reference, and this walk holds the read lock, so the entry is live here.
+        // The caller receives exactly one new reference. A refused increment cannot hand
+        // out a structural reference, so the output slot gets NULL.
         if unsafe { up_ref(ptr::addr_of_mut!((*fstr.e).struct_ref)) } == 0 {
             fstr.e = ptr::null_mut();
         }

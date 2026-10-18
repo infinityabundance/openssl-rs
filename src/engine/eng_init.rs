@@ -62,9 +62,12 @@ pub(crate) unsafe fn engine_unlocked_init(e: *mut Engine) -> c_int {
         // `CRYPTO_UP_REF` answers 1 when the reference was taken. A count at `i32::MAX` is
         // refused without changing the count (the shared protocol's checked add), so this arm
         // must not raise `funct_ref` either.
-        // SAFETY: `e` is live, `struct_ref` is its published positive count, and this call
-        // acts for the caller's structural reference, which the caller does not release
-        // during the call; the acquired reference is owned by this frame.
+        // SAFETY: `e` is live and `struct_ref` is its published positive count. This call
+        // acts for the caller's structural reference: `ENGINE_init`/`ENGINE_register_*`
+        // callers hold it directly, and for an `engine_table_select` candidate it is the
+        // global engine list's structural reference taken by `engine_list_add` (`ENGINE_add`).
+        // The table itself stores only a borrowed pointer. That owner does not release the
+        // reference during the call; the acquired reference is owned by this frame.
         let took = unsafe { up_ref(ptr::addr_of_mut!((*e).struct_ref)) };
         if took == 0 {
             return 0;

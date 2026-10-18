@@ -295,12 +295,20 @@ pub unsafe extern "C" fn DSO_new() -> *mut Dso {
 /// `int DSO_free(DSO *dso)`
 ///
 /// A NULL object answers **1**, so a caller may free unconditionally. The unload is
-/// skipped entirely when `DSO_FLAG_NO_UNLOAD_ON_FREE` is set, and a method that reports
-/// a failed unload or finish leaves the object **unreleased** and raises: the object is
-/// still owned by the caller at that point.
+/// skipped entirely when `DSO_FLAG_NO_UNLOAD_ON_FREE` is set.
+///
+/// A method that reports a failed unload or finish raises and answers 0, but the caller's
+/// reference is **already consumed**: the down-ref reaches and claims the last reference
+/// (installing the destroying sentinel) before the hooks run. The object is therefore not
+/// still owned by the caller, and a retry observes `Retired`, answers 0 without running
+/// the teardown, and cannot reclaim the block. The authority has the same ordering
+/// (`dso_lib.c:54-72` decrements before `dso_unload`/`finish` and returns 0 on their
+/// failure), so its object leaks there too; the crate's retry is at least a defined no-op
+/// instead of a second `fetch_sub` on an already-zero count.
 ///
 /// # Safety
-/// `dso` must be NULL or a live object not already released.
+/// `dso` must be NULL or a live object not already released. This call consumes the
+/// caller's reference even when it answers 0.
 #[no_mangle]
 pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
     guard_ffi(0, || {
@@ -1048,6 +1056,53 @@ mod tests {
                 "one reference remains, so nothing is released"
             );
             assert_eq!(DSO_free(d), 1, "the last reference releases it");
+        }
+    }
+
+    static FAILED_FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn failing_finish(_dso: *mut Dso) -> c_int {
+        FAILED_FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+        0
+    }
+
+    /// `DSO_free` consumes the caller's last reference before running `finish`, so a failed
+    /// hook cannot return ownership (authority `dso_lib.c:54-72`). A retry is the shared
+    /// protocol's defined `Retired` no-op, not a second release.
+    #[test]
+    fn failed_finish_consumes_the_reference_and_a_retry_is_a_noop() {
+        // SAFETY: the test builds and releases one object and one method table it owns.
+        unsafe {
+            let d = DSO_new();
+            assert!(!d.is_null());
+            let mut meth: DsoMethod = core::mem::zeroed();
+            meth.finish = Some(failing_finish);
+            let meth = Box::into_raw(Box::new(meth));
+            (*d).meth = meth;
+            FAILED_FINISH_CALLS.store(0, Ordering::SeqCst);
+
+            assert_eq!(DSO_free(d), 0, "a failed finish reports failure");
+            assert_eq!(
+                (*d).references.load(Ordering::Relaxed),
+                crate::runtime::refcount::REF_DESTROYING,
+                "the caller's reference was consumed before the hook"
+            );
+            assert_eq!(DSO_free(d), 0, "a retry observes Retired: a defined no-op");
+            assert_eq!(
+                FAILED_FINISH_CALLS.load(Ordering::SeqCst),
+                1,
+                "the finish hook ran exactly once"
+            );
+
+            // Reclaim what the authority's failure path leaves unreleased; the test owns it.
+            // SAFETY: `d` is the block `DSO_new` allocated, its last reference was consumed
+            // above, and no other owner exists, so its destructor body runs exactly once here.
+            drop(OwnedCtx::<Dso>::from_raw_at(
+                d,
+                FILE_LIB_SEAM,
+                LINE_FREE_DSO,
+            ));
+            drop(Box::from_raw(meth));
         }
     }
 

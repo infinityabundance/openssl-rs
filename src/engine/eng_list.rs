@@ -235,6 +235,16 @@ unsafe fn engine_list_remove(e: *mut Engine) -> c_int {
             ENGINE_LIST_TAIL.store((*e).prev, Ordering::Release);
         }
     }
+    // The operation tables store **borrowed** `ENGINE *` values
+    // (`engine_table_register` takes no reference). The global list's structural reference
+    // is what those entries borrow, so every table must retire `e` before this frame drops
+    // that reference; otherwise `sk`/`funct` entries dangle and
+    // `ossl_engine_table_select` / `engine_unlocked_init` dereference freed storage. This is
+    // a deliberate safety improvement over the authority, whose `ENGINE_remove` does not
+    // unregister (AGENTS.md §17). The lock is already held; the unlocked helper is used
+    // because this crate's lock refuses a recursive write acquisition.
+    // SAFETY: the engine lock is held and `e` is a live list member.
+    unsafe { crate::engine::eng_fat::engine_unregister_from_all_tables(e) };
     // SAFETY: `e` is live and this releases the list's own structural reference.
     unsafe { engine_free_util(e, 0) };
     1
