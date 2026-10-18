@@ -82,21 +82,31 @@ pub(crate) unsafe fn ssl3_ctrl_set_tlsext_host_name(
         raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME_TYPE, 4051);
         return 0;
     }
-    // SAFETY: `s` is live per the caller's contract.
+    // Validate and duplicate **before** releasing the incumbent: `parg` may be the pointer
+    // `SSL_get_servername` handed out, i.e. this very member. The authority frees first
+    // (`ssl/ssl_lib.c`'s `ssl3_ctrl` arm at `s3_lib.c:4029`) and then reads `parg` (`:4043`),
+    // which is a use-after-free for that caller; this ordering is the §17 UB elimination recorded
+    // as D563. Every release still happens at the authority's own site.
+    let mut host: *mut c_char = core::ptr::null_mut();
+    if !parg.is_null() {
+        // SAFETY: `parg` is a NUL-terminated name per the contract.
+        let len = unsafe { strlen(parg.cast::<c_char>()) };
+        if len == 0 || len > TLSEXT_MAXLEN_HOST_NAME {
+            // The authority has already freed the incumbent on this arm; keep that final state.
+            // SAFETY: `s` is live and its `ext_hostname` member obeys the member-buffer invariant.
+            unsafe { (*s).ext_hostname_slot().clear(FILE, 4029) };
+            raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME, 4040);
+            return 0;
+        }
+        // SAFETY: `parg` is the NUL-terminated name.
+        host = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4043) };
+    }
     // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
     // member-buffer invariant, so the handle releases the object's own single block at this site.
     unsafe { (*s).ext_hostname_slot().clear(FILE, 4029) };
     if parg.is_null() {
         return 1;
     }
-    // SAFETY: `parg` is a NUL-terminated name per the contract.
-    let len = unsafe { strlen(parg.cast::<c_char>()) };
-    if len == 0 || len > TLSEXT_MAXLEN_HOST_NAME {
-        raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME, 4040);
-        return 0;
-    }
-    // SAFETY: `parg` is the NUL-terminated name and `s` is live.
-    let host = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4043) };
     if host.is_null() {
         raise_ssl(ERR_R_INTERNAL_ERROR, 4044);
         return 0;
@@ -232,4 +242,94 @@ pub(crate) unsafe fn ssl3_renegotiate_check(s: *mut Ssl, initok: c_int) -> c_int
         }
     }
     0
+}
+
+/// Adversarial self-aliasing probe (`adv-probe.sh`, §16).
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_get_servername, SSL_new};
+
+    /// `SSL_ctrl(SSL_CTRL_SET_TLSEXT_HOSTNAME, ...)` handed the pointer `SSL_get_servername`
+    /// answered must copy before releasing the member. The old order frees first and then reads
+    /// the caller's (freed) name.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn self_aliasing_sni_control_copies_before_clearing() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: process-lifetime method table; the constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let s = unsafe { SSL_new(ctx) };
+        assert!(!s.is_null());
+
+        let name = c"alias.test";
+        assert_eq!(
+            // SAFETY: `s` is live and `name` is NUL-terminated.
+            unsafe {
+                ssl3_ctrl_set_tlsext_host_name(
+                    s,
+                    TLSEXT_NAMETYPE_HOST_NAME as c_long,
+                    name.as_ptr() as *mut c_void,
+                )
+            },
+            1
+        );
+        // SAFETY: `s` is live.
+        let original = unsafe { SSL_get_servername(s, TLSEXT_NAMETYPE_HOST_NAME) };
+        assert!(!original.is_null());
+
+        adv_alloc::reset();
+        adv_alloc::arm_poison_on_free();
+        assert_eq!(
+            // SAFETY: `s` is live and `original` is the NUL-terminated member itself.
+            unsafe {
+                ssl3_ctrl_set_tlsext_host_name(
+                    s,
+                    TLSEXT_NAMETYPE_HOST_NAME as c_long,
+                    original as *mut c_void,
+                )
+            },
+            1,
+            "an aliasing SNI control must copy before releasing the source"
+        );
+        adv_alloc::disarm_poison_on_free();
+
+        // SAFETY: `s` is live.
+        let after = unsafe { SSL_get_servername(s, TLSEXT_NAMETYPE_HOST_NAME) };
+        assert!(!after.is_null());
+        assert_eq!(
+            // SAFETY: `after` is a live NUL-terminated member.
+            unsafe { core::ffi::CStr::from_ptr(after) }.to_bytes(),
+            b"alias.test",
+            "an aliasing SNI control must preserve the value"
+        );
+
+        let ev = adv_alloc::events();
+        let first_malloc = ev.iter().position(|e| matches!(e, Ev::Malloc { .. }));
+        let release = ev
+            .iter()
+            .position(|e| matches!(e, Ev::Free { p } if *p == original as usize));
+        assert!(first_malloc.is_some(), "no allocation was observed: {ev:?}");
+        assert!(release.is_some(), "the incumbent was not released: {ev:?}");
+        assert!(
+            first_malloc < release,
+            "the copy must be allocated before the incumbent is released: {ev:?}"
+        );
+
+        // SAFETY: both pointers are live and owned by this frame.
+        unsafe {
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+        adv_alloc::assert_no_double_free();
+    }
 }

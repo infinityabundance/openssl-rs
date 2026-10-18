@@ -163,3 +163,23 @@ teardown re-entering its own free. `engine_list_add`'s refusal returns to
 
 Court: fmt, clippy `-D warnings`, library tests and all 22 adversarial probes
 are rerun for this addendum.
+
+## Addendum — 2026-10-18, `integrate/safe-c33` (OB-4a contract-analyst fixes)
+
+Rows are per changed file. **None is `SAFETY_DISCHARGED` or
+`INDEPENDENTLY_CHECKED`**: each records a fixed defect and the witness that
+now guards it. States use the §21 lifecycle; every row remains `CONTRACTED`.
+
+| File | Defect | Authority | Fix / mechanism | Witness | State |
+|---|---|---|---|---|---|
+| `src/asn1/utl.rs` | `enc_save` freed the cached block, left the freed pointer in the field, and returned 0 on a refused replacement allocation, so a later `enc_free` double-freed and `enc_restore` copied from released memory. | `crypto/asn1/tasn_utl.c:172-178` assigns the allocation result; the crate publishes the post-free `(NULL, 0, modified=1)` state before the fallible allocation, avoiding the authority's stale-length restore path. | Failure-atomic field publication; release remains the same `OwnedBlock::from_raw` `Drop` at `(FILE, LINE)`. | `asn1::utl::adv_probe::refused_encoding_malloc_leaves_a_null_member_and_safe_restore` | CONTRACTED |
+| `src/ssl/ssl_sess.rs` | `SSL_SESSION_set1_hostname` / `set1_alpn_selected` / `set1_ticket_appdata` released the member and then duplicated the caller's pointer; a caller passing the getter's own result read freed memory. | `ssl/ssl_sess.c:1083/1088`, `:1134/1140`, `:1484/1490` (authority UB). D563. | Duplicate before `clear`; release stays at the authority coordinates (1083/1134/1484); refused duplicate clears to the authority's post-failure state. | `ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing` | CONTRACTED |
+| `src/ssl/s3_lib.rs` | The `SSL_CTRL_SET_TLSEXT_HOSTNAME` arm released the member, then called `strlen`/`CRYPTO_strdup` on the caller's pointer. | `ssl/s3_lib.c:4029/4043` (authority UB). D563. | Validate and duplicate before `clear`; the release stays at 4029 and the raise sites stay at 4040/4044. | `ssl::s3_lib::adv_probe::self_aliasing_sni_control_copies_before_clearing` | CONTRACTED |
+| `src/ssl/ssl_rsa.rs` | `SSL_CTX_use_serverinfo_ex` reallocated the member and then copied/validated through a caller pointer that could name the released incumbent. | `ssl/ssl_rsa.c:839-844` (authority UB). D564. | Detect overlap with the live incumbent, tee the source before `realloc`, and use the tee for the copy and the second validation. | `ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc` | CONTRACTED |
+| `src/ssl/ssl_rsa.rs` | `extension_length + 4` could wrap before an `extension_length`-byte copy. | `ssl/ssl_rsa.c:775-778` (unchecked C `+`). | `checked_add`; overflow answers the allocation-refusal outcome (0). | `ssl::ssl_rsa::checked_arithmetic_tests::extension_append_length_rejects_usize_max` | CONTRACTED |
+| `src/asn1/d2i.rs` | `total + 1` for the joined error buffer could wrap. | `crypto/asn1/tasn_dec.c` error-text path (unchecked C `+`). | `checked_add`; overflow simply appends no text. | `asn1::d2i::tests::error_buffer_length_rejects_usize_max` | CONTRACTED |
+| `src/asn1/tasn_prn.rs` | `strlen(tmp) + 3` for the radix prefix could wrap. | `crypto/asn1/tasn_prn.c` integer render path (unchecked C `+`). | `checked_add`; overflow returns NULL and releases `tmp`. | `asn1::tasn_prn::tests::radix_buffer_length_rejects_usize_max` | CONTRACTED |
+| `src/ssl/ssl_asn1.rs`, `src/ssl/ssl_lib.rs` | `MemberBufSlot::store` claimed the allocation was exactly `len`, but the ASN.1 adoption sites transfer `ASN1_STRING::data`, allocated as `len + 1`; the precondition was false. | `ssl/ssl_asn1.c` adoption arms; `asn1/string.rs`, `asn1/d2i.rs`. | Contract weakened to "at least `len`, writable for `len`" with the free/realloc rationale; adoption now rejects `ASN1_STRING_FLAG_EMBED`, negative lengths, and NULL-with-nonzero-length (all unreachable). | `ssl::ssl_asn1::tests::adopt_octet_string_rejects_embed_and_negative_length` | CONTRACTED |
+
+The OB-4a batch does **not** graduate any consumer family and does not touch the
+OB-4b slot-unification/typestate work or the `PropqSlot` copies.
