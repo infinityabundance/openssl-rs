@@ -1254,7 +1254,14 @@ unsafe fn dgram_pair_write_inner(b: *mut BioDgramPairSt, buf: *const u8, mut sz:
                 break;
             }
             // SAFETY: `b` is live.
-            let new_len = unsafe { compute_rbuf_growth((*b).req_buf_len + sz, (*b).req_buf_len) };
+            let req_buf_len = unsafe { (*b).req_buf_len };
+            // A target that cannot be represented cannot be allocated. Treat the
+            // overflow as "no space" rather than wrapping, which would leave the
+            // growth loop spinning on an unchanged ring.
+            let Some(target) = req_buf_len.checked_add(sz) else {
+                break;
+            };
+            let new_len = compute_rbuf_growth(target, req_buf_len);
             if new_len == 0 {
                 break;
             }
