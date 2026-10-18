@@ -35,8 +35,9 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{OBJ_dup, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -220,22 +221,22 @@ pub(crate) unsafe extern "C" fn CMS_ContentInfo_new_ex(
         // no-op made implicit by the zeroing allocation. The allocator coordinates (`cms_lib.c:64`)
         // and the free-old-then-allocate-new order are preserved exactly.
         let copy = if propq.is_null() {
-            ptr::null_mut()
+            None
         } else {
-            // SAFETY: `propq` is NUL-terminated per the caller's contract.
-            unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 64) }
+            // SAFETY: `propq` is NUL-terminated per the caller's contract; the seam
+            // answers a fresh block this call owns.
+            unsafe { OwnedCStr::dup(propq, SeamFile::new(FILE), 64) }
         };
-        if !propq.is_null() && copy.is_null() {
+        if !propq.is_null() && copy.is_none() {
             // SAFETY: `ci` is live and owned here.
             unsafe { CMS_ContentInfo_free(ci) };
             return ptr::null_mut();
         }
         // SAFETY: `ci` is a live `CMS_ContentInfo` whose `ctx` the item layer zeroed, so its
         // `propq` member is unset and obeys the member-buffer invariant.
-        let mut slot = unsafe { CmsPropqSlot::of(&mut (*ci).ctx) };
-        if !copy.is_null() {
-            // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the field is unset.
-            unsafe { slot.store(copy) };
+        let empty = unsafe { CmsPropqSlot::of(&mut (*ci).ctx).assume_empty() };
+        if let Some(copy) = copy {
+            empty.store(copy);
         }
     }
     ci

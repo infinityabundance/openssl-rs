@@ -120,12 +120,13 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
     CRYPTO_EX_INDEX_X509_STORE_CTX,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_commonName, NID_delta_crl,
     NID_issuing_distribution_point, NID_subject_alt_name, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_delete_ptr, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -237,7 +238,7 @@ unsafe impl CtxDestroy for X509StoreCtx {
             // `ptr` is live and its `propq` obeys the member-buffer invariant, so `clear` is that
             // block's one release at the authority's own site (`:2725`); a NULL incumbent makes it
             // a no-op.
-            PropqSlot::of(&mut *ptr).clear(FILE.as_ptr(), 2725);
+            PropqSlot::of(&mut *ptr).clear(SeamFile::new(FILE), 2725);
         }
     }
 }
@@ -1509,14 +1510,15 @@ pub unsafe extern "C" fn X509_STORE_CTX_new_ex(
         (*ctx.as_ptr()).libctx = libctx;
         if !propq.is_null() {
             // `propq` is NUL-terminated per the contract; the block is freshly zeroed, so the
-            // field is empty and `store` transfers ownership of this call's own dup to `ctx`.
-            let dup = CRYPTO_strdup(propq, FILE.as_ptr(), 2702);
-            PropqSlot::of(&mut *ctx.as_ptr()).store(dup);
-            if dup.is_null() {
+            // field is empty and the token transfers ownership of this call's own dup to `ctx`.
+            let Some(dup) = OwnedCStr::dup(propq, SeamFile::new(FILE), 2702) else {
                 // The authority releases the context at its own line 2704 on this refusal.
                 ctx.set_release_line(2704);
                 return ptr::null_mut();
-            }
+            };
+            // SAFETY: `ctx` is a fresh zeroed block, so its `propq` member is NULL.
+            let empty = PropqSlot::of(&mut *ctx.as_ptr()).assume_empty();
+            empty.store(dup);
         }
     }
     ctx.into_raw()

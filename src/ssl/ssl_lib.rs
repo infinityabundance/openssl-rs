@@ -85,6 +85,7 @@ use crate::runtime::mem::{
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
@@ -965,7 +966,7 @@ unsafe impl CtxDestroy for Cert {
             ptr::drop_in_place(ptr::addr_of_mut!((*ptr).custext));
             // SAFETY: `ptr` is live and its `psk_identity_hint` obeys the member-buffer invariant,
             // so this handle releases the object's own single block at the authority's own site.
-            (*ptr).psk_identity_hint_slot().clear(FILE, 0);
+            (*ptr).psk_identity_hint_slot().clear(FILE_SEAM, 0);
             // SAFETY: `dh_tmp` is NULL or the key the tmp-DH setter installed.
             EVP_PKEY_free((*ptr).dh_tmp.cast());
         }
@@ -1127,13 +1128,13 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
         }
         let hint = (*cert).psk_identity_hint();
         if !hint.is_null() {
-            let dup = CRYPTO_strdup(hint, FILE, 225);
-            if dup.is_null() {
+            // SAFETY: `hint` is NUL-terminated; the seam answers a fresh block this call owns.
+            let Some(dup) = OwnedCStr::dup(hint, FILE_SEAM, 225) else {
                 return ptr::null_mut();
-            }
-            // SAFETY: `ret` is a fresh container whose `psk_identity_hint` member is empty; `dup`
-            // is this call's fresh exclusive block, whose ownership it takes.
-            (*ret).psk_identity_hint_slot().store(dup);
+            };
+            // SAFETY: `ret` is a fresh container whose `psk_identity_hint` member is empty.
+            let empty = (*ret).psk_identity_hint_slot().assume_empty();
+            empty.store(dup);
         }
     }
     ret_owner.into_raw()
@@ -2675,69 +2676,14 @@ impl SslSession {
     }
 }
 
-/// A validated handle over the object-owned C-string member `SSL_SESSION::ext_hostname`.
+/// The object-owned C-string member handle shared by `SSL_SESSION`, `SslCtx`, `Ssl` and `Cert`.
 ///
-/// ## Member-buffer invariant (stated once)
-/// `SSL_SESSION::ext_hostname` is always either NULL or a single NUL-terminated block produced by
-/// the crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam and owned by the enclosing `SSL_SESSION`.
-/// That object is the block's *only* owner: the block is released **exactly once**, by
-/// `ssl_sess.rs`'s `CtxDestroy` body or by the next [`MemberCStrSlot::clear`]/[`MemberCStrSlot::store`]
-/// that replaces it. Nothing else frees or aliases it.
-///
-/// ## Why the field stays raw
-/// The `#[repr(C)]` layout is the authority's, so the field must remain `*mut c_char` at its exact
-/// offset; a Rust owner type cannot live in the struct. This handle is therefore a transient
-/// **borrow** over the field, the only sanctioned way to move the member's ownership in and out of
-/// it — the resident-member counterpart of the per-module `OwnedStr`. It is the `SSL_SESSION`
-/// analogue of `pk7_asn1.rs`'s `PropqSlot` (see `MEMBER-BUFFER-MODEL.md`).
-///
-/// `unsafe` appears only at the two proof boundaries: constructing the handle (which asserts the
-/// field currently obeys the invariant) and `store` (which accepts an externally-allocated block).
-/// `clear` is safe because a handle built by [`MemberCStrSlot::of`] guarantees the incumbent is the
-/// object's own single block.
-pub(crate) struct MemberCStrSlot<'a> {
-    /// Borrow of the object's member field; its value obeys the invariant for `'a`.
-    slot: &'a mut *mut c_char,
-}
-
-impl<'a> MemberCStrSlot<'a> {
-    /// Derive the handle from an object member field.
-    ///
-    /// # Safety
-    ///
-    /// `hostname` is the `ext_hostname` member of a live `SslSession` (or an equivalent
-    /// object-owned C-string member) and currently obeys the member-buffer invariant: it is NULL,
-    /// or a single NUL-terminated `CRYPTO_strdup`/`CRYPTO_strndup` block owned by that object.
-    pub(crate) unsafe fn of(hostname: &'a mut *mut c_char) -> MemberCStrSlot<'a> {
-        MemberCStrSlot { slot: hostname }
-    }
-
-    /// Release any incumbent value through the authority's own `CRYPTO_free` site, leaving the
-    /// field NULL. This is the authority's `if (p) { CRYPTO_free(p); p = NULL; }` — NULL is a
-    /// no-op for `CRYPTO_free`, so the release is total.
-    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
-        let old = core::mem::replace(self.slot, ptr::null_mut());
-        // SAFETY: by the member-buffer invariant the incumbent is NULL or the object's own single
-        // `CRYPTO_strdup` block, so this is that block's one release; `CRYPTO_free` ignores NULL.
-        unsafe { CRYPTO_free(old.cast(), file, line) };
-    }
-
-    /// Store a freshly-`CRYPTO_strdup`ed value into the (now empty) field, transferring ownership
-    /// of it to the enclosing object.
-    ///
-    /// # Safety
-    ///
-    /// `new` is NULL or a live NUL-terminated block this caller owns exclusively (produced by the
-    /// crate's `CRYPTO_strdup`/`CRYPTO_strndup` seam) and no other owner will release it; the field
-    /// is currently unset (NULL).
-    pub(crate) unsafe fn store(&mut self, new: *mut c_char) {
-        debug_assert!(
-            (*self.slot).is_null(),
-            "ext_hostname member slot must be empty before store"
-        );
-        *self.slot = new;
-    }
-}
+/// A type alias for the one shared [`crate::runtime::member_slot::CStrSlot`]: the
+/// member-buffer invariant, the clear/store token protocol and the audited release are
+/// stated once there. [`MemberCStrSlot::of`] is the shared `unsafe fn of(&mut *mut c_char)` and
+/// stays unsafe because it takes a bare member reference rather than an enclosing type whose
+/// field privacy could establish the invariant.
+pub(crate) type MemberCStrSlot<'a> = crate::runtime::member_slot::CStrSlot<'a>;
 
 /// A validated handle over an object-owned `(ptr, len)` **blob** member buffer of `SSL_SESSION`
 /// (`ext_tick`/`ext_ticklen`, `ext_alpn_selected`/`ext_alpn_selected_len`,
@@ -2832,6 +2778,15 @@ impl<'a> MemberBufSlot<'a> {
     /// The authority publishes the pointer one statement before the length (after its `memcpy`);
     /// this publishes both together. No allocator event or observer lies between them, so the
     /// transcript and the observable final state are identical.
+    ///
+    /// **Why this returns a raw pointer rather than a borrow tied to the slot.**
+    /// `CRYPTO_realloc` leaves the grown bytes uninitialised, so a `&mut [u8]` over
+    /// `new_len` would assert initialisation the operation does not establish (a
+    /// `&mut [MaybeUninit<u8>]` would be expressible, but the consumer is the
+    /// authority's `memcpy` from a C pointer, and the slot borrow cannot keep the
+    /// enclosing C object alive across that ABI boundary). The caller therefore owns
+    /// the returned pointer and must initialise the first `new_len` bytes before any
+    /// read, exactly as the safety contract states.
     ///
     /// # Safety
     ///
@@ -3003,13 +2958,13 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
             }
             (*ret).libctx = libctx;
             if !propq.is_null() {
-                let dup = CRYPTO_strdup(propq, FILE, 4040);
-                if dup.is_null() {
+                // SAFETY: `propq` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(propq, FILE_SEAM, 4040) else {
                     return ptr::null_mut();
-                }
-                // SAFETY: `ret` is a fresh context whose `propq` member is empty; `dup` is this
-                // call's fresh exclusive block.
-                (*ret).propq_slot().store(dup);
+                };
+                // SAFETY: `ret` is a fresh context whose `propq` member is empty.
+                let empty = (*ret).propq_slot().assume_empty();
+                empty.store(dup);
             }
             (*ret).method = meth;
             (*ret).mode = SSL_MODE_AUTO_RETRY;
@@ -3175,7 +3130,7 @@ unsafe impl CtxDestroy for SslCtx {
             (*ctx).ext_alpn_slot().clear(FILE, 0);
             CRYPTO_free((*ctx).supportedgroups.cast(), FILE, 0);
             CRYPTO_THREAD_lock_free((*ctx).lock);
-            (*ctx).propq_slot().clear(FILE, 4458);
+            (*ctx).propq_slot().clear(FILE_SEAM, 4458);
         }
     }
 }
@@ -3567,7 +3522,7 @@ unsafe impl CtxDestroy for Ssl {
             (*s).server_cert_type_slot().clear(FILE, 0);
             (*s).ext_alpn_slot().clear(FILE, 0);
             (*s).ext_npn_slot().clear(FILE, 0);
-            (*s).ext_hostname_slot().clear(FILE, 0);
+            (*s).ext_hostname_slot().clear(FILE_SEAM, 0);
             (*s).s3_alpn_selected_slot().clear(FILE, 0);
             (*s).s3_alpn_proposed_slot().clear(FILE, 0);
             CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
@@ -10101,14 +10056,15 @@ pub unsafe extern "C" fn SSL_CTX_use_psk_identity_hint(
             let mut slot = (*cert).psk_identity_hint_slot();
             // Release the incumbent at the authority's own site, then allocate-and-store the
             // replacement. A NULL `identity_hint` leaves the member cleared and a refused
-            // `CRYPTO_strdup` leaves it NULL (the authority's own failure path).
-            slot.clear(FILE, 5795);
+            // `CRYPTO_strdup` leaves it NULL (the authority's own failure path). The token is
+            // the only way to store into the now-empty field.
+            let empty = slot.clear(FILE_SEAM, 5795);
             if !identity_hint.is_null() {
-                let dup = CRYPTO_strdup(identity_hint, FILE, 5797);
-                if dup.is_null() {
+                // SAFETY: `identity_hint` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(identity_hint, FILE_SEAM, 5797) else {
                     return 0;
-                }
-                slot.store(dup);
+                };
+                empty.store(dup);
             }
         }
         1
@@ -10139,13 +10095,13 @@ pub unsafe extern "C" fn SSL_use_psk_identity_hint(
             let cert = (*s).cert;
             let mut slot = (*cert).psk_identity_hint_slot();
             // As `SSL_CTX_use_psk_identity_hint`: release the incumbent, then allocate-and-store.
-            slot.clear(FILE, 5816);
+            let empty = slot.clear(FILE_SEAM, 5816);
             if !identity_hint.is_null() {
-                let dup = CRYPTO_strdup(identity_hint, FILE, 5818);
-                if dup.is_null() {
+                // SAFETY: `identity_hint` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(identity_hint, FILE_SEAM, 5818) else {
                     return 0;
-                }
-                slot.store(dup);
+                };
+                empty.store(dup);
             }
         }
         1
@@ -12551,9 +12507,7 @@ mod adv_member_tests {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::runtime::mem::{
-        CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_strdup, CRYPTO_zalloc,
-    };
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
     use crate::ssl::ssl_sess::{SSL_SESSION_dup, SSL_SESSION_free, SSL_SESSION_new};
 
     /// The member-buffer predicate the refusal test asserts: an empty blob member is `(NULL, 0)`.
@@ -12614,20 +12568,23 @@ mod adv_member_tests {
         let s = new_session();
         // SAFETY: `s` is live; each string is this frame's own `CRYPTO_strdup` block.
         unsafe {
-            let a = CRYPTO_strdup(c"alpha".as_ptr(), ptr::null(), 0);
-            assert!(!a.is_null());
-            (*s).ext_hostname_slot().store(a);
-            assert_eq!((*s).ext_hostname(), a as *const c_char);
+            let a = OwnedCStr::dup(c"alpha".as_ptr(), SeamFile::NULL, 0)
+                .expect("a short strdup must succeed");
+            let a_raw = a.as_ptr();
+            let empty = (*s).ext_hostname_slot().assume_empty();
+            empty.store(a);
+            assert_eq!((*s).ext_hostname(), a_raw as *const c_char);
 
-            let b = CRYPTO_strdup(c"beta".as_ptr(), ptr::null(), 0);
-            assert!(!b.is_null());
-            (*s).ext_hostname_slot().clear(ptr::null(), 0);
-            (*s).ext_hostname_slot().store(b);
-            assert_eq!((*s).ext_hostname(), b as *const c_char);
+            let b = OwnedCStr::dup(c"beta".as_ptr(), SeamFile::NULL, 0)
+                .expect("a short strdup must succeed");
+            let mut slot = (*s).ext_hostname_slot();
+            let empty = slot.clear(SeamFile::NULL, 0);
+            empty.store(b);
+            assert!(!(*s).ext_hostname().is_null());
 
             // A NULL input leaves the member NULL (the authority's empty state).
-            (*s).ext_hostname_slot().clear(ptr::null(), 0);
-            (*s).ext_hostname_slot().store(ptr::null_mut());
+            let mut slot = (*s).ext_hostname_slot();
+            let _empty = slot.clear(SeamFile::NULL, 0);
             assert!((*s).ext_hostname().is_null());
 
             SSL_SESSION_free(s);

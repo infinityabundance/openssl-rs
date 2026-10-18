@@ -35,12 +35,13 @@ use crate::pkcs7::pk7_asn1::{
 };
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_pkcs7_data, NID_pkcs7_digest, NID_pkcs7_encrypted, NID_pkcs7_enveloped, NID_pkcs7_signed,
     NID_pkcs7_signedAndEnveloped, NID_rsaEncryption, NID_undef, OBJ_cmp, OBJ_dup,
     OBJ_find_sigid_by_algs, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
@@ -934,16 +935,16 @@ pub unsafe extern "C" fn ossl_pkcs7_set1_propq(p7: *mut Pkcs7, propq: *const c_c
     // invariant.
     let mut slot = unsafe { PropqSlot::of(&mut (*p7).ctx) };
     // Release any incumbent at the authority's own site (`pk7_lib.c:497`), leaving it unset. A
-    // NULL incumbent makes this a no-op, exactly as the authority's NULL guard does.
-    slot.clear(FILE.as_ptr(), 497);
+    // NULL incumbent makes this a no-op, exactly as the authority's NULL guard does. The
+    // returned token is the only way to store into the now-empty field.
+    let empty = slot.clear(SeamFile::new(FILE), 497);
     if !propq.is_null() {
-        // SAFETY: `propq` is NUL-terminated per the caller's contract.
-        let copy = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 501) };
-        if copy.is_null() {
+        // SAFETY: `propq` is NUL-terminated per the caller's contract; the seam answers a
+        // fresh block this call owns.
+        let Some(copy) = (unsafe { OwnedCStr::dup(propq, SeamFile::new(FILE), 501) }) else {
             return 0;
-        }
-        // SAFETY: `copy` is this call's own fresh `CRYPTO_strdup` block and the field is unset.
-        unsafe { slot.store(copy) };
+        };
+        empty.store(copy);
     }
     1
 }

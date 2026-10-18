@@ -146,7 +146,7 @@ unsafe extern "C" fn shim_realloc(
 }
 
 /// Install the shim, once, before the first `CRYPTO_*` allocation.
-fn install() {
+pub(crate) fn install() {
     INSTALL.call_once(|| {
         // SAFETY: the three shims satisfy the `CRYPTO_*_fn` contract and are
         // `'static`. This is the first `CRYPTO_*` call in the filtered process.
