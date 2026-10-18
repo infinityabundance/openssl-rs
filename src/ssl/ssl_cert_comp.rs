@@ -123,7 +123,24 @@ fn ossl_comp_has_alg(a: c_int) -> bool {
 /// int alg)` — `ssl_cert_comp.c:61-81`.
 ///
 /// # Safety
-/// `data` must be NULL or an owned allocation this function takes over.
+///
+/// `data` is NULL or the exclusive block returned by this crate's
+/// `CRYPTO_memdup(src, len, ...)` in `OSSL_COMP_CERT_from_compressed_data`
+/// (`ssl_cert_comp.rs:180`), the only caller. A non-NULL block therefore comes from
+/// the **plain** `CRYPTO_*` seam and its allocation extent is exactly `len` bytes
+/// (`CRYPTO_memdup` copies `len`; it answers NULL for `len == 0`, so non-NULL implies
+/// `len >= 1`). A secure-heap or `Box`/`Vec` block is excluded.
+///
+/// Ownership transfers to this function. On any refusal the frame's `OwnedBuf`
+/// releases the block exactly once with `CRYPTO_free` — the authority's
+/// `OPENSSL_free(data)` at `ssl_cert_comp.c:78`; on success the block moves to the
+/// returned record and `OSSL_COMP_CERT_free` releases it with `CRYPTO_free`
+/// (authority `OPENSSL_free(cc->data)`, `ssl_cert_comp.c:145`). No copy is made.
+///
+/// The authority compiles this helper only under `#ifndef OPENSSL_NO_COMP_ALG`;
+/// this crate transcribes it in reduced form and `ossl_comp_has_alg` always answers
+/// false, so the success path is unreachable in this build. The adoption is retained
+/// because its seam is the `CRYPTO_memdup` above, not an unowned caller pointer.
 unsafe fn OSSL_COMP_CERT_new(
     data: *mut u8,
     len: usize,

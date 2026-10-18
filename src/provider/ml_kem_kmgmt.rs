@@ -1165,7 +1165,19 @@ unsafe extern "C" fn ml_kem_load(reference: *const c_void, reference_sz: usize) 
 /// The `err:` label of `ml_kem_load` — `ml_kem_kmgmt.c:563-568`.
 ///
 /// # Safety
-/// `key` is this call's own.
+/// `key` is this call's own. `encoded_dk` is NULL or the block `ml_kem_load`
+/// detached from `(*key).encoded_dk` (`:1117-1120`); when non-NULL it is the
+/// secure-heap allocation the P8 decoder made with
+/// `CRYPTO_secure_malloc((*p8fmt).priv_length, ...)` (`ml_kem_codecs.rs:696`),
+/// whose extent equals `key->vinfo->prvkey_bytes` (the codec checks that equality
+/// at `ml_kem_codecs.rs:627-628`). Ownership transfers here, which releases it
+/// exactly once through `CRYPTO_secure_clear_free(encoded_dk, prvkey_bytes, ...)`
+/// — the authority's `err:` arm `OPENSSL_secure_clear_free(encoded_dk,
+/// key->vinfo->prvkey_bytes)` (`ml_kem_kmgmt.c:535`, `LINE_LOAD_CLEAR`) — via
+/// `OwnedBuf::adopt_secure_cleansed`. A plain `CRYPTO_malloc` block is excluded;
+/// the secure allocator's documented uninitialised-heap plain fallback is
+/// covered. `seed` is `ML_KEM_SEED_BYTES` writable, initialized bytes and is
+/// cleansed here.
 unsafe fn load_err(
     key: *mut MlKemKey,
     encoded_dk: *mut u8,
