@@ -596,30 +596,93 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
     let mut key_out: *mut crate::evp::pkey::EvpPkey = ptr::null_mut();
     let mut chain_out: *mut OpenSslStack = ptr::null_mut();
     let mut ca_pubs: *mut OpenSslStack = ptr::null_mut();
+    // `si` and `msg` are shared with the authority's `err:` tail below, which every failure
+    // after the callback has run reaches (`cmp_server.c:299-307`). Every path that reaches the
+    // tail has assigned `si` (the `break 'reply` arms all follow an assignment).
     let si: *mut CmpPkisi;
+    let mut msg: *mut CmpMsg = ptr::null_mut();
 
     // SAFETY: `srv_ctx`'s ctx is live.
     let ctx = unsafe { (*srv_ctx).ctx };
-    if central_keygen == 0 {
-        // SAFETY: `ctx`/`req` are live.
-        let accept_raverified = unsafe { (*srv_ctx).accept_raverified };
-        // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-        if unsafe { crate::cmp::cmp_vfy::ossl_cmp_verify_popo(ctx, req, accept_raverified) } == 0 {
-            /* Proof of possession could not be verified */
-            // SAFETY: no preconditions.
-            let err = crate::runtime::err::ERR_peek_error();
-            // SAFETY: the error string is static or NULL.
-            let reason = crate::runtime::err::ERR_reason_error_string(err);
-            // SAFETY: `reason` is NULL or NUL-terminated.
-            si = unsafe {
-                crate::cmp::cmp_status::OSSL_CMP_STATUSINFO_new(
-                    OSSL_CMP_PKISTATUS_REJECTION,
-                    1 << OSSL_CMP_PKIFAILUREINFO_BAD_POP,
-                    reason,
-                )
-            };
-            if si.is_null() {
-                return ptr::null_mut();
+    'reply: {
+        if central_keygen == 0 {
+            // SAFETY: `ctx`/`req` are live.
+            let accept_raverified = unsafe { (*srv_ctx).accept_raverified };
+            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+            if unsafe { crate::cmp::cmp_vfy::ossl_cmp_verify_popo(ctx, req, accept_raverified) }
+                == 0
+            {
+                /* Proof of possession could not be verified */
+                // SAFETY: no preconditions.
+                let err = crate::runtime::err::ERR_peek_error();
+                // SAFETY: the error string is static or NULL.
+                let reason = crate::runtime::err::ERR_reason_error_string(err);
+                // SAFETY: `reason` is NULL or NUL-terminated.
+                si = unsafe {
+                    crate::cmp::cmp_status::OSSL_CMP_STATUSINFO_new(
+                        OSSL_CMP_PKISTATUS_REJECTION,
+                        1 << OSSL_CMP_PKIFAILUREINFO_BAD_POP,
+                        reason,
+                    )
+                };
+                if si.is_null() {
+                    // The authority's proof-of-possession arm returns before reaching `err:`
+                    // (`cmp_server.c:270-276`), so the context is not touched here.
+                    return ptr::null_mut();
+                }
+            } else {
+                // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
+                si = unsafe {
+                    process_cert_request_inner(
+                        srv_ctx,
+                        req,
+                        cert_req_id,
+                        crm,
+                        p10cr,
+                        &mut cert_out,
+                        &mut chain_out,
+                        &mut ca_pubs,
+                    )
+                };
+                if si.is_null() {
+                    // The authority's `goto err` releases whatever the callback filled in.
+                    break 'reply;
+                }
+                // SAFETY: `si` is live.
+                if unsafe { crate::cmp::cmp_status::ossl_cmp_pkisi_get_status(si) }
+                    == OSSL_CMP_PKISTATUS_WAITING
+                {
+                    // SAFETY: `srv_ctx` is live.
+                    unsafe { (*srv_ctx).polling = 1 };
+                }
+                // SAFETY: `req` is live.
+                let hdr = unsafe { OSSL_CMP_MSG_get0_header(req) };
+                // SAFETY: `ctx`/`hdr` are live.
+                let implicit =
+                    unsafe { crate::cmp::cmp_hdr::ossl_cmp_hdr_has_implicitConfirm(hdr) } != 0
+                        && unsafe { (*srv_ctx).grant_implicit_confirm } != 0
+                        && !cert_out.is_null();
+                // SAFETY: `ctx` is live.
+                if unsafe {
+                    crate::cmp::cmp_ctx::OSSL_CMP_CTX_set_option(
+                        ctx,
+                        OSSL_CMP_OPT_IMPLICIT_CONFIRM,
+                        c_int::from(implicit),
+                    )
+                } == 0
+                {
+                    // The authority's `goto err` releases `si`, the certificate and the stacks.
+                    break 'reply;
+                }
+                if central_keygen == 1
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    && unsafe { (*ctx).new_pkey_priv } != 0
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    && !unsafe { (*ctx).new_pkey }.is_null()
+                {
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    key_out = unsafe { (*ctx).new_pkey };
+                }
             }
         } else {
             // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
@@ -636,32 +699,8 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
                 )
             };
             if si.is_null() {
-                return ptr::null_mut();
-            }
-            // SAFETY: `si` is live.
-            if unsafe { crate::cmp::cmp_status::ossl_cmp_pkisi_get_status(si) }
-                == OSSL_CMP_PKISTATUS_WAITING
-            {
-                // SAFETY: `srv_ctx` is live.
-                unsafe { (*srv_ctx).polling = 1 };
-            }
-            // SAFETY: `req` is live.
-            let hdr = unsafe { OSSL_CMP_MSG_get0_header(req) };
-            // SAFETY: `ctx`/`hdr` are live.
-            let implicit = unsafe { crate::cmp::cmp_hdr::ossl_cmp_hdr_has_implicitConfirm(hdr) }
-                != 0
-                && unsafe { (*srv_ctx).grant_implicit_confirm } != 0
-                && !cert_out.is_null();
-            // SAFETY: `ctx` is live.
-            if unsafe {
-                crate::cmp::cmp_ctx::OSSL_CMP_CTX_set_option(
-                    ctx,
-                    OSSL_CMP_OPT_IMPLICIT_CONFIRM,
-                    c_int::from(implicit),
-                )
-            } == 0
-            {
-                return ptr::null_mut();
+                // The authority's `goto err` releases whatever the callback filled in.
+                break 'reply;
             }
             if central_keygen == 1
                 // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
@@ -673,56 +712,31 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
                 key_out = unsafe { (*ctx).new_pkey };
             }
         }
-    } else {
-        // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
-        si = unsafe {
-            process_cert_request_inner(
-                srv_ctx,
-                req,
+
+        // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+        let unprotected = unsafe { (*srv_ctx).send_unprotected_errors };
+        // SAFETY: `ctx`/`si` are live; the rest are NULL or live.
+        msg = unsafe {
+            ossl_cmp_certrep_new(
+                ctx,
+                bodytype,
                 cert_req_id,
-                crm,
-                p10cr,
-                &mut cert_out,
-                &mut chain_out,
-                &mut ca_pubs,
+                si,
+                cert_out,
+                key_out,
+                ptr::null(),
+                chain_out,
+                ca_pubs,
+                unprotected,
             )
         };
-        if si.is_null() {
-            return ptr::null_mut();
-        }
-        if central_keygen == 1
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            && unsafe { (*ctx).new_pkey_priv } != 0
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            && !unsafe { (*ctx).new_pkey }.is_null()
-        {
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            key_out = unsafe { (*ctx).new_pkey };
+        if msg.is_null() {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cmp(299, c"process_cert_request", 117) };
         }
     }
-
-    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-    let unprotected = unsafe { (*srv_ctx).send_unprotected_errors };
-    // SAFETY: `ctx`/`si` are live; the rest are NULL or live.
-    let msg = unsafe {
-        ossl_cmp_certrep_new(
-            ctx,
-            bodytype,
-            cert_req_id,
-            si,
-            cert_out,
-            key_out,
-            ptr::null(),
-            chain_out,
-            ca_pubs,
-            unprotected,
-        )
-    };
-    if msg.is_null() {
-        // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cmp(299, c"process_cert_request", 117) };
-    }
-    // SAFETY: `si` is this call's own; `cert_out` is owned here; the stacks are NULL or owned.
+    // The authority's `err:` tail: run for success and for every failure after the callback.
+    // SAFETY: `si` is NULL or this call's own; `cert_out` is owned here; the stacks are NULL or owned.
     unsafe {
         OSSL_CMP_PKISI_free(si);
         crate::x509::x_x509::X509_free(cert_out);
