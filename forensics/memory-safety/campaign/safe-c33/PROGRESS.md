@@ -18,7 +18,8 @@ comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
-  (**50.0%**); **0** files have fully discharged obligations; **0/33**
+  (**50.0%**); **0** files have fully discharged obligations; **1 shared
+  mechanism** (RC-1 reference counting) is `SAFETY_DISCHARGED`; **0/33**
   consumers are `SAFE_COMPATIBLE`.
 - Whole tree: **868** `src/**/*.rs`; **377** files have a seam.
 - Disjoint call-site classes: **700** production allocation calls in **240**
@@ -78,7 +79,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1346** passed,
+`cargo test --lib` (must pass; the established baseline is **1357** passed,
 **22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
@@ -1121,6 +1122,32 @@ package.
 - Adjudication review **PASS**. Gate: `fmt` 0, clippy 0, **1346 passed / 22
   ignored**, **22/22** probes, loom **4/4**.
 
+### Subphase 84 — RC-1 `SAFETY_DISCHARGED` (first mechanism)
+
+- Caller audit `RC1-CALLERS.md`: **76 production call expressions, 75
+  ESTABLISHED** (73 independent, 2 forwarded), **0 UNATTRIBUTED**, 1 N/A
+  (test-only `do_lock` op 1).
+- Two final blockers were fixed rather than documented:
+  1. **Engine table lifetime.** Operation tables stored borrowed `ENGINE *` and
+     `ENGINE_remove` dropped the list reference without unregistering them, so a
+     table entry could dangle. `ENGINE_remove` now unregisters the engine from
+     all nine tables under the held lock before the reference is dropped. The
+     authority has the latent dangling-table UB, so this is a §17 divergence.
+  2. **Certificate duplication.** `ssl_cert_dup` checks `dh_tmp`, every slot's
+     X509/key, the chain up-ref, serverinfo, comp-cert, custom extensions and
+     the PSK hint; `cert_copy_security` takes both refs before touching the
+     destination and rolls back on refusal. Refusal tests use `i32::MAX`.
+- `DSO_free`/`BIO_free` docs now state the authority's true post-call
+  semantics; retry/veto tests confirm the reference is consumed.
+- **Adjudication: `SAFETY_DISCHARGED`**, source `544222da4`. §7: contracts
+  complete; every caller precondition established by a frame or ABI witness;
+  no safe-Rust path to the protocol. Independent evidence: loom 4/4 on a fresh
+  compile, exhaustive bounded model (226 interleavings), three mutants detected.
+- Retained, non-blocking: C-ABI caller ownership, consumer lock discipline, the
+  authority's cached-`funct` arm on a refused init, bounded model, no
+  Miri/ASan/differential race replay. All enumerated.
+- Gate: `fmt` 0, clippy 0, **1357 passed / 22 ignored**, **22/22** probes.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1142,8 +1169,9 @@ converted module re-hosts several hand-written sites into one seam.
   release (MlKemKey/MlDsaKey/MlxKey/ProvMlxKemGenCtx, RSA_METHOD).
 - **Interior representation rewrites** (the deeper class, like
   `src/runtime/sparse_array.rs`): raw graph traversal replaced by owned nodes.
-- **Discharge evidence**: no file has a proven per-site validity contract yet;
-  `SAFETY_DISCHARGED` and `SAFE_COMPATIBLE` remain 0 pending the seal.
+- **Discharge evidence**: RC-1 is the first discharged mechanism; no file has a
+  proven per-site obligation closure yet, and `SAFE_COMPATIBLE` remains 0 pending
+  the seal.
 
 ## Structural/no-seam tail (sweep-30 classification)
 
@@ -1202,13 +1230,13 @@ Not one percentage; report each axis honestly.
    module-local destructor traits are `unsafe trait`** with explicit contracts.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
-3. **Discharged safety obligations** — local gate green per batch; three
-   reusable-abstraction soundness fixes landed (adoption ctors are `unsafe fn`;
-   `RawCtx`/`assume_init` staged init in `bio::owned` and `ssl_lib`; `CtxDestroy`
-   is now an `unsafe trait` encoding the zero-validity + destructor contract for
-   the shared seam). Counted separately from sites converted — a converted site
-   is not a discharged obligation. Full `SAFETY_DISCHARGED` enumeration still
-   awaits the seal-point regeneration.
+3. **Discharged safety obligations** — **RC-1 (shared reference counting) is
+   `SAFETY_DISCHARGED`** (subphase 84): contracts, a per-caller audit with 0
+   unattributed rows, loom, an exhaustive bounded model and three mutant
+   negative controls, with the engine-table and certificate-duplication blockers
+   fixed rather than documented. All other mechanisms remain `ESTABLISHED` or
+   `CONTRACTED`; a converted site is not a discharged obligation. Full file-level
+   discharge still awaits the per-file campaign and the seal.
 4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
    (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
 5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
@@ -1298,7 +1326,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `43b9071cf` (RC-1 independently checked)
+**Last observed HEAD:** `544222da4` (RC-1 SAFETY_DISCHARGED)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1312,7 +1340,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1346** tests (22 ignored;
+   The most recent reported library baseline is **1357** tests (22 ignored;
    22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.

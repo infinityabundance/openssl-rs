@@ -1,16 +1,19 @@
 # Refcount boundary RC-1 — `runtime::refcount`
 
 **Source identity:** `integrate/safe-c33` at
-`c74f87d1babf8e7f9ffa305c0bcfb8731d662089` (working tree at audit time).
+`544222da4` (RC-1 discharge batch; audit began at `c74f87d1b`).
 **Boundary ID:** `RC-1`. **Conversion instrument:** bounded deterministic
 concurrency tests plus the existing consumer re-entrancy tests. **Independent
 check:** Loom model checking of the real generic protocol plus an exhaustive
 bounded interleaving model with three mutant negative controls; see
-`REFCOUNT-CHECKS.md`. **Status:** `INDEPENDENTLY_CHECKED` (checked at
-`56ba89459` plus the check-package working tree). **Not** `SAFETY_DISCHARGED`:
-the exported free wrappers still rely on the C-ABI caller contract, and no
-global/unbounded proof exists. **Not** `SAFE_COMPATIBLE`: no dependency-closure
-or consumer-compatibility claim is made here.
+`REFCOUNT-CHECKS.md`. **Caller audit:** every production call site in
+`RC1-CALLERS.md` is ESTABLISHED or explicitly N/A, with source witnesses.
+**Status:** `SAFETY_DISCHARGED` (adjudicated after the engine-table lifetime and
+certificate-duplication blockers were fixed; see §7). Scope: the protocol and
+its callers in this crate. **Not** `SAFE_COMPATIBLE`: no dependency-closure or
+consumer-compatibility claim is made here. The exported wrappers' ownership
+precondition is the C-ABI caller contract, which §7 accepts as an external
+contract and which `RC1-CALLERS.md` records per site.
 
 ## 1. The object and the contract
 
@@ -405,13 +408,44 @@ Retained:
 
 Introduced:
 
-- every production call site now carries a `SAFETY` assertion that must be
-  independently audited; this is an honestly reported obligation, not a
-  discharged one;
+- every production call site now carries a `SAFETY` assertion; these were
+audited per site in `RC1-CALLERS.md` (75 ESTABLISHED, 0 UNATTRIBUTED, 1 N/A);
 - the API is `unsafe`, so any future safe wrapper must repeat the contract at
   its own boundary rather than exposing a safe-looking call.
 
-Graduation: RC-1 is `INDEPENDENTLY_CHECKED` for the protocol state machine. It
-is not `SAFETY_DISCHARGED`: the exported free wrappers still rely on the C-ABI
-caller contract, and no global/unbounded proof exists; that judgment needs a
-separate adjudication. It is not `SAFE_COMPATIBLE`.
+## 8. Discharge record
+
+**Adjudication:** `SAFETY_DISCHARGED`, source `544222da4`.
+
+§7 criteria, as adjudicated by an independent reviewer:
+
+1. **Contracts.** `up_ref`/`down_ref` are `unsafe fn` with complete validity
+   contracts (published positive count, live storage, exactly one owned
+   reference for down-ref, unique `Last` destructor runner, checked
+   `i32::MAX`). No unsafe operation in scope lacks a contract.
+2. **Precondition establishment.** All 76 production call expressions are
+   accounted for in `RC1-CALLERS.md`: 75 ESTABLISHED with a frame or ABI
+   witness and 1 explicitly N/A (a test-only `do_lock` arm). Exported
+   wrappers state the C-ABI caller contract; §7 accepts an external ABI
+   contract. The two former blockers were fixed rather than documented:
+   engine operation tables are unregistered from all nine tables under the
+   held lock before the list reference is dropped (§17 divergence from the
+   authority's latent dangling-table UB), and `ssl_cert_dup` /
+   `cert_copy_security` check every up-ref and roll back on refusal.
+3. **Safe interface.** No safe Rust function can reach `up_ref`/`down_ref`;
+   the compiler enforces the unsafe boundary (`cargo check --all-targets`).
+
+Independent evidence: `REFCOUNT-CHECKS.md` (loom 4/4 on a forced fresh
+compile, exhaustive bounded model of up to three actors — 226 interleavings in
+the base+2 case — and three mutants each detected).
+
+Retained, non-blocking obligations: the C-ABI caller owns the reference it
+frees; object state synchronisation remains the consumer's lock discipline;
+the authority's cached-`funct`-without-a-reference arm on a refused init is a
+retained authority hazard (reachable only through the crate's added
+`i32::MAX` refusal); the model is bounded; no Miri/ASan/differential replay of
+the races exists. These are enumerated residuals, not unknowns.
+
+Graduation: **RC-1 is `SAFETY_DISCHARGED`**. It is **not** `SAFE_COMPATIBLE`:
+no consumer dependency-closure or current-candidate compatibility claim is made
+here.
