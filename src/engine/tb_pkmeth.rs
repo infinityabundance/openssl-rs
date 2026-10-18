@@ -37,7 +37,7 @@ const LINE_SELECT: c_int = 69;
 static PKEY_METH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn pkey_meth_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn pkey_meth_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(PKEY_METH_TABLE) as *mut *mut OpenSslLhash
 }
 

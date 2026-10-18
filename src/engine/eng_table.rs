@@ -289,6 +289,13 @@ pub(crate) unsafe fn engine_table_register(
             OPENSSL_sk_delete_ptr((*fnd).sk, e.cast::<c_void>());
         }
         // If `setdefault`, this ENGINE goes to the head of the list.
+        // The stack stores a **borrowed** `ENGINE *`; `engine_table_register` takes no
+        // reference for it (`eng_table.c:124-131`). The structural reference that keeps
+        // `e` alive is the one `engine_list_add` took when the engine was added to the
+        // global list (`ENGINE_add`). `engine_list_remove` retires this borrow through
+        // `engine_unregister_from_all_tables` before dropping that reference, so the entry
+        // cannot outlive its owner (a deliberate improvement over the authority, which does
+        // not unregister on removal).
         // SAFETY: `fnd` is live and `e` is the caller's engine.
         if unsafe { OPENSSL_sk_push((*fnd).sk, e.cast::<c_void>()) } == 0 {
             // SAFETY: the engine lock is held by the caller.
@@ -363,6 +370,23 @@ pub(crate) unsafe fn engine_table_unregister(table: *mut *mut OpenSslLhash, e: *
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
         return;
     }
+    // SAFETY: the engine lock is held by this frame.
+    unsafe { engine_table_unregister_locked(table, e) };
+    // SAFETY: the engine lock is held by the caller.
+    unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
+}
+
+/// The body of [`engine_table_unregister`] for a caller that already holds the engine lock.
+///
+/// `ENGINE_remove` reaches this form: it unregisters `e` from every table while holding the
+/// lock it took, before dropping the global list's structural reference. The authority's
+/// `engine_table_unregister` always acquires the lock itself (`:167-175`); the crate's lock
+/// refuses a recursive write acquisition, so the removal path cannot call the public form.
+///
+/// # Safety
+/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be a live `ENGINE`; the
+/// engine lock must be held by the caller.
+pub(crate) unsafe fn engine_table_unregister_locked(table: *mut *mut OpenSslLhash, e: *mut Engine) {
     // SAFETY: `table` is a live slot.
     if unsafe { int_table_check(table, false) } {
         // SAFETY: `table` holds a live lhash and `e` is the caller's engine.
@@ -370,8 +394,6 @@ pub(crate) unsafe fn engine_table_unregister(table: *mut *mut OpenSslLhash, e: *
             OPENSSL_LH_doall_arg(*table, Some(int_unregister_cb), e.cast::<c_void>());
         }
     }
-    // SAFETY: the engine lock is held by the caller.
-    unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
 }
 
 /// `static void int_cleanup_cb_doall(ENGINE_PILE *p)` — `:177-185`.
@@ -464,6 +486,14 @@ pub(crate) unsafe fn ossl_engine_table_select(
             return unsafe { select_end(fnd, ret) };
         }
     }
+    // The authority's own arm: `if (fnd->uptodate) { ret = fnd->funct; goto end; }`
+    // (`eng_table.c:240-243`). When the cached default is present but
+    // `engine_unlocked_init` answered 0, the cached pointer is returned **without** an
+    // acquired functional reference. That is an authority-level contract hazard the
+    // conversion inherits, not a new refusal: the crate's checked increment can also
+    // answer 0 at `i32::MAX`, which the authority's plain fetch-add cannot observe.
+    // Callers therefore receive an unowned engine on this arm in both implementations;
+    // it is recorded with the borrowed-table-entry hazard, not discharged here.
     // SAFETY: `fnd` is live.
     if unsafe { (*fnd).uptodate } != 0 {
         // SAFETY: `fnd` is live.
@@ -560,6 +590,141 @@ pub(crate) unsafe fn engine_table_doall(
                 Some(int_dall),
                 ptr::addr_of_mut!(dall).cast::<c_void>(),
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::test_support::lock_global_state;
+
+    static INIT_CALLS: AtomicU32 = AtomicU32::new(0);
+
+    unsafe extern "C" fn refusing_init(_e: *mut Engine) -> c_int {
+        INIT_CALLS.fetch_add(1, Ordering::SeqCst);
+        0
+    }
+
+    /// The authority returns the cached `fnd->funct` when `engine_unlocked_init` fails and
+    /// `uptodate` is set (`eng_table.c:240-243`). The crate's checked increment adds a
+    /// refusal at `i32::MAX` that the authority's plain fetch-add cannot observe; this test
+    /// pins the authority's answer on that arm: the cached pointer, with no acquired
+    /// functional reference.
+    #[test]
+    fn refused_init_returns_the_cached_default_without_a_reference() {
+        let _g = lock_global_state();
+        let nid: c_int = 0x4d7;
+        let mut table: *mut OpenSslLhash = ptr::null_mut();
+        // SAFETY: `table` is this test's own slot; the lhash, pile and engine are built
+        // and released exactly once here.
+        unsafe {
+            assert!(int_table_check(&mut table, true));
+            let raw = RawCtx::<EnginePile>::malloc();
+            assert!(raw.is_some(), "the pile block allocates");
+            let Some(raw) = raw else { return };
+            {
+                let p = raw.as_ptr();
+                (*p).uptodate = 1;
+                (*p).nid = nid;
+                (*p).sk = OPENSSL_sk_new_null();
+                assert!(!(*p).sk.is_null());
+                (*p).funct = ptr::null_mut();
+            }
+            let raw = raw.assume_init();
+            OPENSSL_LH_insert(table, raw.as_ptr().cast::<c_void>());
+
+            let tmplate = EnginePile {
+                nid,
+                sk: ptr::null_mut(),
+                funct: ptr::null_mut(),
+                uptodate: 1,
+            };
+            let fnd = OPENSSL_LH_retrieve(table, ptr::addr_of!(tmplate).cast::<c_void>())
+                .cast::<EnginePile>();
+            assert_eq!(fnd, raw.as_ptr());
+            let _ = raw.into_raw();
+
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            (*fnd).funct = e;
+            (*e).struct_ref.store(i32::MAX, Ordering::Relaxed);
+
+            let got = ossl_engine_table_select(&mut table, nid, c"eng_table-test".as_ptr(), 0);
+            assert_eq!(got, e, "the cached-default arm must match the authority");
+            assert_eq!(
+                (*e).struct_ref.load(Ordering::Relaxed),
+                i32::MAX,
+                "no structural reference was acquired"
+            );
+            assert_eq!((*e).funct_ref, 0, "no functional reference was acquired");
+
+            // Clear the borrowed cache before the pile's destructor runs: the cached
+            // pointer carries no functional reference for `engine_unlocked_finish` to drop.
+            (*e).struct_ref.store(1, Ordering::Relaxed);
+            (*fnd).funct = ptr::null_mut();
+            engine_table_cleanup(&mut table);
+            assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    /// The authority's other trigger for the same arm: the cached default's own `init`
+    /// hook answers 0 (`eng_table.c:233-243`). It likewise returns the cached pointer
+    /// without a functional reference.
+    #[test]
+    fn refused_init_hook_returns_the_cached_default_without_a_reference() {
+        let _g = lock_global_state();
+        let nid: c_int = 0x4d8;
+        let mut table: *mut OpenSslLhash = ptr::null_mut();
+        // SAFETY: `table` is this test's own slot; the lhash, pile and engine are built
+        // and released exactly once here.
+        unsafe {
+            assert!(int_table_check(&mut table, true));
+            let raw = RawCtx::<EnginePile>::malloc();
+            assert!(raw.is_some(), "the pile block allocates");
+            let Some(raw) = raw else { return };
+            {
+                let p = raw.as_ptr();
+                (*p).uptodate = 1;
+                (*p).nid = nid;
+                (*p).sk = OPENSSL_sk_new_null();
+                assert!(!(*p).sk.is_null());
+                (*p).funct = ptr::null_mut();
+            }
+            let raw = raw.assume_init();
+            OPENSSL_LH_insert(table, raw.as_ptr().cast::<c_void>());
+
+            let tmplate = EnginePile {
+                nid,
+                sk: ptr::null_mut(),
+                funct: ptr::null_mut(),
+                uptodate: 1,
+            };
+            let fnd = OPENSSL_LH_retrieve(table, ptr::addr_of!(tmplate).cast::<c_void>())
+                .cast::<EnginePile>();
+            assert_eq!(fnd, raw.as_ptr());
+            let _ = raw.into_raw();
+
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            (*e).init = Some(refusing_init);
+            (*fnd).funct = e;
+            INIT_CALLS.store(0, Ordering::SeqCst);
+
+            let got = ossl_engine_table_select(&mut table, nid, c"eng_table-test".as_ptr(), 0);
+            assert_eq!(got, e, "the cached-default arm must match the authority");
+            assert_eq!(INIT_CALLS.load(Ordering::SeqCst), 1, "the hook ran once");
+            assert_eq!((*e).funct_ref, 0, "no functional reference was acquired");
+            assert_eq!(
+                (*e).struct_ref.load(Ordering::Relaxed),
+                1,
+                "no structural reference was acquired"
+            );
+
+            (*fnd).funct = ptr::null_mut();
+            engine_table_cleanup(&mut table);
+            assert_eq!(ENGINE_free(e), 1);
         }
     }
 }
