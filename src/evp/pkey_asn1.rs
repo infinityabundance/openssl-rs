@@ -643,13 +643,20 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_new(
 /// owned strings, and a transcription that copied the whole struct would alias `src`'s strings into
 /// `dst` and then free them twice.
 ///
+/// `*dst = *src` is a defined whole-object assignment when `dst == src`, and the authority's five
+/// restores make the self-copy a net no-op. This transcription returns before the raw copy so the
+/// identity case never reaches `ptr::copy_nonoverlapping`.
+///
 /// # Safety
-/// `dst` and `src` must be live.
+/// `dst` and `src` must be live. `dst == src` is accepted.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_asn1_copy(
     dst: *mut EvpPkeyAsn1Method,
     src: *const EvpPkeyAsn1Method,
 ) {
+    if ptr::eq(dst.cast_const(), src) {
+        return;
+    }
     // SAFETY: `dst` is live per the contract.
     let (pkey_id, pkey_base_id, pkey_flags, pem_str, info) = unsafe {
         (
@@ -1179,4 +1186,48 @@ pub unsafe extern "C" fn EVP_PKEY_type(type_: c_int) -> c_int {
     }
     // SAFETY: `ameth` is a live method.
     unsafe { (*ameth).pkey_id }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The authority's `*dst = *src` is a defined whole-object assignment when the pointers are
+    /// equal, and its five restores make the self-copy a net no-op. The identity guard must leave
+    /// the object — including its two owned strings — exactly as it was, so the later `free` still
+    /// releases each string once.
+    #[test]
+    fn asn1_copy_accepts_the_identity() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the two literals are NUL-terminated and the answer is this test's object.
+        let ameth = unsafe {
+            EVP_PKEY_asn1_new(1, 0, c"self-copy-pem".as_ptr(), c"self-copy-info".as_ptr())
+        };
+        assert!(!ameth.is_null());
+        // SAFETY: `ameth` is a live object this test owns.
+        let before = unsafe {
+            (
+                (*ameth).pkey_id,
+                (*ameth).pkey_base_id,
+                (*ameth).pkey_flags,
+                (*ameth).pem_str,
+                (*ameth).info,
+            )
+        };
+        // SAFETY: `ameth` is live and is both arguments, the identity case under test.
+        unsafe { EVP_PKEY_asn1_copy(ameth, ameth) };
+        // SAFETY: `ameth` is still live; the guard performs no store.
+        let after = unsafe {
+            (
+                (*ameth).pkey_id,
+                (*ameth).pkey_base_id,
+                (*ameth).pkey_flags,
+                (*ameth).pem_str,
+                (*ameth).info,
+            )
+        };
+        assert_eq!(after, before, "the identity copy changes nothing");
+        // SAFETY: `ameth` is this test's dynamic method and has not been released.
+        unsafe { EVP_PKEY_asn1_free(ameth) };
+    }
 }

@@ -2468,7 +2468,8 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
         // destination. Filling it here rather than lazily in the query is the authority's own
         // choice and the one that avoids a data race, because the write precedes the provider
         // being published to the core.
-        // SAFETY: this is the single writer, and it runs before `*out` is assigned below.
+        // The fill is serialised by the cell's own `Once`, and this call still runs before `*out`
+        // is assigned below.
         crate::provider::cipher::cache_exported_ciphers();
 
         *out = DEFLT_DISPATCH.as_ptr();

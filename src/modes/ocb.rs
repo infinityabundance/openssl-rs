@@ -271,9 +271,15 @@ pub unsafe extern "C" fn CRYPTO_ocb128_init(
 /// `int CRYPTO_ocb128_copy_ctx(OCB128_CONTEXT *dest, OCB128_CONTEXT *src, void *keyenc,
 /// void *keydec)` — `crypto/modes/ocb128.c:194-208`.
 ///
+/// `memcpy(dest, src, sizeof(*dest))` is a whole-object identity when `dest == src`, which the
+/// authority's `memcpy` performs without a guard and then returns 1 after allocating a second
+/// L-table (leaking the original). This transcription short-circuits the identity case instead:
+/// the state is already what the copy asks for, and `ptr::copy_nonoverlapping` must not be handed
+/// overlapping regions.
+///
 /// # Safety
 /// `dest` is caller storage large enough for an `OcbCtx`; `src` is live; the key pointers are
-/// NULL or live schedules owned by the caller.
+/// NULL or live schedules owned by the caller. `dest == src` is accepted.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_ocb128_copy_ctx(
     dest: *mut OcbCtx,
@@ -281,7 +287,21 @@ pub unsafe extern "C" fn CRYPTO_ocb128_copy_ctx(
     keyenc: *mut c_void,
     keydec: *mut c_void,
 ) -> core::ffi::c_int {
-    // SAFETY: the caller's contract.
+    if ptr::eq(dest.cast_const(), src) {
+        // The authority's two overrides still run in its identity case; only its second L-table
+        // allocation (and the leak it creates) is skipped here.
+        // SAFETY: `dest` is live and equals `src` per the test above.
+        unsafe {
+            if !keyenc.is_null() {
+                (*dest).keyenc = keyenc;
+            }
+            if !keydec.is_null() {
+                (*dest).keydec = keydec;
+            }
+        }
+        return 1;
+    }
+    // SAFETY: the caller's contract, and the identity case was handled above.
     unsafe {
         ptr::copy_nonoverlapping(
             src.cast::<u8>(),
@@ -876,6 +896,39 @@ mod tests {
             let mut bad = tag;
             bad[0] ^= 1;
             assert_ne!(CRYPTO_ocb128_finish(ctx, bad.as_ptr(), bad.len()), 0);
+            CRYPTO_ocb128_cleanup(ctx);
+        }
+    }
+
+    /// The authority's `memcpy(dest, src, sizeof(*dest))` is the identity when `dest == src`; the
+    /// Rust transcription must not hand that overlap to `ptr::copy_nonoverlapping`, and it must
+    /// not replace (or leak) the existing L-table either.
+    #[test]
+    fn ocb_copy_ctx_accepts_the_identity() {
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        // SAFETY: live locals and live schedules.
+        unsafe {
+            let ke = schedule(&key, 128);
+            let kd = schedule_dec(&key, 128);
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            let before = (*ctx).l;
+            assert_eq!(
+                CRYPTO_ocb128_copy_ctx(ctx, ctx, ptr::null_mut(), ptr::null_mut()),
+                1,
+                "an identity copy is the authority's answer"
+            );
+            assert_eq!(
+                (*ctx).l,
+                before,
+                "the identity copy must keep the existing L-table"
+            );
             CRYPTO_ocb128_cleanup(ctx);
         }
     }
