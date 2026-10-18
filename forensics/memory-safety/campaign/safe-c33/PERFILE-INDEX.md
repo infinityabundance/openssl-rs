@@ -17,11 +17,12 @@ post-census delta — exactly as it appeared in the former cumulative
 
 **Campaign progress: 9 of 761 PARTIAL files have full group records; a further
 12 files have mechanism-contract sweeps (batch M1), 10 files have
-mechanism-contract sweeps (batch M2) and 11 files have mechanism-contract
-sweeps (batch M3), none with full group records.** The 761 denominator is the
+mechanism-contract sweeps (batch M2), 11 files have mechanism-contract
+sweeps (batch M3) and 12 files have mechanism-contract sweeps (batch M4),
+none with full group records.** The 761 denominator is the
 `PARTIAL` file population in `ATTRIBUTION.md`; it is not a
 count of files that have graduated. The nine full records cover 6,252 production
-unsafe sites in 2,949 groups. The M1–M3 sweeps are obligation checks over the
+unsafe sites in 2,949 groups. The M1–M4 sweeps are obligation checks over the
 known owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
 
 ## 1. Reusable template
@@ -275,6 +276,71 @@ to its own boundary batch.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M3.json`](atlas-refresh/mechanism-sweep-M3.json).
+
+## 3d. Mechanism-contract sweep M4 — 2026-10-18
+
+**Source identity:** `integrate/safe-c33` at `38cf6d5a6` plus the uncommitted
+worktree state (the two `rand_lib.rs` release-coordinate repairs and the
+`provider/digest.rs` SHAKE get-parameter repair with its regression test). The
+census counts quoted in `ATTRIBUTION.md` remain bound to candidate
+`c09eef8b94ce068c92557d9940decf50e8413c8c`; this sweep read HEAD source.
+
+**Scope:** the same mechanism-contract procedure as M1–M3 — classify the
+applicable RC-1 / OB-1 `OwnedBuf` / OB-2 `OwnedStr` / OB-3 `OwnedCtx`–`RawCtx` /
+OB-4 member-slot mechanisms, check caller preconditions and unusual transitions,
+repair genuine defects, run FAST for the changed units — over the next twelve
+ordinary files in the queue (X.509 extensions, RSA `ameth`, RNG, decoders, CMP
+context and the provider DRBG/digest rows). This is **not** the full per-file
+`D###` group record: every row remains `CONTRACTED` at file level, no row is
+`INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED`, and the full group census for
+these twelve files is `NOT_RUN` (queued).
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/x509/v3_san.rs` | OB-2 `OwnedStr` for IP/OID scratch, stack reserved-push, `GENERAL_NAME` union arms, `v2i` ownership | No defect: `v2i_GENERAL_NAMES`'s reserved push and the `copy_issuer`/`copy_email` error tails match `v3_san.c`; `do_othername`/`do_dirname` release their partial values once. |
+| `src/rsa/ameth.rs` | OB-1 `OwnedBuf` plain/cleansed, `X509_PUBKEY`/PKCS#8 `set0` handoff, PSS parameter ownership | No defect: `rsa_priv_encode` cleanses at `rklen`; every `ossl_rsa_pss_to_ctx` failure tail frees the decoded params; the import/export ownership arms match `rsa_ameth.c`. |
+| `src/x509/v3_timespec.rs` | ASN.1 item lifecycle, `#[repr(C)]` layouts, printer pointer walks | No defect: layouts and offsets match `x509v3.h`; the authority's own duplicate `%.*s` print in the start-only arm is reproduced; the unit owns no allocation. |
+| `src/rand/rand_lib.rs` | OB-3 `OwnedCtx`/`CtxDestroy`, OB-2 `OwnedStr`, `RawGlobal` partial init, thread-local DRBG references | **M4-D1 fixed (low):** two provider-name releases used the duplicate's line (`113`) where the authority's `OPENSSL_free` is at `112` (`set_random_provider_name`) and `1090` (`RAND_set1_random_provider`, NULL arm); both now release at the exact authority coordinates. The primary/public/private reference chains and `set0` slot displacement match. |
+| `src/x509/v3_conf.rs` | OB-1 `OwnedBuf`, `v2i`/`s2i`/`r2i` ownership, `do_ext_i2d` error tail, extension stacks | No defect: the DER owner is emptied on the octet-string handoff and the error tail frees once; `X509V3_EXT_add_nconf_sk`'s SKID/AKID reorder, replace and push-failure arms match `v3_conf.c`. |
+| `src/evp/rand.rs` | OB-3 `OwnedCtx` plus a context-local refcount, provider dispatch, lock/call/unlock | No defect: `EVP_RAND_CTX_new`'s failure arm releases the constructor's context, the block and the parent reference exactly once; the generate chunking and `get_ctx_params`/`nonce` asymmetric defaults match. |
+| `src/decoder_lib.rs` | OB-3 `OwnedCtx`/`RawCtx`, decoder-instance reference chain, provider callbacks | No defect: the half-built instance destructor is per-field, the dup arms release only what they acquired, and `decoder_process` frees its mem BIO and restores `start_input_type` on every tail. |
+| `src/cmp/cmp_ctx.rs` | OB-3 `OwnedCtx`/`CtxDestroy`, secret cleansing, up-refs and stacks | No defect: `secretValue` is cleansed at its actual extent on replacement and destruction; up-ref-then-replace and the `set1_certs`/`set0` arms match `cmp_ctx.c`. **Residual:** the generated setters record the allocator seam at line `0` and the short `crypto/cmp/cmp_ctx.c` path (the file's Phase-12.4 convention), not authority-exact; unchanged, no UB. |
+| `src/x509/v3_ncons.rs` | OB-1 `OwnedBuf` (`ipadd`, `strndup`), ASN.1 item groups, matching loops | No defect: every adoption/free line matches `v3_ncons.c` (786/790/798/799/805/806/830, 678/728, 382/430, 247/248); the `permitted`/`excluded` prefix reads stay in bounds. |
+| `src/ec/ecx_meth.rs` | OB-1 plain/cleansed, `EVP_PKEY_assign` transfers, key set/get buffers | No defect: the publication encoders cleanse at the exact extents, `validate_ecx_derive`'s NULL checks match, and the sign/verify lengths and ownership arms match `ecx_meth.c`. |
+| `src/provider/rand.rs` | local unsafe `DrbgCtx`/`OwnedCtx`/`OwnedRaw`, secure allocations, DRBG state machine | No defect: secure clear-free sizes, `*_free` member order and the `dfree` error path match; generate chunking, reseed triggers and parent-chain locking match `drbg.c`/`drbg_{ctr,hash,hmac}.c.in`. |
+| `src/provider/digest.rs` | OB-3-style local `OwnedCtx` (`zalloc`/`malloc`/`clear_free`), digest dispatch, SHA3/SHAKE ctx params | **M4-D2 fixed (low, compatibility):** `shake_get_ctx_params` refused a request naming both `xoflen` and `size`; the authority's generated get-decoder maps them to separate fields and sets both. It now fills every located alias; regression test `provider::digest::sha3::tests::shake_get_ctx_params_sets_both_aliases`. The set path still refuses both aliases (authority raises `PROV_R_REPEATED_PARAMETER`; this crate returns 0 without an error site, which is not generated for SHA3). |
+
+**New unsafe assumptions: none.** The repairs are two release coordinates and one
+compatibility branch; no new `unsafe` operation, adoption, release site,
+`#[repr(C)]` layout or exported symbol changed. The only new test is inside the
+`sha3` module and uses only already-public context fields.
+
+**Defects:**
+
+| id | file | severity | class | fix / witness |
+|---|---|---|---|---|
+| M4-D1 | `src/rand/rand_lib.rs` | low (allocator-seam fidelity; not UB) | two releases of `random_provider_name` recorded line 113 instead of the authority's free lines 112 / 1090 | `L_PROVIDER_NAME_SET_FREE`/`L_PROVIDER_NAME_SET1_FREE`; full suite |
+| M4-D2 | `src/provider/digest.rs` | low (compatibility; not UB) | a SHAKE `get_ctx_params` request carrying both aliases was refused; the authority sets both | fill every located alias; `sha3::tests::shake_get_ctx_params_sets_both_aliases` + full suite |
+
+**Gates (final source):** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D warnings`
+PASS; `cargo test --lib -- --test-threads=1` **1572 passed / 0 failed / 26 ignored**;
+`cargo test --lib -- --test-threads=4` **1572 passed / 0 failed / 26 ignored**. No
+affected adversarial probe is defined in the two changed units (the seam
+repair has no behaviour change; the SHAKE get repair is covered by the new
+unit test); the non-affected probe suite is **NOT_RUN** at this level.
+
+**Deferred / NOT_RUN:** full `D###` records for these twelve files; targeted
+Miri/ASan (BOUNDARY/SEAL); dependency-graph regeneration against the exact
+candidate (BATCH checkpoint after commit); a differential SHAKE `get_ctx_params`
+court (BOUNDARY/SEAL). `src/runtime/bio/bss_dgram.rs` (rank 59) is skipped to its
+own BIO-callback/reentrancy batch (with `bss_dgram_pair.rs`/`bss_conn.rs`), and
+`src/ssl/ssl_sess.rs` (rank 61) is deferred to the SSL session ownership/
+reference-count boundary batch; `src/ssl/statem/statem_clnt.rs` (rank 50) is the
+TLS state-machine batch. `src/ml_dsa/encoders.rs`, `src/ssl/ssl_lib.rs` and
+`src/ssl/statem/statem_srvr.rs` remain untouched (explicitly deferred).
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M4.json`](atlas-refresh/mechanism-sweep-M4.json).
 
 ## 4. Machine-readable index
 
