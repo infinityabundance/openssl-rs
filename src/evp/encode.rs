@@ -283,16 +283,22 @@ pub unsafe extern "C" fn EVP_ENCODE_CTX_free(ctx: *mut EvpEncodeCtx) {
 /// The authority's answer is a constant `1`: the copy cannot fail. It is the whole reason the
 /// layout above has to be the authority's.
 ///
+/// The authority's `memcpy(dctx, sctx, sizeof(*dctx))` returns a constant 1 and has no identity
+/// guard; a whole-object copy onto itself is the identity transformation. The identity case is
+/// handled here so the crate never asks `ptr::copy_nonoverlapping` to copy an overlapping region.
+///
 /// # Safety
 /// `dctx` must be a live writable context and `sctx` a live readable one. The authority does not
-/// test either and neither does this.
+/// test either and neither does this. `dctx == sctx` is accepted.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_ENCODE_CTX_copy(
     dctx: *mut EvpEncodeCtx,
     sctx: *const EvpEncodeCtx,
 ) -> c_int {
-    // SAFETY: the caller's contract; the two regions are the caller's and are assumed distinct.
-    unsafe { ptr::copy_nonoverlapping(sctx, dctx, 1) };
+    if !ptr::eq(dctx.cast_const(), sctx) {
+        // SAFETY: the caller's contract; the two regions are the caller's and are distinct.
+        unsafe { ptr::copy_nonoverlapping(sctx, dctx, 1) };
+    }
     1
 }
 
@@ -1050,6 +1056,32 @@ mod tests {
         assert!(b64_base64(B64_ERROR));
         for a in 0u8..0x3F {
             assert!(b64_base64(a));
+        }
+    }
+
+    /// The authority's `memcpy` is a whole-object identity when the two pointers are equal and
+    /// answers 1 unconditionally. The Rust transcription must take that path without asking
+    /// `ptr::copy_nonoverlapping` to copy an overlapping region.
+    #[test]
+    fn encode_ctx_copy_accepts_the_identity() {
+        // SAFETY: a fresh context is live unless the allocator failed.
+        let ctx = EVP_ENCODE_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is this frame's live context.
+        unsafe {
+            EVP_EncodeInit(ctx);
+            (*ctx).num = 7;
+            (*ctx).flags = EVP_ENCODE_CTX_NO_NEWLINES;
+            let (length, num, flags) = ((*ctx).length, (*ctx).num, (*ctx).flags);
+            assert_eq!(
+                EVP_ENCODE_CTX_copy(ctx, ctx),
+                1,
+                "the authority's answer is a constant 1"
+            );
+            assert_eq!((*ctx).length, length);
+            assert_eq!((*ctx).num, num);
+            assert_eq!((*ctx).flags, flags);
+            EVP_ENCODE_CTX_free(ctx);
         }
     }
 }

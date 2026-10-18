@@ -189,6 +189,14 @@ unsafe extern "C" fn pkey_ec_init(ctx: *mut EvpPkeyCtx) -> c_int {
 
 /// `static int pkey_ec_copy(EVP_PKEY_CTX *dst, const EVP_PKEY_CTX *src)` — `:60`.
 ///
+/// The authority leaves the members it has already duplicated in `dst->data` when a later
+/// duplication fails. Its only caller, `EVP_PKEY_CTX_dup`, clears `rctx->pmeth` before freeing the
+/// copy (`pmeth_lib.c:608-610`), so `pkey_ec_cleanup` is never reached and the fresh `dst->data`
+/// block and any duplicated group/key/UKM leak. This transcription releases that partially built
+/// context on every failure return and clears `dst->data`, so a caller that still runs
+/// `pkey_ec_cleanup` sees a NULL slot rather than a double free. That is a recorded memory-safety
+/// improvement over the authority, not a change to the success path.
+///
 /// # Safety
 /// `dst` and `src` must be live.
 unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) -> c_int {
@@ -211,6 +219,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).gen_group = dup };
         if dup.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     }
@@ -224,6 +234,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).co_key = dup };
         if dup.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     }
@@ -247,6 +259,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).kdf_ukm = ukm.cast::<u8>() };
         if ukm.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     } else {
@@ -893,4 +907,56 @@ pub(crate) static EC_PKEY_METH: EvpPkeyMethod = EvpPkeyMethod {
 #[allow(dead_code)] // its only reader today is `PMETH_STANDARD_METHODS` in `src/evp/pkey_ctx.rs`
 pub(crate) unsafe extern "C" fn ossl_ec_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(EC_PKEY_METH)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// `pkey_ec_copy` acquires the destination context and then a group/key/UKM in order. A later
+    /// failure must release the earlier acquisitions: `CRYPTO_memdup` refuses `siz >= INT_MAX`
+    /// before reading, which fails the UKM duplication after the source group has already been
+    /// duplicated into `dst`. The test checks the release by the cleared slot (and then calls
+    /// `pkey_ec_cleanup` to prove it is a no-op rather than a double free).
+    #[test]
+    fn copy_failure_releases_the_partially_built_destination() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the NID names a built-in curve; the answer is a fresh group this test owns.
+        let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+        assert!(!group.is_null());
+
+        static UKM: u8 = 0;
+        // SAFETY: `EcPkeyCtx` is a `#[repr(C)]` record of raw pointers, `char`s and `usize`s, so
+        // the all-zero image is valid; the fields `pkey_ec_copy` reads are set below.
+        let mut src_ctx: EcPkeyCtx = unsafe { core::mem::zeroed() };
+        src_ctx.gen_group = group;
+        src_ctx.cofactor_mode = -1;
+        src_ctx.kdf_ukm = (&UKM as *const u8).cast_mut();
+        // `CRYPTO_memdup` refuses this length before reading the pointer.
+        src_ctx.kdf_ukmlen = i32::MAX as usize;
+
+        // SAFETY: `EvpPkeyCtx` is a `#[repr(C)]` record whose zero image is valid; `data` is the
+        // only field this call reads.
+        let mut src: EvpPkeyCtx = unsafe { core::mem::zeroed() };
+        src.data = (&mut src_ctx as *mut EcPkeyCtx).cast();
+        // SAFETY: zeroed `dst` has a NULL `data`, which is what `pkey_ec_init` expects.
+        let mut dst: EvpPkeyCtx = unsafe { core::mem::zeroed() };
+
+        // SAFETY: both contexts are live and `dst` is the caller's fresh copy target.
+        let ret = unsafe { pkey_ec_copy(&mut dst, &src) };
+        assert_eq!(ret, 0, "the oversized UKM must be refused");
+        assert!(
+            dst.data.is_null(),
+            "the failed copy must release and clear the partial destination"
+        );
+        // SAFETY: `dst` is live and its `data` is NULL; this must be a no-op, not a double free.
+        unsafe { pkey_ec_cleanup(&mut dst) };
+
+        // SAFETY: the source context and its group are this test's; the duplicate owned its own.
+        unsafe {
+            assert!(!src_ctx.gen_group.is_null());
+            EC_GROUP_free(src_ctx.gen_group);
+        }
+    }
 }
