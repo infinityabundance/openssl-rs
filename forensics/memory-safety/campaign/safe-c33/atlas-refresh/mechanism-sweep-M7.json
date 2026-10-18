@@ -1,0 +1,120 @@
+{
+  "receipt": "mechanism-sweep-M7",
+  "branch": "integrate/safe-c33",
+  "source_head": "bbd0804f0",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "worktree": true,
+  "date": "2026-10-18",
+  "verification_level": "FAST plus BATCH, with one targeted ASan out-pointer contract control for M7-D1",
+  "scope": "mechanism-contract sweep over attribution ranks 77-84; cmp/cmp_genm.rs yielded one defect (fixed); the other seven files audited clean; no file presented a new reusable unsafe boundary",
+  "files": [
+    "src/ec/curve448.rs",
+    "src/cmp/cmp_genm.rs",
+    "src/srp/srp_vfy.rs",
+    "src/evp/e_aes.rs",
+    "src/cms/cms_kari.rs",
+    "src/ts/ts_rsp_verify.rs",
+    "src/pem/pem_pkey.rs",
+    "src/ts/ts_conf.rs"
+  ],
+  "files_not_run": [
+    "src/provider/file_store.rs",
+    "src/runtime/bio/iolib.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_conn.rs",
+    "src/runtime/bio/bss_dgram.rs",
+    "src/runtime/obj.rs",
+    "src/ml_dsa/encoders.rs",
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/statem/statem_srvr.rs",
+    "src/ssl/statem/statem_clnt.rs"
+  ],
+  "defects": [
+    {
+      "id": "M7-D1",
+      "file": "src/cmp/cmp_genm.rs",
+      "function": "OSSL_CMP_get1_caCerts",
+      "pre_fix_lines": [
+        409,
+        424
+      ],
+      "post_fix_lines": [
+        409,
+        428
+      ],
+      "severity": "high (memory-safety; type-confused out-pointer, heap corruption/UB)",
+      "class": "the transcription called ossl_x509_add_certs_new(out_stack as *mut *mut OpenSslStack, ...), passing the fresh stack handle where the helper contract requires the address of a writable *mut OpenSslStack slot; ossl_x509_add_cert_new then read the stack object's first field as the slot and used the stack's element array as an OPENSSL_STACK",
+      "fix": "restore the authority's own call X509_add_certs(out_stack, certs, X509_ADD_FLAG_UP_REF | X509_ADD_FLAG_NO_DUP) and drop the unused ossl_x509_add_certs_new import",
+      "authority_witness": "crypto/cmp/cmp_genm.c:187-192 (4.0.3) calls X509_add_certs(*out, certs, flags)",
+      "witness": "no production-path test: reaching the repaired line requires a live GENM/caCerts exchange; targeted ASan contract canary (correct slot passes; the removed handle-as-slot shape faults) and the focused FAST tests below"
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [
+    "src/cmp/cmp_genm.rs: OSSL_CMP_get1_caCerts no longer passes a stack handle as an out-pointer slot; the unsafe call is replaced by the authority's X509_add_certs"
+  ],
+  "contracts_reused": [
+    "fixed-extent FFI buffer contracts and EVP_MD_CTX/EVP_MD ownership (ec/curve448.rs)",
+    "OPENSSL_sk_* ownership and borrowed-element transfer; OSSL_CMP_ITAV transfer/free (cmp/cmp_genm.rs)",
+    "OB-1: OwnedBuf adoption, seam coordinates, cleansing release (srp/srp_vfy.rs, cms/cms_kari.rs)",
+    "OB-3-style EVP_CIPHER per-context ownership: GCM IV heap block, COPY repointing, exactly-once cleanup (evp/e_aes.rs)",
+    "BIGNUM ownership: BN_free vs BN_clear_free at the authority's sites (srp/srp_vfy.rs)",
+    "PKCS7/X509 stack, chain and BIO ownership; OwnedBlock/OwnedStr (ts/ts_rsp_verify.rs, ts/ts_conf.rs)",
+    "secure-heap name/payload ownership with the authority's cleansed release (pem/pem_pkey.rs)",
+    "EVP_PKEY_CTX ownership and ASN.1 set1/set0 transfer (cms/cms_kari.rs)"
+  ],
+  "residuals": [
+    "srp/srp_vfy.rs: SRP_create_verifier_ex sizes the verifier scratch as 2 * BN_num_bytes(v), matching the authority; a one-byte BIGNUM magnitude would make t_tob64's NUL write exceed that allocation by one byte. The path is authority-identical and cryptographically unreachable for a SHA-1/SHA-256 modexp result, so it is recorded, not repaired (compatibility parity).",
+    "ts/ts_rsp_verify.rs: failure_text is a fixed 256-byte buffer whose 8-entry table totals 118 bytes including separators; the bound is static, not input-dependent.",
+    "cms/cms_kari.rs: the cleansed release clears the full worst-case allocation (outsize) where the authority clears the first probe's outlen; this is a safety-strengthening divergence and is documented at the site."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1575 passed / 0 failed / 26 ignored)",
+    "lib_test_threads_4": "PASS (1575 passed / 0 failed / 26 ignored; no secure-heap isolation failure on this run)",
+    "focused_tests": "PASS (ec::curve448 2/0; evp::e_aes 1/0; pem::pem_pkey 3/0; srp/cms_kari/ts/cmp_genm have no unit tests)",
+    "affected_adversarial_probes": "NOT_RUN (no affected probe exists for these modules; GENM/caCerts differential replay is BOUNDARY/SEAL)"
+  },
+  "boundary_control": {
+    "instrument": "docker/openssl-rs-asan.sh venue; nightly-2026-10-05; -Zsanitizer=address -Zbuild-std",
+    "fixed_shape": "PASS (1 passed / 0 failed; correct slot and X509_add_certs path)",
+    "pre_fix_shape": "SEGV on unknown address 0xfffffffffffffff8, WRITE, after the handle-as-slot call corrupted the stack object; the fault surfaced through OPENSSL_sk_free in runtime/stack.rs",
+    "scope_limit": "the canary exercises the exact argument shape the repair removed; replaying OSSL_CMP_get1_caCerts itself requires a live GENM exchange and is NOT_RUN",
+    "canary_disposition": "temporary tests/m7_canary.rs, removed before the BATCH run"
+  },
+  "deferred": [
+    {
+      "gate": "independent boundary review of M7-D1 and a real GENM/caCerts differential replay",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "src/provider/file_store.rs, src/runtime/bio/{iolib,bss_dgram_pair,bss_conn,bss_dgram}.rs, src/runtime/obj.rs, src/ml_dsa/encoders.rs, src/ssl/ssl_lib.rs, src/ssl/statem/{statem_srvr,statem_clnt}.rs",
+      "status": "NOT_RUN",
+      "reason": "callback/reentrancy and ownership boundaries deferred to a boundary batch",
+      "runs_at": "BOUNDARY"
+    }
+  ],
+  "next_queue": {
+    "file": "src/decoder_pkey.rs",
+    "rank_in_attribution": 85,
+    "unattributed_sites": 153,
+    "then": [
+      "src/asn1/asn1_gen.rs (86, 152)",
+      "src/dh/ameth.rs (87, 152)",
+      "src/ec/ameth.rs (88, 152)"
+    ]
+  }
+}

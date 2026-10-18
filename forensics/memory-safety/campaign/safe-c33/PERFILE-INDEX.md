@@ -465,6 +465,59 @@ sites and wider PSS-decoder replay (BOUNDARY); dependency-graph regeneration
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M6.json`](atlas-refresh/mechanism-sweep-M6.json).
 
+## 3g. Mechanism-contract sweep M7 — 2026-10-18
+
+**Candidate:** `integrate/safe-c33` source HEAD `bbd0804f0` (working tree; not
+committed). **Level:** FAST, then **BATCH**, plus a targeted ASan
+out-pointer contract control for M7-D1.
+
+| file | rank | mechanisms | result |
+|---|---:|---|---|
+| `src/ec/curve448.rs` | 77 | fixed-extent FFI buffer contracts, `EVP_MD_CTX`/`EVP_MD` ownership, scalar cleansing | no defect |
+| `src/cmp/cmp_genm.rs` | 78 | `OPENSSL_sk_*` ownership, ITAV transfer, `OwnedStr`, X509 checks | **M7-D1 (fixed): type-confused out-pointer** |
+| `src/srp/srp_vfy.rs` | 79 | OB-1 `OwnedBuf` adoption, SRP object/`BIGNUM` ownership, encode/decode extents | no defect |
+| `src/evp/e_aes.rs` | 80 | `EVP_CIPHER` ctrl/do-cipher contract, GCM IV heap owner, mode copy repointing | no defect |
+| `src/cms/cms_kari.rs` | 81 | OB-1 cleansed output, `EVP_PKEY_CTX` ownership, ASN.1 set1 transfers | no defect |
+| `src/ts/ts_rsp_verify.rs` | 82 | `OwnedBlock`/`OwnedStr`, PKCS7/X509 stack and chain ownership | no defect |
+| `src/pem/pem_pkey.rs` | 83 | `SecureName`/`SecureData`, decoder/legacy fallback, BIO push/pop | no defect |
+| `src/ts/ts_conf.rs` | 84 | X509/BIO/`NCONF`/stack ownership, `X509V3_parse_list` rows | no defect |
+
+**M7-D1 — `src/cmp/cmp_genm.rs:409-424` (pre-fix).**
+`OSSL_CMP_get1_caCerts` called `ossl_x509_add_certs_new(out_stack as *mut
+*mut OpenSslStack, ...)`, passing the fresh `OPENSSL_STACK` handle where the
+helper's contract requires the address of a writable stack slot (`&out_stack`).
+`ossl_x509_add_cert_new` then read the stack object's first field as a slot and
+inserted through it, using the stack's element array as a second `OPENSSL_STACK`:
+a type-confused write into the stack object. Severity: **high (memory-safety;
+heap corruption / UB on every successful `caCerts` GENM reply)**. The authority
+calls `X509_add_certs(*out, certs, flags)`, so the repair restores that exact
+call (and drops the now-unused internal import).
+
+**M7-D1 boundary control (ASan venue, `nightly-2026-10-05`,
+`-Zsanitizer=address -Zbuild-std`):** a temporary test-only canary exercised
+the helper with the correct slot and with the removed handle-as-slot shape. The
+correct shape passes (`1 passed / 0 failed`); the removed shape faults under
+ASan (`SEGV on unknown address 0xfffffffffffffff8`, `WRITE`, through
+`OPENSSL_sk_free` after the corrupted stack object). The canary was removed
+before the BATCH run. Replaying the production `OSSL_CMP_get1_caCerts` path
+requires a live GENM exchange and is **NOT_RUN**.
+
+**Skipped to a boundary batch (NOT_RUN):** none of the eight files presented a
+new reusable unsafe boundary; the previously deferred callback/ownership files
+remain deferred.
+
+**BATCH:** `cargo fmt --all -- --check` PASS; clippy `--all-targets -D warnings`
+PASS; library serial 1575 passed / 0 failed / 26 ignored; threaded run 1575
+passed / 0 failed / 26 ignored. Focused: `ec::curve448` 2/0, `evp::e_aes` 1/0,
+`pem::pem_pkey` 3/0.
+
+**Deferred / NOT_RUN:** independent boundary review of M7-D1 and a real
+GENM/caCerts differential replay (BOUNDARY); dependency-graph regeneration
+(BATCH checkpoint after commit).
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M7.json`](atlas-refresh/mechanism-sweep-M7.json).
+
 ## 4. Machine-readable index
 
 `atlas-refresh/perfile-index.json` mirrors table 3 as deterministic JSON:
