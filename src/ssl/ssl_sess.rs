@@ -671,11 +671,14 @@ pub unsafe extern "C" fn SSL_CTX_add_session(ctx: *mut SslCtx, c: *mut SslSessio
             }
         }
         // The authority's `lh_SSL_SESSION_insert` returns an existing entry with the same key, or
-        // NULL when the session is new; the `retrieve == NULL` OOM arm is unobservable here.
-        let ret;
+        // NULL when the session is new. This crate's stack push reports a refusal directly, so
+        // the OOM arm is handled at the insertion below rather than inferred from a NULL lookup.
+        let mut ret;
         if existing.is_null() {
             ret = 1;
-            // SAFETY: `ctx` is live and its cache is this context's own.
+            // SAFETY: `ctx` is live and its cache is this context's own; `c` is live per the
+            // caller's contract, and every release below acts only on a reference this call owns
+            // (the cache reference added at entry, or the evicted entry's cache reference).
             unsafe {
                 if (*ctx).sessions.is_null() {
                     (*ctx).sessions = OPENSSL_sk_new_null();
@@ -697,8 +700,15 @@ pub unsafe extern "C" fn SSL_CTX_add_session(ctx: *mut SslCtx, c: *mut SslSessio
                     }
                     SSL_SESSION_free(r);
                 }
-                OPENSSL_sk_push((*ctx).sessions, c.cast());
-                (*c).owner = ctx;
+                if (*ctx).sessions.is_null() || OPENSSL_sk_push((*ctx).sessions, c.cast()) == 0 {
+                    // The authority's OOM/refusal arm (`ssl_sess.c:756-765`): the insert did not
+                    // take a reference, so take back the one this call added and report failure.
+                    // The caller's own reference is untouched.
+                    SSL_SESSION_free(c);
+                    ret = 0;
+                } else {
+                    (*c).owner = ctx;
+                }
             }
         } else {
             // SAFETY: `c` is live; `existing == c`.
@@ -1329,7 +1339,11 @@ pub unsafe extern "C" fn SSL_SESSION_set1_id(
             }
             (*s).session_id_length = sid_len as usize;
             if sid != (*s).session_id.as_ptr() && sid_len > 0 {
-                ptr::copy_nonoverlapping(sid, (*s).session_id.as_mut_ptr(), sid_len as usize);
+                // `memmove` semantics: the C contract only requires `sid` to be readable for
+                // `sid_len` bytes, and a partially overlapping pointer into `session_id` satisfies
+                // it. The authority's `memcpy` makes that overlap UB (AGENTS §17); the copy is
+                // otherwise the authority's in-place result.
+                ptr::copy(sid, (*s).session_id.as_mut_ptr(), sid_len as usize);
             }
             1
         }
@@ -1746,7 +1760,10 @@ pub unsafe extern "C" fn SSL_SESSION_set1_id_context(
             }
             (*s).sid_ctx_length = sid_ctx_len as usize;
             if sid_ctx != (*s).sid_ctx.as_ptr() {
-                ptr::copy_nonoverlapping(sid_ctx, (*s).sid_ctx.as_mut_ptr(), sid_ctx_len as usize);
+                // As `SSL_SESSION_set1_id`: a source partially overlapping `sid_ctx` is readable
+                // under the stated contract, so use memmove rather than reproduce `memcpy`'s
+                // overlap UB (AGENTS §17).
+                ptr::copy(sid_ctx, (*s).sid_ctx.as_mut_ptr(), sid_ctx_len as usize);
             }
             1
         }
@@ -2604,5 +2621,54 @@ mod adv_probe {
         // SAFETY: `s` is live and this releases this frame's reference.
         unsafe { SSL_SESSION_free(s) };
         adv_alloc::assert_no_double_free();
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// §16 control: overlapping session-id sources
+// -------------------------------------------------------------------------------------------
+//
+// The setter contracts require only that the source be readable for the given length. A pointer
+// into the destination array itself satisfies that, so the copy must have memmove semantics; the
+// authority's `memcpy` is undefined for a partial overlap (AGENTS §17).
+#[cfg(test)]
+mod session_id_alias_tests {
+    use super::*;
+
+    #[test]
+    fn partially_overlapping_session_id_and_context_sources_are_copied_safely() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: no arguments; the returned session is owned by this frame.
+        let s = unsafe { SSL_SESSION_new() };
+        assert!(!s.is_null(), "SSL_SESSION_new must succeed");
+
+        // SAFETY: `s` is live; each source is readable for the stated length.
+        unsafe {
+            let id = [1u8, 2, 3, 4, 5, 6, 7, 8];
+            assert_eq!(SSL_SESSION_set1_id(s, id.as_ptr(), id.len() as c_uint), 1);
+            // Source starts one byte into the destination: the seven copied bytes shift left.
+            let overlap = (*s).session_id.as_ptr().add(1);
+            assert_eq!(SSL_SESSION_set1_id(s, overlap, 7), 1);
+            assert_eq!(
+                &(&(*s).session_id)[..8],
+                &[2, 3, 4, 5, 6, 7, 8, 8],
+                "a partially overlapping id source must be copied with memmove semantics"
+            );
+
+            let ctx = [9u8, 10, 11, 12, 13];
+            assert_eq!(
+                SSL_SESSION_set1_id_context(s, ctx.as_ptr(), ctx.len() as c_uint),
+                1
+            );
+            let overlap = (*s).sid_ctx.as_ptr().add(1);
+            assert_eq!(SSL_SESSION_set1_id_context(s, overlap, 4), 1);
+            assert_eq!(
+                &(&(*s).sid_ctx)[..4],
+                &[10, 11, 12, 13],
+                "a partially overlapping id-context source must be copied safely"
+            );
+
+            SSL_SESSION_free(s);
+        }
     }
 }
