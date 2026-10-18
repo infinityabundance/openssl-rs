@@ -51,7 +51,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
 use crate::asn1::a_dup::ASN1_item_dup;
 use crate::asn1::a_verify::ASN1_item_verify_ex;
@@ -294,7 +294,11 @@ pub struct X509Crl {
     /// `ASN1_BIT_STRING signature` — embedded.
     pub(crate) signature: Asn1String,
     /// `CRYPTO_REF_COUNT references` — the count `X509_CRL_up_ref`/`X509_CRL_free` move.
-    pub(crate) references: c_int,
+    ///
+    /// The authority's `CRYPTO_REF_COUNT` is an atomic `int`; [`AtomicI32`] is the same size
+    /// and alignment, so this field stays at offset 128 while the exported refcount pair and
+    /// the ASN.1 item layer become race-free.
+    pub(crate) references: AtomicI32,
     /// `int flags` — the `EXFLAG_*` word.
     pub(crate) flags: c_int,
     /// `AUTHORITY_KEYID *akid` — cached authority key identifier (type withheld).
@@ -330,6 +334,10 @@ pub struct X509Crl {
 }
 
 const _: () = {
+    // `AtomicI32` must remain the authority's four-byte `int` so that `ref_offset = 128`
+    // addresses the same bytes for the ASN.1 item layer.
+    assert!(core::mem::size_of::<AtomicI32>() == core::mem::size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(core::mem::size_of::<X509Crl>() == 248);
     assert!(core::mem::offset_of!(X509Crl, crl) == 0);
     assert!(core::mem::offset_of!(X509Crl, sig_alg) == 88);
@@ -1330,17 +1338,18 @@ pub unsafe extern "C" fn X509_CRL_get_meth_data(crl: *mut X509Crl) -> *mut c_voi
 }
 
 /// `int X509_CRL_up_ref(X509_CRL *crl)` — `crypto/x509/x509cset.c:74-84`, the CRL half of the
-/// reference-count pair `X509_CRL_it` maintains. It is landed here with the object it counts.
+/// reference-count pair `X509_CRL_it` maintains. It is landed here with the object it counts,
+/// and uses the shared [`crate::runtime::refcount::up_ref`] protocol (answers `1` when the new
+/// count is greater than one, `0` without changing it on a zero/destroying count or at
+/// `i32::MAX`).
 ///
 /// # Safety
 /// `crl` is live.
 #[no_mangle]
 pub unsafe extern "C" fn X509_CRL_up_ref(crl: *mut X509Crl) -> c_int {
     // SAFETY: `crl` is live per the contract.
-    let i = unsafe { (*crl).references.wrapping_add(1) };
-    // SAFETY: `crl` is live and writable.
-    unsafe { (*crl).references = i };
-    c_int::from(i > 1)
+    let refs = unsafe { &(*crl).references };
+    crate::runtime::refcount::up_ref(refs)
 }
 
 /// `int ossl_x509_crl_set0_libctx(X509_CRL *x, OSSL_LIB_CTX *libctx, const char *propq)` —
@@ -1391,7 +1400,7 @@ mod tests {
         unsafe {
             let crl = X509_CRL_new();
             assert!(!crl.is_null());
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             assert_eq!((*crl).idp_reasons, CRLDP_ALL_REASONS);
             assert!(!(*crl).meth.is_null());
             assert!((*crl).crl_number.is_null());
@@ -1406,11 +1415,11 @@ mod tests {
         // SAFETY: `crl` is a live object this test owns.
         unsafe {
             let crl = X509_CRL_new();
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             assert_eq!(X509_CRL_up_ref(crl), 1);
-            assert_eq!((*crl).references, 2);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 2);
             X509_CRL_free(crl);
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             X509_CRL_free(crl);
         }
     }
