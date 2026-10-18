@@ -1591,8 +1591,27 @@ pub unsafe extern "C" fn RAND_set0_private(ctx: *mut c_void, rand: *mut EvpRandC
 
 /// `static int random_set_string(char **p, const char *s)`.
 ///
+/// Replaces the string in `*p` with a fresh `CRYPTO_strdup` of `s` (or with NULL when `s` is
+/// NULL), releasing the previous value first. A failed duplicate leaves `*p` unchanged, which is
+/// the authority's early return.
+///
 /// # Safety
-/// `p` must point to a live `char *` slot; `s` NULL or NUL-terminated.
+///
+/// `s` is NULL or NUL-terminated. `p` points to a live `char *` slot whose current value is
+/// **NULL or the base pointer of one whole `CRYPTO_strdup` block whose allocation extent is
+/// exactly `strlen(*p) + 1` bytes (the string plus its NUL), and that this module exclusively
+/// owns and has not released**. On return `*p` is NULL or a fresh block of that same provenance
+/// and extent (`strlen(*p) + 1`); the previous block (if any) has been released once, here,
+/// through the same plain `CRYPTO_free` seam. A borrower of `*p` must not keep it across this
+/// call.
+///
+/// Every caller passes the address of a `RandGlobal` string field: `RAND_set_DRBG_type`
+/// (`rng_name`/`rng_propq`/`rng_cipher`/`rng_digest`), `RAND_set_seed_source_type`
+/// (`seed_name`/`seed_propq`) and `random_conf_init` (the same six fields). Those fields start
+/// NULL from `RawGlobal::new`'s `CRYPTO_zalloc`, are installed only by this function or
+/// `set_random_provider_name`'s `CRYPTO_strdup`, and are released once by
+/// `RandGlobal::destroy_body` (`ossl_rand_ctx_free`) or by this function. No caller passes a
+/// borrowed pointer.
 unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
     let fresh: Option<OwnedStr> = if s.is_null() {
         None
