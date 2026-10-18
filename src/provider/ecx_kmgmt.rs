@@ -983,7 +983,23 @@ unsafe fn ecx_set_params_decoder(params: *const OsslParam, r: &mut EcxSetParams)
 /// `static int ecx_set_params(void *key, const OSSL_PARAM params[])` — `ecx_kmgmt.c:915-942`.
 ///
 /// # Safety
-/// The keymgmt `set_params` dispatch contract.
+/// The keymgmt `set_params` dispatch contract. Additionally, for a non-NULL `key`
+/// (a live `EcxKey` this call may mutate):
+///
+/// * `(*key).privkey` is NULL or the exclusive block
+///   `ossl_ecx_key_allocate_privkey` obtained from
+///   `CRYPTO_secure_zalloc((*key).keylen, ...)` (`ec/ecx_key.rs:105`, entered at
+///   `ecx_key.c:244`); its allocation extent is exactly `keylen`, and no other
+///   owner will release it. The octet-string arm takes that ownership and
+///   releases it once through `CRYPTO_secure_clear_free(ptr, keylen, ...)` — the
+///   destructor's seam (`ecx_key.c:81`) — at `ecx_kmgmt.c:930`'s coordinate,
+///   then stores NULL. A plain `CRYPTO_malloc` block is excluded; the secure
+///   allocator's documented uninitialised-heap plain fallback is covered.
+/// * `params` is NULL or key-terminated. Its `OSSL_PKEY_PARAM_PROPERTIES` value is
+///   **borrowed, not adopted**: it must be an `OSSL_PARAM_UTF8_STRING` whose
+///   `data` is NUL-terminated, `set_property_query` copies it with
+///   `CRYPTO_strdup` (`ecx_kmgmt.c:851`), and the caller retains its block. The
+///   `OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY` value is read only.
 unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) -> c_int {
     let ecxkey = key.cast::<EcxKey>();
     let mut p = EcxSetParams {
@@ -1006,8 +1022,13 @@ unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) 
             {
                 return 0;
             }
-            // Relocate the secret's cleansing release into the seam's `Drop`.
-            drop(OwnedBuf::adopt_cleansed(
+            // `privkey` is a `CRYPTO_secure_zalloc(keylen)` block (`ec/ecx_key.rs:244`), so its
+            // release must route through the secure allocator. `adopt_secure_cleansed` uses
+            // `CRYPTO_secure_clear_free`, which also routes that allocator's documented plain
+            // fallback when the secure heap is uninitialised. The authority's own `:930` is a
+            // plain `OPENSSL_clear_free` of this secure block (an invalid free once the heap is
+            // initialised); per §17 that UB is not reproduced. The extent stays `keylen`.
+            drop(OwnedBuf::adopt_secure_cleansed(
                 (*ecxkey).privkey.cast(),
                 (*ecxkey).keylen,
                 FILE_ECX_KMGMT_SEAM,
@@ -1920,3 +1941,130 @@ pub(crate) static ED448_KEYMGMT_FUNCTIONS: [OsslDispatch; 21] = ecx_keymgmt_func
     ed448_gen_init,
     ed448_gen,
 );
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::ec::ecx_key::ECX_KEY_TYPE_X25519;
+    use crate::provider::cipher::param_octet_string_with;
+    use crate::runtime::secure::{
+        test_arena_bytes, test_offset_of, CRYPTO_secure_actual_size, CRYPTO_secure_allocated,
+        CRYPTO_secure_malloc_done, CRYPTO_secure_malloc_init, CRYPTO_secure_malloc_initialized,
+        CRYPTO_secure_used,
+    };
+
+    const PUBLIC_KEY: [u8; X25519_KEYLEN] = [0x11; X25519_KEYLEN];
+
+    /// An X25519 key whose private scalar is made by the authority's
+    /// `ossl_ecx_key_allocate_privkey`: a secure-heap chunk when the heap is live, the
+    /// allocator's documented plain fallback otherwise.
+    fn x25519_key_with_private_scalar() -> *mut EcxKey {
+        // SAFETY: a NULL libctx and propq are permitted by the constructor's contract.
+        let key = unsafe { ossl_ecx_key_new(ptr::null_mut(), ECX_KEY_TYPE_X25519, 0, ptr::null()) };
+        assert!(!key.is_null(), "the key block must allocate");
+        // SAFETY: `key` is live.
+        let scalar = unsafe { ossl_ecx_key_allocate_privkey(key) };
+        assert!(!scalar.is_null(), "the private scalar must allocate");
+        // SAFETY: `scalar` is the live `keylen`-byte allocation just made.
+        unsafe { ptr::write_bytes(scalar, 0xA5, X25519_KEYLEN) };
+        key
+    }
+
+    /// The `encoded-pub-key` parameter that drives `ecx_set_params`' release arm.
+    fn encoded_public_key_param() -> [OsslParam; 2] {
+        [
+            param_octet_string_with(
+                OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
+                PUBLIC_KEY.as_ptr().cast_mut().cast(),
+                PUBLIC_KEY.len(),
+            ),
+            END,
+        ]
+    }
+
+    /// With the secure heap live the scalar must be released through
+    /// `CRYPTO_secure_clear_free`: the arena chunk is cleansed and the secure accounting
+    /// drops. The plain `CRYPTO_clear_free` this call used to use would free an arena
+    /// pointer (an invalid free) once the heap is initialised.
+    #[test]
+    fn ecx_set_params_releases_the_scalar_through_the_secure_heap() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        let init = CRYPTO_secure_malloc_init(1 << 20, 16);
+        assert!(
+            init == 1 || init == 2,
+            "the secure heap must initialise for this test (init returned {init})"
+        );
+
+        let key = x25519_key_with_private_scalar();
+        // SAFETY: `key` is live and holds the allocation just made.
+        let scalar = unsafe { (*key).privkey };
+        assert_eq!(
+            CRYPTO_secure_allocated(scalar.cast()),
+            1,
+            "the scalar must live in the arena"
+        );
+        let offset = test_offset_of(scalar.cast()).expect("an arena pointer has an offset");
+        let used_before = CRYPTO_secure_used();
+        let actual_size = CRYPTO_secure_actual_size(scalar.cast());
+        assert!(actual_size >= X25519_KEYLEN);
+
+        let params = encoded_public_key_param();
+        // SAFETY: `key` is live and `params` is this frame's terminated array.
+        assert_eq!(unsafe { ecx_set_params(key.cast(), params.as_ptr()) }, 1);
+
+        // SAFETY: `key` is live.
+        unsafe {
+            assert!((*key).privkey.is_null(), "the authority clears the field");
+            assert_eq!((*key).haspubkey, 1);
+        }
+        assert_eq!(
+            CRYPTO_secure_used(),
+            used_before - actual_size,
+            "the scalar must leave the secure accounting"
+        );
+        assert!(
+            test_arena_bytes(offset, X25519_KEYLEN)
+                .iter()
+                .all(|&b| b == 0),
+            "the secure release must cleanse the scalar before returning the chunk"
+        );
+
+        // SAFETY: `key` is live; its scalar is now NULL, so this releases the key alone.
+        unsafe { ossl_ecx_key_free(key) };
+        let _ = CRYPTO_secure_malloc_done();
+    }
+
+    /// Without a heap, `CRYPTO_secure_zalloc` returns the plain allocator's block and
+    /// `CRYPTO_secure_clear_free` cleanses `keylen` before the plain release. The adoption
+    /// must stay valid on that documented fallback path.
+    #[test]
+    fn ecx_set_params_releases_the_plain_fallback_scalar() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        assert_eq!(CRYPTO_secure_malloc_initialized(), 0);
+
+        let key = x25519_key_with_private_scalar();
+        // SAFETY: `key` is live and holds the allocation just made.
+        let scalar = unsafe { (*key).privkey };
+        assert_eq!(
+            CRYPTO_secure_allocated(scalar.cast()),
+            0,
+            "an uninitialised heap yields the plain fallback"
+        );
+
+        let params = encoded_public_key_param();
+        // SAFETY: `key` is live and `params` is this frame's terminated array.
+        assert_eq!(unsafe { ecx_set_params(key.cast(), params.as_ptr()) }, 1);
+
+        // SAFETY: `key` is live.
+        unsafe {
+            assert!((*key).privkey.is_null());
+            assert_eq!((*key).haspubkey, 1);
+        }
+
+        // SAFETY: `key` is live; its scalar is now NULL, so this releases the key alone.
+        unsafe { ossl_ecx_key_free(key) };
+    }
+}

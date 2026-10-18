@@ -894,7 +894,11 @@ unsafe fn check_padding_md(md: *const EvpMd, padding: c_int) -> c_int {
 /// `static int pkey_rsa_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` — `:445`.
 ///
 /// # Safety
-/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`].
+/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
+/// `EVP_PKEY_CTRL_RSA_OAEP_LABEL`, a non-NULL `p2` with `p1 > 0` must be the
+/// whole, exclusively owned block from this crate's `CRYPTO_*` seam and `p1` its
+/// byte length; ownership transfers to the context. Other arms follow the
+/// authority's per-arm contract.
 unsafe extern "C" fn pkey_rsa_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,
