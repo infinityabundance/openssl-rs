@@ -2,6 +2,19 @@
   "candidate_head": "d5255e262c602383645fcae2adc43e04faf9d4a3",
   "files": [
     {
+      "file": "src/cms/cms_env.rs",
+      "groups": 127,
+      "not_discharged": true,
+      "production_sites": 549,
+      "record": "per-file/src__cms__cms_env.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 123,
+        "ESTABLISHED": 0,
+        "UNATTRIBUTED": 4
+      }
+    },
+    {
       "file": "src/evp/cipher_ctx.rs",
       "groups": 181,
       "not_discharged": true,
@@ -81,9 +94,9 @@
     }
   ],
   "totals": {
-    "audited": 6,
+    "audited": 7,
     "boundary_covered": 0,
-    "partial_files": 6,
+    "partial_files": 7,
     "zero_unsafe": 0
   }
 }
