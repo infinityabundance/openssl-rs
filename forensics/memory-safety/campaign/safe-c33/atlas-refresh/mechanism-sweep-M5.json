@@ -1,0 +1,114 @@
+{
+  "receipt": "mechanism-sweep-M5",
+  "branch": "integrate/safe-c33",
+  "source_head": "a8d3661ba",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "worktree": true,
+  "date": "2026-10-18",
+  "verification_level": "BATCH plus targeted ASan boundary control for M5-D1",
+  "scope": "mechanism-contract sweep over attribution ranks 62-69; cms/cms_lib.rs, evp/cipher.rs and provider/mac.rs audited clean; pem_bridge.rs yielded one authority-inherited OOB write and the sweep stopped; BIO pair/conn and provider/file_store deferred as callback boundaries; rsa/object.rs not started",
+  "files": [
+    "src/cms/cms_lib.rs",
+    "src/evp/cipher.rs",
+    "src/provider/mac.rs",
+    "src/evp/pem_bridge.rs"
+  ],
+  "files_not_run": [
+    "src/rsa/object.rs",
+    "src/provider/file_store.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_conn.rs"
+  ],
+  "defects": [
+    {
+      "id": "M5-D1",
+      "file": "src/evp/pem_bridge.rs",
+      "function": "PEM_get_EVP_CIPHER_INFO",
+      "pre_fix_lines": [586],
+      "post_fix_lines": [578, 584],
+      "severity": "high (memory-safety; authority-inherited out-of-bounds write)",
+      "class": "load_iv writes ivlen bytes into the fixed EVP_CIPHER_INFO::iv[EVP_MAX_IV_LENGTH]; a caller-registered cipher method can declare iv_len > 16 via EVP_CIPHER_meth_set_iv_length and is reachable through EVP_get_cipherbyname",
+      "fix": "refuse ivlen > EVP_MAX_IV_LENGTH before load_iv; deliberate divergence from the C authority's out-of-bounds write",
+      "witness": "evp::pem_bridge::tests::cipher_info_refuses_an_iv_longer_than_the_fixed_array (new) plus the four existing evp::pem_bridge tests: 5 passed / 0 failed / 0 ignored (1594 filtered)"
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-4: CmsPropqSlot/CmsCtx member-buffer handle over the zeroed item allocation (cms_lib.rs)",
+    "OB-3: OwnedCtx/RawCtx and CtxDestroy with a repr(C) EvpCipher and AtomicI32 refcount (evp/cipher.rs)",
+    "OB-3: OwnedCtx/OwnedRaw plus unsafe trait MacDestroy and per-unit destroy_body (provider/mac.rs)",
+    "OB-1: OwnedBuf scratch allocation and release in KMAC init; OwnedBuf::new_plain_released in PEM_SignFinal",
+    "PemBuf: flag-dispatched PEM_MALLOC/PEM_FREE ownership for the LINESIZE+1 line buffers",
+    "refcount::up_ref/down_ref with the Last/Remaining/Retired protocol; provider up_ref/free transfer",
+    "stack ownership and X509/X509_CRL up_ref/free semantics in CMS add/get paths"
+  ],
+  "retained_obligations": [
+    "provider/mac.rs: Poly1305Data and SiphashData are released without cleansing, matching the authority's documented asymmetry; the secret-lifetime reading is recorded, not changed",
+    "cms_lib.rs ossl_cms_get1_crls_ex: an X509_CRL_up_ref that succeeds before a failed stack push leaks one reference, matching the authority's failure path",
+    "evp/pem_bridge.rs PEM_read_bio_ex keeps the authority's in-place decode and fixed EVP_CIPHER_INFO ABI; the new guard refuses rather than resizing"
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1573 passed / 0 failed / 26 ignored)",
+    "lib_test_threads_4": "FLAKY-THEN-PASS: run 1 1557 passed / 16 failed / 26 ignored, all runtime::secure global secure-heap init tests; rerun 1573 passed / 0 failed / 26 ignored; run with only the new test skipped 1572 passed / 0 failed / 26 ignored; runtime::secure::tests alone threaded 15 passed / 0 failed",
+    "focused_tests": "PASS (5 passed / 0 failed / 0 ignored; 1594 filtered)",
+    "affected_adversarial_probes": "M5-D1 focused ASan control only; broader probes NOT_RUN (BOUNDARY/SEAL)"
+  },
+  "boundary_control": {
+    "instrument": "docker/openssl-rs-asan.sh venue; nightly-2026-10-05; -Zsanitizer=address -Zbuild-std",
+    "sensitivity_canary": "PASS (deliberate heap-use-after-free diagnosed in /asan/bin/asan_canary)",
+    "pre_fix_revert": "stack-buffer-overflow in load_iv at src/evp/pem_bridge.rs:404; focused test aborted (exit 101)",
+    "fixed_source": "PASS (1 passed / 0 failed; 1598 filtered)",
+    "restoration": "guard restored; no TEMPORARY marker remains; fmt and the five focused tests pass again"
+  },
+  "deferred": [
+    {
+      "gate": "deterministic full-library --test-threads=4 (runtime::secure global-heap race)",
+      "status": "NOT_RUN",
+      "reason": "repeat run passed but the first run failed in 16 runtime::secure tests; the parallel secure-heap isolation race predates M5 and needs its own batch",
+      "runs_at": "test-isolation batch / BOUNDARY"
+    },
+    {
+      "gate": "independent boundary review and broader M5-D1 probes",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "src/runtime/bio/bss_dgram_pair.rs (rank 65), src/runtime/bio/bss_conn.rs (rank 66)",
+      "status": "NOT_RUN",
+      "reason": "BIO callback/ownership boundaries; deferred to the BIO reentrancy batch"
+    },
+    {
+      "gate": "src/provider/file_store.rs (rank 69)",
+      "status": "NOT_RUN",
+      "reason": "store loader callback boundary; deferred to a callback batch"
+    },
+    {
+      "gate": "src/rsa/object.rs (rank 68)",
+      "status": "NOT_RUN",
+      "reason": "queued next; halted by the STOP condition"
+    }
+  ],
+  "next_queue": {
+    "file": "src/rsa/object.rs",
+    "rank_in_attribution": 68,
+    "unattributed_sites": 172,
+    "then": [
+      "src/provider/file_store.rs (171, callback boundary)",
+      "src/pkcs7/pk7_smime.rs (168)"
+    ]
+  }
+}
