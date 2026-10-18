@@ -78,7 +78,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1266** passed
+`cargo test --lib` (must pass; the established baseline is **1268** passed
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -805,6 +805,21 @@ package.
   count corrected). Gate: `fmt` 0, clippy 0, **1266 passed / 18 ignored**,
   adv-probe **18/18**.
 
+### Subphase 71 — `CRYPTO_RWLOCK` measured-profile predicate
+
+- Option B (the authority's 56-byte `pthread_rwlock_t` block) is now selected
+  only for `linux-gnu`/x86_64/64-bit, the measured `USE_RWLOCK` profile. musl
+  and every other environment fall back to option A and make **no** allocator-
+  size parity claim; the contract requires a future profile to be measured and
+  added deliberately.
+- Added two contested-lock tests (8 readers + 4 writers; 8 readers + 2 writers)
+  that require write exclusivity and reader/writer exclusion; bounded and
+  schedule-independent.
+- Compatibility delta recorded: x86_64-musl moves from the 56-byte allocation to
+  option A — the correction, not a regression.
+- Adversarial review **PASS**. Gate: `fmt` 0, clippy 0, **1268 passed / 18
+  ignored**, adv-probe **18/18**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -982,7 +997,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `031874cb9` (static seam coordinates merged)
+**Last observed HEAD:** `69a9c66b9` (rwlock measured-profile predicate merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
