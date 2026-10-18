@@ -1201,6 +1201,42 @@ package.
   static hazards (blockers only for caller-family/`SAFE_COMPATIBLE` claims).
 - Gate: `fmt` 0, clippy 0, **1391 passed / 22 ignored**.
 
+### Subphase 87 — OB-3 (`OwnedCtx`/`RawCtx`) `SAFETY_DISCHARGED`
+
+- Caller audit `OB3-CALLERS.md`: **304 production transitions**
+  (`assume_init` 28, `from_raw` 80, `from_raw_at` 41, `malloc` 9,
+  `malloc_at` 4, `into_raw` 132, `set_release_line` 10), **0 unattributed**,
+  plus 18 test transitions. 121 reclaim rows, of which **76 coordinates
+  verified** against the 3.6.4 authority and **45 enumerated compatibility
+  residuals** (trait-default `(NULL,0)` file/line metadata — allocator-hook
+  diagnostics, not a safety obligation).
+- Source corrections: D1 `sk_X509_ATTRIBUTE_pop_free` through the authority
+  path (`p_lib.c:1849`); D2/D3 split allocation vs release coordinates in
+  `evp/pkey.rs` (1520/1851) and `evp/pkey_ctx.rs` (297/310/312/403/410/463/
+  476/1521/1522), release line installed before the last fallible step;
+  D4 `evp/digest.rs` block release is `evp_lib.c:866` (867 is a brace), the
+  unreachable `evp_md_new` drop uses `digest.c:947`, and the digest-copy test
+  no longer reads a released block. `context/mod.rs` holds a `RawCtx` until
+  `context_init` succeeds, then `assume_init`; `OSSL_LIB_CTX_free` uses
+  `from_cart_at(context.c:495)` so `destroy_body` (ischild + context deinit)
+  runs before the block free.
+- Evidence: `OB3-CHECKS.md` owner-transition model (64 transitions, 4 mutants
+  each detected), 130/130 swept `CtxDestroy` impls exercised by
+  `zero_state_sweep!` across 112 files, 12 field-by-field zero-validity
+  witnesses for the 13 `super::owned` BIO modules, final-tree gate.
+- **Miri now runs** in the court (`nightly-2026-10-01` under
+  `/work/.phase25-rustup`; the earlier “unavailable” note was a PATH error):
+  Stacked Borrows **14/14** and Tree Borrows **14/14** on
+  `runtime::bio::owned::release_model_tests`, plus the `EvpMd` zero-state
+  tests. Scope: the focused owner model and zero-state tests only — not the
+  C ABI, allocator hooks, or the whole crate.
+- **Adjudication: `SAFETY_DISCHARGED`**, scoped to the context ownership
+  boundary; source `bfe27c84b`, merge `3e9ebd582`. Three independent
+  adjudications: RETAIN (7 gaps) → RETAIN (13 shared-owner modules missing
+  from the inventory) → DISCHARGE.
+- Gate: `fmt` 0, clippy 0, **1536 passed / 0 failed / 22 ignored**,
+  **22/22** adversarial probes.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1380,7 +1416,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `4f3093ad0` (OB-2 SAFETY_DISCHARGED)
+**Last observed HEAD:** `3e9ebd582` (OB-3 SAFETY_DISCHARGED; source `bfe27c84b`)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1495,7 +1531,7 @@ reconciliation. Resume in a fresh session; the state above is committed.
 - A successful test run does not discharge every unsafe obligation.
 - `SAFETY_DISCHARGED` requires explicit per-site evidence.
 - `SAFE_COMPATIBLE` remains **0/33** pending dependency-closure discharge and current-candidate functional verification.
-- Miri is unavailable on the pinned toolchain; record this limitation without implying its checks were performed.
+- Miri **is available** in the court container (`nightly-2026-10-01`, `RUSTUP_HOME=/work/.phase25-rustup`; Stacked Borrows is the default, Tree Borrows via `MIRIFLAGS=-Zmiri-tree-borrows`; `-Zmiri-stacked-borrows` is not a valid flag). Run it on focused boundaries and state the scope; never imply whole-crate aliasing coverage.
 
 **Stop and escalate:** any plausible soundness defect, behavioural divergence, unaccounted unsafe obligation, failing gate, or ambiguous ownership transfer. Do not hide residuals to complete a batch.
 
