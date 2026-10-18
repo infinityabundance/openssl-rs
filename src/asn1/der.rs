@@ -599,6 +599,10 @@ unsafe fn print_info(
     // SAFETY: `bp` is a live BIO and `buf` is NUL-terminated.
     let mut bp = bp;
     let mut pop_f_prefix = false;
+    // The prefix filter BIO this frame pushes in when the sink cannot take a prefix.
+    // `BIO_pop` detaches it but does not release it; the authority's `asn1_print_info`
+    // calls `BIO_free(bio)` on every exit, and this handle is that release.
+    let mut prefix_bio: *mut Bio = core::ptr::null_mut();
     // SAFETY: as above.
     if unsafe {
         crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_PREFIX, 0, buf.as_ptr().cast_mut().cast())
@@ -615,8 +619,11 @@ unsafe fn print_info(
             }
             let pushed = crate::runtime::bio::BIO_push(b, bp);
             if pushed.is_null() {
+                // The authority's `err:` tail releases the BIO it allocated.
+                crate::runtime::bio::BIO_free(b);
                 return 0;
             }
+            prefix_bio = b;
             pushed
         };
         bp = pushed;
@@ -652,8 +659,12 @@ unsafe fn print_info(
             };
         }
         if pop_f_prefix {
-            // SAFETY: `bp` is the pushed prefix BIO.
-            unsafe { crate::runtime::bio::BIO_pop(bp) };
+            // SAFETY: `bp` is the pushed prefix BIO and `prefix_bio` is that same
+            // frame-owned object; `BIO_pop` detaches it before its single release.
+            unsafe {
+                crate::runtime::bio::BIO_pop(bp);
+                crate::runtime::bio::BIO_free(prefix_bio);
+            };
         }
         return 0;
     }
@@ -711,8 +722,12 @@ unsafe fn print_info(
         };
     }
     if pop_f_prefix {
-        // SAFETY: `bp` is the pushed prefix BIO.
-        unsafe { crate::runtime::bio::BIO_pop(bp) };
+        // SAFETY: `bp` is the pushed prefix BIO and `prefix_bio` is that same
+        // frame-owned object; `BIO_pop` detaches it before its single release.
+        unsafe {
+            crate::runtime::bio::BIO_pop(bp);
+            crate::runtime::bio::BIO_free(prefix_bio);
+        };
     }
     i
 }
