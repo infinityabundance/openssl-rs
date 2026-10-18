@@ -11,7 +11,7 @@
 //! ## Signatures and platform types
 //!
 //! Taken from the authority's installed `crypto.h`, not from memory. On the
-//! admitted `linux-x86_64` profile (`e_os2.h`/`crypto.h`):
+//! admitted `linux-gnu`/`x86_64` profile (`e_os2.h`/`crypto.h`):
 //!
 //! ```text
 //! CRYPTO_RWLOCK        typedef void
@@ -87,18 +87,25 @@
 //!
 //! ## Ownership classification
 //!
-//! On the measured `linux`/`x86_64`/64-bit target, [`CryptoRwlock`]
-//! (`CRYPTO_RWLOCK`) uses **option B** from `OPAQUE-REPRESENTATIONS.md`:
-//! `CRYPTO_THREAD_lock_new` allocates the authority's exact 56-byte
-//! `pthread_rwlock_t` block through `CRYPTO_zalloc` at
+//! Option B from `OPAQUE-REPRESENTATIONS.md` is used **only** for the measured
+//! `linux-gnu`/`x86_64`/64-bit target (`target_os = "linux"`,
+//! `target_env = "gnu"`, `target_arch = "x86_64"`,
+//! `target_pointer_width = "64"`), where [`CryptoRwlock`] (`CRYPTO_RWLOCK`) is
+//! represented by the authority's exact 56-byte `pthread_rwlock_t` block:
+//! `CRYPTO_THREAD_lock_new` allocates it through `CRYPTO_zalloc` at
 //! `crypto/threads_pthread.c:910` and writes an [`RwlockInner`] inline;
 //! `CRYPTO_THREAD_lock_free` runs `drop_in_place` and releases the same block at
 //! `:1005`. A caller-installed `CRYPTO_set_mem_functions` hook therefore observes
 //! the authority's byte count and coordinates, including the NULL-on-refusal
 //! behaviour. Compile-time `size_of`/`align_of` asserts make a growing Rust type
-//! a build error rather than out-of-bounds storage. On every other target the
-//! module keeps option A (`Box<RwlockInner>`), because no authority size has been
-//! measured there.
+//! a build error rather than out-of-bounds storage.
+//!
+//! Every other profile — musl or any other `target_env`, any non-x86_64
+//! architecture, and any non-Linux target — uses option A
+//! (`Box<RwlockInner>`) and makes **no allocator-size parity claim** with the
+//! authority. A future profile that wants option B must have its authority
+//! layout measured and be added deliberately; it must not inherit this profile's
+//! constants.
 //!
 //! The internal `ossl_crypto_mutex_*` / `ossl_crypto_condvar_*` primitives remain
 //! `pub(crate)` Rust-owned `Box` representations and are not exported; they are
@@ -117,6 +124,7 @@ use crate::runtime::bio::sys::{self, Timespec, Timeval};
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
@@ -178,18 +186,22 @@ struct RwlockInner {
 }
 
 /// The authority's `sizeof(pthread_rwlock_t)` for the `USE_RWLOCK` profile on
-/// the measured target (`crypto/threads_pthread.c:910`). The other branch, which
-/// the admitted build does not select, allocates a 40-byte `pthread_mutex_t`; a
-/// target whose authority layout is not measured keeps option A.
+/// the measured `linux-gnu`/`x86_64`/64-bit target
+/// (`crypto/threads_pthread.c:910`). The other branch, which the admitted build
+/// does not select, allocates a 40-byte `pthread_mutex_t`. No other profile has
+/// a measured authority layout; those profiles keep option A and make no
+/// allocator-size parity claim.
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const AUTHORITY_CRYPTO_RWLOCK_SIZE: usize = 56;
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const AUTHORITY_CRYPTO_RWLOCK_ALIGN: usize = 8;
@@ -199,24 +211,28 @@ const AUTHORITY_CRYPTO_RWLOCK_ALIGN: usize = 8;
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const _: () = assert!(core::mem::size_of::<usize>() == 8);
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const _: () = assert!(core::mem::size_of::<*mut c_void>() == 8);
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const _: () = assert!(core::mem::size_of::<c_int>() == 4);
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const _: () = assert!(
@@ -226,6 +242,7 @@ const _: () = assert!(
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const _: () = assert!(
@@ -238,18 +255,21 @@ const _: () = assert!(
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const FILE: &core::ffi::CStr = c"crypto/threads_pthread.c";
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const LINE_ALLOC: c_int = 910;
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 const LINE_FREE: c_int = 1005;
@@ -318,6 +338,7 @@ fn current_id() -> CryptoThreadId {
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 fn alloc_lock() -> *mut CryptoRwlock {
@@ -335,10 +356,13 @@ fn alloc_lock() -> *mut CryptoRwlock {
     block.cast::<CryptoRwlock>()
 }
 
-/// Option A, retained for targets whose authority layout has not been measured.
+/// Option A for every profile outside the measured
+/// `linux-gnu`/`x86_64`/64-bit one. It makes no allocator-size parity claim with
+/// the authority.
 #[cfg(not(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 )))]
 fn alloc_lock() -> *mut CryptoRwlock {
@@ -461,6 +485,7 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 struct BlockRelease(*mut CryptoRwlock);
@@ -468,6 +493,7 @@ struct BlockRelease(*mut CryptoRwlock);
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 impl Drop for BlockRelease {
@@ -482,6 +508,7 @@ impl Drop for BlockRelease {
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 ))]
 unsafe fn free_lock(lock: *mut CryptoRwlock) {
@@ -494,6 +521,7 @@ unsafe fn free_lock(lock: *mut CryptoRwlock) {
 #[cfg(not(all(
     target_os = "linux",
     target_arch = "x86_64",
+    target_env = "gnu",
     target_pointer_width = "64"
 )))]
 unsafe fn free_lock(lock: *mut CryptoRwlock) {
@@ -1059,6 +1087,147 @@ mod tests {
         unsafe { CRYPTO_THREAD_lock_free(core::ptr::null_mut()) };
     }
 
+    /// Contended readers and writers on the measured option-B target. Writers
+    /// perform a non-atomic read-modify-write under the write lock, so a lost
+    /// update proves the lock failed to exclude; readers check that the counter
+    /// never decreases. Every thread has bounded work, so the outcome does not
+    /// depend on timing or scheduling.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn rwlock_contested_readers_and_writers_serialise_updates() {
+        use std::sync::atomic::AtomicBool;
+
+        const READERS: usize = 8;
+        const WRITERS: usize = 4;
+        const WRITER_ITERS: usize = 250;
+        const READER_ITERS: usize = 250;
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "lock allocation must succeed");
+        let shared = std::sync::Arc::new(SendLock(lock));
+        let counter = std::sync::Arc::new(AtomicUsize::new(0));
+        let in_write = std::sync::Arc::new(AtomicBool::new(false));
+
+        let mut handles = Vec::new();
+        for _ in 0..WRITERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let counter = std::sync::Arc::clone(&counter);
+            let in_write = std::sync::Arc::clone(&in_write);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..WRITER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_write_lock(shared.0) }, 1);
+                    let overlapped = in_write.swap(true, Ordering::SeqCst);
+                    let value = counter.load(Ordering::SeqCst);
+                    counter.store(value + 1, Ordering::SeqCst);
+                    in_write.store(false, Ordering::SeqCst);
+                    // SAFETY: this thread holds the write lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert!(!overlapped, "two writers held the write lock at once");
+                }
+            }));
+        }
+        for _ in 0..READERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let counter = std::sync::Arc::clone(&counter);
+            handles.push(std::thread::spawn(move || {
+                let mut last = 0;
+                for _ in 0..READER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_read_lock(shared.0) }, 1);
+                    let value = counter.load(Ordering::SeqCst);
+                    // SAFETY: this thread holds the read lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert!(
+                        value >= last,
+                        "readers must never observe the counter decreasing"
+                    );
+                    last = value;
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "a contested worker panicked");
+        }
+
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            WRITERS * WRITER_ITERS,
+            "writers lost an update, so write locks did not exclude"
+        );
+
+        // SAFETY: every user has joined and the lock is unheld.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
+    /// A writer updates a two-field invariant under one write lock; readers
+    /// must never observe the fields disagreeing. This checks reader/writer
+    /// exclusion independently of the writer-serialisation counter test.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn rwlock_contested_readers_never_observe_a_partial_write() {
+        const READERS: usize = 8;
+        const WRITERS: usize = 2;
+        const WRITER_ITERS: usize = 200;
+        const READER_ITERS: usize = 200;
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "lock allocation must succeed");
+        let shared = std::sync::Arc::new(SendLock(lock));
+        let pair = std::sync::Arc::new((AtomicUsize::new(0), AtomicUsize::new(0)));
+
+        let mut handles = Vec::new();
+        for _ in 0..WRITERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let pair = std::sync::Arc::clone(&pair);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..WRITER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_write_lock(shared.0) }, 1);
+                    let next = pair.0.load(Ordering::SeqCst) + 1;
+                    pair.0.store(next, Ordering::SeqCst);
+                    pair.1.store(next, Ordering::SeqCst);
+                    // SAFETY: this thread holds the write lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                }
+            }));
+        }
+        for _ in 0..READERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let pair = std::sync::Arc::clone(&pair);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..READER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_read_lock(shared.0) }, 1);
+                    let first = pair.0.load(Ordering::SeqCst);
+                    let second = pair.1.load(Ordering::SeqCst);
+                    // SAFETY: this thread holds the read lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert_eq!(first, second, "a reader observed a partial write");
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "a contested worker panicked");
+        }
+
+        assert_eq!(pair.0.load(Ordering::SeqCst), WRITERS * WRITER_ITERS);
+        assert_eq!(pair.1.load(Ordering::SeqCst), WRITERS * WRITER_ITERS);
+
+        // SAFETY: every user has joined and the lock is unheld.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
     // -------- thread identity ---------------------------------------------
 
     #[test]
@@ -1224,6 +1393,7 @@ mod tests {
     #[cfg(all(
         target_os = "linux",
         target_arch = "x86_64",
+        target_env = "gnu",
         target_pointer_width = "64"
     ))]
     mod lock_hook {
