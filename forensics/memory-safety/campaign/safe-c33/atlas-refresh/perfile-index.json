@@ -91,12 +91,25 @@
         "ESTABLISHED": 20,
         "UNATTRIBUTED": 2
       }
+    },
+    {
+      "file": "src/x509/v3_addr.rs",
+      "groups": 123,
+      "not_discharged": true,
+      "production_sites": 498,
+      "record": "per-file/src__x509__v3_addr.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 80,
+        "ESTABLISHED": 38,
+        "UNATTRIBUTED": 5
+      }
     }
   ],
   "totals": {
-    "audited": 7,
+    "audited": 8,
     "boundary_covered": 0,
-    "partial_files": 7,
+    "partial_files": 8,
     "zero_unsafe": 0
   }
 }

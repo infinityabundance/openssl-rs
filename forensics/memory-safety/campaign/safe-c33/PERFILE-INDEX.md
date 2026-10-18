@@ -15,9 +15,9 @@ post-census delta — exactly as it appeared in the former cumulative
 > `INDEPENDENTLY_CHECKED` result. A file graduates only through the AGENTS.md §7
 > dependency-closure and independent-evidence gates.
 
-**Campaign progress: 7 of 761 PARTIAL files audited.** The 761 denominator is the
+**Campaign progress: 8 of 761 PARTIAL files audited.** The 761 denominator is the
 `PARTIAL` file population in `ATTRIBUTION.md`; it is not a count of files that
-have graduated. The audits cover 5,338 production unsafe sites in 2,733 groups.
+have graduated. The audits cover 5,836 production unsafe sites in 2,856 groups.
 
 ## 1. Reusable template
 
@@ -83,7 +83,8 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 | `src/evp/cipher_ctx.rs` | `9b8f322d2cfd65395ec585ae47978a9195e829cf175f8801e3e653dd3976b94b` | 672 | 181 | 35 | 129 | 17 | `per-file/src__evp__cipher_ctx.rs.md` | PASS (not `INDEPENDENTLY_CHECKED`) |
 | `src/provider/kdf.rs` | `182b0b81dbf345f31b880ce824ae928bf92715909f153cf34560fc82cff22512` | 716 | 541 | 20 | 519 | 2 | `per-file/src__provider__kdf.rs.md` | PASS after correction (not `INDEPENDENTLY_CHECKED`) |
 | `src/evp/pkey.rs` | `b0d36d170c5ae823960c96d1d5b35c703c0306c222c4470f4202793cbbdccfd4` | 568 | 238 | 1 | 236 | 1 | `per-file/src__evp__pkey.rs.md` | PASS (not `INDEPENDENTLY_CHECKED`) |
-| **Total** | — | **5,338** | **2,733** | **394** | **2,290** | **49** | 7 records | — |
+| `src/x509/v3_addr.rs` | `fd18ebfe54c23b86747da6a0500f8f231508c0101d06d48cfbf9d29c52b046e2` | 498 | 123 | 38 | 80 | 5 | `per-file/src__x509__v3_addr.rs.md` | pending adversarial review (not `INDEPENDENTLY_CHECKED`) |
+| **Total** | — | **5,836** | **2,856** | **432** | **2,370** | **54** | 8 records | — |
 
 ### Record notes
 
@@ -97,6 +98,9 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 - `src/evp/digest.rs` carries the reusable template in its record (§1). The
   template is reproduced above so it remains discoverable without reading a
   record.
+- `src/x509/v3_addr.rs` was audited at HEAD `7c4e8dde6`; its source hash matches
+  the census exactly and `git diff c09eef8..HEAD` is empty, so its census lines
+  are its HEAD lines.
 - `src/provider/cipher.rs` and `src/evp/pkey.rs` include post-census source-delta
   sections. Those sections are part of their records and are not summarized
   away here.
@@ -112,13 +116,13 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
 {
   "candidate_head": "d5255e262c602383645fcae2adc43e04faf9d4a3",
   "files": [ ],
-  "totals": { "audited": 7, "partial_files": 7, "zero_unsafe": 0, "boundary_covered": 0 }
+  "totals": { "audited": 8, "partial_files": 8, "zero_unsafe": 0, "boundary_covered": 0 }
 }
 ```
 
 `files` is sorted by `file`. `totals.audited` is the number of audited files;
 `partial_files`, `zero_unsafe` and `boundary_covered` are their status counts in
-the `ATTRIBUTION.md` vocabulary (all seven are `PARTIAL`). Every entry carries
+the `ATTRIBUTION.md` vocabulary (all eight are `PARTIAL`). Every entry carries
 `not_discharged: true`.
 
 ## 5. Provenance
