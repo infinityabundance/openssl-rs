@@ -329,8 +329,12 @@ impl Drop for OwnedSkey {
             if self.destruct {
                 let p = self.ptr.as_ptr();
                 // The authority's `EVP_SKEY_free` order: the key data, then the method, then the
-                // lock, then the block.
-                evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata);
+                // lock, then the block. The key-data test is the authority's own: a key whose
+                // import/generate failed before producing data still reaches this destructor, and
+                // the provider's mandatory `free` must not be called with a NULL it never saw.
+                if !(*p).keydata.is_null() {
+                    evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata);
+                }
                 EVP_SKEYMGMT_free((*p).skeymgmt);
                 CRYPTO_THREAD_lock_free((*p).lock);
             }
@@ -1493,6 +1497,12 @@ mod tests {
 
     static SKEY_TARGET: AtomicUsize = AtomicUsize::new(0);
     static SKEY_REENTERS: AtomicUsize = AtomicUsize::new(0);
+    static SKEY_KEY_FREES: AtomicUsize = AtomicUsize::new(0);
+
+    /// Counts key-destructor calls; the fixture's key data is never dereferenced.
+    unsafe extern "C" fn counting_key_free(_keydata: *mut c_void) {
+        SKEY_KEY_FREES.fetch_add(1, Ordering::SeqCst);
+    }
 
     /// The method's `free(keydata)` hook is provider-controlled. Re-entering `EVP_SKEY_free`
     /// from it must observe the destroying sentinel, not tear the key down twice.
@@ -1515,11 +1525,33 @@ mod tests {
             mgmt.free = Some(reentrant_key_free);
             let key = evp_skey_alloc(&mut mgmt);
             assert!(!key.is_null());
+            // The authority calls the key destructor only for a non-NULL key data value; the
+            // re-entrancy arm under test is the one that runs then.
+            (*key).keydata = core::ptr::NonNull::<c_void>::dangling().as_ptr();
             SKEY_TARGET.store(key as usize, Ordering::SeqCst);
             SKEY_REENTERS.store(0, Ordering::SeqCst);
             EVP_SKEY_free(key);
             SKEY_TARGET.store(0, Ordering::SeqCst);
             assert_eq!(SKEY_REENTERS.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    /// A key whose import/generate failed before producing any key data is released without asking
+    /// the provider to free NULL: the authority guards `skey->keydata != NULL` and so must this
+    /// destructor, because the provider's `free` is a callback it does not control.
+    #[test]
+    fn a_failed_key_without_data_does_not_call_the_provider_destructor() {
+        // SAFETY: the method is a live stack object and `evp_skey_alloc` takes its own
+        // reference; the key's `keydata` stays NULL.
+        unsafe {
+            let mut mgmt = a_hand_built_skeymgmt();
+            mgmt.free = Some(counting_key_free);
+            let key = evp_skey_alloc(&mut mgmt);
+            assert!(!key.is_null());
+            assert!((*key).keydata.is_null());
+            SKEY_KEY_FREES.store(0, Ordering::SeqCst);
+            EVP_SKEY_free(key);
+            assert_eq!(SKEY_KEY_FREES.load(Ordering::SeqCst), 0);
         }
     }
 
