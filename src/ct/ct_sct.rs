@@ -910,3 +910,7 @@ pub unsafe extern "C" fn SCT_LIST_validate(
     }
     are_scts_valid
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Sct => zero_state_sweep_sct);

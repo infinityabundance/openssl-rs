@@ -1344,3 +1344,7 @@ pub unsafe extern "C" fn BIO_new_connect(str_: *const c_char) -> *mut Bio {
     })
 }
 // `BIO_RR_ACCEPT` is the accept BIO's retry reason; `bss_acpt` owns it.
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioConnect => zero_state_sweep_bio_connect);

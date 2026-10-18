@@ -833,3 +833,7 @@ pub unsafe extern "C" fn BIO_new_bio_pair(
         ret
     })
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioBioSt => zero_state_sweep_bio_bio_st);

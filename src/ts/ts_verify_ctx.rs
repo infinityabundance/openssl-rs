@@ -445,3 +445,7 @@ unsafe fn ts_req_to_ctx_err(ctx: *mut TsVerifyCtx, ret: *mut TsVerifyCtx) -> *mu
     }
     ptr::null_mut()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(TsVerifyCtx => zero_state_sweep_ts_verify_ctx);

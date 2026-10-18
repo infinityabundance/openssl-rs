@@ -674,3 +674,7 @@ pub unsafe extern "C" fn OSSL_ENCODER_CTX_new_for_pkey(
     unsafe { crate::encoder_meth::OSSL_ENCODER_CTX_free(ctx) };
     ptr::null_mut()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ConstructDataPkey => zero_state_sweep_construct_data_pkey);

@@ -2442,3 +2442,7 @@ mod alias_ownership_tests {
         unsafe { SSL_SESSION_free(session) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SslSession => zero_state_sweep_ssl_session);

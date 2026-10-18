@@ -589,3 +589,7 @@ pub(crate) static MLX_ASYM_KEM_FUNCTIONS: [OsslDispatch; 9] = [
         function: ptr::null_mut(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvMlxKemCtx => zero_state_sweep_prov_mlx_kem_ctx);

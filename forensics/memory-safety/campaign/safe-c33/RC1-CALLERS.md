@@ -53,7 +53,7 @@ delegation bodies separately). Descriptive drift only; no safety claim moves.
 | P06 | `src/encoder_meth.rs:298` | `OSSL_ENCODER_up_ref` | up | EXPORT-UP | `encoder` "must be live"; "acts for the caller's existing reference" | ESTABLISHED |
 | P07 | `src/evp/asymcipher.rs:488` | `EVP_ASYM_CIPHER_up_ref` | up | EXPORT-UP | `cipher` "must be live"; "acts for the caller's existing reference" | ESTABLISHED |
 | P08 | `src/evp/cipher.rs:1011` | `EVP_CIPHER_up_ref` | up | EXPORT-UP | `EVP_ORIG_DYNAMIC` arm; "the C-ABI caller holds the reference this call acts for" (legacy arm does not touch the count) | ESTABLISHED |
-| P09 | `src/evp/digest.rs:860` | `EVP_MD_up_ref` | up | EXPORT-UP | `EVP_ORIG_DYNAMIC` arm; "the C-ABI caller holds the reference this call acts for" (legacy arm does not touch the count) | ESTABLISHED |
+| P09 | `src/evp/digest.rs:869` | `EVP_MD_up_ref` | up | EXPORT-UP | `EVP_ORIG_DYNAMIC` arm; "the C-ABI caller holds the reference this call acts for" (legacy arm does not touch the count) | ESTABLISHED |
 | P10 | `src/evp/exchange.rs:518` | `EVP_KEYEXCH_up_ref` | up | EXPORT-UP | `exchange` "must be live"; "acts for the caller's existing reference" | ESTABLISHED |
 | P11 | `src/evp/kdf.rs:472` | `EVP_KDF_up_ref` | up | EXPORT-UP | `kdf` "must be a live `EvpKdf`"; "acts for the caller's existing reference" | ESTABLISHED |
 | P12 | `src/evp/kem.rs:421` | `EVP_KEM_up_ref` | up | EXPORT-UP | `kem` "must be live"; "acts for the caller's existing reference" | ESTABLISHED |
@@ -88,7 +88,7 @@ delegation bodies separately). Descriptive drift only; no safety claim moves.
 | P36 | `src/encoder_meth.rs:342` | `OSSL_ENCODER_free` | down | EXPORT-FREE | `encoder` live; "this frame owns the reference it releases" | ESTABLISHED |
 | P37 | `src/evp/asymcipher.rs:466` | `EVP_ASYM_CIPHER_free` | down | EXPORT-FREE | `cipher` live; "this frame owns the reference it releases" | ESTABLISHED |
 | P38 | `src/evp/cipher.rs:1036` | `EVP_CIPHER_free` | down | EXPORT-FREE | `EVP_ORIG_DYNAMIC`; "this frame owns the reference it releases" | ESTABLISHED |
-| P39 | `src/evp/digest.rs:885` | `EVP_MD_free` | down | EXPORT-FREE | `EVP_ORIG_DYNAMIC`; "this frame owns the reference it releases" | ESTABLISHED |
+| P39 | `src/evp/digest.rs:894` | `EVP_MD_free` | down | EXPORT-FREE | `EVP_ORIG_DYNAMIC`; "this frame owns the reference it releases" | ESTABLISHED |
 | P40 | `src/evp/exchange.rs:496` | `EVP_KEYEXCH_free` | down | EXPORT-FREE | `exchange` live; "this frame owns the reference it releases" | ESTABLISHED |
 | P41 | `src/evp/kdf.rs:488` | `EVP_KDF_free` | down | EXPORT-FREE | `kdf` live; "this frame owns the reference it releases" | ESTABLISHED |
 | P42 | `src/evp/kem.rs:399` | `EVP_KEM_free` | down | EXPORT-FREE | `kem` live; "this frame owns the reference it releases" | ESTABLISHED |

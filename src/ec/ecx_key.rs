@@ -307,3 +307,7 @@ pub unsafe extern "C" fn ossl_ecx_compute_key(
     }
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcxKey => zero_state_sweep_ecx_key);

@@ -50,9 +50,9 @@
 //!     that is what makes `EVP_PKEY_get0_description`'s and `EVP_PKEY_dup`'s legacy arms unreachable
 //!     rather than merely untested.
 //!   * **`attributes`** — a `STACK_OF(X509_ATTRIBUTE)` whose element destructor is
-//!     `X509_ATTRIBUTE_free`, a Phase 12 symbol. No function in `p_lib.c` sets it (the
-//!     `EVP_PKEY_add1_attr` family is `crypto/x509/`'s), so `EVP_PKEY_free` has a field to name and
-//!     no branch to omit.
+//!     `X509_ATTRIBUTE_free`. No function in `p_lib.c` sets it (the `EVP_PKEY_add1_attr` family is
+//!     `crypto/x509/`'s), but this crate's `evp/evp_pkey.rs` does, so `EVP_PKEY_free` releases the
+//!     stack exactly as the authority does (`p_lib.c:1849`).
 //!   * **the arms that read a legacy origin** in the functions that *are* here. Each is marked at the
 //!     site with the stratum that fills it, because a reader of one function should not have to find
 //!     this paragraph first.
@@ -149,11 +149,13 @@ use crate::runtime::obj::{
     NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::stack::OPENSSL_sk_pop_free;
 use crate::runtime::str::OPENSSL_strlcpy;
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
     CRYPTO_THREAD_write_lock, CryptoRwlock,
 };
+use crate::x509::x_attrib::{X509Attribute, X509_ATTRIBUTE_free};
 
 /// `EVP_PKEY_NONE` — `include/openssl/evp.h`, which spells it `NID_undef`.
 #[allow(dead_code)] // read by `pkey_set_type` and `EVP_PKEY_get_id`, both of which 7.4a's next slice lands
@@ -312,8 +314,9 @@ pub struct EvpPkey {
     pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` — guards the operation cache and the dirty counters.
     pub(crate) lock: *mut CryptoRwlock,
-    /// `STACK_OF(X509_ATTRIBUTE) *attributes` — `[ 0 ]`. Phase 12's element destructor
-    /// (`X509_ATTRIBUTE_free`), so nothing in this crate sets it; present for the offset.
+    /// `STACK_OF(X509_ATTRIBUTE) *attributes` — `[ 0 ]`. Written by the
+    /// `EVP_PKEY_add1_attr*` family in `evp/evp_pkey.rs`; released by
+    /// `sk_X509_ATTRIBUTE_pop_free` in [`CtxDestroy::destroy_body`].
     pub(crate) attributes: *mut crate::runtime::stack::OpenSslStack,
     /// `int save_parameters` — set to **1** by `EVP_PKEY_new`, and read and written by
     /// `EVP_PKEY_save_parameters`'s two arms. Both test `type` against a legacy NID, and
@@ -379,6 +382,10 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/p_lib.c".as_ptr
 const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/p_lib.c");
 /// `EVP_PKEY_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 1491).
 const LINE_ZALLOC_PKEY: c_int = 1491;
+/// `EVP_PKEY_new`'s error-label `OPENSSL_free(ret)` (line 1520).
+const LINE_FREE_PKEY_CTOR: c_int = 1520;
+/// `EVP_PKEY_free`'s `OPENSSL_free(x)` (line 1851).
+const LINE_FREE_PKEY: c_int = 1851;
 /// `EVP_PKEY_get_bn_param`'s `OPENSSL_zalloc(buf_sz)` (line 2232).
 const LINE_ZALLOC_BN_BUFFER: c_int = 2232;
 /// `EVP_PKEY_get_bn_param`'s two frees of that buffer (lines 2248 and 2250).
@@ -389,14 +396,28 @@ const LINE_FREE_BN_BUFFER: c_int = 2248;
 // `EVP_PKEY_get_bn_param` and `EVP_PKEY_get1_encoded_public_key` manage by hand.
 // ---------------------------------------------------------------------------------------------
 
+/// The element destructor `sk_X509_ATTRIBUTE_pop_free` passes to
+/// [`OPENSSL_sk_pop_free`] — the authority spells it `X509_ATTRIBUTE_free`
+/// (`crypto/evp/p_lib.c:1849`).
+///
+/// # Safety
+/// `elem` must be NULL or an `X509_ATTRIBUTE` this crate allocated.
+unsafe extern "C" fn free_x509_attribute(elem: *mut c_void) {
+    #[cfg(test)]
+    tests::note_attribute_free();
+    // SAFETY: `elem` is NULL or an `X509_ATTRIBUTE`, and `X509_ATTRIBUTE_free` accepts NULL.
+    unsafe { X509_ATTRIBUTE_free(elem.cast::<X509Attribute>()) };
+}
+
 /// The authority's `EVP_PKEY_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
-/// the key data, the ex-data block and the lock.
+/// the key data, the ex-data block, the lock and the attribute stack.
 // SAFETY: (a) holds: `destroy_body` is `EVP_PKEY_free` minus the block -- the key data, the
-// ex-data block and the lock, each releaser NULL-tolerant, never the enclosing block. (b) holds:
-// `EvpPkey` is a `#[repr(C)]` record of integers, raw pointers, atomics and the two pointer-only
-// `CryptoExData`/`EvpPkeyCache` records, so an all-zero block is a valid `EvpPkey`;
-// `evp_pkey_free_it` on it reads a NULL operation cache, a NULL legacy key and a NULL `keymgmt`, and
-// `CRYPTO_free_ex_data`/`CRYPTO_THREAD_lock_free` accept the zeroed ex-data and NULL lock.
+// ex-data block, the lock and `sk_X509_ATTRIBUTE_pop_free`, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: `EvpPkey` is a `#[repr(C)]` record of integers, raw pointers, atomics
+// and the two pointer-only `CryptoExData`/`EvpPkeyCache` records, so an all-zero block is a valid
+// `EvpPkey`; `evp_pkey_free_it` on it reads a NULL operation cache, a NULL legacy key and a NULL
+// `keymgmt`, `CRYPTO_free_ex_data`/`CRYPTO_THREAD_lock_free` accept the zeroed ex-data and NULL
+// lock, and `OPENSSL_sk_pop_free(NULL, ..)` is a no-op.
 unsafe impl CtxDestroy for EvpPkey {
     unsafe fn destroy_body(ptr: *mut EvpPkey) {
         // SAFETY: `ptr` is a live record per the trait contract; every member is set because only a
@@ -409,6 +430,10 @@ unsafe impl CtxDestroy for EvpPkey {
                 ptr::addr_of_mut!((*ptr).ex_data),
             );
             CRYPTO_THREAD_lock_free((*ptr).lock);
+            /* The authority's `sk_X509_ATTRIBUTE_pop_free(x->attributes,
+             * X509_ATTRIBUTE_free)` (p_lib.c:1849), after the reference count and before the
+             * block release `Drop` performs. */
+            OPENSSL_sk_pop_free((*ptr).attributes, Some(free_x509_attribute));
         }
     }
 }
@@ -450,8 +475,14 @@ impl Drop for RawPkey {
     /// The authority's `EVP_PKEY_new` refusal release: the block alone.
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
-        // release is the authority's own plain `CRYPTO_free` at the allocation's own site.
-        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_ZALLOC_PKEY) };
+        // release is the authority's own `OPENSSL_free(ret)` at the error label (p_lib.c:1520).
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE,
+                LINE_FREE_PKEY_CTOR,
+            )
+        };
     }
 }
 
@@ -638,7 +669,7 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
         drop(OwnedCtx::<EvpPkey>::from_raw_at(
             x,
             FILE_SEAM,
-            LINE_ZALLOC_PKEY,
+            LINE_FREE_PKEY,
         ))
     };
 }
@@ -5015,6 +5046,61 @@ pub unsafe extern "C" fn EVP_PKEY_print_params_fp(
 mod tests {
     use super::*;
 
+    use core::cell::Cell;
+
+    use crate::asn1::layout::V_ASN1_UTF8STRING;
+    use crate::evp::evp_pkey::{EVP_PKEY_add1_attr_by_NID, EVP_PKEY_get_attr_count};
+    use crate::runtime::obj::NID_pkcs9_unstructuredName;
+
+    thread_local! {
+        /// Element-destructor invocations observed by the
+        /// `sk_X509_ATTRIBUTE_pop_free` thunk on this thread. Thread-local so the
+        /// counter cannot see another parallel test's key frees.
+        static ATTRIBUTE_FREES: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Called by [`free_x509_attribute`] (test builds only).
+    pub(super) fn note_attribute_free() {
+        ATTRIBUTE_FREES.with(|n| n.set(n.get() + 1));
+    }
+
+    /// `EVP_PKEY_free` runs `sk_X509_ATTRIBUTE_pop_free(x->attributes,
+    /// X509_ATTRIBUTE_free)` (`p_lib.c:1849`): the stack and each element are released
+    /// exactly once. The element destructor is counted on this thread; a missing
+    /// `pop_free` leaves the count at zero, and a duplicate release would report two.
+    #[test]
+    fn an_attribute_is_released_exactly_once_with_the_key() {
+        ATTRIBUTE_FREES.with(|n| n.set(0));
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        let value = b"attribute-value";
+        // SAFETY: `pkey` is this test's own key; `value` is readable for its length.
+        unsafe {
+            assert_eq!(
+                EVP_PKEY_add1_attr_by_NID(
+                    pkey,
+                    NID_pkcs9_unstructuredName,
+                    V_ASN1_UTF8STRING,
+                    value.as_ptr(),
+                    value.len() as c_int,
+                ),
+                1,
+                "the attribute must be stored"
+            );
+            assert_eq!(EVP_PKEY_get_attr_count(pkey), 1);
+            assert!(!(*pkey).attributes.is_null());
+            assert_eq!(ATTRIBUTE_FREES.with(|n| n.get()), 0, "not yet released");
+
+            EVP_PKEY_free(pkey);
+        }
+        assert_eq!(
+            ATTRIBUTE_FREES.with(|n| n.get()),
+            1,
+            "exactly one attribute release"
+        );
+    }
+
     /// `EVP_PKEY_get_params` and `EVP_PKEY_set_params` refuse a **blank** key, and the refusal is the
     /// same `EVP_R_INVALID_KEY` a NULL key gets -- because the authority's legacy arm is `#if 0`, so a
     /// key with no provider method has nothing to delegate to. Both leave one error on the queue,
@@ -5471,3 +5557,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpPkey => zero_state_sweep_evp_pkey);

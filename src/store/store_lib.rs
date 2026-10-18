@@ -2638,3 +2638,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslStoreCtx => zero_state_sweep_ossl_store_ctx, OsslStoreSearch => zero_state_sweep_ossl_store_search, OsslStoreInfo => zero_state_sweep_ossl_store_info);

@@ -977,3 +977,7 @@ unsafe fn section_not_found_message(value: *const c_char) -> *const c_char {
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`. The authority refuses to format a
 /// message longer than this, so a longer one is truncated in both implementations.
 const ERR_MAX_DATA_SIZE: usize = 1024;
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProviderConfGlobal => zero_state_sweep_provider_conf_global);

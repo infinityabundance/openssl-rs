@@ -1144,3 +1144,7 @@ pub(crate) static CMAC_LEGACY_KEYMGMT_FUNCTIONS: [OsslDispatch; 18] = [
         function: ptr::null_mut(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(MacKey => zero_state_sweep_mac_key, MacGenCtx => zero_state_sweep_mac_gen_ctx);

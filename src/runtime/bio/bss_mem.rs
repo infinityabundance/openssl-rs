@@ -608,3 +608,7 @@ unsafe extern "C" fn mem_puts(bp: *mut Bio, str_: *const c_char) -> c_int {
     // SAFETY: `bp` is live and `str` is valid for `n` bytes.
     unsafe { mem_write(bp, str_, n as c_int) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioBufMem => zero_state_sweep_bio_buf_mem);

@@ -2184,3 +2184,7 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 41] = [
         algorithm_description: ptr::null(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(KdfData => zero_state_sweep_kdf_data, DhGenCtx => zero_state_sweep_dh_gen_ctx);

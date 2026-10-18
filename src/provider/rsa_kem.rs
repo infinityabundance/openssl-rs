@@ -736,3 +736,7 @@ pub(crate) static RSA_ASYM_KEM_FUNCTIONS: [OsslDispatch; 12] = [
     OsslDispatch { function_id: OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS, function: rsakem_settable_ctx_params as *mut c_void },
     OsslDispatch { function_id: OSSL_DISPATCH_END, function: ptr::null_mut() },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvRsaCtx => zero_state_sweep_prov_rsa_ctx);

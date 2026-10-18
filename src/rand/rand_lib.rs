@@ -2311,3 +2311,7 @@ pub unsafe extern "C" fn RAND_file_name(buf: *mut c_char, size: usize) -> *const
 // the argument at the site (docs/DECISIONS.md D312). The DRBG rows `"CTR-DRBG"` and `"SEED-SRC"`
 // that `EVP_RAND_fetch` asks for are published, so `rand_new_seed`/`rand_new_drbg` reach real rows
 // and a NULL fetch is a real refusal rather than an empty algorithm store.
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(RandGlobal => zero_state_sweep_rand_global);

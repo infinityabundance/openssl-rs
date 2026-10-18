@@ -823,3 +823,7 @@ pub unsafe extern "C" fn BIO_ssl_shutdown(b: *mut Bio) {
         cur = unsafe { BIO_next(cur) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioSsl => zero_state_sweep_bio_ssl);

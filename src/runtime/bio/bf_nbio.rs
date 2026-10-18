@@ -343,3 +343,7 @@ unsafe extern "C" fn nbiof_puts(bp: *mut Bio, str_: *const c_char) -> c_int {
     // SAFETY: `next` is live; `str_` is NUL-terminated.
     unsafe { super::BIO_puts(next, str_) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(NbioTest => zero_state_sweep_nbio_test);

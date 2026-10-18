@@ -1549,3 +1549,7 @@ mod tests {
             as unsafe fn(*const crate::provider::OsslProvider) -> c_int;
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslDecoderCtx => zero_state_sweep_ossl_decoder_ctx);

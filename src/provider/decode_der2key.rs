@@ -3578,3 +3578,7 @@ mod tests {
         assert!(q.starts_with(b"provider=default,fips=yes,"));
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BarePubkey => zero_state_sweep_bare_pubkey);

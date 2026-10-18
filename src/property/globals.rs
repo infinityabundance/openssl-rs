@@ -217,3 +217,7 @@ pub(crate) unsafe fn ossl_global_properties_stop_mirroring(libctx: *mut c_void) 
         unsafe { (*globp).no_mirrored |= NO_MIRRORED };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslGlobalProperties => zero_state_sweep_ossl_global_properties);

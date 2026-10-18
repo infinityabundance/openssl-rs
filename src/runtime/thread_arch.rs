@@ -560,3 +560,7 @@ pub(crate) unsafe fn ossl_crypto_thread_native_clean(handle: *mut CryptoThread) 
     }
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CryptoThread => zero_state_sweep_crypto_thread);

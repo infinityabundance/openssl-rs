@@ -65,13 +65,13 @@ pub type OsslIndicatorCallback =
 /// The authority's translation unit, so an allocation that fails records the
 /// coordinates a consumer would see from the authority.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/self_test_core.c".as_ptr();
-/// `OPENSSL_zalloc(sizeof(*stcb))` is at `crypto/self_test_core.c:40`,
-/// `OPENSSL_free(stcb)` at 45, `OPENSSL_zalloc(sizeof(*ret))` at 88 and
-/// `OPENSSL_free(st)` at 103.
-const LINE_ZALLOC_CB: c_int = 40;
-const LINE_FREE_CB: c_int = 45;
-const LINE_ZALLOC_ST: c_int = 88;
-const LINE_FREE_ST: c_int = 103;
+/// `OPENSSL_zalloc(sizeof(*stcb))` is at `crypto/self_test_core.c:38`,
+/// `OPENSSL_free(stcb)` at 44, `OPENSSL_zalloc(sizeof(*ret))` at 92 and
+/// `OPENSSL_free(st)` at 108.
+const LINE_ZALLOC_CB: c_int = 38;
+const LINE_FREE_CB: c_int = 44;
+const LINE_ZALLOC_ST: c_int = 92;
+const LINE_FREE_ST: c_int = 108;
 
 /// A second name for [`FILE`] for the [`CtxDestroy`] implementations below, whose associated
 /// `FILE` would otherwise shadow the module constant inside its own definition.
@@ -683,3 +683,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SelfTestCb => zero_state_sweep_self_test_cb, OsslSelfTest => zero_state_sweep_ossl_self_test);

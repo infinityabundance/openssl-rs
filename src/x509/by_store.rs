@@ -651,3 +651,7 @@ static X509_STORE_LOOKUP: StoreLookupMethod = StoreLookupMethod(X509LookupMethod
 pub unsafe extern "C" fn X509_LOOKUP_store() -> *mut X509LookupMethod {
     (&raw const X509_STORE_LOOKUP.0).cast_mut()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CachedStore => zero_state_sweep_cached_store);

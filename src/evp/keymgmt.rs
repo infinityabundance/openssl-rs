@@ -1698,3 +1698,7 @@ mod tests {
         crate::runtime::err::ERR_clear_error();
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpKeyMgmt => zero_state_sweep_evp_key_mgmt);
