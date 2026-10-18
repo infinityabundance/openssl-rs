@@ -1,0 +1,124 @@
+{
+  "receipt": "mechanism-sweep-M8",
+  "branch": "integrate/safe-c33",
+  "source_head": "8fd9d3a79",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "worktree": true,
+  "date": "2026-10-18",
+  "verification_level": "FAST plus BATCH, with targeted ASan controls for M8-D1 and M8-D2",
+  "scope": "mechanism-contract sweep over attribution ranks 85-92; evp/skeymgmt.rs and bn/bignum.rs each yielded one defect (fixed); the other six files audited clean; no file presented a new reusable unsafe boundary",
+  "files": [
+    "src/decoder_pkey.rs",
+    "src/asn1/asn1_gen.rs",
+    "src/dh/ameth.rs",
+    "src/ec/ameth.rs",
+    "src/evp/skeymgmt.rs",
+    "src/bn/bignum.rs",
+    "src/evp/asymcipher.rs",
+    "src/evp/kem.rs"
+  ],
+  "files_not_run": [
+    "src/provider/file_store.rs",
+    "src/runtime/bio/iolib.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_conn.rs",
+    "src/runtime/bio/bss_dgram.rs",
+    "src/runtime/obj.rs",
+    "src/ml_dsa/encoders.rs",
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/statem/statem_srvr.rs",
+    "src/ssl/statem/statem_clnt.rs"
+  ],
+  "defects": [
+    {
+      "id": "M8-D1",
+      "file": "src/evp/skeymgmt.rs",
+      "lines_pre_fix": "328-341",
+      "line_post_fix": 335,
+      "severity": "high",
+      "class": "provider-callback contract violation (NULL key data)",
+      "description": "OwnedSkey::drop called evp_skeymgmt_freedata unconditionally; the authority's EVP_SKEY_free guards keydata != NULL. The import/generate failure paths free a key whose keydata was never produced, so a mandatory provider free(NULL) was invoked in a state the authority never invokes. A provider whose free dereferences its key data faults.",
+      "fix": "Restored the authority's keydata != NULL guard in Drop; updated the re-entrancy fixture to supply non-NULL key data and added a data-less-key destructor test.",
+      "witness": "evp::skeymgmt::tests::a_failed_key_without_data_does_not_call_the_provider_destructor (new); free_reentry_from_the_provider_key_destructor_is_a_noop (updated fixture)"
+    },
+    {
+      "id": "M8-D2",
+      "file": "src/bn/bignum.rs",
+      "lines_pre_fix": "496-509",
+      "line_post_fix": 501,
+      "severity": "high",
+      "class": "aliasing UB on a C-valid call",
+      "description": "BN_copy formed (as_mut(a), as_ref(b)) before testing identity. BN_copy(a, a) is valid in the authority and returns a early (bn_lib.c:341-342); the crate created aliasing borrows (UB) and cleared the destination before reading the source, emptying the number.",
+      "fix": "Added the authority's early return for a.cast_const() == b before any borrow is formed, and updated the safety contract.",
+      "witness": "bn::bignum::tests::copying_a_number_onto_itself_preserves_it (new)"
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [
+    "src/evp/skeymgmt.rs: the provider free callback is no longer invoked with NULL key data on the failed import/generate path",
+    "src/bn/bignum.rs: BN_copy no longer forms aliasing &mut/& for a == b"
+  ],
+  "contracts_reused": [
+    "RC-1 refcount protocol with destroy sentinel and re-entrant free refusal (skeymgmt.rs, kem.rs, asymcipher.rs)",
+    "OB-1 OwnedBuf adoption/provenance/cleansed release at the authority coordinates (decoder_pkey.rs, asn1/asn1_gen.rs, dh/ameth.rs, ec/ameth.rs, asymcipher.rs OwnedBlock)",
+    "OB-3 OwnedCtx/CtxDestroy with zero-validity destroy bodies (skeymgmt.rs, asymcipher.rs, kem.rs)",
+    "construct-data ownership transfer: fields first, block last, drop on every failure path (decoder_pkey.rs)",
+    "EVP_PKEY_ASN1_METHOD callback dispatch and PKCS#8/X509 set0 transfer ownership (dh/ameth.rs, ec/ameth.rs)",
+    "BIGNUM Box ownership, BN_FLG_STATIC_DATA no-release, and checked byte extents (bn/bignum.rs)",
+    "provider fetch/export ownership and the two-pass provider resolution loop (asymcipher.rs, kem.rs)"
+  ],
+  "residuals": [
+    "bn/bignum.rs: BN_with_flags narrows the authority's limb-aliasing to a value copy (recorded OBL-BN-WITH-FLAGS-ALIASING); the function still documents that dest and b must be distinct when both are non-null, a precondition the authority's body would tolerate as a self-assignment. Not a new UB on a C-valid path observed in-tree; recorded as a compatibility narrowing.",
+    "bn/bignum.rs: BN_secure_new returns the ordinary Box-backed object and does not allocate from the secure heap; recorded file-level divergence, unchanged by this batch.",
+    "src/evp/skeymgmt.rs: the provider free contract is now authority-identical, but a real third-party provider's observable free count on the failure path is not replayed (NOT_RUN/BOUNDARY)."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1577 passed / 0 failed / 26 ignored)",
+    "lib_test_threads_4": "PASS (1577 passed / 0 failed / 26 ignored; no secure-heap isolation failure on this run)",
+    "focused_tests": "PASS (bn::bignum 5/0; evp::skeymgmt 11/0; decoder_pkey 3/0; asn1_gen 3/0; dh::ameth 5/0; evp::asymcipher 5/0; evp::kem 4/0; ec/ameth has no unit tests)",
+    "affected_adversarial_probes": "NOT_RUN (no existing probe targets these two repaired paths; a third-party NULL-free differential is BOUNDARY)"
+  },
+  "boundary_control": {
+    "instrument": "docker/openssl-rs-asan.sh venue; nightly-2026-10-05; -Zsanitizer=address -Zbuild-std; ASAN_OPTIONS=detect_leaks=0",
+    "m8_d2": "PASS (copying_a_number_onto_itself_preserves_it, 1 passed / 0 failed; no sanitizer finding)",
+    "m8_d1": "PASS (all 11 evp::skeymgmt tests, 0 failed; no sanitizer finding)",
+    "scope_limit": "ASan observes memory errors, not Rust aliasing-model violations; M8-D2's UB is prevented structurally by the pre-borrow identity check and witnessed functionally by the value-preservation test. No third-party provider was executed."
+  },
+  "next_queue": {
+    "file": "src/store/store_result.rs",
+    "rank_in_attribution": 93,
+    "unattributed_sites": 146,
+    "then": [
+      "src/ec/pmeth.rs (94, 145)",
+      "src/dsa/ameth.rs (95, 144)",
+      "src/evp/keymgmt.rs (96, 144)",
+      "src/evp/bio_ok.rs (97, 143)"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "independent boundary review of M8-D1/M8-D2 and a real third-party-provider NULL-free differential",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "src/provider/file_store.rs, src/runtime/bio/{iolib,bss_dgram_pair,bss_conn,bss_dgram}.rs, src/runtime/obj.rs, src/ml_dsa/encoders.rs, src/ssl/ssl_lib.rs, src/ssl/statem/{statem_srvr,statem_clnt}.rs",
+      "status": "NOT_RUN",
+      "reason": "callback/reentrancy and ownership boundaries deferred to a boundary batch",
+      "runs_at": "BOUNDARY"
+    }
+  ]
+}

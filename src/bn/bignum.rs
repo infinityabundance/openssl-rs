@@ -488,15 +488,21 @@ pub unsafe extern "C" fn BN_dup(a: *const BigNum) -> *mut BigNum {
 
 /// `BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b)`
 ///
+/// `a == b` is a valid authority call and answers `a` unchanged
+/// (`bn_lib.c:341-342`'s own early return), so it is handled **before** any borrow of
+/// either pointer is formed.
+///
 /// # Safety
 ///
-/// `a` and `b` must each be null or live, and must not be the same object when
-/// both are non-null.
+/// `a` and `b` must each be null or live.
 #[no_mangle]
 pub unsafe extern "C" fn BN_copy(a: *mut BigNum, b: *const BigNum) -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: `a` and `b` are null or live and distinct, which is this
-        // function's `# Safety` section; the only read of either pointer.
+        if a.cast_const() == b {
+            return a;
+        }
+        // SAFETY: `a` and `b` are null or live, which is this function's `# Safety`
+        // section; the only read of either pointer.
         let (dst, src) = unsafe { (as_mut(a), as_ref(b)) };
         match (dst, src) {
             (Some(dst), Some(src)) => {
@@ -1914,6 +1920,21 @@ mod tests {
             BN_free(p);
             BN_free(q);
         }
+    }
+
+    /// `BN_copy(a, a)` is a valid call in the authority (`bn_lib.c:341-342` returns `a`
+    /// before any write). It must not form aliasing borrows or clear the source.
+    #[test]
+    fn copying_a_number_onto_itself_preserves_it() {
+        let mut p: *mut BigNum = core::ptr::null_mut();
+        // SAFETY: `p` is a writable slot and the string is NUL-terminated.
+        unsafe { BN_hex2bn(&mut p, c"deadbeefcafebabe".as_ptr()) };
+        // SAFETY: `p` is live; the authority's own self-copy case.
+        assert_eq!(unsafe { BN_copy(p, p) }, p);
+        // SAFETY: `p` is live.
+        assert!(unsafe { same_value(p, p) });
+        // SAFETY: `p` was allocated by this test and is live.
+        unsafe { BN_free(p) };
     }
 
     /// Test-only equality, so this test does not have to reach for `BN_cmp` in
