@@ -78,8 +78,8 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1285** passed,
-**21 ignored**, and **21/21** probes via `scripts/adv-probe.sh`)
+`cargo test --lib` (must pass; the established baseline is **1293** passed,
+**22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
 (one concurrent-refcount test added in subphase 39, eight
 reference-count/re-entrancy tests added in subphase 40, seven
 alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
@@ -921,6 +921,31 @@ package.
   `src/runtime/mem.rs:430-433`). Gate: `fmt` 0, clippy 0, **1285 passed / 21
   ignored**, **21/21** probes.
 
+### Subphase 76 — per-file record index and `cms/cms_env.rs`
+
+- The cumulative audit was split into six verbatim per-file records under
+  `per-file/` plus `PERFILE-INDEX.md` and `atlas-refresh/perfile-index.json`;
+  all 2,606 group rows preserved exactly once and `PERFILE-AUDIT.md` is now a
+  pointer document.
+- Audit of `cms/cms_env.rs`: 549 production sites in 127 groups — **0
+  ESTABLISHED, 123 CONTRACTED, 4 UNATTRIBUTED**.
+- Fixes:
+  1. `CMS_add0_recipient_key` now installs every adopted field before
+     publishing the recipient; a failed push detaches exactly the fields the
+     caller keeps and frees only the skeleton, mirroring the authority.
+  2. `cms_RecipientInfo_ktri_decrypt` adopts the decrypted key with the
+     cleansing release over the produced length (<= allocation extent); a new
+     isolated probe observes the zeroed prefix at release.
+  3. `set0_key` documents association semantics (caller retains ownership and
+     detaches with NULL) so it cannot free a replaced borrowed key;
+     `set0_pkey` documents the one-reference transfer.
+  4. `wrap_init` documents the authority's NULL `EVP_CIPHER_CTX` callback
+     contract instead of inventing a check.
+- Adversarial review **FAILED** on the first test inputs (authority-rejected
+  NID) and an overclaimed canary, and **PASSED** after correction. Gate: `fmt`
+  0, clippy 0, **1293 passed / 22 ignored**, **22/22** probes. Per-file
+  campaign: **7 of 761**.
+
 Converted files (union of stage/p25/* files): see the batch table above for the authoritative list. Allocation-site counts below are a **frozen-baseline** measure; the candidate-bound figure is in `atlas-refresh/` and MUST be regenerated (`atlas_refresh.py`) before quoting completion numbers. OOM guard: build with `CARGO_BUILD_JOBS=4`, test with `cargo test --lib -- --test-threads=4`.
 
 ## Standing conversion standard
@@ -1098,7 +1123,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `e56cb78cd` (mechanism-class fixes merged)
+**Last observed HEAD:** `9972658e2` (cms_env audit fixes merged)
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1112,8 +1137,8 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1285** tests (21 ignored;
-   21/21 adversarial probes via `scripts/adv-probe.sh`). Do not accept
+   The most recent reported library baseline is **1293** tests (22 ignored;
+   22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
    unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
