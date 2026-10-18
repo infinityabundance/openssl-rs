@@ -1605,7 +1605,27 @@ unsafe extern "C" fn def_load_bio(conf: *mut Conf, in_: *mut Bio, line: *mut c_l
 ///
 /// # Safety
 /// Every pointer must be NULL or live, exactly as at the corresponding `goto
-/// err`; `conf` must be live.
+/// err`; `conf` must be live. The blocks this function adopts are the caller's
+/// (`def_load_bio`) and transfer here; for each non-NULL pointer the caller has
+/// established plain `CRYPTO_*`-seam provenance and whole-block identity, with
+/// `CRYPTO_free` as the single valid release:
+///
+/// * `section` is the `CRYPTO_strdup(c"default", ...)` block
+///   (`src/runtime/conf/def.rs:1005`), extent `strlen + 1` (terminator included);
+/// * `dirpath` is, on a directory include, the `include_path` block whose
+///   ownership `process_include` transfers to it (`:1432`, `:1786`) — either the
+///   `str_copy` result or the `CRYPTO_malloc(newlen)` joined path (`:1377`),
+///   extent the allocation (`strlen + 1` at most);
+/// * `v` is the `CRYPTO_malloc(size_of::<ConfValue>())` block (`:1504`), extent
+///   exactly `size_of::<ConfValue>()`, and this function takes ownership of it
+///   together with its two members: `v->name`, a `CRYPTO_strdup` block (`:1512`,
+///   extent `strlen + 1`), and `v->value`, the `BUF_MEM` data block `str_copy`
+///   installed (`:732`; `CRYPTO_malloc` extent, NUL-terminated).
+///
+/// Each is released exactly once through `CRYPTO_free`, the authority's
+/// `OPENSSL_free` at `conf_def.c:571`/`:584`/`:597-599`, via
+/// `OwnedBuf::adopt_plain_nullable`. `buff` is a `BUF_MEM` handled by
+/// `BUF_MEM_free`; `biosk` is a stack freed by `OPENSSL_sk_free`.
 #[allow(clippy::too_many_arguments)]
 unsafe fn finish_with_error(
     conf: *mut Conf,

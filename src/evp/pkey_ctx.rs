@@ -1748,7 +1748,30 @@ pub(crate) type PkeyMethVerifyctxFn =
 /// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *)`.
 pub(crate) type PkeyMethDeriveFn =
     unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize) -> c_int;
-/// `int (*)(EVP_PKEY_CTX *, int, int, void *)`.
+/// `int (*)(EVP_PKEY_CTX *, int, int, void *)` — the `EVP_PKEY_METHOD`
+/// control callback.
+///
+/// # Safety
+///
+/// The implementer may assume `ctx` is live and that `p1`/`p2` are valid for the
+/// arm selected by `type_` under the authority's `EVP_PKEY_CTRL_*` contract. The
+/// caller must satisfy that per-arm contract. The ownership-carrying arms used
+/// by this crate are:
+///
+/// - `EVP_PKEY_CTRL_EC_KDF_UKM` and `EVP_PKEY_CTRL_DH_KDF_UKM`: a non-NULL `p2`
+///   is transferred to the implementation. It must be the whole, exclusively
+///   owned block from this crate's `CRYPTO_*` allocator seam, and `p1` must be
+///   its non-negative byte length, at most the allocated extent. The
+///   implementation stores it and releases it exactly once through the seam at
+///   the authority's replacement/destruction site.
+/// - `EVP_PKEY_CTRL_RSA_OAEP_LABEL`: when `p2` is non-NULL and `p1 > 0`, the
+///   same transfer applies with `p1` the label length; otherwise the
+///   implementation clears the stored label and does not consume `p2`, exactly
+///   as the authority does.
+///
+/// The corresponding `EVP_PKEY_CTRL_GET_*` arms instead require `p2` to be
+/// writable for the named output type. Every other arm keeps the authority's
+/// own contract.
 pub(crate) type PkeyMethCtrlFn =
     unsafe extern "C" fn(*mut EvpPkeyCtx, c_int, c_int, *mut c_void) -> c_int;
 /// `int (*)(EVP_PKEY_CTX *, const char *, const char *)`.

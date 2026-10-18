@@ -543,7 +543,16 @@ unsafe fn b64_read_asn1(
 /// # Safety
 ///
 /// `out` must be a live BIO; `mdalgs` must be null or a live `STACK_OF(X509_ALGOR)`
-/// whose elements are live `X509_ALGOR`s.
+/// whose elements are live `X509_ALGOR`s. The `EVP_MD_CTRL_MICALG` arm additionally
+/// requires the method's `md_ctrl` to obey its own contract: on a positive answer it
+/// has stored in the output slot a NUL-terminated string it allocated through the
+/// plain `CRYPTO_*` seam (`CRYPTO_malloc`/`CRYPTO_strdup`), whose allocation extent
+/// is the string plus its terminator. Ownership of that block transfers to this
+/// frame, which performs its single release through `CRYPTO_free` — the authority's
+/// `OPENSSL_free(micstr)` at `crypto/asn1/asn_mime.c:189` — via
+/// `OwnedBuf::adopt_plain_nullable`; `BIO_puts` reads only up to and including the
+/// terminator, so the readable length is bounded by it. A secure-heap block is
+/// excluded. On every non-positive answer the ctrl retains ownership.
 unsafe fn asn1_write_micalg(out: *mut Bio, mdalgs: *mut OpenSslStack) -> c_int {
     let mut have_unknown = 0;
     let mut write_comma = 0;

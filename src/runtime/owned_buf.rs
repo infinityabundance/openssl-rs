@@ -86,6 +86,24 @@ mod conditional_probe {
     }
 }
 
+/// Test-only observation of the release arm `Drop` selected, for the OB-1 model
+/// correspondence tests. Thread-local so concurrent tests cannot perturb each other.
+#[cfg(test)]
+mod drop_probe {
+    use core::cell::Cell;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(super) enum Call {
+        Plain,
+        Cleansed { num: usize },
+        SecureCleansed { num: usize },
+    }
+
+    thread_local! {
+        pub(super) static LAST: Cell<Option<Call>> = const { Cell::new(None) };
+    }
+}
+
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for a plainly released block, or `None`
     /// when the allocator answers NULL.
@@ -151,6 +169,9 @@ impl OwnedBuf {
     /// subsequent accesses stay within the checked product. An overflowing product
     /// is refused with `None` rather than allocated, so a caller must not treat
     /// `None` as a zero-length success.
+    // The `new_array` construction is exercised by this module's tests; no production caller
+    // remains after the `x509spki` extent fix moved that site to the safe `new`.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) unsafe fn new_array(
         count: usize,
         size: usize,
@@ -680,11 +701,15 @@ impl Drop for OwnedBuf {
     fn drop(&mut self) {
         match self.release {
             Release::Plain { file, line } => {
+                #[cfg(test)]
+                drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Plain)));
                 // SAFETY: `self.ptr` is the block this handle owns and has not
                 // released; the authority's `CRYPTO_free` accepts NULL.
                 unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file.as_ptr(), line) };
             }
             Release::Cleansed { num, file, line } => {
+                #[cfg(test)]
+                drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Cleansed { num })));
                 // SAFETY: `self.ptr` is the block this handle owns and has not
                 // released; `num` was set to the allocation length by a safe
                 // constructor or established by `adopt_cleansed`'s contract, so it
@@ -704,6 +729,14 @@ impl Drop for OwnedBuf {
                 // mode and leaves `num` intact; both releases accept NULL.
                 #[cfg(test)]
                 conditional_probe::LAST.with(|last| last.set(Some((clear, num))));
+                #[cfg(test)]
+                drop_probe::LAST.with(|last| {
+                    last.set(Some(if clear {
+                        drop_probe::Call::Cleansed { num }
+                    } else {
+                        drop_probe::Call::Plain
+                    }))
+                });
                 // SAFETY: both releases accept the block this handle owns; the preceding comment
                 // establishes its provenance, extent and single-release obligation.
                 unsafe {
@@ -715,6 +748,9 @@ impl Drop for OwnedBuf {
                 }
             }
             Release::SecureCleansed { num, file, line } => {
+                #[cfg(test)]
+                drop_probe::LAST
+                    .with(|last| last.set(Some(drop_probe::Call::SecureCleansed { num })));
                 // SAFETY: `self.ptr` is the whole block a secure constructor allocated or
                 // `adopt_secure_cleansed` established as secure-allocator provenance
                 // (including that allocator's documented plain fallback); this handle has
@@ -996,3 +1032,9 @@ mod tests {
         unsafe { crate::runtime::mem::CRYPTO_free(raw.cast(), FILE.as_ptr(), 17) };
     }
 }
+
+// The exhaustive release-state model and the production correspondence tests. Test-only: nothing
+// here is compiled into the library, and it never changes the production transition rules.
+#[cfg(test)]
+#[path = "owned_buf_model.rs"]
+mod release_model_tests;
