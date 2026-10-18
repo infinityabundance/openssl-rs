@@ -153,10 +153,10 @@ unsafe fn bio_read_intern(
         unsafe { raise_site(&BIO_LIB_267) };
         return -1;
     }
-    // SAFETY: `bio` is non-NULL and live.
-    let b = unsafe { &mut *bio };
-    // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-    let Some(m) = (unsafe { b.method.as_ref() }) else {
+    // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per the
+    // BIO contract. No reference to the BIO spans the callbacks below: they may
+    // re-enter the BIO API, so every field is re-read through the raw pointer.
+    let Some(m) = (unsafe { (*bio).method.as_ref() }) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_271) };
         return -2;
@@ -186,7 +186,9 @@ unsafe fn bio_read_intern(
             return ret as c_int;
         }
     }
-    if b.init == 0 {
+    // SAFETY: `bio` is live; the field is re-read because the callback may have
+    // changed it.
+    if unsafe { (*bio).init } == 0 {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_279) };
         return -1;
@@ -195,8 +197,9 @@ unsafe fn bio_read_intern(
     // `data` and report how many through `readbytes`.
     let mut ret = unsafe { bread(bio, data.cast(), dlen, readbytes) };
     if ret > 0 {
-        // SAFETY: `readbytes` is a writable out-parameter owned by this call.
-        b.num_read += unsafe { *readbytes } as u64;
+        // SAFETY: `bio` is live and `readbytes` is a writable out-parameter owned
+        // by this call.
+        unsafe { (*bio).num_read += *readbytes as u64 };
     }
     // SAFETY: `bio` is still live and non-NULL on this path.
     if unsafe { has_callback(bio) } {
@@ -292,10 +295,9 @@ unsafe fn bio_write_intern(
     if bio.is_null() {
         return 0;
     }
-    // SAFETY: `bio` is non-NULL and live.
-    let b = unsafe { &mut *bio };
-    // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-    let Some(bwrite) = (unsafe { b.method.as_ref() }).and_then(|m| m.bwrite) else {
+    // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per the
+    // BIO contract. No reference to the BIO spans the callbacks below.
+    let Some(bwrite) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.bwrite) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_340) };
         return -2;
@@ -320,7 +322,9 @@ unsafe fn bio_write_intern(
             return ret as c_int;
         }
     }
-    if b.init == 0 {
+    // SAFETY: `bio` is live; the field is re-read because the callback may have
+    // changed it.
+    if unsafe { (*bio).init } == 0 {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_348) };
         return -1;
@@ -330,7 +334,9 @@ unsafe fn bio_write_intern(
     // `data` and report how many through `local_written`.
     let mut ret = unsafe { bwrite(bio, data.cast(), dlen, &mut local_written) };
     if ret > 0 {
-        b.num_write += local_written as u64;
+        // SAFETY: `bio` is live; the callback above may have re-entered, so the
+        // counter is updated through the raw pointer.
+        unsafe { (*bio).num_write += local_written as u64 };
     }
     // SAFETY: `bio` is still live and non-NULL on this path.
     if unsafe { has_callback(bio) } {
@@ -433,10 +439,9 @@ pub unsafe extern "C" fn BIO_sendmmsg(
             unsafe { raise_site(&BIO_LIB_399) };
             return 0;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(m) = (unsafe { b.method.as_ref() }) else {
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callback below.
+        let Some(m) = (unsafe { (*bio).method.as_ref() }) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_405) };
             return 0;
@@ -473,7 +478,9 @@ pub unsafe extern "C" fn BIO_sendmmsg(
                 return 0;
             }
         }
-        if b.init == 0 {
+        // SAFETY: `bio` is live; the field is re-read because the callback may
+        // have changed it.
+        if unsafe { (*bio).init } == 0 {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_424) };
             return 0;
@@ -531,10 +538,9 @@ pub unsafe extern "C" fn BIO_recvmmsg(
             unsafe { raise_site(&BIO_LIB_446) };
             return 0;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(recv) = (unsafe { b.method.as_ref() }).and_then(|m| m.recvmmsg) else {
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callback below.
+        let Some(recv) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.recvmmsg) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_452) };
             return 0;
@@ -565,7 +571,9 @@ pub unsafe extern "C" fn BIO_recvmmsg(
                 return 0;
             }
         }
-        if b.init == 0 {
+        // SAFETY: `bio` is live; the field is re-read because the callback may
+        // have changed it.
+        if unsafe { (*bio).init } == 0 {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_471) };
             return 0;
@@ -608,10 +616,9 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
             unsafe { raise_site(&BIO_LIB_500) };
             return -1;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(bputs) = (unsafe { b.method.as_ref() }).and_then(|m| m.bputs) else {
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callbacks below.
+        let Some(bputs) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.bputs) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_504) };
             return -2;
@@ -625,7 +632,9 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
                 return ret as c_int;
             }
         }
-        if b.init == 0 {
+        // SAFETY: `bio` is live; the field is re-read because the callback may
+        // have changed it.
+        if unsafe { (*bio).init } == 0 {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_515) };
             return -1;
@@ -634,7 +643,9 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
         let mut ret = unsafe { bputs(bio, buf) };
         let mut written: usize = 0;
         if ret > 0 {
-            b.num_write += ret as u64;
+            // SAFETY: `bio` is live; the method above may have been reached only
+            // through the raw pointer, so the counter is updated the same way.
+            unsafe { (*bio).num_write += ret as u64 };
             written = ret as usize;
             ret = 1;
         }
@@ -679,10 +690,9 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
             unsafe { raise_site(&BIO_LIB_549) };
             return -1;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(bgets) = (unsafe { b.method.as_ref() }).and_then(|m| m.bgets) else {
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callbacks below.
+        let Some(bgets) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.bgets) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_553) };
             return -2;
@@ -711,7 +721,9 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
                 return ret as c_int;
             }
         }
-        if b.init == 0 {
+        // SAFETY: `bio` is live; the field is re-read because the callback may
+        // have changed it.
+        if unsafe { (*bio).init } == 0 {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_569) };
             return -1;
@@ -885,10 +897,9 @@ pub unsafe extern "C" fn BIO_ctrl(
         if bio.is_null() {
             return -1;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(ctrl) = (unsafe { b.method.as_ref() }).and_then(|m| m.ctrl) else {
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callbacks below.
+        let Some(ctrl) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.ctrl) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_663) };
             return -2;
@@ -953,10 +964,9 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
         if bio.is_null() {
             return -2;
         }
-        // SAFETY: `bio` is non-NULL and live.
-        let b = unsafe { &mut *bio };
-        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
-        let Some(callback_ctrl) = (unsafe { b.method.as_ref() }).and_then(|m| m.callback_ctrl)
+        // SAFETY: `bio` is non-NULL and live; `method` is NULL or a live table per
+        // the BIO contract. No reference to the BIO spans the callbacks below.
+        let Some(callback_ctrl) = (unsafe { (*bio).method.as_ref() }).and_then(|m| m.callback_ctrl)
         else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_690) };
