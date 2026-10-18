@@ -2268,8 +2268,15 @@ unsafe fn get_string_internal(
     }
     let sz = p.data_size;
     // A UTF-8 string always wants a terminator; a zero-length value of any other type
-    // still wants a byte so the allocation is not a zero-length request.
-    let alloc_sz = sz + usize::from(type_ == OSSL_PARAM_UTF8_STRING || sz == 0);
+    // still wants a byte so the allocation is not a zero-length request. The authority's
+    // C `sz + 1` wraps for a hostile `data_size`; refuse instead of allocating a wrapped
+    // extent (§3).
+    let Some(alloc_sz) = sz.checked_add(usize::from(type_ == OSSL_PARAM_UTF8_STRING || sz == 0))
+    else {
+        // The authority's C addition wraps and has no defined outcome for this extent;
+        // answer the module's ordinary refusal rather than inventing an error reason.
+        return false;
+    };
     if !used_len.is_null() {
         // SAFETY: `used_len` is writable for one `size_t`.
         unsafe { *used_len = sz };
@@ -3075,7 +3082,12 @@ unsafe fn setbuf_fromparams(
         if q.data.is_null() || q.data_size == 0 {
             continue;
         }
-        let next = written + q.data_size;
+        // A wrapped sum must not pass the capacity check below: `next > cap` would be
+        // false and the copy would run past `out`. The authority's static packet uses
+        // checked accounting; refuse the parameter array instead.
+        let Some(next) = written.checked_add(q.data_size) else {
+            return false;
+        };
         if !counting_only {
             if next > cap {
                 return false;
@@ -3188,4 +3200,61 @@ pub unsafe extern "C" fn OSSL_PARAM_construct_BN(
     crate::ffi::guard_ffi(END, || {
         construct(key, OSSL_PARAM_UNSIGNED_INTEGER, buf.cast(), bsize)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    /// A hostile `data_size` must not wrap the accounting sum and let
+    /// `copy_nonoverlapping` write past the caller's buffer. The checked sum refuses
+    /// before reading `data` or writing a byte.
+    #[test]
+    fn buffer_accounting_refuses_a_wrapping_data_size() {
+        let mut byte = [0u8; 1];
+        let p = construct(
+            c"k".as_ptr(),
+            OSSL_PARAM_OCTET_STRING,
+            byte.as_mut_ptr().cast::<c_void>(),
+            usize::MAX,
+        );
+        let params = [&p as *const OsslParam];
+        let mut out = [0u8; 8];
+        let mut outlen = out.len();
+        // SAFETY: `params` is one live descriptor; `out`/`outlen` are this frame's. The
+        // descriptor's extent cannot be read here, which is exactly what must be refused.
+        let ok = unsafe { setbuf_fromparams(1, params.as_ptr(), out.as_mut_ptr(), &mut outlen) };
+        assert!(!ok, "a wrapping extent must be refused");
+        assert_eq!(
+            outlen,
+            out.len(),
+            "a refusal must not report a consumed length"
+        );
+        assert_eq!(out, [0u8; 8], "a refusal must not write");
+    }
+
+    /// The allocation path must refuse the same wrap instead of allocating zero bytes
+    /// and publishing a short extent to the caller.
+    #[test]
+    fn string_extent_refuses_a_wrapping_terminator() {
+        let mut byte = [0u8; 1];
+        let p = construct(
+            c"k".as_ptr(),
+            OSSL_PARAM_UTF8_STRING,
+            byte.as_mut_ptr().cast::<c_void>(),
+            usize::MAX,
+        );
+        let mut val: *mut c_void = ptr::null_mut();
+        let mut max_len = 0usize;
+        let mut used_len = 0usize;
+        // SAFETY: `p` is live and the three out-slots are this frame's. `*val` is NULL,
+        // so the allocation path is taken and the extent sum is the value under test.
+        let ok =
+            unsafe { get_string_internal(&p, &mut val, &mut max_len, &mut used_len, p.data_type) };
+        assert!(!ok, "a wrapping allocation extent must be refused");
+        assert!(val.is_null(), "no block may be published");
+        assert_eq!(max_len, 0);
+    }
 }

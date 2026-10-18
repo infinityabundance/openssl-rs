@@ -1512,13 +1512,21 @@ unsafe fn do_PVK_body_key(
             unsafe { EVP_CIPHER_CTX_free(cctx) };
             return ptr::null_mut();
         }
-        // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `keylen + 8`-byte block
+        // `keylen` is bounded by `PVK_MAX_KEYLEN` at the only call site, but this is
+        // allocation-extent arithmetic: keep the bound local and checked rather than a
+        // hidden caller obligation (§3).
+        let Some(enc_len) = (keylen as usize).checked_add(8) else {
+            // SAFETY: `cctx` is this frame's own.
+            unsafe { EVP_CIPHER_CTX_free(cctx) };
+            return ptr::null_mut();
+        };
+        // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `enc_len`-byte block
         // it answers has that provenance; this frame (via `enctmp`) owns it and no other owner
         // releases it.
         let Some(buf) = (unsafe {
             OwnedBuf::take(
-                CRYPTO_malloc(keylen as usize + 8, ptr::null(), 0).cast::<c_uchar>(),
-                keylen as usize + 8,
+                CRYPTO_malloc(enc_len, ptr::null(), 0).cast::<c_uchar>(),
+                enc_len,
                 false,
             )
         }) else {
@@ -1691,7 +1699,12 @@ unsafe fn do_PVK_key_bio(
     {
         return ptr::null_mut();
     }
-    let buflen = keylen + saltlen;
+    // `ossl_do_PVK_header` bounds `keylen` and `saltlen` immediately above; making the
+    // extent sum checked keeps that bound local instead of an undocumented caller
+    // obligation (§3).
+    let Some(buflen) = keylen.checked_add(saltlen) else {
+        return ptr::null_mut();
+    };
     // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `buflen`-byte block it
     // answers has that provenance; this frame owns it and no other owner releases it.
     let Some(buf) = (unsafe {
@@ -1831,14 +1844,22 @@ unsafe fn i2b_PVK(
     let mut rc4: *mut EvpCipher = ptr::null_mut();
 
     if enclevel != 0 {
-        outlen += PVK_SALTLEN as c_int;
+        // The authority accumulates this extent in a C `int`; refuse an unrepresentable
+        // sum instead of wrapping it (§3).
+        let Some(next) = outlen.checked_add(PVK_SALTLEN as c_int) else {
+            return -1;
+        };
+        outlen = next;
     }
     // SAFETY: `pk` is live and the sizing pass takes a NULL cursor.
     let pklen = unsafe { do_i2b(ptr::null_mut(), pk, 0) };
     if pklen < 0 {
         return -1;
     }
-    outlen += pklen;
+    let Some(next) = outlen.checked_add(pklen) else {
+        return -1;
+    };
+    outlen = next;
     if out.is_null() {
         return outlen;
     }
