@@ -36307,3 +36307,33 @@ family converted to the shared gate. It is documented in `AGENTS.md` §17 terms:
 elimination of a known-unsafe mechanism, not a compatibility defect, and no accepted positive-count
 call changes behaviour.
 
+## D563 -- Session string/blob setters copy before they release the incumbent
+
+`SSL_SESSION_set1_hostname`, `SSL_SESSION_set1_alpn_selected`,
+`SSL_SESSION_set1_ticket_appdata` and `SSL_ctrl(SSL_CTRL_SET_TLSEXT_HOSTNAME)` are documented to
+accept any readable argument, and the matching getters (`SSL_SESSION_get0_hostname`,
+`SSL_SESSION_get0_alpn_selected`, `SSL_SESSION_get0_ticket_appdata`, `SSL_get_servername`)
+return the session's own member pointer. The authority releases that member first and then calls
+`OPENSSL_strdup`/`OPENSSL_memdup`/`strlen` on the caller's pointer
+(`ssl/ssl_sess.c:1083/1088`, `:1134/1140`, `:1484/1490`, `ssl/s3_lib.c:4029/4043`), so a C caller
+that passes the getter's own answer back is a use-after-free. The crate now validates and
+duplicates the incoming value **before** the release and then makes the release at the same
+authority coordinate; a refused duplicate still leaves the authority's post-failure `(NULL, 0)`
+state. This is an `AGENTS.md` §17 elimination of UB in the authority, not a rejection of a
+documented success: every non-aliasing call keeps the authority's value and answer, and only the
+allocator-event order changes (duplicate before release), matching the ordering already used by
+`SSL_CTX_set_alpn_protos` and `set_cert_type`. Witnesses:
+`ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing` and
+`ssl::s3_lib::adv_probe::self_aliasing_sni_control_copies_before_clearing`.
+
+## D564 -- Serverinfo install declares its source before regrowing the member
+
+`SSL_CTX_use_serverinfo_ex` may be passed a range inside the very `(ptr, len)` member it is about
+to `CRYPTO_realloc`. The authority reallocs first and then copies --- and re-validates --- through
+the caller's pointer (`ssl/ssl_rsa.c:839-844`), which is a use-after-free whenever `realloc` moves
+the block. The crate detects a source range that overlaps the live incumbent, copies it into a
+temporary buffer before the regrow, and uses that temporary for both the `memcpy` and the second
+`serverinfo_process_buffer` call. Non-aliasing callers are unchanged; an aliasing caller gets the
+documented success instead of the authority's UB. This is an `AGENTS.md` §17 elimination of UB in
+the authority. Witness: `ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc`.
+

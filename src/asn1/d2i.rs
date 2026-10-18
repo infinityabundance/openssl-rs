@@ -1016,8 +1016,11 @@ unsafe fn add_error_data(parts: &[*const c_char]) {
     if total == 0 {
         return;
     }
-    // SAFETY: the buffer is `total + 1` bytes.
-    let Some(buf) = OwnedBlock::<u8>::malloc(total + 1, FILE.as_ptr(), LINE) else {
+    let Some(size) = error_buffer_len(total) else {
+        return;
+    };
+    // SAFETY: the buffer is `size` = `total + 1` bytes, and `size` did not wrap.
+    let Some(buf) = OwnedBlock::<u8>::malloc(size, FILE.as_ptr(), LINE) else {
         return;
     };
     // The block's stable address, for the raw copies and the append below.
@@ -1040,6 +1043,15 @@ unsafe fn add_error_data(parts: &[*const c_char]) {
     // append.
     unsafe { crate::runtime::err::ERR_add_error_txt(c"".as_ptr(), dst) };
     // `buf`'s `Drop` releases the joined string through the allocator seam.
+}
+
+/// The joined error buffer's length, `total + 1`.
+///
+/// The authority's `strlen` sum cannot overflow on any string a process can hold, but the sum is
+/// caller-influenced and the allocation size must not wrap (AGENTS.md §3). `None` is the same
+/// failure outcome as a refused allocation: the error text is simply not appended.
+fn error_buffer_len(total: usize) -> Option<usize> {
+    total.checked_add(1)
 }
 
 /// `ASN1_item_d2i_ex` — redirect a null value slot, clear a cache, decode.
@@ -2233,4 +2245,16 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
     // SAFETY: the caller's slot is writable.
     unsafe { *in_ = p };
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_buffer_length_rejects_usize_max() {
+        assert_eq!(error_buffer_len(0), Some(1));
+        assert_eq!(error_buffer_len(usize::MAX - 1), Some(usize::MAX));
+        assert_eq!(error_buffer_len(usize::MAX), None);
+    }
 }
