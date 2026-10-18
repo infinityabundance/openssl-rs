@@ -1,0 +1,266 @@
+{
+  "receipt": "boundary-sweep-B5",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "c12d9915c",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ml_dsa/encoders.rs"
+    ],
+    "working_tree_blob": {
+      "src/ml_dsa/encoders.rs": "680edaf4de463e0a3a282dc4e59723129dd88652"
+    }
+  },
+  "stop_status": "REPAIRED - one medium memory-safety defect (out-of-bounds write from an over-weight hint, ASan-confirmed on the pre-fix body), one low out-of-bounds/UB class (zero-polynomial hint decode), and two low checked-extent repairs were found and fixed. No further memory-safety defect was found. FAST, BATCH and the targeted ASan controls pass. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 (forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c), cross-checked line by line against the crate body",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, CRYPTO_* seam coordinate (file/line pairs 629/644/650/692/716/744/750/773/809) or unsafe lint attribute changed. The repairs are local bounds, refused arms and documentation.",
+    "external_contracts": [
+      "The ML-DSA key object is internal. Its unsafe entry points require a live MlDsaKey in the state its constructors produce: encoded members are NULL or live allocations owned by the key (plain seam for pub_encoding, secure seam for priv_encoding/seed, each of the parameter set's exact length), and t1/s1 sub-allocations satisfy the vector invariants.",
+      "ossl_ml_dsa_sk_decode may receive the key's own priv_encoding as in_ (the explicit-key load path). On a public-hash mismatch it resets the key, which releases that buffer; the caller must not use in_ afterwards.",
+      "A hostile wire input is a (ptr,len) pair whose len equals the parameter set's pk_len/sk_len/sig_len; every field read is bounds-checked against it by Packet::get_bytes. A length mismatch is refused before any pointer is dereferenced.",
+      "The hint vector in a signature object is in-memory state, not wire input. FIPS 204 requires at most omega set coefficients; the signing caller establishes it with vector_count_ones and hint_bits_decode re-establishes it for decoded signatures. The encoder now refuses a violation locally instead of relying on that caller.",
+      "A caller-installed CRYPTO_set_mem_functions/secure-heap observer must see each allocation and release at the authority's own coordinates; the local OwnedBuf carries the allocation kind, extent and both coordinate pairs.",
+      "No safe Rust caller reaches any raw operation in this file: the OwnedBuf constructors are the only safe entry points and they fix the release extent from the allocation."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B5-ML-1",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "file-local OB-1 OwnedBuf over CRYPTO_malloc / CRYPTO_secure_malloc and CRYPTO_secure_clear_free, plus into_raw transfer",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The safe constructors fix len to the requested allocation extent and Drop is the single release, so no safe caller can manufacture a cleansing length above the block (the OB-1 invariant).",
+        "The secure arm is verified separately: with no secure heap CRYPTO_secure_malloc falls back to the plain seam, and CRYPTO_secure_clear_free recognises the non-secure provenance, cleanses exactly len bytes and releases through CRYPTO_free. runtime::secure's clear_free/fallback/zero-length tests witness this seam.",
+        "into_raw is file-private and is called only on the success branch after the old member has been released; no safe path exposes an untracked block.",
+        "There is no adoption constructor: every block in this unit comes from a constructor call in the same function, so provenance is not re-asserted by hand (AGENTS §1)."
+      ]
+    },
+    {
+      "id": "B5-ML-2",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "pkEncode/pkDecode: public-key serialisation, CRYPTO_memdup cache, old-member replacement, failure ownership",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "pkDecode refuses a key whose encoded members are non-NULL, then allocates t1 and caches the public-key hash; an early refusal leaves the allocated public members owned by the key (authority parity, freed by key_reset/key_free).",
+        "On success the member is a fresh plain-seam CRYPTO_memdup block; on a memdup refusal the member stays NULL and the call reports 0.",
+        "pkEncode frees the incumbent pub_encoding only after the whole encoding lands, at the authority's :644 coordinate."
+      ]
+    },
+    {
+      "id": "B5-ML-3",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "skEncode/skDecode: secret-key serialisation, secure scratch block, seed cleanse, priv_encoding ownership and the in_ alias path",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "skEncode allocates the scratch block on the secure seam, cleanses it on every failure arm (secure_clear_free at :750) and releases the incumbent priv_encoding at :744 before transferring the new block.",
+        "skDecode cleanses and releases key->seed at :773 before any refusal, decoded s1/s2/t0 live in the key's secure block (cleansed by key_reset), and the fresh priv_encoding copy is secure.",
+        "When priv_encoding == in_ the function does not re-copy; a subsequent public-hash mismatch resets the key and therefore releases in_. This is the authority's explicit-key load path and is now stated in the contract.",
+        "Early decode refusals (header, packet, trailing bytes) leave the key partially populated but entirely owned; the authority does the same and the eventual reset/free cleanses the secret vectors."
+      ]
+    },
+    {
+      "id": "B5-ML-4",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "twelve bit-packing primitives and their byte-order/load-store helpers plus packet_copy_bytes",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every decode read goes through Packet::get_bytes, so a truncated packet is refused before the fixed-width load; every encode write is preceded by WPACKET_allocate_bytes at the exact width the loop stores.",
+        "The coefficient loops use fixed iteration counts that match 256 coefficients (32x8, 64x4, 64x2) and never index past the Poly array.",
+        "packet_copy_bytes requires destination writability and disjointness; every caller passes a key array of at least the copied fixed size."
+      ]
+    },
+    {
+      "id": "B5-ML-5",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "hint_bits_encode/hint_bits_decode and sigEncode/sigDecode",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B5-D1",
+        "B5-D2"
+      ],
+      "residuals": [
+        "The encoder now refuses the (omega+1)th set coefficient instead of writing it; the authority writes past the omega+k packet (UB) in that state.",
+        "The decoder refuses a zero-polynomial vector; the authority's do/while runs once for k == 0, reading past the limit span and adding through a possibly-NULL polynomial pointer.",
+        "A malformed hint with a non-monotonic or out-of-range limit is still refused exactly as the authority does; the byte values are bounded by u8 and the 256-coefficient array.",
+        "sigEncode cleanses its partial output on failure exactly as the authority (OPENSSL_cleanse over sig_len); sigDecode leaves z/hint/c_tilde writes in place on failure (all public signature data)."
+      ]
+    },
+    {
+      "id": "B5-ML-6",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "raise_with_alg diagnostic construction and allocation-extent arithmetic",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B5-D3"
+      ],
+      "residuals": [
+        "The algorithm name is a static NUL-terminated params->alg; the concatenation length and the hint packet extent are now checked adds, with an impossible overflow turned into a refusal rather than a panic or wrap.",
+        "A failed capacity check in raise_with_alg would suppress the diagnostic rather than raise a malformed one; all current callers pass bounded static text."
+      ]
+    },
+    {
+      "id": "B5-ML-7",
+      "file": "src/ml_dsa/encoders.rs",
+      "mechanism": "ossl_ml_dsa_poly_decode_expand_mask and ossl_ml_dsa_w1_encode",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Both delegate bounds to Packet/WPACKET; expand_mask intentionally ignores bytes after the exact gamma1 width, matching the authority.",
+        "w1_encode writes public data and does not cleanse on refusal (authority parity)."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B5-D1",
+      "file": "src/ml_dsa/encoders.rs",
+      "pre_fix_line": 1401,
+      "severity": "medium",
+      "class": "out-of-bounds write on an unstated hint-weight precondition",
+      "description": "hint_bits_encode wrote each non-zero hint coefficient at data[coeff_index++] into the omega+k-byte packet. The FIPS 204 weight bound (at most omega set coefficients) was only an unchecked caller assumption: the signing caller enforces it with vector_count_ones, but the unsafe function's contract did not state it and the helper did not enforce it. A sig whose hint carried more than omega ones (for example a future in-crate caller of ossl_ml_dsa_sig_encode, or a corrupted signature object) overran the WPACKET allocation. ASan on the pre-fix body reports a stack-buffer-overflow at this write.",
+      "fix": "Refuse the (omega+1)th set coefficient before the write, so coeff_index < omega <= total always holds; state the weight bound in hint_bits_encode's and ossl_ml_dsa_sig_encode's contracts. Valid signatures are unchanged.",
+      "regression": "ml_dsa::encoders::tests::hint_encode_refuses_a_hint_over_the_weight_bound (2-byte packet, omega=1, four set coefficients); the pre-fix body (temporary working-tree revert of the guard; the base blob's write is line 1401) was rebuilt under ASan and produced 'AddressSanitizer: stack-buffer-overflow ... hint_bits_encode' at encoders.rs:1445 of that revert, and the post-fix body passes."
+    },
+    {
+      "id": "B5-D2",
+      "file": "src/ml_dsa/encoders.rs",
+      "pre_fix_line": 1440,
+      "severity": "low",
+      "class": "out-of-bounds read / null-pointer arithmetic on a zero-length vector (authority UB not reproduced)",
+      "description": "hint_bits_decode derived end = p.add(k) and entered a do/while loop unconditionally. For k == 0 it read the zero-length limit span (one byte past the packet) and then wrote through a possibly-NULL polynomial pointer; p.add(0) on NULL is itself outside Rust's pointer contract. No static parameter set has k == 0, so the arm is not reachable today, but the unsafe contract permitted it.",
+      "fix": "Refuse k == 0 before touching the cursor or the vector, and state k >= 1 in the contract. This is a deliberate divergence from the authority's out-of-bounds access (AGENTS §17).",
+      "regression": "ml_dsa::encoders::tests::hint_decode_refuses_an_empty_vector (one-byte packet, empty Vector) passes post-fix; the pre-fix arm is not driven by ASan because the null-pointer step is UB rather than an ASan-detectable access, so the instrument is recorded as Miri-scope NOT_RUN."
+    },
+    {
+      "id": "B5-D3",
+      "file": "src/ml_dsa/encoders.rs",
+      "pre_fix_line": 1383,
+      "severity": "low",
+      "class": "unchecked allocation-extent arithmetic (AGENTS §3)",
+      "description": "The hint packet extent used omega + k without a checked add, and raise_with_alg's message capacity used the three-piece length sum (pre-fix line 310) without one. Both operands are static and small, so neither can overflow on this target; the standard nevertheless requires the extent to be locally checked rather than relying on that.",
+      "fix": "checked_add with an error/return on overflow for both extents. Behaviour on every reachable input is identical.",
+      "regression": "covered by the existing ML-DSA suite and the two new controls; no overflow input exists on 64-bit targets, so no dynamic overflow control was added."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (test-profile build of the touched target)",
+      "focused_tests": [
+        "ml_dsa (module filter): 14 passed / 0 failed (12 existing + the 2 new controls)"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1588 passed / 0 failed / 26 ignored (268.13 s, --test-threads=1)",
+      "threaded4": "1588 passed / 0 failed / 26 ignored (80.84 s, --test-threads=4)",
+      "probes": [
+        "runtime::secure: 15 passed / 0 failed, including clear_free_cleanses_the_whole_usable_allocation_before_release, allocate_before_init_falls_back_to_the_plain_allocator and zero_length_allocation_returns_a_minimum_chunk (the secure seam reused by this file)",
+        "ml_dsa: 14 passed / 0 failed"
+      ]
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh (running); nightly-2026-10-05, -Zsanitizer=address -Zbuild-std, CARGO_TARGET_DIR=/work/.asan-target, ASAN_OPTIONS=detect_leaks=0",
+      "pre_fix_canary": "PASS (instrument fired): the temporary pre-fix body produced 'SUMMARY: AddressSanitizer: stack-buffer-overflow /work/src/ml_dsa/encoders.rs:1445:26 in openssl_rs::ml_dsa::encoders::hint_bits_encode' and aborted.",
+      "post_fix": "PASS: ml_dsa::encoders::tests 2 passed / 0 failed under ASan.",
+      "restoration": "the fixed file was restored byte-identically (sha256 61fb7560...); no pre-fix code remains."
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B5-1",
+        "class": "over-weight hint out-of-bounds write",
+        "control": "The new encode control drives a 2-byte packet with omega=1 and four set coefficients. The pre-fix body was rebuilt under ASan and the control produced a stack-buffer-overflow in hint_bits_encode; the fixed body refuses and passes."
+      },
+      {
+        "id": "NC-B5-2",
+        "class": "zero-polynomial hint out-of-bounds read / null arithmetic",
+        "control": "The new decode control passes an empty Vector and a one-byte packet; the fixed body refuses before the limit read. The pre-fix arm is UB not reliably observable under ASan, so its confirmation is recorded as Miri-scope NOT_RUN."
+      },
+      {
+        "id": "NC-B5-3",
+        "class": "secure-heap release seam remains live",
+        "control": "runtime::secure's whole-allocation cleanse, plain-fallback and zero-length tests all PASS after the change, showing the cleansing and provenance-routing instruments are not dead."
+      }
+    ],
+    "not_run": [
+      {
+        "id": "NR-B5-1",
+        "control": "Miri (Stacked/Tree Borrows) over the hint/signature paths, including the pre-fix zero-vector arm",
+        "gate": "BOUNDARY/SEAL; no Miri component is installed in the court and the UB is structural rather than ASan-observable."
+      },
+      {
+        "id": "NR-B5-2",
+        "control": "Paired authority run for an over-weight hint and a zero-vector hint",
+        "gate": "BOUNDARY; the authority source shows the out-of-bounds write/read, but no paired pinned-OpenSSL harness drives MlDsaSig internals."
+      },
+      {
+        "id": "NR-B5-3",
+        "control": "Constant-time / dudect measurement after the new weight branch",
+        "gate": "BOUNDARY/SEAL. No timing claim is made: the branch tests the number of non-zero PUBLIC hint coefficients (signature data), not a secret, and source inspection alone is not evidence."
+      },
+      {
+        "id": "NR-B5-4",
+        "control": "FRF-Fuzz residual corpus and downstream consumer replay",
+        "gate": "SEAL; no pinned authority/candidate harness pair was built for ML-DSA encodings in this batch."
+      },
+      {
+        "id": "NR-B5-5",
+        "control": "Full dependency-closure audit, independent reviewer not the author, SEAL forensic regeneration, full scripts/adv-probe.sh",
+        "gate": "BOUNDARY/SEAL; only the affected ML-DSA and secure-heap probes were run."
+      }
+    ]
+  },
+  "secret_cleaning": {
+    "classification": {
+      "pub_encoding": "PUBLIC_DATA / plain release",
+      "priv_encoding": "SECRET_DATA + CLEANSING_REQUIRED / secure clear free",
+      "seed": "SECRET_DATA + CLEANSING_REQUIRED / secure clear free",
+      "s1_s2_t0_poly_blocks": "SECRET_DATA / secure heap, cleansed on member release",
+      "K_inline_in_key": "SECRET_DATA / OPENSSL_cleanse in key_reset",
+      "rho_tr_c_tilde_sig_out_hint": "PUBLIC_DATA"
+    },
+    "paths": [
+      "skEncode success: incumbent priv_encoding secure_clear_free at :744; new block transferred.",
+      "skEncode failure: scratch secure_clear_free at :750 over the full enc_len, including partial output.",
+      "skDecode entry: seed secure_clear_free at :773 before any validation or refusal.",
+      "skDecode success/failure: decoded secret vectors live in the key's secure s1 block; key_reset/key_free cleanse them, and the public-hash-mismatch arm resets explicitly.",
+      "pkEncode/pkDecode: public data only; plain free/CRYPTO_memdup as the authority.",
+      "sigEncode failure: OPENSSL_cleanse(out, sig_len), authority parity; signature is public data, not a secret obligation.",
+      "input_tr in skDecode is the public-key hash tr, copied to the stack; it is PUBLIC_DATA and is not a cleansing obligation."
+    ],
+    "conclusion": "Every secret-bearing allocation in this unit is cleansed on success, failure and partial-initialisation paths that release it. No new secret copy was introduced."
+  },
+  "unsafe_accounting": {
+    "eliminated": [
+      "The over-weight-hint out-of-bounds write (bound now local in hint_bits_encode).",
+      "The zero-polynomial hint over-read/null pointer arithmetic (refused in hint_bits_decode).",
+      "The two unchecked allocation-extent sums (raise_with_alg capacity, hint packet extent)."
+    ],
+    "relocated": [],
+    "hidden": 0,
+    "new_obligations": [],
+    "behavior_delta": "An in-memory hint with more than omega non-zero coefficients is refused by sigEncode (the authority writes out of bounds), and a zero-polynomial hint is refused by sigDecode (the authority reads out of bounds). Valid keys, valid signatures and every static parameter path are unchanged. No export, signature, #[repr(C)] layout, allocator coordinate or lint attribute changed.",
+    "safe_caller_ub": "none known: the only safe functions are the OwnedBuf constructors, which cannot mis-size a release; every raw operation in this file is an unsafe fn whose preconditions are stated, and the in-crate callers establish them (the signing weight check, the key lifecycle's encoded-member ownership)."
+  },
+  "residuals_total": 22,
+  "dispositions": {
+    "src/ml_dsa/encoders.rs": "CONTRACTED",
+    "safety_discharged": [],
+    "safe_compatible": []
+  },
+  "next": {
+    "queue": [
+      "src/pem/pem_lib.rs (rank 101)",
+      "src/property/parse.rs (rank 102)",
+      "src/x509/pcy_tree.rs (rank 103)",
+      "deferred callback/ownership boundaries: src/provider/file_store.rs, src/runtime/bio/{iolib,bss_dgram_pair,bss_conn,bss_dgram}.rs, src/runtime/obj.rs, src/ssl/ssl_lib.rs, src/ssl/statem/{statem_srvr,statem_clnt}.rs"
+    ],
+    "note": "B5 covers exactly src/ml_dsa/encoders.rs and starts no second file. It is CONTRACTED, not SAFETY_DISCHARGED: Miri on the hint paths, a paired authority differential, timing measurement, FRF-Fuzz replay, the dependency-closure audit and independent review remain NOT_RUN. Hidden obligations: 0."
+  }
+}
