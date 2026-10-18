@@ -809,7 +809,7 @@ unsafe fn update_cipher_list(
 /// `ciphersuite_cb` — `ssl_ciph.c:1273-1302`.
 unsafe extern "C" fn ciphersuite_cb(elem: *const c_char, len: c_int, arg: *mut c_void) -> c_int {
     let ciphersuites = arg as *mut OpenSslStack;
-    if elem.is_null() || len == 0 || len > 79 {
+    if elem.is_null() || len <= 0 || len > 79 {
         return 1;
     }
     let mut name = [0u8; 80];
