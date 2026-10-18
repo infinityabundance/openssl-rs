@@ -15,9 +15,12 @@ post-census delta — exactly as it appeared in the former cumulative
 > `INDEPENDENTLY_CHECKED` result. A file graduates only through the AGENTS.md §7
 > dependency-closure and independent-evidence gates.
 
-**Campaign progress: 9 of 761 PARTIAL files audited.** The 761 denominator is the
-`PARTIAL` file population in `ATTRIBUTION.md`; it is not a count of files that
-have graduated. The audits cover 6,252 production unsafe sites in 2,949 groups.
+**Campaign progress: 9 of 761 PARTIAL files have full group records; a further
+12 files have mechanism-contract sweeps (batch M1, not full group records).** The
+761 denominator is the `PARTIAL` file population in `ATTRIBUTION.md`; it is not a
+count of files that have graduated. The nine full records cover 6,252 production
+unsafe sites in 2,949 groups. The M1 sweep is an obligation check over the known
+owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
 
 ## 1. Reusable template
 
@@ -115,6 +118,43 @@ the audit and its fixes, **not** an `INDEPENDENTLY_CHECKED` result and **not**
   the census because of the post-census `SeamFile` and cleanse changes recorded
   in its §7. It has 11 test-only operations, excluded from its 416 production
   sites.
+
+## 3a. Mechanism-contract sweep M1 — 2026-10-18
+
+**Source identity:** `integrate/safe-c33` at `258bcca51` plus the uncommitted
+worktree state (test-only OB-4b lifecycle model and the §3 repairs listed below).
+The census counts quoted in `ATTRIBUTION.md` remain bound to candidate
+`c09eef8b94ce068c92557d9940decf50e8413c8c`; this sweep read HEAD source.
+
+**Scope:** the mechanism-contract procedure for ordinary files — classify the
+applicable RC-1 / OB-1 `OwnedBuf` / OB-2 `OwnedStr` / OB-3 `OwnedCtx`–`RawCtx` /
+OB-4 member-slot mechanisms, check caller preconditions and unusual transitions,
+repair genuine defects, run FAST for the changed units. This is **not** the full
+per-file `D###` group record: every row remains `CONTRACTED` at file level, no
+row is `INDEPENDENTLY_CHECKED` or `SAFETY_DISCHARGED`, and the full group census
+for these twelve files is `NOT_RUN` (queued).
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/params/mod.rs` | OB-1 `OwnedBuf` (7 sites), extent accounting | **D1 fixed (STOP-class):** `written + data_size` could wrap past the capacity check and let `copy_nonoverlapping` write out of bounds; the helper is reachable from `provider/kdf.rs:1558/5281/7290`. Now `checked_add`. **D2 fixed:** `sz + terminator` allocation extent now `checked_add`. Two negative-control tests added. |
+| `src/pkcs7/pk7_doit.rs` | OB-1 `OwnedBuf` new/adopt/into_raw, cleansing lengths | No defect: lengths come from EVP sizing/output calls; every failure path drops the owned block; adoption provenance is the seam. |
+| `src/x509/v3_utl.rs` | OwnedBlock/OwnedCtx, `CRYPTO_strndup` adoption, parser bounds | **D6 fixed:** `strlen + 3` allocation extent now `checked_add` (§3). Parser bounds (`ipv6_cb` even-`total` invariant) verified against `v3_utl.c`. |
+| `src/pem/pvkfmt.rs` | OB-1 `OwnedBuf::take`, extent sums | **D3–D5 fixed:** `keylen + 8`, `keylen + saltlen`, and the two `i2b_PVK` `outlen` sums now use `checked_add` and refuse on overflow. All were bounded at the call site; the bounds are now local, not hidden. |
+| `src/cms/cms_sd.rs` | OB-1 `OwnedBuf` adopt/new/into_raw, two `from_raw_parts` | No defect: the `mlen != os->length` guard establishes both slice extents; every adopted block has one owner. |
+| `src/x509/x509_vfy.rs` | OB-3 `OwnedCtx`, OB-4 `CStrSlot`, verify callbacks | No code defect. `X509_STORE_CTX_free`'s cleanup callback is a retained authority-compatible reentrancy edge (raw pointer, no `&mut` across the call); recorded, not discharged. |
+| `src/evp/bio_enc.rs` | local unsafely-implemented `CtxDestroy`+`OwnedCtx`, BIO callbacks | No defect: allocation/release coordinates and the cleanse split match `bio_enc.c:68/73/97`; callbacks receive a raw BIO only. |
+| `src/store/store_lib.rs` | OB-3 `OwnedCtx`/`CtxDestroy`, stack free thunk | **D7 (documentation):** the `OSSL_STORE_INFO_new*` safety contracts now state that ownership transfers only on success; the authority's allocation-refusal leak is preserved, not hidden. |
+| `src/x509/x_pubkey.rs` | OB-4 `CStrSlot` (`propq`), OB-1 adoption, `OwnedCtx`-style new/free | No reachable defect. `x509_pubkey_set0_libctx` still clears before duplicating, but the member is private, has no getter, and every caller passes a different object's string; recorded as a latent pattern (copy-before-clear would change the allocator transcript). |
+| `src/x509/v3_asid.rs` | OB-2 `OwnedStr::adopt` (4 sites) | No defect: `i2s_ASN1_INTEGER`/`CRYPTO_strdup` provenance is this crate's seam; each adopted string is released once at the authority line. |
+| `src/asn1/asn_mime.rs` | OB-1 `OwnedBuf` new/adopt/into_raw (commit and `err:` tails) | No defect: commit transfers name/value/header exactly once; the shared error tail adopts each slot and frees even NULL. |
+| `src/rsa/pmeth.rs` | OB-3 `OwnedCtx`/`CtxDestroy`, OB-1 OAEP label | No memory-safety defect. The authority's partial-copy leak on a refused `BN_dup`/`CRYPTO_memdup` is preserved and now recorded (not UB). |
+
+**New unsafe assumptions: none.** The repairs are checked safe arithmetic and
+documentation; no new `unsafe` operation, adoption, release site, allocator
+coordinate, `#[repr(C)]` layout or exported symbol changed.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M1.json`](atlas-refresh/mechanism-sweep-M1.json).
 
 ## 4. Machine-readable index
 
