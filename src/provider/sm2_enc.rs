@@ -545,3 +545,7 @@ pub(crate) static SM2_ASYM_CIPHER_FUNCTIONS: [OsslDispatch; 12] = [
         function: ptr::null_mut(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSm2Ctx => zero_state_sweep_prov_sm2_ctx);

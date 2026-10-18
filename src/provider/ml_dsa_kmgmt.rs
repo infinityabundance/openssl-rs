@@ -1192,3 +1192,7 @@ make_ml_dsa_keymgmt_functions!(
     ml_dsa_87_gen,
     EVP_PKEY_ML_DSA_87
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(MlDsaGenCtx => zero_state_sweep_ml_dsa_gen_ctx);

@@ -310,3 +310,7 @@ pub unsafe extern "C" fn CT_POLICY_EVAL_CTX_get_time(ctx: *const CtPolicyEvalCtx
     // SAFETY: `ctx` is live per the contract.
     unsafe { (*ctx).epoch_time_in_ms }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CtPolicyEvalCtx => zero_state_sweep_ct_policy_eval_ctx);

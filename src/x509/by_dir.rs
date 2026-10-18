@@ -934,3 +934,7 @@ static X509_DIR_LOOKUP: DirLookupMethod = DirLookupMethod(X509LookupMethod {
 pub unsafe extern "C" fn X509_LOOKUP_hash_dir() -> *mut X509LookupMethod {
     (&raw const X509_DIR_LOOKUP.0).cast_mut()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ByDirHash => zero_state_sweep_by_dir_hash, ByDirEntry => zero_state_sweep_by_dir_entry, ByDir => zero_state_sweep_by_dir);

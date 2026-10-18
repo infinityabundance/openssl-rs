@@ -561,3 +561,7 @@ pub(crate) unsafe fn SCT_CTX_set_time(sctx: *mut SctCtx, time_in_ms: u64) {
     // SAFETY: `sctx` is live per the contract.
     unsafe { (*sctx).epoch_time_in_ms = time_in_ms };
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SctCtx => zero_state_sweep_sct_ctx);

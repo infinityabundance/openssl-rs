@@ -531,3 +531,7 @@ unsafe extern "C" fn sock_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c
     }
     ret
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BssSockData => zero_state_sweep_bss_sock_data);

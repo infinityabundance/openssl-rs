@@ -549,3 +549,7 @@ mod tests {
         assert_eq!(unsafe { ossl_core_bio_free(cb) }, 1);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslCoreBio => zero_state_sweep_ossl_core_bio);

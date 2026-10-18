@@ -1036,3 +1036,7 @@ mod adv_probe {
         adv_alloc::assert_no_double_free();
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Dh => zero_state_sweep_dh);

@@ -559,3 +559,7 @@ mod comp_api_tests {
         unsafe { assert!(COMP_CTX_new(&mut refusing).is_null()) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CompCtx => zero_state_sweep_comp_ctx);

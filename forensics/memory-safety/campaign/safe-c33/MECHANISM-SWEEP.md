@@ -40,7 +40,7 @@ Class 3 has **zero** candidates: a scan of every `struct` in `src/` found 28 typ
 | 12 | **HIGH** | `6_secret_cleanse_gap` | `src/cmp/cmp_ctx.rs:1062` | `ossl_cmp_ctx_set0_secret_value` | operation: ptr::write_bytes((*(*ctx).secret_value).data, 0, l) before freeing/replacing secret_value |
 | 13 | **MEDIUM** | `1_self_aliasing_copy` | `src/evp/cipher_ctx.rs:1095` | `EVP_CIPHER_CTX_copy` | operation: unsafe { ptr::copy_nonoverlapping(in_, out, 1) } |
 | 14 | **MEDIUM** | `1_self_aliasing_copy` | `src/evp/encode.rs:295` | `EVP_ENCODE_CTX_copy` | operation: unsafe { ptr::copy_nonoverlapping(sctx, dctx, 1) } |
-| 15 | **MEDIUM** | `1_self_aliasing_copy` | `src/evp/pkey_asn1.rs:665` | `EVP_PKEY_asn1_copy` | operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) } |
+| 15 | **MEDIUM** | `1_self_aliasing_copy` | `src/evp/pkey_asn1.rs:671` | `EVP_PKEY_asn1_copy` | operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) } |
 | 16 | **MEDIUM** | `1_self_aliasing_copy` | `src/mac/cmac.rs:314` | `CMAC_CTX_copy` | operation: ptr::copy_nonoverlapping((*in_).k1.as_ptr(), (*out).k1.as_mut_ptr(), bl as usize) |
 | 17 | **MEDIUM** | `1_self_aliasing_copy` | `src/modes/ocb.rs:286` | `CRYPTO_ocb128_copy_ctx` | operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy) |
 | 18 | **MEDIUM** | `2_publication_before_acquisition` | `src/evp/asymcipher.rs:303` | `evp_asym_cipher_from_algorithm` | operation: (*p).prov = prov |
@@ -51,7 +51,7 @@ Class 3 has **zero** candidates: a scan of every `struct` in `src/` found 28 typ
 
 ### 1 — Self-aliasing copy (81: 8 HIGH / 5 MEDIUM / 68 LOW)
 
-The strongest cross-file instance is the provider **digest `copyctx`** callbacks (`src/provider/digest.rs`, `src/provider/legacyprov.rs`). `EVP_MD_CTX_copy_ex(ctx, ctx)` deliberately invokes `copyctx(algctx, algctx)` for a provider method that publishes both `dupctx` and `copyctx` (`src/evp/digest.rs:2925-2930`, with an in-file test at `:6003` asserting the same-pointer call). The provider callback then runs `ptr::copy_nonoverlapping` over the same region, which violates its non-overlap requirement. The callbacks are documented as "distinct per the caller's contract"; that contract is contradicted by the caller. Evidence needed: run the self-copy against each digest row; Miri or ASan confirms the violation; then use `ptr::copy` or an identity guard.
+The strongest cross-file instance is the provider **digest `copyctx`** callbacks (`src/provider/digest.rs`, `src/provider/legacyprov.rs`). `EVP_MD_CTX_copy_ex(ctx, ctx)` deliberately invokes `copyctx(algctx, algctx)` for a provider method that publishes both `dupctx` and `copyctx` (`src/evp/digest.rs:2934-2930`, with an in-file test at `:6003` asserting the same-pointer call). The provider callback then runs `ptr::copy_nonoverlapping` over the same region, which violates its non-overlap requirement. The callbacks are documented as "distinct per the caller's contract"; that contract is contradicted by the caller. Evidence needed: run the self-copy against each digest row; Miri or ASan confirms the violation; then use `ptr::copy` or an identity guard.
 
 The five MEDIUM rows are exported copy APIs with no identity short-circuit: `EVP_PKEY_asn1_copy`, `CMAC_CTX_copy`, `CRYPTO_ocb128_copy_ctx`, `EVP_ENCODE_CTX_copy`, `EVP_CIPHER_CTX_copy`. `EVP_PKEY_meth_copy` already has the correct `ptr::eq` guard (`src/evp/pkey_ctx.rs:2171`) and is the template. The 68 LOW rows are fresh-destination `dup`/`dupctx`/`meth_dup`/helper copies, where both sides cannot normally be the same pointer; they are retained for completeness and need a publication-path witness, not a code change.
 
@@ -103,7 +103,7 @@ Authority read from `forensics/authorities/src/openssl-3.6.4/`.
 | `src/evp/cipher_ctx.rs:1095` | `evp_enc.c:1782-1809` | **Not permitted.** `EVP_CIPHER_CTX_reset(out)` memsets the object (provider arm) before `*out = *in`; `in->cipher` is then NULL and `in->cipher->dupctx` dereferences it. The entry now refuses `out == in` with 0, leaving the input untouched (AGENTS §17 UB elimination); `copying_a_context_onto_itself_is_refused`. |
 | `src/mac/cmac.rs:314` | `cmac.c:93-109` | **Not permitted.** The nested `EVP_CIPHER_CTX_copy(out->cctx, in->cctx)` has the same NULL-dereference self-copy as above. `CMAC_CTX_copy` now refuses `out == in` with 0 before reading either context; `copy_refuses_the_identity_and_leaves_the_source_alone`. |
 | `src/evp/encode.rs:295` | `encode.c:128-133` | **Permitted as identity** (`memcpy` of a whole object, constant 1 answer). Identity guard added; `encode_ctx_copy_accepts_the_identity`. |
-| `src/evp/pkey_asn1.rs:665` | `ameth_lib.c:255-272` | **Permitted as identity** (`*dst = *src` is defined when equal; five restores make it a no-op). Identity guard added; `asn1_copy_accepts_the_identity`. |
+| `src/evp/pkey_asn1.rs:671` | `ameth_lib.c:255-272` | **Permitted as identity** (`*dst = *src` is defined when equal; five restores make it a no-op). Identity guard added; `asn1_copy_accepts_the_identity`. |
 | `src/modes/ocb.rs:286` | `ocb128.c:194-208` | **Permitted as identity** for the header/`memcpy`, but the authority then allocates a second L-table and leaks the original. Guard added, preserving the `keyenc`/`keydec` overrides and skipping the leak; `ocb_copy_ctx_accepts_the_identity`. |
 
 ### Class 7 MEDIUM (`pkey_ec_copy`)

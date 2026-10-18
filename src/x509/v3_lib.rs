@@ -831,3 +831,7 @@ pub unsafe extern "C" fn X509V3_add1_i2d(
     unsafe { *x = ret };
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509V3ExtMethod => zero_state_sweep_x509_v3_ext_method);

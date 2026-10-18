@@ -513,3 +513,7 @@ mod tests {
         assert_eq!(i, 5);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Epki2pkiCtx => zero_state_sweep_epki2pki_ctx);

@@ -47,7 +47,7 @@ const CTX_FILE: *const c_char = FILE;
 unsafe impl CtxDestroy for EcdsaSig {
     const FILE: *const c_char = CTX_FILE;
     const LINE_ALLOC: c_int = 1189;
-    const LINE_FREE: c_int = 1198;
+    const LINE_FREE: c_int = 1200;
 
     /// `ECDSA_SIG_free`'s body without the block release: the two owned scalars are cleared, as
     /// the authority does before its `OPENSSL_free(sig)` at `ec_asn1.c:1198`.
@@ -420,3 +420,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcdsaSig => zero_state_sweep_ecdsa_sig);

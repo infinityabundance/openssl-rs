@@ -158,3 +158,7 @@ pub unsafe extern "C" fn X509_PKEY_free(x: *mut X509Pkey) {
     // `key_free` is set) and then the record itself at `:45`, each exactly once.
     drop(unsafe { OwnedCtx::<X509Pkey>::from_raw(x) });
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Pkey => zero_state_sweep_x509_pkey);
