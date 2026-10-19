@@ -457,6 +457,11 @@ unsafe fn pkcs12_gen_gost_mac_key(
         )
     } == 0
     {
+        // A failed expansion can leave partial key material in the scratch. The authority
+        // returns without cleansing at `p12_mutl.c:73-76`; cleansed here as a deliberate
+        // secret-residue improvement, with no observable behaviour change.
+        // SAFETY: `out` is this frame's own scratch and may hold partial key material.
+        unsafe { OPENSSL_cleanse(out.as_mut_ptr().cast::<c_void>(), out.len()) };
         return false;
     }
     // SAFETY: both buffers are live and the copy is within `out` and `key`.
