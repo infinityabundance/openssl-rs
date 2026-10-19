@@ -483,6 +483,15 @@ pub unsafe extern "C" fn PKCS5_pbe2_set_iv_ex(
         }
 
         let ivlen = EVP_CIPHER_get_iv_length(cipher);
+        // The authority fills `unsigned char iv[EVP_MAX_IV_LENGTH]` with `ivlen`
+        // bytes and has no bound check. A caller-registered method
+        // (`EVP_CIPHER_meth_set_iv_length`) may declare a longer IV, which the
+        // authority would overrun; refuse instead of reproducing the
+        // out-of-bounds write (§17). No authority error site exists on this
+        // arm, so the refusal is the bare `err:` tail.
+        if ivlen > EVP_MAX_IV_LENGTH as c_int {
+            return pbe2_err(ctx, pbe2, ret);
+        }
         if ivlen > 0 {
             if !aiv.is_null() {
                 ptr::copy_nonoverlapping(aiv, iv.as_mut_ptr(), ivlen as usize);

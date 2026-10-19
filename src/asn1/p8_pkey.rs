@@ -196,16 +196,14 @@ unsafe extern "C" fn pkey_cb(
         ASN1_OP_FREE_PRE => {
             // SAFETY: `pval` points at a live `Pkcs8PrivKeyInfo` for this operation.
             let key = unsafe { (*pval).cast::<Pkcs8PrivKeyInfo>() };
-            // SAFETY: `key` is live and its `pkey` is its own octet string.
+            // SAFETY: `key` is live and its `pkey` is its own octet string. Only the
+            // contents are cleansed: the item layer still reads `length`/`data` from the
+            // string when it releases that member after this callback.
             unsafe {
                 if !(*key).pkey.is_null() {
                     OPENSSL_cleanse(
-                        (*key).pkey.cast::<c_void>(),
-                        core::mem::size_of::<Asn1String>(),
-                    );
-                    OPENSSL_cleanse(
                         (*(*key).pkey).data.cast::<c_void>(),
-                        (*(*key).pkey).length as usize,
+                        (*(*key).pkey).length.max(0) as usize,
                     );
                 }
             }
@@ -437,7 +435,9 @@ mod tests {
     use super::*;
     use crate::asn1::layout::V_ASN1_UNDEF;
     use crate::asn1::prim::ASN1_INTEGER_get;
-    use crate::asn1::string::{ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_OCTET_STRING_new};
+    use crate::asn1::string::{
+        ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_OCTET_STRING_new, ASN1_STRING_set,
+    };
     use crate::asn1::x_algor::{X509_ALGOR_free, X509_ALGOR_new};
     use crate::runtime::obj::{NID_rsaEncryption, OBJ_nid2obj, OBJ_obj2nid};
     use core::ptr;
@@ -458,6 +458,44 @@ mod tests {
             ASN1_INTEGER_free(p8.version);
             X509_ALGOR_free(p8.pkeyalg);
             crate::asn1::string::ASN1_OCTET_STRING_free(p8.pkey);
+        }
+    }
+
+    /// `ASN1_OP_FREE_PRE` zeroes the private-key octets but must leave the octet
+    /// string's own `data`/`length` intact: the item layer releases that member
+    /// immediately after the callback, and a zeroed owner would leak the block.
+    #[test]
+    fn free_pre_cleanses_the_octets_and_keeps_the_owner_releasable() {
+        let mut p8 = blank_p8();
+        let payload = [0xA5u8; 8];
+        // SAFETY: `p8.pkey` is the fresh octet string from `blank_p8`.
+        unsafe {
+            assert_eq!(
+                ASN1_STRING_set(p8.pkey, payload.as_ptr().cast::<c_void>(), 8),
+                1
+            );
+        }
+        // SAFETY: the copy above left a live block owned by the string.
+        let data = unsafe { (*p8.pkey).data };
+        assert!(!data.is_null());
+
+        let mut value: *mut c_void = (&raw mut p8).cast::<c_void>();
+        // SAFETY: `value` points at the live structure for the callback's contract.
+        let rc = unsafe {
+            pkey_cb(
+                ASN1_OP_FREE_PRE,
+                &raw mut value,
+                PKCS8_PRIV_KEY_INFO_it(),
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(rc, 1);
+        // SAFETY: the block is still live and owned by the string.
+        unsafe {
+            assert_eq!(core::slice::from_raw_parts(data, 8), &[0u8; 8]);
+            assert_eq!((*p8.pkey).data, data);
+            assert_eq!((*p8.pkey).length, 8);
+            free_p8(&mut p8);
         }
     }
 
