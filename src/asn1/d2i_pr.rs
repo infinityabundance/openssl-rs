@@ -81,6 +81,12 @@ pub unsafe extern "C" fn ossl_d2i_PrivateKey_legacy(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut EvpPkey {
+    /* The legacy method callback takes an `int`: a length outside `int` range would truncate at
+     * that call. Refuse it rather than hand a callback a length that is not the caller's. This is
+     * a deliberate divergence on invalid input (`docs/SECURITY_DIVERGENCE_POLICY.md`). */
+    if length < 0 || length > c_long::from(c_int::MAX) {
+        return ptr::null_mut();
+    }
     // SAFETY: `pp` is the caller's readable cursor.
     let mut p: *const c_uchar = unsafe { *pp };
     // SAFETY: `a` is NULL or a live slot; the dereference is guarded by the short-circuit.
@@ -218,6 +224,14 @@ unsafe fn d2i_private_key_decoder(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut EvpPkey {
+    /* `OSSL_DECODER_from_data` hands its `size_t` length to `BIO_new_mem_buf`, which takes an
+     * `int`; a negative, or wider-than-`int`, `long` therefore truncates to a negative `int`, and
+     * `BIO_new_mem_buf` reads a negative length as "strlen the buffer". The authority has the
+     * same implicit conversion (`size_t len = length;` then the `int` BIO call). This refusal is
+     * a deliberate divergence on invalid input (`docs/SECURITY_DIVERGENCE_POLICY.md`). */
+    if length < 0 || length > c_long::from(c_int::MAX) {
+        return ptr::null_mut();
+    }
     let mut len: usize = length as usize;
     let mut pkey: *mut EvpPkey = ptr::null_mut();
     let mut bak_a: *mut EvpPkey = ptr::null_mut();
@@ -498,4 +512,34 @@ pub unsafe extern "C" fn d2i_AutoPrivateKey(
 ) -> *mut EvpPkey {
     // SAFETY: `a`/`pp` are the caller's; the context is NULL.
     unsafe { d2i_AutoPrivateKey_ex(a, pp, length, ptr::null_mut(), ptr::null()) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A length the `int`-taking decoder/callback would truncate is refused before any read, so a
+    /// negative length cannot reach `BIO_new_mem_buf`'s negative-length (`strlen`) arm.
+    #[test]
+    fn a_length_outside_int_range_is_refused_before_any_read() {
+        let byte = 0u8;
+        for length in [-1 as c_long, c_long::from(c_int::MAX) + 1] {
+            let mut cursor: *const c_uchar = &byte;
+            let before = cursor;
+            // SAFETY: `cursor` points at one readable byte; the guard refuses before reading for
+            // `length`, and `a` is NULL.
+            let ret = unsafe {
+                d2i_PrivateKey_ex(
+                    EVP_PKEY_NONE,
+                    ptr::null_mut(),
+                    &raw mut cursor,
+                    length,
+                    ptr::null_mut(),
+                    ptr::null(),
+                )
+            };
+            assert!(ret.is_null());
+            assert_eq!(cursor, before, "the cursor must not move on a refusal");
+        }
+    }
 }

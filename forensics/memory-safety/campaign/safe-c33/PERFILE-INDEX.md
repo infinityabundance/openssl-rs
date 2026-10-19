@@ -1929,3 +1929,88 @@ independent review and SEAL. `src/property/store.rs` (93) and
 **Next ordinary position:** `src/ec/curve25519.rs` (90, security-sensitive
 algorithm; vectors `NOT_RUN`), then `src/x509/x509_v3.rs` (89),
 `src/runtime/conf/api.rs` (89) and `src/dso/mod.rs` (89).
+
+## 24. Mechanism sweep M20 — curve25519, x509_v3, conf/api, dso, ec/asn1, d2i_pr, dsa/ossl, e_chacha20_poly1305
+
+**STOP status: CLEAR after repair.** One confirmed double-free/use-after-free on the DSA
+lifecycle pair and one confirmed caller-length truncation feeding an out-of-bounds
+`strlen` were repaired. Hidden = 0. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`; no audited file was a newly discovered boundary.
+
+**Audited (ordinary, one line each).** Rank values are production-site positions.
+
+- `src/ec/curve25519.rs` (90): the ten perlasm field primitives and their pointer
+  contracts; `fe64`/`fe51`/`fe` arithmetic ranges; `ge_*` group operations and the
+  masked table select; the scalar reduction; and the six `ossl_*` exports with their
+  cleanse and output-before-`CRYPTO_memcmp` order. No defect. Constant-time and RFC
+  7748/8032 vectors are `NOT_RUN` (the in-module RFC vectors were not re-run as a
+  cryptographic court).
+- `src/x509/x509_v3.rs` (89): count/find/get/delete/add, the replace loop of
+  `X509v3_add_extensions`, the two `X509_EXTENSION_create_by_*` ownership arms and the
+  four accessors. No defect; a NULL stack element is outside the declared extension-stack
+  contract and the authority dereferences it the same way.
+- `src/runtime/conf/api.rs` (89): `OwnedValue`'s four release arms, `_CONF_add_string`'s
+  push-then-insert/pop-replaced order, both free walks, `_CONF_new_section`'s partial
+  construction, and the lookup/getenv ladder. No defect. Observation: `_CONF_free_data`
+  releases `includedir` before the `data == NULL` early return, where the authority
+  returns first; unreachable through the public API (only a successful load creates
+  `includedir`, which has already created `data`), so not changed.
+- `src/dso/mod.rs` (89): the `OwnedCtx<Dso>` destructor body, refcount-gated
+  `DSO_free` (including finish-hook re-entry), the load refusal ladder, bind/ctrl/merge/
+  filename and the two address lookups. No defect.
+- `src/ec/asn1.rs` (87): `Packet`, DER integer/length/DSA-signature codecs, the
+  ECDSA_SIG and ECPKPARAMETERS/ECPrivateKey i2d/d2i paths, the group `fieldid`/`curve`
+  builders and the point codecs. No defect.
+- `src/asn1/d2i_pr.rs` (86): the provider-first/legacy-second decode, the mark pair,
+  `err_out`/`decoder_err_out` identity tests and the element-count fallback. M20-D1
+  repaired.
+- `src/dsa/ossl.rs` (86): the blinded sign loop, nonce setup, verify's range/zero
+  refusals, the modexp dispatch and both lifecycle hooks. M20-D2 repaired.
+- `src/evp/e_chacha20_poly1305.rs` (86): the two AEAD blocks, the TLS fast path's
+  aligned scratch and zero-padding, the counter carry, the tag/AAD ctrls, copy and
+  cleanup. No defect; AEAD vectors and timing are `NOT_RUN`.
+
+**Defects.**
+
+- **M20-D1 (fixed, medium, `asn1/d2i_pr.rs:78-91,220-232`).** `d2i_PrivateKey_ex`'s
+  `long` length reached `OSSL_DECODER_from_data` as a `size_t` and then
+  `BIO_new_mem_buf`'s `int`; a negative or not-`int`-sized length truncated to a
+  negative `int`, whose BIO spelling is "strlen the buffer" (out-of-bounds read). The
+  legacy callback also received `length as c_int`. Both entry points now refuse a
+  length outside `0..=INT_MAX` before dereferencing the cursor, a deliberate divergence
+  on invalid input. Control
+  `asn1::d2i_pr::tests::a_length_outside_int_range_is_refused_before_any_read`.
+- **M20-D2 (fixed, high, `dsa/ossl.rs:974-995`).** `dsa_finish` freed
+  `dsa->method_mont_p` but left the freed pointer installed. `DSA_set_method` runs the
+  outgoing table's `finish`, and `DSA_free` runs the table's `finish` again through
+  `CtxDestroy::destroy_body`, so a cached Montgomery context was released twice
+  (double free / use-after-free). The hook now clears the slot; the authority leaves it
+  dangling, so this is a recorded §17 divergence (the M17-D1 class). Control
+  `dsa::ossl::tests::the_finish_hook_clears_the_mont_cache_it_releases`.
+
+**New unsafe assumptions (hidden must be 0).** None. M20-D2 removes an implicit
+"the freed cache stays installed" assumption; M20-D1 removes an implicit "`long` fits
+`int`" assumption at two call sites. No new unsafe abstraction, exported signature,
+`#[repr(C)]` layout or `CRYPTO_*` coordinate changed.
+
+**Contracts reused.** RC-1 reference-count gate; OB-1 `OwnedBuf` (plain and cleansed);
+OB-2 `OwnedStr`; OB-3 `OwnedCtx`/`CtxDestroy` and `RawCtx` zeroed construction; OB-4
+member-buffer slots; the ASN.1 `i2d`/`d2i` cursor and embedded-`value` conventions;
+`EVP_CIPHER` `init`/`do_cipher`/`ctrl`/`cleanup` contracts; the `CRYPTO_*` seam
+coordinates.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`asn1::d2i_pr` 1/0 (new control) and `dsa::ossl` 1/0 (new control); the other six
+modules have no test functions. BATCH (final candidate): library **1618 passed / 0
+failed / 27 ignored** serially (64.71 s) and with `--test-threads=4` (92.53 s). No
+audited file carries an `OPENSSL_RS_ADV_PROBE` arm, so no adversarial probe was
+affected.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows), ASan/Loom/TSan, RFC 7748/8032 and AEAD
+vector/Dudect courts for curve25519 and ChaCha20-Poly1305, FRF-Fuzz, authority
+differentials for the M20-D1/M20-D2 divergences, independent review and SEAL.
+
+**Next ordinary position:** `src/ml_dsa/poly.rs` (86), then
+`src/asn1/a_mbstr.rs` (85), `src/asn1/string.rs` (85) and
+`src/property/strings.rs` (85); `src/provider/mac_legacy_kmgmt.rs` (86) is a provider
+callback boundary and was not selected.
