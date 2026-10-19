@@ -1,0 +1,198 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "cdaab4e27",
+  "date": "2026-10-19",
+  "scope": "The eight src/apps/* CLI front-ends named as next by M34. Contract checks against OpenSSL 3.6.4 for argument-string lifetimes, option-table bounds, file/BIO ownership on every exit, error tails, getter-returned raw pointers and allocation arithmetic; genuine cleanup, option-routing and arithmetic defects repaired.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/apps/{enc,kdf}.rs repaired; src/apps/{ecparam,ec,engine,errstr,genrsa,info}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 39 and this file.",
+  "reconciliation": {
+    "source_rs_files": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "canonical_audited_before_batch": 317,
+    "canonical_unaudited_before_batch": 446,
+    "canonical_audited_after_batch": 325,
+    "canonical_unaudited_after_batch": 438,
+    "mechanism_sweep_files_union": 265,
+    "m1_index_section_files": 12,
+    "full_per_file_records": 9,
+    "boundary_sweep_files": 48,
+    "mechanism_boundary_overlap": 9,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array (M2-M35, 265 unique), the twelve M1 files named in PERFILE-INDEX.md section 3a, the nine structured per-file records in perfile-index.json, and each boundary sweep's structured .boundaries[].file (48 unique, 9 also named by a mechanism sweep). The eight files added here were absent from the M2-M34 union (verified 0/8 present before insertion).",
+    "difference_from_317": "M34 left 317 audited / 446 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/apps/ecparam.rs",
+    "src/apps/ec.rs",
+    "src/apps/enc.rs",
+    "src/apps/engine.rs",
+    "src/apps/errstr.rs",
+    "src/apps/genrsa.rs",
+    "src/apps/info.rs",
+    "src/apps/kdf.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/apps/ecparam.rs",
+      "mechanisms": [
+        "EC_get_builtin_curves count-then-fill with Vec::set_len",
+        "BIO ownership for -list_curves and -out",
+        "fixed [OSSL_PARAM; 4] keygen parameter array",
+        "load_keyparams/keygen EVP_PKEY ownership",
+        "OSSL_ENCODER_CTX_new_for_pkey / OSSL_ENCODER_to_bio",
+        "EVP_PKEY_CTX and getter-returned pointers"
+      ],
+      "disposition": "audited_no_change",
+      "note": "EC_get_builtin_curves returns the table count and writes min(nitems,count); both calls use the count as nitems, so the single set_len(filled) assertion is exact. The four-slot parameter array holds at most three entries plus the end terminator. Every params_key/out/key/pctx/ectx exit releases once; EVP_PKEY_keygen writes only on success. OSSL_ENCODER_to_bio accepts a NULL context (returns the authority's encoder-not-found failure), so the omitted explicit null check matches observable behaviour. -no_seed and -check_named reach not_landed rather than fabricating the unlanded arms."
+    },
+    {
+      "file": "src/apps/ec.rs",
+      "mechanisms": [
+        "load_key/load_pubkey EVP_PKEY ownership",
+        "bio_open_default output BIO on every exit",
+        "EVP_PKEY_set_utf8_string_param/int_param CString lifetimes",
+        "EVP_PKEY_print_private/public",
+        "EVP_PKEY_CTX_new_from_pkey/EVP_PKEY_check",
+        "OSSL_ENCODER_CTX_new_for_pkey / OSSL_ENCODER_to_bio"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Each CString lives across its parameter call; eckey and out are released exactly once on every path (including all setter, print and check failures). The encoder path passes OPT_FMT_PEMDER selection as the authority does. Retained shared divergence: bio_open_owner's owner-only permissions are not reconstructed (private is computed but unused); OSSL_ENCODER_to_bio tolerates NULL and reports the same 'unable to write EC key'."
+    },
+    {
+      "file": "src/apps/enc.rs",
+      "mechanisms": [
+        "set_hex destination bounds",
+        "-bufsize strtol/LONG_MAX conversion and bsize use",
+        "BIO chain ownership for base64/cipher push",
+        "EVP_CIPHER_fetch/EVP_CIPHER_free",
+        "EVP_CipherInit_ex key/iv buffer extents",
+        "opaque symmetric-key option routing",
+        "printkey rendering"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The header documents the EVP_SKEY/EVP_SKEYMGMT path as not landed, but -skeyopt only set a flag and -skeymgmt was stored and ignored. With a cipher and no -K, the body then continued into the raw-key path and initialised the cipher with the all-zero key buffer, and -skeyopt/-K was silently accepted where the authority refuses the combination. Both options now return not_landed at parse time. set_hex indexes out[i/2] only for i < 2*out.len(); bsize reproduces the authority's k/opt_long/LONG_MAX/1024 check; the cleanup order (BIO_free(in), BIO_free_all(out), BIO_free(benc), BIO_free(b64), EVP_CIPHER_free) matches apps/enc.c:801-821 and never dereferences a freed chain link."
+    },
+    {
+      "file": "src/apps/engine.rs",
+      "mechanisms": [
+        "ENGINE_by_id functional reference vs ENGINE_get_first/get_next structural pointer",
+        "ENGINE_init/ENGINE_finish balance",
+        "ENGINE_get_id/ENGINE_get_name getter pointers",
+        "BIO owners for stdout/stderr and every early exit",
+        "ENGINE_ctrl_cmd_string argument lifetimes"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Only ENGINE_by_id answers a functional reference, and only that pointer is ENGINE_free'd; the listing walk uses the structural pointer the authority does not free. Engine id/name getters are NULL-checked before CStr. cname/carg CStrings outlive ENGINE_ctrl_cmd_string. out is freed on every parse refusal and at end; the per-failure stderr BIO is freed immediately. No new boundary."
+    },
+    {
+      "file": "src/apps/errstr.rs",
+      "mechanisms": [
+        "256-byte ERR_error_string_n buffer",
+        "CStr over the NUL-terminated answer",
+        "OPENSSL_init_ssl NULL settings",
+        "%lx conversion"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ERR_error_string_n is given the exact buffer length and the buffer is NUL-terminated; the CStr borrow is scoped before the buffer goes out of scope. OPENSSL_init_ssl's settings argument is NULL and documented. parse_hex_l performs wrapping arithmetic only and cannot index past the input. The documented GNU/POSIX strerror divergence is unchanged."
+    },
+    {
+      "file": "src/apps/genrsa.rs",
+      "mechanisms": [
+        "BN_new/BN_GENCB_new single-owner release on every exit",
+        "strtol base-0 conversion and opt_int range check",
+        "-primes observable",
+        "numbits validation"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Every path after the two allocations frees both exactly once; NULL is accepted by BN_free/BN_GENCB_free. Numeric conversion rejects trailing characters, empty subjects, and positive overflow. Negative magnitudes beyond LONG_MAX+1 are accepted as LONG_MIN and then rejected by opt_int as outside integer range (authority rejects with 'Can't parse ... as a number'); both exit 1, message differs. Generation remains not_landed as documented."
+    },
+    {
+      "file": "src/apps/info.rs",
+      "mechanisms": [
+        "OPENSSL_info getter pointer",
+        "selector accounting"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The single raw getter is NULL-checked before CStr, and the returned pointer is documented as a 'static NUL-terminated string. dirty/type accounting has no indexing. No change."
+    },
+    {
+      "file": "src/apps/kdf.rs",
+      "mechanisms": [
+        "app_params_new_from_opts OSSL_PARAM array allocation and free",
+        "OSSL_PARAM_allocate_from_text ownership",
+        "OwnedBuf::new_cleansed_at derived key",
+        "OwnedBuf::adopt_plain OPENSSL_buf2hexstr",
+        "EVP_KDF/EVP_KDF_CTX ownership on every exit",
+        "BIO owner for -out"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The OSSL_PARAM array was allocated as (opts.len()+1) * size_of::<OSSL_PARAM>() without checked arithmetic, although the authority's OPENSSL_calloc rejects an overflowing product. It now uses checked_add/checked_mul and answers NULL (the call's existing malformed-option failure) on overflow. The terminator is written at index sz within the allocated entry count. Every exit releases params, out, ctx, kdf, dkm_bytes and hexout once; dkm_bytes is the cleansed owned block and hexout the plain-adopt block."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/apps/enc.rs",
+      "lines": "401-408, 508",
+      "severity": "medium",
+      "class": "security_option_routing",
+      "description": "The module header says -skeyopt/-skeymgmt reach not_landed, but -skeyopt only set a flag and -skeymgmt was stored and ignored. With a cipher and no -K, parsing then fell through to the raw-key path and called EVP_CipherInit_ex with the all-zero key buffer; -skeyopt together with -K was silently accepted instead of the authority's 'Either a raw key or the skeyopt args' refusal.",
+      "repair": "Both option arms now return not_landed at parse time, so the opaque-key path cannot silently degrade to a zero key. No unsafe operation changed."
+    },
+    {
+      "file": "src/apps/kdf.rs",
+      "lines": "109-118",
+      "severity": "low",
+      "class": "arithmetic_overflow",
+      "description": "app_params_new_from_opts sized the params array with (opts.len() + 1) * size_of::<OSSL_PARAM>() without checked arithmetic. A wrapping product would under-allocate a block later written through params.add(i)/params.add(sz). The input is argv-derived and unreachable at present lengths, but the authority's OPENSSL_calloc rejects the overflow and §3 requires the check.",
+      "repair": "checked_add(1) and checked_mul(size_of) with a NULL return (the function's existing failure value)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_note": "Neither repair adds or removes an unsafe expression: the enc fix is control flow at two safe option arms, and the kdf fix replaces a wrapping multiplication inside an existing safe allocation expression. No new FFI symbol, allocator coordinate, #[repr(C)] layout or signature.",
+  "allocator_coordinate_changes": 0,
+  "abi_or_layout_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy": "PASS (--all-targets -- -D warnings)",
+    "focused": "PASS: no unit tests in these front-ends (0 passed / 0 failed / 1,675 filtered); cargo check --lib PASS",
+    "library_serial": "1648 passed / 0 failed / 27 ignored (64.66 s, --test-threads=1)",
+    "library_parallel": "1648 passed / 0 failed / 27 ignored (96.40 s, --test-threads=4)",
+    "removed_or_newly_ignored_tests": 0,
+    "probes": "NOT_RUN: courts/phase17/rt_cli_bodies_probe.sh needs a CLI executable; the crate has no bin target and the probe's candidate shim points at the pre-batch artifacts/phase2/openssl, so a run would not exercise this candidate"
+  },
+  "not_run": [
+    "RT-CLI-BODIES differential probe against a rebuilt candidate",
+    "Miri under Stacked Borrows and Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "retained_obligations": [
+    "src/apps/ec.rs and src/apps/ecparam.rs use bio_open_default for a bio_open_owner call site (shared apps/lib permission divergence), so a private-key -out gets default rather than owner-only permissions.",
+    "src/apps/enc.rs does not reproduce -v's bufsize report or the final byte-count report (apps/enc.c verbose arms); the court does not drive -v.",
+    "src/apps/enc.rs -P without -nosalt prints the zero-initialised salt buffer where the authority prints its uninitialised stack salt; the authority's value is indeterminate, so it is not reproduced.",
+    "src/apps/enc.rs keeps -K/-iv argument copies and the key/iv stack buffers un-cleansed; the authority cleanses only the argv hkey string. No new cleansed-secret ownership is introduced in this batch.",
+    "src/apps/genrsa.rs accepts a negative decimal magnitude beyond LONG_MAX+1 as LONG_MIN, then rejects it as outside integer range; the authority rejects it as unparseable. Both exit 1.",
+    "src/apps/engine.rs renders a NULL ENGINE_get_id/ENGINE_get_name as an empty string where glibc's printf would render (null).",
+    "src/apps/kdf.rs omits the pointer-bearing ERR_print_errors tail on malformed -kdfopt/set_params failure (documented, not driven)."
+  ],
+  "next_queue": [
+    "src/apps/keyio.rs",
+    "src/apps/mac.rs",
+    "src/apps/nseq.rs",
+    "src/apps/ocsp.rs",
+    "src/apps/passwd.rs",
+    "src/apps/pkcs12.rs",
+    "src/apps/pkcs7.rs",
+    "src/apps/pkcs8.rs"
+  ],
+  "next_queue_note": "These are the literal first eight lines of REMAINING-AUDIT.txt after removing this batch. They remain queued, not excluded."
+}

@@ -1,11 +1,3 @@
-src/apps/ecparam.rs
-src/apps/ec.rs
-src/apps/enc.rs
-src/apps/engine.rs
-src/apps/errstr.rs
-src/apps/genrsa.rs
-src/apps/info.rs
-src/apps/kdf.rs
 src/apps/keyio.rs
 src/apps/mac.rs
 src/apps/nseq.rs
