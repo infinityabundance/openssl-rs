@@ -2598,3 +2598,51 @@ M22-retained boundaries.
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M29.json`](atlas-refresh/mechanism-sweep-M29.json).
+
+## 25. Boundary sweep B15 — thread stop, initialisation/atexit, and ENGINE ctrl dispatch
+
+Receipt: [`atlas-refresh/boundary-sweep-B15.json`](atlas-refresh/boundary-sweep-B15.json).
+Candidate `2eef78548`; three files, four repairs.
+
+**STOP status: CLEAR after repair.** Two confirmed memory-safety defects were stopped on
+and repaired: `B15-D1` (heap-use-after-free when a handler calls `OPENSSL_thread_stop`
+from a per-context stop) and `B15-D2` (NULL/one-past-the-array read in `ENGINE_ctrl` for
+command number 0; authority-parity UB, not reproduced). Both negative controls were
+observed on the pre-fix candidate (ASan heap-use-after-free; SIGSEGV) and pass after the
+repair.
+
+| file | boundaries | disposition | defects / residuals |
+|---|---|---|---|
+| `src/runtime/thread_events.rs` | `B15-TE-1..5` (head ownership, global register, stop walks, registration callback edge, key cell) | `CONTRACTED` | **B15-D1 (fixed, high):** the nested whole-thread stop released the head the enclosing context-stop walk still wrote. `init_thread_stop` now reports whether an enclosing walk owns the head; a refusal restores the slot and returns. Controls: `a_handler_that_stops_the_thread_during_a_context_stop_is_refused` (ASan pre-fix UAF at `thread_events.rs:781`, clean post-fix). `B15-R3/R4` retained. |
+| `src/runtime/init.rs` | `B15-IN-1..5` (atexit node ownership, drain, init ordering, cleanup/terminal state, identity) | `CONTRACTED` | **B15-D3 (fixed, medium):** `OPENSSL_atexit`'s load+store lost concurrent registrations (149/512 survived); now a compare-exchange push. **B15-D4 (fixed, low):** the drain looped, so a self-registering handler could hang cleanup; now one snapshot and one walk, as the authority. Controls: `concurrent_atexit_registrations_all_survive`, `a_handler_registered_during_the_drain_is_not_run_by_it`. `B15-R1/R2` retained. |
+| `src/engine/eng_ctrl.rs` | `B15-ENG-1..3` (caller-owned `cmd_defns`, ctrl dispatch, argument conversion) | `CONTRACTED` | **B15-D2 (fixed, high):** `int_ctrl_cmd_by_num` matched the `cmd_num == 0` terminator; on a valid empty list, `ENGINE_ctrl(e, GET_NAME_LEN, 0, …)` then called `strlen(NULL)` and `GET_NEXT` read one entry past the array. The authority has the same fault; the crate now fails closed at `ENGINE_R_INVALID_CMD_NUMBER` (`B15-R5`, recorded divergence). Control: `a_zero_command_number_does_not_match_the_terminator` (SIGSEGV pre-fix). |
+
+**Sweep.** Each callback reentrancy edge was checked for a live Rust reference, a
+non-reentrant lock and an owned buffer across the call. The thread-stop handlers do run
+under the register lock (authority order); nested registration/deregistration is refused
+by the non-recursive lock, and the one path that released shared storage is repaired.
+`OPENSSL_cleanup` now states the authority's single-threaded requirement explicitly; only
+cleanup-vs-cleanup is made safe. Every `cmd_defns` traversal step is bounded by the
+terminator.
+
+**New unsafe assumptions (hidden must be 0).** None. One new raw field write (the CAS
+node's `next`) sits in a SAFETY-commented block over uniquely-owned storage. No export,
+signature, `#[repr(C)]` layout, allocator-seam coordinate or unsafe lint attribute changed.
+No safe caller can cause UB through the audited interfaces under the stated contracts.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused 22/0.
+ASan (dedicated venue, `-Zsanitizer=address -Zbuild-std`): the B15-D1 control passes with
+no report after the repair and reported the predicted heap-use-after-free before it.
+BATCH: library **1635 passed / 0 failed / 27 ignored** serially (239.63 s) and with
+`--test-threads=4` (100.94 s); 0 newly ignored, 0 removed, four tests added. None of the
+three files carries an `OPENSSL_RS_ADV_PROBE` arm.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; the court's 1.98.1 toolchain has no miri),
+Loom/TSan, the authority differentials for B15-D1/D2/D4, independent review and SEAL.
+Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next ordinary position:** `src/x509/v3_info.rs` (63), then
+`src/ts/ts_req_utils.rs` (63), `src/evp/e_rc2.rs` (63), `src/apps/pkeyutl.rs` (62),
+`src/asn1/a_verify.rs` (62), `src/dsa/mod.rs` (62), `src/evp/evp_pbe.rs` (62),
+`src/ffc/params.rs` (62). `src/engine/eng_ctrl.rs` was the last M29-deferred boundary
+named in §24 and is audited here.
