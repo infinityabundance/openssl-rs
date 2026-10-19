@@ -1,0 +1,169 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "197f501dc",
+  "date": "2026-10-19",
+  "scope": "Reconciled next-position queue and audited the eight highest-ranked unaudited ordinary PARTIAL census files: src/ml_dsa/encoders.rs (225 unattributed sites), src/ssl/bio_ssl.rs (133), src/runtime/bio/bss_bio.rs (131), src/runtime/confmod/mod.rs (126), src/asn1/bio_asn1.rs (114), src/provider/ecx_kmgmt.rs (113), src/ec/key.rs (111), src/params/build.rs (104). src/provider/mod.rs (118) was skipped as a provider-dispatch boundary.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "dirty: src/ssl/bio_ssl.rs (M31-D1..D3 repair), PERFILE-INDEX.md section 35 and this receipt; untracked .asan-target/ and .ob4work/ were already present",
+  "reconciliation": {
+    "source_files": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "structured_audited": 268,
+    "structured_unaudited": 600,
+    "sweep_files_union": 225,
+    "index_record_files": 144,
+    "naive_regex_paths": 869,
+    "naive_remaining": 8,
+    "naive_remaining_paths": [
+      "src/runtime/bio/owned_ctx_model.rs",
+      "src/runtime/bio/zero_state.rs",
+      "src/runtime/foreign.rs",
+      "src/runtime/member_slot.rs",
+      "src/runtime/mem_coords.rs",
+      "src/runtime/owned_buf_model.rs",
+      "src/runtime/owned_str_model.rs",
+      "src/runtime/release_probe.rs"
+    ],
+    "method": "A free-text src/*.rs extraction over PERFILE-INDEX.md and every atlas-refresh/*.json counts paths named only by next_batch/skipped/files_not_run prose. Only each sweep's structured .files array plus the index's audited record tables count. The eight naive survivors are test-only/model infrastructure modules, not census files.",
+    "conclusion": "All previous next-position lists were derived from the naive union and are stale; this receipt's next_batch comes from the 600-file structured unaudited set ranked by attribution.json unattributed_sites."
+  },
+  "files": [
+    "src/ml_dsa/encoders.rs",
+    "src/ssl/bio_ssl.rs",
+    "src/runtime/bio/bss_bio.rs",
+    "src/runtime/confmod/mod.rs",
+    "src/asn1/bio_asn1.rs",
+    "src/provider/ecx_kmgmt.rs",
+    "src/ec/key.rs",
+    "src/params/build.rs"
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf/OwnedDef allocation, single release, into_raw transfer",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy (BioSsl, BioBioSt, EcxGenCtx, Pvk2key-style zero-valid state)",
+    "RC-1 refcount destroy gate (EC_KEY_free/up_ref)",
+    "B1-B17 BIO and application callback reentrancy contract (raw pointers only, no Rust borrow across a callback)",
+    "RCU publish/synchronize-before-release list ownership"
+  ],
+  "defects": [
+    {
+      "id": "M31-D1",
+      "file": "src/ssl/bio_ssl.rs",
+      "pre_fix_lines": [867, 868, 869, 870, 871],
+      "post_fix_lines": [877, 878, 879, 880, 881, 882, 883, 884, 885, 886],
+      "status": "fixed",
+      "severity": "medium (memory safety; reachable only after allocator refusal, but the module itself defines that state as safe)",
+      "class": "NULL data-slot dereference (authority divergence)",
+      "description": "BIO_ssl_shutdown read (*bdata).ssl without checking that the BIO's data slot was non-NULL. A refused BIO_C_SET_SSL re-creation deliberately leaves BIO.ptr NULL and init 0 ('poisoned but safe'); a later BIO_ssl_shutdown on that live chain dereferenced NULL. The pinned authorities (3.0.22/3.5.9/4.0.2 bio_ssl.c) guard bdata != NULL.",
+      "fix": "Wrap the ssl read and SSL_shutdown call in an if !bdata.is_null() guard, matching the authority.",
+      "divergence": "None; the guard is the authority's own behaviour."
+    },
+    {
+      "id": "M31-D2",
+      "file": "src/ssl/bio_ssl.rs",
+      "pre_fix_lines": [850, 851],
+      "post_fix_lines": [852, 853, 854, 855, 856, 857],
+      "status": "fixed",
+      "severity": "medium (memory safety; same allocator-refusal state)",
+      "class": "NULL data-slot dereference (authority UB not reproduced)",
+      "description": "BIO_ssl_copy_session_id found an SSL BIO by method type and dereferenced its data slot without a NULL check. The authority has the same unconditional dereference; AGENTS.md section 17 forbids reproducing a C-authority UB mechanism.",
+      "fix": "Refuse (return 0) when either located BIO has a NULL data slot. No ownership or ABI change.",
+      "divergence": "Recorded deliberate safety improvement: the authority would dereference NULL; the converted implementation refuses."
+    },
+    {
+      "id": "M31-D3",
+      "file": "src/ssl/bio_ssl.rs",
+      "pre_fix_lines": [380, 381, 382, 383, 384, 385, 386, 387, 388, 389],
+      "post_fix_lines": [386, 387, 388, 389, 390, 391],
+      "status": "fixed",
+      "severity": "medium (ownership transfer / leak; no UB)",
+      "class": "transcribed ownership transfer loss (AGENTS.md section 8 compatibility axis)",
+      "description": "In the BIO_C_SET_SSL recovery arm (data slot NULL because an earlier re-creation failed), ssl_new installed a fresh block but the function never assigned the caller's SSL * to it. The authority always executes bs->ssl = (SSL *)ptr, so the caller's connection is adopted and released by the BIO; here it was neither adopted nor released, and the BIO remained with a NULL connection.",
+      "fix": "Assign ssl = ptr as *mut Ssl after the successful ssl_new, before the common BIO_set_shutdown/bs->ssl store.",
+      "divergence": "None; restores the authority's transfer."
+    }
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "focused": "ssl::bio_ssl: 1 passed / 0 failed / 1 ignored (zero-state sweep); the ignored allocator probe ssl::bio_ssl::adv_probe::set_ssl_allocation_refusal_clears_data_before_recreate passed alone with OPENSSL_RS_ADV_PROBE=1 (1 passed / 0 failed)",
+    "lib_tests_serial": "1646 passed / 0 failed / 27 ignored (308.67 s)",
+    "lib_tests_threads_4": "1646 passed / 0 failed / 27 ignored (90.59 s)"
+  },
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 0,
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; no CRYPTO_* size, file or line coordinate changed",
+    "repr_c_and_exports": "unchanged; no exported symbol, signature or #[repr(C)] layout touched (BioSsl, BioBioSt, EcxGenCtx, EcKey, ConfModule/ConfImodule, BioAsn1BufCtx, ParamBldDef, MlDsaKey-side local OwnedBuf unchanged)",
+    "lint_attributes": "unchanged; unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks and missing_safety_doc retained; clippy -D warnings accepted",
+    "controls": "The existing allocator-injection probe now also exercises BIO_ssl_shutdown and BIO_ssl_copy_session_id on the poisoned slot and passes; no double free reported.",
+    "hidden_obligations": 0
+  },
+  "compatibility": "The two NULL guards turn an allocator-refusal crash into the authority's (shutdown) or a safe refusal (copy). M31-D3 restores the authority's ownership transfer. Every other audited transition matches the pinned source: BIO pair ring invariants and pair destruction, confmod RCU publish/free order and DSO ownership, NDEF support-block transfer at BIO_C_SET_EX_ARG, ECX generator/private-key secure releases, EC_KEY refcount/destructor order, parameter-builder extents and consume-on-to_param, and ML-DSA packet extents plus hint-weight refusal.",
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE. FAST+BATCH only; BOUNDARY evidence (Miri/ASan/TSan, authority differential for the poisoned-state arms, independent review) remains PENDING.",
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    {
+      "id": "M31-R1",
+      "file": "src/ssl/bio_ssl.rs",
+      "class": "application-visible allocator-failure edge",
+      "description": "BIO_C_SET_SSL still owns the re-create/ssl_free sequence and can be made to fail by an allocator hook. It is now failure-atomic (NULL slot, init 0) and every public chain-level entry point tolerates that state. The allocator hook family remains a C-ABI reentrancy edge.",
+      "disposition": "Recorded; BOUNDARY/SEAL sanitizer evidence NOT_RUN."
+    },
+    {
+      "id": "M31-R2",
+      "file": "src/runtime/confmod/mod.rs",
+      "class": "application-controlled init/finish callbacks",
+      "description": "module_init/module_finish invoke conf_init_func/conf_finish_func with raw pointers and no Rust borrow or crate lock held. A callback that releases its own imod violates the authority's contract.",
+      "disposition": "Retained authority-compatible reentrancy edge."
+    },
+    {
+      "id": "M31-R3",
+      "file": "src/asn1/bio_asn1.rs",
+      "class": "application-controlled prefix/suffix callbacks and ex_arg slot",
+      "description": "ASN1_OP_STREAM_PRE and the prefix/suffix callbacks may replace ex_buf/ex_arg. The module trusts the callback's own contract, as the authority does; the support block is still released exactly once by ndef_suffix_free.",
+      "disposition": "Retained; no safe-Rust caller reaches the raw slot."
+    },
+    {
+      "id": "M31-R4",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "class": "authority-parity free-before-duplicate property setter",
+      "description": "set_property_query releases the incumbent propq before CRYPTO_strdup(propq). A caller passing the object's own member would alias; no getter exposes propq and every landed caller passes a different string, matching the authority.",
+      "disposition": "Recorded latent pattern; not reachable through a safe interface."
+    }
+  ],
+  "files_not_run": [],
+  "not_run": [
+    "src/provider/mod.rs (118): provider-dispatch boundary, skipped.",
+    "src/ssl/record/rec_layer_s3.rs (63), src/ssl/statem/* and the ENGINE dispatch files: held protocol/engine boundaries.",
+    "Miri Stacked/Tree Borrows: no miri in the court toolchain.",
+    "ASan/TSan/Loom for the allocator-refusal and callback edges: BOUNDARY gate.",
+    "Authority differential for BIO_ssl_copy_session_id (the authority's NULL dereference is not reproducible; the differential must assert refusal, not a crash).",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "next_batch": {
+    "files": [
+      "src/provider/ec_kmgmt.rs (102)",
+      "src/runtime/bio/bss_acpt.rs (102)",
+      "src/runtime/bio/bf_buff.rs (101)",
+      "src/evp/keymgmt_lib.rs (98)",
+      "src/provider/decode_der2key.rs (98)",
+      "src/ct/ct_sct.rs (97)",
+      "src/evp/pkey_asn1.rs (96)",
+      "src/ssl/ssl_conf.rs (94)"
+    ],
+    "triage": "Descending unattributed_sites among the 600 structured unaudited census files after this batch. src/provider/mod.rs (118) remains skipped as a provider-dispatch boundary; the held protocol/engine files remain held.",
+    "skipped": [
+      "src/provider/mod.rs (118): provider-dispatch boundary.",
+      "src/ssl/record/rec_layer_s3.rs (63): record-layer state boundary, previously deferred.",
+      "src/ssl/statem/*, src/engine/eng_dyn.rs, src/engine/eng_lib.rs, src/engine/eng_cnf.rs: protocol/ENGINE dispatch boundaries.",
+      "The eight non-census runtime model/probe modules: test-only infrastructure, not in the 868-file census."
+    ]
+  }
+}

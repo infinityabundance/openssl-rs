@@ -15,15 +15,23 @@ post-census delta — exactly as it appeared in the former cumulative
 > `INDEPENDENTLY_CHECKED` result. A file graduates only through the AGENTS.md §7
 > dependency-closure and independent-evidence gates.
 
-**Campaign progress: 9 of 761 PARTIAL files have full group records; a further
-12 files have mechanism-contract sweeps (batch M1), 10 files have
-mechanism-contract sweeps (batch M2), 11 files have mechanism-contract
-sweeps (batch M3) and 12 files have mechanism-contract sweeps (batch M4),
-none with full group records.** The 761 denominator is the
-`PARTIAL` file population in `ATTRIBUTION.md`; it is not a
-count of files that have graduated. The nine full records cover 6,252 production
-unsafe sites in 2,949 groups. The M1–M4 sweeps are obligation checks over the
-known owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
+**Campaign progress: 9 of 761 PARTIAL files have full group records; the
+mechanism-contract sweeps M1–M31 name 225 files in their structured `files`
+arrays, and their union with the nine full records is 268 files. That leaves
+600 of the 868 census files unaudited (`PARTIAL`); 92 files are `ZERO_UNSAFE`
+and 15 are `BOUNDARY_COVERED`.** The 761 denominator is the `PARTIAL` file
+population in `ATTRIBUTION.md`; it is not a count of files that have graduated.
+The nine full records cover 6,252 production unsafe sites in 2,949 groups. The
+sweeps are obligation checks over the known owner/slot/member-buffer mechanisms,
+not the full `D###` enumeration.
+
+**Reconciliation note (2026-10-19).** A free-text `src/...rs` extraction over
+this file and every `atlas-refresh/*.json` returns 869 paths because
+`next_batch`, `skipped`, `files_not_run` and NOT_RUN prose also name files. Only
+each sweep's `.files` array (plus this file's audited record tables) counts as
+audited. The naive extraction leaves only eight non-census runtime model/probe
+files and no ordinary file, which is why the previous next-position lists were
+stale. See §35 for the exact counts and the M31 set.
 
 ## 1. Reusable template
 
@@ -2820,3 +2828,72 @@ to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
 `src/evp/e_rc2.rs` (63), `src/apps/pkeyutl.rs` (62), `src/asn1/a_verify.rs` (62),
 `src/dsa/mod.rs` (62). `src/evp/evp_pbe.rs` and `src/ffc/params.rs` were swept here and leave
 the queue. This boundary sweep does not consume an ordinary queue position.
+
+## 35. Mechanism sweep M31 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `197f501dc` plus the worktree state
+(the `src/ssl/bio_ssl.rs` repair below and this record).
+
+**Reconciliation.** The census population is 868 source files: 92
+`ZERO_UNSAFE`, 15 `BOUNDARY_COVERED`, 761 `PARTIAL`. Structured audit evidence
+(each M-sweep's `.files` array plus this index's audited record tables) covers
+**268** files, leaving **600** unaudited census files. A free-text extraction of
+`src/...rs` from this file and every `atlas-refresh/*.json` instead yields 869
+paths because prose fields (`next_batch`, `skipped`, `files_not_run`) name files
+that were never audited. The eight paths that survive the naive subtraction are
+test-only/model infrastructure modules (`owned_ctx_model`, `owned_buf_model`,
+`owned_str_model`, `member_slot_model`, `zero_state`, `release_probe`,
+`mem_coords`, `foreign`), not ordinary census files. All previous
+"next position" lists were built from the naive set and are therefore stale.
+
+**Scope:** the eight highest-ranked unaudited ordinary `PARTIAL` files excluded
+from prior sweeps: `src/ml_dsa/encoders.rs` (225 unattributed sites),
+`src/ssl/bio_ssl.rs` (133), `src/runtime/bio/bss_bio.rs` (131),
+`src/runtime/confmod/mod.rs` (126), `src/asn1/bio_asn1.rs` (114),
+`src/provider/ecx_kmgmt.rs` (113), `src/ec/key.rs` (111) and
+`src/params/build.rs` (104). `src/provider/mod.rs` (118) was skipped as a
+provider-dispatch boundary.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/ml_dsa/encoders.rs` | OB-1 local `OwnedBuf` (plain/secure), packet extents, hint-weight bounds | No defect. Every allocation has a checked/public extent, `Drop` is the single release, and `hint_bits_encode` refuses a hint above the `omega + k` packet extent instead of writing past it. |
+| `src/ssl/bio_ssl.rs` | OB-3 `OwnedCtx<BioSsl>`, BIO callback contract, poisoned-data state | **M31-D1 fixed (medium, memory safety):** `BIO_ssl_shutdown` dereferenced the data slot that a refused `BIO_C_SET_SSL` re-creation deliberately leaves NULL; the pinned authority guards `bdata != NULL` (`bio_ssl.c:503`). **M31-D2 fixed (medium, memory safety):** `BIO_ssl_copy_session_id` had the same null-data dereference; the authority has the same UB, so the guard is a recorded §17 divergence. **M31-D3 fixed (medium, leak/compatibility):** the `BIO_C_SET_SSL` recovery arm recreated the block but never stored the caller's `SSL *`; the authority stores `bs->ssl = ptr`. |
+| `src/runtime/bio/bss_bio.rs` | OB-3 `OwnedCtx<BioBioSt>`, ring extents, pair ownership | No defect. The ring invariants keep every copy inside `size`; a refused second pair allocation leaves the first block owned by its BIO and released once. |
+| `src/runtime/confmod/mod.rs` | RCU lists, OB-1 entries (`OwnedBuf::new_zeroed`/`adopt`), DSO ownership, application init/finish callbacks | No defect. Publish/free order is synchronize-before-release; every failure arm releases only what it acquired; callbacks remain raw-pointer reentrancy edges (retained). |
+| `src/asn1/bio_asn1.rs` | `BioAsn1BufCtx` ownership, prefix/suffix callbacks, NDEF support block | No defect. The support block transfers exactly once at `BIO_C_SET_EX_ARG`; failure before it drops the handle, and the suffix cleanup is the single release. |
+| `src/provider/ecx_kmgmt.rs` | OB-3 `OwnedCtx<EcxGenCtx>`, secure/plain property ownership, keymgmt callbacks | No defect. `set_property_query` frees before duplicating exactly as the authority (latent self-alias retained, no getter); the secure private-key release uses the secure seam. |
+| `src/ec/key.rs` | RC-1 refcount, key/group/point/BN ownership, method and ex-data callbacks | No defect. `down_ref` claims the last reference before any destructor; re-entrant `EC_KEY_free` is a no-op; `EC_KEY_copy` preserves the authority's partial-failure state. |
+| `src/params/build.rs` | OB-1 `OwnedDef`, block-count arithmetic, secure/plain `to_param` | No defect. Push-time extents and the `to_param` sums are checked; a refused push drops the definition; `to_param` consumes and empties the builder as the authority does. |
+
+**New unsafe assumptions (hidden must be 0).** None. The repairs add two NULL
+guards and one pointer assignment; they add no unsafe operation, adoption,
+allocator coordinate, `#[repr(C)]` layout, exported symbol or signature. The
+poisoned-data state is now tolerated at every public chain-level entry point.
+
+**Retained obligations.** `BIO_C_SET_SSL` re-creation and `ssl_free` remain
+application-visible allocator-failure edges (now failure-atomic at the slot).
+`confmod` module init/finish and `asn1` prefix/suffix callbacks remain
+application-controlled reentrancy edges; no Rust borrow or crate lock is held
+across them. `ecx_kmgmt`'s free-before-duplicate property setter is retained for
+authority parity (no getter exposes the member).
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`ssl::bio_ssl` 1 passed / 1 ignored, and the ignored allocator probe
+`set_ssl_allocation_refusal_clears_data_before_recreate` passes alone under
+`OPENSSL_RS_ADV_PROBE=1` after the new shutdown/copy calls. BATCH: library
+**1646 passed / 0 failed / 27 ignored** serially (308.67 s) and with
+`--test-threads=4` (90.59 s). No test was removed or newly ignored.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; no miri in the court toolchain),
+ASan/TSan/Loom, authority differentials for the repaired poisoned-state arms,
+independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next eight unaudited ordinary files (reconciled set):**
+`src/provider/ec_kmgmt.rs` (102 unattributed), `src/runtime/bio/bss_acpt.rs`
+(102), `src/runtime/bio/bf_buff.rs` (101), `src/evp/keymgmt_lib.rs` (98),
+`src/provider/decode_der2key.rs` (98), `src/ct/ct_sct.rs` (97),
+`src/evp/pkey_asn1.rs` (96), `src/ssl/ssl_conf.rs` (94).
+`src/provider/mod.rs` (118) stays skipped as a provider-dispatch boundary;
+`src/ssl/record/rec_layer_s3.rs`, the `ssl/statem` modules and the ENGINE
+dispatch files remain held.
