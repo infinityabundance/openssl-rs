@@ -187,6 +187,14 @@ pub(crate) unsafe fn num_properties(list: *const OsslPropertyList) -> c_int {
     }
 }
 
+/// A borrowed view of the list's definition tail.
+///
+/// # Safety
+/// `list` must be a live list from `ossl_parse_property`, `ossl_parse_query` or
+/// `ossl_property_merge`, and `len` must be its `num_properties`. The returned
+/// reference's lifetime is chosen by the caller (`'len` is not tied to the raw
+/// `list`), so the caller must also ensure the borrow does not outlive the list's
+/// allocation and that no `&mut` alias to the tail exists for its duration.
 #[allow(dead_code)]
 // unreachable until 6.8's fetch calls it; this whole module is the interface the
 // provider registry is written against, and the seal of no earlier phase named it
@@ -194,6 +202,7 @@ pub(crate) unsafe fn properties<'len>(
     list: *const OsslPropertyList,
     len: usize,
 ) -> &'len [OsslPropertyDefinition] {
-    // SAFETY: the caller guarantees `len` is the tail's length.
+    // SAFETY: the caller guarantees `len` is the tail's length and that the
+    // returned borrow stays within the list's allocation and lifetime.
     unsafe { core::slice::from_raw_parts(properties_ptr(list), len) }
 }
