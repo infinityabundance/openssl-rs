@@ -34,6 +34,13 @@ src/apps/rsa.rs
 src/apps/sess_id.rs
 src/apps/skeyutl.rs
 src/apps/smime.rs
+src/apps/speed.rs
+src/apps/spkac.rs
+src/apps/storeutl.rs
+src/apps/ts.rs
+src/apps/verify.rs
+src/apps/version.rs
+src/apps/x509.rs
 src/aria.rs
 src/asn1/a_d2i_fp.rs
 src/asn1/a_digest.rs
@@ -69,6 +76,7 @@ src/asn1/text.rs
 src/asn1/time.rs
 src/asn1/utl.rs
 src/asn1/x_algor.rs
+src/asn1_dsa.rs
 src/bn/arith.rs
 src/bn/bignum.rs
 src/bn/blinding.rs
