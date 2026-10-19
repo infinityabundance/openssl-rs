@@ -66,9 +66,17 @@ src/asn1/d2i_pr.rs
 src/asn1/d2i_pu.rs
 src/asn1/d2i.rs
 src/asn1/der.rs
+src/asn1/evp_asn1.rs
 src/asn1/fre.rs
 src/asn1/i2d.rs
+src/asn1/i2d_evp.rs
+src/asn1/layout.rs
 src/asn1/new.rs
+src/asn1/nsseq.rs
+src/asn1/p5_pbe.rs
+src/asn1/p5_pbev2.rs
+src/asn1/p5_scrypt.rs
+src/asn1/p8_pkey.rs
 src/asn1/prim.rs
 src/asn1/string.rs
 src/asn1/tasn_prn.rs

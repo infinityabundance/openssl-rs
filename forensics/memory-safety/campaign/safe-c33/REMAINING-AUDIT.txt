@@ -1,11 +1,3 @@
-src/asn1/evp_asn1.rs
-src/asn1/i2d_evp.rs
-src/asn1/layout.rs
-src/asn1/nsseq.rs
-src/asn1/p5_pbe.rs
-src/asn1/p5_pbev2.rs
-src/asn1/p5_scrypt.rs
-src/asn1/p8_pkey.rs
 src/asn1/t_pkey.rs
 src/asn1/t_spki.rs
 src/asn1/typ.rs

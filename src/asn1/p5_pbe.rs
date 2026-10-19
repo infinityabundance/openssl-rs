@@ -57,7 +57,7 @@ const PKCS5_DEFAULT_PBE1_SALT_LEN: c_int = 8;
 
 /// An owned salt block drawn for [`PKCS5_pbe_set0_algor_ex`].
 ///
-/// The authority allocates it with `OPENSSL_malloc` at `p5_pbe.c:53` and releases it at `:59`
+/// The authority allocates it with `OPENSSL_malloc` at `p5_pbe.c:53` and releases it at `:76`
 /// when the `RAND_bytes_ex` draw fails; on success `ASN1_STRING_set0` takes it over. The block
 /// stays a `CRYPTO_malloc` at the authority's own size and `file`/`line`; only its ownership is
 /// this type, whose `Drop` is the single plain release on the failure path.
@@ -263,8 +263,8 @@ pub unsafe extern "C" fn PKCS5_pbe_set0_algor_ex(
         };
 
         // `SaltBuf::new` is the authority's `OPENSSL_malloc(saltlen)` at `p5_pbe.c:53`; its
-        // `Drop` is the `OPENSSL_free` at `:59` on the one failure path that reaches it.
-        let Some(sstr) = SaltBuf::new(salt_bytes, FILE.as_ptr(), 53, 59) else {
+        // `Drop` is the `OPENSSL_free` at `:76` on the one failure path that reaches it.
+        let Some(sstr) = SaltBuf::new(salt_bytes, FILE.as_ptr(), 53, 76) else {
             PBEPARAM_free(pbe);
             return 0;
         };
