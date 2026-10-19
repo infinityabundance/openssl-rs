@@ -286,8 +286,17 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             }
         }
 
-        // `add = (num + 1) * sizeof(char *)`: the pointer array each row begins with.
-        let add: c_int = (num + 1) * size_of::<*mut c_char>() as c_int;
+        // `add = (num + 1) * sizeof(char *)`: the pointer array each row begins with. The
+        // product is checked rather than wrapping: a wrapped `add` would place the row cursor
+        // before the pointer array while the block was sized from the wrapped value, so the
+        // field and sentinel stores below could write outside it.
+        let Some(add) = num
+            .checked_add(1)
+            .and_then(|n| n.checked_mul(size_of::<*mut c_char>() as c_int))
+        else {
+            // SAFETY: `buf` and `ret` are live; the arrays are initialised.
+            break 'err unsafe { read_err(buf, ret) };
+        };
         // SAFETY: `buf` holds `size` bytes.
         unsafe { *(*buf).data.add((size - 1) as usize) = 0 };
         let mut offset: c_int = 0;
@@ -322,10 +331,17 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             // SAFETY: `offset >= 1`; the newline becomes the field terminator.
             unsafe { *(*buf).data.add((offset - 1) as usize) = 0 };
             // A fresh block of `add + offset` bytes: the pointer array and the
-            // NUL-terminated line packed after it. The handle owns the block and releases it on
-            // every exit below that does not hand it to the row's stack.
-            let Some(mut row) = OwnedBuf::new((add + offset) as usize, FILE_SEAM, MALLOC_ROW)
+            // NUL-terminated line packed after it. The sum is checked so the extent can never
+            // wrap below the pointer array's own `add` bytes. The handle owns the block and
+            // releases it on every exit below that does not hand it to the row's stack.
+            let Some(row_bytes) = add
+                .checked_add(offset)
+                .and_then(|n| usize::try_from(n).ok())
             else {
+                // SAFETY: `buf` and `ret` are live.
+                break 'err unsafe { read_err(buf, ret) };
+            };
+            let Some(mut row) = OwnedBuf::new(row_bytes, FILE_SEAM, MALLOC_ROW) else {
                 // SAFETY: `buf` and `ret` are live.
                 break 'err unsafe { read_err(buf, ret) };
             };
