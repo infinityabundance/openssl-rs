@@ -1631,3 +1631,62 @@ review and SEAL are `NOT_RUN`.
 **Next ordinary position:** `src/pem/pem_info.rs`, then `src/ml_kem/arith.rs`,
 `src/pkcs12/p12_sbag.rs`, `src/asn1/new.rs` and `src/evp/encode.rs` in the 95/94 production-site
 cohorts.
+
+## 21. Boundary sweep B11 — thread, ssl_conf, p12_crt
+
+**STOP status: CLEAR after repair.** Two confirmed memory-safety defect classes and one hidden
+dangling-pointer obligation were repaired; p12_crt had no defect. Hidden = 0. Nothing is promoted
+to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Audited (boundary).** `src/runtime/thread.rs` (B11-THR-1..4), `src/ssl/ssl_conf.rs`
+(B11-SSL-1..3), `src/pkcs12/p12_crt.rs` (B11-P12-1..3).
+
+**Defects.**
+
+- **B11-D1 (fixed, high, `runtime/thread.rs`, condvar wait).** Both wait arms released the caller's
+  mutex, waited, then set the parking flag without waiting for it to be clear. A second thread could
+  take the mutex after the signal, leaving two threads believing they held it; the thread pool's
+  join state and RCU's counters are mutated under that mutex. The wait now re-acquires through the
+  same blocking loop as `ossl_crypto_mutex_lock`. New control
+  `a_woken_waiter_waits_for_the_mutex_before_returning` fires on the pre-fix shape.
+- **B11-D2 (fixed, medium, `ssl/ssl_conf.rs`, option parse).** `cmd_Protocol`/`cmd_Options`/
+  `cmd_VerifyMode` stored a frame-local table's address in the long-lived `SSL_CONF_CTX` and left it
+  dangling after the parse (the authority's tables are `static`). `parse_option_list` now clears
+  `tbl`/`ntbl` before returning. New control
+  `an_option_command_does_not_retain_its_frame_local_table` fires on the pre-fix shape.
+- **B11-D3 (fixed, high, `ssl/ssl_conf.rs:183-199`, option words).** `ssl_set_option` cast the
+  `c_long` cert-flag and `c_int` verify-mode pointers to `*mut u64` and wrote eight bytes; every
+  VerifyMode option wrote four bytes past the `c_int`. Each class is now written through its own
+  type. ASan negative control: the pre-fix widened write reported `heap-buffer-overflow` at
+  `ssl_conf.rs:208`; the fixed candidate passes the same run.
+- **B11-D4 (fixed, low, `runtime/thread.rs`).** `mutex_held` returned `&'static Mutex<bool>` and
+  `rwlock_inner<'a>` returned a caller-chosen lifetime. Both are now higher-ranked closure helpers
+  (`with_mutex_flag`, `with_rwlock_inner`), so the borrow cannot escape the call.
+- **B11-D5 (fixed, low, `runtime/thread.rs`, unlock contract).** Reader ownership is not recorded,
+  so a non-owner read unlock decrements the count; the documentation claimed a 0 return. The
+  contract now requires the caller to hold the lock and records the authority-parity residual.
+
+**No defect.** `thread.rs`: authority-sized rwlock block and coordinates, once/TLS/id/atomic
+surface, gate-based condition variable and timed arm, sleep surface. `ssl_conf.rs`: table order and
+switch indexing, prefix handling, context lifecycle and borrow capture, finish's unreachable
+back-fill, cert-filename teardown. `p12_crt.rs`: bag adoption/removal, the `add_*` family's
+ownership transfer, `PKCS12_create_ex2`'s callback calls (no borrow or lock held), and the
+err-path release order.
+
+**Retained.** Caller-held lock on unlock (reader attribution absent); atomic storage must not be
+accessed non-atomically; `SSL_CONF_CTX` borrows the selected SSL/SSL_CTX; the unwired certificate
+rows and the `SSL_PKEY_NUM`-only filename array remain for the certificate-loading subphase;
+`PKCS12_create_cb` must not free the inputs or re-enter the build; a bag not found by
+`pkcs12_remove_bag` stays with the caller.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; `runtime::thread` 31/0,
+`ssl::ssl_conf` 2/0, `pkcs12::p12_crt` 2/0. BATCH: library **1610 passed / 0 failed / 27 ignored**
+serially (61.17 s) and with `--test-threads=4` (93.90 s). ASan (pinned nightly, `-Zbuild-std`):
+pre-fix overflow observed, post-fix controls clean. No affected `OPENSSL_RS_ADV_PROBE` arm exists.
+Loom/TSan interleaving proof, Miri (nightly download failed on disk space), authority differentials,
+FRF-Fuzz, independent review and SEAL are `NOT_RUN`.
+
+**Next ordinary position:** `src/pem/pem_info.rs`, then `src/ml_kem/arith.rs`,
+`src/pkcs12/p12_sbag.rs`, `src/asn1/new.rs` and `src/evp/encode.rs`. B1-B11 boundary queue closed;
+next boundary item is the Loom/TSan control for the repaired condvar protocol at the next BOUNDARY
+trigger.
