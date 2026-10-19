@@ -306,7 +306,9 @@ pub unsafe extern "C" fn BF_ecb_encrypt(
 /// `void BF_cbc_encrypt(...)` — `crypto/bf/bf_enc.c:108-181`.
 ///
 /// # Safety
-/// `in`/`out` `length` bytes; `schedule` live; `ivec` eight bytes (written back).
+/// `length` is a multiple of 8 (the authority's documented precondition, and what keeps the
+/// final whole-block arm from touching a block the caller did not supply); `in`/`out` each
+/// cover `length` bytes; `schedule` live; `ivec` eight bytes (written back).
 #[no_mangle]
 pub unsafe extern "C" fn BF_cbc_encrypt(
     input: *const u8,

@@ -98,6 +98,11 @@ const _: () = {
 
 /// `static void *async_stack_alloc(size_t *num)` — `async_posix.c:82-85`.
 ///
+/// The authority allocates with `OPENSSL_malloc`; this crate zero-fills through
+/// `CRYPTO_zalloc`. The allocator hook, request size and `(FILE, LINE)` coordinate are
+/// unchanged: a deliberate safety improvement that keeps uninitialised fibre-stack bytes
+/// out of reach, recorded rather than silently substituted.
+///
 /// # Safety
 /// `num` must be a live `size_t`.
 pub(crate) unsafe extern "C" fn async_stack_alloc(num: *mut usize) -> *mut c_void {

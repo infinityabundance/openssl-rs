@@ -1,0 +1,195 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "f326c049f",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by M40. The three ASN.1 wrapper families (x_sig/x_spki/x_val), the POSIX ucontext fibre backend (async_posix), Blowfish, the SRP constants and the two substituted ordinary files bn/dh and bn/exp. src/async/async.rs and src/async/async_wait.rs are retained callback/fibre boundaries, recorded NOT_RUN and replaced by the next two ordinary queue entries. Two inaccurate unsafe-contract statements repaired, both documentation-only with no behaviour change. No new unsafe operation, FFI symbol, allocator coordinate or repr(C) layout introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/blowfish.rs and src/async/arch/async_posix.rs contract statements repaired; src/asn1/{x_sig,x_spki,x_val}.rs, src/bn/{bn_srp,dh,exp}.rs audited with no source change; src/async/{async,async_wait}.rs NOT_RUN. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 45 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 365,
+    "canonical_unaudited_before_batch": 398,
+    "canonical_audited_after_batch": 373,
+    "canonical_unaudited_after_batch": 390,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 2,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from REMAINING-AUDIT.txt and inserted at their alphabetical positions. The two NOT_RUN callback/fibre boundary files remain in REMAINING-AUDIT.txt.",
+    "difference_from_365": "M40 left 365 audited / 398 unaudited. This batch moves the six ordinary files it named plus the two substitutes; the two retained boundaries are left queued."
+  },
+  "files": [
+    "src/asn1/x_sig.rs",
+    "src/asn1/x_spki.rs",
+    "src/asn1/x_val.rs",
+    "src/async/arch/async_posix.rs",
+    "src/blowfish.rs",
+    "src/bn/bn_srp.rs",
+    "src/bn/dh.rs",
+    "src/bn/exp.rs"
+  ],
+  "not_run": [
+    {
+      "file": "src/async/async.rs",
+      "reason": "retained callback/fibre boundary (M22/M24 exclusion); requires a BOUNDARY-level callback/fibre audit"
+    },
+    {
+      "file": "src/async/async_wait.rs",
+      "reason": "retained callback/fibre boundary (CtxDestroy member body plus application cleanup callbacks); requires a BOUNDARY-level audit"
+    }
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/asn1/x_sig.rs",
+      "mechanisms": [
+        "X509_SIG repr(C) layout and offset/size assertions",
+        "X509_SIG_it static item descriptor",
+        "IMPLEMENT_ASN1_FUNCTIONS quartet (_new/_free/d2i/i2d)",
+        "X509_SIG_get0 / X509_SIG_getm borrowed out-parameters"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Both out-parameters are independently NULL-checked and both answers are borrowed, matching x_sig.c. The item layer is the established shared codec; no duplicate symbol is exported, matching the authority."
+    },
+    {
+      "file": "src/asn1/x_spki.rs",
+      "mechanisms": [
+        "NETSCAPE_SPKAC / NETSCAPE_SPKI repr(C) layouts (16/32 bytes)",
+        "ASN1_TFLG_EMBED X509_ALGOR field at offset 8",
+        "item lifecycle (_new/_free/d2i/i2d) for both items",
+        "embedded-field free path"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The embedded field's own address is handed to the item machinery, so free releases the algorithm's members and never the enclosing block. The embedded offset and the 32-byte stride are compile-time asserted."
+    },
+    {
+      "file": "src/asn1/x_val.rs",
+      "mechanisms": [
+        "X509_VAL repr(C) layout and offset/size assertions",
+        "two ASN1_TIME templates",
+        "item lifecycle (_new/_free/d2i/i2d)"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Two mandatory pointer fields with one owner per item; no _dup is exported, matching x_val.c."
+    },
+    {
+      "file": "src/async/arch/async_posix.rs",
+      "mechanisms": [
+        "ucontext_t C shim (size/align/getcontext/set_stack/swapcontext/stack)",
+        "AtomicPtr allocator slots with provenance-preserving recovery",
+        "allow_customize latch under async_mem_lock",
+        "caller-supplied stack alloc/free callbacks",
+        "OwnedFibre allocation and single release at (FILE, LINE_FREE)"
+      ],
+      "disposition": "repaired_contract",
+      "note": "Callbacks run with the latch lock released, so they are reentrancy-safe; the latch, the unlock-before-store ordering and the default-function identity all match the authority. The repair records the CRYPTO_zalloc vs OPENSSL_malloc divergence (zero-filled stack) with the hook, size and coordinate unchanged. No code change."
+    },
+    {
+      "file": "src/blowfish.rs",
+      "mechanisms": [
+        "n2l / l2n / n2ln / l2nn byte extents",
+        "BF_set_key cyclic key XOR and self-encrypting schedule",
+        "BF_encrypt / BF_decrypt round order",
+        "ECB, CBC, CFB64 and OFB64 block/partial loops"
+      ],
+      "disposition": "repaired_contract",
+      "note": "Every pointer walk is bounded by the caller's stated extent and the length/num arithmetic matches the authority. The repair adds the authority's multiple-of-8 precondition to BF_cbc_encrypt, whose final whole-block arm would otherwise over-read on decryption for a non-multiple length. No code change."
+    },
+    {
+      "file": "src/bn/bn_srp.rs",
+      "mechanisms": [
+        "limb-array transcription of ten constants",
+        "new_static_data + AtomicPtr cache with compare_exchange",
+        "BN_FLG_STATIC_DATA borrow semantics",
+        "ten accessors returning process-lifetime *const BigNum"
+      ],
+      "disposition": "audited_no_change",
+      "note": "A CAS loser releases its unpublished Box exactly once; the cached object is process-lifetime and BN_free honours the static flag. Declared array lengths give the expected widths."
+    },
+    {
+      "file": "src/bn/dh.rs",
+      "mechanisms": [
+        "thirty-two static_data_bignum accessors",
+        "per-symbol function-local AtomicPtr caches",
+        "width, flag and safe-prime assertions"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Same static-BIGNUM idiom as bn_srp; every accessor answers the shared process-lifetime object and the test table covers all thirty-two widths and static/malloced flags."
+    },
+    {
+      "file": "src/bn/exp.rs",
+      "mechanisms": [
+        "bn_mod_exp_mont_fixed_top internal",
+        "null-or-live pointer contract",
+        "even-modulus refusal at bn_exp.c:622"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The substitution delegates to BN_mod_exp_mont_consttime with the same refusal and error coordinate; no new unsafe operation."
+    }
+  ],
+  "defects_repaired": [
+    {
+      "severity": "low",
+      "file": "src/blowfish.rs",
+      "line": 309,
+      "kind": "unsafe_contract_statement",
+      "note": "BF_cbc_encrypt's # Safety now states the authority's multiple-of-8 precondition, which the final whole-block arm relies on. Documentation-only, no behaviour change."
+    },
+    {
+      "severity": "low",
+      "file": "src/async/arch/async_posix.rs",
+      "line": 101,
+      "kind": "divergence_record",
+      "note": "async_stack_alloc zero-fills through CRYPTO_zalloc where the authority uses OPENSSL_malloc; the allocator hook, request size and (FILE, LINE) coordinate are unchanged. Documentation-only, no behaviour change."
+    }
+  ],
+  "contracts_reused": [
+    "ASN.1 item lifecycle, template layout and ASN1_TFLG_EMBED free/new semantics",
+    "generated d2i/i2d a/pp/out conventions",
+    "OB-1/OB-2 allocation seams",
+    "static-BIGNUM cache idiom and BN_FLG_STATIC_DATA borrow rule",
+    "B-series callback contract for the caller-supplied stack allocator/free pair"
+  ],
+  "new_unsafe_assumptions": [],
+  "evidence": {
+    "fast": {
+      "fmt": "pass",
+      "focused": {
+        "asn1::x_": "6 passed / 0 failed (the three wrapper files carry no tests of their own)",
+        "blowfish": "2 passed / 0 failed",
+        "bn::bn_srp": "0 tests (covered through srp_lib and the full suite)",
+        "bn::dh": "7 passed / 0 failed",
+        "bn::exp": "2 passed / 0 failed",
+        "crypto_async::arch::async_posix": "2 passed / 0 failed"
+      }
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings: pass",
+      "library_serial": "1649 passed / 0 failed / 27 ignored (263.79 s)",
+      "library_test_threads_4": "1649 passed / 0 failed / 27 ignored (81.70 s)",
+      "affected_probes": "none: no audited file carries an OPENSSL_RS_ADV_PROBE arm"
+    }
+  },
+  "not_run_gates": [
+    "BOUNDARY audit of src/async/async.rs and src/async/async_wait.rs",
+    "Miri (Stacked Borrows / Tree Borrows)",
+    "ASan / TSan / Loom",
+    "authority differential replay",
+    "caller/dependency closure",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "promotions": [],
+  "queue": {
+    "remaining_after_batch": 390,
+    "audited_after_batch": 373,
+    "next_eight": [
+      "src/async/async.rs",
+      "src/async/async_wait.rs",
+      "src/bn/intern.rs",
+      "src/bn/kron.rs",
+      "src/bn/nist.rs",
+      "src/bn/rsa_fips186_4.rs",
+      "src/camellia.rs",
+      "src/cast.rs"
+    ],
+    "note": "The first two entries are the retained callback/fibre boundaries recorded NOT_RUN here; a later batch must substitute the next ordinary files if it cannot run a BOUNDARY-level audit."
+  }
+}
