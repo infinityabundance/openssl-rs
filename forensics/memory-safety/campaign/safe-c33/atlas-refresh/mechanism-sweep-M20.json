@@ -1,0 +1,100 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "d528ba2bc",
+  "worktree": "dirty (src/asn1/d2i_pr.rs, src/dsa/ossl.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "ordinary mechanism-contract sweep starting at the queued src/ec/curve25519.rs (90 production sites) and continuing down the production-site ranking: src/x509/x509_v3.rs (89), src/runtime/conf/api.rs (89), src/dso/mod.rs (89), src/ec/asn1.rs (87), src/asn1/d2i_pr.rs (86), src/dsa/ossl.rs (86), src/evp/e_chacha20_poly1305.rs (86). No audited file was a newly discovered boundary.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/ec/curve25519.rs",
+    "src/x509/x509_v3.rs",
+    "src/runtime/conf/api.rs",
+    "src/dso/mod.rs",
+    "src/ec/asn1.rs",
+    "src/asn1/d2i_pr.rs",
+    "src/dsa/ossl.rs",
+    "src/evp/e_chacha20_poly1305.rs"
+  ],
+  "files_not_run": [
+    "src/provider/mac_legacy_kmgmt.rs (86) — provider keymgmt callbacks; BOUNDARY, not selected.",
+    "src/provider/*_kmgmt.rs and src/engine/eng_table.rs — provider/global-registry callback boundaries; not selected.",
+    "src/runtime/rcu.rs and src/runtime/obj_table.rs — concurrency/global-table boundaries; not selected.",
+    "src/property/store.rs and src/http/http_client.rs — previously recorded BOUNDARY; not selected."
+  ],
+  "defects": [
+    {
+      "id": "M20-D1",
+      "file": "src/asn1/d2i_pr.rs",
+      "lines_post_fix": "78-91, 220-232",
+      "severity": "medium",
+      "class": "caller length truncated to int before a BIO length (out-of-bounds read)",
+      "description": "d2i_PrivateKey_ex passed its long length to OSSL_DECODER_from_data as a size_t, which passes it to BIO_new_mem_buf as an int; a negative or wider-than-int length truncated to a negative int, whose BIO spelling is strlen over the buffer. The legacy method callback also received length as c_int. The authority has the same implicit conversion.",
+      "fix": "Both entry points refuse a length outside 0..=INT_MAX before dereferencing the cursor, raising nothing (deliberate divergence on invalid input). Added control asn1::d2i_pr::tests::a_length_outside_int_range_is_refused_before_any_read."
+    },
+    {
+      "id": "M20-D2",
+      "file": "src/dsa/ossl.rs",
+      "lines_post_fix": "974-995",
+      "severity": "high",
+      "class": "double free / use-after-free across the DSA lifecycle pair",
+      "description": "dsa_finish freed dsa->method_mont_p but left the freed pointer installed. DSA_set_method runs the outgoing table's finish and DSA_free runs the table's finish again through CtxDestroy::destroy_body, so a cached Montgomery context was released twice. The authority leaves the dangling pointer in place.",
+      "fix": "The hook clears method_mont_p after freeing it; recorded as a deliberate §17 divergence (the M17-D1 class). Added control dsa::ossl::tests::the_finish_hook_clears_the_mont_cache_it_releases."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 reference-count sentinel contract",
+    "OB-1 OwnedBuf allocation/adoption and plain/cleansed release modes",
+    "OB-2 OwnedStr adoption and single release",
+    "OB-3 OwnedCtx/CtxDestroy and RawCtx zeroed construction",
+    "OB-4 member-buffer slot protocol",
+    "CRYPTO_* allocator seam coordinates",
+    "ASN.1 i2d/d2i cursor, embedded value and duplicate/reuse conventions",
+    "EVP_CIPHER init/do_cipher/ctrl/cleanup contract",
+    "DSO method table and finish-unload ordering contract"
+  ],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "test_only_unsafe_added": 0,
+  "allocator_coordinate_changes": [],
+  "abi_or_layout_changes": [],
+  "excluded_symbol_changes": [],
+  "hidden_obligations": 0,
+  "no_defect_found": [
+    "src/ec/curve25519.rs: fe64/fe51/fe arithmetic ranges, masked table select, scalar reduction, the ten perlasm primitives' pointer contracts, and the six exports' cleanse/compare order.",
+    "src/x509/x509_v3.rs: extension list count/find/get/delete/add, the add_extensions replace loop, the two create_by_* ownership arms, and the four accessors.",
+    "src/runtime/conf/api.rs: OwnedValue's four release arms, _CONF_add_string's push-then-insert/pop-replaced order, both free walks, _CONF_new_section partial construction, and the lookup/getenv ladder.",
+    "src/dso/mod.rs: OwnedCtx<Dso> destructor body, refcount-gated DSO_free and finish-hook re-entry, the load refusal ladder, bind/ctrl/merge/filename and the address lookups.",
+    "src/ec/asn1.rs: Packet cursor, DER integer/length/DSA-signature codecs, ECDSA_SIG and ECPKPARAMETERS/ECPrivateKey i2d/d2i, group fieldid/curve builders and point codecs.",
+    "src/dsa/ossl.rs: blinded sign loop, nonce setup, verify refusals and modexp dispatch (lifecycle hook repaired by M20-D2).",
+    "src/evp/e_chacha20_poly1305.rs: both AEAD blocks, TLS fast-path scratch and zero padding, counter carry, tag/AAD ctrls, copy and cleanup."
+  ],
+  "observations_not_repaired": [
+    "src/runtime/conf/api.rs:_CONF_free_data releases includedir before the data == NULL early return, where the authority returns first. The state is unreachable through the public API (only a successful load creates includedir, and that load has already created data) and no free is duplicated on any reachable path."
+  ],
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: asn1::d2i_pr 1/0 (new control), dsa::ossl 1/0 (new control); the other six modules have no test functions",
+    "library_tests_serial": "PASS: 1618 passed / 0 failed / 27 ignored (64.71 s)",
+    "library_tests_threads_4": "PASS: 1618 passed / 0 failed / 27 ignored (92.53 s)",
+    "affected_adversarial_probes": "NOT_RUN: none of the eight audited files carries an OPENSSL_RS_ADV_PROBE arm"
+  },
+  "not_discharged": true,
+  "residuals": [
+    "Miri (Stacked/Tree Borrows), ASan/Loom/TSan and the sanitizer controls for M20-D2 remain PENDING at the next BOUNDARY/SEAL trigger.",
+    "RFC 7748/8032, Wycheproof/ACVP and Dudect courts for curve25519 and ChaCha20-Poly1305 were not run; no constant-time claim is made from source inspection.",
+    "FRF-Fuzz, authority differentials for the M20-D1/M20-D2 divergences, independent review and SEAL remain PENDING."
+  ],
+  "next_queue": {
+    "file": "src/ml_dsa/poly.rs",
+    "rank_note": "86 production sites; security-sensitive algorithm (vectors NOT_RUN in this sweep)",
+    "then": [
+      "src/asn1/a_mbstr.rs (85)",
+      "src/asn1/string.rs (85)",
+      "src/property/strings.rs (85)"
+    ],
+    "skipped_boundary": "src/provider/mac_legacy_kmgmt.rs (86)"
+  }
+}
