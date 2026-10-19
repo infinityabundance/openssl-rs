@@ -1,0 +1,133 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "ed5bc5eb7",
+  "worktree": "dirty (src/asn1/string.rs, src/asn1/i2d.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "Queue reconciliation first, then eight ordinary files from the reconciled remaining set: src/digest/sha2.rs (79 production sites), src/digest/md32.rs (collector reached by sha2), src/mac/cmac.rs (80), src/evp/p5_crpt2.rs (80), src/des/mod.rs (79), src/asn1/string.rs (85), src/asn1/i2d.rs (116) and src/x509/x509_req.rs (119). No audited file was a newly discovered boundary.",
+  "verification_level": "FAST+BATCH",
+  "reconciliation": {
+    "source_files_under_src": 877,
+    "attribution_total": 868,
+    "partial_files": 761,
+    "zero_unsafe_files": 92,
+    "boundary_covered_files": 15,
+    "audited_files": 211,
+    "audited_partial_files": 208,
+    "audited_boundary_covered_files": 3,
+    "remaining_total": 666,
+    "remaining_partial_files": 553,
+    "note": "211 = 199 distinct files in structured receipt fields (.files in mechanism-sweep-M*.json plus boundaries[].file / sweep[].site in boundary-sweep-B*.json) + the 12 M1 files, whose receipt mechanism-sweep-M1.json has an empty files array and whose audit exists only in PERFILE-INDEX.md section 3a. unsafe-census.json and attribution.json mention all 868 census files and are not audit records. The 20 index paths absent from structured receipts are next-queue or caller mentions, not audits.",
+    "progress_1520": "PROGRESS.md:1520-1521 says the file-level ownership conversion queue is empty; :1523-1527 immediately names the next queue as the 761 PARTIAL files for per-file obligation audit. B14 quoted only the first sentence. The ownership-conversion queue is empty; the obligation-audit queue is not."
+  },
+  "files": [
+    "src/digest/sha2.rs",
+    "src/digest/md32.rs",
+    "src/mac/cmac.rs",
+    "src/evp/p5_crpt2.rs",
+    "src/des/mod.rs",
+    "src/asn1/string.rs",
+    "src/asn1/i2d.rs",
+    "src/x509/x509_req.rs"
+  ],
+  "files_not_run": [
+    "src/asn1/bio_asn1.rs (116) - BIO filter callbacks; BOUNDARY, not selected.",
+    "src/provider/ecx_kmgmt.rs (142) - provider keymgmt callback surface; BOUNDARY, not selected.",
+    "src/asn1/tasn_prn.rs (116) - inspected but not claimed in this batch: item print callbacks and BIO writes only; retained for M22.",
+    "src/ssl/statem/statem_srvr.rs (rank 31) - handshake callback/state boundary; not selected."
+  ],
+  "defects": [
+    {
+      "id": "M21-D1",
+      "file": "src/asn1/string.rs",
+      "lines_post_fix": "264",
+      "severity": "medium",
+      "class": "signed/unsigned capacity test can skip reallocation of an ASN1_STRING buffer",
+      "description": "string_set_body compared `s.length as usize` against the new length. A negative length, reachable through the exported ASN1_STRING_length_set, became a huge usize, so the resize was skipped and a longer payload was copied into the existing buffer. The authority compares the signed int and reallocates.",
+      "fix": "The negative-length arm now reallocates. Control: asn1::string::tests::a_negative_length_forces_the_set_to_reallocate."
+    },
+    {
+      "id": "M21-D2",
+      "file": "src/asn1/string.rs",
+      "lines_post_fix": "800-824",
+      "severity": "low",
+      "class": "unchecked length sum used for allocation (AGENTS.md section 3)",
+      "description": "ossl_sk_ASN1_UTF8STRING2text accumulated the joined length and then allocated length + 1 with unchecked arithmetic. Negative ASN1_STRING lengths were converted with `as usize`. The authority has the same implicit size_t arithmetic; the crate must not reproduce the wrapping.",
+      "fix": "Both additions and the +1 now use checked_add; each element length is converted with usize::try_from and a negative value refuses with NULL. This is a deliberate section 17 divergence for invalid string state."
+    },
+    {
+      "id": "M21-D3",
+      "file": "src/asn1/i2d.rs",
+      "lines_post_fix": "724-729",
+      "severity": "medium",
+      "class": "negative content length copied as a huge extent",
+      "description": "ex_i2c copied whenever `len != 0`. A negative length on a live ASN1_STRING made `len as usize` huge and passed it to copy_nonoverlapping. The authority's memcpy with a negative length is undefined.",
+      "fix": "The copy now requires len > 0. This eliminates the authority's UB rather than reproducing it (AGENTS.md section 17)."
+    }
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption and single release",
+    "OB-3 OwnedCtx/CtxDestroy and staged raw construction",
+    "OB-4 member-slot replacement protocol",
+    "CRYPTO_* allocator seam coordinates",
+    "md32 collector HASH_UPDATE/HASH_FINAL contract",
+    "EVP_CIPHER_CTX CMAC init/update/final/resume ordering",
+    "EVP_KDF PBKDF2 parameter and error-tail contract",
+    "ASN.1 i2d/d2i cursor, embedded value and negative-length conventions",
+    "X.509 extension attribute ownership and decode/re-encode contract"
+  ],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "test_only_unsafe_added": 1,
+  "allocator_coordinate_changes": [],
+  "abi_or_layout_changes": [],
+  "excluded_symbol_changes": [],
+  "hidden_obligations": 0,
+  "no_defect_found": [
+    "src/digest/sha2.rs: 32/64-bit Update/Final/Transform and one-shot paths; the length counters wrap exactly as the authority and every block copy is bounded by the staged count.",
+    "src/digest/md32.rs: shared Update/Final collector; the len+n and n*64 extents are bounded by the caller contract and the zero-length update does not move the counter.",
+    "src/mac/cmac.rs: staged allocation, cleanup order and cleansing, copy refusal, init restart/key arms, Update burst arithmetic and Final padding; block-size bounds match the authority's own EVP_MAX_BLOCK_LENGTH assumption.",
+    "src/evp/p5_crpt2.rs: NULL normalisations, PBKDF2 parameter construction, second key-length read, salt type test, cleanse-on-error and cipher/digest fetch releases.",
+    "src/des/mod.rs: key schedule, parity/weak-key helpers, c2l/l2cn extents, string-to-key truncation and every mode loop. DES_cfb_encrypt/DES_ede3_cfb_encrypt use unsigned length exactly as the authority (`register unsigned long l = length`).",
+    "src/asn1/string.rs: OwnedBlock seam, embed/NDEF free split, copy/dup ownership, set0 replacement and comparison beyond the repaired capacity test.",
+    "src/asn1/i2d.rs: two-pass sizing, SET OF scratch ownership and sort, checked template/sequence sums, apart from the repaired negative-length copy.",
+    "src/x509/x509_req.rs: X509_to_X509_REQ version-block transfer, extension attribute decode/add/replace tails and single-release paths."
+  ],
+  "observations_not_repaired": [
+    "src/des/mod.rs DES_cfb_encrypt computes numbits+7 before the range check, as the authority does; an INT_MAX numbits differs only between a debug overflow panic and the authority's C UB, so it is recorded rather than changed.",
+    "src/asn1/i2d.rs i2d_ex_primitive still returns a negative content length unchanged when a caller supplies one; only the out-of-bounds copy was removed."
+  ],
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: asn1::string 2/0 (one new control), asn1::i2d 0 tests, x509::x509_req 3/0, des:: 28/0, mac::cmac 3/0, digest:: 66/0, evp::p5_crpt2 3/0",
+    "library_tests_serial": "PASS: 1620 passed / 0 failed / 27 ignored (228.44 s)",
+    "library_tests_threads_4": "PASS: 1620 passed / 0 failed / 27 ignored (92.72 s)",
+    "affected_adversarial_probes": "NOT_RUN: none of the eight audited files carries an OPENSSL_RS_ADV_PROBE arm"
+  },
+  "not_discharged": true,
+  "residuals": [
+    "Miri (Stacked/Tree Borrows), ASan/Loom/TSan and sanitizer controls for M21-D1/M21-D3 remain PENDING at the next BOUNDARY/SEAL trigger.",
+    "A direct runtime witness for the M21-D2 allocation-sum refusal was not built; the checked arithmetic is review-only.",
+    "Authority differentials for the three section 17 divergences, independent review and SEAL remain PENDING."
+  ],
+  "next_queue": {
+    "file": "src/asn1/tasn_prn.rs",
+    "rank_note": "116 production sites; inspected here, not claimed",
+    "then": [
+      "src/cms/cms_kemri.rs (131)",
+      "src/ct/ct_oct.rs (120)",
+      "src/runtime/conf/lib.rs (117)",
+      "src/encoder_lib.rs (142)",
+      "src/pem/pem_all.rs (104)",
+      "src/bn/primes.rs (105)",
+      "src/ts/ts_rsp_print.rs (83)"
+    ],
+    "skipped_boundary": [
+      "src/asn1/bio_asn1.rs (116)",
+      "src/provider/ecx_kmgmt.rs (142)",
+      "src/provider/cipher_gcm.rs (128)"
+    ]
+  }
+}
