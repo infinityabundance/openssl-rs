@@ -443,22 +443,22 @@ struct UiScratch {
     /// The verify buffer of `pass_size + 1` bytes, or NULL when not verifying.
     vpass: *mut c_char,
     /// The byte count both buffers were allocated with, `pass_size + 1`.
-    pass_size: usize,
+    buf_size: usize,
 }
 
 impl UiScratch {
     /// Take ownership of the `UI` just built and the size its buffers will be.
     ///
     /// # Safety
-    /// `ui` is this frame's own live `UI`; `pass_size + 1` is the size `ipass`/`vpass` are
-    /// allocated with.
-    unsafe fn new(ui: *mut Ui, pass_size: usize) -> UiScratch {
+    /// `ui` is this frame's own live `UI`; `buf_size` is the positive size
+    /// `ipass`/`vpass` are allocated with and must equal `pass_size + 1`.
+    unsafe fn new(ui: *mut Ui, buf_size: usize) -> UiScratch {
         UiScratch {
             ui,
             prompt: ptr::null_mut(),
             ipass: ptr::null_mut(),
             vpass: ptr::null_mut(),
-            pass_size,
+            buf_size,
         }
     }
 }
@@ -467,10 +467,10 @@ impl Drop for UiScratch {
     /// The authority's `end:` label: the verify buffer, the input buffer, the prompt, the `UI`.
     fn drop(&mut self) {
         // SAFETY: each field is NULL or this frame's own allocation; the two buffers are
-        // `pass_size + 1` bytes as allocated above, and `UI_free` releases `ui` exactly once.
+        // `buf_size` bytes as allocated above, and `UI_free` releases `ui` exactly once.
         unsafe {
-            CRYPTO_clear_free(self.vpass.cast(), self.pass_size + 1, ptr::null(), 0);
-            CRYPTO_clear_free(self.ipass.cast(), self.pass_size + 1, ptr::null(), 0);
+            CRYPTO_clear_free(self.vpass.cast(), self.buf_size, ptr::null(), 0);
+            CRYPTO_clear_free(self.ipass.cast(), self.buf_size, ptr::null(), 0);
             if !self.prompt.is_null() {
                 CRYPTO_free(self.prompt.cast(), ptr::null(), 0);
             }
@@ -510,6 +510,15 @@ unsafe fn do_ui_passphrase(
         return 0;
     }
 
+    // The authority allocates `pass_size + 1` octets in a raw `size_t` sum. A
+    // wrapped sum would allocate a zero/short buffer that the UI then treats as
+    // `pass_size` octets long (§3), so refuse it with the invalid-argument site.
+    let Some(buf_size) = pass_size.checked_add(1) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PASSPHRASE_124) };
+        return 0;
+    };
+
     // SAFETY: no preconditions.
     let ui = unsafe { UI_new() };
     if ui.is_null() {
@@ -519,8 +528,8 @@ unsafe fn do_ui_passphrase(
     }
     // The `UI` and everything built under it is this frame's from here on; `Drop` is the
     // authority's own `end:`-label release on every path below.
-    // SAFETY: `ui` is this frame's live `UI` and `pass_size + 1` is the size its buffers get.
-    let mut scratch = unsafe { UiScratch::new(ui, pass_size) };
+    // SAFETY: `ui` is this frame's live `UI` and `buf_size` is the size its buffers get.
+    let mut scratch = unsafe { UiScratch::new(ui, buf_size) };
 
     if !ui_method.is_null() {
         // SAFETY: `ui` is live and `ui_method` is non-NULL per the contract.
@@ -542,9 +551,9 @@ unsafe fn do_ui_passphrase(
     }
     scratch.prompt = prompt;
 
-    // SAFETY: `CRYPTO_zalloc` takes a size and answers NULL or a zeroed block; a positive
-    // `pass_size + 1` is a valid size and `pass_size`'s range is the caller's contract.
-    let ipass: *mut c_char = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
+    // SAFETY: `CRYPTO_zalloc` takes a size and answers NULL or a zeroed block; `buf_size`
+    // is the checked `pass_size + 1` computed above.
+    let ipass: *mut c_char = CRYPTO_zalloc(buf_size, ptr::null(), 0).cast();
     if ipass.is_null() {
         // `scratch`'s `Drop` releases the prompt and the `UI` on this failure tail.
         return 0;
@@ -572,7 +581,7 @@ unsafe fn do_ui_passphrase(
 
     if verify != 0 {
         // SAFETY: as for `ipass`.
-        let vpass: *mut c_char = CRYPTO_zalloc(pass_size + 1, ptr::null(), 0).cast();
+        let vpass: *mut c_char = CRYPTO_zalloc(buf_size, ptr::null(), 0).cast();
         if vpass.is_null() {
             // `scratch`'s `Drop` releases the input buffer, the prompt and the `UI`.
             return 0;
@@ -647,10 +656,13 @@ pub(crate) const OSSL_PASSPHRASE_PARAM_INFO: *const c_char = c"info".as_ptr();
 /// is why it is a cleanse of `pass` and not of the cache -- the cache was never written.
 ///
 /// # Safety
-/// `data` must be live; `pass_len` must point at the length a successful read stored in it.
+/// `data` must be live; `pass` must be writable for `pass_size` bytes; `pass_len` must
+/// point at the length a successful read stored in it. A length above `pass_size` (a
+/// callback breaking its output contract) is refused rather than trusted.
 unsafe fn cache_passphrase(
     data: *mut OsslPassphraseData,
     pass: *const c_char,
+    pass_size: usize,
     pass_len: *const usize,
     ret: c_int,
 ) -> c_int {
@@ -660,6 +672,19 @@ unsafe fn cache_passphrase(
     }
     // SAFETY: `pass_len` is the length the read above stored.
     let len = unsafe { *pass_len };
+    // The reported length is an externally supplied extent. The authority
+    // trusts it and copies `len` bytes from `pass` and allocates `len + 1`; a
+    // length above the caller's buffer (or one whose successor wraps) would
+    // read out of bounds and size the cache below the copy. Refuse instead of
+    // reproducing that undefined behaviour (§3, §17).
+    let cache_len = match len.checked_add(1) {
+        Some(cache_len) if len <= pass_size => cache_len,
+        _ => {
+            // SAFETY: `pass` is writable for `pass_size` bytes per the contract.
+            unsafe { OPENSSL_cleanse(pass.cast_mut().cast::<c_void>(), pass_size) };
+            return 0;
+        }
+    };
     // SAFETY: `data` is live; the read is of a plain field.
     let cached = unsafe { (*data).cached_passphrase };
     // SAFETY: as above.
@@ -667,7 +692,13 @@ unsafe fn cache_passphrase(
     if cached.is_null() || len > cached_len {
         // SAFETY: `cached` is NULL or the live cache; the clear-realloc contract is satisfied.
         let new_cache = unsafe {
-            CRYPTO_clear_realloc(cached.cast::<c_void>(), cached_len, len + 1, ptr::null(), 0)
+            CRYPTO_clear_realloc(
+                cached.cast::<c_void>(),
+                cached_len,
+                cache_len,
+                ptr::null(),
+                0,
+            )
         };
         if new_cache.is_null() {
             // SAFETY: `pass` is the caller's buffer, writable for `len` bytes.
@@ -774,8 +805,9 @@ pub unsafe extern "C" fn ossl_pw_get_passphrase(
             // SAFETY: the callback is live and its arguments are the caller's own.
             unsafe { cb(pass, pass_size, pass_len, params, cbarg) }
         });
-        // SAFETY: `pass_len` was set by the callback above when it succeeded.
-        return unsafe { cache_passphrase(data, pass, pass_len, ret) };
+        // SAFETY: `pass_len` was set by the callback above when it succeeded; `pass` is the
+        // caller's `pass_size`-byte buffer.
+        return unsafe { cache_passphrase(data, pass, pass_size, pass_len, ret) };
     }
 
     // The is_pem_password and is_ui_method cases.
@@ -847,8 +879,9 @@ pub unsafe extern "C" fn ossl_pw_get_passphrase(
     // SAFETY: `allocated_ui_method` is NULL or the method the wrapper built for this call.
     unsafe { UI_destroy_method(allocated_ui_method) };
 
-    // SAFETY: `pass_len` was set by `do_ui_passphrase` when it succeeded.
-    unsafe { cache_passphrase(data, pass, pass_len, ret) }
+    // SAFETY: `pass_len` was set by `do_ui_passphrase` when it succeeded; `pass` is the
+    // caller's `pass_size`-byte buffer.
+    unsafe { cache_passphrase(data, pass, pass_size, pass_len, ret) }
 }
 
 /// `static int ossl_pw_get_password(char *buf, int size, int rwflag, void *userdata,
@@ -1010,6 +1043,45 @@ mod tests {
             *pass_len = phrase.len();
         }
         1
+    }
+
+    /// An `OSSL_PASSPHRASE_CALLBACK` that claims success while reporting one byte more
+    /// than the caller's buffer: the output-contract violation the caching path refuses
+    /// instead of copying `len` bytes and sizing the cache with `len + 1`.
+    unsafe extern "C" fn overlong_phrase(
+        _pass: *mut c_char,
+        pass_size: usize,
+        pass_len: *mut usize,
+        _params: *const OsslParam,
+        _arg: *mut c_void,
+    ) -> c_int {
+        // SAFETY: `pass_len` is the dispatcher's live out-slot.
+        unsafe { *pass_len = pass_size.wrapping_add(1) };
+        1
+    }
+
+    /// A callback length above `pass_size` is refused and leaves no cache (§3, §16).
+    #[test]
+    fn an_overlong_callback_length_is_refused() {
+        let mut d = blank();
+        // Larger than the advertised `pass_size`, so the pre-fix path could complete
+        // without a fault and the control observes the refusal itself.
+        let mut buf = [0 as c_char; 64];
+        let mut len: usize = 0;
+        // SAFETY: `d` and `buf` are live; the callback is the one defined above.
+        unsafe {
+            assert_eq!(
+                ossl_pw_set_ossl_passphrase_cb(&mut d, Some(overlong_phrase), ptr::null_mut()),
+                1
+            );
+            assert_eq!(ossl_pw_enable_passphrase_caching(&mut d), 1);
+            assert_eq!(
+                ossl_pw_get_passphrase(buf.as_mut_ptr(), 32, &mut len, ptr::null(), 0, &mut d),
+                0
+            );
+            assert!(d.cached_passphrase.is_null());
+            ossl_pw_clear_passphrase_data(&mut d);
+        }
     }
 
     /// The explicit-phrase arm answers **before** any UI is consulted, which is what lets

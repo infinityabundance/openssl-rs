@@ -357,7 +357,11 @@ impl Vector {
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials, and they must not alias.
 pub(crate) unsafe fn vector_copy(dst: &mut Vector, src: &Vector) {
-    debug_assert_eq!(dst.num_poly, src.num_poly);
+    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then
+    // writes `src->num_poly` elements into `dst`. A shape mismatch is a caller
+    // error here, so refuse in release too rather than reproduce the write
+    // beyond `dst`'s extent (§17).
+    assert_eq!(dst.num_poly, src.num_poly);
     // SAFETY: the contract says both name `num_poly` polynomials and do not alias.
     unsafe {
         ptr::copy_nonoverlapping(src.poly, dst.poly, src.num_poly);
