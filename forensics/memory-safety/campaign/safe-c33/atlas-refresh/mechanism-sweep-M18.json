@@ -1,0 +1,120 @@
+{
+ "receipt": "mechanism-sweep-M18",
+ "branch": "integrate/safe-c33",
+ "worktree": true,
+ "date": "2026-10-19",
+ "source_head": "9bdeaddee",
+ "verification_level": "FAST plus BATCH; one aliasing-soundness defect repaired in BN_div; two low-severity authority-fidelity/validity repairs in the ASN.1 allocator; one CBD counted-loop divergence repaired; no new boundary; hidden = 0",
+ "scope": "ordinary mechanism-contract sweep starting at the queued src/pem/pem_info.rs (rank 204, 96 production sites) and continuing down the production-site ranking. Eight ordinary files audited: src/pem/pem_info.rs, src/ml_kem/arith.rs, src/pkcs12/p12_sbag.rs, src/asn1/new.rs, src/evp/encode.rs, src/bn/arith.rs, src/ml_dsa/key.rs, src/pkcs12/p12_kiss.rs. The B1-B11 boundary queue is closed; no boundary file was audited in this batch.",
+ "files": [
+  "src/pem/pem_info.rs",
+  "src/ml_kem/arith.rs",
+  "src/pkcs12/p12_sbag.rs",
+  "src/asn1/new.rs",
+  "src/evp/encode.rs",
+  "src/bn/arith.rs",
+  "src/ml_dsa/key.rs",
+  "src/pkcs12/p12_kiss.rs"
+ ],
+ "files_not_run": [],
+ "defects": [
+  {
+   "id": "M18-D1",
+   "file": "src/bn/arith.rs",
+   "lines_post_fix": "325-372",
+   "severity": "high",
+   "class": "aliasing: two live `&mut` to one allocation (Rust reference model violation)",
+   "description": "BN_div read its two outputs with `let (q_out, r_out, ...) = unsafe { (as_mut(dv), as_mut(rem), ...) }`. Its own documentation (and the authority's ABI comment) allows a caller to pass one object for both slots; doing so created two `&mut BigNum` to the same allocation. The authority's aliased case is undefined, so no defined C caller observes a difference, but a Rust caller satisfying the stated contract triggered UB.",
+   "fix": "Inputs are read through scoped shared references whose uses end before any output borrow; each output is then borrowed and released in turn. The remainder is stored first and the quotient last, so the aliased case ends with the quotient, now documented. Added control `div_accepts_one_object_for_both_outputs` (17 / 5 with dv == rem == out answers the quotient 3)."
+  },
+  {
+   "id": "M18-D2",
+   "file": "src/asn1/new.rs",
+   "lines_post_fix": "276-291",
+   "severity": "low",
+   "class": "authority divergence in a reusable allocator (reference-count initialisation)",
+   "description": "The SEQUENCE/NDEF_SEQUENCE embed arm skipped `ossl_asn1_do_lock`, which asn1_item_embed_new calls for embedded values too (`tasn_new.c:59-153`). No in-tree item embeds a refcounted type (only X509, X509_CRL and X509_REQ carry ASN1_AFLG_REFCOUNT, and all are pointed-to rather than embedded), so the old shape was unobservable today; a future embedded refcounted sequence would have started with an uninitialised count.",
+   "fix": "The embed arm now calls `utl::do_lock(pval, 0, item)` and raises TASN_NEW_162 on a negative answer, matching the authority's asn1err path. No new contract: do_lock's existing ASN1_ITEM contract is reused."
+  },
+  {
+   "id": "M18-D3",
+   "file": "src/asn1/new.rs",
+   "lines_post_fix": "417-427",
+   "severity": "low",
+   "class": "avoidable read of a slot the authority only takes the address of",
+   "description": "template_new ran `let mut tval = unsafe { *pval }` before the embed branch, then wrote the same value back. The authority's `tval = (ASN1_VALUE *)pval` only takes the slot's address and never reads it. Current callers always hand over zeroed storage, so no UB was reachable; a future caller with an uninitialised embedded slot would have hit an uninitialised read.",
+   "fix": "The pre-read and write-back are removed; the embed branch sets `tval = pval.cast::<c_void>()` exactly as the authority does, and the temporary is assigned only on that branch (no unused initialiser)."
+  },
+  {
+   "id": "M18-D4",
+   "file": "src/ml_kem/arith.rs",
+   "lines_post_fix": "1151-1163, 1192-1204",
+   "severity": "low",
+   "class": "counted-loop divergence at rank == 0 (unsound contract as written)",
+   "description": "gencbd_vector and gencbd_vector_ntt used a do-while shape: with rank == 0 they sampled one scalar into an `out` documented live for zero scalars, while ml_kem.c's `for (i = 0; i < rank; i++)` performs no sample and still returns success. No in-tree caller passes a non-positive rank (vinfo rank is 2-4), but the stated contract admitted rank == 0.",
+   "fix": "Both drivers now use the authority's counted loop and answer success when rank <= 0. Preconditions for inner_product, matrix_mult_intt, matrix_mult_transpose_add, hash_h_pubkey, encrypt_cpa and decrypt_cpa now state `rank >= 1` (their first action reads/writes one scalar) and the two CPA functions state their message/r/ctext/out widths."
+  }
+ ],
+ "abi_or_layout_changes": 0,
+ "allocator_coordinate_changes": 0,
+ "excluded_symbol_changes": 0,
+ "hidden_obligations": [],
+ "new_unsafe_assumptions": [],
+ "unsafe_operations_introduced": 1,
+ "unsafe_operations_removed": 2,
+ "test_only_unsafe_added": 1,
+ "contracts_reused": [
+  "Local owner contract for PemBuf (adoption at the PEM_read_bio success edge, single release at the authority's success/err coordinates) in pem_info",
+  "OB-1 OwnedBuf allocation/adoption and four release modes (plain, cleansed, secure, secure-cleansed) in ml_dsa/key",
+  "OB-3 OwnedCtx/CtxDestroy (empty body, zeroed-state constructor) in evp/encode",
+  "OwnedBlock zalloc/malloc ownership in asn1/new",
+  "OpenSSL stack element/pop-free/freefunc convention (pem_info, p12_kiss, p12_sbag via p12_asn)",
+  "ASN.1 item/template/ADB/callback ordering (ASN1_OP_NEW_PRE/POST, extern new/clear hooks) in asn1/new",
+  "BN null-or-live access convention, Box-owned BigNum and the copy-before-store aliasing discipline in bn/arith",
+  "PKCS12 selector/union accessor contract and create0_* adoption in p12_sbag/p12_kiss",
+  "ML-KEM vinfo rank/du/dv invariants and the CT helpers (constish_time_non_zero, reduce_once) in ml_kem/arith",
+  "ERR raise-coordinate contract and the CRYPTO_* allocator seam coordinates"
+ ],
+ "no_defect_found": [
+  "src/pem/pem_info.rs: PemBuf adoption/release and the err-order release; the classification loop and push/reclassify arms; private-key ptype chop and raw selection; encrypted-key custody (data relinquish); the writer, including the authority's `PEM_write_bio_RSAPrivateKey` and `enc_len > 0` guards and the three cipher checks.",
+  "src/ml_kem/arith.rs: sample_scalar's 168-byte (multiple-of-3) rejection loop; scalar encode/decode widths; the NTT and inverse; vector/matrix products; matrix_expand; cbd_2/cbd_3 buffer consumption; the repaired CBD drivers; encrypt_cpa/decrypt_cpa storage reuse.",
+  "src/pkcs12/p12_sbag.rs: the five get0_* selector guards; nid/bag_nid/bag_type/bag_obj; get1_cert/crl and their _ex context stamping with release on refusal; create_cert/crl/secret; create0_p8inf/pkcs8 adoption; the pkcs8-encrypt fetch/legacy fallback and cipher free.",
+  "src/asn1/new.rs (after repair): extern/primitive/mstring/choice/sequence allocation, template optional/ADB/stack/embed arms, primitive hooks, ANY malloc, BOOLEAN/NULL in-slot values, item_clear/template_clear/primitive_clear.",
+  "src/evp/encode.rs: EVP_ENCODE_CTX layout/copy identity, encode update/final buffering and line breaks, the SRP table selection, decode update's eight goto arms, decodeblock_int trimming/padding, all `decoded_len == 0 && eof > 0` refusals.",
+  "src/bn/arith.rs (after repair): add/sub/uadd/usub word forms, mul/sqr, div/nnmod, mod_add/sub/mul/sqr, quick variants, lshift/rshift, inverse, gcd, modular exponentiation and sqrt tails.",
+  "src/ml_dsa/key.rs: OwnedBuf modes and Drop; reset/free order; dup's selection arms and refusal cleanup; equality/has; public_from_private scratch custody; pairwise_check; keygen_internal; generate_key prekey comparison and error path.",
+  "src/pkcs12/p12_kiss.rs: parse_pk12's data/encrypted arms and dual-stack cleanup; parse_bags/parse_bag keyBag/shrouded/cert/secret/attribute/safeContents ownership; PKCS12_parse MAC both-spellings, split loop, ca append and err release order."
+ ],
+ "residuals": [
+  "The read-before-write `as_mut(r)` + `as_ref(a)` shape used by BN_add/BN_sub/BN_uadd/BN_usub/BN_mul/BN_sqr/BN_nnmod/BN_mod_inverse/lshift/rshift is sound under the Stacked/Tree Borrows access order (all shared uses end before the write through the unique borrow), but it has no Miri witness and is PENDING at the next BOUNDARY trigger. The same shape exists in src/bn/gf2m.rs, src/bn/mont.rs and src/bn/recp.rs, which are outside this batch.",
+  "BN_div's aliased-output result (the quotient) is a deliberate defined value where the authority's aliased case is unspecified; no defined caller observes it.",
+  "compress/decompress require bits in 1..=12; an out-of-range bits value panics in this crate (safe Rust function, not UB) and the authority's internal callers pass only 4/10.",
+  "p12_sbag's get0_*/get1_* readers require a well-formed selector/value pair (as the authority does); a hand-built bag with a matching outer type and NULL value is a caller-contract violation.",
+  "Line coordinates remain the crate's established convention; no CRYPTO_* seam coordinate was changed in this batch.",
+  "ASan/Miri/Loom/TSan, full-suite sanitizers, FRF-Fuzz, authority differentials, independent review and SEAL regeneration are NOT_RUN."
+ ],
+ "not_discharged": true,
+ "gates": {
+  "cargo_fmt_all_check": "PASS",
+  "cargo_clippy_all_targets_deny_warnings": "PASS",
+  "focused_tests": "PASS: evp::encode 7/0, pkcs12::p12_sbag 3/0, bn 83/0 plus the new BN_div control 1/0, ml_dsa 14/0, ml_kem 8/0; pem::pem_info, asn1::new and pkcs12::p12_kiss have no test functions",
+  "library_tests_serial": "PASS: 1611 passed / 0 failed / 27 ignored (257.90 s)",
+  "library_tests_threads_4": "PASS: 1611 passed / 0 failed / 27 ignored (95.72 s)",
+  "affected_adversarial_probes": "NOT_RUN: none of the audited files carries an OPENSSL_RS_ADV_PROBE arm (only src/asn1/utl.rs in the asn1 tree does, and it is unchanged); the batch adds a normal unit-test control."
+ },
+ "next_queue": {
+  "file": "src/apps/smime.rs",
+  "rank_note": "93 production sites; ordinary (no callback/ownership boundary change)",
+  "then": [
+   "src/ssl/ssl_rsa.rs (92)",
+   "src/asn1/a_strex.rs (91)",
+   "src/cms/cms_enc.rs (91)",
+   "src/provider/dsa_sig.rs (91)",
+   "src/x509/v3_lib.rs (91)"
+  ],
+  "boundary_queue": [
+   "src/runtime/thread.rs: Loom/TSan control for the repaired condvar protocol",
+   "src/asn1/new.rs do_lock embed arm and the bn read-before-write pattern: Miri Stacked/Tree Borrows at the next BOUNDARY trigger"
+  ]
+ }
+}
