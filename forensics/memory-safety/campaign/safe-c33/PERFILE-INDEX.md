@@ -1471,3 +1471,61 @@ independent review and SEAL are `NOT_RUN`. Receipt:
 
 **Next ordinary position:** `src/dsa/object.rs` (178), then `src/x509/v3_ac_tgt.rs`
 (190) and down the production-site ranking.
+
+## 18. Boundary sweep B10 — http_client, params/build, runtime/err, rsa_kmgmt, pkey_asn1
+
+**STOP status: CLEAR after repair.** No memory-safety defect remains. One Rust data race (the global
+ASN.1 method registry), one unchecked allocation-arithmetic class (parameter builder), three
+allocator-seam coordinate divergences, one builder-block size divergence, one false `unsafe Sync`
+marker, one RSA narrowing-cast parity defect and four contract/overflow repairs were made. Hidden
+obligations = 0; no safe-Rust caller can cause UB through these modules. Receipt:
+[`atlas-refresh/boundary-sweep-B10.json`](atlas-refresh/boundary-sweep-B10.json).
+
+**Boundaries (all `CONTRACTED`, none promoted).** B10-HTTP-1/2/3 request-context ownership, nbio over
+caller BIOs, and open/close callback ownership; B10-PARAM-1/2 builder lifecycle and
+ordinary/secure block arithmetic; B10-ERR-1/2/3 `ERR_STATE` ownership, slot ownership and the
+print/allocator-hook reentrancy edges; B10-RSA-1/2/3 object/import/export, generation context and
+load/dup; B10-ASN1-1/2/3 the global method registry, method construction/copy/free and lookup/alias
+tables.
+
+**Defects.**
+
+- **B10-D7 (fixed, medium, `pkey_asn1.rs:356`).** `app_methods` was a `static mut` pointer mutated and
+  read with no synchronisation: concurrent `EVP_PKEY_asn1_add0`/lookup is a data race and therefore
+  UB. It is now one `Mutex<AppMethods>` with locked count/get0/find helpers; no application callback
+  runs under the lock. Loom/TSan control is `NOT_RUN`.
+- **B10-D1 (fixed, medium, `params/build.rs:188`).** `size + 1`, `alloc_blocks * ALIGN`, the two block
+  counters and `to_param`'s array/block sums were unchecked; an extreme caller-asserted extent could
+  wrap, under-allocate and overrun in `param_bld_convert`. All are `checked_*` now. Negative control:
+  disabling the push check fails `unrepresentable_value_extent_is_refused_at_push` (1 vs 0).
+- **B10-D2/D4/D5 (fixed, low).** Seam coordinates: `param_build.c` and `http_client.c` are plain
+  `.c` files, so their `__FILE__` carries `../../src/openssl-3.6.4/`; the builder also recorded
+  line 0 at every site and the error queue recorded `NULL/0` for releases that the authority makes
+  through `err_local.h:25/56/66/79/92/94` and `err.c:209`. Each site now carries its own coordinate.
+- **B10-D3 (fixed, low, `params/build.rs:89`).** The inline `Vec` made the builder block 40 bytes;
+  it is now `#[repr(C)]` with the `Vec` behind a pointer, matching the authority's 24 bytes. New
+  size-parity test.
+- **B10-D6 (fixed, low, `runtime/err.rs:453`).** `unsafe impl Sync for ErrState` was unnecessary and
+  falsely claimed shareability (`thread_local!` needs only `'static`); removed.
+- **B10-D8 (fixed, low, `rsa_kmgmt.rs:966`).** `nbits as c_int` was compared with 512 before the
+  authority's `size_t` comparison, rejecting values `>= 2^31` the authority accepts at
+  `gen_set_params`. The comparison now uses `usize`; the later `(int)` generation cast is unchanged.
+- **B10-D9/D11/D12 (fixed, low).** Contracts now state `common_load`'s alignment requirement, the
+  nbio rule that a custom BIO must not re-enter the same `rctx`, and `EVP_PKEY_asn1_add0`'s borrowed
+  lifetime/no-unregister obligation. **B10-D10 (fixed, low)** adds `checked_add` to the four
+  error-queue string sums.
+
+**Retained residuals.** Custom BIOs must not re-enter the same request context; allocator hooks must
+not re-enter the ERR API (or the ASN.1 registry, where it would deadlock); registered ASN.1 methods
+and returned error strings are borrowed; `ERR_add_error_txt`'s length-bounded split is still absent;
+`ERR_error_string(NULL)` keeps the authority's non-thread-safe static buffer; the builder's `Vec`
+body is Rust-owned and invisible to the CRYPTO hook. These are stated at the boundaries, not hidden.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused `params::build::`
+2/0, `evp::pkey_asn1::` 2/0, `runtime::err` 14/0. BATCH: library **1606 passed / 0 failed / 27
+ignored** serially (227.09 s) and with `--test-threads=4` (97.95 s). No affected
+`OPENSSL_RS_ADV_PROBE` arm exists. ASan/Miri/Loom/TSan, authority differentials, reentrancy
+canaries, independent review and SEAL are `NOT_RUN`.
+
+**Next ordinary position:** `src/dsa/object.rs` (178), then `src/x509/v3_ac_tgt.rs` (190). The
+M15 boundary-skipped list is closed; no remaining B10 boundary item.

@@ -963,7 +963,7 @@ unsafe extern "C" fn rsa_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if OSSL_PARAM_get_size_t(p, &raw mut (*gctx).nbits) == 0 {
                 return 0;
             }
-            if ((*gctx).nbits as c_int) < RSA_MIN_MODULUS_BITS {
+            if (*gctx).nbits < RSA_MIN_MODULUS_BITS as usize {
                 raise_site(&err_sites::PROV_RSA_KMGMT_513);
                 return 0;
             }
@@ -1190,8 +1190,9 @@ unsafe extern "C" fn rsa_gen_cleanup(genctx: *mut c_void) {
 /// sub-type is refused *without* detaching.
 ///
 /// # Safety
-/// `reference` is readable for `reference_sz` bytes and, when the size matches, holds a live
-/// `*mut Rsa` slot this call may clear.
+/// `reference` is readable for `reference_sz` bytes and, when the size matches, is non-NULL and
+/// suitably aligned for a `*mut Rsa` (the authority itself dereferences it as `void **`), and
+/// holds a live `*mut Rsa` slot this call may clear.
 unsafe fn common_load(
     reference: *const c_void,
     reference_sz: usize,
