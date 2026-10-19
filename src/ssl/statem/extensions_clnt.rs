@@ -364,7 +364,8 @@ unsafe fn tls_construct_ctos_supported_groups(s: *mut Ssl, pkt: *mut Wpacket) ->
 /// is what `ssl_generate_pkey` (`ssl/ssl_rsa.c`/`t1_lib.c`) does.
 ///
 /// # Safety
-/// `s` must be a live connection and `pkt` a live packet.
+/// `s` must be a live connection whose `ctx` is live (every connection constructed by
+/// `SSL_new` satisfies this), and `pkt` a live packet.
 unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
     use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
     use crate::runtime::mem::CRYPTO_free;
@@ -427,6 +428,12 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
     unsafe {
         CRYPTO_free(pub_.cast(), core::ptr::null(), 0);
         if ret == EXT_RETURN_SENT {
+            // The slot owns the previous ephemeral, if any. The authority reuses the stored
+            // `ks_pkey[0]` in the HRR arm; this reduced client has no share table, so it keeps
+            // the freshly generated key and must release the value it displaces.
+            if !(*s).pkey.is_null() {
+                EVP_PKEY_free((*s).pkey.cast());
+            }
             (*s).pkey = pkey.cast();
         } else {
             EVP_PKEY_free(pkey);
