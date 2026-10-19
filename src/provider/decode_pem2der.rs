@@ -67,6 +67,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::{strcmp, strlen};
 use crate::runtime::bio::BIO_free;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -532,8 +533,8 @@ unsafe extern "C" fn pem2der_decode(
         return 1;
     };
 
-    'end: {
-        // 10 is the number of characters in "Proc-Type:", which `PEM_get_EVP_CIPHER_INFO()
+    let ok = 'end: {
+        // 10 is the number of characters in "Proc-Type:", which `PEM_get_EVP_CIPHER_INFO()`
         // requires to be present. If the PEM header has fewer characters than that, it's not worth
         // spending cycles on it.
         // SAFETY: `pem_header` is a NUL-terminated string `PEM_read_bio` returned.
@@ -692,7 +693,19 @@ unsafe extern "C" fn pem2der_decode(
         }
 
         ok
+    };
+
+    // `der` is `SECRET_DATA` on two of the paths above: `PEM_do_header` decrypts a private key in
+    // place, and a bare `PRIVATE KEY`/`EC PRIVATE KEY` PEM is already plaintext key DER. The
+    // authority releases the block with a plain `OPENSSL_free(der)` (`decode_pem2der.c:321`), so
+    // cleanse what was written before this frame's handle releases it. Deliberate secret-residue
+    // improvement; the release site and allocator seam are unchanged.
+    if der_len > 0 {
+        // SAFETY: `der` is the live block `PEM_read_bio` allocated and this frame owns; `der_len`
+        // never exceeds the block's extent.
+        unsafe { OPENSSL_cleanse(der.as_ptr().cast(), der_len as usize) };
     }
+    ok
 }
 
 /// `ossl_pem_to_der_decoder_functions[]` — `decode_pem2der.c:327-336`. Five named slots and the
