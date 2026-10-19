@@ -133,7 +133,11 @@ unsafe fn rsa_cms_sign(si: *mut CmsSignerInfo) -> c_int {
         return 0;
     }
     let aid_len = params[0].return_size;
-    if aid_len == 0 {
+    // The provider writes into `aid` and reports the bytes it produced. A conforming provider
+    // never reports more than the buffer it was handed; bound the report anyway so a
+    // non-conforming provider cannot turn `d2i_X509_ALGOR` into an out-of-bounds read of this
+    // stack buffer (the authority trusts the report and would read past `aid`).
+    if aid_len == 0 || aid_len > aid.len() {
         return 0;
     }
     // SAFETY: `pp` is readable for `aid_len`.
