@@ -44,17 +44,21 @@ use crate::runtime::err::raise_site;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
-/// The authority translation unit this module reconstructs.
-pub(crate) const FILE: &core::ffi::CStr = c"crypto/params_from_text.c";
-/// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-pub(crate) const LINE: c_int = 0;
+/// The authority translation unit this module reconstructs. `params_from_text.c` is a plain `.c`,
+/// so the admitted build's `__FILE__` carries the source-tree prefix; the allocator seam records
+/// exactly that string.
+pub(crate) const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/params_from_text.c";
+
+/// The authority's allocation/release lines this unit's seam operations reproduce.
+const LINE_ZALLOC: c_int = 325;
+const LINE_FREE: c_int = 332;
 
 /// `HAS_PREFIX(str, pre)` for the literal `"hex"` — a plain byte comparison, so
 /// `"HEX"` is **not** a prefix.
 ///
 /// # Safety
 ///
-/// `s` must be NULL or NUL-terminated.
+/// `s` must be non-NULL and NUL-terminated.
 unsafe fn has_hex_prefix(s: *const c_char) -> bool {
     // SAFETY: `s` is NUL-terminated per the caller's contract, so the four reads stay
     // inside it unless it is shorter, in which case one of them is the terminator and
@@ -301,8 +305,9 @@ unsafe fn construct_from_text(
 /// # Safety
 ///
 /// `to` must be NULL or writable for one `OsslParam`; `paramdefs` must be NULL or a
-/// `key`-terminated array of live `OsslParam`; `key` and `value` must be NUL-terminated;
-/// `found` must be NULL or writable for one `c_int`.
+/// `key`-terminated array of live `OsslParam`; `key` must be NUL-terminated; `value` must be
+/// NUL-terminated for the string forms and readable for `value_n` bytes for the octet-string
+/// form; `found` must be NULL or writable for one `c_int`.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_PARAM_allocate_from_text(
     to: *mut OsslParam,
@@ -327,7 +332,13 @@ pub unsafe extern "C" fn OSSL_PARAM_allocate_from_text(
         };
         // `OPENSSL_zalloc(buf_n > 0 ? buf_n : 1)` — never a zero-length request.
         let alloc = if buf_n > 0 { buf_n } else { 1 };
-        let Some(buf) = OwnedBuf::new_zeroed(alloc, SeamFile::new(FILE), LINE) else {
+        let Some(buf) = OwnedBuf::new_zeroed_released(
+            alloc,
+            SeamFile::new(FILE),
+            LINE_ZALLOC,
+            SeamFile::new(FILE),
+            LINE_FREE,
+        ) else {
             // SAFETY: as above.
             unsafe { BN_free(tmpbn) };
             return 0;

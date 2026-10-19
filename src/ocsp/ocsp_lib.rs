@@ -91,8 +91,8 @@ const OCSP_LIB_86: ErrSite = ocsp_lib_site(86, c"OCSP_cert_id_new", OCSP_R_DIGES
 /// otherwise the issuer name is the issuer's own subject and the serial is NULL.
 ///
 /// # Safety
-/// `subject` and `issuer` must be NULL or live `X509`s; `issuer` must be live so its public-key
-/// bit string can be read, and `dgst` must be NULL or a live `EVP_MD`.
+/// `subject` must be NULL or a live `X509`; `issuer` must be a live `X509` carrying a public-key
+/// bit string; `dgst` must be NULL or a live `EVP_MD`.
 #[no_mangle]
 pub unsafe extern "C" fn OCSP_cert_to_id(
     dgst: *const EvpMd,
@@ -124,8 +124,8 @@ pub unsafe extern "C" fn OCSP_cert_to_id(
 /// and answers NULL; the name-digest arm additionally raises `OCSP_R_DIGEST_ERR`.
 ///
 /// # Safety
-/// `dgst` must be a live `EVP_MD`; `issuerName`, `issuerKey` and `serialNumber` must be live where
-/// non-NULL, and `issuerKey`'s content octets must be readable for its length.
+/// `dgst`, `issuerName` and `issuerKey` must be live (non-NULL); `serialNumber` must be NULL or
+/// live, and `issuerKey`'s content octets must be readable for its length.
 #[no_mangle]
 pub unsafe extern "C" fn OCSP_cert_id_new(
     dgst: *const EvpMd,
