@@ -134,13 +134,22 @@ pub unsafe extern "C" fn DSA_generate_parameters_ex(
     }
 
     if !seed_in.is_null() {
-        // SAFETY: `dsa` is live, `seed_in` is readable for `seed_len` bytes, and the counter is
-        // `-1` as the authority passes it.
+        // A negative `seed_len` is converted to `size_t` by the authority's call, which puts
+        // it at or above `INT_MAX`; `CRYPTO_memdup` refuses that length and the authority
+        // answers 0. Clamping to zero instead would clear the seed and then *succeed*,
+        // generating parameters without it -- a different answer for the same input. (The
+        // authority additionally drops a pre-existing seed and leaves `seedlen` stale on this
+        // refused path; that artifact of an invalid length is not reproduced.)
+        if seed_len < 0 {
+            return 0;
+        }
+        // SAFETY: `dsa` is live, `seed_in` is readable for `seed_len` bytes (checked
+        // non-negative above), and the counter is `-1` as the authority passes it.
         if unsafe {
             ossl_ffc_params_set_validate_params(
                 core::ptr::addr_of_mut!((*dsa).params),
                 seed_in,
-                seed_len.max(0) as usize,
+                seed_len as usize,
                 -1,
             )
         } == 0
@@ -177,4 +186,38 @@ pub unsafe extern "C" fn DSA_generate_parameters_ex(
         }
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dsa::object::{DSA_free, DSA_new};
+
+    /// A negative `seed_len` is refused rather than clamped. The authority converts the `int`
+    /// to `size_t`, which makes the length at or above `INT_MAX`, and `CRYPTO_memdup` refuses
+    /// it; the answer is 0 before any generation. Clamping to zero instead used to generate
+    /// parameters without the seed and answer 1.
+    #[test]
+    fn a_negative_seed_length_is_refused_before_generation() {
+        let mut seed = [0u8; 1];
+        // SAFETY: `d` is this test's own object; `seed` is never read on the refusing path;
+        // every out-parameter is NULL and `cb` is NULL, both allowed by the contract.
+        unsafe {
+            let d = DSA_new();
+            assert!(!d.is_null());
+            assert_eq!(
+                DSA_generate_parameters_ex(
+                    d,
+                    512,
+                    seed.as_mut_ptr(),
+                    -1,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                ),
+                0
+            );
+            DSA_free(d);
+        }
+    }
 }

@@ -1,11 +1,3 @@
-src/dsa/ctrl.rs
-src/dsa/depr.rs
-src/dsa/gen.rs
-src/dsa/key.rs
-src/dsa/prn.rs
-src/dsa/sign.rs
-src/dsa/vrf.rs
-src/dso/dlfcn.rs
 src/ec/backend.rs
 src/ec/check.rs
 src/ec/ctrl.rs

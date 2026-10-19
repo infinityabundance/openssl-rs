@@ -4027,3 +4027,67 @@ valid); SEAL.
 **Queue.** `REMAINING-AUDIT.txt` 348 → **340**; `AUDITED-FILES.txt` 415 → **423**.
 **Next eight (stable order).** `src/dsa/ctrl.rs`, `src/dsa/depr.rs`, `src/dsa/gen.rs`,
 `src/dsa/key.rs`, `src/dsa/prn.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dso/dlfcn.rs`.
+
+## 53. Mechanism sweep M48 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M48.json`](atlas-refresh/mechanism-sweep-M48.json).
+Candidate `59c853fa4`. Five files were audited without edit; three carry repairs: two
+compatibility residuals (a negative seed length answered the wrong way, and a DER-encoder
+error path released its buffer in the wrong order for a recording allocator) and two
+safety-contract tightenings. No reusable unsafe abstraction, allocator seam coordinate,
+`#[repr(C)]` layout, export or unsafe lint attribute changed.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/dsa/ctrl.rs` | audited_no_change | `crypto/evp/dsa_ctrl.c`: the shared `dsa_paramgen_check` gate (NULL or non-generation op -> `-2` with `EVP_R_COMMAND_NOT_SUPPORTED`; the authority's `pmeth` key-type arm is unreachable because this crate's `EvpPkeyCtx` has no `pmeth`, and the `-1` branch is therefore never taken), six `OSSL_PARAM` builders through the non-strict `EVP_PKEY_CTX_set_params`, and the `EVP_PKEY_CTX_ctrl` wrapper. Contracts cover a NULL-or-live context, NUL-terminated strings, a seed readable for `seedlen`, and locals that outlive the set-params call. The seven NULL-context answers are pinned by the module's test. |
+| `src/dsa/depr.rs` | audited_no_change | `crypto/dsa/dsa_depr.c`: `DSA_new` -> `BN_GENCB_new` (failure frees the DSA) -> `BN_GENCB_set_old` -> `DSA_generate_parameters_ex`; success returns the DSA and frees the callback, failure frees the callback then the DSA, matching the authority's `cb`-first order on both paths. The old-style callback is the caller's and is invoked through BN_GENCB under the B-series callback contract; no Rust borrow is held. |
+| `src/dsa/gen.rs` | defect_repaired | `crypto/dsa/dsa_gen.c`: the 186-2/186-4 selector (`dirty_cnt` only when `ret > 0`) and the three-arm export (method `dsa_paramgen`, seed install, `bits < 2048 && seed_len <= 20`). **M48-D1** repaired: a negative `seed_len` was clamped to 0, which omitted the seed and then generated parameters, answering 1; the authority's implicit `int`→`size_t` conversion puts the length at or above `INT_MAX`, which `CRYPTO_memdup` refuses, so it answers 0. An explicit negative refusal now precedes the call; the invalid-input state artifact (the authority also drops a pre-existing seed and leaves `seedlen` stale) is recorded and not reproduced. A focused regression test was added. |
+| `src/dsa/key.rs` | audited_no_change | `crypto/dsa/dsa_key.c`: method dispatch and the static `dsa_keygen` (partial validation, `BN_secure_new` private exponent, `ossl_ffc_generate_private_key`, `ossl_dsa_generate_public_key`, `dirty_cnt`) plus the `err:` release comparisons. The public-key scratch is `BN_FLG_CONSTTIME` and cleared on both exits; this crate's `BN_with_flags` copies limbs, so the scratch owns its storage. The fresh private key is `BN_secure_new`, and the failure path's `BN_free` is secret-safe through B19's `BN_FLG_SECURE` cleansing arm; a caller's pre-existing key is never released (`priv_key != dsa->priv_key`). |
+| `src/dsa/prn.rs` | audited_no_change | `crypto/dsa/dsa_prn.c`: two `FILE`/BIO wrappers (`BIO_s_file`, `BIO_C_SET_FILE_PTR`/`BIO_NOCLOSE`, free on both paths) and the two BIO printers (throwaway `EVP_PKEY`, `EVP_PKEY_set1_DSA`, print gated on the assignment, free on both paths). Private-key printing is the API's purpose; no internal secret buffer is kept. |
+| `src/dsa/sign.rs` | defect_repaired | `crypto/dsa/dsa_sign.c`: `OwnedSig` (`CRYPTO_zalloc`; `BN_clear_free` of both halves in `Drop`), `OwnedBufMem`/`BUF_MEM_free`, the two dispatch entry points, `DSA_SIG_get0`/`set0`, the DER pair's three call shapes, `DSA_size`, `ossl_dsa_sign_int`, `DSA_sign` and `DSA_verify` (canonical re-encode, `OwnedBuf::adopt_cleansed`). **M48-D2** repaired: the encoder error path dropped the `BUF_MEM` at scope exit *after* `WPACKET_cleanup`, while `dsa_sign.c:106-108` frees the buffer first; a recording allocator observes that order. The repair drops `buf` explicitly before cleanup (`WPACKET_cleanup` only walks `pkt.subs`). **M48-D3**: `DSA_SIG_set0`'s contract now requires distinct, exclusively owned `r`/`s`; a repeated pointer was permitted by the text but would double-release. |
+| `src/dsa/vrf.rs` | audited_no_change | `crypto/dsa/dsa_vrf.c`: one dispatch to `dsa->meth->dsa_do_verify`. The authority calls the member unconditionally; this crate's nullable table entry is the reduction, and an absent member answers `-1`, the authority's "not verified for a reason other than a wrong signature". The `dgst`/`sig`/`dsa` contracts are the authority's. |
+| `src/dso/dlfcn.rs` | defect_repaired | `crypto/dso/dso_dlfcn.c`: the dlfcn declarations, `dlfcn_load` (errno save/restore, `OwnedStr` adoption of the converted name, push failure frees the name before `dlclose` exactly as the authority's `err:` label, `loaded_filename` transfer), `dlfcn_unload` (empty stack = 1; a popped NULL is pushed back), `dlfcn_bind_func` (top entry, `dlsym` bits carried without a call), `dlfcn_merger` (four shapes, one trailing slash, `len + 2`), `dlfcn_name_converter` (no-slash rule, EXT_ONLY, `len + 1` write), `dlfcn_pathbyaddr`, `dlfcn_globallookup`, and the static table (`unsafe impl Sync`; NULL `ctrl`/`init`/`finish` are load-bearing) behind `guard_ffi`. **M48-D4**: the `dlfcn_pathbyaddr` contract allowed a NULL `path` unconditionally although the body writes `path[len]` when `sz > 0`; it now permits NULL only for the sizing call. The loader edge was audited: `dlopen`/`dlsym`/`dlclose` invoke no application callback while a Rust borrow is held (library constructors run inside `dlopen`, with no Rust object borrowed; the name handle is an owned value). |
+
+**Secret-bearing buffers.** DSA private exponents are `SECRET_DATA`. `dsa_keygen` allocates a
+fresh exponent with `BN_secure_new` (`BN_FLG_SECURE`); the failure path releases it with the
+authority's `BN_free`, which B19 establishes cleanses that arm, and the caller's own key is
+never released. `ossl_dsa_generate_public_key`'s `BN_FLG_CONSTTIME` scratch is `BN_clear_free`d
+on both exits. The signature halves (`r`, `s`, k-derived and secret-adjacent) are
+`BN_clear_free`d by `OwnedSig::Drop`/`DSA_SIG_free` and by `DSA_SIG_set0` when replacing them.
+`DSA_sign_setup` hands the nonce inverse to its caller; this unit stores no nonce buffer.
+`DSA_verify`'s DER re-encode is cleansed over `derlen.max(0)` bytes through
+`OwnedBuf::adopt_cleansed` (the authority's `OPENSSL_clear_free`). `i2d_DSA_SIG`'s `BUF_MEM` is
+released through `BUF_MEM_free`, which cleanses its data. The DSO unit holds only public
+filenames, released with the plain `CRYPTO_free` seam.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. The three repairs remove two
+latent behavioural divergences and two loose contracts; the negative-length guard narrows the
+input contract rather than adding an assumption. Contracts reused: RC-1; OB-1 `OwnedBuf`
+(`adopt_cleansed`); OB-2 `OwnedStr` (`adopt_nullable`, plain release); B19's
+`BN_free`/`BN_clear_free`/`BN_FLG_SECURE` cleansing rules; the B-series callback contracts for
+the BN_GENCB old-style callback and the method-table entry points; and the `DsoMethod`
+static/`Sync` contract. The only added unsafe operation is the test-only block in
+`dsa::gen::tests`, which carries its own `SAFETY:` contract; no production unsafe op was added.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean. Focused filters (0 failed each):
+`dsa::ctrl` 1 passed, `dsa::depr` 0, `dsa::gen` 1, `dsa::key` 0, `dsa::prn` 0, `dsa::sign` 0,
+`dsa::vrf` 0, `dso::dlfcn` 5. BATCH `cargo clippy --all-targets -- -D warnings` clean; full
+library **1659 passed / 0 failed / 27 ignored** with `--test-threads=1` (284.91 s) and with
+`--test-threads=4` (102.47 s); 1658 -> 1659 is the one added regression test. The two affected
+DSA allocator probes were executed individually (`--ignored --exact`, `OPENSSL_RS_ADV_PROBE=1`):
+`dsa_new_refused_alloc_returns_null_without_free` and
+`dsa_method_init_failure_runs_partial_cleanup`, 1 passed each.
+
+**NOT_RUN.** Constant-time/dudect for the DSA private-key and nonce paths
+(`SECRET_DEPENDENT_CONTROL`; source inspection is not a timing result and no measurement was
+taken); Wycheproof/ACVP (the crate's published vectors were exercised, no external suite was
+replayed); `RT-DSA`/`RT-DSO` authority differential (not built or replayed); Miri (no component
+in the court toolchain); ASan (the repairs change a refusal and an error-path release order, not
+a memory access, and no sanitizer build was run); BOUNDARY (no reusable unsafe abstraction or
+shared-mechanism contract changed; the DSO loader edge was audited and holds no Rust borrow
+across `dlopen`/`dlsym`/`dlclose`, but a dedicated loader BOUNDARY pass was not run); SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 340 -> **332**; `AUDITED-FILES.txt` 423 -> **431**.
+**Next eight (stable order).** `src/ec/backend.rs`, `src/ec/check.rs`, `src/ec/ctrl.rs`,
+`src/ec/curve.rs`, `src/ec/cvt.rs`, `src/ec/depr.rs`, `src/ec/ecdh_ossl.rs`,
+`src/ec/ecdsa_ossl.rs`.
