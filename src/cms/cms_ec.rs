@@ -134,8 +134,13 @@ unsafe fn pkey_type2param(
 
         // SAFETY: the context constructor answers a fresh context.
         pctx = unsafe { EVP_PKEY_CTX_new_from_name(libctx, c"EC".as_ptr(), propq) };
+        if pctx.is_null() {
+            return ptr::null_mut();
+        }
         // SAFETY: `pctx` is live.
-        if pctx.is_null() || unsafe { EVP_PKEY_paramgen_init(pctx) } <= 0 {
+        if unsafe { EVP_PKEY_paramgen_init(pctx) } <= 0 {
+            // SAFETY: `pctx` is owned here.
+            unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pctx) };
             return ptr::null_mut();
         }
         // SAFETY: `groupname` is writable; `poid` is live.
@@ -603,7 +608,7 @@ unsafe fn ecdh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             let penc2 = unsafe {
                 OwnedBuf::adopt_plain_nullable(penc2_raw, SeamFile::new(c"cms_ec.c"), 289)
             };
-            if enckeylen as c_long > INT_MAX || enckeylen == 0 {
+            if enckeylen > INT_MAX as usize || enckeylen == 0 {
                 // `penc2` releases its own block at the authority's own site on drop.
                 break 'body;
             }
