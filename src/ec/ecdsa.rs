@@ -33,8 +33,9 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 
 /// The translation-unit coordinate the `OPENSSL_zalloc`/`OPENSSL_free` pair in the four
-/// `ECDSA_SIG_*` accessors is attributed to, as the allocator reports it.
-const FILE: *const c_char = c"crypto/ec/ec_asn1.c".as_ptr();
+/// `ECDSA_SIG_*` accessors is attributed to, as the allocator reports it. `crypto/ec/ec_asn1.c`
+/// is a source-tree file, so its `__FILE__` carries the admitted build record's prefix.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c".as_ptr();
 
 /// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
 /// `FILE` would otherwise shadow the module constant inside its own definition.
@@ -50,7 +51,7 @@ unsafe impl CtxDestroy for EcdsaSig {
     const LINE_FREE: c_int = 1200;
 
     /// `ECDSA_SIG_free`'s body without the block release: the two owned scalars are cleared, as
-    /// the authority does before its `OPENSSL_free(sig)` at `ec_asn1.c:1198`.
+    /// the authority does before its `OPENSSL_free(sig)` at `ec_asn1.c:1200`.
     ///
     /// # Safety
     /// `ptr` is a live context this crate allocated and has not released (the trait contract).
@@ -300,7 +301,7 @@ pub extern "C" fn ECDSA_SIG_new() -> *mut EcdsaSig {
 pub unsafe extern "C" fn ECDSA_SIG_free(sig: *mut EcdsaSig) {
     // SAFETY: `sig` is NULL or a block `ECDSA_SIG_new` handed out and `Drop` has not released;
     // `from_raw` reclaims it (NULL yields `None`), and its `Drop` runs the authority's own
-    // `BN_clear_free` pair followed by the single `OPENSSL_free(sig)` at `ec_asn1.c:1198`.
+    // `BN_clear_free` pair followed by the single `OPENSSL_free(sig)` at `ec_asn1.c:1200`.
     drop(unsafe { OwnedCtx::<EcdsaSig>::from_raw(sig) });
 }
 

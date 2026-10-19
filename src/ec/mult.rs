@@ -34,8 +34,9 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
 
-/// The `crypto/ec/ec_mult.c` translation unit, as the allocator reports it.
-const FILE: &core::ffi::CStr = c"crypto/ec/ec_mult.c";
+/// The `crypto/ec/ec_mult.c` translation unit, as the allocator reports it. It is a source-tree
+/// file, so its `__FILE__` carries the admitted build record's prefix.
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c";
 
 /// `struct ec_pre_comp_st` — `crypto/ec/ec_mult.c:37-48`.
 ///
