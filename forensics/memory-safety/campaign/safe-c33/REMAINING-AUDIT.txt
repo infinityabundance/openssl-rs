@@ -1,11 +1,3 @@
-src/ec/nist.rs
-src/ec/oct.rs
-src/ec/print.rs
-src/ec/prn.rs
-src/ec/sm2_key.rs
-src/ec/smpl2.rs
-src/ec/smpl.rs
-src/ec/support.rs
 src/engine/eng_all.rs
 src/engine/eng_dyn.rs
 src/engine/eng_fat.rs

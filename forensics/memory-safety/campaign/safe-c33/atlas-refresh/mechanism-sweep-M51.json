@@ -1,0 +1,196 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "876100008",
+  "worktree": "source: src/ec/nist.rs, src/ec/oct.rs, src/ec/print.rs, src/ec/prn.rs, src/ec/sm2_key.rs, src/ec/smpl2.rs, src/ec/smpl.rs, src/ec/support.rs; ledger: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 56 and this file.",
+  "scope": "The eight files named as next by M50. Three audited with no source change. Repairs: the GF2m method table's three default-oct slots are NULL again (D1); two allocator seam file strings gain the admitted build record's __FILE__ prefix (D2/D3); one allocation extent is checked (D4); one unsafe API's NULL precondition is stated instead of describing UB as an expected fault (D5, documentation only). No new production unsafe operation, FFI symbol, allocation extent/line, repr(C) layout, exported signature or unsafe lint attribute.",
+  "verification_level": "FAST+BATCH",
+  "files_dispositions_summary": {
+    "audited_no_change": 3,
+    "defect_repaired": 5
+  },
+  "hidden_obligations": 0,
+  "new_unsafe_assumptions": 0,
+  "unsafe_ops_removed": 0,
+  "unsafe_ops_relocated": 0,
+  "safety_contract_repairs": [
+    {
+      "id": "M51-D1",
+      "file": "src/ec/smpl2.rs",
+      "severity": "low",
+      "kind": "compatibility-method-table",
+      "note": "point_set_compressed_coordinates, point2oct and oct2point are None again, matching ec2_smpl.c:954-956; EC_FLAGS_DEFAULT_OCT already dispatches those operations by field type in ec_oct.c, so no in-crate behaviour changes."
+    },
+    {
+      "id": "M51-D2",
+      "file": "src/ec/oct.rs",
+      "severity": "low",
+      "kind": "allocator-seam",
+      "note": "FILE_EC_OCT is now ../../src/openssl-3.6.4/crypto/ec/ec_oct.c, matching the admitted authority's __FILE__ for the CRYPTO_malloc/CRYPTO_free pair at :147/:151."
+    },
+    {
+      "id": "M51-D3",
+      "file": "src/ec/smpl.rs",
+      "severity": "low",
+      "kind": "allocator-seam",
+      "note": "FILE is now ../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c, matching the admitted authority's __FILE__ for CRYPTO_malloc_array at :1229 and CRYPTO_free at :1357."
+    },
+    {
+      "id": "M51-D4",
+      "file": "src/ec/print.rs",
+      "severity": "low",
+      "kind": "checked-arithmetic",
+      "note": "EC_POINT_point2hex computes buf_len * 2 + 2 with checked_mul/checked_add; an unrepresentable extent answers NULL (the allocation-failure answer) instead of wrapping to a short allocation and overrunning it."
+    },
+    {
+      "id": "M51-D5",
+      "file": "src/ec/support.rs",
+      "severity": "none",
+      "kind": "safety-contract-documentation",
+      "note": "ossl_ec_curve_nist2nid_int's # Safety now requires a non-NULL name. The previous text called a NULL dereference in strcmp an expected fault; a safe-looking permitted input that is actually UB is not a sound contract."
+    }
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/ec/nist.rs",
+      "mechanisms": [
+        "EC_GFp_nist_method table and export",
+        "ossl_ec_GFp_nist_group_copy",
+        "ossl_ec_GFp_nist_group_set_curve",
+        "ossl_ec_GFp_nist_field_mul/field_sqr"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ec/ecp_nist.c. Private BN_CTX values are released on refusal and success paths; field_mod_func is only a copied callback pointer; no allocator seam and no secret copy."
+    },
+    {
+      "file": "src/ec/oct.rs",
+      "mechanisms": [
+        "PointBuf owner (CRYPTO_malloc :147 / CRYPTO_free :151)",
+        "ossl_ec_GFp_simple_set_compressed_coordinates",
+        "ossl_ec_GFp_simple_point2oct/oct2point",
+        "EC_POINT_set_compressed_coordinates and deprecated wrappers",
+        "EC_POINT_point2oct/oct2point/point2buf"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ecp_oct.c and ec_oct.c. M51-D2 seam prefix. Length checks precede every write; point2buf's into_raw is the single transfer edge and the encoder-refusal path frees through Drop."
+    },
+    {
+      "file": "src/ec/print.rs",
+      "mechanisms": [
+        "EC_POINT_point2hex (OwnedBuf adoption, OPENSSL_free :39)",
+        "OwnedClearBuf (CRYPTO_malloc :63, CRYPTO_clear_free :72)",
+        "EC_POINT_hex2point and hex2point_tail"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ec_print.c. M51-D4 checked extent. The shared err tail releases the octet block over the decoder-written length and clears a point only when this call allocated it."
+    },
+    {
+      "file": "src/ec/prn.rs",
+      "mechanisms": [
+        "GenBuf owner (OPENSSL_clear_free :218)",
+        "print_bin fixed-width formatter",
+        "ECPKParameters_print and explicit/named arms",
+        "ECPKParameters_print_fp / EC_KEY_print_fp / ECParameters_print_fp",
+        "ECParameters_print (EC_KEY_PRINT_PARAM arm)"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ec/eck_prn.c and ec_ameth.c:717-720. off is clamped to 128 before the 133-byte formatter writes; the p/a/b/gen_buf/ctx release order matches the authority's err label."
+    },
+    {
+      "file": "src/ec/sm2_key.rs",
+      "mechanisms": [
+        "ossl_sm2_key_private_check"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/sm2/sm2_key.c. Only max = BN_dup(order) is allocated and BN_free'd on every path; the private scalar is borrowed, never copied."
+    },
+    {
+      "file": "src/ec/smpl2.rs",
+      "mechanisms": [
+        "EC_GF2m_simple_method table",
+        "group init/finish/clear-finish/copy/set/get/discriminant",
+        "point init/finish/clear/copy/set-to-infinity/affine get-set",
+        "add/dbl/invert/is-on-curve/cmp/make-affine(s)",
+        "field mul/sqr/div/inv",
+        "Lopez-Dahab ladder pre/step/post",
+        "ec_GF2m_simple_points_mul",
+        "ec2_oct set_compressed_coordinates/point2oct/oct2point"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ec2_smpl.c and ec2_oct.c. M51-D1 restores the authority's NULL default-oct slots. Group/point clear-finish cleanse with BN_clear_free; every temporary lives in a BN_CTX released on all exits."
+    },
+    {
+      "file": "src/ec/smpl.rs",
+      "mechanisms": [
+        "EC_GFp_simple_method table",
+        "group init/finish/clear-finish/copy/set/get/discriminant",
+        "Jacobian/affine coordinate accessors",
+        "add/dbl/invert/is-on-curve/cmp/make-affine(s)",
+        "field mul/sqr/inv",
+        "blind_coordinates and ladder pre/step/post"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ecp_smpl.c. M51-D3 seam prefix. prod_z is one owned CRYPTO_malloc_array block with BN_clear_free elements; field_inv creates a secure BN_CTX when ctx is NULL; the arithmetic and branch order match the authority."
+    },
+    {
+      "file": "src/ec/support.rs",
+      "mechanisms": [
+        "curve_list table (82 rows)",
+        "nist_curves table (15 rows)",
+        "OSSL_EC_curve_nid2name",
+        "ossl_ec_curve_name2nid",
+        "ossl_ec_curve_nid2nist_int",
+        "ossl_ec_curve_nist2nid_int"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/evp/ec_support.c. M51-D5 states the non-NULL precondition of the strcmp-based lookup; table order and case sensitivity match."
+    }
+  ],
+  "not_run": [
+    "constant-time/dudect for the prime/binary field inversion, blinding and ladder paths (SECRET_DEPENDENT_CONTROL; source inspection is not a timing result)",
+    "Wycheproof/ACVP (the crate's published vectors ran; no external suite was replayed)",
+    "RT-EC authority differential (not rebuilt or replayed for this batch)",
+    "Miri (no component in the court toolchain)",
+    "ASan (the repairs change seam strings, table NULL slots, a checked length and a doc comment, not a memory-access pattern)",
+    "BOUNDARY (no reusable unsafe abstraction's contract changed; the touched owners and callbacks are existing OB-1/B1/B2/B6-B18 contracts)",
+    "SEAL"
+  ],
+  "tests": {
+    "focused": "cargo test --lib ec:: -- --test-threads=4: 47 passed / 0 failed / 1 ignored (1638 filtered)",
+    "adv_probes": "none exists for the four changed sites; the only EC adv_probe (ecx_backend) is unaffected and was not replayed",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "fmt": "cargo fmt --all -- --check clean",
+    "lib_serial": "1659 passed / 0 failed / 27 ignored (312.63 s, --test-threads=1)",
+    "lib_threads4": "1659 passed / 0 failed / 27 ignored (90.68 s, --test-threads=4)"
+  },
+  "queue_after_batch": {
+    "remaining_audit": 308,
+    "audited_files": 455,
+    "next_eight": [
+      "src/engine/eng_all.rs",
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_fat.rs",
+      "src/engine/eng_lib.rs",
+      "src/engine/eng_pkey.rs",
+      "src/engine/eng_table.rs",
+      "src/engine/tb_cipher.rs",
+      "src/engine/tb_dh.rs"
+    ]
+  },
+  "reconciliation": {
+    "canonical_audited_before_batch": 447,
+    "canonical_unaudited_before_batch": 316,
+    "canonical_audited_after_batch": 455,
+    "canonical_unaudited_after_batch": 308,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 0,
+    "method": "The eight audited files were removed from the head of REMAINING-AUDIT.txt and merged into AUDITED-FILES.txt in path order. Counts are entries, not files touched."
+  },
+  "retained_observations": [
+    "print.rs's OwnedClearBuf trusts the decoder-reported oct_buf_len not to exceed the buffer extent passed to OPENSSL_hexstr2buf_ex. The authority has the same precondition and the decoder establishes it; it remains an internal owner precondition, not a new public unsafe API.",
+    "The M51-D1 method-table change is not observably behavioural inside the crate because EC_FLAGS_DEFAULT_OCT dispatches by field type; a direct observer of EC_GF2m_simple_method() now sees the authority's NULL slots.",
+    "Out of this batch but the same seam-prefix class: src/ec/ecdh_ossl.rs:61 and src/ec/ecdsa_ossl.rs:66 still use short crypto/ec/... FILE constants for their CRYPTO_* calls. They were audited in M49 and are left unchanged; a later ledger pass should decide whether M49's evidence remains valid or needs reissuing.",
+    "sm2_key.rs and all eight files hold no private scalar copy: SM2's scalar is borrowed for a range comparison, and the EC scalar/point intermediates remain in mult.rs and ecdsa_ossl.rs, whose cleansing was audited in M49/M50."
+  ]
+}
