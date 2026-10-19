@@ -287,6 +287,16 @@ pub(crate) unsafe extern "C" fn CMS_ReceiptRequest_create0_ex(
     }
     // SAFETY: `rr` is live.
     if !id.is_null() {
+        // A negative length is an `int` that the authority hands to `ASN1_STRING_set0` and
+        // every later encoder turns into a huge `size_t` read. Refuse it (D-RCU-3 shape);
+        // `id` is not adopted on this path, so the caller keeps its allocation.
+        if idlen < 0 {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cms(125, c"CMS_ReceiptRequest_create0_ex", ERR_R_CMS_LIB) };
+            // SAFETY: `rr` is owned here.
+            unsafe { CMS_ReceiptRequest_free(rr) };
+            return ptr::null_mut();
+        }
         // SAFETY: `rr` is live; `id` ownership transfers.
         unsafe { ASN1_STRING_set0((*rr).signed_content_identifier, id.cast(), idlen) };
     } else {
@@ -619,160 +629,163 @@ pub(crate) unsafe extern "C" fn ossl_cms_Receipt_verify(
         return r;
     }
 
-    // Locate original request.
-    // SAFETY: `osis` is live.
-    let osis_num = unsafe { OPENSSL_sk_num(osis) };
-    i = 0;
-    while i < osis_num {
-        // SAFETY: `i` is in range.
-        osi = unsafe { OPENSSL_sk_value(osis, i) }.cast::<CmsSignerInfo>();
-        // SAFETY: `osi`/`rct` are live.
-        if unsafe { ASN1_STRING_cmp((*osi).signature, (*rct).originator_signature_value) } == 0 {
-            break;
+    'verify: {
+        // Locate original request.
+        // SAFETY: `osis` is live.
+        let osis_num = unsafe { OPENSSL_sk_num(osis) };
+        i = 0;
+        while i < osis_num {
+            // SAFETY: `i` is in range.
+            osi = unsafe { OPENSSL_sk_value(osis, i) }.cast::<CmsSignerInfo>();
+            // SAFETY: `osi`/`rct` are live.
+            if unsafe { ASN1_STRING_cmp((*osi).signature, (*rct).originator_signature_value) } == 0
+            {
+                break;
+            }
+            i += 1;
         }
-        i += 1;
-    }
 
-    if i == osis_num {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                305,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_NO_MATCHING_SIGNATURE,
+        if i == osis_num {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    305,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_NO_MATCHING_SIGNATURE,
+                )
+            };
+            break 'verify;
+        }
+
+        // SAFETY: `sis` is live.
+        let si = unsafe { OPENSSL_sk_value(sis, 0) }.cast::<CmsSignerInfo>();
+
+        // Get msgSigDigest value and compare.
+        let oid = OBJ_nid2obj(NID_id_smime_aa_msgSigDigest);
+        // SAFETY: `si`/`oid` are live.
+        let msig = unsafe { CMS_signed_get0_data_by_OBJ(si, oid, -3, V_ASN1_OCTET_STRING) }
+            .cast::<Asn1String>();
+
+        if msig.is_null() {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    318,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_NO_MSGSIGDIGEST,
+                )
+            };
+            break 'verify;
+        }
+
+        // SAFETY: `osi` is live; `dig`/`diglen` are this frame's.
+        if unsafe { cms_msgSigDigest(osi, dig.as_mut_ptr(), &mut diglen) } == 0 {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    323,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_ERROR,
+                )
+            };
+            break 'verify;
+        }
+
+        // SAFETY: `msig` is live.
+        if diglen != unsafe { (*msig).length } as c_uint {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    328,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_WRONG_LENGTH,
+                )
+            };
+            break 'verify;
+        }
+
+        // SAFETY: `msig` is live; `dig` is readable for `diglen`, as is `msig->data`.
+        if unsafe {
+            core::slice::from_raw_parts(dig.as_ptr(), diglen as usize)
+                != core::slice::from_raw_parts((*msig).data, diglen as usize)
+        } {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    333,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_VERIFICATION_FAILURE,
+                )
+            };
+            break 'verify;
+        }
+
+        // Compare content types.
+        let ctype_oid = OBJ_nid2obj(NID_pkcs9_contentType);
+        // SAFETY: `osi`/`ctype_oid` are live.
+        let octype = unsafe { CMS_signed_get0_data_by_OBJ(osi, ctype_oid, -3, V_ASN1_OBJECT) }
+            .cast::<Asn1Object>();
+        if octype.is_null() {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    343,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_NO_CONTENT_TYPE,
+                )
+            };
+            break 'verify;
+        }
+
+        // Compare details in receipt request.
+        // SAFETY: `octype`/`rct` are live.
+        if unsafe { OBJ_cmp(octype, (*rct).content_type) } != 0 {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    350,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_CONTENT_TYPE_MISMATCH,
+                )
+            };
+            break 'verify;
+        }
+
+        // Get original receipt request details.
+        // SAFETY: `osi` is live; `rr` is this frame's slot.
+        if unsafe { CMS_get1_ReceiptRequest(osi, &mut rr) } <= 0 {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    357,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_NO_RECEIPT_REQUEST,
+                )
+            };
+            break 'verify;
+        }
+
+        // SAFETY: `rr`/`rct` are live.
+        if unsafe {
+            ASN1_STRING_cmp(
+                (*rr).signed_content_identifier,
+                (*rct).signed_content_identifier,
             )
-        };
-        return r;
+        } != 0
+        {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                raise_cms(
+                    363,
+                    c"ossl_cms_Receipt_verify",
+                    crate::runtime::err::err_reasons::CMS_R_CONTENTIDENTIFIER_MISMATCH,
+                )
+            };
+            break 'verify;
+        }
+
+        r = 1;
     }
-
-    // SAFETY: `sis` is live.
-    let si = unsafe { OPENSSL_sk_value(sis, 0) }.cast::<CmsSignerInfo>();
-
-    // Get msgSigDigest value and compare.
-    let oid = OBJ_nid2obj(NID_id_smime_aa_msgSigDigest);
-    // SAFETY: `si`/`oid` are live.
-    let msig = unsafe { CMS_signed_get0_data_by_OBJ(si, oid, -3, V_ASN1_OCTET_STRING) }
-        .cast::<Asn1String>();
-
-    if msig.is_null() {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                318,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_NO_MSGSIGDIGEST,
-            )
-        };
-        return r;
-    }
-
-    // SAFETY: `osi` is live; `dig`/`diglen` are this frame's.
-    if unsafe { cms_msgSigDigest(osi, dig.as_mut_ptr(), &mut diglen) } == 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                323,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_ERROR,
-            )
-        };
-        return r;
-    }
-
-    // SAFETY: `msig` is live.
-    if diglen != unsafe { (*msig).length } as c_uint {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                328,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_WRONG_LENGTH,
-            )
-        };
-        return r;
-    }
-
-    // SAFETY: `msig` is live; `dig` is readable for `diglen`, as is `msig->data`.
-    if unsafe {
-        core::slice::from_raw_parts(dig.as_ptr(), diglen as usize)
-            != core::slice::from_raw_parts((*msig).data, diglen as usize)
-    } {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                333,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_MSGSIGDIGEST_VERIFICATION_FAILURE,
-            )
-        };
-        return r;
-    }
-
-    // Compare content types.
-    let ctype_oid = OBJ_nid2obj(NID_pkcs9_contentType);
-    // SAFETY: `osi`/`ctype_oid` are live.
-    let octype = unsafe { CMS_signed_get0_data_by_OBJ(osi, ctype_oid, -3, V_ASN1_OBJECT) }
-        .cast::<Asn1Object>();
-    if octype.is_null() {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                343,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_NO_CONTENT_TYPE,
-            )
-        };
-        return r;
-    }
-
-    // Compare details in receipt request.
-    // SAFETY: `octype`/`rct` are live.
-    if unsafe { OBJ_cmp(octype, (*rct).content_type) } != 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                350,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_CONTENT_TYPE_MISMATCH,
-            )
-        };
-        return r;
-    }
-
-    // Get original receipt request details.
-    // SAFETY: `osi` is live; `rr` is this frame's slot.
-    if unsafe { CMS_get1_ReceiptRequest(osi, &mut rr) } <= 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                357,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_NO_RECEIPT_REQUEST,
-            )
-        };
-        return r;
-    }
-
-    // SAFETY: `rr`/`rct` are live.
-    if unsafe {
-        ASN1_STRING_cmp(
-            (*rr).signed_content_identifier,
-            (*rct).signed_content_identifier,
-        )
-    } != 0
-    {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                363,
-                c"ossl_cms_Receipt_verify",
-                crate::runtime::err::err_reasons::CMS_R_CONTENTIDENTIFIER_MISMATCH,
-            )
-        };
-        return r;
-    }
-
-    r = 1;
 
     // SAFETY: each is NULL or owned.
     unsafe {
