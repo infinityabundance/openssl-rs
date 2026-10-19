@@ -5425,3 +5425,102 @@ made for the PKCS#12 units.
 again), `src/pkcs12/p12_key.rs`, `src/pkcs12/p12_mutl.rs`,
 `src/pkcs12/p12_npas.rs`, `src/pkcs12/p12_p8d.rs`, `src/pkcs12/p12_p8e.rs`,
 `src/pkcs12/p12_utl.rs`, `src/pkcs7/bio_pk7.rs`.
+
+## M63 — per-file contract sweep (PKCS#12 key/MAC/newpass, PKCS7 attribute helpers and BIO)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`6f128a871` (dirty worktree: the repairs below; no commit was made by the audit
+subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results. The authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/` and confirmed byte-identical to the
+pinned 3.6.4 tag for the units compared.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/pkcs12/p12_key.rs` | four `PKCS12_key_gen_asc/utf8` spellings over `OwnedBuf` (cleansed adoption), `PKCS12_key_gen_uni_ex` KDF fetch/params/derive, length and NULL arms, five PBE parameters | no defect |
+| `src/pkcs12/p12_mutl.rs` | `PKCS12_mac_present`/`_get0_mac`, `pkcs12_setup_mac` salt/iteration allocation, PBMAC1 parameter unpack, PBKDF2/GOST key derivation, `pkcs12_gen_mac` digest/key/HMAC ladder and cleanses, `PKCS12_verify_mac` constant-time compare, `PKCS12_set_mac`, `PKCS12_set_pbmac1_pbkdf2` | 1 defect (M63-D3) repaired |
+| `src/pkcs12/p12_npas.rs` | `alg_get` PBE tuple decode, `newpass_bag` decrypt/re-encrypt/union replacement, `newpass_bags`, `newpass_p12` safe restore, three raise sites | no defect |
+| `src/pkcs12/p12_p8d.rs` | both `PKCS8_decrypt` spellings; `zbuf == 1` cleansed plaintext release | no defect |
+| `src/pkcs12/p12_p8e.rs` | both `PKCS8_encrypt` spellings, PRF/v1.5 ladder, `PKCS8_set0_pbe_ex` adoption and partial-init release | no defect |
+| `src/pkcs12/p12_utl.rs` | `OPENSSL_asc2uni`/`_uni2asc`/`_utf82uni`/`_uni2utf8`, `bmp_to_utf8`, the four PKCS12 BIO/`FILE` wrappers, local `OwnedBuf` | 2 defects (M63-D1, M63-D2) repaired |
+| `src/pkcs7/bio_pk7.rs` | one `BIO_new_NDEF` forward | no defect |
+| `src/pkcs7/pk7_attr.rs` | SMIMECapabilities encode/decode, `PKCS7_simple_smimecap` parameter ownership, content-type/signing-time/digest attributes | no defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary.
+It stays at the head of `REMAINING-AUDIT.txt`. `src/pkcs7/pk7_attr.rs` was
+substituted from position 9 of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M63-D1 | `src/pkcs12/p12_utl.rs:142`, `:270`, `:278`, `:402`, `:413` | low | the allocation-size accumulators `asclen * 2 + 2` (asc2uni), `ulen += 2/4` (utf82uni) and `asclen += j/+1` (uni2utf8) were unchecked `c_int` arithmetic; overflow panics in debug and wraps in release, turning the allocation size into a bogus value instead of returning the ordinary failure answer (§3/§17) | every sizing step now uses `checked_mul`/`checked_add` and refuses with the ordinary NULL answer before allocating. No exported signature changed. |
+| M63-D2 | `src/pkcs12/p12_utl.rs:201` | medium | `OPENSSL_uni2asc` executed `uni.add(1)` unconditionally, but its documented contract permitted `(NULL, 0)`; pointer arithmetic on null is Rust UB even though the authority's `uni++` is never dereferenced for an empty input | the skip is conditional on `unilen != 0`, preserving the one-byte `""` result for `(NULL, 0)` while removing the UB; contracts for the four conversions now state that NULL is permitted only for the empty input. |
+| M63-D3 | `src/pkcs12/p12_mutl.rs:464` | low | a failed `PKCS5_PBKDF2_HMAC` in the GOST keygen left the 96-byte scratch, which can hold partial derived key material, uncleansed on the failure path; the authority `p12_mutl.c:73-76` does the same | the failure arm now `OPENSSL_cleanse`s the whole scratch before returning false. Deliberate secret-residue improvement; no observable behaviour, release seam or coordinate changed. |
+
+**Unsafe accounting.** Eliminated: 0 (no unsafe operation removed). Relocated:
+0. New assumptions: 0 — the three repairs only refuse or cleanse inputs the
+body previously accepted. Hidden obligations: 0 after the repair. No exported
+symbol, signature, `#[repr(C)]` layout, excluded symbol or allocator seam
+coordinate changed; no new `unsafe fn`.
+
+**Secret-bearing storage.** PKCS#12 passwords, the converted UTF-16 form, PBKDF2
+keys, the GOST key, HMAC keys and decrypted private-key encodings are
+`SECRET_DATA`; salts, iteration counts, algorithm identifiers, MAC values and
+ciphertext are `PUBLIC_DATA`. Cleansed paths: `p12_key`'s converted password is
+an `OwnedBuf` with a cleansing release on success and every KDF failure;
+`p12_mutl`'s MAC `key` array is cleansed on every exit, and the GOST scratch is
+now cleansed on both paths (M63-D3); `p12_p8d`/`p12_p8e` use `zbuf == 1`, so
+the DER plaintext is cleansed by the item layer on decrypt and encrypt, and
+`PKCS8_set0_pbe_ex` releases its partial initialization without running a
+destructor. Retained authority behaviour: the parsed `PKCS8_PRIV_KEY_INFO`
+returned by `PKCS8_decrypt_ex` is released with the item destructor, which does
+not cleanse the decoded key fields, and an unencrypted `keyBag` in
+`newpass_p12` is released the same way. `p12_utl` returns password conversions
+to the C caller, which owns the cleansing release. No constant-time claim is
+made for any unit from source inspection.
+
+**Contracts reused.** OB-1 `OwnedBuf` (`adopt_cleansed` for the converted
+password, local plain `OwnedBuf` for the conversion result seam); ASN.1 item
+ownership for `PKCS8_PRIV_KEY_INFO`, `PBE2PARAM`, `PBKDF2PARAM`, `PBMAC1PARAM`,
+`X509_SIG`, `PKCS12_SAFEBAG` and `PKCS12_MAC_DATA`; C ABI contracts for
+NULL-or-live optional pointers, caller-sized buffers and caller-owned results;
+the `EVP_KDF`/`EVP_MD` fetch contracts; the B19 BIGNUM/secret cleansing rule
+applied to the MAC and GOST scratch; the `CRYPTO_*` allocator seam at the
+authority's exact `FILE`/`LINE`. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`pkcs12::p12_utl` **4 / 0**, `pkcs12::p12_key` **2 / 0 / 1 ignored**,
+`pkcs12::p12_mutl` **2 / 0**, `pkcs12::p12_npas` **1 / 0**; the substituted
+`pkcs7` units contain no unit tests. BATCH: `cargo clippy --all-targets -- -D
+warnings` clean; full library **1670 passed / 0 failed / 27 ignored** (1697
+total) serial in 248.98 s and with `--test-threads=4` in 95.56 s, in the court
+with `CARGO_BUILD_JOBS=4`. Affected probe
+`pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release` **1 / 0**
+with `OPENSSL_RS_ADV_PROBE=1`. No unexplained removal and no newly ignored
+test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; a direct failure-path residue control
+for M63-D3 (the GOST scratch is a function-local array and no harness observes
+it) NOT_RUN; an allocator-seam differential for the `p12_utl` conversion blocks
+NOT_RUN; dudect/ctgrind (no constant-time claim); FRF suite; dependency-graph
+regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) The decoded-key structures released by `PKCS8_PRIV_KEY_INFO_free` (and the
+unencrypted `keyBag` path in `newpass_p12`) are not cleansed; that is the
+authority's item-destructor contract and is preserved, not reclassified as
+safe. (3) `p12_key`'s `out` is caller-owned key material; the ABI has no
+length-attached cleansing release. (4) `OPENSSL_asc2uni`/`utf82uni` return
+password material that the C caller must release with `OPENSSL_clear_free`;
+that ownership is the exported contract. (5) No constant-time claim is made
+for the PKCS#12 or PKCS#7 units.
+
+**Queue.** `REMAINING-AUDIT.txt` 217 -> **209**; `AUDITED-FILES.txt` 546 ->
+**554**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/pkcs7/pk7_mime.rs`, `src/property/defn_cache.rs`,
+`src/property/globals.rs`, `src/property/list.rs`, `src/property/query.rs`,
+`src/provider/base.rs`, `src/provider/capabilities.rs`.
