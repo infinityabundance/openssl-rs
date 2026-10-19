@@ -4157,3 +4157,74 @@ SEAL.
 **Next eight (stable order).** `src/ec/ecdsa.rs`, `src/ec/ecx_backend.rs`,
 `src/ec/ecx_key.rs`, `src/ec/kdf.rs`, `src/ec/kmeth.rs`, `src/ec/mod.rs`,
 `src/ec/mont.rs`, `src/ec/mult.rs`.
+
+
+## 55. Mechanism sweep M50 — 8-file ordinary batch — 2026-10-19
+
+Candidate `adc3c4402`. All eight EC files were audited against the admitted
+`openssl-3.6.4` sources and the established contracts (RC-1, OB-1/OB-2/OB-3/OB-4,
+B1/B2/B6–B18, B19). Three files needed no edit. Five files carry repairs: one
+secret-cleansing gap in the PKCS#8 ECX import (M50-D1), three allocator seam file
+strings that lacked the admitted build record's `__FILE__` prefix
+(M50-D2/D3/D4), one one-bit-field conversion that was not truncated to its C
+storage width (M50-D5), and two stale free-site coordinates in comments
+(M50-D6, documentation only). No `#[repr(C)]` layout, exported symbol/signature,
+allocation extent/line, or unsafe lint attribute changed.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/ec/ecdsa.rs` | defect_repaired | `crypto/ec/ecdsa_sign.c`, `ecdsa_vrf.c` and `ec_asn1.c:1187-1300`: seven method-column dispatchers (`ECDSA_do_sign[_ex]`, `ECDSA_sign[_ex]`, `ECDSA_sign_setup`, `ECDSA_do_verify`, `ECDSA_verify`) and the `ECDSA_SIG` constructor/destructor/accessors (`OwnedCtx`/`RawCtx`, two `BN_clear_free` members). **M50-D2**: the allocator seam now reports `../../src/openssl-3.6.4/crypto/ec/ec_asn1.c`, the admitted authority's `__FILE__`, instead of the short path. **M50-D6**: the `OPENSSL_free(sig)` coordinate in two comments is line 1200, not 1198. `ECDSA_SIG_set0` replaces and clears the old pair only after both arguments are checked non-NULL. |
+| `src/ec/ecx_backend.rs` | defect_repaired | `crypto/ec/ecx_backend.c`: `ossl_ecx_public_from_private` (four arms, no default), `ossl_ecx_key_fromdata` (private octets imported at `keylen`, mismatch cleared with the **received** length), `ossl_ecx_key_dup` (`RawDupKey`→`OwnedDupKey` staged construction, `CRYPTO_zalloc` at `:106`, private copy into a secure allocation, `dup_err`), `ossl_ecx_key_op` (algorithm-parameter checks, keygen clamping, silent `RAND_priv_bytes_ex` failure) and `ossl_ecx_key_from_pkcs8`. **M50-D1**: the decoded `ASN1_OCTET_STRING` is a copy of the raw private scalar; it is now released with `ASN1_STRING_clear_free`, not the authority's plain `ASN1_OCTET_STRING_free`. |
+| `src/ec/ecx_key.rs` | defect_repaired | `crypto/ec/ecx_key.c`: the `ECX_KEY` shape, `CtxDestroy` (`propq` free at `:77`, secure clear at `:81`, block at `:83`), `ossl_ecx_key_new` (`RawCtx`), `ossl_ecx_key_free` (release/acquire refcount), `_set0_libctx`, `_up_ref`, `_allocate_privkey` and `ossl_ecx_compute_key` (X25519/X448 only, length query, output-length check). **M50-D5**: `haspubkey` is a one-bit C field; the storage-unit model now masks the assignment with `& 1`, where the previous `as c_uint` could store 2 or larger. |
+| `src/ec/kdf.rs` | audited_no_change | `crypto/ec/ecdh_kdf.c`: the four-`OSSL_PARAM` X963 descriptor build, the single `EVP_KDF` fetch/`EVP_KDF_CTX` create/derive/release sequence (a refused context still frees the fetched method), and the deprecated `ECDH_KDF_X9_62` forwarder with NULL libctx/propq. The input `Z` and output `out` are caller-owned and not copied here. |
+| `src/ec/kmeth.rs` | defect_repaired | `crypto/ec/ec_kmeth.c`: the static default `EC_KEY_METHOD`, `EC_KEY_OpenSSL`/`_get_default_method`/`_set_default_method` (`AtomicPtr`, NULL restores the built-in), `EC_KEY_get_method`/`_set_method`, `ossl_ec_key_new_method_int` (`OwnedEcKey` whose `Drop` is the authority's `err:` `EC_KEY_free`), `ECDH_compute_key` (`OwnedSecret` cleansing the method's buffer at `:172`), the `EC_KEY_METHOD_*` allocator/free and the twelve column setters/getters. **M50-D3**: the seam now reports `../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c`, the authority's `__FILE__`. |
+| `src/ec/mod.rs` | audited_no_change | `crypto/ec/ec_local.h`: `EC_FLAGS_*`, `point_conversion_form_t`, `Pct`, `EcMethod`/`EcGroup`/`EcPoint`/`EcKey`/`EcdsaSig`/`EcKeyMethod`, the `EcPreComp` union, all callback type aliases, and `ec_point_is_compat`. Layouts are the measured authority shapes; the only function is a field predicate whose contract requires live, initialised objects. |
+| `src/ec/mont.rs` | audited_no_change | `crypto/ec/ecp_mont.c`: the `EC_GFp_mont_method` table, group init/finish/clear-finish/copy (cleansing `field_data2` on the clear paths), `group_set_curve` (replace-then-restore field data, release on `simple_group_set_curve` failure), field mul/sqr/inv/encode/decode/set-to-one. `field_inv` uses the public Fermat exponent in a secure `BN_CTX`; every `BN_*` temporary is released on each exit. No allocator seam of its own. |
+| `src/ec/mult.rs` | defect_repaired | `crypto/ec/ec_mult.c`: `EcPreCompSt`/`CtxDestroy` (points array + points, refcounted release), `ec_pre_comp_new`/`_dup`/`EC_ec_pre_comp_free`, the three ladder inlines, `EC_POINT_CSWAP`, `ossl_ec_scalar_mul_ladder` (cardinality/lambda Montgomery ladder, `pbit` merge, affine input, `BN_FLG_CONSTTIME`), `ossl_ec_wNAF_mul` (precomputation reuse, wNAF splitting, per-scalar windows, `val`/`val_sub` ownership, single `err:` release) and `ossl_ec_wNAF_precompute_mult`/`_have_precompute_mult`. **M50-D4**: the seam now reports `../../src/openssl-3.6.4/crypto/ec/ec_mult.c`, the authority's `__FILE__`. Length sums mirror the authority and are bounded by the valid array/count contract; `CRYPTO_malloc_array` keeps its checked multiply. |
+
+**Secret-bearing buffers.** `SECRET_DATA`: the ECX private scalar is allocated with
+`CRYPTO_secure_zalloc`, copied into a secure allocation by the duplicate, cleansed at
+`keylen` by `CRYPTO_secure_clear_free` on every destructor path, and cleansed at the
+**received** length on the `fromdata` size-mismatch arm; the PKCS#8 decode's private
+octet copy is now cleared before release (M50-D1); the `ECDH_compute_key` method buffer
+is cleansed by `OwnedSecret` after both the raw-copy and KDF branches (and is not
+released if the method itself failed, matching the authority's caller obligation);
+`ECDSA_SIG`'s `r`/`s` reach `BN_clear_free` on replacement and destruction (M49's
+nonce handling in `ecdsa_ossl` is unchanged). `SECRET_DEPENDENT_CONTROL`: scalar
+bits drive the ladder's `BN_consttime_swap`; no constant-time claim is made from
+source inspection, and dudect was not run. The wNAF digit arrays are plain-freed as
+in the authority; the secret-scalar cases take the ladder path, so they are not
+classified secret here. `kdf.rs` borrows `Z` and writes caller-owned `out`; any
+provider-internal secret copies are `provider/kdf.rs`'s scope.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts reused:
+RC-1 allocator seam; OB-1 `OwnedBuf`/`OwnedBlock` (through callees and the checked
+getter); OB-3 `OwnedCtx`/`CtxDestroy` for `EcdsaSig`, `EcxKey`, `EcPreCompSt`;
+B1/B2/B6–B18 callback and reentrancy contracts for the `EC_KEY_METHOD` columns,
+`compute_key`/`KDF` and the method setters; B19 `BN_clear_free`/`BN_FLG_CONSTTIME`
+rules. The ECX `haspubkey` bitfield is modelled as its storage unit (recorded
+representation difference).
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`cargo test --lib ec::` 47 passed / 0 failed / 1 ignored (1638 filtered). BATCH
+`cargo clippy --all-targets -- -D warnings` clean; full library **1659 passed /
+0 failed / 27 ignored** with `--test-threads=1` (201.53 s) and with
+`--test-threads=4` (92.24 s). The one affected allocator probe,
+`ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free`,
+was replayed alone and passed (1 passed, 0 failed). All run in the court container
+with `CARGO_BUILD_JOBS=4`.
+
+**NOT_RUN.** Constant-time/dudect for the ECX private-scalar, ECDSA
+private-scalar/nonce and ladder paths (`SECRET_DEPENDENT_CONTROL`; source
+inspection is not a timing result); Wycheproof/ACVP (the crate's published vectors
+ran, no external suite was replayed); `RT-EC` authority differential (not
+rebuilt/replayed); Miri (no component in the court toolchain); ASan (the repairs
+change a seam string, a one-bit mask and a release helper, not a memory access
+pattern); BOUNDARY (no reusable unsafe abstraction's contract changed — the touched
+contracts are the existing OB-3 owners and the ASN.1 clear-free helper);
+SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 324 -> **316**; `AUDITED-FILES.txt` 439 -> **447**.
+**Next eight (stable order).** `src/ec/nist.rs`, `src/ec/oct.rs`, `src/ec/print.rs`,
+`src/ec/prn.rs`, `src/ec/sm2_key.rs`, `src/ec/smpl2.rs`, `src/ec/smpl.rs`,
+`src/ec/support.rs`.

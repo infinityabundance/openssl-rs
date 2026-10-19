@@ -1,11 +1,3 @@
-src/ec/ecdsa.rs
-src/ec/ecx_backend.rs
-src/ec/ecx_key.rs
-src/ec/kdf.rs
-src/ec/kmeth.rs
-src/ec/mod.rs
-src/ec/mont.rs
-src/ec/mult.rs
 src/ec/nist.rs
 src/ec/oct.rs
 src/ec/print.rs

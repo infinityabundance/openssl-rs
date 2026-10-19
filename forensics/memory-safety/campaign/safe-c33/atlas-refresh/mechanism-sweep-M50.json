@@ -1,0 +1,195 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "adc3c4402",
+  "worktree": "source: src/ec/ecdsa.rs, src/ec/ecx_backend.rs, src/ec/ecx_key.rs, src/ec/kmeth.rs, src/ec/mult.rs; ledger: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 55 and this file.",
+  "scope": "The eight files named as next by M49: src/ec/ecdsa.rs, src/ec/ecx_backend.rs, src/ec/ecx_key.rs, src/ec/kdf.rs, src/ec/kmeth.rs, src/ec/mod.rs, src/ec/mont.rs, src/ec/mult.rs. Three audited with no source change. Repairs: the PKCS#8 ECX private-key octet copy is clear-freed (D1); three allocator seam file strings gain the admitted build record's __FILE__ prefix (D2/D3/D4); the ECX haspubkey one-bit field is masked on assignment (D5); two free-site comments corrected (D6). No new production unsafe operation, FFI symbol, allocation extent/line, repr(C) layout, exported signature or unsafe lint attribute.",
+  "verification_level": "FAST+BATCH",
+  "files_dispositions_summary": {
+    "audited_no_change": 3,
+    "defect_repaired": 5
+  },
+  "hidden_obligations": 0,
+  "new_unsafe_assumptions": 0,
+  "unsafe_ops_removed": 0,
+  "unsafe_ops_relocated": 0,
+  "safety_contract_repairs": [
+    {
+      "id": "M50-D1",
+      "file": "src/ec/ecx_backend.rs",
+      "severity": "low-medium",
+      "kind": "secret-cleansing",
+      "note": "ossl_ecx_key_from_pkcs8 releases the decoded private-key OCTET STRING with ASN1_STRING_clear_free instead of the authority's plain ASN1_OCTET_STRING_free; seam coordinates and return value unchanged."
+    },
+    {
+      "id": "M50-D2",
+      "file": "src/ec/ecdsa.rs",
+      "severity": "low",
+      "kind": "allocator-seam",
+      "note": "FILE is now ../../src/openssl-3.6.4/crypto/ec/ec_asn1.c, matching the admitted authority's __FILE__."
+    },
+    {
+      "id": "M50-D3",
+      "file": "src/ec/kmeth.rs",
+      "severity": "low",
+      "kind": "allocator-seam",
+      "note": "FILE is now ../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c, matching the admitted authority's __FILE__."
+    },
+    {
+      "id": "M50-D4",
+      "file": "src/ec/mult.rs",
+      "severity": "low",
+      "kind": "allocator-seam",
+      "note": "FILE is now ../../src/openssl-3.6.4/crypto/ec/ec_mult.c, matching the admitted authority's __FILE__."
+    },
+    {
+      "id": "M50-D5",
+      "file": "src/ec/ecx_key.rs",
+      "severity": "low",
+      "kind": "representation",
+      "note": "haspubkey models a one-bit C field; the assignment now masks with & 1 instead of storing the raw c_int conversion."
+    },
+    {
+      "id": "M50-D6",
+      "file": "src/ec/ecdsa.rs",
+      "severity": "none",
+      "kind": "documentation",
+      "note": "Two comments now cite OPENSSL_free(sig) at ec_asn1.c:1200 (the constant was already 1200)."
+    }
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/ec/ecdsa.rs",
+      "mechanisms": [
+        "seven EC_KEY_METHOD dispatchers",
+        "ECDSA_SIG_new/free/get0/get0_r/get0_s/set0 through OwnedCtx/RawCtx"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ecdsa_sign.c, ecdsa_vrf.c and ec_asn1.c:1187-1300. M50-D2 seam prefix; M50-D6 comment coordinates. r/s are BN_clear_free'd on replacement and destruction."
+    },
+    {
+      "file": "src/ec/ecx_backend.rs",
+      "mechanisms": [
+        "ossl_ecx_public_from_private",
+        "ossl_ecx_key_fromdata",
+        "ossl_ecx_key_dup (RawDupKey/OwnedDupKey)",
+        "ossl_ecx_key_op",
+        "ossl_ecx_key_from_pkcs8"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ecx_backend.c. M50-D1 clear-frees the decoded private-key octet copy. Private scalars use secure allocations and the received length on the mismatch arm."
+    },
+    {
+      "file": "src/ec/ecx_key.rs",
+      "mechanisms": [
+        "EcxKey CtxDestroy",
+        "ossl_ecx_key_new/free/set0_libctx/up_ref/allocate_privkey",
+        "ossl_ecx_compute_key"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ecx_key.c. M50-D5 masks the one-bit haspubkey field. Private scalar is secure-cleared at keylen on every destructor path."
+    },
+    {
+      "file": "src/ec/kdf.rs",
+      "mechanisms": [
+        "ossl_ecdh_kdf_X9_63 OSSL_PARAM build and KDF drive",
+        "ECDH_KDF_X9_62 forwarder"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ec/ecdh_kdf.c. Z/out are caller-owned; the refused-context path still frees the fetched method."
+    },
+    {
+      "file": "src/ec/kmeth.rs",
+      "mechanisms": [
+        "default EC_KEY_METHOD and default-pointer accessors",
+        "EC_KEY_get_method/set_method",
+        "ossl_ec_key_new_method_int (OwnedEcKey)",
+        "ECDH_compute_key (OwnedSecret)",
+        "EC_KEY_METHOD_new/free and column setters/getters"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ec_kmeth.c. M50-D3 seam prefix. OwnedSecret cleanses the method buffer on both success branches."
+    },
+    {
+      "file": "src/ec/mod.rs",
+      "mechanisms": [
+        "ec_local.h shapes and constants",
+        "callback type aliases",
+        "ec_point_is_compat"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ec/ec_local.h. Measured layouts; the only function is a live-object field predicate."
+    },
+    {
+      "file": "src/ec/mont.rs",
+      "mechanisms": [
+        "EC_GFp_mont_method table",
+        "group init/finish/clear-finish/copy/set_curve",
+        "field mul/sqr/inv/encode/decode/set_to_one"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ec/ecp_mont.c. Cleansing clear-finish and restore-on-failure match the authority; no allocator seam of its own."
+    },
+    {
+      "file": "src/ec/mult.rs",
+      "mechanisms": [
+        "EcPreCompSt CtxDestroy/refcount",
+        "ec_pre_comp_new/dup/free",
+        "ladder inlines and EC_POINT_CSWAP",
+        "ossl_ec_scalar_mul_ladder",
+        "ossl_ec_wNAF_mul and its err label",
+        "ossl_ec_wNAF_precompute_mult/have_precompute_mult"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/ec/ec_mult.c. M50-D4 seam prefix. Length sums mirror the authority and are bounded by the valid count/array contract; CRYPTO_malloc_array retains checked multiply."
+    }
+  ],
+  "not_run": [
+    "constant-time/dudect for the ECX private-scalar, ECDSA private-scalar/nonce and ladder paths (SECRET_DEPENDENT_CONTROL; source inspection is not a timing result)",
+    "Wycheproof/ACVP (the crate's published vectors ran; no external suite was replayed)",
+    "RT-EC authority differential (not rebuilt or replayed for this batch)",
+    "Miri (no component in the court toolchain)",
+    "ASan (the repairs change a seam string, a one-bit mask and a release helper, not a memory access pattern)",
+    "BOUNDARY (no reusable unsafe abstraction's contract changed; the touched owners are existing OB-3 contracts)",
+    "SEAL"
+  ],
+  "tests": {
+    "focused": "cargo test --lib ec:: -- --test-threads=4: 47 passed / 0 failed / 1 ignored (1638 filtered)",
+    "adv_probes": "ec::ecx_backend::adv_probe::ecx_key_dup_refused_alloc_returns_null_without_free replayed alone: 1 passed / 0 failed",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "fmt": "cargo fmt --all -- --check clean",
+    "lib_serial": "1659 passed / 0 failed / 27 ignored (201.53 s, --test-threads=1)",
+    "lib_threads4": "1659 passed / 0 failed / 27 ignored (92.24 s, --test-threads=4)"
+  },
+  "queue_after_batch": {
+    "remaining_audit": 316,
+    "audited_files": 447,
+    "next_eight": [
+      "src/ec/nist.rs",
+      "src/ec/oct.rs",
+      "src/ec/print.rs",
+      "src/ec/prn.rs",
+      "src/ec/sm2_key.rs",
+      "src/ec/smpl2.rs",
+      "src/ec/smpl.rs",
+      "src/ec/support.rs"
+    ]
+  },
+  "reconciliation": {
+    "canonical_audited_before_batch": 439,
+    "canonical_unaudited_before_batch": 324,
+    "canonical_audited_after_batch": 447,
+    "canonical_unaudited_after_batch": 316,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 0,
+    "method": "The eight audited files were removed from the head of REMAINING-AUDIT.txt and merged into AUDITED-FILES.txt in LC_ALL=C order. Counts are definitions/entries, not files touched."
+  },
+  "retained_observations": [
+    "ossl_ecx_key_fromdata's private import may receive a plain OPENSSL_malloc block from OSSL_PARAM_get_octet_string when the key's privkey slot is NULL; CRYPTO_secure_clear_free recognises a non-secure pointer and clear-frees it, so the bytes are cleansed, but their lifetime is not in secure memory. This is the authority's behaviour.",
+    "ossl_ecx_key_allocate_privkey overwrites the privkey slot without releasing a previous allocation, exactly as the authority; callers use it only on a fresh key.",
+    "ossl_ec_wNAF_mul's length sums and the precomputation product are unchecked in the authority and remain unchecked here; a valid points/scalars array bounds num far below usize::MAX on the x86_64 profile, and CRYPTO_malloc_array keeps its checked multiplication.",
+    "wNAF digit arrays are plain-freed, matching the authority; the secret-scalar cases are routed to the Montgomery ladder, so the arrays are not classified secret.",
+    "No constant-time claim is made for the ladder: it uses BN_consttime_swap and route-merged condition bits as the authority does, but no timing measurement was performed."
+  ]
+}
