@@ -85,6 +85,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
+use std::sync::{Mutex, MutexGuard};
 
 use crate::asn1::layout::{Asn1Item, Asn1Pctx, Asn1String};
 use crate::evp::digest::EvpMdCtx;
@@ -353,7 +354,59 @@ pub const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 15] = [
 ];
 
 /// `app_methods` — the application-registered methods, sorted by `ameth_cmp`.
-static mut APP_METHODS: *mut OpenSslStack = ptr::null_mut();
+///
+/// The authority declares a bare stack pointer and mutates it with no synchronisation. In Rust
+/// that is a data race (and therefore UB) as soon as two threads call `EVP_PKEY_asn1_add0` or
+/// read the table while another thread registers, so the slot and every stack operation on it
+/// are serialised by one mutex, exactly as `x509_vpm.rs` serialises its parameter table. The
+/// lock is never held across a caller-supplied callback: `ameth_cmp` is this module's own
+/// comparator and the stack helpers are internal. A registration's caller still owns `ameth`
+/// and must keep it alive (and unmodified) for as long as it remains registered.
+struct AppMethods {
+    stack: *mut OpenSslStack,
+}
+
+// SAFETY: `stack` is only dereferenced while `APP_METHODS` is locked, and the stack it names is
+// only mutated under that lock. The method pointers it holds are caller-owned objects.
+unsafe impl Send for AppMethods {}
+
+static APP_METHODS: Mutex<AppMethods> = Mutex::new(AppMethods {
+    stack: ptr::null_mut(),
+});
+
+/// The registry guard. Poisoning records a defect in a previous critical section; the pointer
+/// slot is never left half-written (the stack is either installed or it is not), so the value is
+/// recovered rather than propagated to the C caller.
+fn lock_app_methods() -> MutexGuard<'static, AppMethods> {
+    match APP_METHODS.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
+/// `EVP_PKEY_asn1_get_count`'s arithmetic, with the registry already locked.
+fn app_count_locked(slot: &AppMethods) -> c_int {
+    let mut num = STANDARD_METHODS.len() as c_int;
+    if !slot.stack.is_null() {
+        // SAFETY: `slot.stack` is NULL or the live stack this module owns, under the lock.
+        num += unsafe { OPENSSL_sk_num(slot.stack) };
+    }
+    num
+}
+
+/// `EVP_PKEY_asn1_get0`'s index walk, with the registry already locked.
+fn app_get0_locked(slot: &AppMethods, idx: c_int) -> *const EvpPkeyAsn1Method {
+    let num = STANDARD_METHODS.len() as c_int;
+    if idx < 0 {
+        return ptr::null();
+    }
+    if idx < num {
+        return STANDARD_METHODS[idx as usize];
+    }
+    // SAFETY: `slot.stack` is the live registry or NULL, under the lock; an out-of-range index
+    // answers NULL.
+    unsafe { OPENSSL_sk_value(slot.stack, idx - num) }.cast::<EvpPkeyAsn1Method>()
+}
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/asn1/ameth_lib.c".as_ptr();
@@ -395,13 +448,8 @@ unsafe extern "C" fn ameth_cmp(a: *const c_void, b: *const c_void) -> c_int {
 /// Nothing: it touches no pointer argument.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_asn1_get_count() -> c_int {
-    let mut num = STANDARD_METHODS.len() as c_int;
-    // SAFETY: `APP_METHODS` is NULL or a stack this module owns.
-    if !unsafe { APP_METHODS }.is_null() {
-        // SAFETY: `APP_METHODS` is live.
-        num += unsafe { OPENSSL_sk_num(APP_METHODS) };
-    }
-    num
+    let slot = lock_app_methods();
+    app_count_locked(&slot)
 }
 
 /// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_get0(int idx)` — `crypto/asn1/ameth_lib.c:48`.
@@ -416,15 +464,8 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get_count() -> c_int {
 /// is, and because it reads the module's own `APP_METHODS`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_asn1_get0(idx: c_int) -> *const EvpPkeyAsn1Method {
-    let num = STANDARD_METHODS.len() as c_int;
-    if idx < 0 {
-        return ptr::null();
-    }
-    if idx < num {
-        return STANDARD_METHODS[idx as usize];
-    }
-    // SAFETY: `APP_METHODS` is NULL or a stack this module owns.
-    unsafe { OPENSSL_sk_value(APP_METHODS, idx - num) }.cast::<EvpPkeyAsn1Method>()
+    let slot = lock_app_methods();
+    app_get0_locked(&slot, idx)
 }
 
 /// `int EVP_PKEY_asn1_add0(const EVP_PKEY_ASN1_METHOD *ameth)` — `crypto/asn1/ameth_lib.c:144`.
@@ -435,7 +476,9 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get0(idx: c_int) -> *const EvpPkeyAsn1Met
 /// method pushed and the stack re-sorted.
 ///
 /// # Safety
-/// `ameth` must be a live method, and it must outlive the registry.
+/// `ameth` must be a live method, and it must outlive the registry. Registration does not take a
+/// reference: releasing a `DYNAMIC` method with [`EVP_PKEY_asn1_free`] while it is still registered
+/// leaves a dangling entry (the authority has the same contract, and no API unregisters a method).
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_asn1_add0(ameth: *const EvpPkeyAsn1Method) -> c_int {
     // SAFETY: `ameth` is live per the contract.
@@ -447,16 +490,15 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_add0(ameth: *const EvpPkeyAsn1Method) -> 
         return 0;
     }
 
-    // SAFETY: `APP_METHODS` is NULL or a stack this module owns.
-    if unsafe { APP_METHODS }.is_null() {
+    let mut slot = lock_app_methods();
+    if slot.stack.is_null() {
         // SAFETY: the comparator reads only `pkey_id`, which every pushed method has.
         /* `OPENSSL_sk_new` is a safe entry point of this crate. */
         let st = OPENSSL_sk_new(Some(ameth_cmp));
         if st.is_null() {
             return 0;
         }
-        // SAFETY: this module owns the pointer and nothing else writes it.
-        unsafe { APP_METHODS = st };
+        slot.stack = st;
     }
 
     /* The duplicate test compares `pkey_id` alone, which is why a caller that registers the same id
@@ -466,20 +508,20 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_add0(ameth: *const EvpPkeyAsn1Method) -> 
      * assigned immediately below. */
     let mut probe: EvpPkeyAsn1Method = unsafe { core::mem::zeroed() };
     probe.pkey_id = id;
-    // SAFETY: `APP_METHODS` is live and `probe` is a live local of the right shape for the
+    // SAFETY: `slot.stack` is live and `probe` is a live local of the right shape for the
     // comparator, which reads only `pkey_id`.
-    if unsafe { OPENSSL_sk_find(APP_METHODS, ptr::addr_of!(probe).cast::<c_void>()) } >= 0 {
+    if unsafe { OPENSSL_sk_find(slot.stack, ptr::addr_of!(probe).cast::<c_void>()) } >= 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::AMETH_LIB_174) };
         return 0;
     }
 
-    // SAFETY: `APP_METHODS` is live and `ameth` outlives the registry per the contract.
-    if unsafe { OPENSSL_sk_push(APP_METHODS, ameth.cast::<c_void>()) } == 0 {
+    // SAFETY: `slot.stack` is live and `ameth` outlives the registry per the contract.
+    if unsafe { OPENSSL_sk_push(slot.stack, ameth.cast::<c_void>()) } == 0 {
         return 0;
     }
-    // SAFETY: `APP_METHODS` is live.
-    unsafe { OPENSSL_sk_sort(APP_METHODS) };
+    // SAFETY: `slot.stack` is live.
+    unsafe { OPENSSL_sk_sort(slot.stack) };
     1
 }
 
@@ -1015,16 +1057,18 @@ unsafe fn pkey_asn1_find(type_: c_int) -> *const EvpPkeyAsn1Method {
     let mut probe: EvpPkeyAsn1Method = unsafe { core::mem::zeroed() };
     probe.pkey_id = type_;
 
-    // SAFETY: `APP_METHODS` is NULL or a stack this module owns.
-    if !unsafe { APP_METHODS }.is_null() {
-        // SAFETY: `APP_METHODS` is live and `probe` is a live local the comparator reads as a
-        // method.
-        let idx = unsafe { OPENSSL_sk_find(APP_METHODS, ptr::addr_of!(probe).cast::<c_void>()) };
+    let slot = lock_app_methods();
+    if !slot.stack.is_null() {
+        // SAFETY: `slot.stack` is live under the lock and `probe` is a live local the comparator
+        // reads as a method.
+        let idx = unsafe { OPENSSL_sk_find(slot.stack, ptr::addr_of!(probe).cast::<c_void>()) };
         if idx >= 0 {
-            // SAFETY: `idx` is a valid index into `APP_METHODS`.
-            return unsafe { OPENSSL_sk_value(APP_METHODS, idx) }.cast::<EvpPkeyAsn1Method>();
+            // SAFETY: `idx` is a valid index into `slot.stack`.
+            return unsafe { OPENSSL_sk_value(slot.stack, idx) }.cast::<EvpPkeyAsn1Method>();
         }
     }
+    // The standard table is immutable, so the lock is no longer needed for the search.
+    drop(slot);
 
     /* `OBJ_bsearch_ameth(type, standard_methods, OSSL_NELEM(standard_methods))`, whose element size
      * is `sizeof(const EVP_PKEY_ASN1_METHOD *)` and whose comparator is `ameth_cmp`. The key is a
@@ -1120,12 +1164,15 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_find_str(
         // module doc gives.
         unsafe { *pe = ptr::null_mut() };
     }
-    // SAFETY: it touches no pointer argument.
-    let mut i = unsafe { EVP_PKEY_asn1_get_count() };
+    // The snapshot is taken under the registry lock so a concurrent registration cannot make the
+    // count and the per-index reads disagree. Method pointers themselves are caller-owned and the
+    // registry never releases one, so a pointer returned from this walk stays valid as long as its
+    // owner keeps the method alive.
+    let slot = lock_app_methods();
+    let mut i = app_count_locked(&slot);
     while i > 0 {
         i -= 1;
-        // SAFETY: `i` is inside the index space the count just reported.
-        let ameth = unsafe { EVP_PKEY_asn1_get0(i) };
+        let ameth = app_get0_locked(&slot, i);
         if ameth.is_null() {
             continue;
         }

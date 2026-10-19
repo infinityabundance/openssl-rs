@@ -253,7 +253,7 @@ const ERR_REASON_MASK: c_ulong = 0x7f_ffff;
 const ERR_SYSTEM_MASK: c_ulong = 0x7fff_ffff;
 
 /// The `OPENSSL_FILE` string for this unit's `CRYPTO_*` macro expansions.
-const FILE: &core::ffi::CStr = c"crypto/http/http_client.c";
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/http/http_client.c";
 
 // ---------------------------------------------------------------------------
 // The struct and the callback type
@@ -1609,7 +1609,9 @@ unsafe fn may_still_retry(max_time: TimeT, ptimeout: *mut c_int) -> c_int {
 ///
 /// # Safety
 /// `rctx` must be NULL or a live context whose `mem`, `wbio` and `rbio` are live BIOs, and whose
-/// `buf` is writable for `buf_size` bytes.
+/// `buf` is writable for `buf_size` bytes. A custom BIO method reached through those BIOs must not
+/// re-enter any operation on the same `rctx` during the call: the state machine holds an exclusive
+/// Rust reference to it across every BIO operation, so a re-entrant call would form a second one.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_HTTP_REQ_CTX_nbio(rctx: *mut OsslHttpReqCtx) -> c_int {
     // SAFETY: the whole body. `rctx` is NULL or live with the BIOs and buffer the contract
