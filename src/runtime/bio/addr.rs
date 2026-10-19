@@ -93,6 +93,23 @@ pub struct BioAddr {
 /// The `sin_addr`/`sin6_addr`/`sun_path` region starts after the family word.
 const ADDR_OFFSET: usize = 2;
 
+// The accessors below form `SockAddrIn`/`SockAddrIn6`/`SockAddrUn` references from a
+// `BioAddr` (for example `BIO_ADDR_rawmake` writes through `*mut SockAddrIn`). Those
+// types need four-byte alignment, so the containing storage must guarantee it; the
+// assertion turns a later weakening of `SockAddrStorage` into a compile error rather
+// than undefined behaviour.
+const _: () = {
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrIn>()
+    );
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrIn6>()
+    );
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrUn>()
+    );
+};
+
 /// `sizeof(BIO_ADDR)` in the authority.
 ///
 /// `BIO_ADDR` is `union bio_addr_st { struct sockaddr; struct sockaddr_in6;

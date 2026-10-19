@@ -2385,3 +2385,47 @@ Deferred NOT_RUN as provider/callback boundaries: `provider/ml_kem_codecs.rs` (8
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M25.json`](atlas-refresh/mechanism-sweep-M25.json).
+
+## 30. Mechanism sweep M26 — 2026-10-19
+
+Eight ordinary files from the M25-named batch; no newly discovered boundary.
+Source identity `f479783f8`; `src/runtime/bio/addr.rs`,
+`src/runtime/bio/addr_info.rs` and `src/runtime/bio/sys.rs` are the source changes.
+
+**M26 audited files (8).** `src/provider/core_dispatch.rs`,
+`src/provider/exchange.rs`, `src/slh_dsa/wots.rs`, `src/runtime/bio/addr.rs`,
+`src/runtime/bio/addr_info.rs`, `src/evp/evp_pkey.rs`, `src/x509/v3_genn.rs`,
+`src/x509/v3_akid.rs`.
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M26-D1 | `src/runtime/bio/addr_info.rs:321` | medium (compatibility divergence) | `addrinfo_wrap` ignored `BIO_ADDR_rawmake`'s refusal, returning success with an `AF_UNSPEC` address for an over-long `AF_UNIX` path; the allocation-failure arm also omitted the authority's `*bai = NULL` (§8, §17) | check the result, release the fresh address on refusal, and write NULL on node-allocation failure; control `runtime::bio::addr_info::tests::a_unix_path_that_cannot_be_terminated_is_refused` |
+| M26-D2 | `src/runtime/bio/sys.rs:335` | high (alignment invariant; potential UB) | `SockAddrStorage` was 2-aligned while `addr.rs` derives 4-aligned `SockAddrIn`/`SockAddrIn6`/`SockAddrUn` references from it, so stack/embedded `BioAddr` values were not sound by construction (§2, §10, §21) | `#[repr(C, align(4))]` (size unchanged at 128) plus compile-time alignment assertions in `addr.rs` |
+
+**Contracts reused.** RC-1, OB-1, OB-2, OB-3, OB-4, ASN1 item/union
+ownership, BIO control callbacks and opaque `BIO_ADDR` storage, provider
+keyexch/kdf dispatch, OSSL_PARAM decoders. No new unsafe assumption; hidden
+obligations 0; unsafe ops introduced/removed/relocated 0/0/0.
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1627 passed / 0 failed / 27 ignored** serially (201.53 s) and with
+`--test-threads=4` (126.99 s); focused `runtime::bio::addr` 13/0.
+
+**NOT_RUN.** `RT-BIO-ADDR` differential probe (the phase-4 runner links the
+committed `artifacts/phase2` distribution shell, which predates this worktree;
+rebuilding it is a boundary action), Miri/ASan on the alignment change
+(BOUNDARY), independent review and SEAL. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/dh/ctrl.rs` (73), `src/dsa/pmeth.rs` (73),
+`src/provider/decode_msblob2key.rs` (72), `src/runtime/bio/bss_mem.rs` (72),
+`src/x509/v3_attrmap.rs` (72), `src/runtime/bio/bio_sock2.rs` (70),
+`src/x509/by_file.rs` (70), `src/runtime/bio/method.rs` (69).
+Deferred NOT_RUN as boundaries: `provider/legacyprov.rs` (73),
+`provider/child.rs` (71), `runtime/lhash.rs` (71, BOUNDARY_COVERED),
+`ssl/record/rec_layer_s3.rs` (69); `src/dh/key.rs` is already covered by B14-D1.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M26.json`](atlas-refresh/mechanism-sweep-M26.json).
