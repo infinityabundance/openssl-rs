@@ -895,6 +895,13 @@ pub extern "C" fn RSA_null_method() -> *const RsaMethod {
 // Slice C, first part — the RAND-free half of the padding functions (D285)
 // =============================================================================================
 //
+// **Negative and too-short lengths are refused here, unlike the authority.** The C bodies pass
+// an `int` length straight into `memcpy`/`memset`, so a negative `flen` (or the `flen < 2` X9.31
+// check, which reads a header and a trailer before copying) is undefined behaviour in the
+// authority. These entry points reject the length before touching a buffer; every non-negative
+// input keeps the authority's result and error reason. This is the deliberate divergence §17
+// requires: a C-valid hostile argument must not reach the copies.
+//
 // Three of the eight padding *add* functions need `RAND_bytes_ex` for the bytes they insert
 // `rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
 // for implicit rejection. What lands here first is the half whose output is a **pure function of
@@ -938,6 +945,13 @@ pub unsafe extern "C" fn RSA_padding_add_none(
             raise_site(&err_sites::RSA_NONE_29);
             return 0;
         }
+        // `flen == tlen` and both are negative: the authority's `memcpy` would receive the
+        // negated length as `size_t`. Refuse it as the too-small case it would have been for any
+        // non-negative `tlen`.
+        if flen < 0 {
+            raise_site(&err_sites::RSA_NONE_29);
+            return 0;
+        }
         core::ptr::copy_nonoverlapping(from, to, flen as usize);
         1
     }
@@ -966,6 +980,12 @@ pub unsafe extern "C" fn RSA_padding_check_none(
             raise_site(&err_sites::RSA_NONE_42);
             return -1;
         }
+        // A non-negative `tlen` with a negative `flen` would make `tlen - flen` larger than the
+        // destination and hand the negated `flen` to `memcpy`. Refuse it at the too-large site.
+        if flen < 0 {
+            raise_site(&err_sites::RSA_NONE_42);
+            return -1;
+        }
         core::ptr::write_bytes(to, 0, (tlen - flen) as usize);
         core::ptr::copy_nonoverlapping(from, to.offset((tlen - flen) as isize), flen as usize);
         tlen
@@ -991,6 +1011,13 @@ pub unsafe extern "C" fn RSA_padding_add_X931(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // The authority subtracts before checking, so a negative length (or an `INT_MIN` bound)
+        // reaches a wrapped `j` and then a `memcpy` with a negated length. Refuse the inputs that
+        // cannot describe a block before doing the arithmetic.
+        if tlen < 0 || flen < 0 {
+            raise_site(&err_sites::RSA_X931_56);
+            return -1;
+        }
         let j = tlen - flen - 2;
 
         if j < 0 {
@@ -1041,7 +1068,10 @@ pub unsafe extern "C" fn RSA_padding_check_X931(
         let mut p = from;
         let mut i: c_int = 0;
 
-        if num != flen || (*p != 0x6a && *p != 0x6b) {
+        // The body reads `from[0]`, then the header and a trailer, and finally copies
+        // `flen - 2` bytes; a block shorter than two octets (or a negative length) cannot be
+        // walked. The authority reads and copies out of bounds for those inputs.
+        if flen < 2 || num != flen || (*p != 0x6a && *p != 0x6b) {
             raise_site(&err_sites::RSA_X931_87);
             return -1;
         }
@@ -1130,6 +1160,13 @@ pub unsafe extern "C" fn RSA_padding_add_PKCS1_type_1(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // A negative bound would make `tlen - RSA_PKCS1_PADDING_SIZE` itself wrap; a negative
+        // `flen` would pass the upper-bound test and be negated into the `memset`/`memcpy`
+        // lengths. The authority has both faults; this entry point refuses them.
+        if tlen < 0 || flen < 0 {
+            raise_site(&err_sites::RSA_PK1_38);
+            return 0;
+        }
         if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
             raise_site(&err_sites::RSA_PK1_38);
             return 0;
@@ -1255,6 +1292,11 @@ pub unsafe extern "C" fn PKCS1_MGF1(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // A negative seed length would be negated when passed to `EVP_DigestUpdate`; the
+        // authority does the same conversion. Refuse it before allocating.
+        if seedlen < 0 {
+            return -1;
+        }
         let c = EVP_MD_CTX_new();
         let mut md = [0u8; EVP_MAX_MD_SIZE];
         let mut cnt = [0u8; 4];
@@ -1433,7 +1475,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         // SAFETY: `md` is live (the default above when the caller passed NULL).
         let mdlen: c_int = EVP_MD_get_size(md);
 
-        if tlen <= 0 || flen <= 0 || mdlen <= 0 {
+        // A negative label length would be negated when passed to `EVP_Digest`; the authority
+        // does the same conversion. Every non-negative input keeps the authority's answer.
+        if tlen <= 0 || flen <= 0 || plen < 0 || mdlen <= 0 {
             return -1;
         }
         // `num` is the modulus length and `flen` the encoded message length: `flen <= num` for any
@@ -1689,6 +1733,12 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_type_2_ex(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // Checked before the subtraction so an `INT_MIN` bound cannot wrap it; a negative `tlen`
+        // is the authority's too-large arm in every case where its own subtraction is defined.
+        if tlen < 0 {
+            raise_site(&err_sites::RSA_PK1_132);
+            return 0;
+        }
         if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
             raise_site(&err_sites::RSA_PK1_132);
             return 0;
@@ -1975,7 +2025,7 @@ unsafe fn ossl_rsa_prf(
     'body: {
         // SAFETY: as above.
         unsafe {
-            if tlen.wrapping_mul(8) != bitlen as c_int {
+            if llen < 0 || tlen.wrapping_mul(8) != bitlen as c_int {
                 raise_site(&err_sites::RSA_PK1_294);
                 break 'body;
             }
@@ -2447,6 +2497,13 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // The authority computes `tlen - 1` before any check and passes `plen`/`flen` straight
+        // into `EVP_Digest`/`memcpy`; a negative or `INT_MIN` value therefore wraps or is negated
+        // into a `size_t`. Every non-positive `tlen` and negative length is refused here.
+        if tlen <= 0 || flen < 0 || plen < 0 {
+            raise_site(&err_sites::RSA_OAEP_99);
+            return 0;
+        }
         let emlen: c_int = tlen - 1;
         let mut seedmask = [0u8; EVP_MAX_MD_SIZE];
 
@@ -4222,6 +4279,104 @@ mod tests {
                 0
             );
             BN_free(e);
+        }
+    }
+
+    /// **Negative and sub-minimum lengths are refused before any copy.** The authority's C
+    /// bodies pass the `int` straight to `memcpy`/`memset`, so these arguments are undefined
+    /// behaviour there; each entry point must answer its documented failure without touching the
+    /// buffers. `INT_MIN` is included because the authority's `tlen - 11`/`tlen - flen - 2`
+    /// arithmetic wraps for it.
+    #[test]
+    fn the_padding_entry_points_refuse_lengths_that_cannot_describe_a_block() {
+        let from = [0xa5u8; 16];
+        let mut to = [0u8; 16];
+        let mut mask = [0u8; 8];
+
+        // SAFETY: every pointer refers to a live local of the length named in the call; the
+        // lengths are the malicious ones under test, so the guards must answer before any read
+        // or write. `c_int::MIN` is the wrapping-arithmetic case.
+        unsafe {
+            assert_eq!(
+                RSA_padding_add_none(to.as_mut_ptr(), -1, from.as_ptr(), -1),
+                0
+            );
+            assert_eq!(
+                RSA_padding_check_none(to.as_mut_ptr(), 8, from.as_ptr(), -1, 8),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_X931(to.as_mut_ptr(), 8, from.as_ptr(), -1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_X931(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_X931(to.as_mut_ptr(), 8, from.as_ptr(), 1, 1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_X931(to.as_mut_ptr(), 8, from.as_ptr(), -1, -1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_1(to.as_mut_ptr(), 16, from.as_ptr(), -1),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_1(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                0
+            );
+            assert_eq!(
+                PKCS1_MGF1(
+                    mask.as_mut_ptr(),
+                    mask.len() as c_long,
+                    from.as_ptr(),
+                    -1,
+                    crate::evp::legacy_sha::EVP_sha256(),
+                ),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    -1,
+                    core::ptr::null(),
+                    0,
+                ),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    8,
+                    from.as_ptr(),
+                    -1,
+                ),
+                0
+            );
+            assert_eq!(
+                RSA_padding_check_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    16,
+                    16,
+                    from.as_ptr(),
+                    -1,
+                ),
+                -1
+            );
         }
     }
 }
