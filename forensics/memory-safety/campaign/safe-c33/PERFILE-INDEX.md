@@ -2343,3 +2343,45 @@ Skipped as already swept or retained boundaries: `src/ec/smpl2.rs` and
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M24.json`](atlas-refresh/mechanism-sweep-M24.json).
+
+## 29. Mechanism sweep M25 — 2026-10-19
+
+Eight ordinary files from the M24-named batch; no newly discovered boundary.
+Source identity `d8b4d82ca`; `src/runtime/str.rs` is the only source change.
+
+**M25 audited files (8).** `src/runtime/bio/bf_lbuf.rs`, `src/provider/seed_src.rs`,
+`src/asn1/x_algor.rs`, `src/x509/x509_set.rs`, `src/provider/ec_kem.rs`,
+`src/runtime/str.rs`, `src/provider/mlx_kmgmt.rs`, `src/provider/ml_dsa_codecs.rs`.
+
+**Defect.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M25-D1 | `src/runtime/str.rs:458` | high (one-byte OOB write; length divergence) | `buf2hexstr_sep` omitted the authority's `if (len == 0) ++len;`, so an empty separator-form `OPENSSL_buf2hexstr_ex` reported length 0, accepted `str_n == 0`, and wrote the NUL past the caller's extent (§3, §17) | restore the clamp before `*strlength`; control `runtime::str::tests::buf2hexstr_ex_empty_with_separator_requires_one_byte` |
+
+**Contracts reused.** RC-1, OB-1, OB-2, OB-3 (+ zero-state sweep), OB-4,
+ASN1 item/`ASN1_STRING` ownership, BIO control callbacks, provider
+keymgmt import/export. No new unsafe assumption; hidden obligations 0;
+unsafe ops introduced/removed/relocated 0/0/0.
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1626 passed / 0 failed / 27 ignored** serially (222.53 s) and with
+`--test-threads=4` (89.13 s); focused `runtime::str::tests` 8/0.
+
+**NOT_RUN.** Miri/ASan on the new bounds control (BOUNDARY), independent
+review and SEAL. No downstream probe exercises the empty separator form: the
+hostility corpus calls `OPENSSL_buf2hexstr` with non-empty input and the coverage
+probe only resolves the `_ex` export. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/provider/core_dispatch.rs` (75),
+`src/provider/exchange.rs` (74), `src/slh_dsa/wots.rs` (74),
+`src/runtime/bio/addr.rs` (74), `src/runtime/bio/addr_info.rs` (74),
+`src/evp/evp_pkey.rs` (74), `src/x509/v3_genn.rs` (73), `src/x509/v3_akid.rs` (73).
+Deferred NOT_RUN as provider/callback boundaries: `provider/ml_kem_codecs.rs` (80),
+`provider/file_store_any2obj.rs` (79), `ui/ui_openssl.rs` (84),
+`provider/legacyprov.rs` (73); substitutions if triage changes:
+`src/dsa/pmeth.rs` (73), `src/dh/ctrl.rs` (73).
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M25.json`](atlas-refresh/mechanism-sweep-M25.json).

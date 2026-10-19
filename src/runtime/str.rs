@@ -451,6 +451,11 @@ unsafe fn buf2hexstr_sep(
         unsafe { raise_site(&O_STR_303) };
         return 0;
     }
+    // The authority's `if (len == 0) ++len;`: with a separator and no input bytes
+    // the encoding is still one NUL byte, so the length and the writable extent
+    // must both be 1. Without this clamp an empty `OPENSSL_buf2hexstr_ex` call
+    // reports length 0 and writes one byte through the caller's `str`.
+    let len = if len == 0 { 1 } else { len };
 
     if !strlength.is_null() {
         // SAFETY: `strlength` is writable per the caller's contract.
@@ -842,6 +847,62 @@ mod tests {
         };
         assert_eq!(rc, 1);
         assert_eq!(need, 9, "3 bytes as 8 digits plus 2 separators plus NUL");
+    }
+
+    #[test]
+    fn buf2hexstr_ex_empty_with_separator_requires_one_byte() {
+        let mut need = 0usize;
+        // Measuring form: the empty encoding still includes the terminator (the
+        // authority's `if (len == 0) ++len;`).
+        // SAFETY: `need` is writable; a NULL `str` is the measuring form and a
+        // NULL `buf` is never read when `buflen` is 0.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                core::ptr::null_mut(),
+                0,
+                &mut need,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 1);
+        assert_eq!(need, 1);
+
+        // A zero-byte destination is too small rather than silently overrun.
+        let mut out = [0xAAu8; 1];
+        let mut got = usize::MAX;
+        // SAFETY: `out` is writable for zero bytes, `got` is writable, and the
+        // empty input has no readable requirement.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                out.as_mut_ptr().cast::<c_char>(),
+                0,
+                &mut got,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 0);
+        assert_eq!(out[0], 0xAA, "the refused call must not write");
+        assert_eq!(got, 1, "the authority reports the required length first");
+
+        // One byte is enough and receives the terminator.
+        // SAFETY: `out` is writable for one byte and `got` is writable.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                out.as_mut_ptr().cast::<c_char>(),
+                out.len(),
+                &mut got,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 1);
+        assert_eq!(got, 1);
+        assert_eq!(out[0], 0);
     }
 
     #[test]
