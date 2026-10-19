@@ -52,7 +52,7 @@ use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_decr.c` — the authority's `__FILE__` string.
-const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_decr.c";
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c";
 
 /// `EVP_CIPH_FLAG_CIPHER_WITH_MAC` — `include/openssl/evp.h:364`.
 const EVP_CIPH_FLAG_CIPHER_WITH_MAC: core::ffi::c_ulong = 0x2000000;
@@ -131,7 +131,15 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
         return ptr::null_mut();
     }
 
-    let mut max_out_len = inlen + block_size;
+    // `max_out_len` is the authority's `inlen + block_size`, later grown by the
+    // MAC tail on encrypt. The authority computes it in `int`; an overflowing or
+    // negative sum would size the output buffer below the bytes `EVP_CipherUpdate`
+    // writes, which §17 forbids reproducing. Refuse instead.
+    let Some(mut max_out_len) = inlen.checked_add(block_size).filter(|v| *v >= 0) else {
+        // SAFETY: `ctx` is live.
+        unsafe { EVP_CIPHER_CTX_free(ctx) };
+        return ptr::null_mut();
+    };
     /* SAFETY: `ctx` is live. */
     let with_mac = (unsafe { EVP_CIPHER_get_flags(EVP_CIPHER_CTX_get0_cipher(ctx)) }
         & EVP_CIPH_FLAG_CIPHER_WITH_MAC)
@@ -150,7 +158,12 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
         }
         // SAFETY: `ctx` is live.
         if unsafe { EVP_CIPHER_CTX_is_encrypting(ctx) } != 0 {
-            max_out_len += mac_len;
+            let Some(grown) = max_out_len.checked_add(mac_len) else {
+                // SAFETY: `ctx` is live.
+                unsafe { EVP_CIPHER_CTX_free(ctx) };
+                return ptr::null_mut();
+            };
+            max_out_len = grown;
         } else {
             if inlen < mac_len {
                 // SAFETY: a compile-time-constant site.
@@ -189,6 +202,11 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
 
     // SAFETY: `ctx` is live; `out` has `max_out_len` bytes; `in_`/`inlen` are the caller's.
     if unsafe { EVP_CipherUpdate(ctx, out.as_ptr(), &raw mut i, in_, inlen) } == 0 {
+        // A failed update may already have written plaintext into the buffer; cleanse it before
+        // the authority's plain release. This is a deliberate failure-path improvement over
+        // `p12_decr.c:85`, which frees without cleansing.
+        // SAFETY: `out` is this frame's `max_out_len`-byte block.
+        unsafe { OPENSSL_cleanse(out.as_ptr().cast(), max_out_len as usize) };
         // The authority's failure release is the plain `CRYPTO_free` at `:85`, in its own order
         // before the raise and the context release.
         out.set_release_line(85);
@@ -202,8 +220,12 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
     let mut outlen = i;
     // SAFETY: `ctx` is live; `out + i` is inside the buffer.
     if unsafe { EVP_CipherFinal_ex(ctx, out.as_ptr().add(i as usize), &raw mut i) } == 0 {
-        // The authority's failure release is the plain `CRYPTO_free` at `:92`.
-        out.set_release_line(92);
+        // A failed final may leave plaintext in the buffer; cleanse it before the authority's
+        // plain release (`p12_decr.c:93`, a deliberate failure-path improvement).
+        // SAFETY: `out` is this frame's `max_out_len`-byte block.
+        unsafe { OPENSSL_cleanse(out.as_ptr().cast(), max_out_len as usize) };
+        // The authority's failure release is the plain `CRYPTO_free` at `:93`.
+        out.set_release_line(93);
         drop(out);
         let msg = if passlen == 0 {
             c"empty password"
@@ -230,8 +252,12 @@ pub unsafe extern "C" fn PKCS12_pbe_crypt_ex(
                 )
             } <= 0
             {
-                // The authority's failure release is the plain `CRYPTO_free` at `:105`.
-                out.set_release_line(105);
+                // A failed tag read may leave plaintext in the buffer; cleanse it before the
+                // authority's plain release (`p12_decr.c:108`, a deliberate improvement).
+                // SAFETY: `out` is this frame's `max_out_len`-byte block.
+                unsafe { OPENSSL_cleanse(out.as_ptr().cast(), max_out_len as usize) };
+                // The authority's failure release is the plain `CRYPTO_free` at `:108`.
+                out.set_release_line(108);
                 drop(out);
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PKCS12_110) };
@@ -450,6 +476,13 @@ pub unsafe extern "C" fn PKCS12_item_i2d_encrypt_ex(
     if crypted.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS12_210) };
+        if zbuf != 0 {
+            // The authority frees `in` without cleansing when the crypt fails
+            // (`p12_decr.c:211`), even though its success tail honours `zbuf`; the encoding can
+            // carry private-key material, so cleanse here as a deliberate improvement.
+            // SAFETY: `in_` is this call's own encoding of `inlen` bytes.
+            unsafe { OPENSSL_cleanse(in_.as_ptr().cast(), inlen.max(0) as usize) };
+        }
         in_.set_release_line(211);
         drop(in_);
         // SAFETY: `oct` is this call's own.
