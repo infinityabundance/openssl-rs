@@ -468,7 +468,9 @@ unsafe fn dynamic_set_data_ctx(e: *mut Engine, ctx: *mut *mut DynamicDataCtx) ->
 /// `static dynamic_data_ctx *dynamic_get_data_ctx(ENGINE *e)` — `:201-236`.
 ///
 /// # Safety
-/// `e` must be a live `ENGINE`.
+/// `e` must be a live `ENGINE` that the caller does not concurrently destroy or
+/// control: the `ex_data` read before `dynamic_set_data_ctx` takes the lock, so a
+/// concurrent `CRYPTO_set_ex_data`/`CRYPTO_free_ex_data` on the same ENGINE would race.
 unsafe fn dynamic_get_data_ctx(e: *mut Engine) -> *mut DynamicDataCtx {
     if DYNAMIC_EX_DATA_IDX.load(Ordering::Relaxed) < 0 {
         // `ENGINE_get_ex_new_index(0, NULL, NULL, NULL, dynamic_data_ctx_free_func)` is the
@@ -575,7 +577,11 @@ unsafe extern "C" fn dynamic_finish(_e: *mut Engine) -> c_int {
 /// `static int dynamic_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))` — `:289-366`.
 ///
 /// # Safety
-/// Called through the ENGINE control surface with the authority's argument contract.
+/// Called through the ENGINE control surface with the authority's argument contract:
+/// `e` is a live `ENGINE` the caller does not concurrently destroy, control or load
+/// (the authority does not serialise per-ENGINE control, and this port preserves that;
+/// the context's fields are unsynchronised), and a non-NULL `p` for a string command is
+/// NUL-terminated.
 unsafe extern "C" fn dynamic_ctrl(
     e: *mut Engine,
     cmd: c_int,
@@ -797,7 +803,11 @@ unsafe fn using_libcrypto_11(ctx: *mut DynamicDataCtx) -> c_int {
 /// `static int dynamic_load(ENGINE *e, dynamic_data_ctx *ctx)` — `:412-522`.
 ///
 /// # Safety
-/// `e` and `ctx` must be live; the context must be uninitialised (the caller checks).
+/// `e` and `ctx` must be live; `ctx` must be the context stored in `e`'s `ex_data` and
+/// must be uninitialised (the caller checks); the caller must have the same exclusive
+/// use of `e` as [`dynamic_ctrl`]. The loaded library's `v_check` and `bind_engine` are
+/// application code: they run without the engine lock, may re-enter the crate, and must
+/// not retain the `dynamic_fns` pointer past the call.
 unsafe fn dynamic_load(e: *mut Engine, ctx: *mut DynamicDataCtx) -> c_int {
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).dynamic_dso.is_null() } {
@@ -1001,6 +1011,19 @@ const _: () = {
     assert!(
         core::mem::size_of::<Option<EngineGenIntFuncPtr>>()
             == core::mem::size_of::<*const c_void>()
+    );
+    // `dynamic_fns` is handed to the loaded library, so its C layout is part of the
+    // ABI: a pointer to `static_state`, then the three allocator slots in order.
+    assert!(core::mem::size_of::<DynamicFns>() == 4 * core::mem::size_of::<*const c_void>());
+    assert!(core::mem::offset_of!(DynamicFns, static_state) == 0);
+    assert!(core::mem::offset_of!(DynamicFns, mem_fns) == core::mem::size_of::<*const c_void>());
+    assert!(core::mem::size_of::<DynamicMemFns>() == 3 * core::mem::size_of::<*const c_void>());
+    assert!(core::mem::offset_of!(DynamicMemFns, malloc_fn) == 0);
+    assert!(
+        core::mem::offset_of!(DynamicMemFns, realloc_fn) == core::mem::size_of::<*const c_void>()
+    );
+    assert!(
+        core::mem::offset_of!(DynamicMemFns, free_fn) == 2 * core::mem::size_of::<*const c_void>()
     );
 };
 
