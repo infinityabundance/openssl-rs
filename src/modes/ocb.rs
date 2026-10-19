@@ -549,8 +549,15 @@ pub unsafe extern "C" fn CRYPTO_ocb128_encrypt(
                 f((*ctx).offset.as_ptr(), pad.as_mut_ptr(), (*ctx).keyenc);
             }
 
+            // The caller's `in`/`out` may be the same buffer (in-place AEAD). Copy the
+            // ciphertext tail out first so the input is never borrowed while `out` is
+            // mutably borrowed: `from_raw_parts(inp, ..)` and
+            // `from_raw_parts_mut(outp, ..)` over an aliasing range would be undefined
+            // behaviour even though the byte XOR is read-then-write.
+            let mut tail = [0u8; 16];
+            ptr::copy_nonoverlapping(inp, tail.as_mut_ptr(), last_len);
             ocb_block_xor(
-                core::slice::from_raw_parts(inp, last_len),
+                &tail[..last_len],
                 &pad,
                 last_len,
                 core::slice::from_raw_parts_mut(outp, last_len),
@@ -558,7 +565,7 @@ pub unsafe extern "C" fn CRYPTO_ocb128_encrypt(
 
             let mut cell = (*ctx).checksum;
             let mut star_block = [0u8; 16];
-            star_block[..last_len].copy_from_slice(core::slice::from_raw_parts(inp, last_len));
+            star_block[..last_len].copy_from_slice(&tail[..last_len]);
             star_block[last_len] = 0x80;
             xor16(&mut cell, &star_block);
             (*ctx).checksum = cell;
@@ -662,8 +669,12 @@ pub unsafe extern "C" fn CRYPTO_ocb128_decrypt(
                 f((*ctx).offset.as_ptr(), pad.as_mut_ptr(), (*ctx).keyenc);
             }
 
+            // As in the encrypt arm: `in`/`out` may alias, so the ciphertext tail is
+            // copied before `out` is mutably borrowed.
+            let mut tail = [0u8; 16];
+            ptr::copy_nonoverlapping(inp, tail.as_mut_ptr(), last_len);
             ocb_block_xor(
-                core::slice::from_raw_parts(inp, last_len),
+                &tail[..last_len],
                 &pad,
                 last_len,
                 core::slice::from_raw_parts_mut(outp, last_len),
@@ -896,6 +907,87 @@ mod tests {
             let mut bad = tag;
             bad[0] ^= 1;
             assert_ne!(CRYPTO_ocb128_finish(ctx, bad.as_ptr(), bad.len()), 0);
+            CRYPTO_ocb128_cleanup(ctx);
+        }
+    }
+
+    /// `in == out` is permitted (EVP's block update may pass one buffer), and the
+    /// partial-block arm copies the input tail before forming the output borrow. Pinning
+    /// the in-place result to the out-of-place one keeps the bytes and the tag identical
+    /// while removing the overlapping `&`/`&mut` that `from_raw_parts(_mut)` would form.
+    #[test]
+    fn ocb_partial_block_in_place_matches_out_of_place() {
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        let iv = unhex("000102030405060708090a0b");
+        let aad = unhex("0001020304050607");
+        // Thirteen bytes: one full block is impossible, so the partial arm runs.
+        let pt = unhex("000102030405060708090a0b0c");
+        // SAFETY: live locals and live schedules.
+        unsafe {
+            let ke = schedule(&key, 128);
+            let kd = schedule_dec(&key, 128);
+
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut ct = [0u8; 13];
+            assert_eq!(
+                CRYPTO_ocb128_encrypt(ctx, pt.as_ptr(), ct.as_mut_ptr(), pt.len()),
+                1
+            );
+            let mut tag = [0u8; 16];
+            assert_eq!(CRYPTO_ocb128_tag(ctx, tag.as_mut_ptr(), 16), 1);
+            CRYPTO_ocb128_cleanup(ctx);
+
+            // In-place encryption of the same thirteen bytes.
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut buf = [0u8; 13];
+            buf.copy_from_slice(&pt);
+            assert_eq!(
+                CRYPTO_ocb128_encrypt(ctx, buf.as_ptr(), buf.as_mut_ptr(), buf.len()),
+                1
+            );
+            assert_eq!(buf, ct);
+            let mut in_place_tag = [0u8; 16];
+            assert_eq!(CRYPTO_ocb128_tag(ctx, in_place_tag.as_mut_ptr(), 16), 1);
+            assert_eq!(in_place_tag, tag);
+            CRYPTO_ocb128_cleanup(ctx);
+
+            // In-place decryption recovers the plaintext and verifies the tag.
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut buf = [0u8; 13];
+            buf.copy_from_slice(&ct);
+            assert_eq!(
+                CRYPTO_ocb128_decrypt(ctx, buf.as_ptr(), buf.as_mut_ptr(), buf.len()),
+                1
+            );
+            assert_eq!(&buf[..], &pt[..]);
+            assert_eq!(CRYPTO_ocb128_finish(ctx, tag.as_ptr(), tag.len()), 0);
             CRYPTO_ocb128_cleanup(ctx);
         }
     }
