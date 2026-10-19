@@ -433,12 +433,22 @@ unsafe extern "C" fn dh_init(dh: *mut Dh) -> c_int {
 
 /// `static int dh_finish(DH *dh)` — `dh_key.c:207-211`. Releases the cached Montgomery context.
 ///
+/// **The released slot is cleared.** `DH_set_method` runs this hook on each method transition
+/// and `DH_free` runs it again through the destructor body, so leaving the freed pointer
+/// installed would make the second pass release it a second time; the next key operation would
+/// also take `BN_MONT_CTX_set_locked`'s non-NULL fast path with freed storage. Clearing is a
+/// deliberate divergence from the authority (the M17-D1/M20-D2 class, §17: do not reproduce the
+/// authority's UB) and is not observable to a caller that uses a released context correctly.
+///
 /// # Safety
 ///
 /// `dh` is a live object.
 unsafe extern "C" fn dh_finish(dh: *mut Dh) -> c_int {
     // SAFETY: `dh` is live and `method_mont_p` is NULL or the object's own context.
-    unsafe { BN_MONT_CTX_free((*dh).method_mont_p) };
+    unsafe {
+        BN_MONT_CTX_free((*dh).method_mont_p);
+        (*dh).method_mont_p = ptr::null_mut();
+    }
     1
 }
 
@@ -909,4 +919,33 @@ pub(crate) unsafe fn ossl_dh_key2buf(
         }
     }
     p_size as usize
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::mont::BN_MONT_CTX_new;
+    use crate::dh::object::{DH_free, DH_new, DH_set_method};
+
+    /// `DH_set_method` runs the outgoing table's `finish`, and a later `DH_free` runs it again
+    /// through the destructor body. The first pass must clear the cache so the second cannot
+    /// release the same context twice (the M17-D1/M20-D2 class).
+    #[test]
+    fn the_finish_hook_clears_the_mont_cache_it_releases() {
+        // SAFETY: the object and the cached context are this test's own; all three calls are the
+        // public lifecycle entry points under their documented contracts.
+        unsafe {
+            let dh = DH_new();
+            assert!(!dh.is_null());
+            (*dh).method_mont_p = BN_MONT_CTX_new();
+            assert!(!(*dh).method_mont_p.is_null());
+            assert_eq!(DH_set_method(dh, DH_OpenSSL()), 1);
+            assert!(
+                (*dh).method_mont_p.is_null(),
+                "the finished cache must not remain installed"
+            );
+            // The negative control: before the repair this second call released the same block.
+            DH_free(dh);
+        }
+    }
 }
