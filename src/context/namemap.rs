@@ -116,9 +116,21 @@ use crate::runtime::thread::{
 /// The authority's translation unit and the coordinates of its allocations and
 /// releases, so an allocation that fails records the site a consumer would see.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/core_namemap.c".as_ptr();
-const LINE_ZALLOC_MAP: c_int = 521;
-const LINE_FREE_MAP: c_int = 539;
-const LINE_FREE_NAME: c_int = 66;
+/// `ossl_namemap_new`'s `OPENSSL_zalloc(sizeof(*namemap))` (line 554).
+const LINE_ZALLOC_MAP: c_int = 554;
+/// `ossl_namemap_free`'s `OPENSSL_free(namemap)` (line 583).
+const LINE_FREE_MAP: c_int = 583;
+/// `name_string_free`'s `OPENSSL_free(name)` (line 51).
+const LINE_FREE_NAME: c_int = 51;
+/// `numname_insert`'s `OPENSSL_strdup(name)` (line 240) and its `err:`
+/// `OPENSSL_free(tmpname)` (line 257).
+const LINE_STRDUP_NAME: c_int = 240;
+const LINE_FREE_TMPNAME: c_int = 257;
+/// `ossl_namemap_add_names`'s `OPENSSL_strdup(names)` (line 325), the
+/// lock-failure release (line 329) and the function's `end:` release (line 388).
+const LINE_STRDUP_NAMES: c_int = 325;
+const LINE_FREE_NAMES_LOCK: c_int = 329;
+const LINE_FREE_NAMES_END: c_int = 388;
 
 /// `HT_DEF_KEY_FIELD_CHAR_ARRAY(name, 64)` and the macros' `sizeof - 1`.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
@@ -432,7 +444,10 @@ pub(crate) fn ossl_namemap_new(_libctx: *mut c_void) -> *mut OsslNamemap {
 /// initialisation beyond [`ossl_namemap_new`]'s explicit `write`.
 ///
 /// # Safety
-/// `nm` must be a live namemap.
+/// `nm` must be a live namemap and the caller must hold its **write** lock (or be the
+/// sole owner before publication). The returned reference is tied to that exclusive
+/// access: it must not be retained after the lock is released, and no second reference
+/// to the table may exist for its lifetime.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 unsafe fn map_mut<'a>(nm: *mut OsslNamemap) -> &'a mut HashMap<Vec<u8>, c_int> {
     // SAFETY: `nm` is live per the caller's contract; the field is a `HashMap`
@@ -541,7 +556,11 @@ pub(crate) fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
 /// it, and it read `2` against the authority's `1`.
 ///
 /// # Safety
-/// `namemap` must be NULL or live; `fn` must be a valid function pointer.
+/// `namemap` must be NULL or live; `fn` must be a valid function pointer. The callback
+/// receives names **borrowed from the map** (the duplicate is a shallow copy of the
+/// pointer array), so it must not release or mutate the namemap, and the map must stay
+/// live for the whole call. The lock is released before the callback, so re-entering the
+/// map is allowed as long as the callback does not free it.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) unsafe fn ossl_namemap_doall_names(
     namemap: *mut OsslNamemap,
@@ -758,7 +777,7 @@ unsafe fn numname_insert(namemap: *mut OsslNamemap, number: c_int, name: *const 
     }
 
     // SAFETY: `name` is NUL-terminated per the contract.
-    let tmpname = unsafe { CRYPTO_strdup(name, FILE, LINE_FREE_NAME) };
+    let tmpname = unsafe { CRYPTO_strdup(name, FILE, LINE_STRDUP_NAME) };
     if tmpname.is_null() {
         if new_entry {
             // SAFETY: `names` was created above and has not been published.
@@ -775,7 +794,7 @@ unsafe fn numname_insert(namemap: *mut OsslNamemap, number: c_int, name: *const 
         }
         // SAFETY: `tmpname` was not stored, so it is released here and nowhere
         // else.
-        unsafe { CRYPTO_free(tmpname.cast::<c_void>(), FILE, LINE_FREE_NAME) };
+        unsafe { CRYPTO_free(tmpname.cast::<c_void>(), FILE, LINE_FREE_TMPNAME) };
         return 0;
     }
 
@@ -915,7 +934,7 @@ pub(crate) unsafe fn ossl_namemap_add_names(
     }
     // SAFETY: `names` is NUL-terminated per the contract; `CRYPTO_strdup` accepts
     // NULL and answers NULL.
-    let tmp = unsafe { CRYPTO_strdup(names, FILE, LINE_FREE_NAME) }.cast::<c_char>();
+    let tmp = unsafe { CRYPTO_strdup(names, FILE, LINE_STRDUP_NAMES) }.cast::<c_char>();
     if tmp.is_null() {
         return 0;
     }
@@ -923,7 +942,7 @@ pub(crate) unsafe fn ossl_namemap_add_names(
     // SAFETY: `namemap` is live, so its lock is live.
     if unsafe { CRYPTO_THREAD_write_lock((*namemap).lock) } == 0 {
         // SAFETY: `tmp` was not stored.
-        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE, LINE_FREE_NAME) };
+        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE, LINE_FREE_NAMES_LOCK) };
         return 0;
     }
 
@@ -934,7 +953,7 @@ pub(crate) unsafe fn ossl_namemap_add_names(
     // SAFETY: the same lock is released, and `tmp` is released exactly once.
     unsafe {
         CRYPTO_THREAD_unlock((*namemap).lock);
-        CRYPTO_free(tmp.cast::<c_void>(), FILE, LINE_FREE_NAME);
+        CRYPTO_free(tmp.cast::<c_void>(), FILE, LINE_FREE_NAMES_END);
     }
     ret
 }
