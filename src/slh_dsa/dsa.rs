@@ -480,7 +480,10 @@ unsafe fn msg_encode(
     // SAFETY: `out_len` is writable per the contract.
     unsafe { *out_len = encoded_len };
     // The heap block, if the encoding does not fit `tmp`, is owned here so its release is `Drop`'s
-    // cleansing free on **every** path below.
+    // cleansing free on **every** path below. This is a deliberate safety improvement over the
+    // authority, which plain-frees an internal `WPACKET` failure at `:278` and clear-frees only the
+    // block the caller receives, at `:309`/`:339`; the block may already carry part of a
+    // confidential message on the failure path, so the cleansing release is kept there too.
     let heap = if encoded_len <= tmp_len {
         None
     } else {
