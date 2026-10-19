@@ -719,8 +719,10 @@ pub unsafe extern "C" fn DSA_get0_key(
 
 /// `int DSA_set0_key(DSA *d, BIGNUM *pub_key, BIGNUM *priv_key)` — `dsa_lib.c:305-318`.
 ///
-/// Each slot is replaced **only when the argument is non-NULL**, and the outgoing value is cleared
-/// rather than freed — this is key material. Always answers 1, including for a NULL pair.
+/// Each slot is replaced **only when the argument is non-NULL**, and the outgoing value is released
+/// through `BN_clear_free` rather than the authority's `BN_free`. That is a deliberate safety
+/// improvement — the outgoing value is key material — and is observable only to a reader of freed
+/// memory, which is not a contract. Always answers 1, including for a NULL pair.
 ///
 /// # Safety
 ///

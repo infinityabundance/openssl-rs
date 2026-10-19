@@ -1529,3 +1529,50 @@ canaries, independent review and SEAL are `NOT_RUN`.
 
 **Next ordinary position:** `src/dsa/object.rs` (178), then `src/x509/v3_ac_tgt.rs` (190). The
 M15 boundary-skipped list is closed; no remaining B10 boundary item.
+
+## 19. Mechanism sweep M16 — dsa/object, v3_ac_tgt, cmp_hdr, cms_dh, slh_dsa/dsa, dane, pcy_cache, bn/rand
+
+**STOP status: CLEAR after repair.** One debug-build counter overflow and two too-weak
+validity contracts repaired; two deliberate divergences recorded. No memory-safety defect, ABI
+regression, layout change or new hidden obligation remains; hidden = 0.
+
+**Audited (ordinary).** `src/dsa/object.rs` (178), `src/x509/v3_ac_tgt.rs` (190),
+`src/cmp/cmp_hdr.rs` (191), `src/cms/cms_dh.rs` (192), `src/slh_dsa/dsa.rs` (193),
+`src/x509/dane.rs` (194), `src/x509/pcy_cache.rs` (195), `src/bn/rand.rs` (196); ranks are
+production-site positions. No file in this run was a new boundary.
+
+**Defects.**
+
+- **M16-D1 (fixed, low, `bn/rand.rs:1056`).** `ossl_bn_gen_dsa_nonce_fixed_top` incremented
+  the authority's `unsigned char` digest counter with `i += 1`; a range above ~130k bits would
+  panic a debug build (caught by `guard_ffi` as a spurious 0) where the authority wraps. Now
+  `i.wrapping_add(1)`.
+- **M16-D2/D3 (fixed, low, `pcy_cache.rs:459-461`, `:480-483`).** `ossl_policy_cache_set`'s and
+  `ossl_policy_cache_find_data`'s `# Safety` sections admitted NULL for `x`/`id`, but both
+  bodies (and the authority) dereference them. Contracts narrowed to live, non-NULL inputs.
+- **M16-D4 (recorded, low, `dsa/object.rs:720-725`).** `DSA_set0_key` keeps `BN_clear_free` for
+  the outgoing key where `dsa_lib.c:320/324` uses `BN_free`; a deliberate cleansing improvement,
+  observable only to a reader of freed memory. The doc now records the divergence.
+- **M16-D5 (recorded, low, `slh_dsa/dsa.rs:482-487`).** `msg_encode` clear-frees its internal
+  `WPACKET`-failure block at `slh_dsa.c:309`, where the authority plain-frees it at `:278`; the
+  block may hold part of a confidential message, so the cleansing improvement is kept and
+  recorded.
+
+**No defect.** `dsa/object` constructor/`DSA_free`/`DSA_dup_DH`/`set0_*`/FFC bridge; `v3_ac_tgt`
+items/templates/printers/row; `cmp_hdr` getters, setters, nonces, implicitConfirm and `hdr_init`;
+`cms_dh` peer key, shared info, decrypt/encrypt and envelope dispatch; `slh_dsa/dsa` sign/verify,
+`msg_encode` and tree-id extraction; `dane` matrix and its cache releases; `pcy_cache` create/new/
+free/find and the `pcy_map.c` transcription; `bn/rand` draw, range rejection, fixed-top and
+DSA-nonce paths.
+
+**Boundary-skipped (NOT_RUN).** None.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused `dsa::object`
+2/0/2 ignored (allocator probes), `bn::rand` 7/0, `x509::pcy_cache` 1/0. BATCH: library **1606
+passed / 0 failed / 27 ignored** serially (225.02 s) and with `--test-threads=4` (102.45 s). No
+affected `OPENSSL_RS_ADV_PROBE` arm exists (the only probe-bearing file changed documentation
+only). ASan/Miri/Loom/TSan, full sanitizers, FRF-Fuzz, authority differentials, independent review
+and SEAL are `NOT_RUN`.
+
+**Next ordinary position:** `src/rsa/ossl.rs` (197), then `src/srp/srp_lib.rs` (198) and down the
+production-site ranking.
