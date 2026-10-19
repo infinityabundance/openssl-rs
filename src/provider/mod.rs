@@ -1049,11 +1049,16 @@ pub(crate) unsafe fn ossl_provider_store_new(ctx: *mut c_void) -> *mut c_void {
 /// `freeing` is set **first**, before anything is released, and is never cleared: 6.8e's
 /// child callbacks read it to tell a real removal from part of the teardown.
 ///
-/// Each pointer is cleared as it is released, so a second call over the same object is a
-/// no-op rather than a double free — which the partial-construction path relies on.
+/// Each field pointer is cleared as it is released, so the function is safe on a
+/// partially constructed object and each field is released at most once. It does **not**
+/// make a second call on the same `vstore` safe: the `ProviderStore` block itself is
+/// released here, so the caller must call this exactly once per store. The partial-
+/// construction path in [`ossl_provider_store_new`] does, and `context_deinit` re-NULLs the
+/// slot after its single call.
 ///
 /// # Safety
-/// `vstore` must be NULL or a store from [`ossl_provider_store_new`].
+/// `vstore` must be NULL or a live store from [`ossl_provider_store_new`]; a non-NULL
+/// `vstore` must be released exactly once.
 pub(crate) unsafe fn ossl_provider_store_free(vstore: *mut c_void) {
     let store = vstore.cast::<ProviderStore>();
     if store.is_null() {
@@ -1374,14 +1379,16 @@ pub(crate) static PREDEFINED_PROVIDERS: [PredefinedProvider; 4] = [
 ///
 /// A linear scan, as the authority's loop is, stopping at the first match: two rows sharing a
 /// name would leave the second unreachable, which is the authority's behaviour as well.
-fn predefined_row(name: *const c_char) -> Option<&'static PredefinedProvider> {
+///
+/// The key is a `&CStr` rather than a raw pointer: the pointer's NUL-termination is established
+/// once, at the one caller's conversion site, so this helper cannot be handed an invalid pointer
+/// from safe code inside the crate.
+fn predefined_row(name: &core::ffi::CStr) -> Option<&'static PredefinedProvider> {
     for row in PREDEFINED_PROVIDERS.iter() {
         if row.name.to_bytes().is_empty() {
             return None;
         }
-        // SAFETY: `name` is NUL-terminated per every caller's contract, and `row.name` is a
-        // literal with a terminator.
-        if unsafe { c_strcmp(name, row.name.as_ptr()) } == 0 {
+        if name == row.name {
             return Some(row);
         }
     }
@@ -1488,7 +1495,10 @@ pub(crate) unsafe fn ossl_provider_new(
     let mut template = blank_info();
     let mut chosen = false;
     if init_function.is_none() {
-        if let Some(row) = predefined_row(name) {
+        // SAFETY: `name` is NUL-terminated per the contract; this conversion is the one place
+        // the raw C string becomes a reference, and the helper below is safe from here on.
+        let name_c = unsafe { core::ffi::CStr::from_ptr(name) };
+        if let Some(row) = predefined_row(name_c) {
             // SAFETY: the row is a literal with a terminator, so its pointer is valid for the
             // program's life; the template does not own it, and `provider_new` dup's it.
             template.name = row.name.as_ptr().cast_mut();
@@ -2698,15 +2708,16 @@ pub unsafe extern "C" fn OSSL_PROVIDER_do_all(
 /// `int OSSL_PROVIDER_available(OSSL_LIB_CTX *libctx, const char *name)`.
 ///
 /// # Safety
-/// `libctx` NULL or live; `name` is NULL or NUL-terminated.
+/// `libctx` NULL or live; `name` must be NUL-terminated (it is a search key, not a
+/// nullable handle).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_PROVIDER_available(
     libctx: *mut c_void,
     name: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `libctx` is NULL or live; `name` is passed through to `ossl_provider_find`,
-        // whose contract is NULL or NUL-terminated.
+        // SAFETY: `libctx` is NULL or live; `name` is NUL-terminated, which is
+        // `ossl_provider_find`'s contract.
         unsafe { crate::provider::activate::ossl_provider_available(libctx, name) }
     })
 }
@@ -3140,19 +3151,19 @@ mod tests {
         );
         assert_eq!(PREDEFINED_PROVIDERS[1].is_fallback, 0, "base is not");
         assert_eq!(PREDEFINED_PROVIDERS[2].is_fallback, 0, "null is not");
-        assert!(predefined_row(c"default".as_ptr()).is_some());
-        assert!(predefined_row(c"base".as_ptr()).is_some());
-        assert!(predefined_row(c"null".as_ptr()).is_some());
+        assert!(predefined_row(c"default").is_some());
+        assert!(predefined_row(c"base").is_some());
+        assert!(predefined_row(c"null").is_some());
         // `legacy` is a *module* in this profile and must not be found here: it is loaded by
         // name through the DSO layer, which is why 6.9 had to precede this registry.
-        assert!(predefined_row(c"legacy".as_ptr()).is_none());
-        assert!(predefined_row(c"fips".as_ptr()).is_none());
+        assert!(predefined_row(c"legacy").is_none());
+        assert!(predefined_row(c"fips").is_none());
         assert!(
-            predefined_row(c"".as_ptr()).is_none(),
+            predefined_row(c"").is_none(),
             "the terminator matches nothing"
         );
         assert!(
-            predefined_row(c"DEFAULT".as_ptr()).is_none(),
+            predefined_row(c"DEFAULT").is_none(),
             "the comparison is exact"
         );
     }
