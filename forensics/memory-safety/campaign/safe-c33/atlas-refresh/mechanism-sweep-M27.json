@@ -1,0 +1,156 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "2b218351d",
+  "worktree": "dirty: src/dh/ctrl.rs, src/runtime/bio/bss_mem.rs (M27 fixes and the new control) plus this receipt and the PERFILE-INDEX entry",
+  "scope": "Eight ordinary files from the M26-named batch, ranked by production unsafe-site count in the frozen census: src/dh/ctrl.rs (73), src/dsa/pmeth.rs (73), src/provider/decode_msblob2key.rs (72), src/runtime/bio/bss_mem.rs (72), src/x509/v3_attrmap.rs (72), src/runtime/bio/bio_sock2.rs (70), src/x509/by_file.rs (70), src/runtime/bio/method.rs (69). None was a newly discovered boundary, so neither substitution (src/x509/x_x509.rs (69), src/asn1/a_sign.rs (68)) was used.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/dh/ctrl.rs",
+    "src/dsa/pmeth.rs",
+    "src/provider/decode_msblob2key.rs",
+    "src/runtime/bio/bss_mem.rs",
+    "src/x509/v3_attrmap.rs",
+    "src/runtime/bio/bio_sock2.rs",
+    "src/x509/by_file.rs",
+    "src/runtime/bio/method.rs"
+  ],
+  "files_not_run": [],
+  "dispositions": [
+    {
+      "file": "src/dh/ctrl.rs",
+      "mechanisms": "OSSL_PARAM builders for the six set_dh_paramgen_* controls, dh_paramgen/dh_param_derive gates, EVP_PKEY_CTX_ctrl wrappers, set0_dh_kdf_ukm custody/release at the authority's coordinate, get0 octet_ptr out-slot",
+      "result": "No code defect. Every parameter points at a frame local that outlives the strict setter, the negative-length-first ordering and the plain/raise split match dh_ctrl.c, and the sole release fires only on the strict setter's 1. M27-D3 tightened a doc-only out-parameter precondition (plen)."
+    },
+    {
+      "file": "src/dsa/pmeth.rs",
+      "mechanisms": "OB-3 RawCtx/OwnedCtx context construction and cleanup, field-by-field init/copy, keygen scratch published as ctx->keygen_info, sign/verify length gates, DSA ctrl/ctrl_str match arms, method-table callbacks",
+      "result": "No defect. The init block writes every destructor-visible field before assume_init/into_raw, copy preserves the authority's init-first order, cleanup releases the block through the authority's own free coordinate, and paramgen/keygen ownership transfers match dsa_pmeth.c:207-260."
+    },
+    {
+      "file": "src/provider/decode_msblob2key.rs",
+      "mechanisms": "local OwnedCtx for the decoder context with into_raw/from_raw at newctx/freectx, OB-1 OwnedBuf for the blob body, ossl_do_blob_header parsing, passphrase-callback setup, key descriptor dispatch, data_cb/export_object callbacks",
+      "result": "No defect. Every goto next/end path in decode_msblob2key.c is reproduced with the same ok answer and the same single free_key call; buf and in are released before the callback and the context is released exactly once. The allocator seam passes NULL/0 coordinates, matching the established provider-decode convention (decode_der2key, encode_key2any); no memory-safety or ABI consequence."
+    },
+    {
+      "file": "src/runtime/bio/bss_mem.rs",
+      "mechanisms": "OB-3 CtxDestroy for BioBufMem (readp block, never the enclosing block), BUF_MEM ownership and mem_buf_free read-only adjustment, mem_init failure tails, read/write/ctrl state transitions, BUF_MEM_grow_clean growth arithmetic, gets terminator write",
+      "result": "M27-D1 and M27-D2 fixed. The remaining transitions match bss_mem.c: mem_read subtracts only within the reported length, seek keeps num inside off+remain before pointer arithmetic, reset honours MEM_RDONLY/NONCLEAR_RST, and set_buf_mem releases the incumbent buffer first. mem_buf_sync/read/ctrl retain the authority's NULL-or-live BIO contract."
+    },
+    {
+      "file": "src/x509/v3_attrmap.rs",
+      "mechanisms": "ASN1 item/template statics (ATAV, type/value mappings, CHOICE mapping, SET OF template), repr(C) size/offset assertions, union selector, generated new/free/d2i/i2d wrappers, i2r printers",
+      "result": "No defect. Sizes, offsets, template flags/tags and the CHOICE utype match v3_attrmap.c:18-38; the printers dereference only the selector's live arm and preserve every <=0 early return. Static rows remain immutable."
+    },
+    {
+      "file": "src/runtime/bio/bio_sock2.rs",
+      "mechanisms": "syscall wrappers (socket/connect/bind/listen/accept/getsockname/setsockopt), BIO_ADDR pass-through and size reads, OB-2 OwnedStr adoption/join for BIO_accept, BIO_get_accept_socket cleanup ordering, BIO_sock_info extent check",
+      "result": "No defect. Failure records and retry behaviour match bio_sock2.c and bio_sock.c; the accept join uses checked length arithmetic and the authority's NUL/colon layout; get_accept_socket releases the chain then the two strings in the authority's order; addr_len > sizeof(BioAddr) is refused as BIO_R_GETSOCKNAME_TRUNCATED_ADDRESS."
+    },
+    {
+      "file": "src/x509/by_file.rs",
+      "mechanisms": "X509/X509_CRL loader error-label transcription, per-iteration X509 lifetime for the PEM certificate loop, X509_INFO stack ownership and pop_free thunk, BIO_set_filename macro expansion, lookup method table with ctrl/ctrl_ex",
+      "result": "No defect. count/x lifetimes match by_file.c:90-230 on every goto err/next path (including the fresh X509 after each successful add and the CRL free only after the add up-ref); the bundle loader's certificate-then-CRL order and zero-count raise match; ctrl_ex forwards the same libctx/propq and loading-defaults record."
+    },
+    {
+      "file": "src/runtime/bio/method.rs",
+      "mechanisms": "OB-3 CtxDestroy for BioMethod (name then table), BIO_meth_new refusal coordinate, legacy read/write conversion shims, mutator exclusive-access contract, accessor NULL totality",
+      "result": "No defect. The zalloc/strdup order, the :43 refusal release and the :53/:54 destructor order match bio_meth.c:37-56; every mutator writes the same slot pair and the getters preserve the legacy/modern asymmetry. The shims additionally guard NULL out-parameters, which is total over the authority's unchecked form."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M27-D1",
+      "file": "src/runtime/bio/bss_mem.rs",
+      "pre_fix_lines": [571, 573],
+      "post_fix_lines": [579, 583, 585],
+      "severity": "high (write through a C-valid NULL/zero-length buffer; the authority has the same UB and it is not reproduced)",
+      "class": "out-of-contract terminator write on the zero-length gets path (AGENTS.md sections 17 and 21.1)",
+      "description": "mem_gets wrote `*buf = 0` whenever the computed j was <= 0. BIO_gets admits a buffer valid for `size` bytes, and for `size == 0` a NULL or zero-length buffer satisfies that contract, so `BIO_gets(b, NULL, 0)` dereferenced NULL. The authority's bss_mem.c:357-360 has the same defect.",
+      "fix": "Write the terminator only when `size > 0` (where j <= 0 means size == 1) and `buf` is non-NULL; the answer stays the authority's 0. The cap is also computed with saturating_sub so INT_MIN cannot overflow the `size - 1` expression. Control: runtime::bio::bss_mem::tests::a_zero_length_gets_does_not_write_through_a_null_buffer.",
+      "divergence": "Deliberate: for size 0 the buffer is left untouched instead of writing a byte the caller has no writable extent for. Return value and all size > 0 behaviour are unchanged."
+    },
+    {
+      "id": "M27-D2",
+      "file": "src/runtime/bio/bss_mem.rs",
+      "pre_fix_lines": [385],
+      "post_fix_lines": [387],
+      "severity": "medium (fallible arithmetic; release behaviour unchanged, debug builds could panic)",
+      "class": "unchecked length sum on an allocation/growth path (AGENTS.md section 3)",
+      "description": "mem_write computed `blen + inl as usize` without a checked add. A negative `inl` reaches the growth as an enormous size_t (the authority's modular arithmetic) and fails there; on Rust debug builds the addition panics instead, relying on a panic boundary rather than translating to the authority's failure.",
+      "fix": "Use checked_add and return the authority's -1 (`ret`) on overflow; every unallocatable enormous length already fails BUF_MEM_grow_clean, so the observable refusal is the same.",
+      "divergence": "None for conforming input; the refusal path is now explicit rather than a wrapped allocation request."
+    },
+    {
+      "id": "M27-D3",
+      "file": "src/dh/ctrl.rs",
+      "pre_fix_lines": [578],
+      "post_fix_lines": [608],
+      "severity": "low (documentation/contract accuracy; no code change)",
+      "class": "documented precondition did not establish out-parameter validity (AGENTS.md sections 7 and 21)",
+      "description": "The # Safety section for EVP_PKEY_CTX_get_dh_kdf_outlen described `plen` as \"NULL or a live int the callee writes\", while a 1 return executes `*plen = len as c_int`; a caller following the contract could pass NULL and cause UB.",
+      "fix": "State that `plen` is a live, writable int written on a 1 return.",
+      "divergence": "None: documentation only."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/guard_ffi and the error-site coordinates",
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption and release modes",
+    "OB-2 OwnedStr adoption and caller-transfer",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy and the zero-state sweep",
+    "OB-4 member-buffer slot replacement protocol",
+    "ASN1 item/template/union ownership convention",
+    "BIO control/read/write/callback contract and BIO_ADDR opaque storage",
+    "provider decoder dispatch and OSSL_PARAM builders",
+    "X509_INFO STACK_OF ownership and the lookup method row"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 0,
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; no CRYPTO_* coordinate, size or release mode changed",
+    "repr_c_and_exports": "no exported symbol, signature or #[repr(C)] layout changed",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained)",
+    "controls": "runtime::bio::bss_mem::tests::a_zero_length_gets_does_not_write_through_a_null_buffer (negative control for M27-D1); checked_add refusal for M27-D2"
+  },
+  "compatibility": "M27-D1 diverges only for size 0 (deliberate §17 correction of authority UB). M27-D2 refuses the same unallocatable lengths the authority's grow already refused. M27-D3 is documentation only. No ABI, exported-symbol or allocator-seam change.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1628 passed / 0 failed / 27 ignored (227.01 s)",
+    "lib_tests_threads_4": "1628 passed / 0 failed / 27 ignored (102.25 s)",
+    "focused": "runtime::bio::bss_mem::tests 1 passed / 0 failed"
+  },
+  "not_run": [
+    "Affected phase-4 BIO differential probes: the runner links the committed artifacts/phase2 distribution shell, which predates this worktree, so the candidate under test would be stale.",
+    "Miri (Stacked and Tree Borrows) on the zero-length gets control and the checked growth path - BOUNDARY gate.",
+    "ASan/Loom on the same paths - BOUNDARY negative-control gate.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; every record remains a file-level obligation check. M27-D1/M27-D2 runtime confirmation beyond the focused control is PENDING/NOT_RUN.",
+  "next_batch": {
+    "files": [
+      "src/x509/x_x509.rs (69)",
+      "src/asn1/a_sign.rs (68)",
+      "src/provider/eddsa_sig.rs (68)",
+      "src/runtime/bio/bss_file.rs (68)",
+      "src/apps/crl2pkcs7.rs (67)",
+      "src/asn1/fre.rs (67)",
+      "src/engine/eng_ctrl.rs (67)",
+      "src/x509/x_ietfatt.rs (67)"
+    ],
+    "triage": "src/engine/eng_ctrl.rs is triaged first: if it proves a genuinely new ENGINE ctrl callback boundary it is NOT_RUN and the next ranked ordinary file after the already-covered src/ec/smpl.rs (66) is src/asn1/bitstr.rs (65).",
+    "skipped": [
+      "src/ssl/record/rec_layer_s3.rs (69) - protocol state-machine boundary, deferred NOT_RUN.",
+      "src/provider/legacyprov.rs (73) - provider dispatch boundary, deferred NOT_RUN.",
+      "src/provider/child.rs (71) - child-provider callback boundary, deferred NOT_RUN.",
+      "src/runtime/lhash.rs (71) - BOUNDARY_COVERED, not an ordinary file.",
+      "src/dh/key.rs (71) - already covered by B14-D1; no re-audit needed.",
+      "the four M22-retained boundaries (async/async, evp/keymgmt_lib, provider/decode_der2key, engine/eng_table, store/store_meth)"
+    ]
+  }
+}
