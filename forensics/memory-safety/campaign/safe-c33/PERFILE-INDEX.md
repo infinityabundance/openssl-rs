@@ -3136,3 +3136,73 @@ omits the pointer-bearing `ERR_print_errors` tails.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M35.json`](atlas-refresh/mechanism-sweep-M35.json).
+
+## 40. Mechanism sweep M36 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `cbe7d2512` plus the three CLI
+front-end repairs described below; contracts checked against OpenSSL 3.6.4
+(`apps/{mac,ocsp,pkcs12}.c` read at the pinned tag).
+
+**Scope:** the eight `src/apps/*` CLI front-ends M35 named as next. The audit
+covered argument-string lifetimes (`Opts` copies argv, so no `&[String]` escapes),
+file/BIO ownership on every exit, option-array bounds, error tails, allocation
+arithmetic, and every raw pointer returned by a getter or owned by the body.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/apps/keyio.rs` | `bio_open_default`, `open_input` `CString` lifetime, `load_key`/`load_pubkey`/`load_cert`/`load_crl`/`load_keyparams` BIO ownership, public-then-private re-open fallback | No defect. Every `CString` outlives its `BIO_new_file`, each BIO is released once on every exit (including the `load_pubkey` failure re-open), and no getter pointer escapes the call. |
+| `src/apps/mac.rs` | local `OwnedBuf` release, `app_params_new_from_opts` allocation/free, `OSSL_PARAM_allocate_from_text` extents, `EVP_MAC`/`EVP_MAC_CTX` ownership, read/final/output bounds, `CString` lifetimes | Repaired one low arithmetic defect: the `OSSL_PARAM` array used `(len + 1) * size_of` unchecked, so the product could wrap before `CRYPTO_zalloc` and later writes. It now uses `checked_add`/`checked_mul` and returns NULL, matching `OPENSSL_calloc`'s rejection. `app_params_free` stops at the calloc'ed terminator; `len <= BUFSIZE` bounds the hex loop and `BIO_write`. |
+| `src/apps/nseq.rs` | `NETSCAPE_CERT_SEQUENCE`/`certs` stack ownership, `PEM_read_bio_X509` loop, `OPENSSL_sk_*` bounds, borrowed name getters, BIO cleanup order | No defect. `seq` is assigned on both arms before the common `end:`; the stack and its certificates are released once by `NETSCAPE_CERT_SEQUENCE_free`, and every exit frees `out` before `in` as the authority does. |
+| `src/apps/ocsp.rs` | `OCSP_REQUEST_new`/`-free`, `load_cert` ownership for `-issuer`/`-cert`, `EVP_MD_fetch`/legacy method, `OCSP_cert_to_id`/`OCSP_request_add0_id`, nonce, request writer BIO | Repaired one low ownership defect: the loaded `issuer`/`cert` and fetched `cert_id_md` were never released (the authority frees all three at `end:`), and a replaced `-issuer`/`-cert` leaked its predecessor. A documented `OcspState` single-owner `Drop` now releases them on every exit; replacement frees the previous object as `apps/ocsp.c:481` does. |
+| `src/apps/passwd.rs` | `Md` RAII over `EVP_MD_CTX_*`, digest buffer widths (16/64), salt truncation/clamping, output permutation indices, `-in` line reading and `pw_maxlen` truncation | No defect. Every digest write fits its fixed buffer; `passwd[..1]` is reached only when the length is non-zero; the md5 permutation indices stay below 16 and the SHA-256/512 tables below 32/64. Non-ASCII salts truncate by `char` rather than byte, and `-in -`/`-stdin` are unlanded — retained divergences, not memory-safety defects. |
+| `src/apps/pkcs12.rs` | `load_cert`/`load_key` ownership, `PKCS12_create_ex2` argument extents, `-nomac`/`-iter` routing, `i2d_PKCS12_bio`, output BIO | Repaired one low compatibility defect: `-iter` fell back to `0` on a failed parse, silently selecting the default; `opt_int_arg` returns `-1` on failure, which is preserved now. `cert`/`key` are released once on every path and after `PKCS12_free`, never before. |
+| `src/apps/pkcs7.rs` | `PKCS7_new_ex` + `d2i`/PEM out-slot reuse, `PKCS7_free`, borrowed `cert`/`crl` stacks, `OBJ_obj2nid` union selection, print/write paths, BIO ownership | No defect. A failed `d2i`/PEM decode clears the out-slot through `ASN1_item_ex_free`, so the later `PKCS7_free(p7)` is not a double free; the stack walk is bounds-checked by `OPENSSL_sk_num`, and all three resources are released once on every return. |
+| `src/apps/pkcs8.rs` | `load_key`, `EVP_PKEY2PKCS8`/`EVP_PKCS82PKEY`, `PKCS8_PRIV_KEY_INFO_free`, PEM/DER writers, input/output BIO ownership | No defect. `pkey`, `p8inf`, `out` and `inbio` are released once on every branch; the conversion routines do not transfer ownership. `-iter`/`-saltlen` are parsed but unused in the landed `-nocrypt` arms and only feed the unlanded encrypted arms — retained divergence. |
+
+**Defects repaired (all low severity; none is UB).** `mac` sized its parameter
+array with unchecked multiplication; `ocsp` leaked the loaded issuer, certificate
+and fetched digest (and a replaced issuer/certificate) on success and on every
+failure after loading; `pkcs12` used the wrong fallback value for an invalid
+`-iter`. No invalid free, double free, null dereference, alias, uninitialised
+read or new hidden obligation was found.
+
+**New unsafe assumptions (hidden must be 0).** One documented ownership contract
+was added: `OcspState` (each field is NULL or the frame's single reference,
+released once by `Drop` through `OCSP_REQUEST_free`/`X509_free`/`EVP_MD_free`,
+all of which accept NULL; `EVP_MD_free` is the authority's no-op for a static
+legacy method). No new FFI symbol, allocator coordinate, `#[repr(C)]` layout or
+signature; no hidden obligation. Contracts reused: the keyio load/BIO contract,
+OB-3-style single-owner release, the local `OwnedBuf` scratch-buffer contract in
+`mac`, the `ASN1_item_ex_free` out-slot clearing rule, and the `Opts` bounds
+contract.
+
+**Evidence.** FAST: fmt clean; `cargo check --lib` PASS; `cargo test --lib --
+apps::` **0 passed / 0 failed** (1,675 filtered — these front-ends have no unit
+tests). BATCH: clippy `--all-targets -D warnings` PASS; library **1648 passed /
+0 failed / 27 ignored** serially (202.25 s) and with `--test-threads=4`
+(93.85 s). No test removed or newly ignored.
+
+**NOT_RUN.** `courts/phase17/rt_cli_bodies_probe.sh` was not run: the crate has no
+CLI bin target and the probe's candidate shim points at the pre-batch
+`artifacts/phase2/openssl`, so a run would not exercise this candidate. Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay for these
+eight units, independent adversarial review and SEAL are `NOT_RUN`. Nothing is
+promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** `ocsp` still leaks a detached `OCSP_CERTID`
+on the `OCSP_request_add0_id` failure arm (the authority's stack-only
+`sk_OCSP_CERTID_free` does the same); `ocsp`/`pkcs12`/`pkcs8` omit the
+pointer-bearing `ERR_print_errors`/`opt_int` diagnostics; `passwd` truncates a
+non-ASCII salt by `char` where the authority truncates by byte and leaves `-in
+-`/`-stdin` unlanded; `pkcs8` defers `-iter`/`-saltlen` to the unlanded encrypted
+arms; the shared `bio_open_owner` permission divergence remains for the private
+output paths.
+
+**Queue.** `REMAINING-AUDIT.txt` 438 → **430**; `AUDITED-FILES.txt` 325 → **333**.
+
+**Next eight (stable order).** `src/apps/pkeyparam.rs`, `src/apps/pkey.rs`,
+`src/apps/prime.rs`, `src/apps/rand.rs`, `src/apps/req.rs`, `src/apps/rsa.rs`,
+`src/apps/sess_id.rs`, `src/apps/skeyutl.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M36.json`](atlas-refresh/mechanism-sweep-M36.json).

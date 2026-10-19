@@ -1,0 +1,212 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "cbe7d2512",
+  "date": "2026-10-19",
+  "scope": "The eight src/apps/* CLI front-ends named as next by M35. Contract checks against OpenSSL 3.6.4 for argument-string lifetimes, file/BIO ownership on every exit, option-table bounds, error tails, allocation arithmetic, and getter-returned or body-owned raw pointers; genuine arithmetic, ownership and option-fallback defects repaired.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/apps/{mac,ocsp,pkcs12}.rs repaired; src/apps/{keyio,nseq,passwd,pkcs7,pkcs8}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 40 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 325,
+    "canonical_unaudited_before_batch": 438,
+    "canonical_audited_after_batch": 333,
+    "canonical_unaudited_after_batch": 430,
+    "mechanism_sweep_files_union_before_batch": 265,
+    "mechanism_sweep_files_union_after_batch": 273,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight files added here were absent from the pre-batch file (verified with an anchored grep over AUDITED-FILES.txt before insertion) and were the first eight entries of REMAINING-AUDIT.txt.",
+    "difference_from_325": "M35 left 325 audited / 438 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/apps/keyio.rs",
+    "src/apps/mac.rs",
+    "src/apps/nseq.rs",
+    "src/apps/ocsp.rs",
+    "src/apps/passwd.rs",
+    "src/apps/pkcs12.rs",
+    "src/apps/pkcs7.rs",
+    "src/apps/pkcs8.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/apps/keyio.rs",
+      "mechanisms": [
+        "bio_open_default stdin/stdout/BIO_new_file split",
+        "open_input CString lifetime",
+        "load_key/load_pubkey/load_cert/load_crl/load_keyparams BIO ownership",
+        "public-then-private re-open fallback"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Every CString outlives its BIO_new_file/BIO_new_fp call, each BIO is released exactly once on every exit (including the load_pubkey failure re-open), and no decoder getter pointer escapes the call."
+    },
+    {
+      "file": "src/apps/mac.rs",
+      "mechanisms": [
+        "local OwnedBuf CRYPTO_malloc/CRYPTO_free release",
+        "app_params_new_from_opts allocation and app_params_free",
+        "OSSL_PARAM_allocate_from_text extents",
+        "EVP_MAC/EVP_MAC_CTX ownership",
+        "BUFSIZE read/final/output bounds",
+        "CString lifetimes"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The OSSL_PARAM array used (sz + 1) * size_of unchecked, so the product could wrap before CRYPTO_zalloc and later params.add(i) writes. It now uses checked_add/checked_mul and returns NULL, matching OPENSSL_calloc's rejection (the same repair M35 made in kdf). app_params_free stops at the calloc'ed terminator; len <= BUFSIZE bounds the hex loop and BIO_write."
+    },
+    {
+      "file": "src/apps/nseq.rs",
+      "mechanisms": [
+        "NETSCAPE_CERT_SEQUENCE_new/free",
+        "seq->certs stack ownership and OPENSSL_sk_* bounds",
+        "PEM_read_bio_X509 loop",
+        "X509_get_subject_name/get_issuer_name borrowed pointers",
+        "BIO_free/BIO_free_all cleanup order"
+      ],
+      "disposition": "audited_no_change",
+      "note": "seq is assigned on both arms before the common end:; the stack and its certificates are released once by NETSCAPE_CERT_SEQUENCE_free; every exit frees out before in as apps/nseq.c does."
+    },
+    {
+      "file": "src/apps/ocsp.rs",
+      "mechanisms": [
+        "OCSP_REQUEST_new/OCSP_REQUEST_free",
+        "load_cert ownership for -issuer/-cert",
+        "EVP_MD_fetch and static legacy EVP_sha1",
+        "OCSP_cert_to_id and OCSP_request_add0_id",
+        "nonce and ASN1_item_i2d_bio request writer",
+        "BIO ownership"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The loaded issuer/cert and fetched cert_id_md were never released (apps/ocsp.c:900-911 frees all three), and a replaced -issuer/-cert leaked its predecessor. A documented OcspState single-owner Drop now releases them on every exit; -cert frees the previous certificate before loading its replacement as apps/ocsp.c:481 does. The detached OCSP_CERTID on an OCSP_request_add0_id failure remains unreleased, matching the authority's stack-only sk_OCSP_CERTID_free."
+    },
+    {
+      "file": "src/apps/passwd.rs",
+      "mechanisms": [
+        "Md RAII over EVP_MD_CTX_new/init/update/final/free",
+        "fixed digest buffers (16/64 bytes)",
+        "salt truncation and rounds clamping",
+        "md5/sha output permutation indices",
+        "-in line reading and pw_maxlen truncation"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Every digest write fits its fixed buffer; passwd[..1] is reached only when the length is non-zero; md5 permutation indices stay below 16 and the SHA-256/512 tables below 32/64. Non-ASCII salts truncate by char rather than byte, and -in -/-stdin are unlanded: retained compatibility divergences, not memory-safety defects."
+    },
+    {
+      "file": "src/apps/pkcs12.rs",
+      "mechanisms": [
+        "load_cert/load_key ownership",
+        "PKCS12_create_ex2 argument extents",
+        "-nomac/-iter routing",
+        "i2d_PKCS12_bio and output BIO ownership"
+      ],
+      "disposition": "defect_repaired",
+      "note": "-iter fell back to 0 on a failed parse, silently selecting the default iteration count; opt_int_arg yields -1 on failure, which is now preserved. cert/key are released once on every path and after PKCS12_free, never before."
+    },
+    {
+      "file": "src/apps/pkcs7.rs",
+      "mechanisms": [
+        "PKCS7_new_ex plus d2i/PEM out-slot reuse",
+        "PKCS7_free on every exit",
+        "borrowed cert/crl stacks",
+        "OBJ_obj2nid and PKCS7 union selection",
+        "print/write paths and BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "A failed d2i/PEM decode clears the out-slot through ASN1_item_ex_free, so the later PKCS7_free(p7) is not a double free; the stack walk is bounds-checked by OPENSSL_sk_num; all three resources are released once on every return."
+    },
+    {
+      "file": "src/apps/pkcs8.rs",
+      "mechanisms": [
+        "load_key ownership",
+        "EVP_PKEY2PKCS8/EVP_PKCS82PKEY",
+        "PKCS8_PRIV_KEY_INFO_free",
+        "PEM/DER private-key writers",
+        "input/output BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "pkey, p8inf, out and inbio are released once on every branch; the conversion routines do not transfer ownership. -iter/-saltlen are parsed but unused in the landed -nocrypt arms and only feed the unlanded encrypted arms."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/apps/mac.rs",
+      "line": 135,
+      "severity": "low",
+      "kind": "unchecked allocation arithmetic",
+      "detail": "(sz + 1) * size_of::<OsslParam>() could wrap before CRYPTO_zalloc; replaced with checked_add/checked_mul returning NULL.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/ocsp.rs",
+      "line": 118,
+      "severity": "low",
+      "kind": "ownership leak",
+      "detail": "issuer, certificate and fetched cert_id_md (and replaced issuer/cert) were never released; now owned by OcspState with one Drop.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/pkcs12.rs",
+      "line": 142,
+      "severity": "low",
+      "kind": "option-value fallback",
+      "detail": "-iter parse failure selected 0 (the default) instead of opt_int_arg's -1.",
+      "ub": false
+    }
+  ],
+  "new_unsafe_assumptions": [
+    {
+      "name": "OcspState single-owner release",
+      "kind": "documented ownership contract",
+      "hidden_obligations": 0,
+      "detail": "Each field is NULL or the frame's single reference; Drop releases through OCSP_REQUEST_free/X509_free/EVP_MD_free, all of which accept NULL. EVP_MD_free is the authority's no-op for a static legacy method."
+    }
+  ],
+  "contracts_reused": [
+    "keyio load/BIO contract",
+    "OB-3-style single-owner release (OcspState)",
+    "local OwnedBuf scratch-buffer contract in mac",
+    "ASN1_item_ex_free out-slot clearing rule (pkcs7)",
+    "Opts bounds contract (rest/check_rest_arg)"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "clean",
+      "check": "cargo check --lib PASS",
+      "filtered_tests": "cargo test --lib -- apps:: 0 passed / 0 failed (1,675 filtered)"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "lib_serial": "1648 passed / 0 failed / 27 ignored (202.25 s)",
+      "lib_threads4": "1648 passed / 0 failed / 27 ignored (93.85 s)",
+      "removed_or_newly_ignored_tests": 0
+    }
+  },
+  "not_run": [
+    "courts/phase17/rt_cli_bodies_probe.sh (no CLI bin target; shim points at pre-batch artifacts/phase2/openssl)",
+    "Miri Stacked/Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "retained_obligations": [
+    "ocsp leaks a detached OCSP_CERTID on the OCSP_request_add0_id failure arm, as the authority's stack-only sk_OCSP_CERTID_free does",
+    "ocsp/pkcs12/pkcs8 omit pointer-bearing ERR_print_errors/opt_int diagnostics",
+    "passwd truncates non-ASCII salts by char where the authority truncates by byte; -in -/-stdin unlanded",
+    "pkcs8 defers -iter/-saltlen to the unlanded encrypted arms",
+    "shared bio_open_owner permission divergence remains for private output paths"
+  ],
+  "queue": {
+    "remaining_audit_before": 438,
+    "remaining_audit_after": 430,
+    "audited_before": 325,
+    "audited_after": 333,
+    "next_eight": [
+      "src/apps/pkeyparam.rs",
+      "src/apps/pkey.rs",
+      "src/apps/prime.rs",
+      "src/apps/rand.rs",
+      "src/apps/req.rs",
+      "src/apps/rsa.rs",
+      "src/apps/sess_id.rs",
+      "src/apps/skeyutl.rs"
+    ]
+  }
+}

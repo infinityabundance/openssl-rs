@@ -128,15 +128,17 @@ fn app_params_new_from_opts(opts: &[String], paramdefs: *const OsslParam) -> *mu
         return ptr::null_mut();
     }
     let sz = opts.len();
-    // SAFETY: a non-zero count and a static file/line label.
     // `params = OPENSSL_calloc(sz + 1, sizeof(OSSL_PARAM));` —
-    // `apps/lib/apps.c:3489-3491`.
-    let params = CRYPTO_zalloc(
-        (sz + 1) * core::mem::size_of::<OsslParam>(),
-        c"apps/lib/apps.c".as_ptr(),
-        3489,
-    )
-    .cast::<OsslParam>();
+    // `apps/lib/apps.c:3489-3491`. `OPENSSL_calloc` rejects an overflowing
+    // `nmemb * size`; make that overflow explicit instead of wrapping here.
+    let Some(entry_count) = sz.checked_add(1) else {
+        return ptr::null_mut();
+    };
+    let Some(block_size) = entry_count.checked_mul(core::mem::size_of::<OsslParam>()) else {
+        return ptr::null_mut();
+    };
+    // SAFETY: a non-zero size and a static file/line label.
+    let params = CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489).cast::<OsslParam>();
     if params.is_null() {
         return ptr::null_mut();
     }
