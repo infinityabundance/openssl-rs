@@ -1,0 +1,146 @@
+{
+  "receipt": "mechanism-sweep-M63",
+  "branch": "integrate/safe-c33",
+  "source_head": "6f128a871",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no confirmed memory-safety defect left unrepaired, no ABI regression, no hidden obligation and no remaining unsafe-safe-Rust API); two checked-arithmetic/NULL-UB repairs and one secret-residue failure-path improvement",
+  "scope": "Per-file contract audit of the four PKCS12_key_gen spellings and the PKCS12KDF engine, the PKCS12 MAC presence/read/setup/generate/verify/PBMAC1 units, the PKCS12 password-change workers, both PKCS8_decrypt and both PKCS8_encrypt spellings, the OPENSSL_asc2uni/uni2asc/utf82uni/uni2utf8 conversions plus the four PKCS12 BIO/FILE wrappers, BIO_new_PKCS7, and the PKCS7 SMIMECapabilities/content-type/signing-time/digest attribute helpers. evp/method_store.rs was deferred as the method-store registry boundary; pkcs7/pk7_attr.rs was substituted from position 9 of the queue. PKCS#12 passwords, converted UTF-16 forms, PBKDF2/GOST/HMAC keys and decrypted private-key encodings are SECRET_DATA; salts, iteration counts, algorithm identifiers, MAC values and ciphertext are PUBLIC_DATA. No constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/pkcs12/p12_key.rs",
+    "src/pkcs12/p12_mutl.rs",
+    "src/pkcs12/p12_npas.rs",
+    "src/pkcs12/p12_p8d.rs",
+    "src/pkcs12/p12_p8e.rs",
+    "src/pkcs12/p12_utl.rs",
+    "src/pkcs7/bio_pk7.rs",
+    "src/pkcs7/pk7_attr.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M63-D1",
+      "file": "src/pkcs12/p12_utl.rs",
+      "line_pre_fix": 139,
+      "line_post_fix": 142,
+      "also": "pre-fix src/pkcs12/p12_utl.rs:257,260,381,389; post-fix :270,278,402,413",
+      "severity": "low",
+      "class": "unchecked c_int allocation-size accumulators",
+      "description": "asclen * 2 + 2 (OPENSSL_asc2uni), ulen += 2/4 (OPENSSL_utf82uni) and asclen += j/+1 (OPENSSL_uni2utf8) were unchecked signed additions. Overflow panics in debug and wraps in release, turning the allocation size into a bogus value (the subsequent slice write then panics) instead of returning the ordinary failure answer; the authority has the same signed overflow, and AGENTS.md section 17 forbids reproducing it.",
+      "fix": "Every sizing step uses checked_mul/checked_add and refuses with the ordinary NULL answer before allocating. No exported signature or release seam changed.",
+      "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_utl.c:17-43,77-148,181-235; the new unit test refuses asclen = INT_MAX/2 + 1 before any read."
+    },
+    {
+      "id": "M63-D2",
+      "file": "src/pkcs12/p12_utl.rs",
+      "line_pre_fix": 194,
+      "line_post_fix": 201,
+      "severity": "medium",
+      "class": "undefined pointer arithmetic on NULL permitted by the documented contract",
+      "description": "OPENSSL_uni2asc executed uni.add(1) unconditionally after the empty-length guard, while its # Safety contract permitted (NULL, 0). pointer.add on null is Rust UB even though the authority's uni++ is never dereferenced for an empty input. The contracts of the four conversions also allowed NULL with non-zero lengths.",
+      "fix": "The leading-byte skip is conditional on unilen != 0, preserving the authority's one-byte empty string for (NULL, 0); the four conversion contracts now permit NULL only for the empty input.",
+      "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_utl.c:45-66 (uni++ after the empty guard); new unit test calls uni2asc(NULL,0), uni2utf8(NULL,0) and asc2uni(NULL,0)."
+    },
+    {
+      "id": "M63-D3",
+      "file": "src/pkcs12/p12_mutl.rs",
+      "line_pre_fix": 460,
+      "line_post_fix": 464,
+      "severity": "low",
+      "class": "secret-bearing scratch not cleansed on a failure path",
+      "description": "A failed PKCS5_PBKDF2_HMAC in pkcs12_gen_gost_mac_key left the 96-byte out array uncleansed. That array can hold partial derived key material; the authority's success path cleanses but its failure path returns without cleansing (p12_mutl.c:73-76).",
+      "fix": "The failure arm cleanses the whole scratch before returning false. Deliberate secret-residue improvement; no observable behaviour, exported symbol, release seam or allocator coordinate changed.",
+      "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c:62-80."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf: adopt_cleansed for the converted password in p12_key, and the local plain OwnedBuf at p12_utl's exact allocation/release coordinates",
+    "ASN.1 item ownership for PKCS8_PRIV_KEY_INFO, PBE2PARAM, PBKDF2PARAM, PBMAC1PARAM, X509_SIG, PKCS12_SAFEBAG and PKCS12_MAC_DATA",
+    "C ABI caller contracts for NULL-or-live optional pointers, caller-sized buffers and caller-owned results",
+    "EVP_KDF and EVP_MD fetch/release contracts for the PKCS12KDF, PBKDF2 and digest lookups",
+    "B19 BIGNUM/secret cleansing rule applied to the MAC key array and the GOST scratch",
+    "CRYPTO_* allocator seam at the authority's exact FILE/LINE"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry boundary.",
+    "PKCS8_decrypt_ex answers a parsed PKCS8_PRIV_KEY_INFO released by the item destructor, which does not cleanse the decoded key fields; an unencrypted keyBag in newpass_p12 is released the same way. This is the authority's item-destructor contract and is preserved, not reclassified as safe.",
+    "p12_key's out buffer is caller-owned key material; the exported ABI has no length-attached cleansing release.",
+    "OPENSSL_asc2uni/utf82uni return password material that the C caller owns; the cleansing release is the caller's obligation under the exported ABI.",
+    "The PKCS#12 KDF provider row and constant-time behaviour of the MAC comparisons are outside this file-level batch.",
+    "No constant-time claim is made for the PKCS#12 or PKCS#7 units from source inspection."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1670 passed / 0 failed / 27 ignored; 1697 total; 248.98 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1670 passed / 0 failed / 27 ignored; 1697 total; 95.56 s; --test-threads=4)",
+    "focused_tests": "PASS (9 passed / 0 failed / 1 ignored: p12_utl 4, p12_key 2 + 1 ignored, p12_mutl 2, p12_npas 1; p12_p8d/p12_p8e/bio_pk7/pk7_attr have no unit tests)",
+    "affected_adversarial_probes": "PASS (pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release, 1 passed / 0 failed, OPENSSL_RS_ADV_PROBE=1)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M63-D3's GOST scratch is a function-local array and no harness observes its residue; no allocator hook sees the p12_utl conversion blocks' contents; Miri/ASan/valgrind, dudect/ctgrind, the FRF suite and the dependency-graph regeneration are BOUNDARY/SEAL work."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/pkcs7/pk7_mime.rs",
+      "src/property/defn_cache.rs",
+      "src/property/globals.rs",
+      "src/property/list.rs",
+      "src/property/query.rs",
+      "src/provider/base.rs",
+      "src/provider/capabilities.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "failure-path residue control for the pkcs12_gen_gost_mac_key scratch",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "allocator-content differential for the p12_utl conversion blocks",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / ASan / valgrind over the PKCS#12 and PKCS#7 paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement of any secret-dependent PKCS#12 path (dudect/ctgrind under the exact build profile)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ]
+}
