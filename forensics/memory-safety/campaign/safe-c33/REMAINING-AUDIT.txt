@@ -1,11 +1,3 @@
-src/apps/keyio.rs
-src/apps/mac.rs
-src/apps/nseq.rs
-src/apps/ocsp.rs
-src/apps/passwd.rs
-src/apps/pkcs12.rs
-src/apps/pkcs7.rs
-src/apps/pkcs8.rs
 src/apps/pkeyparam.rs
 src/apps/pkey.rs
 src/apps/prime.rs
