@@ -247,12 +247,13 @@ pub fn main(argv: &[String]) -> i32 {
         return 1;
     }
 
-    // `out = bio_open_default(outfile, 'w', outformat);` — `apps/crl.c:387-389`.
-    let out = bio_open_default(outfile.as_deref(), true);
-    if out.is_null() {
+    // `bio_out` — the authority prints every selected field to `bio_out`, then
+    // opens `out = bio_open_default(outfile, 'w', outformat)` at `apps/crl.c:387-389`.
+    let print_out = bio_open_default(None, true);
+    if print_out.is_null() {
         // SAFETY: `x` is live and not freed again.
         unsafe { X509_CRL_free(x) };
-        return not_landed("crl -out (unopenable)");
+        return 1;
     }
     let mut ret = 1i32;
 
@@ -262,7 +263,7 @@ pub fn main(argv: &[String]) -> i32 {
             Print::Issuer => {
                 // SAFETY: `x` is live.
                 let issuer = unsafe { X509_CRL_get_issuer(x) };
-                print_name(out, c"issuer=", issuer);
+                print_name(print_out, c"issuer=", issuer);
             }
             Print::CrlNumber => {
                 // SAFETY: `x` is live; crit/idx are NULL out-slots.
@@ -275,21 +276,21 @@ pub fn main(argv: &[String]) -> i32 {
                     )
                 }
                 .cast::<Asn1String>();
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"crlNumber=".as_ptr()) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"crlNumber=".as_ptr()) };
                 if !crlnum.is_null() {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"0x".as_ptr()) };
-                    // SAFETY: `out`/`crlnum` are live.
-                    unsafe { i2a_ASN1_INTEGER(out, crlnum) };
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"0x".as_ptr()) };
+                    // SAFETY: `print_out`/`crlnum` are live.
+                    unsafe { i2a_ASN1_INTEGER(print_out, crlnum) };
                     // SAFETY: `crlnum` is live and not freed again.
                     unsafe { ASN1_INTEGER_free(crlnum) };
                 } else {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"<NONE>".as_ptr()) };
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"<NONE>".as_ptr()) };
                 }
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"\n".as_ptr()) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"\n".as_ptr()) };
             }
             Print::Hash => {
                 let mut ok = 0i32;
@@ -303,73 +304,80 @@ pub fn main(argv: &[String]) -> i32 {
                     )
                 };
                 if prints.len() > 1 {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"issuer name hash=".as_ptr()) };
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"issuer name hash=".as_ptr()) };
                 }
                 if ok != 0 {
                     let line = format!("{hash_value:08x}\n");
-                    // SAFETY: `out` is live; `line` is this frame's bytes.
+                    // SAFETY: `print_out` is live; `line` is this frame's bytes.
                     unsafe {
                         crate::runtime::bio::iolib::BIO_write(
-                            out,
+                            print_out,
                             line.as_ptr().cast(),
                             line.len() as c_int,
                         )
                     };
                 } else {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"<ERROR>".as_ptr()) };
-                    ret = 1;
-                    break;
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"<ERROR>".as_ptr()) };
+                    // SAFETY: `print_out`/`x` are live and not freed again.
+                    unsafe { crate::runtime::bio::BIO_free(print_out) };
+                    // SAFETY: as above.
+                    unsafe { X509_CRL_free(x) };
+                    return 1;
                 }
             }
             Print::HashOld => {
                 if prints.len() > 1 {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"issuer name old hash=".as_ptr()) };
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"issuer name old hash=".as_ptr()) };
                 }
                 // SAFETY: `x` is live.
                 let h = unsafe { X509_NAME_hash_old(X509_CRL_get_issuer(x)) };
                 let line = format!("{h:08x}\n");
-                // SAFETY: `out` is live; `line` is this frame's bytes.
+                // SAFETY: `print_out` is live; `line` is this frame's bytes.
                 unsafe {
                     crate::runtime::bio::iolib::BIO_write(
-                        out,
+                        print_out,
                         line.as_ptr().cast(),
                         line.len() as c_int,
                     )
                 };
             }
             Print::LastUpdate => {
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"lastUpdate=".as_ptr()) };
-                // SAFETY: `out`/`x` are live; the dateopt flag is the RFC822 default.
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"lastUpdate=".as_ptr()) };
+                // SAFETY: `print_out`/`x` are live; the dateopt flag is the RFC822 default.
                 unsafe {
                     ASN1_TIME_print_ex(
-                        out,
+                        print_out,
                         X509_CRL_get0_lastUpdate(x),
                         ASN1_DTFLGS_RFC822 as core::ffi::c_ulong,
                     )
                 };
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"\n".as_ptr()) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"\n".as_ptr()) };
             }
             Print::NextUpdate => {
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"nextUpdate=".as_ptr()) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"nextUpdate=".as_ptr()) };
                 // SAFETY: `x` is live.
                 let next = unsafe { X509_CRL_get0_nextUpdate(x) };
                 if !next.is_null() {
-                    // SAFETY: `out`/`next` are live.
+                    // SAFETY: `print_out`/`next` are live.
                     unsafe {
-                        ASN1_TIME_print_ex(out, next, ASN1_DTFLGS_RFC822 as core::ffi::c_ulong)
+                        ASN1_TIME_print_ex(
+                            print_out,
+                            next,
+                            ASN1_DTFLGS_RFC822 as core::ffi::c_ulong,
+                        )
                     };
                 } else {
-                    // SAFETY: `out` is live; the literal is static.
-                    unsafe { BIO_puts(out, c"NONE".as_ptr()) };
+                    // SAFETY: `print_out` is live; the literal is static.
+                    unsafe { BIO_puts(print_out, c"NONE".as_ptr()) };
                 }
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c"\n".as_ptr()) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c"\n".as_ptr()) };
             }
             Print::Fingerprint => {
                 let digest = EVP_sha1();
@@ -381,9 +389,9 @@ pub fn main(argv: &[String]) -> i32 {
                     X509_CRL_digest(x, digest, md.as_mut_ptr().cast::<c_uchar>(), &mut n) == 0
                 } {
                     eprintln!("out of memory");
-                    // SAFETY: `out`/`x` are live and not freed again.
-                    unsafe { crate::runtime::bio::BIO_free_all(out) };
-                    // SAFETY: `out`/`x` are live and not freed again.
+                    // SAFETY: `print_out`/`x` are live and not freed again.
+                    unsafe { crate::runtime::bio::BIO_free(print_out) };
+                    // SAFETY: as above.
                     unsafe { X509_CRL_free(x) };
                     return 1;
                 }
@@ -391,10 +399,10 @@ pub fn main(argv: &[String]) -> i32 {
                 // `apps/crl.c:379-380`.
                 // SAFETY: `digest` is a static method.
                 let name = unsafe { crate::evp::digest::EVP_MD_get0_name(digest) };
-                // SAFETY: `out` is live; `name` is a static NUL-terminated string.
-                unsafe { BIO_puts(out, name) };
-                // SAFETY: `out` is live; the literal is static.
-                unsafe { BIO_puts(out, c" Fingerprint=".as_ptr()) };
+                // SAFETY: `print_out` is live; `name` is a static NUL-terminated string.
+                unsafe { BIO_puts(print_out, name) };
+                // SAFETY: `print_out` is live; the literal is static.
+                unsafe { BIO_puts(print_out, c" Fingerprint=".as_ptr()) };
                 let mut s = String::new();
                 for (j, b) in md[..n as usize].iter().enumerate() {
                     if j + 1 == n as usize {
@@ -403,14 +411,28 @@ pub fn main(argv: &[String]) -> i32 {
                         s.push_str(&format!("{b:02X}:"));
                     }
                 }
-                // SAFETY: `out` is live; `s` is this frame's bytes.
+                // SAFETY: `print_out` is live; `s` is this frame's bytes.
                 unsafe {
-                    crate::runtime::bio::iolib::BIO_write(out, s.as_ptr().cast(), s.len() as c_int)
+                    crate::runtime::bio::iolib::BIO_write(
+                        print_out,
+                        s.as_ptr().cast(),
+                        s.len() as c_int,
+                    )
                 };
                 // SAFETY: `digest` is a static method; the free is a no-op for it.
                 unsafe { EVP_MD_free(digest.cast_mut()) };
             }
         }
+    }
+
+    // `out = bio_open_default(outfile, 'w', outformat);` — `apps/crl.c:387-389`.
+    let out = bio_open_default(outfile.as_deref(), true);
+    if out.is_null() {
+        // SAFETY: `print_out`/`x` are live and not freed again.
+        unsafe { crate::runtime::bio::BIO_free(print_out) };
+        // SAFETY: as above.
+        unsafe { X509_CRL_free(x) };
+        return not_landed("crl -out (unopenable)");
     }
 
     // `if (text) X509_CRL_print_ex(out, x, get_nameopt());` — `apps/crl.c:391-392`.
@@ -421,9 +443,11 @@ pub fn main(argv: &[String]) -> i32 {
 
     if noout {
         ret = 0;
-        // SAFETY: `out`/`x` are live and not freed again.
+        // SAFETY: `out`/`print_out`/`x` are live and not freed again.
         unsafe { crate::runtime::bio::BIO_free_all(out) };
-        // SAFETY: `out`/`x` are live and not freed again.
+        // SAFETY: as above.
+        unsafe { crate::runtime::bio::BIO_free(print_out) };
+        // SAFETY: as above.
         unsafe { X509_CRL_free(x) };
         return ret;
     }
@@ -440,9 +464,11 @@ pub fn main(argv: &[String]) -> i32 {
     };
     if i == 0 {
         eprintln!("unable to write CRL");
-        // SAFETY: `out`/`x` are live and not freed again.
+        // SAFETY: `out`/`print_out`/`x` are live and not freed again.
         unsafe { crate::runtime::bio::BIO_free_all(out) };
-        // SAFETY: `out`/`x` are live and not freed again.
+        // SAFETY: as above.
+        unsafe { crate::runtime::bio::BIO_free(print_out) };
+        // SAFETY: as above.
         unsafe { X509_CRL_free(x) };
         return ret;
     }
@@ -450,9 +476,11 @@ pub fn main(argv: &[String]) -> i32 {
 
     // `end: ... BIO_free_all(out); EVP_MD_free(digest); X509_CRL_free(x); ...` —
     // `apps/crl.c:409-417`.
-    // SAFETY: `out`/`x` are live and not freed again.
+    // SAFETY: `out`/`print_out`/`x` are live and not freed again.
     unsafe { crate::runtime::bio::BIO_free_all(out) };
-    // SAFETY: `out`/`x` are live and not freed again.
+    // SAFETY: as above.
+    unsafe { crate::runtime::bio::BIO_free(print_out) };
+    // SAFETY: as above.
     unsafe { X509_CRL_free(x) };
     ret
 }

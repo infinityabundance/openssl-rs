@@ -104,7 +104,9 @@ fn strtol_base0(value: &str) -> Option<i64> {
         if d >= radix {
             break;
         }
-        acc = acc * i128::from(radix) + i128::from(d);
+        acc = acc
+            .saturating_mul(i128::from(radix))
+            .saturating_add(i128::from(d));
         if acc > i128::from(i64::MAX) + 1 {
             overflow = true;
             acc = 0;
