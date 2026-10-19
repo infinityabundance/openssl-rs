@@ -277,6 +277,15 @@ pub(crate) unsafe fn item_embed_new(
                 // SAFETY: the caller's contract: `*pval` is this call's storage, of
                 // `item.size` bytes.
                 unsafe { core::ptr::write_bytes(*pval, 0, item.size.max(0) as usize) };
+                // The authority calls `ossl_asn1_do_lock` for embedded values too; an
+                // embedded item that carries a reference count is initialised identically
+                // (and its failure leaves the caller's storage in place).
+                // SAFETY: `*pval` is a live value of the item's type.
+                if unsafe { utl::do_lock(pval, 0, item) } < 0 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::TASN_NEW_162) };
+                    return 0;
+                }
             } else {
                 // The block is owned here while `do_lock` initialises the reference count;
                 // ownership leaves this frame with the value published to the caller's slot.
@@ -407,13 +416,12 @@ pub(crate) unsafe fn template_new(
     let embed = c_int::from(t.flags & ASN1_TFLG_EMBED != 0);
     // For an embedded field the value *is* the field, so the item machinery is handed
     // the address of a pointer to the field rather than the field's own slot. That
-    // indirection is the authority's, and it is what makes `embed` propagate.
-    // SAFETY: the caller's contract covers this slot.
-    let mut tval: *mut c_void = unsafe { *pval };
+    // indirection is the authority's, and it is what makes `embed` propagate. The
+    // authority does not read the field slot here (`tval = (ASN1_VALUE *)pval` is the
+    // slot's address), so neither does this transcription.
+    let mut tval: *mut c_void;
     let pval = if embed != 0 {
-        // SAFETY: `pval` is a live slot; `tval` is this frame's copy.
-        unsafe { pval.write(tval) };
-        tval = pval as *mut c_void;
+        tval = pval.cast::<c_void>();
         &mut tval as *mut *mut c_void
     } else {
         pval

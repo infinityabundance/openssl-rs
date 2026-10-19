@@ -1690,3 +1690,82 @@ FRF-Fuzz, independent review and SEAL are `NOT_RUN`.
 `src/pkcs12/p12_sbag.rs`, `src/asn1/new.rs` and `src/evp/encode.rs`. B1-B11 boundary queue closed;
 next boundary item is the Loom/TSan control for the repaired condvar protocol at the next BOUNDARY
 trigger.
+
+## 22. Mechanism sweep M18 — pem_info, ml_kem/arith, p12_sbag, asn1/new, evp/encode, bn/arith, ml_dsa/key, p12_kiss
+
+**STOP status: CLEAR after repair.** One confirmed aliasing/soundness defect (`BN_div` held two
+live `&mut` to one object), two low-severity ASN.1-allocator fidelity/validity defects and one
+CBD counted-loop divergence were repaired. Hidden = 0. Nothing is promoted to `SAFETY_DISCHARGED`
+or `SAFE_COMPATIBLE`; the B1-B11 boundary queue remains closed and no boundary was audited here.
+
+**Audited (ordinary, one line each).**
+
+- `src/pem/pem_info.rs` (96): `PemBuf` adoption/single-release and err ordering; the
+  classification loop and push/reclassify arms; the private-key `ptype` chop and raw selection; the
+  `enc_data` custody transfer; the writer, including the authority's `PEM_write_bio_RSAPrivateKey`
+  and `enc_len > 0` guards. No defect.
+- `src/ml_kem/arith.rs` (95): hashes/sampling, scalar encode/decode, NTT, vector/matrix products,
+  CBD samplers and the CPA pair. M18-D4 repaired. No memory-safety defect.
+- `src/pkcs12/p12_sbag.rs` (95): selector-guarded `get0_*`, `nid`/`bag_*`, `get1_cert`/`crl`
+  (plain and `_ex`), the six constructors and the PKCS8-encrypt fetch/legacy fallback. No defect.
+- `src/asn1/new.rs` (95): item/template/primitive allocator, embed indirection, extern/choice/
+  sequence arms, clear paths. M18-D2/D3 repaired. No defect after repair.
+- `src/evp/encode.rs` (94): encode/decode state machines, the identity copy, line/padding bounds
+  and every refusal arm (including `decoded_len == 0 && eof > 0`). No defect.
+- `src/bn/arith.rs` (91): the add/sub/mul/div/mod/shift/inverse/gcd/exp/sqrt entry points.
+  M18-D1 repaired, control added. No other defect.
+- `src/ml_dsa/key.rs` (92): `OwnedBuf` and its four release modes; reset/free/dup; equality/has;
+  `public_from_private`; pairwise check; keygen and the prekey comparison. No defect.
+- `src/pkcs12/p12_kiss.rs` (92): `parse_pk12`/`parse_bags`/`parse_bag` ownership and the
+  `PKCS12_parse` MAC/split/`ca`/err paths. No defect.
+
+**Defects.**
+
+- **M18-D1 (fixed, high, `bn/arith.rs:325-372`).** `BN_div` built `as_mut(dv)` and `as_mut(rem)` in
+  one tuple. Its own documentation supports one object for both slots, which is two live `&mut` to
+  one allocation (aliasing UB); the authority's aliased case is undefined. Inputs are now read
+  through scoped shared borrows, and each output is borrowed and released in turn. The aliased
+  case ends with the quotient (stored last), now documented. Control
+  `div_accepts_one_object_for_both_outputs` (`17 / 5`, `dv == rem == out` -> 3).
+- **M18-D2 (fixed, low, `asn1/new.rs:276-291`).** The SEQUENCE embed arm skipped
+  `ossl_asn1_do_lock`, which `asn1_item_embed_new` calls for embedded values too. No in-tree item
+  embeds a refcounted type (`X509`, `X509_CRL`, `X509_REQ` are pointed to), so the old shape was
+  unobservable; the arm now calls it and raises `TASN_NEW_162` on refusal.
+- **M18-D3 (fixed, low, `asn1/new.rs:417-427`).** `template_new` read `*pval` before the authority's
+  address-only `tval = (ASN1_VALUE *)pval`; the read was unused and would be an uninitialised read
+  if the slot were ever not zeroed. Removed.
+- **M18-D4 (fixed, low, `ml_kem/arith.rs:1151-1163, 1192-1204`).** `gencbd_vector`/`_ntt` used a
+  do-while shape: `rank == 0` sampled one scalar into an `out` documented live for zero, where the
+  authority's counted loop samples none. Both now use the counted loop. Contracts for
+  `inner_product`, `matrix_mult_*`, `hash_h_pubkey` and the CPA pair now state `rank >= 1` and their
+  buffer widths.
+
+**New unsafe assumptions (hidden must be 0).** None. The `BN_div` repair removes an aliasing
+assumption; the CBD repair performs strictly fewer writes; the embed `do_lock` uses the contract
+already exercised by the non-embed arm.
+
+**Contracts reused.** Local `PemBuf` adoption/release; OB-1 `OwnedBuf` (four release modes);
+OB-3 `OwnedCtx`/`CtxDestroy`; `OwnedBlock` ownership in `asn1/new`; the OpenSSL stack
+pop-free/freefunc convention; ASN.1 item/template/ADB callback ordering; the BN null-or-live and
+copy-before-store discipline; the PKCS12 selector/union and `create0_*` adoption contracts; the
+ML-KEM `vinfo` rank/`du`/`dv` invariants; the `ERR` raise-coordinate and `CRYPTO_*` seam contracts.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused `evp::encode` 7/0,
+`pkcs12::p12_sbag` 3/0, `bn` 83/0 plus the new `BN_div` control 1/0, `ml_dsa` 14/0, `ml_kem` 8/0;
+`pem::pem_info`, `asn1::new` and `pkcs12::p12_kiss` have no test functions. BATCH (final candidate):
+library **1611 passed / 0 failed / 27 ignored** serially (257.90 s) and with `--test-threads=4`
+(95.72 s). No affected `OPENSSL_RS_ADV_PROBE` arm exists (only `src/asn1/utl.rs` in the ASN.1 tree
+carries one, unchanged).
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows) for the `BN_div` repair and the retained read-before-write
+`as_mut`+`as_ref` shape; ASan/Loom/TSan, full sanitizers, FRF-Fuzz, authority differentials for the
+newly defined aliased case, independent review and SEAL. These are PENDING at the next BOUNDARY or
+SEAL trigger; the boundary queue is closed.
+
+**Retained.** The read-before-write pattern is sound under the SB/TB access order but has no Miri
+witness; the same shape exists in `bn/{gf2m,mont,recp}.rs`, outside this batch. `compress`/
+`decompress` require `bits` in `1..=12` (panic, not UB). `p12_sbag`'s readers require a well-formed
+selector/value pair, as the authority does. No `CRYPTO_*` coordinate or `#[repr(C)]` layout changed.
+
+**Next ordinary position:** `src/apps/smime.rs` (93), then `src/ssl/ssl_rsa.rs` (92),
+`src/asn1/a_strex.rs` (91), `src/cms/cms_enc.rs` (91), `src/provider/dsa_sig.rs` (91).
