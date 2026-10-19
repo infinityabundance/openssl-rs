@@ -24,7 +24,15 @@ src/apps/passwd.rs
 src/apps/pkcs12.rs
 src/apps/pkcs7.rs
 src/apps/pkcs8.rs
+src/apps/pkey.rs
+src/apps/pkeyparam.rs
 src/apps/pkeyutl.rs
+src/apps/prime.rs
+src/apps/rand.rs
+src/apps/req.rs
+src/apps/rsa.rs
+src/apps/sess_id.rs
+src/apps/skeyutl.rs
 src/apps/smime.rs
 src/aria.rs
 src/asn1/a_d2i_fp.rs

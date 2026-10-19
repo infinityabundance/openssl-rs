@@ -1,0 +1,211 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "330816a1f",
+  "date": "2026-10-19",
+  "scope": "The eight src/apps/* CLI front-ends named as next by M36. Contract checks against OpenSSL 3.6.4 for argument-string lifetimes, file/BIO ownership on every exit, option-array bounds, error tails, allocation arithmetic, and getter-returned or body-owned raw pointers; one verification defect, one incomplete stdin transcription and one wrong-format option fallback repaired.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/apps/req.rs and src/apps/rsa.rs repaired; src/apps/{pkeyparam,pkey,prime,rand,sess_id,skeyutl}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 41 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 333,
+    "canonical_unaudited_before_batch": 430,
+    "canonical_audited_after_batch": 341,
+    "canonical_unaudited_after_batch": 422,
+    "mechanism_sweep_files_union_before_batch": 273,
+    "mechanism_sweep_files_union_after_batch": 281,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight files added here were absent from the pre-batch file (they were the first eight entries of REMAINING-AUDIT.txt) and were inserted in the file's existing sorted order.",
+    "difference_from_333": "M36 left 333 audited / 430 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/apps/pkeyparam.rs",
+    "src/apps/pkey.rs",
+    "src/apps/prime.rs",
+    "src/apps/rand.rs",
+    "src/apps/req.rs",
+    "src/apps/rsa.rs",
+    "src/apps/sess_id.rs",
+    "src/apps/skeyutl.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/apps/pkeyparam.rs",
+      "mechanisms": [
+        "bio_open stdio/file split",
+        "PEM_read_bio_Parameters_ex",
+        "EVP_PKEY_CTX_new_from_pkey / EVP_PKEY_param_check",
+        "PEM_write_bio_Parameters / EVP_PKEY_print_params",
+        "BIO_free/BIO_free_all cleanup order"
+      ],
+      "disposition": "audited_no_change",
+      "note": "inbio and out are released once on every return; the -check valid arm keeps the context live until after the write; BIO_write's length is the 21-byte literal."
+    },
+    {
+      "file": "src/apps/pkey.rs",
+      "mechanisms": [
+        "load_key/load_pubkey ownership",
+        "EVP_PKEY_CTX_new / EVP_PKEY_check",
+        "PEM/DER private and public key writers",
+        "EVP_PKEY_print_private / print_public",
+        "output BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "pkey and out are released once on every exit; the -ec_conv_form/-ec_param_enc arm frees both before refusing; private is retained only for the shared permission divergence."
+    },
+    {
+      "file": "src/apps/prime.rs",
+      "mechanisms": [
+        "BN_hex2bn/BN_dec2bn out-slot",
+        "BN_print / BN_check_prime",
+        "BN_bn2hex/BN_bn2dec adoption through OwnedBlock",
+        "BIO_get_line / BUFSIZE bounds",
+        "hex_digit_prefix"
+      ],
+      "disposition": "audited_no_change",
+      "note": "BIO_get_line writes at most BUFSIZE-1 bytes and NUL-terminates, so hex_digit_prefix stops at index BUFSIZE-1 and buf[n] = 0 is in bounds; the BN_bn2hex/BN_bn2dec block is one adopted allocation with the OPENSSL_free seam at (NULL, 0)."
+    },
+    {
+      "file": "src/apps/rand.rs",
+      "mechanisms": [
+        "opt_long/strtol suffix parse",
+        "RAND_bytes_ex chunking",
+        "BIO_f_base64 push",
+        "BIO_write/BIO_puts/BIO_ctrl flush",
+        "output BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "chunk <= 1<<16 and hex.len() <= 1<<17 fit the c_int write count; scaled_num is bounded by UINT64_MAX >> 3 before the loop; the base64 chain is released once by BIO_free_all. Matches OpenSSL 3.6.4 (no -n option)."
+    },
+    {
+      "file": "src/apps/req.rs",
+      "mechanisms": [
+        "load_csr BIO ownership and stdin arm",
+        "X509_REQ_get0_pubkey",
+        "X509_REQ_verify",
+        "X509_REQ_print_ex / print_name",
+        "PEM_write_bio_PUBKEY and request writers",
+        "output BIO ownership"
+      ],
+      "disposition": "defect_repaired",
+      "note": "A NULL X509_REQ_get0_pubkey skipped -verify and could exit 0; it now follows the authority and exits 1. load_csr now opens a NULL filename as stdin through keyio::bio_open_default, as load_csr_autofmt does. req/out are released once on every return."
+    },
+    {
+      "file": "src/apps/rsa.rs",
+      "mechanisms": [
+        "load_key/load_pubkey ownership",
+        "EVP_PKEY_is_a",
+        "EVP_PKEY_get_bn_param / BN_print",
+        "EVP_PKEY_CTX_new_from_pkey / EVP_PKEY_check",
+        "OSSL_ENCODER_CTX_new_for_pkey / to_bio / free",
+        "try_legacy_encoding",
+        "output BIO ownership"
+      ],
+      "disposition": "defect_repaired",
+      "note": "-RSAPublicKey_in set pubin = 2 but keyio::load_pubkey has no PKCS#1 public-key arm, so it decoded a different format; the arm now reaches not_landed. pkey, out and ectx are released once on every exit."
+    },
+    {
+      "file": "src/apps/sess_id.rs",
+      "mechanisms": [
+        "load_sess_id BIO ownership",
+        "PEM_read_bio_SSL_SESSION",
+        "SSL_SESSION_get0_peer borrowed pointer",
+        "SSL_SESSION_set1_id_context",
+        "SSL_SESSION_print / print_keylog / X509_print",
+        "request writers and output BIO"
+      ],
+      "disposition": "audited_no_change",
+      "note": "peer is borrowed from x and used only while x is live; out is NULL when -noout suppresses printing and BIO_free_all(NULL) is the authority's no-op; x/out are released once on every return."
+    },
+    {
+      "file": "src/apps/skeyutl.rs",
+      "mechanisms": [
+        "EVP_SKEYMGMT_fetch / EVP_SKEY_generate",
+        "EVP_SKEY_get0_* getters",
+        "EVP_SKEY_free / EVP_SKEYMGMT_free",
+        "EVP_CIPHER_free",
+        "bio_err BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "cstr never retains a getter pointer past the call; skey is NULL-or-live before the single EVP_SKEY_free; mgmt is released after skey; the stderr BIO is NOCLOSE and freed once per arm."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/apps/req.rs",
+      "line": 324,
+      "severity": "medium",
+      "kind": "verification skip / false success",
+      "detail": "A NULL X509_REQ_get0_pubkey skipped the -verify arm entirely, so -verify -noout could return 0 without verifying. The authority's apps/req.c:974-976 goes to end with ret=1; the guard now does the same.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/req.rs",
+      "line": 104,
+      "severity": "low",
+      "kind": "incomplete transcription",
+      "detail": "load_csr refused a NULL filename instead of reading stdin as load_csr_autofmt does; it now opens through keyio::bio_open_default.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/rsa.rs",
+      "line": 183,
+      "severity": "low",
+      "kind": "wrong-format option fallback",
+      "detail": "-RSAPublicKey_in mapped to FORMAT_PEM/ASN1 in this stratum, whose load_pubkey decodes SubjectPublicKeyInfo; the authority maps it to FORMAT_PEMRSA/FORMAT_ASN1RSA. The arm now reaches not_landed rather than accepting a different format.",
+      "ub": false
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "contracts_reused": [
+    "Opts copying/bounds contract (rest/num_rest/check_rest_arg)",
+    "keyio bio_open_default stdio/file contract",
+    "OB-3-style NULL-tolerant single release",
+    "OwnedBlock adoption contract for BN_bn2hex/BN_bn2dec",
+    "BIO_NOCLOSE standard-stream contract"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "clean",
+      "check": "cargo check --lib PASS (11.51 s)",
+      "filtered_tests": "cargo test --lib -- apps:: 0 passed / 0 failed (1,675 filtered); cargo test --lib -- x509_req 3 passed",
+      "targeted_control": "direct apps::req::main probe: req.pem -verify -noout -> 0 + 'Certificate request self-signature verify OK'; req.pem with SPKI OID rewritten to unassigned 1.2.840.113549.1.1.99 (NULL X509_REQ_get0_pubkey) -> 1 and no OK line"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "lib_serial": "1648 passed / 0 failed / 27 ignored (220.78 s)",
+      "lib_threads4": "1648 passed / 0 failed / 27 ignored (93.48 s)",
+      "removed_or_newly_ignored_tests": 0
+    }
+  },
+  "not_run": [
+    "courts/phase17/rt_cli_bodies_probe.sh (no CLI bin target; candidate shim points at pre-batch artifacts/phase2/openssl)",
+    "authority parity for the unlanded -RSAPublicKey_in decoder",
+    "Miri Stacked/Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "retained_obligations": [
+    "shared bio_open_owner permission divergence remains for pkey/rsa private-key output and the other apps using bio_open_default for an owner-mode file",
+    "req parses -days with str::parse/unwrap_or(0) where the authority uses opt_int_arg and UNSET_DAYS = -2 (only the unlanded -x509 arm consumes it)",
+    "pkey/rsa accept only PEM/DER input formats, not the authority's OPT_FMT_ANY P12",
+    "error tails omit the pointer-bearing ERR_print_errors lines",
+    "-RSAPublicKey_in is explicitly unlanded until keyio gains a PKCS#1 public-key decoder"
+  ],
+  "queue": {
+    "remaining_audit_before": 430,
+    "remaining_audit_after": 422,
+    "audited_before": 333,
+    "audited_after": 341,
+    "next_batch": [
+      "src/apps/speed.rs",
+      "src/apps/spkac.rs",
+      "src/apps/storeutl.rs",
+      "src/apps/ts.rs",
+      "src/apps/verify.rs",
+      "src/apps/version.rs",
+      "src/apps/x509.rs",
+      "src/asn1_dsa.rs"
+    ]
+  }
+}

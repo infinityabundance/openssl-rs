@@ -49,7 +49,6 @@ use crate::pem::pem_all::PEM_write_bio_PUBKEY;
 use crate::pem::pem_all::{
     PEM_read_bio_X509_REQ, PEM_write_bio_X509_REQ, PEM_write_bio_X509_REQ_NEW,
 };
-use crate::runtime::bio::bss_file::BIO_new_file;
 use crate::runtime::bio::iolib::BIO_puts;
 use crate::runtime::bio::{BIO_free, Bio};
 use crate::x509::t_req::X509_REQ_print_ex;
@@ -100,17 +99,14 @@ fn opt_format_pemder(prog: &str, s: &str, result: &mut c_int) -> bool {
 
 /// `X509_REQ *load_csr_autofmt(...)` — `apps/lib/apps.c`, the PEM/DER decoder arms.
 fn load_csr(uri: Option<&str>, format: c_int) -> *mut X509Req {
-    let Some(path) = uri else {
-        eprintln!("Could not open file or uri for loading of X509 request from <stdin>");
-        return core::ptr::null_mut();
-    };
-    let Ok(cs) = std::ffi::CString::new(path) else {
-        return core::ptr::null_mut();
-    };
-    // SAFETY: `cs` is NUL-terminated and outlives the call.
-    let bio = unsafe { BIO_new_file(cs.as_ptr(), c"r".as_ptr()) };
+    // `bio_open_default(filename, 'r', format)` — a NULL filename is stdin, as
+    // `load_csr_autofmt` passes it.
+    let bio = bio_open_default(uri, false);
     if bio.is_null() {
-        eprintln!("Could not open file or uri for loading of X509 request from {path}");
+        eprintln!(
+            "Could not open file or uri for loading of X509 request from {}",
+            uri.unwrap_or("<stdin>")
+        );
         return core::ptr::null_mut();
     }
     // SAFETY: `bio` is live; the out-slot is NULL and cb/arg are the no-password arms.
@@ -122,7 +118,10 @@ fn load_csr(uri: Option<&str>, format: c_int) -> *mut X509Req {
         }
     };
     if req.is_null() {
-        eprintln!("Could not read X509 request from {path}");
+        eprintln!(
+            "Could not read X509 request from {}",
+            uri.unwrap_or("<stdin>")
+        );
     }
     // SAFETY: `bio` is live and not freed again.
     unsafe { BIO_free(bio) };
@@ -320,33 +319,38 @@ pub fn main(argv: &[String]) -> i32 {
     if verify {
         // SAFETY: `req` is live.
         let tpubkey = unsafe { X509_REQ_get0_pubkey(req) };
-        if !tpubkey.is_null() {
-            // SAFETY: `req`/`tpubkey` are live.
-            let i = unsafe { X509_REQ_verify(req, tpubkey) };
-            if i < 0 {
-                // SAFETY: `req` is live and not freed again.
-                unsafe { X509_REQ_free(req) };
-                return 1;
-            }
-            if i == 0 {
-                eprintln!("Certificate request self-signature verify failure");
-                // SAFETY: `req` is live and not freed again.
-                unsafe { X509_REQ_free(req) };
-                return 1;
-            }
-            let bio_out = bio_open_default(None, true);
-            let line = b"Certificate request self-signature verify OK\n";
-            // SAFETY: `bio_out` is live; `line` is this frame's bytes.
-            unsafe {
-                crate::runtime::bio::iolib::BIO_write(
-                    bio_out,
-                    line.as_ptr().cast(),
-                    line.len() as c_int,
-                )
-            };
-            // SAFETY: `bio_out` is this frame's own BIO.
-            unsafe { crate::runtime::bio::BIO_free(bio_out) };
+        // `if (tpubkey == NULL) goto end;` — `apps/req.c:974-976`. The request has
+        // no key to verify against, so verification cannot be reported as success.
+        if tpubkey.is_null() {
+            // SAFETY: `req` is live and not freed again.
+            unsafe { X509_REQ_free(req) };
+            return 1;
         }
+        // SAFETY: `req`/`tpubkey` are live.
+        let i = unsafe { X509_REQ_verify(req, tpubkey) };
+        if i < 0 {
+            // SAFETY: `req` is live and not freed again.
+            unsafe { X509_REQ_free(req) };
+            return 1;
+        }
+        if i == 0 {
+            eprintln!("Certificate request self-signature verify failure");
+            // SAFETY: `req` is live and not freed again.
+            unsafe { X509_REQ_free(req) };
+            return 1;
+        }
+        let bio_out = bio_open_default(None, true);
+        let line = b"Certificate request self-signature verify OK\n";
+        // SAFETY: `bio_out` is live; `line` is this frame's bytes.
+        unsafe {
+            crate::runtime::bio::iolib::BIO_write(
+                bio_out,
+                line.as_ptr().cast(),
+                line.len() as c_int,
+            )
+        };
+        // SAFETY: `bio_out` is this frame's own BIO.
+        unsafe { crate::runtime::bio::BIO_free(bio_out) };
     }
 
     // `if (noout && !text && !modulus && !subject && !pubkey) { ret = 0; goto end; }`
