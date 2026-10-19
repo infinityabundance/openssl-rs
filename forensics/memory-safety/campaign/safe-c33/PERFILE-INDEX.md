@@ -1853,3 +1853,79 @@ trigger.
 **Graduation.** `CONTRACTED`; not `SAFETY_DISCHARGED` (Miri NOT_RUN, no
 independent reviewer). Hidden obligations 0; no safe caller can cause UB through
 the audited aliases.
+
+---
+
+## 23. Mechanism sweep M19 — smime, a_strex, cms_enc, dsa_sig, v3_lib, ecdsa_sig, v3_sxnet, v3_attrdesc
+
+**STOP status: CLEAR after repair.** One confirmed memory-safety defect class (a
+provider-controlled IV length overrunning the authority's `iv[EVP_MAX_IV_LENGTH]`
+stack buffer) was repaired with a §17 refusal and a boundary control; four
+ownership/leak divergences were repaired. Hidden = 0. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Audited (ordinary).** `src/apps/smime.rs` (93), `src/asn1/a_strex.rs` (91),
+`src/cms/cms_enc.rs` (91), `src/provider/dsa_sig.rs` (91), `src/x509/v3_lib.rs`
+(91), `src/provider/ecdsa_sig.rs` (90), `src/x509/v3_sxnet.rs` (89),
+`src/x509/v3_attrdesc.rs` (89). `src/ssl/ssl_rsa.rs` (92) was skipped as already
+audited (B7/B8). No newly audited file was a new boundary.
+
+**Defects.**
+
+- **M19-D1 (fixed, high, `cms/cms_enc.rs:218-235`).** `ossl_cms_EncryptedContent_init_bio`
+  filled `unsigned char iv[EVP_MAX_IV_LENGTH]` with `ivlen = EVP_CIPHER_CTX_get_iv_length(ctx)`
+  bytes and later copied `ivlen` bytes into `aparams.iv`, with no upper bound. A
+  provider may advertise an `ivlen` above `EVP_MAX_IV_LENGTH`; the authority
+  (`cms_enc.c:96-98,179`) overruns the stack buffer. The conversion now refuses
+  with `ERR_R_EVP_LIB` at the authority's IV-length coordinate, recording the
+  deliberate §17 divergence; `iv_length_guard_rejects_a_provider_iv_larger_than_the_buffer`
+  is the positive/negative control. The end-to-end custom-provider reproducer is
+  `NOT_RUN` (no overlong-IV provider harness).
+- **M19-D2 (fixed, low, `apps/smime.rs:370-745`, nine sites).** The recipient
+  stack was released with `OPENSSL_sk_free`, which frees only the stack array;
+  `apps/smime.c:726` uses `OSSL_STACK_OF_X509_free` (pop-free with `X509_free`).
+  Every certificate pushed for `-encrypt` was leaked. All sites now call
+  `crate::x509::t_x509::OSSL_STACK_OF_X509_free`.
+- **M19-D3 (fixed, low, `apps/smime.rs`, 17 cleanup sites).** `indata` — the
+  content BIO `SMIME_read_PKCS7_ex` produces — was never freed; `apps/smime.c:744`
+  releases it on every path. Each cleanup/return now frees it (NULL-safe).
+- **M19-D4 (fixed, low, `apps/smime.rs:373-383`).** `OPENSSL_sk_push`'s result was
+  ignored. On refusal the authority's `goto end` releases the unpushed
+  certificate and the stack (`apps/smime.c:517-521,723-745`); the arm now does
+  the same.
+- **M19-D5 (fixed, low, `provider/ecdsa_sig.rs:926-935`).** `ecdsa_dupctx` omitted
+  the authority's `kinv != NULL || r != NULL` refusal (`ecdsa_sig.c:634-638`).
+  Those fields stay NULL without the ACVP arm, but a future assignment would
+  make the `CRYPTO_memdup` alias two `BIGNUM`s and `freectx` release each twice.
+  The refusal is restored.
+
+**No defect.** `a_strex`: escape/width tables, counting-vs-writing passes, UTF-8
+conversion, `ASN1_STRING_to_UTF8`'s reuse of the stack string, and the
+`do_name_ex` separator/field-name ladder. `dsa_sig`: context create/dup/free,
+digest setup and `aid_buf` copy, sign/verify paths, signature adoption and the
+generated decoders. `v3_lib`: dynamic-row ownership, `ext_list` lifecycle,
+search/sort, alias copy, `X509V3_get_d2i`, and `X509V3_add1_i2d`'s
+replace/append/delete arms. `v3_sxnet`: add/get ownership transfer and the
+partial-value cleanup. `v3_attrdesc`: the four printers and SELECTOR arms.
+
+**Contracts reused.** RC-1, OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3
+`OwnedCtx`/`CtxDestroy`, OB-4 member buffers, the `CRYPTO_*` seam coordinates,
+the stack pop-free/element-destructor convention, the `i2s` callback ownership
+contract, and the provider dispatch/ctx-dup contracts established in M7/M8.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`cms::cms_enc` 1/0 (new control), `x509::v3_lib` 1/0; the other six modules have
+no test functions. BATCH (final candidate): library **1616 passed / 0 failed /
+27 ignored** serially (260.36 s) and with `--test-threads=4` (110.53 s). No
+audited file carries an `OPENSSL_RS_ADV_PROBE` arm, so no adversarial probe was
+affected.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows), ASan/Loom/TSan, the custom-provider
+overlong-IV reproducer for M19-D1, curve25519/Wycheproof and other cryptographic
+courts, FRF-Fuzz, authority differentials for the newly defined IV refusal,
+independent review and SEAL. `src/property/store.rs` (93) and
+`src/http/http_client.rs` (92) remain BOUNDARY and were not selected.
+
+**Next ordinary position:** `src/ec/curve25519.rs` (90, security-sensitive
+algorithm; vectors `NOT_RUN`), then `src/x509/x509_v3.rs` (89),
+`src/runtime/conf/api.rs` (89) and `src/dso/mod.rs` (89).
