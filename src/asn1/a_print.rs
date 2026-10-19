@@ -93,7 +93,8 @@ pub unsafe extern "C" fn ASN1_PRINTABLE_type(s: *const c_uchar, len: c_int) -> c
 ///
 /// # Safety
 ///
-/// `s` must be null or a live, uniquely-owned `ASN1_UNIVERSALSTRING`.
+/// `s` must be null or a live, uniquely-owned `ASN1_UNIVERSALSTRING` whose
+/// `length` is nonnegative and whose `data` is null or owns `length + 1` bytes.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_UNIVERSALSTRING_to_string(s: *mut Asn1String) -> c_int {
     // SAFETY: the caller's contract makes `s` live and uniquely owned.
@@ -102,6 +103,12 @@ pub unsafe extern "C" fn ASN1_UNIVERSALSTRING_to_string(s: *mut Asn1String) -> c
     };
     let (type_, length, data) = (st.type_, st.length, st.data);
     if type_ != V_ASN1_UNIVERSALSTRING {
+        return 0;
+    }
+    if length < 0 {
+        // The authority would write its terminator at offset zero of an object that
+        // claims a negative extent; forming a slice of `length as usize` bytes would
+        // instead be immediate UB, so the invalid extent is refused before that.
         return 0;
     }
     if length % 4 != 0 {
@@ -198,4 +205,25 @@ pub unsafe extern "C" fn ASN1_STRING_print(bp: *mut Bio, v: *const Asn1String) -
         }
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn universalstring_refuses_a_negative_length_without_forming_a_slice() {
+        let mut storage = [0u8; 4];
+        let mut s = Asn1String {
+            length: -4,
+            type_: V_ASN1_UNIVERSALSTRING,
+            data: storage.as_mut_ptr(),
+            flags: 0,
+        };
+        // SAFETY: every field is a live local; the negative length is the invalid
+        // extent this test checks the guard for.
+        let rc = unsafe { ASN1_UNIVERSALSTRING_to_string(&mut s) };
+        assert_eq!(rc, 0);
+        assert_eq!(s.length, -4);
+    }
 }

@@ -2897,3 +2897,58 @@ independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
 `src/provider/mod.rs` (118) stays skipped as a provider-dispatch boundary;
 `src/ssl/record/rec_layer_s3.rs`, the `ssl/statem` modules and the ENGINE
 dispatch files remain held.
+
+## 36. Mechanism sweep M32 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `f5b42eef2` plus the worktree state
+(the two repairs below, the canonical queue files and this record).
+
+**Canonical structured queue.** `AUDITED-FILES.txt` is built only from
+structured fields: each mechanism sweep's `.files` array (M2–M31, **233** unique),
+the twelve M1 files in §3a, the nine records in `perfile-index.json`, and every
+boundary sweep's `.boundaries[].file` (**48** unique, 9 overlapping a mechanism
+sweep). The union is **293** audited census files. `PARTIAL-FILES.txt` is the
+**761** `PARTIAL` rows of `attribution.json`; `REMAINING-AUDIT.txt` is
+`comm -23`, **470** files before this batch and **462** after it. The census has
+868 files (92 `ZERO_UNSAFE`, 15 `BOUNDARY_COVERED`, 761 `PARTIAL`) out of 877
+`src/**/*.rs`. The old **268** figure omitted the 39 boundary-only files, predates
+M31's 8 files, and was based on a 225-file mechanism union that the structured
+arrays do not support.
+
+**Scope:** the first eight security-relevant files in the stable remaining
+order: AES modes, the ASN.1 read/dup/digest/write/print/type cluster, and
+`BN_CTX`.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/aes.rs` | `AES_*` raw block/mode exports, `block128_f` callbacks, wrap/unwrap delegation | No defect. Every arm matches the pinned 3.6.4 `aes_ige.c`/`aes_wrap.c`, including the documented one-key `AES_bi_ige_encrypt` bug and the asserts-as-callers-preconditions (multiple of 16, 32/64-byte IV). |
+| `src/asn1/a_d2i_fp.rs` | BIO read loop, `BUF_MEM_grow_clean` extents, ASN.1 header arithmetic | No defect. Checked adds guard every grown extent; the tag/length peeks stay inside `len`; the recoverable `ASN1_R_TOO_LONG` and clean-EOF branches match `a_d2i_fp.c`. |
+| `src/asn1/a_dup.rs` | OB-1 `OwnedBuf` (`new_plain_released`/`adopt_plain`), `ASN1_AUX` callbacks | No defect. The `+10` slack, the encode/decode scratch release and the authority's aux-error leak are preserved; callbacks receive raw pointers only. |
+| `src/asn1/a_digest.rs` | OB-1 `OwnedBuf`, engine/provider selection, fetched-method release | No defect. Every path releases the encoding; `fetched_md != md` drives the conditional release, as in `a_digest.c`. |
+| `src/asn1/a_i2d_fp.rs` | OB-1 `OwnedBlock`, `from_raw` adoption, short-write loop | No defect. `write_all` is the authority's `j`/`n` loop; the memory-BIO failure path frees the BIO it made. |
+| `src/asn1/a_print.rs` | `ASN1_STRING` extent, in-place compaction, signed-char classification | **M32-D1 fixed (medium, memory safety):** a negative `length` passed `% 4 == 0` and reached `from_raw_parts_mut(data, length as usize)`, forming an enormous slice (UB); the authority only writes one terminator. Now refused before any slice; safety contract states the nonnegative extent. Negative-control test added. |
+| `src/asn1/a_type.rs` | OB-3 item ownership, `ASN1_TYPE_set` release-before-overwrite, pack/unpack octet ownership | No defect. The null-item `primitive_free` redirect and the three `t` cases match `a_type.c`; no borrow is held across a callback. |
+| `src/bn/ctx.rs` | BN_CTX pool ownership, `BN_CTX_start`/`end` marks, `BN_GENCB` callback dispatch | **M32-D2 fixed (low, compatibility/security state):** `BN_CTX_get` now clears a leaked `BN_FLG_CONSTTIME` on a reused slot, matching `bn_ctx.c:237`. Test added. Box/Vec ownership, OOM-abort and the unmodelled `too_many` flag are recorded residuals, not UB. |
+
+**New unsafe assumptions (hidden must be 0).** None. M32-D1 adds a refusal
+before an existing slice formation; M32-D2 writes an existing flag field. No
+unsafe operation, adoption, allocator coordinate, `#[repr(C)]` layout, exported
+symbol or signature changed.
+
+**Evidence.** FAST: fmt clean; focused `asn1::a_print` 1/1 and `bn::ctx` 1/1.
+BATCH: clippy `--all-targets -D warnings` PASS; library **1648 passed / 0 failed
+/ 27 ignored** serially (285.88 s) and with `--test-threads=4` (95.94 s). No test
+removed or newly ignored.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows), ASan/TSan/Loom, authority
+differential for the invalid-extent refusal, independent adversarial review and
+SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next eight (stable order, library modules preferred).** `src/aria.rs`,
+`src/asn1/asn1_item_list.rs`, `src/asn1/asn_mstbl.rs`, `src/asn1/asn_pack.rs`,
+`src/asn1/a_strnid.rs`, `src/asn1/a_utf8.rs`, `src/asn1/d2i_param.rs`,
+`src/asn1/d2i_pu.rs`. The literal first eight remaining lines are `src/apps/*`
+CLI front-ends; they stay queued and are deferred, not excluded.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M32.json`](atlas-refresh/mechanism-sweep-M32.json).
