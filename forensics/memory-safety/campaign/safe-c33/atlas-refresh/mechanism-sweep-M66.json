@@ -1,0 +1,120 @@
+{
+  "receipt": "mechanism-sweep-M66",
+  "branch": "integrate/safe-c33",
+  "source_head": "ca22e7d4b",
+  "worktree": false,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH. No source repair was required and no source edit was made; no unrepaired memory-safety defect, ABI regression, hidden obligation or unsafe-safe-Rust API was found.",
+  "scope": "Per-file contract audit of the provider DER AlgorithmIdentifier writers (ECDSA-with-MD, ECX/EdDSA, ML-DSA, RSA/RSA-PSS, RSA-with-MD, SLH-DSA, SM2-with-SM3) and the digest name-to-NID table. Data classes: DER OIDs, algorithm identifiers, WPACKET output and key metadata (params->alg, SLH-DSA type NID) are PUBLIC_DATA. No private key body, seed, scalar or signature-secret buffer is read, copied, stored or released by these units. No constant-time claim is made from source inspection.",
+  "files": [
+    "src/provider/der_ec_sig.rs",
+    "src/provider/der_ecx_key.rs",
+    "src/provider/der_ml_dsa_key.rs",
+    "src/provider/der_rsa_key.rs",
+    "src/provider/der_rsa_sig.rs",
+    "src/provider/der_slh_dsa_key.rs",
+    "src/provider/der_sm2_sig.rs",
+    "src/provider/digest_to_nid.rs"
+  ],
+  "files_not_run": [],
+  "defects": [],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    {
+      "mechanism": "unsafe impl Sync for OsslItem",
+      "file": "src/provider/digest_to_nid.rs",
+      "obligation": "Every OsslItem instance's ptr must name a 'static NUL-terminated byte string for the sharing impl to be sound. Both current tables satisfy this (both this module and src/provider/securitycheck_default.rs use c\"...\".as_ptr() constants), and no safe caller can construct an OsslItem whose pointer is dereferenced without entering an unsafe fn whose contract requires NUL termination. The invariant is documented in the SAFETY comment, not enforced by the type (the repr(C) layout must keep the authority's OSSL_ITEM shape).",
+      "status": "documented, not a hidden obligation"
+    },
+    {
+      "mechanism": "OPENSSL_strcasecmp(name, ...) in der_ml_dsa_key",
+      "file": "src/provider/der_ml_dsa_key.rs",
+      "obligation": "name comes from ossl_ml_dsa_key_get_name, which returns (*key).params->alg; every MlDsaParams table entry initialises alg to a c\"...\".as_ptr() literal and ossl_ml_dsa_key_new refuses a NULL params, so a live key always yields a NUL-terminated static name. Established by the constructor, reported rather than newly introduced.",
+      "status": "established by constructor"
+    }
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "WPACKET live-packet contract and DER-mode write discipline (WPACKET_init_der, WPACKET_memcpy, WPACKET_get_total_written, WPACKET_finish, WPACKET_cleanup) from the packet unit",
+    "der_writer begin_sequence/precompiled/end_sequence/null/uint32 contracts and their tag semantics",
+    "OPENSSL_strcasecmp NUL-terminated-string contract",
+    "RSA-PSS accessors' NULL-or-live contract and ossl_rsa_pss_params_30_is_unrestricted's documented NULL answer",
+    "C ABI contracts for unused key arguments, caller-owned WPACKET backing buffers, and caller-owned result pointers",
+    "digest_to_nid OSSL_ITEM table contract (readable for it_len entries, each ptr NUL-terminated)"
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 260.48 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 105.73 s; --test-threads=4)",
+    "focused_tests": "PASS (provider::der_* 12 passed / 0 failed; provider::securitycheck_default 2 / 0; digest_to_nid itself has no unit tests and is exercised through its two consumers)",
+    "affected_adversarial_probes": "NOT_RUN (no adversarial probe exists for provider DER AlgorithmIdentifier writers or the digest-to-NID table)"
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/provider/dsa_kmgmt.rs",
+      "src/provider/ecdh_exch.rs",
+      "src/provider/ecx_exch.rs",
+      "src/provider/ecx_kem.rs",
+      "src/provider/encode_key2blob.rs",
+      "src/provider/encode_key2ms.rs",
+      "src/provider/endecoder_common.rs"
+    ],
+    "substitute": "src/provider/file_store_any2obj.rs"
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / Tree Borrows / ASan over the DER-writer key arguments and the digest table",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "authority differential court for the written AlgorithmIdentifier bytes against the pinned binary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY (the unit tests compare against the authority's generated header bytes, not the pinned executable)"
+    },
+    {
+      "gate": "affected adversarial probes (none exists for these units)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement (no secret-dependent operation in these units; no claim made)",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry boundary at the head of the queue.",
+    "The OsslItem Sync invariant is documented but not type-enforced because the repr(C) layout must retain the authority's OSSL_ITEM shape. Both current tables use static literals, and the only dereference site is an unsafe fn that requires NUL termination.",
+    "The WPACKET backing buffers are caller-owned and are not cleansed here; their contents are public algorithm identifiers, not key material.",
+    "The key arguments are read only through public-metadata accessors; private encodings, seeds and scalars are not touched by these units.",
+    "No constant-time claim is made for any DER writer or the digest table from source inspection."
+  ],
+  "not_discharged": true,
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "Miri/ASan over the DER-writer key arguments, an authority differential for the emitted AlgorithmIdentifier bytes, the FRF suite and dependency-graph regeneration are BOUNDARY/SEAL work. No unit in this batch changed behaviour, so no negative control was added."
+  }
+}
