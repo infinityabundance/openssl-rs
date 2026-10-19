@@ -5108,3 +5108,115 @@ a hardening candidate. (5) CCM's keyed intermediate residue is recorded above.
 again), `src/modes/gcm.rs`, `src/modes/mod.rs`, `src/modes/ocb.rs`,
 `src/modes/siv128.rs`, `src/modes/wrap.rs`, `src/modes/xts.rs`,
 `src/ocsp/ocsp_cl.rs`.
+
+## M60 — per-file contract sweep (GCM, non-AEAD mode helpers, OCB, AES-SIV, key wrap, XTS, OCSP client/HTTP)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`b12ba246b` (dirty worktree: the seven repairs below; no commit was made by the
+audit subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/modes/gcm.rs` | `GCM128_CONTEXT` layout/alignment, `H`/`Xi` half-word accessors, `GcmRawCtx`→`GcmCtxOwner` initialisation transition, cleansing release at the authority coordinate, nonce/AAD/message length accounting, `num`-style partial-block continuity, `CRYPTO_memcmp` tag answer | no defect |
+| `src/modes/mod.rs` | CBC enc/dec (in-place and out-of-place), OFB, CFB-128/-8/-1, `cfbr_encrypt_block`'s `ovec` slack byte, CTR/CTR-32 counter increments, all four CTS families' straddling copies and return lengths | 2 defects (M60-D1) repaired |
+| `src/modes/ocb.rs` | `OcbCtx` layout, `CtxDestroy` body (L-table release + whole-context cleanse), `ocb_lookup_l` growth, `copy_ctx` identity case, setiv stretch indexing, AAD/data full-block and partial-block arms, stream callback contract, tag compare | 1 defect (M60-D2) repaired |
+| `src/modes/siv128.rs` | `SIV_BLOCK` union views, S2V duplicate/free arms, zeroed-context requirement, `cipher_ctx`/`mac`/`mac_ctx_init` ownership across init/copy/cleanup, tag compare, failure cleanse | no defect |
+| `src/modes/wrap.rs` | RFC 3394/5649 wrap/unwrap, `memmove` overlap arms, range tests before arithmetic, IV/AIV compare, failure-path `OPENSSL_cleanse(out, inlen)` | 3 defects (M60-D3..D5) repaired |
+| `src/modes/xts.rs` | caller-populated `#[repr(C)]` context, tweak doubling (LE arm), ciphertext stealing forward/backward, `len < 16` refusal, unaligned `u64_a1` loads, GB variant | no defect |
+| `src/ocsp/ocsp_cl.rs` | response accessors, `OCSP_resp_find` scan bounds, single/response status out-pointers, validity time arithmetic, request builder ownership (add0_id, set1_name, add1_cert, sign), responder-id selectors | 2 defects (M60-D6..D7) repaired |
+| `src/ocsp/ocsp_http.rs` | HTTP request-context configuration, every failure arm frees the context, exchange + `ASN1_item_d2i_bio` NULL-BIO arm | no defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It stays
+at the head of `REMAINING-AUDIT.txt`. `src/ocsp/ocsp_http.rs` was substituted
+from the head of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M60-D1 | `src/modes/mod.rs:118`, `:139` | medium | `ctr128_inc`/`ctr96_inc` were safe `fn`s that dereferenced a caller-supplied raw pointer: safe Rust could pass NULL and cause UB (unsafe-safe-Rust API) | both are now `unsafe fn` with a `# Safety` contract; the four in-file call sites carry SAFETY comments. No code or ABI change. |
+| M60-D2 | `src/modes/ocb.rs:557`, `:674` | medium | the partial-block arms formed `from_raw_parts(inp, last_len)` and `from_raw_parts_mut(outp, last_len)` over the same range when `in == out`, which EVP's block update may pass — overlapping `&`/`&mut` is UB | the input tail is copied to a local before `out` is mutably borrowed; the authority's byte result is preserved for the non-overlapping case and correctness is restored for in-place (see residual 4). New in-place regression test. |
+| M60-D3 | `src/modes/wrap.rs:110` | low | `crypto_128_unwrap_raw` evaluated `inlen - 8` before the range test; a caller-supplied `inlen < 8` panicked in a debug build (abort across the C ABI) where the authority answers 0 | `checked_sub(8)` with a false answer; observable release behaviour unchanged. |
+| M60-D4 | `src/modes/wrap.rs:203` | low | `CRYPTO_128_wrap_pad` computed `div_ceil(8) * 8` before the `inlen == 0`/`max` test; a huge caller length overflowed in a debug build | the authority's range test now runs before the ceiling arithmetic. |
+| M60-D5 | `src/modes/wrap.rs:260` | low | `CRYPTO_128_unwrap_pad` evaluated `inlen / 8 - 1` before the range test; `inlen < 8` underflowed in a debug build | the range test now precedes the block count. |
+| M60-D6 | `src/ocsp/ocsp_cl.rs:550` | medium | `OCSP_request_sign`'s key-mismatch arm returned with the freshly created `OCSP_SIGNATURE` still installed: leak plus a half-built request, whereas the authority's `goto err` frees it and clears the pointer | free and null on that arm, matching the authority's error path. |
+| M60-D7 | `src/ocsp/ocsp_cl.rs:243` | low | `OCSP_resp_find` computed `last + 1`; `last == INT_MAX` overflowed in a debug build (abort) where the authority's undefined addition effectively wraps | `saturating_add(1)`: an empty scan and `-1`, the same answer the release build produced. New regression test. |
+
+**Unsafe accounting.** Eliminated: the two safe raw-pointer helpers can no longer
+be called from safe Rust with an invalid pointer (M60-D1). Relocated: 0. New
+assumptions: 0. Hidden obligations: 0. No exported symbol, signature,
+`#[repr(C)]` layout or allocator coordinate changed. The repairs sit inside
+existing unsafe bodies or replace an overlapping reference pair with a local
+copy; no unsafe operation was added or removed.
+
+**Secret-bearing storage.** GCM: the context carries `H`, the keystream `eki`,
+the tag mask `ek0`, the GHASH accumulator and the pending AAD/message bytes; the
+single release is `CRYPTO_clear_free(ctx, sizeof(GcmCtx))` in
+`GcmCtxOwner::drop`, so the whole context is cleansed on the normal release. The
+`CRYPTO_gcm128_new` allocation-failure path frees the not-yet-initialised block
+with plain `CRYPTO_free` (nothing secret has been written). OCB: `destroy_body`
+releases the L table with `CRYPTO_clear_free` and cleanses the whole `OcbCtx`
+(`offset`, `offset_aad`, `sum`, `checksum`, `l_star`, `l_dollar`) on cleanup;
+the key schedules and block/stream callbacks are caller-owned and never copied.
+AES-SIV: `ossl_siv128_cleanup` cleanses `d` and `tag`; the CMAC and cipher
+state lives in their own contexts and is released by their destructors.
+RFC 5649 unwrap cleanses `out` (unwrapped key material) on every refusal arm;
+RFC 3394 unwrap cleanses `out` on IV mismatch. XTS carries no long-lived
+secret: the tweak and `scratch` are IV/ciphertext-derived and the key schedules
+remain the caller's. OCSP: none of these functions copies a secret; the private
+key is handled as an `EVP_PKEY` handle and the signature/ASN.1 payloads are
+public data. Per the authority, the wrap/OCB/SIV local keyed intermediates are
+not cleansed (residual 5); no constant-time claim is made for any file here
+from source inspection.
+
+**Contracts reused.** The validated-initialisation owner transition and single
+cleansing release (`GcmRawCtx`→`GcmCtxOwner`); `RawCtx`/`CtxDestroy` member
+release plus whole-context cleanse for OCB and SIV (the enclosing block is never
+released by `destroy_body`); the OCB L-table member extent (`max_l_index * 16`,
+with `l_index + 1` entries populated); the caller-populated `#[repr(C)]` XTS
+context; the C ABI caller contracts for `in`/`out`/`iv`/`key` extents and
+in-place operation; and the `CRYPTO_*` allocator seam at the authority's
+translation-unit coordinates. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; `cargo check
+--lib` clean; focused `modes::` **25 passed / 0 failed** (including the two new
+regression tests) and `ocsp::` **1 passed / 0 failed**; name-filtered `wrap`
+**19 passed / 0 failed**. BATCH: `cargo clippy --all-targets -- -D warnings`
+clean; full library **1669 passed / 0 failed / 27 ignored** (1696 total) serial
+in 246.82 s and with `--test-threads=4` in 85.30 s, in the court with
+`CARGO_BUILD_JOBS=4`. That is the M59 baseline plus the three new tests: no
+unexplained removal and no newly ignored test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; `scripts/adv-probe.sh` has no probe for
+the modes or OCSP families (affected adversarial probes NOT_RUN); dudect/ctgrind
+(no constant-time claim is made); FRF suite; pinned-authority differential
+beyond the 3.6.4 source comparison of `gcm128.c`, `ctr128.c`, `cfb128.c`,
+`cts128.c`, `ocb128.c`, `siv128.c`, `wrap128.c`, `xts128.c` and `ocsp_cl.c`;
+dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `OCSP_request_sign`'s `set1_name`-failure arm returns without freeing a
+pre-existing `optionalSignature`, whereas the authority's `goto err` frees it
+and clears the pointer; the Rust arm is the safer one and is only reachable on
+an allocation failure, but it is a recorded divergence. (3) `OCSP_check_validity`
+still evaluates `t_now ± nsec/maxsec` without checked arithmetic; `nsec` and
+`maxsec` are caller configuration rather than network data and the authority's
+signed overflow is undefined. Hardening candidate. (4) The in-place OCB
+partial-block tag now checksums the original plaintext; the authority's C reads
+`in` after writing `out`, so an exactly-overlapping caller would checksum
+ciphertext and produce a different tag. The safe result is retained and pinned
+by the new test; non-overlapping behaviour is identical. (5) `wrap.rs`'s `a`/`b`
+intermediates, OCB's `pad`/`tail` and SIV's local `t`/`q` are not cleansed, as
+the authority also leaves them; they are keyed intermediates, not key stores.
+(6) No constant-time claim is made for GCM, OCB, SIV, wrap or XTS.
+
+**Queue.** `REMAINING-AUDIT.txt` 241 -> **233**; `AUDITED-FILES.txt` 522 ->
+**530**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/ocsp/ocsp_lib.rs`, `src/ocsp/ocsp_prn.rs`, `src/ocsp/ocsp_srv.rs`,
+`src/ocsp/v3_ocsp.rs`, `src/param_build_set.rs`, `src/params/dup.rs`,
+`src/params/from_text.rs`.

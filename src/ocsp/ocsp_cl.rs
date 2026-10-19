@@ -237,7 +237,10 @@ pub unsafe extern "C" fn OCSP_resp_find(
         if bs.is_null() {
             return -1;
         }
-        let last = if last < 0 { 0 } else { last + 1 };
+        // A caller-chosen `last` of `INT_MAX` would overflow the `+ 1`; the authority's
+        // signed addition is undefined for that value. Saturation yields the same answer
+        // (`-1`) without a debug-build panic across the C ABI.
+        let last = if last < 0 { 0 } else { last.saturating_add(1) };
         let sresp = (*bs).tbsResponseData.responses;
         let mut i = last;
         while i < OPENSSL_sk_num(sresp) {
@@ -541,6 +544,11 @@ pub unsafe extern "C" fn OCSP_request_sign(
         if !key.is_null() {
             if X509_check_private_key(signer, key) == 0 {
                 raise_site(&OCSP_CL_93);
+                // The authority's `goto err` releases the signature it just created and
+                // leaves the request without one; returning with it still installed leaks
+                // the fresh `OCSP_SIGNATURE` and exposes a half-built request.
+                OCSP_SIGNATURE_free((*req).optionalSignature);
+                (*req).optionalSignature = ptr::null_mut();
                 return 0;
             }
             // `OCSP_REQUEST_sign(req, key, dgst, signer->libctx, signer->propq)`.
@@ -703,5 +711,26 @@ pub unsafe extern "C" fn OCSP_resp_get1_id(
             return 0;
         }
         1
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ocsp::ocsp_asn::{OCSP_BASICRESP_free, OCSP_BASICRESP_new};
+
+    /// `last + 1` at `INT_MAX` used to overflow a debug build. Saturation makes the scan
+    /// start past every representable index, so the answer is the same `-1` the release
+    /// build produced by wrapping.
+    #[test]
+    fn resp_find_accepts_the_largest_last_without_overflowing() {
+        // SAFETY: a live basic response whose response stack is still NULL; the scan is
+        // empty, so `id` is never dereferenced.
+        unsafe {
+            let bs = OCSP_BASICRESP_new();
+            assert!(!bs.is_null());
+            assert_eq!(OCSP_resp_find(bs, ptr::null_mut(), c_int::MAX), -1);
+            OCSP_BASICRESP_free(bs);
+        }
     }
 }
