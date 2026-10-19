@@ -1,0 +1,321 @@
+{
+  "receipt": "boundary-sweep-B17",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "13b62ac3e",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ssl/ssl_lib.rs",
+      "src/x509/x509_vpm.rs",
+      "src/evp/evp_pbe.rs",
+      "src/ffc/params.rs",
+      "src/encoder_pkey.rs",
+      "src/provider/decode_pvk2key.rs"
+    ],
+    "working_tree_blob": {
+      "src/ssl/ssl_lib.rs": "970457ecae25003a7741881c56bb75011c6e969c",
+      "src/x509/x509_vpm.rs": "3056a53091179d95ec929312933d61f66868d130",
+      "src/evp/evp_pbe.rs": "19ef25cecdb08b4b3cd7d52eea6f2be837020aac",
+      "src/ffc/params.rs": "b00c847cfa1209f81ca8d022670b35d6ea95001a",
+      "src/encoder_pkey.rs": "6f2dc30158995d24e9091f195082716781a8e7ae",
+      "src/provider/decode_pvk2key.rs": "5190310c07f769b4057d64a06a5cb089cc7fc60d"
+    }
+  },
+  "stop_status": "CLEAR after repair. The B16-R8/E2 alias class is closed in src/ssl/ssl_lib.rs. STOP was invoked on seven confirmed defects and each was repaired: B17-D1 (the SSL_CTRL_SET_TLS_EXT_SRP_USERNAME arm freed srp_ctx.login before CRYPTO_strdup(parg); SSL_get_srp_username can return that exact pointer through its context fallback), B17-D2 (the password/info arm had the same free-before-duplicate UAF and additionally left the member dangling on a refused duplicate), B17-D3 (SSL_set1_host cleared the parameter before reading a name X509_VERIFY_PARAM_get0_host returned), B17-D4 (ossl_ffc_params_set0_j(d, d->j) released then stored the same pointer), B17-D5 (the unsynchronised static mut PBE_ALGS allowed cleanup-vs-find/free use-after-free and init-vs-init lost stacks), B17-D6 (X509_VERIFY_PARAM_inherit released dest->policies/dest->hosts before copying them when dest == src, reachable through SSL_set1_param/SSL_CTX_set1_param), and B17-D7 (int_x509_param_set_hosts released the host set before strndup(name)). Pre-fix ASan controls were observed for D1, D2, D3 and D6 (heap-use-after-free in strlen, strlen, strchr and alloc::vec::Vec::len respectively). D4's and D7's pre-fix ASan runs are NOT_RUN; their post-fix controls pass and the same class control was observed on D1/D2/D3/D6. D5's race is scheduler-dependent, so its deterministic pre-fix canary is NOT_RUN; the four-thread registration regression and the full suite pass. No unresolved STOP condition remains. Hidden obligations are 0; no safe Rust caller can cause UB through the audited interfaces under the stated contracts. Nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.6.4 ssl/ssl_lib.c :1138-1154 (SSL_set1_host), :1382-1395 (SSL_set1_param), :2943-3074 and :3097-3214 (SSL_ctrl/SSL_CTX_ctrl SRP arms), crypto/x509/x509_vpm.c :36-79 and :150-215 (host set/inherit), crypto/evp/evp_pbe.c :33 and :232-300 (application PBE registry), crypto/ffc/ffc_params.c :73-80 (set0_j), crypto/encode_decode/encoder_pkey.c :85-408, providers/implementations/encode_decode/decode_pvk2key.c :66-293. The two deferred files were read against their dispatch contracts; no authority source was fetched for them in this batch.",
+    "abi": "C ABI unchanged: no exported symbol, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. New test modules are #[cfg(test)] only.",
+    "external_contracts": [
+      "SSL_CTX_ctrl's SRP username/password arms copy their argument. The getters SSL_get_srp_username/SSL_get_srp_userinfo return the connection's own field, or the connection's context field when the connection's is NULL; the latter is the C-valid aliasing input repaired here.",
+      "SSL_set1_host takes a borrowed NUL-terminated name; X509_VERIFY_PARAM_get0_host returns a name owned by the connection's parameter. The setter must read the input before clearing the parameter.",
+      "SSL_set1_param/SSL_CTX_set1_param inherit from a caller-supplied parameter. The same parameter may be the destination (SSL_get0_param/SSL_CTX_get0_param); self-inheritance must not release the source set before copying it.",
+      "X509_VERIFY_PARAM_set1_host takes a borrowed name; the name may be a string owned by the parameter's own host stack (X509_VERIFY_PARAM_get0_host).",
+      "ossl_ffc_params_set0_j transfers ownership of j. Passing the slot's current value transfers a pointer the slot already owns; it is a no-op here rather than the authority's release-then-store UAF.",
+      "PBE_ALGS is a process-global application registry. EVP_PBE_alg_add_type, EVP_PBE_find_ex and EVP_PBE_cleanup may run concurrently; no keygen function or application callback is invoked by these entry points. The pointers they read and write are copied out under the lock.",
+      "OSSL_ENCODER_CTX_new_for_pkey borrows the EVP_PKEY for the context's lifetime. Its construct/import callbacks run provider code with no Rust borrow or crate lock held.",
+      "The decoder dispatch contract supplies a context returned by newctx and a non-NULL, pointer-sized object reference to export_object. The decoder owns the core BIO and the decoded key; free_key is the key's single release on every path."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B17-SSL-1",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SRP context string ctrl setters: SSL_CTRL_SET_TLS_EXT_SRP_USERNAME / SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD",
+      "disposition": "CONTRACTED",
+      "contract": "The argument is borrowed and NUL-terminated. The setter duplicates it before releasing the incumbent, validates the username length before any release-and-store, and on every failure leaves the member NULL while releasing the old block exactly once at the authority's site. The getters return borrowed pointers and may fall back to the connection's context field.",
+      "defects": ["B17-D1", "B17-D2"],
+      "residuals": ["B17-R1"]
+    },
+    {
+      "id": "B17-SSL-2",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SSL_set1_host and its parameter-owned-name detection",
+      "disposition": "CONTRACTED",
+      "contract": "The name is borrowed. A name the parameter's own host stack owns is duplicated first (an extra seam allocation only in that case); a non-owning name keeps the authority's exact clear-then-set order and allocator events. A refused pre-copy clears the host and IP sets and returns 0.",
+      "defects": ["B17-D3"],
+      "residuals": ["B17-R1"]
+    },
+    {
+      "id": "B17-SSL-3",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SSL_set1_param / SSL_CTX_set1_param delegation to X509_VERIFY_PARAM_set1/inherit",
+      "disposition": "CONTRACTED",
+      "contract": "The source parameter is borrowed and may be the destination parameter. Self-inheritance retains the policies and host sets already in place instead of releasing and re-copying them; the flag-only inheritance steps are unchanged.",
+      "defects": ["B17-D6"],
+      "residuals": ["B17-R1", "B17-R3"]
+    },
+    {
+      "id": "B17-SSL-4",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "remaining setter sweep: ALPN, certificate type, PSK identity hint, session-id context, BIO and store ownership transfer",
+      "disposition": "CONTRACTED",
+      "contract": "ALPN and certificate-type setters allocate the replacement before clearing the member. PSK identity hints and session-id context have no getter that returns the written member. SSL_set0_rbio/wbio and SSL_CTX_set_cert_store/set0_ctlog_store transfer a reference; a pointer merely borrowed from a getter does not satisfy that contract.",
+      "defects": [],
+      "residuals": ["B17-R2"]
+    },
+    {
+      "id": "B17-XVPM-1",
+      "file": "src/x509/x509_vpm.rs",
+      "mechanism": "X509_VERIFY_PARAM_inherit and int_x509_param_set_hosts",
+      "disposition": "CONTRACTED",
+      "contract": "A self-copy (dest == src) and a source-owned host name are read before the destination set is released. Non-aliasing inheritance and SET_HOST/ADD_HOST ordering otherwise match the authority. X509_VERIFY_PARAM_set1_email/ip already duplicate before release.",
+      "defects": ["B17-D6", "B17-D7"],
+      "residuals": ["B17-R1", "B17-R3"]
+    },
+    {
+      "id": "B17-PBE-1",
+      "file": "src/evp/evp_pbe.rs",
+      "mechanism": "application PBE registry: publication, add, find, cleanup",
+      "disposition": "CONTRACTED",
+      "contract": "PBE_ALGS is an AtomicPtr published under a module-local Mutex. Add's allocate-or-load plus push is one critical section; find sorts, locates and copies the row's four fields under the guard; cleanup swaps the handle to NULL and releases the old stack under the guard. No keygen or application callback runs under the lock; lock order is none -> PBE_ALGS_LOCK.",
+      "defects": ["B17-D5"],
+      "residuals": ["B17-R7"]
+    },
+    {
+      "id": "B17-FFC-1",
+      "file": "src/ffc/params.rs",
+      "mechanism": "cofactor ownership transfer: ossl_ffc_params_set0_j",
+      "disposition": "CONTRACTED",
+      "contract": "d is live and writable; j is NULL or a live BIGNUM whose ownership is transferred. Self-assignment is a no-op retaining the single owner; NULL clears the slot; a distinct value releases the incumbent first.",
+      "defects": ["B17-D4"],
+      "residuals": ["B17-R6"]
+    },
+    {
+      "id": "B17-ENC-1",
+      "file": "src/encoder_pkey.rs",
+      "mechanism": "encoder collection/construct/import dispatch (deferred)",
+      "disposition": "CONTRACTED",
+      "contract": "OSSL_ENCODER_CTX_new_for_pkey borrows the key for the context lifetime. ConstructDataPkey is a zero-valid #[repr(C)] block with an empty CtxDestroy; setup_fail clears construct_data and releases the block on every non-transfer path. Provider does_selection/import_object/free_object callbacks run with no Rust borrow or crate lock held.",
+      "defects": [],
+      "residuals": ["B17-R4"]
+    },
+    {
+      "id": "B17-DEC-1",
+      "file": "src/provider/decode_pvk2key.rs",
+      "mechanism": "PVK decoder newctx/decode/export dispatch (deferred)",
+      "disposition": "CONTRACTED",
+      "contract": "The framework supplies the non-NULL context from newctx and a pointer-sized object reference to export_object. Pvk2keyCtx is zero-valid and OwnedCtx releases the block; the core BIO and decoded key are released on every path, with free_key as the key's single release. The passphrase and data callbacks run with no Rust borrow or crate lock held.",
+      "defects": [],
+      "residuals": ["B17-R5"]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B17-D1",
+      "file": "src/ssl/ssl_lib.rs",
+      "lines_pre_fix": "4875-4900 (SSL_CTX_ctrl username arm)",
+      "lines_post_fix": "4875-4913",
+      "severity": "high",
+      "class": "heap-use-after-free read on a C-valid aliasing argument",
+      "description": "The username arm freed srp_ctx.login and set it NULL before reading parg. SSL_get_srp_username returns the connection's own login or, when that is NULL, the connection's context login, so SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLS_EXT_SRP_USERNAME, 0, SSL_get_srp_username(ssl)) passed the released block to strlen. The repair validates and duplicates first, then releases the incumbent, preserving every failure-path end state.",
+      "control": "ssl::ssl_lib::setter_alias_tests::srp_username_accepts_the_getter_pointer. Pre-fix ASan: heap-use-after-free, READ of size 3 in strlen. Post-fix: passes; the full alias suite is ASan-clean."
+    },
+    {
+      "id": "B17-D2",
+      "file": "src/ssl/ssl_lib.rs",
+      "lines_pre_fix": "4902-4915 (SSL_CTX_ctrl password arm)",
+      "lines_post_fix": "4915-4942",
+      "severity": "high",
+      "class": "heap-use-after-free read plus a dangling member on the allocation-failure path",
+      "description": "The password arm freed srp_ctx.info before CRYPTO_strdup(parg), and if the duplicate failed it returned 0 without clearing the now-dangling pointer; the later srp_ctx release would free it again. SSL_get_srp_userinfo can return that exact context-fallback pointer. The repair duplicates first, always clears before the NULL test, then stores or returns with the field NULL.",
+      "control": "ssl::ssl_lib::setter_alias_tests::srp_userinfo_accepts_the_getter_pointer. Pre-fix ASan: heap-use-after-free in strlen. Post-fix: passes."
+    },
+    {
+      "id": "B17-D3",
+      "file": "src/ssl/ssl_lib.rs",
+      "lines_pre_fix": "7889-7909 (SSL_set1_host)",
+      "lines_post_fix": "7908-7988 (host_is_param_owned plus SSL_set1_host)",
+      "severity": "high",
+      "class": "heap-use-after-free read when the setter is handed a name the parameter owns",
+      "description": "SSL_set1_host cleared the parameter's host set before it read host, so a caller passing X509_VERIFY_PARAM_get0_host(SSL_get0_param(s), i) fed freed bytes to the subsequent IP/host conversions. The repair scans the parameter's host pointers and duplicates such a name first; non-aliasing inputs keep the authority's exact order and allocator events.",
+      "control": "ssl::ssl_lib::setter_alias_tests::set1_host_accepts_the_parameter_owned_name. Pre-fix ASan: heap-use-after-free in strchr. Post-fix: passes."
+    },
+    {
+      "id": "B17-D4",
+      "file": "src/ffc/params.rs",
+      "lines_pre_fix": "251-260 (ossl_ffc_params_set0_j)",
+      "lines_post_fix": "256-275",
+      "severity": "high",
+      "class": "use-after-free from release-then-store of the same ownership-transfer pointer",
+      "description": "The authority releases d->j and then stores j. Passing d->j releases the value and installs the released pointer; the next reader or the block's release touches freed memory. The input is an ownership transfer of a value the slot already owns, so the port keeps the single owner and treats self-assignment as a no-op (recorded §17 divergence).",
+      "control": "ffc::params::tests::set0_j_self_assignment_is_a_no_op. Pre-fix ASan NOT_RUN (no temporary revert was run for this file); the post-fix test passes and the class control is the observed D1/D2/D3/D6 result."
+    },
+    {
+      "id": "B17-D5",
+      "file": "src/evp/evp_pbe.rs",
+      "lines_pre_fix": "491 (static mut), 764-808 (add), 877-889 (find), 952-958 (cleanup)",
+      "lines_post_fix": "500-518 (AtomicPtr plus lock), 790-830 (add), 890-950 (find), 1005-1017 (cleanup)",
+      "severity": "high",
+      "class": "unsynchronised global registry: cleanup-vs-find/free use-after-free and init-vs-init lost stack",
+      "description": "PBE_ALGS was a plain static mut. A cleanup could free the stack between a find's NULL test and its sort/value reads, and two adds could each observe NULL and install a different stack, leaking one and leaving the other's rows unreachable. The repair makes the handle an AtomicPtr and serialises publication, add, find-copy and cleanup under one Mutex; the row fields are copied while the guard protects their lifetime. No keygen or application callback runs under the lock.",
+      "control": "evp::evp_pbe::tests::concurrent_adds_are_not_lost (four threads, disjoint keys, every key found) and the pre-existing round-trip test. The deterministic pre-fix race canary is NOT_RUN (scheduler-dependent); the full suite passes serially and with four test threads."
+    },
+    {
+      "id": "B17-D6",
+      "file": "src/x509/x509_vpm.rs",
+      "lines_pre_fix": "420-446 (inherit policies/hosts arms)",
+      "lines_post_fix": "423-462",
+      "severity": "high",
+      "class": "self-inheritance release-before-copy use-after-free",
+      "description": "X509_VERIFY_PARAM_inherit released dest->policies via X509_VERIFY_PARAM_set1_policies and dest->hosts via sk_pop_free before iterating/deep-copying src->policies/src->hosts. When dest == src, as in SSL_set1_param(s, SSL_get0_param(s)) or SSL_CTX_set1_param(ctx, SSL_CTX_get0_param(ctx)), both source reads were of freed storage. The repair skips the destructive copy when the source and destination sets are the same pointer; the resulting values are the set already in place.",
+      "control": "ssl::ssl_lib::setter_alias_tests::set1_param_accepts_the_same_parameter. Pre-fix ASan: heap-use-after-free in alloc::vec::Vec::len. Post-fix: passes for the connection and context forms."
+    },
+    {
+      "id": "B17-D7",
+      "file": "src/x509/x509_vpm.rs",
+      "lines_pre_fix": "876-890 (int_x509_param_set_hosts SET_HOST path)",
+      "lines_post_fix": "886-920",
+      "severity": "high",
+      "class": "heap-use-after-free read when a host name aliases the set being replaced",
+      "description": "int_x509_param_set_hosts released vpm->hosts and only then called CRYPTO_strndup(name). X509_VERIFY_PARAM_set1_host(param, X509_VERIFY_PARAM_get0_host(param, i), ...) therefore read a freed string. The repair performs the length/embedded-NUL checks and the duplicate before the SET_HOST release, and still clears the set before returning 0 when the duplicate is refused.",
+      "control": "ssl::ssl_lib::setter_alias_tests::param_set1_host_accepts_its_own_name. Pre-fix ASan NOT_RUN (same class as D3, observed there); the post-fix test passes and the five-test ASan suite is clean."
+    }
+  ],
+  "sweep": [
+    {
+      "concern": "ssl_lib copy-setters and getter aliases",
+      "result": "Every SSL_set*/SSL_CTX_set*/ctrl arm that receives a pointer was classified. The two SRP context strings and SSL_set1_host were the only copy-setters that released before reading; SSL_set1_param exposed the inherit self-copy. ALPN, certificate type and session-id already allocate/copy first; PSK identity hints have no getter for the written member; the set0 BIO/store setters are ownership transfers whose getter pointers do not carry a transferable reference (R2)."
+    },
+    {
+      "concern": "x509_vpm inheritance and host/policy setters behind the ssl_lib setters",
+      "result": "The self-inherit policies/hosts arms and the SET_HOST release path were the free-before-copy sites. Email and IP use the duplicate-first int_x509_param_set1 helper. The direct policy-set self-alias has no exported getter and is unreachable without an internal caller; the reachable inherit path is guarded (R3)."
+    },
+    {
+      "concern": "PBE registry concurrency and callback edges",
+      "result": "All four entry points that touch PBE_ALGS were audited. The critical sections contain stack allocation/sort/find/push/pop/free and the registry's own CRYPTO_free; keygen and keygen_ex are copied out and never invoked under the lock. EVP_PBE_alg_add and EVP_PBE_find take no lock themselves, so their delegation cannot deadlock."
+    },
+    {
+      "concern": "FFC cofactor ownership",
+      "result": "Reachability is internal (pub(crate)): src/dh/asn1.rs passes a fresh DHX value and src/ffc/backend.rs passes a fromdata value. No supported caller passes the slot's own pointer; the no-op makes that C-valid misuse memory-safe without changing the supported paths."
+    },
+    {
+      "concern": "encoder dispatch boundary (deferred)",
+      "result": "OSSL_ENCODER_CTX_new_for_pkey, the two-pass collection, the construct/import/destruct callbacks and ConstructDataPkey ownership were read. No defect found. The provider callbacks run with no Rust borrow or crate lock held; the key is borrowed for the context lifetime (R4). No source change."
+    },
+    {
+      "concern": "provider decoder boundary (deferred)",
+      "result": "pvk2key_newctx/freectx/set_ctx_params/does_selection/decode/export_object and the DSA/RSA dispatch tables were read. No defect found. The core BIO and key releases are complete on every path; the framework's non-NULL context and pointer-sized reference are the stated external contract (R5). No source change."
+    }
+  ],
+  "compatibility": {
+    "ssl_lib_srp": "Duplicate-before-release changes the allocator event order on the success path; the result and every failure-path end state are unchanged, and the info field is now NULL after a refused duplicate instead of dangling. The alias input succeeds where the authority reads freed memory.",
+    "ssl_lib_set1_host": "A non-owning name keeps the authority's exact clear-then-set order and allocator events. A parameter-owned name gains one seam allocation and otherwise produces the same host list; the caller's stale getter pointer is no longer dereferenced.",
+    "ssl_lib_set1_param": "Non-self inheritance is unchanged. Self-inheritance now retains the existing policies/host sets rather than releasing and deep-copying them; values are identical, and host pointers previously returned by get0_host remain valid.",
+    "evp_pbe": "Single-threaded outputs and allocator events are unchanged. Concurrent adds are serialised, so their interleaving differs from the authority's unsynchronised schedule; no public result depends on interleaving. No keygen callback runs under the lock.",
+    "ffc_set0_j": "NULL clears and distinct values are unchanged. Passing the slot's own value is now a no-op instead of the authority's use-after-free; recorded as a §17 UB-elimination divergence.",
+    "encoder_and_decoder": "No source change and no ABI change. The two files contribute boundary contracts and residuals only."
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "setter_alias_tests 5 passed/0 failed; evp::evp_pbe 5 passed/0 failed; ffc set0_j 2 passed/0 failed"
+    },
+    "negative_controls_observed": [
+      "B17-D1 pre-fix ASan: heap-use-after-free, READ of size 3 in strlen (srp_username_accepts_the_getter_pointer).",
+      "B17-D2 pre-fix ASan: heap-use-after-free in openssl_rs::runtime::mem::strlen (srp_userinfo_accepts_the_getter_pointer).",
+      "B17-D3 pre-fix ASan: heap-use-after-free in strchr (set1_host_accepts_the_parameter_owned_name).",
+      "B17-D6 pre-fix ASan: heap-use-after-free in alloc::vec::Vec::len (set1_param_accepts_the_same_parameter)."
+    ],
+    "asan_post_fix": "ASan venue, -Zsanitizer=address -Zbuild-std, ASAN_OPTIONS=detect_leaks=0: setter_alias_tests 5 passed, 0 failed, no AddressSanitizer finding. With leak detection on the venue reports the pre-existing E1 EVP fetch leak (336 bytes in four allocations from SSL_CTX_new_ex), not a finding in these paths.",
+    "batch": "cargo test --lib -- --test-threads=1: 1646 passed, 0 failed, 27 ignored (195.53 s). cargo test --lib -- --test-threads=4: 1646 passed, 0 failed, 27 ignored (89.92 s). Seven tests added; none removed or newly ignored."
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's product toolchain has no miri component; the dedicated ASan venue covered the alias controls instead."
+  },
+  "loom_or_tsan": "NOT_RUN. The B17-D5 repair is a serialisation argument plus a four-thread regression test; no Loom or TSan model was invoked and no deterministic pre-fix schedule was constructed.",
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No new abstraction or caller obligation. The PBE repair replaces every static mut access with safe atomics and a module-local Mutex; the alias repairs are reorderings/guards inside existing unsafe functions. Remaining C-ABI obligations are the documented pkey lifetime for OSSL_ENCODER_CTX_new_for_pkey, the decoder framework's non-NULL context/pointer-sized reference, the ownership-transfer contracts of the set0 BIO/store setters, and the provider callbacks' rule against re-entering with crate borrows held.",
+  "unsafe_operations_removed": 3,
+  "unsafe_operations_removed_detail": "Three static-mut access blocks (two in EVP_PBE_alg_add_type, one in EVP_PBE_cleanup) are replaced by safe AtomicPtr operations. The remaining unsafe stack calls are rebound to the atomic-loaded handle; no unsafe operation was introduced in production code.",
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_introduced_detail": "None. The setter repairs reorder existing calls or add safe pointer comparisons/aliases; the PBE lock helper is safe Rust.",
+  "test_only_unsafe_added": 9,
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Under the stated contracts, no safe Rust caller can cause UB through these boundaries. Every audited entry point is a C ABI function with documented pointer/lifetime preconditions, and every repaired path either releases the incumbent after the input is consumed or refuses the operation with a defined end state. The provider/passphrase callbacks remain C contracts, not hidden Rust obligations.",
+  "escalations": [
+    {
+      "id": "E1",
+      "file": "src/ssl/ssl_lib.rs / src/evp/fetch.rs (pre-existing, outside the repaired paths)",
+      "severity": "low",
+      "description": "With LeakSanitizer enabled the ASan venue reports a direct leak from EVP_MD_fetch during SSL_CTX_new_ex (the known 84-byte-per-fetch E1 class, 336 bytes in four allocations in this run). It is unrelated to B17 and does not affect the use-after-free results."
+    }
+  ],
+  "residuals": [
+    {
+      "id": "B17-R1",
+      "file": "src/ssl/ssl_lib.rs, src/x509/x509_vpm.rs",
+      "severity": "low",
+      "disposition": "RECORDED divergence - UB elimination",
+      "description": "Duplicate-before-release changes allocator event order for the repaired paths (SRP success paths, an aliasing SSL_set1_host input, self-inheritance and an aliasing set1_host name). Values, error codes and failure end states are preserved; the authority's use-after-free for those inputs is not reproduced."
+    },
+    {
+      "id": "B17-R2",
+      "file": "src/ssl/ssl_lib.rs",
+      "severity": "low",
+      "disposition": "CONTRACT-BOUND - not repaired",
+      "description": "SSL_set0_rbio, SSL_set0_wbio, SSL_CTX_set_cert_store and SSL_CTX_set0_ctlog_store release the incumbent before storing the replacement. Their arguments transfer a reference; the pointer a getter returns is borrowed and does not satisfy that contract, so the alias is not a supported call and is outside the copy-setter class. SSL_CTX_set1_cert_store already up-refs before delegating, so its getter alias is safe."
+    },
+    {
+      "id": "B17-R3",
+      "file": "src/x509/x509_vpm.rs",
+      "severity": "low",
+      "disposition": "CONTRACTED - unreachable alias",
+      "description": "X509_VERIFY_PARAM_set1_policies would still release then iterate the source if passed param's own policies stack, but the crate exports no getter for that stack and the parameter layout is opaque. The reachable self-inherit path is guarded. If a get0_policies getter is added, the same identity guard must be added there."
+    },
+    {
+      "id": "B17-R4",
+      "file": "src/encoder_pkey.rs",
+      "severity": "low",
+      "disposition": "CONTRACTED - deferred boundary",
+      "description": "The encoder context stores a borrowed const EVP_PKEY pointer in ConstructDataPkey. The caller must keep the key alive until the context is released and encoding completes, as the authority requires. Bounds arithmetic for the cached id array goes through CRYPTO_malloc_array's checked_mul."
+    },
+    {
+      "id": "B17-R5",
+      "file": "src/provider/decode_pvk2key.rs",
+      "severity": "low",
+      "disposition": "CONTRACTED - deferred boundary",
+      "description": "pvk2key_decode/export_object assume the framework's non-NULL newctx result and a pointer-sized reference. newctx can return NULL on allocation failure; the framework must then skip decode/export. The passphrase/data/export callbacks run with no Rust borrow or crate lock held."
+    },
+    {
+      "id": "B17-R6",
+      "file": "src/ffc/params.rs",
+      "severity": "low",
+      "disposition": "DEFERRED CONTROL",
+      "description": "The pre-fix ASan run for the ffc self-assignment control was not performed. The post-fix control passes; the same release-before-use class has four observed ASan pre-fix controls in this receipt (D1/D2/D3/D6)."
+    },
+    {
+      "id": "B17-R7",
+      "file": "src/evp/evp_pbe.rs",
+      "severity": "low",
+      "disposition": "DEFERRED CONTROL",
+      "description": "The pre-fix PBE race cannot be forced deterministically without a scheduling hook. The four-thread post-fix regression and the full suite pass; Loom/TSan are NOT_RUN."
+    }
+  ],
+  "graduation": "CONTRACTED for all nine boundaries. Every remaining unsafe operation has an explicit validity contract and SAFETY comment, every required precondition is established by its callers or by the C ABI contract, and no safe caller can cause UB through the audited interfaces under those contracts. Hidden obligations 0. Not SAFETY_DISCHARGED: full Miri (Stacked/Tree Borrows), Loom/TSan, pre-fix ASan for D4/D7, the deterministic PBE race canary, encoder/decoder adversarial probes, authority differentials and independent review are NOT_RUN. The two deferred codec boundaries are audited but not part of a graduated consumer family.",
+  "next_ordinary_position": "src/x509/v3_info.rs (63), then src/ts/ts_req_utils.rs (63), src/evp/e_rc2.rs (63), src/apps/pkeyutl.rs (62), src/asn1/a_verify.rs (62), src/dsa/mod.rs (62). src/evp/evp_pbe.rs and src/ffc/params.rs were swept here and leave the queue. This boundary sweep does not consume an ordinary queue position."
+}

@@ -2755,3 +2755,68 @@ canary, independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` 
 `src/ts/ts_req_utils.rs` (63), `src/evp/e_rc2.rs` (63), `src/apps/pkeyutl.rs` (62),
 `src/asn1/a_verify.rs` (62), `src/dsa/mod.rs` (62), `src/evp/evp_pbe.rs` (62),
 `src/ffc/params.rs` (62). This boundary sweep does not consume an ordinary queue position.
+
+## 27. Boundary sweep B17 — setter aliasing, PBE registry, FFC cofactor, deferred codec edges
+
+Receipt: [`atlas-refresh/boundary-sweep-B17.json`](atlas-refresh/boundary-sweep-B17.json).
+Candidate `13b62ac3e`; four repaired files, two deferred boundaries audited.
+
+**STOP status: CLEAR after repair. The B16-R8/E2 alias class is closed in `ssl_lib.rs`.**
+Seven confirmed defects were stopped on and repaired: `B17-D1` (SRP username ctrl freed
+`srp_ctx.login` before `CRYPTO_strdup(parg)`; `SSL_get_srp_username` can return that very
+pointer through its context fallback), `B17-D2` (the password/info arm had the same UAF and
+also left the member dangling on a refused duplicate), `B17-D3` (`SSL_set1_host` cleared the
+parameter before reading a name `X509_VERIFY_PARAM_get0_host` returned), `B17-D6`
+(`X509_VERIFY_PARAM_inherit` freed `dest->policies`/`dest->hosts` before copying them when
+`dest == src`, reachable through `SSL_set1_param`/`SSL_CTX_set1_param`), `B17-D7`
+(`int_x509_param_set_hosts` freed the host set before `strndup(name)`), `B17-D4`
+(`ossl_ffc_params_set0_j(d, d->j)` freed then stored the same pointer), and `B17-D5`
+(the unsynchronised `static mut PBE_ALGS` allowed a cleanup-vs-find/free UAF and an
+init-vs-init lost stack). Pre-fix controls observed under ASan: D1, D2, D3 and D6 each
+reported `heap-use-after-free` (in `strlen`, `strlen`, `strchr` and `Vec::len` respectively);
+all five post-fix controls pass under ASan. D4's and D7's pre-fix ASan runs are NOT_RUN, but
+their post-fix controls pass and the class control is the observed D1/D2/D3/D6 result. D5's
+race is scheduler-dependent, so its deterministic pre-fix canary is NOT_RUN; the four-thread
+registration control and the full suite pass.
+
+| file | boundaries | disposition | defects / residuals |
+|---|---|---|---|
+| `src/ssl/ssl_lib.rs` | `B17-SSL-1..4` (SRP ctrl strings, `SSL_set1_host`, `SSL_set1_param` delegation, remaining copy/ownership setters) | `CONTRACTED` | **D1/D2 (fixed, high):** SRP username/info duplicate before release; the info failure path now clears the member. **D3 (fixed, high):** a parameter-owned host name is duplicated before the clear. **D6 (fixed, high):** self-inherit no longer releases the source set. `B17-R2` records the `set0` ownership-transfer setters (alias is contract-invalid, not a copy setter). |
+| `src/x509/x509_vpm.rs` | `B17-XVPM-1` (host/policy inheritance and `set1_host`) | `CONTRACTED` | **D7 (fixed, high):** duplicate-then-release in `int_x509_param_set_hosts`. **D6 (fixed, high):** policies/hosts self-copy guards in `X509_VERIFY_PARAM_inherit`. `B17-R3` records the unexported-policy-set self-alias (unreachable without a getter). |
+| `src/evp/evp_pbe.rs` | `B17-PBE-1` (application PBE registry publication, add/find/cleanup) | `CONTRACTED` | **D5 (fixed, high):** `PBE_ALGS` is now an `AtomicPtr` under a module-local `Mutex`; find copies the row under the guard, cleanup swaps then releases. No keygen or application callback runs under the lock. |
+| `src/ffc/params.rs` | `B17-FFC-1` (cofactor ownership transfer) | `CONTRACTED` | **D4 (fixed, high):** self-assignment is a no-op retaining the single owner; the authority's UAF is a recorded §17 divergence. Null clears and distinct values are unchanged. |
+| `src/encoder_pkey.rs` | `B17-ENC-1` (encoder collection, construct/import callbacks, pkey construction data) | `CONTRACTED` (deferred) | No defect found. `ConstructDataPkey` is zero-valid with an empty `CtxDestroy`; provider `does_selection`/`import_object`/`free_object` callbacks run with no Rust borrow or crate lock held; `B17-R4` records the borrowed `EVP_PKEY` lifetime. |
+| `src/provider/decode_pvk2key.rs` | `B17-DEC-1` (decoder context, passphrase edge, decode/export ownership) | `CONTRACTED` (deferred) | No defect found. `Pvk2keyCtx` is zero-valid and `OwnedCtx` releases the block; `free_key` is the key's single release on every path; `B17-R5` records the framework's non-NULL/pointer-sized reference contract. |
+
+**Sweep.** Every copy-setter in `ssl_lib` was classified: ALPN and certificate-type setters already
+allocate before clearing; PSK identity hints and session-id context have no getter returning
+the written member; the `set1`/`set0` BIO and store setters take an ownership reference rather
+than copying, so a getter pointer does not satisfy their transfer contract (R2). The SRP
+username/info getters fall back to the connection's context, which is what made the two ctrl
+aliases reachable. The PBE registry's critical sections contain only stack/allocator work; the
+keygen pointers are copied, never invoked, under the lock. The encoder and decoder were read
+against their dispatch contracts and left unchanged (deferred).
+
+**New unsafe assumptions (hidden must be 0).** None. The PBE repair replaces every
+`static mut` access in add/find/cleanup with safe atomics; the alias repairs reorder existing
+operations and add no unsafe expression. No export, signature, `#[repr(C)]` layout, allocator-seam coordinate or
+unsafe lint attribute changed. No safe caller can cause UB through the audited interfaces under
+the stated contracts.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused 5/0 (SSL
+alias), 5/0 (PBE), 2/0 (FFC). ASan (dedicated venue, `-Zsanitizer=address -Zbuild-std`): the
+pre-fix D1/D2/D3/D6 controls each reported the predicted heap-use-after-free; the post-fix
+five-test suite passes with no ASan finding (leak detection disabled for the known E1 leak).
+BATCH: library **1646 passed / 0 failed / 27 ignored** serially (195.53 s) and with
+`--test-threads=4` (89.92 s); 0 newly ignored, 0 removed, seven tests added. E1 remains the
+pre-existing ERR/EVP fetch leak (336 bytes in four allocations with leak detection on).
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; the court toolchain has no miri), Loom/TSan, the
+deterministic PBE race canary, pre-fix ASan for D4/D7 specifically, encoder/decoder adversarial
+provider probes, the authority differentials, independent review and SEAL. Nothing is promoted
+to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next ordinary position:** `src/x509/v3_info.rs` (63), then `src/ts/ts_req_utils.rs` (63),
+`src/evp/e_rc2.rs` (63), `src/apps/pkeyutl.rs` (62), `src/asn1/a_verify.rs` (62),
+`src/dsa/mod.rs` (62). `src/evp/evp_pbe.rs` and `src/ffc/params.rs` were swept here and leave
+the queue. This boundary sweep does not consume an ordinary queue position.
