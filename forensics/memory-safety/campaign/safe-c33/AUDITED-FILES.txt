@@ -180,9 +180,17 @@ src/dh/gen.rs
 src/dh/group_params.rs
 src/dh/kdf.rs
 src/dh/key.rs
+src/dh/mod.rs
 src/dh/object.rs
 src/dh/pmeth.rs
+src/dh/prn.rs
+src/dh/rfc5114.rs
+src/digest/blake2.rs
 src/digest/md32.rs
+src/digest/md4.rs
+src/digest/md5.rs
+src/digest/md5_sha1.rs
+src/digest/mdc2.rs
 src/digest/sha2.rs
 src/dsa/ameth.rs
 src/dsa/mod.rs

@@ -46,7 +46,10 @@ use super::Dh;
 ///
 /// # Safety
 ///
-/// Takes no pointer.
+/// Takes no caller pointer, but each `*_of` argument must be a live function that returns a
+/// pointer to a live `BigNum` valid for the duration of this call. This file's only callers
+/// pass the three `ossl_bignum_dh*` constant accessors; any other function pointer is the
+/// caller's obligation.
 unsafe fn make_dh(
     p_of: unsafe fn() -> *const BigNum,
     q_of: unsafe fn() -> *const BigNum,
