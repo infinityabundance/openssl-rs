@@ -237,7 +237,15 @@ src/ec/lib.rs
 src/ec/mod.rs
 src/ec/mont.rs
 src/ec/mult.rs
+src/ec/nist.rs
+src/ec/oct.rs
 src/ec/pmeth.rs
+src/ec/print.rs
+src/ec/prn.rs
+src/ec/sm2_key.rs
+src/ec/smpl.rs
+src/ec/smpl2.rs
+src/ec/support.rs
 src/encoder_lib.rs
 src/encoder_meth.rs
 src/encoder_pkey.rs

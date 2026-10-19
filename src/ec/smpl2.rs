@@ -45,10 +45,9 @@ use crate::ec::{
     EcComputeKeyFn, EcFieldMulFn, EcFieldSqrFn, EcGroup, EcGroupCheckDiscriminantFn, EcGroupCopyFn,
     EcGroupFinishFn, EcGroupGetCurveFn, EcGroupInitFn, EcGroupQueryFn, EcGroupSetCurveFn,
     EcKeyCheckFn, EcKeyInitFn, EcKeySignSetupFn, EcKeySignSigFn, EcKeyVerifySigFn, EcLadderFn,
-    EcMethod, EcOct2PointFn, EcOct2PrivFn, EcPoint, EcPoint2OctFn, EcPointAddFn, EcPointCmpFn,
-    EcPointCopyFn, EcPointDblFn, EcPointFinishFn, EcPointGetAffineFn, EcPointInitFn,
-    EcPointIsAtInfinityFn, EcPointIsOnCurveFn, EcPointMulFn, EcPointSetAffineFn,
-    EcPointSetCompressedFn, EcPointSetToInfinityFn, EcPointUnaryFn, EcPointsMakeAffineFn,
+    EcMethod, EcOct2PrivFn, EcPoint, EcPointAddFn, EcPointCmpFn, EcPointCopyFn, EcPointDblFn,
+    EcPointFinishFn, EcPointGetAffineFn, EcPointInitFn, EcPointIsAtInfinityFn, EcPointIsOnCurveFn,
+    EcPointMulFn, EcPointSetAffineFn, EcPointSetToInfinityFn, EcPointUnaryFn, EcPointsMakeAffineFn,
     EcPriv2OctFn, PointConversionForm, EC_FLAGS_DEFAULT_OCT, POINT_CONVERSION_COMPRESSED,
     POINT_CONVERSION_HYBRID, POINT_CONVERSION_UNCOMPRESSED,
 };
@@ -1424,11 +1423,11 @@ static EC_GF2M_SIMPLE_METHOD: EcMethod = EcMethod {
     point_get_affine_coordinates: Some(
         ossl_ec_GF2m_simple_point_get_affine_coordinates as EcPointGetAffineFn,
     ),
-    point_set_compressed_coordinates: Some(
-        ossl_ec_GF2m_simple_set_compressed_coordinates as EcPointSetCompressedFn,
-    ),
-    point2oct: Some(ossl_ec_GF2m_simple_point2oct as EcPoint2OctFn),
-    oct2point: Some(ossl_ec_GF2m_simple_oct2point as EcOct2PointFn),
+    // `ec2_smpl.c:954-956`: these three slots are NULL in the authority. `EC_FLAGS_DEFAULT_OCT`
+    // makes `ec_oct.c` dispatch the binary-field arms, exactly as it does for `ecp_smpl.c`.
+    point_set_compressed_coordinates: None,
+    point2oct: None,
+    oct2point: None,
     add: Some(ossl_ec_GF2m_simple_add as EcPointAddFn),
     dbl: Some(ossl_ec_GF2m_simple_dbl as EcPointDblFn),
     invert: Some(ossl_ec_GF2m_simple_invert as EcPointUnaryFn),

@@ -136,8 +136,14 @@ pub unsafe extern "C" fn EC_POINT_point2hex(
         // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
         let buf = OwnedBuf::adopt_plain_nullable(buf, FILE_SEAM, 39);
 
-        // `OPENSSL_malloc(buf_len * 2 + 2)`, line 29.
-        let Some(ret) = OwnedBuf::new(buf_len * 2 + 2, FILE_SEAM, 29) else {
+        // `OPENSSL_malloc(buf_len * 2 + 2)`, line 29. The extent is checked: the authority's
+        // `size_t` expression would wrap to a short allocation and the loop below would then write
+        // past it, so an unrepresentable extent takes the authority's allocation-failure answer
+        // (NULL) instead of reproducing that undefined behaviour.
+        let Some(ret_len) = buf_len.checked_mul(2).and_then(|n| n.checked_add(2)) else {
+            return ptr::null_mut();
+        };
+        let Some(ret) = OwnedBuf::new(ret_len, FILE_SEAM, 29) else {
             // goto err: `buf` is released by its own `Drop` -- no `CRYPTO_free` written here.
             return ptr::null_mut();
         };
