@@ -3639,3 +3639,62 @@ independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
 `src/bn/rsa_fips186_4.rs`, `src/camellia.rs`, `src/cast.rs`. `src/async/async.rs` and
 `src/async/async_wait.rs` were the two queued `NOT_RUN` boundary carriers and leave the
 boundary queue; this sweep does not consume an ordinary queue position.
+
+## 46. Mechanism sweep M42 — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M42.json`](atlas-refresh/mechanism-sweep-M42.json).
+Candidate `a5a807ccb` plus this batch's source edits.
+
+**STOP status: CLEAR after repair.** Three confirmed defects were stopped on and
+repaired: `M42-D1` (aliasing UB in `bn_set_all_zero`), `M42-D2` (`CAST_set_key`
+OOB read on a negative signed length), and `M42-D3` (`CAST_cbc_encrypt` OOB
+read/write on a negative length). Three contract statements were made precise; no
+behaviour other than the repaired bounds changed. Hidden obligations 0 for the
+audited interfaces under their stated contracts.
+
+| file | mechanisms | disposition | defects / residuals |
+|---|---|---|---|
+| `src/bn/intern.rs` | `bn_compute_wNAF`, `bn_get_dmax`/`bn_get_top`, `bn_set_all_zero`, `bn_copy_words`/`bn_get_words`/`bn_set_words` word bridges | `CONTRACTED` after repair | **M42-D1 (fixed, medium):** `bn_set_all_zero` called `bn_get_dmax(a)` while holding `as_mut(a)`, so a shared and a unique reference to the same `BIGNUM` were live together and the subsequent padding write used the invalidated unique borrow. `dmax` is now derived from `b` (they coincide in this representation). **Contract (low):** `bn_get_words` now forbids stores through its shared-derived pointer. |
+| `src/bn/kron.rs` | `BN_kronecker` value/sign algorithm, `trailing_zeros`, `BN_CTX`-free temporaries | `CONTRACTED` | No defect. `parts()` copies both magnitudes, so no raw borrow escapes; every refusal is the authority's `-2`; `guard_ffi` wraps the export. |
+| `src/bn/nist.rs` | five `BN_nist_mod_*` dispatchers, `BN_nist_mod_func` value-selection, static prime accessors | `CONTRACTED` | No defect. `BN_nist_mod_func` reads a copied magnitude and compares against the static getters; a NULL `p` selects nothing rather than dereferencing. |
+| `src/bn/rsa_fips186_4.rs` | `ossl_bn_inv_sqrt_2` cache, auxiliary-prime search, `gen_prob_primes` pool/cleanup, `derive_prime` CRT+MR loop | `CONTRACTED` | No memory-safety defect. The cached constant is published once with a losing-thread release; every pool slot is checked before use; cleanup clears exactly the internally drawn slots and ends the `BN_CTX` frame. Residual `M42-R1` records the shared `BN_clear` cleansing gap (below). |
+| `src/camellia.rs` | `CamelliaKey` layout, `get_u32`/`put_u32`, `Ekeygen`, `Feistel`/FL rounds, five mode entry points | `CONTRACTED` | No memory-safety defect. `Camellia_set_key` validates both pointers and all three key sizes. **Contract (low):** every mode entry now states the schedule must come from `Camellia_set_key` (`grand_rounds` 3 or 4); a zeroed key is a valid value but would index outside `rd_key`. |
+| `src/cast.rs` | `CastKey` layout, `CAST_set_key` schedule, `E_CAST` rounds, ECB/CBC/CFB/OFB modes | `CONTRACTED` after repair | **M42-D2 (fixed, high):** a negative `len` was cast to `usize`, turning the authority's empty signed loop into a multi-gigabyte read of `data`. **M42-D3 (fixed, high):** for a negative CBC `length`, `l + 8` was cast to `c_uint` and passed to `n2ln`/`l2nn`, reading or writing far outside the caller's buffer; the partial arm now selects only a true 1..7-byte remainder. |
+| `src/chacha.rs` | `CHACHA_U8TOU32`, `chacha20_core`, `ChaCha20_ctr32` counter/XOR loop | `CONTRACTED` | No defect. The key/counter reads are bounded by the contract; the in-place XOR preserves `out == inp`; the counter advance and zero-length no-op match the authority. |
+| `src/cmp/cmp_http.rs` | `raise_cmp`, `keep_alive`, debug/log path, header stack, `OSSL_CMP_MSG_http_perform` transfer and decode | `CONTRACTED` | No memory-safety defect. `headers` is released on every early return; `req_mem`/`rsp` have single releases; a NULL `rsp` is handled by the item layer. **Contract (low):** the `req->body` non-NULL precondition the authority relies on is now stated. |
+
+**Sweep.** Every raw access is bounded by a stated precondition or derived from an owner:
+`bn_compute_wNAF`'s buffer is an `OwnedBuf` released on each refusal arm; the
+word bridges are caller-sized; Kron/NIST copy their inputs; the RSA generator's pool
+slots are checked and cleared exactly on the internally drawn arms; Camellia and CAST
+render their `#[repr(C)]` layouts with compile-time offsets; ChaCha's loop is bounded
+by `len`; and the CMP path's two BIOs and header stack each have one release.
+
+**Evidence.** FAST: `cargo fmt --all -- --check` clean; clippy `--all-targets -D
+warnings` PASS; focused tests `bn::intern` 7, `bn::rsa_fips186_4` 5, `camellia` 4, `cast`
+5 (including two new negative-length controls), `chacha` 14 — all 0 failed. BATCH:
+library **1653 passed / 0 failed / 27 ignored** serially (62.32 s) and with
+`--test-threads=4` (84.88 s); two tests added, none removed or newly ignored. None of
+the eight files carries an `OPENSSL_RS_ADV_PROBE` arm.
+
+**Retained obligation (non-UB, shared mechanism).** `M42-R1`: `BN_clear`
+(`src/bn/bignum.rs`) clears the `Vec` length without cleansing the limb storage,
+while the authority `OPENSSL_cleanse`s `d[0..dmax]`. This is reachable from
+`rsa_fips186_4`'s auxiliary-prime cleanup and from `BN_CTX_get`'s slot reset. It is a
+secret-residue divergence, not a Rust soundness defect, and repairing the shared owner
+invalidates the BIGNUM-dependent evidence closure, so it is deferred to a dedicated
+BIGNUM shared-mechanism sweep rather than edited inside this batch.
+
+**NOT_RUN.** Miri (no miri component in the court toolchain), targeted ASan control for
+M42-D2/D3 (new plain tests are the FAST controls; sanitizer confirmation is a BOUNDARY
+gate), Loom/TSan (no shared-memory change), authority differentials, independent review
+and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Queue.** `REMAINING-AUDIT.txt` 390 → **380**; `AUDITED-FILES.txt` 373 → **383**.
+The ten moved entries are the eight audited files plus the two B18-audited async files
+(`src/async/async.rs`, `src/async/async_wait.rs`) that B18 left in the queue for
+bookkeeping.
+
+**Next eight (stable order).** `src/cms/cms_att.rs`, `src/cms/cms_dd.rs`,
+`src/cms/cms_io.rs`, `src/cms/cms_kem.rs`, `src/context/core_bio.rs`,
+`src/context/dispatch.rs`, `src/context/mod.rs`, `src/context/thread_data.rs`.
