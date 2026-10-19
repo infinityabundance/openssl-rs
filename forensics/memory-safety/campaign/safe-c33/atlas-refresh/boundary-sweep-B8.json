@@ -1,0 +1,218 @@
+{
+  "receipt": "boundary-sweep-B8",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "fd112380b",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/provider/mod.rs",
+      "src/ssl/ssl_rsa.rs"
+    ],
+    "working_tree_blob": {
+      "src/provider/mod.rs": "9732b319d121d359e51309f3fc2665ce3459d9bc",
+      "src/ssl/ssl_rsa.rs": "96e9ebb7baf0cedef932a7726d906188bfb9360d"
+    }
+  },
+  "stop_status": "CLEAR - no confirmed memory-safety defect, no ABI regression and no new hidden obligation. Three unsafe-contract/inside-safe-interior findings in provider/mod.rs and one remaining B7 callback-forwarding parity item in ssl_rsa.rs were found and repaired. FAST, BATCH (serial and --test-threads=4) and the two affected adversarial probes pass; the negative control for the callback forwarding fires on the pre-fix shape. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.5.9 ssl/ssl_rsa.c:54-109 and :311-360 (both certificate-file loaders forward the connection's/context's default password callback) and crypto/provider_core.c (store constructor/teardown, provider_new, ossl_provider_new, ossl_provider_find, ossl_provider_add_to_store, ossl_provider_up_ref/free, child-callback registration, and the OSSL_PROVIDER_* exports), cross-checked line by line against the crate bodies.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, CRYPTO_* allocator seam coordinate or unsafe lint attribute changed. The provider edits are documentation/contract corrections only; the ssl_rsa edit forwards two existing struct fields to the PEM reader.",
+    "external_contracts": [
+      "OSSL_PROVIDER handles are caller-owned references: every successful load/find/up-ref transfers a reference the caller must release exactly once with OSSL_PROVIDER_unload/free. A NULL handle is refused by deactivate/unload rather than dereferenced.",
+      "A provider object inserted into the store contributes the caller's original reference to the store and, when actualprov is non-NULL, receives one additional caller reference. The losing thread's object is deactivated and released.",
+      "ossl_provider_store_free is single-call: it releases the ProviderStore block itself. It is valid on a partially constructed store only because each unreached field is NULL.",
+      "OSSL_PROVIDER_available/name lookup requires a NUL-terminated non-NULL name because it is the store search key; a NULL name is outside the C contract (the authority faults on it too).",
+      "Child-callback create/remove functions registered through the core dispatch are application-controlled. The authority (and this crate) invoke them under the store lock and require them to be short, non-reentrant and non-blocking; they must not call back into the provider store.",
+      "PEM password callbacks follow the pem_password_cb contract: write at most the supplied length into the buffer, return the password length, or return a negative value to abort. A NULL callback selects PEM_def_callback.",
+      "SSL_use_certificate_file uses the live connection's default_passwd_callback/userdata; SSL_CTX_use_certificate_file uses the live context's. Both then install the decoded X509 through SSL[_CTX]_use_certificate, which up-refs it."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B8-PROV-1",
+      "file": "src/provider/mod.rs",
+      "mechanism": "provider store construction, partial-construction failure, and single-call teardown (ossl_provider_store_new / ossl_provider_store_free)",
+      "disposition": "CONTRACTED",
+      "defects": ["B8-D1"],
+      "residuals": [
+        "The partial-construction path releases only fields reached so far; every later field is still NULL because the store is CRYPTO_zalloc'd.",
+        "The store's freeing bit is set before any release so child callbacks and provider_remove_store_methods see teardown rather than a real removal.",
+        "The function must be called exactly once per store. context_deinit calls it once and re-NULLs the slot; ossl_provider_store_new calls it once on its own partial object."
+      ]
+    },
+    {
+      "id": "B8-PROV-2",
+      "file": "src/provider/mod.rs",
+      "mechanism": "provider lifecycle and reference count (provider_new, ossl_provider_up_ref, ossl_provider_free, OSSL_PROVIDER_try_load_ex/load_ex/unload)",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "refcnt is an AtomicI32 with relaxed fetch_add and AcqRel fetch_sub, matching the authority's CRYPTO_UP_REF/CRYPTO_DOWN_REF. The caller must hold a live reference before up-ref and must balance every acquired reference; a concurrent up-ref against a last release is outside the C contract.",
+        "ossl_provider_free invokes the provider's teardown on the last reference and deregisters thread handlers unconditionally, before releasing module/name/path/parameters/locks. Only the member buffers are adopted by OwnedBuf; the object block remains on the raw seam.",
+        "The load wrappers deactivate/free their own object on every failure arm and up-ref the store's winner outside the store lock, as the authority does.",
+        "ERR_load_strings/ERR_unload_strings are compile-time-table stubs in this crate. A provider's reason table is therefore stored in error_strings and freed on the last reference, but never registered in (or unloaded from) a dynamic ERR table; the authority's ERR_unload_strings call is deliberately inert here and cannot leave a dangling string table."
+      ]
+    },
+    {
+      "id": "B8-PROV-3",
+      "file": "src/provider/mod.rs",
+      "mechanism": "child-callback registration/deregistration and create_provider_children (application reentrancy edge)",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "create_cb/remove_cb are invoked while the store write lock is held, matching provider_core.c's explicit comment. The registered callbacks must be short and must not reenter provider loading or store teardown; violating this is a deadlock (authority parity), not a Rust soundness defect.",
+        "The rollback walks downward from the current index and calls remove_cb for every provider it had handed over, then frees the registration block; a NULL create_cb/remove_cb is treated as failure/no-op rather than called, a deliberate safe divergence from the authority's unconditional call.",
+        "Registration is found by provider identity on deregistration; the callbacks themselves are not called on withdrawal (authority parity)."
+      ]
+    },
+    {
+      "id": "B8-PROV-4",
+      "file": "src/provider/mod.rs",
+      "mechanism": "registry lookup and insertion ownership (ossl_provider_find, ossl_provider_add_to_store)",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "find/sort and insertion take the store lock; the lookup answer is up-ref'd after the lock is released, relying on the store's own reference keeping the provider alive (authority parity).",
+        "On the losing side of a same-name race the caller's object is deactivated and freed, and the store's object is returned with a fresh reference. The post-insertion up-ref failure arm is unreachable for ordinary providers and child creation passes actualprov = NULL, so no dangling store entry is reachable.",
+        "Parameter lists are deep-copied under the store read lock; a caller-installed CRYPTO_set_mem_functions hook that reenters provider loading could deadlock here. This is an authority-parity liveness obligation, recorded rather than hidden."
+      ]
+    },
+    {
+      "id": "B8-PROV-5",
+      "file": "src/provider/mod.rs",
+      "mechanism": "exported OSSL_PROVIDER_* ABI surface: NULL conventions, accessors, dispatch/algorithm queries, callbacks, configuration accessors",
+      "disposition": "CONTRACTED",
+      "defects": ["B8-D2"],
+      "residuals": [
+        "Each export uses guard_ffi and forwards to the transcribed core function; no export introduces new unsafe state or a safe Rust interface over the registry.",
+        "get0_name/get0_dispatch/get0_provider_ctx are NULL-tolerant where implemented; the dispatch table and OsslAlgorithm rows remain provider-owned statics and are never freed by the registry.",
+        "OSSL_PROVIDER_do_all invokes the application callback outside every lock on a duplicated provider list, retaining a reference and activation count per surviving provider until the undo phase.",
+        "The configuration accessors walk the provider's parameter stack without a lock; concurrent OSSL_PROVIDER_add_conf_parameter is outside the authority's thread-safety contract and remains a caller obligation."
+      ]
+    },
+    {
+      "id": "B8-PROV-6",
+      "file": "src/provider/mod.rs",
+      "mechanism": "predefined-provider name lookup key (predefined_row)",
+      "disposition": "CONTRACTED",
+      "defects": ["B8-D4"],
+      "residuals": [
+        "The lookup is now a safe function over &CStr; the raw pointer's NUL-termination is established once at the caller's CStr::from_ptr conversion, inside the unsafe fn whose contract already requires it.",
+        "Byte-for-byte comparison is unchanged: CStr equality compares the same non-NUL bytes as strcmp, and the first match still wins.",
+        "The store-entry scan in ossl_provider_new still uses c_strcmp because those entries are raw #[repr(C)] fields; that call remains in the caller's unsafe block under the same NUL-termination contract."
+      ]
+    },
+    {
+      "id": "B8-SSL-1",
+      "file": "src/ssl/ssl_rsa.rs",
+      "mechanism": "SSL_use_certificate_file / SSL_CTX_use_certificate_file PEM password-callback forwarding",
+      "disposition": "CONTRACTED",
+      "defects": ["B8-D3"],
+      "residuals": [
+        "The connection loader forwards the live SSL's default_passwd_callback/userdata; the context loader forwards the live SSL_CTX's. These are the same fields the authority reads (sc-> on the connection, ctx-> on the context).",
+        "ASN1 loading does not consult a password callback; only the PEM arm changed.",
+        "The decrypted X509 is installed through SSL[_CTX]_use_certificate and freed by the loader afterwards because the install up-refs it, matching the pre-existing ownership path.",
+        "The reduced ssl_security_cert default callback recorded in the module header is unchanged and remains a compatibility reduction, not a safety obligation."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B8-D1",
+      "file": "src/provider/mod.rs",
+      "pre_fix_line": 1052,
+      "severity": "low",
+      "class": "unsafe-contract inaccuracy (documented idempotence that does not exist)",
+      "description": "ossl_provider_store_free advertised that a second call over the same object is a no-op. The function clears each member pointer as it releases it, which makes a single call on a partially constructed store safe, but it also releases the ProviderStore block. A caller following the documented contract and calling twice would use freed memory.",
+      "fix": "The contract now requires exactly one release for a non-NULL store and states that the field clearing covers partial construction, not object-level idempotence. No runtime behaviour changed; the two real call sites were already single-call (ossl_provider_store_new's failure arm and context_deinit, which re-NULLs the slot).",
+      "regression": "Source/contract review plus the existing store constructor/teardown tests in provider::tests; no new runtime canary is meaningful because the repaired statement is a caller obligation, not an in-function check."
+    },
+    {
+      "id": "B8-D2",
+      "file": "src/provider/mod.rs",
+      "pre_fix_line": 2703,
+      "severity": "low",
+      "class": "unsafe-contract inaccuracy (NULL accepted by the documented contract but dereferenced)",
+      "description": "OSSL_PROVIDER_available's # Safety allowed a NULL name. The name is copied into the store search template and passed to ossl_provider_cmp, which calls c_strcmp on it, so a NULL name faults. The authority has the same requirement.",
+      "fix": "The contract now requires a NUL-terminated non-NULL name and the forwarding SAFETY comment names ossl_provider_find's real contract. No runtime behaviour changed.",
+      "regression": "Contract review; the existing provider::tests accessor and comparator controls cover the non-NULL path."
+    },
+    {
+      "id": "B8-D4",
+      "file": "src/provider/mod.rs",
+      "pre_fix_line": 1382,
+      "severity": "low",
+      "class": "safe fn with raw deref (soundness of the safe interior)",
+      "description": "predefined_row was a safe fn taking *const c_char and calling c_strcmp on it. Every current caller passed a NUL-terminated name, but the safe signature did not require it, so safe code inside the crate could hand it an invalid pointer and obtain UB.",
+      "fix": "The helper now takes &CStr and compares it directly. The single production caller converts once with CStr::from_ptr inside its existing unsafe block; the unit tests pass C string literals directly.",
+      "regression": "provider::tests::the_predefined_table_is_default_base_null_and_default_is_the_fallback passed after the signature change; the full library suite and clippy are green."
+    },
+    {
+      "id": "B8-D3",
+      "file": "src/ssl/ssl_rsa.rs",
+      "pre_fix_line": 337,
+      "severity": "low",
+      "class": "authority-parity callback omission (application password callback not forwarded)",
+      "description": "SSL_use_certificate_file and SSL_CTX_use_certificate_file passed None/NULL to PEM_read_bio_X509, so an encrypted certificate block reached PEM_def_callback instead of the application's default password callback. The authority forwards sc->default_passwd_callback / ctx->default_passwd_callback (ssl_rsa.c:87-88 and :338-339). This was the recorded B7 follow-up.",
+      "fix": "Both PEM arms now forward the corresponding live object's default_passwd_callback and userdata, matching the chain loader's B7-D4 repair.",
+      "regression": "ssl::ssl_rsa::password_callback_tests::ctx_certificate_file_forwards_the_password_callback and connection_certificate_file_forwards_the_password_callback load an encrypted PEM fixture and assert the application callback is consulted exactly once. Negative control observed: reverting both arguments to None/NULL makes both controls fail with count 0."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "focused_tests": [
+        "provider::tests 10 passed / 0 failed",
+        "ssl::ssl_rsa::password_callback_tests 2 passed / 0 failed"
+      ]
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "library_serial": "1602 passed / 0 failed / 27 ignored (342.45 s, --test-threads=1)",
+      "library_threaded": "1602 passed / 0 failed / 27 ignored (95.04 s, --test-threads=4)",
+      "unmandated_default_thread_run": "One run at the default thread count hit the pre-existing evp::method_store::tests::this_puts_only_into_a_temporary_store_and_always_destructs isolation failure; both mandated runs (1 and 4 threads) are green and the failure is unrelated to the changed units.",
+      "probes": [
+        "OPENSSL_RS_ADV_PROBE=1 ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc PASS",
+        "OPENSSL_RS_ADV_PROBE=1 provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair PASS"
+      ],
+      "negative_control": "Reverting both PEM reader arguments to None/NULL made both new password-callback controls fail (callback count 0 instead of 1); the source was restored and both controls pass."
+    },
+    "not_run": [
+      "ASan / Miri / Loom / TSan for the audited units (NOT_RUN; no runtime code changed in provider/mod.rs and the ssl_rsa change is argument forwarding only)",
+      "full-suite sanitizers",
+      "authority differential replay for the certificate-file loader",
+      "FRF-Fuzz residual replay",
+      "independent reviewer sign-off",
+      "SEAL forensic regeneration"
+    ]
+  },
+  "obligations": {
+    "discharged": [
+      "B7 follow-up: certificate-file default password callback forwarding (B8-D3)",
+      "provider store single-call teardown contract (B8-D1)",
+      "OSSL_PROVIDER_available name contract (B8-D2)",
+      "predefined-provider lookup no longer dereferences a raw pointer from safe code (B8-D4)"
+    ],
+    "retained": [
+      "Store-lock callback discipline for child registration/create_provider_children (short, non-reentrant application callbacks).",
+      "Allocator-hook reentrancy while the store read lock is held during provider parameter copying (authority parity; liveness).",
+      "Caller must hold and balance provider references; concurrent up-ref against the last release is outside the C contract.",
+      "Configuration parameter lists are immutable after construction; concurrent OSSL_PROVIDER_add_conf_parameter is outside the authority's thread-safety contract.",
+      "Application password callbacks follow the pem_password_cb length/negative-abort contract."
+    ],
+    "newly_introduced": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "provider/mod.rs": "CONTRACTED",
+    "ssl_rsa.rs certificate-file loaders": "CONTRACTED",
+    "safe_compatible": false,
+    "note": "No consumer family graduates from this sweep. provider/activate.rs, provider/init.rs, provider/child.rs and the fetch closure retain their own boundaries and were only consulted as callers."
+  },
+  "next": {
+    "ordinary_position": "src/cms/cms_pwri.rs (128), then src/runtime/bio/mod.rs (129), src/x509/v3_pci.rs (130)",
+    "boundary_queue": "none from the B1-B8 queue",
+    "large_file_deferral": "src/rsa/mod.rs (123)",
+    "remaining_known_follow_up": "none from B7; B7-D4 is closed by B8-D3"
+  }
+}

@@ -1257,3 +1257,67 @@ fixture, authority differentials for the refusals, the `provider/mod` boundary,
 queue; the ordinary queue resumes at `src/cms/cms_pwri.rs` (128), then
 `src/runtime/bio/mod.rs` (129), `src/x509/v3_pci.rs` (130). `src/rsa/mod.rs` (123)
 remains the large-file deferral.
+
+## 14. Boundary sweep B8 — provider lifecycle/registry and certificate-file callback forwarding
+
+**STOP status: CLEAR.** No confirmed memory-safety defect, no ABI regression and no
+new hidden obligation. Three `provider/mod.rs` findings (two unsafe contracts and one
+safe-function raw dereference) and one B7 follow-up remained; all four are repaired.
+
+**B8-D1 (fixed, low, contract).** `ossl_provider_store_free`'s documentation claimed
+a second call on the same store is a no-op. The function clears each *field* (so a
+partially built store is safe) but releases the `ProviderStore` block itself, so a
+second call would be a use-after-free. The contract now requires exactly one release
+per non-NULL store and names the two single-call sites; no code changed.
+
+**B8-D2 (fixed, low, contract).** `OSSL_PROVIDER_available`'s `# Safety` allowed a
+NULL `name`, but `name` is the search key passed to `ossl_provider_find`'s comparator,
+which dereferences it. The contract now requires NUL termination and the forwarding
+comment cites the real callee contract. Authority behaviour (a NULL name faults) is
+is therefore documented rather than silently promised as supported.
+
+**B8-D4 (fixed, low, soundness).** `predefined_row` was a **safe** function taking
+`*const c_char` and dereferencing it through `c_strcmp`; the safe signature did not
+require NUL termination, so safe crate code could hand it an invalid pointer. It now
+takes `&CStr` and compares bytes directly; the single production caller performs the
+`CStr::from_ptr` conversion inside its existing unsafe block. Behaviour is unchanged.
+
+**B8-D3 (fixed, low, parity).** The B7 follow-up: `SSL_use_certificate_file` and
+`SSL_CTX_use_certificate_file` passed `None`/NULL to `PEM_read_bio_X509`; the
+authority forwards the connection's/context's default password callback
+(`ssl_rsa.c:87-88`, `:338-339`). Both now forward it, matching the chain loader's
+B7-D4 repair. Two regression controls load an encrypted PEM fixture and assert the
+application callback was consulted (and observe 0 from the loader, since the fixture
+body is not a certificate).
+
+**Provider boundary result.** `B8-PROV-1..6` (store construction/teardown, lifecycle
+and refcount, child-callback registration, find/insert race ownership, export
+contracts) are `CONTRACTED`, not `SAFETY_DISCHARGED`: the retained authority
+discipline includes callbacks invoked under the store lock (registration and
+`create_provider_children`; the authority requires short, non-reentrant callbacks),
+allocator-hook reentrancy while the store read lock is held during parameter copying,
+and the store's teardown being single-call. `ossl_provider_up_ref` returning 0 after
+incrementing, and the losing-race deactivate/free, match the authority; the only path
+where `ossl_provider_add_to_store`'s post-insertion up-ref can fail is a child
+provider, and child creation passes `actualprov = NULL`, so the dangling-store arm is
+not reachable. Hidden obligations: 0. No safe Rust caller can cause UB through these
+interfaces.
+
+**Evidence.** FAST: fmt clean; focused `provider::tests` 10/0 and
+`ssl::ssl_rsa::password_callback_tests` 2/0. BATCH: clippy `--all-targets -D warnings`
+PASS; library **1602 passed / 0 failed / 27 ignored** serially (342.45 s) and with
+`--test-threads=4` (95.04 s); affected adversarial probes
+`ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc` and
+`provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair` pass under
+`OPENSSL_RS_ADV_PROBE=1`. Negative control observed: reverting both PEM arguments to
+`None`/NULL makes the two new controls fail with callback count 0. An extra default-
+thread-count run (not a mandated gate) hit the pre-existing
+`evp::method_store::tests::this_puts_only_into_a_temporary_store_and_always_destructs`
+isolation failure; the mandated 1-thread and 4-thread runs are green. ASan/Miri/Loom,
+full-suite sanitizers, FRF-Fuzz, independent review and SEAL regeneration are
+`NOT_RUN`. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B8.json`](atlas-refresh/boundary-sweep-B8.json).
+
+**Next ordinary position:** `src/cms/cms_pwri.rs` (128), then
+`src/runtime/bio/mod.rs` (129), `src/x509/v3_pci.rs` (130). No B7 follow-up remains;
+`src/rsa/mod.rs` (123) is still the large-file deferral.
