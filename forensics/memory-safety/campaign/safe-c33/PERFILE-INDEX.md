@@ -2429,3 +2429,52 @@ Deferred NOT_RUN as boundaries: `provider/legacyprov.rs` (73),
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M26.json`](atlas-refresh/mechanism-sweep-M26.json).
+
+## 31. Mechanism sweep M27 — 2026-10-19
+
+Source HEAD `2b218351d`; branch `integrate/safe-c33`; worktree dirty
+(`src/dh/ctrl.rs`, `src/runtime/bio/bss_mem.rs`, this index and the M27
+receipt). Eight ordinary files from the M26-named batch; no newly discovered
+boundary, so neither substitution (`src/x509/x_x509.rs`, `src/asn1/a_sign.rs`)
+was used.
+
+**M27 audited files (8).** `src/dh/ctrl.rs`, `src/dsa/pmeth.rs`,
+`src/provider/decode_msblob2key.rs`, `src/runtime/bio/bss_mem.rs`,
+`src/x509/v3_attrmap.rs`, `src/runtime/bio/bio_sock2.rs`,
+`src/x509/by_file.rs`, `src/runtime/bio/method.rs`.
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M27-D1 | `src/runtime/bio/bss_mem.rs:583` | high (write through a C-valid NULL/zero-length buffer) | `mem_gets` wrote its terminator whenever `j <= 0`, so `BIO_gets(b, NULL, 0)` — admissible under the public `BIO_gets` contract — dereferenced NULL. The authority has the same defect; it is not reproduced (§17, §21.1) | write only when `size > 0` and `buf` is non-NULL, keeping the authority's `0` answer; control `runtime::bio::bss_mem::tests::a_zero_length_gets_does_not_write_through_a_null_buffer` |
+| M27-D2 | `src/runtime/bio/bss_mem.rs:387` | medium (fallible arithmetic; no memory-safety impact observed) | `mem_write` computed `readp->length + inl` unchecked, so a negative or enormous `inl` panicked in debug (a panic boundary, §3) before `BUF_MEM_grow_clean` could refuse it | `checked_add`, translating overflow to the authority's `-1` refusal; the enormous wrapped lengths already fail the grow |
+| M27-D3 | `src/dh/ctrl.rs:608` | low (contract accuracy; doc only) | `EVP_PKEY_CTX_get_dh_kdf_outlen` advertised `plen` as "NULL or a live `int`" while the body writes `*plen` on success, so the documented precondition did not establish validity | state that `plen` is a live, writable `int` on a `1` return |
+
+**Contracts reused.** RC-1, OB-1, OB-2, OB-3 (+ zero-state sweep),
+OB-4, ASN1 item/template/union ownership, BIO control/read/write callbacks,
+provider decoder dispatch, OSSL_PARAM builders, `BUF_MEM` ownership. No new
+unsafe assumption; hidden obligations 0; unsafe ops
+introduced/removed/relocated 0/0/0.
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1628 passed / 0 failed / 27 ignored** serially (227.01 s) and with
+`--test-threads=4` (102.25 s); focused `runtime::bio::bss_mem::tests` 1/0.
+
+**NOT_RUN.** The phase-4 BIO differential probes still link the committed
+`artifacts/phase2` distribution shell, which predates this worktree, so no
+`RT-BIO` probe was run; Miri/ASan on M27-D1's NULL-write control (BOUNDARY),
+independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/x509/x_x509.rs` (69), `src/asn1/a_sign.rs` (68),
+`src/provider/eddsa_sig.rs` (68), `src/runtime/bio/bss_file.rs` (68),
+`src/apps/crl2pkcs7.rs` (67), `src/asn1/fre.rs` (67),
+`src/engine/eng_ctrl.rs` (67), `src/x509/x_ietfatt.rs` (67).
+Deferred NOT_RUN as boundaries: `src/ssl/record/rec_layer_s3.rs` (69) and the
+M26/M25-retained set. If `src/engine/eng_ctrl.rs` proves a new ENGINE ctrl
+callback boundary, record it `NOT_RUN` and substitute the next ranked ordinary
+file (`src/asn1/bitstr.rs` (65) after the already-covered `src/ec/smpl.rs`).
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M27.json`](atlas-refresh/mechanism-sweep-M27.json).
