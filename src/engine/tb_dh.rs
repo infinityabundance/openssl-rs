@@ -43,7 +43,7 @@ pub(crate) fn dh_table_slot() -> *mut *mut OpenSslLhash {
 /// `void ENGINE_unregister_DH(ENGINE *e)` — `crypto/engine/tb_dh.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_DH(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -59,7 +59,7 @@ unsafe extern "C" fn engine_unregister_all_dh() {
 /// `int ENGINE_register_DH(ENGINE *e)` — `:28-35`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_DH(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -94,7 +94,7 @@ pub extern "C" fn ENGINE_register_all_DH() {
 /// `int ENGINE_set_default_DH(ENGINE *e)` — `:45-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_DH(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -124,7 +124,7 @@ pub extern "C" fn ENGINE_get_default_DH() -> *mut Engine {
 /// `const DH_METHOD *ENGINE_get_DH(const ENGINE *e)` — `:66-69`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_DH(e: *const Engine) -> *const c_void {
     // SAFETY: `e` is the caller's engine.
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn ENGINE_get_DH(e: *const Engine) -> *const c_void {
 /// `int ENGINE_set_DH(ENGINE *e, const DH_METHOD *dh_meth)` — `:72-76`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_DH(e: *mut Engine, dh_meth: *const c_void) -> c_int {
     // SAFETY: `e` is the caller's engine.

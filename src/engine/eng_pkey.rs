@@ -47,7 +47,7 @@ use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock};
 /// `crypto/engine/eng_pkey.c:17-22`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_load_privkey_function(
     e: *mut Engine,
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn ENGINE_set_load_privkey_function(
 /// `:24-28`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_load_pubkey_function(
     e: *mut Engine,
@@ -81,7 +81,7 @@ pub unsafe extern "C" fn ENGINE_set_load_pubkey_function(
 ///     ENGINE_SSL_CLIENT_CERT_PTR loadssl_f)` — `:30-36`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_load_ssl_client_cert_function(
     e: *mut Engine,
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn ENGINE_set_load_ssl_client_cert_function(
 /// `ENGINE_LOAD_KEY_PTR ENGINE_get_load_privkey_function(const ENGINE *e)` — `:38-41`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_load_privkey_function(
     e: *const Engine,
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn ENGINE_get_load_privkey_function(
 /// `ENGINE_LOAD_KEY_PTR ENGINE_get_load_pubkey_function(const ENGINE *e)` — `:43-46`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_load_pubkey_function(
     e: *const Engine,
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn ENGINE_get_load_pubkey_function(
 /// `:48-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_ssl_client_cert_function(
     e: *const Engine,

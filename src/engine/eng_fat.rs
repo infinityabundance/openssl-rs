@@ -98,7 +98,7 @@ const ENGINE_FLAGS_NO_REGISTER_ALL: c_int = 0x0008;
 /// `int ENGINE_set_default(ENGINE *e, unsigned int flags)` — `crypto/engine/eng_fat.c:17-46`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`]; the authority's arm bodies dereference it.
+/// `e` must be a non-NULL pointer to a live [`Engine`]; the authority's arm bodies dereference it.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default(e: *mut Engine, flags: c_uint) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -210,7 +210,8 @@ unsafe fn push_cstr_or_null(buf: &mut Vec<u8>, p: *const c_char) {
 /// with the authority's `"str=%s"` operand and answers 0 rather than setting anything.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`]; `def_list` must be NULL or NUL-terminated.
+/// `e` must be a non-NULL pointer to a live [`Engine`]; `def_list` must be NULL or
+/// NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_string(
     e: *mut Engine,
@@ -277,7 +278,7 @@ pub(crate) unsafe fn engine_unregister_from_all_tables(e: *mut Engine) {
 /// `int ENGINE_register_complete(ENGINE *e)` — `:93-111`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_complete(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine; each register arm is the matching 13.2 table.

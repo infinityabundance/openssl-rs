@@ -43,7 +43,7 @@ pub(crate) fn dsa_table_slot() -> *mut *mut OpenSslLhash {
 /// `void ENGINE_unregister_DSA(ENGINE *e)` — `crypto/engine/tb_dsa.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_DSA(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -59,7 +59,7 @@ unsafe extern "C" fn engine_unregister_all_dsa() {
 /// `int ENGINE_register_DSA(ENGINE *e)` — `:28-35`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_DSA(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -94,7 +94,7 @@ pub extern "C" fn ENGINE_register_all_DSA() {
 /// `int ENGINE_set_default_DSA(ENGINE *e)` — `:45-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_DSA(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -124,7 +124,7 @@ pub extern "C" fn ENGINE_get_default_DSA() -> *mut Engine {
 /// `const DSA_METHOD *ENGINE_get_DSA(const ENGINE *e)` — `:66-69`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_DSA(e: *const Engine) -> *const c_void {
     // SAFETY: `e` is the caller's engine.
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn ENGINE_get_DSA(e: *const Engine) -> *const c_void {
 /// `int ENGINE_set_DSA(ENGINE *e, const DSA_METHOD *dsa_meth)` — `:72-76`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_DSA(e: *mut Engine, dsa_meth: *const c_void) -> c_int {
     // SAFETY: `e` is the caller's engine.
