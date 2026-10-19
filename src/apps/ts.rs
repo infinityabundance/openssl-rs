@@ -38,7 +38,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long};
+use core::ffi::{c_char, c_int, c_long};
 use std::ffi::{CStr, CString};
 
 use crate::apps::keyio::bio_open_default;
@@ -47,6 +47,7 @@ use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::TS_OPTIONS;
 use crate::asn1::a_type::{ASN1_TYPE_free, ASN1_TYPE_new};
 use crate::asn1::layout::V_ASN1_NULL;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::x_algor::{X509_ALGOR_free, X509_ALGOR_new};
 use crate::evp::digest::{
     EVP_DigestFinal, EVP_DigestInit, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
@@ -284,6 +285,10 @@ fn query_command(
         }
         // SAFETY: `in_bio` is live; the out-slot is NULL.
         query = unsafe { d2i_TS_REQ_bio(in_bio, core::ptr::null_mut()) };
+    } else if digest.is_some() {
+        // `create_digest`'s hex arm is not landed. The authority opens no data BIO on
+        // this arm (`digest == NULL && (data_bio = ...)`), so none is opened here.
+        return false;
     } else {
         if let Some(d) = data {
             data_bio = bio_open_default(Some(d), false);
@@ -292,10 +297,10 @@ fn query_command(
             }
         } else {
             data_bio = bio_open_default(None, false);
-        }
-        if digest.is_some() {
-            // `create_digest`'s hex arm is not landed.
-            return false;
+            // `if (digest == NULL && (data_bio = bio_open_default(...)) == NULL) goto end;`
+            if data_bio.is_null() {
+                return false;
+            }
         }
         query = create_query(data_bio, md, no_nonce, cert);
     }
@@ -341,11 +346,19 @@ fn query_command(
 /// The `default_config_file` the authority's `openssl.c:334` computes at startup.
 fn default_config_file() -> Option<String> {
     let p = CONF_get1_default_config_file();
-    if p.is_null() {
-        return None;
-    }
-    // SAFETY: `p` is NUL-terminated.
-    Some(unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned())
+    // `CONF_get1_default_config_file` hands this frame one owned NUL-terminated block;
+    // `OwnedBlock`'s `Drop` is the authority's `OPENSSL_free(configfile)` at its
+    // (NULL, 0) seam. The copy below is the only surviving form.
+    // SAFETY: `p` is NULL or a fresh block the helper allocated through the crate's
+    // seam, owned exclusively here and not released elsewhere.
+    let owned = unsafe { OwnedBlock::<c_char>::from_raw(p, core::ptr::null(), 0) }?;
+    // SAFETY: `owned.as_ptr()` is the NUL-terminated block the helper produced and
+    // the handle keeps it live for the duration of the copy.
+    Some(
+        unsafe { CStr::from_ptr(owned.as_ptr()) }
+            .to_string_lossy()
+            .into_owned(),
+    )
 }
 
 /// `int ts_main(int argc, char **argv)` — `apps/ts.c:179-374`.
@@ -519,11 +532,16 @@ pub fn main(argv: &[String]) -> i32 {
     let conf = match &configfile {
         Some(cf) => load_config_file(cf),
         None => {
-            // `app_load_config(NULL)` searches the default path; not landed.
+            // `app_load_config(NULL)` searches the default path; not landed. The
+            // authority's `end:` still releases `md` (`apps/ts.c:369-371`).
+            // SAFETY: `md` is NULL or this frame's fetched method, not freed again.
+            unsafe { EVP_MD_free(md) };
             return not_landed("ts default config");
         }
     };
     let Some(conf) = conf else {
+        // SAFETY: `md` is NULL or this frame's fetched method, not freed again.
+        unsafe { EVP_MD_free(md) };
         return 1;
     };
 
