@@ -1,5 +1,3 @@
-src/engine/eng_dyn.rs
-src/engine/eng_table.rs
 src/engine/tb_eckey.rs
 src/engine/tb_pkmeth.rs
 src/engine/tb_rand.rs

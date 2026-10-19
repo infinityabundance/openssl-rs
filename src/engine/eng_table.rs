@@ -92,7 +92,10 @@ const _: () = {
 // `funct` when set, and never releases the enclosing block, which `OwnedCtx`'s `Drop` releases
 // through `CRYPTO_free` at `:113`; (b) an all-zero `EnginePile` is a valid value (`sk`/`funct`
 // NULL, `nid`/`uptodate` zero), so the zeroed block `OwnedCtx::zalloc` would build is valid and
-// this body is sound on it.
+// this body is sound on it; (c) whenever `funct` is non-NULL the caller holds the engine lock --
+// the body calls `engine_unlocked_finish`, which requires it. The only non-NULL-`funct` owners
+// are built by `int_cleanup_cb_doall` under `engine_table_cleanup`'s lock; the register-failure
+// owners always have `funct == NULL`.
 unsafe impl CtxDestroy for EnginePile {
     /// `__FILE__` for the pile's `OPENSSL_malloc`/`OPENSSL_free` coordinates.
     const FILE: *const c_char = c"crypto/engine/eng_table.c".as_ptr();
@@ -152,14 +155,18 @@ unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
 unsafe extern "C" fn engine_pile_cmp(a: *const c_void, b: *const c_void) -> c_int {
     let a = a.cast::<EnginePile>();
     let b = b.cast::<EnginePile>();
-    // SAFETY: the lhash calls the comparison with two stored pile pointers.
-    unsafe { (*a).nid - (*b).nid }
+    // SAFETY: the lhash calls the comparison with two stored pile pointers. Wrapping
+    // subtraction is the authority's two's-complement result without a debug-build
+    // overflow panic across the `extern "C"` edge (the C subtraction is UB there).
+    unsafe { (*a).nid.wrapping_sub((*b).nid) }
 }
 
 /// `static int int_table_check(ENGINE_TABLE **t, int create)` — `:65-77`.
 ///
 /// # Safety
-/// `t` must point to a live `ENGINE_TABLE *` slot.
+/// `t` must point to a live `ENGINE_TABLE *` slot, and the engine lock must be held:
+/// this access is non-atomic (the crate's table statics are `AtomicPtr`s, but this
+/// unit receives a `*mut *mut` view), so every access must be serialised by that lock.
 unsafe fn int_table_check(t: *mut *mut OpenSslLhash, create: bool) -> bool {
     // SAFETY: `t` is a live slot per the contract.
     if !unsafe { *t }.is_null() {
@@ -181,8 +188,17 @@ unsafe fn int_table_check(t: *mut *mut OpenSslLhash, create: bool) -> bool {
 ///     ENGINE *e, const int *nids, int num_nids, int setdefault)` — `:83-149`.
 ///
 /// # Safety
-/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be NULL or a live
-/// `ENGINE`; `nids` must point to `num_nids` integers; `cleanup` is a caller callback.
+/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be a live, non-NULL
+/// `ENGINE` (the crate's register/set-default wrappers always pass one, and the
+/// `setdefault` arm would dereference it; the authority's wrappers check for NULL
+/// before calling); `nids` must point to `num_nids` integers; `cleanup` is a caller
+/// callback that must remain valid until engine cleanup.
+///
+/// The registered entry is a **borrow**: `e` must remain alive until it is
+/// unregistered, either because the global engine list holds the structural reference
+/// (`ENGINE_add`) or because the caller keeps one. The authority assumes the same;
+/// [`crate::engine::eng_list`]'s removal path retires the borrow before dropping the
+/// list's reference.
 pub(crate) unsafe fn engine_table_register(
     table: *mut *mut OpenSslLhash,
     cleanup: Option<EngineCleanupCb>,
@@ -447,20 +463,21 @@ pub(crate) unsafe fn ossl_engine_table_select(
     l: c_int,
 ) -> *mut Engine {
     let _ = (f, l);
-    // Load the config before checking whether engines are available.
+    // Load the config before taking the engine lock: configuration modules may register
+    // engines, and that path takes the same lock.
     OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
 
-    // SAFETY: `table` is a live slot.
-    if unsafe { *table }.is_null() {
-        return ptr::null_mut();
-    }
+    // The authority checks `*table == NULL` before locking. The slot is read here through
+    // a non-atomic `*mut` view, so that fast path would race a locked cleanup/register;
+    // it is deliberately not reproduced (AGENTS.md §17). A NULL table takes the same
+    // `select_end` refusal below, after acquiring the lock.
     // SAFETY: the lock is the engine lock, created by the run-once.
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
         return ptr::null_mut();
     }
     ERR_set_mark();
-    // Check again inside the lock, racing against cleanup.
-    // SAFETY: `table` is a live slot.
+    // Check the slot inside the lock, serialised against cleanup and registration.
+    // SAFETY: `table` is a live slot and the engine lock is held.
     if !unsafe { int_table_check(table, false) } {
         // SAFETY: the engine lock is held and `fnd` is NULL or a live pile.
         return unsafe { select_end(ptr::null_mut(), ptr::null_mut()) };
@@ -579,7 +596,10 @@ unsafe extern "C" fn int_dall(pile: *mut c_void, dall: *mut c_void) {
 /// `:308-316`.
 ///
 /// # Safety
-/// `table` must be NULL or a live `ENGINE_TABLE`; `cb` accepts each pile.
+/// `table` must be NULL or a live `ENGINE_TABLE`; `cb` accepts each pile. The caller
+/// must hold the engine lock (read or write) for the whole walk and must not mutate or
+/// free the table from `cb`: the walk dereferences every pile and hands its borrowed
+/// stack and engines to the callback (the crate's only caller holds the read lock).
 pub(crate) unsafe fn engine_table_doall(
     table: *mut OpenSslLhash,
     cb: Option<EngineTableDoallCb>,
@@ -729,6 +749,57 @@ mod tests {
             (*fnd).funct = ptr::null_mut();
             engine_table_cleanup(&mut table);
             assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    /// Concurrency control for the slot-access repair: `ossl_engine_table_select`
+    /// must share the engine lock with a register/cleanup loop instead of reading the
+    /// slot unlocked. Run under ThreadSanitizer; the pre-repair fast path (the
+    /// authority's `*table == NULL` check before locking) reports a race here.
+    ///
+    /// This test deliberately does not take `lock_global_state`: serialising it would
+    /// remove the interleaving it exists to exercise. It owns its slot and touches no
+    /// other engine state beyond the engine lock, so it does not disturb its siblings.
+    #[test]
+    fn concurrent_select_and_cleanup_serialise_on_the_engine_lock() {
+        // SAFETY: the once storage and init are `eng_lib.rs`'s.
+        assert!(unsafe { crate::engine::eng_lib::run_engine_lock_init() });
+        // The heap block is the shared slot; every access goes through a table helper,
+        // which the engine lock serialises.
+        let slot = Box::into_raw(Box::new(ptr::null_mut::<OpenSslLhash>()));
+        let slot_addr = slot as usize;
+        let nid: c_int = 0x4d9;
+
+        let select = std::thread::spawn(move || {
+            let slot = slot_addr as *mut *mut OpenSslLhash;
+            for _ in 0..2_000 {
+                // SAFETY: the slot is the test's shared allocation and the helper takes
+                // the engine lock before touching it.
+                unsafe {
+                    let _ = ossl_engine_table_select(slot, nid, c"eng_table-race".as_ptr(), 0);
+                }
+            }
+        });
+        let mutate = std::thread::spawn(move || {
+            let slot = slot_addr as *mut *mut OpenSslLhash;
+            for _ in 0..2_000 {
+                // SAFETY: the slot is the test's, and both helpers serialise on the
+                // engine lock.
+                unsafe {
+                    assert!(CRYPTO_THREAD_write_lock(global_engine_lock()) != 0);
+                    assert!(int_table_check(slot, true));
+                    CRYPTO_THREAD_unlock(global_engine_lock());
+                    engine_table_cleanup(slot);
+                }
+            }
+        });
+        assert!(select.join().is_ok(), "the select thread does not panic");
+        assert!(mutate.join().is_ok(), "the mutate thread does not panic");
+        // SAFETY: both threads have joined and cleanup nulled the slot; this is its
+        // single release.
+        unsafe {
+            assert!((*slot).is_null());
+            drop(Box::from_raw(slot));
         }
     }
 }
