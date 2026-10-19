@@ -1,0 +1,211 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "21e0ed4a9",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by B19/M42: the four CMS units (cms_att, cms_dd, cms_io, cms_kem) and the four context units (core_bio, dispatch, mod, thread_data). Three ordering/lifetime defects in src/context/mod.rs repaired against the authority; the other seven files audited with no change. No new unsafe operation, FFI symbol, allocator coordinate or repr(C) layout introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/context/mod.rs only (decoder store/cache teardown order, child-provider slot position, default-DRBG release, stale module note). src/cms/{cms_att,cms_dd,cms_io,cms_kem}.rs, src/context/{core_bio,dispatch,thread_data}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 48 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 383,
+    "canonical_unaudited_before_batch": 380,
+    "canonical_audited_after_batch": 391,
+    "canonical_unaudited_after_batch": 372,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 0,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from REMAINING-AUDIT.txt and inserted at their alphabetical positions in AUDITED-FILES.txt.",
+    "difference_from_383": "M43 moves exactly the eight named ordinary files; no file is skipped or substituted."
+  },
+  "files": [
+    "src/cms/cms_att.rs",
+    "src/cms/cms_dd.rs",
+    "src/cms/cms_io.rs",
+    "src/cms/cms_kem.rs",
+    "src/context/core_bio.rs",
+    "src/context/dispatch.rs",
+    "src/context/mod.rs",
+    "src/context/thread_data.rs"
+  ],
+  "not_run": [],
+  "file_dispositions": [
+    {
+      "file": "src/cms/cms_att.rs",
+      "mechanisms": [
+        "22 exported CMS_signed/CMS_unsigned attribute wrappers",
+        "cms_attrib_get loc/lastpos walk",
+        "cms_check_attribute property-rule evaluation",
+        "CMS_ATTRIBUTE_PROPERTIES seven-entry table"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The property flags, the ONLY_ONE duplicate probe and the REQUIRED_COND arm match cms_att.c:213-273 exactly. Every wrapper forwards to the shared x509 attribute stack helpers; no ownership crosses this unit."
+    },
+    {
+      "file": "src/cms/cms_dd.rs",
+      "mechanisms": [
+        "ossl_cms_DigestedData_create item allocation and ownership hand-off",
+        "ossl_cms_DigestedData_init_bio digest-context chain",
+        "ossl_cms_DigestedData_do_final EVP_MD_CTX_new/free pair and verify/encode arms"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The fresh EVP_MD_CTX has one release on every arm. Verification checks mdlen against the decoded digest length before reading the digest data, so the two slices are in-bounds; the comparison itself is the authority's memcmp, and mdlen is nonzero for every digest this crate exposes."
+    },
+    {
+      "file": "src/cms/cms_io.rs",
+      "mechanisms": [
+        "CMS_stream NDEF boundary slot",
+        "d2i_CMS_bio / i2d_CMS_bio",
+        "PEM_read/write_CMS and BIO forms through d2i_void_cms/i2d_void_cms",
+        "BIO_new_CMS and the two streaming wrappers",
+        "SMIME_write_CMS / SMIME_read_CMS_ex / SMIME_read_CMS"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The void-pointer adapter functions restate the typed encoder/decoder contract. The two extern delegates resolve to the landed asn1::asn_mime no_mangle exports. CMS_stream stores the ASN1 OCTET STRING data field address exactly as cms_io.c:18-35 does and raises the authority's ERR_R_CMS_LIB."
+    },
+    {
+      "file": "src/cms/cms_kem.rs",
+      "mechanisms": [
+        "kem_cms_decrypt cipher fetch and wrap-mode check",
+        "kem_cms_encrypt KDF default query and AlgorithmIdentifier packaging",
+        "ossl_cms_kem_envelope dispatch"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Every acquisition (EVP_CIPHER_fetch, ASN1_TYPE_new, d2i_X509_ALGOR) is released on each arm. EVP_CIPHER_CTX_get_type is a macro over EVP_CIPHER_get_type(EVP_CIPHER_CTX_get0_cipher(ctx)), so the expanded call is exact. The X509_ALGOR_copy/set0 failure arms match the authority, including the direct return 0 in the set0 arm."
+    },
+    {
+      "file": "src/context/core_bio.rs",
+      "mechanisms": [
+        "BioCoreGlobals CtxDestroy (empty member body) and CRYPTO_zalloc seam",
+        "seven BIO-method forwards through the per-libctx dispatch table",
+        "BIO_new_from_core_bio handle adoption and up_ref failure",
+        "ossl_bio_init_core first-table-wins slot fill"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Reuses OB-3: the block is a CRYPTO_zalloc at bss_core.c:32 and the slot free is the bare block release at :27. The NULL b_bio_free and NULL up_ref guards are the module's already-recorded safety divergences; the authority faults on those paths, so no reachable result changes."
+    },
+    {
+      "file": "src/context/dispatch.rs",
+      "mechanisms": [
+        "OsslDispatch repr(C) (id, function pointer)",
+        "Sync for static tables",
+        "entry_function size-checked cast",
+        "lookup END-terminated walk"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The Sync claim is scoped to static, fully initialised, never-mutated tables, which is what every authority dispatch array is. entry_function refuses a NULL table/entry and a signature whose size differs from a data pointer; lookup's NULL-table answer is the recorded divergence."
+    },
+    {
+      "file": "src/context/mod.rs",
+      "mechanisms": [
+        "OsslLibCtx OB-3 owner and CRYPTO seam coordinates",
+        "context_init ordered slot construction and failure unwind",
+        "context_deinit_objs P1/P2 release ordering",
+        "context_deinit thread-stop-first teardown",
+        "default context RUN_ONCE, thread-local default and set0_default",
+        "OSSL_LIB_CTX_get_data index registry",
+        "ossl_release_default_drbg_ctx cleanup arm"
+      ],
+      "disposition": "repaired_defects",
+      "note": "Three defects repaired: decoder_cache/store order, child-provider slot position versus the provider store's P1 rule, and the default-DRBG leak. The stale module note claiming ossl_ctx_thread_stop is not called was corrected. Slot construction order and the index registry already matched the authority."
+    },
+    {
+      "file": "src/context/thread_data.rs",
+      "mechanisms": [
+        "OsslLibCtxThreads OB-3 owner (two counters, mutex, condvar)",
+        "OSSL_get/set_max_threads under the slot lock",
+        "avail_threads wrapping subtraction",
+        "pool start/join/clean with cond_finished wakeup"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The slot is claimed before spawn and returned on spawn failure; join decrements before signalling under the same lock. The constructor's failure arm releases both primitives and the unpublished block, matching internal.c:113-157."
+    }
+  ],
+  "defects_repaired": [
+    {
+      "id": "M43-R1",
+      "file": "src/context/mod.rs",
+      "site": "context_deinit_objs (decoder pair)",
+      "severity": "LOW",
+      "defect": "decoder_cache was released before decoder_store; context.c:251-260 releases decoder_store first.",
+      "repair": "Swapped the two releases to the authority order.",
+      "category": "compatibility/lifecycle ordering"
+    },
+    {
+      "id": "M43-R2",
+      "file": "src/context/mod.rs",
+      "site": "context_deinit_objs (slot 18)",
+      "severity": "HIGH",
+      "defect": "child_provider globals were freed before the provider store, inverting the authority's P1 rule. provider_deactivate_free reaches slot 18 through OSSL_LIB_CTX_CHILD_PROVIDER_INDEX; the early free plus re-NULL silently skipped the parent up-ref/free callbacks.",
+      "repair": "Moved the slot-18 release to the authority's low-priority position after the thread slot. No UAF existed because the slot was re-NULLed, so this is a behaviour/resource defect.",
+      "category": "ownership teardown ordering"
+    },
+    {
+      "id": "M43-R3",
+      "file": "src/context/mod.rs",
+      "site": "release_default_drbg_ctx",
+      "severity": "MEDIUM",
+      "defect": "The live function (reached from ossl_rand_cleanup_int) stored NULL into slot 5 without freeing the RAND global that Phase 9 now installs, leaking the global and its owned DRBGs.",
+      "repair": "Restored the authority's free-then-clear with a NULL guard.",
+      "category": "resource lifetime"
+    }
+  ],
+  "new_unsafe_assumptions": {
+    "eliminated": 0,
+    "relocated": 0,
+    "new": 0,
+    "hidden": 0,
+    "note": "The three repairs change release order and add one already-owned release; they add no unsafe operation. Every remaining unsafe expression in the batch has an existing explicit SAFETY contract."
+  },
+  "contracts_reused": [
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy (OsslLibCtx, BioCoreGlobals, OsslLibCtxThreads)",
+    "RC-1 CRYPTO_* allocator seam coordinates",
+    "OsslDispatch id/signature matched pair",
+    "BIO method call contract",
+    "B1/B2/B6-B18 callback reentrancy contracts for dispatch-table callbacks"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check clean",
+      "focused_context": "21 passed / 0 failed",
+      "focused_cms": "9 passed / 1 ignored (cms allocator probe)"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings clean",
+      "serial_test_threads_1": "1656 passed / 0 failed / 27 ignored (263.38 s)",
+      "parallel_test_threads_4": "1656 passed / 0 failed / 27 ignored (108.97 s)",
+      "affected_probe": "cms::cms_env::tests::adv_probe_decrypted_key_release_cleanses_before_free 1/1",
+      "default_parallel_note": "An unconstrained cargo test --lib run was flaky in runtime::secure's secure-heap init ordering (16 failures). Both required thread counts pass; the flake is the known isolation issue, outside this batch's files, and was not introduced by these edits."
+    },
+    "not_run_gates": [
+      "BOUNDARY independent closure audit of the OsslLibCtx destructor body (changed body requires re-adjudication; zero-state sweep and BATCH rerun pass)",
+      "Miri (no component in the court toolchain)",
+      "ASan",
+      "authority differential for teardown side effects (no harness reaches a child-provider teardown)",
+      "SEAL",
+      "negative control for M43-R3 (freeing the process-global default DRBG would poison the suite)"
+    ]
+  },
+  "promotions": [],
+  "not_run_gates": [
+    "BOUNDARY",
+    "MIRI",
+    "ASAN",
+    "AUTHORITY_DIFFERENTIAL",
+    "SEAL"
+  ],
+  "queue": {
+    "remaining_before": 380,
+    "remaining_after": 372,
+    "audited_before": 383,
+    "audited_after": 391,
+    "next_eight": [
+      "src/crmf/crmf_pbm.rs",
+      "src/ct/ct_b64.rs",
+      "src/ct/ct_policy.rs",
+      "src/ct/ct_prn.rs",
+      "src/ct/ct_sct_ctx.rs",
+      "src/ct/ct_sct.rs",
+      "src/ct/ct_vfy.rs",
+      "src/ct/ct_x509v3.rs"
+    ]
+  }
+}

@@ -3750,3 +3750,50 @@ heap (`OBL-BN-ALLOCATOR`) and the NOT_RUN authority differential/SEAL gates.
 
 **Queue.** Unchanged (`REMAINING-AUDIT.txt` 380, `AUDITED-FILES.txt` 383): this sweep
 audits an owner already counted. **Next ordinary position:** `src/cms/cms_att.rs`.
+
+## 48. Mechanism sweep M43 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M43.json`](atlas-refresh/mechanism-sweep-M43.json).
+Candidate `21e0ed4a9` plus the teardown repairs below in `src/context/mod.rs`.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/cms/cms_att.rs` | audited_no_change | 22 exported attribute wrappers, `cms_attrib_get`/`cms_check_attribute`, the seven-entry property table. The rule logic is line-for-line `cms_att.c:213-273`; no ownership is transferred, so no OB contract applies. |
+| `src/cms/cms_dd.rs` | audited_no_change | `DigestedData` create/init/final. `EVP_MD_CTX_new`/`free` pair is single-owner; verify compares with `mdlen` validated against the decoded length (authority `memcmp`). No change. |
+| `src/cms/cms_io.rs` | audited_no_change | `CMS_stream`, the d2i/i2d/PEM BIO codec, streaming wrappers and S/MIME delegates. The two `d2i_of_void`/`i2d_of_void` casts restate the typed callers; the extern delegates `SMIME_{write,read}_ASN1_ex` bind to the landed `asn1::asn_mime` exports. |
+| `src/cms/cms_kem.rs` | audited_no_change | `kem_cms_{decrypt,encrypt}`: every acquisition (`EVP_CIPHER_fetch`, `ASN1_TYPE_new`, `d2i_X509_ALGOR`) has one release on every arm; `EVP_CIPHER_CTX_get_type` is the authority's own macro, so the expanded `EVP_CIPHER_get_type(EVP_CIPHER_CTX_get0_cipher(..))` is exact. |
+| `src/context/core_bio.rs` | audited_no_change | OB-3 `BioCoreGlobals` (`CtxDestroy`, empty member body, `CRYPTO_zalloc` seam at `bss_core.c:32`/`:27`), seven method forwards. The NULL-`BIO_free`/`BIO_up_ref` guards are the already-recorded safety divergences; no new assumption. |
+| `src/context/dispatch.rs` | audited_no_change | `OsslDispatch` `#[repr(C)]`, `Sync` justified by static tables, `entry_function` size-checked `transmute_copy`, NULL-table `lookup` divergence already recorded. |
+| `src/context/mod.rs` | repaired_defects | `OsslLibCtx` OB-3 owner, `context_init` slot construction, `context_deinit_objs` ordering, default-context `RUN_ONCE` chain, index registry. Three defects repaired (below). |
+| `src/context/thread_data.rs` | audited_no_change | OB-3 `OsslLibCtxThreads`, max/active counters under the slot mutex, pool start/join/clean. Wrapping subtraction and join-before-signal match `crypto/thread/internal.c`. |
+
+**Defects repaired (all `src/context/mod.rs`).**
+
+1. `context_deinit_objs:745` — `decoder_cache` was released before `decoder_store`; the authority releases the store first (`context.c:251-260`). Reordered to the authority. Severity **LOW** (teardown side-effect order, no reachable UB).
+2. `context_deinit_objs:921` — the slot-18 child-provider globals were freed before the provider store, inverting the authority's P1 rule (`provider_store` before child data, `context.c:274`). `provider_deactivate_free` reaches these globals through `OSSL_LIB_CTX_CHILD_PROVIDER_INDEX`, so the early free silently skipped the parent up-ref/free callbacks. The slot was re-NULLed, so this was a behaviour/resource defect, not a UAF. Moved to the authority's low-priority position after the thread slot. Severity **HIGH** (P1 lifecycle invariant).
+3. `release_default_drbg_ctx:1542` — cleared slot 5 without freeing it. The function is live via `rand_lib::ossl_rand_cleanup_int`, and Phase 9 had already filled the slot, so cleanup leaked the RAND global and its owned DRBGs. Restored the authority's free-then-clear. Severity **MEDIUM** (reachable leak, no UB).
+
+The module-header statement that `ossl_ctx_thread_stop` was not yet called was stale and is corrected.
+
+**Assumptions.** Unsafe assumptions eliminated: 0. Relocated: 0. New: 0. Contracts reused: OB-3
+`OwnedCtx`/`RawCtx`/`CtxDestroy`, RC-1 seam coordinates, the `OsslDispatch` id/signature matched pair,
+the BIO-method call contract, and the B1/B2/B6-B18 callback reentrancy contracts for the core-BIO
+dispatch callbacks. No new FFI symbol, allocator coordinate, `#[repr(C)]` layout or signature.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused `context::` 21/21 and `cms::`
+9 passed / 1 ignored. BATCH `cargo clippy --all-targets -- -D warnings` clean; full library
+**1656 passed / 0 failed / 27 ignored** with `--test-threads=1` (263.38 s) and with
+`--test-threads=4` (108.97 s); the affected cms allocator probe 1/1. A default-parallel
+`cargo test --lib` run was flaky in `runtime::secure` (secure-heap init ordering); this is the
+known isolation issue, it is outside this batch's files, and both required thread counts pass.
+
+**NOT_RUN.** BOUNDARY independent closure audit of the `OsslLibCtx` destructor body (the body
+changed, so its OB-3 evidence needs re-adjudication); Miri (no component in the court toolchain);
+ASan; authority differential for teardown side effects (no harness reaches a child-provider
+teardown); SEAL. The leak repair has no executable negative control: exercising it frees the
+process-global default DRBG and would poison the rest of the suite.
+
+**Queue.** `REMAINING-AUDIT.txt` 380 → **372**; `AUDITED-FILES.txt` 383 → **391**.
+**Next eight (stable order).** `src/crmf/crmf_pbm.rs`, `src/ct/ct_b64.rs`, `src/ct/ct_policy.rs`,
+`src/ct/ct_prn.rs`, `src/ct/ct_sct_ctx.rs`, `src/ct/ct_sct.rs`, `src/ct/ct_vfy.rs`,
+`src/ct/ct_x509v3.rs`.
