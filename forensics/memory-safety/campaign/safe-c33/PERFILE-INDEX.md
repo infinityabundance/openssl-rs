@@ -3964,3 +3964,66 @@ not a memory access); BOUNDARY (no shared mechanism changed: the repaired guard 
 **Next eight (stable order).** `src/digest/ripemd.rs`, `src/digest/sha1.rs`, `src/digest/sha3.rs`,
 `src/digest/sm3.rs`, `src/digest/wp.rs`, `src/dsa/asn1.rs`, `src/dsa/backend.rs`,
 `src/dsa/check.rs`.
+
+---
+
+## 52. Mechanism sweep M47 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M47.json`](atlas-refresh/mechanism-sweep-M47.json).
+Candidate `8e84cdfeb`; no source file changed. All eight files are transcriptions whose unsafe
+operations are the collection's established seam patterns, and the audit found no defect that
+justified an edit. FAST and BATCH were run on the unchanged candidate.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/digest/ripemd.rs` | audited_no_change | `crypto/ripemd/rmd_dgst.c`, `rmd_one.c`, `rmd_local.h`, `rmdconst.h`: the 96-byte `Ripemd160Ctx` (offsets asserted), the two independent 80-step lines over the shared `md32` collector, the five-assignment combine that reuses the first temporary, the `Md32` impl (little-endian `make_string`), the five exports and the one-shot's local-context cleanse. The block contract is the collector's `num * MD32_CBLOCK` readable. |
+| `src/digest/sha1.rs` | audited_no_change | `crypto/sha/sha1dgst.c`, `sha1_one.c`, `sha_local.h`: the 96-byte `ShaCtx`, the ring-buffer `Xupdate` interleaved with the round that consumes it, `Md32` (big-endian `make_string`), the five exports, `ossl_sha1` (direct primitives, local cleanse) and `SHA1` (default-provider `EVP_Q_digest`, shared static NULL arm). `ossl_sha1_ctrl` is the SSLv3 master-secret arm: refuses a wrong cmd/NULL ctx/`mslen != 48` before touching state, cleanses the intermediate digest, leaves the context re-initialised for the caller's `Final`. |
+| `src/digest/sha3.rs` | audited_no_change | `crypto/sha/sha3.c` and `keccak1600.c` (reference arm): `KeccakCtx` shape, the 25-lane permutation, `load_le64`/`store_le64`, `SHA3_absorb`/`SHA3_squeeze`, reset/init/update/final/squeeze. State-machine invariants are the authority's: update refuses `FINAL`/`SQUEEZE`, `bufsz < bsz` on every reachable path, `pad_and_absorb` writes `buf[num]` and `buf[bsz-1]` only under that invariant, and a repeated squeeze consumes buffered bytes before permuting. `sha3_blocksize` keeps the authority's `(1600 - bitlen*2)/8`; its callers pass the provider rows' fixed bit lengths or a legacy method's small `md_size*8`, so no hostile `bitlen` reaches the multiply. |
+| `src/digest/sm3.rs` | audited_no_change | `crypto/sm3/sm3.c` and `sm3_local.h` over `md32`: the 108-byte `Sm3Ctx`, the loop-form 68-word schedule with the authority's XOR feed-forward, `P0`/`P1`/`FF`/`GG`/`T_j`, `Md32` (big-endian `make_string`), init/update/final and the unexported transform. The collector establishes the staging-block bound; no export is introduced. |
+| `src/digest/wp.rs` | audited_no_change | `crypto/whrlpool/wp_block.c` (`OPENSSL_SMALL_FOOTPRINT` arm) and `wp_dgst.c`: the 168-byte `WhirlpoolCtx`, the `S`/`K` round loop, `WHIRLPOOL_Init/Update/BitUpdate/Final` and the one-shot. `Update` chunks at `1 << 60` before `BitUpdate` so `bits * 8` and `blocks * 64` stay inside `usize`; the 256-bit counter carry, the partial-byte staging bound and the `byteoff <= 64` padding arm are the authority's own invariants. `Final` returns 0 without copying for `md == NULL`, and cleanses the caller's context after a successful copy. |
+| `src/dsa/asn1.rs` | audited_no_change | `crypto/dsa/dsa_asn1.c`: `dsa_cb` (`NEW_PRE` -> `DSA_new`, `FREE_PRE` -> `DSA_free` + null), one shared `DSA_AUX` behind a justified `unsafe impl Sync`, the three template arrays with `offset_of!`-derived offsets, and `d2i_`/`i2d_`/`DSAparams_dup` through the crate's ASN.1 machinery. `priv_key` is `CBIGNUM_it`, so a decoded private value is wiped by the item's own free path. |
+| `src/dsa/backend.rs` | audited_no_change | `crypto/dsa/dsa_backend.c`: `ossl_dsa_key_fromdata` (neither-half success; private half only under `include_private`; `BN_clear_free` on the error path), `ossl_dsa_is_foreign`, `dsa_bn_dup_check`, `ossl_dsa_dup` (authority's `== 0` domain-parameter tests preserved, `DSA_free` on every failure) and `ossl_dsa_key_from_pkcs8` (negative-integer/sequence check, `BN_secure_new` + `BN_FLG_CONSTTIME`, `BN_mod_exp`, authority's `BN_free`/`DSA_free`/`BN_CTX_free`/`ASN1_STRING_clear_free` sequence). The apparent `BN_free` of the private value is secret-safe because `BN_secure_new` sets `BN_FLG_SECURE`, and this crate's `BN_free` cleanses that arm. |
+| `src/dsa/check.rs` | audited_no_change | `crypto/dsa/dsa_check.c`: `dsa_precheck_params` (NULL p/q, modulus bound, `q < p`), the quick/full parameter validators, public/partial/private key checks with the authority's `&& *ret == 0` ledger test, and `ossl_dsa_check_pairwise` (`BN_CTX_new_ex`, `BN_new`, public-key recomputation, `BN_free`/`BN_CTX_free` on the shared `err:` path). Allocation failure and mismatch both answer 0, as the authority does. No test calls it directly; its provider callers compile and the full suite covers them. |
+
+**Defects.** None confirmed. No source change was made, so no `#[repr(C)]`, allocator seam,
+exported symbol, `# Safety` text or unsafe lint attribute was touched, and the evidence for the
+shared mechanisms consumed by these files is not invalidated.
+
+**Secret-bearing buffers.** Digest state is `SECRET_DEPENDENT_CONTROL`, not public metadata.
+`RIPEMD160` and `ossl_sha1` cleanse their local contexts (authority behaviour); `md32::finalize`
+zeroes the staging block on every construction, and `WHIRLPOOL_Final` cleanses the whole caller
+context after copying the digest. `ossl_sha1_ctrl` cleanses its intermediate digest after the
+outer-hash update; `padtmp` holds only the public 0x36/0x5c pad bytes. SM3/SHA-3 do not cleanse
+caller-owned context state (authority behaviour; the provider's `freectx` owns release). For DSA,
+the decoded private key goes through `CBIGNUM_it`, `ossl_dsa_key_fromdata` error paths use
+`BN_clear_free` for the private half, and `ossl_dsa_key_from_pkcs8`'s private value is
+`BN_secure_new` (so the authority's plain `BN_free` still wipes it). `ossl_dsa_dup` releases a
+failed copy through `DSA_free`, which clears both halves.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts reused: RC-1 (raw
+context entry points require a live initialized context and a readable input range); OB-2 where
+the DSA error sites build authority strings; OB-3 `OwnedCtx` for the provider-side context
+lifetime; the `md32` collector's `block`/`make_string` contract for RIPEMD-160/SHA-1/SM3; the
+`CBIGNUM_it` cleansing free path; and B19's `BN_free`/`BN_clear_free`/`BN_FLG_SECURE` cleansing
+rules.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean. Focused tests: `digest::ripemd::tests`
+3 passed, `digest::sha1::tests` 5, `digest::sha3::tests` 3, `digest::sm3::tests` 2,
+`digest::wp::tests` 3, `dsa::asn1::tests` 2, `dsa::backend::tests` 3 (all 0 failed).
+BATCH `cargo clippy --all-targets -- -D warnings` clean; full library **1658 passed / 0 failed /
+27 ignored** with `--test-threads=1` (236.50 s) and with `--test-threads=4` (91.21 s). Affected
+adversarial probes in the suite: `dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free`
+and `dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup` passed as part of the
+full run; `dsa::check` has no direct unit test.
+
+**NOT_RUN.** Constant-time/dudect for the five digests and for the DSA private-key paths
+(`SECRET_DEPENDENT_CONTROL`; source inspection is not a timing result and no timing measurement
+was taken); Wycheproof/ACVP (the batch ran the crate's published vectors only); authority
+differential `RT-DIGEST`/`RT-DSA` (not built or replayed in this batch); Miri (no component in the
+court toolchain); ASan (no memory access was added or exercised by a probe); BOUNDARY (no shared
+mechanism changed; all eight files were audited without edit, so their existing evidence remains
+valid); SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 348 → **340**; `AUDITED-FILES.txt` 415 → **423**.
+**Next eight (stable order).** `src/dsa/ctrl.rs`, `src/dsa/depr.rs`, `src/dsa/gen.rs`,
+`src/dsa/key.rs`, `src/dsa/prn.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dso/dlfcn.rs`.
