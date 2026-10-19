@@ -4657,3 +4657,82 @@ or undefined in the authority.
 **Next eight (stable order).** `src/evp/e_sm4.rs`, `src/evp/evp_cnf.rs`,
 `src/evp/evp_lib.rs`, `src/evp/e_xcbc_d.rs`, `src/evp/keymgmt_lib.rs`,
 `src/evp/legacy_blake2.rs`, `src/evp/legacy_evp.rs`, `src/evp/legacy_md4.rs`.
+
+## 62. Per-file audit M55 — legacy EVP statics, CNF and ALGOR hand-offs (eight files)
+
+**Candidate.** `integrate/safe-c33` at `03ef9b1fd` plus this batch's worktree
+edits. Files: `src/evp/e_sm4.rs`, `src/evp/evp_cnf.rs`, `src/evp/evp_lib.rs`,
+`src/evp/e_xcbc_d.rs`, `src/evp/legacy_blake2.rs`, `src/evp/legacy_evp.rs`,
+`src/evp/legacy_md4.rs`, `src/evp/legacy_md5.rs`. `src/evp/keymgmt_lib.rs`
+was the fifth queued file but is a provider export/import dispatch boundary
+(operation cache, two-lock protocol, provider callbacks), so it was **not**
+audited here and remains queued; `src/evp/legacy_md5.rs` was substituted from
+the next stable slot. Authority: the pinned 3.6.4 `crypto/evp/` units
+(`e_sm4.c`, `evp_cnf.c`, `evp_lib.c`, `e_xcbc_d.c`, `legacy_blake2.c`,
+`names.c`, `legacy_md4.c`, `legacy_md5.c`, `legacy_md5_sha1.c`).
+
+**Disposition.** All eight audited files are clean transcriptions. Their
+statics match the authority field for field (NID, pkey NID, size, block size,
+flags, origin, ASN.1 views, `ctx_size`), their callback triples forward the
+context and data pointers unchanged, and their NULL/ownership contracts are
+stated at every raw boundary. No ownership, initialisation, aliasing or
+secret-lifetime defect was found in them.
+
+**Queued follow-up repaired (already-audited file, metadata only).**
+`src/evp/e_aes_cbc_hmac_sha1.rs` carried the same legacy-control patterns M54
+repaired in the SHA-256 sibling:
+- M55-D1 (medium, authority-UB reproduction): the `SET_MAC_KEY` arm at `:191`
+  forwarded a negative `arg` to the provider's `size_t` length, a
+  `SIZE_MAX`-byte read. It now refuses `arg < 0` with `-1` (§17).
+- M55-D2 (medium, authority-UB reproduction): the
+  `MULTIBLOCK_ENCRYPT` arm at `:255` dereferenced `ptr_` without the size test
+  its `_AAD` sibling makes. It now refuses
+  `arg < size_of::<EvpCtrlTls11MultiblockParam>()` with `-1`, matching the
+  provider arm's recorded divergence.
+- M55-D3 (low, signed overflow): the `MAX_BUFSIZE` answer at `:238` computed
+  `arg + 20 + 16` in `c_int` and would panic (debug) or wrap (release) for a
+  fragment size near `INT_MAX`. The SHA-1 digest constant (`20`) is correct;
+  the arithmetic is now the checked helper `tls11_multiblock_max_bufsize`,
+  which refuses overflow with `-1`. Two controls added:
+  `evp::e_aes_cbc_hmac_sha1::tests::the_tls11_max_bufsize_reserves_a_sha1_digest`
+  and `..._refuses_overflow` (both pass).
+
+**Secret-bearing storage and cleansing.** `e_sm4.rs`'s `EvpSm4Key` (SM4 round
+keys) and `e_xcbc_d.rs`'s `DesxCbcKey` (DES key schedule plus the two
+whitening blocks) are secret and live in the legacy `cipher_data` block. Both
+are cleansed by the shared `EVP_CIPHER_CTX_reset` path with
+`OPENSSL_cleanse(cipher_data, ctx_size)` before `CRYPTO_free` (and by the
+`CRYPTO_clear_free` arms on the init-failure paths); `cleanup` is `None`,
+matching the authority. The digest statics keep `ctx_size` zero, so they own
+no `md_data` block and no secret state in this crate; the provider fetch
+replaces them before any callback reads `md_data`. `evp_lib.rs`'s `aid`
+buffer holds the public `algorithm-id` DER and is owned by `OwnedBuf` at the
+authority's malloc/free coordinates. `evp_cnf.rs`'s formatted error string is
+public configuration text. No constant-time claim is made in this batch.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`cargo test --lib` per unit — `e_sm4` 1, `evp_cnf` 1, `evp_lib` 0,
+`e_xcbc_d` 1, `legacy_blake2` 2, `legacy_evp` 5, `legacy_md4` 2,
+`legacy_md5` 3, `e_aes_cbc_hmac_sha1` 2 — **17 passed / 0 failed**. BATCH:
+`cargo clippy --all-targets -- -D warnings` clean; full library
+**1664 passed / 0 failed / 27 ignored** serial (66.20 s) and with
+`--test-threads=4` (82.67 s; 1691 total), in the court with
+`CARGO_BUILD_JOBS=4`. No newly ignored test and no unexplained removal
+(previous batch: 1662 passed / 27 ignored; +2 are this batch's controls).
+
+**NOT_RUN.** Miri (no component in the pinned toolchain); ASan/valgrind and a
+runtime control for M55-D1/D2 (no in-tree fixture constructs a legacy
+CBC-HMAC-SHA1 context for these private control arms; the guards are compile-
+and review-verified); constant-time/dudect (no secret-dependent branch was
+introduced); `RT-CIPHER` differential for the MAX_BUFSIZE answer; FRF/probe
+suite; dependency-graph regeneration; SEAL.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. No new
+production unsafe operation, exported symbol, signature, `#[repr(C)]` layout
+or allocator coordinate changed. The changed helper is safe Rust.
+
+**Queue.** `REMAINING-AUDIT.txt` 281 -> **273**; `AUDITED-FILES.txt` 482 ->
+**490**. **Next eight (stable order).** `src/evp/keymgmt_lib.rs`,
+`src/evp/legacy_mdc2.rs`, `src/evp/legacy_ripemd.rs`,
+`src/evp/legacy_sha3.rs`, `src/evp/legacy_sha.rs`, `src/evp/legacy_wp.rs`,
+`src/evp/method_store.rs`, `src/evp/p5_crpt.rs`.
