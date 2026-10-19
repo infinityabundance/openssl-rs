@@ -5618,3 +5618,105 @@ again), `src/provider/cipher_gcm.rs`, `src/provider/cipher_tdes_wrap.rs`,
 `src/provider/ctx.rs`, `src/provider/decode_der2key.rs`,
 `src/provider/decode_epki2pki.rs`, `src/provider/decode_pem2der.rs`,
 `src/provider/decode_spki2typespki.rs`.
+
+## M65 — per-file contract sweep (provider decoder front doors, shared provider context, GCM and DES3-WRAP, DSA DER writer)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M65.json`](atlas-refresh/mechanism-sweep-M65.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`46badefba` (dirty worktree: the repairs below; no commit was made by the audit
+subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results. Authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/` and
+`forensics/authorities/build/openssl-3.6.4-production/` for every unit compared.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/cipher_gcm.rs` | `ossl_gcm_initctx`, the shared engine (`getivgen`, `setivinv`, `gcm_tls_init`, `gcm_tls_iv_set_fixed`, `gcm_tls_cipher`, `gcm_cipher_internal`, `gcm_iv_generate`), get/set ctx params, one-shot and the GCM/TLS AAD path, the `GcmDestroy`/`OwnedCtx`/`OwnedRaw` ownership model, AES/ARIA/SM4 `newctx`/`dupctx`/`freectx` and `initkey`, layout assertions | 3 defects (M65-D1..D3) repaired |
+| `src/provider/cipher_tdes_wrap.rs` | `des_ede3_wrap`/`des_ede3_unwrap` (including the in-place shift), `tdes_wrap_cipher_internal`, both dispatch entries, `required_write_extent`, `tdes_wrap_newctx`, the DES3-WRAP table | 2 defects (M65-D4, M65-D5) repaired |
+| `src/provider/ctx.rs` | OB-3 `ProvCtx`/`CtxDestroy`, `zalloc` constructor, setters/getters (NULL-live), `PROV_LIBCTX_OF`, both core-parameter accessors, zero-state sweep | no defect |
+| `src/provider/decode_der2key.rs` | `BARE_ALGOR`/`BARE_PUBKEY` templates and destructor, the `KeytypeDesc` function table, selection rule, `der2key_newctx`/`freectx`, `der2key_decode` mark/fatal/label flow, `export_object`, the ML-KEM/ML-DSA/SLH-DSA d2i forwarders, both 77-row tables | 1 cleansing repair (M65-D8) |
+| `src/provider/decode_epki2pki.rs` | OB-3 context and destructor, generated parser, `ossl_epki2pki_der_decode` (`d2i_X509_SIG`/PBE/`PKCS8_pkey_get0`/callback), decode bridge and BUF_MEM split, dispatch table | 1 secret-cleansing repair (M65-D6) |
+| `src/provider/decode_pem2der.rs` | 18-row PEM map and its `Sync` argument, OB-3 context, `read_pem`, `PEM_do_header` pass shim, both engine dispatches and the generic params build, `'end` release order | 1 secret-cleansing repair (M65-D7) |
+| `src/provider/decode_spki2typespki.rs` | OB-3 context, generated parser, `ossl_spki2typespki_der_decode` (SPKI read, SM2 special case, callback params), decode bridge, dispatch table | no defect (SPKI is `PUBLIC_DATA`; plain release retained) |
+| `src/provider/der_dsa_sig.rs` | the nine OID literals and `ossl_DER_w_algorithmIdentifier_DSA_with_MD` over `WPACKET` | no defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary.
+It stays at the head of `REMAINING-AUDIT.txt`. `src/provider/der_dsa_sig.rs`
+was substituted from position 9 of the stable queue.
+
+**Defects.**
+
+| ID | File:line (post-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M65-D1 | `src/provider/cipher_gcm.rs:844` | high | `getivgen` incremented at `iv + ivlen - 8`; the whole-IV restore arm can set `iv_gen` with `ivlen < 8`, so the wrapping subtraction wrote outside `iv` (authority UB, reachable from `tlsivgen`) | refuse with 0 when `ivlen < 8`; legitimate 12-byte IVs are unaffected |
+| M65-D2 | `src/provider/cipher_gcm.rs:881` | high | `setivinv` copied `inl` bytes at `iv + ivlen - inl` with an application-supplied `data_size`; `inl > ivlen` wraps (authority UB, reachable from `tlsivinv`) | refuse with 0 when `inl > ivlen` |
+| M65-D3 | `src/provider/cipher_gcm.rs:1352` | high | `gcm_tls_iv_set_fixed`'s `(ivlen - len) < 8` guard wraps for `len > ivlen`, after which `memcpy`/`RAND_bytes_ex` run with an underflowed length (authority UB, reachable from `tlsivfixed`) | add `len > ivlen` to the refusal guard |
+| M65-D4 | `src/provider/cipher_tdes_wrap.rs:246` | medium | the in-place shift used `ptr::copy(out, out.add(8), …)`, i.e. source first; the authority's `memmove(out, out + 8, …)` shifts left. Every in-place unwrap decrypted the wrong blocks and read the wrong final IV | swap to `ptr::copy(out.add(8), out, …)`; new read-sequence test fails pre-repair and passes post-repair |
+| M65-D5 | `src/provider/cipher_tdes_wrap.rs:253` | medium | the authority's `in -= 8` was transcribed literally; `in - 8` is outside the caller's block (Rust UB) even though it is immediately added back | compute the central and final offsets directly from the original pointer |
+| M65-D6 | `src/provider/decode_epki2pki.rs:311,393,463` | low | passphrase `pbuf`, decrypted `new_der` and the input DER were left/released without cleansing (authority plain releases) | cleanse `pbuf` on both arms, cleanse `new_der` over its plaintext length, cleanse the decode block over `der_len`; release sites and seam unchanged |
+| M65-D7 | `src/provider/decode_pem2der.rs:706` | low | `PEM_do_header` decrypts private-key material into `der`; the authority releases it plainly | cleanse `der` over `der_len` before the existing release |
+| M65-D8 | `src/provider/decode_der2key.rs:536` | low | the read block carries private-key DER; both authority tails release it plainly | `cleanse_der(der, der_len)` before the single `OwnedBuf` release on both tails |
+
+**Unsafe accounting.** Eliminated: 0 expressions (no `unsafe fn` removed or
+added). Relocated: 0. New assumptions: 0 — the length guards only refuse
+inputs that reached out-of-bounds writes, and `cleanse_der`'s contract names
+provenance, ownership and the length bound. Hidden obligations: 0 after the
+repairs. No exported symbol, signature, `#[repr(C)]` layout, excluded symbol or
+allocator-seam coordinate changed. The three GCM refusals are deliberate
+divergences from authority UB, in the §17 direction.
+
+**Secret-bearing storage.** GCM/TDES IVs, tags, AAD, the fixed wrap IV,
+`sha1tmp`, algorithm names/OIDs and SubjectPublicKeyInfo DER are `PUBLIC_DATA`;
+passphrases, decrypted `PrivateKeyInfo` bytes and private-key DER are
+`SECRET_DATA`. Cleansed paths: GCM contexts and every key schedule via
+`CRYPTO_clear_free`; TDES `icv`/`iv`/`ctx->iv`/`sha1tmp` on every unwrap exit,
+`out` on an ICV mismatch, and the TDES context via `tdes_freectx`; epki
+`pbuf`/`new_der`/input DER; pem2der `der`; der2key `der`. Retained authority
+behaviour: decoded key objects and the `PKCS8_PRIV_KEY_INFO` item are released
+by their item destructors without cleansing. No constant-time claim is made.
+
+**Contracts reused.** OB-1 `OwnedBuf`/`OwnedBlock` adoption and the `CRYPTO_*`
+seam at the authority's exact `FILE`/`LINE`; OB-3 `OwnedCtx`/`CtxDestroy` and
+the all-zero sweep; OB-4 member-buffer slots and caller-sized UTF-8 writes; the
+provider decoder dispatch contracts from B1/B2/B6–B20; the GCM `OwnedCtx` /
+`OwnedRaw` cleansing-vs-plain distinction; C ABI contracts for NULL-or-live
+optional pointers, key-terminated `OSSL_PARAM` arrays, writable out-parameters
+and caller-owned results. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`provider::cipher_gcm` **2 / 0**, `provider::cipher_tdes_wrap` **2 / 0**,
+`provider::decode_der2key` **5 / 0**, `provider::decode_epki2pki` **2 / 0**,
+`provider::decode_pem2der` **3 / 0**, `provider::decode_spki2typespki`
+**2 / 0**, `provider::ctx` **3 / 0**; `provider::der_dsa_sig` contains no unit
+tests. BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1672 passed / 0 failed / 27 ignored** (1699 total) with
+`--test-threads=1` in 248.20 s and with `--test-threads=4` in 94.07 s, in the
+court with `CARGO_BUILD_JOBS=4`. No unexplained removal and no newly ignored
+test.
+
+**NOT_RUN.** Miri/ASan/valgrind over the GCM length guards and the in-place
+TDES unwrap; a differential compatibility court for in-place DES3-WRAP against
+the pinned authority binary; Loom; affected adversarial probes (none exists for
+these units); dudect/ctgrind (no constant-time claim); FRF suite;
+dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) Decoded key objects released by the row free functions and the
+`PKCS8_PRIV_KEY_INFO` item destructor are not cleansed; that is the authority's
+item contract and is preserved. (3) Keys are expanded into the context
+schedule; the caller's key buffer is not owned or released here. (4) The GCM
+refusals change behaviour only for inputs the authority turns into memory
+corruption; a court probing overlength TLS-IV parameters observes the refusal.
+(5) `decode_spki2typespki` keeps a plain release because SPKI is public.
+
+**Queue.** `REMAINING-AUDIT.txt` 201 -> **193**; `AUDITED-FILES.txt` 562 ->
+**570**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/provider/der_ec_sig.rs`, `src/provider/der_ecx_key.rs`,
+`src/provider/der_ml_dsa_key.rs`, `src/provider/der_rsa_key.rs`,
+`src/provider/der_rsa_sig.rs`, `src/provider/der_slh_dsa_key.rs`,
+`src/provider/der_sm2_sig.rs`; `src/provider/digest_to_nid.rs` is the
+substitute ordinary entry.

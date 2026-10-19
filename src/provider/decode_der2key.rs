@@ -118,7 +118,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc, OPENSSL_cleanse};
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_SLH_DSA_SHA2_128f, NID_SLH_DSA_SHA2_128s, NID_SLH_DSA_SHA2_192f,
@@ -521,6 +521,22 @@ unsafe fn raise_msg(site: &err_sites::ErrSite, msg: String) {
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
 
+/// Cleanse the decoder's read block before its plain release.
+///
+/// The block is `SECRET_DATA` whenever the input was a private key; the authority frees it with a
+/// plain `OPENSSL_free` (`decode_der2key.c:395`) and this deliberate improvement wipes the bytes
+/// first. The allocator-seam coordinates and the release site are unchanged.
+///
+/// # Safety
+/// `der` is NULL or the live block `ossl_read_der` allocated, owned by the calling frame, and
+/// `der_len` is a length it reported for that block.
+unsafe fn cleanse_der(der: *mut c_uchar, der_len: c_long) {
+    if !der.is_null() && der_len > 0 {
+        // SAFETY: the caller's contract; the cleanse length never exceeds the block.
+        unsafe { OPENSSL_cleanse(der.cast(), der_len as usize) };
+    }
+}
+
 /// `static int der2key_decode(void *vctx, OSSL_CORE_BIO *cin, int selection, OSSL_CALLBACK
 /// *data_cb, void *data_cbarg, OSSL_PASSPHRASE_CALLBACK *pw_cb, void *pw_cbarg)` — `:246-382`.
 ///
@@ -650,6 +666,11 @@ unsafe extern "C" fn der2key_decode(
             // SAFETY: `key` is NULL or live and the row's own free owns it.
             unsafe { fr(key) };
         }
+        // The read can carry a private key (`SECRET_DATA`). The authority releases it with the
+        // plain `OPENSSL_free(der)` at `decode_der2key.c:395`; cleanse before the owner's release.
+        // This is a deliberate secret-residue improvement and does not move the seam.
+        // SAFETY: `der_raw` is NULL or this frame's read block and `der_len` its reported length.
+        unsafe { cleanse_der(der_raw, der_len) };
         // `der`'s `Drop` is the authority's own `CRYPTO_free`, after the key release.
         return ok;
     }
@@ -658,6 +679,8 @@ unsafe extern "C" fn der2key_decode(
     ok = 1;
 
     // The authority's `next:` releases the read block here, before the object callback.
+    // SAFETY: `der_raw` is NULL or this frame's read block and `der_len` its reported length.
+    unsafe { cleanse_der(der_raw, der_len) };
     drop(der);
 
     if !key.is_null() {

@@ -1,0 +1,205 @@
+{
+  "receipt": "mechanism-sweep-M65",
+  "branch": "integrate/safe-c33",
+  "source_head": "46badefba",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; STOP raised and repaired for three GCM TLS-IV length arms that reproduced an authority out-of-bounds write through wrapping size_t arithmetic, and for the in-place DES3-WRAP unwrap whose shift used the reversed ptr::copy argument order and formed an out-of-block pointer. No unrepaired memory-safety defect, ABI regression, hidden obligation or remaining unsafe-safe-Rust API.",
+  "scope": "Per-file contract audit of the shared provider decoder front doors (PEM-to-DER, EncryptedPrivateKeyInfo-to-PrivateKeyInfo, SubjectPublicKeyInfo-to-type-specific and DER-to-key), the shared provider context, the AES/ARIA/SM4 GCM engine and its three hardware rows, the DES3-WRAP cipher engine, and the DSA WITH MD DER writer. evp/method_store.rs was deferred again as the method-store registry boundary; provider/der_dsa_sig.rs was substituted from position 9 of the queue. Data classes: GCM/TDES IVs, tags, AAD, OIDs, algorithm names, dispatch tables and SubjectPublicKeyInfo DER are PUBLIC_DATA; passphrases, decrypted PrivateKeyInfo bytes and private-key DER are SECRET_DATA. No constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/provider/cipher_gcm.rs",
+    "src/provider/cipher_tdes_wrap.rs",
+    "src/provider/ctx.rs",
+    "src/provider/decode_der2key.rs",
+    "src/provider/decode_epki2pki.rs",
+    "src/provider/decode_pem2der.rs",
+    "src/provider/decode_spki2typespki.rs",
+    "src/provider/der_dsa_sig.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains at the head of REMAINING-AUDIT.txt."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M65-D1",
+      "file": "src/provider/cipher_gcm.rs",
+      "line_pre_fix": 852,
+      "line_post_fix": 844,
+      "severity": "high",
+      "class": "authority undefined behaviour reproduced (wrapping size_t subtraction -> out-of-bounds store)",
+      "description": "getivgen increments the invocation field at ctx->iv + ctx->ivlen - 8. The whole-IV restore arm of gcm_tls_iv_set_fixed sets iv_gen without requiring ivlen >= 8, so an application can reach getivgen with ivlen 1..7. The C authority computes an in-struct pointer and corrupts the preceding members; the Rust transcription's wrapping_sub formed a wildly out-of-bounds pointer and ctr64_inc wrote through it. Reachable from the public OSSL_CIPHER_PARAM_AEAD_TLS1_GET_IV_GEN parameter path.",
+      "fix": "Refuse with 0 when ivlen < 8, before hw->setiv and the increment. Legitimate TLS GCM IVs are 12 bytes, so no valid call changes. The # Safety contract still states the callee obligations; the guard is the caller-side elimination of the authority's mechanism (§17).",
+      "witness": "ciphercommon_gcm.c:116-132; ciphercommon_gcm.c:790-813 (restore arm sets iv_gen with no length check); new test provider::cipher_gcm::tests::the_tls_iv_length_arms_refuse_wrapped_lengths."
+    },
+    {
+      "id": "M65-D2",
+      "file": "src/provider/cipher_gcm.rs",
+      "line_pre_fix": 871,
+      "line_post_fix": 881,
+      "severity": "high",
+      "class": "authority undefined behaviour reproduced (unvalidated data_size -> underflowed memcpy offset)",
+      "description": "setivinv copies inl bytes to ctx->iv + ctx->ivlen - inl. Its documented precondition inl <= ivlen was not established by ossl_gcm_set_ctx_params, which forwards the application-supplied OSSL_PARAM data_size unchanged. In the authority an inl above ivlen wraps the subtraction and writes outside ctx->iv; in Rust the same wrapping_sub produced an out-of-bounds write. Reachable from OSSL_CIPHER_PARAM_AEAD_TLS1_SET_IV_INV.",
+      "fix": "Refuse with 0 when inl > ctx->ivlen, before the copy. The valid explicit-IV call uses 8 bytes against a 12-byte IV, so behaviour is unchanged on every legitimate path.",
+      "witness": "ciphercommon_gcm.c:134-146; ciphercommon_gcm.c:606-612 (caller passes p.inviv->data_size); new test provider::cipher_gcm::tests::the_tls_iv_length_arms_refuse_wrapped_lengths."
+    },
+    {
+      "id": "M65-D3",
+      "file": "src/provider/cipher_gcm.rs",
+      "line_pre_fix": 1333,
+      "line_post_fix": 1352,
+      "severity": "high",
+      "class": "authority undefined behaviour reproduced (wrapped guard admits memcpy/RAND_bytes_ex with an underflowed length)",
+      "description": "gcm_tls_iv_set_fixed guards with (ivlen - len) < 8 in size_t. For len > ivlen the subtraction wraps, the guard passes, and the authority copies len bytes and draws ivlen - len into ctx->iv + len. With GCM_IV_MAX_SIZE 128 a len above ivlen is still inside the iv array for the copy but the RAND length wraps. The Rust transcription reproduced the wrap with wrapping_sub and would pass a near-SIZE_MAX length to RAND_bytes_ex. Reachable from OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED.",
+      "fix": "Added len > ctx->ivlen to the guard, so the subtraction below is only evaluated when no wrap is possible. A valid fixed-IV call has len <= ivlen - 8.",
+      "witness": "ciphercommon_gcm.c:790-813 (size_t subtraction at :803); new test provider::cipher_gcm::tests::the_tls_iv_length_arms_refuse_wrapped_lengths."
+    },
+    {
+      "id": "M65-D4",
+      "file": "src/provider/cipher_tdes_wrap.rs",
+      "line_pre_fix": 243,
+      "line_post_fix": 246,
+      "severity": "medium",
+      "class": "conversion defect (source/destination reversed) -> wrong plaintext on every in-place unwrap",
+      "description": "The in-place shift was written ptr::copy(out, out.add(8), inl - 8), but Rust's ptr::copy takes the source first. The authority's memmove(out, out + 8, inl - 8) (cipher_tdes_wrap.c:57) shifts the central blocks left; the transcription shifted them right, so the central decrypt read the first eight bytes twice and the final IV read the wrong block. Any EVP_DecryptUpdate performed in place (the normal record path) produced a wrong result or a spurious ICV failure against OpenSSL.",
+      "fix": "ptr::copy(out.add(8), out, inl - 8), the authority's direction. The new read-sequence test records every block the hardware callback is handed and requires the in-place and out-of-place forms to read the same byte sequence; it fails on the pre-repair direction and passes on the repair.",
+      "witness": "cipher_tdes_wrap.c:53-61; new test provider::cipher_tdes_wrap::tests::the_in_place_unwrap_reads_the_same_bytes_as_the_out_of_place_form."
+    },
+    {
+      "id": "M65-D5",
+      "file": "src/provider/cipher_tdes_wrap.rs",
+      "line_pre_fix": 244,
+      "line_post_fix": 253,
+      "severity": "medium",
+      "class": "out-of-block pointer arithmetic (Rust UB) used to express the shifted read offsets",
+      "description": "The transcription reproduced the authority's in -= 8, which forms a pointer eight bytes before the caller's block. The authority never dereferences it (the +8 and +inl-8 below add it back), but Rust pointer arithmetic requires every intermediate offset to stay in bounds of the allocation.",
+      "fix": "The two reads it denotes are now computed directly: an in-place central read starts at the original in, and the shifted final block is at in + inl - 16. The in-place read-sequence test witnesses the equivalence.",
+      "witness": "cipher_tdes_wrap.c:56-61; test provider::cipher_tdes_wrap::tests::the_in_place_unwrap_reads_the_same_bytes_as_the_out_of_place_form."
+    },
+    {
+      "id": "M65-D6",
+      "file": "src/provider/decode_epki2pki.rs",
+      "line_pre_fix": 244,
+      "line_post_fix": 311,
+      "severity": "low",
+      "class": "secret residue on a stack buffer and on plain heap releases (deliberate improvement over the authority)",
+      "description": "The OSSL_PASSPHRASE_CALLBACK copy in pbuf[1024] is SECRET_DATA and was left on the stack; the decrypted PKCS8_PRIV_KEY_INFO bytes in new_der and the input DER block (which can itself be a plaintext PrivateKeyInfo) were released with plain CRYPTO_free. The authority does the same at decode_epki2pki.c:172-205, :232 and :152.",
+      "fix": "OPENSSL_cleanse(pbuf, 1024) on both the refusal and success arms; cleanse new_der over its plaintext length before its OwnedBlock release; cleanse the decode block over der_len before its release. Release sites and allocator-seam coordinates are unchanged, and no observable behaviour changes.",
+      "witness": "decode_epki2pki.c:159-234; tests provider::decode_epki2pki (dispatch shape and zero-state sweep) remain green."
+    },
+    {
+      "id": "M65-D7",
+      "file": "src/provider/decode_pem2der.rs",
+      "line_pre_fix": 700,
+      "line_post_fix": 706,
+      "severity": "low",
+      "class": "secret residue on a plain heap release (deliberate improvement over the authority)",
+      "description": "PEM_do_header decrypts a private key in place in the der block, and a bare PRIVATE KEY/EC PRIVATE KEY PEM is already plaintext key DER. The authority releases the block with a plain OPENSSL_free (decode_pem2der.c:321).",
+      "fix": "After the label block, cleanse der over der_len before the existing OwnedBlock release. The success and the decryption-failure paths are both covered (on failure der_len is the still-allocated ciphertext length).",
+      "witness": "decode_pem2der.c:283-325; tests provider::decode_pem2der (dispatch shape and zero-state sweep) remain green."
+    },
+    {
+      "id": "M65-D8",
+      "file": "src/provider/decode_der2key.rs",
+      "line_pre_fix": 646,
+      "line_post_fix": 536,
+      "severity": "low",
+      "class": "secret residue on a plain heap release (deliberate improvement over the authority)",
+      "description": "The block ossl_read_der returns carries the input DER, which is private-key material on every private-key row. The authority releases it with a plain OPENSSL_free on both the fatal and the next: tails (decode_der2key.c:395, :419).",
+      "fix": "A new unsafe helper cleanse_der(der, der_len) wipes the block before the single OwnedBuf release on both tails. The helper's contract states provenance, ownership and that der_len never exceeds the allocation; it is called only from the owning frame.",
+      "witness": "decode_der2key.c:246-419; tests provider::decode_der2key (tables, selection rule and zero-state sweep) remain green."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [
+    "src/provider/cipher_tdes_wrap.rs: the out-of-block in_.sub(8) computation was removed; no unsafe expression was added or removed, and no unsafe fn signature changed."
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf/OwnedBlock plain and cleansed adoption-release, and the CRYPTO_* allocator seam at the authority's exact FILE/LINE",
+    "OB-3 OwnedCtx/CtxDestroy for ProvCtx, Epki2pkiCtx, Pem2DerCtx, Spki2TypespkiCtx and BarePubkey, including the all-zero-state sweep and the empty-destructor obligation",
+    "OB-4 member-buffer slots (propq, data_structure) and their caller-sized OSSL_PARAM_get_utf8_string contract",
+    "provider decoder dispatch contracts (newctx/freectx/decode/set-table/set_ctx_params and export_object) established in B1/B2/B6-B20",
+    "GCM GcmDestroy cleansing block release (CRYPTO_clear_free) for the key schedule and the three context kinds; OwnedRaw plain repair window for dupctx",
+    "TDES OwnedCtx/tdes_freectx cleansing block release for the key schedule",
+    "C ABI contracts for NULL-or-live optional pointers, key-terminated OSSL_PARAM arrays, writable out-parameters, caller-owned results and callback pointer validity",
+    "B19 secret-cleansing discipline applied to the GCM/TDES failure tails and the decoder DER blocks"
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 248.20 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 94.07 s; --test-threads=4)",
+    "focused_tests": "PASS (cipher_gcm 2 passed / 0 failed; cipher_tdes_wrap 2 passed / 0 failed; decode_der2key 5 / 0; decode_epki2pki 2 / 0; decode_pem2der 3 / 0; decode_spki2typespki 2 / 0; provider::ctx 3 / 0; der_dsa_sig has no unit tests)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no GCM, DES3-WRAP or provider-decoder probe; the two new unit tests are the negative controls for M65-D1..D5)"
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/provider/der_ec_sig.rs",
+      "src/provider/der_ecx_key.rs",
+      "src/provider/der_ml_dsa_key.rs",
+      "src/provider/der_rsa_key.rs",
+      "src/provider/der_rsa_sig.rs",
+      "src/provider/der_slh_dsa_key.rs",
+      "src/provider/der_sm2_sig.rs",
+      "src/provider/digest_to_nid.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / Tree Borrows / ASan over the GCM TLS-IV helpers and the in-place TDES unwrap",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "differential compatibility court for in-place DES3-WRAP unwrap against the pinned authority binary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY (the new read-sequence unit test is a structural witness, not an authority differential)"
+    },
+    {
+      "gate": "affected adversarial probes (none exists for these units)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement (no secret-dependent branching in the changed code; no claim made)",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry boundary.",
+    "The decoded key objects released by the row free functions (DH_free, DSA_free, EC_KEY_free, RSA_free, the ML/SLH key frees) and by the PKCS8 item destructor are not cleansed; that is the authority's item-destructor contract and is preserved, not reclassified as safe.",
+    "GCM/TDES keys are expanded into the context's own schedule; the original key buffer is caller-owned and is not copied or released by these units. The context block is released with CRYPTO_clear_free, which wipes the schedule.",
+    "The GCM guards refuse inputs the authority turns into memory corruption; this is a deliberate safety divergence (§17), not a compatibility claim. A court that probes overlength tlsivfixed/tlsivinv data will see the refusal rather than the authority's corruption.",
+    "decode_spki2typespki's DER is SubjectPublicKeyInfo (PUBLIC_DATA) and keeps the authority's plain release; the epki/der2key/pem2der DER blocks are cleansed because they can carry private-key material.",
+    "No constant-time claim is made for any GCM, TDES or decoder unit from source inspection."
+  ],
+  "not_discharged": true,
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "Miri/ASan/valgrind over the GCM length guards and the in-place TDES unwrap, the authority differential for in-place wrap, the FRF suite and dependency-graph regeneration are BOUNDARY/SEAL work. The new unit tests are negative controls for the arithmetic and read-offset repairs, not authorisations of SAFETY_DISCHARGED."
+  }
+}

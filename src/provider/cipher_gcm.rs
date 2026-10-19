@@ -836,6 +836,14 @@ unsafe fn getivgen(ctx: *mut ProvGcmCtx, out: *mut c_uchar, mut olen: usize) -> 
         if (*ctx).bits.iv_gen() == 0 || (*ctx).bits.key_set() == 0 {
             return 0;
         }
+        // The invocation field is at least eight bytes in size (`ciphercommon_gcm.c:122-127`); the
+        // increment below subtracts eight from `ivlen`. The whole-IV restore arm of
+        // `gcm_tls_iv_set_fixed` sets `iv_gen` without checking that length, so an `ivlen` below
+        // eight would wrap the offset and write outside `iv`. Refuse rather than reproduce the
+        // authority's out-of-bounds store (§17).
+        if (*ctx).ivlen < 8 {
+            return 0;
+        }
         let hw = (*ctx).hw;
         if ((*hw).setiv)(ctx, (*ctx).iv.as_ptr(), (*ctx).ivlen) == 0 {
             return 0;
@@ -864,6 +872,13 @@ unsafe fn setivinv(ctx: *mut ProvGcmCtx, in_: *mut c_uchar, inl: usize) -> c_int
     // SAFETY: the caller's contract.
     unsafe {
         if (*ctx).bits.iv_gen() == 0 || (*ctx).bits.key_set() == 0 || (*ctx).bits.enc() != 0 {
+            return 0;
+        }
+        // `ciphercommon_gcm.c:134-146` writes at `iv + ivlen - inl` with no upper bound on `inl`.
+        // A `data_size` larger than `ivlen` reaches here from the public parameter interface and
+        // would make the subtraction wrap, so the copy would write outside `iv`. Refuse instead of
+        // reproducing the authority's out-of-bounds store (§17).
+        if inl > (*ctx).ivlen {
             return 0;
         }
         ptr::copy_nonoverlapping(
@@ -1328,8 +1343,13 @@ unsafe fn gcm_tls_iv_set_fixed(ctx: *mut ProvGcmCtx, iv: *const c_uchar, len: us
         }
         /* Fixed field must be at least 4 bytes and invocation field at least 8. The width
          * arithmetic is the authority's `size_t` subtraction, so `wrapping_sub` states its
-         * semantics rather than panicking under this profile's `overflow-checks`. */
+         * semantics rather than panicking under this profile's `overflow-checks`. The explicit
+         * `len > ivlen` arm is a deliberate widening of the guard: the authority's subtraction
+         * wraps for `len > ivlen`, so its check passes and the `memcpy`/`RAND_bytes_ex` below write
+         * with an underflowed length. Refuse instead of reproducing that out-of-bounds write
+         * (§17); a legitimate call has `len <= ivlen - 8`. */
         if len < EVP_GCM_TLS_FIXED_IV_LEN
+            || len > (*ctx).ivlen
             || (*ctx).ivlen.wrapping_sub(len) < EVP_GCM_TLS_EXPLICIT_IV_LEN
         {
             return 0;
@@ -2443,5 +2463,44 @@ mod tests {
 
         assert_eq!(core::mem::size_of::<ProvGcmHw>(), 48);
         assert_eq!(core::mem::size_of::<GcmFlags>(), 1);
+    }
+
+    /// The three TLS-IV length arms refuse a width the authority's `size_t` arithmetic would wrap:
+    /// a `data_size` above `ivlen` for `tlsivfixed`/`tlsivinv`, and an `ivlen` below the eight-byte
+    /// invocation field for `tlsivgen`. The authority's own bodies perform an out-of-bounds write
+    /// for each (`ciphercommon_gcm.c:134-146`, `:790-813`, `:116-132`), which §17 forbids
+    /// reproducing, so the conversion refuses before the first store.
+    #[test]
+    fn the_tls_iv_length_arms_refuse_wrapped_lengths() {
+        // SAFETY: `aes_gcm_newctx` is the allocator seam for this context; NULL is the
+        // provider's absent context, which `PROV_LIBCTX_OF` accepts and stores as NULL.
+        let raw = unsafe { aes_gcm_newctx(ptr::null_mut(), 128) };
+        assert!(!raw.is_null(), "the allocator refused a GCM context");
+        let ctx = raw.cast::<ProvGcmCtx>();
+        // SAFETY: `ctx` is the live AES-GCM context this test just allocated; the flags and `ivlen`
+        // written here are this test's own state, and each buffer lives in this frame.
+        unsafe {
+            (*ctx).bits.set_key_set(true);
+            (*ctx).bits.set_iv_gen();
+            (*ctx).bits.set_enc(0);
+
+            // `setivinv` would write `inl` bytes at `iv + ivlen - inl`.
+            let mut inv = [0u8; 17];
+            assert_eq!(setivinv(ctx, inv.as_mut_ptr(), (*ctx).ivlen + 1), 0);
+
+            // `gcm_tls_iv_set_fixed` would copy `len` bytes and then draw `ivlen - len`.
+            let fixed = [0u8; 17];
+            assert_eq!(
+                gcm_tls_iv_set_fixed(ctx, fixed.as_ptr(), (*ctx).ivlen + 1),
+                0
+            );
+
+            // `getivgen` would increment at `iv + ivlen - 8`.
+            (*ctx).ivlen = 4;
+            let mut out = [0u8; 16];
+            assert_eq!(getivgen(ctx, out.as_mut_ptr(), 0), 0);
+
+            aes_gcm_freectx(raw);
+        }
     }
 }
