@@ -399,14 +399,24 @@ pub(crate) unsafe extern "C" fn TS_REQ_to_TS_VERIFY_CTX(
         // SAFETY: the err: arm releases the context per the authority.
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     }
+    // The authority passes `ASN1_STRING_get0_data(msg)` straight to `memcpy`. A string whose
+    // `length` is positive but whose `data` is NULL is reachable from the public API through
+    // `ASN1_STRING_set0`, so that call would read through NULL. Refuse it instead of
+    // reproducing the fault: the same error arm the `len <= 0` test takes.
+    // SAFETY: `msg` is live.
+    let msg_data = unsafe { ASN1_STRING_get0_data(msg) };
+    if msg_data.is_null() {
+        // SAFETY: the err: arm releases the context per the authority.
+        return unsafe { ts_req_to_ctx_err(ctx, ret) };
+    }
     // `len` is positive, so this is the authority's own `OPENSSL_malloc(hashed_msg->length)`.
     let Some(buf) = OwnedBlock::<c_uchar>::malloc(len as usize, FILE.as_ptr(), 168) else {
         // SAFETY: the err: arm releases the context per the authority.
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     };
-    // SAFETY: `buf` holds `len` bytes and `msg`'s data holds `len` bytes.
+    // SAFETY: `buf` holds `len` bytes and `msg_data` holds `len` bytes (checked above).
     unsafe {
-        ptr::copy_nonoverlapping(ASN1_STRING_get0_data(msg), buf.as_ptr(), len as usize);
+        ptr::copy_nonoverlapping(msg_data, buf.as_ptr(), len as usize);
         // The context now owns the block; `into_raw` stores it as the C-layout member
         // `TS_VERIFY_CTX_cleanup` releases at `:126`.
         (*ret).imprint = buf.into_raw();
@@ -449,3 +459,36 @@ unsafe fn ts_req_to_ctx_err(ctx: *mut TsVerifyCtx, ret: *mut TsVerifyCtx) -> *mu
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(TsVerifyCtx => zero_state_sweep_ts_verify_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::ASN1_STRING_set0;
+    use crate::ts::ts_asn1::{TS_REQ_free, TS_REQ_new};
+    use crate::ts::ts_req_utils::{TS_MSG_IMPRINT_get_msg, TS_REQ_get_msg_imprint};
+
+    /// A positive `length` with a NULL `data` pointer is constructible through the exported
+    /// `ASN1_STRING_set0`; the authority's `memcpy` would read through NULL. The conversion
+    /// refuses it on the request's own error arm instead.
+    #[test]
+    fn req_to_ctx_refuses_positive_length_with_null_data() {
+        // SAFETY: every pointer below is a live object this test owns and releases once.
+        unsafe {
+            let req = TS_REQ_new();
+            assert!(!req.is_null());
+            let imprint = TS_REQ_get_msg_imprint(req);
+            assert!(!imprint.is_null());
+            let msg = TS_MSG_IMPRINT_get_msg(imprint);
+            assert!(!msg.is_null());
+
+            // A length the conversion accepts, but no backing bytes.
+            ASN1_STRING_set0(msg, ptr::null_mut(), 5);
+
+            assert!(
+                TS_REQ_to_TS_VERIFY_CTX(req, ptr::null_mut()).is_null(),
+                "a NULL imprint data pointer must be refused"
+            );
+            TS_REQ_free(req);
+        }
+    }
+}
