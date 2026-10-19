@@ -37,14 +37,6 @@ src/apps/ts.rs
 src/apps/verify.rs
 src/apps/version.rs
 src/apps/x509.rs
-src/aria.rs
-src/asn1/asn1_item_list.rs
-src/asn1/asn_mstbl.rs
-src/asn1/asn_pack.rs
-src/asn1/a_strnid.rs
-src/asn1/a_utf8.rs
-src/asn1/d2i_param.rs
-src/asn1/d2i_pu.rs
 src/asn1_dsa.rs
 src/asn1/evp_asn1.rs
 src/asn1/i2d_evp.rs

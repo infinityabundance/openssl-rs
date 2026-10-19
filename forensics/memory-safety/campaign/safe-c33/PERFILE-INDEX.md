@@ -2952,3 +2952,53 @@ CLI front-ends; they stay queued and are deferred, not excluded.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M32.json`](atlas-refresh/mechanism-sweep-M32.json).
+
+## 37. Mechanism sweep M33 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `80a359d33` (no source change; the
+batch is eight contract checks against OpenSSL 3.6.4 and adds only queue/record
+edits).
+
+**Scope:** the eight files M32 named as next: the ARIA compiled branch and an
+ASN.1 reader/string-table/pack cluster.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/aria.rs` | `AriaU128` `#[repr(C)]` union views, `Key_RC`/`S1`/`S2`/`X1`/`X2` tables, round-key pointer arithmetic, both key schedules | No defect. The 147-row table check does not apply here; `KEY_RC` and the four word tables compare byte-for-byte with `crypto/aria/aria.c:60-66` and its `S1`..`X2` initialisers (unit test binds the `sb1`..`sb4` expansion). The `(bits + 256) / 32` count is computed only after the 128/192/256 check, which avoids the authority's signed-overflow UB without changing any valid-input result; `ARIA_GSRK`'s `Q`/`R` and the rotated `ARIA_DIFF_BYTE(T2,T3,T0,T1)` reproduce the macros. Decrypt is the same encrypt loop over the unwound schedule, matching `aria.c:601-683`. |
+| `src/asn1/asn1_item_list.rs` | generated `asn1_item_list[]` order, `ASN1_ITEM_lookup` scan, `ASN1_ITEM_get` bound | No defect. Programmatic comparison of the Rust accessor list against `crypto/asn1/asn1_item_list.h` gives 147 entries in identical order; all guards are unset in the admitted profile. `i >= len` returns NULL as the authority does; a null `name` remains the authority's precondition (documented, not converted into a null answer). |
+| `src/asn1/asn_mstbl.rs` | `CONF` section iteration, `X509V3_parse_list` ownership, `sk_CONF_VALUE_pop_free` callback, `strtoul` refusals | No defect. `min`/`max`/`mask`/`flags` acceptance and every refusal, the `cnf`-shaped versus `name`-shaped error record, the `STABLE_FLAGS_CLEAR` alias and the `ASN1_STRING_TABLE_add` call site match `asn_mstbl.c:57-117`. The 256-byte `BIO_snprintf` formatting buffer is the crate's established `ERR_raise_data` pattern (retained diagnostic truncation, not a safety obligation). |
+| `src/asn1/asn_pack.rs` | `ASN1_STRING` in/out ownership slot, `ASN1_STRING_set0`, encode/decode scratch | No defect. The three `oct` cases, the `<= 0` encode test (the assignment happens before the test, as in C), the empty-`data` refusal and the shared `err:` release match `asn_pack.c`. `ASN1_item_unpack(_ex)` pass the string's extent and raise `ASN1_R_DECODE_ERROR` on null. |
+| `src/asn1/a_strnid.rs` | `tbl_standard` NID order, runtime `stable` stack, `OwnedRow` zalloc/free ownership, mask intersection | No defect. All 28 rows, their bounds/masks/flags, the `nid <= 0` refusals, the sort-then-find over `stable`, the standard-table fallback and the owned-row copy match `a_strnid.c:118-234`. `ASN1_STRING_TABLE_cleanup` clears the atomic stack pointer before `OPENSSL_sk_pop_free`, exactly as the authority nulls `stable` first; `st_free` frees only `STABLE_FLAGS_MALLOC` rows. `table_cmp`'s null guard is a defensive no-UB path that valid stack contents never reach; `OwnedRow::from_raw` has an explicit single-release contract. |
+| `src/asn1/a_utf8.rs` | `UTF8_getc` four refusal codes and length gating, `UTF8_putc` sizing convention and surrogate-before-length order | No defect. All four malformed forms (`-1`..`-4`), the `0xd800`-`0xdfff` refusal only in the three-byte arm, the non-minimal checks (`0x80`/`0x800`/`0x10000`) and the null-`str` width query match `a_utf8.c` exactly, including the observable `-2`-before-`-1` order in `UTF8_putc`. `val` is written only on success. |
+| `src/asn1/d2i_param.rs` | `EVP_PKEY` slot ownership, `ameth->param_decode` callback dispatch, `BUF_MEM` read lifetime | No defect. The two refusals before the callback and the callback's own `0`, the `err:` identity test, and the `BUF_MEM_free` on both BIO-read paths match `d2i_param.c:18-65`. The `long`→`int` callback narrowing is reproduced deliberately. |
+| `src/asn1/d2i_pu.rs` | type-switched `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey`, downgraded-copy ownership, `err_out` identity test | No defect. The provided-EC downgrade, the `type != id || copy != NULL` set-type test, the RSA assignment-then-null-test (C assigns inside the condition), the DSA/EC member write-back and the `copy` release on both paths match `d2i_pu.c:28-98`. A caller-supplied key is not freed when `*a == ret`. |
+
+**Defects.** None. No source file changed.
+
+**New unsafe assumptions (hidden must be 0).** None. The batch adds no unsafe
+operation, adoption, allocator coordinate, `#[repr(C)]` layout, exported symbol
+or signature. Existing contracts were checked and reused: OB-1-style
+zalloc/free ownership (`OwnedRow`), the typed-stack comparator/callback contract,
+OB-4-style member-buffer slots in `d2i_pu`, the B-series no-Rust-borrow-across-a-
+callback rule (`param_decode`, `sk_pop_free`), and the RC-1 refcount boundary
+(no refcount transition in this batch; not applicable).
+
+**Evidence.** FAST: fmt clean; focused `aria::` **6 passed / 0 failed**
+(1,669 filtered). BATCH: clippy `--all-targets -D warnings` PASS; library
+**1648 passed / 0 failed / 27 ignored** serially (222.92 s) and with
+`--test-threads=4` (99.12 s). No test removed or newly ignored.
+
+**NOT_RUN.** No file-specific adversarial probe exists for these units; Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay,
+independent adversarial review and SEAL are `NOT_RUN`. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Queue.** `REMAINING-AUDIT.txt` 462 → **454**; `AUDITED-FILES.txt` 301 → **309**.
+
+**Next eight (stable order).** `src/apps/asn1parse.rs`, `src/apps/ciphers.rs`,
+`src/apps/cms.rs`, `src/apps/configutl.rs`, `src/apps/crl.rs`, `src/apps/dgst.rs`,
+`src/apps/dhparam.rs`, `src/apps/dsa.rs`. These are CLI front-end boundaries and
+remain deferred, not excluded.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M33.json`](atlas-refresh/mechanism-sweep-M33.json).
