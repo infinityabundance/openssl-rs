@@ -23,6 +23,8 @@
 
 use core::ffi::{c_int, c_uchar, c_void, CStr};
 use core::ptr;
+use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
+use std::sync::{Mutex, MutexGuard};
 
 use crate::rand::sys;
 use crate::runtime::init::OPENSSL_atexit;
@@ -108,17 +110,31 @@ impl RandomDevice {
 
 /// `static struct random_device random_devices[OSSL_NELEM(random_device_paths)]`
 /// — `rand_unix.c:412-418`.
-static mut RANDOM_DEVICES: [RandomDevice; DEVICE_COUNT] = [RandomDevice::EMPTY; DEVICE_COUNT];
+///
+/// The authority's own array is unsynchronised. Concurrent `RAND_bytes` callers and the public
+/// `RAND_keep_random_devices_open` can therefore race on it in C; in Rust the same access through
+/// a `static mut` is undefined behaviour even when every caller is safe. The array carries its
+/// own `Mutex` and the scalars below are atomics, which removes the race without changing any
+/// observable transition. The lock is held only for the short cache transitions, never across a
+/// caller's read of the returned descriptor.
+static RANDOM_DEVICES: Mutex<[RandomDevice; DEVICE_COUNT]> =
+    Mutex::new([RandomDevice::EMPTY; DEVICE_COUNT]);
 
 /// `static int keep_random_devices_open = 1` — `rand_unix.c:419`.
-static mut KEEP_RANDOM_DEVICES_OPEN: c_int = 1;
+static KEEP_RANDOM_DEVICES_OPEN: AtomicI32 = AtomicI32::new(1);
 
 /// `static void *shm_addr` — `rand_unix.c:423`.
-static mut SHM_ADDR: *mut c_void = ptr::null_mut();
+static SHM_ADDR: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
 /// `static int seeded = OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID < 0` — the
 /// function-local static of `wait_random_seeded` (rand_unix.c:438).
-static mut SEEDED: c_int = 0;
+static SEEDED: AtomicI32 = AtomicI32::new(0);
+
+/// The device cache, with poisoning ignored: the authority has no poison state, and every
+/// transition below is a plain integer/stat update that leaves the array usable.
+fn random_devices() -> MutexGuard<'static, [RandomDevice; DEVICE_COUNT]> {
+    RANDOM_DEVICES.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// `static uint64_t get_time_stamp(void)` — `rand_unix.c:782-802`.
 ///
@@ -211,7 +227,10 @@ pub(crate) unsafe fn ossl_pool_add_nonce_data(pool: *mut RandPool) -> c_int {
 ///
 /// The weak-symbol probe is the one part that is not reproducible: Rust has no weak-symbol
 /// mechanism, so `sys::getentropy` binds strongly and the divergence is stated there.
-fn syscall_random(buf: *mut c_void, buflen: usize) -> isize {
+///
+/// # Safety
+/// `buf` is writable for `buflen` bytes.
+unsafe fn syscall_random(buf: *mut c_void, buflen: usize) -> isize {
     // Authority rand_unix.c:356-365 probes the glibc weak `getentropy` first:
     //
     //     if (getentropy != NULL) {
@@ -235,7 +254,7 @@ fn syscall_random(buf: *mut c_void, buflen: usize) -> isize {
 extern "C" fn cleanup_shm() {
     // SAFETY: `SHM_ADDR` is the mapping installed by `wait_random_seeded`, or
     // null; the authority passes it to `shmdt` unconditionally.
-    unsafe { shmdt(SHM_ADDR) };
+    unsafe { shmdt(SHM_ADDR.load(Ordering::Relaxed)) };
 }
 
 /// `static int wait_random_seeded(void)` — `rand_unix.c:436-501`
@@ -247,8 +266,8 @@ extern "C" fn cleanup_shm() {
 /// crate. `sys::open`, `sys::read`, `sys::close`, `sys::select` and
 /// `sys::strchr` do exist.
 fn wait_random_seeded() -> c_int {
-    // SAFETY: `SEEDED` is this function's own file-scope static.
-    let seeded = unsafe { SEEDED };
+    // SAFETY: `SEEDED` is this unit's own process-lifetime flag.
+    let seeded = SEEDED.load(Ordering::Relaxed);
     if seeded == 0 {
         /* See if anything has created the global seeded indication */
         // MISSING(crate): shmget
@@ -325,8 +344,7 @@ fn wait_random_seeded() -> c_int {
                 // SAFETY: `fd` is live.
                 unsafe { sys::close(fd) };
                 if r == 1 {
-                    // SAFETY: `SEEDED` is this function's own static.
-                    unsafe { SEEDED = 1 };
+                    SEEDED.store(1, Ordering::Relaxed);
                     /* Create the shared memory indicator */
                     // MISSING(crate): shmget, IPC_CREAT, S_IRUSR/G/O
                     shm_id = shmget(
@@ -338,19 +356,18 @@ fn wait_random_seeded() -> c_int {
             }
         }
         if shm_id != -1 {
-            // SAFETY: `SEEDED` is this function's own static.
-            unsafe { SEEDED = 1 };
+            SEEDED.store(1, Ordering::Relaxed);
             /*
              * Map the shared memory to prevent its premature destruction.
              * If this call fails, it isn't a big problem.
              */
             // MISSING(crate): shmat, SHM_RDONLY
-            // SAFETY: `SHM_ADDR` is this function's own static.
-            unsafe {
-                SHM_ADDR = shmat(shm_id, ptr::null_mut(), SHM_RDONLY);
-            }
-            // SAFETY: `SHM_ADDR` is this function's own static.
-            if unsafe { SHM_ADDR } != core::ptr::without_provenance_mut(1) {
+            // SAFETY: `shmat` takes a plain identifier and an optional address; both are valid
+            // here, and the result is published only through this unit's `AtomicPtr`.
+            let addr = unsafe { shmat(shm_id, ptr::null_mut(), SHM_RDONLY) };
+            SHM_ADDR.store(addr, Ordering::Relaxed);
+            // SAFETY: `SHM_ADDR` is this unit's own pointer.
+            if SHM_ADDR.load(Ordering::Relaxed) != core::ptr::without_provenance_mut(1) {
                 // MISSING(crate): `OPENSSL_atexit` is not implemented in this
                 // stratum; the authority registers `&cleanup_shm`.
                 // `OPENSSL_atexit` is `crypto/init.c`'s and is Phase 3's, landed long before this stratum. The
@@ -363,17 +380,17 @@ fn wait_random_seeded() -> c_int {
             }
         }
     }
-    // SAFETY: `SEEDED` is this function's own static.
-    unsafe { SEEDED }
+    // SAFETY: `SEEDED` is this unit's own process-lifetime flag.
+    SEEDED.load(Ordering::Relaxed)
 }
 
 /// `static int check_random_device(struct random_device *rd)` — `rand_unix.c:516-526`.
 ///
 /// # Safety
-/// `rd` is a live `RandomDevice`.
+/// `rd` is a live, writable `RandomDevice`.
 /// MISSING(crate): `fstat`, `struct stat`, the `st_dev`/`st_ino`/`st_mode`/
 /// `st_rdev` fields and `S_IRWXU`/`S_IRWXG`/`S_IRWXO` are undeclared.
-fn check_random_device(rd: *mut RandomDevice) -> c_int {
+unsafe fn check_random_device(rd: *mut RandomDevice) -> c_int {
     // SAFETY: the caller's contract: `rd` is live and readable.
     let rd = unsafe { &mut *rd };
     // SAFETY: `Stat` is a byte-compatible image of the platform's `struct stat`, for which an
@@ -396,13 +413,14 @@ fn check_random_device(rd: *mut RandomDevice) -> c_int {
 
 /// `static int get_random_device(size_t n)` — `rand_unix.c:531-556`.
 fn get_random_device(n: usize) -> c_int {
-    // SAFETY: `RANDOM_DEVICES` is this unit's own file-scope array and `n` is
-    // bounded by its caller's loop over `OSSL_NELEM(random_device_paths)`.
-    let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+    // The array's own lock covers both the check and the re-open, so two threads cannot produce
+    // conflicting references to the same cache entry.
+    let mut devices = random_devices();
     let rd = &mut devices[n];
 
     /* reuse existing file descriptor if it is (still) valid */
-    if check_random_device(rd as *mut RandomDevice) != 0 {
+    // SAFETY: `rd` is the live entry at `n`, which the caller bounds to the array length.
+    if unsafe { check_random_device(rd as *mut RandomDevice) } != 0 {
         return rd.fd;
     }
 
@@ -432,12 +450,11 @@ fn get_random_device(n: usize) -> c_int {
 
 /// `static void close_random_device(size_t n)` — `rand_unix.c:561-568`.
 fn close_random_device(n: usize) {
-    // SAFETY: `RANDOM_DEVICES` is this unit's own array and `n` is bounded by
-    // its callers.
-    let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+    let mut devices = random_devices();
     let rd = &mut devices[n];
 
-    if check_random_device(rd as *mut RandomDevice) != 0 {
+    // SAFETY: `rd` is the live entry at `n`, which the caller bounds to the array length.
+    if unsafe { check_random_device(rd as *mut RandomDevice) } != 0 {
         // SAFETY: `rd.fd` is live.
         unsafe { sys::close(rd.fd) };
     }
@@ -450,8 +467,7 @@ fn close_random_device(n: usize) {
 /// The `#else` stub arm (rand_unix.c:598-609) returns 1 and does nothing; it
 /// is not built on this profile.
 pub(crate) fn ossl_rand_pool_init() -> c_int {
-    // SAFETY: `RANDOM_DEVICES` is this unit's own file-scope array.
-    let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+    let mut devices = random_devices();
     for rd in devices.iter_mut() {
         rd.fd = -1;
     }
@@ -470,8 +486,7 @@ pub(crate) fn ossl_rand_pool_keep_random_devices_open(keep: c_int) {
     if keep == 0 {
         ossl_rand_pool_cleanup();
     }
-    // SAFETY: `KEEP_RANDOM_DEVICES_OPEN` is this unit's own file-scope static.
-    unsafe { KEEP_RANDOM_DEVICES_OPEN = keep };
+    KEEP_RANDOM_DEVICES_OPEN.store(keep, Ordering::Relaxed);
 }
 
 /// `size_t ossl_pool_acquire_entropy(RAND_POOL *pool)` — `rand_unix.c:630-746`.
@@ -504,7 +519,9 @@ pub(crate) unsafe fn ossl_pool_acquire_entropy(pool: *mut RandPool) -> usize {
             attempts -= 1; /* the authority's `attempts-- > 0` */
             // SAFETY: `pool` is live per the caller's contract.
             let buffer = unsafe { ossl_rand_pool_add_begin(pool, bytes_needed) };
-            let bytes = syscall_random(buffer.cast::<c_void>(), bytes_needed);
+            // SAFETY: `buffer` is the pool's writable range of `bytes_needed` bytes; see
+            // `ossl_rand_pool_add_begin` above.
+            let bytes = unsafe { syscall_random(buffer.cast::<c_void>(), bytes_needed) };
             if bytes > 0 {
                 // SAFETY: `pool` is live; `bytes` bytes were written at
                 // `buffer`, which is what `add_end` accounts for.
@@ -571,8 +588,8 @@ pub(crate) unsafe fn ossl_pool_acquire_entropy(pool: *mut RandPool) -> usize {
                     break;
                 }
             }
-            // SAFETY: `KEEP_RANDOM_DEVICES_OPEN` is this unit's own static.
-            if bytes < 0 || unsafe { KEEP_RANDOM_DEVICES_OPEN } == 0 {
+            // SAFETY: `KEEP_RANDOM_DEVICES_OPEN` is this unit's own flag.
+            if bytes < 0 || KEEP_RANDOM_DEVICES_OPEN.load(Ordering::Relaxed) == 0 {
                 close_random_device(i);
             }
 

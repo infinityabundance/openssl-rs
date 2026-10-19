@@ -1,0 +1,249 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "5f03632b9",
+  "date": "2026-10-19",
+  "scope": "Eight ordinary files from the M28-named batch. src/runtime/thread_events.rs (thread-event handler registry, thread-local destructor and handler-stack callbacks) and src/runtime/init.rs (OPENSSL_init_crypto ordering plus caller-registered atexit handlers) were triaged first and both confirmed callback/initialization boundaries, so they are NOT_RUN and were substituted by src/ocsp/ocsp_vfy.rs (64) and src/bn/blinding.rs (64), the first two ranked substitutes the M28 receipt named.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "dirty: src/rand/unix.rs and src/ts/ts_verify_ctx.rs (M29 repairs and the new TS control) plus this receipt and the PERFILE-INDEX entry; untracked .asan-target/ and .ob4work/ were already present",
+  "files": [
+    "src/x509/v3_prn.rs",
+    "src/ffc/dh.rs",
+    "src/cmp/cmp_util.rs",
+    "src/cmp/cmp_status.rs",
+    "src/ts/ts_verify_ctx.rs",
+    "src/rand/unix.rs",
+    "src/ocsp/ocsp_vfy.rs",
+    "src/bn/blinding.rs"
+  ],
+  "files_not_run": [
+    "src/runtime/thread_events.rs",
+    "src/runtime/init.rs"
+  ],
+  "dispositions": [
+    {
+      "file": "src/x509/v3_prn.rs",
+      "mechanisms": "X509V3_EXT_val_prn and unknown_ext_print, X509V3_EXT_print's X509V3_EXT_METHOD dispatch (it/d2i/i2s/i2v/i2r/ext_flags/ext_free), OB-2 OwnedStr adoption of the i2s result, CONF_VALUE stack pop_free, X509V3_extensions_print and the FILE-wrapping X509V3_EXT_print_fp",
+      "result": "No memory-safety defect. The d2i/i2s/i2v/i2r/ext_free callback contract, the err: tail's release order (stack, value, decoded structure) and the NULL-method/NULL-decode arms match v3_prn.c:24-214. Two arms are safer extensions, not divergences: a NULL d2i or ext_free member is not called (the authority would call NULL). Residual recorded as M29-D4."
+    },
+    {
+      "file": "src/ffc/dh.rs",
+      "mechanisms": "OnceLock-built DH_NAMED_GROUP table over process-lifetime BIGNUM constants, Send/Sync assertion, name/uid/pqg lookups, five accessors, named_group_set's set0_pqg ownership transfer plus cached-nid flush",
+      "result": "No defect. Row order, p/g tie-breaking, the q refinement, NULL-accessor answers and the static-data flag carried by the table's BIGNUMs match ffc_dh.c:50-174. The NULL checks in named_group_set are the established fail-closed extension over the authority's unchecked dereference."
+    },
+    {
+      "file": "src/cmp/cmp_util.rs",
+      "mechanisms": "parse_level, ossl_cmp_log_parse_metadata (strchr/strtol coordinate parse and CRYPTO_strndup slices), improve_location_name, OSSL_CMP_print_to_bio, OSSL_CMP_print_errors_cb's ERR_get_error_all walk and application log callback, ossl_cmp_X509_STORE_add1_certs, UTF8 push, the two octet-string set1 helpers, formatted log helpers",
+      "result": "No memory-safety defect. Pointer arithmetic in the metadata parser matches cmp_util.c:47-124; the UTF8/octet helpers preserve the authority's dup-then-replace ordering and every failure tail releases exactly once. One compatibility residual recorded as M29-D3."
+    },
+    {
+      "file": "src/cmp/cmp_status.rs",
+      "mechanisms": "PKISI status/statusString/failInfo accessors, ASN1_BIT_STRING bit scan, CMP_PKIFAILUREINFO_to_string, bounded snprint_PKIStatusInfo_parts writer, OSSL_CMP_snprint_PKIStatusInfo/CTX variants, OSSL_CMP_STATUSINFO_new ownership ladder",
+      "result": "No memory-safety defect. The ADVANCE_BUFFER guard (printed < 0 || printed >= size) is reproduced at every step, and the stack/BIT STRING/status_string ownership and every goto-err tail match cmp_status.c:18-303. The authority-parity NULL-data format arm is recorded as M29-D5."
+    },
+    {
+      "file": "src/ts/ts_verify_ctx.rs",
+      "mechanisms": "OB-3 OwnedCtx and the CtxDestroy cleanup body, flags setters, four borrowing setters and four set0_* owners, TS_VERIFY_CTX_cleanup re-zeroing, TS_REQ_to_TS_VERIFY_CTX's policy/md_alg/imprint/nonce acquisition and err tail",
+      "result": "M29-D1 fixed. Every other transition matches ts_verify_ctx.c:15-185, including cleanup's member order, the set0 self-assignment-free ordering, and the err arm's ctx-vs-ret choice. A focused control exercises the repaired arm."
+    },
+    {
+      "file": "src/rand/unix.rs",
+      "mechanisms": "getrandom and DEVRANDOM seeding arms, /dev device cache (get/check/close), shm seeded indicator and its atexit handler, nonce data assembly, pool entropy accounting, process-global cache state",
+      "result": "M29-D2 fixed. syscall/gettimeofday/uname/strchr call sites, the FD_SET/select and one-byte-read arms, the kernel-version gate and the entropy accounting match rand_unix.c:332-802. Two helpers that dereferenced caller-supplied raw pointers under a safe signature (syscall_random, check_random_device) are now unsafe fn with stated contracts."
+    },
+    {
+      "file": "src/ocsp/ocsp_vfy.rs",
+      "mechanisms": "ocsp_verify's item-signature arms, ocsp_find_signer/ocsp_find_signer_sk (byName/byKey SHA1 hash match), ocsp_check_ids, ocsp_match_issuerid (fetch/legacy digest parity checks), ocsp_check_delegated, ocsp_verify_signer's X509_STORE_CTX lifecycle, OCSP_basic_verify/OCSP_request_verify ownership tails",
+      "result": "No defect. The chain/stack ownership, the -1/0/1 return taxonomy, the flags transitions (TRUSTOTHER/NOVERIFY/NOCHAIN/NOCHECKS/NOEXPLICIT) and every goto-end release match ocsp_vfy.c:26-437. Callback-free except for digest fetches, which obey their own contracts."
+    },
+    {
+      "file": "src/bn/blinding.rs",
+      "mechanisms": "OwnedCtx Box ownership and member-only destructor, BN_BLINDING_new failure ladder, update/convert_ex/invert_ex factor transitions, BN_BLINDING_create_param retry loop with int_bn_mod_inverse, flag and lock accessors, Montgomery selection",
+      "result": "No defect. The counter -1/0/32 transitions, the NO_RECREATE/NO_UPDATE arms, the 33-draw retry ceiling, the b==NULL-frees / b!=NULL-returns-b asymmetry and the consttime flag carry match bn_blind.c:40-310. Montgomery multiplication is used where the authority uses the fixed-top spelling; that is a recorded arithmetic-representation divergence, not an ownership or bounds defect."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/raise_site_dynamic/guard_ffi and the recorded error-site coordinates",
+    "OB-1 OwnedBlock allocation/adoption and its single release",
+    "OB-2 OwnedStr adoption of a callback-returned NUL-terminated seam block",
+    "OB-3 OwnedCtx/CtxDestroy and the zero-state sweep",
+    "X509V3_EXT_METHOD callback contract (it/d2i/i2s/i2v/i2r/ext_free and result ownership)",
+    "STACK_OF CONF_VALUE/X509/OCSP_SINGLERESP/ASN1_UTF8STRING consumption and sethandling",
+    "ASN1 item/template ownership and the item-layer d2i/free contract",
+    "BIO printf/puts/write/FP ownership contract",
+    "BN_BLINDING opaque-owner and Montgomery/BN arithmetic contracts",
+    "RAND pool allocation and entropy-accounting contract"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "defects": [
+    {
+      "id": "M29-D1",
+      "file": "src/ts/ts_verify_ctx.rs",
+      "pre_fix_lines": [
+        397,
+        409
+      ],
+      "post_fix_lines": [
+        402,
+        414
+      ],
+      "status": "fixed",
+      "severity": "high (read through NULL from C-valid state; the pinned authority has the same fault and it is not reproduced)",
+      "class": "positive-length/NULL-data copy (AGENTS.md sections 17 and 21.1)",
+      "description": "TS_REQ_to_TS_VERIFY_CTX read ASN1_STRING_length(msg) and, when positive, passed ASN1_STRING_get0_data(msg) straight to memcpy. An ASN1_STRING with length 5 and data NULL is constructible through the exported ASN1_STRING_set0 on the object TS_MSG_IMPRINT_get_msg returns, so the copy read through NULL. The authority does the same (ts_verify_ctx.c:170).",
+      "fix": "Capture the data pointer once and take the existing err: arm when it is NULL; valid strings are byte-for-byte unchanged. Control: ts::ts_verify_ctx::tests::req_to_ctx_refuses_positive_length_with_null_data.",
+      "divergence": "Deliberate: an inconsistent (positive length, NULL data) imprint is refused instead of faulting."
+    },
+    {
+      "id": "M29-D2",
+      "file": "src/rand/unix.rs",
+      "pre_fix_lines": [
+        111,
+        114,
+        117,
+        121
+      ],
+      "post_fix_lines": [
+        120,
+        124,
+        127,
+        131
+      ],
+      "status": "fixed",
+      "severity": "high (data race and aliasing UB reachable from concurrent RAND_bytes / RAND_keep_random_devices_open; safe pub(crate) fns and a safe exported wrapper performed the raw access)",
+      "class": "unsynchronised static mut shared state (AGENTS.md sections 2, 7 and 21.3)",
+      "description": "RANDOM_DEVICES, KEEP_RANDOM_DEVICES_OPEN, SHM_ADDR and SEEDED were static mut. Every seeding call took &mut *addr_of_mut!(RANDOM_DEVICES) and the scalars were read/written directly, so two threads in the entropy path (or a concurrent RAND_keep_random_devices_open) minted conflicting references or raced a non-atomic write. The authority has the same unsynchronised C state; Rust makes it UB regardless of caller correctness.",
+      "fix": "RANDOM_DEVICES is a const-initialised Mutex with poison ignored (the authority has no poison state); the three scalars are AtomicI32/AtomicPtr with Relaxed access, matching the authority's lack of ordering requirements. The cache lock spans only the check/reopen/close transition, never a caller's read. Controls: the four rand::unix::tests cases (second acquisition + device-cache reuse, kernel fill, idempotent init/keep flag, nonce data).",
+      "divergence": "None observable: the same transitions happen in the same order; only the storage discipline changes."
+    },
+    {
+      "id": "M29-D3",
+      "file": "src/cmp/cmp_util.rs",
+      "pre_fix_lines": [
+        300,
+        301,
+        302
+      ],
+      "post_fix_lines": [
+        300,
+        301,
+        302
+      ],
+      "status": "recorded_not_repaired",
+      "severity": "low (diagnostic text only; no memory-safety effect)",
+      "class": "authority compatibility gap (AGENTS.md section 8 compatibility axis)",
+      "description": "OSSL_CMP_print_errors_cb does not reproduce cmp_util.c:158-170's ERR_SYSTEM_ERROR arm: the authority formats a system error with openssl_strerror_r and always uses ERR_GET_REASON(err) for the fallback text, while this transcription always calls ERR_reason_error_string(err) and uses the unmasked error code for the fallback reason. A system error therefore prints reason(<full code>) instead of the platform text. ERR_reason_error_string returns NULL for system errors, so the fallback is the arm taken.",
+      "fix": "Not repaired in this safety batch. The correction needs the ERR module's strerror helper exposed or the arm duplicated here; recorded for a compatibility sweep rather than silently changed.",
+      "divergence": "Pre-existing transcription gap, now recorded."
+    },
+    {
+      "id": "M29-D4",
+      "file": "src/x509/v3_prn.rs",
+      "pre_fix_lines": [
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153
+      ],
+      "post_fix_lines": [
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153
+      ],
+      "status": "recorded_not_repaired",
+      "severity": "low (authority-parity NULL argument; requires a hand-built CONF_VALUE with both members NULL)",
+      "class": "NULL C-string argument to BIO_puts (AGENTS.md sections 17 and 21.1)",
+      "description": "X509V3_EXT_val_prn calls BIO_puts(out, value) when name is NULL and BIO_puts(out, name) when value is NULL. A CONF_VALUE with both members NULL, pushable through the exported stack API, therefore passes NULL to BIO_puts, which would length-scan it. The pinned authority and OpenSSL 4.0.2 have the identical arm; the constructor paths this crate lands never produce such an entry.",
+      "fix": "Not repaired: recording it preserves authority parity for every constructed path. A later hardening batch should add the both-NULL skip together with the other C-string print arms so the divergence is consistent.",
+      "divergence": "Pre-existing authority UB, recorded; not introduced by the conversion."
+    },
+    {
+      "id": "M29-D5",
+      "file": "src/cmp/cmp_status.rs",
+      "pre_fix_lines": [
+        337,
+        338,
+        339,
+        340,
+        341,
+        342,
+        343
+      ],
+      "post_fix_lines": [
+        337,
+        338,
+        339,
+        340,
+        341,
+        342,
+        343
+      ],
+      "status": "recorded_not_repaired",
+      "severity": "low (authority-parity NULL argument; requires an ASN1_UTF8STRING with positive length and NULL data)",
+      "class": "format directive over a positive-length/NULL-data string (AGENTS.md sections 17 and 21.1)",
+      "description": "snprint_PKIStatusInfo_parts passes ASN1_STRING_get0_data(text) with ASN1_STRING_length(text) as the precision. An element with positive length and NULL data (constructible through ASN1_STRING_set0) makes the %.*s arm scan a NULL pointer. cmp_status.c:205-210 has the same arm.",
+      "fix": "Not repaired: the same both-inconsistent-object class as M29-D4; recorded for the same consistent hardening batch.",
+      "divergence": "Pre-existing authority UB, recorded; not introduced by the conversion."
+    }
+  ],
+  "safety_checks": {
+    "unsafe_operations_introduced": 3,
+    "unsafe_operations_introduced_detail": "two calls to helpers whose declarations were tightened from safe fn to unsafe fn with an explicit # Safety contract (syscall_random, check_random_device), plus the guarded ASN1_STRING_get0_data call in TS_REQ_to_TS_VERIFY_CTX; no new raw-pointer capability was added",
+    "unsafe_operations_removed": 12,
+    "unsafe_operations_removed_detail": "twelve static-mut accesses across four statics (RANDOM_DEVICES 3, SEEDED 4, SHM_ADDR 3, KEEP_RANDOM_DEVICES_OPEN 2), replaced by one Mutex and three atomics",
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; no CRYPTO_* coordinate, size or release mode changed (the TS and RAND repairs add no allocation and remove none)",
+    "repr_c_and_exports": "no exported symbol, signature or #[repr(C)] layout changed; TS_VERIFY_CTX and RAND cache layouts and all size/offset asserts retained",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained); clippy -D warnings accepted the new SAFETY comments",
+    "controls": "ts::ts_verify_ctx::tests::req_to_ctx_refuses_positive_length_with_null_data builds the inconsistent string through exported ASN1_STRING_set0 and requires the NULL answer; the four rand::unix tests exercise the repaired cache transitions. M29-D3/D4/D5 are recorded, not certified."
+  },
+  "compatibility": "M29-D1/D2 diverge only for an internally inconsistent ASN1_STRING and for concurrent callers, respectively; both are deliberate safety corrections under sections 17/21.1 and change no valid serial behaviour. M29-D3 is a diagnostic-text gap left recorded. M29-D4/D5 reproduce the authority's own NULL-argument arms. No ABI, symbol, allocator-seam, error-coordinate or repr(C) change.",
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE. The M29 repairs are FAST+BATCH-verified only; BOUNDARY runtime confirmation (Miri cannot model these FFI paths; TSan/ASan and the concurrency negative control are NOT_RUN) and independent review remain PENDING.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1631 passed / 0 failed / 27 ignored (67.03 s)",
+    "lib_tests_threads_4": "1631 passed / 0 failed / 27 ignored (86.66 s)",
+    "focused": "ts::ts_verify_ctx 2/0; rand::unix 4/0; x509::v3_prn 1/0; ffc::dh 7/0; bn::blinding 11/0; cmp::cmp_util, cmp::cmp_status and ocsp::ocsp_vfy have no module-local tests (0 matched, 0 failed)"
+  },
+  "not_run": [
+    "src/runtime/thread_events.rs (65): thread-event handler callback boundary (thread-local handler stack, TLS destructor callback, application TEVENT handlers), NOT_RUN.",
+    "src/runtime/init.rs (65): initialization/atexit callback boundary (run-once ordering plus caller-registered OPENSSL_atexit handlers invoked from OPENSSL_cleanup), NOT_RUN.",
+    "Affected phase-4 TS/CMP/OCSP differential probes: their runner links the committed artifacts/phase2 distribution shell, which predates this worktree.",
+    "Miri (Stacked and Tree Borrows) on the TS NULL-data control and the rand cache: the paths are FFI/syscall-bearing and outside Miri's supported surface - BOUNDARY gate.",
+    "TSan/ASan/Loom on the concurrent RAND path and a negative control for the static-mut class - BOUNDARY gate.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "next_batch": {
+    "files": [
+      "src/x509/v3_info.rs (63)",
+      "src/ts/ts_req_utils.rs (63)",
+      "src/evp/e_rc2.rs (63)",
+      "src/apps/pkeyutl.rs (62)",
+      "src/asn1/a_verify.rs (62)",
+      "src/dsa/mod.rs (62)",
+      "src/evp/evp_pbe.rs (62)",
+      "src/ffc/params.rs (62)"
+    ],
+    "triage": "Drawn from the frozen census in descending production-site order from 63 after this batch, skipping the engine/provider dispatch candidates. src/ssl/tls_srp.rs (62) is held for the following batch because it is protocol-adjacent; src/ffc/params.rs (62) is ordinary despite its params_generate.rs sibling having been audited in M6.",
+    "skipped": [
+      "src/runtime/thread_events.rs (65) - confirmed thread-event callback boundary, NOT_RUN this run.",
+      "src/runtime/init.rs (65) - confirmed initialization/atexit callback boundary, NOT_RUN this run.",
+      "src/encoder_pkey.rs (63), src/engine/tb_asnmth.rs (63) and src/provider/decode_pvk2key.rs (63) - rank-adjacent engine/provider dispatch surfaces; inferred boundary candidates, not audited this run.",
+      "src/ssl/tls_srp.rs (62) - protocol-adjacent, deferred one position.",
+      "src/engine/eng_ctrl.rs, src/ssl/record/rec_layer_s3.rs, src/provider/legacyprov.rs, src/provider/child.rs, src/runtime/lhash.rs - previously deferred NOT_RUN/BOUNDARY_COVERED boundaries.",
+      "the M22-retained boundaries (async/async, evp/keymgmt_lib, provider/decode_der2key, engine/eng_table, store/store_meth)."
+    ]
+  }
+}
