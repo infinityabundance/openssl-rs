@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/ffc/key_validate.rs
-src/ffc/params_validate.rs
-src/http/http_lib.rs
-src/idea.rs
-src/mac/hmac.rs
-src/mac/poly1305.rs
-src/mac/siphash.rs
-src/mac/ssl3_cbc.rs
 src/ml_dsa/hash.rs
 src/ml_dsa/mod.rs
 src/ml_dsa/ntt.rs
