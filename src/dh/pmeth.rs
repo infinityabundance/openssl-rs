@@ -272,9 +272,11 @@ unsafe extern "C" fn pkey_dh_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
 /// # Safety
 /// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
 /// `EVP_PKEY_CTRL_DH_KDF_UKM`, a non-NULL `p2` must be the whole, exclusively
-/// owned block from this crate's `CRYPTO_*` seam and `p1` its non-negative byte
-/// length; ownership transfers to the context. Other arms follow the authority's
-/// per-arm contract.
+/// owned block from this crate's `CRYPTO_*` seam; ownership transfers to the
+/// context. A negative `p1` is refused with `-2` instead of being recorded as a
+/// `size_t` (the authority records it, and a later X9.42 derive would read that
+/// many bytes from `p2`); every non-negative length preserves the authority's
+/// behaviour. Other arms follow the authority's per-arm contract.
 unsafe extern "C" fn pkey_dh_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,
@@ -381,6 +383,12 @@ unsafe extern "C" fn pkey_dh_ctrl(
             1
         }
         EVP_PKEY_CTRL_DH_KDF_UKM => {
+            // A negative length is not a byte count: recording it as a `size_t` would make a
+            // later X9.42 derive read that many bytes from `p2`. The authority stores it; this
+            // arm refuses the invalid input, which is unobservable for every valid length.
+            if !p2.is_null() && p1 < 0 {
+                return -2;
+            }
             // SAFETY: `dctx`'s field is this context's own block (or NULL) and no other owner
             // releases it; `Drop` performs its single release at the authority's own replacement
             // site.
@@ -888,6 +896,33 @@ pub(crate) unsafe extern "C" fn ossl_dh_pkey_method() -> *const EvpPkeyMethod {
 #[allow(dead_code)] // its only reader today is `PMETH_STANDARD_METHODS` in `src/evp/pkey_ctx.rs`
 pub(crate) unsafe extern "C" fn ossl_dhx_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(DHX_PKEY_METH)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_id};
+
+    /// The UKM length is recorded as a `size_t` and later read as one by the X9.42 derive, so a
+    /// negative value must be refused rather than stored. Nothing is transferred on the refusal.
+    #[test]
+    fn a_negative_ukm_length_is_refused() {
+        // SAFETY: both arguments are the null engine and an id.
+        let ctx = unsafe { EVP_PKEY_CTX_new_id(EVP_PKEY_DH, ptr::null_mut()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live and this installs this method's own context.
+        assert_eq!(unsafe { pkey_dh_init(ctx) }, 1);
+        let mut buf = [0u8; 4];
+        // SAFETY: `ctx` is live and holds the context `pkey_dh_init` installed; `buf` is live for
+        // the call and a refused ctrl transfers no ownership.
+        let ret =
+            unsafe { pkey_dh_ctrl(ctx, EVP_PKEY_CTRL_DH_KDF_UKM, -1, buf.as_mut_ptr().cast()) };
+        assert_eq!(ret, -2, "a negative UKM length is refused");
+        // SAFETY: `ctx` holds the context installed above and no other release has run.
+        unsafe { pkey_dh_cleanup(ctx) };
+        // SAFETY: `ctx` came from `EVP_PKEY_CTX_new_id` and is not used again.
+        unsafe { EVP_PKEY_CTX_free(ctx) };
+    }
 }
 
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
