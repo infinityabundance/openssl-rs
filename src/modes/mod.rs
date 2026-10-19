@@ -112,8 +112,11 @@ pub type Ocb128F = unsafe extern "C" fn(
 );
 
 /// `ctr128_inc` — `crypto/modes/ctr128.c:28-38`: increment a 128-bit big-endian counter.
-fn ctr128_inc(counter: *mut u8) {
-    // SAFETY: the caller passes a live sixteen-byte counter; every access is within it.
+///
+/// # Safety
+/// `counter` must be writable for sixteen bytes for the duration of the call.
+unsafe fn ctr128_inc(counter: *mut u8) {
+    // SAFETY: the caller's contract; every access is within the sixteen bytes.
     unsafe {
         let mut n: u32 = 16;
         let mut c: u32 = 1;
@@ -130,8 +133,11 @@ fn ctr128_inc(counter: *mut u8) {
 }
 
 /// `ctr96_inc` — `crypto/modes/ctr128.c:190-199`: increment the upper ninety-six bits.
-fn ctr96_inc(counter: *mut u8) {
-    // SAFETY: the caller passes a live sixteen-byte counter.
+///
+/// # Safety
+/// `counter` must be writable for sixteen bytes for the duration of the call.
+unsafe fn ctr96_inc(counter: *mut u8) {
+    // SAFETY: the caller's contract; every access is within the sixteen bytes.
     unsafe {
         let mut n: u32 = 12;
         let mut c: u32 = 1;
@@ -611,6 +617,7 @@ pub unsafe extern "C" fn CRYPTO_ctr128_encrypt(
         }
         while l + 16 <= len {
             block(ivec, ecount_buf, key);
+            // SAFETY: `ivec` is writable for sixteen bytes per this function's contract.
             ctr128_inc(ivec);
             for i in 0..16 {
                 *out.add(l + i) = *input.add(l + i) ^ *ecount_buf.add(i);
@@ -620,6 +627,7 @@ pub unsafe extern "C" fn CRYPTO_ctr128_encrypt(
         }
         if l < len {
             block(ivec, ecount_buf, key);
+            // SAFETY: `ivec` is writable for sixteen bytes per this function's contract.
             ctr128_inc(ivec);
             while l < len {
                 *out.add(l) = *input.add(l) ^ *ecount_buf.add(n as usize);
@@ -680,6 +688,7 @@ pub unsafe extern "C" fn CRYPTO_ctr128_encrypt_ctr32(
             ctr(input, out, blocks, key, ivec);
             put_u32_be(ivec.add(12), ctr32);
             if ctr32 == 0 {
+                // SAFETY: `ivec` is writable for sixteen bytes per this function's contract.
                 ctr96_inc(ivec);
             }
             let consumed = blocks * 16;
@@ -693,6 +702,7 @@ pub unsafe extern "C" fn CRYPTO_ctr128_encrypt_ctr32(
             ctr32 = ctr32.wrapping_add(1);
             put_u32_be(ivec.add(12), ctr32);
             if ctr32 == 0 {
+                // SAFETY: `ivec` is writable for sixteen bytes per this function's contract.
                 ctr96_inc(ivec);
             }
             while len != 0 {
