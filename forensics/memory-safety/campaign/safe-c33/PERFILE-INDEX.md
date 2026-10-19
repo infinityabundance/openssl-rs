@@ -4808,3 +4808,88 @@ FRF suite; dependency-graph regeneration; SEAL.
 defer again), `src/evp/pbe.rs`, `src/evp/p_dec.rs`, `src/evp/p_enc.rs`,
 `src/evp/p_legacy_assign.rs`, `src/evp/p_lib.rs`, `src/evp/pmeth_check.rs`,
 `src/ffc/backend.rs`.
+
+## M57 — per-file contract sweep (legacy PKEY wrappers, method checks, FFC backend and keygen)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`526fa34db` (dirty worktree; no commit was made by the audit subagent). Census
+identity is unchanged from the M56 receipt. The eight records below are
+file-level obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/evp/pbe.rs` | `EVP_PBE_scrypt[_ex]` descriptor build, NULL normalisation, `r`/`p` bound, KDF fetch/context lifetime, caller-owned key extent | 1 defect (M57-D1) repaired; OSSL_PARAM and KDF contracts reused |
+| `src/evp/p_dec.rs` | `EVP_PKEY_decrypt_old`: type test, legacy RSA accessor, PKCS#1 v1.5 decrypt, caller-owned plaintext | no defect |
+| `src/evp/p_enc.rs` | `EVP_PKEY_encrypt_old`: type test, legacy RSA accessor, PKCS#1 v1.5 encrypt, caller-owned ciphertext | no defect |
+| `src/evp/p_legacy_assign.rs` | six set1/get0/get1 exports, `RSA`/`EC_KEY` up_ref and failure release, base-id test for SM2 | no defect; refcount contract reused |
+| `src/evp/p_lib.rs` | `EVP_PKEY_set1_engine` / `get0_engine`: functional reference, method probe, previous engine release, two distinct fields | no defect; engine callback contract reused |
+| `src/evp/pmeth_check.rs` | `try_provided_check` -1/0/1 protocol, keymgmt copy and export substitution, six selections, legacy-arm reachability | no defect; one residual error-reason note (see below) |
+| `src/ffc/backend.rs` | `ossl_ffc_params_fromdata`: named-group arm, BN/int/seed/flag/digest imports, error-label release order, set0 transfers | 1 contract defect (M57-D2) corrected; ownership contract reused |
+| `src/ffc/key_generate.rs` | `ossl_ffc_generate_private_key`: N/s defaults, range check, `2^N`/`q` bound, rejection loop, caller-owned private key | 1 defect (M57-D3) repaired; BIGNUM contract reused |
+
+**Deferred boundary.** `src/evp/method_store.rs` was not audited: it is the
+method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary. It
+remains in `REMAINING-AUDIT.txt` at the head of the queue. `ffc/key_generate.rs`
+was substituted from the head of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M57-D1 | `src/evp/pbe.rs:156` (pre-fix cast at 151) | medium | `*mut` descriptor published from immutable storage | four scalars are `mut` parameters; descriptors use `addr_of_mut!` (no ABI change) |
+| M57-D2 | `src/ffc/backend.rs:82` | low | `# Safety` admitted NULL for a pointer the body dereferences; digest strings borrowed but unstated | contract now requires non-NULL `ffc` and states the DIGEST/DIGEST_PROPS lifetime |
+| M57-D3 | `src/ffc/key_generate.rs:87` (pre-fix `2 * s`) | low | signed strength doubling can overflow (debug panic; release wrap can hang the rejection loop) | `checked_mul(2)` with refusal before allocation (§17 divergence; callers bounded) |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0.
+Hidden obligations: 0. No production unsafe operation, exported symbol,
+signature, `#[repr(C)]` layout or allocator coordinate changed. M57-D1 removes
+a mutable-pointer-from-`&T` capability inside an existing unsafe block; M57-D2
+is documentation; M57-D3 is safe arithmetic plus one new unit test.
+
+**Secret-bearing storage.** `pbe.rs` holds no internal secret: password/salt
+are only pointed at by descriptors (the provider copies them into its own
+`CRYPTO_clear_free`-owned buffers), and `key` remains the caller's. `p_dec.rs`
+writes caller-owned plaintext; `p_enc.rs` reads caller-owned plaintext.
+`p_lib.rs`/`pmeth_check.rs` borrow keydata without copying. `ffc/backend.rs`
+handles public FFC parameters. `ffc/key_generate.rs` writes the private key
+directly into the caller's BIGNUM, so cleansing remains the caller's obligation
+(DH uses `BN_clear_free`; `dsa/key.rs` uses `BN_free`, the authority's own
+ordering, noted as a follow-up outside this batch).
+
+**Contracts reused.** OSSL_PARAM terminated-array and caller-owned output
+contract; KDF input-parameter read-only convention; `EVP_PKEY_CTX`
+provider/legacy `-1` fall-through contract; refcount set1 contract; FFC_PARAMS
+`set0_pqg`/`set0_j` ownership plus err-label release order; B19 BIGNUM
+secret-output convention; RC-1 seam and `#[repr(C)]` layouts untouched.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused tests
+(ffc::backend 4, ffc::key_generate 3, evp::p_lib 1, evp::evp_pbe 5,
+evp::p5_scrypt 2, evp::p5_crpt 6) **21 passed / 0 failed**.
+BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1666 passed / 0 failed / 27 ignored** (1693 total) serial in 62.08 s and
+with `--test-threads=4` in 94.83 s, in the court with `CARGO_BUILD_JOBS=4`.
+No unexplained removal and no newly ignored test (M56: 1665 passed / 27
+ignored; +1 is M57-D3's regression control).
+
+**NOT_RUN.** Miri, ASan/valgrind, dudect/constant-time (no secret-dependent
+branch introduced); a runtime control for M57-D1 (no in-tree provider writes
+an input parameter) and for M57-D2 (documentation-only); authority
+differential for the `pmeth_check.rs` NONE-branch error reason and the M57-D3
+divergence; affected adversarial probes (`scripts/adv-probe.sh` has no probe
+for these boundaries); FRF suite; dependency-graph regeneration; SEAL.
+
+**Residual.** `pmeth_check.rs` raises `PMETH_CHECK_78`
+(`OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`) at both the `EVP_PKEY_NONE` test
+and the `not_supported` label, where the authority raises `NO_KEY_SET` at the
+former. Both statements are in the legacy arm, unreachable here because
+`try_provided_check` returns -1 only for a NULL `keymgmt` and no legacy context
+can be built; no site constant was invented without the pinned authority
+coordinates.
+
+**Queue.** `REMAINING-AUDIT.txt` 265 -> **257**; `AUDITED-FILES.txt` 498 ->
+**506**. **Next eight.** `src/evp/method_store.rs` (registry boundary —
+defer again), `src/ffc/key_validate.rs`, `src/ffc/params_validate.rs`,
+`src/http/http_lib.rs`, `src/idea.rs`, `src/mac/hmac.rs`,
+`src/mac/poly1305.rs`, `src/mac/siphash.rs`.
