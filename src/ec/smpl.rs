@@ -83,7 +83,7 @@ use crate::runtime::owned_buf::OwnedBuf;
 
 /// The translation-unit coordinate the two `OPENSSL_malloc_array`/`OPENSSL_free` pairs in
 /// `ossl_ec_GFp_simple_points_make_affine` are attributed to, as the allocator reports them.
-const FILE: &core::ffi::CStr = c"crypto/ec/ecp_smpl.c";
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c";
 
 /// `static const EC_METHOD` — `crypto/ec/ecp_smpl.c:24-79`.
 ///
