@@ -43,7 +43,7 @@ pub(crate) fn rand_table_slot() -> *mut *mut OpenSslLhash {
 /// `void ENGINE_unregister_RAND(ENGINE *e)` — `crypto/engine/tb_rand.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_RAND(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -59,7 +59,7 @@ unsafe extern "C" fn engine_unregister_all_rand() {
 /// `int ENGINE_register_RAND(ENGINE *e)` — `:28-35`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_RAND(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -94,7 +94,7 @@ pub extern "C" fn ENGINE_register_all_RAND() {
 /// `int ENGINE_set_default_RAND(ENGINE *e)` — `:45-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_RAND(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -124,7 +124,7 @@ pub extern "C" fn ENGINE_get_default_RAND() -> *mut Engine {
 /// `const RAND_METHOD *ENGINE_get_RAND(const ENGINE *e)` — `:66-69`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_RAND(e: *const Engine) -> *const c_void {
     // SAFETY: `e` is the caller's engine.
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn ENGINE_get_RAND(e: *const Engine) -> *const c_void {
 /// `int ENGINE_set_RAND(ENGINE *e, const RAND_METHOD *rand_meth)` — `:72-76`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_RAND(e: *mut Engine, rand_meth: *const c_void) -> c_int {
     // SAFETY: `e` is the caller's engine.

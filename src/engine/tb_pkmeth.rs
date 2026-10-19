@@ -44,7 +44,7 @@ pub(crate) fn pkey_meth_table_slot() -> *mut *mut OpenSslLhash {
 /// `void ENGINE_unregister_pkey_meths(ENGINE *e)` — `crypto/engine/tb_pkmeth.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_pkey_meths(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -60,7 +60,7 @@ unsafe extern "C" fn engine_unregister_all_pkey_meths() {
 /// `int ENGINE_register_pkey_meths(ENGINE *e)` — `:28-39`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_pkey_meths(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -105,7 +105,7 @@ pub extern "C" fn ENGINE_register_all_pkey_meths() {
 /// `int ENGINE_set_default_pkey_meths(ENGINE *e)` — `:49-60`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_pkey_meths(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -152,7 +152,7 @@ pub extern "C" fn ENGINE_get_pkey_meth_engine(nid: c_int) -> *mut Engine {
 /// `phase7_obligations.py`'s `UNBLOCKED_HANDOFFS`) rather than retired.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_pkey_meth(e: *mut Engine, nid: c_int) -> *const EvpPkeyMethod {
     let mut ret: *mut c_void = ptr::null_mut();
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn ENGINE_get_pkey_meth(e: *mut Engine, nid: c_int) -> *co
 /// `ENGINE_PKEY_METHS_PTR ENGINE_get_pkey_meths(const ENGINE *e)` — `:86-89`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_pkey_meths(e: *const Engine) -> Option<EnginePkeyMethsPtr> {
     // SAFETY: `e` is the caller's engine.
@@ -184,7 +184,8 @@ pub unsafe extern "C" fn ENGINE_get_pkey_meths(e: *const Engine) -> Option<Engin
 /// `int ENGINE_set_pkey_meths(ENGINE *e, ENGINE_PKEY_METHS_PTR f)` — `:92-96`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be a non-NULL pointer to a live [`Engine`]; `f` is NULL or a valid
+/// `ENGINE_PKEY_METHS_PTR`.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_pkey_meths(
     e: *mut Engine,
