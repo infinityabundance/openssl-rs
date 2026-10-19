@@ -1380,3 +1380,50 @@ readable receipt:
 `src/pkcs7/pk7_asn1.rs` and `src/x509/x_crl.rs`. The boundary queue is
 `src/property/store.rs`, `src/provider/activate.rs`, `src/context/namemap.rs` and
 `src/provider/ec_kmgmt.rs` (lock/callback/refcount edges), not re-opened here.
+
+## 16. Boundary sweep B9 — property store, provider activation, namemap, EC keymgmt
+
+**STOP status: CLEAR after repair.** One refcount/ownership defect, one OOM-path leak,
+one short-circuit parity defect, one incomplete unsafe contract and five allocator-seam
+coordinate defects were repaired. No memory-safety defect, ABI regression or new hidden
+obligation remains; hidden = 0.
+
+**Boundaries.** `B9-PROP-1..3` (store construction/teardown and add/remove, query cache,
+do_all snapshot), `B9-ACT-1..3` (activation/deactivation and child/fallback edges, the
+three-phase doall sweep, operation bitset/query surface), `B9-NAME-1..2` (map
+construction/insertion/aliasing and the borrowed-name lookups) and `B9-EC-1..2` (EC/SM2
+parameter import/export/get and generation/load/dup) are all `CONTRACTED`.
+
+**Defects.**
+
+- **B9-D7 (fixed, medium).** `ossl_provider_doall_activated` undid only from the
+  callback-refusal index (leaking phase-1 raises for earlier providers) and from the
+  failed index on the early-unlock path (down-refing a provider it never raised). It now
+  restarts at 0 after phase 2 and at `curr + 1` after an early unlock, matching
+  `provider_core.c`'s `curr = -1` / `for (curr++; ...)`. New control
+  `doall_activated_undoes_every_raised_count_on_callback_refusal`; negative control
+  observes 3 instead of 2 on the pre-fix shape.
+- **B9-D1 (fixed, medium).** The property store's `add` error tail passed NULL to
+  `alg_cleanup`, leaking the freshly allocated `ALGORITHM` (authority frees it).
+- **B9-D9 (fixed, medium).** Eighteen `ok &= f()` sites in `ec_kmgmt.rs` evaluated import,
+  export and validation steps the authority short-circuits; all now use
+  `ok = ok && f()` semantics.
+- **B9-D2/D3/D4/D6/D8 (fixed, low).** Allocator-seam corrections: store implementation
+  malloc/free coordinates (337/344), `del_tmpalg` (575), namemap zalloc/free/name and
+  strdup sites (554/583/51/240/257/325/329/388), provider opbits realloc (2035), and the
+  EC COPY_UTF8/COPY_OCTET invocation lines (1091–1095, 1103/1104/1107).
+- **B9-D5 (fixed, low).** `namemap::map_mut`'s unsafe contract now requires the write
+  lock or sole pre-publication ownership and forbids retaining the reference after
+  unlock; the doall callback's borrowed-name obligation is stated.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`property::store` 11/0, `context::namemap` 6/0, `provider::activate` 7/0/1 ignored.
+BATCH: library **1604 passed / 0 failed / 27 ignored** serially (290.17 s) and with
+`--test-threads=4` (91.96 s); `opbits_realloc_publishes_after_old_pair` passes under
+`OPENSSL_RS_ADV_PROBE=1`. ASan/Miri/Loom/TSan, the B9-D1 allocation canary, early-unlock
+injection, the EC authority differential, FRF-Fuzz, independent review and SEAL
+generation are `NOT_RUN`. Receipt:
+[`atlas-refresh/boundary-sweep-B9.json`](atlas-refresh/boundary-sweep-B9.json).
+
+**Next ordinary position:** `src/cms/cms_ec.rs` (168), then `src/pkcs7/pk7_asn1.rs` and
+`src/x509/x_crl.rs`. The B1–B9 boundary queue is closed; no known follow-up remains.
