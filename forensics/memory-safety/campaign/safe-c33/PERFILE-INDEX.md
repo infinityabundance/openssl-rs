@@ -1427,3 +1427,47 @@ generation are `NOT_RUN`. Receipt:
 
 **Next ordinary position:** `src/cms/cms_ec.rs` (168), then `src/pkcs7/pk7_asn1.rs` and
 `src/x509/x_crl.rs`. The B1–B9 boundary queue is closed; no known follow-up remains.
+
+## 17. Mechanism sweep M15 — cms_ec, pk7_asn1, x_crl, x509name, cmp_protect, key_legacy, pem_pk8, ess_lib
+
+**STOP status: CLEAR after repair.** Two error-path resource leaks and one non-faithful
+`size_t` guard repaired. No memory-safety defect, ABI regression, layout change or
+new hidden obligation remains; hidden = 0.
+
+**Audited (ordinary).** `src/cms/cms_ec.rs` (168), `src/pkcs7/pk7_asn1.rs` (146),
+`src/x509/x_crl.rs` (149), `src/x509/x509name.rs` (169), `src/cmp/cmp_protect.rs` (170),
+`src/pem/key_legacy.rs` (173), `src/pem/pem_pk8.rs` (174), `src/ess/ess_lib.rs` (179);
+ranks are production-site positions.
+
+**Defects.**
+
+- **M15-D1 (fixed, medium, `cms_ec.rs:137-145`).** `pkey_type2param`'s OID arm returned
+  NULL when `EVP_PKEY_paramgen_init` failed without freeing the freshly created
+  `EVP_PKEY_CTX`; `cms_ec.c` frees it at its single `err` label.
+- **M15-D2 (fixed, low, `cms_ec.rs:611`).** The encoded-public-key length was cast to
+  `c_long` before the `INT_MAX` test, so a value above `i64::MAX` would evade the
+  authority's refusal and truncate at `ASN1_STRING_set0`; now compared in `usize`.
+- **M15-D3 (fixed, low, `cmp_protect.rs:442-457`).** `pbmac_algor` leaked
+  `OSSL_CRMF_PBMPARAMETER` on the `i2d < 0` and `ASN1_STRING_set` failure arms; both now
+  free it, as `cmp_protect.c`'s `err` label does.
+
+**No defect.** `pk7_asn1` templates/ADB/callbacks; `x_crl` layouts/templates/`crl_cb`/
+`crl_inf_cb`/lookup/method surface (D2I_POST extension arm and cache frees remain
+withheld as documented); `x509name` accessors/add/delete set fixup/create-by-*;
+`key_legacy` shims/DHPARAMS readers/`pkey_get_*`; `pem_pk8` do_pk8pkey and readers;
+`ess_lib` cert-id builders and lookup.
+
+**Boundary-skipped (NOT_RUN).** `http/http_client.rs` (BIO callback), `params/build.rs`
+(secure-heap ownership), `runtime/err.rs` (error queue), `provider/rsa_kmgmt.rs`
+(provider callbacks), `evp/pkey_asn1.rs` (global method registry).
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`x_crl::` 4/0, `cms::cms_env::` 100/0/3 with `pem::`/`x509::x_name::`/`pkey_asn1::`,
+and `cmp` 9/0. BATCH: library **1604 passed / 0 failed / 27 ignored** serially
+(318.51 s) and with `--test-threads=4` (110.42 s). No affected `OPENSSL_RS_ADV_PROBE`
+arm exists. ASan/Miri/Loom/TSan, full sanitizers, FRF-Fuzz, authority differential,
+independent review and SEAL are `NOT_RUN`. Receipt:
+[`atlas-refresh/mechanism-sweep-M15.json`](atlas-refresh/mechanism-sweep-M15.json).
+
+**Next ordinary position:** `src/dsa/object.rs` (178), then `src/x509/v3_ac_tgt.rs`
+(190) and down the production-site ranking.

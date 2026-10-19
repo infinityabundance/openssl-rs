@@ -440,14 +440,20 @@ unsafe fn pbmac_algor(ctx: *const OsslCmpCtx) -> *mut crate::asn1::x_algor::X509
     let pbm_der =
         unsafe { OwnedBuf::adopt_plain_nullable(pbm_der.cast(), SeamFile::new(FILE), 212) };
     if pbm_der_len < 0 {
-        // SAFETY: `pbm_str` is this call's own.
-        unsafe { ASN1_STRING_free(pbm_str) };
+        // SAFETY: `pbm_str`/`pbm` are this call's own.
+        unsafe {
+            ASN1_STRING_free(pbm_str);
+            OSSL_CRMF_PBMPARAMETER_free(pbm);
+        }
         return ptr::null_mut();
     }
     // SAFETY: `pbm_str` is live; `pbm_der` readable for `pbm_der_len`.
     if unsafe { ASN1_STRING_set(pbm_str, pbm_der.as_ptr().cast(), pbm_der_len) } == 0 {
-        // SAFETY: `pbm_str` is this call's own.
-        unsafe { ASN1_STRING_free(pbm_str) };
+        // SAFETY: `pbm_str`/`pbm` are this call's own.
+        unsafe {
+            ASN1_STRING_free(pbm_str);
+            OSSL_CRMF_PBMPARAMETER_free(pbm);
+        }
         return ptr::null_mut();
     }
     // SAFETY: `pbm_str`/`pbm` are this call's own; `pbm_der` releases on drop.
