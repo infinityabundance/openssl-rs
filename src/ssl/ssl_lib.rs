@@ -4874,10 +4874,10 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
         }
         SSL_CTRL_SET_TLS_EXT_SRP_USERNAME => {
             c.srp_ctx.srp_mask |= SSL_KSRP;
-            // SAFETY: `c` is live; `login` is NULL or an owned string.
-            unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
-            c.srp_ctx.login = ptr::null_mut();
             if parg.is_null() {
+                // SAFETY: `c` is live; `login` is NULL or an owned string.
+                unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+                c.srp_ctx.login = ptr::null_mut();
                 return 1;
             }
             // SAFETY: `parg` is a NUL-terminated string for this command.
@@ -4885,12 +4885,25 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
                 .to_bytes()
                 .len();
             if !(1..=255).contains(&len) {
+                // The authority releases the incumbent before validating, so keep that end state.
+                // SAFETY: `c` is live; `login` is NULL or an owned string.
+                unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+                c.srp_ctx.login = ptr::null_mut();
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(SSL_R_INVALID_SRP_USERNAME, 4525) };
                 return 0;
             }
+            // Duplicate *before* releasing the incumbent: `parg` may be the pointer
+            // `SSL_get_srp_username(s)` returned, i.e. the very field about to be released.
+            // The authority frees first and then reads `parg`, a use-after-free for that caller;
+            // duplicate-first is the recorded safety repair (B17-D1). The allocator site is
+            // unchanged, and every failure path still releases the incumbent exactly as the
+            // authority does.
             // SAFETY: `parg` is NUL-terminated; `CRYPTO_strdup` copies it.
             let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4528) };
+            // SAFETY: `c` is live; `login` is NULL or an owned string.
+            unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+            c.srp_ctx.login = ptr::null_mut();
             if dup.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4529) };
@@ -4902,10 +4915,17 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
         SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD => {
             c.srp_ctx.give_client_pwd_callback =
                 Some(crate::ssl::tls_srp::srp_password_from_info_cb);
-            // SAFETY: `c` is live; `info` is NULL or an owned string.
-            unsafe { CRYPTO_free(c.srp_ctx.info.cast(), FILE, 0) };
+            // Duplicate *before* releasing the incumbent: `parg` may be the pointer
+            // `SSL_get_srp_userinfo(s)` returned, i.e. the very field about to be released. The
+            // authority frees first and then reads `parg`; duplicate-first is the recorded safety
+            // repair (B17-D2). The allocator site is unchanged.
             // SAFETY: `parg` is a NUL-terminated string for this command.
             let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4537) };
+            // SAFETY: `c` is live; `info` is NULL or an owned string. Clearing before the NULL
+            // test also removes the authority's failure-path dangling member: a refused duplicate
+            // leaves the field NULL, never a released pointer.
+            unsafe { CRYPTO_free(c.srp_ctx.info.cast(), FILE, 0) };
+            c.srp_ctx.info = ptr::null_mut();
             if dup.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4538) };
@@ -7881,6 +7901,33 @@ pub unsafe extern "C" fn SSL_set_trust(s: *mut Ssl, trust: c_int) -> c_int {
     })
 }
 
+/// Whether `host` is one of the strings owned by `param->hosts`.
+///
+/// # Safety
+/// `param` must be live; `host` must be NULL or a live NUL-terminated string.
+unsafe fn host_is_param_owned(param: *const X509VerifyParam, host: *const c_char) -> bool {
+    // SAFETY: `param` is live per the contract.
+    let st = unsafe { (*param).hosts };
+    if st.is_null() || host.is_null() {
+        return false;
+    }
+    // SAFETY: `st` is the live hosts stack whose elements are C-string pointers.
+    let n = unsafe { OPENSSL_sk_num(st) };
+    let mut i = 0;
+    while i < n {
+        // SAFETY: `i < n` and the slot is a string pointer the stack owns.
+        if unsafe { OPENSSL_sk_value(st, i) }
+            .cast::<c_char>()
+            .cast_const()
+            == host
+        {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+
 /// `int SSL_set1_host(SSL *s, const char *host)` — `ssl/ssl_lib.c:1138-1154`.
 ///
 /// # Safety
@@ -7890,6 +7937,34 @@ pub unsafe extern "C" fn SSL_set1_host(s: *mut Ssl, host: *const c_char) -> c_in
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         let param = unsafe { (*s).param };
+        // The authority clears the parameter before it reads `host`. When `host` is one of the
+        // names the parameter itself owns -- the pointer `X509_VERIFY_PARAM_get0_host` returns --
+        // that order is a use-after-free. Duplicate such an input first so the clear cannot
+        // invalidate it (B17-D3). A non-aliasing input keeps the authority's exact order and
+        // allocator events.
+        // SAFETY: `param` and `host` are per the caller's contract.
+        let owned_host = if unsafe { host_is_param_owned(param, host) } {
+            // SAFETY: `host` is NUL-terminated and was just shown to be a live parameter string.
+            let copy = unsafe { OwnedCStr::dup(host, FILE_SEAM, 1145) };
+            match copy {
+                Some(copy) => Some(copy),
+                None => {
+                    // A refused pre-copy still leaves the parameter cleared, the authority's
+                    // state before it would attempt the duplicate.
+                    // SAFETY: `param` is live; both arguments are the authority's clear.
+                    unsafe {
+                        X509_VERIFY_PARAM_set1_host(param, ptr::null(), 0);
+                        X509_VERIFY_PARAM_set1_ip(param, ptr::null(), 0);
+                    }
+                    return 0;
+                }
+            }
+        } else {
+            None
+        };
+        // The private copy lives to the end of this call; `host` is only used to duplicate the
+        // parameter's own string, so reading it before any clear is the whole repair.
+        let host = owned_host.as_ref().map_or(host, |copy| copy.as_ptr());
         // Clear hostname(s) and any IP in every case, exactly as the authority does.
         // SAFETY: `param` is live; the NULL arguments are the authority's clear
         // (`X509_VERIFY_PARAM_set1_host(param, NULL, 0)`).
@@ -7900,7 +7975,8 @@ pub unsafe extern "C" fn SSL_set1_host(s: *mut Ssl, host: *const c_char) -> c_in
         if host.is_null() {
             return 1;
         }
-        // SAFETY: `param` and `host` are per the caller's contract.
+        // SAFETY: `param` is live and `host` is either the caller's own string or the private
+        // copy made above, so neither clear released it.
         unsafe {
             let as_ip = X509_VERIFY_PARAM_set1_ip_asc(param, host);
             let as_host = X509_VERIFY_PARAM_set1_host(param, host, 0);
@@ -13568,6 +13644,187 @@ mod cert_dup_refusal_tests {
             );
 
             drop(cert_owner);
+        }
+    }
+}
+
+/// Controls for the B17 setter-alias repairs: each setter is handed the pointer its matching
+/// getter returned, which is the exact input the pre-repair code invalidated before reading.
+#[cfg(test)]
+mod setter_alias_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::tls_srp::{SSL_get_srp_userinfo, SSL_get_srp_username};
+    use crate::x509::x509_vpm::{X509_VERIFY_PARAM_get0_host, X509_VERIFY_PARAM_set1_host};
+    use core::ffi::CStr;
+
+    fn new_connection() -> (*mut SslCtx, *mut Ssl) {
+        // SAFETY: process-lifetime method table; the constructors return owned objects this
+        // test releases.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        (ctx, ssl)
+    }
+
+    /// `SSL_get_srp_username` falls back to the connection's context field; passing that pointer
+    /// back to the ctx setter must not read the freed block. Pre-repair this is the B17-D1
+    /// heap-use-after-free. The connection is created before the context field is set, so its own
+    /// login is NULL and the getter returns the context's pointer.
+    #[test]
+    fn srp_username_accepts_the_getter_pointer() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and `ctx` are live; the string is a static literal for this call.
+        unsafe {
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_USERNAME,
+                    0,
+                    c"user".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            let held = SSL_get_srp_username(ssl);
+            assert!(!held.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_USERNAME,
+                    0,
+                    held.cast::<c_void>(),
+                ),
+                1
+            );
+            let again = SSL_get_srp_username(ssl);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"user");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `SSL_get_srp_userinfo` falls back to the connection's context field; the password ctrl
+    /// must duplicate before it releases the field. Pre-repair this is the B17-D2
+    /// heap-use-after-free. The connection is created before the context field is set, so the
+    /// getter returns the context's pointer.
+    #[test]
+    fn srp_userinfo_accepts_the_getter_pointer() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and `ctx` are live; the string is a static literal for this call.
+        unsafe {
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD,
+                    0,
+                    c"secret".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            let held = SSL_get_srp_userinfo(ssl);
+            assert!(!held.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD,
+                    0,
+                    held.cast::<c_void>(),
+                ),
+                1
+            );
+            let again = SSL_get_srp_userinfo(ssl);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"secret");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `SSL_set1_param(s, SSL_get0_param(s))` and the ctx form inherit a parameter from itself.
+    /// The pre-repair `X509_VERIFY_PARAM_inherit` released the shared policies/hosts before it
+    /// copied them, which is a use-after-free (B17-D6). The self-copy is now a no-op and the
+    /// parameter keeps the values it already held.
+    #[test]
+    fn set1_param_accepts_the_same_parameter() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl`/`ctx` and both parameters are live; each string is a static literal.
+        unsafe {
+            let param = SSL_get0_param(ssl);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(param, c"example.com".as_ptr(), 0),
+                1
+            );
+            assert_eq!(SSL_set1_param(ssl, param), 1);
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(CStr::from_ptr(held), c"example.com");
+
+            let cparam = SSL_CTX_get0_param(ctx);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(cparam, c"ctx.example".as_ptr(), 0),
+                1
+            );
+            assert_eq!(SSL_CTX_set1_param(ctx, cparam), 1);
+            let cheld = X509_VERIFY_PARAM_get0_host(cparam, 0);
+            assert!(!cheld.is_null());
+            assert_eq!(CStr::from_ptr(cheld), c"ctx.example");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `X509_VERIFY_PARAM_get0_host(SSL_get0_param(s), 0)` returns a name the parameter owns;
+    /// `SSL_set1_host` clears that stack before reading its argument. Pre-repair this is the
+    /// B17-D3 heap-use-after-free.
+    #[test]
+    fn set1_host_accepts_the_parameter_owned_name() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` is live and each pointer is one this call or the parameter owns.
+        unsafe {
+            assert_eq!(SSL_set1_host(ssl, c"example.com".as_ptr()), 1);
+            let param = SSL_get0_param(ssl);
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(SSL_set1_host(ssl, held), 1);
+            let again = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"example.com");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The direct parameter setter has the same alias edge: the source name can be one the
+    /// parameter's host stack owns. Pre-repair this is the B17-D7 heap-use-after-free.
+    #[test]
+    fn param_set1_host_accepts_its_own_name() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and its parameter are live; each pointer is one this call or the
+        // parameter owns.
+        unsafe {
+            let param = SSL_get0_param(ssl);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(param, c"direct.example".as_ptr(), 0),
+                1
+            );
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(X509_VERIFY_PARAM_set1_host(param, held, 0), 1);
+            let again = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"direct.example");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
         }
     }
 }

@@ -427,7 +427,12 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_inherit(
         {
             let src_val = (*src).policies;
             let dest_val = (*dest).policies;
-            if (to_overwrite || (!src_val.is_null() && (to_default || dest_val.is_null())))
+            // Self-copy: `X509_VERIFY_PARAM_set1_policies` releases `dest->policies` before it
+            // reads the source stack, so when both name the same set it would iterate freed
+            // slots. The copy's result is the set already in place, so skip it. Reachable from
+            // `SSL_set1_param(s, SSL_get0_param(s))` / `SSL_CTX_set1_param` (B17-D6).
+            if src_val != dest_val
+                && (to_overwrite || (!src_val.is_null() && (to_default || dest_val.is_null())))
                 && X509_VERIFY_PARAM_set1_policies(dest, src_val) == 0
             {
                 return 0;
@@ -440,7 +445,12 @@ pub unsafe extern "C" fn X509_VERIFY_PARAM_inherit(
         {
             let src_val = (*src).hosts;
             let dest_val = (*dest).hosts;
-            if to_overwrite || (!src_val.is_null() && (to_default || dest_val.is_null())) {
+            // Self-copy: the authority releases `dest->hosts` and then deep-copies `src->hosts`,
+            // which for `dest == src` (or any shared stack) reads the set it just freed. A copy
+            // of a set into itself is that set, so retain it (B17-D6).
+            if src_val != dest_val
+                && (to_overwrite || (!src_val.is_null() && (to_default || dest_val.is_null())))
+            {
                 OPENSSL_sk_pop_free((*dest).hosts, Some(str_free));
                 (*dest).hosts = ptr::null_mut();
                 if !src_val.is_null() {
@@ -868,22 +878,41 @@ unsafe fn int_x509_param_set_hosts(
             namelen -= 1;
         }
 
+        // Duplicate **before** releasing the incumbent: `name` may be a string the parameter's
+        // own host stack owns (`X509_VERIFY_PARAM_get0_host(param, i)`). The authority frees the
+        // set first and then reads `name`, which is a use-after-free for that caller;
+        // duplicate-first is the recorded safety repair (B17-D7). The length and embedded-NUL
+        // checks above already read `name`, so they precede the release too.
+        let copy = if name.is_null() || namelen == 0 {
+            None
+        } else {
+            let raw = CRYPTO_strndup(name, namelen, FILE.as_ptr(), 0);
+            if raw.is_null() {
+                // A refused duplicate still clears the set on the SET_HOST arm, the authority's
+                // end state on allocation failure.
+                if mode == SET_HOST {
+                    OPENSSL_sk_pop_free((*vpm).hosts, Some(str_free));
+                    (*vpm).hosts = ptr::null_mut();
+                }
+                return 0;
+            }
+            // The host string owns the fresh copy: every early exit below releases it, and only a
+            // successful push gives it up to `vpm->hosts`.
+            // SAFETY: `raw` is a fresh, non-NULL block this file allocated.
+            Some(OwnedBuf::adopt_plain_nullable(
+                raw.cast(),
+                SeamFile::new(FILE),
+                0,
+            ))
+        };
+
         if mode == SET_HOST {
             OPENSSL_sk_pop_free((*vpm).hosts, Some(str_free));
             (*vpm).hosts = ptr::null_mut();
         }
-        if name.is_null() || namelen == 0 {
+        let Some(copy) = copy else {
             return 1;
-        }
-
-        let raw = CRYPTO_strndup(name, namelen, FILE.as_ptr(), 0);
-        if raw.is_null() {
-            return 0;
-        }
-        // The host string owns the fresh copy: every early exit below releases it, and only a
-        // successful push gives it up to `vpm->hosts`.
-        // SAFETY: `raw` is a fresh, non-NULL block this file allocated.
-        let copy = OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 0);
+        };
 
         if (*vpm).hosts.is_null() {
             (*vpm).hosts = OPENSSL_sk_new_null();

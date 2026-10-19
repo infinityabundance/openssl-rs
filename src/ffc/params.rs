@@ -237,11 +237,16 @@ pub(crate) unsafe fn ossl_ffc_params_get0_pqg(
 /// `void ossl_ffc_params_set0_j(FFC_PARAMS *d, BIGNUM *j)` — `crypto/ffc/ffc_params.c:73-80`.
 ///
 /// The cofactor, which is optionally output for ASN.1. Unlike the `pqg` triple this **always
-/// releases** the old value and always leaves a NULL slot for a NULL argument — the
-/// authority's body sets `d->j = NULL` first and only then stores, so
-/// `ossl_ffc_params_set0_j(d, d->j)` is a use-after-free rather than a no-op. That asymmetry
-/// with [`ossl_ffc_params_set0_pqg`] is the authority's, and `crypto/dh/dh_asn1.c:115` is a
-/// caller that passes a fresh value.
+/// releases** the old value and always leaves a NULL slot for a NULL argument. The authority's
+/// body releases first and only then stores, so `ossl_ffc_params_set0_j(d, d->j)` is a
+/// use-after-free rather than a no-op. The input is an ownership transfer, which makes that call
+/// self-contradictory as well: `d` already owns `j`, so there is no second ownership to take.
+///
+/// **Recorded divergence (B17-D4, §17 UB elimination).** Passing the slot's own value is a no-op
+/// here: the single owner is retained and nothing is released. A NULL argument still clears the
+/// slot and a distinct value still releases the incumbent first, so every supported call keeps
+/// the authority's behaviour and allocator sequence. `crypto/dh/dh_asn1.c:115` is the reached
+/// caller and passes a fresh value.
 ///
 /// # Safety
 ///
@@ -251,6 +256,12 @@ pub(crate) unsafe fn ossl_ffc_params_get0_pqg(
 pub(crate) unsafe fn ossl_ffc_params_set0_j(d: *mut FfcParams, j: *mut BigNum) {
     // SAFETY: `d` is live and `j` is NULL or live per this function's `# Safety` section.
     unsafe {
+        // Self-assignment would release the value and store the released pointer. That input is
+        // also an ownership transfer of a pointer the slot already owns, so keeping the single
+        // owner is the only sound reading; the authority's use-after-free is not reproduced.
+        if j == (*d).j {
+            return;
+        }
         BN_free((*d).j);
         (*d).j = ptr::null_mut();
         if !j.is_null() {
@@ -992,9 +1003,9 @@ mod tests {
         }
     }
 
-    /// `set0_j` is **not** `set0_pqg`: a NULL argument clears the slot rather than leaving it,
-    /// and passing the slot's own value is a use-after-free in the authority. The first half
-    /// is asserted here; the second is why no test passes `d->j`.
+    /// `set0_j` is **not** `set0_pqg`: a NULL argument clears the slot rather than leaving it.
+    /// Passing the slot's own value is the authority's use-after-free; this port keeps the single
+    /// owner and treats that call as a no-op (B17-D4), which the next test exercises.
     #[test]
     fn set0_j_always_releases_and_a_null_clears() {
         let mut p = Params::new();
@@ -1014,6 +1025,25 @@ mod tests {
 
             ossl_ffc_params_set0_j(raw, ptr::null_mut());
             assert!((*raw).j.is_null());
+        }
+    }
+
+    /// Passing the slot's own value must neither release it nor replace it. Pre-repair this is
+    /// the B17-D4 heap-use-after-free (the authority's `BN_free` then store of the same pointer).
+    #[test]
+    fn set0_j_self_assignment_is_a_no_op() {
+        let mut p = Params::new();
+        let raw = p.as_mut();
+        // SAFETY: `raw` is live; `a` is transferred to it exactly once and released by `Params`.
+        unsafe {
+            let a = BN_new();
+            assert!(BN_set_word(a, 11) != 0);
+            ossl_ffc_params_set0_j(raw, a);
+            assert_eq!((*raw).j, a);
+
+            ossl_ffc_params_set0_j(raw, (*raw).j);
+            assert_eq!((*raw).j, a);
+            assert_eq!(BN_cmp((*raw).j, a), 0);
         }
     }
 

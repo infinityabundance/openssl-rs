@@ -61,6 +61,8 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Mutex, MutexGuard};
 
 use crate::asn1::layout::Asn1Type;
 use crate::asn1::text::i2t_ASN1_OBJECT;
@@ -488,7 +490,31 @@ impl Drop for OwnedPbeCtl {
 /// `sk_EVP_PBE_CTL_*` macros over `OPENSSL_sk_*` with [`pbe_cmp`] as the comparator, so it is the
 /// crate's own stack here for the same reason: `OPENSSL_sk_find`'s comparator calling convention
 /// is part of what makes the sort order observable.
-static mut PBE_ALGS: *mut OpenSslStack = ptr::null_mut();
+///
+/// The authority's comment beside `EVP_PBE_find_ex` says the sort "ideally" needs a lock and
+/// does not take one. The registry can be entered concurrently (`EVP_PBE_alg_add_type` from two
+/// initialisation paths, `EVP_PBE_cleanup` from `evp_cleanup_int`), and the unsynchronised
+/// pointer lets a cleanup free the stack between a find's NULL test and its read, or lets two
+/// adds each install a stack and lose one. [`PBE_ALGS_LOCK`] serialises every access; the
+/// pointer is atomic so a reader never observes a torn/stale handle (B17-D5).
+static PBE_ALGS: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
+
+/// Serialises the registry handle and every operation on the stack it names.
+///
+/// The critical sections contain only stack allocation/sort/find/push/pop and the registry's own
+/// row releases. No application callback and no keygen function runs under it: the PBE keygen
+/// pointers are copied out, never invoked, and `free_evp_pbe_ctl` is a plain `CRYPTO_free`.
+/// Lock order: none -> this lock.
+static PBE_ALGS_LOCK: Mutex<()> = Mutex::new(());
+
+/// Take [`PBE_ALGS_LOCK`], recovering from poison: every mutation inside is a completed stack
+/// operation or an atomic store, so a panic cannot leave a half-written handle, and cascading the
+/// panic into unrelated registry users is worse than continuing.
+fn lock_pbe_algs() -> MutexGuard<'static, ()> {
+    PBE_ALGS_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 /// `static int pbe2_cmp(const EVP_PBE_CTL *pbe1, const EVP_PBE_CTL *pbe2)` —
 /// `crypto/evp/evp_pbe.c:177-184`.
@@ -768,17 +794,23 @@ pub unsafe extern "C" fn EVP_PBE_alg_add_type(
     md_nid: c_int,
     keygen: Option<EvpPbeKeygen>,
 ) -> c_int {
-    // SAFETY: `PBE_ALGS` is NULL or a stack this module owns.
-    if unsafe { PBE_ALGS }.is_null() {
+    // The allocate-or-find plus the push is one critical section: a concurrent cleanup would
+    // otherwise free the stack between the NULL test and the push (a use-after-free), and two
+    // concurrent adds could each install a different stack and lose one. No application callback
+    // runs here (B17-D5).
+    let _guard = lock_pbe_algs();
+
+    // SAFETY: `PBE_ALGS` is NULL or a stack this module owns; the guard serialises every writer.
+    let mut st = PBE_ALGS.load(Ordering::Acquire);
+    if st.is_null() {
         /* SAFETY: `pbe_cmp` reads only the two integer keys of the slots it is handed. */
-        let st = OPENSSL_sk_new(Some(pbe_cmp));
+        st = OPENSSL_sk_new(Some(pbe_cmp));
         if st.is_null() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EVP_PBE_207) };
             return 0;
         }
-        // SAFETY: this module owns the pointer and nothing else writes it.
-        unsafe { PBE_ALGS = st };
+        PBE_ALGS.store(st, Ordering::Release);
     }
 
     let Some(pbe_tmp) = OwnedPbeCtl::zalloc() else {
@@ -797,8 +829,9 @@ pub unsafe extern "C" fn EVP_PBE_alg_add_type(
         (*row).keygen_ex = None;
     }
 
-    // SAFETY: `PBE_ALGS` is live and `pbe_tmp` outlives the registry until `EVP_PBE_cleanup`.
-    if unsafe { OPENSSL_sk_push(PBE_ALGS, pbe_tmp.as_ptr().cast::<c_void>()) } == 0 {
+    // SAFETY: `st` is the live stack the guard protects and `pbe_tmp` outlives the registry until
+    // `EVP_PBE_cleanup`.
+    if unsafe { OPENSSL_sk_push(st, pbe_tmp.as_ptr().cast::<c_void>()) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::EVP_PBE_222) };
         // A refused push leaves the row unregistered; `pbe_tmp` drops at the authority's own
@@ -875,37 +908,57 @@ pub unsafe extern "C" fn EVP_PBE_find_ex(
         keygen_ex: None,
     };
 
-    let mut pbetmp: *const EvpPbeCtl = ptr::null();
-    // SAFETY: `PBE_ALGS` is NULL or a stack this module owns.
-    if !unsafe { PBE_ALGS }.is_null() {
-        /* Ideally, this would be done under lock. */
-        // SAFETY: `PBE_ALGS` is live.
-        unsafe { OPENSSL_sk_sort(PBE_ALGS) };
-        // SAFETY: `PBE_ALGS` is live and `pbelu` is a live local the comparator reads two
-        // integers from.
-        let i = unsafe { OPENSSL_sk_find(PBE_ALGS, ptr::addr_of!(pbelu).cast::<c_void>()) };
-        // SAFETY: `PBE_ALGS` is live; an index the find answered, negative or not.
-        pbetmp = unsafe { OPENSSL_sk_value(PBE_ALGS, i) }.cast::<EvpPbeCtl>();
+    // Copy the matching row's fields while the registry lock protects its lifetime. The
+    // authority reads the row after the lockless find; doing so here would let a concurrent
+    // `EVP_PBE_cleanup` release the block between the index and the field reads (B17-D5).
+    let mut found: Option<(c_int, c_int, Option<EvpPbeKeygen>, Option<EvpPbeKeygenEx>)> = None;
+    {
+        let _guard = lock_pbe_algs();
+        // SAFETY: `PBE_ALGS` is NULL or a stack this module owns; the guard serialises every
+        // mutation (allocation, push, pop/free).
+        let st = PBE_ALGS.load(Ordering::Acquire);
+        if !st.is_null() {
+            // SAFETY: `st` is live under the guard.
+            unsafe { OPENSSL_sk_sort(st) };
+            // SAFETY: `st` is live and `pbelu` is a live local the comparator reads two
+            // integers from.
+            let i = unsafe { OPENSSL_sk_find(st, ptr::addr_of!(pbelu).cast::<c_void>()) };
+            // SAFETY: `st` is live; an index the find answered, negative or not.
+            let row = unsafe { OPENSSL_sk_value(st, i) }.cast::<EvpPbeCtl>();
+            if !row.is_null() {
+                // SAFETY: `row` is a live element and the guard keeps cleanup from releasing it
+                // until these four field reads complete.
+                found = Some(unsafe {
+                    (
+                        (*row).cipher_nid,
+                        (*row).md_nid,
+                        (*row).keygen,
+                        (*row).keygen_ex,
+                    )
+                });
+            }
+        }
     }
-    if pbetmp.is_null() {
-        pbetmp = match builtin_search(&pbelu) {
-            Some(row) => row,
+    let (cipher_nid, md_nid, keygen, keygen_ex) = match found {
+        Some(found) => found,
+        None => match builtin_search(&pbelu) {
+            Some(row) => (row.cipher_nid, row.md_nid, row.keygen, row.keygen_ex),
             None => return 0,
-        };
-    }
-    // SAFETY: `pbetmp` is a live row per the two branches above.
+        },
+    };
+    // SAFETY: every out-parameter is NULL or writable per the contract.
     unsafe {
         if !pcnid.is_null() {
-            *pcnid = (*pbetmp).cipher_nid;
+            *pcnid = cipher_nid;
         }
         if !pmnid.is_null() {
-            *pmnid = (*pbetmp).md_nid;
+            *pmnid = md_nid;
         }
         if !pkeygen.is_null() {
-            *pkeygen = (*pbetmp).keygen;
+            *pkeygen = keygen;
         }
         if !pkeygen_ex.is_null() {
-            *pkeygen_ex = (*pbetmp).keygen_ex;
+            *pkeygen_ex = keygen_ex;
         }
     }
     1
@@ -950,11 +1003,16 @@ unsafe extern "C" fn free_evp_pbe_ctl(pbe: *mut c_void) {
 /// Nothing: it touches only this module's own registry.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PBE_cleanup() {
-    // SAFETY: `PBE_ALGS` is NULL or a stack this module owns whose every element is a row this
-    // module allocated.
-    unsafe { OPENSSL_sk_pop_free(PBE_ALGS, Some(free_evp_pbe_ctl)) };
-    // SAFETY: this module owns the pointer.
-    unsafe { PBE_ALGS = ptr::null_mut() };
+    // Release and clear as one critical section: a concurrent find must not observe a freed
+    // stack, and a concurrent add must either see the old stack before this swap or install a new
+    // one after it. `free_evp_pbe_ctl` only calls `CRYPTO_free`, so no application callback runs
+    // under the lock (B17-D5).
+    let _guard = lock_pbe_algs();
+    // SAFETY: `PBE_ALGS` is NULL or the stack this module owns.
+    let st = PBE_ALGS.swap(ptr::null_mut(), Ordering::AcqRel);
+    // SAFETY: `st` is NULL or a stack this module owns whose every element is a row this module
+    // allocated; `OPENSSL_sk_pop_free` releases each exactly once through `free_evp_pbe_ctl`.
+    unsafe { OPENSSL_sk_pop_free(st, Some(free_evp_pbe_ctl)) };
 }
 
 /// `int EVP_PBE_get(int *ptype, int *ppbe_nid, size_t num)` — `crypto/evp/evp_pbe.c:300`.
@@ -1071,6 +1129,7 @@ mod tests {
     /// the builtin table survives the cleanup.
     #[test]
     fn alg_add_round_trip_and_cleanup() {
+        let _global = crate::test_support::lock_global_state();
         const NEW: c_int = NID_hmac_sha1 + 100_000;
         // SAFETY: the keygen slot is None and the rest are integers.
         let added = unsafe { EVP_PBE_alg_add_type(EVP_PBE_TYPE_PRF, NEW, 7, 8, None) };
@@ -1100,5 +1159,49 @@ mod tests {
         };
         assert_eq!(builtin, 1);
         assert_eq!((cn, mn), (-1, NID_sha1));
+    }
+
+    /// Concurrent registration must not lose a row and concurrent lookup must never observe a
+    /// stack a cleanup freed. The critical sections are exercised by four threads adding disjoint
+    /// keys; every key is then found from the main thread. The race itself is scheduler-dependent,
+    /// so this is a serialised regression control for the repaired lock, not a deterministic canary
+    /// of the pre-repair defect.
+    #[test]
+    fn concurrent_adds_are_not_lost() {
+        let _global = crate::test_support::lock_global_state();
+        const BASE: c_int = 800_000;
+        const PER_THREAD: c_int = 128;
+        // SAFETY: this module's own registry; the global-state guard excludes the other registry
+        // test and no other test owns a row.
+        unsafe { EVP_PBE_cleanup() };
+
+        let mut workers = Vec::new();
+        for t in 0..4 {
+            workers.push(std::thread::spawn(move || {
+                for i in 0..PER_THREAD {
+                    let nid = BASE + t * PER_THREAD + i;
+                    // SAFETY: the keygen slot is None and the rest are integers.
+                    let added = unsafe { EVP_PBE_alg_add_type(EVP_PBE_TYPE_PRF, nid, 1, 2, None) };
+                    assert_eq!(added, 1, "registration {nid} must succeed");
+                }
+            }));
+        }
+        for worker in workers {
+            let joined = worker.join();
+            assert!(joined.is_ok(), "add worker must not panic");
+        }
+
+        for nid in BASE..BASE + 4 * PER_THREAD {
+            let mut cn: c_int = -1;
+            let mut mn: c_int = -1;
+            // SAFETY: two live locals and a NULL keygen slot.
+            let found =
+                unsafe { EVP_PBE_find(EVP_PBE_TYPE_PRF, nid, &mut cn, &mut mn, ptr::null_mut()) };
+            assert_eq!(found, 1, "row {nid} must survive concurrent registration");
+            assert_eq!((cn, mn), (1, 2));
+        }
+
+        // SAFETY: this module's own registry; releases every row added above.
+        unsafe { EVP_PBE_cleanup() };
     }
 }
