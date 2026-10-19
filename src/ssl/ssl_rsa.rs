@@ -708,6 +708,27 @@ unsafe fn use_certificate_chain_file(
         raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 492);
         return 0;
     }
+    // `ssl_rsa.c:479-490`: the authority forwards the **context's** default password callback
+    // (branching on `ctx`, not on `real_ctx`) to both PEM readers. Dropping it here made an
+    // encrypted certificate block fall through to `PEM_def_callback` instead of the application's
+    // callback.
+    let (passwd_callback, passwd_callback_userdata) = if !ctx.is_null() {
+        // SAFETY: `ctx` is non-NULL in this branch and live per the caller's contract.
+        unsafe {
+            (
+                (*ctx).default_passwd_callback,
+                (*ctx).default_passwd_callback_userdata,
+            )
+        }
+    } else {
+        // SAFETY: `ctx` is NULL, so the caller supplied a live `ssl`.
+        unsafe {
+            (
+                (*ssl).default_passwd_callback,
+                (*ssl).default_passwd_callback_userdata,
+            )
+        }
+    };
     let real_ctx = if ssl.is_null() {
         ctx
     } else {
@@ -727,8 +748,9 @@ unsafe fn use_certificate_chain_file(
         unsafe { BIO_free(in_) };
         return 0;
     }
-    // SAFETY: `in_` is a live readable BIO.
-    let ok = unsafe { PEM_read_bio_X509_AUX(in_, &mut x, None, ptr::null_mut()) };
+    // SAFETY: `in_` is a live readable BIO; `x` is live; the callbacks are the context's own.
+    let ok =
+        unsafe { PEM_read_bio_X509_AUX(in_, &mut x, passwd_callback, passwd_callback_userdata) };
     if ok.is_null() {
         raise_ssl(ERR_R_PEM_LIB, 515);
         // SAFETY: both owned here.
@@ -783,8 +805,11 @@ unsafe fn use_certificate_chain_file(
                 }
                 return ret;
             }
-            // SAFETY: `in_` is a live readable BIO; `ca` is live.
-            let read = unsafe { PEM_read_bio_X509(in_, &mut ca, None, ptr::null_mut()) };
+            // SAFETY: `in_` is a live readable BIO; `ca` is live; the callbacks are the
+            // context's own.
+            let read = unsafe {
+                PEM_read_bio_X509(in_, &mut ca, passwd_callback, passwd_callback_userdata)
+            };
             if !read.is_null() {
                 // SAFETY: exactly one of `ctx`/`ssl` is non-NULL and live; `ca` is live.
                 let r = unsafe {

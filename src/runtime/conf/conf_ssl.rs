@@ -37,7 +37,6 @@
 //! which is a real property of this version and not an oversight here.
 
 use core::ffi::{c_char, c_int, c_void};
-use core::ptr;
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 use crate::runtime::bio::print::BIO_snprintf;
@@ -374,7 +373,10 @@ unsafe extern "C" fn ssl_module_init(md: *mut ConfImodule, cnf: *const Conf) -> 
         };
         // SAFETY: this thread's own error queue, the generated site's coordinates, and the
         // `section=%s` argument the authority formats.
-        unsafe { raise_site_dynamic_data(&CONF_SSL_75, reason, section_message(section)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_dynamic_data(&CONF_SSL_75, reason, section_message(section, &mut buf))
+        };
         return ssl_module_init_failed(md);
     }
 
@@ -415,10 +417,11 @@ unsafe extern "C" fn ssl_module_init(md: *mut ConfImodule, cnf: *const Conf) -> 
             // SAFETY: this thread's own error queue, the generated site's coordinates, and the
             // `name=%s, value=%s` argument the authority formats.
             unsafe {
+                let mut buf = [0; ERR_MAX_DATA_SIZE];
                 raise_site_dynamic_data(
                     &CONF_SSL_94,
                     reason,
-                    name_value_message(sect_name, sect_value),
+                    name_value_message(sect_name, sect_value, &mut buf),
                 )
             };
             return ssl_module_init_failed(md);
@@ -542,47 +545,50 @@ unsafe extern "C" fn ssl_module_free_thunk(_md: *mut ConfImodule) {
 
 /// `"section=%s"` — the first raise's data.
 ///
-/// A `static` buffer rather than an allocation, for the reason `confmod/mod.rs` records for its
-/// three: the authority's `ERR_vset_error` allocates, the raise copies the bytes before
-/// returning, and no caller holds the pointer afterwards. `BIO_snprintf` is the function
-/// `ERR_vset_error` itself formats through, so the bytes match by construction.
+/// The caller owns the storage. A process-global `static mut` buffer would be a data race:
+/// `ssl_module_init` runs from `CONF_modules_load`, which may run concurrently on different
+/// `CONF` objects, and the registry's RCU discipline is what makes that legal.
+/// `raise_site_dynamic_data` copies the bytes before returning, so stack storage is sufficient.
 ///
 /// # Safety
 /// `section` must be NUL-terminated.
-unsafe fn section_message(section: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length, and the format string is a
-    // static NUL-terminated one whose single conversion is `%s`.
+unsafe fn section_message(
+    section: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
+    // SAFETY: `buf` is exactly the declared length, and the format string is a static
+    // NUL-terminated one whose single conversion is `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"section=%s".as_ptr(),
             section,
         )
     };
-    // SAFETY: the pointer is to the static written immediately above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"name=%s, value=%s"` — the second raise's data.
 ///
 /// # Safety
 /// Both arguments must be NUL-terminated.
-unsafe fn name_value_message(name: *const c_char, value: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn name_value_message(
+    name: *const c_char,
+    value: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `section_message`, with two `%s` matching the two arguments.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"name=%s, value=%s".as_ptr(),
             name,
             value,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// Install a store, for [`ssl_module_init`] and for the tests here.
@@ -690,5 +696,54 @@ mod tests {
             // The store is empty again, so nothing is found.
             assert_eq!(conf_ssl_name_find(exact.as_ptr(), &mut idx), 0);
         }
+    }
+
+    /// The formatter must write into the caller's storage, not a process-global buffer: a second
+    /// call with different input must not disturb the first result. This is the negative control
+    /// for the `static mut` diagnostic-buffer class; on that body both calls returned the same
+    /// address and the second overwrote the first.
+    #[test]
+    fn diagnostic_storage_is_caller_owned() {
+        let mut first = [0; ERR_MAX_DATA_SIZE];
+        let mut second = [0; ERR_MAX_DATA_SIZE];
+        // SAFETY: both inputs are static NUL-terminated strings and each buffer is distinct.
+        let a = unsafe { section_message(c"FIRST".as_ptr(), &mut first) };
+        // SAFETY: `a` points into `first`, which is still live.
+        let snapshot = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes().to_vec();
+        // SAFETY: as above, with its own storage.
+        let b = unsafe { section_message(c"SECOND".as_ptr(), &mut second) };
+        assert_ne!(a, b, "caller-owned storage must not alias");
+        // SAFETY: `a` still points into the live `first` buffer.
+        let a_after = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes();
+        assert_eq!(a_after, snapshot.as_slice());
+        // SAFETY: `b` points into the live `second` buffer.
+        let b_after = unsafe { std::ffi::CStr::from_ptr(b) }.to_bytes();
+        assert_eq!(b_after, b"section=SECOND");
+    }
+
+    /// Concurrent diagnostic building is the trigger the old buffer raced on. Each thread keeps
+    /// its own storage, so every result matches its own input regardless of interleaving.
+    #[test]
+    fn concurrent_section_messages_do_not_interfere() {
+        std::thread::scope(|scope| {
+            for (input, expected) in [
+                (c"one", &b"section=one"[..]),
+                (c"two", &b"section=two"[..]),
+                (c"three", &b"section=three"[..]),
+                (c"four", &b"section=four"[..]),
+            ] {
+                scope.spawn(move || {
+                    for _ in 0..2000 {
+                        let mut buf = [0; ERR_MAX_DATA_SIZE];
+                        // SAFETY: `input` is a static NUL-terminated string and `buf` is this
+                        // thread's own storage.
+                        let p = unsafe { section_message(input.as_ptr(), &mut buf) };
+                        // SAFETY: `p` points into this thread's live `buf`.
+                        let seen = unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes();
+                        assert_eq!(seen, expected);
+                    }
+                });
+            }
+        });
     }
 }
