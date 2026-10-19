@@ -36,6 +36,7 @@
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Mutex, MutexGuard};
 
 use crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string;
 use crate::engine::eng_fat::ENGINE_set_default_string;
@@ -61,6 +62,26 @@ use crate::runtime::stack::{
 /// `static STACK_OF(ENGINE) *initialized_engines = NULL` (`:28`).
 static INITIALIZED_ENGINES: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 
+/// Serialises the `initialized_engines` stack against concurrent module callbacks.
+///
+/// The authority uses a plain static and no lock. `CONF_modules_load` may run concurrently on
+/// different `CONF` objects (`runtime/confmod` documents that), so two loads can enter
+/// `int_engine_init` together, and a load can overlap `CONF_modules_unload`'s finish walk.
+/// Without this lock one init can lose another's freshly allocated stack (leaking the stack
+/// and the engines it recorded), and a finish can free the stack while an init is pushing to
+/// it. The lock is held only around the stack's own allocation/push/pop/free: no `ENGINE_*`
+/// callback and no application code ever runs under it (lock order: none -> this lock).
+static INITIALIZED_ENGINES_LOCK: Mutex<()> = Mutex::new(());
+
+/// Take [`INITIALIZED_ENGINES_LOCK`], recovering from poison: a panic while holding it cannot
+/// corrupt the stack handle (every mutation is a single atomic or a completed stack operation),
+/// and cascading the panic into unrelated module callbacks is worse than continuing.
+fn lock_initialized_engines() -> MutexGuard<'static, ()> {
+    INITIALIZED_ENGINES_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// `static const char *skip_dot(const char *name)` — `crypto/engine/eng_cnf.c:19-26`.
 ///
 /// # Safety
@@ -84,17 +105,27 @@ unsafe fn skip_dot(name: *const c_char) -> *const c_char {
 /// # Safety
 /// `e` must be a live `ENGINE` or NULL; `ENGINE_init`'s own contract applies.
 unsafe fn int_engine_init(e: *mut Engine) -> c_int {
-    // SAFETY: `e` is live or NULL per the contract.
+    // SAFETY: `e` is live or NULL per the contract. `ENGINE_init` runs the application's init
+    // callback; it must stay outside the stack lock, which no callback may enter.
     if unsafe { ENGINE_init(e) } == 0 {
         return 0;
     }
-    if INITIALIZED_ENGINES.load(Ordering::Acquire).is_null() {
-        INITIALIZED_ENGINES.store(OPENSSL_sk_new_null(), Ordering::Release);
-    }
-    let st = INITIALIZED_ENGINES.load(Ordering::Acquire);
-    // SAFETY: `st` is the stack just stored (or an earlier one); `e` is a live ENGINE.
-    if st.is_null() || unsafe { OPENSSL_sk_push(st, e.cast::<c_void>()) } == 0 {
-        // SAFETY: the functional reference was taken above and is released on this path.
+    // SAFETY: the stack is this module's static; `e` is a live ENGINE and the guard keeps the
+    // push and the slot update mutually exclusive with the finish walk.
+    let pushed = {
+        let _guard = lock_initialized_engines();
+        let mut st = INITIALIZED_ENGINES.load(Ordering::Acquire);
+        if st.is_null() {
+            st = OPENSSL_sk_new_null();
+            INITIALIZED_ENGINES.store(st, Ordering::Release);
+        }
+        // SAFETY: `st` is the live stack this module just created or loaded; `e` is a live
+        // ENGINE and the guard serialises the push against the finish walk.
+        !st.is_null() && unsafe { OPENSSL_sk_push(st, e.cast::<c_void>()) } != 0
+    };
+    if !pushed {
+        // SAFETY: the functional reference was taken above and is released on this path. It is
+        // released after the guard, so an application finish hook may re-enter the module.
         unsafe { ENGINE_finish(e) };
         return 0;
     }
@@ -311,21 +342,32 @@ unsafe extern "C" fn int_engine_module_init(md: *mut ConfImodule, cnf: *const Co
 /// process; `ENGINE_finish` is called on every engine `int_engine_init` recorded.
 unsafe extern "C" fn int_engine_module_finish(_md: *mut ConfImodule) {
     loop {
-        let st = INITIALIZED_ENGINES.load(Ordering::Acquire);
-        // SAFETY: `st` is NULL or the stack `int_engine_init` built; `OPENSSL_sk_pop` accepts
-        // NULL. A popped element is an ENGINE `int_engine_init` pushed.
-        let e = unsafe { OPENSSL_sk_pop(st) }.cast::<Engine>();
-        if e.is_null() {
-            break;
-        }
+        // Pop under the lock; finish outside it. The engine's finish callback is application code
+        // and may re-enter configuration loading, so it must not run with the stack lock held.
+        let e: *mut Engine = {
+            let _guard = lock_initialized_engines();
+            let st = INITIALIZED_ENGINES.load(Ordering::Acquire);
+            if st.is_null() {
+                break;
+            }
+            // SAFETY: `st` is the live stack this module built; `OPENSSL_sk_pop` accepts NULL and
+            // returns a NULL item only when the stack is empty.
+            let e = unsafe { OPENSSL_sk_pop(st) }.cast::<Engine>();
+            if e.is_null() {
+                // The stack is empty. Release it and clear the slot *under the lock*, so a
+                // concurrent init cannot have captured this pointer and push into freed storage:
+                // it re-reads the slot after taking the same lock.
+                // SAFETY: `st` is the empty stack this module built and owns; `OPENSSL_sk_free`
+                // accepts any live stack and releases it exactly once.
+                unsafe { OPENSSL_sk_free(st) };
+                INITIALIZED_ENGINES.store(ptr::null_mut(), Ordering::Release);
+                break;
+            }
+            e
+        };
         // SAFETY: `e` holds a functional reference `int_engine_init` took.
         unsafe { ENGINE_finish(e) };
     }
-    let st = INITIALIZED_ENGINES.load(Ordering::Acquire);
-    // SAFETY: `st` is NULL or the stack this module built; it is released exactly once, and the
-    // static is cleared so a later finish does not free it again.
-    unsafe { OPENSSL_sk_free(st) };
-    INITIALIZED_ENGINES.store(ptr::null_mut(), Ordering::Release);
 }
 
 /// `void ENGINE_add_conf_module(void)` — `crypto/engine/eng_cnf.c:180-184`.
@@ -350,4 +392,51 @@ pub unsafe extern "C" fn ENGINE_add_conf_module() {
             )
         };
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::test_support::lock_global_state;
+
+    /// Two concurrent `int_engine_init` calls must both be recorded, and the finish walk must
+    /// release both functional references. This is a regression control for the serialised
+    /// stack, not a canary: the lost-update window it covers is scheduler-dependent, so its
+    /// pre-repair failure cannot be forced deterministically without a scheduling hook.
+    #[test]
+    fn concurrent_init_records_every_engine_and_finish_releases_them() {
+        let _g = lock_global_state();
+        // SAFETY: the two engines are created here, initialised by the two worker threads and
+        // released by this test after the finish walk; the global-state guard serialises the
+        // process-wide engine registry.
+        unsafe {
+            let a = ENGINE_new();
+            let b = ENGINE_new();
+            assert!(!a.is_null() && !b.is_null());
+
+            let (a_addr, b_addr) = (a as usize, b as usize);
+            let first = std::thread::spawn(move || {
+                // SAFETY: the address is the engine this test created and no other thread touches
+                // it except through the object's own lock or this test's serialisation. The
+                // enclosing test block already establishes the unsafe context for the call.
+                int_engine_init(a_addr as *mut Engine)
+            });
+            let second = std::thread::spawn(move || {
+                // SAFETY: as above, for the second engine.
+                int_engine_init(b_addr as *mut Engine)
+            });
+            assert_eq!(first.join().unwrap_or(-1), 1);
+            assert_eq!(second.join().unwrap_or(-1), 1);
+            assert_eq!((*a).funct_ref, 1);
+            assert_eq!((*b).funct_ref, 1);
+
+            int_engine_module_finish(ptr::null_mut());
+            assert_eq!((*a).funct_ref, 0);
+            assert_eq!((*b).funct_ref, 0);
+
+            assert_eq!(ENGINE_free(a), 1);
+            assert_eq!(ENGINE_free(b), 1);
+        }
+    }
 }
