@@ -809,10 +809,18 @@ pub unsafe extern "C" fn SSL_CTX_flush_sessions(s: *mut SslCtx, t: c_long) {
     })
 }
 
-/// Release a context's session cache (`SSL_CTX_free`'s cache teardown).
+/// Release a context's session-cache container (`SSL_CTX_free`'s `lh_SSL_SESSION_free`).
+///
+/// [`crate::ssl::ssl_sess::SSL_CTX_flush_sessions_ex`] has already removed every entry and
+/// invoked `remove_session_cb` while the context was live, so this is normally just the
+/// container release. An entry a callback re-added during the flush is released here **without**
+/// a callback: that matches the authority's `lh_SSL_SESSION_free` being a container-only free
+/// (the authority would leak such an entry; releasing it is the safe divergence, not a double
+/// release, because the cache reference is the one dropped).
 ///
 /// # Safety
-/// `ctx` must be a live context whose cache is no longer shared.
+/// `ctx` must be a live context whose cache is no longer shared and whose `ex_data` has been
+/// released (no callback runs here).
 pub(crate) unsafe fn ssl_ctx_session_cache_free(ctx: *mut SslCtx) {
     // SAFETY: `ctx` is live per the contract.
     unsafe {
@@ -2398,6 +2406,27 @@ mod alias_ownership_tests {
     use super::*;
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new};
+    use core::sync::atomic::AtomicUsize;
+
+    static REMOVE_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static OBSERVED_CTX: AtomicUsize = AtomicUsize::new(0);
+    static OBSERVED_EX_DATA: AtomicUsize = AtomicUsize::new(0);
+    static OBSERVED_SESSION: AtomicUsize = AtomicUsize::new(0);
+    static OBSERVED_INDEX: AtomicI32 = AtomicI32::new(-1);
+
+    /// The teardown-time `remove_session_cb`. It reads the context's ex_data through the public
+    /// getter: that is the authority's ticket-#212 ordering contract, and it is what a regression
+    /// that freed `ex_data` before the flush would break (the getter would answer NULL).
+    unsafe extern "C" fn record_remove_session(ctx: *mut SslCtx, session: *mut SslSession) {
+        REMOVE_CALLS.fetch_add(1, Ordering::Relaxed);
+        OBSERVED_CTX.store(ctx as usize, Ordering::Relaxed);
+        OBSERVED_SESSION.store(session as usize, Ordering::Relaxed);
+        let idx = OBSERVED_INDEX.load(Ordering::Relaxed);
+        // SAFETY: `ctx` is live for the duration of the authority's remove_session_cb, and `idx`
+        // was registered by the test before the callback was installed.
+        let data = unsafe { crate::ssl::ssl_lib::SSL_CTX_get_ex_data(ctx, idx) };
+        OBSERVED_EX_DATA.store(data as usize, Ordering::Relaxed);
+    }
 
     fn session_refs(session: *const SslSession) -> i32 {
         // SAFETY: `session` is a live session in every caller.
@@ -2455,6 +2484,56 @@ mod alias_ownership_tests {
         unsafe { SSL_SESSION_free(session) };
         // SAFETY: the context still has the caller's reference.
         unsafe { SSL_CTX_free(ctx) };
+    }
+
+    #[test]
+    fn context_free_flushes_the_cache_and_runs_remove_session_cb_while_ex_data_is_live() {
+        // SAFETY: process-lifetime method table; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        let session = new_cached_session(ctx);
+
+        // SAFETY: the class/index registration has no object preconditions.
+        let idx = crate::runtime::ex_data::CRYPTO_get_ex_new_index(
+            crate::runtime::ex_data::CRYPTO_EX_INDEX_SSL_CTX,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            None,
+        );
+        assert!(idx > 0);
+        let sentinel = 0x5EED_5EEDusize;
+        // SAFETY: `ctx` is live and `idx` names a registered slot.
+        let set =
+            unsafe { crate::ssl::ssl_lib::SSL_CTX_set_ex_data(ctx, idx, sentinel as *mut c_void) };
+        assert_eq!(set, 1);
+        OBSERVED_INDEX.store(idx, Ordering::Relaxed);
+        REMOVE_CALLS.store(0, Ordering::Relaxed);
+        OBSERVED_EX_DATA.store(0, Ordering::Relaxed);
+        OBSERVED_SESSION.store(0, Ordering::Relaxed);
+        // SAFETY: `ctx` is live and the callback is a process-lifetime function.
+        unsafe { SSL_CTX_sess_set_remove_cb(ctx, Some(record_remove_session)) };
+
+        // SAFETY: this retires the context's only reference. `SSL_CTX_free` must flush the cache
+        // (invoking the callback) before `ex_data`, the members and the lock are released.
+        unsafe { SSL_CTX_free(ctx) };
+
+        assert_eq!(REMOVE_CALLS.load(Ordering::Relaxed), 1);
+        assert_eq!(OBSERVED_CTX.load(Ordering::Relaxed), ctx as usize);
+        assert_eq!(
+            OBSERVED_EX_DATA.load(Ordering::Relaxed),
+            sentinel,
+            "the callback must observe live ex_data"
+        );
+        assert_ne!(OBSERVED_SESSION.load(Ordering::Relaxed), 0);
+        // The flush released the cache's reference; this frame's remains, and the session no
+        // longer points at the retired context.
+        assert_eq!(session_refs(session), 1);
+        // SAFETY: `session` is live through this frame's reference.
+        assert!(unsafe { (*session).owner }.is_null());
+        // SAFETY: this releases the caller's remaining reference.
+        unsafe { SSL_SESSION_free(session) };
     }
 
     #[test]

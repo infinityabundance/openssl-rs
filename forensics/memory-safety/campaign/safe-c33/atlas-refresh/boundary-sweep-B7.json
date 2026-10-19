@@ -1,0 +1,194 @@
+{
+  "receipt": "boundary-sweep-B7",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "e9a0fa799",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/provider/conf.rs",
+      "src/runtime/conf/conf_ssl.rs",
+      "src/ssl/ssl_lib.rs",
+      "src/ssl/ssl_sess.rs",
+      "src/ssl/ssl_rsa.rs"
+    ],
+    "working_tree_blob": {
+      "src/provider/conf.rs": "e4a861fe2dc1d5292e476a150ffc09df73568a5e",
+      "src/runtime/conf/conf_ssl.rs": "2cb5e174bc9ae2b8164c7ad19fb592a0bb243708",
+      "src/ssl/ssl_lib.rs": "4a6619a7abbe9f128e43e2c6bc92d930362dc0c4",
+      "src/ssl/ssl_sess.rs": "6f56a39bc40cb1c1cbc1d9dcc760681c2e0ebf85",
+      "src/ssl/ssl_rsa.rs": "9b784a0ad07943dc1197a8dd3f0083f656bbf6c0"
+    }
+  },
+  "stop_status": "REPAIRED - two medium conversion-introduced cross-thread data races on process-global diagnostic buffers, one medium authority-parity teardown defect (remove_session_cb was never invoked by SSL_CTX_free), and one low callback-forwarding divergence in the certificate-chain loader were found and fixed. No confirmed memory-safety defect remains in the audited bodies; the teardown reorder additionally removes a latent use-after-free reachable from an application remove_session_cb. FAST, BATCH and targeted ASan pass. Negative controls for both repaired classes were observed to fire on the pre-fix shapes. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 ssl/ssl_lib.c:4350-4468 (SSL_CTX_free), ssl/ssl_sess.c:1265-1310 (SSL_CTX_flush_sessions_ex) and ssl/ssl_rsa.c:463-597/979-1092, cross-checked line by line against the crate bodies; the diagnostic-buffer repair reuses the B6-D2 caller-owned-storage contract from src/runtime/confmod/mod.rs",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, CRYPTO_* seam coordinate or unsafe lint attribute changed. The repairs are caller-owned scratch storage, one destructive-order change inside CtxDestroy::destroy_body, and two forwarded callback arguments.",
+    "external_contracts": [
+      "The diagnostic message builders are private; their returned pointer is consumed synchronously by raise_site_data/raise_site_dynamic_data, which copies the bytes. No pointer outlives the call.",
+      "remove_session_cb is an application callback invoked with a live SSL_CTX and a live SSL_SESSION after the context's reference count has reached zero. It must not call SSL_CTX_free on that context (the authority's own reentrancy shape); it may read ex_data and the other members, which the repaired order keeps alive for the whole callback.",
+      "SSL_CTX_flush_sessions_ex invokes remove_session_cb outside ctx->lock, one session at a time, and releases the cache reference after each callback. A callback that re-adds a session creates a new cache reference; the post-flush container release drops that reference without a second callback.",
+      "use_certificate_chain_file's arguments are the public wrappers' live objects; the forwarded pem_password_cb follows the authority's PEM callback contract (writes at most the supplied length, negative aborts the read).",
+      "ssl_set_cert/ssl_set_pkey/ssl_set_cert_and_key retain the authority's caller preconditions: live CERT/X509/EVP_PKEY objects, and a chain stack whose entries remain live for the call."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B7-CONF-1",
+      "file": "src/provider/conf.rs",
+      "mechanism": "directive_message/section_not_found_message diagnostic builders consumed by raise_site_data",
+      "disposition": "CONTRACTED",
+      "defects": ["B7-D1"],
+      "residuals": [
+        "Both builders now format into a caller-owned stack array; each of the three call sites declares the array immediately before the raise, and the raise copies the bytes synchronously.",
+        "Message bytes, truncation length (ERR_MAX_DATA_SIZE) and the authority's site coordinates are unchanged.",
+        "The applier/provider callback invokes provider_conf_load from OSSL_PROVIDER_load; no lock is held across it and the repair adds no lock."
+      ]
+    },
+    {
+      "id": "B7-CONF-2",
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "mechanism": "section_message/name_value_message diagnostic builders consumed by raise_site_dynamic_data",
+      "disposition": "CONTRACTED",
+      "defects": ["B7-D2"],
+      "residuals": [
+        "Both builders now format into a caller-owned stack array; both call sites live inside ssl_module_init, which CONF_modules_load may run concurrently.",
+        "The store (SSL_NAMES) remains a process-global AtomicPtr with the authority's write-at-configuration-time contract; the repair does not change it.",
+        "Message bytes and the authority's site coordinates are unchanged."
+      ]
+    },
+    {
+      "id": "B7-SSL-1",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SslCtx::destroy_body member release order and ssl_ctx_session_cache_free",
+      "disposition": "CONTRACTED",
+      "defects": ["B7-D3"],
+      "residuals": [
+        "destroy_body now flushes the session cache first, so remove_session_cb runs while param, dane, ex_data, cert_store, cipher lists, cert, CA names, SRP/engine state and the lock are all still live.",
+        "Deliberate divergence from the authority's literal order: the authority frees param and dane before flushing, so a callback reaching them through the public getters would observe freed memory. Flushing first is strictly safer; callback-visible semantics for the members the authority documents (ex_data, cache) are preserved.",
+        "After the flush, ex_data is freed (authority ticket #212 order), then the container is released. A session a callback re-added during the flush is released without a second callback; the authority's lhash-free would leak it. Releasing the cache reference is safe, not a double release.",
+        "remove_session_cb remains an application reentrancy edge on a refcount-zero context; freeing or re-entering SSL_CTX_free from it is outside the contract (authority parity). No lock is held across the callback.",
+        "The zero-state sweep still executes destroy_body on an all-zero block: sessions is NULL, so the flush is skipped and every later release stays NULL-safe."
+      ]
+    },
+    {
+      "id": "B7-SSL-2",
+      "file": "src/ssl/ssl_rsa.rs",
+      "mechanism": "use_certificate_chain_file leaf install, chain loop and PEM readers, including the default password callback edge",
+      "disposition": "CONTRACTED",
+      "defects": ["B7-D4"],
+      "residuals": [
+        "The chain loader now forwards the context's default_passwd_callback/userdata (the SSL connection's for SSL_use_certificate_chain_file) to both PEM_read_bio_X509_AUX and PEM_read_bio_X509, matching ssl_rsa.c:479-490 and :546-573.",
+        "The reduced ssl_security_cert default callback recorded in the module header is unchanged: weak keys accepted where the authority would reject them.",
+        "SSL_use_certificate_file and SSL_CTX_use_certificate_file still pass NULL/None to PEM_read_bio_X509 where the authority forwards the same default callback; those certificate-file loaders are outside this item and are recorded as the next known follow-up.",
+        "The chain loop keeps the authority's ownership: x is freed at the tail because SSL_*_use_certificate up-refs it, and ca is freed only when add0 refuses it."
+      ]
+    },
+    {
+      "id": "B7-SSL-3",
+      "file": "src/ssl/ssl_rsa.rs",
+      "mechanism": "ssl_set_cert, ssl_set_pkey and ssl_set_cert_and_key reference and parameter ownership",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every X509/EVP_PKEY reference added by these helpers is released on each failure arm; the existing key/cert slots are released before replacement exactly as ssl_rsa.c:258-309/133-152/979-1092.",
+        "ssl_signed_chain duplicates the chain with X509_chain_up_ref before taking ownership; X509_up_ref/EVP_PKEY_up_ref refusals unwind without leaving a partially installed slot.",
+        "Caller obligations (live objects, chain entries live for the call, override semantics) are those of the authority C ABI and are stated at each entry point."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B7-D1",
+      "file": "src/provider/conf.rs",
+      "pre_fix_line": 943,
+      "severity": "medium",
+      "class": "cross-thread data race (Rust UB) on process-global diagnostic buffers",
+      "description": "directive_message and section_not_found_message (pre-fix lines 943 and 963) formatted into module-level static mut [c_char; 1024] arrays. provider_conf_load is reached from OSSL_PROVIDER_load and may run concurrently for different library contexts, so two threads raising an unrecognized-directive or missing-section error wrote the same buffer. The authority's ERR_vset_error allocates per raise; the race was introduced by the conversion.",
+      "fix": "Both builders take a caller-owned &mut [c_char; ERR_MAX_DATA_SIZE]; the three call sites declare a stack array immediately before raise_site_data, which copies the bytes. No shared mutable storage remains.",
+      "regression": "provider::conf::diagnostic_buffer_tests::diagnostic_storage_is_caller_owned proves the two calls return distinct caller storage and the first result survives the second call; concurrent_directives_do_not_interfere drives four threads x 2000 raises and checks each thread's own message."
+    },
+    {
+      "id": "B7-D2",
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "pre_fix_line": 553,
+      "severity": "medium",
+      "class": "cross-thread data race (Rust UB) on process-global diagnostic buffers",
+      "description": "section_message and name_value_message (pre-fix lines 553 and 573) formatted into static mut [c_char; 1024] arrays. ssl_module_init is called from CONF_modules_load for each module and may run concurrently on different CONF objects; the two raising paths therefore shared writable storage.",
+      "fix": "Both builders take a caller-owned &mut [c_char; ERR_MAX_DATA_SIZE]; both raising paths in ssl_module_init declare a stack array at the raise. The process-global store (AtomicPtr) is unchanged.",
+      "regression": "runtime::conf::conf_ssl::tests::diagnostic_storage_is_caller_owned and concurrent_section_messages_do_not_interfere mirror the provider controls."
+    },
+    {
+      "id": "B7-D3",
+      "file": "src/ssl/ssl_lib.rs",
+      "pre_fix_line": 3103,
+      "severity": "medium",
+      "class": "authority-parity teardown omission with a latent use-after-free in application callbacks",
+      "description": "SSL_CTX_free's destroy_body called ssl_ctx_session_cache_free directly (pre-fix line 3114), which released every cached session without invoking remove_session_cb. The authority flushes the cache in SSL_CTX_free (ssl_lib.c:4385-4389, ticket #212) so the callback runs for every cached session. The old order also released ex_data and the other members before (and instead of) any callback, so simply adding a callback call after the existing frees would have exposed freed members to the application.",
+      "fix": "destroy_body now flushes first via SSL_CTX_flush_sessions_ex(ctx, 0), then frees param/dane, then ex_data (authority order), then releases the now-empty container and the remaining members. The flush invokes remove_session_cb outside ctx->lock with the context, its ex_data, cache and lock still live. ssl_ctx_session_cache_free is documented as the post-flush container release and remains the fallback for entries a callback re-added.",
+      "regression": "ssl::ssl_sess::alias_ownership_tests::context_free_flushes_the_cache_and_runs_remove_session_cb_while_ex_data_is_live registers ex_data, installs a remove_session_cb that reads it through SSL_CTX_get_ex_data, frees the context, and asserts one callback, the sentinel value, a non-NULL session and a cleared owner back-pointer. The adjacent back-pointer tests cover the surviving-session path."
+    },
+    {
+      "id": "B7-D4",
+      "file": "src/ssl/ssl_rsa.rs",
+      "pre_fix_line": 731,
+      "severity": "low",
+      "class": "authority-parity divergence: default password callback not forwarded by the chain loader",
+      "description": "use_certificate_chain_file passed None/NULL to PEM_read_bio_X509_AUX (pre-fix line 731) and PEM_read_bio_X509 (pre-fix line 787). The authority forwards the context's default_passwd_callback/userdata (ssl_rsa.c:479-490), so an encrypted certificate block reached PEM_def_callback instead of the application's callback; with a null userdata that path attempts an interactive prompt.",
+      "fix": "The loader now reads the callbacks from ctx (or the connection for SSL_use_certificate_chain_file) and passes them to both readers. No ownership or lifetime changes.",
+      "regression": "No dynamic control: constructing an encrypted TRUSTED CERTIFICATE fixture was not attempted, and a regression would risk the interactive PEM_def_callback path in the test harness. The fix is a line-by-line match to ssl_rsa.c:479-490/546-573 and is covered by the compile and the existing chain-loader path audit. Recorded as NOT_RUN, not PASS."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (cargo test --lib --no-run; no warnings)",
+      "focused_tests": [
+        "runtime::conf::conf_ssl::tests: 4 passed / 0 failed (two new controls plus the two store tests)",
+        "provider::conf: 3 passed / 0 failed (two new controls plus the zero-state sweep)",
+        "ssl::ssl_sess: 7 passed / 0 failed / 1 ignored (includes the new teardown control and the three alias tests)",
+        "ssl::ssl_lib: 21 passed / 0 failed / 4 ignored",
+        "ssl::ssl_rsa: 1 passed / 0 failed / 1 ignored"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1597 passed / 0 failed / 27 ignored (261.46 s, --test-threads=1)",
+      "threaded4": "1597 passed / 0 failed / 27 ignored (82.78 s, --test-threads=4)",
+      "probes": [
+        "ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc: 1 passed under OPENSSL_RS_ADV_PROBE=1, --ignored --exact --test-threads=1",
+        "ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing: 1 passed",
+        "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner: 1 passed"
+      ]
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh (running); nightly-2026-10-05, -Zsanitizer=address -Zbuild-std, CARGO_TARGET_DIR=/work/.asan-target, ASAN_OPTIONS=detect_leaks=0",
+      "result": "ssl::ssl_sess::alias_ownership_tests: 4 passed / 0 failed, including the new teardown control and both surviving-session controls. No use-after-free or double-free report."
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B7-1",
+        "class": "process-global diagnostic buffer aliasing / cross-thread race",
+        "control": "Temporarily restored section_message's static mut body (same signature, ignored caller buffer). runtime::conf::conf_ssl::tests::diagnostic_storage_is_caller_owned failed deterministically with 'caller-owned storage must not alias' (both pointers equal); restoring the caller-owned body passed. The threaded control is the same class under interleaving."
+      },
+      {
+        "id": "NC-B7-2",
+        "class": "use-after-free / dead-member read from a teardown remove_session_cb",
+        "control": "Temporarily inserted CRYPTO_free_ex_data before SSL_CTX_flush_sessions_ex in destroy_body. context_free_flushes_the_cache_and_runs_remove_session_cb_while_ex_data_is_live failed with left: 0 (the getter answered NULL for the zeroed ex_data) instead of the sentinel; restoring the flush-first order passed, and ASan reports no UAF."
+      }
+    ],
+    "not_run": [
+      "Miri / Loom / ThreadSanitizer over the repaired bodies (the deterministic storage and ordering controls are the targeted instruments used instead; TSan on the pre-fix bodies is not available without reconstructing them)",
+      "Full-suite ASan (only the four alias_ownership_tests were run in the ASan venue)",
+      "A dynamic encrypted-chain fixture for the forwarded password callback (B7-D4); the fix is authority-line parity only",
+      "C differential courts for SSL_CTX teardown/callback order (candidate distribution shell rebuild required)",
+      "FRF-Fuzz replay, dependency-closure audit, independent review, SEAL regeneration"
+    ]
+  },
+  "summary": {
+    "hidden_obligations": 0,
+    "safe_rust_caller_can_cause_ub": "No new unsafe/safe boundary is exposed: the four files expose only unsafe C-ABI entry points, the diagnostic builders are private and synchronously consumed, and the teardown callback contract is stated at the boundary. The repaired ordering is strictly safer than the authority for the param/dane members and preserves the authority's ex_data/cache semantics.",
+    "graduation": "CONTRACTED (no SAFETY_DISCHARGED, no SAFE_COMPATIBLE)",
+    "next_boundary_position": "No deferred boundary item remains from the B1-B7 queue. Remaining same-class follow-up (recorded, not started): SSL_use_certificate_file / SSL_CTX_use_certificate_file still do not forward the default password callback. Other static-mut sites (src/des/mod.rs:1812, src/mac/hmac.rs:59, src/digest/sha2.rs static digest buffers, src/rand/unix.rs, src/provider/file_store_any2obj.rs:782) are separate caller-serialisation classes, not the diagnostic-buffer class, and are not audited by this batch.",
+    "next_ordinary_position": "src/evp/fetch.rs (rank 118), then src/ssl/tls13_enc.rs (119), src/ts/ts_rsp_utils.rs (120), src/x509/x509_vpm.rs (121)."
+  }
+}
