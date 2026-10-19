@@ -550,7 +550,11 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_keygen_info(ctx: *mut EvpPkeyCtx, idx:
     if idx == -1 {
         return count;
     }
-    if idx < 0 || idx > count {
+    // The authority writes `idx > count`, which reads one slot past a `count`-element array
+    // and dereferences a NULL `keygen_info` before the first generation (where `count` is 0).
+    // Both are UB in the C authority, so the boundary is `>=` here: an index the context does
+    // not have answers 0. Valid indices (`0..count`) are unchanged.
+    if idx < 0 || idx >= count {
         return 0;
     }
     // SAFETY: `idx` is in `0..=count` and the authority treats the array as that long; the caller's
@@ -811,4 +815,81 @@ pub unsafe extern "C" fn EVP_PKEY_new_mac_key(
         EVP_PKEY_CTX_free(mac_ctx);
     }
     mac_key
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evp::pkey_ctx::CachedParameters;
+
+    fn an_unattached_ctx() -> EvpPkeyCtx {
+        EvpPkeyCtx {
+            operation: EVP_PKEY_OP_UNDEFINED,
+            libctx: ptr::null_mut(),
+            propquery: ptr::null_mut(),
+            keytype: ptr::null(),
+            keymgmt: ptr::null_mut(),
+            op_keymgmt_genctx: ptr::null_mut(),
+            op_kex_exchange: ptr::null_mut(),
+            op_kex_algctx: ptr::null_mut(),
+            op_sig_signature: ptr::null_mut(),
+            op_sig_algctx: ptr::null_mut(),
+            op_ciph_cipher: ptr::null_mut(),
+            op_ciph_algctx: ptr::null_mut(),
+            op_encap_kem: ptr::null_mut(),
+            op_encap_algctx: ptr::null_mut(),
+            cached_parameters: CachedParameters {
+                dist_id_name: ptr::null_mut(),
+                dist_id: ptr::null_mut(),
+                dist_id_len: 0,
+                dist_id_set: 0,
+            },
+            app_data: ptr::null_mut(),
+            pkey_gencb: None,
+            keygen_info: ptr::null_mut(),
+            keygen_info_count: 0,
+            legacy_keytype: 0,
+            pmeth: ptr::null(),
+            engine: ptr::null_mut(),
+            pkey: ptr::null_mut(),
+            peerkey: ptr::null_mut(),
+            data: ptr::null_mut(),
+            flag_call_digest_custom: 0,
+            rsa_pubexp: ptr::null_mut(),
+        }
+    }
+
+    /// The authority's `idx > count` reads the slot after the array. This pins the corrected
+    /// boundary on both shapes: an attached two-slot array, and no array at all (where the
+    /// authority would dereference NULL for `idx == 0`).
+    #[test]
+    fn keygen_info_refuses_the_index_it_does_not_have() {
+        let mut info = [11 as c_int, 22 as c_int];
+        let mut ctx = an_unattached_ctx();
+        ctx.keygen_info = info.as_mut_ptr();
+        ctx.keygen_info_count = 2;
+        // SAFETY: `ctx` is this frame's own live object and `info` outlives every call.
+        unsafe {
+            let p = ptr::addr_of_mut!(ctx);
+            assert_eq!(EVP_PKEY_CTX_get_keygen_info(p, -1), 2);
+            assert_eq!(EVP_PKEY_CTX_get_keygen_info(p, 0), 11);
+            assert_eq!(EVP_PKEY_CTX_get_keygen_info(p, 1), 22);
+            assert_eq!(
+                EVP_PKEY_CTX_get_keygen_info(p, 2),
+                0,
+                "one past the count is not a slot"
+            );
+            assert_eq!(EVP_PKEY_CTX_get_keygen_info(p, -2), 0);
+        }
+
+        let mut fresh = an_unattached_ctx();
+        // SAFETY: `fresh` is this frame's own live object; `keygen_info` is NULL and `count` 0.
+        unsafe {
+            assert_eq!(EVP_PKEY_CTX_get_keygen_info(ptr::addr_of_mut!(fresh), 0), 0);
+            assert_eq!(
+                EVP_PKEY_CTX_get_keygen_info(ptr::addr_of_mut!(fresh), -1),
+                0
+            );
+        }
+    }
 }

@@ -171,8 +171,20 @@ unsafe fn hkdf_expand(
         return 0;
     }
     let hash_len = sz as usize;
+    if hash_len > crate::ssl::ssl_lib::EVP_MAX_MD_SIZE {
+        return 0;
+    }
     let n = out_len.div_ceil(hash_len);
     if n > 255 {
+        return 0;
+    }
+    // The scratch block holds `T(i-1) | info | i`; its capacity is a precondition the
+    // caller's contract does not state, so refuse rather than let the copy decide.
+    if info_len
+        .checked_add(hash_len)
+        .and_then(|n| n.checked_add(1))
+        .is_none_or(|n| n > 512)
+    {
         return 0;
     }
     let mut t = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
@@ -244,6 +256,12 @@ pub(crate) unsafe fn hkdf_expand_label(
     info[p + 1] = out_len as u8;
     p += 2;
     let full = PREFIX.len() + label.len();
+    // `HkdfLabel` encodes the label and context lengths in one byte each and the output
+    // length in two. A value that does not fit is refused here instead of being silently
+    // truncated and copied past the end of `info`.
+    if out_len > u16::MAX as usize || full > u8::MAX as usize || context_len > u8::MAX as usize {
+        return 0;
+    }
     info[p] = full as u8;
     p += 1;
     info[p..p + PREFIX.len()].copy_from_slice(PREFIX);
@@ -520,11 +538,14 @@ pub(crate) unsafe fn transcript_update(s: *mut Ssl, data: *const u8, len: usize)
     // SAFETY: `s` is live.
     unsafe {
         if (*s).hs_md_ctx.is_null() {
-            if (*s).hs_buf_len + len > TLS13_HS_BUF_LEN {
+            let Some(end) = (*s).hs_buf_len.checked_add(len) else {
+                return 0;
+            };
+            if end > TLS13_HS_BUF_LEN {
                 return 0;
             }
             ptr::copy_nonoverlapping(data, (*s).hs_buf.as_mut_ptr().add((*s).hs_buf_len), len);
-            (*s).hs_buf_len += len;
+            (*s).hs_buf_len = end;
             return 1;
         }
         EVP_DigestUpdate((*s).hs_md_ctx.cast(), data.cast(), len)
@@ -1274,9 +1295,20 @@ pub(crate) unsafe fn tls13_encrypt_record(
         let tag_len = (*s).cipher_tag_len;
         let iv_len = (*s).cipher_iv_len;
         let key_len = (*s).cipher_key_len;
+        if !(8..=16).contains(&iv_len) {
+            return -1;
+        }
         let nonce = make_nonce(&(*s).enc_iv, iv_len, (*s).enc_seq);
-        let inner_len = len + 1;
-        let rec_len = inner_len + tag_len;
+        // The inner plaintext is `plain || content_type` in a fixed scratch block, and the
+        // record length is a two-byte field; both are refusals rather than overflows.
+        let inner_len = match len.checked_add(1) {
+            Some(n) if n <= TLS13_HS_BUF_LEN + 1 => n,
+            _ => return -1,
+        };
+        let rec_len = match inner_len.checked_add(tag_len) {
+            Some(n) if n <= u16::MAX as usize => n,
+            _ => return -1,
+        };
         // Header: `type || version || length`, the AEAD AAD (`tls13_enc`). The outer record version
         // is TLS 1.2 (`0x0303`), never TLS 1.3 (`rec_layer_s3.c:395-405`, RFC 8446 §5.1).
         let mut hdr = [0u8; 5];
@@ -1375,7 +1407,7 @@ pub(crate) unsafe fn tls13_decrypt_record(
     unsafe {
         let tag_len = (*s).cipher_tag_len;
         let iv_len = (*s).cipher_iv_len;
-        if ct_len < tag_len {
+        if ct_len < tag_len || !(8..=16).contains(&iv_len) {
             return -1;
         }
         let nonce = make_nonce(&(*s).dec_iv, iv_len, (*s).dec_seq);
@@ -1476,7 +1508,9 @@ pub(crate) unsafe fn write_handshake_message(
 ) -> c_int {
     // `SSL3_RT_HANDSHAKE` — `ssl3.h` (22).
     const SSL3_RT_HANDSHAKE: u8 = 22;
-    let total = 4 + body_len;
+    let Some(total) = body_len.checked_add(4) else {
+        return 0;
+    };
     let mut msg = [0u8; 17000];
     if total > msg.len() {
         return 0;
@@ -1582,5 +1616,53 @@ pub(crate) unsafe fn tls13_process_finished(s: *mut Ssl, msg: &[u8], secret: *co
         (*s).peer_finish_md_len = n;
         ptr::copy_nonoverlapping(expected.as_ptr(), (*s).peer_finish_md.as_mut_ptr(), n);
         transcript_update(s, msg.as_ptr(), msg.len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The `HkdfLabel` encoder writes a one-byte context length; a context that does not fit is
+    /// refused before either the length truncation or the copy, while the SHA-256 transcript
+    /// length the schedule actually uses still expands.
+    #[test]
+    fn hkdf_expand_label_refuses_a_context_that_does_not_fit_its_length_byte() {
+        let md = EVP_sha256();
+        let secret = [7u8; 32];
+        let context = [0u8; 256];
+        let mut out = [0u8; 32];
+        // SAFETY: `md` is a static method table, and every buffer is this frame's.
+        unsafe {
+            assert_eq!(
+                hkdf_expand_label(
+                    md,
+                    secret.as_ptr(),
+                    secret.len(),
+                    b"key",
+                    context.as_ptr(),
+                    context.len(),
+                    out.as_mut_ptr(),
+                    out.len(),
+                ),
+                0,
+                "a 256-byte context cannot be encoded in the label"
+            );
+            assert_eq!(
+                hkdf_expand_label(
+                    md,
+                    secret.as_ptr(),
+                    secret.len(),
+                    b"key",
+                    context.as_ptr(),
+                    32,
+                    out.as_mut_ptr(),
+                    out.len(),
+                ),
+                1,
+                "the SHA-256 transcript length is accepted"
+            );
+            assert_ne!(out, [0u8; 32], "the accepted expansion produced output");
+        }
     }
 }

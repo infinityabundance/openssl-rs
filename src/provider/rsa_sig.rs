@@ -1189,6 +1189,13 @@ unsafe fn rsa_sign_directly(
             } else {
                 match (*prsactx).pad_mode {
                     RSA_X931_PADDING => {
+                        // `RSA_private_encrypt` takes an `int`; a `size_t` above `INT_MAX`
+                        // would become negative and turn the padding check into a huge copy.
+                        // The authority truncates here; refuse instead (§17: no C UB).
+                        if tbslen > c_int::MAX as usize {
+                            raise_site(&err_sites::PROV_RSA_SIG_730);
+                            return 0;
+                        }
                         if (RSA_size((*prsactx).rsa) as usize) < tbslen + 1 {
                             let mut msg = [0u8; 96];
                             BIO_snprintf(
@@ -1328,6 +1335,11 @@ unsafe fn rsa_sign_directly(
                 }
             }
         } else {
+            // `RSA_private_encrypt`'s length is an `int`; see the X931 arm above.
+            if tbslen > c_int::MAX as usize {
+                raise_site(&err_sites::PROV_RSA_SIG_821);
+                return 0;
+            }
             ret = RSA_private_encrypt(
                 tbslen as c_int,
                 tbs,
@@ -1515,6 +1527,10 @@ unsafe extern "C" fn rsa_verify_recover(
 
     // SAFETY: `prsactx` is the caller's context.
     unsafe {
+        // As in `rsa_verify_directly`: the RSA calls take an `int` signature length.
+        if siglen > c_int::MAX as usize {
+            return 0;
+        }
         if rout.is_null() {
             *routlen = RSA_size((*prsactx).rsa) as usize;
             return 1;
@@ -1699,6 +1715,12 @@ unsafe fn rsa_verify_directly(
 
     // SAFETY: `prsactx` is the caller's context.
     unsafe {
+        // Every arm passes `siglen` to an `int`-length RSA operation; a value above `INT_MAX`
+        // becomes negative there and the padding check's length arithmetic then reads out of
+        // bounds. Refuse instead of reproducing the authority's truncation (§17).
+        if siglen > c_int::MAX as usize {
+            return 0;
+        }
         if !(*prsactx).md.is_null() {
             match (*prsactx).pad_mode {
                 RSA_PKCS1_PADDING => {
