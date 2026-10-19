@@ -99,10 +99,10 @@
 //!   Phase 3 deferral, and this module does not change it: `CRYPTO_EX_INDEX_OSSL_LIB_CTX`
 //!   is observable only through the ex-data API, which `RT-EXDATA` already
 //!   covers as a process-global one. It stays a recorded deferral.
-//! * `ossl_ctx_thread_stop(ctx)` runs in `context_deinit` in the authority. The
-//!   per-thread state it releases cannot exist until 6.6e registers threads
-//!   against a context, so the call is not made yet and the omission is named
-//!   here rather than silently absent.
+//! * `ossl_ctx_thread_stop(ctx)` runs in `context_deinit` in the authority and
+//!   is made first there too; it landed with 6.6e-ii's per-thread event-handler
+//!   table. `ossl_do_ex_data_init`/`ossl_crypto_cleanup_all_ex_data_int` remain
+//!   the process-global ex-data deferral described just above.
 
 use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_void};
@@ -742,18 +742,14 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         }
     }
 
-    // The decoder cache, slot 20, and the decoder method store, slot 11 -- released in the
-    // authority's `P2` position, immediately before the encoder store, for the same reason: the
-    // cache's entries own decoder contexts whose decoders point at providers, and the store's
-    // implementations do too.
+    // The decoder method store, slot 11, and the decoder cache, slot 20 -- released in the
+    // authority's `P2` position, immediately before the encoder store, and in its internal order:
+    // `context_deinit_objs` frees `decoder_store` before `decoder_cache`. Both own provider-backed
+    // implementations, so both must go before the provider store.
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
     // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
     // that the object is no longer in use. Each slot is released exactly once and re-NULLed.
     unsafe {
-        if !(*ctx).decoder_cache.is_null() {
-            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
-            (*ctx).decoder_cache = ptr::null_mut();
-        }
         if !(*ctx).decoder_store.is_null() {
             crate::property::store::ossl_method_store_free(
                 (*ctx)
@@ -761,6 +757,10 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::property::store::OsslMethodStore>(),
             );
             (*ctx).decoder_store = ptr::null_mut();
+        }
+        if !(*ctx).decoder_cache.is_null() {
+            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
+            (*ctx).decoder_cache = ptr::null_mut();
         }
     }
 
@@ -798,21 +798,11 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         }
     }
 
-    // The child-provider globals, released after the provider-config object. The authority's
-    // `context_deinit_objs` reaches `child_provider` through `ossl_provider_deinit_child` and
-    // then releases the slot; the deregistration is 6.6d's call site, and releasing the object
-    // here is what keeps the slot's lifetime this stratum's.
-    // SAFETY: `ctx` is a live context being torn down; each slot is released once.
-    unsafe {
-        if !(*ctx).child_provider.is_null() {
-            crate::provider::child::ossl_child_prov_ctx_free((*ctx).child_provider);
-            (*ctx).child_provider = ptr::null_mut();
-        }
-    }
-
     // The provider store, released **first among the slot objects the authority marks P1**,
     // because the child-provider data that 6.8e lands must be freed after it. Releasing it
-    // here is what makes the P1 relation hold once that arrives.
+    // here is what makes the P1 relation hold: during this release each provider is
+    // deactivated, and a child provider's parent-reference callbacks read the slot 18 globals
+    // (`ossl_provider_up_ref_parent`/`ossl_provider_free_parent`).
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other
     // thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the
     // caller contract is that the object is no longer in use. Each slot is released exactly
@@ -925,6 +915,20 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::thread_data::OsslLibCtxThreads>(),
             );
             (*ctx).threads = ptr::null_mut();
+        }
+    }
+
+    // The child-provider globals, released **last among the slot objects that own memory**, which
+    // is the authority's low-priority position: after the provider store (P1) and after the thread
+    // slot. The provider store's deactivation path reads these globals through
+    // `ossl_lib_ctx_get_data(.., OSSL_LIB_CTX_CHILD_PROVIDER_INDEX)`, so freeing them earlier
+    // would silently skip the parent-reference callbacks. The deregistration itself
+    // (`ossl_provider_deinit_child`) is `destroy_body`'s, before `context_deinit`.
+    // SAFETY: `ctx` is a live context being torn down; each slot is released once.
+    unsafe {
+        if !(*ctx).child_provider.is_null() {
+            crate::provider::child::ossl_child_prov_ctx_free((*ctx).child_provider);
+            (*ctx).child_provider = ptr::null_mut();
         }
     }
 
@@ -1528,15 +1532,25 @@ pub(crate) fn lib_ctx_default_deinit() {
     };
 }
 
-/// `void ossl_release_default_drbg_ctx(void)` — internal. Phase 9 owns the DRBG
-/// slot; this is here because the authority's only caller is the cleanup path
-/// this module drives, and a slot release belongs with the slot.
-#[allow(dead_code)] // unreachable until the DRBG slot exists
+/// `void ossl_release_default_drbg_ctx(void)` — internal. The authority's caller
+/// is `ossl_rand_cleanup_int`, which this crate drives from its own RAND cleanup;
+/// a slot release belongs with the slot.
+///
+/// The slot was filled by `context_init` when Phase 9 landed the RAND global, so
+/// this must release it before clearing the pointer — a bare NULL store would
+/// leak the DRBG and its owned DRBGs. The authority's order is free-then-clear.
 pub(crate) fn release_default_drbg_ctx() {
-    // SAFETY: the global default object exists for the life of the process; the
-    // field is a plain pointer and Phase 9 has not filled it yet, so this is a
-    // NULL store today and the release goes on this line when it lands.
-    unsafe { (*global_default()).drbg = ptr::null_mut() };
+    // SAFETY: the global default object exists for the life of the process; its
+    // `drbg` field is NULL or the live RAND global `context_init` stored there,
+    // owned by this slot until this release nulls it. `context_deinit` later sees
+    // NULL and skips its own release, so the object is freed exactly once.
+    unsafe {
+        let drbg = (*global_default()).drbg;
+        if !drbg.is_null() {
+            crate::rand::rand_lib::ossl_rand_ctx_free(drbg);
+            (*global_default()).drbg = ptr::null_mut();
+        }
+    }
 }
 
 #[cfg(test)]

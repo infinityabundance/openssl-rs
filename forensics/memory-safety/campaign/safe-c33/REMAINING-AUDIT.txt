@@ -1,11 +1,3 @@
-src/cms/cms_att.rs
-src/cms/cms_dd.rs
-src/cms/cms_io.rs
-src/cms/cms_kem.rs
-src/context/core_bio.rs
-src/context/dispatch.rs
-src/context/mod.rs
-src/context/thread_data.rs
 src/crmf/crmf_pbm.rs
 src/ct/ct_b64.rs
 src/ct/ct_policy.rs
