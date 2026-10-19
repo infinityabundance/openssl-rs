@@ -261,7 +261,7 @@ pub(crate) unsafe fn string_set_body(
         unsafe { raise_site(&err_sites::ASN1_LIB_305) };
         return 0;
     }
-    if (s.length as usize) <= len || s.data.is_null() {
+    if s.length < 0 || (s.length as usize) <= len || s.data.is_null() {
         // SAFETY: `s.data` came from this allocator (or is null) and this frame owns it; taking it
         // makes the owner below its single release while the resize runs.
         let mut data = unsafe { OwnedBlock::take(s.data) };
@@ -799,17 +799,29 @@ pub unsafe extern "C" fn ossl_sk_ASN1_UTF8STRING2text(
         // SAFETY: `i` is in range of the live stack.
         let current = unsafe { OPENSSL_sk_value(text, i) }.cast::<Asn1String>();
         if i > 0 {
-            length += sep_len;
+            let Some(next) = length.checked_add(sep_len) else {
+                return ptr::null_mut();
+            };
+            length = next;
         }
         // SAFETY: `current` is a live element of the stack.
-        length += unsafe { ASN1_STRING_length(current) } as usize;
+        let Ok(cur_len) = usize::try_from(unsafe { ASN1_STRING_length(current) }) else {
+            return ptr::null_mut();
+        };
+        let Some(next) = length.checked_add(cur_len) else {
+            return ptr::null_mut();
+        };
+        length = next;
         if max_len != 0 && length > max_len {
             return ptr::null_mut();
         }
         i += 1;
     }
     // `CRYPTO_malloc(length + 1)`, line 456; the caller owns the block `Drop` would otherwise free.
-    let Some(result) = OwnedBlock::new(length + 1) else {
+    let Some(alloc_len) = length.checked_add(1) else {
+        return ptr::null_mut();
+    };
+    let Some(result) = OwnedBlock::new(alloc_len) else {
         return ptr::null_mut();
     };
 
@@ -819,7 +831,9 @@ pub unsafe extern "C" fn ossl_sk_ASN1_UTF8STRING2text(
         // SAFETY: `i` is in range of the live stack.
         let current = unsafe { OPENSSL_sk_value(text, i) }.cast::<Asn1String>();
         // SAFETY: `current` is live.
-        let len = unsafe { ASN1_STRING_length(current) } as usize;
+        let Ok(len) = usize::try_from(unsafe { ASN1_STRING_length(current) }) else {
+            return ptr::null_mut();
+        };
         if i > 0 && sep_len > 0 {
             // SAFETY: `p` has room for `sep_len + 1` bytes and `sep` is readable for `sep_len`.
             unsafe { ptr::copy_nonoverlapping(sep, p, sep_len + 1) };
@@ -851,4 +865,27 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
         n += 1;
     }
     n
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A negative `length` is a legal value of the exported setter, but it is not a
+    /// capacity. `string_set_body` must reallocate rather than treat it as a very
+    /// large buffer extent.
+    #[test]
+    fn a_negative_length_forces_the_set_to_reallocate() {
+        // SAFETY: `s` is this frame's fresh live string; every pointer is a live local
+        // buffer of the stated length and every release is this frame's own.
+        unsafe {
+            let s = ASN1_STRING_new();
+            assert!(!s.is_null());
+            assert_eq!(ASN1_STRING_set(s, b"abcdef".as_ptr().cast(), 6), 1);
+            ASN1_STRING_length_set(s, -1);
+            assert_eq!(ASN1_STRING_set(s, b"0123456789".as_ptr().cast(), 10), 1);
+            assert_eq!(bytes(s), b"0123456789");
+            ASN1_STRING_free(s);
+        }
+    }
 }
