@@ -1,0 +1,107 @@
+{
+  "receipt": "mechanism-sweep-M17",
+  "branch": "integrate/safe-c33",
+  "worktree": true,
+  "date": "2026-10-19",
+  "source_head": "b1002f0ee",
+  "verification_level": "FAST plus BATCH; STOP-class dangling cached Montgomery contexts repaired; one debug-build arithmetic overflow repaired; no new boundary; hidden = 0",
+  "scope": "ordinary mechanism-contract sweep starting at the queued src/rsa/ossl.rs (live rank 197) and continuing down the production-site ranking. Eight ordinary files audited: src/rsa/ossl.rs (197), src/srp/srp_lib.rs (198), src/engine/eng_list.rs (199), src/ocsp/ocsp_ext.rs (200), src/provider/ml_dsa_kmgmt.rs (201), src/rsa/ctrl.rs (202), src/cms/cms_asn1.rs (203), src/slh_dsa/key.rs (204 cohort). Three boundary files in the 96-site tie cohort were skipped and are listed in files_not_run.",
+  "files": [
+    "src/rsa/ossl.rs",
+    "src/srp/srp_lib.rs",
+    "src/engine/eng_list.rs",
+    "src/ocsp/ocsp_ext.rs",
+    "src/provider/ml_dsa_kmgmt.rs",
+    "src/rsa/ctrl.rs",
+    "src/cms/cms_asn1.rs",
+    "src/slh_dsa/key.rs"
+  ],
+  "files_not_run": [
+    "src/runtime/thread.rs (rank 204 cohort) - lock/once/thread-local primitives; BOUNDARY.",
+    "src/ssl/ssl_conf.rs (rank 203 cohort) - SSL_CONF command dispatch over application command handlers; BOUNDARY.",
+    "src/pkcs12/p12_crt.rs (rank 206 cohort) - PKCS12_create_ex2 application-controlled bag callback; BOUNDARY."
+  ],
+  "defects": [
+    {
+      "id": "M17-D1",
+      "file": "src/rsa/ossl.rs",
+      "lines_post_fix": "2249-2270",
+      "severity": "high",
+      "class": "dangling cached pointer released or used again (double free / use-after-free)",
+      "description": "rsa_ossl_finish released pinfo->m and rsa->_method_mod_{n,p,q} but left the freed pointers in those slots. RSA_set_method invokes the outgoing method's finish on every method transition and then installs the new table, so a second RSA_set_method released the same blocks again; alternatively the next private operation's BN_MONT_CTX_set_locked returned the dangling pointer from its non-NULL fast path and used it as a Montgomery context. The authority (rsa_ossl.c:1179-1195) has the same UB; AGENTS.md section 17 forbids reproducing it.",
+      "fix": "Clear every released slot (extra-prime pinfo->m and the three _method_mod_* fields) at its single release. Recorded at the function as a deliberate divergence; the difference is observable only to a caller that uses a released context. Added the_finish_hook_clears_every_slot_it_releases, which also acts as the double-release negative control."
+    },
+    {
+      "id": "M17-D2",
+      "file": "src/srp/srp_lib.rs",
+      "lines_post_fix": "105-119",
+      "severity": "low",
+      "class": "unchecked signed-to-unsigned allocation width (debug-build overflow across the C ABI)",
+      "description": "srp_Calc_xy computed numN = bn_num_bytes(N) and then cast it to usize and doubled it for the two-block scratch allocation. A live BIGNUM whose bit length overflowed the authority's int yields a negative width; the cast produces a huge usize and the doubling overflows, panicking a debug build across SRP_Calc_u_ex / SRP_Calc_u's extern \"C\" boundary. The authority's own allocation fails in that case.",
+      "fix": "Refuse a negative width by returning NULL after releasing the fetched digest, which is the authority's allocation-failure answer; the positive path is unchanged. Also narrowed srp_Calc_xy's contract: N is live because BN_num_bytes reads it, while x and y remain NULL-or-live (BN_ucmp accepts NULL)."
+    }
+  ],
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "test_only_unsafe_added": 1,
+  "contracts_reused": [
+    "RC-1 refcount protocol for ENGINE list insertion/removal, iteration and ENGINE_by_id (up/down pairs with the list as reference owner)",
+    "OB-1 OwnedBuf allocation/adoption and release coordinates used by rsa/ossl and srp_lib",
+    "OB-2 OwnedStr adoption for the SLH-DSA generation context's propq duplicate",
+    "OB-3 OwnedCtx/CtxDestroy for MlDsaGenCtx, including the authority's member-only cleanup body",
+    "OB-4 member-buffer slots for the RSA cached Montgomery contexts and the CMS property-query string",
+    "RSA_METHOD table contract (function-pointer Option reduction, NULL member refusal as the authority's goto err)",
+    "BN null-or-live access convention, BN_with_flags handle discipline and BN_CTX start/end pairing",
+    "OpenSSL stack element/pop-free/freefunc convention (OCSP acceptable-responses, CMS prime-info and safe-bag walks)",
+    "ASN.1 item/template/ADB/callback ordering contracts for the CMS item callbacks and streaming cms_cb",
+    "Provider keymgmt dispatch contract for import/export/load/dup/has/match/validate/generate",
+    "ERR raise-coordinate contract and the CRYPTO_* allocator seam coordinates",
+    "C-ABI exported-symbol, out-parameter, null-or-live and destructor contracts"
+  ],
+  "no_defect_found": [
+    "src/rsa/ossl.rs: the static RSA_METHOD table and both accessors; the AtomicPtr default-method store; the per-thread blinding sparse array and read-then-write lock order; RSA_setup_blinding and rsa_get_public_exp; the public/private encrypt and public/private decrypt bodies including length refusals, constant-time error flagging, KDK derivation and every release; rsa_ossl_mod_exp's cache/smooth/slow/extra-prime/tail arms; rsa_ossl_init and the repaired finish.",
+    "src/srp/srp_lib.rs: srp_Calc_xy/srp_Calc_k digest construction; SRP_Calc_server_key, _B_ex, _A, _client_key_ex ownership and single err tails; SRP_Calc_x_ex buffer sizing and constant-time-friendly sequence; the two verification wrappers; the immutable knowngN table and both id accessors.",
+    "src/engine/eng_list.rs: engine_list_add/remove reference accounting, cleanup registration and refusal paths; dynamic-id add/remove under the lock and every unlock edge; ENGINE_get_first/last/next/prev, ENGINE_add/remove/up_ref/by_id, engine_cpy and the copy arm; the table-unregister-before-free safety improvement.",
+    "src/ocsp/ocsp_ext.rs: the four request/onereq/basicresp/singleresp extension accessor families; ocsp_add1_nonce's ASN1_object_size check, DER header, RAND fallback and REPLACE install; OCSP_check_nonce/OCSP_copy_nonce; OCSP_crlID_new, OCSP_accept_responses_new, OCSP_archive_cutoff_new and OCSP_url_svcloc_new failure cleanup.",
+    "src/provider/ml_dsa_kmgmt.rs: keymgmt free/dup/has/match/validate; the three generated repeated-key decoders; fromdata/import/export and the fixed-size OSSL_PARAM destinations; load's pointer-slot detach; gen_init/gen/gen_cleanup and the entropy_len bounded by the 32-byte array.",
+    "src/rsa/ctrl.rs: RSA_pkey_ctx_ctrl; the named md set/get helpers and their parameter arrays; padding, PSS, OAEP, MGF1, saltlen and keygen-bits/primes controls; set_rsa_keygen_pubexp's success-only custody transfer and set1_rsa_keygen_pubexp's duplicate/refund arm; set0_rsa_oaep_label's single success-path release and get0's borrowed octet_ptr.",
+    "src/cms/cms_asn1.rs: cms_si_cb, cms_ec_cb, cms_rek_cb, cms_kari_cb, cms_kemri_cb, cms_ri_cb and cms_cb's stream/detached/free arms; the CMS/RSA static templates, ADB and AUX records; the two shared-info encoders and the Sync wrappers over constant statics.",
+    "src/slh_dsa/key.rs: new/dup/free/reset and their hash refcounts; fromdata with full-width and half-width private inputs and its cleansing error path; generate_key's entropy width check, RAND fallback and error cleansing; every accessor; set_priv/set_pub copy widths; key_to_text."
+  ],
+  "residuals": [
+    "slh_dsa_key_equal uses CRYPTO_memcmp for the public component where the authority uses memcmp; equality results are identical and the widening is constant-time on public data, so it is retained.",
+    "rsa_ossl_finish now clears slots the authority leaves dangling. This is a deliberate section 17 divergence for the authority's UB; no defined caller observes the difference.",
+    "srp_Calc_xy continues to accept NULL x/y, which the authority's BN_ucmp tolerates as less-than; N is now documented live because the authority's BN_num_bytes macro dereferences it.",
+    "Line coordinates remain the crate's established convention; no CRYPTO_* seam coordinate was changed in this batch.",
+    "ASan/Miri/Loom/TSan, full-suite sanitizers, FRF-Fuzz, authority differentials, independent review and SEAL regeneration are NOT_RUN."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: rsa::ossl 8 passed / 0 failed (new regression control included), provider::ml_dsa_kmgmt 1/0, rsa::ctrl 2/0; srp, engine::eng_list, ocsp::ocsp_ext, cms::cms_asn1 and slh_dsa::key have no test functions",
+    "library_tests_serial": "PASS: 1607 passed / 0 failed / 27 ignored (80.85 s)",
+    "library_tests_threads_4": "PASS: 1607 passed / 0 failed / 27 ignored (90.95 s)",
+    "affected_adversarial_probes": "NOT_RUN: no audited file carries an OPENSSL_RS_ADV_PROBE arm; the change adds a normal unit-test negative control only."
+  },
+  "next_queue": {
+    "file": "src/pem/pem_info.rs",
+    "rank_note": "96-production-site tie cohort; runtime/thread, ssl_conf and p12_crt in this cohort are boundary work",
+    "then": [
+      "src/ml_kem/arith.rs (95)",
+      "src/pkcs12/p12_sbag.rs (95)",
+      "src/asn1/new.rs (95)",
+      "src/evp/encode.rs (94)"
+    ],
+    "boundary_queue": [
+      "src/runtime/thread.rs",
+      "src/ssl/ssl_conf.rs",
+      "src/pkcs12/p12_crt.rs"
+    ]
+  }
+}

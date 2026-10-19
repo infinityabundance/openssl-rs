@@ -85,8 +85,8 @@ unsafe fn bn_num_bytes(a: *const BigNum) -> c_int {
 ///
 /// # Safety
 ///
-/// `x`, `y` and `N` must be NULL or live `BIGNUM`s; `libctx` NULL or a live library context;
-/// `propq` NULL or NUL-terminated.
+/// `x` and `y` must be NULL or live `BIGNUM`s; `N` must be live (the authority's `BN_num_bytes(N)`
+/// dereferences it); `libctx` NULL or a live library context; `propq` NULL or NUL-terminated.
 unsafe fn srp_Calc_xy(
     x: *const BigNum,
     y: *const BigNum,
@@ -101,8 +101,18 @@ unsafe fn srp_Calc_xy(
     if sha1.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `N` is NULL or live per the contract.
+    // SAFETY: `N` is live per the contract.
     let numN = unsafe { bn_num_bytes(N) };
+    // A live input can still answer a negative width only if its bit length overflowed the
+    // authority's `int`; casting that to `usize` and doubling it would wrap (and panic a debug
+    // build across this C ABI), so the authority's allocation failure is answered instead.
+    if numN < 0 {
+        // SAFETY: `sha1` came from `EVP_MD_fetch`.
+        unsafe {
+            EVP_MD_free(sha1);
+        }
+        return ptr::null_mut();
+    }
     let mut tmp: Option<OwnedBuf> = None;
     'done: {
         // `x != N` is the authority's pointer comparison: a straddling `x` is already

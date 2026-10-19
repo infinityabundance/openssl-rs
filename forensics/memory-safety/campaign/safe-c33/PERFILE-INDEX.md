@@ -1576,3 +1576,58 @@ and SEAL are `NOT_RUN`.
 
 **Next ordinary position:** `src/rsa/ossl.rs` (197), then `src/srp/srp_lib.rs` (198) and down the
 production-site ranking.
+
+## 20. Mechanism sweep M17 — rsa/ossl, srp_lib, eng_list, ocsp_ext, ml_dsa_kmgmt, rsa/ctrl, cms_asn1, slh_dsa/key
+
+**STOP status: CLEAR after repair.** One confirmed memory-safety defect class (dangling cached
+Montgomery contexts released or used again after `RSA_set_method`) and one debug-build arithmetic
+overflow were repaired; one internal contract was tightened. Hidden = 0.
+
+**Audited (ordinary).** `src/rsa/ossl.rs` (197), `src/srp/srp_lib.rs` (198),
+`src/engine/eng_list.rs` (199), `src/ocsp/ocsp_ext.rs` (200),
+`src/provider/ml_dsa_kmgmt.rs` (201), `src/rsa/ctrl.rs` (202), `src/cms/cms_asn1.rs` (203),
+`src/slh_dsa/key.rs` (204 cohort). No newly audited file was a new boundary.
+
+**Defects.**
+
+- **M17-D1 (fixed, high, `rsa/ossl.rs:2249-2270`).** `rsa_ossl_finish` released the extra-prime
+  contexts and `_method_mod_{n,p,q}` but left the freed pointers in their slots. `RSA_set_method`
+  calls that hook on every method transition, so a second `RSA_set_method` released the same blocks
+  again, and the next private operation's `BN_MONT_CTX_set_locked` returned the dangling pointer
+  from its non-NULL fast path (use-after-free). The authority has the same UB; §17 forbids
+  reproducing it. Every released slot is now cleared, the deliberate divergence is recorded at the
+  function, and `the_finish_hook_clears_every_slot_it_releases` is the regression/negative control.
+- **M17-D2 (fixed, low, `srp/srp_lib.rs:105-119`).** `srp_Calc_xy` cast `BN_num_bytes(N)` to
+  `usize` and doubled it without checking the sign; a live `BIGNUM` whose bit length overflowed the
+  authority's `int` yields a negative width, whose cast and doubling panic a debug build across the
+  C ABI. The function now answers the authority's allocation-failure result for a negative width,
+  and its `# Safety` section requires a live (non-NULL) `N`, which is what `BN_num_bytes` reads.
+
+**No defect.** `rsa/ossl`: method table, default-method store, blinding store/lock order, the four
+crypt entry points, KDK, CRT/smooth path and lifecycle hooks. `srp_lib`: `xy`/`k` digests, client
+and server key derivations, verification wrappers and the immutable `knowngN` table. `eng_list`:
+list insertion/removal and RC-1 up/down pairs, dynamic-id linkage, iteration and `ENGINE_by_id`
+copy/recursion arms, and the table-unregister-before-free improvement. `ocsp_ext`: the four
+repeated extension families, nonce construction (DER header plus content), and the four
+constructors' failure cleanup. `ml_dsa_kmgmt`: keymgmt dispatch, generated decoders, export/load,
+seed-length bounded by the fixed entropy array, and the generator context's `CtxDestroy` body.
+`rsa/ctrl`: named md setters/getters, padding/PSS/OAEP controls, keygen bits/pubexp/primes and the
+OAEP label custody transfer. `cms_asn1`: the six item callbacks, streaming `cms_cb`, ADB/template
+statics and the two shared-info encoders. `slh_dsa/key`: new/dup/free/reset, hash refcounts,
+fromdata and its error cleansing, generation/entropy widths, accessors and text output.
+
+**Boundary-skipped (NOT_RUN).** `src/runtime/thread.rs` (lock/once/TLS primitives),
+`src/ssl/ssl_conf.rs` (`SSL_CONF` command dispatch), `src/pkcs12/p12_crt.rs`
+(application-controlled `PKCS12_create_ex2` callback). The remaining 96-site tie-cohort file
+`src/pem/pem_info.rs` is ordinary and is next in the queue.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused `rsa::ossl` 8/0
+(new control included), `provider::ml_dsa_kmgmt` 1/0, `rsa::ctrl` 2/0; the other audited modules
+have no test functions. BATCH (final candidate): library **1607 passed / 0 failed / 27 ignored**
+serially (80.85 s) and with `--test-threads=4` (90.95 s). No affected `OPENSSL_RS_ADV_PROBE` arm
+exists. ASan/Miri/Loom/TSan, full sanitizers, FRF-Fuzz, authority differentials, independent
+review and SEAL are `NOT_RUN`.
+
+**Next ordinary position:** `src/pem/pem_info.rs`, then `src/ml_kem/arith.rs`,
+`src/pkcs12/p12_sbag.rs`, `src/asn1/new.rs` and `src/evp/encode.rs` in the 95/94 production-site
+cohorts.
