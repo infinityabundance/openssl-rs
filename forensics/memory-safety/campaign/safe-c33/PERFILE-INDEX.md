@@ -1077,3 +1077,55 @@ deferred `confmod` boundary and SEAL evidence are `NOT_RUN`.
 `src/ssl/bio_ssl.rs` (105) and `src/runtime/bio/bss_bio.rs` (106) in the boundary
 queue. Machine-readable receipt:
 [`atlas-refresh/mechanism-sweep-M12.json`](atlas-refresh/mechanism-sweep-M12.json).
+
+## 11. Boundary sweep B6 — confmod, BIO-SSL and the BIO pair
+
+**Audited (boundary):** `src/runtime/confmod/mod.rs` (110, 126 sites),
+`src/ssl/bio_ssl.rs` (105, 133), `src/runtime/bio/bss_bio.rs` (106, 131). The three
+deferrals recorded by M11/M12 are closed; no boundary file remains in the B1–B6 queue.
+
+**B6-D1 (fixed, high, STOP-and-clear).** `BIO_C_SET_SSL`'s re-creation arm called
+`ssl_free`, which released the `BioSsl` block without clearing `BIO.ptr`, then returned 0
+when `ssl_new`'s allocation was refused. The dangling slot caused a use-after-free in
+later callbacks and a second release in `BIO_free`; the authority has the same release
+build defect. The arm now clears the data slot and `init` before the fallible
+`ssl_new`, every callback refuses a NULL slot, and SET_SSL can recover. Control:
+`ssl::bio_ssl::adv_probe::set_ssl_allocation_refusal_clears_data_before_recreate`
+(allocator-refusal probe; the recording allocator flags the pre-fix double release).
+
+**B6-D2 (fixed, medium).** The four confmod diagnostic builders formatted into
+`static mut BUF`, a cross-thread data race when `CONF_modules_load` runs concurrently on
+different `CONF` objects. Each now takes caller-owned stack storage; the raise copies the
+bytes synchronously. Message bytes and error coordinates are unchanged. The same class
+remains in `src/provider/conf.rs` and `src/runtime/conf/conf_ssl.rs` (outside this batch).
+
+**B6-D3 (fixed, low).** `BIO_read`/`bio_nread0` trusted `init` to imply a live peer and
+`bio_write`/`bio_nwrite0` trusted it to imply a ring buffer. Both states are reachable
+through the public `BIO_set_init`/`BIO_set_data` accessors. The paths now answer 0 on an
+absent peer/buffer and `bio_destroy_pair` clears a live peer even when its data is
+absent. Control: `bss_bio::tests::forced_initialised_state_without_a_pair_is_inert`.
+
+**B6-D4 (fixed, low, parity).** `CONF_modules_unload` relied on `OPENSSL_sk_dup(NULL)`
+answering NULL, which this crate's stack intentionally does not do. An explicit NULL test
+now takes the authority's early return.
+
+**Residuals.** No hidden obligations in the three files; no safe Rust caller can cause UB
+through their interfaces. Retained and now stated: re-adopting the same SSL pointer with
+`BIO_CLOSE`; `BIO_set_data`/`BIO_set_init` replacing a method's data; BIO pairs are not
+concurrency-safe; `module_find` returns an unpinned entry, so unload/finish must not run
+concurrently with load and a module callback must not unload its own module (the upstream
+design has no per-module refcount, which blocks `SAFETY_DISCHARGED`); DSO symbol
+signatures are the module's contract. Graduation: `CONTRACTED`.
+
+**Evidence.** FAST: fmt and `cargo check --lib` clean; focused `bss_bio` 2/0, `bio_ssl`
+1/0 + 1 ignored, `confmod` 2/0. BATCH: clippy `--all-targets -D warnings` PASS; library
+**1592 passed / 0 failed / 27 ignored** serially (253.62 s) and with `--test-threads=4`
+(94.65 s); the ignored allocator probe passes alone under `OPENSSL_RS_ADV_PROBE=1`.
+ASan/Miri/TSan/Loom, the RT-SSL-BIO and RT-CONF-MOD differential courts (candidate shell
+rebuild required), FRF-Fuzz replay, independent review and SEAL regeneration are
+`NOT_RUN`. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B6.json`](atlas-refresh/boundary-sweep-B6.json).
+
+**Next boundary position:** none from the B1–B6 queue. Next ordinary position remains
+`src/evp/fetch.rs` (118), `src/ssl/tls13_enc.rs` (119), `src/ts/ts_rsp_utils.rs` (120),
+`src/x509/x509_vpm.rs` (121).
