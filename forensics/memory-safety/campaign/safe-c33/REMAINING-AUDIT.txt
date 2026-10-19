@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/pkcs7/pk7_mime.rs
-src/property/defn_cache.rs
-src/property/globals.rs
-src/property/list.rs
-src/property/query.rs
-src/provider/base.rs
-src/provider/capabilities.rs
-src/provider/child.rs
 src/provider/cipher_gcm.rs
 src/provider/cipher_tdes_wrap.rs
 src/provider/ctx.rs

@@ -1,0 +1,135 @@
+{
+  "receipt": "mechanism-sweep-M64",
+  "branch": "integrate/safe-c33",
+  "source_head": "13574d0cf",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; no STOP (no unrepaired memory-safety defect, no ABI regression, no hidden obligation and no remaining unsafe-safe-Rust API); one NULL-parity repair and one explicit slice-lifetime contract statement",
+  "scope": "Per-file contract audit of the PKCS7 MIME stream/S-MIME wrappers, the per-context property definition cache, the global-properties slot and mirroring flags, the property list layout and tail accessors, the property query accessors and enabled test, the base provider's parameter/query/dispatch/init boundary, the default provider TLS-GROUP/TLS-SIGALG capability up-call, and the child provider's slot, callbacks and init/deinit. evp/method_store.rs was deferred as the method-store registry boundary; provider/child.rs was substituted from position 9 of the queue. provider/base.rs was audited rather than deferred because its handle is the borrowed opaque handle of the already-contracted ProviderInitFn dispatch table. All units are PUBLIC_DATA: property names/values, algorithm/capability tables, provider metadata and the PKCS7 MIME envelope. No constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/pkcs7/pk7_mime.rs",
+    "src/property/defn_cache.rs",
+    "src/property/globals.rs",
+    "src/property/list.rs",
+    "src/property/query.rs",
+    "src/provider/base.rs",
+    "src/provider/capabilities.rs",
+    "src/provider/child.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M64-D1",
+      "file": "src/property/query.rs",
+      "line_pre_fix": 170,
+      "line_post_fix": 173,
+      "severity": "low",
+      "class": "NULL-handling divergence from the authority (compatibility, not UB in reach)",
+      "description": "ossl_property_get_number_value dereferenced prop unconditionally, while the authority tests prop != NULL and answers 0 (property_query.c:51-57). A NULL definition was UB in the Rust transcription and a defined 0 in the authority. No production caller passes NULL today, and the function is currently dead code, so no observed behaviour changed.",
+      "fix": "Added the authority's NULL arm (return 0) and a NULL assertion to the existing focused test. The # Safety contract now reads NULL or live. No exported signature, release seam or allocator coordinate changed.",
+      "witness": "forensics/authorities/src/openssl-3.6.4/crypto/property/property_query.c:51-57; src/property/query.rs tests::a_definition_that_is_not_a_number_answers_zero_for_its_number."
+    },
+    {
+      "id": "M64-D2",
+      "file": "src/property/list.rs",
+      "line_pre_fix": 190,
+      "line_post_fix": 201,
+      "severity": "low",
+      "class": "implicit unsafe-contract obligation (borrow lifetime and alias exclusivity)",
+      "description": "properties<'len> returns a caller-chosen lifetime from a raw list pointer. The # Safety stated only that len must be num_properties; it did not state that the returned borrow must stay within the list allocation/lifetime or that no &mut alias to the tail may exist. The type cannot express these obligations because the owner is a raw pointer.",
+      "fix": "The # Safety contract now names both obligations and the function gained a one-line description. Documentation-only; no code or signature change, and no SAFETY_DISCHARGED claim is made for the raw-pointer boundary.",
+      "witness": "forensics/authorities/src/openssl-3.6.4/crypto/property/property_local.h struct ossl_property_list_st; src/property/list.rs:201."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "RC-1 context read/write lock for the definition-cache lookup and store",
+    "OB-3 OwnedCtx/CtxDestroy for ossl_ctx_global_properties and ChildProvGlobals, including the all-zero-state destructor sweep",
+    "lhash element ownership (adopt/into_raw) and the CRYPTO_malloc/CRYPTO_free seam at the authority's exact FILE/LINE in defn_cache",
+    "C ABI contracts for NULL-or-live optional pointers, terminated dispatch tables, writable out-parameters and caller-owned results",
+    "Provider callback and dispatch-table contracts established in B1/B2/B6-B20 and M4 (including the recorded safer NULL-callback and NULL-name refusals)",
+    "OsslParam static Sync and the immutable-literal/row-field OSSL_PARAM aliasing contract used by the capability tables",
+    "OB-1/OB-2 are not used by these units; no new owner model was created"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry boundary.",
+    "ossl_prop_defn_set's delete arm leaves the removed element unreleased, exactly as the authority does; the cache leaks until context teardown and this is preserved, not reclassified as safe.",
+    "A cached definition list is shared by the cache and by every Implementation.properties that found it; the cache owns the single release and no caller may free it.",
+    "properties<'len>'s lifetime and alias exclusivity remain caller obligations that the type system cannot express from a raw list pointer.",
+    "provider_create_child_cb holds the child write lock across parent upcalls (c_prov_get0_provider_ctx, c_prov_get0_dispatch) exactly as the authority does; a parent re-entering the create path from those callbacks would deadlock, not race, and this reentrancy contract is recorded rather than changed.",
+    "No constant-time claim is made for the property or provider metadata units from source inspection."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1670 passed / 0 failed / 27 ignored; 1697 total; 256.82 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1670 passed / 0 failed / 27 ignored; 1697 total; 136.75 s; --test-threads=4)",
+    "focused_tests": "PASS (pre-repair: property 29 passed / 0 failed, which includes the query unit; post-repair: property::query 3 passed / 0 failed; provider::child 1 passed / 0 failed; pkcs7::pk7_mime, provider::base and provider::capabilities have no unit tests)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no property, provider base/capabilities/child or PKCS7-MIME probe)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "Miri/ASan/valgrind, Loom, Tree Borrows over the properties tail view, the FRF suite and the dependency-graph regeneration are BOUNDARY/SEAL work; no affected adversarial probe exists for these units. The M64-D2 lifetime obligation is stated, not verified."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/provider/cipher_gcm.rs",
+      "src/provider/cipher_tdes_wrap.rs",
+      "src/provider/ctx.rs",
+      "src/provider/decode_der2key.rs",
+      "src/provider/decode_epki2pki.rs",
+      "src/provider/decode_pem2der.rs",
+      "src/provider/decode_spki2typespki.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / Tree Borrows over the property list tail view (properties/properties_ptr)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / ASan / valgrind over the definition-cache and child-provider paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "affected adversarial probes (none exists for these units)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement (no secret-dependent path in these units)",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ]
+}

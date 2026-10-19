@@ -160,16 +160,20 @@ pub(crate) unsafe fn ossl_property_get_string_value(
 
 /// `int64_t ossl_property_get_number_value(const OSSL_PROPERTY_DEFINITION *prop)`
 ///
-/// A definition that is not a `NUMBER` answers **0**, not an error: the answer is
-/// the same shape as a number, and the caller distinguishes by
-/// [`ossl_property_get_type`].
+/// A definition that is not a `NUMBER`, and a NULL definition, answer **0**, not
+/// an error: the answer is the same shape as a number, and the caller
+/// distinguishes by [`ossl_property_get_type`]. The NULL arm is the authority's
+/// own (`property_query.c:51-57`), which tests `prop != NULL` before reading.
 ///
 /// # Safety
-/// `prop` must be live.
+/// `prop` must be NULL or live.
 #[allow(dead_code)]
 // unreachable until 6.8's fetch calls it; this whole module is the interface the
 // provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_get_number_value(prop: *const OsslPropertyDefinition) -> i64 {
+    if prop.is_null() {
+        return 0;
+    }
     // SAFETY: `prop` is live.
     unsafe {
         if (*prop).type_ != OSSL_PROPERTY_TYPE_NUMBER {
@@ -289,6 +293,11 @@ mod tests {
         );
         // SAFETY: `d` is live.
         assert_eq!(unsafe { ossl_property_get_number_value(&d) }, 0);
+        // The authority tests `prop != NULL` before reading (`property_query.c:51-57`),
+        // so a NULL definition answers 0 rather than faulting.
+        // SAFETY: NULL is permitted by the contract.
+        let null_value = unsafe { ossl_property_get_number_value(core::ptr::null()) };
+        assert_eq!(null_value, 0);
         // The string arm reads only the low four bytes, which is what the union's
         // layout decides on a little-endian target.
         let ds = defn(

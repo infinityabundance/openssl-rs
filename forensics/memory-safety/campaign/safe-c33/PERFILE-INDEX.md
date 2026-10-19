@@ -5524,3 +5524,97 @@ for the PKCS#12 or PKCS#7 units.
 again), `src/pkcs7/pk7_mime.rs`, `src/property/defn_cache.rs`,
 `src/property/globals.rs`, `src/property/list.rs`, `src/property/query.rs`,
 `src/provider/base.rs`, `src/provider/capabilities.rs`.
+
+---
+
+## M64 — per-file contract sweep (property vocabulary/definition cache, provider base/capabilities/child, PKCS7 MIME)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`13574d0cf` (dirty worktree: the M64-D1 repair below; no commit was made by the
+audit subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results. The authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/` for every unit compared.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/pkcs7/pk7_mime.rs` | `i2d_PKCS7_bio_stream`, `PEM_write_bio_PKCS7_stream`, `SMIME_write_PKCS7` (signed arm, `md_algs`, `SMIME_OLDMIME`), `SMIME_read_PKCS7_ex`/`SMIME_read_PKCS7` (live `*p7` probe, libctx/propq read, `resolve_libctx`) | no safety defect; thin C ABI delegation |
+| `src/property/defn_cache.rs` | slot-2 lhash constructor/releaser, `OwnedElem` alloc/adopt/into_raw, hash/cmp/free thunks, `ossl_prop_defn_get` read-lock lookup, `ossl_prop_defn_set` hit/insert/delete arms, checked size and allocator seam | no safety defect; one authority-faithful delete leak and unreachable assertion arm noted |
+| `src/property/globals.rs` | slot-14 `OsslGlobalProperties`, OB-3 `CtxDestroy`, zeroed-holder validity, `ossl_ctx_global_properties` loadconfig arm, two mirroring flag accessors, zero-state sweep | no defect |
+| `src/property/list.rs` | `#[repr(C)]` definition/list layout (union and `has_optional` bitfield), `properties_ptr`, `num_properties`, `properties` tail view | no UB; returned-slice lifetime/aliasing obligation was implicit and is now stated in the `# Safety` contract (M64-D2, documentation) |
+| `src/property/query.rs` | sorted-array binary search and comparator, NULL/absent-name arms, `get_type`/`get_string_value`/`get_number_value`, `has_optional`, `is_enabled` override-before-union read | 1 defect (M64-D1) repaired |
+| `src/provider/base.rs` | `BASE_PARAM_TYPES` descriptors, `base_get_params` locate/set arms, `base_query` four operation rows, `BASE_DISPATCH_TABLE`, `ossl_base_provider_init` dispatch walk/handle/libctx/ctx storage | no defect; provider dispatch boundary under the established `ProviderInitFn` contract, not the method-store registry |
+| `src/provider/capabilities.rs` | 44-row/59-row/3-row/3-row capability tables, literal and row-field `OSSL_PARAM` aliasing, both walkers and callback refusal, `ossl_prov_get_capabilities` name dispatch | no defect; NULL-`cb`/NULL-name guards are the recorded safer divergence |
+| `src/provider/child.rs` | slot-18 `ChildProvGlobals` and OB-3 destructor, child init dispatch walk, create/remove/global-props callbacks under the write lock, `init_as_child` seven-pointer validation, deregister NULL guard, parent up-ref/free, handle/ischild accessors | no defect; lock-across-parent-upcall reentrancy is authority-identical and recorded as a retained contract |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It stays
+at the head of `REMAINING-AUDIT.txt`. `src/provider/child.rs` was substituted
+from position 9 of the stable queue. `src/provider/base.rs` was **audited**
+rather than deferred: its handle use is the borrowed opaque handle of the
+already-contracted `ProviderInitFn` dispatch table, not an ownership-adoption
+or registry boundary.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M64-D1 | `src/property/query.rs:173` (post-fix) | low (compatibility, not UB in-reach) | `ossl_property_get_number_value` dereferenced `prop` unconditionally, while the authority tests `prop != NULL` and answers 0; a NULL definition was UB here and a defined 0 there | added the authority's NULL arm and a NULL assertion to the existing focused test. The contract now reads "NULL or live". No signature change. |
+| M64-D2 | `src/property/list.rs:201` (post-fix) | low (contract documentation) | `properties<'len>` returns a caller-chosen lifetime from a raw list pointer; the `# Safety` stated only the length obligation, leaving the borrow-lifetime and alias-exclusivity requirements implicit | the contract now names both obligations. No code or signature change; the type cannot express them because the owner is a raw pointer. |
+
+**Unsafe accounting.** Eliminated: 0 (no unsafe operation removed). Relocated:
+0. New assumptions: 0. Hidden obligations: 0 after M64-D2's contract
+statement; the remaining obligations are explicit and retained. No exported
+symbol, signature, `#[repr(C)]` layout, excluded symbol or allocator seam
+coordinate changed; no new `unsafe fn`.
+
+**Secret-bearing storage.** These units carry `PUBLIC_DATA`: property names and
+values, algorithm and capability tables, provider metadata, and the PKCS#7 MIME
+envelope. No `SECRET_DATA` buffer is allocated, copied or released here. No
+constant-time claim is made for any unit from source inspection.
+
+**Contracts reused.** RC-1 context read/write locking for the definition cache;
+OB-3 `OwnedCtx`/`CtxDestroy` for the global-properties and child-provider
+slots, including the zero-state sweep; lhash element ownership and the
+`CRYPTO_*` allocator seam at the authority's exact `FILE`/`LINE` in
+`defn_cache`; C ABI contracts for NULL-or-live optional pointers, terminated
+dispatch tables, writable out-parameters and caller-owned results; the provider
+callback/dispatch contracts established in B1/B2/B6–B20 and M4 (including the
+safer NULL-callback and NULL-name refusals); the `OsslParam` static Sync and
+immutable-literal/row-field aliasing contract. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`property` **29 / 0**, `property::query` **3 / 0**, `provider::child`
+**1 / 0**; `pkcs7::pk7_mime`, `provider::base` and `provider::capabilities`
+contain no unit tests. BATCH after the repair: `cargo clippy --all-targets -- -D
+warnings` clean; full library **1670 passed / 0 failed / 27 ignored** (1697
+total) serial in 256.82 s and with `--test-threads=4` in 136.75 s, in the court
+with `CARGO_BUILD_JOBS=4`. No unexplained removal and no newly ignored test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; affected adversarial probes NOT_RUN
+(`scripts/adv-probe.sh` has no property, provider base/capabilities/child or
+PKCS7-MIME probe); a Miri or Tree-Borrows run of the `properties` tail view;
+dudect/ctgrind (no constant-time claim); FRF suite; dependency-graph
+regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `ossl_prop_defn_set`'s delete arm leaves the removed element unreleased,
+exactly as the authority does; the cache leaks until context teardown, and this
+is preserved rather than reclassified. (3) A cached definition list is shared
+by the cache and by every `Implementation.properties` that found it; the cache
+owns the single release, and no caller may free it. (4) `properties<'len>`'s
+lifetime and alias exclusivity remain caller obligations that the type system
+cannot express from a raw list pointer. (5) `provider_create_child_cb` holds
+the child write lock across parent upcalls (`c_prov_get0_provider_ctx`,
+`c_prov_get0_dispatch`) exactly as the authority does; a parent that re-enters
+the create path from those callbacks would deadlock, not race, and this
+reentrancy contract is recorded rather than changed.
+
+**Queue.** `REMAINING-AUDIT.txt` 209 -> **201**; `AUDITED-FILES.txt` 554 ->
+**562**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/provider/cipher_gcm.rs`, `src/provider/cipher_tdes_wrap.rs`,
+`src/provider/ctx.rs`, `src/provider/decode_der2key.rs`,
+`src/provider/decode_epki2pki.rs`, `src/provider/decode_pem2der.rs`,
+`src/provider/decode_spki2typespki.rs`.
