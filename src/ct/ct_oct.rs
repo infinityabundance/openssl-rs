@@ -401,6 +401,33 @@ pub unsafe extern "C" fn o2i_SCT(
     ptr::null_mut()
 }
 
+/// `4 + sct->sig_len`, the signature block's encoded extent.
+///
+/// The authority's `size_t` addition wraps; an output buffer sized from a wrapped
+/// sum would be written past its end, so the sum is checked here (AGENTS.md §3).
+fn signature_encoded_len(sig_len: usize) -> Option<usize> {
+    4usize.checked_add(sig_len)
+}
+
+/// `43 + sct->ext_len + 4 + sct->sig_len`, a V1 SCT's encoded extent.
+///
+/// Same reason as [`signature_encoded_len`]: the authority's `size_t` sum wraps,
+/// and this crate does not size an allocation from a wrapped length.
+fn v1_encoded_len(ext_len: usize, sig_len: usize) -> Option<usize> {
+    43usize
+        .checked_add(ext_len)?
+        .checked_add(4)?
+        .checked_add(sig_len)
+}
+
+/// `len2 + 2 + sct_len`, the list encoder's running extent.
+///
+/// The running total is the allocation size the sizing call answers, so the same
+/// checked-arithmetic rule applies (AGENTS.md §3).
+fn list_encoded_len(len2: usize, sct_len: usize) -> Option<usize> {
+    len2.checked_add(2)?.checked_add(sct_len)
+}
+
 /// `int i2o_SCT_signature(const SCT *sct, unsigned char **out)` — `crypto/ct/ct_oct.c:153-196`.
 ///
 /// Declared in `crypto/ct/ct_local.h:202`, so it is **not** an export.
@@ -424,7 +451,12 @@ pub(crate) unsafe fn i2o_SCT_signature(sct: *const Sct, out: *mut *mut c_uchar) 
 
     // SAFETY: `sct` is live per the contract.
     let sig_len = unsafe { (*sct).sig_len };
-    let len = 4 + sig_len;
+    let Some(len) = signature_encoded_len(sig_len) else {
+        return -1;
+    };
+    if len > c_int::MAX as usize {
+        return -1;
+    }
 
     if !out.is_null() {
         // SAFETY: `out` is a writable cursor slot.
@@ -478,12 +510,21 @@ pub unsafe extern "C" fn i2o_SCT(sct: *const Sct, out: *mut *mut c_uchar) -> c_i
     }
 
     // SAFETY: `sct` is live per the contract.
-    let len = unsafe {
-        if (*sct).version == SCT_VERSION_V1 {
-            43 + (*sct).ext_len + 4 + (*sct).sig_len
-        } else {
-            (*sct).sct_len
-        }
+    let (version, ext_len, sig_len, sct_len) = unsafe {
+        (
+            (*sct).version,
+            (*sct).ext_len,
+            (*sct).sig_len,
+            (*sct).sct_len,
+        )
+    };
+    let len = if version == SCT_VERSION_V1 {
+        let Some(len) = v1_encoded_len(ext_len, sig_len) else {
+            return -1;
+        };
+        len
+    } else {
+        sct_len
     };
 
     if len > c_int::MAX as usize {
@@ -750,7 +791,10 @@ pub unsafe extern "C" fn i2o_SCT_LIST(a: *const OpenSslStack, pp: *mut *mut c_uc
                 break;
             }
         }
-        len2 += 2 + sct_len as usize;
+        let Some(next) = list_encoded_len(len2, sct_len as usize) else {
+            break;
+        };
+        len2 = next;
         i += 1;
     }
 
@@ -850,4 +894,28 @@ pub unsafe extern "C" fn i2d_SCT_LIST(a: *const OpenSslStack, out: *mut *mut c_u
     let data = unsafe { OwnedBuf::adopt_plain_nullable((*octp).data.cast(), SeamFile::NULL, 0) };
     drop(data);
     len
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encoded_length_sums_are_checked() {
+        assert_eq!(signature_encoded_len(0), Some(4));
+        assert_eq!(signature_encoded_len(usize::MAX - 4), Some(usize::MAX));
+        assert_eq!(signature_encoded_len(usize::MAX - 3), None);
+
+        assert_eq!(v1_encoded_len(0, 0), Some(47));
+        assert_eq!(v1_encoded_len(usize::MAX - 47, 0), Some(usize::MAX));
+        assert_eq!(v1_encoded_len(usize::MAX - 46, 0), None);
+        assert_eq!(v1_encoded_len(0, usize::MAX - 47), Some(usize::MAX));
+        assert_eq!(v1_encoded_len(0, usize::MAX - 46), None);
+
+        assert_eq!(list_encoded_len(2, 0), Some(4));
+        assert_eq!(list_encoded_len(usize::MAX - 2, 0), Some(usize::MAX));
+        assert_eq!(list_encoded_len(usize::MAX - 1, 0), None);
+        assert_eq!(list_encoded_len(0, usize::MAX - 2), Some(usize::MAX));
+        assert_eq!(list_encoded_len(0, usize::MAX - 1), None);
+    }
 }
