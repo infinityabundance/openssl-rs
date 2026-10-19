@@ -4456,3 +4456,67 @@ SEAL.
 **Next eight (stable order).** `src/engine/tb_eckey.rs`, `src/engine/tb_pkmeth.rs`,
 `src/engine/tb_rand.rs`, `src/engine/tb_rsa.rs`, `src/ess/ess_asn1.rs`,
 `src/evp/algorithm.rs`, `src/evp/c_allc.rs`, `src/evp/c_alld.rs`.
+
+## 59. Mechanism sweep M53 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M53.json`](atlas-refresh/mechanism-sweep-M53.json).
+
+**Batch.** `src/engine/tb_eckey.rs`, `tb_pkmeth.rs`, `tb_rand.rs`, `tb_rsa.rs`,
+`src/ess/ess_asn1.rs`, `src/evp/c_allc.rs`, `c_alld.rs`, and substituted
+`src/evp/e_aes_cbc_hmac_sha1.rs`. `src/evp/algorithm.rs` was confirmed as a
+provider-dispatch/registry boundary (`reserve_store`/`fn_`/`unreserve_store`
+function pointers and `ossl_provider_doall_activated`) and left **NOT_RUN** for a
+BOUNDARY pass; the next ordinary entry was substituted.
+
+| file | disposition | authority / mechanisms |
+|---|---|---|
+| `src/engine/tb_eckey.rs` | defect_repaired | `crypto/engine/tb_eckey.c`: EC method table (authority's `dh_table` spelling), `dummy_nid`, register/unregister/set-default and the opaque method accessors. **M53-D1**. |
+| `src/engine/tb_pkmeth.rs` | defect_repaired | `crypto/engine/tb_pkmeth.c`: NID-set callback registration, `ENGINE_get_pkey_meth`, and `engine_pkey_meths_free` over the engine's own callback. **M53-D1**. |
+| `src/engine/tb_rand.rs` | defect_repaired | `crypto/engine/tb_rand.c`: single-`dummy_nid` RAND table and accessors. **M53-D1**. |
+| `src/engine/tb_rsa.rs` | defect_repaired | `crypto/engine/tb_rsa.c`: single-`dummy_nid` RSA table and accessors. **M53-D1**. |
+| `src/ess/ess_asn1.rs` | audited_no_change | `crypto/ess/ess_asn1.c`: five `ASN1_SEQUENCE` templates, 16/16/24/16/16-byte layouts and the generated new/free/dup/d2i/i2d exports. Template flags, offsets, `static_` vs exported `_it` split and `#ifndef` profile arms match the authority. |
+| `src/evp/c_allc.rs` | audited_no_change | `crypto/evp/c_allc.c`: `openssl_add_all_ciphers_int` registration order, aliases and the `no-rc5` omissions match the authority. |
+| `src/evp/c_alld.rs` | audited_no_change | `crypto/evp/c_alld.c`: `openssl_add_all_digests_int` order, three explicit aliases and the `no-md2` omission match the authority. |
+| `src/evp/e_aes_cbc_hmac_sha1.rs` | audited_no_change | `crypto/evp/e_aes_cbc_hmac_sha1.c`: the two deprecated statics, `init`/`do_cipher`/`ctrl`/ASN.1 callbacks over the provider context, TLS 1.1 AAD pad arithmetic and the AES-NI-gated NULL answer. AAD writes are bounded by the 13-byte check and the 16-byte `aux`; `SHA1_Update`/state copies use owner-derived slots. |
+
+**Defects repaired.** M53-D1 (low, four `tb_*` files, 21 clauses): `# Safety`
+said `e` "must be NULL or point to a live `Engine`" for functions whose bodies
+dereference `e` unconditionally. Each now requires a non-NULL live `Engine`,
+completing the M52-D1 class. `engine_pkey_meths_free` keeps its NULL-tolerant
+wording because it tests NULL; `ENGINE_set_pkey_meths` now names `e` explicitly
+instead of the generic "pointer arguments" sentence. No production code,
+signature, layout or exported symbol changed.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts
+reused: RC-1 allocator seam (no allocation in the batch changed); B1/B2/B6–B18
+engine callback contracts, including the `ENGINE_PKEY_METHS_PTR` count-and-`nids`
+obligation also used by `tb_cipher.rs`; B15/B16/B20 engine table selection;
+the ASN.1 item/template and generated-wrapper contracts; the legacy EVP
+`OBJ_NAME` registration contract.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`cargo test --lib -- --test-threads=4 engine::` 20 passed / 0 failed /
+0 ignored (1667 filtered); `legacy_evp::` 5 passed / 0 failed. BATCH
+`cargo clippy --all-targets -- -D warnings` clean; full library **1660 passed /
+0 failed / 27 ignored** with `--test-threads=1` (228.46 s) and with
+`--test-threads=4` (82.14 s). All runs in the court container with
+`CARGO_BUILD_JOBS=4`.
+
+**NOT_RUN.** BOUNDARY for `src/evp/algorithm.rs` (provider-dispatch/registry
+callback boundary; remains queued); Miri (no component in the court toolchain);
+ASan (contract wording only, no memory-access-pattern change); `RT-ENGINE` /
+`RT-EVP` authority differentials for the exact candidate; FRF/probe suite; SEAL.
+
+**Retained observations.** (1) `algorithm.rs` is not a registry *table* like the
+`tb_*` units but the provider algorithm walk; its function-pointer callbacks mean
+it needs the BOUNDARY treatment, not a contract-wording pass. (2) The
+`ENGINE_PKEY_METHS_PTR` callback must set `nids` to `num_nids` integers whenever
+it answers a positive count; this is the established engine callback obligation,
+inherited unchanged from the authority. (3) No secret copy or constant-time
+claim is involved in this batch; the method tables and name registration are
+public data.
+
+**Queue.** `REMAINING-AUDIT.txt` 298 -> **290**; `AUDITED-FILES.txt` 465 -> **473**.
+**Next eight (stable order).** `src/evp/algorithm.rs`, `src/evp/e_aes_cbc_hmac_sha256.rs`,
+`src/evp/e_bf.rs`, `src/evp/e_cast.rs`, `src/evp/e_des.rs`, `src/evp/e_idea.rs`,
+`src/evp/e_rc4_hmac_md5.rs`, `src/evp/e_rc4.rs`.
