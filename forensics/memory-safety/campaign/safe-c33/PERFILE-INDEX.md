@@ -4381,3 +4381,78 @@ allocator coordinate changes, and it now matches the admitted build record.
 **Next eight (stable order).** `src/engine/eng_dyn.rs`, `src/engine/eng_table.rs`,
 `src/engine/tb_eckey.rs`, `src/engine/tb_pkmeth.rs`, `src/engine/tb_rand.rs`,
 `src/engine/tb_rsa.rs`, `src/ess/ess_asn1.rs`, `src/evp/algorithm.rs`.
+
+## 58. Boundary sweep B20 — dynamic ENGINE loader and ENGINE operation tables — 2026-10-19
+
+Receipt: [`atlas-refresh/boundary-sweep-B20.json`](atlas-refresh/boundary-sweep-B20.json).
+
+**STOP status: CLEAR after repair.** One Rust data race was confirmed and repaired:
+`ossl_engine_table_select` read the `ENGINE_TABLE *` slot without the engine lock on
+the authority's `*table == NULL` fast path while `engine_table_cleanup` /
+`engine_table_register` wrote it under the lock. ThreadSanitizer reports the race at
+`eng_table.rs:472` on the pre-repair shape and is clean on the repair; the new
+`concurrent_select_and_cleanup_serialise_on_the_engine_lock` test is the witness. The
+authority has the same C data race; the fast path is deliberately not reproduced
+(§17). One overflow panic across an `extern "C"` comparison was removed. Register,
+select-walk, pile-destructor and dynamic-loader preconditions that were implicit are
+now stated (non-NULL register target, borrowed-entry lifetime, doall lock, the
+per-ENGINE exclusivity of control/load, and the loaded library's `dynamic_fns`
+lifetime). A `dynamic_fns` C-layout guard was added. No export, signature,
+`#[repr(C)]` layout, allocator-seam coordinate or unsafe-lint attribute changed.
+
+| file | boundaries | disposition | defects |
+|---|---|---|---|
+| `src/engine/eng_dyn.rs` | `B20-DYN-1..4` (ex_data context ownership/construction, ctrl string+`dirs` ownership, DSO load/version/bind rollback, built-in registration) | `CONTRACTED` | none; **B20-D6 (fixed, low)** states the per-ENGINE exclusivity and loaded-library callback obligations the authority leaves implicit. |
+| `src/engine/eng_table.rs` | `B20-TBL-1..5` (pile ownership/destructor, register, unregister/cleanup, select, doall) | `CONTRACTED` | **B20-D1 (fixed, medium):** unlocked slot read in select (TSan-confirmed data race). **B20-D2 (fixed, low):** `engine_pile_cmp` could overflow-panic across `extern "C"`; now `wrapping_sub`. **B20-D3 (fixed, low):** register contract allowed NULL while `setdefault` dereferences it, and omitted the borrowed-entry lifetime. **B20-D4 (fixed, low):** doall omitted the engine-lock/no-mutation precondition. **B20-D5 (fixed, low):** the pile destructor's engine-lock precondition is now explicit. |
+
+**Ownership before/after.** `DynamicDataCtx` keeps its staged `RawDataCtx` ->
+`OwnedCtx` construction, single `CRYPTO_free` at `eng_dyn.c:147`/`:193`, and
+`dirs`/`int_free_str` ownership; `EnginePile` keeps `RawCtx::malloc` ->
+`assume_init` -> lhash ownership with block-only failure releases at `:113` and the
+normal release at `:184`. Both files' `CtxDestroy` bodies were re-read against the
+authority; the only change is the stated destructor-lock precondition.
+
+**Assumptions.** Eliminated: 1 (the unlocked slot read). Relocated: 0. New: 0.
+Hidden: 0. Contract corrections make the remaining external obligations explicit:
+per-ENGINE control/load exclusivity; the loaded library may not retain `dynamic_fns`;
+registered entries borrow `e` until unregistered; `engine_table_doall` callers hold
+the engine lock and do not mutate the table; a non-NULL cached `funct` is finished
+only under the lock. Reused: RC-1/OB-1..OB-4 allocator and owner shapes;
+B1/B2/B6–B18 callback contracts; B15/B16 engine ctrl/registration contracts.
+
+**Residuals (disclosed, not hidden).** `B20-R1` the authority's `uptodate` arm can
+return the cached default without an acquired functional reference when `init`
+fails (pinned by two tests). `B20-R2` table entries are borrowed `ENGINE *`; the
+global-list removal path retires them before dropping its reference (a deliberate
+improvement), but an engine registered without being in the list must be kept alive
+by its registrant. `B20-R3` engine `init`/`finish`/`destroy` hooks run under the
+engine write lock in register/select/unregister/cleanup (authority parity; a
+recursive write is refused, a read lock can block). `B20-R4` allocations occur under
+that lock, so allocator hooks must not re-enter engine APIs. `B20-R5` per-ENGINE
+control/load is not serialised (authority parity; now an external contract).
+`B20-R6` `v_check`/`bind_engine` are arbitrary unlocked library code. `B20-R7` a
+lock failure while lazily registering the dynamic ex_data index leaks that index
+(bounded; authority parity). `B20-R8` the authority's mandatory list-add failure
+leaves the failed engine bound and the DSO loaded (poisoned, later ctrl refused;
+authority parity).
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`engine::eng_dyn` + `engine::eng_table` 5 passed / 0 failed. BATCH clippy
+`--all-targets -D warnings` clean; full library **1660 passed / 0 failed / 27
+ignored** with `--test-threads=4` (93.68 s) and with `--test-threads=1`
+(277.26 s). One test added, none removed, none newly ignored (1687 collected).
+**TSan** (`nightly-2026-10-05`, `-Zsanitizer=thread -Zbuild-std`, dedicated
+`.tsan-target`, one test, `--test-threads=1`): positive run clean; the pre-repair
+negative control reported `WARNING: ThreadSanitizer: data race` at
+`eng_table.rs:472` (`ossl_engine_table_select` vs `engine_table_cleanup`).
+
+**NOT_RUN.** Miri (no `miri` component in either venue; the path uses allocator and
+pthread FFI); ASan (not the instrument for the slot-ordering defect and no extent or
+ownership change; TSan covered the class); Loom (the C ABI statics are not a Loom
+model); `RT-ENGINE` authority differential for the exact candidate; FRF/probe suite;
+SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 300 -> **298**; `AUDITED-FILES.txt` 463 -> **465**.
+**Next eight (stable order).** `src/engine/tb_eckey.rs`, `src/engine/tb_pkmeth.rs`,
+`src/engine/tb_rand.rs`, `src/engine/tb_rsa.rs`, `src/ess/ess_asn1.rs`,
+`src/evp/algorithm.rs`, `src/evp/c_allc.rs`, `src/evp/c_alld.rs`.

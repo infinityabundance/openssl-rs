@@ -252,10 +252,12 @@ src/encoder_pkey.rs
 src/engine/eng_all.rs
 src/engine/eng_cnf.rs
 src/engine/eng_ctrl.rs
+src/engine/eng_dyn.rs
 src/engine/eng_fat.rs
 src/engine/eng_lib.rs
 src/engine/eng_list.rs
 src/engine/eng_pkey.rs
+src/engine/eng_table.rs
 src/engine/tb_asnmth.rs
 src/engine/tb_cipher.rs
 src/engine/tb_dh.rs
