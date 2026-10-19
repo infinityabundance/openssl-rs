@@ -721,9 +721,11 @@ unsafe fn ex_i2c(
         }
     }
 
-    if !cout.is_null() && len != 0 {
+    if !cout.is_null() && len > 0 {
         // SAFETY: `cont` is readable for `len` bytes and `cout` is writable for the
-        // same, per the caller's contract and the arm that set them.
+        // same, per the caller's contract and the arm that set them. A non-positive
+        // `len` cannot describe content; the authority's `memcpy` with a negative
+        // length is undefined, so this crate declines to reproduce it (AGENTS.md §17).
         unsafe { core::ptr::copy_nonoverlapping(cont, cout, len as usize) };
     }
     len

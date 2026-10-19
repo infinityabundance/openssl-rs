@@ -2058,3 +2058,79 @@ independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
 (`PROGRESS.md:1520`). The last recorded ordinary list remains `src/ml_dsa/poly.rs` (86),
 then `src/asn1/a_mbstr.rs` (85), `src/asn1/string.rs` (85) and
 `src/property/strings.rs` (85).
+
+## 25. Queue reconciliation and mechanism sweep M21 — 2026-10-19
+
+**Reconciliation (corrects the “queue empty” reading of `PROGRESS.md:1520`).**
+
+| measure | count |
+|---|---:|
+| Rust source files under `src/` | 877 |
+| census files in `ATTRIBUTION.md` | 868 |
+| `PARTIAL` files (the audit denominator) | 761 |
+| `ZERO_UNSAFE` / `BOUNDARY_COVERED` | 92 / 15 |
+| **files with a recorded audit** | **211** |
+| — recorded as `PARTIAL` / `BOUNDARY_COVERED` | 208 / 3 |
+| **total remaining** | **666** |
+| **remaining `PARTIAL` files** | **553** |
+
+`211` is the union of (a) the 199 distinct files named in structured receipt
+fields — `.files` in `mechanism-sweep-M*.json` and `boundaries[].file` /
+`sweep[].site` in `boundary-sweep-B*.json` — and (b) the 12 M1 files, whose
+receipt `mechanism-sweep-M1.json` has an empty `files` array and whose audit
+exists only in section 3a above. `unsafe-census.json` and `attribution.json`
+name all 868 census files and are **not** audit records. The 20 index paths
+absent from the structured receipts are next-queue and caller mentions, not
+audits (for example `a_mbstr`, `string`, `property/strings`, `ml_dsa/poly`).
+
+`PROGRESS.md:1520-1521` says the *file-level ownership conversion* queue is
+empty; `:1523-1527` immediately names the next queue as the **761 `PARTIAL`
+files** for per-file obligation audit. B14 quoted only the first sentence. The
+conversion queue is empty; the obligation-audit queue is not.
+
+**M21 audited files (8).**
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/digest/sha2.rs` | 32/64-bit counters, staging extents, Final padding, one-shot | No defect. |
+| `src/digest/md32.rs` | shared `HASH_UPDATE`/`HASH_FINAL` collector | No defect. |
+| `src/mac/cmac.rs` | staged allocation, cleanup/cleanse, copy, init arms, burst arithmetic, Final | No defect. |
+| `src/evp/p5_crpt2.rs` | PBKDF2 params, NULL normalisations, error-tail cleanse, fetch releases | No defect. |
+| `src/des/mod.rs` | key schedule, c2l/l2cn, string keys, all mode loops | No defect; the unsigned `l = length` is authority-faithful. |
+| `src/asn1/string.rs` | `OwnedBlock`, embed/NDEF free, copy/dup/set0, joined UTF-8 text | **M21-D1 and M21-D2 fixed.** |
+| `src/asn1/i2d.rs` | two-pass sizing, SET OF scratch/sort, template sums, primitive copy | **M21-D3 fixed.** |
+| `src/x509/x509_req.rs` | `X509_to_X509_REQ`, extension decode/add/replace tails | No defect. |
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M21-D1 | `src/asn1/string.rs:264` | medium | negative length mistaken for a large capacity; resize skipped, copy overflows | negative arm reallocates; control `asn1::string::tests::a_negative_length_forces_the_set_to_reallocate` |
+| M21-D2 | `src/asn1/string.rs:800-824` | low | unchecked joined-length sum/`+1` used for allocation (§3) | `checked_add` and `usize::try_from`; negative element length refuses |
+| M21-D3 | `src/asn1/i2d.rs:724` | medium | negative content length copied as a huge extent | copy requires `len > 0`; authority's UB not reproduced (§17) |
+
+**New unsafe assumptions (hidden must be 0).** None. No production `unsafe`
+operation, adoption, release site, allocator coordinate, `#[repr(C)]` layout,
+export or lint attribute changed. One test-only unsafe block was added for the
+M21-D1 control.
+
+**Gates.** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D
+warnings` PASS; library **1620 passed / 0 failed / 27 ignored** serially
+(228.44 s) and with `--test-threads=4` (92.72 s). Focused: `asn1::string` 2/0,
+`x509::x509_req` 3/0, `des::` 28/0, `mac::cmac` 3/0, `digest::` 66/0,
+`evp::p5_crpt2` 3/0; `asn1::i2d` has no test functions. No affected
+`OPENSSL_RS_ADV_PROBE` arm exists.
+
+**NOT_RUN.** Miri, ASan/Loom/TSan, a runtime witness for M21-D2, authority
+differentials for the three §17 divergences, independent review and SEAL.
+Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch (truthful remaining set).** `src/asn1/tasn_prn.rs`,
+`src/cms/cms_kemri.rs`, `src/ct/ct_oct.rs`, `src/runtime/conf/lib.rs`,
+`src/encoder_lib.rs`, `src/pem/pem_all.rs`, `src/bn/primes.rs`,
+`src/ts/ts_rsp_print.rs`. Retained boundaries (NOT_RUN):
+`src/asn1/bio_asn1.rs`, `src/provider/ecx_kmgmt.rs`,
+`src/provider/cipher_gcm.rs`.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M21.json`](atlas-refresh/mechanism-sweep-M21.json).
