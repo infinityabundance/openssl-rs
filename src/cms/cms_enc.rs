@@ -51,6 +51,13 @@ const EVP_CTRL_AEAD_SET_TAG: c_int = 0x11;
 /// `ERR_R_BIO_LIB` — `include/openssl/err.h`.
 const ERR_R_BIO_LIB: c_int = 524290;
 
+/// Whether `ivlen` fits the authority's `iv[EVP_MAX_IV_LENGTH]`: the stack buffer
+/// `ossl_cms_EncryptedContent_init_bio` fills with `RAND_bytes_ex` and copies from.
+#[inline]
+fn iv_length_fits_authority_buffer(ivlen: c_int) -> bool {
+    (0..=EVP_MAX_IV_LENGTH as c_int).contains(&ivlen)
+}
+
 /// `BIO_get_cipher_ctx(BIO *, EVP_CIPHER_CTX **)` — `BIO_ctrl(b, BIO_C_GET_CIPHER_CTX, 0, pctx)`.
 ///
 /// # Safety
@@ -202,6 +209,22 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
         // SAFETY: `ctx` is live.
         ivlen = unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) };
         if ivlen < 0 {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cms(92, c"ossl_cms_EncryptedContent_init_bio", ERR_R_EVP_LIB) };
+            // SAFETY: the context and cipher are live.
+            unsafe {
+                EVP_CIPHER_free(fetched_ciph);
+                BIO_free(b);
+            }
+            return ptr::null_mut();
+        }
+        // The authority fills `unsigned char iv[EVP_MAX_IV_LENGTH]` with `ivlen` bytes
+        // (`cms_enc.c:96-98`) and later `memcpy`s `ivlen` bytes into `aparams.iv`
+        // (`:179`). A provider may advertise an `ivlen` larger than
+        // `EVP_MAX_IV_LENGTH`; the authority then overruns its stack buffer, which
+        // §17 forbids reproducing. Refuse instead, at the authority's own IV-length
+        // refusal coordinate and reason.
+        if !iv_length_fits_authority_buffer(ivlen) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cms(92, c"ossl_cms_EncryptedContent_init_bio", ERR_R_EVP_LIB) };
             // SAFETY: the context and cipher are live.
@@ -583,5 +606,24 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedData_init_bio(
             ossl_cms_get0_cmsctx(cms),
             0,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{iv_length_fits_authority_buffer, EVP_MAX_IV_LENGTH};
+
+    /// Negative/positive control for the §17 guard: a provider's advertised IV length
+    /// above the authority's stack-buffer size is refused instead of copied.
+    #[test]
+    fn iv_length_guard_rejects_a_provider_iv_larger_than_the_buffer() {
+        assert!(iv_length_fits_authority_buffer(0));
+        assert!(iv_length_fits_authority_buffer(
+            EVP_MAX_IV_LENGTH as core::ffi::c_int
+        ));
+        assert!(!iv_length_fits_authority_buffer(
+            EVP_MAX_IV_LENGTH as core::ffi::c_int + 1
+        ));
+        assert!(!iv_length_fits_authority_buffer(-1));
     }
 }
