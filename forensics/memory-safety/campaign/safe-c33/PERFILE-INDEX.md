@@ -3070,3 +3070,69 @@ opening it before the config load.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M34.json`](atlas-refresh/mechanism-sweep-M34.json).
+
+## 39. Mechanism sweep M35 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `cdaab4e27` plus the two CLI
+front-end repairs described below; contracts checked against OpenSSL 3.6.4
+(`apps/enc.c`, `apps/kdf.c` read at the pinned tag).
+
+**Scope:** the eight `src/apps/*` CLI front-ends M34 named as next. The audit
+covered argument-string lifetimes (`Opts` copies argv, so no `&[String]`
+escapes), file/BIO ownership on every exit, option-array bounds, error tails,
+allocation arithmetic, and every raw pointer returned by a getter.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/apps/ecparam.rs` | `EC_get_builtin_curves` count-then-fill, `BIO` ownership, fixed `[OSSL_PARAM; 4]`, keygen/load `EVP_PKEY` ownership, encoder context | No defect. Both curve calls use the table count as `nitems`, so `set_len(filled)` is exact; the parameter array holds at most three entries plus the terminator; every key/out/ctx exit releases once. `-no_seed`/`-check_named` reach `not_landed`. |
+| `src/apps/ec.rs` | `load_key`/`load_pubkey`, output `BIO`, parameter setters with `CString`, print/check contexts, encoder context | No defect. Each `CString` outlives its parameter call; `eckey`/`out` are released once on every failure path. The encoder's NULL context is tolerated by `OSSL_ENCODER_to_bio`, producing the authority's same failure message. |
+| `src/apps/enc.rs` | `set_hex` bounds, `-bufsize` conversion, base64/cipher `BIO` chain ownership, `EVP_CIPHER` ownership, cipher key/IV extents, opaque-key option routing | Repaired one medium option-routing defect: `-skeyopt` only set a flag and `-skeymgmt` was ignored, so with a cipher and no `-K` the body silently initialised the cipher with the all-zero key buffer. Both options now reach `not_landed` at parse time. `set_hex` cannot index past `out`; `-bufsize` reproduces the authority's `k`/`opt_long`/`LONG_MAX/1024` check; chain release order matches `apps/enc.c:801-821`. |
+| `src/apps/engine.rs` | `ENGINE_by_id` functional ref vs `ENGINE_get_first/get_next` structural pointer, init/finish balance, id/name getters, BIO owners | No defect. Only the `ENGINE_by_id` reference is freed; the listing walk follows the authority and does not free structural pointers. Getter strings are NULL-checked; control command strings outlive the call; every early exit frees `out`. |
+| `src/apps/errstr.rs` | 256-byte `ERR_error_string_n` buffer, `CStr`, `OPENSSL_init_ssl`, `%lx` conversion | No defect. The buffer is NUL-terminated within its given length and the borrow is scoped; the init settings pointer is NULL; the hex parser uses wrapping arithmetic only. |
+| `src/apps/genrsa.rs` | `BN`/`BN_GENCB` single-owner release, base-0 conversion, `-primes`, `numbits` validation | No memory-safety defect. Both allocations are freed exactly once on every path. A negative magnitude beyond `LONG_MAX+1` is accepted as `LONG_MIN` and then rejected by `opt_int`; the authority rejects it as unparseable, both exit 1. |
+| `src/apps/info.rs` | `OPENSSL_info` getter pointer, selector accounting | No defect. The one raw getter is NULL-checked before `CStr`; selector accounting has no indexing. |
+| `src/apps/kdf.rs` | `app_params_new_from_opts` array allocation/free, `OSSL_PARAM_allocate_from_text`, cleansed derived key, hex rendering adoption, `EVP_KDF` ownership | Repaired one low arithmetic defect: the `OSSL_PARAM` array used `(opts.len()+1) * size_of` without checked arithmetic. It now uses `checked_add`/`checked_mul` and returns NULL (the existing malformed-option failure). Every exit releases params/out/ctx/kdf/key/hex once. |
+
+**Defects repaired.** `enc`'s opaque symmetric-key options could silently degrade to
+a zero raw key (`-skeyopt`) or be ignored (`-skeymgmt`); both now stop at the
+documented `not_landed` boundary. `kdf` sized its parameter array with unchecked
+arithmetic; the product is now checked, matching `OPENSSL_calloc`'s rejection.
+Neither repair adds, removes or relocates an unsafe operation. No invalid free,
+double free, null dereference, alias, uninitialised read or new hidden obligation
+was found.
+
+**New unsafe assumptions (hidden must be 0).** None. Both repairs are safe-code
+changes (control flow and checked arithmetic). Contracts reused: the keyio
+load/BIO contract, OB-1 `OwnedBuf` (`new_cleansed_at`, `adopt_plain`), OB-3
+encoder-context release, the `ENGINE` structural/functional reference rule from
+B16, and the `Opts` bounds contract.
+
+**Evidence.** FAST: fmt clean; `cargo check --lib` PASS; `cargo test --lib --
+apps::` **0 passed / 0 failed** (1,675 filtered — these front-ends have no unit
+tests). BATCH: clippy `--all-targets -D warnings` PASS; library **1648 passed /
+0 failed / 27 ignored** serially (64.66 s) and with `--test-threads=4`
+(96.40 s). No test was removed or newly ignored.
+
+**NOT_RUN.** `courts/phase17/rt_cli_bodies_probe.sh` needs a CLI executable; the
+crate has no bin target and the probe's candidate shim points at the pre-batch
+`artifacts/phase2/openssl`, so a run would not exercise this candidate. Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay for these
+eight units, independent adversarial review and SEAL are `NOT_RUN`. Nothing is
+promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** `ec` and `ecparam` use `bio_open_default` for
+a `bio_open_owner` call site (shared `apps/lib` permission divergence); `enc`
+does not reproduce `-v`'s byte reports, prints a zero-initialised `-P` salt where
+the authority prints an indeterminate stack buffer, and leaves `-K`/`-iv`
+argument copies and the key/IV buffers un-cleansed; `engine` renders a NULL
+id/name as an empty string; `genrsa`'s negative-overflow message differs; `kdf`
+omits the pointer-bearing `ERR_print_errors` tails.
+
+**Queue.** `REMAINING-AUDIT.txt` 446 → **438**; `AUDITED-FILES.txt` 317 → **325**.
+
+**Next eight (stable order).** `src/apps/keyio.rs`, `src/apps/mac.rs`,
+`src/apps/nseq.rs`, `src/apps/ocsp.rs`, `src/apps/passwd.rs`,
+`src/apps/pkcs12.rs`, `src/apps/pkcs7.rs`, `src/apps/pkcs8.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M35.json`](atlas-refresh/mechanism-sweep-M35.json).

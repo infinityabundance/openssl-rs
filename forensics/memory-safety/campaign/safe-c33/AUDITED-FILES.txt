@@ -8,6 +8,14 @@ src/apps/crl2pkcs7.rs
 src/apps/dgst.rs
 src/apps/dhparam.rs
 src/apps/dsa.rs
+src/apps/ec.rs
+src/apps/ecparam.rs
+src/apps/enc.rs
+src/apps/engine.rs
+src/apps/errstr.rs
+src/apps/genrsa.rs
+src/apps/info.rs
+src/apps/kdf.rs
 src/apps/pkeyutl.rs
 src/apps/smime.rs
 src/aria.rs
