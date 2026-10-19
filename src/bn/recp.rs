@@ -300,8 +300,9 @@ pub unsafe extern "C" fn BN_RECP_CTX_free(recp: *mut RecpCtx) {
 ///
 /// # Safety
 ///
-/// `recp` must be null or a live, uniquely-owned `BN_RECP_CTX`; `d` must be null or
-/// live; `ctx` is unused.
+/// `recp` must be null or a live `BN_RECP_CTX`; `d` must be null or live; `ctx` is
+/// unused. The context and the divisor are distinct object types (`RecpCtx` and
+/// `BigNum`), so aliasing them is not a supported input.
 #[no_mangle]
 pub unsafe extern "C" fn BN_RECP_CTX_set(
     recp: *mut RecpCtx,
@@ -309,10 +310,11 @@ pub unsafe extern "C" fn BN_RECP_CTX_set(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut_recp(recp), as_ref(d)) };
+        // SAFETY: `d` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(d) };
         let (dd, dn) = parts(x);
-        let Some(dst) = dst else {
+        // SAFETY: `recp` is null-or-live per this function's `# Safety` section.
+        let Some(dst) = (unsafe { as_mut_recp(recp) }) else {
             return 0;
         };
         if dd.is_empty() {
@@ -338,8 +340,11 @@ fn divisor_as_bignum(recp: &RecpCtx, neg: bool) -> *mut BigNum {
 ///
 /// # Safety
 ///
-/// `dv` and `rem` must each be null or a live, uniquely-owned `BIGNUM`; `m` must be
-/// null or live; `recp` must be null or a live `BN_RECP_CTX`; `ctx` is unused.
+/// `dv` and `rem` must each be null or a live `BIGNUM`; `m` must be null or live;
+/// `recp` must be null or a live `BN_RECP_CTX`; `ctx` is unused. `dv` and `rem` may
+/// alias each other, and either may alias `m`; the dividend is read before either
+/// output is written, and when `dv == rem` the remainder is stored first and the
+/// quotient last (`BN_div`'s rule), so the shared object ends holding the quotient.
 #[no_mangle]
 pub unsafe extern "C" fn BN_div_recp(
     dv: *mut BigNum,
@@ -377,8 +382,8 @@ pub unsafe extern "C" fn BN_div_recp(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `m` must be null or live;
-/// `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `m` must be null or live; `ctx` is unused.
+/// `r` may alias `m`; the divisor is read before `r` is written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_reciprocal(
     r: *mut BigNum,
@@ -414,8 +419,9 @@ pub unsafe extern "C" fn BN_reciprocal(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `x` and `y` must each be null
-/// or live; `recp` must be null or a live `BN_RECP_CTX`; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `x` and `y` must each be null or live; `recp`
+/// must be null or a live `BN_RECP_CTX`; `ctx` is unused. `r` may alias `x` or `y`;
+/// both are copied before `r` is written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_mul_reciprocal(
     r: *mut BigNum,
@@ -454,8 +460,9 @@ pub unsafe extern "C" fn BN_mod_mul_reciprocal(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a`, `p` and `m` must each be
-/// null or live; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a`, `p` and `m` must each be null or live;
+/// `ctx` is unused. `r` may alias any of `a`, `p` and `m`; all three are copied and
+/// their `BN_FLG_CONSTTIME` bits are read before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_exp_recp(
     r: *mut BigNum,
@@ -465,10 +472,16 @@ pub unsafe extern "C" fn BN_mod_exp_recp(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y, z) = unsafe { (as_mut(r), as_ref(a), as_ref(p), as_ref(m)) };
+        // The inputs are copied before the output is borrowed, so `r` may alias any
+        // of them; `gets_consttime` below also reads the original flags first.
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `p` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // SAFETY: `m` is null-or-live per this function's `# Safety` section.
+        let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
         // SAFETY: the null checks are `BN_get_flags`'s own contract, and the site is
         // a compile-time constant.
@@ -482,10 +495,16 @@ pub unsafe extern "C" fn BN_mod_exp_recp(
         // why `0^0 mod 0` answers one here rather than failing.
         if limbs::bit_len(&pd) == 0 {
             let zero = md.len() == 1 && md[0] == 1;
-            return c_int::from(store(dst, if zero { Vec::new() } else { vec![1] }, false));
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            return c_int::from(store(
+                unsafe { as_mut(r) },
+                if zero { Vec::new() } else { vec![1] },
+                false,
+            ));
         }
         match mod_exp_core(&ad, &pd, &md) {
-            Some(v) => c_int::from(store(dst, v, false)),
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
             None => 0,
         }
     })
@@ -510,8 +529,10 @@ unsafe fn gets_consttime(b: *const BigNum) -> bool {
 ))]
 mod tests {
     use super::*;
+    use crate::bn::arith::BN_ucmp;
+    use crate::bn::bignum::{BN_copy, BN_get_word, BN_new, BN_set_word};
     use crate::runtime::mem::CRYPTO_set_mem_functions;
-    use core::ffi::{c_char, c_int, c_void};
+    use core::ffi::{c_char, c_int, c_ulong, c_void};
     use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
 
     extern "C" {
@@ -619,5 +640,169 @@ mod tests {
         assert_eq!(FREE_FILE.load(Ordering::SeqCst), FILE.as_ptr() as usize);
         assert_eq!(FREE_LINE.load(Ordering::SeqCst), LINE_FREE);
         assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "no second allocation");
+    }
+
+    /// A `BIGNUM` holding a machine word.
+    fn word(w: c_ulong) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        // SAFETY: `b` is live.
+        assert_eq!(unsafe { BN_set_word(b, w) }, 1);
+        b
+    }
+
+    /// Copy an object so an aliased-output case does not destroy the input used by
+    /// the distinct-output reference computation.
+    fn copy_of(src: *const BigNum) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let dst = unsafe { BN_new() };
+        // SAFETY: `dst` is live and `src` is live for the duration of the call.
+        assert!(!unsafe { BN_copy(dst, src) }.is_null());
+        dst
+    }
+
+    /// The M18-D1 regression control for this file. `BN_mod_exp_recp` used to form
+    /// `as_mut(r)` and `as_ref(a)`/`as_ref(p)`/`as_ref(m)` in one tuple, which was UB
+    /// when a caller aliased the output (a supported case). `BN_div_recp` delegates
+    /// to the repaired `BN_div`, so its two-output and output/input aliases are
+    /// pinned here too.
+    #[test]
+    fn aliased_outputs_match_the_distinct_form() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: `BN_RECP_CTX_new` takes no pointers.
+        let recp = unsafe { BN_RECP_CTX_new() };
+        let m = word(10);
+        // SAFETY: every object is live and the context is unused.
+        assert_eq!(unsafe { BN_RECP_CTX_set(recp, m, NULL) }, 1);
+        let a = word(3);
+        let p = word(4);
+
+        // BN_mod_exp_recp: r == a, r == p and r == m.
+        // SAFETY: `BN_new` takes no pointers.
+        let power = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(unsafe { BN_mod_exp_recp(power, a, p, m, NULL) }, 1);
+
+        let alias_a = copy_of(a);
+        // SAFETY: every pointer is live; `alias_a` is both base and output.
+        assert_eq!(unsafe { BN_mod_exp_recp(alias_a, alias_a, p, m, NULL) }, 1);
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_a, power) }, 0, "mod_exp_recp r == a");
+
+        let alias_p = copy_of(p);
+        // SAFETY: every pointer is live; `alias_p` is both exponent and output.
+        assert_eq!(unsafe { BN_mod_exp_recp(alias_p, a, alias_p, m, NULL) }, 1);
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_p, power) }, 0, "mod_exp_recp r == p");
+
+        let alias_m = copy_of(m);
+        // SAFETY: every pointer is live; `alias_m` is both modulus and output.
+        assert_eq!(unsafe { BN_mod_exp_recp(alias_m, a, p, alias_m, NULL) }, 1);
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_m, power) }, 0, "mod_exp_recp r == m");
+
+        // BN_div_recp: a divisor of five, a dividend of seventeen, so the quotient is
+        // three and the remainder two.
+        // SAFETY: `BN_RECP_CTX_new` takes no pointers.
+        let recp5 = unsafe { BN_RECP_CTX_new() };
+        let five = word(5);
+        // SAFETY: every object is live.
+        assert_eq!(unsafe { BN_RECP_CTX_set(recp5, five, NULL) }, 1);
+        let dividend = word(17);
+
+        // dv == rem: `BN_div` stores the remainder first and the quotient last, so
+        // the shared object ends holding the quotient.
+        // SAFETY: `BN_new` takes no pointers.
+        let both_outputs = unsafe { BN_new() };
+        // SAFETY: every pointer is live and both output slots are the same object.
+        assert_eq!(
+            // SAFETY: every pointer is live and both output slots are the same object.
+            unsafe { BN_div_recp(both_outputs, both_outputs, dividend, recp5, NULL) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: the object is live.
+            unsafe { BN_get_word(both_outputs) },
+            3,
+            "dv == rem ends holding the quotient"
+        );
+
+        // dv == m (the dividend): the dividend is read before either output is
+        // written, so the same object ends holding the quotient.
+        let aliased_dividend = copy_of(dividend);
+        // SAFETY: every pointer is live; the dividend is also the quotient output.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe {
+                BN_div_recp(
+                    aliased_dividend,
+                    core::ptr::null_mut(),
+                    aliased_dividend,
+                    recp5,
+                    NULL,
+                )
+            },
+            1
+        );
+        // SAFETY: the object is live.
+        assert_eq!(unsafe { BN_get_word(aliased_dividend) }, 3, "dv == m");
+
+        // BN_mod_mul_reciprocal: r == x and r == y. 7 * 3 = 21, whose truncated
+        // remainder modulo 10 is 1.
+        let x = word(7);
+        let y = word(3);
+        // SAFETY: `BN_new` takes no pointers.
+        let reduced = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_mod_mul_reciprocal(reduced, x, y, recp, NULL) },
+            1
+        );
+        let alias_x = copy_of(x);
+        // SAFETY: every pointer is live; `alias_x` is both factor and output.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_mod_mul_reciprocal(alias_x, alias_x, y, recp, NULL) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_x, reduced) },
+            0,
+            "mod_mul_reciprocal r == x"
+        );
+        let alias_y = copy_of(y);
+        // SAFETY: every pointer is live; `alias_y` is both factor and output.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_mod_mul_reciprocal(alias_y, x, alias_y, recp, NULL) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_y, reduced) },
+            0,
+            "mod_mul_reciprocal r == y"
+        );
+
+        // BN_reciprocal: r == m. 2^4 / 10 truncates to 1.
+        // SAFETY: `BN_new` takes no pointers.
+        let quotient = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(unsafe { BN_reciprocal(quotient, m, 4, NULL) }, 4);
+        let alias_divisor = copy_of(m);
+        // SAFETY: every pointer is live; the divisor is also the output.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_reciprocal(alias_divisor, alias_divisor, 4, NULL) },
+            4
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_divisor, quotient) },
+            0,
+            "reciprocal r == m"
+        );
     }
 }

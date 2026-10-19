@@ -1769,3 +1769,45 @@ selector/value pair, as the authority does. No `CRYPTO_*` coordinate or `#[repr(
 
 **Next ordinary position:** `src/apps/smime.rs` (93), then `src/ssl/ssl_rsa.rs` (92),
 `src/asn1/a_strex.rs` (91), `src/cms/cms_enc.rs` (91), `src/provider/dsa_sig.rs` (91).
+
+---
+
+## B12 — BN output-aliasing boundary (`gf2m`, `mont`, `recp`)
+
+**Audited (boundary).** `src/bn/gf2m.rs` (B12-BN-GF2M-1/2), `src/bn/mont.rs`
+(B12-BN-MONT-1/2/3) and `src/bn/recp.rs` (B12-BN-RECP-1/2/3). The M18-D1 class
+(a tuple of `as_mut` and `as_ref` calls forming two live borrows of one allocation
+when a caller aliases an output) was present in 13 production entry points and is
+repaired: every operand is copied before the output is borrowed, each output is
+borrowed only at store time, and every `# Safety` section now names the arguments
+that may alias. Receipt: [`atlas-refresh/boundary-sweep-B12.json`](atlas-refresh/boundary-sweep-B12.json).
+
+**Aliased-case contract.** `r` may alias `a`/`b` for the `BN_GF2m_*` arithmetic
+entry points and `r` may alias `a`/`b`/`p`/`m` for `BN_to_montgomery`,
+`BN_from_montgomery`, `BN_mod_mul_montgomery`, `BN_mod_exp_mont{,_consttime}` and
+`BN_mod_exp_recp`. `BN_div_recp` allows `dv == rem` (remainder first, quotient
+last) and either output aliasing the dividend. Context setters take type-distinct
+objects; `BN_MONT_CTX_copy(to == from)` returns before forming any borrow.
+
+**Controls.** `bn::gf2m::tests::aliased_outputs_match_the_distinct_form`,
+`bn::mont::tests::aliased_outputs_match_the_distinct_form` and
+`bn::recp::tests::aliased_outputs_match_the_distinct_form` compare each aliased
+call with the distinct-output computation.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+controls 3/0; module filters `bn::gf2m` 6/0, `bn::mont` 1/0, `bn::recp` 2/0. BATCH:
+library **1614 passed / 0 failed / 27 ignored** serially (290.33 s) and with
+`--test-threads=4` (96.02 s). No affected `OPENSSL_RS_ADV_PROBE` arm exists.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows): the court's only toolchain is
+`1.98.1-x86_64-unknown-linux-gnu` and the `miri` component is unavailable (no
+nightly installed). ASan/Loom/TSan, FRF-Fuzz and SEAL remain PENDING at the next
+trigger. Nothing is promoted to `SAFETY_DISCHARGED`; hidden obligations in the
+three audited files are 0.
+
+**Residual (STOP for class closure).** The same tuple shape remains in
+`src/bn/arith.rs` (14 sites: `BN_add`, `BN_sub`, `BN_uadd`, `BN_usub`, `BN_mul`,
+`BN_sqr`, `BN_nnmod`, `BN_mod_inverse`, `BN_lshift`, `BN_rshift`, `BN_exp`,
+`BN_mod_exp`, `BN_gcd`, `BN_mod_sqrt`) and was outside this batch's explicit
+three-file scope. It must be the next boundary item (B13) before the class is
+closed.
