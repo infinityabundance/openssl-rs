@@ -24,7 +24,7 @@
 
 use core::ffi::{c_int, c_void};
 
-use crate::bn::bignum::{BN_free, BN_new, BigNum};
+use crate::bn::bignum::{BN_free, BN_new, BigNum, BN_FLG_CONSTTIME};
 use crate::ffi::guard_ffi;
 
 /// The authority's `BN_CTX`.
@@ -246,7 +246,12 @@ pub unsafe extern "C" fn BN_CTX_get(ctx: *mut BnCtx) -> *mut BigNum {
         };
         c.used += 1;
         // SAFETY: `p` is a live object this context owns.
-        unsafe { crate::bn::bignum::BN_clear(p) };
+        unsafe {
+            crate::bn::bignum::BN_clear(p);
+            // `bn_ctx.c:237` also clears the consttime bit a previous frame may have
+            // leaked onto a reused pool slot.
+            (*p).flags &= !BN_FLG_CONSTTIME;
+        }
         p
     })
 }
@@ -470,4 +475,32 @@ pub unsafe extern "C" fn BN_set_params(_m: c_int, _e: c_int, _i: c_int, _f: c_in
 #[no_mangle]
 pub unsafe extern "C" fn BN_get_params(_i: c_int) -> c_int {
     guard_ffi(0, || 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::bignum::{BN_get_flags, BN_set_flags};
+
+    #[test]
+    fn ctx_get_clears_a_leaked_consttime_flag() {
+        // SAFETY: every pointer is a live object this test owns for the duration of
+        // the calls, and every start/end pair is balanced.
+        unsafe {
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            BN_CTX_start(ctx);
+            let first = BN_CTX_get(ctx);
+            assert!(!first.is_null());
+            BN_set_flags(first, BN_FLG_CONSTTIME);
+            BN_CTX_end(ctx);
+
+            BN_CTX_start(ctx);
+            let reused = BN_CTX_get(ctx);
+            assert_eq!(reused, first);
+            assert_eq!(BN_get_flags(reused, BN_FLG_CONSTTIME), 0);
+            BN_CTX_end(ctx);
+            BN_CTX_free(ctx);
+        }
+    }
 }
