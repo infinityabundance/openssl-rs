@@ -1001,44 +1001,75 @@ pub unsafe extern "C" fn OPENSSL_atexit(handler: Option<extern "C" fn()>) -> c_i
         let Some(handler) = handler else {
             return 0;
         };
-        let Some(node) = OwnedInitStop::new(handler, STOP_HANDLERS.load(Ordering::Acquire)) else {
-            return 0;
+        // A compare-exchange loop, not the authority's `load; store`: concurrent
+        // registrations must all survive. The C code's unsynchronised publish is a
+        // data race there; this crate refuses to reproduce the race and completes
+        // the lock-free push the `AtomicPtr` already implies.
+        let node = match OwnedInitStop::new(handler, core::ptr::null_mut()) {
+            Some(node) => node,
+            None => return 0,
         };
-        // The store is the single release store that publishes the node and transfers ownership
-        // of the block to the list.
-        STOP_HANDLERS.store(node.into_raw(), Ordering::Release);
-        1
+        loop {
+            let head = STOP_HANDLERS.load(Ordering::Acquire);
+            // SAFETY: `node` is not published until the successful exchange, so it
+            // is uniquely owned and its `next` may be rewritten between attempts.
+            unsafe { (*node.0.as_ptr()).next = head };
+            match STOP_HANDLERS.compare_exchange_weak(
+                head,
+                node.0.as_ptr(),
+                Ordering::Release,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => {
+                    // The store published the node and transferred ownership of the
+                    // block to the list.
+                    let _ = node.into_raw();
+                    return 1;
+                }
+                Err(_) => continue,
+            }
+        }
     })
 }
 
 /// The drain, called from `OPENSSL_cleanup` after `OPENSSL_thread_stop`.
+///
+/// One pass, exactly as the authority: it walks the list that was published when
+/// the drain began and then clears the slot. A node pushed by a handler while
+/// this walk runs is therefore not called by it (and the authority never calls it
+/// later either: the library is terminal). Looping would let a handler extend its
+/// own teardown and, if it re-registers itself each time, hang `OPENSSL_cleanup`.
 fn run_atexit_handlers() {
-    loop {
-        let node = STOP_HANDLERS.swap(core::ptr::null_mut(), Ordering::AcqRel);
-        if node.is_null() {
-            return;
-        }
-        let mut curr = node;
-        while !curr.is_null() {
-            // SAFETY: `curr` is a node this list owns; its `handler` and `next` are read here,
-            // before the node is reclaimed, so the walk can continue and the authority's order
-            // (call the handler, then read `next`, then free) is preserved.
-            let (handler, next) = unsafe { ((*curr).handler, (*curr).next) };
-            handler();
-            // SAFETY: `curr` is a live node the list owns and has not released; `from_raw`
-            // reclaims it, and the binding's `Drop` performs its single release at the
-            // authority's own coordinates.
-            let owned = unsafe { OwnedInitStop::from_raw(curr) };
-            drop(owned);
-            curr = next;
-        }
+    let mut curr = STOP_HANDLERS.swap(core::ptr::null_mut(), Ordering::AcqRel);
+    while !curr.is_null() {
+        // SAFETY: `curr` is a node this list owns; its `handler` and `next` are read here,
+        // before the node is reclaimed, so the walk can continue and the authority's order
+        // (call the handler, then read `next`, then free) is preserved.
+        let (handler, next) = unsafe { ((*curr).handler, (*curr).next) };
+        handler();
+        // SAFETY: `curr` is a live node the list owns and has not released; `from_raw`
+        // reclaims it, and the binding's `Drop` performs its single release at the
+        // authority's own coordinates.
+        let owned = unsafe { OwnedInitStop::from_raw(curr) };
+        drop(owned);
+        curr = next;
     }
+    // The authority's `stop_handlers = NULL` after its walk. Nothing can drain a
+    // node registered during this pass: `STOPPED` is set for the life of the
+    // process, so this is the same terminal discard (and the same leak) it makes.
+    STOP_HANDLERS.store(core::ptr::null_mut(), Ordering::Release);
 }
 
 /// `void OPENSSL_cleanup(void)`
 ///
-/// Idempotent and safe to call concurrently. The authority assumes a
+/// Idempotent, and concurrent calls to *it* are safe. The authority assumes a
 /// single-threaded caller; the atomic swap here makes the guard robust anyway.
+///
+/// **It must not run concurrently with any other library call.** That is the
+/// authority's assumption ("We assume we are single-threaded for this function"):
+/// the teardown deletes pthread keys and releases registries that an in-flight
+/// `OPENSSL_init_crypto` or subsystem call would still use. Only cleanup-vs-cleanup
+/// is made safe here; init-vs-cleanup is outside the C contract, as it is upstream.
 ///
 /// The authority's teardown sequence ends with `err_cleanup()` (via
 /// `crypto/init.c`), which frees the error-string hash. That is observable: after
@@ -1646,6 +1677,76 @@ mod tests {
                 0
             );
             assert_eq!(ERR_peek_error(), 0);
+        });
+    }
+
+    /// The two `OPENSSL_atexit` node tests below share these counters.
+    static ATEXIT_CALLS: AtomicI32 = AtomicI32::new(0);
+    static LATE_CALLS: AtomicI32 = AtomicI32::new(0);
+    static LATE_REGISTERED: AtomicI32 = AtomicI32::new(-1);
+
+    extern "C" fn count_atexit_handler() {
+        ATEXIT_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    extern "C" fn late_handler() {
+        LATE_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    extern "C" fn registers_late_handler() {
+        // SAFETY: `late_handler` is a valid `extern "C"` function with the
+        // required signature; the node allocation is the function's own.
+        let r = unsafe { OPENSSL_atexit(Some(late_handler)) };
+        LATE_REGISTERED.store(r, Ordering::SeqCst);
+    }
+
+    /// `OPENSSL_atexit`'s publication must not lose a concurrent registration.
+    ///
+    /// The authority's C code does a plain `load; store`, which is a data race
+    /// there; this crate's `AtomicPtr` makes the store sound but a plain store is
+    /// still a lost update. The push is a compare-exchange loop, so every node
+    /// survives and every handler runs.
+    #[test]
+    fn concurrent_atexit_registrations_all_survive() {
+        with_init_lock(|| {
+            ATEXIT_CALLS.store(0, Ordering::SeqCst);
+            const THREADS: usize = 8;
+            const EACH: usize = 64;
+            let barrier = std::sync::Barrier::new(THREADS);
+            std::thread::scope(|scope| {
+                for _ in 0..THREADS {
+                    scope.spawn(|| {
+                        barrier.wait();
+                        for _ in 0..EACH {
+                            // SAFETY: the handler is this module's own valid fn.
+                            assert_eq!(unsafe { OPENSSL_atexit(Some(count_atexit_handler)) }, 1);
+                        }
+                    });
+                }
+            });
+            run_atexit_handlers();
+            assert_eq!(ATEXIT_CALLS.load(Ordering::SeqCst), (THREADS * EACH) as i32);
+        });
+    }
+
+    /// A handler registered *while* the drain is running is not run by that
+    /// drain. The authority walks the list once and then clears `stop_handlers`;
+    /// a self-registering handler therefore cannot extend its own teardown (and
+    /// cannot make `OPENSSL_cleanup` loop forever).
+    #[test]
+    fn a_handler_registered_during_the_drain_is_not_run_by_it() {
+        with_init_lock(|| {
+            LATE_CALLS.store(0, Ordering::SeqCst);
+            LATE_REGISTERED.store(-1, Ordering::SeqCst);
+            // SAFETY: the handler is this module's own valid fn.
+            assert_eq!(unsafe { OPENSSL_atexit(Some(registers_late_handler)) }, 1);
+            run_atexit_handlers();
+            assert_eq!(LATE_REGISTERED.load(Ordering::SeqCst), 1);
+            assert_eq!(
+                LATE_CALLS.load(Ordering::SeqCst),
+                0,
+                "the authority's single pass does not run a node pushed behind the cursor"
+            );
         });
     }
 }
