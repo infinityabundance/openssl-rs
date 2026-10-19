@@ -36,7 +36,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint};
 
 use crate::apps::keyio::{bio_open_default, FORMAT_ASN1, FORMAT_PEM};
 use crate::apps::openssl::not_landed;
@@ -140,7 +140,10 @@ pub fn main(argv: &[String]) -> i32 {
     let mut dump: c_int = 0;
     let mut informat = FORMAT_PEM;
     let mut offset: c_long = 0;
-    let mut length: c_long = 0;
+    // `unsigned int length = 0;` — `apps/asn1parse.c:85`. The authority stores
+    // the `strtol` result in an `unsigned int`, so a negative `-length` becomes
+    // the corresponding large value; keep that conversion.
+    let mut length: c_uint = 0;
     let mut item: *const Asn1Item = core::ptr::null();
 
     loop {
@@ -180,7 +183,7 @@ pub fn main(argv: &[String]) -> i32 {
             OptMatch::Value("offset", v) => offset = strtol_base0(&v),
             // `case OPT_LENGTH: length = strtol(opt_arg(), NULL, 0); break;` —
             // `apps/asn1parse.c:131-133`.
-            OptMatch::Value("length", v) => length = strtol_base0(&v),
+            OptMatch::Value("length", v) => length = strtol_base0(&v) as c_uint,
             // `case OPT_DUMP: dump = -1; break;` — `apps/asn1parse.c:134-136`.
             OptMatch::Flag("dump") => dump = -1,
             // `case OPT_DLIMIT: dump = strtol(opt_arg(), NULL, 0); break;` —
@@ -380,8 +383,8 @@ pub fn main(argv: &[String]) -> i32 {
     num -= offset;
     // `if (length == 0 || length > (unsigned int)num) length = (unsigned int)num;` —
     // `apps/asn1parse.c:288-289`.
-    if length == 0 || length > num {
-        length = num;
+    if length == 0 || length > num as c_uint {
+        length = num as c_uint;
     }
 
     if !derout.is_null() {
@@ -395,7 +398,7 @@ pub fn main(argv: &[String]) -> i32 {
                 length as c_int,
             )
         };
-        if c_long::from(w) != length {
+        if w != length as c_int {
             eprintln!("Error writing output");
             // SAFETY: all three are live and not freed again.
             unsafe { crate::runtime::bio::BIO_free(derout) };
@@ -417,7 +420,7 @@ pub fn main(argv: &[String]) -> i32 {
             ASN1_parse_dump(
                 bio_out,
                 strp.add(offset as usize),
-                length,
+                c_long::from(length),
                 c_int::from(indent),
                 dump,
             )
