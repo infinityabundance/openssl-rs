@@ -1,0 +1,154 @@
+{
+  "receipt": "boundary-sweep-B13",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "d8a2428e9",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/bn/arith.rs"
+    ],
+    "working_tree_blob": {
+      "src/bn/arith.rs": "1f00aff38af0c45a63c5a6ecdff3ccf3e344b262"
+    }
+  },
+  "stop_status": "CLEAR for the M18-D1 aliasing class. The 14 `(as_mut(r), as_ref(input))` tuple sites in src/bn/arith.rs are repaired by the B12 read-first/write-last shape, and no such tuple remains in src/. Three same-shape sites outside arith.rs (bn/bignum.rs BN_copy and BN_with_flags, bn/mont.rs BN_MONT_CTX_copy) cannot alias by early return or by their stated contract, so they are escalations with no defect. Miri is NOT_RUN (the pinned 1.98.1 toolchain has no miri component); nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.5.9 crypto/bn/{bn_add.c,bn_div.c,bn_mod.c,bn_exp.c,bn_gcd.c,bn_sqrt.c,bn_shift.c} and doc/man3/{BN_add.pod,BN_mod_inverse.pod,BN_set_bit.pod}.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. Only the order in which Rust borrows are formed changed.",
+    "external_contracts": [
+      "A result object may alias an input. Every operand read must complete before the result is written; forming two simultaneously live Rust borrows of one allocation is UB even when the write happens last.",
+      "Documented/source-visible alias sets: BN_add/BN_sub/BN_mul r == a or b (BN_add.pod:51-57); BN_sqr r == a (BN_add.pod:60-61); BN_gcd r == a or b (BN_add.pod:107-109); BN_mod_inverse r == a (BN_mod_inverse.pod:21) and r == n is also defined by int_bn_mod_inverse, which copies n before writing the result; BN_nnmod r == a, and r == m is rejected (bn_mod.c:21-24); BN_lshift/BN_rshift r == a (bn_shift.c in-place paths); BN_exp r == a or p (bn_exp.c:62); BN_mod_exp r == a or p (the mont/recp paths compute into a temporary); BN_mod_sqrt in == a (bn_sqrt.c copies a into A before writing ret).",
+      "Implementation-defined extensions, not authority-guaranteed: BN_mod_exp r == m (BN_mod_exp_simple rejects it at bn_exp.c:1323) and BN_mod_sqrt in == p. They are defined here because both operands are cloned before the store, and they are pinned by the control rather than claimed as parity."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B13-BN-ARITH-1",
+      "file": "src/bn/arith.rs",
+      "mechanism": "BIGNUM-output borrow ordering in BN_add, BN_sub, BN_uadd, BN_usub, BN_mul, BN_sqr, BN_nnmod, BN_mod_inverse, BN_lshift, BN_rshift, BN_exp, BN_mod_exp, BN_gcd and BN_mod_sqrt",
+      "disposition": "CONTRACTED",
+      "contract": "Each operand is read through a shared reference whose last use is the `parts` clone; the output is borrowed only at the store (BN_mod_sqrt borrows at each finish_sqrt exit). No `&mut` and `&` to one allocation are live together. r may alias the operand(s) listed in the module `Aliasing` section; BN_nnmod still rejects r == m, BN_mod_inverse r == n, BN_mod_exp r == m and BN_mod_sqrt in == p are implementation-defined and pinned.",
+      "defects": [
+        "B13-D1",
+        "B13-D2"
+      ],
+      "residuals": []
+    }
+  ],
+  "defects": [
+    {
+      "id": "B13-D1",
+      "file": "src/bn/arith.rs",
+      "lines_post_fix": "77-92, 107-122, 138-144, 167-178, 323-329, 343-348, 434-458, 712-731, 754-758, 786-790, 1007-1029, 1054-1064, 1161-1167, 1213-1227",
+      "severity": "high",
+      "class": "aliasing (M18-D1): `as_mut(r)` and `as_ref(input)` formed in one tuple, i.e. a live mutable borrow and a live shared borrow of one allocation when a caller aliases the output",
+      "description": "Fourteen entry points formed `let (dst, x, ...) = unsafe { (as_mut(r), as_ref(a), ...) }` while their docs and the authority support r aliasing the operand. The reads happened through `parts` clones, so the value was usually correct, but the concurrent borrows were not a defined Rust state. The blanket module claim that every function accepts an alias was also wider than the per-function authority contract.",
+      "sites": [
+        "BN_add: `(as_mut(r), as_ref(a), as_ref(b))` -> `as_ref(a)`+parts, `as_ref(b)`+parts, `as_mut(r)` only at store.",
+        "BN_sub: `(as_mut(r), as_ref(a), as_ref(b))` -> same read-first/write-last shape.",
+        "BN_uadd: `(as_mut(r), as_ref(a), as_ref(b))` -> same read-first/write-last shape.",
+        "BN_usub: `(as_mut(r), as_ref(a), as_ref(b))` -> reads end before the `ad.len() < bd.len()` early return; output borrow only at store.",
+        "BN_mul: `(as_mut(r), as_ref(a), as_ref(b))` -> reads cloned before the product; output borrow only at store.",
+        "BN_sqr: `(as_mut(r), as_ref(a))` -> read cloned before the square; output borrow only at store.",
+        "BN_nnmod: `(as_mut(r), as_ref(a), as_ref(m))` -> reads cloned before the `r == m` rejection and before the store.",
+        "BN_mod_inverse: `(as_mut(r), as_ref(a), as_ref(n))` -> reads cloned before the inverse computation; output borrowed in the final match.",
+        "BN_lshift: `(as_mut(r), as_ref(a))` -> read cloned before the shift; output borrow only at store.",
+        "BN_rshift: `(as_mut(r), as_ref(a))` -> read cloned before the shift; output borrow only at store.",
+        "BN_exp: `(as_mut(r), as_ref(a), as_ref(p))` -> exponent and base cloned before the ladder; output borrow at store.",
+        "BN_mod_exp: `(as_mut(r), as_ref(a), as_ref(p), as_ref(m))` -> all three operands cloned before the ladder; output borrow at each success arm.",
+        "BN_gcd: `(as_mut(r), as_ref(a), as_ref(b))` -> reads cloned before the gcd; output borrow only at store.",
+        "BN_mod_sqrt: `(as_mut(inp), as_ref(a), as_ref(p))` -> both operands cloned before any write; `as_mut(inp)` is formed at each of the two finish_sqrt exits instead of being held across the computation."
+      ],
+      "fix": "Adopted the B12 shape: `as_ref(operand)` -> `parts` clone -> drop the shared borrow -> compute -> `as_mut(output)` at the store. Each unsafe block has its own SAFETY comment. The module `Aliasing` section now states the exact supported set per function, including the three implementation-defined cases."
+    },
+    {
+      "id": "B13-D2",
+      "file": "src/bn/arith.rs",
+      "lines_post_fix": "module doc, `## Aliasing`",
+      "severity": "low",
+      "class": "contract documentation: the blanket text said every function accepts r aliasing a or b",
+      "description": "The old module text claimed the authority allows aliasing for every entry point. The manual states the opposite default (`Unless noted otherwise, the result BIGNUM must be different from the arguments`), and only specific functions document or implement an alias.",
+      "fix": "Replaced the blanket claim with the per-function supported set, the preserved rejections (BN_nnmod r == m, BN_mod_exp_simple r == m) and the implementation-defined extensions."
+    }
+  ],
+  "public_behavior_aliased_cases": {
+    "BN_add(r, a, b) / BN_sub(r, a, b) / BN_uadd(r, a, b) / BN_usub(r, a, b)": "r == a, r == b or r == a == b is supported; the magnitude is computed from the original operands and stored last.",
+    "BN_mul(r, a, b, ctx)": "r == a, r == b or r == a == b is supported; the product is computed from the originals and stored last.",
+    "BN_sqr(r, a, ctx)": "r == a is supported; the square is computed from the original magnitude.",
+    "BN_nnmod(r, a, m, ctx)": "r == a is supported; r == m is rejected with BN_MOD_22 before any write, matching bn_mod.c:21-24.",
+    "BN_mod_inverse(r, a, n, ctx)": "r == a is documented; r == n is defined here (int_bn_mod_inverse copies n before writing) although the manual calls it an error.",
+    "BN_lshift(r, a, n) / BN_rshift(r, a, n)": "r == a is supported; the shifted magnitude is computed from the original.",
+    "BN_exp(r, a, p, ctx)": "r == a and r == p are supported (bn_exp.c:62); both operands are cloned before the ladder.",
+    "BN_mod_exp(r, a, p, m, ctx)": "r == a and r == p are supported; r == m is defined by this implementation but not authority-guaranteed.",
+    "BN_gcd(r, a, b, ctx)": "r == a or r == b is supported; the gcd is computed from the originals.",
+    "BN_mod_sqrt(in, a, p, ctx)": "in == a is supported; in == p is defined by this implementation but not authority-guaranteed. in == NULL still allocates."
+  },
+  "compatibility": {
+    "distinct_output_calls": "unchanged arithmetic, signs, error sites and failure ordering; only the order in which Rust borrows are formed changed",
+    "aliased_output_calls": "now defined in Rust and equal to the distinct-output computation for every supported alias (control)",
+    "preserved_rejections": "BN_nnmod r == m still returns 0 at BN_MOD_22; BN_mod_exp_simple r == m still returns 0 at BN_EXP_1324",
+    "implementation_defined_extensions": "BN_mod_inverse r == n, BN_mod_exp r == m and BN_mod_sqrt in == p are defined here, are not claimed as authority parity, and are pinned by the control",
+    "authority_differential": "NOT_RUN for the newly documented aliased cases; distinct-output behaviour is covered by the existing courts and was not changed"
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "cargo test --lib bn::arith -- --test-threads=4: 2 passed, 0 failed (aliased_outputs_match_the_distinct_form, div_accepts_one_object_for_both_outputs)"
+    },
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1615 passed, 0 failed, 27 ignored (91.86 s)",
+      "serial": "cargo test --lib -- --test-threads=1: 1615 passed, 0 failed, 27 ignored (243.70 s)",
+      "ignored_delta": "0 newly ignored; no test removed",
+      "affected_probes": "none: no OPENSSL_RS_ADV_PROBE arm exists in src/bn/arith.rs"
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's only toolchain is 1.98.1-x86_64-unknown-linux-gnu; `cargo miri --version` reports \"the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain\" and `rustup component list --installed` shows only cargo, clippy, rust-std, rustc and rustfmt"
+  },
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "BN_mod_sqrt now calls `as_mut(inp)` at each of its two finish_sqrt exits instead of holding one borrow across the computation; this is the same null-or-live/uniqueness contract at a second store site, not a new obligation.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 1,
+  "unsafe_operations_introduced_detail": "the second `as_mut(inp)` at BN_mod_sqrt's early exit; the first replaces the pre-fix tuple borrow",
+  "borrow_hazards_eliminated": 14,
+  "test_only_unsafe_added": 6,
+  "escalations": [
+    {
+      "id": "B13-E1",
+      "file": "src/bn/bignum.rs",
+      "lines": "506 (BN_copy), 862 (BN_with_flags)",
+      "disposition": "CLOSED - alias pre-excluded, not modified",
+      "description": "Both form `(as_mut(dst), as_ref(src))`. BN_copy returns `a` before the tuple when `a.cast_const() == b` (bn_lib.c:341-342), so the two references are distinct. BN_with_flags' # Safety section requires `dest` and `b` to be distinct when both are non-null; the authority's limb-array aliasing is deliberately not reproduced (OBL-BN-WITH-FLAGS-ALIASING)."
+    },
+    {
+      "id": "B13-E2",
+      "file": "src/bn/mont.rs",
+      "lines": "273 (BN_MONT_CTX_copy)",
+      "disposition": "CLOSED - alias pre-excluded, not modified",
+      "description": "`(as_mut_mont(to), as_ref_mont(from))` is reached only after `if to == from { return to; }`, so the context references are distinct by construction."
+    },
+    {
+      "id": "B13-E3",
+      "file": "src/bn/blinding.rs",
+      "lines": "676-692 (int_bn_mod_inverse)",
+      "disposition": "CLOSED - already read-first",
+      "description": "The file was not a tuple match. It reads `a` and `n` through shared references whose last use is the `parts` clone, then calls `store(as_mut(dst), ...)`; no overlap remains."
+    }
+  ],
+  "residuals": [
+    {
+      "id": "B13-R1",
+      "file": "src/bn/arith.rs",
+      "severity": "low",
+      "disposition": "RETAINED - documented",
+      "description": "BN_mod_inverse r == n, BN_mod_exp r == m and BN_mod_sqrt in == p are defined by this implementation but are not authority-guaranteed. They are borrow-safe (operands are cloned before the store) and pinned by the control, but they are not parity claims. Authority differential evidence for them is NOT_RUN."
+    }
+  ],
+  "graduation": "CONTRACTED. The ownership reconstruction is complete for the file, every remaining unsafe operation has an explicit validity contract and a SAFETY comment, hidden obligations are 0, and no safe caller can cause UB through the audited aliases. Not SAFETY_DISCHARGED: Miri (Stacked/Tree Borrows) is NOT_RUN and the independent-reviewer/BOUNDARY step has not been performed. No SAFE_COMPATIBLE claim.",
+  "next_ordinary_position": "unchanged: src/apps/smime.rs (93), then src/ssl/ssl_rsa.rs (92), src/asn1/a_strex.rs (91), src/cms/cms_enc.rs (91), src/provider/dsa_sig.rs (91)"
+}
