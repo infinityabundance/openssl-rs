@@ -1,0 +1,121 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "6041240a8",
+  "worktree": "dirty (src/apps/smime.rs, src/cms/cms_enc.rs, src/provider/ecdsa_sig.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "ordinary mechanism-contract sweep starting at the queued src/apps/smime.rs (93 production sites) and continuing down the production-site ranking. Eight ordinary files audited: src/apps/smime.rs (93), src/asn1/a_strex.rs (91), src/cms/cms_enc.rs (91), src/provider/dsa_sig.rs (91), src/x509/v3_lib.rs (91), src/provider/ecdsa_sig.rs (90), src/x509/v3_sxnet.rs (89), src/x509/v3_attrdesc.rs (89). src/ssl/ssl_rsa.rs (92) was skipped as already audited (B7/B8). No audited file was a newly discovered boundary.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/apps/smime.rs",
+    "src/asn1/a_strex.rs",
+    "src/cms/cms_enc.rs",
+    "src/provider/dsa_sig.rs",
+    "src/x509/v3_lib.rs",
+    "src/provider/ecdsa_sig.rs",
+    "src/x509/v3_sxnet.rs",
+    "src/x509/v3_attrdesc.rs"
+  ],
+  "files_not_run": [
+    "src/property/store.rs (93) — method-store lock/provider callback boundary; BOUNDARY, not selected.",
+    "src/http/http_client.rs (92) — OSSL_HTTP_bio_cb_t application BIO callback; BOUNDARY, not selected.",
+    "src/ssl/ssl_rsa.rs (92) — already audited (B7/B8); skipped as instructed.",
+    "src/ec/curve25519.rs (90) — next queue position, security-sensitive algorithm; cryptographic vectors NOT_RUN."
+  ],
+  "defects": [
+    {
+      "id": "M19-D1",
+      "file": "src/cms/cms_enc.rs",
+      "lines_post_fix": "218-235",
+      "severity": "high",
+      "class": "provider-controlled length used for a fixed-size stack buffer (out-of-bounds write)",
+      "description": "ossl_cms_EncryptedContent_init_bio filled unsigned char iv[EVP_MAX_IV_LENGTH] with ivlen = EVP_CIPHER_CTX_get_iv_length(ctx) bytes and later copied ivlen bytes into aparams.iv. A provider may advertise an ivlen larger than EVP_MAX_IV_LENGTH, so the authority (cms_enc.c:96-98,179) overruns its stack buffer. The conversion reproduced that authority UB.",
+      "fix": "Refuse an ivlen outside 0..=EVP_MAX_IV_LENGTH with ERR_R_EVP_LIB at the authority's own IV-length coordinate, recording the deliberate §17 divergence. Added control cms::cms_enc::tests::iv_length_guard_rejects_a_provider_iv_larger_than_the_buffer. The end-to-end custom-provider reproducer remains NOT_RUN."
+    },
+    {
+      "id": "M19-D2",
+      "file": "src/apps/smime.rs",
+      "lines_post_fix": "370-745 (nine release sites)",
+      "severity": "low",
+      "class": "stack element-ownership divergence (certificate leak)",
+      "description": "The recipient stack was released with OPENSSL_sk_free, which frees only the stack array. apps/smime.c:726 uses OSSL_STACK_OF_X509_free (pop-free with X509_free), so every certificate pushed for -encrypt was leaked.",
+      "fix": "Every encerts release now calls crate::x509::t_x509::OSSL_STACK_OF_X509_free, matching the authority's element destructor."
+    },
+    {
+      "id": "M19-D3",
+      "file": "src/apps/smime.rs",
+      "lines_post_fix": "17 cleanup sites",
+      "severity": "low",
+      "class": "owned BIO leak on success and every failure path",
+      "description": "indata, the content BIO produced by SMIME_read_PKCS7_ex, was never released. apps/smime.c:744 frees it on every path.",
+      "fix": "Each cleanup/return path after the read now calls the NULL-safe BIO_free(indata), matching the authority's single end: label."
+    },
+    {
+      "id": "M19-D4",
+      "file": "src/apps/smime.rs",
+      "lines_post_fix": "373-383",
+      "severity": "low",
+      "class": "unchecked stack insertion (unpushed certificate and stack leak)",
+      "description": "OPENSSL_sk_push's result was ignored. On refusal the authority's goto end releases the certificate it did not push and the stack (apps/smime.c:517-521,723-745).",
+      "fix": "The push result is checked; failure frees the unpushed certificate and the stack."
+    },
+    {
+      "id": "M19-D5",
+      "file": "src/provider/ecdsa_sig.rs",
+      "lines_post_fix": "926-935",
+      "severity": "low",
+      "class": "latent double release through a raw struct copy (authority refusal omitted)",
+      "description": "ecdsa_dupctx omitted the authority's kinv != NULL || r != NULL refusal (ecdsa_sig.c:634-638). Those fields stay NULL without the ACVP test arm, but any future assignment would make CRYPTO_memdup alias two BIGNUMs and freectx release each of them twice.",
+      "fix": "Restored the authority's refusal before the raw copy."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 reference-count sentinel contract",
+    "OB-1 OwnedBuf allocation/adoption and release modes",
+    "OB-2 OwnedStr adoption for i2s_ASN1_INTEGER results",
+    "OB-3 OwnedCtx/CtxDestroy and the zeroed-state constructor",
+    "OB-4 member-buffer slot protocol",
+    "CRYPTO_* allocator seam coordinates",
+    "OPENSSL stack pop-free element-destructor convention (OSSL_STACK_OF_X509_free)",
+    "X509V3ExtI2s application-callback ownership contract",
+    "Provider dispatch and dupctx/freectx ownership contracts"
+  ],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "test_only_unsafe_added": 0,
+  "allocator_coordinate_changes": [],
+  "abi_or_layout_changes": [],
+  "excluded_symbol_changes": [],
+  "hidden_obligations": 0,
+  "no_defect_found": [
+    "src/asn1/a_strex.rs: escape/width tables, counting-vs-writing passes, UTF-8 conversion, ASN1_STRING_to_UTF8 stack-string reuse, do_name_ex separator and field-name ladder.",
+    "src/provider/dsa_sig.rs: context create/dup/free, digest setup and aid_buf copy, sign/verify paths, signature adoption, generated decoders.",
+    "src/x509/v3_lib.rs: dynamic-row ownership, ext_list lifecycle, search/sort, alias copy, X509V3_get_d2i, X509V3_add1_i2d replace/append/delete arms.",
+    "src/x509/v3_sxnet.rs: add/get ownership transfer and partial-value cleanup.",
+    "src/x509/v3_attrdesc.rs: the four printers and SELECTOR arms."
+  ],
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: cms::cms_enc 1/0 (new control), x509::v3_lib 1/0; apps::smime, provider::dsa_sig, provider::ecdsa_sig, asn1::a_strex, x509::v3_sxnet and x509::v3_attrdesc have no test functions",
+    "library_tests_serial": "PASS: 1616 passed / 0 failed / 27 ignored (260.36 s)",
+    "library_tests_threads_4": "PASS: 1616 passed / 0 failed / 27 ignored (110.53 s)",
+    "affected_adversarial_probes": "NOT_RUN: none of the eight audited files carries an OPENSSL_RS_ADV_PROBE arm"
+  },
+  "not_discharged": true,
+  "residuals": [
+    "M19-D1's end-to-end reproducer needs a provider whose cipher advertises ivlen > EVP_MAX_IV_LENGTH; the guard is unit-controlled but not exercised through a custom provider.",
+    "Miri (Stacked/Tree Borrows), ASan/Loom/TSan, FRF-Fuzz, authority differentials for the new IV refusal, independent review and SEAL remain PENDING at the next BOUNDARY/SEAL trigger.",
+    "src/property/store.rs and src/http/http_client.rs remain BOUNDARY; the boundary queue is closed."
+  ],
+  "next_queue": {
+    "file": "src/ec/curve25519.rs",
+    "rank_note": "90 production sites; security-sensitive algorithm (vectors NOT_RUN in this sweep)",
+    "then": [
+      "src/x509/x509_v3.rs (89)",
+      "src/runtime/conf/api.rs (89)",
+      "src/dso/mod.rs (89)"
+    ]
+  }
+}
