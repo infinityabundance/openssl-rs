@@ -1,11 +1,3 @@
-src/asn1/t_pkey.rs
-src/asn1/t_spki.rs
-src/asn1/typ.rs
-src/asn1/x_bignum.rs
-src/asn1/x_info.rs
-src/asn1/x_int64.rs
-src/asn1/x_long.rs
-src/asn1/x_pkey.rs
 src/asn1/x_sig.rs
 src/asn1/x_spki.rs
 src/asn1/x_val.rs

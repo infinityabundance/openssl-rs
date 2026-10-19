@@ -3454,3 +3454,72 @@ pointer-bearing `ERR_print_errors` lines.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M39.json`](atlas-refresh/mechanism-sweep-M39.json).
+
+## 44. Mechanism sweep M40 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `49933eef4` plus the two
+contract-statement repairs below; contracts checked against OpenSSL 3.6.4
+(`crypto/asn1/{t_pkey,t_spki,tasn_typ,x_bignum,x_info,x_int64,x_long,x_pkey}.c`).
+
+**Scope:** the eight files M39 named as next. The audit covered the two number
+printers, the SPKI printer, the generated `d2i_*`/`i2d_*` wrapper layer and the
+`ASN1_NULL` sentinel, the `BIGNUM`/`CBIGNUM` primitive hooks, the `LONG`/`ZLONG`
+slot-resident primitives, the eight fixed-width integer primitives, and the
+`X509_INFO`/`X509_PKEY` lifecycles.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/asn1/t_pkey.rs` | `ASN1_buf_print`/`ASN1_bn_print`, `BIO_indent`/`BIO_printf`/`BIO_write`, `BN_is_negative`/`BN_is_zero`/`BN_bn2bin`, `OwnedBuf::new_cleansed` scratch | No defect. The wide-number buffer is `nbytes + 1` with a leading zero for the sign pad; `BN_bn2bin` writes exactly `nbytes` at `+1`, and the `buf[1] & 0x80` decision is the authority's. The scratch owner is the single `OPENSSL_clear_free` on both exits. Formats, signs, widths and failure tails match `t_pkey.c`. |
+| `src/asn1/t_spki.rs` | `NETSCAPE_SPKI_print`, `X509_PUBKEY_get0_param`/`X509_PUBKEY_get`, `EVP_PKEY_print_public`/`EVP_PKEY_free`, `OBJ_obj2nid`/`OBJ_nid2ln`, challenge and signature printers | Repaired the `# Safety` contract: it named only `spkac`, while the body also reads the mandatory template fields `spkac->pubkey`, `spkac->challenge`, `sig_algor.algorithm` and `signature`. No behaviour change; the item templates make all five present on a valid value. |
+| `src/asn1/typ.rs` | generated `d2i_*`/`i2d_*` wrappers for the string/multistring types, `ASN1_SEQUENCE_ANY`/`ASN1_SET_ANY`, `ASN1_NULL_new`/`_free`/`d2i`/`i2d` | No defect. Every wrapper is the authority's one-line forward; a null value slot is handled by the shared decoder, `pp` remains the caller's obligation, and the `ASN1_NULL` sentinel `(ASN1_VALUE *)1` is returned and never dereferenced, exactly as `tasn_typ.c`. |
+| `src/asn1/x_bignum.rs` | `BIGNUM`/`CBIGNUM` primitive hook table, `bn_new`/`bn_secure_new`, `bn_free`, `bn_i2c`/`bn_c2i`, `bn_secure_c2i`, `bn_print` | No defect. `bn_free` reads `BN_SENSITIVE` from the item and takes `BN_clear_free`; a failed decode frees the value this call allocated and nulls the slot, matching `x_bignum.c`. The pad decision and magnitude write match. |
+| `src/asn1/x_info.rs` | `X509_INFO` layout/offsets, `CtxDestroy` member body, `OwnedCtx::zalloc`/`from_raw`, `CRYPTO_free(enc_data)` | No defect. `_new` is the authority's zero-allocation; `_free` releases certificate, CRL, private key and `enc_data`, then the record, each once. The zeroed state is the authority's own constructed state, so the OB-3 zero-state sweep is sound. |
+| `src/asn1/x_int64.rs` | eight fixed-width items and their `size`-as-flags hooks, `OwnedBlock` zalloc/from_raw, `ossl_c2i_uint64_int`/`ossl_i2c_uint64_int`, signed/zero-default rules | Repaired the `uint32_free` `SAFETY` contract: a decoded `UINT32` is allocated by `uint64_new` (eight bytes, the authority's own `uint32_c2i`), not by the four-byte `uint32_new`. `OwnedBlock`'s `Drop` releases the allocation's base pointer, so the wider block is released whole; the statement now says so instead of claiming a four-byte extent. No behaviour change. |
+| `src/asn1/x_long.rs` | `LONG`/`ZLONG` slot-resident hooks, `long_new`/`long_free`, `long_i2c`/`long_c2i`, `long_print`, sentinel size | No defect. Reads and writes target the value slot itself (`read_unaligned`/`write_unaligned`), the negative encode is the authority's `0 - utmp - 1`, the padding/sign tests match, and the errors are the authority's coordinates. |
+| `src/asn1/x_pkey.rs` | `X509_PKEY` layout/offsets, `RawCtx` publication window, `X509_ALGOR_new`/`ASN1_OCTET_STRING_new`, `CtxDestroy` member body, `OwnedCtx::from_raw`, `key_free` gate | No defect. The raw window releases only the block if initialisation is refused, the two members are written before `assume_init`, and the failure path drops the partially built value (members then block) and raises `X509_PKEY_28`. Member release order and the `key_free` test match `x_pkey.c`. |
+
+**Defects repaired.** Two low-severity unsafe-contract statements, both
+documentation-only and with no behaviour change: `x_int64.rs:242` claimed
+`uint32_free` always reclaimed a four-byte block although the decode path
+installs an eight-byte block through `uint64_new` (the release is
+base-pointer-only, so no UB, but the stated extent was false); `t_spki.rs:32`
+understated the printer's preconditions, omitting the mandatory template fields
+it dereferences. No invalid free, double free, leak, alias, uninitialised read,
+ABI change or allocator-seam change was found.
+
+**New unsafe assumptions (hidden must be 0).** None. No unsafe function, FFI
+symbol, allocator coordinate, `#[repr(C)]` layout or exported signature was
+added or changed. Contracts reused: RC-1 item descriptor/template layout, OB-1
+`OwnedBlock` allocation/release seam, OB-3 `OwnedCtx`/`CtxDestroy` (including
+its zero-state obligation), the ASN.1 item lifecycle and primitive-hook
+contract, `d2i`/`i2d` `a`/`pp`/`out` conventions, and the `CBIGNUM`
+`BN_SENSITIVE` clear-free rule.
+
+**Evidence.** FAST: `cargo fmt --all -- --check` clean; focused `asn1::` **40
+passed / 0 failed / 1 ignored**. BATCH: clippy `--all-targets -D warnings` PASS;
+library **1649 passed / 0 failed / 27 ignored** serially (254.34 s) and with
+`--test-threads=4` (88.20 s). No test removed or newly ignored.
+
+**NOT_RUN.** No runtime probe is affected: both repairs are contract statements
+with no generated code change, so the FRF ASN.1 courts (`rt-asn1`,
+`rt-asn1-str`, `rt-asn1-template`), the `rt-mem-*` allocator-hook courts, Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay, the
+caller/dependency closure (BOUNDARY), independent adversarial review and SEAL
+are `NOT_RUN`; the FRF tooling container is not up. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** `ASN1_bn_print` keeps the authority's
+`number`-as-`%s` form: a null `number` is not part of the stated contract even
+though the authority would hand it to `printf`. `t_spki` still dereferences the
+item-mandatory fields exactly as the authority does. The allocator `file`/`line`
+coordinates remain `0` (`OPENSSL_NO_CRYPTO_MDEBUG` convention), and error tails
+still omit the pointer-bearing `ERR_print_errors` lines.
+
+**Queue.** `REMAINING-AUDIT.txt` 406 → **398**; `AUDITED-FILES.txt` 357 → **365**.
+
+**Next eight (stable order).** `src/asn1/x_sig.rs`, `src/asn1/x_spki.rs`,
+`src/asn1/x_val.rs`, `src/async/arch/async_posix.rs`, `src/async/async.rs`,
+`src/async/async_wait.rs`, `src/blowfish.rs`, `src/bn/bn_srp.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M40.json`](atlas-refresh/mechanism-sweep-M40.json).
