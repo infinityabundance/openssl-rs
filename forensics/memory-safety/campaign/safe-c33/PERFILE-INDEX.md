@@ -2699,3 +2699,59 @@ Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
 `src/asn1/a_verify.rs` (62), `src/dsa/mod.rs` (62), `src/evp/evp_pbe.rs` (62),
 `src/ffc/params.rs` (62). `src/engine/eng_ctrl.rs` was the last M29-deferred boundary
 named in §24 and is audited here.
+
+## 26. Boundary sweep B16 — SRP credentials, client extensions, ENGINE config, ASN.1 method table
+
+Receipt: [`atlas-refresh/boundary-sweep-B16.json`](atlas-refresh/boundary-sweep-B16.json).
+Candidate `8cfc56b38`; four files, five repairs.
+
+**STOP status: CLEAR after repair.** Three confirmed memory-safety defects were stopped on
+and repaired: `B16-D2` (heap-use-after-free when `SSL_set_srp_server_param` is passed the
+pointer `SSL_get_srp_userinfo` returned), `B16-D3` (NULL dereference/abort on
+`ENGINE_unregister_pkey_asn1_meths(NULL)`, a call the function itself documented as
+NULL-tolerant), and `B16-D1` (a refused structural reference returned a borrowed
+`EVP_PKEY_ASN1_METHOD` while owning no engine reference). Two further ownership defects
+were repaired: `B16-D4` (displaced `s3.tmp.pkey` not released) and `B16-D5` (the
+unsynchronised `initialized_engines` stack: finish-vs-init heap-use-after-free and
+init-vs-init lost stack). Pre-fix controls were observed: ASan heap-use-after-free (D2),
+SIGABRT null dereference (D3), and an assertion failure returning the borrowed method
+(D1). D5's race is scheduler-dependent, so its deterministic pre-fix canary is NOT_RUN;
+the serialised post-fix regression test passes.
+
+| file | boundaries | disposition | defects / residuals |
+|---|---|---|---|
+| `src/ssl/tls_srp.rs` | `B16-SRP-1..4` (credential-block ownership, setters/accessors, callback edge, context installers) | `CONTRACTED` | **B16-D2 (fixed, high):** duplicate-then-release for `info`, so a self-aliased argument no longer reads freed memory. `B16-R1/R2` are the authority's own credential-reset leaks; `B16-R3` is the init-failure strength delta; `B16-R4` is the missing ERR raises. `B16-R8/E2` records the same alias class in `ssl_lib.rs` (out of scope). |
+| `src/ssl/statem/extensions_clnt.rs` | `B16-EXT-1..3` (framework/builders, key-share transfer, message ownership) | `CONTRACTED` | **B16-D4 (fixed, low):** the previous `s3.tmp.pkey` is released before the new share is stored. Wire bytes unchanged; the non-HRR reduction still regenerates rather than reusing `ks_pkey[0]`. No callback runs in this file. |
+| `src/engine/eng_cnf.rs` | `B16-CNF-1..3` (module stack, config walk/ctrl edge, registration) | `CONTRACTED` | **B16-D5 (fixed, high):** stack publication/push/pop/free now serialised by a module-local `Mutex`; `ENGINE_init`/`ENGINE_finish` hooks run outside it. `B16-R7` retains the authority's "do not mutate the walked CONF section" callback contract; `B16-R9` records reentrant-init ordering. |
+| `src/engine/tb_asnmth.rs` | `B16-ASN1-1..3` (table registration, by-name lookup/refcount, method release) | `CONTRACTED` | **B16-D1 (fixed, high):** a refused up-ref now unlocks, raises `TB_ASNMTH_213` (`ERR_R_CRYPTO_LIB`) and returns NULL without writing `*pe`, as the authority does. **B16-D3 (fixed, high):** NULL unregistration is refused before the pile walk. NULL contracts on the register/get/set functions were corrected to non-NULL. `B16-R5` retains the callback-under-read-lock contract; `B16-R6` the borrowed method lifetime. |
+
+**Sweep.** Every SRP credential field and every failure path was traced for partial init and
+aliasing. The extension builders were compared with the fetched authority sources; only the
+key-share transfer owns a pointer. The ENGINE stack's publication and mutation are now under
+one lock, with no callback executed under it. The ASN.1 table walk takes exactly one
+structural reference on a match and fails closed on refusal; its callback remains under the
+engine read lock, as in the authority.
+
+**New unsafe assumptions (hidden must be 0).** None. Two production `unsafe` blocks were
+added in the refusal arm (unlock and the generated raise site), both SAFETY-commented; the
+other repairs add no unsafe expression. No export, signature, `#[repr(C)]` layout,
+allocator-seam coordinate or unsafe lint attribute changed. No safe caller can cause UB
+through the audited interfaces under the stated contracts.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused 4/0. ASan
+(dedicated venue, `-Zsanitizer=address -Zbuild-std`): the B16-D2 control reported the
+predicted heap-use-after-free before the repair and passes after it. BATCH: library **1639
+passed / 0 failed / 27 ignored** serially (209.80 s) and with `--test-threads=4` (90.40 s);
+0 newly ignored, 0 removed, four tests added. None of the four files carries an
+`OPENSSL_RS_ADV_PROBE` arm. E1 records an unrelated 84-byte ERR/EVP leak observed by the
+ASan venue.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; the court's 1.98.1 toolchain has no miri),
+Loom/TSan, the authority differentials for B16-D1/D2/D3/D5, the deterministic B16-D5 race
+canary, independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next ordinary position:** `src/x509/v3_info.rs` (63), then
+`src/ts/ts_req_utils.rs` (63), `src/evp/e_rc2.rs` (63), `src/apps/pkeyutl.rs` (62),
+`src/asn1/a_verify.rs` (62), `src/dsa/mod.rs` (62), `src/evp/evp_pbe.rs` (62),
+`src/ffc/params.rs` (62). This boundary sweep does not consume an ordinary queue position.

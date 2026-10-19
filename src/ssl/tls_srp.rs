@@ -58,7 +58,9 @@ const SSL_ERROR_NONE: c_int = 0;
 /// `ssl_ctx_srp_ctx_free_intern` — `ssl/tls_srp.c:33-50`.
 ///
 /// # Safety
-/// `ctx` must be NULL or a live context whose `srp_ctx` this call may release.
+/// `srp` must be NULL or a live credential block this call may release: every pointer
+/// member is NULL or owned exclusively by the block, and the enclosing context or
+/// connection will never release or read it afterwards.
 unsafe fn srp_ctx_free(srp: *mut crate::ssl::ssl_lib::SrpCtx) {
     // SAFETY: `srp` is a live `SrpCtx` per the caller's contract; each field is NULL or owned.
     unsafe {
@@ -473,28 +475,30 @@ pub unsafe extern "C" fn SSL_set_srp_server_param(
                 }
             }
             if !info.is_null() {
-                if !(*s).srp_ctx.info.is_null() {
-                    // SAFETY: `(*s).srp_ctx.info` is the connection's own string; the owner is its
-                    // single release at the authority's own site.
-                    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-                    drop(OwnedBuf::adopt_plain_nullable(
-                        (*s).srp_ctx.info.cast::<u8>(),
-                        SeamFile::new(c"ssl/tls_srp.c"),
-                        290,
-                    ));
-                }
-                // The duplicate is a helper allocation the seam adopts; it becomes the connection's
-                // field, released by `srp_ctx_free` at line 38. The field is assigned (NULL on a
-                // refused duplicate) before the null test, so a refused duplicate leaves the field
-                // NULL rather than dangling -- the authority's own assignment order.
+                // Duplicate *before* releasing the old block: `info` may be the pointer
+                // `SSL_get_srp_userinfo(s)` returned, i.e. the very field about to be released.
+                // The authority frees first and then duplicates, which reads freed memory for
+                // that C-valid alias; the duplicate-first order is the recorded safety repair.
+                // The duplicate is a helper allocation the seam adopts; it becomes the
+                // connection's field, released by `srp_ctx_free` at line 38.
                 // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-                (*s).srp_ctx.info = OwnedBuf::adopt_plain_nullable(
+                let dup = OwnedBuf::adopt_plain_nullable(
                     CRYPTO_strdup(info, c"ssl/tls_srp.c".as_ptr(), 291).cast::<u8>(),
                     SeamFile::new(c"ssl/tls_srp.c"),
                     38,
-                )
-                .into_raw()
-                .cast::<c_char>();
+                );
+                // SAFETY: `(*s).srp_ctx.info` is the connection's own string; the owner is its
+                // single release at the authority's own site.
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt_plain_nullable(
+                    (*s).srp_ctx.info.cast::<u8>(),
+                    SeamFile::new(c"ssl/tls_srp.c"),
+                    290,
+                ));
+                // The field is assigned (NULL on a refused duplicate) before the null test, so a
+                // refused duplicate leaves the field NULL rather than dangling -- the authority's
+                // own end state on allocation failure.
+                (*s).srp_ctx.info = dup.into_raw().cast::<c_char>();
                 if (*s).srp_ctx.info.is_null() {
                     return -1;
                 }
@@ -792,4 +796,48 @@ pub unsafe extern "C" fn SSL_CTX_set_srp_client_pwd_callback(
             ) as c_int
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::test_support::lock_global_state;
+
+    /// `SSL_set_srp_server_param` duplicates `info` before releasing the previous value, so a
+    /// caller may pass the pointer `SSL_get_srp_userinfo` returned. The pre-repair order freed
+    /// first and duplicated second; this test is the ASan canary for that alias.
+    #[test]
+    fn server_param_accepts_its_own_userinfo_as_the_new_info() {
+        let _g = lock_global_state();
+        // SAFETY: every object is created, used and released in this test; the global-state
+        // guard serialises the process-wide SSL registries.
+        unsafe {
+            let ctx = crate::ssl::ssl_lib::SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = crate::ssl::ssl_lib::SSL_new(ctx);
+            assert!(!s.is_null());
+            let original = CRYPTO_strdup(c"secret".as_ptr(), c"ssl/tls_srp.c".as_ptr(), 291);
+            assert!(!original.is_null());
+            (*s).srp_ctx.info = original;
+
+            // The N/g/s/v arguments are NULL only to keep the fixture small: the info arm runs
+            // before the completeness check, and the call answers -1 either way.
+            let rc = SSL_set_srp_server_param(
+                s,
+                ptr::null(),
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                (*s).srp_ctx.info,
+            );
+            assert_eq!(rc, -1);
+            let info = (*s).srp_ctx.info;
+            assert!(!info.is_null());
+            assert_eq!(core::ffi::CStr::from_ptr(info).to_bytes(), b"secret");
+
+            crate::ssl::ssl_lib::SSL_free(s);
+            crate::ssl::ssl_lib::SSL_CTX_free(ctx);
+        }
+    }
 }
