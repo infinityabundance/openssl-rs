@@ -3596,3 +3596,46 @@ The two `NOT_RUN` boundary files stay queued.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M41.json`](atlas-refresh/mechanism-sweep-M41.json).
+
+## 28. Boundary sweep B18 — async job/fibre lifecycle and the wait-context callback edge
+
+Receipt: [`atlas-refresh/boundary-sweep-B18.json`](atlas-refresh/boundary-sweep-B18.json).
+Candidate `7fc72ede5`; two files, one repair.
+
+**STOP status: CLEAR after repair.** One confirmed memory-safety defect was stopped on and
+repaired: `B18-D1` (heap-use-after-free in `AsyncWaitCtx::destroy_body` when a cleanup
+callback removes another fd entry). Pre-fix ASan observed the predicted READ of size 4;
+post-fix the same control and the full suite are clean. Hidden obligations 0; no safe Rust
+caller can cause UB through the audited interfaces under the stated contracts.
+
+| file | boundaries | disposition | defects / residuals |
+|---|---|---|---|
+| `src/async/async.rs` | `B18-ASY-1..5` (context, job/fibre/stack, pool, start/resume+err state machine, pause/block and thread-stop edge) | `CONTRACTED` | No defect. `B18-R1` records the authority's no-outstanding-job precondition for `ASYNC_cleanup_thread` (violation is a UAF in both implementations); `B18-R3` the authority-parity leaks; `B18-R4` the fail-closed NULL `func`/`wctx` arms; `B18-R6` hooks under the B15 register lock. |
+| `src/async/async_wait.rs` | `B18-WAIT-1..3` (context/node ownership, fd-list surgery, callback/status and cleanup reentrancy) | `CONTRACTED` after repair | **B18-D1 (fixed, high):** `destroy_body` captured `curr->next` before the application cleanup callback; a callback calling `ASYNC_WAIT_CTX_clear_fd` for that next, still-added entry released it, and the loop continued through freed memory. The next link is now read after the callback, as the authority does. `B18-R2` retains the callback's self-removal/context-free prohibition. |
+
+**Sweep.** Every constructor and failure arm was checked against the authority: context and
+pool blocks are crate-allocator owned and published only after full initialisation; job
+`funcargs` is a copied block with a single release; the fibre storage and stack are
+released separately only where the Rust layout split requires it. The `ASYNC_start_job`
+state machine and its `err` path release the job into the pool exactly on the authority's
+arms, restoring the default libctx before release. No lock is held across the job function
+or the thread-stop handler, and no Rust borrow spans a callback. The one reentrancy defect
+was in the wait-context free walk.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+`crypto_async` 7/0 (1671 filtered). ASan (dedicated venue, `-Zsanitizer=address
+-Zbuild-std`, nightly-2026-10-05): post-fix control passes; the pre-fix candidate reported
+heap-use-after-free at `async_wait.rs:101`, freed through `ASYNC_WAIT_CTX_clear_fd`. BATCH:
+library **1651 passed / 0 failed / 27 ignored** serially (233.04 s) and with
+`--test-threads=4` (98.86 s); two tests added, none removed or newly ignored. Neither file
+carries an `OPENSSL_RS_ADV_PROBE` arm.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; no miri component in the court toolchain),
+Loom/TSan (per-thread state, no shared-memory change), authority differentials,
+independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next ordinary position:** `src/bn/intern.rs`, then `src/bn/kron.rs`, `src/bn/nist.rs`,
+`src/bn/rsa_fips186_4.rs`, `src/camellia.rs`, `src/cast.rs`. `src/async/async.rs` and
+`src/async/async_wait.rs` were the two queued `NOT_RUN` boundary carriers and leave the
+boundary queue; this sweep does not consume an ordinary queue position.
