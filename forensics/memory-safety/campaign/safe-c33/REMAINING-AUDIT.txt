@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/modes/gcm.rs
-src/modes/mod.rs
-src/modes/ocb.rs
-src/modes/siv128.rs
-src/modes/wrap.rs
-src/modes/xts.rs
-src/ocsp/ocsp_cl.rs
-src/ocsp/ocsp_http.rs
 src/ocsp/ocsp_lib.rs
 src/ocsp/ocsp_prn.rs
 src/ocsp/ocsp_srv.rs
