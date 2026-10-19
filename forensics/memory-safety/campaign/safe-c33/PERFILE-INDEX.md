@@ -4893,3 +4893,114 @@ coordinates.
 defer again), `src/ffc/key_validate.rs`, `src/ffc/params_validate.rs`,
 `src/http/http_lib.rs`, `src/idea.rs`, `src/mac/hmac.rs`,
 `src/mac/poly1305.rs`, `src/mac/siphash.rs`.
+
+---
+
+## M58 — per-file contract sweep (FFC key/param validation, HTTP URL parser, IDEA, legacy HMAC, Poly1305, SipHash, TLS CBC MAC)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`cfe1798ec` (dirty worktree; no commit was made by the audit subagent).
+Census identity is unchanged from the M57 receipt. The eight records below are
+file-level obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ffc/key_validate.rs` | SP800-56A partial/full public-key and private-key range checks; `ret` write-before-test protocol; `BN_CTX` lifetime and authority failure returns; NULL `params`/`pub_key` arms | no defect |
+| `src/ffc/params_validate.rs` | FIPS 186-2/4 validators over a copied `FFC_PARAMS`; `simple_validate`'s zeroed destination, forced flags, `res` substitution and cleanup; `full_validate` seed/primality arms | no defect |
+| `src/http/http_lib.rs` | `OSSL_parse_url` component scan and bounds, `OSSL_HTTP_parse_url` `OwnedStr` handoff/release lines, `use_proxy` bracket stripping, `OSSL_HTTP_adapt_proxy` borrowed return | no defect |
+| `src/idea.rs` | 54-word `#[repr(C)]` schedule, key expansion/inversion, ECB/CBC/CFB64/OFB64, `num < 0` poison arm, wrapping 64-bit arithmetic | no defect |
+| `src/mac/hmac.rs` | `HMAC_Init[_ex]` re-key/NULL-key protocol, `keytmp`/`pad` cleanse arms, `HMAC_Final` opad fold, `CTX_new/reset/copy/free`, OB-3 `CtxDestroy` body | no defect; OB-3 and cleanse contracts reused |
+| `src/mac/poly1305.rs` | `#[repr(C)]` 248-byte context, u128 block arithmetic, partial-block carry, key load, `Final` cleanse of the whole context, layout size test | no defect |
+| `src/mac/siphash.rs` | `Init`/`Update`/`Final`, zero-means-maximum sizes, `set_hash_size` v1 compensation, tail buffer, two output constructions | 1 contract defect (M58-D1) corrected |
+| `src/mac/ssl3_cbc.rs` | constant-time TLS/SSLv3 record MAC over four digest contexts; `MdState` alignment, `num_starting_blocks`/variance loop bounds, length-byte construction, pad2 fold, `err` cleanup | 1 UB-risk hardening (M58-D2); no arithmetic defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was not audited: it is the
+method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It
+remains in `REMAINING-AUDIT.txt` at the head of the queue. `src/mac/ssl3_cbc.rs`
+was substituted from the head of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M58-D1 | `src/mac/siphash.rs:180`, `:204` | low | `# Safety` admitted a NULL `ctx` for two functions whose bodies dereference it | both contracts now require a live, non-NULL context; body unchanged (upstream `crypto/siphash/siphash.c` has no NULL test either) |
+| M58-D2 | `src/mac/ssl3_cbc.rs:469` (pre-fix copy at `:465`) | low | `copy_nonoverlapping` with a NULL `mac_secret` and `mac_secret_length == 0` is UB under Rust's pointer rules (the authority's `memcpy(..., 0)` performs no access) | the copy is skipped when the secret is empty; the `# Safety` section now allows NULL only for the empty secret. No observable change. |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0.
+Hidden obligations: 0. No exported symbol, signature, `#[repr(C)]` layout or
+allocator coordinate changed. M58-D1 is documentation-only; M58-D2 wraps an
+existing copy in an existing unsafe block in a zero-length guard. No unsafe
+operation was added or removed.
+
+**Secret-bearing storage.** `hmac.rs` is the only unit here that both holds
+MAC-key material and cleanses it: `keytmp` (key or `H(key)` when the key is
+longer than a block) and `pad` (the ipad/opad image) are cleansed on the
+`goto err` arms and on the success path whenever `reset` is set -- exactly the
+authority's `err:` cleanse. The four early returns that skip it in the
+authority (`j > 144`, `j < 0`, a failed `j < len` digest, and
+`len < 0 || len > 144`) skip it here too, and no secret is present in the
+buffers on those arms because `keytmp` is written only by a successful
+`EVP_DigestFinal_ex`. The keyed digest states live in `i_ctx`/`o_ctx`, whose
+`EVP_MD_CTX_reset`/`free` run their own cleanses. `HMAC_Final`'s `buf` (the
+inner digest) is not cleansed, matching the authority; it is classified as a
+keyed intermediate, not a key. `poly1305.rs` cleanses the whole 248-byte
+context on `Final` (multiplier, nonce, accumulator and tail). `ssl3_cbc.rs`
+does **not** cleanse `hmac_pad` (the secret XOR pad constant, a directly
+recoverable key copy) or the keyed `md_state`/`mac_out`/`first_block`/`block`
+images; the authority does not either. Following the recorded
+`provider/mac.rs` precedent (Poly1305's provider free is a bare free because
+the authority's is), this batch classifies rather than diverges; adding the
+cleanses is the first hardening candidate for a security batch. `siphash.rs`
+has no cleanse in the authority (key mixed into `v0..v3` and `leavings`
+persisting in the caller's context); cleansing belongs to the provider's free
+path. `ffc/*` handles public parameters and caller-owned BIGNUMs; `http_lib.rs`
+handles public URL/proxy text; `idea.rs` writes a key schedule that the
+authority never cleanses and that this crate has no release path for.
+
+**Contracts reused.** OB-2 `OwnedStr` adoption/release at authority
+coordinates (`http_lib.rs`); OB-3 `OwnedCtx`/`CtxDestroy` with the zero-state
+sweep (`hmac.rs`); the caller-owned BIGNUM private-key and FFC copy/cleanup
+protocols (`ffc/*`); the authority's `# Safety`-documented pointer extents for
+the digest dispatch and constant-time selection helpers (`ssl3_cbc.rs`); the
+wrapping-arithmetic convention for `unsigned long` transcriptions (`idea.rs`).
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused tests
+(ffc::key_validate 3, ffc::params_validate 6, idea::tests 2, mac::hmac 4,
+mac::poly1305 3, mac::siphash 5, mac::ssl3_cbc 4) **27 passed / 0 failed**.
+`http_lib.rs` has no unit test in-tree, so it has no focused count.
+BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1666 passed / 0 failed / 27 ignored** (1693 total) serial in 272.50 s and
+with `--test-threads=4` in 97.95 s, in the court with `CARGO_BUILD_JOBS=4`.
+No unexplained removal and no newly ignored test.
+
+**NOT_RUN.** Miri, ASan/valgrind, dudect/constant-time (the only `ssl3_cbc`
+change is the zero-length guard; no constant-time claim is made from source
+inspection); a runtime control for M58-D1 (documentation-only) and M58-D2 (no
+in-tree caller yet; the focused tests all pass non-empty secrets); authority
+differential for the pinned `ssl3_cbc` SSLv3 arm (no in-tree authority tree;
+current upstream has removed `is_sslv3`, so only the TLS arm and the helper
+serialisers were cross-checked); affected adversarial probes
+(`scripts/adv-probe.sh` has no probe for these boundaries); FRF suite;
+dependency-graph regeneration; negative controls for the secret-residue
+classification; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `hmac.rs` forwards `impl` to `EVP_DigestInit_ex`; current upstream
+3.6-dev adds an early `if (impl != NULL) return 0`, while the 3.0 source (and
+the port's own doc) forwards it. The pinned 3.6.4 tree is not in this
+checkout, so the version question is recorded rather than changed; forwarding
+is memory-safe because `evp_md_init_internal` refuses a non-NULL `impl`
+before any dereference, but a non-NULL `impl` mutates `ctx->md` before that
+refusal, a compatibility difference if the pin has the early check.
+(3) The `ssl3_cbc` secret residue noted above. (4) SipHash/Poly1305 provider
+free paths are outside this batch and are where those contexts' cleansing is
+recorded.
+
+**Queue.** `REMAINING-AUDIT.txt` 257 -> **249**; `AUDITED-FILES.txt` 506 ->
+**514**. **Next eight.** `src/evp/method_store.rs` (registry boundary —
+defer again), `src/ml_dsa/hash.rs`, `src/ml_dsa/mod.rs`, `src/ml_dsa/ntt.rs`,
+`src/ml_dsa/sample.rs`, `src/ml_dsa/sign.rs`, `src/ml_kem/key.rs`,
+`src/ml_kem/mod.rs`.
