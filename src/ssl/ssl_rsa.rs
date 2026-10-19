@@ -332,7 +332,15 @@ pub unsafe extern "C" fn SSL_use_certificate_file(
                 cert = d2i_X509_bio(in_, &mut x);
             } else if type_ == SSL_FILETYPE_PEM {
                 j = ERR_R_PEM_LIB;
-                cert = PEM_read_bio_X509(in_, &mut x, None, ptr::null_mut());
+                // `ssl_rsa.c:87-88`: the authority forwards the connection's default password
+                // callback, so an encrypted certificate block reaches the application's
+                // callback instead of `PEM_def_callback`.
+                cert = PEM_read_bio_X509(
+                    in_,
+                    &mut x,
+                    (*ssl).default_passwd_callback,
+                    (*ssl).default_passwd_callback_userdata,
+                );
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 95);
                 X509_free(x);
@@ -388,7 +396,14 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_file(
                 cert = d2i_X509_bio(in_, &mut x);
             } else if type_ == SSL_FILETYPE_PEM {
                 j = ERR_R_PEM_LIB;
-                cert = PEM_read_bio_X509(in_, &mut x, None, ptr::null_mut());
+                // `ssl_rsa.c:338-339`: the context's default password callback, exactly as
+                // the chain loader forwards it.
+                cert = PEM_read_bio_X509(
+                    in_,
+                    &mut x,
+                    (*ctx).default_passwd_callback,
+                    (*ctx).default_passwd_callback_userdata,
+                );
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 347);
                 X509_free(x);
@@ -1602,5 +1617,124 @@ mod adv_probe {
         // SAFETY: `ctx` is live and owned by this frame.
         unsafe { SSL_CTX_free(ctx) };
         adv_alloc::assert_no_double_free();
+    }
+}
+
+/// B8 regression controls for the certificate-file password-callback edge.
+///
+/// The fixture is an encrypted PEM block whose body decodes to 48 zero bytes. It is not a
+/// certificate, so both loaders must answer 0; what is observed is that the application's
+/// password callback **was consulted**, which is the B7 follow-up's whole subject. Without the
+/// forwarding each loader reaches `PEM_def_callback` instead and the counter stays 0.
+#[cfg(test)]
+mod password_callback_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::evp::pem_bridge::PemPasswordCb;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_default_passwd_cb,
+        SSL_CTX_set_default_passwd_cb_userdata, SSL_free, SSL_new, SSL_set_default_passwd_cb,
+        SSL_set_default_passwd_cb_userdata,
+    };
+    use core::sync::atomic::{AtomicUsize, Ordering};
+    use std::ffi::CString;
+
+    const ENCRYPTED_PEM: &str = "-----BEGIN CERTIFICATE-----\n\
+Proc-Type: 4,ENCRYPTED\n\
+DEK-Info: AES-256-CBC,00000000000000000000000000000000\n\
+\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+-----END CERTIFICATE-----\n";
+
+    const PASSWORD: &[u8] = b"boundary-b8";
+
+    static CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn password_cb(
+        buf: *mut c_char,
+        size: c_int,
+        _rwflag: c_int,
+        _u: *mut c_void,
+    ) -> c_int {
+        CALLS.fetch_add(1, Ordering::SeqCst);
+        if buf.is_null() || size <= 0 || PASSWORD.len() + 1 > size as usize {
+            return -1;
+        }
+        // SAFETY: `buf` is writable for `size` bytes and the copy fits the test above.
+        unsafe {
+            ptr::copy_nonoverlapping(PASSWORD.as_ptr().cast::<c_char>(), buf, PASSWORD.len());
+            *buf.add(PASSWORD.len()) = 0;
+        }
+        PASSWORD.len() as c_int
+    }
+
+    fn write_fixture() -> (std::path::PathBuf, CString) {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, Ordering::SeqCst);
+        let path =
+            std::env::temp_dir().join(format!("openssl-rs-b8-{}-{n}.pem", std::process::id()));
+        if std::fs::write(&path, ENCRYPTED_PEM).is_err() {
+            panic!("cannot write the temporary PEM fixture");
+        }
+        let Some(text) = path.to_str() else {
+            panic!("the temporary path is not UTF-8");
+        };
+        let cpath = match CString::new(text) {
+            Ok(c) => c,
+            Err(_) => panic!("the temporary path contains a NUL byte"),
+        };
+        (path, cpath)
+    }
+
+    #[test]
+    fn ctx_certificate_file_forwards_the_password_callback() {
+        let _g = crate::test_support::lock_global_state();
+        CALLS.store(0, Ordering::SeqCst);
+        let (path, cpath) = write_fixture();
+        // SAFETY: the method table is static; the context and file are this frame's.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+            SSL_CTX_set_default_passwd_cb(ctx, Some(password_cb as PemPasswordCb));
+            SSL_CTX_set_default_passwd_cb_userdata(ctx, ptr::null_mut());
+            let ret = SSL_CTX_use_certificate_file(ctx, cpath.as_ptr(), SSL_FILETYPE_PEM);
+            assert_eq!(ret, 0, "the fixture body is not a certificate");
+            assert_eq!(
+                CALLS.load(Ordering::SeqCst),
+                1,
+                "SSL_CTX_use_certificate_file must forward the default password callback"
+            );
+            SSL_CTX_free(ctx);
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn connection_certificate_file_forwards_the_password_callback() {
+        let _g = crate::test_support::lock_global_state();
+        CALLS.store(0, Ordering::SeqCst);
+        let (path, cpath) = write_fixture();
+        // SAFETY: the method table is static; the context, connection and file are this
+        // frame's.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null(), "SSL_new must succeed");
+            SSL_set_default_passwd_cb(ssl, Some(password_cb as PemPasswordCb));
+            SSL_set_default_passwd_cb_userdata(ssl, ptr::null_mut());
+            let ret = SSL_use_certificate_file(ssl, cpath.as_ptr(), SSL_FILETYPE_PEM);
+            assert_eq!(ret, 0, "the fixture body is not a certificate");
+            assert_eq!(
+                CALLS.load(Ordering::SeqCst),
+                1,
+                "SSL_use_certificate_file must forward the default password callback"
+            );
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+        let _ = std::fs::remove_file(&path);
     }
 }
