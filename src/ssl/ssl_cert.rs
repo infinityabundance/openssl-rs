@@ -648,7 +648,13 @@ pub unsafe extern "C" fn SSL_add_dir_cert_subjects_to_stack(
                     break;
                 }
                 let flen = c_strlen(filename);
-                if dlen + flen + 2 > buf.len() {
+                // The authority adds three `size_t`s directly; make the bound check
+                // un-overflowable (`dlen + flen + 2` is the final path length with `/` and NUL).
+                let too_long = dlen
+                    .checked_add(flen)
+                    .and_then(|n| n.checked_add(2))
+                    .is_none_or(|n| n > buf.len());
+                if too_long {
                     raise_ssl(SSL_R_PATH_TOO_LONG, 984);
                     break;
                 }
