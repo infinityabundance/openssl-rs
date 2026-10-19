@@ -2014,3 +2014,47 @@ differentials for the M20-D1/M20-D2 divergences, independent review and SEAL.
 `src/asn1/a_mbstr.rs` (85), `src/asn1/string.rs` (85) and
 `src/property/strings.rs` (85); `src/provider/mac_legacy_kmgmt.rs` (86) is a provider
 callback boundary and was not selected.
+
+## 24. Boundary sweep B14 — provider MAC callback boundary and the finish-hook class
+
+Receipt: [`atlas-refresh/boundary-sweep-B14.json`](atlas-refresh/boundary-sweep-B14.json).
+Candidate `13dcc552f`; two items, one repair.
+
+**STOP status: CLEAR.** The freed-but-not-cleared finish-hook class is closed crate-wide.
+`rsa_ossl_finish` (M17-D1) and `dsa_finish` (M20-D2) were already repaired; B14 found and
+repaired the last instance, `dh_finish`.
+
+| file | boundaries | disposition | defect / residual |
+|---|---|---|---|
+| `src/provider/mac_legacy_kmgmt.rs` | `B14-MK-1..4` (key refcount/ownership, member replacement, generator/transfer, export callback reentrancy) | `CONTRACTED` | **none (no UB)**. `B14-R1`: repeated `mac_gen_set_params` leaks the previous secure key, exactly as authority `:425` does; documented at the site, preserved, not a safety defect. |
+| `src/dh/key.rs` | `B14-DH-1` (DH method finish cache) | `CONTRACTED` | **B14-D1 (fixed, high):** `dh_finish` freed `method_mont_p` without clearing it; `DH_set_method` and `DH_free` both run the hook, so a transition + free double-released and the next key operation used freed storage. The slot is now cleared after release. Control `dh::key::tests::the_finish_hook_clears_the_mont_cache_it_releases`; the control was observed to fail with the clear removed. |
+
+**Sweep.** Every `*_finish` hook and every `finish:` table entry was examined. Only
+RSA/DSA/DH release a reusable cached slot; RSA and DSA were already repaired and DH is
+repaired here. EC group/point finish hooks free owned field elements without clearing them,
+but are reached exactly once from the owning `OwnedCtx` destructor immediately before the
+block is released (no reuse), so they are closed by exact-once proof. EC_KEY/DSO `finish`
+hooks are application-owned and all built-in EC tables leave them `None`. Engine/conf/DSO
+lifecycle hooks release through refcounts or free the enclosing record; `WPACKET_finish`
+already clears its slot; the remaining `finish` symbols are AEAD finalisers, builder methods
+or test fixtures.
+
+**New unsafe assumptions (hidden must be 0).** None. One raw slot write (NULL) was added
+inside `dh_finish`'s existing audited unsafe block. No export, signature, `#[repr(C)]`
+layout, allocator-seam coordinate or unsafe lint attribute changed. No safe caller can cause
+UB through the audited interfaces.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; DH control 1/0 and
+provider zero-state sweeps 2/0. BATCH: library **1619 passed / 0 failed / 27 ignored**
+serially (316.49 s) and threaded (99.38 s); 0 newly ignored, 0 removed, one test added.
+No audited file carries an `OPENSSL_RS_ADV_PROBE` arm.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows; `cargo miri` unavailable on the court's 1.98.1
+toolchain), ASan/Loom/TSan, the authority differential for the DH slot-clear divergence,
+independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Next ordinary position:** no B14 follow-on; the file-level queue is empty at `e48a1b519`
+(`PROGRESS.md:1520`). The last recorded ordinary list remains `src/ml_dsa/poly.rs` (86),
+then `src/asn1/a_mbstr.rs` (85), `src/asn1/string.rs` (85) and
+`src/property/strings.rs` (85).

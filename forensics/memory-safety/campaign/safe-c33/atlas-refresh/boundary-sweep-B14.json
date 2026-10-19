@@ -1,0 +1,305 @@
+{
+  "receipt": "boundary-sweep-B14",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "13dcc552f",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/provider/mac_legacy_kmgmt.rs",
+      "src/dh/key.rs"
+    ],
+    "working_tree_blob": {
+      "src/provider/mac_legacy_kmgmt.rs": "119617fd0f8d09316202aaf4e17006e3010be617",
+      "src/dh/key.rs": "546aa89dfafbcef9ce1500f8730cac24090e3b48"
+    }
+  },
+  "stop_status": "CLEAR. The freed-but-not-cleared finish-hook class is closed crate-wide. M17-D1 (rsa_ossl_finish) and M20-D2 (dsa_finish) were already repaired; this sweep found and repaired the last remaining instance, dh_finish. Every other hook that releases object-owned storage either clears its slot or is provably reached exactly once immediately before the enclosing block is released. No safe caller can cause UB through the audited interfaces; hidden obligations are 0. Nothing is promoted to SAFETY_DISCHARGED (Miri and independent review are NOT_RUN).",
+  "authority": {
+    "source": "openssl-3.6.4 providers/implementations/keymgmt/mac_legacy_kmgmt.c (mac_gen_set_params :411-432, mac_gen :472-513, mac_export :264-295, ossl_mac_key_free :85-101, mac_gen_cleanup :515-525); crypto/dh/dh_key.c:207-211 (dh_finish); crypto/dsa/dsa_ossl.c:466-471 (dsa_finish); crypto/rsa/rsa_ossl.c:1179-1195 (rsa_ossl_finish); crypto/ec/ecp_mont.c:93-109, ecp_smpl.c:113-125/338-351, ec2_smpl.c:47-69/236-250, ec_lib.c (free paths); crypto/dso/dso_lib.c:54-72; crypto/conf/conf_mod.c; crypto/engine/eng_init.c.",
+    "abi": "C ABI unchanged: no exported symbol, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. The DH repair adds one slot write after the authority's BN_MONT_CTX_free; the provider file is unchanged.",
+    "external_contracts": [
+      "MAC_KEY is reference counted; exactly the caller holding the last reference runs ossl_mac_key_free's destructor body, and each handle owns exactly one reference.",
+      "An OSSL_PARAM array is NULL or key-terminated; an OCTET_STRING with data_size > 0 has a readable data pointer, and a UTF8_STRING is NUL-terminated. mac_key_fromdata may replace the key's priv_key/properties/cipher, releasing and NULLing each previous slot first.",
+      "MacGenCtx is exclusively owned by its gen_init caller and cleaned up exactly once. mac_gen may transfer priv_key and cipher to the new MAC_KEY; the transfer NULLs the generator's slots, and a refused ossl_prov_cipher_copy leaves the generator unchanged.",
+      "mac_export's OSSL_CALLBACK is application-controlled. No Rust &mut, non-reentrant lock or key-owned buffer is live across the call: OSSL_PARAM_BLD_to_param materialises independent copies before the callback, and the key is not touched afterwards.",
+      "A DH method's finish hook is called by DH_set_method on every transition and again by DH_free through CtxDestroy::destroy_body. dh->method_mont_p is therefore NULL or a uniquely owned live MontCtx on every entry, and the hook must clear it after release.",
+      "EC_GROUP/EC_POINT finish hooks run only from their OwnedCtx destructor bodies (ec/lib.rs:267/286 and 314/326), exactly once, immediately before the enclosing block is released; the object is never reused after the hook.",
+      "EC_KEY_METHOD.finish/keyfinish and DSO_METHOD.finish are application-owned hooks. The crate calls them at the authority's sites but cannot clear application-private state."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B14-MK-1",
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "mechanism": "MAC_KEY refcounted ownership: ossl_mac_key_new/ossl_mac_key_free/ossl_mac_key_up_ref and CtxDestroy for MacKey",
+      "disposition": "CONTRACTED",
+      "contract": "A non-NULL MAC_KEY handle owns one reference. The last ossl_mac_key_free hands the block to OwnedCtx, whose Drop runs destroy_body (secure clear of priv_key at priv_key_len, plain free of properties, cipher reset) exactly once and then releases the block; the zeroed block is a valid zero state (OB-3 obligation (b)).",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B14-MK-2",
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "mechanism": "member replacement in mac_key_fromdata: priv_key, priv_key_len, properties and cipher",
+      "disposition": "CONTRACTED",
+      "contract": "Each replaced slot is adopted by OwnedBuf (secure or plain) and set to NULL before the replacement is allocated; a refused allocation leaves a valid key (NULL slot plus stale length, which every reader guards on the pointer). OSSL_PARAM data never aliases the key's own storage. The CMAC cipher replacement is ossl_prov_cipher_load's own alloc_cipher/engine transaction, which nulls replaced ownership before fetching.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B14-MK-3",
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "mechanism": "MacGenCtx ownership and the mac_gen transfer",
+      "disposition": "CONTRACTED",
+      "contract": "mac_gen_init_common returns an exclusively owned zeroed context; failure in mac_gen_init/cmac_gen_init runs mac_gen_cleanup once. mac_gen takes the cipher through ossl_prov_cipher_copy (up-ref first, failure leaves the source untouched), resets the generator's cipher, and moves priv_key to the new MAC_KEY while setting the generator's pointer to NULL and its length to 0. mac_gen_cleanup may therefore run on either the pre-transfer or post-transfer state.",
+      "defects": [],
+      "residuals": [
+        "B14-R1"
+      ]
+    },
+    {
+      "id": "B14-MK-4",
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "mechanism": "mac_export application callback reentrancy",
+      "disposition": "CONTRACTED",
+      "contract": "key_to_params completes and OSSL_PARAM_BLD_to_param copies every value into a builder-owned block before param_cb is invoked. mac_export holds only its own tmpl/params locals across the callback, forms no reference to MacKey after the call, and frees params/tmpl regardless of the callback's answer. A callback that frees the key cannot invalidate the exported parameter block; a callback that retains the pointer past return violates the OSSL_CALLBACK contract.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B14-DH-1",
+      "file": "src/dh/key.rs",
+      "mechanism": "DH method finish hook and the cached Montgomery context",
+      "disposition": "CONTRACTED",
+      "contract": "DH_set_method runs the outgoing table's finish and then init; DH_free runs finish once through CtxDestroy::destroy_body. On every entry dh->method_mont_p is NULL or the object's uniquely owned live context. dh_finish releases it through BN_MONT_CTX_free and writes NULL back, so a second transition/free is a no-op and the next key operation rebuilds through BN_MONT_CTX_set_locked rather than taking its non-NULL fast path with freed storage.",
+      "defects": [
+        "B14-D1"
+      ],
+      "residuals": []
+    }
+  ],
+  "defects": [
+    {
+      "id": "B14-D1",
+      "file": "src/dh/key.rs",
+      "lines_pre_fix": "439-442",
+      "lines_post_fix": "446-455",
+      "severity": "high",
+      "class": "freed-but-not-cleared cached pointer (M17-D1/M20-D2 class): double free and use-after-free across a method transition",
+      "description": "dh_finish called BN_MONT_CTX_free(dh->method_mont_p) without clearing the slot. DH_set_method invokes the outgoing method's finish on every transition (dh/object.rs:143), and DH_free invokes it again through the destructor body (dh/object.rs:339). A second finish therefore released the same MontCtx twice, and a key operation after the transition found the freed pointer through BN_MONT_CTX_set_locked's non-NULL fast path (bn/mont.rs:309-312).",
+      "fix": "Clear dh->method_mont_p immediately after BN_MONT_CTX_free, with the divergence and §17 rationale at the hook. Regression control `dh::key::tests::the_finish_hook_clears_the_mont_cache_it_releases` asserts the slot is NULL after DH_set_method and then exercises the second finish through DH_free. The same control was observed to fail with the clear temporarily removed."
+    }
+  ],
+  "sweep": [
+    {
+      "hook": "rsa_ossl_finish",
+      "site": "src/rsa/ossl.rs:2249",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Already repaired as M17-D1: clears pinfo->m and _method_mod_n/_method_mod_p/_method_mod_q after release. Control rsa::ossl::tests::the_finish_hook_clears_every_slot_it_releases."
+    },
+    {
+      "hook": "dsa_finish",
+      "site": "src/dsa/ossl.rs:990",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Already repaired as M20-D2: clears method_mont_p after BN_MONT_CTX_free. Control dsa::ossl::tests::the_finish_hook_clears_the_mont_cache_it_releases."
+    },
+    {
+      "hook": "dh_finish",
+      "site": "src/dh/key.rs:446",
+      "releases_cached_pointer": true,
+      "affected": true,
+      "reason": "B14-D1: released method_mont_p without clearing it; DH_set_method and DH_free both run it. Repaired in this batch; new regression control and an observed negative control."
+    },
+    {
+      "hook": "ossl_ec_GFp_mont_group_finish",
+      "site": "src/ec/mont.rs:163",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Clears field_data1 and field_data2 after release, then delegates field/a/b to the simple finish. Reached exactly once from EcGroup::destroy_body (ec/lib.rs:267-268), immediately before the block is released; the group is never reused."
+    },
+    {
+      "hook": "ossl_ec_GFp_mont_group_clear_finish",
+      "site": "src/ec/mont.rs:180",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Clears both field data slots. Reached exactly once from clear_destroy_body (ec/lib.rs:286-289), immediately before the block is released."
+    },
+    {
+      "hook": "ossl_ec_GFp_simple/GF2m_simple group_finish and group_clear_finish",
+      "site": "src/ec/smpl.rs:198,213; src/ec/smpl2.rs:99,114",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Free field/a/b (and the GF2m polynomial marker) without clearing them, but each is reached exactly once from the owning EcGroup destructor, which releases the block immediately; no second operation can observe the slots. Exact-once call-site proof recorded in this receipt."
+    },
+    {
+      "hook": "ossl_ec_GFp_simple/GF2m_simple point_finish and point_clear_finish",
+      "site": "src/ec/smpl.rs:565,581; src/ec/smpl2.rs:349,364",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Free x/y/z exactly once from EcPoint::destroy_body/clear_destroy_body (ec/lib.rs:314-329), immediately before the point block is released; the point is never reused after the hook."
+    },
+    {
+      "hook": "EC_KEY_METHOD.finish and group keyfinish invocations",
+      "site": "src/ec/key.rs:245-249,259-261,315-317,320-322; src/ec/kmeth.rs:315-317",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "All built-in EC method tables set finish: None and keyfinish: None (smpl/nist/mont/smpl2/kmeth). A caller-supplied method's hook is an application-owned contract; the crate calls it at the authority's sites and owns no cached slot behind it."
+    },
+    {
+      "hook": "DSO_METHOD.finish",
+      "site": "src/dso/mod.rs:339-340",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Called once behind the refcount destroying sentinel before the block is reclaimed; reentry from the hook is a defined no-op and is pinned by dso::tests::free_reentry_from_the_finish_hook_is_a_noop. The failing-hook protocol is pinned separately."
+    },
+    {
+      "hook": "module_finish",
+      "site": "src/runtime/confmod/mod.rs:411-421",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Runs the module's application finish then frees the already-unlinked imod and its name; no live object retains a released slot. Failure paths are the module registry's own and were audited in their batch."
+    },
+    {
+      "hook": "int_engine_module_finish",
+      "site": "src/engine/eng_cnf.rs:312-332",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Pops every recorded engine and calls ENGINE_finish on each, then frees the stack and stores NULL in INITIALIZED_ENGINES, so a second finish cannot free or pop it again."
+    },
+    {
+      "hook": "engine_unlocked_finish / ENGINE_finish",
+      "site": "src/engine/eng_init.rs:86-127,158-180",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Functional-reference count reduction and engine_free_util; the release is the refcount protocol, not a cached pointer in a reusable object. Reentrancy is under the global engine lock as in the authority."
+    },
+    {
+      "hook": "dynamic_finish",
+      "site": "src/engine/eng_dyn.rs:571",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Unreachable: dynamic_init always answers 0, so the engine is never functional and the hook is never installed/invoked."
+    },
+    {
+      "hook": "stbl_module_finish",
+      "site": "src/asn1/asn_mstbl.rs:261-263",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Calls the global ASN1_STRING_TABLE_cleanup; it owns no object member slot and is the authority's whole body."
+    },
+    {
+      "hook": "oid_module_finish",
+      "site": "src/runtime/confmod/asn1.rs:243-245",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Empty in the authority; objects created by the section belong to the object database."
+    },
+    {
+      "hook": "SSL_CONF_CTX_finish",
+      "site": "src/ssl/ssl_conf.rs:1248-1260",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "The only release in the authority is the REQUIRE_PRIVATE back-fill, which this slice never installs (canames is always NULL); the body is a no-op."
+    },
+    {
+      "hook": "tls12_client_finish",
+      "site": "src/ssl/statem/statem_clnt.rs:2804-2830",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Updates session cache/counters and handshake state; it releases no pointer."
+    },
+    {
+      "hook": "WPACKET_finish",
+      "site": "src/packet.rs:726-744",
+      "releases_cached_pointer": true,
+      "affected": false,
+      "reason": "Adopts and releases the sub-packet and writes NULL back to (*pkt).subs, so a second finish sees the empty state."
+    },
+    {
+      "hook": "ccm_finish / CRYPTO_gcm128_finish / ocb_finish / CRYPTO_ocb128_finish / ossl_siv128_finish / aes_gcm_siv_finish",
+      "site": "src/modes/ccm.rs:315; src/modes/gcm.rs:628; src/modes/ocb.rs:691,723; src/modes/siv128.rs:637; src/provider/cipher.rs:13734",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "AEAD tag/finalisation operations on caller-owned contexts; they release no object-owned pointer and are not lifecycle teardown hooks."
+    },
+    {
+      "hook": "test-only finish hooks (DSO reentrant/failing, BIO comp note_finish)",
+      "site": "src/dso/mod.rs:953,1064; src/runtime/bio/comp.rs:480",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Test fixtures; the DSO cases pin the reentrant and failed-hook protocols, and note_finish is empty."
+    },
+    {
+      "hook": "builder methods named finish (Rand, DhGenCtx, X509*, BIO enc, Conf value, EC/DSO dynamic data)",
+      "site": "src/rand/rand_lib.rs:399; src/provider/keymgmt.rs:483; src/x509/x509_lu.rs:578,627; src/x509/x509_meth.rs:88; src/x509/x509_trust.rs:200; src/x509/v3_purp.rs:466; src/x509/by_dir.rs:248; src/x509/v3_asid.rs:161; src/evp/bio_enc.rs:190; src/runtime/conf/api.rs:231; src/engine/eng_dyn.rs:361; src/dh/mod.rs:408; src/dsa/mod.rs:417",
+      "releases_cached_pointer": false,
+      "affected": false,
+      "reason": "Consuming builder/accessor methods, not lifecycle callbacks; they release no cached pointer."
+    }
+  ],
+  "compatibility": {
+    "provider_file": "unchanged; no source edit. Behaviour, error sites, ownership coordinates and the authority-faithful repeated-set leak are preserved.",
+    "dh_finish": "The only observable difference is that a released method_mont_p no longer remains installed. Correct-use callers see the same answers: a subsequent transition or free is a no-op instead of a double release, and the next key operation rebuilds the cache. This is a recorded §17 divergence (do not reproduce the authority's UB).",
+    "authority_differential": "NOT_RUN for the DH slot-clear divergence; the existing DH courts and library tests were run unchanged."
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "cargo test --lib dh::key::tests::the_finish_hook_clears_the_mont_cache_it_releases -- --test-threads=4: 1 passed, 0 failed; cargo test --lib provider::mac_legacy_kmgmt -- --test-threads=4: 2 passed (both zero-state sweeps)"
+    },
+    "negative_control": "With the slot-clear temporarily removed, the new DH control failed at `the finished cache must not remain installed`; with the repair restored it passed. The control cannot reach the second release on the failing path because the assertion precedes DH_free.",
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1619 passed, 0 failed, 27 ignored (99.38 s)",
+      "serial": "cargo test --lib -- --test-threads=1: 1619 passed, 0 failed, 27 ignored (316.49 s)",
+      "ignored_delta": "0 newly ignored; 0 removed; one test added",
+      "affected_probes": "none: neither src/dh/key.rs nor src/provider/mac_legacy_kmgmt.rs contains an OPENSSL_RS_ADV_PROBE arm"
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's only toolchain is 1.98.1-x86_64-unknown-linux-gnu; `cargo miri --version` reports \"the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain\""
+  },
+  "asan_or_loom": "NOT_RUN. No ASan, Loom or TSan venue was invoked; the negative control used a deterministic null-slot assertion rather than a sanitizer.",
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "The DH repair adds one raw slot write (NULL) inside the existing audited unsafe block, guarded by the same live-object contract and a SAFETY comment; it introduces no new abstraction, caller obligation, exported symbol or layout change.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 1,
+  "unsafe_operations_introduced_detail": "`(*dh).method_mont_p = ptr::null_mut();` in dh_finish, inside the existing unsafe block.",
+  "test_only_unsafe_added": 1,
+  "safe_callers_can_cause_ub": false,
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B14-R1",
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "lines": "841-868",
+      "severity": "low",
+      "disposition": "RETAINED - authority-faithful, documented at the site",
+      "description": "mac_gen_set_params overwrites gctx->priv_key without releasing the previous secure block (authority mac_legacy_kmgmt.c:425 does the same). A caller that sets a private key twice on one generator context leaks the first block, including secret contents. The crate sets the slot to NULL before the replacement allocation, so cleanup cannot release the stale pointer; this is a resource/secret-hygiene leak, not UB, and is preserved for authority behaviour. Authority differential is NOT_RUN."
+    },
+    {
+      "id": "B14-R2",
+      "file": "src/ec/smpl.rs, src/ec/smpl2.rs",
+      "lines": "198,213,565,581; 99,114,349,364",
+      "severity": "low",
+      "disposition": "RETAINED - exactly-once destructor proof",
+      "description": "The EC group/point finish hooks free their owned field elements without NULLing them. They are reached only from the owning EcGroup/EcPoint OwnedCtx destructor, exactly once, immediately before the enclosing block is released; no path re-enters them or reuses the object. This is documented rather than changed to avoid altering authority teardown order."
+    },
+    {
+      "id": "B14-R3",
+      "file": "src/ec/key.rs, src/dso/mod.rs",
+      "lines": "ec/key.rs:245-249,315-322; dso/mod.rs:339-340",
+      "severity": "low",
+      "disposition": "RETAINED - application contract",
+      "description": "EC_KEY_METHOD.finish/keyfinish and DSO_METHOD.finish are application-owned callbacks. The crate calls them at the authority's sites (including method transitions for EC_KEY) but cannot know or clear application-private cached state; a hook must tolerate the authority's call sequence. All built-in EC tables set these slots to None, and the DSO refcount tests pin the crate's own reentrancy behaviour."
+    }
+  ],
+  "graduation": "CONTRACTED. For both items every remaining unsafe operation has an explicit validity contract and SAFETY comment, every required precondition is established by its callers or the provider/module ABI, and no safe caller can cause UB. The finish-hook class is closed crate-wide. Not SAFETY_DISCHARGED: Miri (Stacked/Tree Borrows), sanitizer/Loom venues, the authority differential for the DH divergence and independent review are NOT_RUN. No SAFE_COMPATIBLE claim.",
+  "next_ordinary_position": "No B14 follow-on. The file-level queue is empty at e48a1b519 (PROGRESS.md:1520); the last recorded ordinary list is src/ml_dsa/poly.rs (86), then src/asn1/a_mbstr.rs (85), src/asn1/string.rs (85), src/property/strings.rs (85)."
+}
