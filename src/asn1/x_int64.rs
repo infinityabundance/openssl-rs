@@ -239,9 +239,11 @@ unsafe extern "C" fn uint32_new(pval: *mut *mut c_void, _it: *const Asn1Item) ->
 unsafe extern "C" fn uint32_free(pval: *mut *mut c_void, _it: *const Asn1Item) {
     // SAFETY: `pval` is a live slot.
     let v = unsafe { *pval };
-    // SAFETY: `v` is NULL or the four-byte block `uint32_new` installed and no other owner has
-    // released; `from_raw` maps NULL to `None`, and its `Drop` is the block's single release at the
-    // authority's own `file`/`line`.
+    // SAFETY: `v` is NULL, the four-byte block `uint32_new` installed, or the eight-byte block
+    // `uint32_c2i` installed through `uint64_new` (the authority's own allocation choice, reproduced
+    // in `uint32_c2i`), and no other owner has released it. `from_raw` maps NULL to `None`; its
+    // `Drop` releases the allocation's base pointer once at the authority's own `file`/`line`. The
+    // release is extent-independent, so the wider decode allocation is released whole.
     drop(unsafe { OwnedBlock::<u32>::from_raw(v.cast::<u32>(), FILE.as_ptr(), LINE) });
     // SAFETY: `pval` is a live slot.
     unsafe { *pval = core::ptr::null_mut() };

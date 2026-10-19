@@ -30,7 +30,9 @@ use crate::x509::x_pubkey::{X509_PUBKEY_get, X509_PUBKEY_get0_param};
 /// cannot be loaded (that prints a line instead).
 ///
 /// # Safety
-/// `out` must be a live BIO; `spki` a live `NETSCAPE_SPKI` whose `spkac` is present.
+/// `out` must be a live BIO. `spki` must be a live `NETSCAPE_SPKI` built by the item layer
+/// (or an equally shaped value) whose mandatory template fields are present: `spkac`,
+/// `spkac->pubkey`, `spkac->challenge`, `sig_algor.algorithm` and `signature`.
 #[no_mangle]
 pub unsafe extern "C" fn NETSCAPE_SPKI_print(out: *mut Bio, spki: *mut NetScapeSpki) -> c_int {
     // SAFETY: `out`, `spki` and `spki`'s `spkac` are live per the contract, so every field read
