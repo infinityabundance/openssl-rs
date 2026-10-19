@@ -237,8 +237,9 @@ pub(crate) fn ossl_ec_curve_nid2nist_int(nid: c_int) -> *const c_char {
 ///
 /// # Safety
 ///
-/// `name` is a NUL-terminated string; a NULL faults inside `strcmp`, exactly as the
-/// authority's does.
+/// `name` is a non-NULL, NUL-terminated string. The authority's unguarded `strcmp`
+/// dereferences its argument, so NULL is outside this function's contract: a caller must not
+/// pass it. `ossl_ec_curve_name2nid`, the guarded entry point, checks before calling here.
 pub(crate) unsafe fn ossl_ec_curve_nist2nid_int(name: *const c_char) -> c_int {
     for (row, row_nid) in NIST_CURVE_ROWS {
         // SAFETY: `name` is NUL-terminated per this function's contract and the row's name

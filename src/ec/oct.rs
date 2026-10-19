@@ -46,7 +46,7 @@ use crate::runtime::obj::NID_X9_62_prime_field;
 const ERR_LIB_BN: c_int = 3;
 
 /// The `crypto/ec/ec_oct.c` translation unit, for the one allocation pair attributed to it.
-const FILE_EC_OCT: &core::ffi::CStr = c"crypto/ec/ec_oct.c";
+const FILE_EC_OCT: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c";
 
 /// An owned point-encoding buffer from [`EC_POINT_point2buf`].
 ///
