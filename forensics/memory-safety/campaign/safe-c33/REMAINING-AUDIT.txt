@@ -1,12 +1,4 @@
-src/evp/keymgmt_lib.rs
-src/evp/legacy_mdc2.rs
-src/evp/legacy_ripemd.rs
-src/evp/legacy_sha3.rs
-src/evp/legacy_sha.rs
-src/evp/legacy_wp.rs
 src/evp/method_store.rs
-src/evp/p5_crpt.rs
-src/evp/p5_scrypt.rs
 src/evp/pbe.rs
 src/evp/p_dec.rs
 src/evp/p_enc.rs

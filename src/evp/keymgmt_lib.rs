@@ -354,10 +354,12 @@ pub(crate) unsafe fn evp_keymgmt_util_make_pkey(
 /// `int evp_keymgmt_util_export(const EVP_PKEY *pk, int selection, OSSL_CALLBACK *export_cb,
 /// void *export_cbarg)`.
 ///
-/// Two NULL guards, then a delegation to the origin's own exporter. It reads `pk->keymgmt` and
-/// `pk->keydata` with no test on either, so a **typed but unassigned** provider key — `keymgmt`
-/// non-NULL, `keydata` NULL — reaches `evp_keymgmt_export` with a NULL keydata, which the provider
-/// sees. `evp_pkey_export_to_provider` guards that case before calling here; nothing else does.
+/// Three NULL guards, then a delegation to the origin's own exporter. A **typed but unassigned**
+/// provider key — `keymgmt` non-NULL, `keydata` NULL — reaches `evp_keymgmt_export` with a NULL
+/// keydata, which the provider sees. An **unassigned** key (including a fresh `EVP_PKEY_new()`) is
+/// refused before the callback: the authority tests only `pk` and `export_cb` and then dereferences
+/// `pk->keymgmt`, so that input is a NULL dereference in the C authority. Refusing it is the §17
+/// deliberate divergence — a C-valid untyped key must not produce UB.
 ///
 /// # Safety
 /// `pk` NULL or live; `export_cb` NULL or a valid callback.
@@ -372,6 +374,9 @@ pub(crate) unsafe fn evp_keymgmt_util_export(
     }
     // SAFETY: `pk` is live per the contract.
     let (keymgmt, keydata) = unsafe { ((*pk).keymgmt, (*pk).keydata) };
+    if keymgmt.is_null() {
+        return 0;
+    }
     // SAFETY: `keymgmt` is live and `export_cb` is valid.
     unsafe { evp_keymgmt_export(keymgmt, keydata, selection, export_cb, export_cbarg) }
 }
@@ -403,7 +408,10 @@ pub(crate) unsafe fn evp_keymgmt_util_export(
 /// own. It is the only exit that returns a pointer this call did not produce.
 ///
 /// # Safety
-/// `pk` NULL or live; `keymgmt` NULL or live.
+/// `pk` must be live — the authority dereferences it before any NULL test, so a NULL `pk` is a C
+/// caller's ABI violation rather than an accepted input; `keymgmt` NULL or live. When
+/// `pk->keydata` is non-NULL, `pk->keymgmt` is a live method for it (the assign/copy boundary
+/// establishes that pair).
 pub(crate) unsafe fn evp_keymgmt_util_export_to_provider(
     pk: *mut EvpPkey,
     keymgmt: *mut EvpKeyMgmt,
@@ -1202,6 +1210,33 @@ mod tests {
             );
             crate::evp::pkey::EVP_PKEY_free(pkey);
         }
+    }
+
+    /// Exporting an **unassigned** key is refused before the exporter is reached. The authority
+    /// dereferences `pk->keymgmt` without a NULL test here, so a fresh `EVP_PKEY_new()` — a
+    /// documented, reachable input to `EVP_PKEY_export`/`EVP_PKEY_todata` — is UB there; this is
+    /// the §17 divergence that keeps it a refusal.
+    #[test]
+    fn exporting_an_unassigned_key_is_refused_before_the_method_dereference() {
+        unsafe extern "C" fn never_called(_: *const OsslParam, _: *mut c_void) -> c_int {
+            1
+        }
+
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        // SAFETY: `pkey` is this test's own object; its `keymgmt` is NULL, which the repair refuses.
+        let answer = unsafe {
+            evp_keymgmt_util_export(
+                pkey,
+                crate::evp::pkey::OSSL_KEYMGMT_SELECT_ALL,
+                Some(never_called),
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(answer, 0, "an untyped key has no method to export through");
+        // SAFETY: `pkey` is this test's own object.
+        unsafe { crate::evp::pkey::EVP_PKEY_free(pkey) };
     }
 
     /// `evp_keymgmt_util_clear_operation_cache` answers **1** for a NULL key and for a key with no

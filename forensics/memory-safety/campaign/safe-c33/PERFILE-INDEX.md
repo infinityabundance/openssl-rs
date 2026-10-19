@@ -4736,3 +4736,75 @@ or allocator coordinate changed. The changed helper is safe Rust.
 `src/evp/legacy_mdc2.rs`, `src/evp/legacy_ripemd.rs`,
 `src/evp/legacy_sha3.rs`, `src/evp/legacy_sha.rs`, `src/evp/legacy_wp.rs`,
 `src/evp/method_store.rs`, `src/evp/p5_crpt.rs`.
+
+## M56 — per-file contract sweep (keymgmt utilities and PBES units)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`4f340911c` (dirty worktree; no commit was made by the audit subagent). Census
+identity is unchanged from the M55 receipt. The eight records below are
+file-level obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/evp/keymgmt_lib.rs` | operation-cache `OP_CACHE_ELEM` ownership (`OwnedCacheElem`), provider export/import round trip, read/write lock protocol, origin identity `(name_id, prov)`, callback re-entry | 1 defect (M56-D1) repaired; cache/ownership contracts reused |
+| `src/evp/legacy_mdc2.rs` | legacy `EVP_MD` static carrier (`EVP_ORIG_GLOBAL`, `ctx_size` 0, callback triple) | no defect; M55 legacy-static contract reused |
+| `src/evp/legacy_ripemd.rs` | same carrier pattern | no defect; same contract |
+| `src/evp/legacy_sha3.rs` | same carrier pattern plus `sha3_int_init`'s `ctx->digest->md_size` read and `shake_ctrl`'s XOF length write | no defect; the callbacks are unreachable on the zero-`ctx_size` statics through the legacy arm (provider fetch or `NO_INIT` early return) |
+| `src/evp/legacy_sha.rs` | seven carriers plus `sha1_int_ctrl`'s NULL-context guard and `ossl_sha1_ctrl` extent contract | no defect; same reachability argument |
+| `src/evp/legacy_wp.rs` | same carrier pattern (`pkey_type` literal 0, `WHIRLPOOL_BBLOCK / 8`) | no defect; same contract |
+| `src/evp/p5_crpt.rs` | ASN.1 `PBEPARAM`, PBKDF1 fetch/derive, key/IV split, secret buffers | 2 defects (M56-D2 fixed-buffer bound, M56-D3 failure-path cleansing) repaired |
+| `src/evp/p5_scrypt.rs` | `SCRYPT_PARAMS` decode, length/probe validation, `err_cleanup` cleansing on every post-decode failure | no defect; existing `err_cleanup` contract reused |
+
+**Deferred boundary.** `src/evp/method_store.rs` was not audited: it is the
+method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary.
+It remains in `REMAINING-AUDIT.txt` at the head of the queue. `keymgmt_lib.rs`
+was audited rather than deferred because its production body is the portable
+key export/import ownership helper; its provider round trip and lock protocol
+were read in full and M56-D1 was repaired.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M56-D1 | `src/evp/keymgmt_lib.rs:377` (pre-fix call at 371) | high | authority-UB reproduction: NULL `pk->keymgmt` dereference | `evp_keymgmt_util_export` refuses an unassigned key before `evp_keymgmt_export` (§17 divergence; authority crashes on a fresh `EVP_PKEY_new()` passed to `EVP_PKEY_export`/`EVP_PKEY_todata`) |
+| M56-D2 | `src/evp/p5_crpt.rs:285` (pre-fix check at 262) | high | unbounded provider digest size writes past a 64-byte stack buffer | refuse `EVP_MD_get_size(md) > EVP_MAX_MD_SIZE` before `EVP_KDF_derive` (§17 divergence) |
+| M56-D3 | `src/evp/p5_crpt.rs:409` (pre-fix `err:` label at 343) | medium | secret-bearing stack buffers not cleansed on failure paths | `finish_err` now cleanses `md_tmp`/`key`/`iv` before every failure return (§5 divergence; the authority cleanses only on success) |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0.
+Hidden obligations: 0. No production unsafe operation, exported symbol,
+signature, `#[repr(C)]` layout or allocator coordinate changed. The M56-D1
+guard, the M56-D2 bound and the M56-D3 cleansing add no `unsafe fn`; M56-D3
+extends the existing private `finish_err` contract with three caller-owned
+buffer extents.
+
+**Contracts reused.** Legacy `EVP_MD` static carrier contract (M55: global
+origin, zero `ctx_size`, provider fetch replacement); provider
+callback/reentrancy contract; `OSSL_PARAM` terminated-array contract; RC-1
+allocator-seam coordinates; PBES/`err_cleanup` cleansing pattern from
+`p5_scrypt.rs`; ASN.1 private-item shape transposition.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`evp::keymgmt_lib` 5 passed / 0 failed, `evp::p5_crpt` 6 passed / 0 failed,
+`legacy_` (all legacy units) 42 passed / 0 failed, and `p5_scrypt` 2 passed /
+0 failed.
+BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1665 passed / 0 failed / 27 ignored** (1692 total) serial in 60.81 s and
+with `--test-threads=4` in 97.95 s, in the court with `CARGO_BUILD_JOBS=4`.
+No unexplained removal and no newly ignored test (M55: 1664 passed / 27
+ignored; +1 is M56-D1's regression control).
+
+**NOT_RUN.** Miri, ASan/valgrind, dudect/constant-time (no secret-dependent
+branch introduced); a runtime witness for M56-D3 cleansing (stack residue is
+not externally observable; review-only) and an oversized-digest control for
+M56-D2 (no fixture builds a provider method reporting `size > 64`);
+affected adversarial probes (the `scripts/adv-probe.sh` set has no probe for
+these boundaries); authority differential for the three §17/§5 divergences;
+FRF suite; dependency-graph regeneration; SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 273 -> **265**; `AUDITED-FILES.txt` 490 ->
+**498**. **Next eight.** `src/evp/method_store.rs` (registry boundary —
+defer again), `src/evp/pbe.rs`, `src/evp/p_dec.rs`, `src/evp/p_enc.rs`,
+`src/evp/p_legacy_assign.rs`, `src/evp/p_lib.rs`, `src/evp/pmeth_check.rs`,
+`src/ffc/backend.rs`.
