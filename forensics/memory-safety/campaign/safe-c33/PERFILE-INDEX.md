@@ -1175,3 +1175,85 @@ readable receipt: [`atlas-refresh/boundary-sweep-B7.json`](atlas-refresh/boundar
 **Next boundary position:** none from the B1–B7 queue. Next ordinary position remains
 `src/evp/fetch.rs` (118), `src/ssl/tls13_enc.rs` (119), `src/ts/ts_rsp_utils.rs` (120),
 `src/x509/x509_vpm.rs` (121).
+
+## 13. Batch M13 — mechanism-contract sweep (attribution ranks 118–127)
+
+**Audited (ordinary):** `src/evp/fetch.rs` (118, 121 unattributed),
+`src/ssl/tls13_enc.rs` (119, 121), `src/ts/ts_rsp_utils.rs` (120, 121),
+`src/evp/p_legacy.rs` (121, 120), `src/cms/cms_ess.rs` (122, 120),
+`src/evp/pmeth_gn.rs` (125, 118), `src/provider/rsa_sig.rs` (126, 116),
+`src/ssl/ssl_cert.rs` (127, 116).
+**Skipped:** `src/x509/x509_vpm.rs` (121) — boundary-audited in B1, not re-opened.
+**NOT_RUN (BOUNDARY):** `src/provider/mod.rs` (124) — provider lifecycle/refcount
+edge. `src/rsa/mod.rs` (123) was not reached under the eight-file cap and is the
+next large-file deferral.
+
+**M13-D1 (fixed, high, STOP-and-clear).** `EVP_PKEY_CTX_get_keygen_info` accepted
+`idx == keygen_info_count` as in range. `EVP_PKEY_generate` attaches a two-element
+stack array with `count = 2`, so index 2 read one `int` past it; before a generation
+the same test admitted index 0 with `keygen_info == NULL`, dereferencing NULL. Both
+are C-valid calls (an application keygen callback can make them) and the authority
+has the same off-by-one. The guard is now `idx >= count` and answers 0; indices
+`0..count` are unchanged. Control:
+`evp::pmeth_gn::tests::keygen_info_refuses_the_index_it_does_not_have`.
+
+**M13-D2 (fixed, medium).** `hkdf_expand_label` copied an unbounded `context_len`
+into a 512-byte `HkdfLabel` buffer after truncating the length to one byte, and
+`hkdf_expand` built `T(i-1) | info | i` in a 512-byte scratch block with no
+`info_len` bound. All current callers pass a transcript hash or an 8-byte ticket
+nonce, so the paths were latent. The label builder now refuses `out_len > u16::MAX`,
+label length `> u8::MAX` and `context_len > u8::MAX`; the expand refuses a hash
+above `EVP_MAX_MD_SIZE` or an info that cannot fit. Control:
+`ssl::tls13_enc::tests::hkdf_expand_label_refuses_a_context_that_does_not_fit_its_length_byte`.
+
+**M13-D3 (fixed, medium).** `tls13_encrypt_record` copied `len` into a
+`TLS13_HS_BUF_LEN + 1` inner buffer and wrote `len + 1 + tag_len` into a two-byte
+record length with no bound on either; both record paths called `make_nonce` with
+`iv_len` outside the `8..=16` range its indexing requires; `transcript_update` and
+`write_handshake_message` used unchecked sums. The record layer already fragments at
+16384 and fetches a 12-byte IV, so valid records are byte-identical; the guards are
+checked-sum refusals. The pre-existing oversized-flight test and the SSL suite pass.
+
+**M13-D4 (fixed, medium).** `ossl_cms_Receipt_verify` returned early on nine
+post-decode refusals without releasing the `CMS_Receipt` that `ASN1_item_unpack` had
+built; the authority's `err:` label frees it on every exit. The body is now a labelled
+block that breaks to the shared cleanup, so repeatedly rejected receipts no longer
+grow the process. Return codes and error sites are unchanged.
+
+**M13-D5–D8 (fixed, low/medium).** `CMS_ReceiptRequest_create0_ex` refuses a negative
+`idlen` (authority passes it to `ASN1_STRING_set0`); `EVP_BytesToKey` refuses a
+negative `datal`, `EVP_OpenInit` a negative `ekl`, and `EVP_SealInit` checks the
+context key length against the fixed 64-byte stack key before drawing it and refuses
+`EVP_PKEY_get_size <= 0`; the RSA provider's sign/verify/recover paths refuse
+`tbslen`/`siglen` above `c_int::MAX` instead of passing a negative `int` into the
+padding routines; `SSL_add_dir_cert_subjects_to_stack` uses `checked_add` for its
+path-length sum. Negative/overflowing inputs are recorded divergences; every valid
+input keeps the authority's result.
+
+**No defect found:** `src/evp/fetch.rs` (fetch half `allow(dead_code)` and matching
+`evp_fetch.c`; default-property adoption/caller-free split and both render passes
+correct, NULL store/name/list handled by callees) and `src/ts/ts_rsp_utils.rs`
+(dup-and-replace setters, NULL-tolerant destructors, adopt/borrow edges match the
+authority).
+
+**Contracts reused.** OB-1 `OwnedBuf`, OB-3 `OwnedCtx`/destructor shape (module-local
+`OwnedRsaCtx`), C-ABI exported-symbol/out-parameter/destructor contracts, provider
+signature and keymgmt dispatch contracts, SSL stack ownership (`set0` adopts, `add0`
+borrows, `add1` up-refs, `get1` duplicates), and ASN.1 item/`ASN1_STRING_set0`
+ownership. No new unsafe abstraction, ABI/layout change or allocator-coordinate
+change. New unsafe operations are test-only (three regression controls).
+
+**Evidence.** FAST: fmt clean; focused `evp::fetch` 5/0, `ssl::tls13_enc` 2/0 + 1
+ignored plus the new control, `evp::p_legacy` 4/0, `evp::pmeth_gn` 1/0, `ssl::ssl_cert`
+3/0; `cms::cms_ess` and `provider::rsa_sig` have no in-module tests. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1600 passed / 0 failed / 27 ignored**
+serially (212.44 s) and with `--test-threads=4` (87.21 s). Hidden obligations: 0.
+No suite probe covers the changed units. ASan/Miri/Loom, the crafted CMS receipt
+fixture, authority differentials for the refusals, the `provider/mod` boundary,
+`rsa/mod`, FRF-Fuzz and SEAL regeneration are `NOT_RUN`. Machine-readable receipt:
+[`atlas-refresh/mechanism-sweep-M13.json`](atlas-refresh/mechanism-sweep-M13.json).
+
+**Next ordinary queue position:** `src/provider/mod.rs` (124) goes to the boundary
+queue; the ordinary queue resumes at `src/cms/cms_pwri.rs` (128), then
+`src/runtime/bio/mod.rs` (129), `src/x509/v3_pci.rs` (130). `src/rsa/mod.rs` (123)
+remains the large-file deferral.
