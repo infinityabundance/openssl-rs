@@ -536,3 +536,11 @@ src/param_build_set.rs
 src/params/dup.rs
 src/params/from_text.rs
 src/pem/pem_oth.rs
+src/pem/pem_x509.rs
+src/pem/pem_xaux.rs
+src/pkcs12/p12_add.rs
+src/pkcs12/p12_asn.rs
+src/pkcs12/p12_attr.rs
+src/pkcs12/p12_crpt.rs
+src/pkcs12/p12_decr.rs
+src/pkcs12/p12_init.rs

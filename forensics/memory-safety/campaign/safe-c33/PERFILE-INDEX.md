@@ -5319,3 +5319,109 @@ units.
 again), `src/pem/pem_x509.rs`, `src/pem/pem_xaux.rs`, `src/pkcs12/p12_add.rs`,
 `src/pkcs12/p12_asn.rs`, `src/pkcs12/p12_attr.rs`, `src/pkcs12/p12_crpt.rs`,
 `src/pkcs12/p12_decr.rs`.
+
+## M62 — per-file contract sweep (PEM X509 pairs, PKCS#12 ASN.1, attributes, PBE key/IV, buffer crypt, init)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`6749fc638` (dirty worktree: the repairs below; no commit was made by the audit
+subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results. The authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/`.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/pem/pem_x509.rs` | the two `(d2i/i2d_of_void)` shims, four `IMPLEMENT_PEM_rw` expansions, header constants, result ownership | no defect |
+| `src/pem/pem_xaux.rs` | the `X509_AUX` shims and four expansions, `PEM_STRING_X509_TRUSTED`, result ownership | no defect |
+| `src/pkcs12/p12_add.rs` | `PKCS12_item_pack_safebag` union out-slot, two `PKCS12_decrypt_skey` spellings, `PKCS7` type guards, pack/unpack `p7data`/`p7encdata`/`authsafes`, fetched-cipher release | 1 defect (M62-D6) repaired |
+| `src/pkcs12/p12_asn.rs` | four item descriptors, two ADB tables, `SyncAdb`, the `PKCS12_free` `propq` member slot, `d2i`/`i2d` codecs | 1 seam-coordinate defect (M62-D8) repaired |
+| `src/pkcs12/p12_attr.rs` | ten thin add/read helpers, `set0_attrs` shallow release, `friendlyname` BMP decode | 1 contract defect (M62-D7) repaired |
+| `src/pkcs12/p12_crpt.rs` | private `PBEPARAM` descriptor, `PKCS12_PBE_keyivgen_ex` key/IV derivation, both failure arms, cipher init, stack cleansing | 2 defects (M62-D4, M62-D5) repaired |
+| `src/pkcs12/p12_decr.rs` | `PKCS12_pbe_crypt_ex` allocation/length/failure arms, MAC-carrying arm, four item decrypt/encrypt spellings, `OwnedBuf` adoption coordinates | 3 defects (M62-D1, M62-D2, M62-D3) repaired |
+| `src/pkcs12/p12_init.rs` | `PKCS12_init_ex` failure ladder, `version`/`authsafes` slots, `_get0_pkcs7ctx` borrow | no defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It stays
+at the head of `REMAINING-AUDIT.txt`. `src/pkcs12/p12_init.rs` was substituted
+from position 9 of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M62-D1 | `src/pkcs12/p12_decr.rs:134`, `:161` | low | `max_out_len = inlen + block_size` and `max_out_len += mac_len` were unchecked `c_int` sums sizing the output allocation; an overflow or a negative sum could size the block below the bytes `EVP_CipherUpdate` writes (authority wraps; §17 forbids reproducing it) | both sums now use `checked_add` with a non-negative filter and refuse (free the context, answer NULL) before allocating. |
+| M62-D2 | `src/pkcs12/p12_decr.rs:55`, `:228`, `:260` | low | allocator seam used the short `crypto/...` spelling and the authority's `OPENSSL_free(out)` lines were reported as `92` and `105`, but the admitted build's `__FILE__` is `../../src/openssl-3.6.4/...` and the frees are at `p12_decr.c:93` and `:108`; observable through `CRYPTO_set_mem_functions` | `FILE` now carries the admitted spelling; the two failure releases use `:93` and `:108`. The `:85`, `:171`, `:211`, `:216` coordinates already matched and are unchanged. |
+| M62-D3 | `src/pkcs12/p12_decr.rs:209`, `:226`, `:258`, `:484` | medium | on every PBE failure after `EVP_CipherUpdate` the authority frees the output block without cleansing even though the decrypt arm's prefix is plaintext; `PKCS12_item_i2d_encrypt_ex` likewise frees the encoded plaintext without cleansing when `zbuf != 0` and the crypt fails | `OPENSSL_cleanse` of the full allocation (or `inlen`) runs before each plain release. Deliberate failure-path improvement over `p12_decr.c:85/93/108/211`; no release coordinate changed. |
+| M62-D4 | `src/pkcs12/p12_crpt.rs:185` | low | `key`/`iv` are `EVP_MAX_KEY_LENGTH`/`EVP_MAX_IV_LENGTH` stack arrays filled with `EVP_CIPHER_get_key_length`/`_iv_length` bytes; a cipher advertising more overruns them in the authority (reachable only with a caller-supplied cipher whose lengths exceed the built-in PBE table), so the documented contract hid a precondition | lengths are read once and a cipher with `klen > 64` or `ivlen > 16` is refused after the parameter is decoded and freed, before deriving. No raise is invented. |
+| M62-D5 | `src/pkcs12/p12_crpt.rs:213`, `:247` | medium | both derivation-failure returns left the secret `key` (and `iv`) uncleansed on the stack; the authority does the same | both failure arms cleanse both fixed arrays before returning; the success path keeps the authority's two cleanses. |
+| M62-D6 | `src/pkcs12/p12_add.rs:299` | low | `PKCS12_unpack_p7encdata` checked `d.encrypted` for NULL and then dereferenced `enc_data`; a live `PKCS7` with a NULL content object satisfied the documented contract and would fault (the authority has the same gap) | a NULL `enc_data` is refused at the existing decode-error coordinate `PKCS12_ADD_162` (`PKCS12_R_DECODE_ERROR`); no new error site. |
+| M62-D7 | `src/pkcs12/p12_attr.rs:76`, `:117`, `:142`, `:166`, `:190`, `:254` | low | the five add helpers documented `name` as readable for `namelen` bytes, but `namelen == -1` makes `ASN1_STRING_set_by_NID` measure the string, so the contract permitted a non-NUL-terminated buffer; `PKCS12_get_friendlyname` likewise did not state the `V_ASN1_BMPSTRING` value's validity | contracts now state the NUL-termination requirement for `namelen == -1` and the well-formed-attribute precondition. No code or ABI change. |
+| M62-D8 | `src/pkcs12/p12_asn.rs:638` | low | the `PKCS12_free` `propq` member-slot seam reported the short `crypto/...` spelling rather than the admitted build's `__FILE__` | `FILE` now carries `../../src/openssl-3.6.4/crypto/pkcs12/p12_asn.c`; the release line `35` already matched. |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0 (the
+four repaired arguments/coordinates were the only ones that admitted an input
+the body would dereference wrongly). Hidden obligations: 0. No exported
+symbol, signature, `#[repr(C)]` layout or excluded symbol changed. The seam
+repairs change only `file`/`line` strings a `CRYPTO_set_mem_functions` hook
+observes.
+
+**Secret-bearing storage.** PKCS#12 passwords, derived keys and the DER
+encodings of private-key bags are `SECRET_DATA`; the PBE salt/iteration count,
+the algorithm identifiers and the ciphertext are `PUBLIC_DATA`. Cleansed paths:
+`p12_crpt` derives into fixed stack arrays and cleanses both on the success
+tail (authority behaviour) and now on both failure returns (M62-D5);
+`p12_decr`'s output block holds plaintext on the decrypt arm and is now
+cleansed before each failure release (M62-D3); `PKCS12_item_decrypt_d2i_ex`
+cleanses its decrypted buffer when `zbuf` is set (authority) and
+`PKCS12_item_i2d_encrypt_ex` does the same on success and now also on a failed
+crypt (M62-D3). The converted password lives in `p12_key`'s `OwnedBuf` with a
+cleansing release; this batch does not alter it. `p12_attr`/`p12_asn`/`p12_add`
+copy no password or key plaintext: they manipulate borrowed ASN.1 objects, and
+the `SafeBag`/`PKCS7` layers release through the item layer. No constant-time
+claim is made for any file here from source inspection.
+
+**Contracts reused.** `OB-1` `OwnedBuf` (adopt/adopt_plain at the authority's
+allocation and release coordinates); `OB-4` member-buffer slot
+(`PropqSlot::clear` for `p7->ctx.propq`); the ASN.1 item ownership contracts
+for the four PKCS#12 groups and `PBEPARAM`; the C ABI contracts for
+NULL-or-live optional pointers and caller-sized buffers; the `EVP_PBE` key/IV
+generator callback contract; and the `CRYPTO_*` allocator seam at the
+authority's exact `FILE`/`LINE`. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; `cargo check
+--lib` clean; focused `pkcs12` **20 passed / 0 failed / 1 ignored** (the
+`p12_key` allocator probe) and `pem` **19 / 0**. BATCH: `cargo clippy
+--all-targets -- -D warnings` clean; full library **1669 passed / 0 failed /
+27 ignored** (1696 total) serial in 63.59 s and with `--test-threads=4` in
+265.50 s, in the court with `CARGO_BUILD_JOBS=4`. Affected probe
+`pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release` **1 / 0**
+with `OPENSSL_RS_ADV_PROBE=1`. No unexplained removal and no newly ignored
+test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; a targeted allocator-hook control for
+the p12 seam coordinates (no harness observes `CRYPTO_*` file/line strings for
+these units) NOT_RUN; a synthetic-cipher control for the M62-D4 refusal (the
+crate has no public way to build an `EVP_CIPHER` with `key_len > 64`; the
+built-in PBE table cannot reach it) NOT_RUN; a checked-overflow control for
+M62-D1 (needs `inlen` near `INT_MAX`) NOT_RUN; dudect/ctgrind (no constant-time
+claim); FRF suite; dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `PKCS12_item_decrypt_d2i_ex` still frees a decrypted plaintext without
+cleansing when the caller passes `zbuf == 0`; that is the authority's
+contractual choice and is preserved. (3) `PKCS12_pbe_crypt_ex`'s plaintext is
+handed to the caller without a length-attached cleansing release; that is the
+exported ABI contract (the caller owns the buffer), not a hidden obligation.
+(4) The `p12_add` pack paths trust the item layer's union invariants
+(`PKCS7_set_type` establishes `d.encrypted`); the added NULL test covers the
+one content pointer a C caller can tamper with. (5) The PKCS#12 KDF and the
+provider `PKCS12KDF` row are outside this batch. (6) No constant-time claim is
+made for the PKCS#12 units.
+
+**Queue.** `REMAINING-AUDIT.txt` 225 -> **217**; `AUDITED-FILES.txt` 538 ->
+**546**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/pkcs12/p12_key.rs`, `src/pkcs12/p12_mutl.rs`,
+`src/pkcs12/p12_npas.rs`, `src/pkcs12/p12_p8d.rs`, `src/pkcs12/p12_p8e.rs`,
+`src/pkcs12/p12_utl.rs`, `src/pkcs7/bio_pk7.rs`.

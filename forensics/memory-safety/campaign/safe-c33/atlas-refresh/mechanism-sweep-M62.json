@@ -1,0 +1,214 @@
+{
+ "receipt": "mechanism-sweep-M62",
+ "branch": "integrate/safe-c33",
+ "source_head": "6749fc638",
+ "worktree": true,
+ "date": "2026-10-19",
+ "verification_level": "FAST plus BATCH; no STOP (no confirmed memory-safety defect left unrepaired, no ABI regression, no hidden obligation and no remaining unsafe-safe-Rust API); three secret-handling failure-path improvements, one authority stack-overflow non-reproduction, one NULL-dereference refusal, two allocator-seam coordinate repairs and one checked-arithmetic repair",
+ "scope": "Per-file contract audit of the PEM X509 and X509_AUX reader/writer expansions, PKCS12_item_pack_safebag, the PKCS7 pack/unpack helpers in p12_add, the four PKCS#12 ASN.1 item groups and their ADB tables, the ten PKCS#12 attribute helpers, PKCS12_PBE_keyivgen_ex's key/IV derivation, PKCS12_pbe_crypt_ex and the four item crypt spellings, and PKCS12_init_ex. evp/method_store.rs was deferred as the method-store registry boundary; p12_init.rs was substituted from position 9 of the queue. PKCS#12 passwords, derived keys and the DER encodings of private-key bags are SECRET_DATA; salts, iteration counts, algorithm identifiers and ciphertext are PUBLIC_DATA. No constant-time claim is made for any file from source inspection.",
+ "files": [
+  "src/pem/pem_x509.rs",
+  "src/pem/pem_xaux.rs",
+  "src/pkcs12/p12_add.rs",
+  "src/pkcs12/p12_asn.rs",
+  "src/pkcs12/p12_attr.rs",
+  "src/pkcs12/p12_crpt.rs",
+  "src/pkcs12/p12_decr.rs",
+  "src/pkcs12/p12_init.rs"
+ ],
+ "files_not_run": [
+  {
+   "file": "src/evp/method_store.rs",
+   "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+  }
+ ],
+ "defects": [
+  {
+   "id": "M62-D1",
+   "file": "src/pkcs12/p12_decr.rs",
+   "line_pre_fix": 134,
+   "line_post_fix": 138,
+   "also": "src/pkcs12/p12_decr.rs:161",
+   "severity": "low",
+   "class": "unchecked c_int length sums sizing an allocation",
+   "description": "max_out_len = inlen + block_size and max_out_len += mac_len were unchecked c_int sums; an overflowing or negative sum would size the OPENSSL_zalloc block below the bytes EVP_CipherUpdate writes. The authority wraps; AGENTS.md section 17 forbids reproducing that.",
+   "fix": "Both sums use checked_add with a non-negative filter and refuse (free the context, answer NULL) before allocating.",
+   "witness": "Source comparison with crypto/pkcs12/p12_decr.c:54,65,81; cargo check --lib and the full library suite pass."
+  },
+  {
+   "id": "M62-D2",
+   "file": "src/pkcs12/p12_decr.rs",
+   "line_pre_fix": 55,
+   "line_post_fix": 55,
+   "also": "src/pkcs12/p12_decr.rs:228,260",
+   "severity": "low",
+   "class": "allocator-seam file/line coordinates disagree with the authority",
+   "description": "FILE used the short crypto/pkcs12/p12_decr.c spelling, and the CipherFinal/GET_TAG failure releases reported lines 92/105; the admitted build's __FILE__ is ../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c and the authority's OPENSSL_free(out) calls are at p12_decr.c:93 and :108. The strings are observable to a caller-installed CRYPTO_set_mem_functions hook.",
+   "fix": "FILE now carries the admitted spelling; the two failure releases use :93 and :108. The :85, :171, :211 and :216 coordinates already matched.",
+   "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_decr.c:85,93,108,171,211,216."
+  },
+  {
+   "id": "M62-D3",
+   "file": "src/pkcs12/p12_decr.rs",
+   "line_pre_fix": 194,
+   "line_post_fix": 209,
+   "also": "src/pkcs12/p12_decr.rs:226,258,484",
+   "severity": "medium",
+   "class": "secret-bearing failure path freed without cleansing",
+   "description": "On every PBE failure after EVP_CipherUpdate the authority frees the output block without cleansing, although the decrypt arm's prefix is plaintext. PKCS12_item_i2d_encrypt_ex likewise frees the encoded plaintext without cleansing when zbuf != 0 and the crypt fails (p12_decr.c:211).",
+   "fix": "OPENSSL_cleanse of the full allocation (or inlen for the encoding) runs before each plain release; release coordinates are unchanged. Recorded as a deliberate failure-path improvement over the authority.",
+   "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_decr.c:85,93,108,211; full library suite passes."
+  },
+  {
+   "id": "M62-D4",
+   "file": "src/pkcs12/p12_crpt.rs",
+   "line_pre_fix": 179,
+   "line_post_fix": 185,
+   "severity": "low",
+   "class": "hidden precondition: cipher key/IV length must fit the authority's stack arrays",
+   "description": "key and iv are EVP_MAX_KEY_LENGTH/EVP_MAX_IV_LENGTH stack arrays filled with EVP_CIPHER_get_key_length/_iv_length bytes. A caller-supplied cipher advertising more overruns them in the authority; the documented contract required only a live cipher.",
+   "fix": "The two lengths are read once; a cipher with klen > 64 or ivlen > 16 is refused after the parameter decode is freed and before deriving. No raise is invented and no error-queue coordinate changes.",
+   "witness": "crypto/pkcs12/p12_crpt.c:31,51,60; built-in PBE table ciphers are all within the bounds."
+  },
+  {
+   "id": "M62-D5",
+   "file": "src/pkcs12/p12_crpt.rs",
+   "line_pre_fix": 196,
+   "line_post_fix": 213,
+   "also": "src/pkcs12/p12_crpt.rs:247",
+   "severity": "medium",
+   "class": "derived secret left uncleansed on failure returns",
+   "description": "Both derivation-failure returns left the secret key (and iv) array uncleansed on the stack; the authority does the same at p12_crpt.c:56 and :65.",
+   "fix": "Both failure arms cleanse both fixed arrays before returning; the success path keeps the authority's two cleanses at :73-74.",
+   "witness": "crypto/pkcs12/p12_crpt.c:56,65,73,74; focused pkcs12 tests pass."
+  },
+  {
+   "id": "M62-D6",
+   "file": "src/pkcs12/p12_add.rs",
+   "line_pre_fix": 298,
+   "line_post_fix": 299,
+   "severity": "low",
+   "class": "documented live PKCS7 can have a NULL encrypted content object",
+   "description": "PKCS12_unpack_p7encdata checked d.encrypted for NULL and then dereferenced enc_data. A live PKCS7 with a NULL content object satisfies the documented contract and would fault; the authority has the same gap at p12_add.c:166.",
+   "fix": "A NULL enc_data is refused at the existing decode-error coordinate PKCS12_ADD_162 (PKCS12_R_DECODE_ERROR); no new error site.",
+   "witness": "crypto/pkcs12/p12_add.c:155-171; focused pkcs12 tests pass."
+  },
+  {
+   "id": "M62-D7",
+   "file": "src/pkcs12/p12_attr.rs",
+   "line_pre_fix": 76,
+   "line_post_fix": 76,
+   "also": "src/pkcs12/p12_attr.rs:117,142,166,190,254",
+   "severity": "low",
+   "class": "unsafe # Safety contract understates the namelen == -1 / attribute-validity preconditions",
+   "description": "The five add helpers documented name as readable for namelen bytes, but namelen == -1 makes ASN1_STRING_set_by_NID measure the string, so the contract permitted a non-NUL-terminated buffer. PKCS12_get_friendlyname did not state that a present V_ASN1_BMPSTRING value is well formed.",
+   "fix": "Contracts now state the NUL-termination requirement for namelen == -1 and the well-formed-attribute precondition. No code or ABI change.",
+   "witness": "crypto/pkcs12/p12_attr.c:17-80; src/x509/x509_att.rs:755-767."
+  },
+  {
+   "id": "M62-D8",
+   "file": "src/pkcs12/p12_asn.rs",
+   "line_pre_fix": 638,
+   "line_post_fix": 638,
+   "severity": "low",
+   "class": "allocator-seam file coordinate disagrees with the authority",
+   "description": "The PKCS12_free propq member-slot seam reported the short crypto/pkcs12/p12_asn.c spelling rather than the admitted build's ../../src/openssl-3.6.4/... __FILE__.",
+   "fix": "FILE now carries the admitted spelling; the release line 35 already matched p12_asn.c:35.",
+   "witness": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_asn.c:32-39."
+  }
+ ],
+ "new_unsafe_assumptions": [],
+ "hidden_obligations": [],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [
+  "src/pkcs12/p12_decr.rs: FILE c\"crypto/pkcs12/p12_decr.c\" -> c\"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c\"; CipherFinal failure release LINE 92 -> 93; GET_TAG failure release LINE 105 -> 108",
+  "src/pkcs12/p12_asn.rs: FILE c\"crypto/pkcs12/p12_asn.c\" -> c\"../../src/openssl-3.6.4/crypto/pkcs12/p12_asn.c\"; LINE 35 unchanged"
+ ],
+ "excluded_symbol_changes": [],
+ "unsafe_operations_introduced": [],
+ "unsafe_operations_removed": [],
+ "contracts_reused": [
+  "OB-1 OwnedBuf: adopt_plain_nullable / new_zeroed with the authority's allocation and release coordinates",
+  "OB-4 member-buffer slot: PropqSlot::clear for p7->ctx.propq at p12_asn.c:35",
+  "ASN.1 item ownership for PKCS12, PKCS12_MAC_DATA, PKCS12_BAGS, PKCS12_SAFEBAG, PKCS12_SAFEBAGS, PKCS12_AUTHSAFES and the private PBEPARAM descriptor",
+  "C ABI caller contracts for NULL-or-live optional pointers, caller-sized buffers and caller-owned results",
+  "EVP_PBE key/IV generator callback contract (six PKCS#12 OUTER rows)",
+  "CRYPTO_* allocator seam at the authority's exact FILE/LINE"
+ ],
+ "residuals": [
+  "src/evp/method_store.rs remains the deferred method-store registry boundary.",
+  "PKCS12_item_decrypt_d2i_ex still frees a decrypted plaintext without cleansing when the caller passes zbuf == 0; that is the authority's contractual choice and is preserved.",
+  "PKCS12_pbe_crypt_ex hands its plaintext to the caller without a length-attached cleansing release; the exported ABI makes the caller the owner.",
+  "The p12_add pack paths trust the item layer union invariants (PKCS7_set_type establishes d.encrypted); the added test covers the content pointer a C caller can tamper with.",
+  "The PKCS#12 KDF and the provider PKCS12KDF row are outside this batch.",
+  "No constant-time claim is made for the PKCS#12 units from source inspection."
+ ],
+ "not_discharged": true,
+ "gates": {
+  "fmt": "PASS (cargo fmt --all -- --check)",
+  "check_lib": "PASS (cargo check --lib)",
+  "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+  "lib_serial": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 63.59 s; --test-threads=1)",
+  "lib_test_threads_4": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 265.50 s; --test-threads=4)",
+  "focused_tests": "PASS (39 passed / 0 failed: pkcs12 20 + 1 ignored, pem 19)",
+  "affected_adversarial_probes": "PASS (pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release, 1 passed / 0 failed, OPENSSL_RS_ADV_PROBE=1)"
+ },
+ "boundary_control": {
+  "status": "NOT_RUN",
+  "reason": "M62-D4's refusal is unreachable through the built-in PBE table (no public way to construct an EVP_CIPHER with key_len > 64), M62-D1's checked sum needs inlen near INT_MAX, and no harness observes the CRYPTO_* file/line strings for these units. Miri/ASan/valgrind, an allocator-coordinate differential, dudect/ctgrind and the negative controls are BOUNDARY/SEAL work."
+ },
+ "next_queue": {
+  "file": "src/evp/method_store.rs",
+  "then": [
+   "src/pkcs12/p12_key.rs",
+   "src/pkcs12/p12_mutl.rs",
+   "src/pkcs12/p12_npas.rs",
+   "src/pkcs12/p12_p8d.rs",
+   "src/pkcs12/p12_p8e.rs",
+   "src/pkcs12/p12_utl.rs",
+   "src/pkcs7/bio_pk7.rs"
+  ]
+ },
+ "deferred": [
+  {
+   "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "allocator-coordinate differential for p12_decr/p12_asn under a CRYPTO_set_mem_functions hook",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "synthetic-cipher control for the PKCS12_PBE_keyivgen_ex key/IV length refusal",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "checked-overflow control for PKCS12_pbe_crypt_ex max_out_len",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "Miri / ASan / valgrind over the PKCS#12 crypt and item paths",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "constant-time measurement of any secret-dependent PKCS#12 path (dudect/ctgrind under the exact build profile)",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY / SEAL"
+  },
+  {
+   "gate": "dependency-graph regeneration against the exact candidate",
+   "status": "NOT_RUN",
+   "runs_at": "BATCH checkpoint after commit"
+  },
+  {
+   "gate": "Miri, ASan/valgrind, FRF suite, SEAL",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY / SEAL"
+  }
+ ]
+}
