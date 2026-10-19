@@ -92,8 +92,8 @@ pub(crate) use crate::selftest::OsslCallback;
 
 /// `OPENSSL_free(prov->operation_bits)` in `provider_remove_store_methods`.
 const L_REMOVE_METHODS_FREE_BITS: c_int = 1373;
-/// `OPENSSL_realloc(prov->operation_bits, ...)` in `ossl_provider_set_operation_bit`.
-const L_SET_OPERATION_BIT_REALLOC: c_int = 2034;
+/// `OPENSSL_realloc(provider->operation_bits, ...)` in `ossl_provider_set_operation_bit`.
+const L_SET_OPERATION_BIT_REALLOC: c_int = 2035;
 
 /// A validated handle over `OsslProvider`'s `(operation_bits, operation_bits_sz)` member pair.
 ///
@@ -1101,11 +1101,18 @@ pub(crate) unsafe fn ossl_provider_doall_activated(
         if curr == max {
             ret = 1;
         }
-        // The authority's `curr = -1` before the finish loop, re-expressed: phase 3 walks the
-        // whole copy on success and from the last-called provider on a callback refusal.
-        if curr == max {
-            curr = 0;
-        }
+        // The authority assigns `curr = -1` before the finish loop on **both** the
+        // completed sweep and a callback refusal; `finish`'s `curr++` then starts the
+        // undo at index 0. That is required because phase 1 raised every surviving
+        // provider's reference and activation count *before* any callback ran, so a
+        // provider whose callback already answered still needs its raise undone.
+        curr = 0;
+    } else {
+        // `goto err_unlock` leaves `curr` at the provider whose flag lock or count
+        // operation failed; the authority's `finish` loop is `for (curr++; ...)`, so the
+        // undo starts at the **next** entry. Starting at `curr` would down-ref a provider
+        // phase 1 never raised.
+        curr += 1;
     }
 
     // Phase 3: undo, from `curr` onwards.
@@ -2091,6 +2098,95 @@ mod tests {
             );
             SEEN[SELF_TEST_SLOT].store(1, Ordering::SeqCst);
             ossl_provider_free(prov);
+        }
+    }
+
+    /// `ossl_provider_doall_activated`'s undo phase must restore **every** count it
+    /// raised in phase 1, including when the application callback refuses. The authority
+    /// assigns `curr = -1` before its finish loop in both cases, so the down-ref sweep
+    /// starts at index 0. This control activates two providers, refuses the callback on
+    /// the second one, and then observes the first provider's activation count: a phase 3
+    /// that starts at the refusing provider leaves the first one raised, and the next
+    /// activation answers 3 instead of 2.
+    #[repr(C)]
+    struct DoAllProbe {
+        first: *mut OsslProvider,
+        second: *mut OsslProvider,
+        calls: c_int,
+        saw_first: c_int,
+    }
+
+    unsafe extern "C" fn refuse_on_second(prov: *mut OsslProvider, data: *mut c_void) -> c_int {
+        // SAFETY: `data` is the `DoAllProbe` passed by the test below.
+        unsafe {
+            let probe = data.cast::<DoAllProbe>();
+            (*probe).calls += 1;
+            if prov == (*probe).first {
+                (*probe).saw_first = 1;
+                return 1;
+            }
+            if prov == (*probe).second && (*probe).saw_first != 0 {
+                return 0;
+            }
+            1
+        }
+    }
+
+    #[test]
+    fn doall_activated_undoes_every_raised_count_on_callback_refusal() {
+        let _g = lock();
+        // SAFETY: the helper's contract is this test's; the two names are distinct, so both
+        // objects are inserted in this order and appear in that order in the provider stack.
+        let first = unsafe { activated_test_provider(c"rs-doall-a") };
+        // SAFETY: the same helper contract; a distinct name gives a distinct provider.
+        let second = unsafe { activated_test_provider(c"rs-doall-b") };
+        let mut probe = DoAllProbe {
+            first,
+            second,
+            calls: 0,
+            saw_first: 0,
+        };
+
+        // SAFETY: both providers are live and in the default store; the callback and its data
+        // outlive the call.
+        let ret = unsafe {
+            ossl_provider_doall_activated(
+                ptr::null_mut(),
+                refuse_on_second,
+                ptr::addr_of_mut!(probe).cast::<c_void>(),
+            )
+        };
+        assert_eq!(ret, 0, "a refused callback fails the sweep");
+        assert_eq!(
+            probe.saw_first, 1,
+            "the first provider must be visited first"
+        );
+        assert!(
+            probe.calls >= 2,
+            "the callback must reach the second provider"
+        );
+
+        // Both providers are back at their single activation from the helper. The extra
+        // activation below answers 2 when phase 3 undid the raise and 3 when it did not.
+        // SAFETY: `first` is live and in the store.
+        unsafe {
+            assert_eq!(
+                provider_activate(first, 1, 0),
+                2,
+                "phase 3 must undo the raise on providers the callback already visited"
+            );
+            assert_eq!(
+                provider_activate(second, 1, 0),
+                2,
+                "phase 3 must undo the raise on the refusing provider too"
+            );
+            // Return to zero activations before releasing the caller's references, so the
+            // store does not retain activated state from this control.
+            assert_eq!(provider_deactivate(first, 1, 1), 1);
+            assert_eq!(ossl_provider_deactivate(first, 1), 1);
+            assert_eq!(ossl_provider_deactivate(second, 1), 1);
+            ossl_provider_free(first);
+            ossl_provider_free(second);
         }
     }
 

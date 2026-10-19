@@ -80,7 +80,7 @@ use crate::runtime::lhash::{
     OPENSSL_LH_num_items, OPENSSL_LH_retrieve, OPENSSL_LH_set_down_load, OPENSSL_LH_strhash,
     OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::rdtsc::OPENSSL_rdtsc;
 use crate::runtime::sparse_array::{
@@ -105,6 +105,8 @@ const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/prope
 const LINE_ZALLOC_STORE: c_int = 247;
 /// `ossl_method_store_add`'s `OPENSSL_malloc(sizeof(*impl))` (line 337).
 const LINE_MALLOC_IMPL: c_int = 337;
+/// `ossl_method_store_add`'s `OPENSSL_free(impl)` on a refused method up-ref (line 344).
+const LINE_FREE_IMPL_ADD: c_int = 344;
 /// `ossl_method_store_add`'s `OPENSSL_zalloc(sizeof(*alg))` (line 390).
 const LINE_ZALLOC_ALG: c_int = 390;
 /// `alg_cleanup`'s `OPENSSL_free(a)` (line 233).
@@ -119,6 +121,9 @@ const LINE_FREE_STORE: c_int = 268;
 const LINE_MALLOC_QUERY: c_int = 922;
 /// `alg_copy`'s `OPENSSL_memdup(alg, sizeof(ALGORITHM))` (line 563).
 const LINE_MEMDUP_ALG: c_int = 563;
+/// `del_tmpalg`'s `OPENSSL_free(alg)` (line 575), which is a different site from
+/// `alg_cleanup`'s release of a resident entry at line 233.
+const LINE_FREE_TMPALG: c_int = 575;
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of a scratch buffer
@@ -665,7 +670,7 @@ pub(crate) unsafe fn ossl_method_store_add(
     }
 
     // SAFETY: `Implementation` is this module's own `#[repr(C)]` type.
-    let impl_ = CRYPTO_zalloc(
+    let impl_ = CRYPTO_malloc(
         core::mem::size_of::<Implementation>(),
         FILE,
         LINE_MALLOC_IMPL,
@@ -681,7 +686,7 @@ pub(crate) unsafe fn ossl_method_store_add(
         (*impl_).method.free = method_destruct;
         // SAFETY: `impl_` is live, so the `Method` field is this module's own.
         if ossl_method_up_ref(ptr::addr_of_mut!((*impl_).method)) == 0 {
-            CRYPTO_free(impl_.cast::<c_void>(), FILE, LINE_MALLOC_IMPL);
+            CRYPTO_free(impl_.cast::<c_void>(), FILE, LINE_FREE_IMPL_ADD);
             return 0;
         }
         (*impl_).provider = prov;
@@ -754,7 +759,10 @@ pub(crate) unsafe fn ossl_method_store_add(
                 || ossl_method_store_insert(store, alg) == 0
             {
                 ossl_property_unlock(store);
-                alg_cleanup(0, ptr::null_mut(), ptr::null_mut());
+                // The authority's `err:` releases the entry it just allocated: the array
+                // never took ownership of it, so passing NULL here would leak the block and
+                // any member acquired before the refusal.
+                alg_cleanup(0, alg.cast::<c_void>(), ptr::null_mut());
                 impl_free(impl_);
                 return 0;
             }
@@ -1497,7 +1505,7 @@ unsafe extern "C" fn del_tmpalg(alg: *mut c_void) {
     // SAFETY: `alg` is a copy this module made, so `impls` is the duplicate stack it created.
     unsafe {
         OPENSSL_sk_free((*alg).impls);
-        CRYPTO_free(alg.cast::<c_void>(), FILE, LINE_FREE_ALG);
+        CRYPTO_free(alg.cast::<c_void>(), FILE, LINE_FREE_TMPALG);
     }
 }
 
