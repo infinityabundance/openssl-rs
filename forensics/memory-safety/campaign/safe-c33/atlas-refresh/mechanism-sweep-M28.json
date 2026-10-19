@@ -1,0 +1,172 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "485b9b847",
+  "worktree": "dirty: src/asn1/bitstr.rs, src/asn1/fre.rs, src/runtime/bio/bss_file.rs (M28 fixes and the two new controls) plus this receipt and the PERFILE-INDEX entry",
+  "scope": "Eight ordinary files from the M27-named batch, ranked by production unsafe-site count in the frozen census. src/engine/eng_ctrl.rs (67) was triaged first and proved a new ENGINE ctrl callback boundary (it invokes the engine's application-supplied ctrl handler and walks caller-owned cmd_defns); it is NOT_RUN and was substituted by src/asn1/bitstr.rs (65), the ranked substitute the M27 receipt named.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/x509/x_x509.rs",
+    "src/asn1/a_sign.rs",
+    "src/provider/eddsa_sig.rs",
+    "src/runtime/bio/bss_file.rs",
+    "src/apps/crl2pkcs7.rs",
+    "src/asn1/fre.rs",
+    "src/x509/x_ietfatt.rs",
+    "src/asn1/bitstr.rs"
+  ],
+  "files_not_run": [
+    "src/engine/eng_ctrl.rs"
+  ],
+  "dispositions": [
+    {
+      "file": "src/x509/x_x509.rs",
+      "mechanisms": "X509_CINF/X509 item descriptors and ASN1_AUX blocks, x509_cb D2I_PRE/NEW_POST/FREE_POST/DUP_POST/GET0 arms, OB-4 PropqSlot member-buffer protocol, ExData lifecycle, d2i/i2d X509, d2i_X509_AUX and the combined AUX encoder, distinguishing_id custody",
+      "result": "No defect. Sizes/offsets/ref_offset/ref_lock match the measured authority; every error path of d2i_X509_AUX and i2d_X509_AUX (freeret, cursor restore, single release) matches x_x509.c. The seven withheld extension-cache frees are documented as NULL-only on every object this crate can build (their writers are unlanded); that remains a recorded compatibility residual, not a new hidden obligation."
+    },
+    {
+      "file": "src/asn1/a_sign.rs",
+      "mechanisms": "OB-1 OwnedBuf cleansed scratch buffers in ASN1_sign and ASN1_item_sign_ctx, provider algorithm-id branch (128-byte aid, get_params return_size, d2i_X509_ALGOR), item_sign callback branch and its <=0/1/2/3 contract, OBJ_find_sigid_by_algs arm, ASN1_item_i2d adoption, ASN1_STRING_set0 transfer plus set_bits_left",
+      "result": "No defect. Allocation/failure ordering, the two-pass DigestSign sizing, the 0 return on a refused buffer, and the cleansing release of buf_in before ctx all match a_sign.c:27-109 and :146-288."
+    },
+    {
+      "file": "src/provider/eddsa_sig.rs",
+      "mechanisms": "OB-3 CtxBlock owner for PROV_EDDSA_CTX (newctx/dupctx/freectx, single release at :755), ECX_KEY up_ref borrow, WPACKET DER AlgorithmIdentifier, five param decoders, five dispatch tables (including the authority's duplicate SIGN_INIT rows), prehash/prehash_by_caller gates, ed448_shake256 XOF driver",
+      "result": "No defect. Allocation lines 194/764, up_ref/refusal paths, and dupctx's half-built duplicate match eddsa_sig.c.in:187-301, :755-790. One inert state difference is recorded: ID_ED448 clears dom2_flag while the authority leaves it, but dom2 is read only by the Ed25519 sign path, which cannot be reached with an Ed448 key (setup re-checks the key type and resets the flag), so it is unobservable; not changed."
+    },
+    {
+      "file": "src/runtime/bio/bss_file.rs",
+      "mechanisms": "BIO_s_file method table, BIO_new_file/BIO_new_fp, fopen error-data formatter, file_new/file_free, read/write/puts/gets, file_ctrl (seek/tell/EOF/set-fileptr/set-filename/get-fileptr/close/flush), syscall wrappers",
+      "result": "M28-D1 and M28-D2 fixed. Every other transition matches bss_file.c: BIO_new_file's b/fp_flags derivation and two errno reads, file_free's shutdown/init/ptr gate and flag reset, the inverted fwrite argument order, GET_CLOSE/SET_CLOSE/FLUSH, and the SET_FILENAME mode table. The UPLINK-clearing call is inert here because BIO_FLAGS_UPLINK_INTERNAL is 0."
+    },
+    {
+      "file": "src/apps/crl2pkcs7.rs",
+      "mechanisms": "PKCS7 signed-data skeleton construction, OB-1 file BIO ownership via bio_open, PEM_X509_INFO_read_bio stack consumption in add_certs_from_file, X509_CRL ownership transfer into p7s->crl, per-branch cleanup tails, PEM/DER writers",
+      "result": "No defect. The add_certs_from_file push-failure path frees the X509_INFO then the BIO and stack in the authority's order; the CRL slot is nulled after the successful push; every goto-end path releases in, out, p7 and crl exactly once."
+    },
+    {
+      "file": "src/asn1/fre.rs",
+      "mechanisms": "primitive_free arms (OBJECT/BOOLEAN/NULL/ANY/string), item_embed_free arms (PRIMITIVE/MSTRING/CHOICE/EXTERN/SEQUENCE), ASN1_AUX callback FREE_PRE/FREE_POST, reverse template walk with do_adb, template_free stack-of and EMBED handling, ASN1_item_free/ASN1_item_ex_free",
+      "result": "M28-D3 fixed. The remaining arms match tasn_fre.c including the BOOLEAN slot fill, the ANY recursive free, the do_lock refusal that nulls the slot without freeing, and the reverse template order. Every CRYPTO_free carries its boundary provenance/extent/initialization/single-release contract."
+    },
+    {
+      "file": "src/x509/x_ietfatt.rs",
+      "mechanisms": "repr(C) OSSL_IETF_ATTR_SYNTAX_VALUE and OSSL_IETF_ATTR_SYNTAX layouts, CHOICE/SEQUENCE item templates, generated new/free/d2i/i2d wrappers, mixed-choice d2i refusal, add1_value ownership transfer, four accessors, printer",
+      "result": "No defect. Size/offset assertions, template flags/tags, the first-value type propagation and the ERR_R_PASSED_INVALID_ARGUMENT refusal at :87, and add1_value's data-null/type-mismatch/unknown-type/stack-push tails match x_ietfatt.c:59-191. The accessors are total over a NULL values stack exactly as the authority's sk_* calls are."
+    },
+    {
+      "file": "src/asn1/bitstr.rs",
+      "mechanisms": "OB-1/CRYPTO_clear_realloc growth of a bit string, i2c/c2i content codecs, ASN1_BIT_STRING_set_bit/get_bit/check, name/number accessors and printers",
+      "result": "M28-D4 fixed. The codecs match a_bitstr.c including the len==1 zero-length result, the unused-bit mask, the dynamic reason on the err tail, and the trailing-zero derivation. The other total-by-policy arms (NULL data, NULL table, NULL name, NULL flags) are already documented divergences."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M28-D1",
+      "file": "src/runtime/bio/bss_file.rs",
+      "pre_fix_lines": [366, 367, 372],
+      "post_fix_lines": [366, 367],
+      "severity": "high (write outside the caller's extent; the authority has the same defect and it is not reproduced)",
+      "class": "zero-length terminator write (AGENTS.md sections 17 and 21.1; same class as M27-D1)",
+      "description": "file_gets wrote `*buf = 0` before consulting `size`. BIO_gets admits a zero-length request, and for `size == 0` a valid buffer has no writable byte, so the write escaped the caller's extent (and for `BIO_gets(b, NULL, 0)` it dereferenced NULL). `fgets` with a non-positive count is also undefined.",
+      "fix": "Return the authority's 0 without touching `buf` or `bp` when `size <= 0`; the NULL-buffer guard remains. Control: runtime::bio::bss_file::tests::a_zero_length_gets_does_not_write_through_a_null_buffer.",
+      "divergence": "Deliberate: for size 0 the buffer is left untouched instead of receiving a byte the caller has no writable extent for. Return value and all size > 0 behaviour are unchanged."
+    },
+    {
+      "id": "M28-D2",
+      "file": "src/runtime/bio/bss_file.rs",
+      "pre_fix_lines": [447],
+      "post_fix_lines": [454, 458],
+      "severity": "high (NULL dereference inside libc from a C-valid control call; the pinned authority has the same UB)",
+      "class": "NULL argument handed to a libc dereference (AGENTS.md section 17; D-CIPHERCTX-NOALG-1 policy class)",
+      "description": "BIO_C_SET_FILENAME built its mode string and called `fopen(ptr_, mode)` with no NULL check. `fopen(NULL, ...)` dereferences the NULL filename inside libc; OpenSSL 4.0.2 later added the refusal, confirming the input class.",
+      "fix": "Refuse a NULL filename after mode construction and before `fopen`, answering the authority's failure `0`. No new error coordinate is raised, matching this file's existing total-by-policy treatment of NULL arguments in BIO_new_file. Control: runtime::bio::bss_file::tests::set_filename_refuses_a_null_filename.",
+      "divergence": "Deliberate: a NULL filename is an error return rather than a libc fault. All non-NULL inputs and the error queue for them are unchanged."
+    },
+    {
+      "id": "M28-D3",
+      "file": "src/asn1/fre.rs",
+      "pre_fix_lines": [382, 383, 384, 385, 386],
+      "post_fix_lines": [387, 389],
+      "severity": "low (out-of-authority read and redundant write of embedded storage; no observed behavioural change)",
+      "class": "unnecessary read/write broadening an initialization precondition (AGENTS.md section 2)",
+      "description": "template_free read `*pval` unconditionally and, on the ASN1_TFLG_EMBED path, wrote it straight back before substituting the slot's address. The authority never reads an embedded field's storage (`tval = (ASN1_VALUE *)pval; pval = &tval;`), so the transcription imposed an initialization requirement and performed a store the authority does not.",
+      "fix": "Assign `tval` from the slot's address only on the embed path and drop both the read and the write-back, matching `new.rs`'s existing transcription of the same authority pattern.",
+      "divergence": "None for any caller: the removed write stored back the value it had just read, and the non-embed path is textually unchanged."
+    },
+    {
+      "id": "M28-D4",
+      "file": "src/asn1/bitstr.rs",
+      "pre_fix_lines": [468, 472],
+      "post_fix_lines": [472, 477],
+      "severity": "low (fallible signed arithmetic; debug panic in a hand-filled negative-length struct, no conforming-input change)",
+      "class": "unchecked signed subtraction used for an allocation-adjacent write extent (AGENTS.md section 3)",
+      "description": "ASN1_BIT_STRING_set_bit tested `w + 1 - s.length > 0` and then wrote `w + 1 - s.length.max(0)` bytes, mixing the unclamped and clamped lengths. For a caller-filled negative `length`, `INT_MIN` could overflow the test even though the surrounding code deliberately clamps the release extent.",
+      "fix": "Compare and subtract in `usize` against the already-computed clamped `old_len`, keeping the authority's test for every non-negative length while removing the overflow.",
+      "divergence": "None: for every non-negative length the condition and byte count are identical to the previous transcription."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/raise_site_dynamic/guard_ffi and the recorded error-site coordinates",
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption and cleansed release modes",
+    "OB-3 OwnedCtx/CtxDestroy (CtxBlock for PROV_EDDSA_CTX) and the zero-state sweep",
+    "OB-4 member-buffer slot replacement protocol (X509::propq / PropqSlot)",
+    "ASN1 item/template/union ownership and the item-layer D2I_PRE/NEW_POST/FREE_POST callback contract",
+    "BIO method/ctrl/read/write callback contract and FILE-stream ownership",
+    "provider dispatch tables, param decoders and OSSL_PARAM builders",
+    "X509_INFO STACK_OF consumption and PKCS7 ownership transfer",
+    "WPACKET DER initialisation/finish/cleanup contract"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 2,
+    "unsafe_operations_relocated": 0,
+    "unsafe_operations_removed_detail": "M28-D3 removed one raw read of an embedded field slot and one redundant write through it; no unsafe expression was added anywhere in the batch.",
+    "allocator_seam": "unchanged; no CRYPTO_* coordinate, size or release mode changed",
+    "repr_c_and_exports": "no exported symbol, signature or #[repr(C)] layout changed; all size/offset asserts retained",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained)",
+    "controls": "runtime::bio::bss_file::tests::a_zero_length_gets_does_not_write_through_a_null_buffer and set_filename_refuses_a_null_filename (negative controls for M28-D1/D2); M28-D3/D4 are behaviour-preserving repairs verified by the full library suite"
+  },
+  "compatibility": "M28-D1/D2 diverge only for a zero-length gets buffer and a NULL SET_FILENAME filename: both are the authority's own UB, refused deliberately (sections 17 and 21.1). M28-D3/D4 are behaviour-preserving. No ABI, exported-symbol, allocator-seam or error-coordinate change.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1630 passed / 0 failed / 27 ignored (238.37 s)",
+    "lib_tests_threads_4": "1630 passed / 0 failed / 27 ignored (100.52 s)",
+    "focused": "runtime::bio::bss_file::tests 2 passed / 0 failed; asn1::bitstr and asn1::fre have no module-local tests"
+  },
+  "not_run": [
+    "src/engine/eng_ctrl.rs (67): ENGINE ctrl callback boundary (application ctrl handler plus caller-owned ENG_CMD_DEFN walk), NOT_RUN boundary; substituted by src/asn1/bitstr.rs (65).",
+    "Affected phase-4 BIO and ASN.1 differential probes: the runner links the committed artifacts/phase2 distribution shell, which predates this worktree, so the candidate under test would be stale.",
+    "Miri (Stacked and Tree Borrows) on the new zero-length/NULL controls and the EMBED free path - BOUNDARY gate.",
+    "ASan/Loom on the same paths - BOUNDARY negative-control gate.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; every record remains a file-level obligation check. The four M28 repairs are FAST+BATCH-verified only; BOUNDARY runtime confirmation and independent review are PENDING/NOT_RUN.",
+  "next_batch": {
+    "files": [
+      "src/x509/v3_prn.rs (65)",
+      "src/runtime/thread_events.rs (65)",
+      "src/runtime/init.rs (65)",
+      "src/ffc/dh.rs (65)",
+      "src/cmp/cmp_util.rs (65)",
+      "src/cmp/cmp_status.rs (65)",
+      "src/ts/ts_verify_ctx.rs (64)",
+      "src/rand/unix.rs (64)"
+    ],
+    "triage": "src/runtime/thread_events.rs and src/runtime/init.rs are triaged first as possible callback/initialization boundaries; a confirmed boundary is NOT_RUN and substituted by src/ocsp/ocsp_vfy.rs (64), then src/bn/blinding.rs (64), then src/x509/v3_info.rs (63), then src/ts/ts_req_utils.rs (63).",
+    "skipped": [
+      "src/engine/eng_ctrl.rs (67) - newly confirmed ENGINE ctrl callback boundary, NOT_RUN this run.",
+      "src/ssl/record/rec_layer_s3.rs - protocol state-machine boundary, deferred NOT_RUN.",
+      "src/provider/legacyprov.rs - provider dispatch boundary, deferred NOT_RUN.",
+      "src/provider/child.rs - child-provider callback boundary, deferred NOT_RUN.",
+      "src/runtime/lhash.rs - BOUNDARY_COVERED, not an ordinary file.",
+      "src/ec/smpl.rs (66) - already covered.",
+      "the M22-retained boundaries (async/async, evp/keymgmt_lib, provider/decode_der2key, engine/eng_table, store/store_meth)."
+    ]
+  }
+}
