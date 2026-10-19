@@ -660,12 +660,15 @@ with `checked_mul`.
 
 ### 9.4 Secret-classification observations
 
-* `ec/ecdh_ossl.rs:59 OwnedSecretBuf` is secret-bearing but has **no stored
-  cleansing length** and `Drop` is plain `CRYPTO_free`. The module documents
+* `ec/ecdh_ossl.rs:59 OwnedSecretBuf` is secret-bearing. **At the baseline** it had
+  **no stored cleansing length** and `Drop` was plain `CRYPTO_free`; the module documents
   that the authority deliberately hands the shared secret to the caller without
-  cleansing here, and the caller owns and clears it. This is preserved
-  authority behaviour, not a conversion defect, but it means the type must
-  **not** be treated as a secret-safe destructor. Classed DIFFERENT.
+  cleansing here, and the caller owns and clears it. **M49 update:** the type now stores
+  the allocation extent and its `Drop` is a cleansing `CRYPTO_clear_free` at the same
+  allocator coordinate, so every *failure* path is cleansed. The success/transfer edge
+  still hands the block out uncleansed (authority behaviour; caller owns and clears it),
+  so the type is a secret-safe destructor for the error path but not for the transferred
+  value.
 * `rand/pool.rs:169` has no plain-release arm (only `SecureCleansed`/`Cleansed`),
   which is correct for pool blocks but makes it structurally distinct.
 * All `C`/`SC` owners that store a cleansing length do so in the struct
