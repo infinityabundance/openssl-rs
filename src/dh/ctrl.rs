@@ -605,7 +605,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_dh_kdf_outlen(
 /// `-2` nor a raise.
 ///
 /// # Safety
-/// `ctx` NULL or live; `plen` NULL or a live `int` the callee writes.
+/// `ctx` NULL or live; `plen` is a live, writable `int`. This call writes it on
+/// a `1` return, so a NULL slot is not admissible.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_dh_kdf_outlen(
     ctx: *mut EvpPkeyCtx,

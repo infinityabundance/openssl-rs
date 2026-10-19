@@ -380,11 +380,15 @@ unsafe extern "C" fn mem_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c
     let blen = unsafe { (*(*bbm).readp).length };
     // SAFETY: `b` is live.
     unsafe { mem_buf_sync(b) };
-    // SAFETY: `bbm` is live and both lengths are consistent.
-    let grew = unsafe {
-        let newlen = blen + inl as usize;
-        crate::runtime::buffer::BUF_MEM_grow_clean((*bbm).buf, newlen)
+    // The authority computes `readp->length + inl` in `size_t`. A negative `inl`
+    // gives a wrapped, enormous length that can only fail the grow; overflow in
+    // the other direction is equally impossible to satisfy. Translate both to
+    // the same refusal rather than relying on a debug-build panic boundary (§3).
+    let Some(newlen) = blen.checked_add(inl as usize) else {
+        return ret;
     };
+    // SAFETY: `bbm` is live and `newlen` is the checked sum.
+    let grew = unsafe { crate::runtime::buffer::BUF_MEM_grow_clean((*bbm).buf, newlen) };
     if grew == 0 {
         return ret;
     }
@@ -542,7 +546,8 @@ unsafe extern "C" fn mem_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c_
 /// `static int mem_gets(BIO *bp, char *buf, int size)`
 ///
 /// # Safety
-/// `bp` must be a live memory BIO; `buf` must be valid for `size` bytes.
+/// `bp` must be a live memory BIO; `buf` must be valid for `size` writable bytes
+/// when `size > 0`, and may be NULL when `size == 0`.
 unsafe extern "C" fn mem_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_int {
     // SAFETY: the dispatch layer only calls this with a live BIO of this method.
     let bbm = unsafe { (*bp).ptr.cast::<BioBufMem>() };
@@ -564,12 +569,21 @@ unsafe extern "C" fn mem_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_
             c_int::MAX
         }
     };
-    if size - 1 < j {
-        j = size - 1;
+    // `saturating_sub` is total where the authority's `size - 1` would overflow
+    // for `INT_MIN`; `BIO_gets` already refuses negative sizes.
+    let cap = size.saturating_sub(1);
+    if cap < j {
+        j = cap;
     }
     if j <= 0 {
-        // SAFETY: `buf` is valid for `size >= 1` bytes here.
-        unsafe { *buf = 0 };
+        // A positive `size` leaves room for the terminator. `size == 0` has no
+        // writable byte, and `BIO_gets(b, NULL, 0)` is a C-valid call: the
+        // authority still writes the terminator through `buf`, which is the UB
+        // this conversion does not reproduce (§17). The answer stays its `0`.
+        if size > 0 && !buf.is_null() {
+            // SAFETY: `buf` is valid for `size >= 1` bytes here.
+            unsafe { *buf = 0 };
+        }
         return 0;
     }
     // SAFETY: `bm` is live and `j` bytes are readable from `data`.
@@ -612,3 +626,27 @@ unsafe extern "C" fn mem_puts(bp: *mut Bio, str_: *const c_char) -> c_int {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(BioBufMem => zero_state_sweep_bio_buf_mem);
+
+#[cfg(test)]
+mod tests {
+    use crate::runtime::bio::{BIO_free, BIO_gets, BIO_new};
+
+    /// A negative control for the zero-length write `mem_gets` used to make.
+    ///
+    /// `BIO_gets(b, NULL, 0)` is a C-valid call: zero bytes is the one case
+    /// where a NULL buffer satisfies the public contract. The authority writes
+    /// a terminator through it and faults; this conversion must answer `0`
+    /// without touching the pointer.
+    #[test]
+    fn a_zero_length_gets_does_not_write_through_a_null_buffer() {
+        // SAFETY: `BIO_s_mem` answers a static method table and `BIO_new`
+        // allocates the BIO.
+        let bio = unsafe { BIO_new(super::BIO_s_mem()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and NULL is admissible for `size == 0`.
+        let ret = unsafe { BIO_gets(bio, core::ptr::null_mut(), 0) };
+        assert_eq!(ret, 0);
+        // SAFETY: `bio` is this test's own BIO and is released once.
+        unsafe { BIO_free(bio) };
+    }
+}
