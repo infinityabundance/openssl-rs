@@ -2599,6 +2599,59 @@ M22-retained boundaries.
 Receipt:
 [`atlas-refresh/mechanism-sweep-M29.json`](atlas-refresh/mechanism-sweep-M29.json).
 
+## 34. Mechanism sweep M30 — 2026-10-19
+
+Source HEAD `aed68972c`; branch `integrate/safe-c33`; worktree dirty
+(`src/evp/e_rc2.rs`, this index and the M30 receipt). Eight ordinary files
+from the M29-named batch; `src/ssl/tls_srp.rs` (62) remains held and the three
+inferred engine/provider dispatch candidates remain `NOT_RUN`.
+
+**M30 audited files (8).** `src/x509/v3_info.rs`, `src/ts/ts_req_utils.rs`,
+`src/evp/e_rc2.rs`, `src/apps/pkeyutl.rs`, `src/asn1/a_verify.rs`,
+`src/dsa/mod.rs`, `src/evp/evp_pbe.rs`, `src/ffc/params.rs`.
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M30-D1 | `src/evp/e_rc2.rs:369,378,387` | medium (compatibility; no memory-safety effect) | `rc2_get_asn1_type_and_iv` discarded the authority's return value: `let i: c_int = 0;` was never assigned, so a successful parameter decode answered 0 instead of the IV byte count. `EVP_CIPHER_asn1_to_param` callers test `<= 0`, so the legacy/engine RC2 path reported success as failure | assign the `ASN1_TYPE_get_int_octetstring` result to `i` and return it, matching `e_rc2.c:130-156`; failure arms stay `-1` |
+
+**Retained obligations (recorded, not repaired).** M30-R1 `evp_pbe.rs:491`
+`static mut PBE_ALGS` with the authority's own unsynchronised registration model
+(BOUNDARY); M30-R2 `ffc/params.rs:251` `ossl_ffc_params_set0_j(d, d->j)`
+authority-parity self-assignment use-after-free (documented, no landed caller);
+M30-R3 `apps/pkeyutl.rs:110,738` module-private safe helpers over caller raw
+BIO pointers.
+
+**Contracts reused.** RC-1, OB-1 (plain and cleansed), OB-2, OB-3, OB-4 member
+slots, ASN1 item ownership, STACK_OF + pop_free thunks, `X509V3_EXT_METHOD`
+i2v/v2i, the legacy `EVP_CIPHER` callback contract, BIO, and the EVP_PBE row
+registry. No new unsafe assumption; hidden obligations 0; unsafe expressions
+introduced/removed/relocated 0/0/0. No allocator coordinate, export, signature
+or `#[repr(C)]` layout changed.
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1635 passed / 0 failed / 27 ignored** serially (72.75 s) and with
+`--test-threads=4` (109.48 s). Focused: `evp::e_rc2` 1/0.
+
+**NOT_RUN.** `src/ssl/tls_srp.rs` and the three engine/provider dispatch
+candidates; the RC2 get-asn1 return-value authority differential (the default
+provider replaces these statics, so a legacy/engine driver is needed); Miri on
+these FFI callbacks, and ASan/TSan/Loom for the retained PBE registry
+(BOUNDARY); independent review and SEAL. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/apps/cms.rs` (61), `src/provider/ml_dsa_sig.rs`
+(61), `src/slh_dsa/fors.rs` (61), `src/x509/by_store.rs` (61),
+`src/x509/x509_ext.rs` (61), `src/cms/cms_att.rs` (60),
+`src/digest/blake2.rs` (60), `src/x509/v3_aaa.rs` (60). Skipped boundaries:
+`src/ssl/tls_srp.rs` (62, held), `src/ssl/statem/extensions_clnt.rs` (60,
+TLS protocol), `src/engine/eng_cnf.rs` (58, ENGINE config), and the three
+engine/provider dispatch candidates.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M30.json`](atlas-refresh/mechanism-sweep-M30.json).
+
 ## 25. Boundary sweep B15 — thread stop, initialisation/atexit, and ENGINE ctrl dispatch
 
 Receipt: [`atlas-refresh/boundary-sweep-B15.json`](atlas-refresh/boundary-sweep-B15.json).

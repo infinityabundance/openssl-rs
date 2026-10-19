@@ -1,0 +1,172 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "aed68972c",
+  "date": "2026-10-19",
+  "scope": "The eight ordinary files named by the M29 receipt: src/x509/v3_info.rs (63), src/ts/ts_req_utils.rs (63), src/evp/e_rc2.rs (63), src/apps/pkeyutl.rs (62), src/asn1/a_verify.rs (62), src/dsa/mod.rs (62), src/evp/evp_pbe.rs (62), src/ffc/params.rs (62). src/ssl/tls_srp.rs (62) remains held as protocol-adjacent; the inferred engine/provider dispatch candidates remain NOT_RUN.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "dirty: src/evp/e_rc2.rs (M30-D1 repair) plus this receipt and the PERFILE-INDEX entry; untracked .asan-target/ and .ob4work/ were already present",
+  "files": [
+    "src/x509/v3_info.rs",
+    "src/ts/ts_req_utils.rs",
+    "src/evp/e_rc2.rs",
+    "src/apps/pkeyutl.rs",
+    "src/asn1/a_verify.rs",
+    "src/dsa/mod.rs",
+    "src/evp/evp_pbe.rs",
+    "src/ffc/params.rs"
+  ],
+  "files_not_run": [],
+  "dispositions": [
+    {
+      "file": "src/x509/v3_info.rs",
+      "mechanisms": "ACCESS_DESCRIPTION/AUTHORITY_INFO_ACCESS ASN1 items and d2i/i2d/new/free, the two X509V3_EXT_METHOD rows, i2v_AUTHORITY_INFO_ACCESS (GENERAL_NAME dispatch, slot-indexed CONF_VALUE rewrite, CRYPTO_malloc/BIO_snprintf/OwnedStr replacement of vtmp->name), v2i_AUTHORITY_INFO_ACCESS (strchr split, CRYPTO_strndup to OwnedStr, OBJ_txt2obj, reserved-stack push), i2a_ACCESS_DESCRIPTION and the two pop_free thunks",
+      "result": "No memory-safety defect. The err-label conditions (ret == NULL && tret != NULL in i2v; unconditional ainfo pop_free in v2i), the old-name release ordering and the reserved-push invariant match v3_info.c:60-155. The local raise coordinates and reasons match the five authority sites."
+    },
+    {
+      "file": "src/ts/ts_req_utils.rs",
+      "mechanisms": "RC-1 raise_ts coordinates, OB-2 OWNED dup-then-replace setters (msg_imprint, hash_algo, policy_id, nonce), ASN1_OCTET_STRING_set message setter, extension stack accessors, TS_REQ_ext_free pop_free plus NULL, X509v3 extension dispatch, extension-free thunk",
+      "result": "No memory-safety defect. Every dup-first/free-second transition, the pointer-equality no-op guard, cert_req 0xFF/0x00, and the extension-free NULL reset match ts_req_utils.c:14-154."
+    },
+    {
+      "file": "src/evp/e_rc2.rs",
+      "mechanisms": "EVP_RC2_KEY cipher_data layout, ecb/cbc/cfb64/ofb64 do_cipher loops and EVP_MAXCHUNK chunking, EVP_CIPHER_CTX_num carry, rc2_init_key/RC2_set_key, magic<->key_bits mapping, ASN1 get/set parameter callbacks, ctrl arms, six legacy EVP_CIPHER statics and their AtomicI32 refcount",
+      "result": "M30-D1 fixed. All remaining transitions (chunking, num carry, key_bits=key_len*8, ctrl return taxonomy, static field values) match e_rc2.c:92-197 in the pinned 3.6.4 authority."
+    },
+    {
+      "file": "src/apps/pkeyutl.rs",
+      "mechanisms": "option decoding, get_pkey (private/public/certificate loading and X509_get_pubkey ownership), init_ctx operation dispatch and failure free, do_keyop wrappers, BIO open/read/close ladder for input/signature/output, size-query then allocate key operation, asn1parse/hexdump/write output, bio_to_mem and bio_puts helpers",
+      "result": "No memory-safety defect. Every early-return tail releases exactly the objects acquired so far (BIO_free(NULL) is the documented no-op), the size-query buffer is rechecked before the second call, and the Vec-backed buffers are trivially bounded. Not-landed arms (rawin/KEM/peer/kdf/provider/config) refuse before any resource is acquired."
+    },
+    {
+      "file": "src/asn1/a_verify.rs",
+      "mechanisms": "ASN1_verify legacy path (digest lookup, BIT STRING flag check, i2d sizing, OB-1 OwnedBuf cleansed allocation and adoption, VerifyInit/Update/Final), ASN1_item_verify_ex context lifecycle (pkey ctx plus MD ctx release), ASN1_item_verify_ctx four-arm signature dispatch (legacy item_verify, RSA-PSS, generic DigestVerifyInit, NULL-digest algorithms), src/lib error coordinates",
+      "result": "No memory-safety defect. The -1/0/1 answer taxonomy, the ret<=1 legacy-method rule, the DigestVerify full-length call and both cleansed-buffer releases match a_verify.c:20-226. The -1 reset the authority performs before VerifyFinal is equivalent to this transcription's early -1 return."
+    },
+    {
+      "file": "src/dsa/mod.rs",
+      "mechanisms": "DSA_METHOD #[repr(C)] layout, RawMethod zalloc/malloc handle and finish, OwnedMethod adoption and name-then-table release, DSA_meth_new/dup (whole-struct memcpy plus name strdup, both failure tails), DSA_meth_free, name/flags/app_data/callback getters and setters",
+      "result": "No memory-safety defect. Both constructors release the whole object (never the copied name alias) on strdup failure; dup's 96-byte copy has exact extent; set1_name duplicates before releasing. Matches dsa_meth.c:18-219."
+    },
+    {
+      "file": "src/evp/evp_pbe.rs",
+      "mechanisms": "EVP_PBE_CTL row and OwnedPbeCtl zalloc/adopt/drop, application registry PBE_ALGS and pbe_cmp/pbe2_cmp, builtin table binary search, EVP_PBE_CipherInit_ex fetch/legacy-fallback/free ladder, EVP_PBE_alg_add_type push-transfer, EVP_PBE_find_ex/find, cleanup, EVP_PBE_get",
+      "result": "No memory-safety defect. The 3.6.4 authority raises ERR_R_CRYPTO_LIB only for sk_new and push failure and goes silent for the zalloc failure; the two local sites and the silent allocation return reproduce exactly that. Fetched references are freed separately from legacy statics; the row is dropped when the reserved push refuses."
+    },
+    {
+      "file": "src/ffc/params.rs",
+      "mechanisms": "OB-1 seed adoption through CRYPTO_memdup, init/cleanup (non-pedantic plain release plus re-init), set0_pqg three guards, set0_j release-then-store, set_seed self-pointer guard and clear arm, ffc_bn_cpy static-data sharing, params copy failure cleanup, flags/digest/validate setters, print (seed hex walk) and todata",
+      "result": "No memory-safety defect. Every ownership transition and failure path matches ffc_params.c:20-285, including copy's seedlen-before-memdup order and the cleanup re-initialisation. set0_j's self-assignment use-after-free is the authority's and is documented in the function comment."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/raise_site_data/guard_ffi and recorded error-site coordinates",
+    "OB-1 OwnedBuf allocation/adoption with the single declared release (plain or cleansed)",
+    "OB-2 OwnedStr adoption of a seam-allocated NUL-terminated block",
+    "OB-3 OwnedCtx/RawCtx partial-initialisation and single-release rules",
+    "ASN1 item/template ownership and the item-layer d2i/free contract",
+    "STACK_OF ownership and pop_free destructor thunks",
+    "X509V3_EXT_METHOD i2v/v2i callback and result ownership",
+    "EVP_CIPHER legacy callback contract (do_cipher/init/asn1/ctrl) and EVP_CIPHER_CTX member layout",
+    "BIO read/write/open/free contract",
+    "EVP_PBE registry row ownership and comparator calling convention",
+    "FFC_PARAMS member-buffer slot ownership (OB-4)"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    {
+      "id": "M30-R1",
+      "file": "src/evp/evp_pbe.rs:491",
+      "class": "unsynchronised process-global registry (authority parity)",
+      "description": "PBE_ALGS is a private static mut pointer. Concurrent EVP_PBE_alg_add_type/EVP_PBE_find_ex/EVP_PBE_cleanup calls race. The pinned authority has the same unsynchronised stack and its own 'Ideally, this would be done under lock' comment, which the transcription preserves. No safe Rust caller reaches it (all access is inside unsafe extern fns), so this is a C-ABI concurrency obligation, not a new hidden obligation.",
+      "disposition": "Recorded; not repaired in this batch (adding a lock changes the authority's documented single-threaded-registration model). BOUNDARY candidate."
+    },
+    {
+      "id": "M30-R2",
+      "file": "src/ffc/params.rs:251",
+      "class": "authority-parity self-assignment use-after-free",
+      "description": "ossl_ffc_params_set0_j(d, d->j) frees the slot and then stores the freed pointer. The authority's ffc_params.c:73-80 does exactly this; the Rust comment and test document it and no landed caller passes the slot's own value.",
+      "disposition": "Recorded; not repaired to preserve authority behaviour. A hardening batch may add the set0_pqg-style pointer guard with a recorded divergence."
+    },
+    {
+      "id": "M30-R3",
+      "file": "src/apps/pkeyutl.rs:110,738",
+      "class": "module-private safe helpers taking caller raw pointers",
+      "description": "bio_to_mem and bio_puts take *mut Bio and dereference it through BIO_read/BIO_write under a safe signature. Both are private to apps/pkeyutl.rs and every call site holds a live BIO; no downstream safe caller can reach them.",
+      "disposition": "Retained internal-helper boundary; tighten to unsafe fn with a # Safety contract if the apps helpers are opened to other modules."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M30-D1",
+      "file": "src/evp/e_rc2.rs",
+      "pre_fix_lines": [
+        369,
+        376,
+        377,
+        386
+      ],
+      "post_fix_lines": [
+        369,
+        378,
+        387
+      ],
+      "status": "fixed",
+      "severity": "medium (compatibility/functional; no memory-safety effect)",
+      "class": "transcribed return-value loss (AGENTS.md section 8 compatibility axis)",
+      "description": "rc2_get_asn1_type_and_iv declared `let i: c_int = 0;` and never assigned it, so the EVP_CIPHER::get_asn1_parameters callback always answered 0 on success. The authority (e_rc2.c:130-156 in both 3.0 and the pinned 3.6.4) assigns the ASN1_TYPE_get_int_octetstring result and returns it, so a successful RC2 parameter decode answers the IV length (8 for these modes). EVP_CIPHER_asn1_to_param callers test the result with <= 0, so the legacy/engine path would report a successful RC2 algorithm-identifier decode as failure.",
+      "fix": "Assign the ASN1_TYPE_get_int_octetstring result to `i`, keep the already-present `i != l` rejection and the `i > 0` CipherInit guard, and return `i`. No allocation, ownership, ABI, export or layout change.",
+      "divergence": "None for every valid input: the answer now equals the authority's byte count. Failure arms were and remain -1."
+    }
+  ],
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 0,
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; no CRYPTO_* coordinate, size or release mode changed (the repair adds no allocation and removes none)",
+    "repr_c_and_exports": "unchanged; no exported symbol, signature or #[repr(C)] layout touched (AccessDescription, DsaMethod, EvpRc2Key, EvpCipher statics and all size/offset asserts retained)",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained); clippy -D warnings accepted the edit",
+    "controls": "Focused evp::e_rc2 test 1/0. No new allocation or ownership arm was added, so no adversarial control was required. M30-R1/R2/R3 are recorded, not certified."
+  },
+  "compatibility": "M30-D1 restores authority behaviour for the only divergent return value found. Every other audited transition matches the pinned openssl-3.6.4 source for v3_info.c, ts_req_utils.c, e_rc2.c, a_verify.c, dsa_meth.c, evp_pbe.c and ffc_params.c; apps/pkeyutl.c's landed arms match the option/ownership ladder (not-landed arms refuse before acquiring resources). No ABI, symbol, allocator-seam, error-coordinate or repr(C) change.",
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE. The batch is FAST+BATCH-verified only; BOUNDARY evidence (Miri/ASan/TSan, the authority return-value differential for the RC2 callback, independent review) remains PENDING.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1635 passed / 0 failed / 27 ignored (72.75 s)",
+    "lib_tests_threads_4": "1635 passed / 0 failed / 27 ignored (109.48 s)",
+    "focused": "evp::e_rc2 1/0; v3_info, ts_req_utils, pkeyutl, a_verify, dsa, evp_pbe and ffc::params module-local tests are either absent or unchanged by the edit (0 matched for the changed unit beyond e_rc2)"
+  },
+  "not_run": [
+    "src/ssl/tls_srp.rs (62): protocol-adjacent, still held for a batch that can spend BOUNDARY effort on TLS state.",
+    "src/encoder_pkey.rs, src/engine/tb_asnmth.rs and src/provider/decode_pvk2key.rs: inferred engine/provider dispatch boundaries; not audited.",
+    "src/ssl/statem/extensions_clnt.rs (60) and src/engine/eng_cnf.rs (58): candidate protocol and ENGINE-config boundaries, skipped when composing the next batch.",
+    "Authority differential for the repaired RC2 get_asn1_parameters return value (needs a driver that reaches the legacy/engine callback path; the default provider replaces these statics) - BOUNDARY gate.",
+    "Miri (Stacked and Tree Borrows): not applicable to the FFI callbacks touched here; the court toolchain support remains as recorded in earlier sweeps.",
+    "ASan/TSan/Loom for the retained static-mut PBE registry (M30-R1) - BOUNDARY gate.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "next_batch": {
+    "files": [
+      "src/apps/cms.rs (61)",
+      "src/provider/ml_dsa_sig.rs (61)",
+      "src/slh_dsa/fors.rs (61)",
+      "src/x509/by_store.rs (61)",
+      "src/x509/x509_ext.rs (61)",
+      "src/cms/cms_att.rs (60)",
+      "src/digest/blake2.rs (60)",
+      "src/x509/v3_aaa.rs (60)"
+    ],
+    "triage": "Descending production-site order from 61 after this batch, skipping protocol/engine boundaries. None of the eight appears in PERFILE-INDEX.md, so all remain unaudited.",
+    "skipped": [
+      "src/ssl/tls_srp.rs (62) - protocol-adjacent, still held.",
+      "src/ssl/statem/extensions_clnt.rs (60) - TLS client-extension/state boundary.",
+      "src/engine/eng_cnf.rs (58) - ENGINE configuration dispatch boundary.",
+      "src/encoder_pkey.rs (63), src/engine/tb_asnmth.rs (63), src/provider/decode_pvk2key.rs (63) - engine/provider dispatch candidates.",
+      "src/params/from_text.rs (59), src/provider/slh_dsa_sig.rs (59), src/rand/pool.rs (59), src/x509/pcy_node.rs (59) - ordinary but ranked below the selected eight; queued next.",
+      "previously deferred NOT_RUN boundaries: src/engine/eng_ctrl.rs, src/ssl/record/rec_layer_s3.rs, src/provider/legacyprov.rs, src/provider/child.rs, src/runtime/lhash.rs, the M22-retained set."
+    ]
+  }
+}
