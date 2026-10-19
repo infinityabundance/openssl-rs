@@ -325,7 +325,14 @@ pub struct SockAddrUn {
 }
 
 /// `struct sockaddr_storage` — large enough for every family this stratum uses.
-#[repr(C)]
+///
+/// The authority's `BIO_ADDR` is a union of the four socket-address structs, whose
+/// alignment is that of `struct sockaddr_in6` (4). The accessors in `addr.rs` derive
+/// `SockAddrIn`/`SockAddrIn6`/`SockAddrUn` references from this storage, so the
+/// storage must carry at least that alignment; without it a `BioAddr` value would be
+/// only two-byte aligned and those references would be undefined behaviour. The size
+/// is unchanged (128 is already a multiple of 4).
+#[repr(C, align(4))]
 #[derive(Clone, Copy)]
 pub struct SockAddrStorage {
     /// Family of the stored address.
