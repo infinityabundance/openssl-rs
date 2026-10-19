@@ -379,13 +379,13 @@ pub(crate) unsafe fn template_free(pval: *mut *mut c_void, tt: *const Asn1Templa
     // SAFETY: `tt` is live.
     let t = unsafe { &*tt };
     let embed = c_int::from(t.flags & ASN1_TFLG_EMBED != 0);
-    // An embedded field's value is the field itself, so the item machinery is handed
-    // the address of a local holding the field's address. The authority does the same.
-    // SAFETY: the caller's contract covers this slot.
-    let mut tval: *mut c_void = unsafe { *pval };
+    // An embedded field's value *is* the field's storage, so the authority does not
+    // read the field at all: `tval = (ASN1_VALUE *)pval` makes the slot's own address
+    // stand in for the value and hands `&tval` to the item machinery. Reading (and
+    // writing back) `*pval` here would impose an initialization requirement the
+    // authority does not have on embedded storage.
+    let mut tval: *mut c_void;
     let pval = if embed != 0 {
-        // SAFETY: `pval` is a live slot; `tval` is this frame's copy.
-        unsafe { pval.write(tval) };
         tval = pval as *mut c_void;
         &mut tval as *mut *mut c_void
     } else {
