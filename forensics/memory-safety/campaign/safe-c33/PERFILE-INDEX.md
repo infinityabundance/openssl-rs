@@ -5004,3 +5004,107 @@ recorded.
 defer again), `src/ml_dsa/hash.rs`, `src/ml_dsa/mod.rs`, `src/ml_dsa/ntt.rs`,
 `src/ml_dsa/sample.rs`, `src/ml_dsa/sign.rs`, `src/ml_kem/key.rs`,
 `src/ml_kem/mod.rs`.
+
+---
+
+## M59 — per-file contract sweep (ML-DSA core, ML-KEM key/verification core, CCM)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`fb4d7d3b7` (dirty worktree: the six `src/ml_kem/key.rs` repairs below; no
+commit was made by the audit subagent). The eight records are file-level
+obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ml_dsa/hash.rs` | `shake_xof`/`_2`/`_3` short-circuit `&&` chains over `EVP_DigestInit_ex2`/`Update`/`Squeeze`; multi-part update order; zero-length updates; caller extents | no defect |
+| `src/ml_dsa/mod.rs` | parameter table and `MlDsaParams` layout, `unsafe impl Sync` over a `'static` C-string pointer, `MlDsaKey`/`MlDsaSig` `#[repr(C)]` layouts, constant-time scalar helpers | no defect |
+| `src/ml_dsa/ntt.rs` | Montgomery reduction, forward/inverse NTT index bounds, `matrix_as_slice`/vector slice extents, in-place accumulation, `product` cleanse | no defect |
+| `src/ml_dsa/sample.rs` | rejection samplers and nibble/three-byte coefficient bounds, `derived_seed` construction and cleanse arms, public `A` material classification, mask/challenge buffer cleanse | no defect |
+| `src/ml_dsa/sign.rs` | `OwnedBuf` scratch ownership/release arm, `mu` init/update/finalize, sign/verify drivers, temporary pointer partitioning, stack-secret cleanse paths | no defect |
+| `src/ml_kem/key.rs` | `OwnedBuf` plain/secure/cleansed release arms, `add_storage` member layout, key new/dup/reset/free, parse/encode/genkey/encap/decap, secret-buffer cleanse paths | 6 defects (M59-D1..D6) repaired |
+| `src/ml_kem/mod.rs` | `*Alloc` layout `offset_of!` assertions, `VinfoMap` `Sync`, vinfo accessors, size formulas | no defect |
+| `src/modes/ccm.rs` | `CRYPTO_ccm128_*` state machine, B0 length reconstruction, AAD length encodings, `blocks` budget, counter helpers, block/stream callbacks, length refusals | no memory-safety defect; secret residue classified |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It stays
+at the head of `REMAINING-AUDIT.txt`. `src/modes/ccm.rs` was substituted from
+the head of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M59-D1 | `src/ml_kem/key.rs:682` (pre-fix doc at `:679`) | low | `# Safety` admitted NULL for `ossl_ml_kem_key_reset`, whose body dereferences `key`; the authority has no NULL test | contract now requires a live, non-NULL key and states that NULL is a caller violation, not a refusal. No code change. |
+| M59-D2 | `src/ml_kem/key.rs:1048` (pre-fix alloc at `:1044`) | medium | `ossl_ml_kem_parse_public_key` allocated `EVP_MD_CTX` before the length check, leaking it whenever `len != pubkey_bytes`; the authority's short-circuiting `||` never allocates on that arm | length is checked first; the context is allocated only on the accepting arm. Observable return unchanged. |
+| M59-D3 | `src/ml_kem/key.rs:1094` (pre-fix alloc at `:1086`) | medium | same leak in `ossl_ml_kem_parse_private_key` on `len != prvkey_bytes` | same ordering repair. |
+| M59-D4 | `src/ml_kem/key.rs:1219` (pre-fix alloc at `:1201`) | medium | `ossl_ml_kem_encap_seed` allocated `EVP_MD_CTX` before validating `ctext`/`clen`/`shared_secret`/`slen`/`entropy`/`elen`, leaking it on every rejected argument | arguments are validated first, then the context is allocated, matching the authority's short-circuit order. |
+| M59-D5 | `src/ml_kem/key.rs:1326` (pre-fix alloc at `:1302`) | medium | `ossl_ml_kem_decap` allocated `EVP_MD_CTX` before the length/ciphertext checks; an invalid argument returned after the RNG fallback with the context still live | the context is created only on the accepting arm; the RNG fallback still runs both for a rejected argument and for an allocation failure, as the authority's single condition does. |
+| M59-D6 | `src/ml_kem/key.rs:1149`, `:1162`, `:1169` (pre-fix early returns at `:1137`, `:1141`, `:1151`) | medium | `ossl_ml_kem_genkey` returned on `encode_seed` failure, `RAND_priv_bytes_ex` failure and `EVP_MD_CTX_new` failure without cleansing the 64-byte `seed`; the last arm leaves a fully generated private seed on the stack | each early return now cleanses `seed` (§5 failure-path cleansing, a deliberate divergence from the authority, which has the same residue). No observable behaviour change. |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0.
+Hidden obligations: 0. No exported symbol, signature, `#[repr(C)]` layout or
+allocator coordinate changed. No unsafe operation was added or removed; the
+repairs sit inside existing unsafe bodies. `src/ml_kem/key.rs` additionally now
+states the liveness contract for `ossl_ml_kem_encap_seed`, `ossl_ml_kem_decap`
+and `ossl_ml_kem_pubkey_cmp` (documentation only).
+
+**Secret-bearing storage.** ML-DSA sign: `rho_prime` (masking seed), `c_tilde`
+and the caller-side `mu` are cleansed on the success and failure paths; the
+scratch blob (`w1_encoded`, `c_ntt`, NTT vectors) is released through
+`CRYPTO_clear_free` in the signing driver and through the plain authority free
+in the verifying driver (the verify temporaries are public signature data).
+ML-DSA sampling: `derived_seed` in `ossl_ml_dsa_vector_expand_S` and the
+`rej_bounded_poly` block buffer are cleansed on both arms; the expand-mask
+buffer is always cleansed; the public matrix `A` seed/blocks are deliberately
+not cleansed (FIPS 204 §3.6.3, as the authority comments). The NTT accumulator
+`product` is cleansed. ML-KEM: `seed` (genkey) is cleansed on success,
+`add_storage` failure, and now on the three early failures; `augmented_seed` and
+`hashed` are cleansed in `genkey`; `input`/`Kr`/`r` are cleansed in
+encapsulation; `decrypted`/`Kr`/`failure_key` are cleansed on every decapsulation
+arm; `s`/`z`/`d` and `seedbuf` are released through
+`CRYPTO_secure_clear_free`, while the public `t` block uses `CRYPTO_free`.
+CCM cleanses nothing: `cmac`/`nonce` persist in the caller's context and the
+authority has no cleanse arm there; classed as a keyed intermediate residue
+(not a key schedule) and recorded, not diverged.
+
+**Contracts reused.** Authority allocation boundaries and release arms through
+the `CRYPTO_*` seam (`OwnedBuf` in sign/key); the `Vector`/`Matrix`
+`(ptr,len)` member-extent model and `#[repr(C)]` layout assertions; CCM's
+caller-supplied block/stream callback and context-ownership contract; FIPS
+203/204 pointer-extent and length-refusal contracts. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused tests
+`ml_kem` **8 passed / 0 failed**, `ml_dsa` **14 passed / 0 failed**,
+`modes::ccm` **4 passed / 0 failed**. BATCH: `cargo clippy --all-targets -- -D
+warnings` clean; full library **1666 passed / 0 failed / 27 ignored** (1693
+total) serial in 216.08 s and with `--test-threads=4` in 96.71 s, in the court
+with `CARGO_BUILD_JOBS=4`. Matches the M58 baseline exactly: no unexplained
+removal and no newly ignored test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; `scripts/adv-probe.sh` has no probe for
+ML-DSA, ML-KEM or CCM (affected probes NOT_RUN); dudect/ctgrind/constant-time
+(no constant-time claim is made for any file in this batch from source
+inspection); FRF suite; pinned-authority differential beyond the 3.6.4 source
+comparison performed for `ml_kem.c` and `ccm128.c`; dependency-graph
+regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `MlKemKey::rho_pkhash` is not initialised by `key_new`; the authority also
+leaves it untouched after `OPENSSL_malloc`, and `add_storage` zeroes it when
+`dup == 0`, so no path reads it uninitialised. (3) `poly.rs`
+`Vector::as_slice`/`matrix_as_slice` would form a slice from NULL when the
+count is zero; every reachable constructor uses a positive rank and `poly.rs`
+is outside this batch — hardening candidate, no reachable path. (4) The ML-DSA
+scratch-size arithmetic in `sign.rs` uses unchecked products/additions, but
+`k`/`l`/`gamma2` come from the immutable parameter table; checked arithmetic is
+a hardening candidate. (5) CCM's keyed intermediate residue is recorded above.
+(6) No constant-time claim is made for ML-DSA, ML-KEM or CCM.
+
+**Queue.** `REMAINING-AUDIT.txt` 249 -> **241**; `AUDITED-FILES.txt` 514 ->
+**522**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/modes/gcm.rs`, `src/modes/mod.rs`, `src/modes/ocb.rs`,
+`src/modes/siv128.rs`, `src/modes/wrap.rs`, `src/modes/xts.rs`,
+`src/ocsp/ocsp_cl.rs`.
