@@ -1321,3 +1321,62 @@ full-suite sanitizers, FRF-Fuzz, independent review and SEAL regeneration are
 **Next ordinary position:** `src/cms/cms_pwri.rs` (128), then
 `src/runtime/bio/mod.rs` (129), `src/x509/v3_pci.rs` (130). No B7 follow-up remains;
 `src/rsa/mod.rs` (123) is still the large-file deferral.
+
+## 15. Batch M14 — mechanism-contract sweep (rsa deferral, queued 128–130, four live-ranked files)
+
+**STOP status: CLEAR after repair.** One confirmed STOP-class family: the exported RSA
+padding entry points reproduced the authority's undefined behaviour for negative, wrapping
+or sub-minimum lengths (`memcpy`/`memset` receiving a negated `int` as `size_t`). All nine
+sites are repaired and a regression control now exercises each one. No other
+memory-safety defect, ABI regression or new hidden obligation was found.
+
+**Files audited (live attribution rank in parentheses).**
+
+- `src/rsa/mod.rs` (134, large-file deferral) — **M14-D1–D9 (fixed, medium/low):**
+  negative or `INT_MIN` lengths were passed to `memcpy`/`memset`/`EVP_Digest` by
+  `RSA_padding_add_none` (:951), `RSA_padding_check_none` (:985),
+  `RSA_padding_add_X931` (:1017), `RSA_padding_check_X931` (:1074, now also requires
+  `flen >= 2`), `RSA_padding_add_PKCS1_type_1` (:1166),
+  `ossl_rsa_padding_add_PKCS1_type_2_ex` (:1738, `tlen` wrap), `PKCS1_MGF1` (:1297,
+  `seedlen`), both OAEP bodies (:1480, :2503, `plen`/`flen`) and `ossl_rsa_prf` (:2028,
+  `llen`). Each guard is placed so every non-negative input keeps the authority's result
+  and error coordinate; the deliberate UB divergence is recorded at the padding banner.
+  No allocation/ownership defect: `RSA_meth_*` and the `OwnedBuf` scratch paths match
+  `rsa_meth.c`/`rsa_oaep.c`/`rsa_pk1.c`.
+- `src/cms/cms_pwri.rs` (147) — no defect. KEK wrap/unwrap length checks, the password
+  arm, and the SKEY/ASN1 ownership transfers match `cms_pwri.c`.
+- `src/runtime/bio/mod.rs` (154) — no defect. Creation/create-failure, free-veto reference
+  consumption, `BIO_free_all`'s shared-element stop, push/pop and `BIO_dup_chain` teardown
+  match `bio_lib.c` and the B1/B2 contracts.
+- `src/x509/v3_pci.rs` (160) — no defect. `policy_grow`'s realloc ownership, the four
+  failure releases, the file-read retry loop and the `r2i_pci` err cleanup match
+  `v3_pci.c`; the freed slot is nulled so no double free is possible.
+- `src/evp/exchange.rs` (74) — no defect. The raw derive buffer's plain/cleansed release
+  split and the fetched SKEYMGMT release arms match `exchange.c`.
+- `src/evp/e_aria.rs` (93) — no defect. GCM/CCM IV allocation, COPY re-pointing and
+  cleanup match `e_aria.c`; the legacy `SET_IV_INV` ctrl arg remains the EVP_CIPHER ctrl
+  contract's, as in the M7 `e_aes` result.
+- `src/encoder_meth.rs` (104) — no defect. The four-clause provider-function test is
+  transcribed exactly, and both `CtxDestroy` bodies release only their members.
+- `src/crmf/crmf_asn.rs` (122) — no defect. Item templates and the thin
+  new/free/dup/d2i/i2d wrappers forward the ASN.1 ownership contract.
+
+**Contracts reused.** OB-1 `OwnedBuf`, OB-3 `OwnedCtx`/`CtxDestroy`, OB-4 member-buffer
+slots, RC-1 refcount/destroying sentinel, B1/B2 BIO lifecycle/callback contracts, ASN.1
+item/alloc/free/dup contracts, and the C-ABI exported-symbol/out-parameter/destructor
+contracts. New unsafe abstractions: 0. Hidden obligations: 0.
+
+**Evidence.** FAST: fmt clean; `rsa::` 82 passed / 0 failed / 1 ignored, including
+`the_padding_entry_points_refuse_lengths_that_cannot_describe_a_block`. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1603 passed / 0 failed / 27 ignored** serially
+(66.27 s) and with `--test-threads=4` (95.32 s). Negative-control mutation was not run
+because it would inject the very `size_t::MAX` copy outside ASan; the controls are
+load-bearing without it. ASan/Miri/Loom, full-suite sanitizers, FRF-Fuzz, the authority
+differential for the refusal divergences and SEAL regeneration are `NOT_RUN`. Machine-
+readable receipt:
+[`atlas-refresh/mechanism-sweep-M14.json`](atlas-refresh/mechanism-sweep-M14.json).
+
+**Next ordinary queue position:** `src/cms/cms_ec.rs` (168), then
+`src/pkcs7/pk7_asn1.rs` and `src/x509/x_crl.rs`. The boundary queue is
+`src/property/store.rs`, `src/provider/activate.rs`, `src/context/namemap.rs` and
+`src/provider/ec_kmgmt.rs` (lock/callback/refcount edges), not re-opened here.
