@@ -3895,3 +3895,72 @@ comparison is source-level); SEAL.
 **Next eight (stable order).** `src/dh/mod.rs`, `src/dh/prn.rs`, `src/dh/rfc5114.rs`,
 `src/digest/blake2.rs`, `src/digest/md4.rs`, `src/digest/md5.rs`, `src/digest/md5_sha1.rs`,
 `src/digest/mdc2.rs`.
+
+---
+
+## 51. Mechanism sweep M46 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M46.json`](atlas-refresh/mechanism-sweep-M46.json).
+Candidate `5845eca15` plus this batch's source edits; four files changed (`src/digest/blake2.rs`
+is the only behavioural change; `src/dh/mod.rs`, `src/dh/rfc5114.rs` and `src/digest/mdc2.rs`
+receive contract text only).
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/dh/mod.rs` | audited_no_change | The twenty-one `DH_meth_*` entries, `RawMethod` (partial construction, block-only `Drop`) and `OwnedMethod` (`DH_meth_free`'s name-then-table release), all through `CRYPTO_zalloc`/`CRYPTO_malloc`/`CRYPTO_strdup` with `FILE_DH_METH`. `DH_meth_new` stores `flags` before the name so the error path's plain block release is safe; `DH_meth_dup` copies the whole 72-byte table before the one deep field and drops only the block on a failed strdup. Contract text now names the caller's obligation for `DH_meth_free`/`DH_meth_set1_name`: a table this file created, never a built-in static table such as `DH_OpenSSL`'s. |
+| `src/dh/prn.rs` | audited_no_change | `DHparams_print_fp`: `BIO_new(BIO_s_file())`, `BIO_ctrl(BIO_C_SET_FILE_PTR, BIO_NOCLOSE, fp)`, `DHparams_print`, then one `BIO_free`; the caller's `FILE *` is left open. The one refusal raises at `dh_prn.c:28` from reconstructed static strings. No allocation of its own, no ownership transfer, no change. |
+| `src/dh/rfc5114.rs` | audited_no_change | The three `make_dh` expansions: `DH_new`, three `BN_dup`s assigned in the authority's `p,g,q` order, and `DH_free` on any NULL duplicate. The deprecated objects own their numbers while `DH_new_by_nid` shares the table's static constants; the tests pin that asymmetry and the `NID_undef` cache behaviour. Contract text now states that each `*_of` argument must return a live `BigNum`; the only callers are the three constant accessors. |
+| `src/digest/blake2.rs` | defect_repaired | BLAKE2b/BLAKE2s parameter images, `init`/`init_key`/`update`/`final_`, the compressor and `load`/`store`. `init_key` read `key_length` from the public `Param.b[1]` and copied that many bytes into a stack block behind a `debug_assert!` only; a hostile parameter image could therefore write past `block` in a release build. It now refuses `0` and `> KEYBYTES` before the copy, and the test covers 0, 1, one-past and `u8::MAX` for both flavours. `compress`'s contract now states the whole-block read at each block start (the staging buffer is `BLOCKBYTES`); `init`/`final_` now state the `1..=OUTBYTES` digest-length invariant. |
+| `src/digest/md4.rs` | audited_no_change | `Md4Ctx` layout (92 bytes, offsets pinned), the 48-invocation compression through the shared `md32` collector, the `Md32` impl, the four exports and the one-shot's static-NULL arm followed by a local cleanse. The MD4 round functions are the RFC's own spellings, not MD5's simplified forms; the three round bands match the generated table. |
+| `src/digest/md5.rs` | audited_no_change | `Md5Ctx` layout (92 bytes), the 64-invocation compression with the authority's `A,D,C,B` destination cycle, the `Md32` impl, the exports and the one-shot's cleanse of its local context. `MD5_Init`'s zeroing is load-bearing because the first `update` reads `num`; the static-NULL answer is the authority's single shared buffer. |
+| `src/digest/md5_sha1.rs` | audited_no_change | `Md5Sha1Ctx` is the two contexts side by side (92 + 96, offsets pinned), and the four `ossl_`-prefixed entry points match `md5_sha1.c`. `ossl_md5_sha1_ctrl` is the SSLv3 master-secret arm: md5 48-byte pads, SHA-1 40-byte pads, `md5tmp`/`sha1tmp` cleansed before returning, context re-initialised and re-updated so a later final answers the SSLv3 value. No export. |
+| `src/digest/mdc2.rs` | audited_no_change | `Mdc2Ctx` layout (32 bytes, offsets pinned), `c2l`/`l2c`, `mdc2_body` over two DES lanes, `Init`/`Update`/`Final` and the one-shot. `Final`'s `data[i] = 0x80` arm is safe only while `num < MDC2_BLOCK`; that bound is now stated as a caller obligation on `Update`/`Final` because `num` is a public header field (the authority has the same C-level exposure). The two pad arms reproduce the published recipe values. |
+
+**Defect repaired.** `src/digest/blake2.rs` (pre-edit `:263-270` BLAKE2b and `:593-600`
+BLAKE2s, severity medium, latent memory safety): `init_key` took its copy length from
+`(*p).b[1]`, a field of the public `Param` byte image, and only `debug_assert!`ed the bound.
+In a release build a `key_length` above `KEYBYTES` would copy out of `block` and read past
+`key`; `0` also fed a zero block instead of refusing a non-key. Both flavours now return 0
+for `keylen == 0 || keylen > KEYBYTES` before touching the context or the key. The provider's
+`setkey`/`set_ctx_params` already enforce `1..=KEYBYTES`, so the guard changes no valid
+caller's result; the new focused test drives the invalid values directly.
+
+**Contract repairs (no behaviour change).** `compress` in both flavours documents that the
+compressor reads a whole block at every block start, which the callers satisfy by passing whole
+blocks or the `BLOCKBYTES` staging buffer; `init`/`final_` document the digest-length bound that
+`set_ctx_params` establishes; `make_dh` documents its function-pointer precondition; `DH_meth_free`
+and `DH_meth_set1_name` document that the table must come from this file's allocator seam; and
+`MDC2_Update`/`MDC2_Final` document the `num < MDC2_BLOCK` context invariant.
+
+**Secret-bearing buffers.** Digest state is classified `SECRET_DEPENDENT_CONTROL`, not public
+metadata. `MD5`/`MD4` cleanse their local context after `Final`; `init_key` cleanses the padded
+key block on every arm including the new refusal (`block` is still zeroed on return because the
+refusal happens before the copy, and no key byte was written). `md5_sha1` cleanses both
+intermediates before re-initialising. MDC-2's `h`/`hh` are digest state and the authority does not
+cleanse the caller-owned context; no local secret copy is added. No timing claim is made.
+
+**Assumptions.** Eliminated: 1 (the stack-overflow path in `init_key` is now inexpressible for
+any `Param`). Relocated: 0. New: 0. Hidden: 0. Contracts reused: OB-2 `OwnedStr` and the
+`CRYPTO_*` seam for the method table, the `md32` collector's `block`/`make_string` contract for
+MD4/MD5, and the existing provider `set_ctx_params` bounds for BLAKE2.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean. Focused: `digest::blake2` 2 passed /
+0 failed (including the new refusal test); `dh::` 56 passed / 0 failed / 2 ignored; `digest::md`
+10 passed / 0 failed. BATCH `cargo clippy --all-targets -- -D warnings` clean; full library
+**1658 passed / 0 failed / 27 ignored** with `--test-threads=1` (216.09 s) and with
+`--test-threads=4` (93.57 s). Affected probes: `dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free`
+and `dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup` both 1 passed. No
+BLAKE2 allocator probe exists; the key-length refusal is covered by the unit test above.
+
+**NOT_RUN.** Constant-time/dudect for BLAKE2, MD4, MD5, MD5-SHA1 and MDC-2 (digest state is
+`SECRET_DEPENDENT_CONTROL`; source inspection is not a timing result, and MDC-2's DES tables
+are data-dependent by construction); Wycheproof/ACVP (the batch ran the crate's published
+vectors only); authority differential `RT-DIGEST`/`RT-DH` (not built or replayed in this batch);
+Miri (no component in the court toolchain); ASan (the invalid-length arm is a bounds refusal,
+not a memory access); BOUNDARY (no shared mechanism changed: the repaired guard is local to
+`init_key` and its valid-input behaviour is unchanged); SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 356 → **348**; `AUDITED-FILES.txt` 407 → **415**.
+**Next eight (stable order).** `src/digest/ripemd.rs`, `src/digest/sha1.rs`, `src/digest/sha3.rs`,
+`src/digest/sm3.rs`, `src/digest/wp.rs`, `src/dsa/asn1.rs`, `src/dsa/backend.rs`,
+`src/dsa/check.rs`.

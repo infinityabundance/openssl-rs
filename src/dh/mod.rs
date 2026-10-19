@@ -496,7 +496,10 @@ pub unsafe extern "C" fn DH_meth_new(name: *const c_char, flags: c_int) -> *mut 
 ///
 /// # Safety
 ///
-/// `dhm` is NULL or a table [`DH_meth_new`] or [`DH_meth_dup`] returned.
+/// `dhm` is NULL or a table [`DH_meth_new`] or [`DH_meth_dup`] returned that no other holder
+/// retains. In particular it must not be a built-in table such as
+/// [`crate::dh::key::DH_OpenSSL`]'s, whose `name` is not a `CRYPTO_strdup` block and whose
+/// storage is not from this file's allocator seam.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_free(dhm: *mut DhMethod) {
     // SAFETY: `dhm` is NULL or a live `DH_METHOD` this file allocated whose ownership no other
@@ -561,7 +564,9 @@ pub unsafe extern "C" fn DH_meth_get0_name(dhm: *const DhMethod) -> *const c_cha
 ///
 /// # Safety
 ///
-/// `dhm` is a live table; `name` is NULL or a NUL-terminated C string.
+/// `dhm` is a live table [`DH_meth_new`] or [`DH_meth_dup`] returned, whose `name` is NULL or a
+/// `CRYPTO_strdup` block from this file's seam (the old name is released here); `name` is NULL
+/// or a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn DH_meth_set1_name(dhm: *mut DhMethod, name: *const c_char) -> c_int {
     // SAFETY: `name` is NULL or a NUL-terminated string per the contract.
