@@ -1,0 +1,182 @@
+{
+ "schema": "safe-c33/mechanism-sweep/v1",
+ "branch": "integrate/safe-c33",
+ "source_head": "f59229e62",
+ "date": "2026-10-19",
+ "scope": "The eight files named as next by M44: der_writer and the seven DH units (asn1, backend, check, depr, gen, group_params, kdf). One dead-code correctness defect repaired in src/der_writer.rs and covered by a new focused test; the seven DH units are audited against the pinned openssl-3.6.4 authority with no source change. No new unsafe operation, FFI symbol, allocator coordinate, repr(C) layout or signature introduced.",
+ "verification_level": "FAST+BATCH",
+ "worktree": "source change: src/der_writer.rs (boolean writer, its test, and #[cfg(test)]); queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 50 and this file.",
+ "reconciliation": {
+  "canonical_audited_before_batch": 399,
+  "canonical_unaudited_before_batch": 364,
+  "canonical_audited_after_batch": 407,
+  "canonical_unaudited_after_batch": 356,
+  "audited_this_batch": 8,
+  "not_run_this_batch": 0,
+  "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from REMAINING-AUDIT.txt and merged in alphabetical order into AUDITED-FILES.txt.",
+  "difference_from_399": "M45 moves exactly the eight named ordinary files; no file is skipped or substituted."
+ },
+ "files": [
+  "src/der_writer.rs",
+  "src/dh/asn1.rs",
+  "src/dh/backend.rs",
+  "src/dh/check.rs",
+  "src/dh/depr.rs",
+  "src/dh/gen.rs",
+  "src/dh/group_params.rs",
+  "src/dh/kdf.rs"
+ ],
+ "not_run": [],
+ "file_dispositions": [
+  {
+   "file": "src/der_writer.rs",
+   "mechanisms": [
+    "int_start_context / int_end_context tag guards and size comparison",
+    "ossl_DER_w_precompiled, octet_string, octet_string_uint32, uint32, bn, null, begin_sequence, end_sequence",
+    "ossl_DER_w_boolean sub-packet close and tag write",
+    "int_put_bytes_uint32 alignment and width loop",
+    "int_put_bytes_bn top-limb probe through bn_get_words and BN_bn2bin extent"
+   ],
+   "disposition": "defect_repaired",
+   "note": "crypto/der_writer.c:17-198. Pre-edit :131 tested WPACKET_close(pkt) == 0 although the callee answers 1 on success; :132 tested the tag write for != 0 while the authority inverts that arm too (der_writer.c:60-68). The function has no caller in the authority or in this crate, so the defect is unobservable and no compatibility surface changes. Both tests now use the intended non-zero success semantics and the deliberate divergence from the pinned authority is recorded at the function. A null-packet test exercises b = 0 and b = 1, and the test module is now cfg(test) so the focused imports do not leak into the library build. The other eight writers match the authority line-for-line; the BN_bn2bin return check is a strictness addition over the authority and is unreachable for a non-negative BIGNUM."
+  },
+  {
+   "file": "src/dh/asn1.rs",
+   "mechanisms": [
+    "DHparams/DHvparams/DHxparams ASN1_ITEM templates and item accessors",
+    "dh_cb NEW_PRE/FREE_PRE/D2I_POST lifecycle",
+    "d2i_DHxparams translation ownership hand-off (p/q/g/j transfer, vparams release)",
+    "i2d_DHxparams stack seed/counter construction",
+    "ASN1_BIT_STRING itype uninitialised-type authority divergence"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_asn1.c:25-167. The decoded int_dhx942_dh block is owned by OwnedBlock, p/q/g transfer to DH_set0_pqg and j to ossl_ffc_params_set0_j, while seed/counter are freed and the vparams block released at the authority's :125 site before the outer block is dropped at :129; a full struct destructor is never run. The authority's uninitialised stack ASN1_BIT_STRING.type is zero-initialised and documented because the encoder never reads it. i2d_DHxparams frees the counter on the BN_set_word failure arm and on the shared err path exactly once."
+  },
+  {
+   "file": "src/dh/backend.rs",
+   "mechanisms": [
+    "ossl_dh_params_fromdata / ossl_dh_params_todata (FFC import plus priv_len)",
+    "ossl_dh_key_fromdata / ossl_dh_key_todata (BN ownership, include_private)",
+    "ossl_dh_is_foreign",
+    "ossl_dh_dup selection guards and ex_data duplication",
+    "ossl_dh_key_from_pkcs8 two-container decode and three exit labels"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_backend.c:31-242. The private import is BN_clear_free'd and the public BN_free'd on every refusal arm; PKCS#8 uses BN_secure_new, clears the key on conversion failure and ASN1_STRING_clear_free's the source integer on every exit. ossl_dh_dup reproduces the authority's (selection & DOMAIN_PARAMETERS) == 0 || guard and DH_set0_key's leave-private-alone rule; both are asserted by unit tests. No ownership escape or double release."
+  },
+  {
+   "file": "src/dh/check.rs",
+   "mechanisms": [
+    "DH_check_params_ex / DH_check_params structural flags",
+    "DH_check_ex / DH_check subgroup and safe-prime refinement",
+    "DH_check_pub_key_ex / DH_check_pub_key full validation",
+    "ossl_dh_check_pub_key_partial",
+    "ossl_dh_check_priv_key two regimes and 2^length cap",
+    "ossl_dh_check_pairwise self-test lifecycle"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_check.c:29-410. Reason order, |= refinement, the DH_get_nid fast path, BN_CTX start/end and free on every arm, and the OSSL_SELF_TEST onbegin/onend pairing match the authority. The private key is borrowed for the range and pairwise checks; no copy of secret material is created in this unit."
+  },
+  {
+   "file": "src/dh/depr.rs",
+   "mechanisms": [
+    "DH_generate_parameters deprecated wrapper and BN_GENCB ownership"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_depr.c:25-48. BN_GENCB is released before the DH object on the failure path and alone on success; the NULL callback is accepted exactly as BN_GENCB_set_old allows."
+  },
+  {
+   "file": "src/dh/gen.rs",
+   "mechanisms": [
+    "ossl_dh_generate_ffc_parameters FIPS 186-2/186-4 dispatch",
+    "ossl_dh_get_named_group_uid_from_size",
+    "DH_generate_parameters_ex method dispatch",
+    "dh_builtin_genparams safe-prime construction and err label"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_gen.c:39-238. The generator bound is checked after p/g allocation, the three t1/t2 congruence pairs match, and the err label raises ERR_R_BN_LIB exactly once before BN_CTX_end/free (both accept NULL). No secret is handled here: p/g are public parameters."
+  },
+  {
+   "file": "src/dh/group_params.rs",
+   "mechanisms": [
+    "dh_param_init and named-group installation",
+    "ossl_dh_new_by_nid_ex / DH_new_by_nid",
+    "ossl_dh_cache_named_group flush/match/install",
+    "ossl_dh_is_named_safe_prime_group uid test",
+    "DH_get_nid NULL contract"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_group_params.c:27-100. The setter's nid flush followed by dh_param_init's assignment is preserved; the cache installs q only when absent and shares BN_FLG_STATIC_DATA constants; uid 1..3 name the RFC 5114 groups. All matches the authority."
+  },
+  {
+   "file": "src/dh/kdf.rs",
+   "mechanisms": [
+    "ossl_dh_kdf_X9_42_asn1 OSSL_PARAM array and EVP_KDF lifecycle",
+    "DH_KDF_X9_42 text-form OID and provider libctx"
+   ],
+   "disposition": "audited_no_change",
+   "note": "dh_kdf.c:27-73. The five-slot parameter array is fully written in both the UKM and no-UKM shapes, and kctx/kdf are released on every arm. Z and ukm are borrowed read-only and passed straight to EVP_KDF_derive; this unit makes no secret copy and therefore owes no local cleansing. out is left as the authority leaves it on failure."
+  }
+ ],
+ "defects_repaired": [
+  {
+   "file": "src/der_writer.rs",
+   "pre_edit_lines": "131-132",
+   "severity": "low",
+   "class": "correctness / authority-divergence",
+   "memory_safety": false,
+   "summary": "ossl_DER_w_boolean used WPACKET_close(pkt) == 0 (success is 1) and did not mirror the authority's inverted tag write. Corrected both arms to non-zero success, documented the deliberate divergence (the authority function is inverted and has no callers), and added a focused test."
+  }
+ ],
+ "new_unsafe_assumptions": {
+  "eliminated": 0,
+  "relocated": 0,
+  "new": 0,
+  "hidden": 0,
+  "note": "No unsafe operation was added or moved. The only source change is control flow in a private dead function. int_put_bytes_uint32's SAFETY contract now names the alignment its u32 dereference requires and int_der_w_integer's names the callback contract; these make existing preconditions explicit, not new."
+ },
+ "contracts_reused": [
+  "RC-1 CRYPTO_* allocator seam coordinates",
+  "ASN.1 OwnedBlock / from_raw block ownership (AGENTS.md section 1 audited constructors)",
+  "partial-initialisation release ordering (vparams members released before their block; no full destructor on a partially transferred struct)",
+  "B19 cleansing discipline (BN_clear_free, BN_secure_new, ASN1_STRING_clear_free)",
+  "BN_CTX start/end/free cleanup and OSSL_SELF_TEST onbegin/onend pairing"
+ ],
+ "evidence": {
+  "fast": {
+   "fmt": "cargo fmt --all -- --check clean",
+   "focused_der_writer": "2 passed / 0 failed (tag constants and the new boolean writer test)",
+   "focused_dh": "56 passed / 0 failed / 2 ignored (dh:: filter; the two ignored are process-global allocator probes)"
+  },
+  "batch": {
+   "clippy": "cargo clippy --all-targets -- -D warnings clean",
+   "serial_test_threads_1": "1657 passed / 0 failed / 27 ignored (212.39 s)",
+   "parallel_test_threads_4": "1657 passed / 0 failed / 27 ignored (95.36 s)",
+   "affected_probe": "none exists: no der_writer or X9.42 adversarial probe/court is present. The ignored dh::object::adv_probe allocator probes are unaffected and were not run."
+  }
+ },
+ "promotions": [],
+ "not_run_gates": [
+  "BOUNDARY (private dead function, no shared mechanism or trust boundary)",
+  "Miri (no component in the court toolchain)",
+  "ASan",
+  "authority differential for ossl_DER_w_boolean (no executable harness; source-level comparison only)",
+  "SEAL"
+ ],
+ "queue": {
+  "remaining_before": 364,
+  "remaining_after": 356,
+  "audited_before": 399,
+  "audited_after": 407,
+  "next_eight": [
+   "src/dh/mod.rs",
+   "src/dh/prn.rs",
+   "src/dh/rfc5114.rs",
+   "src/digest/blake2.rs",
+   "src/digest/md4.rs",
+   "src/digest/md5.rs",
+   "src/digest/md5_sha1.rs",
+   "src/digest/mdc2.rs"
+  ]
+ }
+}

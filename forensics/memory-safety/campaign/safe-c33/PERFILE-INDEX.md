@@ -3838,3 +3838,60 @@ the court toolchain); ASan; authority differential (no semantic change); SEAL.
 **Queue.** `REMAINING-AUDIT.txt` 372 → **364**; `AUDITED-FILES.txt` 391 → **399**.
 **Next eight (stable order).** `src/der_writer.rs`, `src/dh/asn1.rs`, `src/dh/backend.rs`,
 `src/dh/check.rs`, `src/dh/depr.rs`, `src/dh/gen.rs`, `src/dh/group_params.rs`, `src/dh/kdf.rs`.
+
+## 50. Mechanism sweep M45 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M45.json`](atlas-refresh/mechanism-sweep-M45.json).
+Candidate `f59229e62`; source change confined to `src/der_writer.rs` (one dead-code control-flow
+defect plus its focused test and `#[cfg(test)]`).
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/der_writer.rs` | defect_repaired | Nine `ossl_DER_w_*` writers and the `int_start/end_context`/`int_put_bytes_*` helpers. `ossl_DER_w_boolean` tested `WPACKET_close(pkt) == 0` (success is 1) and did not reproduce the authority's second inversion. Both callees are now tested for non-zero success and the divergence from `der_writer.c:60-68` is recorded in the function doc. New focused null-packet test; the test module is now `#[cfg(test)]`. The other eight functions and their tag/`BN_BYTES` constants match the authority, including `int_put_bytes_bn`'s top-limb probe through `bn_get_words`. |
+| `src/dh/asn1.rs` | audited_no_change | `DHparams`/`DHvparams`/`DHxparams` templates, `DHparams_it`, `dh_cb` NEW/FREE/D2I_POST, and the X9.42 pair. `p/q/g/j` transfer to `DH_set0_pqg`/`ossl_ffc_params_set0_j`; `vparams` seed/counter are released before the vparams block (`OwnedBlock` at `:125`), and the decoded block is dropped at the authority's `:129` release site. The authority's uninitialised stack `ASN1_BIT_STRING.type` is zero-initialised and documented. |
+| `src/dh/backend.rs` | audited_no_change | `params_fromdata/todata`, `key_fromdata/todata`, `is_foreign`, `dup`, `key_from_pkcs8`. The private import is `BN_clear_free`'d on every failure arm; PKCS#8 uses `BN_secure_new` and `ASN1_STRING_clear_free(privkey)` on all exits. `ossl_dh_dup`'s odd `||` domain-parameter guards and `DH_set0_key`'s leave-private-alone rule are the authority's and are codified by the unit tests. |
+| `src/dh/check.rs` | audited_no_change | `DH_check_params[_ex]`, `DH_check[_ex]`, `DH_check_pub_key[_ex]`, partial/private/pairwise validators. Flag order, `|=` refinement, `DH_get_nid` fast path, BN_CTX cleanup on every arm and the self-test begin/end pairing match `dh_check.c`. The private key is borrowed for range checks; no local secret copy exists. |
+| `src/dh/depr.rs` | audited_no_change | `DH_generate_parameters` matches `dh_depr.c:25-48`: `BN_GENCB` released before the object on the failure path and alone on success. |
+| `src/dh/gen.rs` | audited_no_change | `ossl_dh_generate_ffc_parameters`, `ossl_dh_get_named_group_uid_from_size`, `DH_generate_parameters_ex` and `dh_builtin_genparams`. The generator bound is checked after `p`/`g` allocation, the `err:` label raises `ERR_R_BN_LIB` once, and `length`/`dirty_cnt` match `dh_gen.c:39-238`. |
+| `src/dh/group_params.rs` | audited_no_change | `dh_param_init`, `ossl_dh_new_by_nid_ex`, `DH_new_by_nid`, `ossl_dh_cache_named_group`, `ossl_dh_is_named_safe_prime_group`, `DH_get_nid`. The cache flushes `params.nid`, installs only a missing `q`, and shares the `BN_FLG_STATIC_DATA` constants; the RFC 5114 uid 1..3 path is reproduced and tested. |
+| `src/dh/kdf.rs` | audited_no_change | `ossl_dh_kdf_X9_42_asn1` (five-slot `OSSL_PARAM` array, digest/key/optional ukm/cekalg) and `DH_KDF_X9_42` (text-form OID, `OSSL_MAX_NAME_SIZE`). `Z`/`ukm` are borrowed and handed straight to `EVP_KDF_derive`; no copy or temporary secret exists in this unit, so no local cleansing is owed. Failure leaves `out` as the authority leaves it. |
+
+**Defect repaired.** `src/der_writer.rs` (pre-edit `:131-132`, severity low/correctness, not
+memory safety): `ossl_DER_w_boolean` returned failure on every successful close because the
+close test was `== 0`; the authority's source inverts both that test and the following tag write
+(`der_writer.c:60-68`), and the transcription had corrected only the second. The function has no
+caller in the pinned authority or in this crate, so there is no compatibility surface; the
+transcription now implements the documented behaviour and the divergence is recorded at the
+function. A null-packet test exercises both boolean values.
+
+**Secret-bearing buffers.** `dh_backend::ossl_dh_key_fromdata` clears an imported private key
+with `BN_clear_free` on every refusal arm; `ossl_dh_key_from_pkcs8` allocates the private key
+with `BN_secure_new`, clears it on conversion failure, and clear-frees the `ASN1_INTEGER` on
+every exit. `dh_kdf` copies no secret: `Z` is passed by reference into the X9.42 KDF provider,
+whose internal copies are outside this batch. `dh_check` borrows the private key for range and
+pairwise checks without duplicating it. `p/q/g/j`, seeds and counters are public parameters.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. `int_put_bytes_uint32`'s
+contract now states the alignment its `*const c_void` dereference requires, and
+`int_der_w_integer`'s contract references the callback's own validity requirements; no new
+precondition was introduced at any safe boundary. Contracts reused: RC-1 allocator seam, the
+§1 `OwnedBlock`/`from_raw` block-ownership contract, OB-3-style partial-initialisation release
+ordering (vparams members before their block), B19 cleansing discipline, and the existing
+BN_CTX/self-test cleanup contracts. `ossl_DER_w_boolean` has no callers, so no dependency
+closure was invalidated.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; `der_writer` 2 passed / 0 failed;
+`dh::` 56 passed / 0 failed / 2 ignored. BATCH `cargo clippy --all-targets -- -D warnings`
+clean; full library **1657 passed / 0 failed / 27 ignored** with `--test-threads=1` (212.39 s)
+and with `--test-threads=4` (95.36 s). No der_writer or X9.42 adversarial probe exists; the
+unaffected `dh::object::adv_probe` allocator probes remain ignored.
+
+**NOT_RUN.** BOUNDARY (the changed function is private, dead, and holds no shared mechanism or
+trust boundary; no safe caller can reach it); Miri (no component in the court toolchain); ASan;
+authority differential for `ossl_DER_w_boolean` (no executable harness calls it; the semantic
+comparison is source-level); SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 364 → **356**; `AUDITED-FILES.txt` 399 → **407**.
+**Next eight (stable order).** `src/dh/mod.rs`, `src/dh/prn.rs`, `src/dh/rfc5114.rs`,
+`src/digest/blake2.rs`, `src/digest/md4.rs`, `src/digest/md5.rs`, `src/digest/md5_sha1.rs`,
+`src/digest/mdc2.rs`.

@@ -118,6 +118,15 @@ pub(crate) unsafe fn ossl_DER_w_precompiled(
 
 /// `int ossl_DER_w_boolean(WPACKET *pkt, int tag, int b)` — `crypto/der_writer.c:60-68`.
 ///
+/// **The authority's two `!` tests are inverted, and this transcription does not reproduce
+/// them.** `crypto/der_writer.c` writes `!WPACKET_close(pkt)` and
+/// `!WPACKET_put_bytes_u8(pkt, DER_P_BOOLEAN)`, which makes the function answer 0 on every
+/// successful write (both callees answer non-zero for success). The function has no caller in
+/// the authority or in this crate, so the defect is unobservable and no compatibility surface
+/// depends on it; per the campaign's rule against reproducing a flawed implementation, the two
+/// arms below are the intended tests and the manual's wording ("writes the primitive BOOLEAN
+/// using the value B<b>"). Recorded as a deliberate divergence from the pinned authority.
+///
 /// # Safety
 /// `pkt` live.
 #[allow(dead_code)] // transcribed whole; the X9.42 path does not use it (D346)
@@ -128,7 +137,7 @@ pub(crate) unsafe fn ossl_DER_w_boolean(pkt: *mut Wpacket, tag: c_int, b: c_int)
         (int_start_context(pkt, tag) != 0
             && WPACKET_start_sub_packet(pkt) != 0
             && (b == 0 || WPACKET_put_bytes_u8(pkt, 0xFF) != 0)
-            && WPACKET_close(pkt) == 0
+            && WPACKET_close(pkt) != 0
             && WPACKET_put_bytes_u8(pkt, DER_P_BOOLEAN) != 0
             && int_end_context(pkt, tag) != 0) as c_int
     }
@@ -191,7 +200,7 @@ pub(crate) unsafe fn ossl_DER_w_octet_string_uint32(
 /// significant byte has bit 8 set would otherwise read as negative.
 ///
 /// # Safety
-/// `pkt` live; `put_bytes` a live callback; `v` readable by that callback.
+/// `pkt` live; `put_bytes` a live callback; `v` satisfies that callback's own contract.
 unsafe fn int_der_w_integer(
     pkt: *mut Wpacket,
     tag: c_int,
@@ -216,7 +225,7 @@ unsafe fn int_der_w_integer(
 /// `crypto/der_writer.c:109-125`.
 ///
 /// # Safety
-/// `pkt` live; `v` readable for a `u32`; `top_byte` writable.
+/// `pkt` live; `v` readable and correctly aligned for a `u32`; `top_byte` writable.
 unsafe fn int_put_bytes_uint32(
     pkt: *mut Wpacket,
     v: *const c_void,
@@ -370,7 +379,11 @@ pub(crate) unsafe fn ossl_DER_w_end_sequence(pkt: *mut Wpacket, tag: c_int) -> c
     }
 }
 
+#[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::packet::{WPACKET_cleanup, WPACKET_init_null};
+
     // The unit's own shape test: the nine definitions exist and the four tag constants are
     // `include/internal/der.h`'s. The behavioural arms live in `RT-KDF`'s X9.42 block, which
     // drives the whole `x942_encode_otherinfo` program against the authority's bytes.
@@ -383,5 +396,21 @@ mod tests {
         assert_eq!(super::DER_P_SEQUENCE, 16);
         assert_eq!(super::DER_F_CONSTRUCTED, 0x20);
         assert_eq!(super::DER_C_CONTEXT, 0x80);
+    }
+
+    /// The boolean writer answers success for both values. This is the arm the authority's
+    /// inverted `!WPACKET_close`/`!WPACKET_put_bytes_u8` tests would fail; see the function's
+    /// doc comment. A null packet counts the bytes without writing them, which is enough to
+    /// observe the control flow.
+    #[test]
+    fn the_boolean_writer_answers_success_for_both_values() {
+        // SAFETY: `pkt` is a live local and the writer's contract is `pkt` live.
+        unsafe {
+            let mut pkt = core::mem::zeroed::<Wpacket>();
+            assert_eq!(WPACKET_init_null(&mut pkt, 0), 1);
+            assert_eq!(ossl_DER_w_boolean(&mut pkt, -1, 0), 1);
+            assert_eq!(ossl_DER_w_boolean(&mut pkt, -1, 1), 1);
+            WPACKET_cleanup(&mut pkt);
+        }
     }
 }
