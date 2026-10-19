@@ -1,0 +1,99 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "5172780d9",
+  "worktree": "dirty (src/ct/ct_oct.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "Eight ordinary files from the M21-named batch: src/asn1/tasn_prn.rs (116 production sites), src/cms/cms_kemri.rs (131), src/ct/ct_oct.rs (120), src/runtime/conf/lib.rs (117), src/encoder_lib.rs (142), src/pem/pem_all.rs (104), src/bn/primes.rs (105) and src/ts/ts_rsp_print.rs (83). No audited file was a newly discovered boundary; callback-bearing surfaces in these files reuse the established B/M contracts.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/asn1/tasn_prn.rs",
+    "src/cms/cms_kemri.rs",
+    "src/ct/ct_oct.rs",
+    "src/runtime/conf/lib.rs",
+    "src/encoder_lib.rs",
+    "src/pem/pem_all.rs",
+    "src/bn/primes.rs",
+    "src/ts/ts_rsp_print.rs"
+  ],
+  "files_not_run": [
+    "src/asn1/bio_asn1.rs (116) - BIO filter callbacks; retained BOUNDARY, not selected.",
+    "src/provider/ecx_kmgmt.rs (142) - provider keymgmt callback surface; retained BOUNDARY, not selected.",
+    "src/provider/cipher_gcm.rs (128) - provider cipher callback surface; retained BOUNDARY, not selected.",
+    "src/runtime/rcu.rs (135) - RCU callback/lifetime boundary; not selected."
+  ],
+  "defects": [
+    {
+      "id": "M22-D1",
+      "file": "src/ct/ct_oct.rs",
+      "pre_fix_lines": [430, 489, 753],
+      "post_fix_lines": [408, 416, 427, 454, 522, 794],
+      "severity": "low (defensive: unreachable with a representable in-memory SCT, but AGENTS.md section 3 requires local checked allocation arithmetic)",
+      "class": "three unchecked usize length sums used as allocation/encoding extents: 4 + sig_len in i2o_SCT_signature, 43 + ext_len + 4 + sig_len in i2o_SCT, and the running len2 + 2 + sct_len in i2o_SCT_LIST",
+      "description": "The authority computes each extent in size_t and lets it wrap; a wrapped extent would size a buffer below the bytes the encoder then writes. sig_len/ext_len are caller-settable through SCT_set1_signature/SCT_set1_extensions, so the crate must not reproduce the wrapping arithmetic.",
+      "fix": "signature_encoded_len, v1_encoded_len and list_encoded_len use checked_add; overflow answers -1 (the authority's own no-encoding outcome) instead of a wrapped extent. Control: ct::ct_oct::tests::encoded_length_sums_are_checked.",
+      "divergence": "For lengths that wrap size_t the authority's result is undefined/implementation-defined; this crate refuses. No representable SCT reaches the overflow."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1: raise_site/raise_site_data compile-time site constants and guard_ffi failure values; no site coordinate changed.",
+    "OB-1 OwnedBuf/OwnedBlock: cms_kemri's infoder/kem_ct/kem_secret/out adopt/new/into_raw, encoder_lib's instance zalloc and hex block, ct_oct's scratch cursors, and tasn_prn's prepend_radix block all keep their single release at the authority coordinate.",
+    "OB-2 OwnedStr: no new adoption; pem_all's codec shims pass typed pointers through unchanged.",
+    "OB-3 OwnedCtx/CtxDestroy: encoder_lib's OsslEncoderInstance zalloc/destroy_body/from_raw contract and its zero-state sweep are reused unchanged.",
+    "OB-4 member-buffer slots: cms_kemri's kemct/encrypted_key ASN1_STRING_set0 transfers and the ts_rsp_print stack frees follow the established member-slot rules.",
+    "Callback contracts: encoder construct/cleanup/encode/passphrase callbacks, ASN1 item print/aux callbacks and CONF_METHOD init/create/destroy/destroy_data/is_number/to_int callbacks are dispatched through raw pointers with no Rust borrow held across the call; retained, not newly modelled."
+  ],
+  "mechanism_results": {
+    "src/asn1/tasn_prn.rs": "template/item walk, primitive dispatch and the BN hex/decimal printer; prepend_radix keeps checked length and one OwnedBlock release. No defect.",
+    "src/cms/cms_kemri.rs": "KEM recipient init/getters/set_ukm, KDF fetch/derive, cms_kek_cipher's max(outlen,inlen) extent, encapsulate/decapsulate transfers and the clear-free arms. No defect.",
+    "src/ct/ct_oct.rs": "n2s/s2n/l2n3/n2l8/l2n8 cursor codecs, o2i_SCT/o2i_SCT_signature bounds, i2o SCT/signature/list extents and d2i/i2d OCTET STRING wrappers. M22-D1 fixed; parity bounds verified against ct_oct.c.",
+    "src/runtime/conf/lib.rs": "CONF_set_nconf, NCONF_new/free/free_data, get_string/get_number_e and the dumped stack Conf; method callbacks are raw-pointer edges. No defect.",
+    "src/encoder_lib.rs": "OSSL_ENCODER_to_bio/fp/data, instance construction/free, the recursive encoder_process walk and its stolen memory-BIO block, labeled bignum/buf/FFC printers. No defect.",
+    "src/pem/pem_all.rs": "d2i/i2d void shims, plain PEM_ASN1 write wrappers, and the provided-key encoder/legacy fallback with single ctx release. No defect.",
+    "src/bn/primes.rs": "named-prime caches and BN_copy, Miller-Rabin rounds/status, trial-division sieves, OwnedMods calloc/free, BN_generate_prime_ex2 safe/unsafe arms and X9.31 derivation. No defect.",
+    "src/ts/ts_rsp_print.rs": "status/failure tables, TST info printers and GENERAL_NAME/CONF_VALUE stack lifetime. No defect."
+  },
+  "retained_observations": [
+    "src/cms/cms_kemri.rs cms_kek_cipher: the failure-path output buffer is an OwnedBuf::new_cleansed_released, so it is cleansed before release, while the 3.6.4/4.0.3 authority plain-frees it at err: (OPENSSL_free(out)). The source comment calls the authority's release OPENSSL_clear_free, which is inaccurate. This is a pre-existing section 5 safety improvement (same allocator transcript, extra cleanse), recorded rather than reverted.",
+    "src/ct/ct_oct.rs i2d_SCT_LIST still builds an ASN1_OCTET_STRING with data/length initialised and the other fields indeterminate, exactly as the authority's stack local. ASN1_OCTET_STRING_it is the non-NDEF item, so i2d_ASN1_OCTET_STRING reads only data/length; the exact item identity is the retained assumption."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": 0,
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_relocated": 0,
+  "boundary_size": "unchanged: no production unsafe block, adoption, release site, allocator coordinate, #[repr(C)] layout, export or lint attribute was added, removed or moved",
+  "gates": {
+    "cargo_fmt_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "cargo_test_lib_serial": "1621 passed / 0 failed / 27 ignored (211.28 s)",
+    "cargo_test_lib_threads_4": "1621 passed / 0 failed / 27 ignored (128.84 s)",
+    "focused": "ct::ct_oct 1/0 (encoded_length_sums_are_checked); asn1::tasn_prn 1/0; bn::primes 21/0; encoder_lib 4/0",
+    "affected_probe": "none; no OPENSSL_RS_ADV_PROBE arm exists for ct_oct or the other seven files"
+  },
+  "not_run": [
+    "Miri (Stacked/Tree Borrows; not installed in the court toolchain)",
+    "ASan/Loom/TSan",
+    "authority differential for M22-D1's wraparound refusal",
+    "independent reviewer (BOUNDARY)",
+    "SEAL / full forensic regeneration"
+  ],
+  "graduation": "No file promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "next_batch": [
+    "src/rsa/gen.rs (143)",
+    "src/ocsp/ocsp_asn.rs (135)",
+    "src/x509/by_dir.rs (122)",
+    "src/packet.rs (105)",
+    "src/store/store_register.rs (104)",
+    "src/passphrase.rs (104)",
+    "src/dh/object.rs (103)",
+    "src/ml_dsa/poly.rs (86)"
+  ],
+  "next_batch_excluded_boundaries": [
+    "src/async/async.rs (143) - thread/job callback edge, retained BOUNDARY.",
+    "src/evp/keymgmt_lib.rs (140) - provider keymgmt dispatch callbacks, retained BOUNDARY.",
+    "src/provider/decode_der2key.rs (121) - decoder callbacks, retained BOUNDARY.",
+    "src/engine/eng_table.rs (129) - ENGINE method table, retained BOUNDARY.",
+    "src/store/store_meth.rs (127) - STORE method callbacks, retained BOUNDARY."
+  ]
+}

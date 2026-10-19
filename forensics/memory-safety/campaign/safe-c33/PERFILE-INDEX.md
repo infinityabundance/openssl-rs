@@ -2134,3 +2134,63 @@ Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M21.json`](atlas-refresh/mechanism-sweep-M21.json).
+
+## 26. Mechanism sweep M22 — 2026-10-19
+
+Source HEAD `5172780d9`; branch `integrate/safe-c33`; worktree dirty
+(`src/ct/ct_oct.rs`, this section and the M22 receipt). Eight ordinary files from
+the M21-named batch; no newly discovered boundary.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/asn1/tasn_prn.rs` | item/template walk, primitive dispatch, BN hex/decimal printer | No defect. |
+| `src/cms/cms_kemri.rs` | KEM init/getters/set_ukm, KDF derive, `cms_kek_cipher`, encapsulate/decapsulate transfers | No defect. |
+| `src/ct/ct_oct.rs` | cursor codecs, `o2i`/`i2o` SCT and signature bounds, SCT-list extents, OCTET STRING wrappers | **M22-D1 fixed.** |
+| `src/runtime/conf/lib.rs` | `CONF_set_nconf`, NCONF new/free/data, get_string/number, stack `Conf` | No defect. |
+| `src/encoder_lib.rs` | to_bio/fp/data, instance zalloc/free, recursive `encoder_process`, labeled printers | No defect. |
+| `src/pem/pem_all.rs` | codec shims, plain PEM_ASN1 writers, provided-key encoder/legacy fallback | No defect. |
+| `src/bn/primes.rs` | named-prime caches, Miller-Rabin, sieves, `OwnedMods`, prime/X9.31 generation | No defect. |
+| `src/ts/ts_rsp_print.rs` | status/failure tables, TST info printers, GENERAL_NAME stack lifetime | No defect. |
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M22-D1 | `src/ct/ct_oct.rs:408,416,427,454,522,794` | low (defensive) | three unchecked length sums used as encoding/allocation extents: `4+sig_len`, `43+ext_len+4+sig_len`, `len2+2+sct_len` (§3) | `checked_add` helpers; overflow answers `-1`; control `ct::ct_oct::tests::encoded_length_sums_are_checked` |
+
+**Contracts reused.** RC-1 (`raise_site`/`guard_ffi`), OB-1 `OwnedBuf`/
+`OwnedBlock`, OB-3 `OwnedCtx`/`CtxDestroy`, OB-4 member-buffer slots, and the
+established callback contracts for encoder construct/cleanup/encode/passphrase,
+ASN1 item print/aux, and `CONF_METHOD` hooks (raw-pointer dispatch, no Rust
+borrow across the call; retained, not newly modelled). Two pre-existing
+observations are recorded rather than changed: `cms_kemri`'s failure-path output
+buffer is cleansed (the 3.6.4/4.0.3 authority plain-frees it; the source comment
+says `OPENSSL_clear_free`, which is inaccurate), and `i2d_SCT_LIST` relies on
+`ASN1_OCTET_STRING_it`'s non-NDEF identity so only `data`/`length` are read from
+its partially initialised stack value.
+
+**New unsafe assumptions (hidden must be 0).** None. No production `unsafe`
+operation, adoption, release site, allocator coordinate, `#[repr(C)]` layout,
+export or lint attribute changed. Unsafe operations introduced/removed/relocated:
+0/0/0. The only new code is three safe helpers and their test.
+
+**Gates.** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D
+warnings` PASS; library **1621 passed / 0 failed / 27 ignored** serially (211.28
+s) and with `--test-threads=4` (128.84 s). Focused: `ct::ct_oct` 1/0,
+`asn1::tasn_prn` 1/0, `bn::primes` 21/0, `encoder_lib` 4/0. No affected
+`OPENSSL_RS_ADV_PROBE` arm exists.
+
+**NOT_RUN.** Miri, ASan/Loom/TSan, the authority differential for M22-D1's
+wraparound refusal, independent review and SEAL. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch (remaining ordinary set).** `src/rsa/gen.rs` (143),
+`src/ocsp/ocsp_asn.rs` (135), `src/x509/by_dir.rs` (122), `src/packet.rs` (105),
+`src/store/store_register.rs` (104), `src/passphrase.rs` (104),
+`src/dh/object.rs` (103), `src/ml_dsa/poly.rs` (86). Excluded as retained
+boundaries: `src/async/async.rs` (143), `src/evp/keymgmt_lib.rs` (140),
+`src/provider/decode_der2key.rs` (121), `src/engine/eng_table.rs` (129),
+`src/store/store_meth.rs` (127).
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M22.json`](atlas-refresh/mechanism-sweep-M22.json).
