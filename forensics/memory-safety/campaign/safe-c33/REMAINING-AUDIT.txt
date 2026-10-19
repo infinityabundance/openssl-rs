@@ -1,11 +1,3 @@
-src/apps/pkeyparam.rs
-src/apps/pkey.rs
-src/apps/prime.rs
-src/apps/rand.rs
-src/apps/req.rs
-src/apps/rsa.rs
-src/apps/sess_id.rs
-src/apps/skeyutl.rs
 src/apps/speed.rs
 src/apps/spkac.rs
 src/apps/storeutl.rs
