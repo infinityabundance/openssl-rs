@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/provider/cipher_gcm.rs
-src/provider/cipher_tdes_wrap.rs
-src/provider/ctx.rs
-src/provider/decode_der2key.rs
-src/provider/decode_epki2pki.rs
-src/provider/decode_pem2der.rs
-src/provider/decode_spki2typespki.rs
-src/provider/der_dsa_sig.rs
 src/provider/der_ec_sig.rs
 src/provider/der_ecx_key.rs
 src/provider/der_ml_dsa_key.rs

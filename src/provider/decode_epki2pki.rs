@@ -59,6 +59,7 @@ use crate::runtime::buffer::BufMem;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
+use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::obj::OBJ_obj2txt;
 use crate::selftest::OsslCallback;
 
@@ -303,6 +304,11 @@ pub(crate) unsafe fn ossl_epki2pki_der_decode(
         }
         // SAFETY: `p8` is live and this call owns it.
         unsafe { X509_SIG_free(p8) };
+        // The passphrase copy is `SECRET_DATA`. The authority leaves `pbuf` on the stack until it
+        // goes out of scope (`decode_epki2pki.c:172-205`); cleanse it on both the refusal and the
+        // success arm. Deliberate secret-residue improvement; no observable behaviour changes.
+        // SAFETY: `pbuf` is this frame's 1024-byte array.
+        unsafe { OPENSSL_cleanse(pbuf.as_mut_ptr().cast(), pbuf.len()) };
     } else {
         // SAFETY: no preconditions.
         ERR_pop_to_mark();
@@ -377,6 +383,15 @@ pub(crate) unsafe fn ossl_epki2pki_der_decode(
     }
     // SAFETY: `p8inf` is NULL or live and this call owns it.
     unsafe { PKCS8_PRIV_KEY_INFO_free(p8inf) };
+    // `new_der` is the decrypted `PrivateKeyInfo` (`SECRET_DATA`). The authority's release is the
+    // plain `OPENSSL_free(new_der)` at `decode_epki2pki.c:232`; cleanse the plaintext first. This
+    // is a deliberate secret-residue improvement and leaves the release site and allocator seam
+    // unchanged.
+    if !new_der.is_null() && der_len_cur > 0 {
+        // SAFETY: `new_der` is the live allocation `PKCS12_pbe_crypt_ex` made and this frame owns;
+        // `der_len_cur` is its plaintext length on the only path that sets `new_der`.
+        unsafe { OPENSSL_cleanse(new_der.cast(), der_len_cur as usize) };
+    }
     // SAFETY: `new_der` is NULL or the allocation `PKCS12_pbe_crypt_ex` made and this frame owns
     // it; `OwnedBlock`'s `Drop` releases it at the authority's own (NULL, 0) site.
     drop(unsafe { OwnedBlock::take(new_der.cast::<c_void>()) });
@@ -439,6 +454,14 @@ unsafe extern "C" fn epki2pki_decode(
             (*ctx).propq.as_ptr(),
         )
     };
+    // SAFETY: `der` is the buffer the read allocated and this frame owns it; the bytes can be a
+    // decrypted `PrivateKeyInfo` (`SECRET_DATA`), so cleanse them before the plain release the
+    // authority performs at `decode_epki2pki.c:152`. Deliberate secret-residue improvement.
+    if der_len > 0 {
+        // SAFETY: `der` is the live block the read allocated and this frame owns; `der_len` is its
+        // length and never exceeds the block's extent.
+        unsafe { OPENSSL_cleanse(der.cast(), der_len as usize) };
+    }
     // SAFETY: `der` is the buffer the read allocated and this frame owns it; `OwnedBlock`'s
     // `Drop` releases it at the authority's own (NULL, 0) site.
     drop(unsafe { OwnedBlock::take(der.cast::<c_void>()) });
