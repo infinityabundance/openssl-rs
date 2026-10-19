@@ -496,3 +496,11 @@ src/evp/legacy_sha.rs
 src/evp/legacy_wp.rs
 src/evp/p5_crpt.rs
 src/evp/p5_scrypt.rs
+src/evp/pbe.rs
+src/evp/p_dec.rs
+src/evp/p_enc.rs
+src/evp/p_legacy_assign.rs
+src/evp/p_lib.rs
+src/evp/pmeth_check.rs
+src/ffc/backend.rs
+src/ffc/key_generate.rs
