@@ -678,16 +678,25 @@ pub unsafe extern "C" fn CTLOG_STORE_get0_log_by_id(
 ) -> *const Ctlog {
     // SAFETY: `store` is live per the contract.
     let num = unsafe { OPENSSL_sk_num((*store).logs) };
+    // The stored ID is fixed at `CT_V1_HASHLEN` bytes. The authority compares the caller's
+    // length against it unconditionally (`memcmp(log->log_id, log_id, log_id_len)`), which reads
+    // past the field whenever `log_id_len > CT_V1_HASHLEN`. Only a full-length v1 log ID can name
+    // a log, so refuse every other length instead of reproducing that out-of-bounds read
+    // (§17: UB in the C authority is not reproduced; the compatibility delta is a NULL answer
+    // for a call the authority's own C would have read past its buffer).
+    if log_id_len != CT_V1_HASHLEN {
+        return ptr::null();
+    }
     let mut i = 0;
     while i < num {
         // SAFETY: `store->logs` is live and `i` is in bounds.
         let log = unsafe { OPENSSL_sk_value((*store).logs, i) }.cast::<Ctlog>();
-        // SAFETY: `log` is a live element; both buffers are readable for `log_id_len` bytes.
+        // SAFETY: `log` is a live element; both buffers are readable for `CT_V1_HASHLEN` bytes.
         if unsafe {
             sys::memcmp(
                 (*log).log_id.as_ptr().cast::<c_void>(),
                 log_id.cast::<c_void>(),
-                log_id_len,
+                CT_V1_HASHLEN,
             )
         } == 0
         {
@@ -701,3 +710,39 @@ pub unsafe extern "C" fn CTLOG_STORE_get0_log_by_id(
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(CtlogStore => zero_state_sweep_ctlog_store, Ctlog => zero_state_sweep_ctlog, CtlogStoreLoadCtx => zero_state_sweep_ctlog_store_load_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Only a full-length v1 log ID may match, and an over-long caller length must be refused
+    /// before `memcmp` reads past the fixed `log_id` field (the authority reads past it).
+    #[test]
+    fn an_over_long_log_id_is_refused_without_reading_past_the_field() {
+        // SAFETY: `Ctlog`'s fields are pointers, a byte array and an integer, so zero is valid.
+        let mut log: Ctlog = unsafe { core::mem::zeroed() };
+        log.log_id = [0xAB; CT_V1_HASHLEN];
+        let stack = OPENSSL_sk_new_null();
+        assert!(!stack.is_null());
+        // SAFETY: `stack` is live and takes the pointer as its element.
+        assert!(unsafe { OPENSSL_sk_push(stack, (&mut log as *mut Ctlog).cast::<c_void>()) } > 0);
+        let store = CtlogStore {
+            libctx: ptr::null_mut(),
+            propq: ptr::null_mut(),
+            logs: stack,
+        };
+        let id = [0xABu8; CT_V1_HASHLEN];
+        // SAFETY: `store` is live for this frame, the stack holds `&log`, and `id` is readable.
+        unsafe {
+            assert_eq!(
+                CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), CT_V1_HASHLEN),
+                &log as *const Ctlog
+            );
+            // A length past the field must not reach `memcmp`; the old body read byte 33.
+            assert!(CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), CT_V1_HASHLEN + 1).is_null());
+            assert!(CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), 0).is_null());
+            // `OPENSSL_sk_free` releases the stack and its array, never the elements.
+            crate::runtime::stack::OPENSSL_sk_free(stack);
+        }
+    }
+}

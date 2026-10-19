@@ -493,16 +493,26 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
                 return 0;
             }
             i /= 2;
-            if num + i > slen {
+            // `num + i` and the `num + i * 2` growth size are signed sums the authority computes
+            // in `int`. Compute both checked so an input long enough to overflow the authority's
+            // arithmetic is refused instead of wrapping into an undersized allocation and then an
+            // out-of-bounds write (§3). The non-overflowing path is unchanged.
+            let new_num = match num.checked_add(i) {
+                Some(v) => v,
+                None => return 0,
+            };
+            if new_num > slen {
+                let new_slen = match new_num.checked_add(i) {
+                    Some(v) => v,
+                    None => return 0,
+                };
                 // The clear matters: the destination octet is shifted into below.
                 // SAFETY: `s` is this call's buffer of `slen` bytes, or null with `slen`
                 // 0, which is exactly `OwnedBuf::clear_realloc`'s contract.
-                if unsafe { s.clear_realloc(slen.max(0) as usize, (num + i * 2) as usize) }
-                    .is_none()
-                {
+                if unsafe { s.clear_realloc(slen.max(0) as usize, new_slen as usize) }.is_none() {
                     return 0;
                 }
-                slen = num + i * 2;
+                slen = new_slen;
             }
             let mut jj: c_int = 0;
             while jj < i {
@@ -674,12 +684,23 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
                 return 0;
             }
             i /= 2;
-            if num + i > slen {
+            // Checked sums for the same reason as `a2i_ASN1_INTEGER`: the authority's `int`
+            // arithmetic can wrap on a multi-gigabyte input, and the growth size must never be a
+            // wrapped value used as an allocation extent (§3).
+            let new_num = match num.checked_add(i) {
+                Some(v) => v,
+                None => return 0,
+            };
+            if new_num > slen {
+                let new_slen = match new_num.checked_add(i) {
+                    Some(v) => v,
+                    None => return 0,
+                };
                 // SAFETY: `s` is this call's buffer or null, which `OwnedBuf::realloc` accepts.
-                if unsafe { s.realloc((num + i * 2) as usize) }.is_none() {
+                if unsafe { s.realloc(new_slen as usize) }.is_none() {
                     return 0;
                 }
-                slen = num + i * 2;
+                slen = new_slen;
             }
             let mut jj: c_int = 0;
             while jj < i {
