@@ -1,0 +1,120 @@
+{
+  "receipt": "mechanism-sweep-M54",
+  "branch": "integrate/safe-c33",
+  "source_head": "e686b3642",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression or hidden obligation); three defects repaired (one sizing error and two authority-UB reproductions)",
+  "scope": "Per-file audit of the eight legacy EVP cipher carriers at the head of REMAINING-AUDIT.txt: AES-CBC-HMAC-SHA256, Blowfish, CAST5, single DES, IDEA, RC4-HMAC-MD5, RC4 and SEED. Seven files are clean transcriptions; the stitched AES-CBC-HMAC-SHA256 control carried the SHA-1 digest constant, and the two AEAD controls reproduced the authority's negative-length fault.",
+  "files": [
+    "src/evp/e_aes_cbc_hmac_sha256.rs",
+    "src/evp/e_bf.rs",
+    "src/evp/e_cast.rs",
+    "src/evp/e_des.rs",
+    "src/evp/e_idea.rs",
+    "src/evp/e_rc4_hmac_md5.rs",
+    "src/evp/e_rc4.rs",
+    "src/evp/e_seed.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M54-D1",
+      "file": "src/evp/e_aes_cbc_hmac_sha256.rs",
+      "line_pre_fix": 220,
+      "severity": "high",
+      "class": "compatibility / caller buffer sizing (wrong digest constant)",
+      "description": "EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE answered 5 + 16 + ((arg + 20 + 16) & -16), the SHA-1 row's formula, instead of the SHA-256 row's 5 + 16 + ((arg + 32 + 16) & -16) (e_aes_cbc_hmac_sha256.c:807-808 in 1.1.1w, 3.0.0, 3.4.8, 3.5.9 and 3.6.4). For arg = 16384 the answer was 16437 rather than 16453, so a caller sizing a multiblock output buffer from this control could be sixteen bytes short.",
+      "fix": "Extract tls11_multiblock_max_bufsize(arg), use SHA256_DIGEST_LENGTH (32), and refuse an overflowing fragment size with -1 rather than relying on the authority's undefined signed addition.",
+      "witness": "evp::e_aes_cbc_hmac_sha256::tests::the_tls11_max_bufsize_reserves_a_sha256_digest and the_tls11_max_bufsize_refuses_overflow (both pass). Cross-checked against five authority releases and against the provider's aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize, which already used 32."
+    },
+    {
+      "id": "M54-D2",
+      "file": "src/evp/e_rc4_hmac_md5.rs",
+      "line_pre_fix": 228,
+      "severity": "medium",
+      "class": "authority-UB reproduction (negative length becomes SIZE_MAX)",
+      "description": "EVP_CTRL_AEAD_SET_MAC_KEY with a negative arg fell into the else arm and called ptr::copy_nonoverlapping(ptr_, hmac_key, arg as usize), a huge read. The authority's memcpy makes the same int-to-size_t conversion and faults; a negative key length is never a valid call.",
+      "fix": "Refuse arg < 0 with -1 before any pointer use (§17).",
+      "witness": "Code and compile review; no in-tree fixture constructs a legacy RC4-HMAC-MD5 context for this private control, so the guard has no runtime test (recorded as NOT_RUN)."
+    },
+    {
+      "id": "M54-D3",
+      "file": "src/evp/e_aes_cbc_hmac_sha256.rs",
+      "line_pre_fix": "167-174, 237-245",
+      "severity": "medium",
+      "class": "authority-UB reproduction (negative / undersized control arguments)",
+      "description": "The legacy SET_MAC_KEY arm forwarded a negative arg to the provider's size_t length, and MULTIBLOCK_ENCRYPT dereferenced the parameter block without the size test its _AAD sibling makes. Both are undefined in the authority for invalid arguments and were reachable through the legacy callback.",
+      "fix": "SET_MAC_KEY refuses arg < 0 with -1; MULTIBLOCK_ENCRYPT refuses arg < size_of::<EvpCtrlTls11MultiblockParam>() with -1, matching the provider arm's recorded deliberate divergence.",
+      "witness": "Code and compile review; no in-tree fixture constructs the legacy context (NOT_RUN for a runtime control)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "Legacy EVP_CIPHER callback contract: init/do_cipher/ctrl callers supply a live EVP_CIPHER_CTX whose cipher_data block has at least the cipher's ctx_size (RC-1-adjacent, audited in src/evp/cipher_ctx.rs)",
+    "OB-3/OB-4 shared owned-context release: EVP_CIPHER_CTX_reset cleanses cipher_data with OPENSSL_cleanse(cipher_data, ctx_size) before CRYPTO_free, so every key schedule in these files is cleansed on release without a per-file cleanup callback",
+    "Secret-scratch cleansing (B19 technique): hmac_key[64] in RC4-HMAC-MD5 and in the provider set_mac_key, plus IDEA's decrypt temporary, are cleansed before return",
+    "AES-CBC-HMAC-SHA256 provider construction contract (ProvAesHmacSha256Ctx layout, sync_in direction/IV copy, provider cipher/ctrl bodies) reused rather than duplicated",
+    "Authority differential contract for the legacy static initialisers: nid, block_size, key_len, iv_len, flags, origin, ASN.1 views and ctx_size field for field"
+  ],
+  "residuals": [
+    "The AES-CBC-HMAC-SHA256 legacy callbacks use the provider's 840-byte ProvAesHmacSha256Ctx as cipher_data rather than the authority's ~608-byte EVP_AES_HMAC_SHA256. The block is allocated and cleansed at that exact size and every callback agrees on the layout; the difference is not ABI-visible because EVP_CIPHER is opaque and the provider fetch replaces the method before a normal EVP_EncryptInit_ex path uses ctx_size. An engine path (Phase 13) is the only way to reach the legacy ctx_size.",
+    "The legacy ctrl callbacks remain reachable only through an engine; no in-tree test constructs such a context, so M54-D2/D3 have no runtime witness.",
+    "Adjacent observation, not edited: the already-audited src/evp/e_aes_cbc_hmac_sha1.rs (AUDITED-FILES.txt:282) has the same negative SET_MAC_KEY and undersized MULTIBLOCK_ENCRYPT patterns at :191 and :255. Its MAX_BUFSIZE constant is already the correct SHA-1 20. Queue a follow-up with the same two guards.",
+    "No constant-time claim is made for any of these carriers; the stitching and MAC comparison paths reuse provider bodies whose timing discipline is not measured in this batch."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1662 passed / 0 failed / 27 ignored; 1689 total; 64.31 s)",
+    "lib_test_threads_4": "PASS (1662 passed / 0 failed / 27 ignored; 1689 total; 98.74 s)",
+    "focused_tests": "PASS (evp::e_ 18 passed / 0 failed, including the two new M54-D1 controls)",
+    "affected_adversarial_probes": "NOT_RUN (no phase5 probe runner wired into scripts/; the changed answers are control-plane values, not ciphertext)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "The repairs remove an invalid-argument fault and correct a size answer. No in-tree fixture constructs a legacy cipher context for the private ctrl callbacks, so the M54-D2/D3 guards are compile- and review-verified only; a dedicated legacy-context fixture belongs to BOUNDARY."
+  },
+  "next_queue": {
+    "file": "src/evp/e_sm4.rs",
+    "then": [
+      "src/evp/evp_cnf.rs",
+      "src/evp/evp_lib.rs",
+      "src/evp/e_xcbc_d.rs",
+      "src/evp/keymgmt_lib.rs",
+      "src/evp/legacy_blake2.rs",
+      "src/evp/legacy_evp.rs",
+      "src/evp/legacy_md4.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "legacy-context fixture and runtime control for negative/undersized AEAD control arguments",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "RT-CIPHER differential for EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE at several fragment sizes",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, constant-time/dudect on the touched units",
+      "status": "NOT_RUN",
+      "reason": "no toolchain component in the pinned image / no new secret-dependent branch was introduced",
+      "runs_at": "BOUNDARY or SEAL, whichever touches these carriers next"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    }
+  ]
+}
