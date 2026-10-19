@@ -610,7 +610,10 @@ unsafe fn provider_conf_parse_bool_setting(
 ) -> c_int {
     if confvalue.is_null() {
         // SAFETY: this thread's own error queue; the site and the message are the authority's.
-        unsafe { raise_site_data(&PROVIDER_CONF_280, directive_message(confname)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(&PROVIDER_CONF_280, directive_message(confname, &mut buf))
+        };
         return 0;
     }
 
@@ -623,7 +626,10 @@ unsafe fn provider_conf_parse_bool_setting(
         unsafe { *val = 0 };
     } else {
         // SAFETY: this thread's own error queue; the second site and the same message.
-        unsafe { raise_site_data(&PROVIDER_CONF_302, directive_message(confname)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(&PROVIDER_CONF_302, directive_message(confname, &mut buf))
+        };
         return 0;
     }
 
@@ -717,7 +723,13 @@ unsafe fn provider_conf_load(
     if ecmds.is_null() {
         // SAFETY: this thread's own error queue, the generated site, and the `section=%s`
         // message the authority formats.
-        unsafe { raise_site_data(&PROVIDER_CONF_328, section_not_found_message(value)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(
+                &PROVIDER_CONF_328,
+                section_not_found_message(value, &mut buf),
+            )
+        };
         return 0;
     }
 
@@ -932,51 +944,107 @@ unsafe fn strlcat(dst: *mut c_char, src: *const c_char, siz: usize) -> usize {
 
 /// `"directive %s set to unrecognized value"` — the message both bool-setting raises carry.
 ///
-/// A `static` buffer, as `confmod/mod.rs`'s three are, for the reason recorded there: the
-/// authority's `ERR_vset_error` allocates, the raise copies the bytes before returning, and no
-/// caller holds the pointer afterwards. `BIO_snprintf` is the function `ERR_vset_error` itself
-/// formats through.
+/// The caller owns the storage. A process-global `static mut` buffer would be a data race:
+/// `provider_conf_load` runs from `OSSL_PROVIDER_load`, which may run concurrently for different
+/// library contexts, and `ERR_vset_error` copies the bytes before returning. `BIO_snprintf` is
+/// the function `ERR_vset_error` itself formats through.
 ///
 /// # Safety
 /// `confname` must be NUL-terminated.
-unsafe fn directive_message(confname: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length and the format string is a
-    // static NUL-terminated one whose single conversion is `%s`.
+unsafe fn directive_message(
+    confname: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
+    // SAFETY: `buf` is exactly the declared length and the format string is a static
+    // NUL-terminated one whose single conversion is `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"directive %s set to unrecognized value".as_ptr(),
             confname,
         )
     };
-    // SAFETY: the pointer is to the static written immediately above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"section=%s not found"` — the message `provider_conf_load` raises.
 ///
 /// # Safety
 /// `value` must be NUL-terminated.
-unsafe fn section_not_found_message(value: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn section_not_found_message(
+    value: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `directive_message`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"section=%s not found".as_ptr(),
             value,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`. The authority refuses to format a
 /// message longer than this, so a longer one is truncated in both implementations.
 const ERR_MAX_DATA_SIZE: usize = 1024;
+
+#[cfg(test)]
+mod diagnostic_buffer_tests {
+    use super::*;
+
+    /// The formatter must write into the caller's storage, not a process-global buffer: a second
+    /// call with different input must not disturb the first result. This is the negative control
+    /// for the `static mut` diagnostic-buffer class; on that body both calls returned the same
+    /// address and the second overwrote the first.
+    #[test]
+    fn diagnostic_storage_is_caller_owned() {
+        let mut first = [0; ERR_MAX_DATA_SIZE];
+        let mut second = [0; ERR_MAX_DATA_SIZE];
+        // SAFETY: both inputs are static NUL-terminated strings and each buffer is distinct.
+        let a = unsafe { directive_message(c"alpha".as_ptr(), &mut first) };
+        // SAFETY: `a` points into `first`, which is still live.
+        let snapshot = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes().to_vec();
+        // SAFETY: as above, with its own storage.
+        let b = unsafe { directive_message(c"beta".as_ptr(), &mut second) };
+        assert_ne!(a, b, "caller-owned storage must not alias");
+        // SAFETY: `a` still points into the live `first` buffer.
+        let a_after = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes();
+        assert_eq!(a_after, snapshot.as_slice());
+        // SAFETY: `b` points into the live `second` buffer.
+        let b_after = unsafe { std::ffi::CStr::from_ptr(b) }.to_bytes();
+        assert_eq!(b_after, b"directive beta set to unrecognized value");
+    }
+
+    /// Concurrent diagnostic building is the trigger the old buffer raced on. Each thread keeps
+    /// its own storage, so every result matches its own input regardless of interleaving.
+    #[test]
+    fn concurrent_directives_do_not_interfere() {
+        std::thread::scope(|scope| {
+            for (input, expected) in [
+                (c"alpha", &b"directive alpha set to unrecognized value"[..]),
+                (c"beta", &b"directive beta set to unrecognized value"[..]),
+                (c"gamma", &b"directive gamma set to unrecognized value"[..]),
+                (c"delta", &b"directive delta set to unrecognized value"[..]),
+            ] {
+                scope.spawn(move || {
+                    for _ in 0..2000 {
+                        let mut buf = [0; ERR_MAX_DATA_SIZE];
+                        // SAFETY: `input` is a static NUL-terminated string and `buf` is this
+                        // thread's own storage.
+                        let p = unsafe { directive_message(input.as_ptr(), &mut buf) };
+                        // SAFETY: `p` points into this thread's live `buf`.
+                        let seen = unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes();
+                        assert_eq!(seen, expected);
+                    }
+                });
+            }
+        });
+    }
+}
 
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]

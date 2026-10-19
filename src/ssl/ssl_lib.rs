@@ -3107,23 +3107,40 @@ unsafe impl CtxDestroy for SslCtx {
         // [`MemberBufSlot`]/[`MemberCStrSlot`] handles; `supportedgroups` (an element-counted,
         // externally-written list) stays a raw release, as in the authority.
         unsafe {
+            // The session cache is flushed **first**, so that `remove_session_cb` runs while
+            // every member it may reach is still live. The authority flushes before `ex_data`
+            // (`ssl_lib.c`'s `SSL_CTX_free`, ticket #212) and before the cache container is
+            // released; it also frees `param`/`dane` first, which we deliberately do not copy:
+            // a callback reaching either through the public getters would observe freed memory
+            // in the authority. Flushing first is the stricter order and is not observable to a
+            // callback that only uses the surviving members (compatibility note: this is a
+            // deviation from the authority's literal order, recorded in the receipt).
+            if !(*ctx).sessions.is_null() {
+                crate::ssl::ssl_sess::SSL_CTX_flush_sessions_ex(ctx, 0);
+            }
+
+            X509_VERIFY_PARAM_free((*ctx).param);
+            dane_ctx_final(&mut (*ctx).dane);
+
+            // The authority frees `ex_data` only after the flush: `remove_session_cb` may read
+            // it, and an `ex_data` free callback may touch the cache. The container release is
+            // last, and only entries a callback re-added during the flush remain in it.
+            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
+            ssl_ctx_session_cache_free(ctx);
+
+            X509_STORE_free((*ctx).cert_store);
             OPENSSL_sk_free((*ctx).cipher_list);
             OPENSSL_sk_free((*ctx).cipher_list_by_id);
             OPENSSL_sk_free((*ctx).tls13_ciphersuites);
+            cert_free((*ctx).cert);
+            OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
+            OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
             OPENSSL_sk_free((*ctx).srtp_profiles);
-            ssl_ctx_session_cache_free(ctx);
             crate::ssl::tls_srp::ssl_ctx_srp_ctx_free_intern(ctx);
             // `SSL_CTX_set_client_cert_engine` takes a structural engine reference with
             // `ENGINE_init` (`ssl/tls_depr.c:84`); the authority releases it here via
             // `tls_engine_finish` (`ssl_lib.c:4409`). `ENGINE_finish` is NULL-safe.
             crate::engine::eng_init::ENGINE_finish((*ctx).client_cert_engine);
-            OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
-            OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
-            X509_VERIFY_PARAM_free((*ctx).param);
-            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
-            X509_STORE_free((*ctx).cert_store);
-            cert_free((*ctx).cert);
-            dane_ctx_final(&mut (*ctx).dane);
             CTLOG_STORE_free((*ctx).ctlog_store);
             (*ctx).client_cert_type_slot().clear(FILE, 0);
             (*ctx).server_cert_type_slot().clear(FILE, 0);
