@@ -306,9 +306,13 @@ pub(crate) unsafe fn bn_set_all_zero(a: *mut BigNum) {
     // SAFETY: `a` is null-or-live, and uniquely owned, per this function's `# Safety` section.
     if let Some(b) = unsafe { as_mut(a) } {
         let top = c_int::try_from(b.d.len()).unwrap_or(c_int::MAX);
-        // SAFETY: `a` is live per this function's `# Safety` section; `bn_get_dmax` reads
-        // the same object through a shared reference, which is not a mutable borrow.
-        let dmax = unsafe { bn_get_dmax(a) };
+        // In this representation `dmax` and `top` are the same number (see the module
+        // doc), so the authority's `[top, dmax)` padding range is empty. Deriving it
+        // from `b` rather than calling `bn_get_dmax(a)` matters: that helper builds a
+        // second, shared reference over the same object while `b` (the unique borrow)
+        // is still live, which is an aliasing conflict under Stacked/Tree Borrows and
+        // would make the write below undefined.
+        let dmax = top;
         if dmax > top {
             let dmax = dmax as usize;
             b.d[top as usize..dmax].fill(0);
@@ -360,7 +364,11 @@ pub(crate) unsafe fn bn_copy_words(out: *mut Limb, value: *const BigNum, size: c
 /// # Safety
 ///
 /// `a` must be null or point to a live `BIGNUM`. The answer is valid only while `a` is
-/// alive, unmodified, and not borrowed mutably.
+/// alive, unmodified, and not borrowed mutably, and **must not be written through**: it
+/// is derived from a shared borrow of `a`, so a store through it would be an aliasing
+/// violation even though the authority's return type is non-const. Every authority
+/// caller on this crate's paths only reads it; a future writer needs an exclusive
+/// owner-derived pointer instead.
 #[allow(dead_code)]
 pub(crate) unsafe fn bn_get_words(a: *const BigNum) -> *mut Limb {
     // SAFETY: `a` is null-or-live per this function's `# Safety` section.
