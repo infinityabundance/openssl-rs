@@ -923,6 +923,15 @@ unsafe extern "C" fn ecdsa_dupctx(vctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
+    // The authority refuses to duplicate a context that carries the CAVS precomputed
+    // nonce pair (`ecdsa_sig.c:634-638`). Those fields stay NULL without the ACVP test
+    // arm, but the raw copy would otherwise alias the two `BIGNUM`s and `freectx` would
+    // release each of them twice.
+    // SAFETY: `srcctx` is the caller's live context.
+    if unsafe { !(*srcctx).kinv.is_null() || !(*srcctx).r.is_null() } {
+        return ptr::null_mut();
+    }
+
     // SAFETY: `srcctx` is the caller's live context; `CRYPTO_memdup` copies it.
     let dstctx = unsafe {
         CRYPTO_memdup(

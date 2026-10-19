@@ -367,11 +367,20 @@ pub fn main(argv: &[String]) -> i32 {
             let cert = load_cert(Some(r.as_str()), 0, "recipient certificate file");
             if cert.is_null() {
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-                unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+                unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
                 return 1;
             }
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-            unsafe { OPENSSL_sk_push(encerts, cert.cast()) };
+            if unsafe { OPENSSL_sk_push(encerts, cert.cast()) } == 0 {
+                // The authority's `goto end` releases the certificate the push did not take
+                // (`apps/smime.c:517-521`, `:723-745`); the stack releases the pushed ones.
+                // SAFETY: `cert` is this frame's own and the stack is this frame's own.
+                unsafe {
+                    X509_free(cert);
+                    crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts);
+                }
+                return 1;
+            }
         }
     }
     let _ = certfile; // `-certfile` (`load_certs`) is not landed (see header).
@@ -384,7 +393,7 @@ pub fn main(argv: &[String]) -> i32 {
     if inbio.is_null() {
         if !encerts.is_null() {
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-            unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
         }
         return not_landed("smime -in (unopenable)");
     }
@@ -401,9 +410,11 @@ pub fn main(argv: &[String]) -> i32 {
             eprintln!("Error allocating PKCS7 object");
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             if !encerts.is_null() {
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-                unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+                unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
             }
             return 1;
         }
@@ -420,11 +431,13 @@ pub fn main(argv: &[String]) -> i32 {
             eprintln!("Bad input format for PKCS#7 file");
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             if !encerts.is_null() {
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-                unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+                unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
             }
             return 1;
         };
@@ -432,11 +445,13 @@ pub fn main(argv: &[String]) -> i32 {
             eprintln!("Error reading S/MIME message");
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             if !encerts.is_null() {
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-                unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+                unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
             }
             return 1;
         }
@@ -447,13 +462,15 @@ pub fn main(argv: &[String]) -> i32 {
     if out.is_null() {
         // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
         unsafe { BIO_free(inbio) };
+        // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+        unsafe { BIO_free(indata) };
         if !p7.is_null() {
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
         }
         if !encerts.is_null() {
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-            unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
         }
         return not_landed("smime -out (unopenable)");
     }
@@ -469,6 +486,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -521,6 +540,8 @@ pub fn main(argv: &[String]) -> i32 {
                 unsafe { BIO_free_all(out) };
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
                 unsafe { BIO_free(inbio) };
+                // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+                unsafe { BIO_free(indata) };
                 if !store.is_null() {
                     // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
                     unsafe { X509_STORE_free(store) };
@@ -538,6 +559,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -550,6 +573,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -564,6 +589,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -579,6 +606,8 @@ pub fn main(argv: &[String]) -> i32 {
                 unsafe { BIO_free_all(out) };
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
                 unsafe { BIO_free(inbio) };
+                // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+                unsafe { BIO_free(indata) };
                 // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
                 unsafe { PKCS7_free(p7) };
                 return 1;
@@ -592,6 +621,12 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { BIO_free_all(out) };
         // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
         unsafe { BIO_free(inbio) };
+        // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+        unsafe { BIO_free(indata) };
+        if !encerts.is_null() {
+            // SAFETY: `encerts` is the stack this frame built; the authority's `end:` frees it.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
+        }
         if !store.is_null() {
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { X509_STORE_free(store) };
@@ -616,6 +651,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -632,6 +669,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -647,6 +686,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             if !store.is_null() {
@@ -708,6 +749,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 1;
@@ -718,6 +761,8 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BIO_free_all(out) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
+            // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+            unsafe { BIO_free(indata) };
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { PKCS7_free(p7) };
             return 3;
@@ -727,7 +772,7 @@ pub fn main(argv: &[String]) -> i32 {
     // `end:` cleanup — `apps/smime.c:723-745`.
     if !encerts.is_null() {
         // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-        unsafe { crate::runtime::stack::OPENSSL_sk_free(encerts) };
+        unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(encerts) };
     }
     if !store.is_null() {
         // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
@@ -737,6 +782,8 @@ pub fn main(argv: &[String]) -> i32 {
     unsafe { PKCS7_free(p7) };
     // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
     unsafe { BIO_free(inbio) };
+    // SAFETY: `indata` is NULL or the content BIO `SMIME_read_PKCS7_ex` produced.
+    unsafe { BIO_free(indata) };
     // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
     unsafe { BIO_free_all(out) };
     0
