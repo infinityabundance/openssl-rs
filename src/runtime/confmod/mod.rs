@@ -498,46 +498,48 @@ unsafe fn conf_diagnostics(cnf: *const Conf) -> c_int {
 /// `"openssl_conf=%s"` — the message `CONF_modules_load` raises when the named section is
 /// missing.
 ///
+/// The caller owns the storage. A process-global `static mut` buffer would be a data race:
+/// `CONF_modules_load` may run concurrently on different `CONF` objects, and the registry's
+/// RCU discipline is what makes that legal. `raise_site_data` copies the bytes before it
+/// returns, so stack storage is sufficient.
+///
 /// # Safety
 /// `vsection` must be NUL-terminated.
-unsafe fn openssl_conf_message(vsection: *const c_char) -> *const c_char {
-    // A `static` rather than a thread-local or an allocation. The authority's `ERR_vset_error`
-    // allocates; this does not, which is a divergence in *storage* only, because the raise
-    // copies the bytes before returning and no caller holds the pointer afterwards. It also
-    // makes the function non-reentrant, which is why the buffer is written immediately before
-    // the single call that consumes it.
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length, and the format string is a
-    // static NUL-terminated one whose single conversion is `%s`.
+unsafe fn openssl_conf_message(
+    vsection: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
+    // SAFETY: `buf` is exactly the declared length, and the format string is a static
+    // NUL-terminated one whose single conversion is `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"openssl_conf=%s".as_ptr(),
             vsection,
         )
     };
-    // SAFETY: the pointer is to the static written immediately above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s"` — the message `module_run` raises for an unknown module.
 ///
 /// # Safety
 /// `name` must be NUL-terminated.
-unsafe fn module_name_message(name: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn module_name_message(
+    name: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `openssl_conf_message`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s".as_ptr(),
             name,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s, value=%s retcode=%-8d"` — the message `module_run` raises when a module's
@@ -554,13 +556,13 @@ unsafe fn module_init_message(
     name: *const c_char,
     value: *const c_char,
     ret: c_int,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
 ) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length, and the format string is a
-    // static NUL-terminated one with two `%s` and one `%-8d`, matching the three arguments.
+    // SAFETY: `buf` is exactly the declared length, and the format string is a static
+    // NUL-terminated one with two `%s` and one `%-8d`, matching the three arguments.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s, value=%s retcode=%-8d".as_ptr(),
             name,
@@ -568,28 +570,29 @@ unsafe fn module_init_message(
             ret,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s, path=%s"` — the message `module_load_dso` raises.
 ///
 /// # Safety
 /// `name` and `path` must be NUL-terminated.
-unsafe fn dso_message(name: *const c_char, path: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn dso_message(
+    name: *const c_char,
+    path: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `module_init_message`, with two `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s, path=%s".as_ptr(),
             name,
             path,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `int CONF_modules_load(const CONF *cnf, const char *appname, unsigned long flags)`.
@@ -655,8 +658,9 @@ pub unsafe extern "C" fn CONF_modules_load(
             if (flags & CONF_MFLAGS_SILENT) == 0 {
                 // SAFETY: this thread's own queue, and a compile-time-constant site.
                 unsafe {
+                    let mut buf = [0; ERR_MAX_DATA_SIZE];
                     ERR_clear_last_mark();
-                    raise_site_data(&CONF_MOD_163, openssl_conf_message(vsection));
+                    raise_site_data(&CONF_MOD_163, openssl_conf_message(vsection, &mut buf));
                 }
             } else {
                 // SAFETY: as above.
@@ -730,7 +734,10 @@ unsafe fn module_run(
         if (flags & CONF_MFLAGS_SILENT) == 0 {
             // SAFETY: a compile-time-constant site, this thread's own queue, and the message is
             // formatted with the authority's own formatter.
-            unsafe { raise_site_data(&CONF_MOD_276, module_name_message(name)) };
+            unsafe {
+                let mut buf = [0; ERR_MAX_DATA_SIZE];
+                raise_site_data(&CONF_MOD_276, module_name_message(name, &mut buf));
+            }
         }
         return -1;
     }
@@ -741,7 +748,13 @@ unsafe fn module_run(
     if ret <= 0 && (flags & CONF_MFLAGS_SILENT) == 0 {
         // SAFETY: a compile-time-constant site, this thread's own queue, and the message is
         // formatted with the authority's own formatter.
-        unsafe { raise_site_data(&CONF_MOD_286, module_init_message(name, value, ret)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(
+                &CONF_MOD_286,
+                module_init_message(name, value, ret, &mut buf),
+            );
+        }
     }
 
     ret
@@ -776,8 +789,9 @@ unsafe fn module_load_dso(
         // SAFETY: a compile-time-constant site, the reason is the variable the authority's
         // `errcode` is, and the message is formatted with the authority's own formatter.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             raise_site_dynamic(&CONF_MOD_331, CONF_R_ERROR_LOADING_DSO);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     }
@@ -787,9 +801,10 @@ unsafe fn module_load_dso(
     let Some(ifunc) = ifunc else {
         // SAFETY: `dso` was created here and is reachable from nowhere else.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             DSO_free(dso);
             raise_site_dynamic(&CONF_MOD_331, CONF_R_MISSING_INIT_FUNCTION);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     };
@@ -815,9 +830,10 @@ unsafe fn module_load_dso(
         // the reference `DSO_load` created here.
         // SAFETY: `dso` was created above and is reachable from nowhere else.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             DSO_free(dso);
             raise_site_dynamic(&CONF_MOD_331, CONF_R_ERROR_LOADING_DSO);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     }
@@ -1303,8 +1319,15 @@ pub extern "C" fn CONF_modules_unload(all: c_int) {
         unsafe { ossl_rcu_write_lock(lock) };
 
         let old_modules = supported_modules();
-        // SAFETY: a NULL handle answers NULL, which the test below turns into an early return; a
-        // non-NULL one is the published list.
+        // The authority's `sk_dup(NULL)` answers NULL and it unlocks and returns; this
+        // crate's `OPENSSL_sk_dup` deliberately answers an empty stack for NULL, so the
+        // parity test is explicit here.
+        if old_modules.is_null() {
+            // SAFETY: the write lock is held by this thread.
+            unsafe { ossl_rcu_write_unlock(lock) };
+            return;
+        }
+        // SAFETY: `old_modules` is the published, non-NULL list.
         let new_modules = unsafe { OPENSSL_sk_dup(old_modules) };
         if new_modules.is_null() {
             // SAFETY: the write lock is held by this thread.

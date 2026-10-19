@@ -1,0 +1,261 @@
+{
+  "receipt": "boundary-sweep-B6",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "afde3d63c",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/runtime/confmod/mod.rs",
+      "src/ssl/bio_ssl.rs",
+      "src/runtime/bio/bss_bio.rs"
+    ],
+    "working_tree_blob": {
+      "src/runtime/confmod/mod.rs": "7207e37f6af3d8aa52b205bc87074fb2fcea7f23",
+      "src/ssl/bio_ssl.rs": "3e7019e45d36b74b8cbdc88a40828ed6c5c15738",
+      "src/runtime/bio/bss_bio.rs": "4febc39c79001255bf592a9b2e8f372cd71d8b5f"
+    }
+  },
+  "stop_status": "REPAIRED - one high memory-safety defect (use-after-free / double release in BIO_C_SET_SSL's re-creation arm when ssl_new's allocation is refused), one medium conversion-introduced data race (process-global message buffers in confmod), one low null-dereference class reachable through the public BIO accessors, and one low authority-parity divergence in CONF_modules_unload were found and fixed. One further upstream-parity hazard is retained, not repaired: module_find returns an unpinned registry entry, so a concurrent CONF_modules_unload (or an init callback that unloads its own module) can free it before module_init uses it. It is now an explicitly stated external precondition and blocks SAFETY_DISCHARGED; the authority has the same design and no per-module refcount. FAST, BATCH and the allocator-refusal control pass. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 (forensics/authorities/src/openssl-3.6.4/{ssl/bio_ssl.c, crypto/bio/bss_bio.c, crypto/conf/conf_mod.c}), cross-checked line by line against the crate bodies",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, CRYPTO_* seam coordinate or unsafe lint attribute changed. The repairs are file-private guards, caller-owned scratch storage, and one explicit null test.",
+    "external_contracts": [
+      "BIO_f_ssl method data (BIO.ptr) is a BioSsl owned by the BIO, allocated by ssl_new and released exactly once by ssl_free. BIO_set_data/BIO_set_init are public but replacing the method data with a non-BioSsl or NULL is a method-contract violation; the repaired code tolerates NULL (poisoned) and answers without dispatch.",
+      "A BIO_C_SET_SSL transfer of a live SSL must not pass the SSL the BIO already owns. Re-adopting that same pointer with BIO_CLOSE remains the authority's double-release path and is a stated caller precondition, not repaired.",
+      "BIO_s_bio method data is a BioBioSt owned by the BIO; peer is a live paired BIO or NULL; init is set only by bio_make_pair. BIO_set_data/BIO_set_init are public but forcing a state that contradicts the pair fields is outside the method contract; the repaired read/write paths answer 0 instead of dereferencing the absent peer/buffer.",
+      "BIO pairs are not safe for concurrent read/write/free; the authority imposes no lock and this port adds none.",
+      "CONF module entries and imodules are registry-owned. module_find returns an unpinned pointer; CONF_modules_unload/CONF_modules_finish must not run concurrently with CONF_modules_load, and a module init/finish callback must not unload its own module. This is an upstream design limitation (no per-module refcount) and blocks SAFETY_DISCHARGED.",
+      "A DSO module's OPENSSL_init/OPENSSL_finish symbols must have the conf_init_func/conf_finish_func signatures; DSO_bind_func cannot check the shape and the authority casts the same way.",
+      "CRYPTO allocator hooks and module callbacks are application-controlled reentrancy edges; the registry runs no application callback while holding the RCU write lock. Allocator hooks still run under it, as in the authority."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B6-SSL-1",
+      "file": "src/ssl/bio_ssl.rs",
+      "mechanism": "ssl_write/ssl_read dispatch, SSL_get_error mapping, retry flags and renegotiation counters",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D1"],
+      "residuals": [
+        "The renegotiation trigger and timeout accounting remain reduced as recorded in the module header; no SSL BIO end-to-end court drives a transfer.",
+        "ssl_write/ssl_read now refuse a NULL method-data slot (the poisoned state after a refused re-creation) instead of dereferencing it; valid connections are unchanged.",
+        "buf is checked NULL before ssl_write/ssl_read, matching the authority; written/readbytes stay caller-owned out-parameters."
+      ]
+    },
+    {
+      "id": "B6-SSL-2",
+      "file": "src/ssl/bio_ssl.rs",
+      "mechanism": "ssl_ctrl BIO_C_SET_SSL re-creation, shutdown/init ownership, rbio up-ref and chain links",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D1"],
+      "residuals": [
+        "Passing the SSL the BIO already owns to BIO_C_SET_SSL with BIO_CLOSE remains the authority's double-release shape; it is now a stated caller precondition.",
+        "BIO_CTRL_DUP, BIO_CTRL_RESET role restore and the renegotiation controls remain reduced as documented in the module header.",
+        "A refused BIO_up_ref still leaves the SSL installed with init 0 (authority parity); BIO_free then does not release the connection. This is a leak on an allocator-refusal path, not UB."
+      ]
+    },
+    {
+      "id": "B6-SSL-3",
+      "file": "src/ssl/bio_ssl.rs",
+      "mechanism": "ssl_new/ssl_free CtxDestroy block ownership and BIO_new_ssl*/copy_session_id/shutdown constructors",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BioSsl is zero-valid and destroy_body is empty; ssl_free is the only release of the SSL (conditioned on the authority's shutdown/init pair) and OwnedCtx is the only release of the block.",
+        "BIO_new_ssl_connect/BIO_new_buffer_ssl_connect keep the authority's failure teardown order; BIO_push cannot return NULL for a non-NULL head, so the null checks are defensive.",
+        "BIO_ssl_shutdown walks BIO_next without a cycle guard, exactly as the authority; a caller-created cycle is outside the chain contract."
+      ]
+    },
+    {
+      "id": "B6-BIO-1",
+      "file": "src/runtime/bio/bss_bio.rs",
+      "mechanism": "BioBioSt ownership, bio_new/bio_free and the CtxDestroy ring-buffer release",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The context block is OwnedCtx-owned and the ring buffer is OwnedBlock-owned; bio_ctrl's resize path keeps the authority's CRYPTO_free(NULL,0) coordinate.",
+        "bio_free returns 0 for a NULL context instead of asserting; this is the only divergence and is unreachable from a constructor-produced BIO."
+      ]
+    },
+    {
+      "id": "B6-BIO-2",
+      "file": "src/runtime/bio/bss_bio.rs",
+      "mechanism": "ring-buffer read/write, non-copying bio_nread/bio_nwrite index arithmetic and retry protocol",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D3"],
+      "residuals": [
+        "Every copy is bounded by the peer's len and the ring's size; the wrap split is the authority's offset arithmetic.",
+        "The read/write paths now establish a non-NULL context and buffer before use; a forced initialised state from BIO_set_init answers 0 instead of dereferencing the absent peer or buffer.",
+        "BIO pairs remain single-threaded; no lock is added."
+      ]
+    },
+    {
+      "id": "B6-BIO-3",
+      "file": "src/runtime/bio/bss_bio.rs",
+      "mechanism": "bio_make_pair/bio_destroy_pair wiring, peer callbacks and BIO_ctrl pending/eof/dup arms",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D3"],
+      "residuals": [
+        "bio_destroy_pair still clears the live peer BIO's init even when the peer's method data was replaced through the public accessor; it now skips only the NULL data fields.",
+        "BIO_CTRL_DUP returns 1 when the destination has no method data instead of asserting; the authority asserts a non-NULL fresh destination.",
+        "BIO_C_SET_WRITE_BUF_SIZE keeps the authority's (size_t)num conversion and allocation-failure shape."
+      ]
+    },
+    {
+      "id": "B6-BIO-4",
+      "file": "src/runtime/bio/bss_bio.rs",
+      "mechanism": "BIO_new_bio_pair construction and failure rollback",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Outputs are written as NULL on every failure; a refused second make_pair leaves the first buffer allocated until the caller's BIO_free, which is the authority's order.",
+        "writebuf1/writebuf2 larger than c_long::MAX are refused before the control conversion."
+      ]
+    },
+    {
+      "id": "B6-CONF-1",
+      "file": "src/runtime/confmod/mod.rs",
+      "mechanism": "RCU-protected supported/initialized module lists and their wholesale replacement",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Readers take an RCU read hold, never a mutex; writers duplicate-shallow, publish, unlock, synchronize, then release the old array.",
+        "module_lists_free frees the lock before swapping the list slots; OPENSSL_cleanup is single-threaded, which is the authority's precondition."
+      ]
+    },
+    {
+      "id": "B6-CONF-2",
+      "file": "src/runtime/confmod/mod.rs",
+      "mechanism": "module_add/module_find/module_init/module_finish, DSO load/bind, link counts and application callbacks",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "module_find releases the RCU read lock before module_init pins the entry with links++; concurrent unload, or an init callback that unloads its own module, can free the entry first. This is an upstream design limitation with no per-module refcount and is now a stated external precondition (unload/finish not concurrent with load; a callback must not unload its own module).",
+        "The DSO init/finish symbols are bound as a bare fn() and transmuted to the declared signatures; signature correctness is the module's contract, as in the authority.",
+        "CONF_modules_unload's unchecked sk_new_null leaves removed entries leaked on allocation refusal; authority parity and not memory-unsafe.",
+        "module_init intentionally leaves the record allocated when the lock is NULL, matching the authority's return; no UB follows because no later path reaches the record."
+      ]
+    },
+    {
+      "id": "B6-CONF-3",
+      "file": "src/runtime/confmod/mod.rs",
+      "mechanism": "four diagnostic message builders consumed by raise_site_data",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D2"],
+      "residuals": [
+        "Each builder now formats into a caller-owned stack array; the error raise copies the bytes synchronously, so no pointer outlives the call.",
+        "The same process-global static-mut pattern still exists in src/provider/conf.rs and src/runtime/conf/conf_ssl.rs; those files are outside this batch and are queued as the same data-race class."
+      ]
+    },
+    {
+      "id": "B6-CONF-4",
+      "file": "src/runtime/confmod/mod.rs",
+      "mechanism": "CONF_modules_load/load_file_ex flow, marks and the shared failure tail",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "conf_diagnostics reads the CONF's libctx and the file's config_diagnostics; the mark/pop pair matches the authority.",
+        "load_file_ex frees the default filename only when it allocated one, and applies IGNORE_RETURN_CODES after the shared tail exactly as the authority."
+      ]
+    },
+    {
+      "id": "B6-CONF-5",
+      "file": "src/runtime/confmod/mod.rs",
+      "mechanism": "CONF_modules_unload/finish and module_lists_free teardown",
+      "disposition": "CONTRACTED",
+      "defects": ["B6-D4"],
+      "residuals": [
+        "The walk is reverse and releases collected entries only after synchronize_rcu; completed entries are removed from the published list before release.",
+        "Dso/name/entry releases stay outside the write lock; no application callback runs under the lock.",
+        "A second unload after module_lists_free returns early on the NULL lock, matching the authority's own test."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B6-D1",
+      "file": "src/ssl/bio_ssl.rs",
+      "pre_fix_line": 359,
+      "severity": "high",
+      "class": "use-after-free and double release in a failed BIO_C_SET_SSL re-creation",
+      "description": "The re-creation arm called ssl_free(b), which released the BioSsl block through OwnedCtx::from_raw without clearing BIO.ptr, and then called ssl_new(b). When ssl_new's allocation was refused the arm returned 0 with BIO.ptr still naming the released block. Any later callback read freed memory, and BIO_free/ssl_free released the same block a second time. The authority has the same dangling pointer in release builds (its ssl_free frees bs and does not clear b->ptr), so the defect was reproduced from the authority rather than newly introduced.",
+      "fix": "Clear the data slot with BIO_set_data(NULL) and clear init with BIO_set_init(0) immediately after ssl_free and before the possibly failing ssl_new. A refused allocation now leaves an explicitly poisoned but safe state; ssl_ctrl recovers via a fresh ssl_new, and ssl_read/ssl_write/ssl_callback_ctrl/ssl_free refuse a NULL data slot. Setting init=0 also stops generic BIO_read/BIO_write from treating the poisoned object as usable.",
+      "regression": "ssl::bio_ssl::adv_probe::set_ssl_allocation_refusal_clears_data_before_recreate drives a zeroed connection, refuses the BioSsl-sized allocation with the recording allocator, asserts SET_SSL answers 0, asserts the data slot is NULL and init 0, exercises every callback without dispatch to stale memory, frees the BIO, and asserts the allocator observed no double release. The pre-fix body's second free of the same block is the class this instrument records. The probe is ignored in the routine suite and runs alone under OPENSSL_RS_ADV_PROBE=1."
+    },
+    {
+      "id": "B6-D2",
+      "file": "src/runtime/confmod/mod.rs",
+      "pre_fix_line": 509,
+      "severity": "medium",
+      "class": "cross-thread data race (Rust UB) on process-global message buffers",
+      "description": "All four diagnostic builders formatted into a module-level static mut [c_char; 1024]. CONF_modules_load may run concurrently on different CONF objects, and the registry's RCU discipline exists to make concurrent readers legal, but two threads raising an unknown-section/unknown-module/DSO error wrote the same static buffer concurrently. The authority's ERR_vset_error allocates per raise, so this race was introduced by the conversion, not inherited.",
+      "fix": "Each builder now takes a caller-owned &mut [c_char; ERR_MAX_DATA_SIZE] and formats into it. Every call site declares a stack buffer immediately before raise_site_data, which copies the bytes before returning. No shared mutable storage remains in the file; message bytes and coordinates are unchanged.",
+      "regression": "Existing confmod tests pass; the interface change is compile-checked at all six call sites. A ThreadSanitizer/Miri race control is NOT_RUN (the repair removes the shared location; a pre-fix TSan canary would require rebuilding the old body)."
+    },
+    {
+      "id": "B6-D3",
+      "file": "src/runtime/bio/bss_bio.rs",
+      "pre_fix_line": 201,
+      "severity": "low",
+      "class": "null-pointer dereference from a state reachable through the public BIO accessors",
+      "description": "BIO_read/bio_nread0 trusted init to imply a paired peer and dereferenced peer_ctx(b) unconditionally; bio_write/bio_nwrite0 trusted init to imply an allocated ring buffer. BIO_set_init and BIO_set_data are public on a live BIO, so an application can make a constructor-produced pair BIO report init=1 without bio_make_pair ever running, or replace the peer's method data with NULL. The authority asserts (or dereferences) the same state.",
+      "fix": "Read and non-copying-read paths now return 0 when the context or its peer data is NULL; write paths return 0 when the context or ring buffer is NULL; PENDING/EOF return 0 when the peer's data is absent; bio_destroy_pair clears the live peer BIO's init even when its data slot is absent. Legitimate pair behaviour is unchanged.",
+      "regression": "runtime::bio::bss_bio::tests::forced_initialised_state_without_a_pair_is_inert creates a pair BIO, sets init through the public accessor, and drives read/write/PENDING/EOF/free. Pre-fix this dereferenced NULL; post-fix it answers 0/1 as recorded and frees cleanly."
+    },
+    {
+      "id": "B6-D4",
+      "file": "src/runtime/confmod/mod.rs",
+      "pre_fix_line": 1306,
+      "severity": "low",
+      "class": "authority-parity divergence on a NULL supported_modules list",
+      "description": "CONF_modules_unload relied on the comment's claim that OPENSSL_sk_dup(NULL) answers NULL and takes the authority's early return. This crate's OPENSSL_sk_dup deliberately answers an empty stack for NULL, so the early return was skipped and an empty list was created, published and freed. The final state is the same, but the control flow and RCU synchronize differ from the authority.",
+      "fix": "Test supported_modules() for NULL explicitly under the write lock and unlock/return before duplicating, matching conf_mod.c's sk_CONF_MODULE_dup(NULL) == NULL arm.",
+      "regression": "Covered structurally; no dynamic control distinguishes the two final states (both leave supported_modules NULL), so no new test was added."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (cargo check --lib)",
+      "focused_tests": [
+        "runtime::bio::bss_bio: 2 passed / 0 failed (zero-state sweep + the new forced-state control)",
+        "ssl::bio_ssl: 1 passed / 0 failed / 1 ignored (zero-state sweep; the allocator probe is ignored by design)",
+        "runtime::confmod: 2 passed / 0 failed"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1592 passed / 0 failed / 27 ignored (253.62 s, --test-threads=1)",
+      "threaded4": "1592 passed / 0 failed / 27 ignored (94.65 s, --test-threads=4)",
+      "probes": [
+        "ssl::bio_ssl::adv_probe::set_ssl_allocation_refusal_clears_data_before_recreate: 1 passed / 0 failed under OPENSSL_RS_ADV_PROBE=1, --ignored --exact --test-threads=1 (recording allocator; double-release check clean)",
+        "runtime::bio::bss_bio::tests::forced_initialised_state_without_a_pair_is_inert: 1 passed"
+      ]
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B6-1",
+        "class": "use-after-free / double release on a failed BIO_C_SET_SSL re-creation",
+        "control": "The allocator probe refuses the exact BioSsl allocation after ssl_free has released the old block. The recording allocator flags a release of an already-released pointer, so the pre-fix body fails assert_no_double_free at BIO_free; the repaired body passes."
+      },
+      {
+        "id": "NC-B6-2",
+        "class": "null dereference from a forced initialised pair state",
+        "control": "The pair test sets init through BIO_set_init without pairing and drives both read and write; the pre-fix body dereferenced the absent peer/buffer, the repaired body answers the uninitialised result."
+      }
+    ],
+    "not_run": [
+      "ASan over the repaired file bodies (the allocator-refusal control is the targeted instrument used instead)",
+      "Miri / ThreadSanitizer / Loom for the confmod race and the registry concurrency contract",
+      "C differential courts RT-SSL-BIO and RT-CONF-MOD (the candidate distribution shell must be rebuilt from this candidate before the comparison is meaningful)",
+      "FRF-Fuzz replay, dependency-closure audit, independent review, SEAL regeneration"
+    ]
+  },
+  "summary": {
+    "hidden_obligations": 0,
+    "safe_rust_caller_can_cause_ub": "No: these files expose only unsafe C-ABI entry points, and every remaining raw precondition is stated at the boundary. The confmod module_find/unload and re-adopting-the-same-SSL preconditions are retained external contracts that block SAFETY_DISCHARGED.",
+    "graduation": "CONTRACTED (no SAFETY_DISCHARGED, no SAFE_COMPATIBLE)",
+    "next_boundary_position": "No deferred boundary file remains in the B1-B6 queue. The next boundary candidates are the same static-mut diagnostic-buffer class in src/provider/conf.rs and src/runtime/conf/conf_ssl.rs, then a re-audit of the confmod unload/load pinning design.",
+    "next_ordinary_position": "src/evp/fetch.rs (rank 118, 121), then src/ssl/tls13_enc.rs (119, 121), src/ts/ts_rsp_utils.rs (120, 121), src/x509/x509_vpm.rs (121, 121)."
+  }
+}
