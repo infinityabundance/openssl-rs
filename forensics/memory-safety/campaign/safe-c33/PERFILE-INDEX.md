@@ -4520,3 +4520,48 @@ public data.
 **Next eight (stable order).** `src/evp/algorithm.rs`, `src/evp/e_aes_cbc_hmac_sha256.rs`,
 `src/evp/e_bf.rs`, `src/evp/e_cast.rs`, `src/evp/e_des.rs`, `src/evp/e_idea.rs`,
 `src/evp/e_rc4_hmac_md5.rs`, `src/evp/e_rc4.rs`.
+
+## 60. Boundary sweep B21 — EVP algorithm walk, provider callbacks and the first-name seam
+
+**Candidate.** `integrate/safe-c33` at `f1daf09bb`; `src/evp/algorithm.rs`
+(blob `5f886ca7b`). Authority: `crypto/core_algorithm.c` (sha256
+`182f4a8d…`, 6,246 bytes) in the pinned 3.6.4 manifest.
+
+**Disposition.** CONTRACTED, not `SAFETY_DISCHARGED`. Five boundaries
+(B21-EVP-1..5) re-use the B9/B10 registry serialization contract:
+`ossl_provider_doall_activated` takes a provider reference and raises its
+activation count before invoking `algorithm_do_this` **outside every lock**,
+and `query_operation`/`unquery_operation` bracket the map walk.
+
+**Defects repaired.**
+- B21-D1 (low, allocator-seam coordinate): `L_STRNDUP` said 175; the pinned
+  authority's `OPENSSL_strndup` call is `core_algorithm.c:197`. Fixed.
+- B21-D2 (low, panic/overflow): `cur_operation += 1` overflowed for an
+  out-of-contract `operation_id == INT_MAX` (authority C UB; debug panic
+  across `unsafe extern "C"`). Replaced with `checked_add` and a defined stop.
+- B21-D3 (doc): the `libctx` rewrite comment claimed a reader/callback
+  visibility that does not exist; `cbdata.libctx` is written and never read
+  (authority parity). Corrected.
+
+**Gates observed.** FAST fmt clean; focused `evp::algorithm` **7 passed / 0
+failed** (1,680 filtered). BATCH clippy clean; full library **1660 passed /
+0 failed / 27 ignored** serial (281.28 s) and threaded (90.54 s), in the court
+with `CARGO_BUILD_JOBS=4`.
+
+**NOT_RUN.** Miri (no component in stable 1.98.1/nightly-2026-10-05); ASan on
+the exact candidate (no memory-access-pattern change; the allocation remains
+the audited `CRYPTO_strndup` seam and no production test reaches the walk);
+Loom/TSan (no lock or atomic in this file; the callback refcount discipline is
+B9/B10's and was not edited); `RT-FETCH` named-provider/sweep differential;
+FRF/probe suite; SEAL.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. No new
+production unsafe operation; no safe Rust interface changed. Residuals are the
+provider-table termination/NUL contract, the reserve/unreserve callback pairing
+(a caller lock is held across pre/fn/post), and the non-fatal context assertion
+— all authority parity and recorded in `boundary-sweep-B21.json`.
+
+**Queue.** `REMAINING-AUDIT.txt` 290 -> **289**; `AUDITED-FILES.txt` 473 -> **474**.
+**Next eight (stable order).** `src/evp/e_aes_cbc_hmac_sha256.rs`,
+`src/evp/e_bf.rs`, `src/evp/e_cast.rs`, `src/evp/e_des.rs`, `src/evp/e_idea.rs`,
+`src/evp/e_rc4_hmac_md5.rs`, `src/evp/e_rc4.rs`, `src/evp/e_seed.rs`.

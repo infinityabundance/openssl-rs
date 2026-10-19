@@ -1,0 +1,217 @@
+{
+  "receipt": "boundary-sweep-B21",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "f1daf09bb",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/evp/algorithm.rs"
+    ],
+    "working_tree_blob": {
+      "src/evp/algorithm.rs": "5f886ca7b8d02f408b7949d9cf1e7fc69ebfa4fa"
+    }
+  },
+  "stop_status": "CLEAR after repair. One allocator-seam error coordinate was wrong (L_STRNDUP 175 vs the pinned authority's 197), one signed-overflow edge in the operation loop was removed, and one misleading contract comment was corrected. No confirmed memory-safety defect, no ABI regression, no weakened detector, no new hidden obligation and no new production unsafe operation. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/core_algorithm.c, sha256 182f4a8da3bb320edcab1ed94f2cb16f3956bd1768e451ae3cedc4e8cb26bb85, 6246 bytes; compared whole against src/evp/algorithm.rs (algorithm_do_map, algorithm_do_this, ossl_algorithm_do_all, ossl_algorithm_get1_first_name).",
+    "abi": "No export, signature, #[repr(C)] layout or unsafe lint attribute changed. ossl_algorithm_do_all and ossl_algorithm_get1_first_name remain pub(crate) without #[no_mangle]; AlgorithmData remains a Rust-only stack structure; the OsslAlgorithm four-pointer layout and all five callback typedefs are unchanged.",
+    "external_contracts": [
+      "A provider's query_operation answer is NULL or a NULL-algorithm_names-terminated OSSL_ALGORITHM array; every non-terminator row's algorithm_names is a NUL-terminated ':'-separated alias list. The provider keeps the array valid until the matching unquery_operation.",
+      "ossl_provider_doall_activated takes a reference and raises the activation count on every already-activated provider under the store/flag locks, invokes the callback outside every lock, and undoes both afterwards. algorithm_do_this therefore runs with a live, pinned provider and holds no registry lock.",
+      "reserve_store, fn_ and unreserve_store are non-NULL; pre and post are optional. api_do_map calls reserve_store once per map and pairs it with unreserve_store on every exit after a successful reserve, including both failure arms.",
+      "A refused precondition (pre returns non-zero with result = 0) is success and skips the map; a pre error (returns 0) is -1; a post that returns 0 overwrites ret with -1. These three conventions are observable and are pinned by tests.",
+      "The callback lock discipline belongs to the callback implementations: method_store's reserve_store takes the method-store lock and holds it across pre, every fn_ and post; those callbacks must not re-enter that store lock. This file takes no lock of its own.",
+      "operation_id is 0 (every operation) or an id in OSSL_OP_DIGEST..=OSSL_OP_HIGHEST (1..=22). The authority's for-loop overflows a signed int for INT_MAX; the crate's checked increment terminates instead."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B21-EVP-1",
+      "file": "src/evp/algorithm.rs",
+      "mechanism": "ossl_algorithm_do_all entry, AlgorithmData stack lifetime, provider selection and libctx rewrite",
+      "disposition": "CONTRACTED",
+      "contract": "libctx NULL or live; provider NULL or live; reserve_store/fn_/unreserve_store non-NULL; pre/post NULL or valid; data opaque and passed back unchanged; operation_id 0 or 1..=22. cbdata is this frame's live stack object and cbptr is passed only to the synchronous doall/do_this call. The no-provider path sweeps activated providers (which doall pins); the named path requires the caller to keep provider alive, compares concrete contexts, and silently returns on mismatch (non-fatal ossl_assert parity).",
+      "defects": [
+        "B21-D2",
+        "B21-D3"
+      ],
+      "residuals": [
+        "B21-R3",
+        "B21-R4"
+      ]
+    },
+    {
+      "id": "B21-EVP-2",
+      "file": "src/evp/algorithm.rs",
+      "mechanism": "algorithm_do_this per-provider operation walk and query/unquery pairing",
+      "disposition": "CONTRACTED",
+      "contract": "provider live and cbdata a live AlgorithmData. Each operation is query_operation -> algorithm_do_map -> unquery_operation, including when the query answers NULL; the array is provider-owned until unquery. A hard -1 returns 0 immediately, a soft 0 sets ok = 0 and continues. The operation increment is checked, so the loop always terminates and no signed overflow can cross the unsafe extern \"C\" boundary.",
+      "defects": [
+        "B21-D2"
+      ],
+      "residuals": [
+        "B21-R1",
+        "B21-R5"
+      ]
+    },
+    {
+      "id": "B21-EVP-3",
+      "file": "src/evp/algorithm.rs",
+      "mechanism": "algorithm_do_map callback sequence: reserve_store, pre, per-entry fn_, post, unreserve_store",
+      "disposition": "CONTRACTED",
+      "contract": "provider live for every callback implementation; map NULL or terminated; cbdata live. reserve_store is called unconditionally and, when it answers non-zero, unreserve_store is called on every exit path. A refused precondition becomes success and skips the map; a pre error is -1 with no post; a post returning 0 overwrites ret with -1. fn_ runs once per non-terminator row. This function holds no lock and allocates nothing.",
+      "defects": [],
+      "residuals": [
+        "B21-R2"
+      ]
+    },
+    {
+      "id": "B21-EVP-4",
+      "file": "src/evp/algorithm.rs",
+      "mechanism": "ossl_algorithm_get1_first_name allocation and ownership transfer",
+      "disposition": "CONTRACTED",
+      "contract": "algo is a live OSSL_ALGORITHM whose algorithm_names is NULL or a NUL-terminated ':'-separated list. NULL answers NULL without allocating; otherwise the first colon (or the whole string) is copied with CRYPTO_strndup at the pinned authority coordinate crypto/core_algorithm.c:197 and the fresh block is transferred to the caller, which releases it once. The function never releases it.",
+      "defects": [
+        "B21-D1"
+      ],
+      "residuals": [
+        "B21-R1"
+      ]
+    },
+    {
+      "id": "B21-EVP-5",
+      "file": "src/evp/algorithm.rs",
+      "mechanism": "registry serialization and callback reentrancy edge (reused B9/B10 contract)",
+      "disposition": "CONTRACTED",
+      "contract": "The activated-provider sweep takes references and raises activation counts under the store/flag locks and invokes algorithm_do_this with no lock held; query/unquery bracket the whole map walk; the only lock held across pre/fn_/post is the method-store lock the caller's reserve_store takes. The resulting order is method-store lock -> provider opbits lock (pre/post), matching the authority.",
+      "defects": [],
+      "residuals": [
+        "B21-R2",
+        "B21-R5"
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B21-D1",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "kind": "allocator_seam_coordinate",
+      "status": "fixed",
+      "description": "L_STRNDUP was 175, which is the named-provider path's `return;` in the pinned authority, not the OPENSSL_strndup call. The value reaches CRYPTO_strndup as the file/line recorded on an allocation failure, so the authority seam coordinate was wrong.",
+      "fix": "L_STRNDUP is now 197, the pinned authority's `ret = OPENSSL_strndup(algo->algorithm_names, first_name_len);`. FILE was already the authority's ../../src/openssl-3.6.4/ spelling and is unchanged."
+    },
+    {
+      "id": "B21-D2",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "kind": "panic_and_overflow_across_c_abi",
+      "status": "fixed",
+      "description": "cur_operation += 1 in algorithm_do_this overflows when operation_id is INT_MAX: a debug build panics across an unsafe extern \"C\" function, and a release build wraps and walks an effectively unbounded range. The C authority's for-loop has the same signed-integer overflow, which is UB.",
+      "fix": "The increment is cur_operation.checked_add(1) with a defined break on overflow. Every valid operation id (0 or 1..=22) takes exactly the authority's path; the out-of-contract id now stops instead of reproducing the authority's UB. The contract now names the valid domain."
+    },
+    {
+      "id": "B21-D3",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "kind": "contract_documentation",
+      "status": "fixed",
+      "description": "The comment on the named-provider libctx rewrite claimed the field was read through cbptr and that every callback saw it. In the authority and the crate cbdata.libctx is written and never read: callbacks receive the caller's separate `data` pointer. The claim implied a reader and could mislead a reentrancy review.",
+      "fix": "The comment now states authority parity: the field is written for fidelity and has no reader; the allow(unused_assignments) is explained accordingly."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS",
+      "focused_tests": "cargo test --lib evp::algorithm -- --test-threads=4: 7 passed / 0 failed / 0 ignored (1680 filtered)."
+    },
+    "controls_observed": [
+      "The seven existing unit tests pin the three return conventions, the refused-precondition-is-success branch, the post-overwrites-ret branch, the NULL-map path, the first-colon split/ownership transfer, and the 1..=22 operation range.",
+      "The full library suite was run twice on the final blob, with --test-threads=1 and --test-threads=4, so the module's global callback fixtures were exercised under both execution schedules.",
+      "The allocator seam coordinate was checked against the pinned authority blob (sha256 182f4a8d..., 6246 bytes), which places OPENSSL_strndup at line 197. No production test allocates through ossl_algorithm_get1_first_name, so the coordinate correction has a source witness rather than a runtime allocation-failure control."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1660 passed, 0 failed, 27 ignored (90.54 s).",
+      "serial": "cargo test --lib -- --test-threads=1: 1660 passed, 0 failed, 27 ignored (281.28 s).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: clean (21.54 s).",
+      "venue": "docker/openssl-rs-court.sh, CARGO_BUILD_JOBS=4, dev profile."
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "No miri component is installed in the court's stable 1.98.1 toolchain or the sanitizer venue's nightly-2026-10-05 toolchain; the exercised path also crosses the allocator and provider-dispatch FFI."
+  },
+  "loom_or_tsan": "NOT_RUN. This file declares no lock or atomic; its concurrency obligations are the B9/B10 doall reference/activation-count discipline, which was not edited. Loom has no synchronization primitive to model here, and TSan was not run for a comment/arithmetic change with no memory-access-pattern delta.",
+  "invalidated_evidence": {
+    "closed": "No prior mechanism receipt covered the L_STRNDUP coordinate; the defect was latent in the D140/D141 transcription.",
+    "not_invalidated": "The B9/B10 activated-provider sweep, refcount undo and query/unquery evidence is unchanged and reused: ossl_provider_doall_activated and the provider functions were not edited. The method_store callback contracts are likewise reused unchanged."
+  },
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No production unsafe operation was added. checked_add is safe Rust; the contract clarification only makes the existing operation_id preconditions explicit. No test-only unsafe was added.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "The batch corrects a coordinate, an increment and a comment; the unsafe call sites themselves are unchanged.",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 0,
+  "boundary_size": "One file changed (23 insertions, 8 deletions). No allocation size, #[repr(C)] layout, export, signature or unsafe lint attribute changed; one allocator-seam error coordinate was corrected from 175 to 197.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "All four entry points are unsafe fn or unsafe extern \"C\" functions whose preconditions are stated; the only safe function on the path (lib_ctx_get_concrete) performs no dereference. No safe Rust interface was added or changed. The remaining obligations are provider ABI contracts (table termination/NUL and query/unquery lifetime) and the callback lock discipline, both recorded as residuals rather than hidden.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B21-R1",
+      "file": "src/evp/algorithm.rs",
+      "severity": "medium",
+      "disposition": "RECORDED external provider contract - authority parity",
+      "description": "The OSSL_ALGORITHM array and every algorithm_names list are provider-owned. A malformed provider table (missing NULL terminator or NUL) would be over-read by the walk/first-name scan exactly as the authority's loop/strchr would. Terminating the array and NUL-terminating names is the provider ABI's obligation; the array must stay valid until unquery_operation."
+    },
+    {
+      "id": "B21-R2",
+      "file": "src/evp/algorithm.rs",
+      "severity": "medium",
+      "disposition": "RECORDED callback contract - authority parity",
+      "description": "The caller's reserve_store commonly takes a non-reentrant method-store lock and this file holds it across pre, every fn_ and post. Those callbacks must not re-enter that store lock; lock order is method-store -> provider opbits. The discipline is method_store's contract (audited separately), reused here unchanged."
+    },
+    {
+      "id": "B21-R3",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority hazard - not reproduced as a panic",
+      "description": "operation_id outside 0 or 1..=22 is outside the contract. The authority's loop overflows for INT_MAX; the checked increment now stops. Negative ids query once and stop, which is the authority's non-overflowing natural behaviour."
+    },
+    {
+      "id": "B21-R4",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity",
+      "description": "The named-provider path's concrete-context assertion is non-fatal under NDEBUG, so a caller mismatch is a silent no-walk. This is deliberate parity; the function still requires provider to be live and held for the duration of the direct walk."
+    },
+    {
+      "id": "B21-R5",
+      "file": "src/evp/algorithm.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity",
+      "description": "cbdata.libctx is written on the named-provider path and never read by this file; the callbacks receive the caller's separate opaque `data`. The write is retained for fidelity and is documented as dead rather than presented as a live callback input."
+    }
+  ],
+  "queue": {
+    "remaining_before": 290,
+    "remaining_after": 289,
+    "audited_before": 473,
+    "audited_after": 474,
+    "next_ordinary": "src/evp/e_aes_cbc_hmac_sha256.rs",
+    "next_eight": [
+      "src/evp/e_aes_cbc_hmac_sha256.rs",
+      "src/evp/e_bf.rs",
+      "src/evp/e_cast.rs",
+      "src/evp/e_des.rs",
+      "src/evp/e_idea.rs",
+      "src/evp/e_rc4_hmac_md5.rs",
+      "src/evp/e_rc4.rs",
+      "src/evp/e_seed.rs"
+    ]
+  }
+}

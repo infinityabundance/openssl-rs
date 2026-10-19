@@ -64,8 +64,9 @@ use crate::runtime::mem::CRYPTO_strndup;
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/core_algorithm.c".as_ptr();
 
-/// `OPENSSL_strndup`'s call site in `ossl_algorithm_get1_first_name`.
-const L_STRNDUP: c_int = 175;
+/// `OPENSSL_strndup`'s call site in `ossl_algorithm_get1_first_name`
+/// (`crypto/core_algorithm.c:197` in the pinned 3.6.4 authority).
+const L_STRNDUP: c_int = 197;
 
 /// `OSSL_OP_DIGEST` — `include/openssl/core_dispatch.h`. The first operation the walk visits.
 pub(crate) const OSSL_OP_DIGEST: c_int = 1;
@@ -252,7 +253,16 @@ unsafe extern "C" fn algorithm_do_this(provider: *mut OsslProvider, cbdata: *mut
             // Soft error: remember it and keep asking this provider for the rest.
             ok = 0;
         }
-        cur_operation += 1;
+        // The authority's `for (…; cur_operation++)` is signed-integer overflow when a
+        // caller passes `INT_MAX`, which is undefined in C and would wrap into an
+        // effectively endless walk here. Operation ids are the authority's `1..=22`
+        // (or the `0` sentinel), so a checked increment is identical for every valid
+        // input and turns the out-of-contract case into a defined stop instead of
+        // reproducing the authority's overflow.
+        let Some(next_operation) = cur_operation.checked_add(1) else {
+            break;
+        };
+        cur_operation = next_operation;
     }
     ok
 }
@@ -278,7 +288,11 @@ unsafe extern "C" fn algorithm_do_this(provider: *mut OsslProvider, cbdata: *mut
 ///
 /// # Safety
 /// `libctx` NULL or live; `provider` NULL or live; `reserve_store`, `fn` and `unreserve_store`
-/// non-NULL; `pre` and `post` NULL or valid; `data` opaque and passed back unchanged.
+/// non-NULL; `pre` and `post` NULL or valid; `data` opaque and passed back unchanged;
+/// `operation_id` is 0 (every operation) or an operation id in
+/// `OSSL_OP_DIGEST..=OSSL_OP_HIGHEST`. A value outside that domain is outside the
+/// authority's contract; the checked increment in `algorithm_do_this` makes it stop
+/// instead of reproducing the authority's signed overflow.
 ///
 /// **`pub(crate)`, and deliberately not `#[no_mangle]`.** The authority's `ossl_algorithm_do_all`
 /// is a global C symbol, but libcrypto's version script hides it from the DSO — it is not one of
@@ -331,10 +345,11 @@ pub(crate) unsafe extern "C" fn ossl_algorithm_do_all(
         return;
     }
 
-    // The rewrite that matters: the walk's own scope becomes the *provider's* context, so
-    // every callback sees the context the methods it builds will belong to rather than the one
-    // the caller passed. `#[allow]` because the field is written and only read through the
-    // pointer `cbptr` gives the walk — the compiler cannot see that reader.
+    // The authority rewrites the walk's own `libctx` to the *provider's* context here.
+    // Nothing in `algorithm_do_map`/`algorithm_do_this` reads the field — the callbacks
+    // receive the caller's opaque `data`, not this structure — so in the authority and
+    // here alike the assignment is preserved for fidelity and has no reader. `#[allow]`
+    // records that (and the compiler cannot otherwise see it through `cbptr`).
     #[allow(unused_assignments)]
     {
         cbdata.libctx = provider_libctx;

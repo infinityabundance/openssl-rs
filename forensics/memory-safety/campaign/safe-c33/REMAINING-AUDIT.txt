@@ -1,4 +1,3 @@
-src/evp/algorithm.rs
 src/evp/e_aes_cbc_hmac_sha256.rs
 src/evp/e_bf.rs
 src/evp/e_cast.rs
