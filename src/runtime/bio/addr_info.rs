@@ -293,6 +293,9 @@ unsafe fn addrinfo_wrap(
     bai: *mut *mut BioAddrInfo,
 ) -> c_int {
     let Some(node) = OwnedNode::new() else {
+        // SAFETY: `bai` is writable per the contract; the authority's own
+        // `if ((*bai = OPENSSL_zalloc(...)) == NULL) return 0;` writes NULL here.
+        unsafe { *bai = ptr::null_mut() };
         return 0;
     };
     let node_ptr = node.as_ptr();
@@ -311,8 +314,15 @@ unsafe fn addrinfo_wrap(
         }
         let addr = BIO_ADDR_new();
         if !addr.is_null() {
-            BIO_ADDR_rawmake(addr, family, where_, wherelen, port);
-            (*node_ptr).addr = addr;
+            // The authority refuses a family/`where` combination `BIO_ADDR_rawmake`
+            // rejects (notably an `AF_UNIX` path that leaves no room for its NUL);
+            // taking the block unconditionally would return success with an
+            // `AF_UNSPEC` address instead.
+            if BIO_ADDR_rawmake(addr, family, where_, wherelen, port) != 0 {
+                (*node_ptr).addr = addr;
+            } else {
+                super::addr::BIO_ADDR_free(addr);
+            }
         }
         (*node_ptr).next = ptr::null_mut();
         if (*node_ptr).addr.is_null() {
@@ -822,6 +832,55 @@ mod tests {
         assert_eq!(parse(c"[::1]x", BIO_PARSE_PRIO_HOST), (0, None, None));
         // A colon in the service half names no service.
         assert_eq!(parse(c"host:a:b", BIO_PARSE_PRIO_HOST), (0, None, None));
+    }
+
+    #[test]
+    fn a_unix_path_that_cannot_be_terminated_is_refused() {
+        // `BIO_ADDR_rawmake` requires `wherelen + 1 <= sizeof(sun_path)`; 107 bytes is the
+        // last path length with room for the NUL, and 108 is the first that has none.
+        let mut last_fit_bytes = vec![b'a'; 107];
+        last_fit_bytes.push(0);
+        let mut too_long_bytes = vec![b'a'; 108];
+        too_long_bytes.push(0);
+        let Ok(last_fit) = CStr::from_bytes_with_nul(&last_fit_bytes) else {
+            return;
+        };
+        let Ok(too_long) = CStr::from_bytes_with_nul(&too_long_bytes) else {
+            return;
+        };
+
+        let mut res: *mut BioAddrInfo = ptr::null_mut();
+        // SAFETY: both paths are NUL-terminated, `res` is writable, and the remaining
+        // arguments are the AF_UNIX lookup the authority supports.
+        let ok = unsafe {
+            BIO_lookup(
+                last_fit.as_ptr(),
+                ptr::null(),
+                BIO_LOOKUP_CLIENT,
+                sys::AF_UNIX,
+                sys::SOCK_STREAM,
+                &mut res,
+            )
+        };
+        assert_eq!(ok, 1);
+        assert!(!res.is_null());
+        // SAFETY: `res` is the chain this call just built and has not released.
+        unsafe { BIO_ADDRINFO_free(res) };
+
+        let mut res: *mut BioAddrInfo = ptr::null_mut();
+        // SAFETY: as above; the authority refuses this path and writes NULL to `res`.
+        let refused = unsafe {
+            BIO_lookup(
+                too_long.as_ptr(),
+                ptr::null(),
+                BIO_LOOKUP_CLIENT,
+                sys::AF_UNIX,
+                sys::SOCK_STREAM,
+                &mut res,
+            )
+        };
+        assert_eq!(refused, 0);
+        assert!(res.is_null());
     }
 
     #[test]
