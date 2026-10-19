@@ -3285,3 +3285,83 @@ is added to `keyio`.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M37.json`](atlas-refresh/mechanism-sweep-M37.json).
+
+## 42. Mechanism sweep M38 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `23bd395c0` plus the five
+resource/compatibility repairs across four files described below; contracts
+checked against OpenSSL 3.6.4
+(`apps/{speed,spkac,storeutl,ts,verify,version,x509}.c`, `crypto/asn1_dsa.c` and
+`crypto/ts/ts_req_utils.c` at the pinned tag).
+
+**Scope:** the eight files M37 named as next. The audit covered argument-string
+lifetimes (`Opts` copies argv), file/BIO ownership on every exit including option
+refusals, option-array bounds, error tails, allocation arithmetic, getter-returned
+and body-owned raw pointers, and (for `asn1_dsa.rs`) the borrowed `Packet` cursor
+contracts against their `dsa/sign.rs` callers.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/apps/speed.rs` | `EVP_MD_fetch`/legacy fallback, `EVP_DigestInit`, `EVP_MD_CTX_free`/`EVP_MD_free`, `Opts` arms | No defect. Fetched methods are released once; `EVP_MD_free` refuses the legacy/static origin, so the fallback is a no-op; every arm returns before the buffer. |
+| `src/apps/spkac.rs` | `bio_open` stdio/file split, `NCONF_new`/`NCONF_load_bio`/`NCONF_get_string`, `NETSCAPE_SPKI_b64_decode`/`_print`/`_get_pubkey`/`_verify`, `PEM_write_bio_PUBKEY` | No defect. `inb`/`conf`/`spki`/`out`/`pkey` are released once on every return; a NULL `NETSCAPE_SPKI_get_pubkey` reaches the library's NULL-refusal arms exactly as the authority's unchecked use; `_passin` is the helper's NULL block. |
+| `src/apps/storeutl.rs` | `OSSL_STORE_open`/`_expect`/`_load`/`_error`/`_eof`/`_close`, `OSSL_STORE_INFO_*` getters, `bio_out`/`bio_err`, output BIO | Repaired one compatibility defect: after the load loop the transcription reopened `out`, which `storeutl.c:507` does not; with zero loaded items it created the `-out` file and wrote `Total found: 0`, where the authority leaves `out` NULL and its `BIO_vprintf` refuses. The reopen is removed. |
+| `src/apps/ts.rs` | `EVP_MD_fetch`/legacy `opt_md`, `NCONF_load`, `create_digest` chunking, `TS_REQ_new`/`TS_MSG_IMPRINT_new`/`X509_ALGOR_new`/`ASN1_TYPE_new`, setters' duplicate-on-set semantics, `d2i_TS_REQ_bio`/`i2d_TS_REQ_bio`/`TS_REQ_print_bio`, output BIO | Repaired three ownership leaks: `query_command` opened a data/stdin BIO before refusing the unlanded `-digest` hex arm (leak on every such run) and now checks the arm first, matching the authority's `digest == NULL && (data_bio = ...)`; `default_config_file` dropped the `CONF_get1_default_config_file` block and now adopts it with `OwnedBlock` at the (NULL, 0) seam; `main`'s two config-failure arms returned after `opt_md` fetched an `EVP_MD` without releasing it, and now free it. |
+| `src/apps/verify.rs` | `X509_VERIFY_PARAM_new`/`_free`, `setup_verify` file arm, `X509_STORE_CTX_new`/`_init`/`_free`, verify callback, `X509_verify_cert`, output BIO | Repaired one ownership leak: `vpm` was allocated before the option loop but released only on the final arm, so every parse refusal/`not_landed` return leaked it. `VpmGuard` now gives every exit the authority's single `end:` release, in the authority's order (`vpm`, then `store`). Callback pointers (`current_cert`, `parent`) are borrowed only across the callback; `V_VERBOSE`/`VFLAGS` are process globals of a single-threaded CLI. |
+| `src/apps/version.rs` | `OpenSSL_version` `'static` C string | No defect. `CStr::from_ptr` is used only on the documented never-NULL static string. |
+| `src/apps/x509.rs` | `load_cert`, `X509_get0_pubkey`, `X509_get_issuer/subject_name`, `X509_get0_serialNumber`, `X509_get0_notBefore/After`, `X509_digest` into a 64-byte buffer, `X509_print_ex`, `i2d_X509_bio`/`PEM_write_bio_X509`, output BIO | No defect. `pkey` and the name/time/serial pointers are borrowed from live `x`; the SHA-1 digest length is bounded by `EVP_MAX_MD_SIZE` (64); `out`/`x` are released once on every return. |
+| `src/asn1_dsa.rs` | borrowed `Packet` cursor (`get_1`, `get_net_2`, `get_bytes`, `get_sub`, length-prefixed 1/2), `WPACKET` encoder, `BN_bn2binpad`/`BN_bin2bn`, `offset_from` | No defect found. Every advance is guarded by `remaining`; `buf_init` refuses `len > SIZE_MAX/2`; the sub-packet borrow is a prefix of the parent; `ossl_decode_der_dsa_sig`'s `offset_from` stays within the caller's slice and `*ppin` advances by the consumed count. The `dsa/sign.rs` callers establish the documented precondition (`*ppin` readable for `len`, live `r`/`s`, live `WPACKET`). BOUNDARY closure is `NOT_RUN` (see below). |
+
+**Defects repaired (none is UB).** Five resource/compatibility divergences: `ts` leaked a data/stdin BIO on the unlanded hex-digest
+arm, leaked the default-config allocation, and leaked the fetched `EVP_MD` on two
+config-failure arms (low); `verify` leaked its `X509_VERIFY_PARAM` on every
+option-parse refusal (low); `storeutl` created an `-out` file and emitted
+`Total found: 0` where the authority emits nothing when zero items load (low).
+No invalid free, double free, null dereference, alias, uninitialised read or new
+hidden obligation was found.
+
+**New unsafe assumptions (hidden must be 0).** None. One new unsafe operation
+was added, inside an established contract: `OwnedBlock::<c_char>::from_raw` in
+`ts::default_config_file` reclaims the `CONF_get1_default_config_file` block
+(configutl's identical adoption). `verify`'s `VpmGuard::drop` calls the existing
+NULL-tolerant `X509_VERIFY_PARAM_free`; the pointer is produced in the same frame
+and the guard is its exclusive owner. No new FFI symbol, allocator coordinate,
+`#[repr(C)]` layout or signature. Contracts reused: `Opts` copying/bounds
+(`rest`/`check_rest_arg`), keyio `bio_open_default` stdio/file, OB-1
+`OwnedBlock` adoption with the (NULL, 0) release seam, OB-3-style NULL-tolerant
+single release, `BIO_NOCLOSE` standard-stream, and the `Packet` borrowed-cursor
+contracts.
+
+**Evidence.** FAST: fmt clean; `cargo check --lib` PASS (9.34 s);
+`cargo test --lib -- apps::` **0 passed / 0 failed** (1,675 filtered — these
+front-ends have no unit tests); affected object tests
+`ts_verify_ctx` **2 passed** and `x509_vpm` **7 passed**. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1648 passed / 0 failed / 27
+ignored** serially (212.28 s) and with `--test-threads=4` (107.24 s). No test
+removed or newly ignored.
+
+**NOT_RUN.** No CLI bin target exists, so the app-level differential probes and
+`courts/phase17/rt_cli_bodies_probe.sh` were not run. Allocator-hook
+instrumentation for the repaired lifetimes, Miri (Stacked/Tree Borrows),
+ASan/TSan/Loom, authority differential replay of the eight units, independent
+adversarial review and SEAL are `NOT_RUN`. `asn1_dsa.rs`'s caller/dependency
+closure is `NOT_RUN`; only its own contracts and the two `dsa/sign.rs` call sites
+were checked. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** Every error tail still omits the
+pointer-bearing `ERR_print_errors` lines; `verify`'s callback returns `ok`
+without the authority's error-to-`ok` conversions (a failing chain is not
+driven); `x509 -out` opens through `bio_open_default` without the
+`outformat`-derived binary-mode flag (identical on Unix); `ts -reply`/`-verify`,
+the `-digest` hex, `-policy` and nonce arms remain unlanded; `verify`'s
+`V_VERBOSE`/`VFLAGS` are `static mut` process globals (single-threaded CLI, no
+thread-safety claim); `spkac`'s unchecked `NETSCAPE_SPKI_get_pubkey` result is
+NULL-refused by the library, matching the authority.
+
+**Queue.** `REMAINING-AUDIT.txt` 422 → **414**; `AUDITED-FILES.txt` 341 → **349**.
+
+**Next eight (stable order).** `src/asn1/evp_asn1.rs`, `src/asn1/i2d_evp.rs`,
+`src/asn1/layout.rs`, `src/asn1/nsseq.rs`, `src/asn1/p5_pbe.rs`,
+`src/asn1/p5_pbev2.rs`, `src/asn1/p5_scrypt.rs`, `src/asn1/p8_pkey.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M38.json`](atlas-refresh/mechanism-sweep-M38.json).

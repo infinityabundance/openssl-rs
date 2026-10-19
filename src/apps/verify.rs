@@ -61,8 +61,24 @@ use crate::x509::x509_vfy::{
     X509_STORE_CTX_get_error, X509_STORE_CTX_get_error_depth, X509_STORE_CTX_init,
     X509_STORE_CTX_new, X509_verify_cert,
 };
-use crate::x509::x509_vpm::{X509_VERIFY_PARAM_free, X509_VERIFY_PARAM_new};
+use crate::x509::x509_vpm::{X509VerifyParam, X509_VERIFY_PARAM_free, X509_VERIFY_PARAM_new};
 use crate::x509::x_x509::X509_free;
+
+/// Owns `main`'s `X509_VERIFY_PARAM` allocation.
+///
+/// The authority releases `vpm` at its `end:` label (`apps/verify.c:248-256`), which every
+/// option-parse refusal reaches. The guard gives the same single release to the early
+/// returns as well: the pointer comes straight from `X509_VERIFY_PARAM_new` in the same
+/// frame, so the guard is its exclusive owner and `Drop` is its only release.
+struct VpmGuard(*mut X509VerifyParam);
+
+impl Drop for VpmGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard exclusively owns the pointer `X509_VERIFY_PARAM_new`
+        // returned (NULL included) and no other path releases it.
+        unsafe { X509_VERIFY_PARAM_free(self.0) };
+    }
+}
 
 /// `FORMAT_UNDEF` — `apps/include/fmt.h:24`.
 const FORMAT_UNDEF: c_int = 0;
@@ -303,9 +319,9 @@ fn setup_verify(cafile: Option<&str>, no_cafile: bool) -> *mut X509Store {
 pub fn main(argv: &[String]) -> i32 {
     // `if ((vpm = X509_VERIFY_PARAM_new()) == NULL) goto end;` —
     // `apps/verify.c:103-104`.
-    // SAFETY: no preconditions.
-    let vpm = X509_VERIFY_PARAM_new();
-    if vpm.is_null() {
+    // SAFETY: no preconditions; the answer is this frame's exclusive allocation.
+    let vpm = VpmGuard(X509_VERIFY_PARAM_new());
+    if vpm.0.is_null() {
         return 1;
     }
 
@@ -411,8 +427,7 @@ pub fn main(argv: &[String]) -> i32 {
     // (store == NULL) goto end;` — `apps/verify.c:220-223`.
     let store = setup_verify(cafile.as_deref(), no_cafile);
     if store.is_null() {
-        // SAFETY: `vpm` is live and not freed again.
-        unsafe { X509_VERIFY_PARAM_free(vpm) };
+        // The guard releases `vpm` on this return, the authority's `end:` order.
         return 1;
     }
     // `X509_STORE_set_verify_cb(store, cb);` — `apps/verify.c:224`.
@@ -443,9 +458,8 @@ pub fn main(argv: &[String]) -> i32 {
 
     // `end: X509_VERIFY_PARAM_free(vpm); X509_STORE_free(store); ... return (ret < 0 ?
     // 2 : ret);` — `apps/verify.c:248-256`.
-    // SAFETY: `vpm`/`store` are live and not freed again.
-    unsafe { X509_VERIFY_PARAM_free(vpm) };
-    // SAFETY: `vpm`/`store` are live and not freed again.
+    drop(vpm);
+    // SAFETY: `store` is live and not freed again.
     unsafe { X509_STORE_free(store) };
     if ret < 0 {
         2
