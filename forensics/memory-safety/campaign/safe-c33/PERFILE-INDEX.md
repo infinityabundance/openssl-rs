@@ -4306,3 +4306,78 @@ should decide whether M49's evidence remains valid or needs reissuing.
 **Next eight (stable order).** `src/engine/eng_all.rs`, `src/engine/eng_dyn.rs`,
 `src/engine/eng_fat.rs`, `src/engine/eng_lib.rs`, `src/engine/eng_pkey.rs`,
 `src/engine/eng_table.rs`, `src/engine/tb_cipher.rs`, `src/engine/tb_dh.rs`.
+
+## 57. Mechanism sweep M52 — 8-file ordinary batch — 2026-10-19
+
+**Batch.** `src/engine/eng_all.rs`, `eng_fat.rs`, `eng_lib.rs`, `eng_pkey.rs`,
+`tb_cipher.rs`, `tb_dh.rs`, `tb_digest.rs`, `tb_dsa.rs`. `eng_dyn.rs` (DSO
+loader and `bind_engine` callback) and `eng_table.rs` (lhash doall, engine
+`init`/`finish` callbacks under the engine lock) were confirmed as
+loader/callback boundaries and recorded **NOT_RUN**; `tb_digest.rs` and
+`tb_dsa.rs` were substituted and remain in the queue. Metadata-only follow-up:
+`src/ec/ecdh_ossl.rs:61` and `src/ec/ecdsa_ossl.rs:66` now carry the admitted
+`../../src/openssl-3.6.4/` seam prefix.
+
+| file | disposition | authority / mechanisms |
+|---|---|---|
+| `src/engine/eng_all.rs` | audited_no_change | `crypto/engine/eng_all.c`: `ENGINE_load_builtin_engines` transcribes the authority's `OPENSSL_init_crypto(ALL_BUILTIN, NULL)` inside `guard_ffi`; the still-unsupported init bit and the recorded divergence are unchanged. |
+| `src/engine/eng_fat.rs` | defect_repaired | `crypto/engine/eng_fat.c`: method-mask dispatch, `int_def_cb`'s exact-length `strncmp` arms, `CONF_parse_list` error operand, complete registrars, and the deliberate `engine_unregister_from_all_tables` removal hardening. **M52-D3**. |
+| `src/engine/eng_lib.rs` | defect_repaired | `crypto/engine/eng_lib.c`: `ENGINE_new`/`engine_free_util`/`ENGINE_free`, the checked refcount sentinel, the cleanup stack, ex-data and element accessors. `engine_set_all_null`'s field inventory matches the authority exactly (it deliberately does not clear the EC/pkey-method/SSL-loader slots). **M52-D2**. |
+| `src/engine/eng_pkey.rs` | defect_repaired | `crypto/engine/eng_pkey.c`: three loader setters/getters and the three entry points; NULL/`funct_ref`/no-loader refusal order matches. **M52-D2**. |
+| `src/engine/tb_cipher.rs` | defect_repaired | `crypto/engine/tb_cipher.c`: cipher table, registration/default selection and the two callback accessors. **M52-D1**. |
+| `src/engine/tb_dh.rs` | defect_repaired | `crypto/engine/tb_dh.c`: single `dummy_nid` table. **M52-D1**. |
+| `src/engine/tb_digest.rs` | defect_repaired | `crypto/engine/tb_digest.c`: digest table selected by `ossl_asn1_item_digest_ex`. **M52-D1**. |
+| `src/engine/tb_dsa.rs` | defect_repaired | `crypto/engine/tb_dsa.c`: single `dummy_nid` table. **M52-D1**. |
+
+**Defects repaired.** M52-D1 (low, six `tb_*` files): `# Safety` said `e` "must
+be NULL or point to a live `Engine`" for functions whose body dereferences `e`
+unconditionally (`ENGINE_register_*`, `ENGINE_set_default_*`, the getters and
+setters); a permitted input that is UB is not a sound contract. Now requires a
+non-NULL live `Engine`. M52-D2 (low, `eng_lib`/`eng_pkey`): same class for the
+nine non-null-tolerant element/getter accessors and the six loader
+setters/getters; the `ENGINE_free`, ex-data and `ENGINE_load_*` functions that do
+test NULL keep the NULL-tolerant wording. M52-D3 (low, `eng_fat`):
+`ENGINE_set_default`, `ENGINE_set_default_string` and
+`ENGINE_register_complete` now require a non-NULL `Engine`. M52-D4 (none,
+metadata): the two short EC seam strings are restored to the admitted prefix.
+No production code path, signature, layout or exported symbol changed.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts
+reused: RC-1 allocator seam (exact size/file/line preserved); OB-3 owner shape
+for `RawEngine`/`OwnedEngine` and the cleanup `OwnedItem` (partial allocation
+releases only the block; the last-reference owner runs the authority's member
+destructor body once); B1/B2/B6–B18 callback contracts for the engine method
+tables and loader callbacks; B15/B16 engine ctrl/registration contracts.
+`eng_dyn`/`eng_table` remain queued for a BOUNDARY pass.
+
+**Recorded deviation.** `ENGINE_set_ex_data`/`ENGINE_get_ex_data` answer 0/NULL
+for a NULL engine, where the authority dereferences it (C UB). This is the
+existing in-crate safety improvement; it is recorded here rather than silently
+inherited.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`cargo test --lib engine:: -- --test-threads=4` 19 passed / 0 failed /
+0 ignored (1667 filtered). BATCH `cargo clippy --all-targets -- -D warnings`
+clean; full library **1659 passed / 0 failed / 27 ignored** with
+`--test-threads=1` (230.71 s) and with `--test-threads=4` (94.92 s). All runs in
+the court container with `CARGO_BUILD_JOBS=4`.
+
+**NOT_RUN.** `RT-ENGINE` phase-13/phase-16 authority differential (not rebuilt
+or replayed); no allocator-transcript probe was re-executed for the two seam
+strings; Miri (no component in the court toolchain); ASan (documentation and seam
+metadata only, no memory-access-pattern change); BOUNDARY for `eng_dyn` and
+`eng_table` (deferred to their own pass — they remain in the queue); SEAL.
+
+**Retained observations.** (1) The same NULL-permissive wording remains in the
+still-unaudited `tb_eckey`, `tb_pkmeth`, `tb_rand` and `tb_rsa` siblings; the
+repair applies when those files are audited. (2) The M49 ownership evidence for
+`ecdh_ossl`/`ecdsa_ossl` is unaffected by the metadata repair; only the reported
+allocator coordinate changes, and it now matches the admitted build record.
+(3) `engine_set_all_null` intentionally leaves `ec_meth`, `pkey_meths`,
+`pkey_asn1_meths` and `load_ssl_client_cert` uncleared, exactly as
+`eng_lib.c:56-75` does; this is not an omission.
+
+**Queue.** `REMAINING-AUDIT.txt` 308 -> **300**; `AUDITED-FILES.txt` 455 -> **463**.
+**Next eight (stable order).** `src/engine/eng_dyn.rs`, `src/engine/eng_table.rs`,
+`src/engine/tb_eckey.rs`, `src/engine/tb_pkmeth.rs`, `src/engine/tb_rand.rs`,
+`src/engine/tb_rsa.rs`, `src/ess/ess_asn1.rs`, `src/evp/algorithm.rs`.

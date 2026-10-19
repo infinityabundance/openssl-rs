@@ -45,7 +45,7 @@ pub(crate) fn cipher_table_slot() -> *mut *mut OpenSslLhash {
 /// `void ENGINE_unregister_ciphers(ENGINE *e)` — `crypto/engine/tb_cipher.c:17-20`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_ciphers(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -61,7 +61,7 @@ unsafe extern "C" fn engine_unregister_all_ciphers() {
 /// `int ENGINE_register_ciphers(ENGINE *e)` — `:27-38`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_ciphers(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -106,7 +106,7 @@ pub extern "C" fn ENGINE_register_all_ciphers() {
 /// `int ENGINE_set_default_ciphers(ENGINE *e)` — `:48-59`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_ciphers(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -147,7 +147,7 @@ pub extern "C" fn ENGINE_get_cipher_engine(nid: c_int) -> *mut Engine {
 /// `const EVP_CIPHER *ENGINE_get_cipher(ENGINE *e, int nid)` — `:73-82`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_cipher(e: *mut Engine, nid: c_int) -> *const c_void {
     let mut ret: *const c_void = ptr::null();
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn ENGINE_get_cipher(e: *mut Engine, nid: c_int) -> *const
 /// `ENGINE_CIPHERS_PTR ENGINE_get_ciphers(const ENGINE *e)` — `:85-88`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_ciphers(e: *const Engine) -> Option<EngineCiphersPtr> {
     // SAFETY: `e` is the caller's engine.
@@ -179,7 +179,7 @@ pub unsafe extern "C" fn ENGINE_get_ciphers(e: *const Engine) -> Option<EngineCi
 /// `int ENGINE_set_ciphers(ENGINE *e, ENGINE_CIPHERS_PTR f)` — `:91-95`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_ciphers(e: *mut Engine, f: Option<EngineCiphersPtr>) -> c_int {
     // SAFETY: `e` is the caller's engine.
