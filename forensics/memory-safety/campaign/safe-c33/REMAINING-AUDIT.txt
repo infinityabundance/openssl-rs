@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/provider/der_ec_sig.rs
-src/provider/der_ecx_key.rs
-src/provider/der_ml_dsa_key.rs
-src/provider/der_rsa_key.rs
-src/provider/der_rsa_sig.rs
-src/provider/der_slh_dsa_key.rs
-src/provider/der_sm2_sig.rs
-src/provider/digest_to_nid.rs
 src/provider/dsa_kmgmt.rs
 src/provider/ecdh_exch.rs
 src/provider/ecx_exch.rs

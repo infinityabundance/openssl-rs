@@ -5720,3 +5720,97 @@ again), `src/provider/der_ec_sig.rs`, `src/provider/der_ecx_key.rs`,
 `src/provider/der_rsa_sig.rs`, `src/provider/der_slh_dsa_key.rs`,
 `src/provider/der_sm2_sig.rs`; `src/provider/digest_to_nid.rs` is the
 substitute ordinary entry.
+
+## M66 — per-file contract sweep (provider DER AlgorithmIdentifier writers and the digest-to-NID table)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M66.json`](atlas-refresh/mechanism-sweep-M66.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`ca22e7d4b` (clean source tree; no repair was required and no source edit was
+made). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results. Authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/` for every unit compared.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/der_ec_sig.rs` | the nine ECDSA-with-MD OID literals, `ossl_DER_w_algorithmIdentifier_ECDSA_with_MD` over `WPACKET` (`begin_sequence`/`precompiled`/`end_sequence`), unknown-`mdnid` refusal | no defect |
+| `src/provider/der_ecx_key.rs` | the four ECX/Ed OID literals, the shared `write_identifier` body, the X25519/X448/ED25519/ED448 writers and their unused `ECX_KEY *` argument | no defect |
+| `src/provider/der_ml_dsa_key.rs` | the three ML-DSA OID literals, `ossl_ml_dsa_key_get_name` precondition, `OPENSSL_strcasecmp` NUL-termination, the three-name dispatch, unknown-name refusal | no defect |
+| `src/provider/der_rsa_key.rs` | the thirteen precompiled identifiers, `der_w_maskgen_algorithm` (`NID_sha1` default omission), `ossl_DER_w_RSASSA_PSS_params` (NULL/unrestricted refusal, salt/trailer checks), the RSA/RSA-PSS AlgorithmIdentifier writers, `ossl_rsa_get0_pss_params_30` lifetime | no defect |
+| `src/provider/der_rsa_sig.rs` | the sixteen MD-with-RSA OID literals, the explicit `NULL` PARAMETERS write, the `-1` unlisted-`mdnid` answer | no defect |
+| `src/provider/der_slh_dsa_key.rs` | the twelve SLH-DSA OID literals, `ossl_slh_dsa_key_get_type` precondition, the twelve-NID dispatch, unknown-NID refusal | no defect |
+| `src/provider/der_sm2_sig.rs` | the single `sm2-with-SM3` OID literal, the one-case dispatch, unused `EC_KEY *` argument | no defect |
+| `src/provider/digest_to_nid.rs` | the eleven-row `OSSL_ITEM` table, `unsafe impl Sync for OsslItem`, `ossl_digest_md_to_nid` (`it`/`it_len` and NUL-terminated `ptr` contract), `ossl_digest_get_approved_nid` | no defect; one retained documented invariant (see below) |
+
+**Defects.** None. Every writer matches its authority's case set, refusal
+value, write order and unused-argument behaviour. The `RSASSA-PSS` params/OID
+order was exercised with a temporary local probe and produces
+`SEQUENCE { id-RSASSA-PSS, RSASSA-PSS-params }`, matching the authority's
+`asn1parse` output; the probe was removed and the worktree is clean.
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. Introduced: 0. No
+`unsafe fn` signature, `#[repr(C)]` layout, exported symbol or allocator-seam
+coordinate changed. Every remaining unsafe operation has an explicit contract
+at its declaration: `*mut Wpacket` live (reused from the `packet` unit),
+`*mut`/`*const` key or PSS object live-or-NULL as declared, `it` readable for
+`it_len` entries with NUL-terminated `ptr`s, and `md` NULL-or-live. Callers
+(`rsa_sig.rs`, `ecdsa_sig.rs`, `dsa_sig.rs`, `eddsa_sig.rs`, `sm2_sig.rs`,
+`ml_dsa_sig.rs`, `slh_dsa_sig.rs`, `encode_key2any.rs`,
+`securitycheck_default.rs`) establish those preconditions from their own
+live-context contracts. Hidden obligations: 0. Retained documented invariant:
+`OsslItem`'s `Sync` relies on every instance's `ptr` naming a `'static`
+NUL-terminated literal — true for both tables (`digest_to_nid.rs` and
+`securitycheck_default.rs`), and dereference still occurs only inside an
+`unsafe fn` whose contract requires NUL termination, so no safe caller can
+reach UB through the safe surface.
+
+**Secret-bearing storage.** All eight units handle `PUBLIC_DATA` only: DER
+OID/algorithm-identifier literals, the `WPACKET` output that carries them, and
+public key metadata (`params->alg`, the SLH-DSA type NID). No private
+encoding, seed, scalar or signature-secret buffer is read, copied, stored or
+released here, so there is no secret-bearing buffer and no cleansing path to
+review. The key-argument reads are limited to the accessors named above; the
+callers' private-key bodies and signature buffers are outside these units.
+No constant-time claim is made.
+
+**Contracts reused.** `WPACKET` live-packet and DER-mode write discipline from
+the `packet` unit (`WPACKET_init_der`, `WPACKET_memcpy`,
+`WPACKET_get_total_written`, `WPACKET_cleanup`); the `der_writer`
+`begin_sequence`/`precompiled`/`end_sequence`/`null`/`uint32` contracts; the
+`OPENSSL_strcasecmp` NUL-terminated-string contract; the RSA-PSS accessors'
+NULL-or-live contract and `ossl_rsa_pss_params_30_is_unrestricted`'s documented
+NULL answer; C ABI contracts for unused key arguments, caller-owned `WPACKET`
+buffers and caller-owned result pointers. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`provider::der_*` **12 passed / 0 failed**; `provider::securitycheck_default`
+**2 / 0** (the `digest_to_nid` consumers; the module itself has no unit
+tests). BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1672 passed / 0 failed / 27 ignored** (1699 total) with
+`--test-threads=1` in 260.48 s and with `--test-threads=4` in 105.73 s, in the
+court with `CARGO_BUILD_JOBS=4`. No unexplained removal and no newly ignored
+test.
+
+**NOT_RUN.** Miri/Tree Borrows/ASan (no allocation, aliasing or lifetime
+claim was changed); Loom; affected adversarial probes (none exists for these
+units); dudect/ctgrind (no constant-time claim); authority differential courts
+(the unit tests compare against the authority's generated bytes, not against
+the pinned binary); FRF suite; dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `src/evp/method_store.rs` remains the deferred registry
+boundary at the head of the queue. (2) The `OsslItem` `Sync` invariant is
+documented but not type-enforced (see above); it is not a hidden obligation
+because it is stated here and its only dereference site is unsafe-contracted.
+(3) The key accessors read public metadata only; no secret buffer is owned by
+these units. (4) The callers' `WPACKET` backings are caller-owned and are not
+cleansed here, correctly, because their contents are algorithm identifiers.
+
+**Queue.** `REMAINING-AUDIT.txt` 193 -> **185**; `AUDITED-FILES.txt` 570 ->
+**578**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/provider/dsa_kmgmt.rs`, `src/provider/ecdh_exch.rs`,
+`src/provider/ecx_exch.rs`, `src/provider/ecx_kem.rs`,
+`src/provider/encode_key2blob.rs`, `src/provider/encode_key2ms.rs`,
+`src/provider/endecoder_common.rs`; `src/provider/file_store_any2obj.rs` is the
+substitute ordinary entry if `method_store.rs` is deferred again.
