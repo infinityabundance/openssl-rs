@@ -564,7 +564,7 @@ unsafe fn ossl_property_str(name: c_int, ctx: *mut c_void, idx: c_int) -> *const
         } else {
             (*propdata).prop_valuelist
         };
-        OPENSSL_sk_value(list, idx - 1).cast::<c_char>()
+        OPENSSL_sk_value(list, idx.wrapping_sub(1)).cast::<c_char>()
     };
     // SAFETY: this thread holds a read lock on `propdata`.
     unsafe { CRYPTO_THREAD_unlock((*propdata).lock) };

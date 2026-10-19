@@ -596,14 +596,19 @@ unsafe fn des_ede3_unwrap(
         ptr::copy_nonoverlapping(WRAP_IV.as_ptr(), (*ctx).iv.as_mut_ptr(), 8);
         // Decrypt the first block, which will end up as the ICV.
         des_ede_cbc_cipher(ctx.cast(), icv.as_mut_ptr(), in_, 8);
-        let mut in_ = in_;
-        // If decrypting in place, move the whole output along a block so the next call is in place.
-        if ptr::eq(out.cast_const(), in_) {
+        // If decrypting in place, move the whole output along a block so the next call is in
+        // place. The authority then subtracts a block from `in` and adds it back at each later
+        // use (`in -= 8; ... in + 8 ...; ... in + inl - 8 ...`). This spelling computes only
+        // the final in-bounds offsets: forming the intermediate out-of-bounds `in - 8` pointer
+        // is UB in Rust (as it is in the C authority) and is not needed for the addresses.
+        let (mid, last) = if ptr::eq(out.cast_const(), in_) {
             ptr::copy(out.add(8), out, inl - 8);
-            in_ = in_.sub(8);
-        }
-        des_ede_cbc_cipher(ctx.cast(), out, in_.add(8), inl - 16);
-        des_ede_cbc_cipher(ctx.cast(), iv.as_mut_ptr(), in_.add(inl - 8), 8);
+            (in_, in_.add(inl - 16))
+        } else {
+            (in_.add(8), in_.add(inl - 8))
+        };
+        des_ede_cbc_cipher(ctx.cast(), out, mid, inl - 16);
+        des_ede_cbc_cipher(ctx.cast(), iv.as_mut_ptr(), last, 8);
         BUF_reverse(icv.as_mut_ptr(), ptr::null(), 8);
         BUF_reverse(out, ptr::null(), inl - 16);
         BUF_reverse((*ctx).iv.as_mut_ptr(), iv.as_ptr(), 8);
@@ -1020,5 +1025,57 @@ mod tests {
             (NID_id_smime_alg_CMS3DESwrap, 8, 24, 0, 1)
         );
         assert_ne!(EVP_des_ede(), EVP_des_ede3());
+    }
+
+    /// The in-place unwrap path is the one that shifts the buffer along a block. It must
+    /// round-trip what `des_ede3_wrap` produced, and it must reach the same addresses without
+    /// forming the authority's out-of-bounds intermediate `in - 8` pointer.
+    #[test]
+    fn in_place_unwrap_round_trips() {
+        let key = [0x0fu8; 24];
+        let plain = *b"0123456789abcdef0123456789abcdef";
+        // Zeroed context and schedule: every field is plain data (pointers, arrays and integers;
+        // `DesKeySchedule` is 128 bytes of `c_uint`).
+        // SAFETY: `zeroed` is a valid value for both plain-data types.
+        let mut ctx: EvpCipherCtx = unsafe { core::mem::zeroed() };
+        // SAFETY: as above.
+        let mut dat: DesEdeKey = unsafe { core::mem::zeroed() };
+        // SAFETY: `ctx` is live for this frame, `cipher_data` names `dat`, and the key is readable
+        // for the 24 bytes the three-key initialiser reads.
+        unsafe {
+            ctx.cipher = ptr::addr_of!(DES3_WRAP.0);
+            ctx.cipher_data = (&mut dat as *mut DesEdeKey).cast();
+            assert_eq!(
+                des_ede3_init_key(
+                    (&mut ctx as *mut EvpCipherCtx).cast(),
+                    key.as_ptr(),
+                    ptr::null(),
+                    1,
+                ),
+                1
+            );
+        }
+        let mut wrapped = [0u8; 48];
+        // SAFETY: `wrapped` holds `plain.len() + 16` bytes, `plain` is readable for its length,
+        // and `ctx`/`dat` are live.
+        unsafe {
+            ctx.encrypt = 1;
+            assert_eq!(
+                des_ede3_wrap(&mut ctx, wrapped.as_mut_ptr(), plain.as_ptr(), plain.len()),
+                (plain.len() + 16) as c_int
+            );
+            // In place: `out == in`, the branch that moves the ciphertext along one block.
+            ctx.encrypt = 0;
+            assert_eq!(
+                des_ede3_unwrap(
+                    &mut ctx,
+                    wrapped.as_mut_ptr(),
+                    wrapped.as_ptr(),
+                    wrapped.len(),
+                ),
+                plain.len() as c_int
+            );
+        }
+        assert_eq!(&wrapped[..plain.len()], &plain);
     }
 }
