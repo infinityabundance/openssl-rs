@@ -3523,3 +3523,76 @@ still omit the pointer-bearing `ERR_print_errors` lines.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M40.json`](atlas-refresh/mechanism-sweep-M40.json).
+
+## 45. Mechanism sweep M41 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `f326c049f` plus the two
+contract-statement repairs below; contracts checked against OpenSSL master
+(`crypto/async/arch/async_posix.c`, `crypto/bf/*`, `crypto/bn/{bn_srp,bn_dh,bn_exp}.c`,
+`crypto/asn1/x_{sig,spki,val}.c`).
+
+**Scope:** the eight files M40 named as next. `src/async/async.rs` and
+`src/async/async_wait.rs` are retained callback/fibre boundaries (the M22/M24
+exclusion); they are recorded `NOT_RUN` and were replaced by the next two
+ordinary files in the queue, `src/bn/dh.rs` and `src/bn/exp.rs`.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/asn1/x_sig.rs` | `X509_SIG` `#[repr(C)]` layout and offset/size assertions, `X509_SIG_it`, `IMPLEMENT_ASN1_FUNCTIONS` quartet, `X509_SIG_get0`/`getm` borrowed out-parameters | No defect. Both out-parameters are independently NULL-checked and the answers are borrowed, matching `x_sig.c`. The item layer is the established shared codec. |
+| `src/asn1/x_spki.rs` | `NETSCAPE_SPKAC`/`NETSCAPE_SPKI` layouts (16/32 bytes), `ASN1_TFLG_EMBED` on the in-struct `X509_ALGOR` at offset 8, item lifecycle, generated `d2i_*`/`i2d_*` | No defect. The embedded field's own address is handed to the item machinery, so free releases the algorithm's members and never the enclosing block; the embedded offset and the 32-byte stride are asserted. |
+| `src/asn1/x_val.rs` | `X509_VAL` layout, two `ASN1_TIME` templates, item lifecycle | No defect. Two mandatory pointer fields, one owner per item; no `_dup` is exported, matching `x_val.c`. |
+| `src/async/arch/async_posix.rs` | `ucontext_t` C shim, `AtomicPtr` allocator slots and provenance-preserving recovery, `allow_customize` latch under `async_mem_lock`, caller stack alloc/free callbacks, `OwnedFibre` storage | No defect. Callbacks run with the lock released (reentrancy-safe), the latch and the unlock-before-store ordering match the authority exactly, and storage release is one `CRYPTO_free` at the authority's coordinate. Repaired a missing divergence record. |
+| `src/blowfish.rs` | `n2l`/`l2n`/`n2ln`/`l2nn` byte extents, `BF_set_key` cyclic key XOR and self-encrypting schedule, ECB/CBC/CFB64/OFB64 loops | No defect. Every pointer walk is bounded by the caller's stated extent and the `length`/`num` arithmetic matches the authority. Repaired the CBC precondition statement. |
+| `src/bn/bn_srp.rs` | limb-array transcription, `new_static_data` + `AtomicPtr` cache/CAS, `BN_FLG_STATIC_DATA` borrow semantics, ten accessors | No defect. A CAS loser releases its unpublished `Box` once; the cached object is process-lifetime and `BN_free` honours the static flag. Widths come from the declared array lengths. |
+| `src/bn/dh.rs` | thirty-two `static_data_bignum` accessors, per-symbol function-local caches, width/flag/prime tests | No defect. Same static-`BIGNUM` idiom; every accessor returns the shared process-lifetime object and the table assertions cover all thirty-two widths and flags. |
+| `src/bn/exp.rs` | the one internal `bn_mod_exp_mont_fixed_top`, null-or-live pointer contract, even-modulus refusal site | No defect. The substitution delegates to `BN_mod_exp_mont_consttime` with the same refusal and error coordinate; no new unsafe operation. |
+
+**Defects repaired.** Two low-severity unsafe-contract statements, both
+documentation-only with no behaviour change: `blowfish.rs:309` now states the
+authority's multiple-of-8 precondition for `BF_cbc_encrypt` (the final whole-block
+arm otherwise over-reads on decryption for a non-multiple length);
+`async_posix.rs:101` records that `async_stack_alloc` zero-fills through
+`CRYPTO_zalloc` where the authority uses `OPENSSL_malloc`, with the hook, request
+size and `(FILE, LINE)` coordinate unchanged. No invalid free, double free, leak,
+alias, uninitialised read, ABI change or allocator-seam change was found.
+
+**New unsafe assumptions (hidden must be 0).** None. No unsafe function, FFI
+symbol, allocator coordinate, `#[repr(C)]` layout or exported signature was
+added or changed. Contracts reused: the ASN.1 item lifecycle/template/`EMBED`
+contract, the generated `d2i`/`i2d` `a`/`pp`/`out` conventions, OB-1/OB-2
+allocation seams, the static-`BIGNUM` cache idiom and `BN_FLG_STATIC_DATA`
+borrow rule, and the B-series callback contract for the caller-supplied stack
+allocator/free pair (invoked without the latch lock held).
+
+**Evidence.** FAST: `cargo fmt --all -- --check` clean; focused `asn1::x_` 6
+passed / 0 failed (the three wrapper files carry no tests of their own),
+`blowfish` 2/0, `bn::dh` 7/0, `bn::exp` 2/0,
+`crypto_async::arch::async_posix` 2/0; `bn::bn_srp` has no unit tests and is
+covered through `srp_lib` and the full suite. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1649 passed / 0 failed / 27
+ignored** serially (263.79 s) and with `--test-threads=4` (81.70 s). No test
+removed or newly ignored.
+
+**NOT_RUN.** `src/async/async.rs` and `src/async/async_wait.rs` are retained
+callback/fibre boundaries and require a BOUNDARY-level audit; Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay, the
+caller/dependency closure, independent adversarial review and SEAL are also
+`NOT_RUN`. No audited file carries an `OPENSSL_RS_ADV_PROBE` arm, so no probe
+was affected. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** `BF_cbc_encrypt` keeps the authority's
+partial-block arms; callers must supply the authority's multiple-of-8 length.
+The SRP/DH constants remain process-lifetime leaks by construction (the cost of
+`.rodata` in C), and the allocator `file`/`line` coordinates remain `0`
+(`OPENSSL_NO_CRYPTO_MDEBUG` convention).
+
+**Queue.** `REMAINING-AUDIT.txt` 398 → **390**; `AUDITED-FILES.txt` 365 → **373**.
+The two `NOT_RUN` boundary files stay queued.
+
+**Next eight (stable order).** `src/async/async.rs`, `src/async/async_wait.rs`
+(both `NOT_RUN` carriers; substitute the next ordinary files), `src/bn/intern.rs`,
+`src/bn/kron.rs`, `src/bn/nist.rs`, `src/bn/rsa_fips186_4.rs`, `src/camellia.rs`,
+`src/cast.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M41.json`](atlas-refresh/mechanism-sweep-M41.json).
