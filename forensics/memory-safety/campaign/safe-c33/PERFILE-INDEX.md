@@ -1129,3 +1129,49 @@ rebuild required), FRF-Fuzz replay, independent review and SEAL regeneration are
 **Next boundary position:** none from the B1–B6 queue. Next ordinary position remains
 `src/evp/fetch.rs` (118), `src/ssl/tls13_enc.rs` (119), `src/ts/ts_rsp_utils.rs` (120),
 `src/x509/x509_vpm.rs` (121).
+
+## 12. Boundary sweep B7 — diagnostic-buffer races, SSL_CTX cache teardown, ssl_rsa loaders
+
+**B7-D1/B7-D2 (fixed, medium, race).** `src/provider/conf.rs` and
+`src/runtime/conf/conf_ssl.rs` still carried the B6-D2 class: four diagnostic builders
+formatted into `static mut BUF`, although `provider_conf_load` and `ssl_module_init` run
+concurrently from concurrent `OSSL_PROVIDER_load`/`CONF_modules_load` calls. All four now
+take a caller-owned `&mut [c_char; ERR_MAX_DATA_SIZE]`; each raise copies the bytes
+synchronously. Message bytes, truncation and site coordinates are unchanged.
+
+**B7-D3 (fixed, medium, parity/UAF).** `SslCtx::destroy_body` released the session cache
+through `ssl_ctx_session_cache_free` without invoking `remove_session_cb`; the authority
+flushes the cache in `SSL_CTX_free` (`ssl_lib.c:4385-4389`, ticket #212). `destroy_body`
+now calls `SSL_CTX_flush_sessions_ex(ctx, 0)` **first**, then frees `param`/`dane`, then
+`ex_data` (authority order), then the container and the remaining members. The callback
+therefore runs outside `ctx->lock` with the context, its `ex_data`, cache and lock still
+live. Deliberate divergence: the authority frees `param`/`dane` before flushing, which
+would expose freed members to a callback; flushing first is the stricter order.
+
+**B7-D4 (fixed, low, parity).** The chain loader passed `None`/NULL to both PEM readers;
+the authority forwards the context's default password callback (`ssl_rsa.c:479-490`).
+`use_certificate_chain_file` now forwards it for both the leaf and the CA blocks. The
+certificate-file loaders still omit the same forwarding and are the next recorded
+follow-up, not part of this item.
+
+**Residuals.** Hidden obligations: 0. No safe Rust caller can cause UB through these
+interfaces. Retained: the `remove_session_cb` reentrancy contract (must not free the
+context); a session re-added by a callback during the flush is released without a second
+callback (the authority would leak it); the existing `ssl_security_cert` reduction; the
+certificate-file callback omission. Graduation: `CONTRACTED`.
+
+**Evidence.** FAST: fmt clean; focused `conf_ssl` 4/0, `provider::conf` 3/0, `ssl_sess`
+7/0 + 1 ignored, `ssl_lib` 21/0 + 4 ignored, `ssl_rsa` 1/0 + 1 ignored. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1597 passed / 0 failed / 27 ignored**
+serially (261.46 s) and with `--test-threads=4` (82.78 s); three affected SSL probes
+pass under `OPENSSL_RS_ADV_PROBE=1`. ASan (nightly-2026-10-05, `-Zsanitizer=address`
+`-Zbuild-std`): the four `ssl_sess::alias_ownership_tests` pass with no UAF/double-free.
+Negative controls observed: restoring the `static mut` builder made the storage control
+fail (`a == b`); freeing `ex_data` before the flush made the teardown control observe 0
+instead of the sentinel. Miri/Loom/TSan, full-suite ASan, the encrypted-chain fixture,
+the C teardown differential, FRF-Fuzz and SEAL regeneration are `NOT_RUN`. Machine-
+readable receipt: [`atlas-refresh/boundary-sweep-B7.json`](atlas-refresh/boundary-sweep-B7.json).
+
+**Next boundary position:** none from the B1–B7 queue. Next ordinary position remains
+`src/evp/fetch.rs` (118), `src/ssl/tls13_enc.rs` (119), `src/ts/ts_rsp_utils.rs` (120),
+`src/x509/x509_vpm.rs` (121).
