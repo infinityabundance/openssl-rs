@@ -289,12 +289,12 @@ fn new_inner() -> RwlockInner {
 /// # Safety
 /// `lock` must be non-NULL and point to a live `RwlockInner` produced by
 /// [`CRYPTO_THREAD_lock_new`] and not yet freed.
-unsafe fn rwlock_inner<'a>(lock: *mut CryptoRwlock) -> &'a RwlockInner {
+unsafe fn with_rwlock_inner<R>(lock: *mut CryptoRwlock, f: impl FnOnce(&RwlockInner) -> R) -> R {
     // SAFETY: `CRYPTO_THREAD_lock_new` writes an `RwlockInner` into the block it
     // returns and casts it to `*mut CryptoRwlock`; the caller guarantees the
-    // pointer is live and non-NULL. The returned reference's lifetime is the
-    // caller's contract for the duration of one C call.
-    unsafe { &*lock.cast::<RwlockInner>() }
+    // pointer is live and non-NULL. The argument is higher-ranked, so the closure
+    // cannot retain the borrow beyond this call.
+    unsafe { f(&*lock.cast::<RwlockInner>()) }
 }
 
 /// Locks the inner mutex, recovering from poisoning.
@@ -393,20 +393,23 @@ pub unsafe extern "C" fn CRYPTO_THREAD_read_lock(lock: *mut CryptoRwlock) -> c_i
             return 0;
         }
         // SAFETY: `lock` is a live, unfreed lock per the caller's contract.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        loop {
-            if !state.writer {
-                state.readers += 1;
-                return 1;
-            }
-            if state.writer_id == Some(me) {
-                // A read request while this thread holds the write lock is the
-                // authority's EDEADLK path, surfaced as 0.
-                return 0;
-            }
-            state = wait_state(inner, state);
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                loop {
+                    if !state.writer {
+                        state.readers += 1;
+                        return 1;
+                    }
+                    if state.writer_id == Some(me) {
+                        // A read request while this thread holds the write lock is the
+                        // authority's EDEADLK path, surfaced as 0.
+                        return 0;
+                    }
+                    state = wait_state(inner, state);
+                }
+            })
         }
     })
 }
@@ -426,30 +429,38 @@ pub unsafe extern "C" fn CRYPTO_THREAD_write_lock(lock: *mut CryptoRwlock) -> c_
             return 0;
         }
         // SAFETY: as `CRYPTO_THREAD_read_lock`.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        while state.writer || state.readers > 0 {
-            if state.writer_id == Some(me) {
-                return 0;
-            }
-            state = wait_state(inner, state);
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                while state.writer || state.readers > 0 {
+                    if state.writer_id == Some(me) {
+                        return 0;
+                    }
+                    state = wait_state(inner, state);
+                }
+                state.writer = true;
+                state.writer_id = Some(me);
+                1
+            })
         }
-        state.writer = true;
-        state.writer_id = Some(me);
-        1
     })
 }
 
 /// `int CRYPTO_THREAD_unlock(CRYPTO_RWLOCK *lock)`
 ///
 /// Releases whichever kind of lock this thread holds — the C API does not say
-/// which — and returns 1 on success. Returns 0 when the lock is not held by this
-/// thread (the authority's `EPERM` case) or when `lock` is NULL.
+/// which — and returns 1 on success. Returns 0 when the lock is NULL, when this
+/// thread holds the write lock but not as the writer, or when no lock is held.
+///
+/// Reader ownership is not attributed per thread: a read unlock by a thread that
+/// did not acquire one is the authority's own undefined case (a plain
+/// `pthread_rwlock_t` does not detect it either), and here it decrements the
+/// reader count. Every caller in the crate unlocks only what it acquired.
 ///
 /// # Safety
 /// `lock` must be NULL or a live lock returned by [`CRYPTO_THREAD_lock_new`] and
-/// not yet freed.
+/// not yet freed, and the calling thread must hold the lock it is releasing.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int {
     guard_ffi(0, || {
@@ -457,25 +468,28 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
             return 0;
         }
         // SAFETY: as `CRYPTO_THREAD_read_lock`.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        if state.writer {
-            if state.writer_id == Some(me) {
-                state.writer = false;
-                state.writer_id = None;
-                inner.cond.notify_all();
-                return 1;
-            }
-            // Held by another thread.
-            return 0;
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                if state.writer {
+                    if state.writer_id == Some(me) {
+                        state.writer = false;
+                        state.writer_id = None;
+                        inner.cond.notify_all();
+                        return 1;
+                    }
+                    // Held by another thread.
+                    return 0;
+                }
+                if state.readers > 0 {
+                    state.readers -= 1;
+                    inner.cond.notify_all();
+                    return 1;
+                }
+                0
+            })
         }
-        if state.readers > 0 {
-            state.readers -= 1;
-            inner.cond.notify_all();
-            return 1;
-        }
-        0
     })
 }
 
@@ -1594,33 +1608,51 @@ pub(crate) fn ossl_crypto_mutex_new() -> *mut CryptoMutex {
     Box::into_raw(Box::new(m))
 }
 
+/// Runs `f` with the parking flag of `m`, scoped to this call.
+///
+/// # Safety
+/// `m` must be non-NULL and live.
+unsafe fn with_mutex_flag<R>(m: *mut CryptoMutex, f: impl FnOnce(&Mutex<bool>) -> R) -> R {
+    // SAFETY: `m` is a live object produced by `ossl_crypto_mutex_new` per the
+    // caller's contract. The argument is higher-ranked, so the closure cannot
+    // retain the field borrow beyond this call.
+    unsafe { f(&(*m).held) }
+}
+
+/// Blocks until `m` is free, then takes it. This is both the lock itself and the
+/// re-acquisition half of the condition-variable waits: setting the flag without
+/// waiting would let the waiter and a second locker both believe they hold `m`.
+///
+/// # Safety
+/// `m` must be non-NULL and live.
+unsafe fn mutex_acquire(m: *mut CryptoMutex) {
+    // SAFETY: `m` is live per the caller's contract.
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            while *flag {
+                // SAFETY: `m` is live per the caller's contract.
+                flag = match (*m).released.wait(flag) {
+                    Ok(g) => g,
+                    Err(p) => p.into_inner(),
+                };
+            }
+            *flag = true;
+        })
+    };
+}
+
 /// `void ossl_crypto_mutex_lock(CRYPTO_MUTEX *mutex)`
 ///
 /// # Safety
 /// `mutex` must be non-NULL and live, and not already held by this thread (the
 /// authority's non-recursive mutex deadlocks on that, and so does this).
-unsafe fn mutex_held(m: *mut CryptoMutex) -> &'static Mutex<bool> {
-    // SAFETY: `mutex` is a live object produced by `ossl_crypto_mutex_new` per
-    // the caller's contract; the returned reference borrows one of its fields
-    // for the duration of one C call.
-    unsafe { &(*m).held }
-}
-
 pub(crate) unsafe fn ossl_crypto_mutex_lock(m: *mut CryptoMutex) {
     if m.is_null() {
         return;
     }
     // SAFETY: `m` is live per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    while *flag {
-        // SAFETY: `m` is live per the caller's contract.
-        flag = match unsafe { &(*m).released }.wait(flag) {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-    }
-    *flag = true;
+    unsafe { mutex_acquire(m) };
 }
 
 /// Locks, recovering from poisoning, as the rwlock helpers above do.
@@ -1641,12 +1673,16 @@ pub(crate) unsafe fn ossl_crypto_mutex_try_lock(m: *mut CryptoMutex) -> c_int {
         return 0;
     }
     // SAFETY: `m` is live per the caller's contract.
-    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
-    if *flag {
-        return 0;
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if *flag {
+                return 0;
+            }
+            *flag = true;
+            1
+        })
     }
-    *flag = true;
-    1
 }
 
 /// `void ossl_crypto_mutex_unlock(CRYPTO_MUTEX *mutex)`
@@ -1657,12 +1693,16 @@ pub(crate) unsafe fn ossl_crypto_mutex_unlock(m: *mut CryptoMutex) {
     if m.is_null() {
         return;
     }
-    // SAFETY: `m` is live per the caller's contract.
-    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
-    *flag = false;
-    drop(flag);
-    // SAFETY: `m` is live per the caller's contract.
-    unsafe { &(*m).released }.notify_one();
+    // SAFETY: `m` is live per the caller's contract, and the closure ends the
+    // borrow of `held` before the notification below.
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            *flag = false;
+        });
+        // SAFETY: `m` is live per the caller's contract.
+        (*m).released.notify_one();
+    }
 }
 
 /// `void ossl_crypto_mutex_free(CRYPTO_MUTEX **mutex)` — frees and NULLs.
@@ -1737,19 +1777,25 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     };
 
     // SAFETY: `m` is live and held by this thread per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    if !*flag {
+    let was_held = unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if !*flag {
+                return false;
+            }
+            *flag = false;
+            true
+        })
+    };
+    if !was_held {
         // The caller did not hold it. `pthread_cond_wait` is undefined there too,
         // so this returns rather than waiting on a mutex it does not own.
         drop(gate);
         return;
     }
-    *flag = false;
-    drop(flag);
     // Wake one `ossl_crypto_mutex_lock` waiter, now that the flag is clear.
     // SAFETY: `m` is live.
-    unsafe { &(*m).released }.notify_one();
+    unsafe { (*m).released.notify_one() };
 
     // SAFETY: `cv` is live; the guard belongs to the gate, and `wait` releases it
     // for the duration of the wait, which is what lets a signaller through.
@@ -1759,10 +1805,11 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     };
     drop(gate);
 
-    // Re-acquire the caller's mutex, restoring the flag so the next `unlock`
-    // releases it rather than corrupting the state.
-    let mut flag = lock_state_poisoned(held);
-    *flag = true;
+    // Re-acquire the caller's mutex exactly as `ossl_crypto_mutex_lock` does. A
+    // second thread may have taken it between the signal and this return, so
+    // setting the flag without waiting would leave both holding it.
+    // SAFETY: `m` is live and this frame is the waiter that released it.
+    unsafe { mutex_acquire(m) };
 }
 
 /// `OSSL_TIME_INFINITY` — `include/internal/time.h`, the sentinel `ossl_time_is_infinite` compares
@@ -1852,16 +1899,22 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait_timeout(
     };
 
     // SAFETY: `m` is live and held by this thread per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    if !*flag {
+    let was_held = unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if !*flag {
+                return false;
+            }
+            *flag = false;
+            true
+        })
+    };
+    if !was_held {
         drop(gate);
         return;
     }
-    *flag = false;
-    drop(flag);
     // SAFETY: `m` is live.
-    unsafe { &(*m).released }.notify_one();
+    unsafe { (*m).released.notify_one() };
 
     let now = monotonic_now_nanos();
     let remaining = deadline.saturating_sub(now);
@@ -1873,8 +1926,10 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait_timeout(
     };
     drop(gate);
 
-    let mut flag = lock_state_poisoned(held);
-    *flag = true;
+    // As in the untimed wait: the caller's mutex must be reacquired by waiting,
+    // not by overwriting whatever state the parking flag is in now.
+    // SAFETY: `m` is live and this frame is the waiter that released it.
+    unsafe { mutex_acquire(m) };
 }
 
 /// `void ossl_crypto_condvar_signal(CRYPTO_CONDVAR *cv)` — wakes one waiter.
@@ -2150,5 +2205,61 @@ mod condvar_tests {
     #[test]
     fn the_clock_never_reports_the_infinity_sentinel() {
         assert_ne!(monotonic_now_nanos(), OSSL_TIME_INFINITY);
+    }
+
+    /// A waiter woken by a signal must **re-acquire** the caller's mutex before
+    /// returning. Stamping the parking flag without waiting for it to clear lets the
+    /// woken thread and a second locker both proceed, which is the data race the
+    /// mutex exists to prevent. The holder here signals and then stays inside the
+    /// critical section longer than the waiter could need, so a waiter that only
+    /// set the flag observes `HOLDER_EXITED` still false.
+    #[test]
+    fn a_woken_waiter_waits_for_the_mutex_before_returning() {
+        use core::sync::atomic::AtomicBool;
+
+        static HOLDER_INSIDE: AtomicBool = AtomicBool::new(false);
+        static HOLDER_EXITED: AtomicBool = AtomicBool::new(false);
+
+        HOLDER_INSIDE.store(false, Ordering::SeqCst);
+        HOLDER_EXITED.store(false, Ordering::SeqCst);
+
+        // SAFETY: both objects are created here, are live until both threads have
+        // finished with them, and are released exactly once at the end.
+        unsafe {
+            let mut m = ossl_crypto_mutex_new();
+            let mut cv = ossl_crypto_condvar_new();
+            assert!(!m.is_null() && !cv.is_null());
+
+            ossl_crypto_mutex_lock(m);
+
+            let m_addr = m as usize;
+            let cv_addr = cv as usize;
+            let holder = std::thread::spawn(move || {
+                let m = m_addr as *mut CryptoMutex;
+                let cv = cv_addr as *mut CryptoCondvar;
+                // The objects outlive this thread; the test joins it before either
+                // object is released.
+                ossl_crypto_mutex_lock(m);
+                HOLDER_INSIDE.store(true, Ordering::SeqCst);
+                ossl_crypto_condvar_signal(cv);
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                HOLDER_EXITED.store(true, Ordering::SeqCst);
+                ossl_crypto_mutex_unlock(m);
+            });
+
+            // Releases `m` and waits; only after that can the holder take it.
+            ossl_crypto_condvar_wait(cv, m);
+
+            assert!(HOLDER_INSIDE.load(Ordering::SeqCst));
+            assert!(
+                HOLDER_EXITED.load(Ordering::SeqCst),
+                "condvar_wait returned while another thread still held the mutex"
+            );
+            ossl_crypto_mutex_unlock(m);
+
+            assert!(holder.join().is_ok(), "the holder thread must not panic");
+            ossl_crypto_mutex_free(&raw mut m);
+            ossl_crypto_condvar_free(&raw mut cv);
+        }
     }
 }

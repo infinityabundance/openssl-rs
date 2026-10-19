@@ -1,0 +1,290 @@
+{
+  "receipt": "boundary-sweep-B11",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "51054179f",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/runtime/thread.rs",
+      "src/ssl/ssl_conf.rs",
+      "src/pkcs12/p12_crt.rs"
+    ],
+    "working_tree_blob": {
+      "src/runtime/thread.rs": "9db937a445b5b49bb278688e7f7cd4e116abe1d1",
+      "src/ssl/ssl_conf.rs": "8e3a271e82de3a526c3e32c20a6a6cc7c0f84fb7",
+      "src/pkcs12/p12_crt.rs": "c2ee7cb7860253f94a24d3a769eaf91660c601b1"
+    }
+  },
+  "stop_status": "CLEAR after repair. Two confirmed memory-safety defect classes and one hidden dangling-pointer obligation were found and repaired: (1) ossl_crypto_condvar_wait and _wait_timeout set the parking flag after the wake instead of waiting for it, so the woken waiter and a second locker could both hold the same CRYPTO_MUTEX (the thread pool and RCU rely on this exclusion); (2) ssl_set_option wrote the cert/verify flag words through a widened u64 view, an eight-byte write into the four-byte verify_mode field (ASan-confirmed heap-buffer-overflow on the pre-fix shape); (3) cmd_Protocol/Options/VerifyMode stored the address of a frame-local table in the long-lived SSL_CONF_CTX. Two reference-lifetime fabrications were also eliminated (an &'static Mutex<bool> and an 'a-chosen &RwlockInner), and the unlock contract was corrected to state what the representation can establish. p12_crt has no defect. FAST and BATCH pass (1610/0/27 both serial and threaded). Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.5.9 crypto/threads_pthread.c (lock_new/read/write/unlock/free, run_once, init/get/set/cleanup_local, thread id, atomics), crypto/thread/arch/thread_posix.c (oll_crypto_mutex_* and ossl_crypto_condvar_* implementations, including pthread_cond_wait's lock re-acquisition), crypto/thread/arch.c (join state machine that depends on condvar wait re-acquiring statelock), ssl/ssl_conf.c (ssl_set_option, option tables, dispatch, context lifecycle and prefix handling), crypto/pkcs12/p12_crt.c (bag helpers, add_* family, PKCS12_create_ex2 callback flow), cross-checked line by line against the crate bodies.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] public handle, allocator seam or unsafe lint attribute changed. CRYPTO_RWLOCK keeps the authority's 56-byte/8-aligned block and coordinates 910/1005; CRYPTO_ONCE, CRYPTO_THREAD_LOCAL and CRYPTO_THREAD_ID remain the glibc-sized aliases. SSL_CONF_CTX stays opaque; SSL_CONF_* exports and the PKCS12_create_cb typedef are unchanged.",
+    "external_contracts": [
+      "CRYPTO_RWLOCK is one CRYPTO_zalloc block at crypto/threads_pthread.c:910 released at :1005. The caller must not free a held or waited-upon lock; recursive write and write-then-read are reported as 0, matching the authority's EDEADLK path.",
+      "CRYPTO_THREAD_read_lock/write_lock require a live lock; CRYPTO_THREAD_unlock additionally requires that the calling thread holds the lock it releases. Reader ownership is not attributed per thread, so a non-owner read unlock is the authority's own undefined case (now stated).",
+      "CRYPTO_ONCE is caller-owned pthread_once_t storage initialised to CRYPTO_ONCE_STATIC_INIT; the init callback is application code called by pthread_once and is not wrapped in a Rust borrow.",
+      "CRYPTO_THREAD_LOCAL keys are caller-owned storage; values are stored verbatim and released by the pthread destructor or the caller. Deleting a key does not run destructors (POSIX parity).",
+      "CRYPTO_atomic_* require non-NULL, valid, aligned caller storage; on this profile the lock argument is accepted and ignored because the authority's lock-free branch is taken for 4- and 8-byte operations.",
+      "The ossl_crypto_mutex/condvar primitives are internal: the caller holds the mutex before waiting, re-checks its predicate after the wait, and uses one mutex with one condvar for the condvar's whole life. The wait must release the mutex and re-acquire it with exclusion; that is the property repaired here.",
+      "SSL_CONF_CTX owns its prefix (CRYPTO_strdup) and cert_filename array; poptions/min_version/max_version/pcert_flags/pvfy_flags are borrowed pointers into the selected SSL or SSL_CTX and must not outlive that object. set_ssl/set_ssl_ctx move the borrow and free the previous filename array.",
+      "SSL_CONF_cmd dispatches by flag: switches are CMDLINE-only names, string commands match the FILE spelling case-insensitively and the CMDLINE spelling exactly. The handler tables must not outlive the call.",
+      "PKCS12_create_ex2 borrows pass/name/pkey/cert/ca; the PKCS12_create_cb callback is application code invoked once per bag with a borrowed bag (possibly NULL for the cert bag) and no Rust reference or lock held. It may not free pkey/cert/ca or re-enter the build.",
+      "The add_* family transfers the returned bag to *pbags on success; a NULL pbags means do not collect. On failure the bag is released by the call that created it, except a bag not found by pkcs12_remove_bag, which is left for the caller as in the authority."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B11-THR-1",
+      "file": "src/runtime/thread.rs",
+      "mechanism": "CRYPTO_RWLOCK allocation, authority-sized representation and single release",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Option B (one 56-byte CRYPTO_zalloc block with the Rust state written inline) is used only on linux-gnu/x86_64/64-bit; every other profile uses Box<RwlockInner> and makes no allocator-size parity claim, as documented.",
+        "Freeing a held or waited-upon lock is a caller defect in both implementations; pthread_rwlock_destroy shares the hazard.",
+        "The block is released with drop_in_place + CRYPTO_free at the authority's line; a panic in a destructor is not possible for Mutex/Condvar."
+      ]
+    },
+    {
+      "id": "B11-THR-2",
+      "file": "src/runtime/thread.rs",
+      "mechanism": "read/write acquire and handle-based unlock, including recursive-write refusal",
+      "disposition": "CONTRACTED",
+      "defects": ["B11-D5"],
+      "residuals": [
+        "Reader ownership is not recorded; a read unlock by a thread that did not acquire one decrements the count. The authority's plain pthread_rwlock_t has the same undefined case, and the contract now requires the caller to hold the lock.",
+        "Readers are not held off by a waiting writer (no writer preference), matching POSIX and glibc's default rwlock behaviour.",
+        "state.readers += 1 is unchecked usize arithmetic; reaching the wrap needs 2^64 concurrent readers and is not reachable from the exported API."
+      ]
+    },
+    {
+      "id": "B11-THR-3",
+      "file": "src/runtime/thread.rs",
+      "mechanism": "once, thread-local storage, thread ids, atomics and the thread-support/sleep surface",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "CRYPTO_THREAD_run_once translates pthread_once failure to 0 and refuses a NULL init (the authority would crash on NULL); this is the recorded safe divergence.",
+        "CRYPTO_THREAD_init_local runs ossl_init_thread first and uses the non-reentrant thread_key_create seam, so the event machinery's own destructor key cannot recurse.",
+        "Atomics always take the lock-free path and ignore the lock argument on this profile, which is the authority's measured behaviour (`courts/phase3/rt_thread_probe.c`). Caller storage must not be accessed non-atomically concurrently; that is the C contract.",
+        "OSSL_sleep's deadline arithmetic wraps like the authority's unsigned OSSL_TIME addition; a clock step or an absurd millis value can shorten the sleep, not cause UB."
+      ]
+    },
+    {
+      "id": "B11-THR-4",
+      "file": "src/runtime/thread.rs",
+      "mechanism": "internal CRYPTO_MUTEX / CRYPTO_CONDVAR ownership, waiting and re-acquisition",
+      "disposition": "CONTRACTED",
+      "defects": ["B11-D1", "B11-D4"],
+      "residuals": [
+        "The condvar uses std::sync::Condvar plus a gate mutex to make release-and-wait one step; the authority uses one pthread_cond_t. The gate is held while the caller's mutex is released and until the waiter is inside wait, so a signaller cannot be lost.",
+        "A condvar bound to one mutex refuses a second mutex by returning without waiting; binding is a caller contract (one mutex per condvar for its life).",
+        "Poison recovery is deliberate: the authority has no poisoning and the critical sections are short and non-panicking.",
+        "The timed wait is a documented substitution (Condvar::wait_timeout with remaining monotonic time); nothing in the authority calls it, and the same re-acquisition repair applies to both arms."
+      ]
+    },
+    {
+      "id": "B11-SSL-1",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "command tables, lookup, prefix handling and dispatch",
+      "disposition": "CONTRACTED",
+      "defects": ["B11-D2"],
+      "residuals": [
+        "Switch rows are CMDLINE-only (str_file is None), exactly as SSL_CONF_CMD_SWITCH expands; string commands carry both spellings where the authority does.",
+        "Cert/key/CA/group/sigalg rows are retained for recognition and value_type but their handlers are unwired (cmd_unwired), as recorded in the module header.",
+        "cmd_RecordPadding uses Rust integer parsing rather than OPENSSL_strtoul(base 0), so hex/octal spellings and QUIC-specific bypasses differ; this is a recorded compatibility divergence, not a memory-safety one.",
+        "atoi_prefix answers 0 on an out-of-range decimal, where the authority's atoi is undefined; both then compare against zero differently only for absurd values. Recorded compatibility divergence."
+      ]
+    },
+    {
+      "id": "B11-SSL-2",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "option/flag word ownership and the CONF_parse_list callback edge",
+      "disposition": "CONTRACTED",
+      "defects": ["B11-D3"],
+      "residuals": [
+        "poptions points at the uint64_t options field; pcert_flags at the crate's c_long cert_flags; pvfy_flags at c_int verify_mode. Each is now written through its own type, which is what the authority's single uint32_t view assumes.",
+        "ssl_set_option returns immediately when poptions is NULL even for cert/verify rows, matching the authority's guard.",
+        "The option tables are frame-local. The parse clears ctx->tbl/ntbl before returning; no pointer to the frame escapes.",
+        "CONF_parse_list invokes ssl_set_option_list synchronously; the callback holds no Rust borrow and the context is not shared across threads by this API."
+      ]
+    },
+    {
+      "id": "B11-SSL-3",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_CONF_CTX construction, borrowing set_ssl/set_ssl_ctx and teardown",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "SSL_CONF_CTX_new allocates size_of::<SslConfCtx>() through the CRYPTO seam at line 1059 and frees it at 1120; the struct is opaque, and its size coincidentally equals the C struct on the admitted profile (no external layout is observed).",
+        "set_ssl/set_ssl_ctx borrow the object's option/version/verify/cert-flag fields; the caller must keep the SSL/SSL_CTX alive for the context's use. The borrowed pointers are NULLed when the object is replaced or cleared.",
+        "The cert_filename array is SSL_PKEY_NUM slots; the authority sizes it SSL_PKEY_NUM + sigalg_list_len, but this crate fixes ssl_pkey_num at 9 and never installs a filename, so the difference is unreachable until cert loading is wired.",
+        "finish's REQUIRE_PRIVATE back-fill and canames hand-off are unreachable here (no filename is ever installed and canames is never set); finish therefore answers 1 as the authority does for that state.",
+        "free releases prefix and the filename array at line 0, matching the authority's OPENSSL_free sites; canames is freed with OPENSSL_sk_free because no X509_NAME pop_free is reachable."
+      ]
+    },
+    {
+      "id": "B11-P12-1",
+      "file": "src/pkcs12/p12_crt.rs",
+      "mechanism": "bag creation, stack adoption/removal and the safe-bag add_* family",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "pkcs12_add_bag adopts the bag only on a successful push and frees a stack it built on failure; a pre-existing stack is left alone, matching the authority.",
+        "PKCS12_add_key_ex detaches p8 only when create0_p8inf takes ownership; the shrouded arm leaves p8 for the caller's free, exactly as the authority comments.",
+        "PKCS12_add_safe_ex frees a stack it built and the half-built PKCS7 on failure; a caller-supplied *psafes stack is not released.",
+        "a bag not found by pkcs12_remove_bag is not freed (authority parity); no caller can reach that state without concurrent mutation of the same stack."
+      ]
+    },
+    {
+      "id": "B11-P12-2",
+      "file": "src/pkcs12/p12_crt.rs",
+      "mechanism": "PKCS12_create_ex2 builder, callback reentrancy and failure cleanup order",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "PKCS12_create_cb is application code. It is called with no Rust borrow and no lock held, once per bag; it must not free pkey/cert/ca or re-enter the build, and the authority has the same obligation.",
+        "The cert-bag callback is invoked even when bag is NULL, as the authority does; pkcs12_remove_bag then treats NULL as nothing to do.",
+        "keyid is EVP_MAX_MD_SIZE bytes and X509_digest bounds keyidlen by the digest; the value is passed as c_int only after the length check.",
+        "Cleanup order on every goto-err arm is bags/safes/p12 as the authority; safes and bags are set to NULL after a successful pop_free, so no double release is possible.",
+        "The callback can make the build slow or abort it; that is the documented -1/0 contract and not a memory-safety edge."
+      ]
+    },
+    {
+      "id": "B11-P12-3",
+      "file": "src/pkcs12/p12_crt.rs",
+      "mechanism": "exported forwarders and types (add_safes/add_key/add_safe/create/create_ex/cb typedef)",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every forwarder passes the same contract through unchanged (NULL context/propq, no callback); no ownership is transferred by the forwarder itself.",
+        "The PKCS12_create_cb typedef is Option<unsafe extern \"C\" fn(*mut Pkcs12Safebag, *mut c_void) -> c_int>, ABI-identical to the authority's function-pointer typedef."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B11-D1",
+      "file": "src/runtime/thread.rs",
+      "pre_fix_line": 1765,
+      "post_fix_line": 1810,
+      "severity": "high",
+      "class": "mutual-exclusion violation / data race (condition-variable re-acquisition)",
+      "description": "ossl_crypto_condvar_wait (and the timed arm) dropped the caller's mutex, waited, then set the parking flag to true without waiting for it to be clear. A second thread could take the mutex between the signal and the waiter's return; both then believed they held it. The thread pool's join state and RCU's counters are mutated under that mutex, so this is a data race in safe-crate state, not merely a lost wakeup. The authority's pthread_cond_wait re-acquires with exclusion.",
+      "fix": "Added mutex_acquire (the blocking acquire loop factored out of ossl_crypto_mutex_lock) and called it at the end of both wait arms. The waiter now re-acquires exactly as a locker does.",
+      "regression": "New control runtime::thread::condvar_tests::a_woken_waiter_waits_for_the_mutex_before_returning. Negative control observed: restoring the pre-fix stamping path made it fail with 'condvar_wait returned while another thread still held the mutex'; the fix was restored and it passes, including the full threaded suite."
+    },
+    {
+      "id": "B11-D2",
+      "file": "src/ssl/ssl_conf.rs",
+      "pre_fix_line": 387,
+      "post_fix_line": 396,
+      "severity": "medium",
+      "class": "dangling pointer retained in a long-lived context (hidden obligation)",
+      "description": "cmd_Protocol, cmd_Options and cmd_VerifyMode stored table.as_ptr() for a frame-local array into cctx->tbl and left it there after CONF_parse_list returned. The authority's tables are static, so its pointer stays valid; this one became dangling. No current reader dereferences it between commands, but the opaque context carried an escaped pointer with no lifetime contract.",
+      "fix": "Introduced parse_option_list, which installs the table for the synchronous parse and clears ctx->tbl/ntbl before returning. The authority is unaffected because its pointer remains valid either way.",
+      "regression": "New control ssl::ssl_conf::tests::an_option_command_does_not_retain_its_frame_local_table. Negative control observed: removing the clear made it fail with 'the context retained a pointer to the handler's stack table'; the clear was restored and it passes."
+    },
+    {
+      "id": "B11-D3",
+      "file": "src/ssl/ssl_conf.rs",
+      "pre_fix_line": 183,
+      "post_fix_line": 199,
+      "severity": "high",
+      "class": "out-of-bounds write (eight-byte store into a four-byte field)",
+      "description": "ssl_set_option cast pcert_flags (*mut c_long) and pvfy_flags (*mut c_int) to *mut u64 and wrote eight bytes. The verify-mode field is a c_int, so every VerifyMode option (and every SSL_TFLAG_VFY row) wrote four bytes past it; on the admitted layout that is padding today, but the access is outside the field and is UB, and a layout/type change would corrupt options or verify_callback. The authority writes one uint32_t.",
+      "fix": "Each class is now written through its own pointer type (c_long for the crate's cert_flags, c_int for verify_mode) with the table's 32-bit value cast to that type.",
+      "regression": "New control ssl::ssl_conf::tests::a_verify_option_writes_only_its_own_word on a four-byte heap allocation. Negative control observed under AddressSanitizer: the pre-fix widened write reported heap-buffer-overflow at ssl_conf.rs:208; the fixed candidate passes the same ASan run."
+    },
+    {
+      "id": "B11-D4",
+      "file": "src/runtime/thread.rs",
+      "pre_fix_line": 1602,
+      "post_fix_line": 1615,
+      "severity": "low",
+      "class": "reference lifetime fabricated by the callee (&'static and caller-chosen 'a)",
+      "description": "mutex_held returned &'static Mutex<bool> from a raw pointer and rwlock_inner returned &'a RwlockInner with a caller-chosen lifetime. Both allowed a caller to retain a borrow past the object's release; the safety comment stated a one-call duration that the signature did not enforce. These are the §2 audit class named by tree_levels/parent_mut.",
+      "fix": "Both became higher-ranked closure helpers (with_mutex_flag, with_rwlock_inner); the reference cannot escape the call, so the borrow's scope is enforced by the type rather than by a comment. Every call site was rewritten.",
+      "regression": "No new test (the property is type-level); the full thread/thread_arch/rcu tests and the threaded full suite exercise every call site."
+    },
+    {
+      "id": "B11-D5",
+      "file": "src/runtime/thread.rs",
+      "pre_fix_line": 447,
+      "post_fix_line": 465,
+      "severity": "low",
+      "class": "contract overclaim (unlock by a non-owner)",
+      "description": "CRYPTO_THREAD_unlock documented a return of 0 whenever 'the lock is not held by this thread', but reader ownership is not recorded, so a non-owner read unlock decremented the reader count and returned 1. The signature's Safety section did not require the caller to hold the lock.",
+      "fix": "The contract now requires the calling thread to hold the lock it releases and records the reader-attribution residual, matching the authority's own undefined case for a plain pthread_rwlock_t.",
+      "regression": "None needed (contract correction); existing rwlock tests still pass."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "focused_tests": [
+        "runtime::thread (filter covers thread, thread_arch, thread_events, threads_common) 31 passed / 0 failed",
+        "ssl::ssl_conf 2 passed / 0 failed (both new controls)",
+        "pkcs12::p12_crt 2 passed / 0 failed"
+      ],
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS"
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh; nightly-2026-10-05; -Zsanitizer=address -Zbuild-std",
+      "pre_fix": "ssl::ssl_conf::tests::a_verify_option_writes_only_its_own_word: ERROR: AddressSanitizer: heap-buffer-overflow at openssl_rs::ssl::ssl_conf::ssl_set_option /work/src/ssl/ssl_conf.rs:208",
+      "post_fix": "same two ssl_conf controls: 2 passed / 0 failed"
+    },
+    "batch": {
+      "library_serial": "1610 passed / 0 failed / 27 ignored (61.17 s, --test-threads=1)",
+      "library_threaded": "1610 passed / 0 failed / 27 ignored (93.90 s, --test-threads=4)",
+      "probes": [
+        "No affected OPENSSL_RS_ADV_PROBE arm exists for these three units."
+      ],
+      "negative_controls": [
+        "B11-D1: pre-fix stamping failed the new waiter test; restored fix passes.",
+        "B11-D2: pre-fix retention failed the new table test; restored clear passes.",
+        "B11-D3: pre-fix widened write aborted under ASan at ssl_conf.rs:208; restored fix passes ASan."
+      ]
+    },
+    "not_run": [
+      "Loom/TSan model check of the repaired condvar/mutex protocol (the threaded suite passes, but no exhaustive interleaving proof)",
+      "Miri on the thread and ssl_conf boundaries (nightly toolchain unavailable in the court: component download failed on disk space)",
+      "authority allocator/behaviour transcript differentials for these units",
+      "FRF-Fuzz residual replay",
+      "independent reviewer sign-off",
+      "SEAL forensic regeneration"
+    ]
+  },
+  "obligations": {
+    "discharged": [
+      "B11-D1 condition-variable wait re-acquires the caller's mutex with exclusion",
+      "B11-D2 no frame-local table pointer is retained by SSL_CONF_CTX",
+      "B11-D3 option flag words are written at their declared width",
+      "B11-D4 inner-lock borrows cannot escape the call",
+      "B11-D5 unlock contract states the holder requirement and the reader-attribution residual"
+    ],
+    "retained": [
+      "Callers must hold a CRYPTO_RWLOCK when unlocking it; reader ownership is not attributed per thread (authority-parity undefined case).",
+      "Callers of CRYPTO_atomic_* must not access the same storage non-atomically concurrently.",
+      "SSL_CONF_CTX borrows the SSL/SSL_CTX option/version/verify/cert-flag fields for its lifetime; the object must outlive the context.",
+      "The unwired SSL_CONF rows (cert/key/CA/group/sigalg) and the SSL_PKEY_NUM-only filename array remain a recorded compatibility obligation for the certificate-loading subphase.",
+      "PKCS12_create_cb must not free pkey/cert/ca or re-enter the build; the authority has the same obligation.",
+      "A bag not found by pkcs12_remove_bag is left for the caller, as in the authority."
+    ],
+    "newly_introduced": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "src/runtime/thread.rs": "CONTRACTED",
+    "src/ssl/ssl_conf.rs": "CONTRACTED",
+    "src/pkcs12/p12_crt.rs": "CONTRACTED",
+    "safe_compatible": false,
+    "note": "No consumer family graduates. No safe Rust caller can cause UB through these modules: every exported entry is unsafe with a stated C contract, and the internal mutex/condvar helpers are pub(crate) with stated caller obligations. The condvar repair is not promoted to SAFETY_DISCHARGED because no Loom/TSan interleaving proof was run and the reader-attribution residual remains. p12_crt had no defect; its callback obligations are caller-side and stated."
+  },
+  "next": {
+    "ordinary_position": "src/pem/pem_info.rs, then src/ml_kem/arith.rs, src/pkcs12/p12_sbag.rs, src/asn1/new.rs and src/evp/encode.rs",
+    "boundary_queue": "none - the three M17 boundary-skipped files are audited; B1-B11 queue closed",
+    "large_file_deferral": "src/rsa/mod.rs (123)",
+    "remaining_known_follow_up": "Loom/TSan control for the repaired condvar protocol at the next BOUNDARY trigger"
+  }
+}
