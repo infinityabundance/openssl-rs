@@ -1020,3 +1020,60 @@ evidence are `NOT_RUN`.
 `src/decoder_meth.rs` (112, 125). `src/ssl/bio_ssl.rs` (105) and
 `src/runtime/bio/bss_bio.rs` (106) remain queued for a boundary batch.
 Machine-readable receipt: [`atlas-refresh/mechanism-sweep-M11.json`](atlas-refresh/mechanism-sweep-M11.json).
+
+## Batch M12 — mechanism-contract sweep (attribution ranks 109, 111–117)
+
+**Audited (ordinary):** `src/dh/pmeth.rs` (109, 126 sites), `src/bn/gf2m.rs`
+(111, 125), `src/decoder_meth.rs` (112, 125), `src/asn1/time.rs` (113, 124),
+`src/provider/encode_key2text.rs` (114, 124), `src/ts/ts_asn1.rs` (115, 124),
+`src/x509/x_name.rs` (116, 124), `src/txt_db/txt_db.rs` (117, 122).
+**NOT_RUN (BOUNDARY):** `src/runtime/confmod/mod.rs` (110, 126) — DSO module
+init/finish callbacks plus global RCU module lists; deferred without inspecting its
+interior.
+
+**M12-D1 (fixed, medium).** `pkey_dh_ctrl`'s `EVP_PKEY_CTRL_DH_KDF_UKM` arm stored
+`p1` directly in the `size_t` `kdf_ukmlen`; a negative length with a non-NULL `p2`
+became a huge length that a later X9.42 derive read from `p2`. The arm now refuses
+`p1 < 0` with `-2` before replacing the stored block. The authority stores the
+wrapped value; the refusal is a recorded divergence on invalid input only. Control:
+`dh::pmeth::tests::a_negative_ukm_length_is_refused`.
+
+**M12-D2 (fixed, high).** `TXT_DB_read` computed `add = (num + 1) * sizeof(char *)`
+in `c_int` and sized each row as `add + offset`. A large C-valid `num` wraps the
+product; under overcommit the preceding index/qualifier arrays can succeed, after
+which the row's pointer-array stores write outside a block sized from the wrapped
+value. Both the product and the row extent are now `checked_*` + `usize::try_from`,
+with overflow taking the existing `read_err` path. Valid inputs keep the same
+allocation sizes, order and results.
+
+**No defect found:** `src/bn/gf2m.rs` (all pointer reads bounded by the terminated
+exponent array; every `BN_CTX_get` failure exits through `BN_CTX_end`),
+`src/decoder_meth.rs` (OB-3 context destruction and dispatch scan at the authority
+order), `src/asn1/time.rs` (parser index invariants: 12/14 bytes consumed against
+minimum lengths 13/15, offset arm reads exactly the last four bytes),
+`src/provider/encode_key2text.rs` (`OwnedClearBuf` adoption extents are the helper
+return lengths; private/generator buffers released with `CRYPTO_clear_free`),
+`src/ts/ts_asn1.rs` (AUX callback NEW/D2I/FREE_POST ownership), `src/x509/x_name.rs`
+(canonicalisation stays inside the UTF-8 block; a negative first-pass i2d length
+makes `BUF_MEM_grow(0)` return 0 and takes the failure path).
+
+**Contracts reused.** OB-3 `OwnedCtx`/`CtxDestroy`, OB-1 `OwnedBuf`, OB-2
+`OwnedStr`, the module-local `OwnedClearBuf`, decoder/encoder dispatch-table
+contracts, ASN.1 item/AUX hooks, and the C-ABI getter/destructor contracts. No new
+unsafe abstraction, ABI/layout change or allocator-coordinate change; the only new
+unsafe operations are test-only calls in the pmeth control.
+
+**Evidence.** FAST: fmt clean; focused `dh::pmeth` 2/0, `bn::gf2m` 5/0,
+`decoder_meth` 5/0, `provider::encode_key2text` 2/0, `x509::x_name` 4/0; `txt_db`,
+`asn1::time` and `ts::ts_asn1` have no in-module tests. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1591 passed / 0 failed / 26 ignored**
+serially (208.15 s) and with `--test-threads=4` (92.77 s). Hidden obligations: 0.
+ASan/Miri controls for D1/D2, an authority differential for the refusal, the
+deferred `confmod` boundary and SEAL evidence are `NOT_RUN`.
+
+**Next ordinary queue position:** `src/evp/fetch.rs` (rank 118, 121), then
+`src/ssl/tls13_enc.rs` (119, 121), `src/ts/ts_rsp_utils.rs` (120, 121),
+`src/x509/x509_vpm.rs` (121, 121). `src/runtime/confmod/mod.rs` (110) joins
+`src/ssl/bio_ssl.rs` (105) and `src/runtime/bio/bss_bio.rs` (106) in the boundary
+queue. Machine-readable receipt:
+[`atlas-refresh/mechanism-sweep-M12.json`](atlas-refresh/mechanism-sweep-M12.json).

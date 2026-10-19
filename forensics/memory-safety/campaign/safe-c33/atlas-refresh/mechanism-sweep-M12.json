@@ -1,0 +1,119 @@
+{
+  "source_head": "3ecc665fa2892b6e238a206319b352b13c014ad3",
+  "worktree": true,
+  "scope": "mechanism-contract sweep over attribution ranks 109 and 111-117 (unattributed-site ranking). Eight ordinary files audited; src/runtime/confmod/mod.rs (rank 110) deferred untouched to a BOUNDARY batch because it carries the DSO module init/finish callback edge plus global RCU lists. Repairs in src/dh/pmeth.rs (negative UKM length) and src/txt_db/txt_db.rs (checked row extent).",
+  "verification_level": "FAST plus BATCH; two length/overflow repairs; no open STOP",
+  "files": [
+    "src/dh/pmeth.rs",
+    "src/bn/gf2m.rs",
+    "src/decoder_meth.rs",
+    "src/asn1/time.rs",
+    "src/provider/encode_key2text.rs",
+    "src/ts/ts_asn1.rs",
+    "src/x509/x_name.rs",
+    "src/txt_db/txt_db.rs"
+  ],
+  "files_not_run": [
+    "src/runtime/confmod/mod.rs"
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1591 passed / 0 failed / 26 ignored; --test-threads=1; 208.15 s)",
+    "lib_test_threads_4": "PASS (1591 passed / 0 failed / 26 ignored; 92.77 s; no secure-heap isolation failure)",
+    "focused_tests": "PASS (dh::pmeth 2/0 including the new negative-UKM control; bn::gf2m 5/0; decoder_meth 5/0; provider::encode_key2text 2/0; x509::x_name 4/0; txt_db, asn1::time and ts::ts_asn1 have no in-module tests)",
+    "affected_adversarial_probes": "NOT_RUN (no phase5 adversarial probe is wired for DH pmeth or TXT_DB; the TXT_DB overflow control needs a large-num allocation regime and is deferred)"
+  },
+  "contracts_reused": [
+    "OB-3 OwnedCtx/CtxDestroy (DhPkeyCtx, OsslDecoderCtx) at authority release sites",
+    "OB-1 OwnedBuf plain/cleansed adoption and checked-extent construction",
+    "OB-2 OwnedStr adoption (decoder name) and module-local OwnedClearBuf for EC private/generator buffers",
+    "C-ABI pkey-method ctrl and encoder/decoder dispatch-table contracts (terminated tables, callback types per OSSL_FUNC id)",
+    "ASN.1 item/template layout, AUX callback (NEW_POST/D2I_POST/FREE_POST) and X509_NAME ex_new/ex_free/ex_d2i hooks",
+    "C-ABI exported-symbol signatures, out-parameter writability, NULL-tolerant destructor contracts"
+  ],
+  "defects": [
+    {
+      "id": "M12-D1",
+      "file": "src/dh/pmeth.rs",
+      "lines_post_fix": "386-391",
+      "severity": "medium",
+      "class": "negative length recorded as size_t -> out-of-bounds read",
+      "description": "pkey_dh_ctrl's EVP_PKEY_CTRL_DH_KDF_UKM arm stored p1 directly in kdf_ukmlen (a size_t). A C-valid negative p1 with a non-NULL p2 became a huge length, and a later X9.42 derive passed it to DH_KDF_X9_42, which reads that many UKM bytes. The authority stores the same value and has the same defect; no safe Rust caller reaches the arm because the current candidate has no legacy pmeth dispatch, but the exported method table makes it latent.",
+      "fix": "The arm refuses a non-NULL p2 paired with p1 < 0 with -2, before releasing or replacing the stored block. Every non-negative length preserves the authority's behaviour exactly; NULL p2 still clears the length to 0.",
+      "witness": "dh::pmeth::tests::a_negative_ukm_length_is_refused installs the method context with pkey_dh_init, calls the ctrl with p1 = -1, asserts -2, then runs the method's own cleanup."
+    },
+    {
+      "id": "M12-D2",
+      "file": "src/txt_db/txt_db.rs",
+      "lines_post_fix": "293-300, 337-347",
+      "severity": "high",
+      "class": "unchecked allocation-offset arithmetic -> heap out-of-bounds write",
+      "description": "TXT_DB_read computed add = (num + 1) * sizeof(char *) in c_int and later allocated add + offset bytes, using add as the row's data cursor. A large C-valid num makes the product wrap (in debug it panics inside guard_ffi; in release it can wrap to 0 or negative). The index and qualifier array allocations precede it, so under Linux overcommit a caller passing num = 2^29 - 1 can reach the parse with both arrays allocated; add then wraps to 0, the row is sized only by the line length, and the field/sentinel pointer stores write past it.",
+      "fix": "Both products/sums are now computed with checked_add/checked_mul and usize::try_from; any overflow takes the existing read_err path (which releases buf, data, index, qual and the object at the authority's error coordinates). Valid num values take the same allocation sizes, order and return values as before.",
+      "witness": "No in-module test exists and the control would require multi-gigabyte virtual allocations, so this is recorded as a BOUNDARY NOT_RUN rather than claimed as tested. The change is arithmetic with a total failure arm; the full library suite exercises the valid path through srp::srp_vfy's TXT_DB_read. The post-fix srp tests pass."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "test_only_unsafe_added": [
+    "src/dh/pmeth.rs tests::a_negative_ukm_length_is_refused: pre-existing EVP_PKEY_CTX_new_id/free and pkey_dh_init/cleanup calls, each with a SAFETY comment; no new production unsafe operation"
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M12-D2 is an extent-arithmetic defect whose negative control requires the large-num allocation regime, and M12-D1 is a length-conversion guard on a currently unreachable legacy dispatch edge. Targeted ASan/Miri controls and an authority differential for the refusal divergence belong to the BOUNDARY batch."
+  },
+  "not_discharged": true,
+  "deferred": [
+    {
+      "gate": "src/runtime/confmod/mod.rs DSO module init/finish callbacks and global RCU module lists",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "ASan/negative control for M12-D2 and Miri over the TXT_DB_read row extent",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Authority differential for the negative-UKM refusal (the authority returns 1 and stores the wrapped length)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "SEAL regeneration, dependency-closure audit and independent review for this slice",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/runtime/confmod/mod.rs was not inspected at all; its DSO callback and RCU boundaries are deferred rather than declared clean.",
+    "The shared PkeyMethCtrlFn contract still states that a non-NULL KDF-UKM p2 pairs with a non-negative p1. This batch hardens the DH implementation only; EC_KDF_UKM has the same recorded caller contract and was audited in an earlier batch, so it was not re-opened here.",
+    "src/asn1/time.rs, src/ts/ts_asn1.rs and src/txt_db/txt_db.rs have no in-module unit tests; their assurance rests on contract review and the full library suite.",
+    "src/x509/x_name.rs x509_name_encode clamps a negative first-pass i2d length with len.max(0); BUF_MEM_grow(0) returns 0, so the existing == 0 test takes the authority's failure path and the second i2d is not reached. Left as authority-parity."
+  ],
+  "next_queue": {
+    "file": "src/evp/fetch.rs",
+    "rank_in_attribution": 118,
+    "unattributed_sites": 121,
+    "then": [
+      "src/ssl/tls13_enc.rs (119, 121)",
+      "src/ts/ts_rsp_utils.rs (120, 121)",
+      "src/x509/x509_vpm.rs (121, 121)",
+      "src/cms/cms_ess.rs (122, 120)"
+    ],
+    "boundary_queue": [
+      "src/runtime/confmod/mod.rs (110, 126)",
+      "src/ssl/bio_ssl.rs (105, 131)",
+      "src/runtime/bio/bss_bio.rs (106, 131)"
+    ]
+  },
+  "receipt": "mechanism-sweep-M12",
+  "branch": "integrate/safe-c33",
+  "date": "2026-10-19"
+}
