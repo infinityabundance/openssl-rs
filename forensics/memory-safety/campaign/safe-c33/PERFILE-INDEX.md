@@ -2267,3 +2267,79 @@ surfaces: `src/provider/mac_legacy_kmgmt.rs` (86), `src/engine/eng_lib.rs` (84),
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M23.json`](atlas-refresh/mechanism-sweep-M23.json).
+
+## 28. Mechanism sweep M24 — 2026-10-19
+
+Source HEAD `8bad5f292`; branch `integrate/safe-c33`; worktree dirty
+(`src/property/strings.rs`, `src/asn1/a_mbstr.rs`, `src/evp/e_des3.rs`,
+`src/ct/ct_log.rs`, `src/cms/cms_rsa.rs`, `src/asn1/utl.rs`,
+`src/evp/e_camellia.rs`, `src/asn1/text.rs`, this section and the M24 receipt).
+Eight ordinary files from the M23-named batch; no newly discovered boundary.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/property/strings.rs` | `OwnedData`/`OwnedString` seams, self-referential `PROPERTY_STRING` layout, lhash hash/cmp/free thunks, rwlock intern race, reverse-lookup stack arithmetic | **M24-D5 fixed** (low). |
+| `src/asn1/a_mbstr.rs` | `traverse_string` callback contract, `in_utf8`/`out_utf8`/`type_str`/`cpy_*` C callbacks, output extent arithmetic, `ASN1_STRING_set0` ownership | No defect; matches 3.6.4 (including `>=` and the `--*pidx` undo). |
+| `src/evp/e_des3.rs` | `EVP_CIPHER` statics, `DesEdeKey` cipher-data block, CBC/OFB/CFB/ECB loops, CMS 3DES wrap/unwrap in-place path | **M24-D1 fixed** (high, UB). |
+| `src/ct/ct_log.rs` | OB-3 `OwnedCtx`/`CtxDestroy` records and zero-state sweep, `OwnedBuf::adopt_plain_nullable`, `OwnedStr` adoption, CONF loader callback, log-ID lookup | **M24-D2 fixed** (high, OOB read). |
+| `src/cms/cms_rsa.rs` | CMS signer/recipient dispatch, `X509_ALGOR` ownership, OAEP parameter pack/unpack, label `OwnedBuf`, provider `algorithm-id` stack buffer | **M24-D3 fixed** (medium, defensive bound). |
+| `src/asn1/utl.rs` | choice selectors, refcount protocol (`REF_DESTROYING`), encoding-cache save/restore, ADB resolution, existing allocator negative control | No defect; `do_lock(op=0)` matches the authority's unconditional lock allocation. |
+| `src/evp/e_camellia.rs` | provider-replaced legacy statics, block/stream callback views, CBC/ECB/OFB/CFB1/8/128/CTR callbacks | No defect; matches 3.6.4. |
+| `src/asn1/text.rs` | `i2t`/`i2a` writers, `OwnedBuf` clear_realloc/realloc readers, line scanning and shift-or accumulation | **M24-D4 fixed** (medium, §3 overflow). |
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M24-D1 | `src/evp/e_des3.rs:604` | high (UB) | `des_ede3_unwrap`'s in-place arm reproduced the authority's `in -= 8` (`e_des3.c:335`), forming an out-of-bounds raw pointer before the later `+ 8` cancelled it; pointer arithmetic outside the allocation is UB in Rust (§2, §17) | compute `mid`/`last` directly: in-place `(in, in+inl-16)`, otherwise `(in+8, in+inl-8)`; same addresses, no out-of-bounds pointer; control `evp::e_des3::tests::in_place_unwrap_round_trips` |
+| M24-D2 | `src/ct/ct_log.rs:687` | high (OOB read) | `CTLOG_STORE_get0_log_by_id` passed the caller's `log_id_len` to `memcmp` against the fixed 32-byte `log_id`, so a length above 32 read past the field (the authority's own UB at `ct_log.c:330`) (§1, §17) | refuse `log_id_len != CT_V1_HASHLEN` and compare 32 bytes; documented compatibility delta (NULL for a length the authority reads out of bounds); control `ct::ct_log::tests::an_over_long_log_id_is_refused_without_reading_past_the_field` |
+| M24-D3 | `src/cms/cms_rsa.rs:140` | medium (defensive) | `EVP_PKEY_CTX_get_params` provider-reported `return_size` was trusted for a 128-byte stack `aid` buffer before `d2i_X509_ALGOR` (§21.1, provider trust boundary) | bound `aid_len` by `aid.len()`; a conforming provider is unchanged, a non-conforming one is refused |
+| M24-D4 | `src/asn1/text.rs:500,690` | medium (defensive) | `a2i_ASN1_INTEGER`/`a2i_ASN1_STRING` used the authority's signed `num + i` and `num + i * 2` as a growth test and allocation extent; wrap on a multi-gigabyte input could skip growth and write past the block (§3) | `checked_add` for the new count and the growth extent; overflow answers `0` (the reader's failure outcome) |
+| M24-D5 | `src/property/strings.rs:567` | low (defensive) | reverse lookup computed `idx - 1` on a caller-supplied `int`; `INT_MIN` panics in debug builds and is signed-overflow UB in the authority (§3) | `wrapping_sub(1)`; every non-minimum index is unchanged and index 0 still asks for `-1` |
+
+**Contracts reused.** RC-1 (`raise_site`/`guard_ffi`), OB-1
+`OwnedBuf`/`OwnedBlock`, OB-2 `OwnedStr`, OB-3
+`OwnedCtx`/`RawCtx`/`CtxDestroy` and the zero-state sweep, OB-4 member-buffer
+slots, the `ASN1_STRING` ownership convention, the `EVP_CIPHER` legacy callback
+contract, and the CMS/`X509_ALGOR` ownership transitions. No new model was
+introduced for a repeated pattern.
+
+**New unsafe assumptions (hidden must be 0).** None. No production allocation
+coordinate, `#[repr(C)]` layout, export or lint attribute changed. Unsafe
+operations introduced/removed/relocated: 0/1 (the `in_.sub(8)` pointer
+computation)/0. The new controls are test-only code; `Ctlog`/`CtlogStore` are
+constructed from plain-data fields and never released by the test.
+
+**Gates.** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D
+warnings` PASS; library **1625 passed / 0 failed / 27 ignored** serially (230.23
+s) and with `--test-threads=4` (87.75 s). Focused: `e_des3` 2/0 (new in-place
+control), `ct_log` 4/0 (new over-long-ID control plus three zero-state sweeps),
+`property::strings` 3/0, `e_camellia` 1/0, `asn1::utl` 0/1 ignored allocator
+probe (unchanged); `a_mbstr`, `cms_rsa`, `asn1::text` have no test functions.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows) on the new in-place control, ASan/Loom,
+authority differentials for the two §17 divergences (in-place pointer spelling
+is address-identical; the log-ID length guard changes only the out-of-bounds
+case), independent review and SEAL. Nothing is promoted to `SAFETY_DISCHARGED`
+or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch (remaining ordinary set, descending production sites).**
+`src/runtime/bio/bf_lbuf.rs` (78), `src/provider/seed_src.rs` (78),
+`src/asn1/x_algor.rs` (77), `src/x509/x509_set.rs` (77),
+`src/provider/ec_kem.rs` (77), `src/runtime/str.rs` (77),
+`src/provider/mlx_kmgmt.rs` (75), `src/provider/ml_dsa_codecs.rs` (75). Triage the
+four provider files first: if one is a genuinely new callback boundary, record it
+`NOT_RUN` and substitute the next ranked ordinary file
+(`src/provider/core_dispatch.rs` (75), then `src/provider/exchange.rs` (74)).
+Skipped as already swept or retained boundaries: `src/ec/smpl2.rs` and
+`src/mac/hmac.rs` (75, already covered), `src/provider/mac_legacy_kmgmt.rs`,
+`src/engine/eng_lib.rs`, `src/x509/x509_trust.rs`,
+`src/provider/slh_dsa_kmgmt.rs`, `src/provider/ecx_kem.rs`, `src/ec/backend.rs`,
+`src/runtime/stack.rs`, `src/async/async.rs`, `src/evp/keymgmt_lib.rs`,
+`src/provider/decode_der2key.rs`, `src/engine/eng_table.rs`,
+`src/store/store_meth.rs`, plus the M1 cluster (`x509_vfy`, `pk7_doit`, `v3_utl`,
+`cms_sd`, `params/mod`, `pvkfmt`, `store_lib`, `bio_enc`, `x_pubkey`, `v3_asid`,
+`asn_mime`, `rsa/pmeth`).
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M24.json`](atlas-refresh/mechanism-sweep-M24.json).
