@@ -1,0 +1,187 @@
+{
+ "schema": "safe-c33/mechanism-sweep/v1",
+ "branch": "integrate/safe-c33",
+ "date": "2026-10-19",
+ "source_head": "24e7c2ac4",
+ "worktree": "source: src/ec/ctrl.rs, src/ec/ecdh_ossl.rs, src/ec/ecdsa_ossl.rs; docs: OWNER-DUPLICATES.md \u00a79.4; ledger: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 54 and this file.",
+ "scope": "The eight files named as next by M48: src/ec/backend.rs, src/ec/check.rs, src/ec/ctrl.rs, src/ec/curve.rs, src/ec/cvt.rs, src/ec/depr.rs, src/ec/ecdh_ossl.rs, src/ec/ecdsa_ossl.rs. Five audited with no source change. Repairs: the ECDH shared-secret failure release is now cleansing (D1); ECDSA digest-width arithmetic is evaluated in i64 (D2); two EVP_PKEY_CTX_get_ecdh_* # Safety contracts no longer admit a NULL out-slot on a writing path (D3/D4). No new production unsafe operation, FFI symbol, allocator coordinate, repr(C) layout, exported signature or unsafe lint attribute.",
+ "verification_level": "FAST+BATCH",
+ "unsafe_ops_removed": 0,
+ "unsafe_ops_relocated": 0,
+ "new_unsafe_assumptions": 0,
+ "hidden_obligations": 0,
+ "files_dispositions_summary": {
+  "audited_no_change": 5,
+  "defect_repaired": 3
+ },
+ "file_dispositions": [
+  {
+   "file": "src/ec/backend.rs",
+   "mechanisms": [
+    "three OSSL_ITEM name/id maps with unsafe impl Sync",
+    "ec_group_explicit_todata / ossl_ec_group_todata",
+    "ossl_ec_key_fromdata (OwnedBlock adoption, BN_secure_new private import)",
+    "ossl_ec_group_fromdata / ec_key_point_format_fromdata / ec_key_group_check_fromdata / ec_set_include_public",
+    "ossl_ec_key_dup and the CRYPTO_dup_ex_data/method copy sequence",
+    "ossl_x509_algor_is_sm2 / ossl_ec_key_param_from_x509_algor / ossl_ec_key_from_pkcs8"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ec/ec_backend.c. The pub key getter's block is adopted by OwnedBlock at the authority's :492 release; the private import is BN_secure_new + BN_FLG_CONSTTIME and is BN_clear_free'd on every tail after EC_KEY_set_private_key copies it. The dup path's BN_new private copy is cleansed by EC_KEY_free on failure. ecerr releases key then group. No change."
+  },
+  {
+   "file": "src/ec/check.rs",
+   "mechanisms": [
+    "EC_GROUP_check_named_curve (optional BN_CTX_new_ex, nist_only filter)",
+    "EC_GROUP_check (custom-curve early success, discriminant/generator/order checks)"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ec/ec_check.c. Every allocated BN_CTX and EC_POINT is released on each exit; the custom-curve success precedes both allocations; the answer is a NID or NID_undef / 0 or 1. No change."
+  },
+  {
+   "file": "src/ec/ctrl.rs",
+   "mechanisms": [
+    "evp_pkey_ctx_getset_ecdh_param_checks gate (legacy pkey-type arm unreachable by the pmeth reduction)",
+    "six strict OSSL_PARAM builders",
+    "set0_ecdh_kdf_ukm custody transfer (OPENSSL_free only on 1)",
+    "six EVP_PKEY_CTX_ctrl wrappers"
+   ],
+   "disposition": "defect_repaired",
+   "note": "crypto/evp/ec_ctrl.c. M49-D3 and M49-D4 correct # Safety text that admitted a NULL plen/pmd although the success/fixer arm writes through it. get0_ecdh_kdf_ukm remains NULL-admissible because set_octet_ptr writes only a non-NULL data pointer."
+  },
+  {
+   "file": "src/ec/curve.rs",
+   "mechanisms": [
+    "EcCurveData / EcListElement generated tables and curve_list_method (D-EC-2)",
+    "EC_get_builtin_curves bounded copy",
+    "ec_group_new_from_data (seed/parameter slicing, generator/order/cofactor/seed install)",
+    "ossl_ec_curve_nid_from_params (CRYPTO_malloc_array checked extent, OwnedBlock release, BN_CTX slots)"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ec/ec_curve.c. Only public curve parameters are released (BN_free); the parameter array is a checked CRYPTO_malloc_array extent adopted by OwnedBlock and plain-released before BN_CTX_end. memcmp lengths are gated on equal seed/parameter widths. No change."
+  },
+  {
+   "file": "src/ec/cvt.rs",
+   "mechanisms": [
+    "EC_GROUP_new_curve_GFp / GF2m method selection and EC_GROUP_set_curve failure release"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ec/ec_cvt.c. The prime method is the profile's compile-time OPENSSL_BN_ASM_MONT arm; both constructors free the group when set_curve fails. No internal state. No change."
+  },
+  {
+   "file": "src/ec/depr.rs",
+   "mechanisms": [
+    "EC_POINT_point2bn (OwnedBuf::adopt_plain octet block)",
+    "EC_POINT_bn2point (BN_num_bytes expansion, release-line-tagged OwnedBuf, frame-owned point cleanup)"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ec/ec_deprecated.c. The authority's leak on buf_len > INT_MAX is preserved and annotated; the caller's point is never cleared; a frame-allocated point is cleared on oct2point failure. Public point data only. No change."
+  },
+  {
+   "file": "src/ec/ecdh_ossl.rs",
+   "mechanisms": [
+    "ossl_ecdh_compute_key method-column dispatch",
+    "ossl_ecdh_simple_compute_key cofactor CDH and fixed-width output",
+    "OwnedSecretBuf transfer/error-release owner",
+    "err_simple (BN_clear, EC_POINT_clear_free, BN_CTX end/free)"
+   ],
+   "disposition": "defect_repaired",
+   "note": "crypto/ec/ecdh_ossl.c. M49-D1 stores the allocation extent and cleanses the shared-secret block on every failure release at the same file/line coordinate; the success transfer remains uncleansed (authority contract, caller owns and clears)."
+  },
+  {
+   "file": "src/ec/ecdsa_ossl.rs",
+   "mechanisms": [
+    "three method-column dispatchers",
+    "ossl_ecdsa_sign / ossl_ecdsa_deterministic_sign / ossl_ecdsa_verify",
+    "ecdsa_sign_setup (BN_secure_new nonce, pre-growth, retry loops, transfer)",
+    "ossl_ecdsa_simple_sign_sig / sign_sig_err",
+    "ossl_ecdsa_simple_verify_sig"
+   ],
+   "disposition": "defect_repaired",
+   "note": "crypto/ec/ecdsa_ossl.c. M49-D2 evaluates 8*dgst_len in i64 at all four truncation sites; M49 also tightens ossl_ecdsa_sign_setup's contract to require distinct output slots/values. Nonce, x, m and signature halves all reach BN_clear_free."
+  }
+ ],
+ "safety_contract_repairs": [
+  {
+   "id": "M49-D1",
+   "file": "src/ec/ecdh_ossl.rs",
+   "line": 107,
+   "severity": "medium",
+   "class": "secret-cleansing",
+   "repair": "OwnedSecretBuf now stores the allocated extent and Drop calls CRYPTO_clear_free(ptr, len, FILE, 145) instead of CRYPTO_free(ptr, FILE, 145). The block can already contain shared-secret bytes on the post-BN_bn2bin failure path, and AGENTS.md \u00a75.1 requires failure-path cleansing. The success transfer edge still calls into_raw and leaves the block for the caller to clear, exactly as the authority does.",
+   "control": "full library suite both serial and --test-threads=4; the changed path is exercised by the EC differential/round-trip tests only at success, so the failure release has no dedicated allocator probe (recorded as NOT_RUN for a targeted probe)."
+  },
+  {
+   "id": "M49-D2",
+   "file": "src/ec/ecdsa_ossl.rs",
+   "line": 666,
+   "severity": "low",
+   "class": "arithmetic/UB-avoidance",
+   "repair": "The four `8 * dgst_len > i` comparisons (sign_sig and verify, byte truncation and bit shift) now use i64::from(dgst_len) * 8 > i64::from(i). The authority's signed int multiply is undefined for |dgst_len| > INT_MAX/8 and can panic in a debug build across the extern C boundary; i64 is the intended mathematical value and cannot overflow.",
+   "control": "cargo clippy -D warnings and the full library suite; the value is unchanged for every dgst_len in the authority's defined range."
+  },
+  {
+   "id": "M49-D3",
+   "file": "src/ec/ctrl.rs",
+   "line": 284,
+   "severity": "low",
+   "class": "safety-contract",
+   "repair": "EVP_PKEY_CTX_get_ecdh_kdf_outlen's # Safety admitted a NULL plen, but its `1` arm performs `*plen = len`. The contract now requires a live writable int whenever the context passes the gate; a NULL slot is admissible only with a refused context (the NULL-context test takes that path).",
+   "control": "ec::ctrl::tests::the_null_context_controls_answer_minus_two_with_a_drained_queue plus the full suite."
+  },
+  {
+   "id": "M49-D4",
+   "file": "src/ec/ctrl.rs",
+   "line": 522,
+   "severity": "low",
+   "class": "safety-contract",
+   "repair": "EVP_PKEY_CTX_get_ecdh_kdf_md's # Safety admitted a NULL pmd, but fix_md's PostCtrlToParams GET arm writes the resolved method through the caller's slot. The contract now requires a live writable slot whenever the ctrl can reach that arm.",
+   "control": "ec::ctrl::tests (NULL-context refusal) plus the full suite."
+  }
+ ],
+ "tests": {
+  "focused": "cargo test --lib ec:: -- --test-threads=4: 47 passed / 0 failed / 1 ignored (1638 filtered)",
+  "adv_probes": "No #[ignore]/OPENSSL_RS_ADV_PROBE adversarial probe exists for the eight touched EC modules; none was affected and none was replayed.",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "fmt": "cargo fmt --all -- --check clean",
+  "lib_serial": "1659 passed / 0 failed / 27 ignored (231.13 s, --test-threads=1)",
+  "lib_threads4": "1659 passed / 0 failed / 27 ignored (88.21 s, --test-threads=4)"
+ },
+ "reconciliation": {
+  "canonical_audited_before_batch": 431,
+  "canonical_unaudited_before_batch": 332,
+  "canonical_audited_after_batch": 439,
+  "canonical_unaudited_after_batch": 324,
+  "audited_this_batch": 8,
+  "not_run_this_batch": 0,
+  "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from the head of REMAINING-AUDIT.txt and merged in LC_ALL=C order into AUDITED-FILES.txt. Counts are definitions/entries, not files touched."
+ },
+ "retained_observations": [
+  "ossl_ec_key_fromdata allocates pub_point before testing the public-key getter's result, while ec_backend.c:396-495 jumps to err on a failed getter without allocating a point. The return value is identical; only a recording allocator would observe the extra allocate/free. Not repaired: no safety or functional consequence, and no error site is generated for those authority lines.",
+  "ec_backend.c's fromdata error arms raise ERR_R_CRYPTO_LIB/ERR_R_EC_LIB/EC_R_INVALID_GROUP_ORDER; this transcription's fromdata block raises nothing because the err_sites stem set for ec_backend.c:3xx-4xx is not generated. The success/failure return values are preserved; the queue difference is a retained compatibility residual.",
+  "The ECDH success transfer deliberately hands out an uncleansed shared-secret block. That is the authority's documented ownership contract and not a destructor obligation; callers are expected to clear it. M49-D1 covers only the failure release.",
+  "The ECDSA fixed-top Montgomery path is modelled through BN_to_montgomery/BN_mod_mul_montgomery/BN_mod_add (the module's recorded substitution). This is a representation difference, not a different value, and no constant-time claim is made from it."
+ ],
+ "not_run": [
+  "constant-time/dudect for the ECDH shared secret and ECDSA private-scalar/nonce paths (SECRET_DEPENDENT_CONTROL; source inspection is not a timing result and the crate's generic BN multiply path is not the authority's fixed-top path)",
+  "Wycheproof/ACVP (the crate's published vectors ran; no external suite was replayed)",
+  "RT-EC authority differential (not rebuilt or replayed for this batch)",
+  "Miri (no component in the court toolchain)",
+  "ASan (the repairs change a release mode, an arithmetic width and contract text, not a memory access pattern)",
+  "BOUNDARY (no reusable unsafe abstraction or shared-mechanism contract changed; OwnedSecretBuf is module-local and its interface is unchanged)",
+  "SEAL"
+ ],
+ "queue_after_batch": {
+  "remaining_audit": 324,
+  "audited_files": 439,
+  "next_eight": [
+   "src/ec/ecdsa.rs",
+   "src/ec/ecx_backend.rs",
+   "src/ec/ecx_key.rs",
+   "src/ec/kdf.rs",
+   "src/ec/kmeth.rs",
+   "src/ec/mod.rs",
+   "src/ec/mont.rs",
+   "src/ec/mult.rs"
+  ]
+ }
+}

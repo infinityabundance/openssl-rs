@@ -19,6 +19,16 @@
 //! it. `BN_clear(x)` is the authority's step (4) and clears only the context temporary; the caller's
 //! buffer is deliberately not cleared here.
 //!
+//! ## The error-path buffer is cleansed, and that is a recorded deviation
+//!
+//! On every failure after the output block is allocated, the authority releases it with a plain
+//! `OPENSSL_free(buf)` at its `err:` label (`ecdh_ossl.c:145`). That block may already hold the
+//! shared secret's leading bytes (the `memset`/`BN_bn2bin` pair writes them before the length check
+//! that can fail), so this transcription cleanses it on release. The allocator seam keeps the
+//! authority's exact `file`/`line` and extent; the release is `OPENSSL_clear_free` rather than
+//! `OPENSSL_free`, and the divergence is deliberate per AGENTS.md §5.1/§17. The success path still
+//! transfers the uncleansed block to the caller, who owns and clears it.
+//!
 //! ## `BN_num_bytes` is the header's macro, not a symbol
 //!
 //! `bn.h`'s `#define BN_num_bytes(a) ((BN_num_bits(a) + 7) / 8)` is expanded at its one site
@@ -44,20 +54,22 @@ use crate::ec::lib::{
 use crate::ec::{EcKey, EcPoint};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 
-/// The translation-unit coordinate the one `OPENSSL_malloc`/`OPENSSL_free` pair in this unit is
-/// attributed to, as the allocator reports it.
+/// The translation-unit coordinate the one allocation/release pair in this unit is attributed to,
+/// as the allocator reports it.
 const FILE: *const c_char = c"crypto/ec/ecdh_ossl.c".as_ptr();
 
 /// The shared-secret buffer, owned by this call until it is handed to the caller.
 ///
 /// It is allocated at the authority's own `CRYPTO_malloc(buflen, FILE, 124)`; until the transfer
-/// edge its `Drop` performs the authority's `OPENSSL_free(buf)` at the `err:` label (`:145`). The
-/// authority deliberately hands the secret out without cleansing it here, so `Drop` is a plain
-/// free (the caller owns and clears it).
+/// edge its `Drop` performs the authority's `err:` release (`:145`). The success edge transfers
+/// the block uncleansed, exactly as the authority does (the caller owns and clears it); every
+/// failure edge cleanses it before release (the module's recorded deviation).
 struct OwnedSecretBuf {
     ptr: *mut core::ffi::c_uchar,
+    /// The allocated extent, which the cleansing release needs.
+    len: usize,
 }
 
 impl OwnedSecretBuf {
@@ -69,7 +81,7 @@ impl OwnedSecretBuf {
         if raw.is_null() {
             None
         } else {
-            Some(OwnedSecretBuf { ptr: raw })
+            Some(OwnedSecretBuf { ptr: raw, len })
         }
     }
 
@@ -88,9 +100,11 @@ impl OwnedSecretBuf {
 
 impl Drop for OwnedSecretBuf {
     fn drop(&mut self) {
-        // SAFETY: `self.ptr` is the block `malloc` allocated and has not handed out; this is its
-        // single release at the authority's own `err:` site.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, 145) };
+        // SAFETY: `self.ptr` is the block `malloc` allocated for `self.len` bytes and has not been
+        // handed out; this is its single release. The authority frees it plainly at `err:`
+        // (`ecdh_ossl.c:145`); the block is secret-bearing on this path, so the release is the
+        // cleansing one (the module's recorded deviation).
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, 145) };
     }
 }
 

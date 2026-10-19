@@ -1,11 +1,3 @@
-src/ec/backend.rs
-src/ec/check.rs
-src/ec/ctrl.rs
-src/ec/curve.rs
-src/ec/cvt.rs
-src/ec/depr.rs
-src/ec/ecdh_ossl.rs
-src/ec/ecdsa_ossl.rs
 src/ec/ecdsa.rs
 src/ec/ecx_backend.rs
 src/ec/ecx_key.rs

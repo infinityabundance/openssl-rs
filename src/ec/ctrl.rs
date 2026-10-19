@@ -281,7 +281,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_ecdh_kdf_outlen(
 /// success arm is a **range test against `INT_MAX`** rather than the provider's own domain.
 ///
 /// # Safety
-/// `ctx` NULL or live; `plen` NULL or a live `int` the callee writes.
+/// `ctx` NULL or live; `plen` is a live, writable `int` whenever the context can reach the `1`
+/// arm, because that arm writes it. A NULL slot is therefore admissible only with a context the
+/// gate refuses (NULL or not a derivation context), where it is never touched.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_outlen(
     ctx: *mut EvpPkeyCtx,
@@ -311,7 +313,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_outlen(
             -2
         }
         1 if len <= c_int::MAX as usize => {
-            // SAFETY: `plen` is NULL or a live `int` that this call writes.
+            // SAFETY: `plen` is a live, writable `int` on this arm per the contract (the gate has
+            // already answered `1`, so `ctx` is a derivation context and the slot is required).
             unsafe { *plen = len as c_int };
             1
         }
@@ -389,7 +392,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set0_ecdh_kdf_ukm(
 /// caller's slot may be left NULL when the method has no UKM.
 ///
 /// # Safety
-/// `ctx` NULL or live; `pukm` NULL or a live slot the callee writes a borrowed pointer into.
+/// `ctx` NULL or live; `pukm` is NULL (the method then reports only the length) or a live slot the
+/// callee writes a borrowed pointer into.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get0_ecdh_kdf_ukm(
     ctx: *mut EvpPkeyCtx,
@@ -515,7 +519,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_ecdh_kdf_md(
 /// `src/dh/ctrl.rs` records the same coordinate for `EVP_PKEY_CTX_get_dh_kdf_md`).
 ///
 /// # Safety
-/// `ctx` NULL or live; `pmd` NULL or a live slot the callee writes.
+/// `ctx` NULL or live; `pmd` is a live, writable slot whenever the context can reach the fixer's
+/// GET arm, because that arm writes the resolved method through it. A NULL slot is admissible
+/// only with a context the ctrl door refuses, where nothing is written.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_md(
     ctx: *mut EvpPkeyCtx,
