@@ -299,7 +299,13 @@ pub(crate) unsafe extern "C" fn WPACKET_sub_reserve_bytes__(
             return 0;
         }
 
-        if WPACKET_reserve_bytes(pkt, lenbytes + len, allocbytes) == 0 {
+        // The authority passes `lenbytes + len` to the reserve as a raw
+        // `size_t` sum. A wrapped sum would reserve fewer bytes than the
+        // caller then treats as allocated (§3), so refuse the overflow.
+        let Some(total) = lenbytes.checked_add(len) else {
+            return 0;
+        };
+        if WPACKET_reserve_bytes(pkt, total, allocbytes) == 0 {
             return 0;
         }
 
@@ -1264,6 +1270,23 @@ mod tests {
             let data = std::slice::from_raw_parts((*buf).data.cast::<u8>(), 4);
             assert_eq!(data, &[0x30, 0x02, 0x03, 0xff]);
             BUF_MEM_free(buf);
+        }
+    }
+
+    /// The sub-packet reserve's `lenbytes + len` extent is checked: a wrapped
+    /// sum must be refused rather than reserving fewer bytes than the caller
+    /// then treats as allocated (§3, §16).
+    #[test]
+    fn an_overflowing_sub_packet_extent_is_refused() {
+        // SAFETY: `pkt` is a live local and `init_null` creates its sub-packet.
+        unsafe {
+            let mut pkt = core::mem::zeroed::<Wpacket>();
+            assert_eq!(WPACKET_init_null(&mut pkt, 8), 1);
+            assert_eq!(
+                WPACKET_sub_reserve_bytes__(&mut pkt, usize::MAX, core::ptr::null_mut(), 2,),
+                0
+            );
+            WPACKET_cleanup(&mut pkt);
         }
     }
 

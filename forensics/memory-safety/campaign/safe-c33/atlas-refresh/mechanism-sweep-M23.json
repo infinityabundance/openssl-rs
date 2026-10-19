@@ -1,0 +1,138 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "42102cec4",
+  "worktree": "dirty (src/packet.rs, src/passphrase.rs, src/ml_dsa/poly.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "Eight ordinary files from the M22-named batch: src/rsa/gen.rs (143 production sites), src/ocsp/ocsp_asn.rs (135), src/x509/by_dir.rs (122), src/packet.rs (105), src/store/store_register.rs (104), src/passphrase.rs (104), src/dh/object.rs (103) and src/ml_dsa/poly.rs (86). No audited file was a newly discovered boundary; the callback-bearing surfaces reuse the established B/M contracts.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/rsa/gen.rs",
+    "src/ocsp/ocsp_asn.rs",
+    "src/x509/by_dir.rs",
+    "src/packet.rs",
+    "src/store/store_register.rs",
+    "src/passphrase.rs",
+    "src/dh/object.rs",
+    "src/ml_dsa/poly.rs"
+  ],
+  "files_not_run": [
+    "src/async/async.rs (143) - retained BOUNDARY, not selected.",
+    "src/evp/keymgmt_lib.rs (140) - retained BOUNDARY, not selected.",
+    "src/provider/decode_der2key.rs (121) - provider decode callback surface, retained BOUNDARY, not selected.",
+    "src/engine/eng_table.rs (129) - ENGINE callback table, retained BOUNDARY, not selected.",
+    "src/store/store_meth.rs (127) - store method callback surface, retained BOUNDARY, not selected."
+  ],
+  "defects": [
+    {
+      "id": "M23-D1",
+      "file": "src/packet.rs",
+      "pre_fix_lines": [302],
+      "post_fix_lines": [305],
+      "severity": "low (defensive: the authority has the same size_t wrap, and this transcribed function is dead on the DER path)",
+      "class": "unchecked lenbytes + len used as the reserve extent in WPACKET_sub_reserve_bytes__ (AGENTS.md section 3)",
+      "description": "The authority passes the raw size_t sum to WPACKET_reserve_bytes. A wrapped sum would reserve fewer bytes than the subsequent allocate/write treats as available, so the crate must not reproduce the wrap.",
+      "fix": "lenbytes.checked_add(len); overflow answers 0, the authority's own reserve-failure outcome. Control: packet::tests::an_overflowing_sub_packet_extent_is_refused.",
+      "divergence": "For a pair whose sum wraps size_t the authority's result is undefined/implementation-defined; this crate refuses. No representable buffer reaches the sum."
+    },
+    {
+      "id": "M23-D2",
+      "file": "src/passphrase.rs",
+      "pre_fix_lines": [547, 575, 472, 473],
+      "post_fix_lines": [516, 551, 584, 470, 471],
+      "severity": "low (defensive: requires a caller that cannot satisfy its buffer contract)",
+      "class": "unchecked pass_size + 1 used for two UI buffer allocations and for their cleansing extents (AGENTS.md section 3)",
+      "description": "do_ui_passphrase allocates pass_size + 1 octets twice and UiScratch::drop cleanses the same extent. A wrapped sum allocates a zero/short block while the UI is still told the buffer has pass_size octets.",
+      "fix": "pass_size.checked_add(1) before the UI is built; overflow refuses with the established invalid-argument site (PASSPHRASE_124). UiScratch stores the checked buf_size and uses it for both allocations and both cleansing releases.",
+      "divergence": "For pass_size == SIZE_MAX the authority proceeds with wrapped arithmetic; this crate refuses with the existing argument error. No representable buffer reaches the sum."
+    },
+    {
+      "id": "M23-D3",
+      "file": "src/passphrase.rs",
+      "pre_fix_lines": [670, 674, 682, 683],
+      "post_fix_lines": [680, 681, 688, 698, 699, 700],
+      "severity": "medium",
+      "class": "callback-reported *pass_len trusted as a copy, cleanse and allocation extent; len + 1 unchecked (AGENTS.md sections 3, 17, 21)",
+      "description": "cache_passphrase reads the length an OSSL_PASSPHRASE_CALLBACK reported. A callback that claims success while reporting more than pass_size would make the authority read and cleanse beyond the caller's buffer and size the cache with a wrapped len + 1, then copy the overlarge length into it.",
+      "fix": "A match on len.checked_add(1) accepts only the Some arm with len <= pass_size; any other value cleanses the caller's pass_size bytes and answers 0, leaving no cache. Control: passphrase::tests::an_overlong_callback_length_is_refused.",
+      "divergence": "A contract-breaking callback is refused instead of trusted. The authority's undefined behaviour is not reproduced; a conforming callback observes no change."
+    },
+    {
+      "id": "M23-D4",
+      "file": "src/ml_dsa/poly.rs",
+      "pre_fix_lines": [360],
+      "post_fix_lines": [364],
+      "severity": "low",
+      "class": "debug_assert!-only precondition on a copy extent (AGENTS.md section 21.4)",
+      "description": "vector_copy copied src.num_poly elements after debug_assert_eq!(dst.num_poly, src.num_poly). Under release the authority's assert disappears, so a shape mismatch writes beyond dst's block.",
+      "fix": "Release-level assert_eq!; a mismatch is a caller error and panics instead of writing out of bounds.",
+      "divergence": "The authority's NDEBUG out-of-bounds write is not reproduced; all in-crate callers construct equal-shape vectors."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1: raise_site/raise_site_data compile-time site constants and guard_ffi failure values; no site coordinate changed.",
+    "OB-1 OwnedBuf/OwnedBlock: rsa/gen's CRYPTO_calloc block, by_dir's scratch BUF_MEM and packet's OwnedSub keep their single releases at the authority coordinates.",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy: by_dir's ByDir/ByDirEntry/ByDirHash records, dh/object's Dh constructor and destructor body, store_register's loader zalloc and packet's OwnedSub adopt/into_raw; by_dir's zero-state sweep is unchanged.",
+    "OB-4 member-buffer structures: dh/object's FFC parameter and key slots, by_dir's dirs/hashes stacks, packet's subs chain and ml_dsa/poly's (poly, num_poly) pair.",
+    "ASN.1 item/template conventions: ocsp_asn's static descriptors, CHOICE utype offsets, i2d out-cursor and d2i in-cursor contracts.",
+    "Callback contracts: BN_GENCB and OSSL_SELF_TEST callbacks in rsa/gen, pem_password_cb/UI_METHOD/OSSL_PASSPHRASE_CALLBACK in passphrase, X509_LOOKUP_METHOD hooks in by_dir, and OSSL_STORE_do_all_loaders' raw-pointer dispatch in store_register; all are dispatched as raw-pointer edges with no Rust borrow held across the call.",
+    "CRYPTO_THREAD_run_once/rwlock and the refcount gate: store_register's registry and dh/object's new/free/up_ref."
+  ],
+  "mechanism_results": {
+    "src/rsa/gen.rs": "CRYPTO_calloc OwnedBuf adoption at the authority file/line, BN_free/BN_clear_free stack thunks, multiprime keygen stack and BIGNUM transfer/rollback, pairwise three-block self-test allocation and cleanup, and the deprecated RSA_generate_key triple ownership. No defect.",
+    "src/ocsp/ocsp_asn.rs": "Ten static ASN1_ITEM descriptors with sequence/choice templates and asserted offsets, and the generated new/d2i/i2d/free boilerplate. No defect.",
+    "src/x509/by_dir.rs": "RawDir block-only failure release, OwnedCtx ByDir/ByDirEntry/ByDirHash destructor bodies, RawCtx entry/hash construction and push transfer, lock/unlock on every return path, and the partially initialised X509/X509_CRL lookup keys. No defect.",
+    "src/packet.rs": "OwnedSub zalloc/adopt/into_raw, reserve-with-reflen doubling under SIZE_MAX/2, final length encoding, QUIC vlint extents, and the read-only Packet cursor. M23-D1 fixed.",
+    "src/store/store_register.rs": "RUN_ONCE registry and atomic stack publication under the write lock, loader OwnedCtx construction, scheme validation walk, replace/delete semantics and do-all callback dispatch. No defect.",
+    "src/passphrase.rs": "UiScratch's four-release order on every path, UI buffer allocation and result copy, cache clear-realloc/copy/NUL termination, dispatcher order for explicit/cached/callback/UI sources, and clear/set transitions. M23-D2 and M23-D3 fixed.",
+    "src/dh/object.rs": "RawCtx zeroed construction and partial-init failure destructor, refcount down/up gate, clear-free key replacement, FFC parameter ownership, method finish/init transitions and getter/setter slots. No defect.",
+    "src/ml_dsa/poly.rs": "Safe-interior polynomial/vector/matrix operations, the VectorBuf member-pair handle, checked malloc_array/secure_malloc_array seams, slice views used by every vector operation, and the derived-seed cleanse in vector_expand_mask. M23-D4 fixed."
+  },
+  "retained_observations": [
+    "src/rsa/gen.rs rsa_keygen_pairwise_test: plaintxt[plaintxt_len - 1] indexes without a local positivity check. The function is reached only after a successful key generation and pairwise_test is never set on this profile, so RSA_size() is positive on every reachable call; the precondition is recorded rather than changed.",
+    "src/x509/by_dir.rs get_cert_by_subject_ex: the path extent is the authority's int arithmetic strlen(ent->dir) + 17. BIO_snprintf truncates safely to the grown BUF_MEM and BUF_MEM_grow refuses a wrapped/oversized extent, so no out-of-bounds access follows for a path longer than INT_MAX.",
+    "src/ml_dsa/poly.rs matrix_as_slice: k * l is not checked. The dimensions come from fixed ML-DSA parameter sets; a wrapped product could only shorten the slice, not extend it beyond the allocated block, so it is not a memory-safety extent."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": 0,
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_relocated": 0,
+  "boundary_size": "unchanged: no production unsafe block, adoption, release site, allocator coordinate, #[repr(C)] layout, export or lint attribute was added, removed or moved; the two new controls are test-only safe code",
+  "gates": {
+    "cargo_fmt_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "cargo_test_lib_serial": "1623 passed / 0 failed / 27 ignored (62.32 s)",
+    "cargo_test_lib_threads_4": "1623 passed / 0 failed / 27 ignored (83.87 s)",
+    "focused": "rsa::gen 6/0; ocsp has no test functions; x509::by_dir 3/0; store::store_register has no test functions; dh::object 1/0 with 2 ignored allocator probes; ml_dsa 14/0; passphrase 10/0 (an_overlong_callback_length_is_refused); packet 3/0 (an_overflowing_sub_packet_extent_is_refused); ml_dsa::poly has no test functions",
+    "affected_probe": "none; no OPENSSL_RS_ADV_PROBE arm exists for packet, passphrase or ml_dsa::poly"
+  },
+  "not_run": [
+    "Miri (Stacked/Tree Borrows; not installed in the court toolchain)",
+    "ASan/Loom/TSan",
+    "authority differentials for the M23-D1..D4 divergences",
+    "independent reviewer (BOUNDARY)",
+    "SEAL / full forensic regeneration"
+  ],
+  "next_batch": [
+    "src/property/strings.rs (85)",
+    "src/asn1/a_mbstr.rs (85)",
+    "src/evp/e_des3.rs (84)",
+    "src/ct/ct_log.rs (83)",
+    "src/cms/cms_rsa.rs (82)",
+    "src/asn1/utl.rs (81)",
+    "src/evp/e_camellia.rs (80)",
+    "src/asn1/text.rs (79)"
+  ],
+  "excluded_boundaries": [
+    "src/provider/mac_legacy_kmgmt.rs (86) - provider MAC callback surface",
+    "src/engine/eng_lib.rs (84) - ENGINE lifecycle callback surface",
+    "src/x509/x509_trust.rs (84) - trust-check callback table",
+    "src/provider/slh_dsa_kmgmt.rs (83) - provider keymgmt callback surface",
+    "src/provider/ecx_kem.rs (83) - provider KEM callback surface",
+    "src/ec/backend.rs (82) - EC backend callback surface",
+    "src/runtime/stack.rs (80) - shared stack/freefunc abstraction",
+    "the five boundaries retained in M22"
+  ],
+  "status": "no STOP condition; four defensive/contract-violation repairs; hidden obligations 0; nothing promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE"
+}

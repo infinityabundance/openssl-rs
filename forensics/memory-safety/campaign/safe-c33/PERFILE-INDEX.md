@@ -2194,3 +2194,76 @@ boundaries: `src/async/async.rs` (143), `src/evp/keymgmt_lib.rs` (140),
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M22.json`](atlas-refresh/mechanism-sweep-M22.json).
+
+## 27. Mechanism sweep M23 — 2026-10-19
+
+Source HEAD `42102cec4`; branch `integrate/safe-c33`; worktree dirty
+(`src/packet.rs`, `src/passphrase.rs`, `src/ml_dsa/poly.rs`, this section and the
+M23 receipt). Eight ordinary files from the M22-named batch; no newly discovered
+boundary.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/rsa/gen.rs` | `OwnedBuf` calloc seam, `sk_BIGNUM` free thunks, multiprime keygen BIGNUM/stack lifetimes, pairwise self-test block, deprecated `RSA_generate_key` triple ownership | No defect. |
+| `src/ocsp/ocsp_asn.rs` | static `ASN1_ITEM` templates and descriptors (sequence and choice), item new/d2i/i2d/free boilerplate | No defect. |
+| `src/x509/by_dir.rs` | OB-3 `OwnedCtx`/`RawCtx` records and zero state, OB-4 stack slots, `sk` thunks, registry lock discipline, hashed lookup path | No defect. |
+| `src/packet.rs` | `OwnedSub` zalloc/adopt, reserve/grow arithmetic, length encoding, QUIC vlint, `Packet` cursor | **M23-D1 fixed.** |
+| `src/store/store_register.rs` | `RUN_ONCE` registry, atomic stack publication, rwlock, loader `OwnedCtx` zalloc, register/get/unregister/do-all | No defect. |
+| `src/passphrase.rs` | `UiScratch` owned scratch, UI buffer extents, cache realloc/copy, callback dispatch order, clear/set transitions | **M23-D2 and M23-D3 fixed.** |
+| `src/dh/object.rs` | OB-3 `RawCtx`/`OwnedCtx` `Dh`, refcount gate, clear-free member slots, FFC parameters, setters | No defect. |
+| `src/ml_dsa/poly.rs` | safe-interior polynomial/vector/matrix ops, member-pair `VectorBuf`, checked allocation seams, slice views, expand-mask seed handling | **M23-D4 fixed.** |
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M23-D1 | `src/packet.rs:305` | low (defensive) | unchecked `lenbytes + len` used as the sub-packet reserve extent (§3) | `checked_add`; overflow answers 0; control `packet::tests::an_overflowing_sub_packet_extent_is_refused` |
+| M23-D2 | `src/passphrase.rs:516` | low (defensive) | unchecked `pass_size + 1` used for both UI buffer allocations and their cleansing extents (§3) | `checked_add`; overflow refuses with the invalid-argument site; `UiScratch` stores the checked size |
+| M23-D3 | `src/passphrase.rs:680` | medium | callback-reported `*pass_len` trusted as a copy/cleanse/allocation extent and `len + 1` unchecked, so a contract-breaking callback could read out of bounds and overflow the cache (§3, §21) | bound the reported length by `pass_size` and use `checked_add`; cleanse and refuse on violation; control `passphrase::tests::an_overlong_callback_length_is_refused` |
+| M23-D4 | `src/ml_dsa/poly.rs:364` | low | `vector_copy` enforced shape equality only with `debug_assert!`, so the release `memcpy` could write past `dst` on a shape mismatch (§21.4) | release-level `assert_eq!`; authority's `NDEBUG` UB not reproduced (§17) |
+
+**Contracts reused.** RC-1 (`raise_site`/`guard_ffi`), OB-1
+`OwnedBuf`/`OwnedBlock`, OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy` and their
+zero-state sweeps, OB-4 member-buffer slots, the ASN.1 item/template and
+`i2d`/`d2i` conventions, the `BN_GENCB`/`OSSL_SELF_TEST` callback contract, the
+`UI_METHOD` and `pem_password_cb` dispatch contracts, and the store-loader
+do-all callback contract. No new model was introduced for a repeated pattern.
+
+**Retained observations.** `rsa/gen.rs`'s pairwise test indexes
+`plaintxt_len - 1` without a positivity check; the argument is only reachable
+after a successful key generation and `pairwise_test` is never set on this
+profile, so the existing precondition is recorded rather than changed.
+`x509/by_dir.rs` keeps the authority's `int` path-length sum; `BIO_snprintf`
+truncates safely and `BUF_MEM_grow` refuses the wrapped extent, so no
+out-of-bounds access follows. `ml_dsa/poly.rs` keeps `k * l` in
+`matrix_as_slice`; the matrix dimensions come from fixed parameter sets and a
+wrapped length only shortens the slice, so it is not a memory-safety extent.
+
+**New unsafe assumptions (hidden must be 0).** None. No production `unsafe`
+operation, adoption, release site, allocator coordinate, `#[repr(C)]` layout,
+export or lint attribute changed. Unsafe operations introduced/removed/relocated:
+0/0/0. The two new controls are test-only safe code.
+
+**Gates.** `cargo fmt --all -- --check` PASS; `cargo clippy --all-targets -- -D
+warnings` PASS; library **1623 passed / 0 failed / 27 ignored** serially (62.32
+s) and with `--test-threads=4` (83.87 s). Focused: `rsa::gen` 6/0, `ocsp` and
+`store::store_register` have no test functions, `x509::by_dir` 3/0, `dh::object`
+1/0 with 2 ignored allocator probes, `ml_dsa` 14/0, `passphrase` 10/0, `packet`
+3/0; `ml_dsa::poly` has no test functions. No affected `OPENSSL_RS_ADV_PROBE`
+arm exists for the three changed files.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows), ASan/Loom/TSan, authority
+differentials for the four §17 divergences, independent review and SEAL.
+Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch (remaining ordinary set).** `src/property/strings.rs` (85),
+`src/asn1/a_mbstr.rs` (85), `src/evp/e_des3.rs` (84), `src/ct/ct_log.rs` (83),
+`src/cms/cms_rsa.rs` (82), `src/asn1/utl.rs` (81), `src/evp/e_camellia.rs` (80),
+`src/asn1/text.rs` (79). Excluded as retained boundaries or shared callback
+surfaces: `src/provider/mac_legacy_kmgmt.rs` (86), `src/engine/eng_lib.rs` (84),
+`src/x509/x509_trust.rs` (84), `src/provider/slh_dsa_kmgmt.rs` (83),
+`src/provider/ecx_kem.rs` (83), `src/ec/backend.rs` (82), `src/runtime/stack.rs`
+(80), plus the five boundaries named in M22.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M23.json`](atlas-refresh/mechanism-sweep-M23.json).
