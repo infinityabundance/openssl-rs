@@ -225,16 +225,34 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
     if !(0..=16).contains(&ivl) {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::P5_CRPT_58) };
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+        // SAFETY: `pbe` is this call's own decode, `kctx` is NULL or live, and the three buffers
+        // are this frame's own.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
     // SAFETY: `cipher` is live per the contract.
     let kl = unsafe { EVP_CIPHER_get_key_length(cipher) };
     if kl < 0 || kl > EVP_MAX_MD_SIZE as c_int {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::P5_CRPT_63) };
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+        // SAFETY: `pbe` is this call's own decode, `kctx` is NULL or live, and the three buffers
+        // are this frame's own.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
 
     // SAFETY: `pbe` is live and its two fields are the decode's own allocations; a decoded
@@ -260,9 +278,22 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
 
     // SAFETY: `md` is live per the contract.
     let mdsize = unsafe { EVP_MD_get_size(md) };
-    if mdsize <= 0 {
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+    /* `md_tmp` is `EVP_MAX_MD_SIZE` bytes, while a fetched method's `size` is bounded only by
+     * `INT_MAX` in `evp_md_cache_constants`. A provider that reports a larger size would make the
+     * derive below write past this frame's buffer; the authority has no bound and overflows.
+     * Refusing the oversized answer is the §17 divergence. */
+    if mdsize <= 0 || mdsize as usize > EVP_MAX_MD_SIZE {
+        // SAFETY: `pbe` is this call's own decode, `kctx` is NULL or live, and the three buffers
+        // are this frame's own.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
 
     // SAFETY: `libctx` is NULL or live and `propq` is NULL or NUL-terminated.
@@ -272,8 +303,17 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
     // SAFETY: `kdf` is NULL or live and this call gives its reference back.
     unsafe { EVP_KDF_free(kdf) };
     if kctx.is_null() {
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+        // SAFETY: `pbe` is this call's own decode, `kctx` is NULL (just checked), and the three
+        // buffers are this frame's own.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
 
     // SAFETY: the constructors take a name and a buffer; every buffer here is this frame's and
@@ -295,8 +335,17 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
     // SAFETY: `kctx` is live, `md_tmp` is `mdsize` writable bytes, and the array is this frame's
     // own and terminated.
     if unsafe { EVP_KDF_derive(kctx, md_tmp.as_mut_ptr(), mdsize as usize, params.as_ptr()) } != 1 {
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+        // SAFETY: `pbe` is this call's own decode, `kctx` is live, and the three buffers are this
+        // frame's own; the failed derive may already have written secret bytes into `md_tmp`.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
     // SAFETY: `kl <= 64` and `ivl <= 16` were checked above, so both slices are in bounds of
     // their destinations, and `16 - ivl` is in bounds of `md_tmp`. The `EVP_CipherInit_ex`
@@ -318,8 +367,17 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
         )
     };
     if init_ok == 0 {
-        // SAFETY: `pbe` is this call's own decode and `kctx` is NULL or live.
-        return unsafe { finish_err(pbe, kctx) };
+        // SAFETY: `pbe` is this call's own decode, `kctx` is live, and the three buffers are this
+        // frame's own and hold derived secret material that must not be left behind.
+        return unsafe {
+            finish_err(
+                pbe,
+                kctx,
+                md_tmp.as_mut_ptr(),
+                key.as_mut_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
     }
     // SAFETY: both buffers are this frame's own.
     unsafe {
@@ -336,13 +394,31 @@ pub unsafe extern "C" fn PKCS5_PBE_keyivgen_ex(
     rv
 }
 
-/// The authority's `err:` label, which releases `kctx` and frees the decode and answers 0.
+/// The authority's `err:` label: cleanse the three secret buffers, release `kctx`, free the decode
+/// and answer 0.
+///
+/// The authority cleanses `md_tmp`/`key`/`iv` only on its success path and leaves whatever the
+/// failed derive or cipher initialisation produced in the frame when it jumps to `err:`. Cleansing
+/// unconditionally is a §5 deliberate divergence; every failure path reaches here after the arrays
+/// were fully initialised at declaration, so the cleanup is valid on all of them.
 ///
 /// # Safety
-/// `kctx` must be NULL or live; `pbe` NULL or this call's own `PBEPARAM` decode.
-unsafe fn finish_err(pbe: *mut PbeParam, kctx: *mut crate::evp::kdf::EvpKdfCtx) -> c_int {
-    // SAFETY: both are NULL or live per the contract.
+/// `kctx` must be NULL or live; `pbe` NULL or this call's own `PBEPARAM` decode; `md_tmp`, `key`
+/// and `iv` must each point to a fully initialised buffer of `EVP_MAX_MD_SIZE`,
+/// `EVP_MAX_KEY_LENGTH` and `EVP_MAX_IV_LENGTH` bytes respectively.
+unsafe fn finish_err(
+    pbe: *mut PbeParam,
+    kctx: *mut crate::evp::kdf::EvpKdfCtx,
+    md_tmp: *mut u8,
+    key: *mut u8,
+    iv: *mut u8,
+) -> c_int {
+    // SAFETY: the three buffers and the two handles are the caller's, NULL-or-live and sized per
+    // the contract.
     unsafe {
+        OPENSSL_cleanse(md_tmp.cast(), EVP_MAX_MD_SIZE);
+        OPENSSL_cleanse(key.cast(), EVP_MAX_KEY_LENGTH);
+        OPENSSL_cleanse(iv.cast(), EVP_MAX_IV_LENGTH);
         EVP_KDF_CTX_free(kctx);
         ASN1_item_free(pbe.cast::<c_void>(), &PBEPARAM_ITEM);
     }

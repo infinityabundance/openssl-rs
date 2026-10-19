@@ -1,0 +1,137 @@
+{
+  "receipt": "mechanism-sweep-M56",
+  "branch": "integrate/safe-c33",
+  "source_head": "4f340911c",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; three repairs (one authority NULL-dereference reproduction, one stack-buffer overflow bound, one failure-path secret cleansing). No STOP remains open after repair.",
+  "scope": "Per-file contract audit of eight EVP units: the portable keymgmt export/import ownership helper, the MDC2/RIPEMD-160/SHA-3/SHA-1-2/Whirlpool legacy digest statics, the PKCS#5 v1.5 PBKDF1 wrapper, and the scrypt PBE wrapper. method_store.rs was skipped as the method-store/OSSL_METHOD_CONSTRUCT_METHOD registry boundary and remains queued; p5_scrypt.rs was substituted from the next stable queue slot.",
+  "files": [
+    "src/evp/keymgmt_lib.rs",
+    "src/evp/legacy_mdc2.rs",
+    "src/evp/legacy_ripemd.rs",
+    "src/evp/legacy_sha3.rs",
+    "src/evp/legacy_sha.rs",
+    "src/evp/legacy_wp.rs",
+    "src/evp/p5_crpt.rs",
+    "src/evp/p5_scrypt.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M56-D1",
+      "file": "src/evp/keymgmt_lib.rs",
+      "line_pre_fix": 371,
+      "line_post_fix": 377,
+      "severity": "high",
+      "class": "authority-UB reproduction (NULL method dereference)",
+      "description": "evp_keymgmt_util_export tested only pk and export_cb, read pk->keymgmt without a NULL test and forwarded it to evp_keymgmt_export, which dereferences (*keymgmt).export. A fresh or otherwise unassigned EVP_PKEY (keymgmt NULL) is a C-valid input to EVP_PKEY_export/EVP_PKEY_todata through EVP_PKEY_export's non-legacy arm, so the crate reproduced the authority's NULL dereference.",
+      "fix": "Refuse a NULL pk->keymgmt with 0 before the exporter is reached; documented as the AGENTS.md section 17 divergence (a C-valid untyped key must not produce UB).",
+      "witness": "evp::keymgmt_lib::tests::exporting_an_unassigned_key_is_refused_before_the_method_dereference (passes; the pre-fix code would fault at the method read)."
+    },
+    {
+      "id": "M56-D2",
+      "file": "src/evp/p5_crpt.rs",
+      "line_pre_fix": 262,
+      "line_post_fix": 285,
+      "severity": "high",
+      "class": "unbounded provider-controlled size written into a fixed stack buffer",
+      "description": "PKCS5_PBE_keyivgen_ex accepted any positive EVP_MD_get_size(md) and passed it as the output length of EVP_KDF_derive into md_tmp[EVP_MAX_MD_SIZE]. evp_md_cache_constants only bounds a fetched method's size by INT_MAX, so a provider reporting size > 64 overflows the 64-byte frame buffer. The authority has the same unchecked size.",
+      "fix": "Refuse mdsize > EVP_MAX_MD_SIZE before the derive; documented as the AGENTS.md section 17 divergence.",
+      "witness": "Code and compile review; no in-tree fixture builds a provider method reporting size > 64 (NOT_RUN for a runtime control)."
+    },
+    {
+      "id": "M56-D3",
+      "file": "src/evp/p5_crpt.rs",
+      "line_pre_fix": 343,
+      "line_post_fix": 409,
+      "severity": "medium",
+      "class": "secret-bearing stack storage not cleansed on failure paths",
+      "description": "The authority cleanses md_tmp/key/iv only after a successful cipher initialisation. A failed EVP_KDF_derive or EVP_CipherInit_ex jumps to err: and leaves partial derived key material in the frame. The port reproduced that ordering.",
+      "fix": "finish_err now cleanses all three buffers before releasing kctx and the PBEPARAM decode on every failure return; this is the AGENTS.md section 5 deliberate divergence. finish_err's safety contract now names the three caller-owned extents.",
+      "witness": "Code and compile review; stack residue is not externally observable, so no runtime cleansing witness (NOT_RUN)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "Legacy EVP_MD static carrier contract (M55): EVP_ORIG_GLOBAL objects are refused by up_ref/free, ctx_size 0 is inert because the provider fetch replaces the method, and the NO_INIT legacy arm returns before any init/update/final callback",
+    "Provider callback and reentrancy contract: export/import callbacks may re-enter provider code, so pk->lock is released across the round trip and the cache is re-checked under the write lock",
+    "Operation-cache ownership contract: OwnedCacheElem owns one CRYPTO_malloc block until into_raw, and op_cache_free / the two failure sites are the only releases",
+    "OSSL_PARAM terminated-array and caller-owned output-buffer contract",
+    "RC-1 allocator seam: FILE and LINE coordinates preserved for CRYPTO_malloc/CRYPTO_free",
+    "PBES err-path cleansing pattern already established in p5_scrypt.rs (err_cleanup cleanses the derived key before decode release)",
+    "ASN.1 private descriptor transposition contract (PBEPARAM and SCRYPT_PARAMS item shape, offsets and free path)"
+  ],
+  "residuals": [
+    "keymgmt_lib.rs retains its provider round-trip and lock-order obligations; no concurrency runtime control was run in this batch.",
+    "M56-D2 has no runtime witness because no in-tree fixture constructs a digest method whose reported size exceeds EVP_MAX_MD_SIZE.",
+    "M56-D3's cleansing is review-verified only; stack residue is not observable through the public interface.",
+    "The five legacy digest files are carriers only: their callbacks are unreachable on the zero-ctx_size statics through the legacy arm, and the provider fetch either replaces them or refuses.",
+    "No constant-time claim is made for any unit in this batch; the PBES units have no secret-dependent comparison."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1665 passed / 0 failed / 27 ignored; 1692 total; 60.81 s)",
+    "lib_test_threads_4": "PASS (1665 passed / 0 failed / 27 ignored; 1692 total; 97.95 s)",
+    "focused_tests": "PASS (evp::keymgmt_lib 5 passed / 0 failed; evp::p5_crpt 6 passed / 0 failed; legacy_ filter 42 passed / 0 failed; p5_scrypt 2 passed / 0 failed)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for the keymgmt export boundary or the PBES wrappers)"
+  },
+  "boundary_control": {
+    "status": "PARTIAL",
+    "reason": "M56-D1 has a positive regression control that exercises the repaired boundary. M56-D2/D3 are compile- and review-verified only because no fixture can construct the triggering provider size or observe stack residue."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/evp/pbe.rs",
+      "src/evp/p_dec.rs",
+      "src/evp/p_enc.rs",
+      "src/evp/p_legacy_assign.rs",
+      "src/evp/p_lib.rs",
+      "src/evp/pmeth_check.rs",
+      "src/ffc/backend.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "runtime control for an oversized provider digest size in PKCS5_PBE_keyivgen_ex",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "runtime cleanliness witness for PBES failure paths",
+      "status": "NOT_RUN",
+      "reason": "not observable through the public interface",
+      "runs_at": "SEAL, if a stack-residue instrument is added"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, dudect/constant-time on the touched units",
+      "status": "NOT_RUN",
+      "reason": "not invoked in this batch; no new secret-dependent branch",
+      "runs_at": "BOUNDARY or SEAL, whichever touches these units next"
+    },
+    {
+      "gate": "authority differential for the three recorded divergences",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit or SEAL"
+    },
+    {
+      "gate": "FRF/probe suite, dependency-graph regeneration, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ]
+}
