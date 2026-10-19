@@ -1,0 +1,356 @@
+{
+  "receipt": "boundary-sweep-B16",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "8cfc56b38",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ssl/tls_srp.rs",
+      "src/ssl/statem/extensions_clnt.rs",
+      "src/engine/eng_cnf.rs",
+      "src/engine/tb_asnmth.rs"
+    ],
+    "working_tree_blob": {
+      "src/ssl/tls_srp.rs": "df912584fc739fa1740fa52384f8e4a2fc4093ca",
+      "src/ssl/statem/extensions_clnt.rs": "b671effbe4868b9123021161d7afe80739ef3ec4",
+      "src/engine/eng_cnf.rs": "55211ea82907ea5851fda48b1a608f79dfe50171",
+      "src/engine/tb_asnmth.rs": "cb2ccec79ca181f33c7c33f0faa49a6a0d6f0abc"
+    }
+  },
+  "stop_status": "CLEAR after repair. STOP was invoked on three confirmed memory-safety defects: B16-D2 (heap-use-after-free in SSL_set_srp_server_param when the caller passes the pointer SSL_get_srp_userinfo returned), B16-D3 (NULL dereference/abort in ENGINE_unregister_pkey_asn1_meths(NULL)), and B16-D1 (a refused structural reference returned a borrowed EVP_PKEY_ASN1_METHOD pointer while owning no engine reference). A fourth ownership defect (B16-D4, displaced ephemeral key not released) and a fifth concurrency defect (B16-D5, unsynchronised initialized_engines stack allowing a finish-vs-init heap-use-after-free and a lost stack) were repaired as well. D2 and D3 have observed pre-fix negative controls (ASan heap-use-after-free; SIGABRT null dereference); D1 has an observed pre-fix assertion failure (borrowed method returned). D5's race cannot be forced deterministically without a scheduling hook: its first-class canary is NOT_RUN and a serialised regression test passes after the repair. No unresolved STOP condition remains. No safe caller can cause UB through the audited interfaces under the stated contracts; hidden obligations are 0. Nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.6.4 ssl/tls_srp.c :33-545, ssl/statem/extensions_clnt.c :16-878 (client constructors), crypto/engine/eng_cnf.c :19-184, crypto/engine/tb_asnmth.c :26-221. The four authority files were fetched for this audit; the crate's own line/site annotations were checked against them.",
+    "abi": "C ABI unchanged: no exported symbol, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. The two new test modules are #[cfg(test)] only.",
+    "external_contracts": [
+      "SrpCtx is a plain #[repr(C)] credential block on SslCtx/Ssl: login/info are NULL or CRYPTO_strdup blocks owned by the block, and n/g/s/b_pub/a_pub/a/b/v are NULL or owned BIGNUMs. srp_ctx_free is the block's single release.",
+      "SSL_set_srp_server_param takes a borrowed info string and copies it with CRYPTO_strdup; the argument may alias the connection's current field (e.g. the pointer SSL_get_srp_userinfo returned).",
+      "The SRP callbacks (username/verify/password) are application-controlled; the username callback is invoked with the live SSL and a writable alert slot and must not free the connection.",
+      "tls_construct_extensions/tls_construct_ctos_* own only their WPACKET writes and, for key_share, the generated EVP_PKEY they transfer to s3.tmp.pkey. The connection's ctx is live for every Ssl constructed by SSL_new.",
+      "CONF module init/finish callbacks may be invoked concurrently by CONF_modules_load (on different CONF objects) and by CONF_modules_unload. initialized_engines is a module-global stack; the engine init/finish hooks are application-controlled and must not run under the stack lock.",
+      "ENGINE.cmd_defns and the pkey_asn1_meths callback are caller-owned. The callback fills nids and/or the method slot; the returned EVP_PKEY_ASN1_METHOD belongs to the engine and is valid only while the caller holds an ENGINE reference.",
+      "ENGINE_pkey_asn1_find_str walks the table under the global engine read lock, as the authority does; the pkey_asn1_meths callback therefore runs under that read lock and must not request the engine write lock. On a refused structural up-ref the authority unlocks, raises ERR_R_CRYPTO_LIB and returns NULL without writing *pe."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B16-SRP-1",
+      "file": "src/ssl/tls_srp.rs",
+      "mechanism": "credential-block ownership: srp_ctx_free, ctx/connection free and init internals",
+      "disposition": "CONTRACTED",
+      "contract": "A live SrpCtx owns login/info (CRYPTO_strdup) and eight BIGNUMs exactly once; srp_ctx_free releases each through the seam at the authority's coordinates, zeroes the block and restores strength = SRP_MINIMAL_N. ssl_srp_ctx_init_intern zeroes the destination before any partial copy, duplicates only non-NULL sources, and on any failure releases exactly the fields acquired so far; ssl_ctx_srp_ctx_init_intern zeroes a fresh or caller-reset context.",
+      "defects": [],
+      "residuals": ["B16-R1", "B16-R2", "B16-R3", "B16-R4"]
+    },
+    {
+      "id": "B16-SRP-2",
+      "file": "src/ssl/tls_srp.rs",
+      "mechanism": "server parameter setters and accessors: SSL_set_srp_server_param[_pw], SSL_get_srp_*",
+      "disposition": "CONTRACTED",
+      "contract": "Password-string assignment duplicates before releasing the previous value, so an argument aliasing the current field is safe; every failed duplicate leaves the field NULL with the old block released, matching the authority's end state. BN fields are copied in place or duplicated; the accessors return borrowed pointers owned by the connection or context.",
+      "defects": ["B16-D2"],
+      "residuals": ["B16-R1"]
+    },
+    {
+      "id": "B16-SRP-3",
+      "file": "src/ssl/tls_srp.rs",
+      "mechanism": "server-parameter callback edge and client A computation: srp_server_param_with_username, srp_password_from_info_cb, srp_calc_a_param",
+      "disposition": "CONTRACTED",
+      "contract": "The username callback runs with no crate lock, no Rust reference held across it and the connection live; its alert output is a writable int. The random buffer is stack-local and cleansed on both success paths. The password callback duplicates a NULL-tolerant field through CRYPTO_strdup.",
+      "defects": [],
+      "residuals": ["B16-R1", "B16-R4"]
+    },
+    {
+      "id": "B16-SRP-4",
+      "file": "src/ssl/tls_srp.rs",
+      "mechanism": "context setter/callback installers: SSL_CTX_set_srp_*",
+      "disposition": "CONTRACTED",
+      "contract": "Each installer forwards to the established ssl3_ctx_ctrl/SSL_CTX_callback_ctrl arm. The callback pointer is stored as pointer bits and re-transmuted to its real type by the arm; it is never called through the placeholder signature.",
+      "defects": [],
+      "residuals": ["B16-R8"]
+    },
+    {
+      "id": "B16-EXT-1",
+      "file": "src/ssl/statem/extensions_clnt.rs",
+      "mechanism": "framework and simple ClientHello constructors: tls_construct_extensions and the server_name/alpn/versions/psk_modes/RI/ec_formats/sig_algs/groups/etm/ems/ticket/pha builders",
+      "disposition": "CONTRACTED",
+      "contract": "Every builder writes only through the live WPACKET and returns EXT_RETURN_FAIL without committing partial state (the caller abandons the packet). Member-buffer reads (hostname, ALPN, session ticket) come from owner-derived accessors that preserve the (ptr,len) invariant; the ticket read is NULL-checked and length-guarded.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B16-EXT-2",
+      "file": "src/ssl/statem/extensions_clnt.rs",
+      "mechanism": "key_share generation and transfer: tls_construct_ctos_key_share",
+      "disposition": "CONTRACTED",
+      "contract": "The generated EVP_PKEY is transferred to s3.tmp.pkey only on EXT_RETURN_SENT and released on every failure; the encoded public key is released once through CRYPTO_free; the previous slot value is released before being displaced. The context dereferenced for libctx/propq is live for every SSL_new connection.",
+      "defects": ["B16-D4"],
+      "residuals": []
+    },
+    {
+      "id": "B16-EXT-3",
+      "file": "src/ssl/statem/extensions_clnt.rs",
+      "mechanism": "message ownership and callback absence",
+      "disposition": "CONTRACTED",
+      "contract": "No application callback is invoked anywhere in this file; the only external operations are WPACKET writes and EVP key generation through the provider, with no crate lock held across them. Failure paths return the authority's EXT_RETURN_FAIL and leave no owned pointer live.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B16-CNF-1",
+      "file": "src/engine/eng_cnf.rs",
+      "mechanism": "module stack ownership: INITIALIZED_ENGINES, int_engine_init, int_engine_module_finish",
+      "disposition": "CONTRACTED",
+      "contract": "The stack pointer is published and mutated only under INITIALIZED_ENGINES_LOCK. int_engine_init takes the functional reference before the lock and records it under the lock; failure finishes the engine after dropping the lock. The finish walk pops one engine under the lock, finishes it with no lock held, and frees/clears the empty stack under the lock. No ENGINE callback or application code runs under the lock (lock order: none -> INITIALIZED_ENGINES_LOCK).",
+      "defects": ["B16-D5"],
+      "residuals": ["B16-R9"]
+    },
+    {
+      "id": "B16-CNF-2",
+      "file": "src/engine/eng_cnf.rs",
+      "mechanism": "configuration walk and ctrl callback edge: int_engine_configure, int_engine_module_init",
+      "disposition": "CONTRACTED",
+      "contract": "The CONF section stack is read for its call lifetime. ENGINE_by_id/ENGINE_ctrl_cmd_string/ENGINE_set_default_string/ENGINE_init are called with no eng_cnf lock held, so an application ctrl/init hook may re-enter configuration loading without deadlock; the structural ENGINE reference is released on every path.",
+      "defects": [],
+      "residuals": ["B16-R7"]
+    },
+    {
+      "id": "B16-CNF-3",
+      "file": "src/engine/eng_cnf.rs",
+      "mechanism": "module registration: ENGINE_add_conf_module",
+      "disposition": "CONTRACTED",
+      "contract": "The two 'static extern \"C\" callbacks and the static module name are published once through CONF_module_add under guard_ffi; no caller data is retained.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B16-ASN1-1",
+      "file": "src/engine/tb_asnmth.rs",
+      "mechanism": "table registration and unregistration: ENGINE_register/unregister/set_default/register_all",
+      "disposition": "CONTRACTED",
+      "contract": "Registration forwards the callback's borrowed nids array to the engine table; the table stores a borrowed ENGINE owned by the global engine list. Unregistration of a live engine removes every occurrence under the engine write lock. A NULL argument is a documented no-op and never reaches the pile callback (which would dereference a NULL cached default).",
+      "defects": ["B16-D3"],
+      "residuals": []
+    },
+    {
+      "id": "B16-ASN1-2",
+      "file": "src/engine/tb_asnmth.rs",
+      "mechanism": "by-name lookup and refcount transfer: ENGINE_get_pkey_asn1_meth[_str], ENGINE_pkey_asn1_find_str, look_str_cb",
+      "disposition": "CONTRACTED",
+      "contract": "The string walk calls the application callback under the global engine read lock (authority order) and returns engine-owned method pointers. A match takes exactly one structural reference before returning the method; a refused checked increment unlocks, raises TB_ASNMTH_213 (ERR_R_CRYPTO_LIB) and returns NULL without writing *pe, so no caller receives a method without an engine reference.",
+      "defects": ["B16-D1"],
+      "residuals": ["B16-R5", "B16-R6"]
+    },
+    {
+      "id": "B16-ASN1-3",
+      "file": "src/engine/tb_asnmth.rs",
+      "mechanism": "method release at engine destruction: engine_pkey_asn1_meths_free",
+      "disposition": "CONTRACTED",
+      "contract": "For each nid reported by the engine's callback, the method the callback hands back is released exactly once with EVP_PKEY_asn1_free. A NULL engine, a missing callback and a refused method are no-ops. The callback's nids array remains engine-owned and is not released.",
+      "defects": [],
+      "residuals": ["B16-R6"]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B16-D1",
+      "file": "src/engine/tb_asnmth.rs",
+      "lines_pre_fix": "406-428 (ENGINE_pkey_asn1_find_str refusal arm)",
+      "lines_post_fix": "421-449",
+      "severity": "high",
+      "class": "refcount refusal returned a borrowed method pointer with no engine reference (latent use-after-free)",
+      "description": "On a refused structural up-ref the pre-fix code set fstr.e = NULL and still fell through to return fstr.ameth. The caller therefore received an EVP_PKEY_ASN1_METHOD owned by an engine it held no reference to, while *pe was written NULL. The authority instead unlocks, raises ERR_R_CRYPTO_LIB (the generated TB_ASNMTH_213 site was present but unused) and returns NULL without touching *pe. The repair follows the authority exactly.",
+      "control": "engine::tb_asnmth::tests::a_refused_structural_reference_returns_no_method. Pre-fix: assertion `ameth.is_null()` failed (the borrowed method was returned). Post-fix: passes; *pe remains the caller's sentinel."
+    },
+    {
+      "id": "B16-D2",
+      "file": "src/ssl/tls_srp.rs",
+      "lines_pre_fix": "475-502 (SSL_set_srp_server_param info arm)",
+      "lines_post_fix": "477-505",
+      "severity": "high",
+      "class": "heap-use-after-free read on a C-valid aliasing argument",
+      "description": "SSL_set_srp_server_param released the connection's old info string and then called CRYPTO_strdup(info). When a caller passes the pointer SSL_get_srp_userinfo(s) returned, info is the block just freed; the duplicate read freed memory (strlen/memcpy). The authority has the same order. The repair duplicates first, then releases the old block and assigns the duplicate, preserving the authority's end state on allocation failure.",
+      "control": "ssl::tls_srp::tests::server_param_accepts_its_own_userinfo_as_the_new_info under the dedicated ASan venue. Pre-fix: AddressSanitizer heap-use-after-free in runtime::mem::strlen (mem.rs:1019) reached from CRYPTO_strdup in tls_srp. Post-fix: 1 passed, 0 failed, no sanitizer report (ASAN_OPTIONS=detect_leaks=0; see escalation E1 for the unrelated leak)."
+    },
+    {
+      "id": "B16-D3",
+      "file": "src/engine/tb_asnmth.rs",
+      "lines_pre_fix": "63-66 (ENGINE_unregister_pkey_asn1_meths)",
+      "lines_post_fix": "65-72",
+      "severity": "high",
+      "class": "NULL dereference/abort on the function's own documented NULL-tolerant call",
+      "description": "ENGINE_unregister_pkey_asn1_meths forwarded a NULL engine to engine_table_unregister. int_unregister_cb compares the argument with each pile's cached default; on a pile whose funct is NULL (a non-defaulted registration) the comparison succeeds and engine_unlocked_finish(NULL) dereferences the NULL engine. The repair refuses NULL before entering the table walk; a NULL cannot name a registered engine.",
+      "control": "engine::tb_asnmth::tests::unregister_with_null_is_refused_before_the_pile_walk. Pre-fix: process abort with `null pointer dereference occurred` at eng_init.rs:91 (SIGABRT). Post-fix: passes."
+    },
+    {
+      "id": "B16-D4",
+      "file": "src/ssl/statem/extensions_clnt.rs",
+      "lines_pre_fix": "425-434 (key_share transfer)",
+      "lines_post_fix": "428-440",
+      "severity": "low",
+      "class": "owned field overwritten without release (leak; no UB)",
+      "description": "tls_construct_ctos_key_share assigned the fresh EVP_PKEY to s3.tmp.pkey unconditionally. The slot owns the previous ephemeral, and a second construction (a retry or a future HRR path) would drop it without release. The authority's share-table arm reuses ks_pkey[0]; this reduced client has no table, so it now releases the displaced key before storing the new one, matching the established sibling pattern in statem_clnt.rs/statem_srvr.rs.",
+      "control": "Static ownership review plus the existing library tests; no wire-visible change and no focused canary (the pre-fix path is a leak, not UB, and is unreachable in the non-HRR stratum). NOT_RUN as a sanitizer canary."
+    },
+    {
+      "id": "B16-D5",
+      "file": "src/engine/eng_cnf.rs",
+      "lines_pre_fix": "86-102 (int_engine_init), 312-329 (int_engine_module_finish)",
+      "lines_post_fix": "107-130, 343-370",
+      "severity": "high",
+      "class": "unsynchronised module-global stack: finish-vs-init heap-use-after-free and init-vs-init lost stack",
+      "description": "The authority uses a plain static with no lock. The crate's CONF registry documents that CONF_modules_load may run concurrently on different CONF objects, so two int_engine_init calls could both observe NULL and one could overwrite the other's freshly allocated stack (leaking the stack and the engines it records), and int_engine_module_finish could free the stack while a concurrent init pushed into it. The repair serialises only the stack allocation/push/pop/free under a module-local Mutex; ENGINE_init/ENGINE_finish (application hooks) run outside it, so callback reentrancy is preserved.",
+      "control": "engine::eng_cnf::tests::concurrent_init_records_every_engine_and_finish_releases_them passes after the repair. The race window it covers is scheduler-dependent, so a pre-fix deterministic canary is NOT_RUN (no scheduling hook); the post-fix test asserts both functional references are recorded and both released."
+    }
+  ],
+  "sweep": [
+    {
+      "concern": "SRP credential ownership and aliasing",
+      "result": "Every SrpCtx field was traced through init, copy, failure and release. The one aliasing UAF (B16-D2) is repaired; all failure paths release only fields acquired so far. Repeated init/setter calls reproduce the authority's own leaks (B16-R1/R2), recorded rather than silently fixed."
+    },
+    {
+      "concern": "SRP callbacks (reentrancy)",
+      "result": "The username/password callbacks are invoked with no crate lock and no Rust reference held across them; the connection is live per the C contract. A callback that frees the connection remains outside that contract (authority contract)."
+    },
+    {
+      "concern": "Client extension construction and packet ownership",
+      "result": "Every builder was compared with the fetched authority constructors. WPACKET sequences, guards and EXT_RETURN values match for the landed rows. The only owned slot transferred is s3.tmp.pkey, and its displaced value is now released (B16-D4). No callback runs in this file."
+    },
+    {
+      "concern": "ENGINE configuration module stack and callbacks",
+      "result": "The stack's publication, push, pop, free and clear are all under one module-local lock; ENGINE callbacks and ctrl/init hooks run outside it. The CONF walk itself remains the authority's: a callback that mutates the section being walked is outside the C contract (B16-R7)."
+    },
+    {
+      "concern": "ASN.1 method table lookup, refcount and callbacks",
+      "result": "Every registration/unregistration/select path was checked against tb_asnmth.c and eng_table.c. The by-name walk holds the read lock across the application callback (authority order; B16-R5), takes exactly one structural reference on a match, and now fails closed on a refused increment (B16-D1). NULL unregistration is refused before the pile walk (B16-D3)."
+    }
+  ],
+  "compatibility": {
+    "tls_srp": "B16-D2 changes only the order of two operations: for a non-aliasing argument the observable result and the allocation-failure end state are identical; for an aliasing argument the authority reads freed memory and this crate now succeeds. The authority's error-queue raises on BN/strdup failure remain unimplemented (B16-R4, pre-existing). The init-failure strength value differs (B16-R3, unobservable on SSL_new's failure path).",
+    "extensions_clnt": "B16-D4 releases a displaced key; the wire bytes and EXT_RETURN values are unchanged. The reduced client still regenerates rather than reusing ks_pkey[0] in an HRR path, which is the pre-existing recorded boundary (the stratum is non-HRR).",
+    "eng_cnf": "B16-D5 serialises access to the stack without changing the config walk, the pop order, the callback order or the error sites. Concurrent loads no longer lose an engine record; sequential authority behaviour is unchanged.",
+    "tb_asnmth": "B16-D3 turns an authority-parity crash into a no-op for a NULL unregistration. B16-D1 matches the authority's refusal answer exactly (NULL method, *pe untouched, TB_ASNMTH_213). Valid-engine paths are unchanged. The wrong 'NULL is allowed' contracts on the register/get/set functions were corrected to non-NULL.",
+    "authority_differential": "NOT_RUN for B16-D1/D2/D3/D5. The authority reads freed memory for B16-D2 and aborts for B16-D3, so a differential would be a crash comparison rather than an output comparison; B16-D1's refusal requires an artificial saturated count on both sides. The existing library suite was run unchanged."
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "cargo test --lib -- ssl::tls_srp::tests engine::tb_asnmth::tests engine::eng_cnf::tests -- --test-threads=1: 4 passed, 0 failed"
+    },
+    "negative_controls_observed": [
+      "engine::tb_asnmth::tests::unregister_with_null_is_refused_before_the_pile_walk on the pre-fix candidate: process abort, `null pointer dereference occurred` at engine/eng_init.rs:91 (SIGABRT); post-fix: passed.",
+      "engine::tb_asnmth::tests::a_refused_structural_reference_returns_no_method on the pre-fix candidate: assertion `ameth.is_null()` failed (the borrowed method pointer was returned); post-fix: passed, and *pe was left untouched.",
+      "ssl::tls_srp::tests::server_param_accepts_its_own_userinfo_as_the_new_info on the pre-fix candidate under ASan: AddressSanitizer heap-use-after-free in runtime::mem::strlen (mem.rs:1019) reached from CRYPTO_strdup; post-fix under ASan: 1 passed, no sanitizer report.",
+      "engine::eng_cnf::tests::concurrent_init_records_every_engine_and_finish_releases_them: post-fix pass. The pre-fix race is scheduler-dependent, so no deterministic pre-fix canary was observed (recorded NOT_RUN below)."
+    ],
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh (openssl-rs-asan:1, nightly-2026-10-05, -Zsanitizer=address -Zbuild-std, CARGO_TARGET_DIR=/work/.asan-target)",
+      "scope": "the focused B16-D2 aliasing control only; one heavy build at a time, CARGO_BUILD_JOBS=4",
+      "pre_fix": "AddressSanitizer: heap-use-after-free in runtime::mem::strlen, ABORTING",
+      "post_fix": "1 passed, 0 failed with ASAN_OPTIONS=detect_leaks=0; no use-after-free or other sanitizer report"
+    },
+    "batch": {
+      "serial": "cargo test --lib -- --test-threads=1: 1639 passed, 0 failed, 27 ignored (209.80 s)",
+      "threaded": "cargo test --lib -- --test-threads=4: 1639 passed, 0 failed, 27 ignored (90.40 s)",
+      "ignored_delta": "0 newly ignored; 0 removed; four tests added (1635 -> 1639)",
+      "affected_probes": "none: none of the four audited files contains an OPENSSL_RS_ADV_PROBE arm"
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's product toolchain is 1.98.1-x86_64-unknown-linux-gnu without the miri component; the dedicated ASan venue covered the B16-D2 UAF control instead."
+  },
+  "loom_or_tsan": "NOT_RUN. The B16-D5 repair is a serialisation argument plus a threaded regression test; no Loom or TSan model was invoked, and no deterministic pre-fix schedule was constructed.",
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No new abstraction or caller obligation. The tb_asnmth refusal branch adds the unlock and raise that the authority performs; the eng_cnf lock adds no unsafe operation. The remaining C-ABI obligations (the pkey_asn1_meths callback runs under the engine read lock; CONF callbacks must not mutate the section being walked; SRP callbacks must not free the connection) are stated in the boundary contracts above, so they are retained and visible, not hidden.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 2,
+  "unsafe_operations_introduced_detail": "Two new production unsafe blocks in ENGINE_pkey_asn1_find_str's refusal arm: CRYPTO_THREAD_unlock(global_engine_lock()) and raise_site(&TB_ASNMTH_213), both under explicit SAFETY comments. The other repairs add no unsafe expression: the tls_srp reorder reuses its existing block, the extensions_clnt release is one FFI call inside the existing block, and the eng_cnf lock is safe Rust.",
+  "test_only_unsafe_added": 7,
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Under the stated contracts, no safe Rust caller can cause UB through these boundaries. The audited entry points are C ABI functions whose pointer/lifetime preconditions are documented at each site; within those contracts the repaired paths release or refuse exactly as stated. The application callbacks remain C contracts, not hidden Rust obligations.",
+  "escalations": [
+    {
+      "id": "E1",
+      "file": "src/ssl/ssl_lib.rs (out of this batch's scope)",
+      "severity": "low",
+      "description": "The ASan venue additionally reported an 84-byte direct leak allocated by raise_site_dynamic_data (runtime/err.rs:1012) through EVP_MD_fetch during SSL_CTX_new_ex. It is unrelated to the B16 files and does not affect the UAF result, but it should be assigned to the ERR/EVP or SSL_CTX boundary."
+    },
+    {
+      "id": "E2",
+      "file": "src/ssl/ssl_lib.rs (out of this batch's scope)",
+      "severity": "medium",
+      "description": "SSL_CTX_set_srp_username/SSL_CTX_set_srp_password use the same free-then-CRYPTO_strdup order as the pre-fix SSL_set_srp_server_param. CALLER_ALIAS: SSL_CTX_set_srp_username(ctx, SSL_get_srp_username(s)) where the connection's login is NULL hands back the context's own field and the control frees it before duplicating. This is the same B16-D2 class and should be repaired in ssl_lib.rs's ssl3_ctx_ctrl arms."
+    }
+  ],
+  "residuals": [
+    {
+      "id": "B16-R1",
+      "file": "src/ssl/tls_srp.rs",
+      "severity": "low",
+      "disposition": "RETAINED - authority-faithful leak",
+      "description": "SSL_set_srp_server_param_pw overwrites srp_ctx.n/g with fresh BN_dup results without releasing the previous values, and srp_server_param_with_username overwrites b/b_pub on repeated calls. The authority does the same; these are leaks, not UB, and changing the overwrite order would alter the allocation-failure state."
+    },
+    {
+      "id": "B16-R2",
+      "file": "src/ssl/tls_srp.rs",
+      "severity": "low",
+      "disposition": "RETAINED - authority-faithful reset",
+      "description": "ssl_ctx_srp_ctx_init_intern and ssl_srp_ctx_init_intern memset the credential block. Used on a live context/connection through the exported init entry points, this drops any previously owned strings and BIGNUMs without release. The authority's own memset has the same effect; the reset is the documented semantics of those functions."
+    },
+    {
+      "id": "B16-R3",
+      "file": "src/ssl/tls_srp.rs",
+      "severity": "low",
+      "disposition": "RETAINED - compatibility delta",
+      "description": "ssl_srp_ctx_init_intern's failure path calls ssl_srp_ctx_free_intern, which restores strength = SRP_MINIMAL_N; the authority's err arm memsets without restoring strength. The connection is not published on this path (SSL_new fails), so the value is unobservable, but the delta is recorded."
+    },
+    {
+      "id": "B16-R4",
+      "file": "src/ssl/tls_srp.rs",
+      "severity": "low",
+      "disposition": "RETAINED - error-queue divergence",
+      "description": "The authority raises ERR_R_BN_LIB/ERR_R_INTERNAL_ERROR when a BN_dup or OPENSSL_strdup fails in ssl_srp_ctx_init_intern. This crate has no generated tls_srp.c sites and raises nothing on those arms. Return values and ownership are unchanged; only the queue contents differ."
+    },
+    {
+      "id": "B16-R5",
+      "file": "src/engine/tb_asnmth.rs",
+      "severity": "medium",
+      "disposition": "RETAINED - C callback contract under a read lock",
+      "description": "ENGINE_pkey_asn1_find_str invokes the application pkey_asn1_meths callback while holding the global engine read lock, exactly as the authority does. A callback that requests the write lock (for example by registering or removing an engine) would deadlock or fail; the callback contract must remain read-only with respect to the engine table."
+    },
+    {
+      "id": "B16-R6",
+      "file": "src/engine/tb_asnmth.rs",
+      "severity": "low",
+      "disposition": "RETAINED - borrowed method lifetime",
+      "description": "ENGINE_get_pkey_asn1_meth_str and engine_pkey_asn1_meths_free call the callback with no crate lock and treat the returned method as engine-owned. The method remains valid only while the engine is alive; the by-name free path and the engine destructor are the authority's own ordering."
+    },
+    {
+      "id": "B16-R7",
+      "file": "src/engine/eng_cnf.rs",
+      "severity": "low",
+      "disposition": "RETAINED - C callback contract",
+      "description": "int_engine_configure reads the section's CONF_VALUE stack across ENGINE_ctrl_cmd_string/ENGINE_set_default_string/ENGINE_init calls. An application hook that mutates the CONF section being walked would invalidate the iteration; the authority has the same requirement. No crate lock is held, so reentrant configuration loading itself is safe."
+    },
+    {
+      "id": "B16-R8",
+      "file": "src/ssl/tls_srp.rs / src/ssl/ssl_lib.rs",
+      "severity": "medium",
+      "disposition": "OUT OF SCOPE - escalated as E2",
+      "description": "The context-level username/password controls still free before duplicating. They are in ssl_lib.rs, outside this four-file batch; escalation E2 records the alias case."
+    },
+    {
+      "id": "B16-R9",
+      "file": "src/engine/eng_cnf.rs",
+      "severity": "low",
+      "disposition": "RETAINED - reentrancy ordering",
+      "description": "If an engine finish hook re-enters configuration loading after the finish walk has observed the stack empty and cleared it, the reentrant engine is recorded on a fresh stack and released by a later finish. The authority's tighter loop may consume it in the same walk; both are safe, and the observable engine lifetime only extends."
+    }
+  ],
+  "graduation": "CONTRACTED for all thirteen boundaries. Every remaining unsafe operation has an explicit validity contract and SAFETY comment, every required precondition is established by its callers or by the C ABI contract, and no safe caller can cause UB through the audited interfaces under those contracts. Hidden obligations 0. Not SAFETY_DISCHARGED: full Miri (Stacked/Tree Borrows), Loom/TSan, the authority differentials for B16-D1/D2/D3/D5, independent review and SEAL are NOT_RUN. ASan covered the B16-D2 control only. No SAFE_COMPATIBLE claim.",
+  "next_ordinary_position": "src/x509/v3_info.rs (63), then src/ts/ts_req_utils.rs (63), src/evp/e_rc2.rs (63), src/apps/pkeyutl.rs (62), src/asn1/a_verify.rs (62), src/dsa/mod.rs (62), src/evp/evp_pbe.rs (62), src/ffc/params.rs (62). This boundary sweep does not consume an ordinary queue position."
+}
