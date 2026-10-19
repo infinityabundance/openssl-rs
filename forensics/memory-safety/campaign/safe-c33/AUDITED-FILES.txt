@@ -480,3 +480,11 @@ src/evp/e_idea.rs
 src/evp/e_rc4_hmac_md5.rs
 src/evp/e_rc4.rs
 src/evp/e_seed.rs
+src/evp/e_sm4.rs
+src/evp/evp_cnf.rs
+src/evp/evp_lib.rs
+src/evp/e_xcbc_d.rs
+src/evp/legacy_blake2.rs
+src/evp/legacy_evp.rs
+src/evp/legacy_md4.rs
+src/evp/legacy_md5.rs

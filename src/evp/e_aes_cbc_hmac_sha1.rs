@@ -166,6 +166,21 @@ unsafe extern "C" fn cbc_hmac_sha1_cipher(
     ret
 }
 
+/// `EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE`'s answer — `e_aes_cbc_hmac_sha1.c:875-876`.
+///
+/// The SHA-1 row reserves `SHA_DIGEST_LENGTH` (20) bytes. A fragment size whose padded sum
+/// overflows is not valid; the authority's signed addition would be undefined there, so the
+/// command refuses it instead (§17).
+fn tls11_multiblock_max_bufsize(arg: c_int) -> c_int {
+    let Some(padded) = arg
+        .checked_add(SHA_DIGEST_LENGTH as c_int + AES_BLOCK_SIZE as c_int)
+        .map(|v| v & !(AES_BLOCK_SIZE as c_int - 1))
+    else {
+        return -1;
+    };
+    padded.checked_add(5 + 16).unwrap_or(-1)
+}
+
 /// `aesni_cbc_hmac_sha1_ctrl` — `e_aes_cbc_hmac_sha1.c:769-896`.
 ///
 /// The `SET_MAC_KEY`, `MULTIBLOCK_AAD` and `MULTIBLOCK_ENCRYPT` arms delegate to the provider's
@@ -187,6 +202,12 @@ unsafe extern "C" fn cbc_hmac_sha1_ctrl(
     unsafe { sync_in(ctx, data) };
     match type_ {
         EVP_CTRL_AEAD_SET_MAC_KEY => {
+            // The authority hands `arg` straight to a `size_t` length, where a negative value
+            // becomes a huge read. It is never a valid key length, so refuse it rather than
+            // reproduce the authority's fault (§17).
+            if arg < 0 {
+                return -1;
+            }
             // SAFETY: `ptr_` is readable for `arg` bytes per the command's contract.
             unsafe {
                 aesni_cbc_hmac_sha1_set_mac_key(data.cast(), ptr_.cast::<c_uchar>(), arg as usize);
@@ -235,7 +256,7 @@ unsafe extern "C" fn cbc_hmac_sha1_ctrl(
                 }
             }
         }
-        EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE => 5 + 16 + ((arg + 20 + 16) & !15),
+        EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE => tls11_multiblock_max_bufsize(arg),
         EVP_CTRL_TLS1_1_MULTIBLOCK_AAD => {
             if arg < core::mem::size_of::<EvpCtrlTls11MultiblockParam>() as c_int {
                 return -1;
@@ -253,6 +274,11 @@ unsafe extern "C" fn cbc_hmac_sha1_ctrl(
             }
         }
         EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT => {
+            // The legacy arm dereferences `param` without the size test its `_AAD` sibling
+            // makes; the provider arm refuses an undersized block, and this carrier must too.
+            if arg < core::mem::size_of::<EvpCtrlTls11MultiblockParam>() as c_int {
+                return -1;
+            }
             // SAFETY: `ptr_` is a live parameter block per the command's contract.
             unsafe {
                 aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
@@ -360,5 +386,33 @@ pub extern "C" fn EVP_aes_256_cbc_hmac_sha1() -> *const EvpCipher {
         ptr::addr_of!(AES_256_CBC_HMAC_SHA1.0)
     } else {
         ptr::null()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The SHA-1 row reserves a 20-byte digest, not the SHA-256 sibling's 32.
+    #[test]
+    fn the_tls11_max_bufsize_reserves_a_sha1_digest() {
+        // `e_aes_cbc_hmac_sha1.c:875-876`: `5 + 16 + ((arg + 20 + 16) & -16)`.
+        assert_eq!(
+            tls11_multiblock_max_bufsize(16),
+            5 + 16 + ((16 + SHA_DIGEST_LENGTH as c_int + 16) & !15)
+        );
+        assert_eq!(tls11_multiblock_max_bufsize(0), 5 + 16 + 32);
+        assert_eq!(
+            tls11_multiblock_max_bufsize(16384),
+            5 + 16 + ((16384 + SHA_DIGEST_LENGTH as c_int + 16) & !15)
+        );
+        // The SHA-256 sibling's constant would answer 85 here: sixteen bytes too large.
+        assert_eq!(tls11_multiblock_max_bufsize(16), 69);
+    }
+
+    /// A fragment size whose padded sum overflows is refused, not wrapped.
+    #[test]
+    fn the_tls11_max_bufsize_refuses_overflow() {
+        assert_eq!(tls11_multiblock_max_bufsize(c_int::MAX), -1);
     }
 }
