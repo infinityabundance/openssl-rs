@@ -88,10 +88,10 @@ pub unsafe extern "C" fn EVP_PBE_scrypt_ex(
     passlen: usize,
     salt: *const u8,
     saltlen: usize,
-    n: u64,
-    r: u64,
-    p: u64,
-    maxmem: u64,
+    mut n: u64,
+    mut r: u64,
+    mut p: u64,
+    mut maxmem: u64,
     key: *mut u8,
     keylen: usize,
     libctx: *mut c_void,
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn EVP_PBE_scrypt_ex(
     } else {
         (salt, saltlen)
     };
-    let maxmem = if maxmem == 0 { SCRYPT_MAX_MEM } else { maxmem };
+    maxmem = if maxmem == 0 { SCRYPT_MAX_MEM } else { maxmem };
 
     /* SAFETY: `libctx` is NULL or live and the two strings are NULL or NUL-terminated. */
     let kdf: *mut EvpKdf = unsafe { EVP_KDF_fetch(libctx, OSSL_KDF_NAME_SCRYPT, propq) };
@@ -134,8 +134,13 @@ pub unsafe extern "C" fn EVP_PBE_scrypt_ex(
     }
 
     let mut params = [OSSL_PARAM_construct_end(); 7];
-    /* SAFETY: the constructors take a name and a buffer; every buffer here is the caller's and
-     * every name is a compile-time constant. */
+    /* SAFETY: the constructors take a name and a buffer; every buffer here is the caller's or a
+     * mutable local, and every name is a compile-time constant. The four numeric descriptors are
+     * built over `n`/`r`/`p`/`maxmem` with `addr_of_mut!`, so the `*mut u64` the descriptor
+     * publishes is a writable pointer derived from mutable storage. The authority's parameters
+     * are non-const locals for the same reason; a `*mut` cast from an immutable binding would
+     * make any write by a provider undefined behaviour even though the in-tree SCRYPT decoder
+     * only reads them. */
     unsafe {
         params[0] = OSSL_PARAM_construct_octet_string(
             OSSL_KDF_PARAM_PASSWORD,
@@ -148,14 +153,14 @@ pub unsafe extern "C" fn EVP_PBE_scrypt_ex(
             saltlen,
         );
         params[2] =
-            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &n as *const u64 as *mut u64);
+            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, core::ptr::addr_of_mut!(n));
         params[3] =
-            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_R, &r as *const u64 as *mut u64);
+            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_R, core::ptr::addr_of_mut!(r));
         params[4] =
-            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_P, &p as *const u64 as *mut u64);
+            OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_P, core::ptr::addr_of_mut!(p));
         params[5] = OSSL_PARAM_construct_uint64(
             OSSL_KDF_PARAM_SCRYPT_MAXMEM,
-            &maxmem as *const u64 as *mut u64,
+            core::ptr::addr_of_mut!(maxmem),
         );
     }
 
