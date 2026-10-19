@@ -1,11 +1,3 @@
-src/apps/asn1parse.rs
-src/apps/ciphers.rs
-src/apps/cms.rs
-src/apps/configutl.rs
-src/apps/crl.rs
-src/apps/dgst.rs
-src/apps/dhparam.rs
-src/apps/dsa.rs
 src/apps/ecparam.rs
 src/apps/ec.rs
 src/apps/enc.rs

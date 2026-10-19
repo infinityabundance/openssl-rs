@@ -42,7 +42,7 @@ use crate::runtime::conf::lib::{
 };
 use crate::runtime::conf::modparse::CONF_get1_default_config_file;
 use crate::runtime::conf::types::{Conf, ConfValue};
-use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value};
 
 /// `static void print_escaped_value(BIO *out, const char *value)` —
 /// `apps/configutl.c:20-68`.
@@ -270,11 +270,17 @@ pub fn main(argv: &[String]) -> i32 {
             // arm's; see the header. Recorded rather than fabricated.
             // SAFETY: `cnf`/`sections` are live here.
             unsafe { NCONF_free(cnf) };
+            // SAFETY: `sections` is the stack `NCONF_get_section_names` allocated for
+            // this frame and it is not used again.
+            unsafe { OPENSSL_sk_free(sections) };
             return not_landed("configutl -out (unopenable)");
         }
     }
 
     // SAFETY: `cnf` and `sections` are live and not used again.
     unsafe { NCONF_free(cnf) };
+    // SAFETY: `sections` is the stack `NCONF_get_section_names` allocated for this
+    // frame; its elements are owned by `cnf`, so the stack only releases its array.
+    unsafe { OPENSSL_sk_free(sections) };
     ret
 }

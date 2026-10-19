@@ -3002,3 +3002,71 @@ remain deferred, not excluded.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M33.json`](atlas-refresh/mechanism-sweep-M33.json).
+
+## 38. Mechanism sweep M34 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `85af84d93` plus the eight CLI
+front-end repairs described below; contracts checked against OpenSSL 3.6.4.
+
+**Scope:** the eight `src/apps/*` CLI front-ends M33 named as next. The audit
+covered argument-string lifetimes (`Opts` copies argv, so no `&[String]` escapes),
+file/BIO ownership on every exit, option-table bounds (`Opts::next`/`rest` are
+bounds-checked), error tails, and every raw pointer returned by a getter.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/apps/asn1parse.rs` | `PEM_read_bio` name/header/data ownership, `BUF_MEM` adoption, DER read loop growth, offset/length bounds, `ASN1_parse_dump` | Repaired one compatibility defect: `length` was `c_long`, but the authority stores `strtol` in `unsigned int`, so `-length -1` stayed negative instead of becoming the clamped whole-buffer length. Now `c_uint` with `(int)length` comparisons. The DER loop's `checked_add` growth, the PEM block adoption (OB-1), and every exit's `BIO_free`/`BUF_MEM_free` are sound. |
+| `src/apps/ciphers.rs` | `SSL_CTX_new_ex`/`SSL_new` ownership, `SSL_get1_supported_ciphers` stack ownership, callback registration, cipher-stack bounds | No defect. `sk` may be NULL, but `OPENSSL_sk_num(NULL)` is -1 and the loop is empty; the `use_supported` stack is freed once, `ctx`/`ssl` on every path, and the stdout/stderr BIOs are `BIO_NOCLOSE`. The `dummy_psk` callback has no state and cannot re-enter. |
+| `src/apps/cms.rs` | `load_content_info` slot ownership, `CMS_sign_ex`/`CMS_add1_signer` refcounts, detached `bcont` BIO, `CMS_verify`, signer/key release | Repaired one leak: the detached-content BIO returned through `indata` was never freed (authority `BIO_free(indata)` at `apps/cms.c:1512`). It is now owned by `DetachedBio`, whose `Drop` releases it on every exit. `CMS_add1_signer` up-refs signer/key, so the post-call frees are correct and not double frees. |
+| `src/apps/configutl.rs` | `NCONF_new`/`NCONF_load`/`NCONF_get_section_names`, `CONF_VALUE` borrowing, default-config block ownership | Repaired one leak: the `NCONF_get_section_names` stack was never freed (authority `sk_OPENSSL_CSTRING_free(sections)`). It is now released on both exits after the call; the stack holds borrowed names owned by `cnf` and has no element freefunc, which is what `OPENSSL_sk_free` models. |
+| `src/apps/crl.rs` | `load_crl` ownership, `X509_CRL_get_ext_d2i` owned return, issuer/update getters, digest buffer, CRL writer | Repaired two compatibility defects: field prints went to the `-out` BIO instead of `bio_out` (the authority prints before opening `out`), and the `-hash` `<ERROR>` arm continued to write the CRL instead of bailing at `end:`. Prints now use a `BIO_NOCLOSE` stdout BIO opened first; `out` is opened after the print loop; all exits free `print_out`, `out` and `x` once. |
+| `src/apps/dgst.rs` | `opt_md_silent` fetched-vs-legacy ownership, `BIO_new`/`BIO_push` chain, signature file BIO, `EVP_MD_CTX`, signer key | Repaired the authority-`end:` cleanup omissions: every early exit between the BIO allocations and the final release leaked the owned BIOs, digest, key and context. A single `dgst_cleanup` now performs the authority's exact release order (`BIO_free(in)`, `BIO_free_all(out)`, `EVP_MD_free(md)`, `EVP_PKEY_free(sigkey)`, `EVP_MD_CTX_free(signctx)`, `BIO_free(bmd)`); the free of `inb` before `bmd` matches `apps/dgst.c:506-512` and `BIO_free` does not traverse the filter chain. |
+| `src/apps/dhparam.rs` | `load_keyparams` ownership, `EVP_PKEY_is_a`, `EVP_PKEY_param_check`, encoder context, numeric option parsing | Repaired one arithmetic defect: `strtol_base0` multiplied and added into `i128` unchecked, so a long numeric argument could panic in debug (or wrap in release) before the range check. It now uses `saturating_mul`/`saturating_add`, as `asn1parse` already did; overflow is still reported as an out-of-range value. |
+| `src/apps/dsa.rs` | `load_key`/`load_pubkey` ownership, `EVP_PKEY_get_bn_param` owned BIGNUM, encoder context, output BIO | No memory-safety defect. All `pkey`/`out`/`ectx`/`pub_key` exits release once. Retained shared divergence: `bio_open_owner`'s owner-only permissions are not reconstructed, so a private-key `-out` uses `bio_open_default`/`fopen` semantics; `private` is computed but unused. This is the existing `apps/lib` boundary, not new to this batch. |
+
+**Defects repaired (all low severity; none is UB).** `configutl` and `cms`
+leaked one allocation per invocation; `dgst` leaked on its early failure paths;
+`dhparam` could overflow `i128` on an over-long numeric option; `crl` misrouted
+print fields and kept writing after the hash error; `asn1parse` mis-handled a
+negative `-length`. No invalid free, double free, null dereference, alias or
+uninitialised read was found.
+
+**New unsafe assumptions (hidden must be 0).** Two documented ownership
+contracts were added, both reusing established release mechanisms: `DetachedBio`
+(one standalone MIME-split BIO, released once with `BIO_free`) and
+`dgst_cleanup` (each pointer is NULL or the frame's one reference, released in
+the authority's order). No new FFI symbol, allocator coordinate, `#[repr(C)]`
+layout or signature; no hidden obligation. Contracts reused: OB-1 `OwnedBlock`
+(asn1parse PEM names/header), OB-3 `OwnedCtx` release through
+`OSSL_ENCODER_CTX_free`, the keyio load/BIO contract, the cipher-stack free
+contract, and the B-series no-Rust-borrow-across-a-callback rule (`dummy_psk`).
+
+**Evidence.** FAST: fmt clean; `cargo check --lib` PASS; `cargo test --lib --
+apps::` **0 passed / 0 failed** (1,675 filtered — these front-ends have no unit
+tests). BATCH: clippy `--all-targets -D warnings` PASS; library **1648 passed /
+0 failed / 27 ignored** serially (253.62 s) and with `--test-threads=4`
+(98.26 s). No test removed or newly ignored.
+
+**NOT_RUN.** `courts/phase17/rt_cli_bodies_probe.sh` was not run: its candidate
+shim points at the pre-batch `artifacts/phase2/openssl` (18 Oct) and the crate has
+no CLI bin target to rebuild it, so a run would not exercise this candidate. Miri
+(Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay for these
+eight units, independent adversarial review and SEAL are `NOT_RUN`. Nothing is
+promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** `src/apps/dsa.rs` uses `bio_open_default` for
+a `bio_open_owner` call site (shared `apps/lib` permission divergence); `cms` and
+dsa omit the pointer-bearing `ERR_print_errors` tails; `crl` prints a repeated
+option once per occurrence where the authority's per-option index prints once;
+`asn1parse` keeps `offset` as `c_long` where the authority uses `int` (only
+> `INT_MAX` values diverge); `configutl` writes `-out` at the end rather than
+opening it before the config load.
+
+**Queue.** `REMAINING-AUDIT.txt` 454 → **446**; `AUDITED-FILES.txt` 309 → **317**.
+
+**Next eight (stable order).** `src/apps/ecparam.rs`, `src/apps/ec.rs`,
+`src/apps/enc.rs`, `src/apps/engine.rs`, `src/apps/errstr.rs`,
+`src/apps/genrsa.rs`, `src/apps/info.rs`, `src/apps/kdf.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M34.json`](atlas-refresh/mechanism-sweep-M34.json).

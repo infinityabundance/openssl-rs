@@ -1,0 +1,231 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "85af84d93",
+  "date": "2026-10-19",
+  "scope": "The eight src/apps/* CLI front-ends named as next by M33. Contract checks against OpenSSL 3.6.4 for argument lifetimes, option-table bounds, BIO/file ownership on every exit, error tails and getter-returned raw pointers; genuine cleanup, arithmetic and output-routing defects repaired.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/apps/{asn1parse,cms,configutl,crl,dgst,dhparam}.rs; queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 38 and this file. ciphers.rs and dsa.rs were audited with no source change.",
+  "reconciliation": {
+    "source_rs_files": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "canonical_audited_before_batch": 309,
+    "canonical_unaudited_before_batch": 454,
+    "canonical_audited_after_batch": 317,
+    "canonical_unaudited_after_batch": 446,
+    "mechanism_sweep_files_union": 257,
+    "m1_index_section_files": 12,
+    "full_per_file_records": 9,
+    "boundary_sweep_files": 48,
+    "mechanism_boundary_overlap": 9,
+    "method": "AUDITED-FILES.txt is the sorted union of each mechanism sweep's structured .files array (M2-M34, 257 unique), the twelve M1 files named in PERFILE-INDEX.md section 3a, the nine structured per-file records in perfile-index.json, and each boundary sweep's structured .boundaries[].file (48 unique, 9 also named by a mechanism sweep). PARTIAL-FILES.txt is attribution.json .files[].path where status == PARTIAL (761). REMAINING-AUDIT.txt is comm -23 of the two.",
+    "difference_from_309": "M33 left 309 audited / 454 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/apps/asn1parse.rs",
+    "src/apps/ciphers.rs",
+    "src/apps/cms.rs",
+    "src/apps/configutl.rs",
+    "src/apps/crl.rs",
+    "src/apps/dgst.rs",
+    "src/apps/dhparam.rs",
+    "src/apps/dsa.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/apps/asn1parse.rs",
+      "mechanisms": [
+        "PEM_read_bio name/header/data block ownership",
+        "BUF_MEM adoption of the decoded data",
+        "DER read loop BUF_MEM_grow and BIO_read",
+        "offset/length bounds",
+        "ASN1_parse_dump call"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The authority declares `unsigned int length` and stores strtol's result there; the port kept a c_long, so `-length -1` remained negative instead of becoming 4294967295 and being clamped to `num`. `length` is now c_uint with `(unsigned int)num` clamping and an `(int)length` write comparison. The read loop's checked_add growth, the OB-1 adoption of `name`/`header`, the BUF_MEM data ownership and all three release paths are sound; PEM failure blocks are already freed and nulled by PEM_read_bio_ex."
+    },
+    {
+      "file": "src/apps/ciphers.rs",
+      "mechanisms": [
+        "SSL_CTX_new_ex/TLS_server_method ownership",
+        "SSL_CTX_set_psk_client_callback registration",
+        "SSL_get1_supported_ciphers owned stack",
+        "SSL_get_ciphers borrowed stack",
+        "cipher stack bounds and description buffer"
+      ],
+      "disposition": "no_defect",
+      "note": "The supported-cipher stack is freed once and only under `use_supported`, `ctx`/`ssl` are freed on every path, and the stdout/stderr BIOs are BIO_NOCLOSE. `OPENSSL_sk_num(NULL)` answers -1, so a failed supported-cipher stack yields an empty loop rather than an out-of-bounds access. dummy_psk holds no state and cannot re-enter."
+    },
+    {
+      "file": "src/apps/cms.rs",
+      "mechanisms": [
+        "CMS_ContentInfo_new_ex slot ownership",
+        "SMIME_read_CMS_ex bcont BIO",
+        "CMS_sign_ex/CMS_add1_signer refcount contract",
+        "CMS_verify input BIO",
+        "signer/key/BIO release on every exit"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The detached-content BIO written through `indata` was never released; the authority frees it with BIO_free(indata) at apps/cms.c:1512. It is now owned by DetachedBio, whose Drop releases it on every exit. CMS_add1_signer up-refs signer and key (crypto/cms/cms_sd.c:369-378), so the post-call releases are correct rather than double frees."
+    },
+    {
+      "file": "src/apps/configutl.rs",
+      "mechanisms": [
+        "CONF_get1_default_config_file owned block",
+        "NCONF_new/NCONF_load/NCONF_free",
+        "NCONF_get_section_names allocated stack",
+        "CONF_VALUE borrowed name/value fields"
+      ],
+      "disposition": "defect_repaired",
+      "note": "The NCONF_get_section_names stack was never released; the authority calls sk_OPENSSL_CSTRING_free(sections) at apps/configutl.c:201. It is now released with OPENSSL_sk_free on both exits after the call. The stack was created without an element freefunc and its names are owned by cnf, so stack-only release is the authority's semantics. The default-config OwnedBlock and the CONF_VALUE borrows are sound."
+    },
+    {
+      "file": "src/apps/crl.rs",
+      "mechanisms": [
+        "load_crl ownership",
+        "X509_CRL_get_ext_d2i owned return",
+        "issuer/update borrowed getters",
+        "X509_CRL_digest fixed buffer",
+        "print stream vs -out BIO",
+        "i2d/PEM writer"
+      ],
+      "disposition": "defect_repaired",
+      "note": "Field prints were sent to the -out BIO, but the authority prints them to bio_out before opening out at apps/crl.c:387-389. The -hash <ERROR> arm also broke the loop and continued to write the CRL, where the authority executes `goto end`. Prints now use a BIO_NOCLOSE stdout BIO opened first; out is opened after the print loop; every exit releases print_out, out and x exactly once."
+    },
+    {
+      "file": "src/apps/dgst.rs",
+      "mechanisms": [
+        "opt_md_silent fetched-vs-legacy method ownership",
+        "BIO_new/BIO_push filter chain",
+        "signature file BIO",
+        "EVP_MD_CTX and signer key ownership",
+        "authority end: release order"
+      ],
+      "disposition": "defect_repaired",
+      "note": "Every early exit between the BIO allocations and the final release leaked the owned BIOs, digest, key and context. A single dgst_cleanup now performs the authority's exact order: BIO_free(in), BIO_free_all(out), EVP_MD_free(md), EVP_PKEY_free(sigkey), EVP_MD_CTX_free(signctx), BIO_free(bmd). Freeing inb before bmd matches apps/dgst.c:506-512; BIO_free does not traverse the filter chain. EVP_MD_free is a no-op for the legacy/static methods the digest parser may return."
+    },
+    {
+      "file": "src/apps/dhparam.rs",
+      "mechanisms": [
+        "opt_int/strtol_base0 numeric parsing",
+        "load_keyparams ownership",
+        "EVP_PKEY_is_a",
+        "EVP_PKEY_param_check",
+        "OSSL_ENCODER_CTX ownership"
+      ],
+      "disposition": "defect_repaired",
+      "note": "strtol_base0 accumulated into i128 with unchecked multiply/add, so a long numeric argument could panic in debug or wrap in release before the range check. It now uses saturating_mul/saturating_add, matching asn1parse; overflow still becomes an out-of-range answer. All pkey/out/ctx exits release once."
+    },
+    {
+      "file": "src/apps/dsa.rs",
+      "mechanisms": [
+        "load_key/load_pubkey ownership",
+        "EVP_PKEY_get_bn_param owned BIGNUM",
+        "EVP_PKEY_print_public/private",
+        "OSSL_ENCODER_CTX ownership",
+        "bio_open_owner reconstruction"
+      ],
+      "disposition": "no_defect",
+      "note": "All pkey/out/ectx/pub_key exits release once and the encoder NULL/number-of-encoders path is safe. Retained shared divergence: the authority's bio_open_owner() owner-only permissions are not reconstructed, so a private-key -out uses bio_open_default/fopen semantics; `private` is computed but unused. This is the existing apps/lib boundary recorded by keyio, not a new assumption."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/apps/configutl.rs",
+      "lines": "200-205, 265-285",
+      "severity": "low",
+      "class": "resource_leak",
+      "description": "NCONF_get_section_names returns a newly allocated stack; neither normal nor -out-failure exit released it.",
+      "repair": "OPENSSL_sk_free(sections) on both exits after the call."
+    },
+    {
+      "file": "src/apps/cms.rs",
+      "lines": "411-416, 569-572",
+      "severity": "low",
+      "class": "resource_leak",
+      "description": "The detached-content BIO set through SMIME_read_CMS_ex's bcont was used by CMS_verify and never released; the authority frees indata at apps/cms.c:1512.",
+      "repair": "DetachedBio RAII owner with BIO_free in Drop."
+    },
+    {
+      "file": "src/apps/dgst.rs",
+      "lines": "434-634",
+      "severity": "low",
+      "class": "resource_leak",
+      "description": "Early returns after the BIO/digest/key allocations skipped the authority's end: release list.",
+      "repair": "dgst_cleanup helper called on every exit, preserving the authority's release order."
+    },
+    {
+      "file": "src/apps/dhparam.rs",
+      "lines": "107",
+      "severity": "low",
+      "class": "arithmetic_overflow",
+      "description": "strtol_base0 multiplied and added into i128 without saturation; an over-long numeric option can panic in debug or wrap in release.",
+      "repair": "saturating_mul/saturating_add before the existing range check."
+    },
+    {
+      "file": "src/apps/crl.rs",
+      "lines": "250-257, 319-323",
+      "severity": "medium",
+      "class": "compatibility_output_routing",
+      "description": "Selected fields were printed to the -out BIO instead of bio_out, and the -hash <ERROR> arm continued into text/writer output instead of bailing at end:.",
+      "repair": "A BIO_NOCLOSE stdout print BIO is opened first; out is opened after the print loop; the hash failure returns after releasing print_out/x."
+    },
+    {
+      "file": "src/apps/asn1parse.rs",
+      "lines": "143, 183, 381-385, 398",
+      "severity": "low",
+      "class": "compatibility_integer_width",
+      "description": "length was c_long while the authority stores strtol in unsigned int, so a negative -length was not converted and clamped as the authority does.",
+      "repair": "length is c_uint, clamped with (unsigned int)num and compared to BIO_write as (int)length."
+    }
+  ],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 10,
+  "unsafe_operations_note": "Net +10 unsafe expression lines, all existing release mechanics at new exit points: DetachedBio::drop (1), the crl print_out releases (6), and the configutl stack releases (2); the dgst release block was consolidated into one helper rather than added. No new FFI symbol, allocator coordinate, #[repr(C)] layout or signature.",
+  "new_unsafe_assumptions": [
+    "src/apps/cms.rs DetachedBio: the field is NULL or the one standalone MIME-split BIO this frame owns, released once with BIO_free and not aliased by cms.",
+    "src/apps/dgst.rs dgst_cleanup: each pointer is NULL or the frame's one reference; release order matches apps/dgst.c:506-512 and BIO_free does not traverse the bmd chain."
+  ],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "retained_obligations": [
+    "src/apps/dsa.rs (with src/apps/keyio.rs): the authority's bio_open_owner() owner-only permissions are not reconstructed; a private-key -out uses bio_open_default/fopen semantics. Shared apps/lib boundary, not new to this batch.",
+    "src/apps/cms.rs and src/apps/dsa.rs: the pointer-bearing ERR_print_errors tails are not reproduced on load/final failures; the behavioral message is printed.",
+    "src/apps/crl.rs: repeated print options (for example -issuer -issuer) print once per occurrence, while the authority's per-option index prints the option once at its last position. No court drives duplicates.",
+    "src/apps/asn1parse.rs: offset stays c_long where the authority uses int; only > INT_MAX values diverge.",
+    "src/apps/configutl.rs: -out is written at the end rather than opened before the config load; only unopenable -out side effects differ."
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy": "PASS (--all-targets -- -D warnings)",
+    "focused": "PASS: no unit tests in these front-ends (0 passed / 0 failed / 1,675 filtered); cargo check --lib PASS",
+    "library_serial": "1648 passed / 0 failed / 27 ignored (253.62 s, --test-threads=1)",
+    "library_parallel": "1648 passed / 0 failed / 27 ignored (98.26 s, --test-threads=4)",
+    "removed_or_newly_ignored_tests": 0,
+    "probes": "NOT_RUN: courts/phase17/rt_cli_bodies_probe.sh's candidate shim points at the pre-batch artifacts/phase2/openssl (18 Oct) and the crate has no CLI bin target to rebuild; a run would not exercise this candidate"
+  },
+  "not_run": [
+    "RT-CLI-BODIES differential probe against a rebuilt candidate",
+    "Miri under Stacked Borrows and Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "next_queue": [
+    "src/apps/ecparam.rs",
+    "src/apps/ec.rs",
+    "src/apps/enc.rs",
+    "src/apps/engine.rs",
+    "src/apps/errstr.rs",
+    "src/apps/genrsa.rs",
+    "src/apps/info.rs",
+    "src/apps/kdf.rs"
+  ],
+  "next_queue_note": "These are the literal first eight lines of REMAINING-AUDIT.txt after removing this batch. They remain queued, not excluded."
+}
