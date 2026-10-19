@@ -3698,3 +3698,55 @@ bookkeeping.
 **Next eight (stable order).** `src/cms/cms_att.rs`, `src/cms/cms_dd.rs`,
 `src/cms/cms_io.rs`, `src/cms/cms_kem.rs`, `src/context/core_bio.rs`,
 `src/context/dispatch.rs`, `src/context/mod.rs`, `src/context/thread_data.rs`.
+
+## 47. Boundary sweep B19 — shared BIGNUM cleansing — 2026-10-19
+
+Receipt: [`atlas-refresh/boundary-sweep-B19.json`](atlas-refresh/boundary-sweep-B19.json).
+Candidate `1efef274c`; only `src/bn/bignum.rs` changed (`7eda5974`).
+
+**M42-R1 closed.** `BN_clear` discarded the `Vec` length without cleansing the limb
+storage. `cleanse_storage` now zeroes the whole allocation (`capacity()` limbs, the
+analogue of the authority's `dmax`) with volatile writes and a compiler fence before
+the length is cleared. `BN_clear_free` was widened from `len()` to `capacity()` for
+the same reason. `BN_clear` now also clears `BN_FLG_FIXED_TOP` (`bn_lib.c:400`),
+`BN_secure_new` carries `BN_FLG_SECURE`, and `BN_free` cleanses when that bit is set
+(`bn_free_d`'s secure arm). `BN_copy`, `BN_with_flags` and `BN_set_word` reuse the
+destination allocation instead of freeing a previously secret block un-cleansed.
+
+| boundary | file | disposition |
+|---|---|---|
+| `B19-BN-1..4` (clear, clear-free, secure flag/free, allocation reuse) | `src/bn/bignum.rs` | `CONTRACTED` |
+
+**Callers.** 38 `BN_clear` and 150 `BN_clear_free` sites across 34 files (RSA private
+factors/CRT, DSA/ECDSA nonces, ECDH x-coordinate, DH private exponent, SRP
+verifier/secret, `BN_CTX` pool reset, prime candidates, CBIGNUM). Every caller treats
+these operations as a secret wipe; none relied on the old non-cleansing behaviour.
+The only new observable value is `BN_get_flags(BN_secure_new(...), BN_FLG_SECURE)`,
+which is the authority's value and makes `src/params/build.rs:814`'s secure arm match
+`param_build.c`.
+
+**Controls observed.** New positive test wipes eight sentinel limbs and reads every
+limb up to `capacity()`; the negative control performs the old `Vec::clear`-only reset
+and confirms the sentinel is still visible, so the inspection is not vacuous; a third
+test checks the secure flag. FAST fmt/clippy clean; focused `bn::bignum` 8/8. BATCH
+full library **1656 passed / 0 failed / 27 ignored** serially (273.86 s) and with
+`--test-threads=4` (102.83 s); three tests added, none removed or newly ignored. ASan
+venue (nightly-2026-10-05): `bn::bignum` 8/8 and `bn::` 90/90 excluding the
+allocator-coordinate hook probe, which is ASan-incompatible for a FILE-pointer
+identity reason unrelated to cleansing. Miri NOT_RUN (no component in the court
+toolchain).
+
+**Invalidated evidence.** M42-R1 is closed; re-adjudicate `M8` `src/bn/bignum.rs`,
+`M32` `src/bn/ctx.rs`, `M42` `src/bn/rsa_fips186_4.rs`, `M37` `src/params/build.rs`
+and the cleansing claims of the 34 caller files at the next BATCH/BOUNDARY gate. OB-1
+and OB-4 evidence is **not** invalidated: limbs are `Vec<Limb>`, not `OwnedBuf`,
+`OwnedBlock` or a member-buffer slot.
+
+**Residual (disclosed, not hidden).** `B19-R1`: arithmetic `store()` assignments and
+`parts()`/operation temporaries are still ordinary `Vec` allocations released by
+`Drop` without cleansing. This is a secret-lifetime gap, not UB, and it is why the
+mechanism is `CONTRACTED`, not `SAFETY_DISCHARGED`, alongside the unmodelled secure
+heap (`OBL-BN-ALLOCATOR`) and the NOT_RUN authority differential/SEAL gates.
+
+**Queue.** Unchanged (`REMAINING-AUDIT.txt` 380, `AUDITED-FILES.txt` 383): this sweep
+audits an owner already counted. **Next ordinary position:** `src/cms/cms_att.rs`.
