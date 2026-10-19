@@ -123,6 +123,11 @@ unsafe extern "C" fn ssl_write(
     }
     // SAFETY: `b` is live per the caller's contract.
     let bs = unsafe { BIO_get_data(b) }.cast::<BioSsl>();
+    // A failed re-creation in `BIO_C_SET_SSL` leaves the data slot NULL; the BIO then
+    // has no connection to write through and answers the authority's uninitialised 0.
+    if bs.is_null() {
+        return 0;
+    }
     // SAFETY: this method's data is a `BioSsl`.
     let ssl = unsafe { (*bs).ssl };
     // SAFETY: `b` is live.
@@ -132,7 +137,8 @@ unsafe extern "C" fn ssl_write(
             BIO_FLAGS_READ | BIO_FLAGS_WRITE | BIO_FLAGS_IO_SPECIAL | BIO_FLAGS_SHOULD_RETRY,
         )
     };
-    // SAFETY: `ssl`/`buf`/`written` per the caller.
+    // SAFETY: `ssl`/`buf`/`written` per the caller; `ssl` may be NULL after
+    // `BIO_C_SET_SSL` was given a NULL connection, and `ssl_write_internal` answers 0.
     let ret = unsafe { ssl_write_internal(ssl, buf.cast::<c_void>(), size, 0, written) };
     // SAFETY: `ssl` live.
     match unsafe { SSL_get_error(ssl, ret) } {
@@ -200,6 +206,11 @@ unsafe extern "C" fn ssl_read(
     }
     // SAFETY: `b` is live per the caller's contract.
     let sb = unsafe { BIO_get_data(b) }.cast::<BioSsl>();
+    // A failed re-creation in `BIO_C_SET_SSL` leaves the data slot NULL; a read then
+    // has no connection to read from and answers 0 (the uninitialised answer).
+    if sb.is_null() {
+        return 0;
+    }
     // SAFETY: this method's data is a `BioSsl`.
     let ssl = unsafe { (*sb).ssl };
     // SAFETY: `b` is live.
@@ -209,7 +220,8 @@ unsafe extern "C" fn ssl_read(
             BIO_FLAGS_READ | BIO_FLAGS_WRITE | BIO_FLAGS_IO_SPECIAL | BIO_FLAGS_SHOULD_RETRY,
         )
     };
-    // SAFETY: `ssl`/`buf`/`readbytes` per the caller.
+    // SAFETY: `ssl`/`buf`/`readbytes` per the caller; `ssl` may be NULL after
+    // `BIO_C_SET_SSL` was given a NULL connection, and `ssl_read_internal` answers -1.
     let ret = unsafe { ssl_read_internal(ssl, buf.cast::<c_void>(), size, readbytes) };
     let mut retry_reason = 0;
     // SAFETY: `ssl` live.
@@ -291,8 +303,18 @@ unsafe extern "C" fn ssl_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_
     let bs = unsafe { BIO_get_data(b) }.cast::<BioSsl>();
     // SAFETY: `b` is live.
     let next = unsafe { BIO_next(b) };
-    // SAFETY: this method's data is a `BioSsl`.
-    let mut ssl = unsafe { (*bs).ssl };
+    // A failed re-creation in `BIO_C_SET_SSL` leaves the method data NULL. Every other
+    // control needs it; the SET_SSL arm allocates a fresh block and recovers.
+    if bs.is_null() && cmd != BIO_C_SET_SSL {
+        return 0;
+    }
+    let mut ssl = if bs.is_null() {
+        // NULL only on the SET_SSL recovery path, handled below.
+        ptr::null_mut()
+    } else {
+        // SAFETY: the guard above established `bs` is non-NULL and is this method's data.
+        unsafe { (*bs).ssl }
+    };
     if ssl.is_null() && cmd != BIO_C_SET_SSL {
         return 0;
     }
@@ -355,9 +377,27 @@ unsafe extern "C" fn ssl_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_
             ret = unsafe { (*bs).num_renegotiates } as c_long;
         }
         BIO_C_SET_SSL => {
-            if !ssl.is_null() {
+            if bs.is_null() {
+                // Recover a data slot cleared by a failed earlier re-creation; without
+                // this the BIO would stay permanently poisoned.
+                // SAFETY: `b` is a live BIO of this method.
+                if unsafe { ssl_new(b) } == 0 {
+                    return 0;
+                }
+            } else if !ssl.is_null() {
                 // SAFETY: `b` is a live BIO of this method.
                 unsafe { ssl_free(b) };
+                // `ssl_free` released the block but the BIO still names it. Clear the
+                // pointer *before* a possibly failing `ssl_new`, so an allocation refusal
+                // leaves a NULL (poisoned but safe) slot rather than a dangling one that
+                // a later `BIO_free` would release a second time. `ssl_free` clears `init`
+                // only when the shutdown flag is set, so clear it here too: an unpaired
+                // data slot must not read as initialised.
+                // SAFETY: `b` is a live BIO.
+                unsafe {
+                    BIO_set_data(b, ptr::null_mut());
+                    BIO_set_init(b, 0);
+                }
                 // SAFETY: `b` is a live BIO.
                 if unsafe { ssl_new(b) } == 0 {
                     return 0;
@@ -375,6 +415,9 @@ unsafe extern "C" fn ssl_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_
             // Re-read the data pointer: the authority rebinds `bs` when it recreated it.
             // SAFETY: `b` is live.
             let bs2 = unsafe { BIO_get_data(b) }.cast::<BioSsl>();
+            if bs2.is_null() {
+                return 0;
+            }
             // SAFETY: `b`/`bs2` live.
             unsafe {
                 BIO_set_shutdown(b, num as c_int);
@@ -574,6 +617,11 @@ unsafe extern "C" fn ssl_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_
 unsafe extern "C" fn ssl_callback_ctrl(b: *mut Bio, cmd: c_int, fp: Option<BioInfoCb>) -> c_long {
     // SAFETY: `b` is live per the caller's contract.
     let bs = unsafe { BIO_get_data(b) }.cast::<BioSsl>();
+    // A failed re-creation in `BIO_C_SET_SSL` leaves the data slot NULL; there is no
+    // connection whose callback could be set.
+    if bs.is_null() {
+        return 0;
+    }
     // SAFETY: this method's data is a `BioSsl`.
     let ssl = unsafe { (*bs).ssl };
     match cmd {
@@ -618,6 +666,11 @@ unsafe extern "C" fn ssl_free(a: *mut Bio) -> c_int {
     }
     // SAFETY: `a` is live per the caller's contract.
     let bs = unsafe { BIO_get_data(a) }.cast::<BioSsl>();
+    // A failed `BIO_C_SET_SSL` re-creation leaves the data slot NULL; `ssl_free` is then
+    // the authority's `OPENSSL_free(NULL)` no-op and answers success.
+    if bs.is_null() {
+        return 1;
+    }
     // SAFETY: this method's data is a `BioSsl`.
     unsafe {
         if BIO_get_shutdown(a) != 0 {
@@ -827,3 +880,79 @@ pub unsafe extern "C" fn BIO_ssl_shutdown(b: *mut Bio) {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(BioSsl => zero_state_sweep_bio_ssl);
+
+#[cfg(test)]
+mod adv_probe {
+    use super::*;
+    use crate::runtime::bio::BIO_read;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::adv_alloc;
+
+    /// Allocation-refusal control for `BIO_C_SET_SSL`'s re-creation arm.
+    ///
+    /// Before the repair the arm called `ssl_free` (which releases the `BioSsl` block and leaves
+    /// `BIO.ptr` naming it) and then returned 0 when `ssl_new`'s allocation was refused. The
+    /// dangling slot made the next `BIO_free` release the same block a second time and made every
+    /// callback read freed memory. The instrument records a release of an already-released
+    /// pointer as a double free, so the control both fails on the old body and passes only when
+    /// the slot is cleared first.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn set_ssl_allocation_refusal_clears_data_before_recreate() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: the probe holds the global state lock and runs alone; every pointer below is
+        // live for the duration of the call, and the two SSL blocks are this test's own.
+        unsafe {
+            let b = BIO_new(&METHODS_SSLP);
+            assert!(!b.is_null());
+            let old_ssl = adv_alloc::zeroed_ssl();
+            let refused_ssl = adv_alloc::zeroed_ssl();
+            assert!(!old_ssl.is_null() && !refused_ssl.is_null());
+
+            // `num == 0` keeps `ssl_free` out of the zeroed connection: the control is about the
+            // block lifecycle, not about `SSL_shutdown`.
+            assert_eq!(BIO_ctrl(b, BIO_C_SET_SSL, 0, old_ssl.cast::<c_void>()), 1);
+            assert!(!BIO_get_data(b).is_null());
+            assert_eq!(BIO_get_init(b), 1);
+
+            adv_alloc::reset();
+            adv_alloc::arm_any(core::mem::size_of::<BioSsl>());
+            let rc = BIO_ctrl(b, BIO_C_SET_SSL, 0, refused_ssl.cast::<c_void>());
+            adv_alloc::disarm_any();
+            assert_eq!(rc, 0, "the refused BioSsl allocation must fail SET_SSL");
+            adv_alloc::assert_no_double_free();
+
+            // The repaired invariant: NULL (poisoned but safe), never the block `ssl_free`
+            // just released.
+            assert!(BIO_get_data(b).is_null());
+            assert_eq!(BIO_get_init(b), 0);
+
+            // Every callback on the poisoned object answers without dereferencing stale data.
+            // `init == 0` makes the generic `BIO_read`/`BIO_write` return the uninitialised
+            // failure before dispatch; either answer is acceptable so long as it is not a
+            // successful transfer and no stale pointer is read.
+            let mut byte: c_char = 0;
+            assert!(
+                BIO_read(b, (&mut byte as *mut c_char).cast::<c_void>(), 1) <= 0,
+                "a poisoned SSL BIO must not report a read"
+            );
+            assert!(
+                BIO_write(b, (&byte as *const c_char).cast::<c_void>(), 1) <= 0,
+                "a poisoned SSL BIO must not report a write"
+            );
+            assert_eq!(BIO_ctrl(b, BIO_CTRL_PENDING, 0, ptr::null_mut()), 0);
+            assert_eq!(BIO_callback_ctrl(b, BIO_CTRL_SET_CALLBACK, None), 0);
+
+            assert_eq!(BIO_free(b), 1);
+            adv_alloc::assert_no_double_free();
+
+            // Neither connection was adopted by the refused re-create; both blocks stay this
+            // test's, released once at the allocator's own `(NULL, 0)` coordinate.
+            CRYPTO_free(old_ssl.cast(), ptr::null(), 0);
+            CRYPTO_free(refused_ssl.cast(), ptr::null(), 0);
+        }
+    }
+}
