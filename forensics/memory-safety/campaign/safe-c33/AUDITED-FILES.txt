@@ -1,5 +1,13 @@
 src/aes.rs
+src/apps/asn1parse.rs
+src/apps/ciphers.rs
+src/apps/cms.rs
+src/apps/configutl.rs
+src/apps/crl.rs
 src/apps/crl2pkcs7.rs
+src/apps/dgst.rs
+src/apps/dhparam.rs
+src/apps/dsa.rs
 src/apps/pkeyutl.rs
 src/apps/smime.rs
 src/aria.rs
