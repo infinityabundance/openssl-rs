@@ -1,0 +1,227 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "23bd395c0",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by M37 (seven src/apps/* CLI front-ends and src/asn1_dsa.rs). Contract checks against OpenSSL 3.6.4 for argument-string lifetimes, file/BIO ownership on every exit including option refusals, option-array bounds, error tails, allocation arithmetic, getter-returned and body-owned raw pointers, and the borrowed Packet cursor contracts. Five resource/compatibility defects across four files repaired; no memory-safety defect found.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/apps/ts.rs, src/apps/verify.rs and src/apps/storeutl.rs repaired; src/apps/{speed,spkac,version,x509}.rs and src/asn1_dsa.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 42 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 341,
+    "canonical_unaudited_before_batch": 422,
+    "canonical_audited_after_batch": 349,
+    "canonical_unaudited_after_batch": 414,
+    "mechanism_sweep_files_union_before_batch": 281,
+    "mechanism_sweep_files_union_after_batch": 289,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight files added here were the first eight entries of REMAINING-AUDIT.txt and were inserted in the file's existing sorted order.",
+    "difference_from_341": "M37 left 341 audited / 422 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/apps/speed.rs",
+    "src/apps/spkac.rs",
+    "src/apps/storeutl.rs",
+    "src/apps/ts.rs",
+    "src/apps/verify.rs",
+    "src/apps/version.rs",
+    "src/apps/x509.rs",
+    "src/asn1_dsa.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/apps/speed.rs",
+      "mechanisms": [
+        "EVP_MD_fetch / legacy EVP_get_digestbyname fallback",
+        "EVP_DigestInit",
+        "EVP_MD_CTX_free / EVP_MD_free",
+        "Opts arms"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The fetched method is released once; EVP_MD_free refuses the legacy/static origin, so the fallback release is a no-op. Every option arm returns before the benchmark boundary."
+    },
+    {
+      "file": "src/apps/spkac.rs",
+      "mechanisms": [
+        "bio_open stdio/file split",
+        "NCONF_new / NCONF_load_bio / NCONF_get_string",
+        "NETSCAPE_SPKI_b64_decode / _print / _get_pubkey / _verify",
+        "PEM_write_bio_PUBKEY",
+        "BIO_free / BIO_free_all cleanup order"
+      ],
+      "disposition": "audited_no_change",
+      "note": "inb, conf, spki, out and pkey are released once on every return. A NULL NETSCAPE_SPKI_get_pubkey result reaches the library's NULL-refusal arms exactly as the authority's unchecked use. _passin is the helper's NULL block."
+    },
+    {
+      "file": "src/apps/storeutl.rs",
+      "mechanisms": [
+        "OSSL_STORE_open / _expect / _load / _error / _eof / _close",
+        "OSSL_STORE_INFO_* getters",
+        "bio_out / bio_err",
+        "output BIO ownership"
+      ],
+      "disposition": "repaired_compatibility",
+      "note": "After the load loop the transcription reopened out, which apps/storeutl.c:507 does not. With zero loaded items it created the -out file and wrote 'Total found: 0', where the authority leaves out NULL and its BIO_vprintf refuses. The reopen is removed."
+    },
+    {
+      "file": "src/apps/ts.rs",
+      "mechanisms": [
+        "EVP_MD_fetch / legacy opt_md",
+        "CONF_get1_default_config_file ownership",
+        "NCONF_load",
+        "create_digest chunking",
+        "TS_REQ_new / TS_MSG_IMPRINT_new / X509_ALGOR_new / ASN1_TYPE_new",
+        "TS_MSG_IMPRINT_set_algo / TS_REQ_set_msg_imprint duplicate-on-set semantics",
+        "d2i_TS_REQ_bio / i2d_TS_REQ_bio / TS_REQ_print_bio",
+        "output BIO ownership"
+      ],
+      "disposition": "repaired_ownership",
+      "note": "query_command opened a data/stdin BIO before refusing the unlanded -digest hex arm; the arm check now precedes the open, matching the authority's 'digest == NULL && (data_bio = ...)'. default_config_file dropped the CONF_get1_default_config_file block; it is now adopted with OwnedBlock at the (NULL, 0) seam. main's two config-failure arms returned after opt_md fetched an EVP_MD without releasing it; both now free it."
+    },
+    {
+      "file": "src/apps/verify.rs",
+      "mechanisms": [
+        "X509_VERIFY_PARAM_new / _free",
+        "setup_verify file arm",
+        "X509_STORE_CTX_new / _init / _free",
+        "X509_STORE_CTX verify callback (borrowed current/parent cert)",
+        "X509_verify_cert",
+        "output BIO ownership"
+      ],
+      "disposition": "repaired_ownership",
+      "note": "vpm was allocated before the option loop but released only on the final arm, leaking it on every parse refusal/not_landed return. VpmGuard now gives every exit the authority's single end: release, in the authority's order (vpm, then store)."
+    },
+    {
+      "file": "src/apps/version.rs",
+      "mechanisms": [
+        "OpenSSL_version 'static C string",
+        "Opts arms"
+      ],
+      "disposition": "audited_no_change",
+      "note": "CStr::from_ptr is used only on the documented never-NULL static version string."
+    },
+    {
+      "file": "src/apps/x509.rs",
+      "mechanisms": [
+        "load_cert",
+        "X509_get0_pubkey / issuer / subject / serial / notBefore / notAfter",
+        "X509_digest into a 64-byte buffer",
+        "X509_print_ex",
+        "i2d_X509_bio / PEM_write_bio_X509",
+        "output BIO ownership"
+      ],
+      "disposition": "audited_no_change",
+      "note": "pkey and the name/time/serial pointers are borrowed from live x; the SHA-1 digest length is bounded by EVP_MAX_MD_SIZE (64); out and x are released once on every return."
+    },
+    {
+      "file": "src/asn1_dsa.rs",
+      "mechanisms": [
+        "borrowed Packet cursor (get_1, get_net_2, get_bytes, get_sub)",
+        "length-prefixed 1/2 decode",
+        "WPACKET encoder",
+        "BN_bn2binpad / BN_bin2bn",
+        "offset_from consumed-count result"
+      ],
+      "disposition": "audited_no_change_boundary_deferred",
+      "note": "Every advance is guarded by remaining; buf_init refuses len > SIZE_MAX/2; the sub-packet borrow is a prefix of the parent; offset_from stays within the caller's slice. The dsa/sign.rs callers establish the documented precondition. Caller/dependency closure remains a BOUNDARY obligation."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/apps/ts.rs",
+      "line": 288,
+      "severity": "low",
+      "kind": "BIO ownership leak",
+      "detail": "query_command opened a data/stdin BIO before returning for the unlanded -digest hex arm, leaking it on every such run. The arm check now precedes the open, matching apps/ts.c:427-433.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/ts.rs",
+      "line": 347,
+      "severity": "low",
+      "kind": "allocator block leak",
+      "detail": "default_config_file converted the CONF_get1_default_config_file block to String and dropped the original allocation. It is now adopted with OwnedBlock at the (NULL, 0) seam, the configutl adoption.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/ts.rs",
+      "line": 532,
+      "severity": "low",
+      "kind": "method leak on failure arms",
+      "detail": "After opt_md fetched an EVP_MD, the 'default config not landed' and config-load-failure arms returned without EVP_MD_free(md); the authority's end: releases it on both. Both arms now free it.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/verify.rs",
+      "line": 323,
+      "severity": "low",
+      "kind": "parameter leak on option refusals",
+      "detail": "vpm was allocated before the option loop but released only on the final arm, so every parse refusal and not_landed return leaked it. VpmGuard now gives every exit one release, matching apps/verify.c's end: label.",
+      "ub": false
+    },
+    {
+      "file": "src/apps/storeutl.rs",
+      "line": 315,
+      "severity": "low",
+      "kind": "compatibility divergence",
+      "detail": "After the loop the transcription reopened out; with zero loaded items it created the -out file and wrote 'Total found: 0', where apps/storeutl.c:507 leaves out NULL and BIO_vprintf refuses. The reopen is removed.",
+      "ub": false
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "contracts_reused": [
+    "Opts argv-copying and bounds contract (rest/check_rest_arg)",
+    "keyio bio_open_default stdio/file contract",
+    "OB-1 OwnedBlock adoption with the (NULL, 0) release seam",
+    "OB-3-style NULL-tolerant single release",
+    "BIO_NOCLOSE standard-stream contract",
+    "Packet borrowed-cursor contracts (readable for remaining; sub-packet prefix)"
+  ],
+  "retained_obligations": [
+    "every error tail omits the pointer-bearing ERR_print_errors lines",
+    "verify's callback returns ok without the authority's error-to-ok conversions; a failing chain is not driven",
+    "x509 -out opens through bio_open_default without the outformat-derived binary-mode flag (identical on Unix)",
+    "ts -reply/-verify, -digest hex, -policy and nonce arms remain unlanded",
+    "verify's V_VERBOSE/VFLAGS are static mut process globals (single-threaded CLI, no thread-safety claim)",
+    "spkac's unchecked NETSCAPE_SPKI_get_pubkey result is NULL-refused by the library, matching the authority",
+    "asn1_dsa caller/dependency closure is a pending BOUNDARY obligation"
+  ],
+  "not_run": [
+    "app-level CLI differential probes (no CLI bin target in the crate)",
+    "courts/phase17/rt_cli_bodies_probe.sh (candidate shim points at pre-batch artifacts/phase2/openssl)",
+    "allocator-hook instrumentation for the repaired lifetimes",
+    "Miri Stacked/Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "asn1_dsa caller/dependency closure (BOUNDARY)",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check clean",
+      "check": "cargo check --lib PASS (9.34 s)",
+      "filtered_tests": "cargo test --lib -- apps:: 0 passed / 0 failed (1,675 filtered); affected object tests: ts_verify_ctx 2 passed, x509_vpm 7 passed"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "lib_serial": "1648 passed / 0 failed / 27 ignored (212.28 s)",
+      "lib_threads4": "1648 passed / 0 failed / 27 ignored (107.24 s)",
+      "removed_or_newly_ignored_tests": 0
+    }
+  },
+  "queue": {
+    "remaining_audit_before": 422,
+    "remaining_audit_after": 414,
+    "audited_before": 341,
+    "audited_after": 349,
+    "next_batch": [
+      "src/asn1/evp_asn1.rs",
+      "src/asn1/i2d_evp.rs",
+      "src/asn1/layout.rs",
+      "src/asn1/nsseq.rs",
+      "src/asn1/p5_pbe.rs",
+      "src/asn1/p5_pbev2.rs",
+      "src/asn1/p5_scrypt.rs",
+      "src/asn1/p8_pkey.rs"
+    ]
+  }
+}

@@ -313,10 +313,8 @@ fn process(
     }
 
     // `indent_printf(indent, out, "Total found: %d\n", items);` —
-    // `apps/storeutl.c:507`.
-    if out.is_null() {
-        out = crate::apps::keyio::bio_open_default(outfile, true);
-    }
+    // `apps/storeutl.c:507`. The authority does not reopen `out` here: with no loaded
+    // items `out` is still NULL and its `BIO_puts`/`BIO_vprintf` refuse the write.
     puts(out, &format!("Total found: {items}\n"));
 
     // `end2: if (!OSSL_STORE_close(store_ctx)) { ... }` —
