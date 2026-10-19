@@ -96,24 +96,32 @@ unsafe impl CtxDestroy for AsyncWaitCtx {
         let mut curr = unsafe { (*ptr).fds };
         while !curr.is_null() {
             // SAFETY: `curr` is a live node.
-            let (del, cleanup, key, fd, custom_data, next) = unsafe {
+            let (del, cleanup, key, fd, custom_data) = unsafe {
                 (
                     (*curr).del,
                     (*curr).cleanup,
                     (*curr).key,
                     (*curr).fd,
                     (*curr).custom_data,
-                    (*curr).next,
                 )
             };
             if del == 0 {
                 if let Some(f) = cleanup {
                     // SAFETY: `f` is the caller's cleanup callback and `ptr` is the object it was
-                    // installed against; every argument is the entry's own.
+                    // installed against; every argument is the entry's own. The callback must
+                    // not release `ptr` or `curr`; it may add or remove other entries.
                     unsafe { f(ptr, key, fd, custom_data) };
                 }
             }
-            // SAFETY: `curr` is this function's own node and `next` was read before the release.
+            // The authority reads `curr->next` *after* running the cleanup callback, so a
+            // callback that removes a later entry through `ASYNC_WAIT_CTX_clear_fd` is observed
+            // through the relinked list. Reading it before the callback would continue through a
+            // node the callback has already released.
+            // SAFETY: `curr` is this function's own node and the callback contract excludes the
+            // entry it is invoked for, so `curr` is still live here.
+            let next = unsafe { (*curr).next };
+            // SAFETY: `curr` is this function's own node, still live per the callback
+            // contract above, and this is its single release.
             drop(unsafe { OwnedFdLookup::adopt(curr, FILE, LINE_FREE_LOOKUP) });
             curr = next;
         }
@@ -539,3 +547,60 @@ pub(crate) unsafe fn async_wait_ctx_reset_counts(ctx: *mut AsyncWaitCtx) {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(AsyncWaitCtx => zero_state_sweep_async_wait_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::cell::Cell;
+
+    /// The keys only need distinct addresses; no entry ever dereferences them. Distinct
+    /// initialisers keep them distinct even under constant merging.
+    static KEY_KEPT: u8 = 1;
+    static KEY_REMOVED: u8 = 2;
+
+    thread_local! {
+        static CLEAR_TARGET: Cell<*const c_void> = const { Cell::new(core::ptr::null()) };
+        static CLEAR_RESULT: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// The head entry's cleanup removes a *different* entry from the same context. The
+    /// authority reads `curr->next` after this callback, so the unlink is observed; reading
+    /// it before the callback continues through a node the callback has released.
+    unsafe extern "C" fn clear_another_entry(
+        ctx: *mut AsyncWaitCtx,
+        _key: *const c_void,
+        _fd: OsslAsyncFd,
+        _custom_data: *mut c_void,
+    ) {
+        let target = CLEAR_TARGET.with(Cell::get);
+        // SAFETY: `ctx` is the live context being released and `target` is the key of a second
+        // live entry in it; both are this test's own.
+        let rc = unsafe { ASYNC_WAIT_CTX_clear_fd(ctx, target) };
+        CLEAR_RESULT.with(|cell| cell.set(rc == 1));
+    }
+
+    #[test]
+    fn a_cleanup_callback_may_remove_another_entry() {
+        let kept = core::ptr::addr_of!(KEY_KEPT).cast::<c_void>();
+        let removed = core::ptr::addr_of!(KEY_REMOVED).cast::<c_void>();
+        // SAFETY: every pointer is this test's own and stays live for the call.
+        unsafe {
+            let ctx = ASYNC_WAIT_CTX_new();
+            assert!(!ctx.is_null());
+            // The list is LIFO: `kept` is inserted second, so its cleanup runs first and
+            // removes `removed`, the next entry.
+            assert_eq!(
+                ASYNC_WAIT_CTX_set_wait_fd(ctx, removed, 7, null_mut(), None),
+                1
+            );
+            assert_eq!(
+                ASYNC_WAIT_CTX_set_wait_fd(ctx, kept, 8, null_mut(), Some(clear_another_entry)),
+                1
+            );
+            CLEAR_TARGET.with(|cell| cell.set(removed));
+            CLEAR_RESULT.with(|cell| cell.set(false));
+            ASYNC_WAIT_CTX_free(ctx);
+        }
+        assert!(CLEAR_RESULT.with(Cell::get));
+    }
+}
