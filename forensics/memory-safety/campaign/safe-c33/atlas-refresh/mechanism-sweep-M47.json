@@ -1,0 +1,167 @@
+{
+ "schema": "safe-c33/mechanism-sweep/v1",
+ "branch": "integrate/safe-c33",
+ "source_head": "8e84cdfeb",
+ "date": "2026-10-19",
+ "scope": "The eight files named as next by M46: src/digest/ripemd.rs, src/digest/sha1.rs, src/digest/sha3.rs, src/digest/sm3.rs, src/digest/wp.rs, src/dsa/asn1.rs, src/dsa/backend.rs, src/dsa/check.rs. All eight audited with no source change: no latent memory-safety defect was found in the transcribed digest constructions or the DSA ASN.1/backend/check paths. No new unsafe operation, FFI symbol, allocator coordinate, repr(C) layout, exported signature or safety-contract text was introduced.",
+ "verification_level": "FAST+BATCH",
+ "worktree": "no source changes; queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 52 and this file.",
+ "reconciliation": {
+  "canonical_audited_before_batch": 415,
+  "canonical_unaudited_before_batch": 348,
+  "canonical_audited_after_batch": 423,
+  "canonical_unaudited_after_batch": 340,
+  "audited_this_batch": 8,
+  "not_run_this_batch": 0,
+  "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from the head of REMAINING-AUDIT.txt and merged in alphabetical order into AUDITED-FILES.txt.",
+  "difference_from_415": "M47 moves exactly the eight named ordinary files; no file is skipped or substituted."
+ },
+ "files": [
+  "src/digest/ripemd.rs",
+  "src/digest/sha1.rs",
+  "src/digest/sha3.rs",
+  "src/digest/sm3.rs",
+  "src/digest/wp.rs",
+  "src/dsa/asn1.rs",
+  "src/dsa/backend.rs",
+  "src/dsa/check.rs"
+ ],
+ "not_run": [
+  "constant-time/dudect for RIPEMD-160, SHA-1, SHA-3/SHAKE, SM3, Whirlpool and the DSA private-key paths (SECRET_DEPENDENT_CONTROL; source inspection is not a timing result and no timing measurement was taken)",
+  "Wycheproof/ACVP (the batch ran the crate's published vectors only)",
+  "RT-DIGEST / RT-DSA authority differential (not built or replayed)",
+  "Miri (no component in the court toolchain)",
+  "ASan (no memory access was added or exercised by a probe)",
+  "BOUNDARY (no shared mechanism changed; all eight files were audited without edit, so existing evidence remains valid)",
+  "SEAL"
+ ],
+ "files_dispositions_summary": {
+  "audited_no_change": 8,
+  "defect_repaired": 0
+ },
+ "file_dispositions": [
+  {
+   "file": "src/digest/ripemd.rs",
+   "mechanisms": [
+    "Ripemd160Ctx repr(C) layout and offset asserts",
+    "ripemd160_block_data_order over the shared md32 collector",
+    "two independent 80-step lines and the five-assignment combine",
+    "Md32 impl and RIPEMD160_Init/Update/Final/Transform/RIPEMD160 exports",
+    "one-shot static-NULL arm and local-context cleanse"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/ripemd/rmd_dgst.c, rmd_one.c, rmd_local.h and rmdconst.h. The collector's block contract (num * MD32_CBLOCK readable) is the only pointer obligation; the data pointer advances one block per loop iteration under num >= 1. The combine reproduces the authority's temporary reuse, and the one-shot cleanses its local context as rmd_one.c does. No change."
+  },
+  {
+   "file": "src/digest/sha1.rs",
+   "mechanisms": [
+    "ShaCtx repr(C) layout and offset asserts",
+    "sha1_block ring-buffer Xupdate interleaved with the consuming round",
+    "Md32 impl and SHA1_Init/Update/Final/Transform exports",
+    "ossl_sha1 direct-primitive one-shot and SHA1 provider one-shot",
+    "ossl_sha1_ctrl SSLv3 master-secret arm"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/sha/sha1dgst.c, sha1_one.c and sha_local.h. Expansion in place is safe because each ring slot is overwritten exactly before the round that reads it, which the code and comment pin. ossl_sha1 cleanly cleanses its MaybeUninit local after Final. ossl_sha1_ctrl refuses cmd != EVP_CTRL_SSL3_MASTER_SECRET, NULL sha1 and mslen != 48 before touching state; it cleanses sha1tmp after the outer update; padtmp holds only public pad bytes. SHA1 delegates to EVP_Q_digest and returns md or NULL exactly as sha1_one.c does. No change."
+  },
+  {
+   "file": "src/digest/sha3.rs",
+   "mechanisms": [
+    "KeccakCtx shape and KECCAK_BUF_LEN",
+    "keccakf1600 reference arm over RHOTATES/IOTAS",
+    "load_le64/store_le64 unaligned word access",
+    "SHA3_absorb/SHA3_squeeze and the XOF state machine",
+    "ossl_sha3_reset/init/update/final/squeeze"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/sha/sha3.c and crypto/sha/keccak1600.c (KECCAK_REF arm). Reachable invariants: update refuses FINAL/SQUEEZE and preserves bufsz < bsz; pad_and_absorb's buf[num] and buf[bsz-1] writes are in range; repeated squeeze drains buffered bytes before permuting. sha3_blocksize keeps the authority's (1600 - bitlen*2)/8 macro shape; callers supply the provider rows' constants or a legacy method's small md_size*8, so no hostile bitlen reaches the multiply. No change."
+  },
+  {
+   "file": "src/digest/sm3.rs",
+   "mechanisms": [
+    "Sm3Ctx repr(C) layout and offset asserts",
+    "loop-form 68-word schedule and 64-round compression",
+    "Md32 impl and ossl_sm3_init/update/final/transform",
+    "provider row as the only surface (no export)"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/sm3/sm3.c and sm3_local.h. The loop form reproduces the authority's RND/EXPAND/P0/P1/FF/GG/T_j arithmetic and the XOR feed-forward; the collector establishes the staging bound and finalization layout. No #[no_mangle] surface is added, matching the authority's local entry points. No change."
+  },
+  {
+   "file": "src/digest/wp.rs",
+   "mechanisms": [
+    "WhirlpoolCtx repr(C) layout and offset asserts",
+    "whirlpool_block S/K round loop (OPENSSL_SMALL_FOOTPRINT arm)",
+    "WHIRLPOOL_Init/Update/BitUpdate/Final exports",
+    "WHIRLPOOL one-shot",
+    "256-bit bit-length counter and partial-byte staging"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/whrlpool/wp_block.c and wp_dgst.c. Update's 1 << 60 chunk keeps CHUNK*8, bytes*8 and blocks*64 inside usize; BitUpdate's counter carry, bitrem/inpgap arms, byteoff staging and 512-bit flush are the authority's. Final's byteoff is bounded by bitoff < WHIRLPOOL_BBLOCK, the padding arms stay inside data[64], a NULL md returns 0 without copying, and a successful Final cleanses the caller's context. No change."
+  },
+  {
+   "file": "src/dsa/asn1.rs",
+   "mechanisms": [
+    "dsa_cb NEW_PRE/FREE_PRE callback",
+    "shared DSA_AUX and its Sync justification",
+    "DSAPrivateKey/DSAparams/DSAPublicKey template arrays",
+    "d2i_/i2d_ exports and DSAparams_dup"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dsa/dsa_asn1.c. Template offsets are offset_of!-derived and compile-time asserted at 4/8/16/24/104/112 with size 200, so a decode cannot target the wrong member. priv_key uses CBIGNUM_it, whose free path wipes the value. The callback returns 2 only when it acted and 0 on a failed DSA_new. All seven entry points match the authority's signatures. No change."
+  },
+  {
+   "file": "src/dsa/backend.rs",
+   "mechanisms": [
+    "ossl_dsa_key_fromdata and its err helper",
+    "ossl_dsa_is_foreign",
+    "ossl_dsa_dup and dsa_bn_dup_check",
+    "ossl_dsa_key_from_pkcs8 with its Pkcs8Exit arms"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dsa/dsa_backend.c. The neither-half import succeeds; the private half is read only under include_private; the error path uses BN_clear_free for the private value and BN_free for the public. ossl_dsa_dup preserves the authority's domain-parameter-gated == 0 tests and releases a partial copy through DSA_free (which clears both halves). key_from_pkcs8 checks the negative-integer/sequence condition before dereferencing the parameter string, uses BN_secure_new + BN_FLG_CONSTTIME and BN_mod_exp, and follows the authority's BN_free/BN_clear-path release; the apparent plain BN_free of the private value is secret-safe because BN_FLG_SECURE routes this crate's BN_free through cleanse_storage. No change."
+  },
+  {
+   "file": "src/dsa/check.rs",
+   "mechanisms": [
+    "dsa_precheck_params",
+    "ossl_dsa_check_params quick/full",
+    "ossl_dsa_check_pub_key/_partial/_priv_key",
+    "ossl_dsa_check_pairwise and its shared err path"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dsa/dsa_check.c. ret is an out-parameter written exactly as the authority writes it (priv_key zeroes before precheck; pub/partial rely on the FFC validator and then apply the && *ret == 0 ledger test). pairwise's BN_CTX/BIGNUM allocations are released on the single err path; allocation failure and mismatch both answer 0. The caller contract requires live dsa/ret pointers, which the provider keymgmt supplies. No direct unit test; callers compile and the suite exercises the crate. No change."
+  }
+ ],
+ "safety_contract_repairs": [],
+ "new_unsafe_assumptions": 0,
+ "hidden_obligations": 0,
+ "unsafe_ops_removed": 0,
+ "unsafe_ops_relocated": 0,
+ "retained_observations": [
+  "sha3_blocksize retains the authority macro's (1600 - bitlen*2)/8 expression. The only callers pass provider-row constants or a legacy method's small md_size*8, so no attacker-controlled bitlen reaches the multiply; changing the expression would deviate from the authority without closing a reachable path.",
+  "Whirlpool's BitUpdate accumulator invariants (bitoff < 512, inpgap <= 7, bits sufficient for a subtraction) are the authority's own and are maintained by the module's Init/Update/Final transitions. The C ABI contract remains the caller's readable-input obligation stated on the entry point."
+ ],
+ "tests": {
+  "focused": "digest::ripemd 3 passed/0 failed; digest::sha1 5/0; digest::sha3 3/0; digest::sm3 2/0; digest::wp 3/0; dsa::asn1 2/0; dsa::backend 3/0; dsa::check 0 tests (callers compile)",
+  "adv_probes": "dsa::object::adv_probe::dsa_new_refused_alloc_returns_null_without_free and dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup passed as part of the full library run",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "fmt": "cargo fmt --all -- --check clean",
+  "library_serial": "1658 passed / 0 failed / 27 ignored (236.50 s)",
+  "library_threads4": "1658 passed / 0 failed / 27 ignored (91.21 s)"
+ },
+ "queue_after_batch": {
+  "remaining_audit": 340,
+  "audited_files": 423,
+  "next_eight": [
+   "src/dsa/ctrl.rs",
+   "src/dsa/depr.rs",
+   "src/dsa/gen.rs",
+   "src/dsa/key.rs",
+   "src/dsa/prn.rs",
+   "src/dsa/sign.rs",
+   "src/dsa/vrf.rs",
+   "src/dso/dlfcn.rs"
+  ]
+ }
+}
