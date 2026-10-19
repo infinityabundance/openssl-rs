@@ -213,7 +213,7 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 unsafe fn des_ede3_unwrap(
     ctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
-    mut in_: *const c_uchar,
+    in_: *const c_uchar,
     inl: usize,
 ) -> c_int {
     // SAFETY: the caller's contract.
@@ -238,13 +238,26 @@ unsafe fn des_ede3_unwrap(
          * If decrypting in place move whole output along a block so the next
          * des_ede_cbc_cipher is in place.
          */
-        if out == in_.cast_mut() {
-            ptr::copy(out, out.add(8), inl - 8);
-            in_ = in_.sub(8);
+        let in_place = out == in_.cast_mut();
+        if in_place {
+            // The authority's `memmove(out, out + 8, inl - 8)` (`cipher_tdes_wrap.c:57`) moves the
+            // central blocks left; `ptr::copy` takes the source first. The previous argument order
+            // shifted right instead, decrypting the wrong blocks on every in-place unwrap.
+            ptr::copy(out.add(8), out, inl - 8);
         }
-        ((*(*ctx).hw).cipher)(ctx, out, in_.add(8), inl - 16);
+        // The authority's `in -= 8` moves the pointer outside the caller's block before it adds
+        // the offsets back (`cipher_tdes_wrap.c:56-59`). `in - 8` is never dereferenced there, but
+        // forming it is undefined in Rust, so the two reads it denotes are named directly: after
+        // the shift above an in-place central read starts at `in`, and the shifted final block
+        // sits at `in + inl - 16` (the untouched last block remains at `in + inl - 8`).
+        let (central, final_iv) = if in_place {
+            (in_, in_.add(inl - 16))
+        } else {
+            (in_.add(8), in_.add(inl - 8))
+        };
+        ((*(*ctx).hw).cipher)(ctx, out, central, inl - 16);
         /* Decrypt final block which will be IV */
-        ((*(*ctx).hw).cipher)(ctx, iv.as_mut_ptr(), in_.add(inl - 8), 8);
+        ((*(*ctx).hw).cipher)(ctx, iv.as_mut_ptr(), final_iv, 8);
         /* Reverse order of everything */
         BUF_reverse(icv.as_mut_ptr(), ptr::null(), 8);
         BUF_reverse(out, ptr::null(), inl - 16);
@@ -655,6 +668,83 @@ mod tests {
             assert!(
                 out.iter().all(|&b| b == 0xa5),
                 "the update entry point wrote before refusing"
+            );
+        }
+    }
+
+    /// The in-place unwrap must read exactly the bytes the authority's `in -= 8` arithmetic denotes
+    /// (`cipher_tdes_wrap.c:56-59`). The mock block function records every range it is handed, so
+    /// the two forms are compared on the bytes they actually read, not on an outcome the failure
+    /// tail would mask. This is the witness for the removal of the out-of-block `in - 8` pointer
+    /// computation.
+    #[test]
+    fn the_in_place_unwrap_reads_the_same_bytes_as_the_out_of_place_form() {
+        std::thread_local! {
+            static READS: std::cell::RefCell<Vec<Vec<u8>>> =
+                const { std::cell::RefCell::new(Vec::new()) };
+        }
+
+        unsafe extern "C" fn mock_init(
+            _ctx: *mut ProvCipherCtx,
+            _key: *const c_uchar,
+            _keylen: usize,
+        ) -> c_int {
+            1
+        }
+        unsafe extern "C" fn mock_cipher(
+            _ctx: *mut ProvCipherCtx,
+            out: *mut c_uchar,
+            in_: *const c_uchar,
+            len: usize,
+        ) -> c_int {
+            // A data-dependent, position-free transform: equal input bytes give equal output.
+            // SAFETY: `out` is writable and `in_` readable for `len` bytes per the hw contract.
+            unsafe {
+                let seen = core::slice::from_raw_parts(in_, len).to_vec();
+                READS.with(|r| r.borrow_mut().push(seen));
+                for i in 0..len {
+                    *out.add(i) = (*in_.add(i)).wrapping_mul(3).wrapping_add(7);
+                }
+            }
+            1
+        }
+        static MOCK_HW: ProvCipherHw = ProvCipherHw {
+            init: mock_init,
+            cipher: mock_cipher,
+            copyctx: None,
+        };
+
+        let input: Vec<u8> = (0..48u8)
+            .map(|b| b.wrapping_mul(5).wrapping_add(1))
+            .collect();
+        let mut out_of_place = vec![0u8; input.len()];
+        let mut in_place = input.clone();
+        // SAFETY: both contexts are zeroed records whose only live member below is `hw`, and the
+        // mock block function never reads `ctx`.
+        let mut plain: ProvCipherCtx = unsafe { core::mem::zeroed() };
+        // SAFETY: as above.
+        let mut copy: ProvCipherCtx = unsafe { core::mem::zeroed() };
+        // SAFETY: the two contexts carry `MOCK_HW`; each buffer is this frame's `input.len()`-byte
+        // block, and the in-place call deliberately passes the same pointer for `out` and `in_`.
+        unsafe {
+            plain.hw = &MOCK_HW;
+            copy.hw = &MOCK_HW;
+            READS.with(|r| r.borrow_mut().clear());
+            let a = des_ede3_unwrap(
+                &mut plain,
+                out_of_place.as_mut_ptr(),
+                input.as_ptr(),
+                input.len(),
+            );
+            let reads_a = READS.with(|r| core::mem::take(&mut *r.borrow_mut()));
+            let buf = in_place.as_mut_ptr();
+            let b = des_ede3_unwrap(&mut copy, buf, buf, in_place.len());
+            let reads_b = READS.with(|r| core::mem::take(&mut *r.borrow_mut()));
+
+            assert_eq!(a, b, "the two forms disagreed on the ICV verdict");
+            assert_eq!(
+                reads_a, reads_b,
+                "the in-place form read a different byte sequence"
             );
         }
     }
