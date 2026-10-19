@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/pkcs12/p12_key.rs
-src/pkcs12/p12_mutl.rs
-src/pkcs12/p12_npas.rs
-src/pkcs12/p12_p8d.rs
-src/pkcs12/p12_p8e.rs
-src/pkcs12/p12_utl.rs
-src/pkcs7/bio_pk7.rs
-src/pkcs7/pk7_attr.rs
 src/pkcs7/pk7_mime.rs
 src/property/defn_cache.rs
 src/property/globals.rs
