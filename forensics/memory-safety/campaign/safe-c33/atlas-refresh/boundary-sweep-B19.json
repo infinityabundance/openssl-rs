@@ -1,0 +1,253 @@
+{
+  "receipt": "boundary-sweep-B19",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "1efef274c",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/bn/bignum.rs"
+    ],
+    "working_tree_blob": {
+      "src/bn/bignum.rs": "7eda59749e499b55bad6ba9c0a2435e8db3824e0"
+    }
+  },
+  "stop_status": "CLEAR after repair. M42-R1 was confirmed: BN_clear discarded the limb length without cleansing the storage, so secret limbs survived in the retained Vec allocation and in the block BN_free later released. The shared owner now cleanses the whole allocation (capacity() limbs, the analogue of the authority's dmax) before discarding the length, and BN_clear_free was widened from len() to capacity() for the same reason. BN_secure_new now carries BN_FLG_SECURE so a plain BN_free cleanses a secure magnitude as bn_free_d does. No confirmed memory-safety defect, ABI regression, weakened detector or new hidden obligation remains. No safe Rust caller can cause UB through the audited interfaces. Nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.5.9 crypto/bn/bn_lib.c:202-210 (bn_free_d, including the BN_FLG_SECURE secure-clear arm), :212-222 (BN_clear_free: release limbs with clear=1, then cleanse the BIGNUM itself), :224-232 (BN_free), :242-260 (BN_new and BN_secure_new), :298-310 (bn_expand2 releases the old limb array with clear=1 when it grows), :391-401 (BN_clear: OPENSSL_cleanse(d, sizeof(*d) * dmax), neg=0, top=0, flags &= ~BN_FLG_FIXED_TOP), :1040-1045 (BN_zero_ex); include/openssl/bn.h:58-68 (BN_FLG_MALLOCED 0x01, STATIC_DATA 0x02, CONSTTIME 0x04, SECURE 0x08, FIXED_TOP 0x10).",
+    "abi": "C ABI unchanged: no exported symbol or signature changed, no #[repr(C)] layout changed (BigNum is an opaque three-field Rust object; no BIGNUM type appears in the ABI-layout court), no allocator-seam coordinate changed, and no unsafe lint attribute was weakened. BN_get_flags now reports BN_FLG_SECURE on a BN_secure_new object, which is the authority's value and makes params/build.rs:814's secure detection reachable as in param_build.c.",
+    "external_contracts": [
+      "BN_clear accepts NULL or a live BIGNUM owned exclusively by the caller for the call. It retains the limb allocation, sets the value to zero, clears neg, clears BN_FLG_FIXED_TOP, and preserves the other flags. Calling it on a BN_FLG_STATIC_DATA object mutates shared constant storage, exactly as the authority's cleanse of .rodata does; callers must not do that.",
+      "BN_clear_free accepts NULL or a live box this library allocated. For BN_FLG_STATIC_DATA it does nothing (the authority's first test skips both the limb release and the zeroise). Otherwise it cleanses the whole limb allocation and releases it exactly once.",
+      "BN_free accepts NULL or a live box. BN_FLG_STATIC_DATA does nothing; BN_FLG_SECURE cleanses the whole limb allocation before release; other objects are released without cleansing, as the authority's bn_free_d(clear=0) does.",
+      "BN_secure_new takes no pointers. It returns a Rust-allocator-backed object carrying BN_FLG_MALLOCED | BN_FLG_SECURE. The secure heap itself is not modelled (OBL-BN-ALLOCATOR); the flag is modelled where it is observable and where it changes release behaviour.",
+      "A BIGNUM's magnitude is a Vec<Limb>; capacity() is the allocation extent and len() the normalised top. Spare capacity may contain limbs from a larger earlier value because Vec::clear/truncate/limbs::normalise discard the length without writing."
+    ]
+  },
+  "cleansing_contract": [
+    {
+      "operation": "BN_clear",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "storage_cleansed": "d[0 .. d.capacity()] via volatile u64 writes plus a SeqCst compiler fence",
+      "extent": "whole limb allocation; capacity() is the authority's dmax",
+      "failure_partial_paths": "NULL is a no-op. Allocation is retained, so a later plain BN_free cannot free un-cleansed limbs. Value set to zero, neg cleared, BN_FLG_FIXED_TOP cleared; MALLOCED/CONSTTIME/STATIC_DATA preserved. No partial state: the cleanse precedes the length reset."
+    },
+    {
+      "operation": "BN_clear_free",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "storage_cleansed": "d[0 .. d.capacity()] before Box release",
+      "extent": "whole limb allocation (previously len() only, which missed spare capacity)",
+      "failure_partial_paths": "NULL is a no-op; BN_FLG_STATIC_DATA is a no-op (authority parity). The BIGNUM struct holds only Vec metadata, neg and flags, none secret; the limb storage is the secret-bearing category."
+    },
+    {
+      "operation": "BN_free",
+      "classification": ["SECRET_DATA when BN_FLG_SECURE", "CLEANSING_REQUIRED when BN_FLG_SECURE"],
+      "storage_cleansed": "d[0 .. d.capacity()] only when BN_FLG_SECURE is set",
+      "extent": "whole limb allocation",
+      "failure_partial_paths": "NULL and BN_FLG_STATIC_DATA are no-ops. A non-secure object is released without cleansing, matching the authority's plain OPENSSL_free arm."
+    },
+    {
+      "operation": "BN_secure_new",
+      "classification": ["SECRET_DATA allocation seam", "CLEANSING_REQUIRED at release"],
+      "storage_cleansed": "not at construction (empty) ; release through BN_free/BN_clear_free as above",
+      "extent": "future allocation",
+      "failure_partial_paths": "Allocation failure aborts (OBL-BN-ALLOCATOR), so there is no NULL-return partial object. The secure heap is not modelled; only the flag and its release consequence are."
+    },
+    {
+      "operation": "BN_zero_ex / BN_zero",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "storage_cleansed": "delegates to BN_clear, so the whole allocation",
+      "extent": "whole limb allocation",
+      "failure_partial_paths": "NULL is a no-op. This is a recorded strengthening: bn_lib.c:1040-1045 drops top/neg/flags only, while this implementation also zeroes the retained storage. Value, sign and flags are the authority's."
+    },
+    {
+      "operation": "BN_set_word",
+      "classification": ["SECRET_DATA possible"],
+      "storage_cleansed": "not required: the existing allocation is reused, so no secret-bearing block is freed",
+      "extent": "n/a",
+      "failure_partial_paths": "The Vec is cleared and one limb pushed in place; stale limbs above the new top remain in the retained allocation until BN_clear/BN_clear_free, exactly as the authority leaves d beyond top until dmax is cleared."
+    },
+    {
+      "operation": "BN_copy / BN_with_flags",
+      "classification": ["SECRET_DATA possible"],
+      "storage_cleansed": "assign_limbs cleanses the old allocation only when the copy forces a reallocation",
+      "extent": "whole old allocation on the reallocation path; otherwise the allocation is retained",
+      "failure_partial_paths": "In-place clear+extend mirrors the authority's write-through-bn_wexpand; a forced grow cleanses the block before releasing it, matching bn_expand2's bn_free_d(b, 1)."
+    },
+    {
+      "operation": "arithmetic result assignment (store) and parts()/operation temporaries",
+      "classification": ["SECRET_DATA possible", "CLEANSING_REQUIRED"],
+      "storage_cleansed": "NOT YET: store() replaces the destination Vec and drops the old block; operation results and parts() clones are ordinary Vec allocations released by Drop",
+      "extent": "transient limb vectors",
+      "failure_partial_paths": "Disclosed as B19-R1. This is the remaining secret-lifetime obligation of the BIGNUM mechanism and blocks SAFETY_DISCHARGED; it is not a UB condition."
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "B19-BN-1",
+      "file": "src/bn/bignum.rs",
+      "mechanism": "BN_clear / BN_zero_ex limb-storage cleanse",
+      "disposition": "CONTRACTED",
+      "contract": "The whole Vec allocation (capacity limbs) is zeroed with volatile writes and a compiler fence before len is cleared. Value, sign and the authority's flag mask are preserved. NULL is a no-op.",
+      "defects": ["B19-D1"],
+      "residuals": ["B19-R3", "B19-R6"]
+    },
+    {
+      "id": "B19-BN-2",
+      "file": "src/bn/bignum.rs",
+      "mechanism": "BN_clear_free release cleanse and its dmax extent",
+      "disposition": "CONTRACTED",
+      "contract": "Every limb of the allocation is cleansed before the single Box release; STATIC_DATA objects are untouched; NULL is a no-op.",
+      "defects": ["B19-D1"],
+      "residuals": ["B19-R2", "B19-R6"]
+    },
+    {
+      "id": "B19-BN-3",
+      "file": "src/bn/bignum.rs",
+      "mechanism": "BN_secure_new flag modelling and the secure arm of BN_free",
+      "disposition": "CONTRACTED",
+      "contract": "BN_secure_new sets BN_FLG_SECURE | BN_FLG_MALLOCED; BN_free cleanses the whole allocation when the flag is set. The secure heap is not modelled, and that narrower promise is stated rather than implied.",
+      "defects": [],
+      "residuals": ["B19-R2"]
+    },
+    {
+      "id": "B19-BN-4",
+      "file": "src/bn/bignum.rs",
+      "mechanism": "allocation reuse in BN_copy, BN_with_flags and BN_set_word",
+      "disposition": "CONTRACTED",
+      "contract": "These resets no longer free a previously secret limb block un-cleansed: they reuse the destination allocation, and assign_limbs cleanses a block that a forced reallocation would release.",
+      "defects": [],
+      "residuals": ["B19-R1"]
+    }
+  ],
+  "callers_audited": {
+    "counts": {
+      "BN_clear_call_sites_excluding_bignum_rs": 38,
+      "BN_clear_free_call_sites_excluding_bignum_rs": 150,
+      "distinct_files": 34
+    },
+    "secret_bearing_groups": [
+      "RSA private factors and CRT components: src/rsa/check.rs BN_clear(p1,q1,r,lcm,gcd); src/rsa/sp800.rs BN_clear(xpo,xqo,tmp,p1,q1,lcm,p1q1,gcd) and BN_clear_free(p,q,d); src/rsa/gen.rs BN_clear_free(d,p,q,dmp1,dmq1,iqmp, factor stack entries, tmp); src/rsa/object.rs BN_clear_free(d,p,q,dmp1,dmq1,iqmp, RSA_PKEY_CTX r/d/t); src/rsa/mp.rs BN_clear_free(r,d,t,pp).",
+      "DSA: src/dsa/ossl.rs BN_clear_free(kinv,k,l); src/dsa/key.rs BN_clear_free(prk); src/dsa/backend.rs BN_clear_free(priv_key); src/dsa/object.rs BN_clear_free(priv_key); src/dsa/sign.rs BN_clear_free(r,s).",
+      "EC/ECDSA/ECDH: src/ec/ecdsa_ossl.rs BN_clear_free(kinv,k,r,x,m); src/ec/ecdsa.rs BN_clear_free(r,s); src/ec/key.rs BN_clear_free(priv_key); src/ec/ecdh_ossl.rs BN_clear(x) (shared x-coordinate); src/ec/backend.rs BN_clear_free(priv_key); point/field coordinates in src/ec/smpl.rs, src/ec/smpl2.rs, src/ec/mont.rs.",
+      "DH/FFC: src/dh/key.rs BN_clear(z) and BN_clear_free(prk); src/dh/backend.rs BN_clear_free(priv_key); src/dh/object.rs BN_clear_free(priv_key); src/ffc/params.rs BN_clear_free(dst).",
+      "SRP: src/srp/srp_lib.rs BN_clear_free(tmp,kv,gb,tmp2,tmp3); src/srp/srp_vfy.rs BN_clear_free(v,s,x,salttmp,verif); src/ssl/tls_srp.rs BN_clear_free(v,s).",
+      "BIGNUM internals: src/bn/ctx.rs pool-slot reset through BN_clear (authority bn_ctx.c); src/bn/primes.rs BN_clear(g,w1,w3,x,m,z,b); src/bn/rsa_fips186_4.rs BN_clear(p1i,p2i,xp1i,xp2i,y1).",
+      "Provider and ASN.1: src/provider/ecdsa_sig.rs BN_clear_free(kinv,r); src/provider/rsa_kmgmt.rs BN_clear_free(pub_exp) per the authority's rsa_gen_cleanup; src/asn1/x_bignum.rs BN_clear_free for CBIGNUM values carrying BN_SENSITIVE."
+    ],
+    "contract_reliance": "Every audited caller treats BN_clear/BN_clear_free as a secret-wiping release or reset. None relies on the old non-cleansing behaviour; no caller used the retained stale limbs as observable data (they are beyond len and invisible to the public API; only a reader of freed/reused memory could see them). The repair therefore strengthens every caller without a semantic change to any value, flag mask or return code.",
+    "newly_exposed_obligation": "None for callers. The only new observable value is BN_get_flags(BN_secure_new(...), BN_FLG_SECURE) == 0x08, which is the authority's value; src/params/build.rs:814 now marks such a parameter secure, matching param_build.c rather than the previous always-false divergence."
+  },
+  "defects": [
+    {
+      "id": "B19-D1",
+      "alias_of": "M42-R1",
+      "file": "src/bn/bignum.rs",
+      "severity": "medium",
+      "kind": "secret_cleansing_divergence (secret residue)",
+      "status": "fixed",
+      "description": "BN_clear set the Vec length to zero without writing the limb storage, while the authority OPENSSL_cleanse's d[0..dmax]. Secret limbs therefore survived in the retained allocation and in the block later released by BN_free. BN_clear_free cleansed only len() limbs, missing spare capacity left by a larger earlier value. Reachable from RSA auxiliary-prime cleanup, BN_CTX pool reuse, DSA/ECDSA nonce cleanup, ECDH shared-secret cleanup, SRP verifier/secret cleanup and CBIGNUM decode failure paths.",
+      "fix": "cleanse_storage() zeroes capacity() limbs with volatile writes plus a compiler fence; BN_clear and BN_clear_free use it; BN_clear now clears BN_FLG_FIXED_TOP as bn_lib.c:400 does; BN_secure_new sets BN_FLG_SECURE and BN_free honours it; BN_copy/BN_with_flags/BN_set_word reuse the destination allocation instead of freeing it un-cleansed."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS",
+      "focused_tests": "cargo test --lib bn::bignum::tests -- --test-threads=4: 8 passed / 0 failed / 1675 filtered (three new tests included)."
+    },
+    "controls_observed": [
+      "Positive control bn_clear_cleanses_the_whole_limb_allocation: writes eight sentinel limbs, sets CONSTTIME and FIXED_TOP, calls BN_clear, then reads every limb up to capacity() with read_volatile and asserts zero; also asserts value zero, neg zero, FIXED_TOP cleared and CONSTTIME preserved. PASS.",
+      "Negative control the_cleansing_control_detects_an_uncleansed_reset: performs the old Vec::clear-only reset and asserts the sentinel is still visible in the allocation, proving the positive control's inspection is not vacuous; it then cleanses through the repaired helper before release. PASS.",
+      "Secure-flag control secure_bignums_carry_the_secure_flag: BN_secure_new reports BN_FLG_SECURE | BN_FLG_MALLOCED and releases through BN_free. PASS."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1656 passed, 0 failed, 27 ignored (102.83 s).",
+      "serial": "cargo test --lib -- --test-threads=1: 1656 passed, 0 failed, 27 ignored (273.86 s).",
+      "test_count_delta": "Three tests added; none removed and none newly ignored (1656 + 27 = 1683 collected)."
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh, nightly-2026-10-05, rustc 1.101.0-nightly (282215592 2026-10-04), -Zsanitizer=address -Zbuild-std, ASAN_OPTIONS=detect_leaks=0, CARGO_TARGET_DIR=/work/.asan-target.",
+      "targeted": "bn::bignum::tests: 8 passed, 0 failed, no AddressSanitizer finding.",
+      "module": "bn:: (excluding the allocator-hook probe): 90 passed, 0 failed, no AddressSanitizer finding.",
+      "excluded_test": "bn::recp::tests::hook_observes_authority_size_and_single_release fails under ASan because the child process's allocator hook observes a different FILE pointer identity than the excluded test expects (recp.rs:628). The file pointer is instrumentation-dependent; the test asserts allocator coordinates, not memory safety, and does not touch any BIGNUM cleansing path. It passes in the non-ASan court. Recorded as an ASan-venue incompatibility, not a finding and not a claimed pass."
+    },
+    "affected_probes": "NOT_RUN. src/bn/bignum.rs has no OPENSSL_RS_ADV_PROBE arm (0 occurrences). The Phase-5 RT-BN probe links the prebuilt artifacts/phase2 candidate shell, not this working tree, so running it would not exercise the change; an authority differential on the exact candidate remains a BOUNDARY/SEAL item."
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "cargo miri reports: the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain. The dedicated ASan venue covered the out-of-allocation-write question for the capacity loop; no aliasing model was available."
+  },
+  "loom_or_tsan": "NOT_RUN. No shared-memory concurrency changed: BIGNUM is caller-exclusive by contract and the repair touches no lock, thread-local or publication edge.",
+  "invalidated_evidence": {
+    "closed": "M42-R1 (mechanism-sweep-M42.json) is repaired by B19-D1; the PERFILE-INDEX M42 note and the rsa_fips186_4 CONTRACTED note are superseded by this receipt.",
+    "revalidate": [
+      "src/bn/bignum.rs: M8 evidence (BN_copy self-alias fix) is bound to the old owner; the file's disposition must be re-derived from this candidate, though M8-D2's repair is untouched.",
+      "src/bn/ctx.rs: M32's BN_CTX pool-reset evidence depends on BN_clear's storage contract; the functional test ctx_get_clears_a_leaked_consttime_flag passed in the full suite, but the cleansing claim needs re-adjudication.",
+      "src/bn/rsa_fips186_4.rs: M42 CONTRACTED evidence named M42-R1 as its residual; revalidate at the next BATCH checkpoint.",
+      "src/params/build.rs: M37 evidence is affected because BN_FLG_SECURE is now carried by BN_secure_new, making the :814 secure arm reachable as in param_build.c; revalidate with an authority differential.",
+      "The 34 caller files above: their secret-cleansing claims inherit the shared BIGNUM contract. §6 rule 4 treats the dependency closure as affected; the full library suite passed on both schedules, but per-file cleansing claims remain PENDING independent re-adjudication at BOUNDARY/SEAL.",
+      "M16 DSA_set0_key's recorded BN_clear_free strengthening is now stronger (whole allocation); no behavioural regression, but its receipt text predates the new extent."
+    ],
+    "not_invalidated": "OB-1 (OwnedBuf/OwnedBlock) and OB-4 (member-buffer slots) evidence is unchanged and was not reused: BIGNUM limbs are Vec<Limb>, not an OwnedBuf/OwnedBlock or a member-buffer slot, and no shared owner, contract or precondition connects them. src/bn/rand.rs's OwnedBuf DRBG buffers are untouched."
+  },
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "cleanse_storage's unsafe write assumes only i < capacity(), which the Vec allocation guarantees; it imposes no caller obligation. BN_secure_new's flag write assumes the pointer new_owned just returned, which is non-NULL by construction. No new caller-established precondition was introduced.",
+  "unsafe_operations_removed": 1,
+  "unsafe_operations_removed_detail": "The per-limb write_volatile loop in BN_clear_free is replaced by the shared helper (the unsafe operation moves, and its extent becomes capacity rather than len).",
+  "unsafe_operations_introduced": 2,
+  "unsafe_operations_introduced_detail": "cleanse_storage's volatile write loop (one unsafe block) and BN_secure_new's flag store (one unsafe block); both carry SAFETY comments. Net production unsafe blocks +1.",
+  "test_only_unsafe_added": 3,
+  "boundary_size": "One file changed (178 insertions, 14 deletions). src/bn/bignum.rs contains 100 unsafe blocks including tests. Every remaining unsafe operation has an explicit SAFETY comment and validity contract; the new helper's contract is a Rust allocation guarantee, not a caller obligation.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "All BIGNUM entry points are unsafe extern C functions with documented pointer/lifetime preconditions, and cleanse_storage is a safe private function whose loop is bounded by the allocation's own capacity. No safe Rust API was added or modified, so no safe caller can cause UB through the audited interfaces. The static-data caution is a pre-existing C-ABI obligation.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B19-R1",
+      "file": "src/bn/bignum.rs",
+      "severity": "medium",
+      "disposition": "DISCLOSED - retained, not hidden",
+      "description": "Arithmetic result assignment store() replaces the destination Vec and drops the previous allocation, and parts()/operation temporaries are ordinary Vec allocations released by Drop. Those transient blocks are not classified as secret-bearing and are not cleansed. The authority keeps limbs in place until BN_clear_free, so this representation frees more blocks than the authority does. This is a secret-lifetime gap, not UB; it is the reason the BIGNUM mechanism is CONTRACTED rather than SAFETY_DISCHARGED."
+    },
+    {
+      "id": "B19-R2",
+      "file": "src/bn/bignum.rs",
+      "severity": "low",
+      "disposition": "RECORDED divergence - OBL-BN-ALLOCATOR",
+      "description": "BN_secure_new does not allocate the limb vector from the secure heap; it is an ordinary Rust allocation. BN_FLG_SECURE now models the observable flag and the cleanse-on-BN_free consequence only. A caller that relies on secure-heap locking/paging semantics does not get them."
+    },
+    {
+      "id": "B19-R3",
+      "file": "src/bn/bignum.rs",
+      "severity": "low",
+      "disposition": "RECORDED strengthening",
+      "description": "BN_zero_ex/BN_zero delegates to BN_clear and therefore zeroes the retained limbs earlier than bn_lib.c:1040-1045. Value, sign and the flag mask are unchanged; only storage contents differ."
+    },
+    {
+      "id": "B19-R4",
+      "file": "src/bn/recp.rs",
+      "severity": "low",
+      "disposition": "ENVIRONMENTAL - ASan venue only",
+      "description": "The allocator-hook isolation test asserts the identity of the FILE pointer recorded by the CRYPTO_* seam. Under ASan the child observes a different pointer identity, so the test fails in that venue. It does not exercise cleansing and passes non-ASan; recorded so the ASan module result is not overstated."
+    },
+    {
+      "id": "B19-R5",
+      "file": "src/bn/bignum.rs",
+      "severity": "low",
+      "disposition": "AUTHORITY PARITY",
+      "description": "BN_clear does not special-case BN_FLG_STATIC_DATA; the authority does not either, so clearing a shared constant would mutate constant storage in both implementations. Callers must not call it on a BN_FLG_STATIC_DATA object."
+    },
+    {
+      "id": "B19-R6",
+      "file": "src/bn/bignum.rs",
+      "severity": "low",
+      "disposition": "INSTRUMENT GAP",
+      "description": "Miri (Stacked and Tree Borrows) is unavailable in the court, and the authority differential must be run against this exact candidate at a BOUNDARY/SEAL gate. The ASan control observed no out-of-allocation write but is not a cleansing or aliasing proof."
+    }
+  ],
+  "graduation": "CONTRACTED for the BIGNUM secret-lifetime mechanism (B19-BN-1..4). Within the narrow storage-cleansing scope the §7 criteria are met for BN_clear/BN_clear_free/BN_free(secure): every remaining unsafe operation has an explicit contract, every precondition is caller- or ABI-established, and no safe caller can cause UB. It is not SAFETY_DISCHARGED because B19-R1 (transient limb vectors), B19-R2 (secure heap), the BOUNDARY authority differential and the SEAL/Miri gates are NOT_RUN. Nothing is promoted and no consumer family graduates.",
+  "next_ordinary_position": "src/cms/cms_att.rs (PERFILE-INDEX §46 queue order). B19 is a shared-mechanism sweep over an already-audited owner and consumes no ordinary queue position; the queue counts are unchanged. The M42-R1 residual is closed."
+}
