@@ -327,8 +327,11 @@ pub unsafe extern "C" fn ossl_ecdsa_deterministic_sign(
 ///
 /// # Safety
 ///
-/// `eckey` is NULL or a live key; `ctx_in` is NULL or a live `BN_CTX`; `kinvp`/`rp` are writable;
-/// `dgst` is NULL or readable for `dlen`; `digestname`/`propq` are NULL or NUL-terminated.
+/// `eckey` is NULL or a live key; `ctx_in` is NULL or a live `BN_CTX`; `kinvp`/`rp` are distinct
+/// writable slots, and the values they point at (when non-NULL) are distinct owned `BIGNUM`s or
+/// NULL. The call clears and replaces `*kinvp`/`*rp`, so two slots that aliased each other (or two
+/// slots holding the same `BIGNUM`) would be a double release. `dgst` is NULL or readable for
+/// `dlen` bytes when `dlen` is positive; `digestname`/`propq` are NULL or NUL-terminated.
 #[allow(clippy::too_many_arguments)] // the authority's own static, `ecdsa_ossl.c:33`'s ten-parameter declaration, whose `digestname`/`libctx`/`propq` tail is read only in the `nonce_type == 1` arm -- and that arm is D333's recorded reduction, which is why three of the names are `_`-prefixed; the reader who lands `ossl_gen_deterministic_nonce_rfc6979` is the one who un-prefixes them
 unsafe fn ecdsa_sign_setup(
     eckey: *mut EcKey,
@@ -569,8 +572,11 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_setup(
 /// const BIGNUM *in_kinv, const BIGNUM *in_r, EC_KEY *eckey)` — `crypto/ec/ecdsa_ossl.c:268-409`.
 /// Internal. The `ecdsa_sign_sig` column every landed table names.
 ///
-/// The digest is truncated to the order's bit length — whole bytes first, then a right shift of the
-/// remaining bits — before `s` is formed. The signature arithmetic itself is the Montgomery-domain
+/// The digest is truncated to the order's bit length — whole bytes first, then a right shift of
+/// the remaining bits — before `s` is formed. The width comparison is performed in `i64`: the
+/// authority's `8 * dgst_len` is a signed `int` multiply, so a `dgst_len` above `INT_MAX / 8` (or
+/// near `INT_MIN`) is undefined behaviour there, while `i64` is the mathematical value intended.
+/// The signature arithmetic itself is the Montgomery-domain
 /// chain `s = (m + r·priv)·k⁻¹ mod n`, computed through the fixed-top wrappers this crate models
 /// with their public equivalents (see the module documentation). The outer `do … while (1)` retries
 /// on `s == 0`, refusing after `MAX_ECDSA_SIGN_RETRIES` and refusing immediately when the caller
@@ -657,7 +663,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_sig(
         /*
          * Need to truncate digest if it is too long: first truncate whole bytes.
          */
-        if 8 * dgst_len > i {
+        if i64::from(dgst_len) * 8 > i64::from(i) {
             dgst_len = (i + 7) / 8;
         }
         if BN_bin2bn(dgst, dgst_len, m).is_null() {
@@ -666,7 +672,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_sig(
             return sign_sig_err(ret, ctx, m, kinv, ok);
         }
         /* If still too long, truncate remaining bits with a shift */
-        if (8 * dgst_len > i) && BN_rshift(m, m, 8 - (i & 0x7)) == 0 {
+        if (i64::from(dgst_len) * 8 > i64::from(i)) && BN_rshift(m, m, 8 - (i & 0x7)) == 0 {
             // SAFETY: a compile-time-constant site (`ecdsa_ossl.c:334`, ERR_R_BN_LIB).
             raise_site(&err_sites::ECDSA_OSSL_334);
             return sign_sig_err(ret, ctx, m, kinv, ok);
@@ -866,12 +872,13 @@ pub unsafe extern "C" fn ossl_ecdsa_verify(
 /// The verification equation `u1·G + u2·Q` with `u1 = m·s⁻¹` and `u2 = r·s⁻¹`, and the range checks
 /// on `r` and `s` before any of it — a signature whose `r` or `s` is zero, negative or not less than
 /// the order raises `EC_R_BAD_SIGNATURE` and answers **0** rather than -1, which is the authority's
-/// own distinction between "invalid" and "error".
+/// own distinction between "invalid" and "error". The digest-width comparison is in `i64` for the
+/// reason [`ossl_ecdsa_simple_sign_sig`] records.
 ///
 /// # Safety
 ///
-/// `dgst` is readable for `dgst_len`; `sig` is NULL or a live signature; `eckey` is a live key with
-/// a group and a public point.
+/// `dgst` is readable for `dgst_len` bytes (when `dgst_len` is positive); `sig` is NULL or a live
+/// signature; `eckey` is a live key with a group and a public point.
 #[no_mangle]
 pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
     dgst: *const c_uchar,
@@ -959,7 +966,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
         /*
          * Need to truncate digest if it is too long: first truncate whole bytes.
          */
-        if 8 * dgst_len > i {
+        if i64::from(dgst_len) * 8 > i64::from(i) {
             dgst_len = (i + 7) / 8;
         }
         if BN_bin2bn(dgst, dgst_len, m).is_null() {
@@ -970,7 +977,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
             return ret;
         }
         /* If still too long truncate remaining bits with a shift */
-        if (8 * dgst_len > i) && BN_rshift(m, m, 8 - (i & 0x7)) == 0 {
+        if (i64::from(dgst_len) * 8 > i64::from(i)) && BN_rshift(m, m, 8 - (i & 0x7)) == 0 {
             // SAFETY: a compile-time-constant site (`ecdsa_ossl.c:508`, ERR_R_BN_LIB).
             raise_site(&err_sites::ECDSA_OSSL_508);
             BN_CTX_end(ctx);

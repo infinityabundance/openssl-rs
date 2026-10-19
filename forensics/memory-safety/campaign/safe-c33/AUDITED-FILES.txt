@@ -216,8 +216,16 @@ src/dso/dlfcn.rs
 src/dso/mod.rs
 src/ec/ameth.rs
 src/ec/asn1.rs
+src/ec/backend.rs
+src/ec/check.rs
+src/ec/ctrl.rs
+src/ec/curve.rs
 src/ec/curve25519.rs
 src/ec/curve448.rs
+src/ec/cvt.rs
+src/ec/depr.rs
+src/ec/ecdh_ossl.rs
+src/ec/ecdsa_ossl.rs
 src/ec/ecx_meth.rs
 src/ec/key.rs
 src/ec/lib.rs

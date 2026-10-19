@@ -4091,3 +4091,69 @@ across `dlopen`/`dlsym`/`dlclose`, but a dedicated loader BOUNDARY pass was not 
 **Next eight (stable order).** `src/ec/backend.rs`, `src/ec/check.rs`, `src/ec/ctrl.rs`,
 `src/ec/curve.rs`, `src/ec/cvt.rs`, `src/ec/depr.rs`, `src/ec/ecdh_ossl.rs`,
 `src/ec/ecdsa_ossl.rs`.
+
+## 54. Mechanism sweep M49 — 8-file ordinary batch — 2026-10-19
+
+Candidate `24e7c2ac4`. All eight EC files were audited against `crypto/ec/ec_*.c`,
+`crypto/evp/ec_ctrl.c` and the established contracts (RC-1, OB-1/OB-2/OB-3/OB-4,
+B1/B2/B6–B18, B19). Five files needed no edit. Four repairs: one secret-cleansing
+gap in the ECDH failure path (M49-D1), an `int`-overflow comparison on
+caller-supplied digest lengths (M49-D2), and two `# Safety` contracts that
+permitted a NULL out-slot on a path that writes it (M49-D3/D4). No reusable unsafe
+abstraction, allocator coordinate (`file`/`line`/extent), `#[repr(C)]` layout,
+export or unsafe lint attribute changed.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/ec/backend.rs` | audited_no_change | `crypto/ec/ec_backend.c`: the three `OSSL_ITEM` name/id maps (static, `unsafe impl Sync` over `'static` literals), `ec_group_explicit_todata`/`ossl_ec_group_todata` (optional parameters chosen by `tmpl`/located descriptor), the key/group `fromdata` family (`OwnedBlock` adoption of the getter's block at `:492`, `BN_secure_new` + `BN_FLG_CONSTTIME` private import, `BN_clear_free` on every tail), `ossl_ec_key_dup` (fresh group/point/`BN_new` private copy; failure `EC_KEY_free` cleanses through `BN_clear_free`), and the X.509/PKCS#8 tail (`d2i_ECParameters`/`d2i_ECPrivateKey` write-back slots, `ecerr` releases key then group). The X509-ALGOR parameter-type dispatch reads `ASN1_STRING` bytes only in the `V_ASN1_SEQUENCE` arm. |
+| `src/ec/check.rs` | audited_no_change | `crypto/ec/ec_check.c`: `EC_GROUP_check_named_curve` (NULL/live group, optional `BN_CTX_new_ex`, `EC_curve_nid2nist` NULL test) and `EC_GROUP_check` (custom-curve early success, discriminant, generator on-curve, order non-zero, `order·G == ∞`). Every allocation (`new_ctx`, `point`) is released on each exit; the custom-curve return precedes both allocations. |
+| `src/ec/ctrl.rs` | defect_repaired | `crypto/evp/ec_ctrl.c`: six strict `OSSL_PARAM` builders, the shared derivation gate (legacy/pkey-type arm unreachable by the `pmeth` reduction), the one custody transfer (`OPENSSL_free(ukm)` only on `1`) and six `EVP_PKEY_CTX_ctrl` wrappers. **M49-D3**: `EVP_PKEY_CTX_get_ecdh_kdf_outlen`'s contract admitted a NULL `plen` although the `1` arm writes it; now live/writable whenever the gate passes (NULL only with a refused context). **M49-D4**: `EVP_PKEY_CTX_get_ecdh_kdf_md` likewise; its fixer writes the resolved method through `p2` on the GET arm. `get0_ecdh_kdf_ukm` stays NULL-admissible because `set_octet_ptr` writes only a non-NULL `data`. |
+| `src/ec/curve.rs` | audited_no_change | `crypto/ec/ec_curve.c`: generated table accessors (`EcCurveData`/`EcListElement`, `curve_list_method` D-EC-2), `EC_get_builtin_curves` (bounded `r.add(i)`, static comments), `ec_group_new_from_data` (seed/param slicing, `BN_bin2bn`, method/`group_set_curve` selection, generator/order/cofactor/seed install, ASN.1 flag adjustment, `BN_free` of public parameters only), and `ossl_ec_curve_nid_from_params` (`CRYPTO_malloc_array` checked extent, `OwnedBlock` plain release, `BN_CTX_get` slots, seed/parameter comparisons gated on equal widths). |
+| `src/ec/cvt.rs` | audited_no_change | `crypto/ec/ec_cvt.c`: `EC_GROUP_new_curve_GFp`/`GF2m` select the profile's method (compile-time `OPENSSL_BN_ASM_MONT` arm), build via `ossl_ec_group_new_ex(ossl_bn_get_libctx(ctx), …)` and free the group when `EC_GROUP_set_curve` fails. No internal state. |
+| `src/ec/depr.rs` | audited_no_change | `crypto/ec/ec_deprecated.c`: `EC_POINT_point2bn` (octet block `OwnedBuf::adopt_plain`, authority's leak-on-`buf_len > INT_MAX` path preserved and annotated) and `EC_POINT_bn2point` (`BN_num_bytes` macro expansion, zero-length widened to one, release-line-tagged `OwnedBuf`, caller's point never cleared, frame-owned point cleared on `oct2point` failure). |
+| `src/ec/ecdh_ossl.rs` | defect_repaired | `crypto/ec/ecdh_ossl.c`: the method-column dispatcher and `ossl_ecdh_simple_compute_key` (cofactor arm in a `BN_CTX` temporary, affine x, field-width left padding, ownership transfer to `*pout`). **M49-D1**: the shared-secret block was plain-freed on every post-allocation failure, although it can already contain secret bytes; `OwnedSecretBuf` now stores its extent and cleanses with `CRYPTO_clear_free` at the same `(file, line 145)` coordinate. The success transfer remains uncleansed (authority behaviour; caller owns and clears). |
+| `src/ec/ecdsa_ossl.rs` | defect_repaired | `crypto/ec/ecdsa_ossl.c`: three method-column dispatchers, `ossl_ecdsa_sign`/`deterministic_sign`/`verify`, the static nonce setup (`BN_secure_new` k, `BN_new` r/x, pre-growth, retry loops, inverse in place, transfer + `setup_err`), `ossl_ecdsa_simple_sign_sig` (digest truncation, Montgomery chain, retry cap, `sign_sig_err`) and `ossl_ecdsa_simple_verify_sig` (r/s range checks, `u1·G + u2·Q`). **M49-D2**: `8 * dgst_len` is now computed in `i64` at all four sites; the authority's signed `int` multiply is undefined for `|dlen| > INT_MAX/8`. The `ossl_ecdsa_sign_setup` contract now requires distinct `kinvp`/`rp` slots and distinct pointed-to `BIGNUM`s (the success arm clears and replaces both). |
+
+**Secret-bearing buffers.** ECDH: the shared secret is the caller-owned `CRYPTO_malloc`
+block (`SECRET_DATA`); the `BN_CTX` temporary `x` is `BN_clear`ed on every exit, the point
+`tmp` is cleared, and the output block is now cleansed on every failure release; the
+success edge transfers it uncleansed to the caller (authority contract). ECDSA: the nonce
+`k` is `BN_secure_new` and reaches `BN_clear_free` on every failure and on both success
+callers (`sign_sig_err`, `deterministic_sign`); `x` and the digest-derived `m` are
+`BN_clear_free`d on every exit; signature halves are released by `ECDSA_SIG_free`, whose
+`Drop` uses the `BN_clear_free` pair; the private scalar is only ever borrowed from the
+`EC_KEY` (owned and cleansed by `EC_KEY_free`). `ec_backend`'s imported private scalar is
+`BN_secure_new` and `BN_clear_free`d after `EC_KEY_set_private_key` copies it; the dup path
+uses `BN_new`/`BN_copy` and is cleansed by `EC_KEY_free` on failure. Curve/check/cvt/depr
+hold public parameter, point and seed data; their releases are plain `BN_free`/`CRYPTO_free`
+matching the authority.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts reused: RC-1;
+OB-1 `OwnedBuf` (`adopt_plain`, release-line tagging), OB-3 `OwnedCtx` via
+`ECDSA_SIG_free`; B19's `BN_clear_free`/`BN_FLG_SECURE` rules; B1/B2/B6–B18 callback
+contracts for the EC method-table columns and `EVP_PKEY_CTX_ctrl`; the `OsslItem` static
+`Sync` contract. The D-EC-2 method substitution remains the recorded profile divergence.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused `cargo test --lib ec::`
+47 passed / 0 failed / 1 ignored (1638 filtered). BATCH `cargo clippy --all-targets -- -D
+warnings` clean; full library **1659 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (88.21 s) and with `--test-threads=1` (231.13 s). No ignored/`#[ignore]`
+adversarial probe exists for the touched EC modules, so no EC allocator probe was affected
+and none was replayed; the two changed behavioural sites (ECDH failure release, ECDSA
+width compare) have no dedicated probe. Doc-only edits after the test run (ECDH owner
+comment, `OWNER-DUPLICATES.md` §9.4) cannot change code identity.
+
+**NOT_RUN.** Constant-time/dudect for ECDH and ECDSA private-scalar/nonce paths
+(`SECRET_DEPENDENT_CONTROL`; source inspection is not a timing result and the generic
+`BN_mul`/`BN_mod_mul` path is not the authority's fixed-top path); Wycheproof/ACVP (the
+crate's published vectors ran, no external suite was replayed); `RT-EC` authority
+differential (not rebuilt/replayed for this batch); Miri (no component in the court
+toolchain); ASan (the repairs are a release-mode change and an arithmetic-width change, no
+memory access); BOUNDARY (no reusable unsafe abstraction's contract changed — the ECDH
+owner is module-local and its contract is unchanged except for the release mechanism);
+SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 332 -> **324**; `AUDITED-FILES.txt` 431 -> **439**.
+**Next eight (stable order).** `src/ec/ecdsa.rs`, `src/ec/ecx_backend.rs`,
+`src/ec/ecx_key.rs`, `src/ec/kdf.rs`, `src/ec/kmeth.rs`, `src/ec/mod.rs`,
+`src/ec/mont.rs`, `src/ec/mult.rs`.
