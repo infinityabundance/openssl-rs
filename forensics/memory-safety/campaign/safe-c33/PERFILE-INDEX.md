@@ -5220,3 +5220,102 @@ the authority also leaves them; they are keyed intermediates, not key stores.
 again), `src/ocsp/ocsp_lib.rs`, `src/ocsp/ocsp_prn.rs`, `src/ocsp/ocsp_srv.rs`,
 `src/ocsp/v3_ocsp.rs`, `src/param_build_set.rs`, `src/params/dup.rs`,
 `src/params/from_text.rs`.
+
+
+## M61 — per-file contract sweep (OCSP lib/prn/srv/v3, param_build_set, params dup/from_text, PEM other)
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`954ab90d0` (dirty worktree: the repairs below; no commit was made by the audit
+subagent). The eight records are file-level obligation checks, not
+`SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ocsp/ocsp_lib.rs` | `OCSP_CERTID` builder (algorithm install, issuer-name/key digests, serial copy), every failure arm, the two id comparators, the ASN.1 duplicate | 2 contract defects (M61-D1) repaired |
+| `src/ocsp/ocsp_prn.rs` | status/cert/reason tables, `ocsp_certid_print`, request and response transcripts, per-entry stack walks, optional signature block | no defect |
+| `src/ocsp/ocsp_srv.rs` | request accessors, `OCSP_id_get0_info`, response create/pack, `add1_status` ownership and choice arms, add-cert, sign/sign_ctx, RESPID setters and matchers, SHA-1 fetch/release | no defect |
+| `src/ocsp/v3_ocsp.rs` | five extension rows, ten static callbacks, nonce raw `i2d`/`d2i` with the owning slot, serviceloc stack walk | no defect |
+| `src/param_build_set.rs` | the seven builder-or-in-place writes, `bn_pad` size probe and range refusal, multi-key name/stack walk | no defect |
+| `src/params/dup.rs` | single-block duplicate with secure-block terminator, block arithmetic, `_PTR` value copy, shallow case-insensitive merge, free walk | 1 contract defect (M61-D2) and the allocator seam (M61-D5) repaired |
+| `src/params/from_text.rs` | hex-prefix key rewrite, integer two's-complement halves, size probe, UTF8/OCTET writes, print-to-bio walk | 2 contract defects (M61-D3..D4) and the allocator seam (M61-D5) repaired |
+| `src/pem/pem_oth.rs` | `PEM_bytes_read_bio` result ownership, `DataBuf` single release, `d2i` cursor, ASN.1 refusal reason | no defect |
+
+**Deferred boundary.** `src/evp/method_store.rs` was again not audited: it is
+the method-store/`OSSL_METHOD_CONSTRUCT_METHOD` registry and dispatch boundary
+(store locking, construct/reserve/unreserve callbacks, method cache). It stays
+at the head of `REMAINING-AUDIT.txt`. `src/pem/pem_oth.rs` was substituted from
+the head of the stable queue.
+
+**Defects.**
+
+| ID | File:line | Severity | Class | Repair |
+|---|---|---|---|---|
+| M61-D1 | `src/ocsp/ocsp_lib.rs:93`, `:126` | low | the `# Safety` contracts allowed NULL for `issuer`, `issuerName` and `issuerKey`, all of which the bodies dereference (the key bit-string unconditionally); a caller following the documented contract could pass NULL and cause UB | contracts now require `issuer` to be live with a public-key bit string and `issuerName`/`issuerKey` to be live; `serialNumber`/`subject`/`dgst` remain the only NULL-allowed arguments. No code or ABI change. |
+| M61-D2 | `src/params/dup.rs:299` | low | `ossl_param_dup`'s contract required only `data_size` readable bytes, but `OSSL_PARAM_OCTET_PTR`/`OSSL_PARAM_UTF8_PTR` entries read one full pointer from `data` regardless of `data_size` | the contract now states the `_PTR` arm's alignment and one-pointer readability. No code change. |
+| M61-D3 | `src/params/from_text.rs:62` | low | `has_hex_prefix`'s contract said `s` may be NULL while the body dereferences it immediately | contract now requires non-NULL and NUL-terminated. No code change. |
+| M61-D4 | `src/params/from_text.rs:309` | low | `OSSL_PARAM_allocate_from_text`'s contract omitted that the non-hex octet-string arm reads `value_n` bytes, not just a NUL-terminated string | contract now states the `value_n` readability requirement. No code change. |
+| M61-D5 | `src/params/dup.rs:50`, `:53-57`; `src/params/from_text.rs:50`, `:53-54` | low | both allocator seams used the bare translation-unit path and line `0`, while the authority's plain `.c` `__FILE__` carries the source-tree prefix and each allocation/release has its own line; the strings are observable to a caller-installed `CRYPTO_set_mem_functions` hook | `FILE` now carries the admitted build's `../../src/openssl-3.6.4/...` spelling and each seam call uses its authority line: dup alloc `:46`, failed-duplicate free `:133`, merge alloc `:191`, secure free `:240`, array free `:241`; from_text alloc `:325`, failure free `:332`. `OwnedParamBlock` carries the release line and `OwnedBuf::new_zeroed_released` separates the two from_text coordinates. |
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. New assumptions: 0.
+Hidden obligations: 0 (the four repaired contracts were the only ones that
+admitted an argument the body dereferenced). No exported symbol, signature,
+`#[repr(C)]` layout or excluded symbol changed. The two seam repairs change only
+the `file`/`line` metadata a `CRYPTO_set_mem_functions` hook observes.
+
+**Secret-bearing storage.** OCSP copies no secret: the private key stays an
+`EVP_PKEY` handle and the signed payloads are public. `from_text`'s temporary
+`BIGNUM` and value buffer can carry parameter material (including private-key
+components); the authority releases them with plain `BN_free`/`OPENSSL_free`
+and the conversion preserves that (residual 2). `dup` preserves the secure
+block's cleansing `CRYPTO_secure_clear_free` and the public array's plain
+`CRYPTO_free`, exactly as the authority; values that came from the secure heap
+are cleansed through the terminator block. `pem_oth` frees the DER block with
+the authority's plain `CRYPTO_free`. No constant-time claim is made for any file
+here from source inspection.
+
+**Contracts reused.** `OB-1` `OwnedBuf` (including the split allocation/release
+coordinates); `OB-4` secure-block terminator (`OSSL_PARAM_ALLOCATED_END` == 127,
+size carried as the secure block's); the C ABI caller contracts for NULL-or-live
+optional pointers and caller-sized buffers; BIGNUM ownership through
+`BN_asc2bn`/`BN_hex2bn` -> `BN_free`; ASN.1 item ownership (`*_new`/`*_free`);
+and the `CRYPTO_*` allocator seam at the authority's `FILE`/`LINE`. No new model
+was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; `cargo check
+--lib` clean; focused `params` **53 passed / 0 failed**, `ocsp` **1 / 0**,
+`pem` **19 / 0**, `rsa::backend` **4 / 0**; `cargo clippy --all-targets -- -D
+warnings` clean. BATCH: full library **1669 passed / 0 failed / 27 ignored**
+(1696 total) serial in 268.56 s and with `--test-threads=4` in 97.51 s, in the
+court with `CARGO_BUILD_JOBS=4`, after the seam repair. No unexplained removal
+and no newly ignored test.
+
+**NOT_RUN.** Miri, ASan/valgrind, Loom; `scripts/adv-probe.sh` has no probe for
+the params, OCSP or PEM-other families (affected adversarial probes NOT_RUN);
+an allocator-coordinate differential over `OSSL_PARAM_dup`/`_merge`/
+`allocate_from_text` (no harness observes the file/line strings for these
+units) NOT_RUN; dudect/ctgrind (no constant-time claim is made); FRF suite;
+dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `method_store.rs` remains the deferred registry boundary.
+(2) `OSSL_PARAM_allocate_from_text`'s failure path frees a buffer that
+`OPENSSL_hexstr2buf_ex` may have partially filled with parameter text, using the
+authority's plain free; switching it to a cleansing release would be a recorded
+deliberate improvement and is a hardening candidate. (3) The same function's
+`q.data_size * 8` range test can overflow on a hostile descriptor: a debug build
+panics (caught by `guard_ffi`) where the release build wraps; the authority has
+the same wrap, so this is a hardening candidate, not a reachable memory-safety
+defect. (4) `OSSL_PARAM_print_to_bio` does not free the `BIGNUM` that
+`OSSL_PARAM_get_BN` allocates for a wide integer, matching the authority's own
+leak; recorded rather than silently fixed. (5) The OCSP printers and builders
+retain the authority's unconditional dereference of mandatory decoded members
+(`certStatus`, `thisUpdate`, `requestList` entries), which a successful ASN.1
+decode establishes. (6) No constant-time claim is made for the OCSP or PEM
+units.
+
+**Queue.** `REMAINING-AUDIT.txt` 233 -> **225**; `AUDITED-FILES.txt` 530 ->
+**538**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/pem/pem_x509.rs`, `src/pem/pem_xaux.rs`, `src/pkcs12/p12_add.rs`,
+`src/pkcs12/p12_asn.rs`, `src/pkcs12/p12_attr.rs`, `src/pkcs12/p12_crpt.rs`,
+`src/pkcs12/p12_decr.rs`.
