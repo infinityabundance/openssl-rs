@@ -1811,3 +1811,45 @@ three audited files are 0.
 `BN_mod_exp`, `BN_gcd`, `BN_mod_sqrt`) and was outside this batch's explicit
 three-file scope. It must be the next boundary item (B13) before the class is
 closed.
+
+## B13 — BN output-aliasing boundary, remaining 14 sites (`arith`)
+
+**Audited (boundary).** `src/bn/arith.rs` (B13-BN-ARITH-1), the 14 sites B12-R1
+left open; `src/` was also swept for the same tuple shape. Receipt:
+[`atlas-refresh/boundary-sweep-B13.json`](atlas-refresh/boundary-sweep-B13.json).
+
+**Pre-fix defect.** `BN_add`, `BN_sub`, `BN_uadd`, `BN_usub`, `BN_mul`, `BN_sqr`,
+`BN_nnmod`, `BN_mod_inverse`, `BN_lshift`, `BN_rshift`, `BN_exp`, `BN_mod_exp`,
+`BN_gcd` and `BN_mod_sqrt` formed `(as_mut(r), as_ref(input))` in one tuple. The
+authority supports those aliases, so a conforming caller created a live `&mut`
+and `&` to one allocation.
+
+**Repair.** Each operand is cloned through a shared borrow whose last use
+precedes the write; the output is borrowed only at the store (`BN_mod_sqrt` at
+each `finish_sqrt` exit). The module `Aliasing` section now names the exact
+supported set and the preserved rejections (`BN_nnmod` `r == m`; `BN_mod_exp_simple`
+`r == m`), and records the implementation-defined `BN_mod_inverse` `r == n`,
+`BN_mod_exp` `r == m` and `BN_mod_sqrt` `in == p` cases.
+
+**Controls.** `bn::arith::tests::aliased_outputs_match_the_distinct_form` covers
+every repaired family (`r` aliasing each supported operand) and compares against
+the distinct-output computation; `BN_nnmod` `r == m` is pinned as a rejection.
+
+**Evidence.** FAST: fmt clean; clippy `--all-targets -D warnings` PASS; focused
+2/0. BATCH: library **1615 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (91.86 s) and serially (243.70 s). No affected
+`OPENSSL_RS_ADV_PROBE` arm exists.
+
+**Escalations (no defect).** `src/bn/bignum.rs:506` (`BN_copy`, alias early
+return) and `:862` (`BN_with_flags`, distinct-by-contract), and
+`src/bn/mont.rs:273` (`BN_MONT_CTX_copy`, `to == from` early return), retain the
+tuple shape with aliasing pre-excluded. `src/bn/blinding.rs` already reads before
+the store.
+
+**NOT_RUN.** Miri (Stacked/Tree Borrows): the pinned `1.98.1` toolchain has no
+`miri` component. ASan/Loom/TSan, FRF-Fuzz and SEAL remain PENDING at the next
+trigger.
+
+**Graduation.** `CONTRACTED`; not `SAFETY_DISCHARGED` (Miri NOT_RUN, no
+independent reviewer). Hidden obligations 0; no safe caller can cause UB through
+the audited aliases.
