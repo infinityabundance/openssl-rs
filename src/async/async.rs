@@ -728,6 +728,11 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
 ///
 /// Declared safe because that is the signature `ossl_init_thread_start` takes
 /// (`ThreadStopHandlerFn`); the handler's own unsafe work is in the block below.
+///
+/// When the thread-event framework invokes this, the B15 register lock is held for the
+/// whole walk. The allocator free and the caller-installed `ASYNC_set_mem_functions`
+/// free hook reached from here therefore run under that lock, exactly as in the
+/// authority; neither may re-enter thread registration.
 extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
     // SAFETY: the key is the crate's own.
     let pool = unsafe {
@@ -760,7 +765,10 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
 /// `void ASYNC_cleanup_thread(void)` — `crypto/async/async.c:421-427`.
 ///
 /// # Safety
-/// None; releases this thread's pool and context.
+/// None beyond the authority's documented precondition: no asynchronous job may be
+/// outstanding for this thread. A paused job's fibre still refers to the dispatcher this
+/// call releases, so resuming it afterwards is a use-after-free (the authority has the
+/// same contract and the same consequence).
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_cleanup_thread() {
     guard_ffi((), || {
@@ -928,6 +936,37 @@ mod tests {
         assert_eq!(STEPS.load(Ordering::SeqCst), 11);
         // SAFETY: `wctx` is this test's own and the job is finished.
         unsafe { ASYNC_WAIT_CTX_free(wctx) };
+    }
+
+    /// A job that finishes without pausing, so the resume path is not involved.
+    unsafe extern "C" fn finishing_job(_arg: *mut c_void) -> c_int {
+        42
+    }
+
+    /// Lazy pool creation, the finished job's return to the pool, and the thread cleanup that
+    /// releases the pool's jobs and then the context. The second call is the authority's own
+    /// idempotent arm (the keys are already NULL).
+    #[test]
+    fn thread_cleanup_releases_a_finished_job_and_is_idempotent() {
+        let _guard = crate::test_support::lock_global_state();
+        let mut job: *mut AsyncJob = null_mut();
+        let mut ret: c_int = -1;
+        // SAFETY: every pointer is this test's own; the job finishes before cleanup.
+        unsafe {
+            let r = ASYNC_start_job(
+                &raw mut job,
+                null_mut(),
+                &raw mut ret,
+                Some(finishing_job),
+                null_mut(),
+                0,
+            );
+            assert_eq!(r, ASYNC_FINISH);
+            assert!(job.is_null());
+            assert_eq!(ret, 42);
+            ASYNC_cleanup_thread();
+            ASYNC_cleanup_thread();
+        }
     }
 
     /// `ASYNC_pause_job` outside a job is a success with no switch, and the block/unblock pair
