@@ -384,6 +384,11 @@ unsafe extern "C" fn ssl_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_
                 if unsafe { ssl_new(b) } == 0 {
                     return 0;
                 }
+                // The authority transfers the caller's connection to the fresh data slot on
+                // this recovery path too (`bs->ssl = (SSL *)ptr` after the successful
+                // `ssl_new`); without this assignment the block would be adopted with a NULL
+                // connection and the caller's SSL would leak.
+                ssl = ptr as *mut Ssl;
             } else if !ssl.is_null() {
                 // SAFETY: `b` is a live BIO of this method.
                 unsafe { ssl_free(b) };
@@ -844,6 +849,13 @@ pub unsafe extern "C" fn BIO_ssl_copy_session_id(t: *mut Bio, f: *mut Bio) -> c_
             BIO_get_data(f).cast::<BioSsl>(),
         )
     };
+    // A failed `BIO_C_SET_SSL` re-creation leaves the data slot NULL, so an SSL BIO can be
+    // live and findable by type without a data block. The authority dereferences that slot
+    // unconditionally here; that is the same UB class 3.0.22 guards in `BIO_ssl_shutdown`, so
+    // this refuses instead of reproducing it (AGENTS.md §17).
+    if tdata.is_null() || fdata.is_null() {
+        return 0;
+    }
     // SAFETY: both data pointers are this method's.
     let (tssl, fssl) = unsafe { ((*tdata).ssl, (*fdata).ssl) };
     if tssl.is_null() || fssl.is_null() {
@@ -865,11 +877,15 @@ pub unsafe extern "C" fn BIO_ssl_shutdown(b: *mut Bio) {
         if unsafe { BIO_method_type(cur) } == BIO_TYPE_SSL {
             // SAFETY: `cur` is a live SSL BIO.
             let bdata = unsafe { BIO_get_data(cur) }.cast::<BioSsl>();
-            // SAFETY: this method's data is a `BioSsl`.
-            let ssl = unsafe { (*bdata).ssl };
-            if !ssl.is_null() {
-                // SAFETY: `ssl` is live.
-                unsafe { SSL_shutdown(ssl) };
+            // A failed re-creation leaves the data slot NULL; the authority's own
+            // `bdata != NULL` guard (3.0.22 `bio_ssl.c:503`) is the behaviour preserved here.
+            if !bdata.is_null() {
+                // SAFETY: this method's data is a `BioSsl`.
+                let ssl = unsafe { (*bdata).ssl };
+                if !ssl.is_null() {
+                    // SAFETY: `ssl` is live.
+                    unsafe { SSL_shutdown(ssl) };
+                }
             }
         }
         // SAFETY: `cur` is live; `BIO_next` walks the chain.
@@ -945,6 +961,10 @@ mod adv_probe {
             );
             assert_eq!(BIO_ctrl(b, BIO_CTRL_PENDING, 0, ptr::null_mut()), 0);
             assert_eq!(BIO_callback_ctrl(b, BIO_CTRL_SET_CALLBACK, None), 0);
+            // The chain-level entry points must tolerate the poisoned slot as well: the
+            // authority's `BIO_ssl_shutdown` checks `bdata != NULL`, and the copy refuses.
+            BIO_ssl_shutdown(b);
+            assert_eq!(BIO_ssl_copy_session_id(b, b), 0);
 
             assert_eq!(BIO_free(b), 1);
             adv_alloc::assert_no_double_free();
