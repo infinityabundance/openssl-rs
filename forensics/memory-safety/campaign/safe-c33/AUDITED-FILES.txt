@@ -155,8 +155,16 @@ src/context/namemap.rs
 src/context/thread_data.rs
 src/crmf/crmf_asn.rs
 src/crmf/crmf_lib.rs
+src/crmf/crmf_pbm.rs
+src/ct/ct_b64.rs
 src/ct/ct_log.rs
 src/ct/ct_oct.rs
+src/ct/ct_policy.rs
+src/ct/ct_prn.rs
+src/ct/ct_sct.rs
+src/ct/ct_sct_ctx.rs
+src/ct/ct_vfy.rs
+src/ct/ct_x509v3.rs
 src/decoder_lib.rs
 src/decoder_meth.rs
 src/decoder_pkey.rs
