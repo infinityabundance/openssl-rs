@@ -222,8 +222,9 @@ pub unsafe extern "C" fn BN_MONT_CTX_free(mont: *mut MontCtx) {
 ///
 /// # Safety
 ///
-/// `mont` must be null or a live, uniquely-owned `BN_MONT_CTX`; `mod` must be null or
-/// live; `ctx` is unused.
+/// `mont` must be null or a live `BN_MONT_CTX`; `m` must be null or live; `ctx` is
+/// unused. The context and the modulus are distinct object types (`MontCtx` and
+/// `BigNum`), so aliasing them is not a supported input.
 #[no_mangle]
 pub unsafe extern "C" fn BN_MONT_CTX_set(
     mont: *mut MontCtx,
@@ -231,10 +232,11 @@ pub unsafe extern "C" fn BN_MONT_CTX_set(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut_mont(mont), as_ref(m)) };
+        // SAFETY: `m` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(m) };
         let (md, _) = parts(x);
-        let Some(dst) = dst else {
+        // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
+        let Some(dst) = (unsafe { as_mut_mont(mont) }) else {
             return 0;
         };
         // A zero modulus is refused quietly; an even one through the inverse the
@@ -256,12 +258,14 @@ pub unsafe extern "C" fn BN_MONT_CTX_set(
 /// # Safety
 ///
 /// `to` must be null or a live, uniquely-owned `BN_MONT_CTX`; `from` must be null or
-/// live.
+/// live. When `to == from` the function returns `to` before forming any borrow, so
+/// the `&mut` on `to` and the `&` on `from` below always refer to distinct objects.
 #[no_mangle]
 pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) -> *mut MontCtx {
     guard_ffi(core::ptr::null_mut(), || {
         // The authority returns `to` untouched when the two are the same object, and
-        // a caller can observe that by identity.
+        // a caller can observe that by identity. This check also makes the borrows
+        // below non-overlapping by construction.
         if to == from {
             return to;
         }
@@ -342,8 +346,10 @@ pub unsafe extern "C" fn BN_MONT_CTX_set_locked(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` must be null or live;
-/// `mont` must be null or a live `BN_MONT_CTX`; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a` must be null or live; `mont` must be
+/// null or a live `BN_MONT_CTX`; `ctx` is unused. `r` may alias `a`; the operand is
+/// copied before `r` is borrowed. `mont` is a distinct object type and cannot alias
+/// either `BIGNUM`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_to_montgomery(
     r: *mut BigNum,
@@ -352,10 +358,11 @@ pub unsafe extern "C" fn BN_to_montgomery(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, mc) = unsafe { (as_mut(r), as_ref(a), as_ref_mont(mont)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
-        let Some(mc) = mc else {
+        // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
+        let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
         };
         if mc.n.is_empty() {
@@ -364,7 +371,9 @@ pub unsafe extern "C" fn BN_to_montgomery(
         // `a * RR`, reduced: the authority reaches this through
         // `BN_mod_mul_montgomery(r, a, &mont->RR, mont, ctx)`.
         let prod = limbs::mul(&ad, &mc.rr);
-        c_int::from(store(dst, mont_reduce(&prod, &mc.n, mc.n0[0]), false))
+        let value = mont_reduce(&prod, &mc.n, mc.n0[0]);
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store(unsafe { as_mut(r) }, value, false))
     })
 }
 
@@ -382,16 +391,19 @@ pub unsafe extern "C" fn BN_from_montgomery(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, mc) = unsafe { (as_mut(r), as_ref(a), as_ref_mont(mont)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
-        let Some(mc) = mc else {
+        // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
+        let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
         };
         if mc.n.is_empty() {
             return 0;
         }
-        c_int::from(store(dst, mont_reduce(&ad, &mc.n, mc.n0[0]), false))
+        let value = mont_reduce(&ad, &mc.n, mc.n0[0]);
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store(unsafe { as_mut(r) }, value, false))
     })
 }
 
@@ -400,7 +412,8 @@ pub unsafe extern "C" fn BN_from_montgomery(
 ///
 /// # Safety
 ///
-/// As `BN_to_montgomery`, with `b` null or live.
+/// As `BN_to_montgomery`, with `b` null or live. `r` may alias `a` or `b`; both
+/// operands are copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_mul_montgomery(
     r: *mut BigNum,
@@ -410,18 +423,23 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y, mc) = unsafe { (as_mut(r), as_ref(a), as_ref(b), as_ref_mont(mont)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
-        let Some(mc) = mc else {
+        // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
+        let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
         };
         if mc.n.is_empty() {
             return 0;
         }
         let prod = limbs::mul(&ad, &bd);
-        c_int::from(store(dst, mont_reduce(&prod, &mc.n, mc.n0[0]), false))
+        let value = mont_reduce(&prod, &mc.n, mc.n0[0]);
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store(unsafe { as_mut(r) }, value, false))
     })
 }
 
@@ -441,9 +459,10 @@ unsafe fn gets_consttime(b: *const BigNum) -> bool {
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a`, `p` and `m` must each be
-/// null or live; `ctx` is unused. `in_mont` is an optimisation the authority may
-/// precompute; this implementation is exact without one and does not read it.
+/// `r` must be null or a live `BIGNUM`; `a`, `p` and `m` must each be null or live;
+/// `ctx` is unused. `r` may alias any of `a`, `p` and `m`; all three are copied
+/// before `r` is borrowed. `in_mont` is an optimisation the authority may precompute;
+/// this implementation is exact without one and does not read it.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_exp_mont(
     r: *mut BigNum,
@@ -454,10 +473,14 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     _in_mont: *mut MontCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y, z) = unsafe { (as_mut(r), as_ref(a), as_ref(p), as_ref(m)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `p` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // SAFETY: `m` is null-or-live per this function's `# Safety` section.
+        let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
         if refuses(&md) {
             // SAFETY: the site is a compile-time constant.
@@ -465,7 +488,8 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             return 0;
         }
         match mod_exp_core(&ad, &pd, &md) {
-            Some(v) => c_int::from(store(dst, v, false)),
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
             None => 0,
         }
     })
@@ -490,10 +514,14 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
     _in_mont: *mut MontCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y, z) = unsafe { (as_mut(r), as_ref(a), as_ref(p), as_ref(m)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `p` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // SAFETY: `m` is null-or-live per this function's `# Safety` section.
+        let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
         if refuses(&md) {
             // SAFETY: the site is a compile-time constant.
@@ -501,7 +529,8 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
             return 0;
         }
         match mod_exp_core(&ad, &pd, &md) {
-            Some(v) => c_int::from(store(dst, v, false)),
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
             None => 0,
         }
     })
@@ -551,8 +580,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime_x2(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `p` and `m` must each be null
-/// or live; `ctx` and `in_mont` are unused.
+/// `r` must be null or a live `BIGNUM`; `p` and `m` must each be null or live; `ctx`
+/// and `in_mont` are unused. `r` may alias `p` or `m`; both are read before `r` is
+/// borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_exp_mont_word(
     r: *mut BigNum,
@@ -594,8 +624,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_word(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; every input must be null or
-/// live; `ctx` and `m_ctx` are unused.
+/// `r` must be null or a live `BIGNUM`; every input must be null or live; `ctx` and
+/// `m_ctx` are unused. `r` may alias any input; all five are read before `r` is
+/// borrowed.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn BN_mod_exp2_mont(
@@ -632,4 +663,174 @@ pub unsafe extern "C" fn BN_mod_exp2_mont(
         // SAFETY: null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, product, false))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::arith::BN_ucmp;
+    use crate::bn::bignum::{BN_copy, BN_new, BN_set_word};
+
+    /// A `BIGNUM` holding a machine word.
+    fn word(w: c_ulong) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        // SAFETY: `b` is live.
+        assert_eq!(unsafe { BN_set_word(b, w) }, 1);
+        b
+    }
+
+    /// Copy an object so an aliased-output case does not destroy the input used by
+    /// the distinct-output reference computation.
+    fn copy_of(src: *const BigNum) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let dst = unsafe { BN_new() };
+        // SAFETY: `dst` is live and `src` is live for the duration of the call.
+        assert!(!unsafe { BN_copy(dst, src) }.is_null());
+        dst
+    }
+
+    /// The M18-D1 regression control for this file: every entry point that writes
+    /// `r` while reading `a`/`b`/`p`/`m` accepts `r` aliasing any of them. The
+    /// aliased result is compared with the distinct-output computation. Before the
+    /// repair, `as_mut(r)` and `as_ref(input)` were formed in one tuple, so these
+    /// calls were undefined behaviour.
+    #[test]
+    fn aliased_outputs_match_the_distinct_form() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: `BN_MONT_CTX_new` takes no pointers.
+        let mont = unsafe { BN_MONT_CTX_new() };
+        let m = word(31);
+        let a = word(3);
+        let b = word(7);
+        let p = word(5);
+        // SAFETY: every object is live and the context is unused.
+        assert_eq!(unsafe { BN_MONT_CTX_set(mont, m, NULL) }, 1);
+
+        // BN_to_montgomery: r == a.
+        // SAFETY: `BN_new` takes no pointers.
+        let mont_a = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(unsafe { BN_to_montgomery(mont_a, a, mont, NULL) }, 1);
+        let alias = copy_of(a);
+        // SAFETY: every pointer is live and `alias` is both input and output.
+        assert_eq!(unsafe { BN_to_montgomery(alias, alias, mont, NULL) }, 1);
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias, mont_a) }, 0, "to_montgomery alias");
+
+        // BN_from_montgomery: r == a.
+        // SAFETY: `BN_new` takes no pointers.
+        let back = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(unsafe { BN_from_montgomery(back, mont_a, mont, NULL) }, 1);
+        let alias_back = copy_of(mont_a);
+        // SAFETY: every pointer is live and `alias_back` is both input and output.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_from_montgomery(alias_back, alias_back, mont, NULL) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_back, back) },
+            0,
+            "from_montgomery alias"
+        );
+        // SAFETY: both are live; the round trip restores the base.
+        assert_eq!(unsafe { BN_ucmp(back, a) }, 0, "round trip");
+
+        // BN_mod_mul_montgomery: r == a and r == b.
+        // SAFETY: `BN_new` takes no pointers.
+        let product = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(
+            // SAFETY: every pointer is live.
+            unsafe { BN_mod_mul_montgomery(product, a, b, mont, NULL) },
+            1
+        );
+        for alias_first in [true, false] {
+            let x = if alias_first { copy_of(a) } else { copy_of(b) };
+            // SAFETY: every pointer is live; the copied operand is also the output.
+            assert_eq!(
+                // SAFETY: every pointer is live.
+                unsafe {
+                    if alias_first {
+                        BN_mod_mul_montgomery(x, x, b, mont, NULL)
+                    } else {
+                        BN_mod_mul_montgomery(x, a, x, mont, NULL)
+                    }
+                },
+                1
+            );
+            assert_eq!(
+                // SAFETY: both are live.
+                unsafe { BN_ucmp(x, product) },
+                0,
+                "mod_mul_montgomery alias"
+            );
+        }
+
+        // BN_mod_exp_mont: r == a, r == p, and r == m.
+        // SAFETY: `BN_new` takes no pointers.
+        let power = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `in_mont` is unused.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont(power, a, p, m, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // r == a.
+        let alias_a = copy_of(a);
+        // SAFETY: every pointer is live; `alias_a` is both base and output.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont(alias_a, alias_a, p, m, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_a, power) }, 0, "mod_exp_mont r == a");
+        // r == p.
+        let alias_p = copy_of(p);
+        // SAFETY: every pointer is live; `alias_p` is both exponent and output.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont(alias_p, a, alias_p, m, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_p, power) }, 0, "mod_exp_mont r == p");
+        // r == m.
+        let alias_m = copy_of(m);
+        // SAFETY: every pointer is live; `alias_m` is both modulus and output.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont(alias_m, a, p, alias_m, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias_m, power) }, 0, "mod_exp_mont r == m");
+
+        // BN_mod_exp_mont_consttime: r == a.
+        let ct = copy_of(a);
+        // SAFETY: every pointer is live; `ct` is both input and output.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont_consttime(ct, ct, p, m, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(ct, power) }, 0, "consttime alias");
+
+        // BN_mod_exp_mont_word: r == m (the shape was already read-first, and this
+        // pins it).
+        let word_out = copy_of(m);
+        // SAFETY: every pointer is live; `word_out` is both the modulus and output.
+        assert_eq!(
+            // SAFETY: every pointer is live and `in_mont` is unused.
+            unsafe { BN_mod_exp_mont_word(word_out, 3, p, word_out, NULL, core::ptr::null_mut()) },
+            1
+        );
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(word_out, power) }, 0, "mont_word alias");
+    }
 }

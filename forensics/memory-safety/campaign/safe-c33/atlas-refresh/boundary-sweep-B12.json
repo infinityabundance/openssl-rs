@@ -1,0 +1,235 @@
+{
+  "receipt": "boundary-sweep-B12",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "79e42f5f1",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/bn/gf2m.rs",
+      "src/bn/mont.rs",
+      "src/bn/recp.rs"
+    ],
+    "working_tree_blob": {
+      "src/bn/gf2m.rs": "6348e607630c55eeb0510abbe421bc3e88af1e62",
+      "src/bn/mont.rs": "51ec202e56c8ffb04ef3ad6c6e6b346dfd3333d2",
+      "src/bn/recp.rs": "af336a7dd740f9ba55bccb6e1797777e219f920e"
+    }
+  },
+  "stop_status": "CLEAR for the assigned B12 three-file boundary: no confirmed memory-safety defect, ABI regression or hidden obligation remains in src/bn/{gf2m,mont,recp}.rs. STOP for campaign-wide closure of the M18-D1 class: the same tuple shape remains in src/bn/arith.rs, outside this batch's explicit three-file scope and deliberately not modified; it must be B13 before the class can be declared closed. Miri is NOT_RUN (no nightly/miri component in the court); nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/bn/bn_gf2m.c (BN_GF2m_add, BN_GF2m_mod_arr, BN_GF2m_mod_mul_arr, BN_GF2m_mod_sqr_arr, BN_GF2m_mod_exp_arr, BN_GF2m_mod_inv and the wrappers), crypto/bn/bn_mont.c (BN_MONT_CTX_set/copy/set_locked, BN_to/from_montgomery, BN_mod_mul_montgomery, BN_mod_exp_mont, BN_mod_exp_mont_consttime, BN_mod_exp_mont_word, BN_mod_exp2_mont) and crypto/bn/bn_recp.c (BN_RECP_CTX_set, BN_div_recp, BN_reciprocal, BN_mod_mul_reciprocal, BN_mod_exp_recp).",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. Doc comments on the # Safety sections now state the aliasing contract explicitly; no signature or behaviour change for distinct-output calls.",
+    "external_contracts": [
+      "The OpenSSL BIGNUM entry points accept a result object that aliases an input operand. The implementation must compute from the original operands and then write the result; reading an operand after a partial write is a compatibility defect, and forming two live Rust borrows of one allocation is UB.",
+      "The two BN_div outputs may be the same object. BN_div stores the remainder first and the quotient last, so that object ends holding the quotient; BN_div_recp inherits this through its delegation.",
+      "BN_MONT_CTX and BN_RECP_CTX are opaque context types distinct from BIGNUM. Passing one allocation as both a context and a BIGNUM is not a supported input. BN_MONT_CTX_copy(to == from) returns before forming any borrow."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B12-BN-GF2M-1",
+      "file": "src/bn/gf2m.rs",
+      "mechanism": "BIGNUM-output borrow ordering in BN_GF2m_add, BN_GF2m_mod_arr, BN_GF2m_mod_mul_arr, BN_GF2m_mod_sqr_arr and BN_GF2m_mod_exp_arr",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "r may alias a or b (and both simultaneously). Inputs are cloned before r is borrowed; nothing reads an operand after r is written. The modulus is an int-array/separate BIGNUM snapshot and is never aliased with r.",
+      "defects": ["B12-D1", "B12-D4"],
+      "residuals": [
+        "The modulus argument (p / the exponent array) is a distinct object/array in the supported contract. A caller passing the same storage as both a modulus and an output is outside the contract; the modulus is nevertheless snapshotted before the write, so the GF2m wrappers remain borrow-safe in that case.",
+        "BN_GF2m_poly2arr writes an int array while reading a BIGNUM; the int[]/BIGNUM cross-type alias is not a supported input."
+      ]
+    },
+    {
+      "id": "B12-BN-GF2M-2",
+      "file": "src/bn/gf2m.rs",
+      "mechanism": "blinded inversion and division wrappers (mod_inv_vartime, BN_GF2m_mod_inv, BN_GF2m_mod_div and the _arr wrappers)",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "r may alias a/xx/y; each operand is copied before r is first written. The blinded sequence reads a and the modulus before the first BN_GF2m_mod_mul writes r.",
+      "defects": ["B12-D4"],
+      "residuals": [
+        "If a caller aliases r with the BIGNUM modulus, the first write changes the modulus used by the later blinded steps. That matches the authority's evaluation order (garbage-in/garbage-out, no UB) but is not a supported result case and is not claimed as one."
+      ]
+    },
+    {
+      "id": "B12-BN-MONT-1",
+      "file": "src/bn/mont.rs",
+      "mechanism": "MontCtx construction/copy (BN_MONT_CTX_set, BN_MONT_CTX_copy, BN_MONT_CTX_set_locked)",
+      "disposition": "CONTRACTED",
+      "contract": "MontCtx and BigNum are distinct object types; no supported alias exists. BN_MONT_CTX_set reads the modulus before borrowing the context. BN_MONT_CTX_copy returns to before forming any borrow when to == from.",
+      "defects": ["B12-D5"],
+      "residuals": [
+        "BN_MONT_CTX_set_locked's double-checked publication and the caller's lock are unchanged; they are not an aliasing boundary."
+      ]
+    },
+    {
+      "id": "B12-BN-MONT-2",
+      "file": "src/bn/mont.rs",
+      "mechanism": "BIGNUM-output borrow ordering in BN_to_montgomery, BN_from_montgomery and BN_mod_mul_montgomery",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "r may alias a or b. Operands are cloned first; the reduced value is computed before r is borrowed, so no shared borrow of the context or operand is live across the write.",
+      "defects": ["B12-D2", "B12-D4"],
+      "residuals": []
+    },
+    {
+      "id": "B12-BN-MONT-3",
+      "file": "src/bn/mont.rs",
+      "mechanism": "BIGNUM-output borrow ordering in BN_mod_exp_mont, BN_mod_exp_mont_consttime, BN_mod_exp_mont_word and BN_mod_exp2_mont",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "r may alias a, p or m (and, for exp2, any of a1/p1/a2/p2/m). All inputs are cloned (and the CONSTTIME flags read) before r is borrowed. A failed exponentiation leaves r untouched, as before.",
+      "defects": ["B12-D2", "B12-D4"],
+      "residuals": [
+        "BN_mod_exp_mont_consttime_x2 runs its two exponentiations sequentially. No borrow overlap exists; the second result wins if a caller passes r1 == r2. Cross-triple aliasing is not a supported authority case."
+      ]
+    },
+    {
+      "id": "B12-BN-RECP-1",
+      "file": "src/bn/recp.rs",
+      "mechanism": "RecpCtx construction (BN_RECP_CTX_set)",
+      "disposition": "CONTRACTED",
+      "contract": "RecpCtx and BigNum are distinct object types; no supported alias exists. The divisor is cloned before the context is borrowed.",
+      "defects": ["B12-D5"],
+      "residuals": []
+    },
+    {
+      "id": "B12-BN-RECP-2",
+      "file": "src/bn/recp.rs",
+      "mechanism": "reciprocal division and reduction (BN_div_recp, BN_reciprocal, BN_mod_mul_reciprocal)",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "BN_div_recp(dv, rem, m, ...) allows dv == rem (remainder stored first, quotient last) and either output aliasing the dividend m; BN_div reads/clones the dividend before writing. BN_reciprocal allows r == m. BN_mod_mul_reciprocal allows r == x or r == y; both factors are copied before the product is reduced.",
+      "defects": ["B12-D4"],
+      "residuals": [
+        "The reciprocal correction loop and its BN_R_BAD_RECIPROCAL site are unchanged."
+      ]
+    },
+    {
+      "id": "B12-BN-RECP-3",
+      "file": "src/bn/recp.rs",
+      "mechanism": "BIGNUM-output borrow ordering in BN_mod_exp_recp",
+      "disposition": "OWNERSHIP_RECONSTRUCTED",
+      "contract": "r may alias a, p or m. All three are cloned and their BN_FLG_CONSTTIME bits are read before r is borrowed.",
+      "defects": ["B12-D3", "B12-D4"],
+      "residuals": [
+        "The even-modulus recp dispatch and the zero-exponent rule (including 0^0 mod 0 == 1) are unchanged."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B12-D1",
+      "file": "src/bn/gf2m.rs",
+      "lines_post_fix": "235-247, 343-363, 462-476, 529-536, 596-604",
+      "severity": "high",
+      "class": "aliasing: `as_mut(r)` and `as_ref(a)`/`as_ref(b)` formed in one tuple, i.e. live mutable and shared borrows of one allocation when a caller aliases an output (a supported case)",
+      "description": "BN_GF2m_add, BN_GF2m_mod_arr, BN_GF2m_mod_mul_arr, BN_GF2m_mod_sqr_arr and BN_GF2m_mod_exp_arr formed the tuple `(as_mut(r), as_ref(a), as_ref(b))`. A caller passing the result object as an operand (which the authority allows) made the two borrows alias the same allocation.",
+      "fix": "Each operand is copied through a scoped shared reference whose last use precedes the output borrow; the output is borrowed only at store time. No operand is read after a partial write. Added the aliased-case control in bn::gf2m::tests."
+    },
+    {
+      "id": "B12-D2",
+      "file": "src/bn/mont.rs",
+      "lines_post_fix": "228-250, 348-375, 383-405, 417-441, 466-492, 502-528",
+      "severity": "high",
+      "class": "aliasing: two live borrows of one allocation across a call (M18-D1 shape)",
+      "description": "BN_to_montgomery, BN_from_montgomery, BN_mod_mul_montgomery, BN_mod_exp_mont and BN_mod_exp_mont_consttime formed `(as_mut(r), as_ref(inputs), as_ref_mont(mont))`; BN_MONT_CTX_set formed `(as_mut_mont(mont), as_ref(m))`. The BIGNUM-output cases are reachable with a supported aliased output.",
+      "fix": "Operands are copied before the output borrow; the reduced value is materialised in a local before `as_mut(r)`, so no context borrow is live across the write. BN_MONT_CTX_set reads the modulus before borrowing the context. BN_MONT_CTX_copy's identity guard and its consequence are documented. Added the aliased-case control in bn::mont::tests."
+    },
+    {
+      "id": "B12-D3",
+      "file": "src/bn/recp.rs",
+      "lines_post_fix": "468-514",
+      "severity": "high",
+      "class": "aliasing: two live borrows of one allocation across a call (M18-D1 shape)",
+      "description": "BN_mod_exp_recp formed `(as_mut(r), as_ref(a), as_ref(p), as_ref(m))`, and then read BN_FLG_CONSTTIME from the same raw inputs while the mutable output borrow was live. A supported r == a/p/m call aliased the borrows.",
+      "fix": "Inputs are copied and their CONSTTIME flags read before `as_mut(r)`; the output is borrowed at each store. BN_RECP_CTX_set reads its divisor before borrowing the context. Added the aliased-case control in the cfg-gated bn::recp::tests module, including dv == rem and dv == dividend."
+    },
+    {
+      "id": "B12-D4",
+      "file": "src/bn/gf2m.rs, src/bn/mont.rs, src/bn/recp.rs",
+      "lines_post_fix": "the # Safety sections of every repaired entry point",
+      "severity": "low",
+      "class": "contract documentation: the old text said `uniquely-owned BIGNUM` although the authority and the implementation accept an aliased output",
+      "description": "A caller could not tell from the contract that r == a/b/p/m is supported, and the implementation's old borrow shape made the documented-safe call unsound.",
+      "fix": "Every repaired public entry point now states exactly which arguments may alias and what the aliased result is; the context setters state that their context/modulus are distinct types."
+    },
+    {
+      "id": "B12-D5",
+      "file": "src/bn/mont.rs, src/bn/recp.rs",
+      "lines_post_fix": "mont 228-250 and 255-275; recp 306-326",
+      "severity": "informational",
+      "class": "same tuple shape with a type-distinct second operand",
+      "description": "BN_MONT_CTX_set, BN_MONT_CTX_copy and BN_RECP_CTX_set formed a mutable context borrow alongside a shared borrow of a different object type. No supported input can make the two pointers alias, and BN_MONT_CTX_copy already returned early for to == from; the shape is reordered and documented for consistency and to remove the pattern from the three files.",
+      "fix": "Read-first for the BigNum operand; BN_MONT_CTX_copy's identity guard is documented as the reason its two same-type references are distinct."
+    }
+  ],
+  "public_behavior_aliased_cases": {
+    "BN_GF2m_add(r, a, b)": "r == a, r == b or r == a == b is supported; the XOR is computed from the originals and stored last (a + a == 0).",
+    "BN_GF2m_mod_arr(r, a, p)": "r == a is supported; the result is a mod p.",
+    "BN_GF2m_mod_mul_arr(r, a, b, p)": "r == a or r == b is supported; a == b takes the square path; the result is a*b mod p.",
+    "BN_GF2m_mod_sqr_arr(r, a, p)": "r == a is supported; the result is a^2 mod p.",
+    "BN_GF2m_mod_exp_arr(r, a, b, p)": "r == a or r == b is supported; the result is a^b mod p.",
+    "BN_GF2m_mod_inv(r, a, p, ctx)": "r == a is supported; the read-before-write order holds through the blinded sequence.",
+    "BN_to_montgomery(r, a, mont, ctx)": "r == a is supported; the result is a*R mod m.",
+    "BN_from_montgomery(r, a, mont, ctx)": "r == a is supported; the result is a*R^-1 mod m.",
+    "BN_mod_mul_montgomery(r, a, b, mont, ctx)": "r == a or r == b is supported; the result is a*b*R^-1 mod m.",
+    "BN_mod_exp_mont(r, a, p, m, ctx, in_mont)": "r == a, r == p or r == m is supported; the result is a^p mod m from the original operands.",
+    "BN_mod_exp_mont_consttime(...)": "same alias set and result as BN_mod_exp_mont.",
+    "BN_mod_exp_mont_word(r, a, p, m, ...)": "r == p or r == m is supported.",
+    "BN_mod_exp2_mont(r, a1, p1, a2, p2, m, ...)": "r may alias any input; all are copied before the store.",
+    "BN_mod_exp_recp(r, a, p, m, ctx)": "r == a, r == p or r == m is supported; the result is a^p mod m from the original operands.",
+    "BN_div_recp(dv, rem, m, recp, ctx)": "dv == rem is supported and the shared object ends holding the quotient (remainder stored first); either output may alias the dividend m, which is read first.",
+    "BN_reciprocal(r, m, len, ctx)": "r == m is supported; the divisor is read before r is written.",
+    "BN_mod_mul_reciprocal(r, x, y, recp, ctx)": "r == x or r == y is supported; the factors are copied before the reduction.",
+    "BN_MONT_CTX_set(mont, m, ctx) / BN_RECP_CTX_set(recp, d, ctx)": "no alias is supported: the context and the BigNum are distinct object types.",
+    "BN_MONT_CTX_copy(to, from)": "to == from returns to untouched before any borrow; otherwise to and from are distinct."
+  },
+  "compatibility": {
+    "distinct_output_calls": "unchanged arithmetic, signs, error sites and failure ordering; only the order in which Rust borrows are formed changed",
+    "aliased_output_calls": "now defined in Rust and equal to the authority's value for every case the authority supports; no API was weakened and no supported aliased case was removed",
+    "div_two_outputs": "remainder first, quotient last (shared with BN_div)",
+    "authority_differential": "NOT_RUN for the newly documented aliased cases; the arithmetic value is pinned by the in-crate controls and the existing differential/replay evidence is unchanged for distinct-output calls"
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "bn::gf2m::tests::aliased_outputs_match_the_distinct_form 1/0; bn::mont::tests::aliased_outputs_match_the_distinct_form 1/0; bn::recp::tests::aliased_outputs_match_the_distinct_form 1/0",
+      "module_filters": "bn::gf2m 6/0; bn::mont 1/0; bn::recp 2/0 (including the isolated allocator-hook child)"
+    },
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1614 passed, 0 failed, 27 ignored (96.02 s)",
+      "serial": "cargo test --lib -- --test-threads=1: 1614 passed, 0 failed, 27 ignored (290.33 s)",
+      "ignored_delta": "0 newly ignored; no test removed",
+      "affected_probes": "none: no OPENSSL_RS_ADV_PROBE arm exists in the three files"
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's only toolchain is 1.98.1-x86_64-unknown-linux-gnu; `cargo miri --version` reports \"the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain\" and no nightly toolchain is installed"
+  },
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "borrow_hazards_eliminated": 13,
+  "test_only_unsafe_added": 93,
+  "residuals": [
+    {
+      "id": "B12-R1",
+      "file": "src/bn/arith.rs",
+      "lines": "65, 90, 116, 140, 291, 307, 394, 667, 705, 734, 952, 993, 1092 and the BN_mod_sqrt site near 1139",
+      "severity": "high",
+      "disposition": "OPEN - outside this batch's explicit three-file scope; not modified",
+      "description": "The same `let (dst, x, ...) = unsafe { (as_mut(r), as_ref(a), ...) }` shape remains in BN_add, BN_sub, BN_uadd, BN_usub, BN_mul, BN_sqr, BN_nnmod, BN_mod_inverse, BN_lshift, BN_rshift, BN_exp, BN_mod_exp, BN_gcd and BN_mod_sqrt. Those entry points document/support r aliasing an operand, so the class is not closed campaign-wide.",
+      "next": "B13 boundary batch on src/bn/arith.rs using the same read-first/write-last repair and one aliased-output control per family."
+    },
+    {
+      "id": "B12-R2",
+      "file": "src/bn/{gf2m,mont,recp}.rs",
+      "severity": "low",
+      "disposition": "RETAINED - documented",
+      "description": "Cross-type aliasing (a context object used as a BIGNUM, or an int[] output overlapping BIGNUM storage) is not a supported input. The context setters and BN_GF2m_poly2arr do not claim it; the borrow shape remains safe because operands are snapshotted before writes."
+    }
+  ],
+  "graduation": "No boundary in this batch is SAFETY_DISCHARGED: Miri is NOT_RUN and the class has an open out-of-batch residual (B12-R1). The three files are OWNERSHIP_RECONSTRUCTED/CONTRACTED for the audited output-aliasing mechanism, with hidden = 0 and no safe caller able to cause UB through the audited aliases. No SAFE_COMPATIBLE claim.",
+  "next_ordinary_position": "unchanged: src/apps/smime.rs (93), then src/ssl/ssl_rsa.rs (92), src/asn1/a_strex.rs (91), src/cms/cms_enc.rs (91), src/provider/dsa_sig.rs (91)"
+}
