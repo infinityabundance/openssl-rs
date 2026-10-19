@@ -361,7 +361,8 @@ unsafe extern "C" fn dlfcn_name_converter(dso: *mut Dso, filename: *const c_char
 /// `static int dlfcn_pathbyaddr(void *addr, char *path, int sz)`
 ///
 /// # Safety
-/// `path` must be NULL or have `sz` writable bytes.
+/// `path` is NULL only when `sz <= 0` (the sizing call writes nothing). When `sz > 0` it must
+/// point at `sz` writable bytes: the authority writes through it without a NULL test.
 unsafe extern "C" fn dlfcn_pathbyaddr(addr: *mut c_void, path: *mut c_char, sz: c_int) -> c_int {
     let mut dli = DlInfo {
         dli_fname: ptr::null(),

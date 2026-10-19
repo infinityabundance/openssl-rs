@@ -264,8 +264,8 @@ pub unsafe extern "C" fn DSA_SIG_get0(
 ///
 /// # Safety
 ///
-/// `sig` is live; each of `r` and `s` is NULL or a live `BIGNUM` whose ownership the caller
-/// transfers on the success path.
+/// `sig` is live; each of `r` and `s` is NULL or a distinct live `BIGNUM` whose exclusive
+/// ownership the caller transfers on the success path (no other owner may release either).
 #[no_mangle]
 pub unsafe extern "C" fn DSA_SIG_set0(sig: *mut DsaSig, r: *mut BigNum, s: *mut BigNum) -> c_int {
     if r.is_null() || s.is_null() {
@@ -391,7 +391,11 @@ pub unsafe extern "C" fn i2d_DSA_SIG(sig: *const DsaSig, ppout: *mut *mut c_ucha
             || WPACKET_get_total_written(&mut pkt, &mut encoded_len) == 0
             || WPACKET_finish(&mut pkt) == 0
         {
-            // `buf`'s `Drop` releases the buffer, exactly as the authority's `BUF_MEM_free(buf)`.
+            // The authority releases the `BUF_MEM` *before* cleaning the packet's
+            // sub-packets (`dsa_sign.c:106-108`), and a recording allocator observes that
+            // order. `WPACKET_cleanup` only walks `pkt.subs`, so releasing `buf` first is
+            // also the sound order here.
+            drop(buf);
             WPACKET_cleanup(&mut pkt);
             return -1;
         }
