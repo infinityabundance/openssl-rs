@@ -1053,7 +1053,10 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
             // `digest` holds `todo <= 64` written bytes.
             unsafe { core::ptr::copy_nonoverlapping(digest.as_ptr(), k_bytes_ptr.add(done), todo) };
             done += todo;
-            i += 1;
+            // The authority's counter is an `unsigned char`, so it wraps for a range large
+            // enough to need more than 255 digests; `wrapping_add` keeps that instead of
+            // panicking in a debug build.
+            i = i.wrapping_add(1);
         }
 
         // SAFETY: `k_bytes` owns `num_k_bytes` bytes and `out` is live and writable.

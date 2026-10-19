@@ -458,7 +458,8 @@ pub(crate) unsafe fn ossl_policy_cache_free(cache: *mut X509PolicyCache) {
 ///
 /// # Safety
 ///
-/// `x` must be NULL or a live `X509`.
+/// `x` must be a live `X509`. The authority dereferences it unconditionally, so NULL is not an
+/// accepted input.
 pub(crate) unsafe fn ossl_policy_cache_set(x: *mut X509) -> *const X509PolicyCache {
     // SAFETY: `x` is NULL or live per the contract.
     unsafe {
@@ -480,7 +481,8 @@ pub(crate) unsafe fn ossl_policy_cache_set(x: *mut X509) -> *const X509PolicyCac
 ///
 /// # Safety
 ///
-/// `cache` is live; `id` is NULL or a live `ASN1_OBJECT`.
+/// `cache` is live; `id` is a live `ASN1_OBJECT`. The comparator reads it through `OBJ_cmp`, so
+/// NULL is not an accepted input.
 pub(crate) unsafe fn ossl_policy_cache_find_data(
     cache: *const X509PolicyCache,
     id: *const Asn1Object,
