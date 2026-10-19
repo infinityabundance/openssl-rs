@@ -465,12 +465,14 @@ pub unsafe extern "C" fn ASN1_BIT_STRING_set_bit(
                 return 0;
             }
             let c = s.data;
-            if w + 1 - s.length > 0 {
+            // `old_len` is the clamped (non-negative) length, and `new_len` is the
+            // checked `w + 1`. Comparing and subtracting in `usize` keeps the
+            // authority's `w + 1 - a->length > 0` test without a signed overflow
+            // for a hand-filled negative length (§3).
+            if new_len > old_len {
                 // SAFETY: `c` holds `w + 1` bytes, of which the first `old_len` are
                 // the old content; the rest are zeroed.
-                unsafe {
-                    core::ptr::write_bytes(c.add(old_len), 0, (w + 1 - s.length.max(0)) as usize)
-                };
+                unsafe { core::ptr::write_bytes(c.add(old_len), 0, new_len - old_len) }
             }
             s.length = w + 1;
         }

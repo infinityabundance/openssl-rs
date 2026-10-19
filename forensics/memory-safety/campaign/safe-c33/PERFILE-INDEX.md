@@ -2478,3 +2478,59 @@ file (`src/asn1/bitstr.rs` (65) after the already-covered `src/ec/smpl.rs`).
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M27.json`](atlas-refresh/mechanism-sweep-M27.json).
+
+## 32. Mechanism sweep M28 — 2026-10-19
+
+Source HEAD `485b9b847`; branch `integrate/safe-c33`; worktree dirty
+(`src/asn1/bitstr.rs`, `src/asn1/fre.rs`, `src/runtime/bio/bss_file.rs`, this
+index and the M28 receipt). Seven ordinary files from the M27-named batch;
+`src/engine/eng_ctrl.rs` (67) proved a new ENGINE ctrl callback boundary and was
+`NOT_RUN`, so the ranked substitute `src/asn1/bitstr.rs` (65) was audited.
+
+**M28 audited files (8).** `src/x509/x_x509.rs`, `src/asn1/a_sign.rs`,
+`src/provider/eddsa_sig.rs`, `src/runtime/bio/bss_file.rs`,
+`src/apps/crl2pkcs7.rs`, `src/asn1/fre.rs`, `src/x509/x_ietfatt.rs`,
+`src/asn1/bitstr.rs` (substitute). `NOT_RUN`: `src/engine/eng_ctrl.rs` (new
+ENGINE ctrl callback boundary).
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M28-D1 | `src/runtime/bio/bss_file.rs:367` | high (write outside the caller's extent) | `file_gets` wrote `*buf = 0` before consulting `size`; a zero-length `BIO_gets` request has no writable byte, and the NULL case dereferenced NULL. The authority has the same defect (§17, §21.1; same class as M27-D1) | return the authority's `0` for `size <= 0` without touching `buf` or `bp`; control `runtime::bio::bss_file::tests::a_zero_length_gets_does_not_write_through_a_null_buffer` |
+| M28-D2 | `src/runtime/bio/bss_file.rs:458` | high (NULL dereference inside libc) | `BIO_C_SET_FILENAME` called `fopen(ptr_, mode)` with no NULL check; `fopen(NULL, ...)` faults. OpenSSL 4.0.2 later added the same refusal | refuse a NULL filename after mode construction and before `fopen`, answering the authority's failure `0` with no new error coordinate; control `runtime::bio::bss_file::tests::set_filename_refuses_a_null_filename` |
+| M28-D3 | `src/asn1/fre.rs:387/389` | low (out-of-authority read + redundant write; no observed behaviour change) | `template_free` read `*pval` unconditionally and wrote it back on the `ASN1_TFLG_EMBED` path; the authority never reads an embedded field's storage and instead uses the slot's address | assign `tval` from the slot's address only on the embed path; the read and write-back are gone |
+| M28-D4 | `src/asn1/bitstr.rs:472` | low (fallible signed arithmetic; debug panic only for a hand-filled negative length) | `ASN1_BIT_STRING_set_bit` tested `w + 1 - s.length > 0` with the unclamped length and wrote the clamped count, so `INT_MIN` could overflow the test | compare and subtract in `usize` against the already-clamped `old_len`; conforming inputs are unchanged |
+
+**Contracts reused.** RC-1, OB-1, OB-3 (incl. `CtxBlock`), OB-4
+(`PropqSlot`), ASN1 item/template/union ownership and the item-layer
+`D2I_PRE`/`NEW_POST`/`FREE_POST` callback contract, BIO method/ctrl/read/write
+contract, provider dispatch and `OSSL_PARAM` builders, `X509_INFO` stack
+consumption and PKCS7 ownership, WPACKET DER lifecycle. No new unsafe
+assumption; hidden obligations 0; unsafe ops introduced/removed/relocated
+0/2/0 (M28-D3 removed one raw read and one redundant write).
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1630 passed / 0 failed / 27 ignored** serially (238.37 s) and with
+`--test-threads=4` (100.52 s); focused `runtime::bio::bss_file::tests` 2/0.
+
+**NOT_RUN.** `src/engine/eng_ctrl.rs` (ENGINE ctrl callback boundary); the
+phase-4 BIO and ASN.1 differential probes still link the committed
+`artifacts/phase2` distribution shell, which predates this worktree; Miri/ASan
+on the new controls and the EMBED free path (BOUNDARY); independent review and
+SEAL. Nothing is promoted to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/x509/v3_prn.rs` (65),
+`src/runtime/thread_events.rs` (65), `src/runtime/init.rs` (65),
+`src/ffc/dh.rs` (65), `src/cmp/cmp_util.rs` (65),
+`src/cmp/cmp_status.rs` (65), `src/ts/ts_verify_ctx.rs` (64),
+`src/rand/unix.rs` (64). Triage `runtime/thread_events.rs` and
+`runtime/init.rs` first as possible callback/initialization boundaries; if
+confirmed `NOT_RUN`, substitute `src/ocsp/ocsp_vfy.rs` (64), then
+`src/bn/blinding.rs` (64), `src/x509/v3_info.rs` (63),
+`src/ts/ts_req_utils.rs` (63). Deferred NOT_RUN: `engine/eng_ctrl.rs`,
+`ssl/record/rec_layer_s3.rs` and the M26/M25-retained boundaries;
+`src/ec/smpl.rs` is already covered.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M28.json`](atlas-refresh/mechanism-sweep-M28.json).

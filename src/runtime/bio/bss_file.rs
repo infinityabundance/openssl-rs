@@ -364,11 +364,17 @@ unsafe extern "C" fn file_puts(bp: *mut Bio, s: *const c_char) -> c_int {
 /// # Safety
 /// `bp` must be a live FILE BIO and `buf` writable for `size` bytes.
 unsafe extern "C" fn file_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_int {
-    if buf.is_null() {
-        // The authority stores `buf[0]`, which faults; total by policy.
+    if buf.is_null() || size <= 0 {
+        // `BIO_gets` admits a zero-length request, and NULL is the only buffer
+        // valid for zero bytes. The authority stores `buf[0]` regardless — a
+        // write outside the caller's extent, and through NULL for the NULL
+        // case — which is the UB this conversion does not reproduce (§17). A
+        // negative size is refused by `BIO_gets` before it reaches here, and
+        // `fgets` with a non-positive count is undefined, so both arms answer
+        // the authority's `0` without touching `buf` or `bp`.
         return 0;
     }
-    // SAFETY: `buf` is writable for `size` bytes.
+    // SAFETY: `buf` is writable for `size >= 1` bytes.
     unsafe { *buf = 0 };
     // SAFETY: `bp` is live and holds a `FILE *`.
     let p = unsafe { (*bp).ptr };
@@ -445,7 +451,14 @@ unsafe extern "C" fn file_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr_: *mut 
                 return 0;
             };
 
-            // SAFETY: `ptr_` is the filename per the control's contract; `mode`
+            // A NULL filename is not a `fopen` contract: the authority hands it
+            // to libc, which faults there. Refusing it is the same total-by-policy
+            // form `BIO_new_file` uses for its NULL arguments; no raise is added,
+            // because the pinned authority has no coordinate for this refusal.
+            if ptr_.is_null() {
+                return 0;
+            }
+            // SAFETY: `ptr_` is NUL-terminated per the control's contract; `mode`
             // is a static NUL-terminated string.
             let fp = unsafe { sys::fopen(ptr_.cast(), mode.as_ptr().cast()) };
             if fp.is_null() {
@@ -508,4 +521,52 @@ unsafe extern "C" fn file_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr_: *mut 
         }
     }
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_gets};
+
+    /// Negative control for the zero-length terminator write.
+    ///
+    /// `BIO_gets(b, NULL, 0)` is a C-valid call: zero bytes is the one case
+    /// where a NULL buffer satisfies the public contract. The authority
+    /// writes a terminator through it and faults; this conversion must answer
+    /// 0 without touching the pointer.
+    #[test]
+    fn a_zero_length_gets_does_not_write_through_a_null_buffer() {
+        // SAFETY: both arguments are static NUL-terminated strings and
+        // `BIO_new_file` answers a fresh BIO or NULL.
+        let bio = unsafe { BIO_new_file(c"/dev/null".as_ptr(), c"r".as_ptr()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and NULL is admissible for `size == 0`.
+        let ret = unsafe { BIO_gets(bio, core::ptr::null_mut(), 0) };
+        assert_eq!(ret, 0);
+        // SAFETY: `bio` is this test's own BIO and is released once.
+        unsafe { BIO_free(bio) };
+    }
+
+    /// `BIO_C_SET_FILENAME` with a NULL filename must not reach `fopen`.
+    #[test]
+    fn set_filename_refuses_a_null_filename() {
+        // SAFETY: both arguments are static NUL-terminated strings and
+        // `BIO_new_file` answers a fresh BIO or NULL.
+        let bio = unsafe { BIO_new_file(c"/dev/null".as_ptr(), c"r".as_ptr()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live; the fourth argument is NULL, which the
+        // authority hands to `fopen` and this conversion refuses.
+        let ret = unsafe {
+            BIO_ctrl(
+                bio,
+                BIO_C_SET_FILENAME,
+                BIO_FP_READ as core::ffi::c_long,
+                core::ptr::null_mut(),
+            )
+        };
+        assert_eq!(ret, 0);
+        // SAFETY: `bio` is this test's own BIO. The control's `file_free`
+        // closed the previous stream, so this releases the BIO only.
+        unsafe { BIO_free(bio) };
+    }
 }
