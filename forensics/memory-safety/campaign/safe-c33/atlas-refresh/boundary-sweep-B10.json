@@ -1,0 +1,414 @@
+{
+  "receipt": "boundary-sweep-B10",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "7672071f1",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/http/http_client.rs",
+      "src/params/build.rs",
+      "src/runtime/err.rs",
+      "src/provider/rsa_kmgmt.rs",
+      "src/evp/pkey_asn1.rs"
+    ],
+    "working_tree_blob": {
+      "src/http/http_client.rs": "ad7bf6d82998ee5c4699bc8d25625912b8a5533f",
+      "src/params/build.rs": "15672c67b33a0284b5ee7a82675b0c00aa93afc2",
+      "src/runtime/err.rs": "fedbad97476008f494bf52f83c3d006f40f952d9",
+      "src/provider/rsa_kmgmt.rs": "bab6bb545b4f873dd8668862bb0868cb622d0fee",
+      "src/evp/pkey_asn1.rs": "b213b3a4989ed83166d1bb9ffb142a30dd39d69d"
+    }
+  },
+  "stop_status": "CLEAR - no confirmed memory-safety defect remains. One Rust UB mechanism (unsynchronised process-global ASN.1 method registry), one unchecked allocation-arithmetic class in the parameter builder, three allocator-seam coordinate divergences, one builder-block size divergence, one false unsafe Sync marker and one incomplete RSA load contract were found and repaired. FAST, BATCH (serial and --test-threads=4) pass, and the new checked-arithmetic control fires on the pre-fix shape. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/param_build.c (builder construction/free, definition push, conversion, secure/ordinary block allocation), crypto/http/http_client.c (REQ_CTX lifecycle, nbio state machine, open/exchange/get/transfer/close callback ownership), crypto/err/err.c + err_local.h + err_blocks.c + err_save.c (ERR_STATE ownership, slot buffers, queue reads, print callback), providers/implementations/keymgmt/rsa_kmgmt.c (object path, import/export, get_params, generation and load/dup), crypto/asn1/ameth_lib.c (application method registry, lookup, copy/free and engine arms), cross-checked line by line against the crate bodies.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] public handle or unsafe lint attribute changed. OSSL_PARAM_BLD is opaque; its block was reduced to the authority's three words and made #[repr(C)], with no change to any exported signature. The new std::sync::Mutex is private registry state.",
+    "external_contracts": [
+      "OSSL_PARAM_BLD keys and pushed value pointers are borrowed and must outlive to_param; to_param consumes the recorded definitions and returns one CRYPTO_malloc block (plus one CRYPTO_secure_malloc block when a secure value was pushed) released by OSSL_PARAM_free.",
+      "A secure value is one allocated by the secure heap; the builder writes it into the secure block and never into the ordinary block. A caller-installed allocator hook sees the authority's block extents or a refusal.",
+      "OSSL_HTTP_REQ_CTX owns its memory BIO, buffer, duplicated proxy/server/port/expected_ct strings and (when free_wbio is set) the wbio chain; rbio is borrowed. bio_update_fn is application code called at connect/disconnect only, with no Rust reference held.",
+      "The BIOs a request context drives may be application-defined. They must not re-enter an operation on the same rctx during nbio; the state machine holds an exclusive Rust reference across every BIO call.",
+      "ERR_STATE slot buffers are owned by the state only when ERR_TXT_MALLOCED is set; borrowed slot data must remain valid until the entry is cleared or replaced. Allocations record NULL/0; releases record the err_local.h/err.c site.",
+      "ERR_print_errors_cb copies each entry into a local buffer before invoking the application callback, so the callback may raise errors; the remaining queue entries are left in place when it returns <= 0.",
+      "RSA keydata is owned by the keymgmt dispatch caller; import/export copy or borrow caller BIGNUMs according to selection, and the export callback borrows the parameter array only for the duration of the call.",
+      "EVP_PKEY_ASN1_METHOD objects are caller-owned and must outlive the registry and every lookup that borrows them. Registration takes no reference and there is no unregister API, matching the authority."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B10-HTTP-1",
+      "file": "src/http/http_client.rs",
+      "mechanism": "OSSL_HTTP_REQ_CTX construction, buffer/string ownership and free",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D4"],
+      "residuals": [
+        "wbio is owned only when free_wbio is set; rbio is always borrowed, as in the authority. A caller-provided wbio is not released by OSSL_HTTP_REQ_CTX_free.",
+        "proxy/server/port/expected_ct are CRYPTO_strdup copies released at the authority's own lines; redirection_url is a borrow into buf and is never released by free."
+      ]
+    },
+    {
+      "id": "B10-HTTP-2",
+      "file": "src/http/http_client.rs",
+      "mechanism": "non-blocking request/response state machine over caller-driven BIOs",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D11"],
+      "residuals": [
+        "The state machine holds &mut OsslHttpReqCtx across BIO_read/BIO_write/BIO_gets/BIO_ctrl. A custom BIO method that re-enters any operation on the same rctx would form a second exclusive reference; its # Safety contract now excludes that re-entry.",
+        "buf is allocated for buf_size and BIO_gets is always called with exactly buf_size; the authority's 'line fills the buffer' and max-header-line refusals are retained before the in-place parse.",
+        "len_to_send/resp_len are bounded by the authority's checks and checked length helper, not by an arithmetic assertion."
+      ]
+    },
+    {
+      "id": "B10-HTTP-3",
+      "file": "src/http/http_client.rs",
+      "mechanism": "connect/disconnect callback ownership, redirection loop and response BIO up-ref",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "bio_update_fn is invoked with no Rust reference to rctx (open, before the context exists; close, through a raw field). It may free or replace the connection BIO, and the returned BIO becomes the context's wbio exactly as in the authority.",
+        "On a callback refusal the supplied/caller-owned BIO is not freed; only a helper-created BIO chain is released.",
+        "OSSL_HTTP_get owns each redirection URL before assigning it to current_url and frees host/port/path at the authority's sites; a same-server redirect reuses the live host/port.",
+        "A response BIO is up-ref'd before being returned when the context is still alive (authority parity)."
+      ]
+    },
+    {
+      "id": "B10-PARAM-1",
+      "file": "src/params/build.rs",
+      "mechanism": "builder allocation/teardown, definition ownership and the push windows",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D2", "B10-D3"],
+      "residuals": [
+        "The Vec body behind the authority's stack pointer is Rust-owned storage; its growth is invisible to CRYPTO_set_mem_functions and aborts on OOM rather than returning the authority's push failure. Total allocation parity is not claimed.",
+        "A push whose recorded size exceeds the eight-byte scalar recorder remains registered and later zero-fills, exactly as the authority leaves it.",
+        "Keys and value pointers are borrowed; the caller must keep them alive until to_param, and to_param empties the builder."
+      ]
+    },
+    {
+      "id": "B10-PARAM-2",
+      "file": "src/params/build.rs",
+      "mechanism": "ordinary/secure block sizing, conversion pointer arithmetic and secure-block attachment",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D1"],
+      "residuals": [
+        "Block counts are now checked at push and re-checked in to_param; the conversion advances by alloc_blocks * OSSL_PARAM_ALIGN_SIZE under that invariant. An unrepresentable extent is a refused push.",
+        "The UTF-8 terminator extent is size + 1; an unrepresentable size is refused rather than wrapping as the authority's size_t addition does (deliberate safety divergence, recorded).",
+        "A secure block failures raise PARAM_BUILD_471; the ordinary allocation failure releases the secure block and returns NULL without raising, matching the authority.",
+        "Parameter values pushed from the secure heap are SECRET_DATA and are laid out only in the secure block; the returned array's terminator carries the secure block for OSSL_PARAM_free."
+      ]
+    },
+    {
+      "id": "B10-ERR-1",
+      "file": "src/runtime/err.rs",
+      "mechanism": "ERR_STATE block ownership, thread-local/shared state access and save/restore",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D5", "B10-D6"],
+      "residuals": [
+        "The thread-local state has no destructor, exactly as before; only OSSL_ERR_STATE_new blocks are owned by OwnedErrState.",
+        "with_state reaches the shared per-thread state through dso_shared::err_state_ptr, so both DSOs observe one queue in the authority binding.",
+        "OSSL_ERR_STATE_save/save_to_mark/restore require a caller-owned state from OSSL_ERR_STATE_new; passing the thread's own state would alias, and the authority contracts likewise describe a preallocated separate state.",
+        "Error-queue text is PUBLIC_DATA metadata and is not cleansed; the authority does not cleanse it either."
+      ]
+    },
+    {
+      "id": "B10-ERR-2",
+      "file": "src/runtime/err.rs",
+      "mechanism": "slot ownership, data replacement/clearing and error reads",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D10"],
+      "residuals": [
+        "A returned file/func/data pointer remains owned by the ring slot and is valid only until the next ERR operation reuses or clears that slot (authority parity).",
+        "ERR_set_error_data takes ownership of a MALLOCED pointer and requires a whole seam block; without the flag the pointer is borrowed until the entry is cleared or replaced.",
+        "The ERR_add_error_txt length-bounded split at ERR_PRINT_BUF_SIZE - 100 is still not implemented (pre-existing recorded obligation).",
+        "ERR_error_string(NULL) writes a process-global 256-byte static buffer; the authority documents the function as not thread-safe, and the unsafe extern contract carries that obligation."
+      ]
+    },
+    {
+      "id": "B10-ERR-3",
+      "file": "src/runtime/err.rs",
+      "mechanism": "print callback and allocator-hook reentrancy edges",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D5"],
+      "residuals": [
+        "ERR_print_errors_cb copies an entry and releases the state reference before calling the application callback, so the callback may raise errors; there is no lock or &mut across it.",
+        "with_state allocates and releases inside its &mut closure, so the installed CRYPTO_set_mem_functions hooks run with that reference live. A hook that re-enters the ERR API on the same thread is now stated as outside the contract; the authority has the same hazard.",
+        "ERR_set_debug duplicates caller strings so a provider can unload while an error is queued."
+      ]
+    },
+    {
+      "id": "B10-RSA-1",
+      "file": "src/provider/rsa_kmgmt.rs",
+      "mechanism": "RSA/RSA-PSS object path, import/export and get_params ownership",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D8", "B10-D9"],
+      "residuals": [
+        "Keydata is owned by the keymgmt dispatch caller; this unit never releases it except through rsa_freedata.",
+        "rsa_export builds one builder array, passes it to the application callback for the call only, then frees it and the builder on every arm.",
+        "Imported private-key parameters are SECRET_DATA. They stay in the caller's BIGNUMs and in the key object; the provider does not copy them into a second ordinary-memory buffer.",
+        "common_load detaches the reference slot only after the sub-type check passes; a caller must provide an aligned slot and a live Rsa."
+      ]
+    },
+    {
+      "id": "B10-RSA-2",
+      "file": "src/provider/rsa_kmgmt.rs",
+      "mechanism": "generation context allocation, set_params, progress callback and cleanup",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "gen_init's failure path releases pub_exp with BN_free at the authority's line and the block with CRYPTO_free; rsa_gen_cleanup uses BN_clear_free for the same member, matching the two authority sites.",
+        "rsa_gencb invokes the application callback with parameters that point into its own frame; no lock or Rust reference is held across it. The callback may re-enter keymgmt.",
+        "The FIPS ACVP members are absent on this profile, as documented."
+      ]
+    },
+    {
+      "id": "B10-RSA-3",
+      "file": "src/provider/rsa_kmgmt.rs",
+      "mechanism": "load (reference detach) and duplicate",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D9"],
+      "residuals": [
+        "A reference of the wrong size is refused without dereferencing; a matching reference is read as a pointer-aligned *mut Rsa slot and is detached in place.",
+        "rsa_dup requires the keypair selection bit and delegates to ossl_rsa_dup."
+      ]
+    },
+    {
+      "id": "B10-ASN1-1",
+      "file": "src/evp/pkey_asn1.rs",
+      "mechanism": "process-global application method registry",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D7"],
+      "residuals": [
+        "The registry is now serialised by one non-reentrant mutex; the slot and every stack read/mutation run under it, so concurrent add/lookup is no longer a Rust data race.",
+        "A registry operation that raises an error allocates through the CRYPTO seam under the lock; an allocator hook that re-enters the registry would deadlock (authority-parity liveness, no UB).",
+        "The registry stores borrowed method pointers and has no unregister API; a caller that frees a registered DYNAMIC method leaves a dangling entry (authority parity, now stated in add0's contract)."
+      ]
+    },
+    {
+      "id": "B10-ASN1-2",
+      "file": "src/evp/pkey_asn1.rs",
+      "mechanism": "method allocation, duplication and destruction",
+      "disposition": "CONTRACTED",
+      "defects": ["B10-D12"],
+      "residuals": [
+        "EVP_PKEY_asn1_new's two CRYPTO_strdup blocks and the zalloc block are released by the authority's three free lines; a failed second duplicate drops the first through the same destructor.",
+        "EVP_PKEY_asn1_copy copies only the function-pointer body and restores the five identity/ownership members, including the self-copy case.",
+        "EVP_PKEY_asn1_free ignores a non-DYNAMIC method, so the standard static objects survive a call."
+      ]
+    },
+    {
+      "id": "B10-ASN1-3",
+      "file": "src/evp/pkey_asn1.rs",
+      "mechanism": "find/find_str/alias walk and exported callback tables",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "find_str takes one registry snapshot per call, so its count and per-index reads agree even while another thread registers; method pointers themselves are borrowed, caller-owned objects.",
+        "An alias cycle is an infinite loop, as in the authority; the engine arms are absent on this profile and are recorded rather than stubbed.",
+        "The standard method array and the two dispatch tables are immutable statics; the Sync marker on EvpPkeyAsn1Method covers only those compile-time objects."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B10-D1",
+      "file": "src/params/build.rs",
+      "pre_fix_line": 188,
+      "post_fix_line": 236,
+      "severity": "medium",
+      "class": "unchecked allocation/offset arithmetic (size + 1, blocks * align, array and block sums)",
+      "description": "param_push stored ossl_param_bytes_to_blocks(alloc) and added it to total_blocks/secure_blocks unchecked; to_param computed (1 + num) * sizeof(OSSL_PARAM), p_blks + total_blocks and align * blocks unchecked; push_utf8_string computed size + 1 unchecked. An extreme caller-asserted size could wrap, under-allocate, and then make param_bld_convert write pd.size bytes past the block.",
+      "fix": "push_utf8_string uses checked_add; param_push rejects a block extent whose align multiplication overflows and uses checked_add for both counters; to_param uses checked_add/checked_mul for the array size, block sum and secure size and fails before any allocation. The conversion still advances under the now-established invariant.",
+      "regression": "New control params::build::tests::unrepresentable_value_extent_is_refused_at_push. Negative control observed: disabling the param_push check makes it fail with left 1 / right 0; the check was restored and the test passes."
+    },
+    {
+      "id": "B10-D2",
+      "file": "src/params/build.rs",
+      "pre_fix_line": 47,
+      "post_fix_line": 47,
+      "severity": "low",
+      "class": "allocator-seam coordinate (bare file path and line 0 at every site)",
+      "description": "param_build.c is a plain .c, so the admitted build's __FILE__ is ../../src/openssl-3.6.4/crypto/param_build.c; the seam recorded crypto/param_build.c and line 0 for all allocations and releases. The authority's zalloc/free/malloc/secure sites are lines 55, 68, 93, 110, 119, 469, 475 and 477.",
+      "fix": "FILE now carries the source-tree prefix and each seam call uses its own site constant. The three definition windows distinguish the failed-push release (68) from free_all_params (110).",
+      "regression": "params::build tests and the full suite; no allocator-transcript court targets this unit (authority differential NOT_RUN)."
+    },
+    {
+      "id": "B10-D3",
+      "file": "src/params/build.rs",
+      "pre_fix_line": 89,
+      "post_fix_line": 109,
+      "severity": "low",
+      "class": "allocator-seam size (builder block 40 bytes instead of the authority's 24)",
+      "description": "The Vec was stored inline, so CRYPTO_zalloc(size_of::<OSSL_PARAM_BLD>()) requested 40 bytes where the authority requests two size_t plus a stack pointer (24). A caller-installed allocator hook observed the wrong num.",
+      "fix": "The builder is #[repr(C)] with total_blocks, secure_blocks and a pointer to a Rust-owned ParamDefs body; the block is 24 bytes, the Vec lives behind the pointer, and free reconstructs the Box before releasing the block.",
+      "regression": "New control params::build::tests::builder_block_keeps_the_authority_three_word_size."
+    },
+    {
+      "id": "B10-D4",
+      "file": "src/http/http_client.rs",
+      "pre_fix_line": 256,
+      "post_fix_line": 256,
+      "severity": "low",
+      "class": "allocator-seam coordinate (bare file path)",
+      "description": "http_client.c is a plain .c, so the authority's allocator hook sees ../../src/openssl-3.6.4/crypto/http/http_client.c; the seam recorded crypto/http/http_client.c on every OwnedBuf allocation/release. The error-raise sites already used the prefixed path.",
+      "fix": "FILE now carries the source-tree prefix; all allocation/release line numbers were already the authority's own.",
+      "regression": "Full suite; no allocator-transcript court targets this unit (authority differential NOT_RUN)."
+    },
+    {
+      "id": "B10-D5",
+      "file": "src/runtime/err.rs",
+      "pre_fix_line": 551,
+      "post_fix_line": 590,
+      "severity": "low",
+      "class": "allocator-seam coordinate (releases recorded NULL/0 instead of err_local.h/err.c)",
+      "description": "ERR allocations deliberately record NULL/0, but releases are asymmetric: err_clear_data/err_set_data/err_set_debug/err_clear free through OPENSSL_free at err_local.h:25/79/56/66/92/94, and OSSL_ERR_STATE_free frees the block at err.c:209. The crate recorded NULL/0 for every release.",
+      "fix": "Added ERR_LOCAL_FILE/ERR_C_FILE and the six release-line constants and used them in clear_data, set_data, set_debug, clear and OwnedErrState::drop; the module comment now states the allocation/release asymmetry.",
+      "regression": "runtime::err 14/0 and the full suite; no allocator-transcript court targets the error queue (authority differential NOT_RUN)."
+    },
+    {
+      "id": "B10-D6",
+      "file": "src/runtime/err.rs",
+      "pre_fix_line": 453,
+      "post_fix_line": 477,
+      "severity": "low",
+      "class": "unjustified unsafe Sync claim",
+      "description": "ErrState is a #[repr(C)] record of raw pointers and mutable per-thread fields, yet it carried unsafe impl Sync with a comment saying the marker was required by thread_local!. thread_local! needs only 'static, and UnsafeCell<ErrState> is !Sync regardless, so the claim was unnecessary and falsely advertised cross-thread sharing.",
+      "fix": "Removed the unsafe impl and replaced the comment with the correct per-thread/!Sync rationale. The crate compiles and the full suite passes without it.",
+      "regression": "Full suite."
+    },
+    {
+      "id": "B10-D7",
+      "file": "src/evp/pkey_asn1.rs",
+      "pre_fix_line": 356,
+      "post_fix_line": 373,
+      "severity": "medium",
+      "class": "data race / UB on the process-global application ASN.1 method registry",
+      "description": "app_methods was a static mut pointer read and mutated by add0, get_count, get0 and pkey_asn1_find with no synchronisation. Concurrent registration and lookup (or two registrations) is a Rust data race on the pointer and on the stack's Vec, and therefore UB; the authority has the same unsynchronised shape.",
+      "fix": "The slot and every stack read/mutation now go through one std::sync::Mutex<AppMethods>; a locked helper serves get_count/get0/pkey_asn1_find/find_str, and add0 holds the same lock for create/find/push/sort. No application callback runs under the lock.",
+      "regression": "evp::pkey_asn1 tests and the full suite. A Loom/TSan control for the concurrent case is NOT_RUN."
+    },
+    {
+      "id": "B10-D8",
+      "file": "src/provider/rsa_kmgmt.rs",
+      "pre_fix_line": 966,
+      "post_fix_line": 966,
+      "severity": "low",
+      "class": "narrowing-cast parity defect in the RSA bits floor check",
+      "description": "The floor check cast size_t nbits to c_int before comparing with RSA_MIN_MODULUS_BITS. The authority compares size_t against the int constant (promoted to size_t), so values >= 2^31 passed set_params in the authority but were rejected here.",
+      "fix": "Compared (*gctx).nbits with RSA_MIN_MODULUS_BITS as usize, preserving the authority's size_t comparison. The later (int) cast into RSA_generate_multi_prime_key is unchanged and still matches the authority.",
+      "regression": "Full suite; rsa_kmgmt has no unit test, so an authority differential for the >= 2^31 window is NOT_RUN."
+    },
+    {
+      "id": "B10-D9",
+      "file": "src/provider/rsa_kmgmt.rs",
+      "pre_fix_line": 1191,
+      "post_fix_line": 1191,
+      "severity": "low",
+      "class": "incomplete unsafe contract (alignment not stated)",
+      "description": "common_load reads and writes through *const *mut Rsa / *mut *mut Rsa, which requires pointer alignment and a non-NULL reference when the size matches; its # Safety stated only the readable extent.",
+      "fix": "The contract now requires non-NULL and suitable alignment for a *mut Rsa when reference_sz matches, and a live slot this call may clear.",
+      "regression": "Contract review; no runtime control for a misaligned reference exists (NOT_RUN)."
+    },
+    {
+      "id": "B10-D10",
+      "file": "src/runtime/err.rs",
+      "pre_fix_line": 874,
+      "post_fix_line": 946,
+      "severity": "low",
+      "class": "unchecked string-size sums feeding slot allocations",
+      "description": "attach_message, openssl_rs_err_set_error, openssl_rs_err_add_data and ERR_add_error_txt computed len + 1, old_len + add_len and old_len + sep_len + txt_len unchecked. A wrapped extent would under-allocate and then be copied into.",
+      "fix": "Each sum now uses checked_add and treats an unrepresentable extent like a refused allocation (no data attached).",
+      "regression": "runtime::err tests and the full suite; the arms require unrepresentable input and have no runtime canary (NOT_RUN)."
+    },
+    {
+      "id": "B10-D11",
+      "file": "src/http/http_client.rs",
+      "pre_fix_line": 1610,
+      "post_fix_line": 1610,
+      "severity": "low",
+      "class": "missing callback-reentrancy contract",
+      "description": "OSSL_HTTP_REQ_CTX_nbio holds &mut OsslHttpReqCtx across every BIO operation, but the # Safety contract did not exclude a custom BIO method re-entering the same rctx.",
+      "fix": "The contract now states that a custom BIO reached through mem/wbio/rbio must not re-enter an operation on the same rctx during the call.",
+      "regression": "Contract review; no custom-BIO reentrancy canary exists (NOT_RUN)."
+    },
+    {
+      "id": "B10-D12",
+      "file": "src/evp/pkey_asn1.rs",
+      "pre_fix_line": 435,
+      "post_fix_line": 479,
+      "severity": "low",
+      "class": "incomplete registration-lifetime contract",
+      "description": "EVP_PKEY_asn1_add0's contract required only a live method that outlives the registry; it did not state that releasing a registered DYNAMIC method leaves a dangling entry (there is no unregister API).",
+      "fix": "The contract now records the borrowed-lifetime/dangling-entry obligation, matching the authority.",
+      "regression": "Contract review."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "focused_tests": [
+        "params::build:: 2 passed / 0 failed (size parity and checked-extent control)",
+        "evp::pkey_asn1:: 2 passed / 0 failed",
+        "runtime::err (filter runtime::err covers err + err_state) 14 passed / 0 failed",
+        "provider::rsa_kmgmt:: 0 tests in module",
+        "http:: 0 tests in module"
+      ],
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS"
+    },
+    "batch": {
+      "library_serial": "1606 passed / 0 failed / 27 ignored (227.09 s, --test-threads=1)",
+      "library_threaded": "1606 passed / 0 failed / 27 ignored (97.95 s, --test-threads=4)",
+      "probes": [
+        "No affected OPENSSL_RS_ADV_PROBE arm exists for these five units."
+      ],
+      "negative_control": "Disabling the param_push extent check made params::build::tests::unrepresentable_value_extent_is_refused_at_push fail with left 1 / right 0; the check was restored and the test passes."
+    },
+    "not_run": [
+      "ASan / Miri / Loom / TSan for the five audited units",
+      "a concurrent-registry control for B10-D7 (the Mutex is the repair; no Loom/TSan run)",
+      "allocator-transcript/authority differentials for the params builder, HTTP client, error queue and RSA keymgmt",
+      "custom-BIO reentrancy and allocator-hook reentrancy canaries",
+      "misaligned-reference control for common_load",
+      "FRF-Fuzz residual replay",
+      "independent reviewer sign-off",
+      "SEAL forensic regeneration"
+    ]
+  },
+  "obligations": {
+    "discharged": [
+      "B10-D1 checked builder allocation/offset arithmetic",
+      "B10-D2/D4/D5 allocator-seam file and line coordinates",
+      "B10-D3 builder block size parity",
+      "B10-D6 false ErrState Sync claim",
+      "B10-D7 registry data race (serialised)",
+      "B10-D8 RSA bits floor comparison",
+      "B10-D9 common_load alignment contract",
+      "B10-D10 checked error-queue string extents",
+      "B10-D11 nbio BIO-reentrancy contract",
+      "B10-D12 registered-method lifetime contract"
+    ],
+    "retained": [
+      "A custom BIO method must not re-enter the same HTTP request context during nbio (now stated).",
+      "An allocator hook must not re-enter the ERR API from inside with_state's allocation/release windows (now stated; authority-parity hazard).",
+      "An allocator hook that re-enters the ASN.1 registry while it is locked would deadlock (liveness, authority parity).",
+      "Registered EVP_PKEY_ASN1_METHOD pointers are borrowed and caller-owned; no unregister API exists.",
+      "Builder keys and value pointers are borrowed until to_param; the Vec body is Rust-owned and invisible to the CRYPTO hook.",
+      "Returned error-queue string pointers are slot-owned and valid only until the next operation on that slot."
+    ],
+    "newly_introduced": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "src/http/http_client.rs": "CONTRACTED",
+    "src/params/build.rs": "CONTRACTED",
+    "src/runtime/err.rs": "CONTRACTED",
+    "src/provider/rsa_kmgmt.rs": "CONTRACTED",
+    "src/evp/pkey_asn1.rs": "CONTRACTED",
+    "safe_compatible": false,
+    "note": "No consumer family graduates. No safe Rust caller can reach UB through these modules: every exported entry is unsafe with a stated C contract, and the one safe-internal global (the ASN.1 registry) is now mutex-serialised. The retained callback/allocator-hook obligations are stated at the boundary."
+  },
+  "next": {
+    "ordinary_position": "src/dsa/object.rs (178), then src/x509/v3_ac_tgt.rs (190) and down the production-site ranking",
+    "boundary_queue": "none - the five M15 boundary-skipped files are audited; B1-B10 queue closed",
+    "large_file_deferral": "src/rsa/mod.rs (123)",
+    "remaining_known_follow_up": "none from B10"
+  }
+}

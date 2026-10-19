@@ -320,7 +320,13 @@ impl ErrState {
                 // Release the buffer this slot owns; the handle's `Drop` is the release.
                 // SAFETY: the MALLOCED flag says this state owns the pointer, and no other
                 // handle has released it.
-                unsafe { drop(OwnedStr::adopt(self.err_data[i], SeamFile::NULL, ERR_LINE)) };
+                unsafe {
+                    drop(OwnedStr::adopt(
+                        self.err_data[i],
+                        SeamFile::new(ERR_LOCAL_FILE),
+                        L_FREE_DATA_DEALL,
+                    ))
+                };
                 self.err_data[i] = core::ptr::null_mut();
                 self.err_data_size[i] = 0;
                 self.err_data_flags[i] = 0;
@@ -347,9 +353,17 @@ impl ErrState {
         // SAFETY: these pointers are always either NULL or owned by this state, and no
         // other handle has released them.
         unsafe {
-            drop(OwnedStr::adopt(self.err_file[i], SeamFile::NULL, ERR_LINE));
+            drop(OwnedStr::adopt(
+                self.err_file[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FILE_CLEAR,
+            ));
             self.err_file[i] = core::ptr::null_mut();
-            drop(OwnedStr::adopt(self.err_func[i], SeamFile::NULL, ERR_LINE));
+            drop(OwnedStr::adopt(
+                self.err_func[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FUNC_CLEAR,
+            ));
             self.err_func[i] = core::ptr::null_mut();
         }
     }
@@ -383,12 +397,20 @@ impl ErrState {
         // fresh duplicate is taken through the seam and stored raw, and the slot's previous
         // buffer is released by `Drop`. The release-then-allocate order is the authority's.
         unsafe {
-            drop(OwnedStr::adopt(self.err_file[i], SeamFile::NULL, ERR_LINE));
+            drop(OwnedStr::adopt(
+                self.err_file[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FILE_SET_DEBUG,
+            ));
             self.err_file[i] = match dup_c(file) {
                 Some(buf) => buf.into_raw(),
                 None => core::ptr::null_mut(),
             };
-            drop(OwnedStr::adopt(self.err_func[i], SeamFile::NULL, ERR_LINE));
+            drop(OwnedStr::adopt(
+                self.err_func[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FUNC_SET_DEBUG,
+            ));
             self.err_func[i] = match dup_c(func) {
                 Some(buf) => buf.into_raw(),
                 None => core::ptr::null_mut(),
@@ -411,7 +433,13 @@ impl ErrState {
             // Release the buffer this slot already owned before adopting the new one.
             // SAFETY: the MALLOCED flag says this state owns the pointer and no other
             // handle has released it; the new `data` is adopted raw below.
-            unsafe { drop(OwnedStr::adopt(self.err_data[i], SeamFile::NULL, ERR_LINE)) };
+            unsafe {
+                drop(OwnedStr::adopt(
+                    self.err_data[i],
+                    SeamFile::new(ERR_LOCAL_FILE),
+                    L_FREE_DATA_REPLACE,
+                ))
+            };
         }
         self.err_data[i] = data;
         self.err_data_size[i] = size;
@@ -446,11 +474,11 @@ impl ErrState {
     }
 }
 
-// SAFETY: the state is only ever reached through the thread-local `STATE`, so a
-// `&mut ErrState` derived from it is never observable by another thread. The
-// `Sync` marker is required by `thread_local!`, not a claim that this type is
-// shareable.
-unsafe impl Sync for ErrState {}
+// The state is only ever reached through the thread-local `STATE` (or the authority's
+// per-thread `ERR_get_state`), so no `Sync` marker is claimed for it: the struct contains raw
+// pointers and is deliberately not shareable. `thread_local!` needs only `'static`, and
+// `UnsafeCell<ErrState>` is `!Sync` regardless, which is the correct shape for per-thread
+// mutable state.
 
 /// The empty C string stored in place of NULL so the read side can hand back a
 /// non-NULL `""` without allocating, exactly as the authority does.
@@ -544,13 +572,38 @@ pub(crate) fn peek_last_lib() -> c_ulong {
     }
 }
 
-/// The `__FILE__`/`__LINE__` the error-state block and every per-slot buffer record.
+/// The `__FILE__`/`__LINE__` the error-state **allocations** record.
 ///
-/// The authority reaches the allocator directly for all of them rather than through the
-/// `OPENSSL_malloc`/`OPENSSL_free` macros, so the value it records is the inert one at every
-/// site — `NULL` and `0` — and that is what a caller's `CRYPTO_set_mem_functions` hook sees.
+/// The authority allocates every per-slot buffer and the `ERR_STATE` block by calling
+/// `CRYPTO_malloc`/`CRYPTO_zalloc` with the literal `NULL, 0` (the header's
+/// `CRYPTO_malloc(..., NULL, 0)` in `err_local.h` and the explicit `NULL, 0` in `err_save.c`),
+/// so those allocations record the inert coordinates. **Releases are not symmetric**: they go
+/// through `OPENSSL_free`, which records `OPENSSL_FILE`/`OPENSSL_LINE` at the `err_local.h` or
+/// `err.c` site that performs them. The release coordinates are therefore separate constants
+/// below; one `NULL`/`0` pair is not the contract for both halves.
 const ERR_FILE: *const c_char = core::ptr::null();
 const ERR_LINE: c_int = 0;
+
+/// `err_local.h` and `err.c` are the files whose `OPENSSL_free`/`CRYPTO_free` calls release a
+/// slot buffer and the state block. Both are plain source-tree files, so `__FILE__` carries the
+/// admitted build's prefix.
+const ERR_LOCAL_FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/err/err_local.h";
+const ERR_C_FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/err/err.c";
+
+/// `err_clear_data`'s `OPENSSL_free(es->err_data[i])` — `err_local.h:25`.
+const L_FREE_DATA_DEALL: c_int = 25;
+/// `err_set_debug`'s `OPENSSL_free(es->err_file[i])` — `err_local.h:56`.
+const L_FREE_FILE_SET_DEBUG: c_int = 56;
+/// `err_set_debug`'s `OPENSSL_free(es->err_func[i])` — `err_local.h:66`.
+const L_FREE_FUNC_SET_DEBUG: c_int = 66;
+/// `err_set_data`'s replacement release — `err_local.h:79`.
+const L_FREE_DATA_REPLACE: c_int = 79;
+/// `err_clear`'s `OPENSSL_free(es->err_file[i])` — `err_local.h:92`.
+const L_FREE_FILE_CLEAR: c_int = 92;
+/// `err_clear`'s `OPENSSL_free(es->err_func[i])` — `err_local.h:94`.
+const L_FREE_FUNC_CLEAR: c_int = 94;
+/// `OSSL_ERR_STATE_free`'s `CRYPTO_free(state, OPENSSL_FILE, OPENSSL_LINE)` — `err.c:209`.
+const L_FREE_STATE: c_int = 209;
 
 // A per-slot buffer: the allocation a ring slot keeps in `err_data` (when
 // `ERR_TXT_MALLOCED`), `err_file` or `err_func`, owned by `OwnedStr`.
@@ -562,7 +615,8 @@ const ERR_LINE: c_int = 0;
 // stores one into a slot and `OwnedStr::adopt` reclaims a slot's pointer for release, so the
 // `CRYPTO_malloc`/`CRYPTO_free` pair is no longer written by hand at a call site. The recorded
 // `__FILE__`/`__LINE__` are unchanged, so the hook observes the same file and line as it
-// observes for the authority's own `err_*` helpers.
+// observes for the authority's own `err_*` helpers: `NULL`/`0` for allocations and the
+// `err_local.h` site for each release.
 
 /// Allocate a fresh slot buffer of `len` bytes through the installed allocator at the inert
 /// `NULL`/`0` coordinates, or `None` when it answers NULL (the authority's refused
@@ -649,7 +703,11 @@ impl Drop for OwnedErrState {
         // owned per-slot buffer first.
         unsafe {
             (*self.ptr.as_ptr()).clear_all(true);
-            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ERR_FILE, ERR_LINE);
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                ERR_C_FILE.as_ptr(),
+                L_FREE_STATE,
+            );
         }
     }
 }
@@ -762,6 +820,15 @@ fn lib_loaded(lib: u32) -> bool {
 #[no_mangle]
 pub extern "C" fn err_free_strings_int() {}
 
+/// Run `f` with this thread's error state.
+///
+/// ## Reentrancy (retained obligation)
+///
+/// The closure runs with `&mut ErrState`, and several callers allocate or release inside it, so
+/// the installed `CRYPTO_set_mem_functions` hooks run while that reference is live. A hook that
+/// re-enters the ERR API on the same thread would form a second `&mut` to the same state. The
+/// authority has the same reentrancy hazard; suppressing it is a retained obligation, so such a
+/// hook is outside this crate's contract. No application callback is invoked from the closure.
 pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
     if init::stopped() {
         return None;
@@ -874,8 +941,12 @@ unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
     let len = unsafe { c_strlen(msg) };
     // The buffer is built through the owned handle and then handed to the slot raw; the
     // handle's `Drop` owns its release. A refused allocation attaches nothing, as the
-    // authority's own NULL `CRYPTO_malloc` does.
-    let Some(buf) = slot_buf_alloc(len + 1) else {
+    // authority's own NULL `CRYPTO_malloc` does. An unrepresentable extent cannot be
+    // allocated either, so it is treated the same way.
+    let Some(alloc) = len.checked_add(1) else {
+        return;
+    };
+    let Some(buf) = slot_buf_alloc(alloc) else {
         return;
     };
     // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
@@ -1005,7 +1076,10 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
             // SAFETY: `msg` is NUL-terminated per the caller's contract.
             let len = unsafe { c_strlen(msg) };
             // The owned buffer's `Drop` owns the release once the slot holds it.
-            let Some(buf) = slot_buf_alloc(len + 1) else {
+            let Some(alloc) = len.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
                 return;
             };
             // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
@@ -1112,8 +1186,13 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
                 } else {
                     0
                 };
-            let total = old_len + add_len;
-            let Some(buf) = slot_buf_alloc(total + 1) else {
+            let Some(total) = old_len.checked_add(add_len) else {
+                return;
+            };
+            let Some(alloc) = total.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
                 return;
             };
             // SAFETY: `buf` is `total + 1` fresh bytes; the old buffer (when `old_len` > 0)
@@ -1242,8 +1321,16 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
                 } else {
                     0
                 };
-            let total = old_len + sep_len + txt_len;
-            let Some(buf) = slot_buf_alloc(total + 1) else {
+            let Some(total) = old_len
+                .checked_add(sep_len)
+                .and_then(|n| n.checked_add(txt_len))
+            else {
+                return;
+            };
+            let Some(alloc) = total.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
                 return;
             };
             // SAFETY: `buf` is `total + 1` fresh bytes; the old data is valid for `old_len`,
