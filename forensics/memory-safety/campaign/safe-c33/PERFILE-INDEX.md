@@ -3797,3 +3797,44 @@ process-global default DRBG and would poison the rest of the suite.
 **Next eight (stable order).** `src/crmf/crmf_pbm.rs`, `src/ct/ct_b64.rs`, `src/ct/ct_policy.rs`,
 `src/ct/ct_prn.rs`, `src/ct/ct_sct_ctx.rs`, `src/ct/ct_sct.rs`, `src/ct/ct_vfy.rs`,
 `src/ct/ct_x509v3.rs`.
+
+## 49. Mechanism sweep M44 — 8-file ordinary batch — 2026-10-19
+
+Receipt: [`atlas-refresh/mechanism-sweep-M44.json`](atlas-refresh/mechanism-sweep-M44.json).
+Candidate `4452e95ac`; audit-only, no source change.
+
+| file | disposition | mechanisms / note |
+|---|---|---|
+| `src/crmf/crmf_pbm.rs` | audited_no_change | `OSSL_CRMF_{pbmp,pbm}_new`: salt and MAC-result `OwnedBuf`s at the authority coordinates, OWF iteration loop, and `basekey` cleansing before every free arm. `crmf_pbm.c:27-223` line-for-line; the `size_t`→`int`/`long` conversions are the authority's own. |
+| `src/ct/ct_b64.rs` | audited_no_change | `ct_base64_decode` allocates `3*(inlen/4)` and hands the block over only after a setter accepts it; `EVP_DecodeBlock` guarantees a multiple-of-four group, so the padding walk cannot underflow. Key DER dropped after `d2i_PUBKEY_ex`; CTLOG failure frees the pkey reference. |
+| `src/ct/ct_policy.rs` | audited_no_change | OB-3 `CtPolicyEvalCtx` (`CtxDestroy`, zero-state sweep), `propq` duplicate released by `OwnedBlock::take`, and the authority's gettimeofday/seconds/add/time2ms arithmetic. setters keep `X509_up_ref`-then-store. |
+| `src/ct/ct_prn.rs` | audited_no_change | `timestamp_print` has one `ASN1_GENERALIZEDTIME_free` on every non-NULL arm and a bounded 20-byte `BIO_snprintf`; `SCT_print`/`SCT_LIST_print` field and stack arithmetic match `ct_prn.c:132-240`. |
+| `src/ct/ct_sct_ctx.rs` | audited_no_change | OB-3 `SctCtx`, `OwnedStr` propq, `certder`/`preder` owner hand-off with the authority's err order, `pretmp` single free, and the key-hash allocator path. The authority's reused-`*hash` error-path free (`ct_public_key_hash`, site `:469`) is reproduced as documented (`:383-388`) and remains an unreachable, retained compatibility obligation. |
+| `src/ct/ct_sct.rs` | audited_no_change | OB-3 `Sct`, `SCT_LIST_free` pop-free thunk, set0/set1 incumbent release and re-duplication, the completeness predicates, and `SCT_validate`'s single-context/two-wrapper lifetime with cleanup on every exit. Matches `ct_sct.c:22-385`. |
+| `src/ct/ct_vfy.rs` | audited_no_change | `sct_ctx_update` writes exactly 12 bytes (`1+1+8+2`) and reuses the buffer for `l2n3`/`s2n`; `SCT_CTX_verify` checks completeness, version, log-id length/bytes and time before reading the signature, and frees the `EVP_MD_CTX` on every arm. |
+| `src/ct/ct_x509v3.rs` | audited_no_change | Poison hooks, `i2r` adapter, the two `d2i_SCT_LIST` wrappers (one `SCT_LIST_free` on the tag-failure arm, `*a` cleared) and the three-row table. The four const-fn transmutes are the established v3-table ABI-compatible callback casts; no ownership crosses the table. |
+
+**Defects repaired.** None. Every unit matches the pinned `openssl-3.6.4` authority; no source line changed.
+The only retained obligation is the pre-existing, documented `ct_sct_ctx::ct_public_key_hash` error arm
+(authority `ct_sct_ctx.c:200-242`) that frees a reused `*hash` block when `md` aliases it. It is not
+reachable from any in-crate caller (both calls pass `sctx`'s NULL hash slot) and does not become a new
+assumption.
+
+**Assumptions.** Unsafe assumptions eliminated: 0. Relocated: 0. New: 0. Hidden: 0. Contracts reused:
+OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy` plus zero-state sweeps, OB-4
+member-buffer slots, RC-1 seam coordinates, B19 cleansing, and the B1/B2/B6-B18 callback contracts for
+the x509v3 table callbacks.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused `ct::` 27 passed / 0 failed /
+4 ignored (the substring filter also matched `object::` names; all CT units pass); `crmf::` has no unit
+tests. BATCH `cargo clippy --all-targets -- -D warnings` clean; full library **1656 passed / 0 failed /
+27 ignored** with `--test-threads=1` (233.36 s) and with `--test-threads=4` (102.99 s). No dedicated
+CT/CRMF adversarial probe or court exists; the three zero-state sweeps and the `ct_log` log-id boundary
+test are the affected focused evidence and pass.
+
+**NOT_RUN.** BOUNDARY (audit-only; no shared mechanism or trust boundary changed); Miri (no component in
+the court toolchain); ASan; authority differential (no semantic change); SEAL.
+
+**Queue.** `REMAINING-AUDIT.txt` 372 → **364**; `AUDITED-FILES.txt` 391 → **399**.
+**Next eight (stable order).** `src/der_writer.rs`, `src/dh/asn1.rs`, `src/dh/backend.rs`,
+`src/dh/check.rs`, `src/dh/depr.rs`, `src/dh/gen.rs`, `src/dh/group_params.rs`, `src/dh/kdf.rs`.
