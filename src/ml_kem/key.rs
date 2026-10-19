@@ -677,9 +677,10 @@ unsafe fn add_storage(
 /// `ossl_ml_kem_key_reset(key)` — `ml_kem.c:1943-1967`.
 ///
 /// # Safety
-/// `key` must be live, or NULL.
+/// `key` must be live and non-NULL. The authority has no NULL test either; a NULL here is the
+/// caller's contract violation, not a refusal.
 pub(crate) unsafe fn ossl_ml_kem_key_reset(key: *mut MlKemKey) {
-    // SAFETY: `key` is live (or NULL, which returns above) per the contract.
+    // SAFETY: `key` is live per the contract.
     unsafe {
         if !(*key).seedbuf.is_null() {
             // `seedbuf` is this key's secure seed block; its handle's `Drop` runs the authority's
@@ -1041,8 +1042,12 @@ pub(crate) unsafe fn ossl_ml_kem_parse_public_key(
         }
         let vinfo = (*key).vinfo;
 
+        if len != (*vinfo).pubkey_bytes {
+            return 0;
+        }
+        // Allocate only after the length check, as the authority's short-circuiting `||` does.
         let mdctx = EVP_MD_CTX_new();
-        if len != (*vinfo).pubkey_bytes || mdctx.is_null() {
+        if mdctx.is_null() {
             return 0;
         }
 
@@ -1083,8 +1088,12 @@ pub(crate) unsafe fn ossl_ml_kem_parse_private_key(
         }
         let vinfo = (*key).vinfo;
 
+        if len != (*vinfo).prvkey_bytes {
+            return 0;
+        }
+        // Allocate only after the length check, as the authority's short-circuiting `||` does.
         let mdctx = EVP_MD_CTX_new();
-        if len != (*vinfo).prvkey_bytes || mdctx.is_null() {
+        if mdctx.is_null() {
             return 0;
         }
 
@@ -1135,6 +1144,9 @@ pub(crate) unsafe fn ossl_ml_kem_genkey(
 
         if !(*key).seedbuf.is_null() {
             if ossl_ml_kem_encode_seed(seed.as_mut_ptr(), seed.len(), key) == 0 {
+                // The authority's early return leaves this buffer untouched; cleanse it here so a
+                // partially copied seed cannot remain on the stack (§5 failure-path cleansing).
+                OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
                 return 0;
             }
             ossl_ml_kem_key_reset(key);
@@ -1145,11 +1157,16 @@ pub(crate) unsafe fn ossl_ml_kem_genkey(
             (*vinfo).secbits as u32,
         ) <= 0
         {
+            // A failed RNG call can have written a partial seed. The authority returns without
+            // cleansing; this port treats the residue as secret (§5).
+            OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
             return 0;
         }
 
         let mdctx = EVP_MD_CTX_new();
         if mdctx.is_null() {
+            // `seed` already holds fresh key material here; do not leave it on the stack.
+            OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
             return 0;
         }
 
@@ -1181,7 +1198,8 @@ pub(crate) unsafe fn ossl_ml_kem_genkey(
 /// `ossl_ml_kem_encap_seed(ctext, clen, shared_secret, slen, entropy, elen, key)` — `ml_kem.c:2293-2348`.
 ///
 /// # Safety
-/// The three buffers must be sized for the key's variant, as the authority's C requires.
+/// `key` must be live with a public key, and the three buffers must be sized for the key's
+/// variant, as the authority's C requires.
 pub(crate) unsafe fn ossl_ml_kem_encap_seed(
     ctext: *mut u8,
     clen: usize,
@@ -1198,15 +1216,19 @@ pub(crate) unsafe fn ossl_ml_kem_encap_seed(
         }
         let vinfo = (*key).vinfo;
 
-        let mdctx = EVP_MD_CTX_new();
+        // Validate before allocating, mirroring the authority's short-circuiting `||`: allocating
+        // first would leak the digest context on every rejected argument.
         if ctext.is_null()
             || clen != (*vinfo).ctext_bytes
             || shared_secret.is_null()
             || slen != ML_KEM_SHARED_SECRET_BYTES
             || entropy.is_null()
             || elen != ML_KEM_RANDOM_BYTES
-            || mdctx.is_null()
         {
+            return 0;
+        }
+        let mdctx = EVP_MD_CTX_new();
+        if mdctx.is_null() {
             return 0;
         }
 
@@ -1278,7 +1300,7 @@ pub(crate) unsafe fn ossl_ml_kem_encap_rand(
 /// `ossl_ml_kem_decap(shared_secret, slen, ctext, clen, key)` — `ml_kem.c:2372-2435`.
 ///
 /// # Safety
-/// The buffers must be sized for the key's variant.
+/// `key` must be live with a private key, and the buffers must be sized for the key's variant.
 pub(crate) unsafe fn ossl_ml_kem_decap(
     shared_secret: *mut u8,
     slen: usize,
@@ -1299,12 +1321,17 @@ pub(crate) unsafe fn ossl_ml_kem_decap(
         }
         let vinfo = (*key).vinfo;
 
-        let mdctx = EVP_MD_CTX_new();
-        if slen != ML_KEM_SHARED_SECRET_BYTES
+        // The authority creates the context inside the same short-circuiting condition, so a
+        // rejected argument leaves nothing to free. Do the same here.
+        let mdctx: *mut crate::evp::digest::EvpMdCtx = if slen != ML_KEM_SHARED_SECRET_BYTES
             || ctext.is_null()
             || clen != (*vinfo).ctext_bytes
-            || mdctx.is_null()
         {
+            ptr::null_mut()
+        } else {
+            EVP_MD_CTX_new()
+        };
+        if mdctx.is_null() {
             RAND_bytes_ex(
                 (*key).libctx,
                 shared_secret,
@@ -1378,6 +1405,10 @@ pub(crate) unsafe fn ossl_ml_kem_decap(
 }
 
 /// `ossl_ml_kem_pubkey_cmp(key1, key2)` — `ml_kem.c:2437-2452`.
+///
+/// # Safety
+/// `key1` and `key2` must each be live. The authority has no NULL test; a NULL here is the
+/// caller's contract violation, not a refusal.
 pub(crate) unsafe fn ossl_ml_kem_pubkey_cmp(key1: *const MlKemKey, key2: *const MlKemKey) -> c_int {
     // SAFETY: both are live per the contract.
     unsafe {
