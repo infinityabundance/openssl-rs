@@ -330,10 +330,19 @@ pub unsafe extern "C" fn BN_div(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (q_out, r_out, x, y) = unsafe { (as_mut(dv), as_mut(rem), as_ref(a), as_ref(b)) };
-        let (ad, an) = parts(x);
-        let (bd, bn) = parts(y);
+        // SAFETY: null-or-live per this function's `# Safety` section. The inputs are
+        // read through shared references whose uses end before either output is
+        // borrowed, so `a`/`b` may alias each other or either output.
+        let (ad, an) = {
+            // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+            let x = unsafe { as_ref(a) };
+            parts(x)
+        };
+        let (bd, bn) = {
+            // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+            let y = unsafe { as_ref(b) };
+            parts(y)
+        };
         let (q, r) = match div_rem_mag(&ad, &bd) {
             Some(qr) => qr,
             None => {
@@ -343,14 +352,19 @@ pub unsafe extern "C" fn BN_div(
             }
         };
         // The quotient is negative exactly when the signs differ, and the remainder
-        // takes the dividend's sign. The remainder is stored first so that a caller
-        // passing the same object for both slots sees the remainder, which is the
-        // authority's order too.
+        // takes the dividend's sign. Each output is borrowed and released in turn, so
+        // two `&mut` are never alive at once when a caller passes the same object for
+        // both slots. The remainder is stored first and the quotient last, so that
+        // aliased case ends with the quotient.
         let mut ok = true;
-        if let Some(dst) = r_out {
+        // SAFETY: `rem` is null-or-live per this function's `# Safety` section.
+        let rem_out = unsafe { as_mut(rem) };
+        if let Some(dst) = rem_out {
             ok &= store(Some(dst), r, an);
         }
-        if let Some(dst) = q_out {
+        // SAFETY: `dv` is null-or-live per this function's `# Safety` section.
+        let dv_out = unsafe { as_mut(dv) };
+        if let Some(dst) = dv_out {
             ok &= store(Some(dst), q, an != bn);
         }
         c_int::from(ok)
@@ -1238,6 +1252,36 @@ fn finish_sqrt(dst: Option<&mut BigNum>, inp: *mut BigNum, value: Vec<Limb>) -> 
             } else {
                 core::ptr::null_mut()
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::bignum::{BN_free, BN_get_word, BN_new, BN_set_word};
+
+    /// One object used for both `BN_div` outputs must stay defined: the two output
+    /// borrows are taken in turn rather than simultaneously, and the remainder is
+    /// stored first so the quotient is what remains in the shared object.
+    #[test]
+    fn div_accepts_one_object_for_both_outputs() {
+        // SAFETY: `BN_new` has no preconditions.
+        let a = unsafe { BN_new() };
+        // SAFETY: as above.
+        let b = unsafe { BN_new() };
+        // SAFETY: as above.
+        let out = unsafe { BN_new() };
+        assert!(!a.is_null() && !b.is_null() && !out.is_null());
+        // SAFETY: the three objects are live and this test owns them.
+        unsafe {
+            assert_eq!(BN_set_word(a, 17), 1);
+            assert_eq!(BN_set_word(b, 5), 1);
+            assert_eq!(BN_div(out, out, a, b, core::ptr::null_mut()), 1);
+            assert_eq!(BN_get_word(out), 3, "the quotient is stored last");
+            BN_free(a);
+            BN_free(b);
+            BN_free(out);
         }
     }
 }
