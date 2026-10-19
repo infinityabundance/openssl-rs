@@ -141,7 +141,9 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
     // SAFETY: `ret` is this call's own freshly zeroed block; each field write leaves a valid value.
     unsafe {
         (*ret).libctx = libctx;
-        (*ret).haspubkey = haspubkey as c_uint;
+        // `ret->haspubkey = haspubkey` assigns to a one-bit field, so the C conversion keeps only
+        // the low bit; the storage-unit model applies the same mask.
+        (*ret).haspubkey = (haspubkey as c_uint) & 1;
         (*ret).keylen = match type_ {
             ECX_KEY_TYPE_X25519 => X25519_KEYLEN,
             ECX_KEY_TYPE_X448 => X448_KEYLEN,
