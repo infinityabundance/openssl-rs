@@ -2534,3 +2534,67 @@ confirmed `NOT_RUN`, substitute `src/ocsp/ocsp_vfy.rs` (64), then
 
 Receipt:
 [`atlas-refresh/mechanism-sweep-M28.json`](atlas-refresh/mechanism-sweep-M28.json).
+
+## 33. Mechanism sweep M29 — 2026-10-19
+
+Source HEAD `5f03632b9`; branch `integrate/safe-c33`; worktree dirty
+(`src/rand/unix.rs`, `src/ts/ts_verify_ctx.rs`, this index and the M29
+receipt). Eight ordinary files from the M28-named batch. Both triaged
+boundaries were confirmed: `src/runtime/thread_events.rs` owns the thread-local
+event-handler stack and its TLS-destructor callback, and `src/runtime/init.rs`
+owns initialization ordering and caller-registered `OPENSSL_atexit` handlers.
+Both are `NOT_RUN`; the first two ranked substitutes,
+`src/ocsp/ocsp_vfy.rs` (64) and `src/bn/blinding.rs` (64), were audited.
+
+**M29 audited files (8).** `src/x509/v3_prn.rs`, `src/ffc/dh.rs`,
+`src/cmp/cmp_util.rs`, `src/cmp/cmp_status.rs`,
+`src/ts/ts_verify_ctx.rs`, `src/rand/unix.rs`, `src/ocsp/ocsp_vfy.rs`
+(substitute), `src/bn/blinding.rs` (substitute). `NOT_RUN`:
+`src/runtime/thread_events.rs` (thread-event callback boundary),
+`src/runtime/init.rs` (initialization/atexit callback boundary).
+
+**Defects.**
+
+| id | file:line (post-fix) | severity | class | fix |
+|---|---|---|---|---|
+| M29-D1 | `src/ts/ts_verify_ctx.rs:407` | high (read through NULL from C-valid state; authority has the same fault) | `TS_REQ_to_TS_VERIFY_CTX` passed `ASN1_STRING_get0_data(msg)` to `memcpy` whenever the length was positive; length 5 with `data == NULL` is constructible through exported `ASN1_STRING_set0` | capture the data pointer once and take the existing `err:` arm when NULL; control `ts::ts_verify_ctx::tests::req_to_ctx_refuses_positive_length_with_null_data` |
+| M29-D2 | `src/rand/unix.rs:120/124/127/131` | high (data race and aliasing UB from concurrent `RAND_bytes` / `RAND_keep_random_devices_open`; safe fns performed the access) | four `static mut` objects (`RANDOM_DEVICES`, `KEEP_RANDOM_DEVICES_OPEN`, `SHM_ADDR`, `SEEDED`) were mutated without synchronisation; two helpers dereferenced caller raw pointers under safe signatures | `Mutex` for the device cache (poison ignored), `AtomicI32`/`AtomicPtr` for the scalars, cache lock held only for the transition; `syscall_random` and `check_random_device` are now `unsafe fn` with stated contracts |
+| M29-D3 | `src/cmp/cmp_util.rs:300` | low (diagnostic text only) | `OSSL_CMP_print_errors_cb` omits the authority's `ERR_SYSTEM_ERROR`/`openssl_strerror_r` arm and uses the unmasked code in the `reason(%lu)` fallback | recorded, not repaired; needs the ERR `strerror` helper or a duplicated arm. No memory-safety effect |
+| M29-D4 | `src/x509/v3_prn.rs:146` | low (authority-parity NULL; needs a both-NULL `CONF_VALUE`) | `X509V3_EXT_val_prn` passes NULL to `BIO_puts` when both the entry's name and value are NULL; the authority and OpenSSL 4.0.2 have the same arm | recorded, not repaired; consistent later hardening batch |
+| M29-D5 | `src/cmp/cmp_status.rs:337` | low (authority-parity NULL; needs positive length with NULL data) | `snprint_PKIStatusInfo_parts` passes a NULL `ASN1_STRING` data pointer with a positive `%.*s` precision; `cmp_status.c` has the same arm | recorded, not repaired; same hardening class as M29-D4 |
+
+**Contracts reused.** RC-1, OB-1, OB-2, OB-3 (incl. the zero-state sweep),
+`X509V3_EXT_METHOD` dispatch and result ownership, `STACK_OF`
+CONF_VALUE/X509/OCSP_SINGLERESP/UTF8 ownership, ASN1 item ownership, the BIO
+printf/puts/FP contract, BN blinding/arithmetic contracts, RAND pool
+allocation/accounting. No new unsafe assumption; hidden obligations 0; unsafe
+expressions introduced/removed/relocated 3/12/0 (the 12 are raw static-mut
+accesses; two helper declarations were tightened to `unsafe fn` rather than
+adding capability).
+
+**Gates.** fmt PASS; clippy `--all-targets -- -D warnings` PASS; library
+**1631 passed / 0 failed / 27 ignored** serially (67.03 s) and with
+`--test-threads=4` (86.66 s). Focused: `ts::ts_verify_ctx` 2/0,
+`rand::unix` 4/0, `x509::v3_prn` 1/0, `ffc::dh` 7/0, `bn::blinding` 11/0;
+`cmp::cmp_util`, `cmp::cmp_status` and `ocsp::ocsp_vfy` have no module-local
+tests.
+
+**NOT_RUN.** The two triaged callback/initialization boundaries; the TS/CMP/
+OCSP differential probes (their runner links the committed `artifacts/phase2`
+shell); Miri on the FFI/syscall paths and TSan/ASan/Loom plus a static-mut
+negative control (BOUNDARY); independent review and SEAL. Nothing is promoted
+to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+**Next 8-file batch.** `src/x509/v3_info.rs` (63),
+`src/ts/ts_req_utils.rs` (63), `src/evp/e_rc2.rs` (63),
+`src/apps/pkeyutl.rs` (62), `src/asn1/a_verify.rs` (62), `src/dsa/mod.rs` (62),
+`src/evp/evp_pbe.rs` (62), `src/ffc/params.rs` (62). Held for the following
+batch: `src/ssl/tls_srp.rs` (62, protocol-adjacent). Inferred boundary
+candidates skipped: `src/encoder_pkey.rs`, `src/engine/tb_asnmth.rs`,
+`src/provider/decode_pvk2key.rs` (all 63, engine/provider dispatch surfaces).
+Deferred NOT_RUN: `engine/eng_ctrl.rs`, `ssl/record/rec_layer_s3.rs`,
+`provider/legacyprov.rs`, `provider/child.rs`, `runtime/lhash.rs` and the
+M22-retained boundaries.
+
+Receipt:
+[`atlas-refresh/mechanism-sweep-M29.json`](atlas-refresh/mechanism-sweep-M29.json).
