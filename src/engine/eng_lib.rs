@@ -733,7 +733,7 @@ pub unsafe extern "C" fn ENGINE_get_ex_data(e: *const Engine, idx: c_int) -> *mu
 /// `int ENGINE_set_id(ENGINE *e, const char *id)` — `crypto/engine/eng_lib.c:203-211`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_id(e: *mut Engine, id: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -751,7 +751,7 @@ pub unsafe extern "C" fn ENGINE_set_id(e: *mut Engine, id: *const c_char) -> c_i
 /// `int ENGINE_set_name(ENGINE *e, const char *name)` — `:213-221`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_name(e: *mut Engine, name: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -833,7 +833,7 @@ pub unsafe extern "C" fn ENGINE_set_ctrl_function(
 /// `int ENGINE_set_flags(ENGINE *e, int flags)` — `:247-251`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_flags(e: *mut Engine, flags: c_int) -> c_int {
     guard_ffi(0, || {
@@ -862,7 +862,7 @@ pub unsafe extern "C" fn ENGINE_set_cmd_defns(
 /// `const char *ENGINE_get_id(const ENGINE *e)` — `:259-262`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_id(e: *const Engine) -> *const c_char {
     guard_ffi(ptr::null(), || {
@@ -874,7 +874,7 @@ pub unsafe extern "C" fn ENGINE_get_id(e: *const Engine) -> *const c_char {
 /// `const char *ENGINE_get_name(const ENGINE *e)` — `:264-267`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_name(e: *const Engine) -> *const c_char {
     guard_ffi(ptr::null(), || {
@@ -898,7 +898,7 @@ pub unsafe extern "C" fn ENGINE_get_destroy_function(
 /// `ENGINE_GEN_INT_FUNC_PTR ENGINE_get_init_function(const ENGINE *e)` — `:274-277`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_init_function(e: *const Engine) -> Option<EngineGenIntFuncPtr> {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -920,7 +920,7 @@ pub unsafe extern "C" fn ENGINE_get_finish_function(
 /// `ENGINE_CTRL_FUNC_PTR ENGINE_get_ctrl_function(const ENGINE *e)` — `:284-287`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_ctrl_function(e: *const Engine) -> Option<EngineCtrlFuncPtr> {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -930,7 +930,7 @@ pub unsafe extern "C" fn ENGINE_get_ctrl_function(e: *const Engine) -> Option<En
 /// `int ENGINE_get_flags(const ENGINE *e)` — `:289-292`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_flags(e: *const Engine) -> c_int {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -940,7 +940,7 @@ pub unsafe extern "C" fn ENGINE_get_flags(e: *const Engine) -> c_int {
 /// `const ENGINE_CMD_DEFN *ENGINE_get_cmd_defns(const ENGINE *e)` — `:294-297`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_cmd_defns(e: *const Engine) -> *const EngineCmdDefn {
     // SAFETY: `e` is the caller's live ENGINE.

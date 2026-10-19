@@ -1,0 +1,211 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "cac592b4c",
+  "worktree": "source: src/engine/eng_all.rs, src/engine/eng_fat.rs, src/engine/eng_lib.rs, src/engine/eng_pkey.rs, src/engine/tb_cipher.rs, src/engine/tb_dh.rs, src/engine/tb_digest.rs, src/engine/tb_dsa.rs, src/ec/ecdh_ossl.rs, src/ec/ecdsa_ossl.rs; ledger: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 57 and this file.",
+  "scope": "The eight ordinary engine files named as next by M51, with eng_dyn.rs and eng_table.rs excluded as loader/callback boundaries and tb_digest.rs/tb_dsa.rs substituted. Repairs are safety-contract wording for functions whose bodies dereference e unconditionally (M52-D1/D2/D3) plus the M51 follow-up restoring two short EC allocator seam strings to the admitted __FILE__ prefix (M52-D4, metadata only). No production unsafe operation, FFI symbol, allocation extent/line, repr(C) layout, exported signature or unsafe lint attribute changed.",
+  "verification_level": "FAST+BATCH",
+  "files_dispositions_summary": {
+    "audited_no_change": 1,
+    "defect_repaired": 7
+  },
+  "hidden_obligations": 0,
+  "new_unsafe_assumptions": 0,
+  "unsafe_ops_removed": 0,
+  "unsafe_ops_relocated": 0,
+  "safety_contract_repairs": [
+    {
+      "id": "M52-D1",
+      "files": [
+        "src/engine/tb_cipher.rs",
+        "src/engine/tb_dh.rs",
+        "src/engine/tb_digest.rs",
+        "src/engine/tb_dsa.rs"
+      ],
+      "severity": "low",
+      "kind": "safety-contract-documentation",
+      "note": "Twenty-two # Safety clauses said e 'must be NULL or point to a live Engine' for ENGINE_unregister_*, ENGINE_register_*, ENGINE_set_default_* and the getter/setter pairs, whose bodies dereference e unconditionally. A permitted input that is UB is not a sound contract; each now requires a non-NULL live Engine. No code changed."
+    },
+    {
+      "id": "M52-D2",
+      "files": [
+        "src/engine/eng_lib.rs",
+        "src/engine/eng_pkey.rs"
+      ],
+      "severity": "low",
+      "kind": "safety-contract-documentation",
+      "note": "Fifteen clauses of the same class: eng_lib's nine element/getter accessors and eng_pkey's six loader setter/getter functions dereference e without a NULL test. The functions that do test NULL (ENGINE_free, engine_set_all_null, the ex-data pair, ENGINE_load_private_key/public_key/ssl_client_cert) keep the NULL-tolerant wording. No code changed."
+    },
+    {
+      "id": "M52-D3",
+      "files": [
+        "src/engine/eng_fat.rs"
+      ],
+      "severity": "low",
+      "kind": "safety-contract-documentation",
+      "note": "ENGINE_set_default, ENGINE_set_default_string and ENGINE_register_complete now require a non-NULL live Engine, matching the arm bodies they dispatch to. No code changed."
+    },
+    {
+      "id": "M52-D4",
+      "files": [
+        "src/ec/ecdh_ossl.rs",
+        "src/ec/ecdsa_ossl.rs"
+      ],
+      "severity": "none",
+      "kind": "allocator-seam",
+      "note": "The M51 follow-up: FILE is now ../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c at :61 and ../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c at :66, restoring the admitted build record's __FILE__ for the CRYPTO_malloc/CRYPTO_clear_free and OPENSSL_free coordinates. M49 ownership evidence is unaffected."
+    }
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/engine/eng_all.rs",
+      "mechanisms": [
+        "ENGINE_load_builtin_engines (OPENSSL_INIT_ENGINE_ALL_BUILTIN)",
+        "guard_ffi wrapper"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/engine/eng_all.c: the transcription is the authority's own OPENSSL_init_crypto call; the still-unsupported ENGINE_* init bit remains the recorded divergence, so no engine is registered in this crate."
+    },
+    {
+      "file": "src/engine/eng_fat.rs",
+      "mechanisms": [
+        "ENGINE_set_default method-mask dispatch",
+        "int_def_cb and CONF_parse_list error operand",
+        "ENGINE_set_default_string",
+        "ENGINE_register_complete / ENGINE_register_all_complete",
+        "engine_unregister_from_all_tables safety hardening"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/eng_fat.c. M52-D3 contract repair. The all-tables unregistration on ENGINE_remove remains the recorded deliberate improvement over the authority's dangling borrowed table entry."
+    },
+    {
+      "file": "src/engine/eng_lib.rs",
+      "mechanisms": [
+        "Engine #[repr(C)] layout (224 bytes, asserted offsets)",
+        "RawEngine partial-construction owner",
+        "OwnedEngine last-reference owner",
+        "checked refcount sentinel (up_ref/down_ref)",
+        "ENGINE_new / engine_free_util / ENGINE_free",
+        "engine_set_all_null field inventory",
+        "cleanup stack and OwnedItem",
+        "ex_data and element accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/eng_lib.c. M52-D2 contract repair. RawEngine releases only the block on ENGINE_new's CRYPTO_new_ex_data refusal; OwnedEngine runs the authority's pkey-method free, destroy hook, dynamic unlink, ex-data free and single block release in the authority's order. engine_set_all_null matches eng_lib.c:56-75 exactly, including its deliberate non-clearing of ec_meth/pkey_meths/pkey_asn1_meths/load_ssl_client_cert."
+    },
+    {
+      "file": "src/engine/eng_pkey.rs",
+      "mechanisms": [
+        "ENGINE_set/get_load_privkey_function",
+        "ENGINE_set/get_load_pubkey_function",
+        "ENGINE_set/get_load_ssl_client_cert_function",
+        "ENGINE_load_private_key",
+        "ENGINE_load_public_key",
+        "ENGINE_load_ssl_client_cert"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/eng_pkey.c (3.5.0 shape): NULL, funct_ref, then no-loader refusal order; the entry points forward the caller's loader and arguments verbatim. M52-D2 contract repair."
+    },
+    {
+      "file": "src/engine/tb_cipher.rs",
+      "mechanisms": [
+        "cipher_table static and slot",
+        "ENGINE_register/unregister/set_default_ciphers",
+        "ENGINE_get_cipher_engine / ENGINE_get_cipher",
+        "ENGINE_get/set_ciphers callback accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_cipher.c. M52-D1 contract repair. The callback is the observable; no in-crate caller selects through this table."
+    },
+    {
+      "file": "src/engine/tb_dh.rs",
+      "mechanisms": [
+        "dh_table static and dummy_nid",
+        "ENGINE_register/unregister/set_default_DH",
+        "ENGINE_get_default_DH",
+        "ENGINE_get/set_DH method accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_dh.c. M52-D1 contract repair. DH_METHOD remains opaque in this unit."
+    },
+    {
+      "file": "src/engine/tb_digest.rs",
+      "mechanisms": [
+        "digest_table static and slot",
+        "ENGINE_register/unregister/set_default_digests",
+        "ENGINE_get_digest_engine / ENGINE_get_digest",
+        "ENGINE_get/set_digests callback accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_digest.c. Substitute for the boundary file eng_table.rs; M52-D1 contract repair."
+    },
+    {
+      "file": "src/engine/tb_dsa.rs",
+      "mechanisms": [
+        "dsa_table static and dummy_nid",
+        "ENGINE_register/unregister/set_default_DSA",
+        "ENGINE_get_default_DSA",
+        "ENGINE_get/set_DSA method accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_dsa.c. Substitute for the boundary file eng_dyn.rs; M52-D1 contract repair."
+    }
+  ],
+  "not_run_files": [
+    {
+      "file": "src/engine/eng_dyn.rs",
+      "reason": "Loader boundary: DSO load/bind, dynamic_fns callbacks, dynamic_ctrl command dispatch and the dynamic engine's ex_data context. Requires its own BOUNDARY pass. Left in REMAINING-AUDIT.txt."
+    },
+    {
+      "file": "src/engine/eng_table.rs",
+      "reason": "Callback boundary: lhash doall callbacks, engine init/finish callbacks invoked while the engine lock is held, and the reusable EnginePile CtxDestroy contract. Requires its own BOUNDARY pass. Left in REMAINING-AUDIT.txt."
+    }
+  ],
+  "not_run": [
+    "RT-ENGINE phase-13/phase-16 authority differential (not rebuilt or replayed for this batch)",
+    "allocator-transcript probe for the two restored EC seam strings (not re-executed)",
+    "Miri (no component in the court toolchain)",
+    "ASan (documentation and seam metadata only, no memory-access-pattern change)",
+    "BOUNDARY for eng_dyn.rs and eng_table.rs (deferred; both remain queued)",
+    "SEAL"
+  ],
+  "tests": {
+    "focused": "cargo test --lib engine:: -- --test-threads=4: 19 passed / 0 failed / 0 ignored (1667 filtered)",
+    "adv_probes": "none replayed; no allocator-transcript probe exists for the two changed seam strings",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "fmt": "cargo fmt --all -- --check clean",
+    "lib_serial": "1659 passed / 0 failed / 27 ignored (230.71 s, --test-threads=1)",
+    "lib_threads4": "1659 passed / 0 failed / 27 ignored (94.92 s, --test-threads=4)"
+  },
+  "queue_after_batch": {
+    "remaining_audit": 300,
+    "audited_files": 463,
+    "next_eight": [
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_table.rs",
+      "src/engine/tb_eckey.rs",
+      "src/engine/tb_pkmeth.rs",
+      "src/engine/tb_rand.rs",
+      "src/engine/tb_rsa.rs",
+      "src/ess/ess_asn1.rs",
+      "src/evp/algorithm.rs"
+    ]
+  },
+  "reconciliation": {
+    "canonical_audited_before_batch": 455,
+    "canonical_unaudited_before_batch": 308,
+    "canonical_audited_after_batch": 463,
+    "canonical_unaudited_after_batch": 300,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 2,
+    "method": "The eight audited files were removed from REMAINING-AUDIT.txt (eng_dyn.rs and eng_table.rs were retained as NOT_RUN boundaries); the eight were merged into AUDITED-FILES.txt in path order. Counts are entries, not files touched."
+  },
+  "retained_observations": [
+    "The same NULL-permissive # Safety wording remains in the still-unaudited tb_eckey.rs, tb_pkmeth.rs, tb_rand.rs and tb_rsa.rs siblings; it should be repaired when those files are audited.",
+    "The M49 ownership evidence for ecdh_ossl/ecdsa_ossl is unaffected by the seam metadata repair; only the reported allocator coordinate changes, and it now matches the admitted build record.",
+    "engine_set_all_null intentionally leaves ec_meth, pkey_meths, pkey_asn1_meths and load_ssl_client_cert uncleared, exactly as eng_lib.c:56-75 does; this is not an omission.",
+    "ENGINE_set_ex_data/ENGINE_get_ex_data answer 0/NULL for a NULL engine where the authority dereferences it (C UB). This existing in-crate safety improvement is recorded here rather than silently inherited.",
+    "The batch contains no secret copy and no constant-time claim; engine method tables are public data and no cryptographic algorithm was changed."
+  ]
+}

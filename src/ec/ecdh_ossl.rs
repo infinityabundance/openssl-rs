@@ -58,7 +58,7 @@ use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 
 /// The translation-unit coordinate the one allocation/release pair in this unit is attributed to,
 /// as the allocator reports it.
-const FILE: *const c_char = c"crypto/ec/ecdh_ossl.c".as_ptr();
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c".as_ptr();
 
 /// The shared-secret buffer, owned by this call until it is handed to the caller.
 ///

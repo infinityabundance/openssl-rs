@@ -63,7 +63,7 @@ use crate::runtime::err::raise_site;
 /// The translation-unit coordinate the one `OPENSSL_free` in this unit is attributed to, as the
 /// allocator reports it: `OPENSSL_free(der)` is a macro expanded at `ecdsa_ossl.c:437`, so
 /// `OPENSSL_FILE` there is this unit's own path.
-const FILE: *const c_char = c"crypto/ec/ecdsa_ossl.c".as_ptr();
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c".as_ptr();
 
 /// `MIN_ECDSA_SIGN_ORDERBITS` — `crypto/ec/ecdsa_ossl.c:24`. The floor below which `ecdsa_sign_setup`
 /// refuses rather than risking the pre-allocation loop never terminating.
