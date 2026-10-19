@@ -512,3 +512,11 @@ src/mac/hmac.rs
 src/mac/poly1305.rs
 src/mac/siphash.rs
 src/mac/ssl3_cbc.rs
+src/ml_dsa/hash.rs
+src/ml_dsa/mod.rs
+src/ml_dsa/ntt.rs
+src/ml_dsa/sample.rs
+src/ml_dsa/sign.rs
+src/ml_kem/key.rs
+src/ml_kem/mod.rs
+src/modes/ccm.rs
