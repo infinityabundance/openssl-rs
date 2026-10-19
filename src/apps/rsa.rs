@@ -28,6 +28,11 @@
 //!   no encoder for a public-key structure the crate's provider does not publish; the
 //!   court's RSA fixtures re-encode through the provider, so the fallback is
 //!   transcribed but not exercised.
+//! * **`-RSAPublicKey_in` is not landed.** The authority maps it to
+//!   `FORMAT_PEMRSA`/`FORMAT_ASN1RSA`, whose PKCS#1 `RSA PUBLIC KEY` decoder has no
+//!   arm in [`crate::apps::keyio::load_pubkey`]; accepting the flag and decoding a
+//!   SubjectPublicKeyInfo instead would change the requested format, so the arm
+//!   reaches [`not_landed`].
 //! * **`-help` is not landed.** `opt_help` is the boundary
 //!   [`crate::apps::opt`] records.
 //! * The `-rand`/`-writerand` and provider-selection arms reach unlanded `apps/lib`
@@ -173,7 +178,9 @@ pub fn main(argv: &[String]) -> i32 {
             // `case OPT_PUBOUT: pubout = 1; break;` — `apps/rsa.c:196-198`.
             OptMatch::Flag("pubout") => pubout = 1,
             // `case OPT_RSAPUBKEY_IN: pubin = 2; break;` — `apps/rsa.c:199-201`.
-            OptMatch::Flag("RSAPublicKey_in") => pubin = 2,
+            // The PKCS#1 `RSA PUBLIC KEY` input decoder (`FORMAT_PEMRSA`/
+            // `FORMAT_ASN1RSA`) is not landed (see the header).
+            OptMatch::Flag("RSAPublicKey_in") => return not_landed("rsa -RSAPublicKey_in"),
             // `case OPT_RSAPUBKEY_OUT: pubout = 2; break;` — `apps/rsa.c:202-204`.
             OptMatch::Flag("RSAPublicKey_out") => pubout = 2,
             // `case OPT_PVK_STRONG: case OPT_PVK_WEAK: case OPT_PVK_NONE: pvk_encr =

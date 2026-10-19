@@ -3206,3 +3206,82 @@ output paths.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M36.json`](atlas-refresh/mechanism-sweep-M36.json).
+
+## 41. Mechanism sweep M37 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `330816a1f` plus the three repairs
+described below; contracts checked against OpenSSL 3.6.4
+(`apps/{pkeyparam,pkey,prime,rand,req,rsa,sess_id,skeyutl}.c` and
+`apps/lib/opt.c` read at the pinned tag).
+
+**Scope:** the eight `src/apps/*` CLI front-ends M36 named as next. The audit
+covered argument-string lifetimes (`Opts` copies argv, so no `&[String]`
+escapes), file/BIO ownership on every exit, option-array bounds, error tails,
+allocation arithmetic, getter-returned pointers and body-owned raw pointers.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/apps/pkeyparam.rs` | `bio_open` stdio/file split, `PEM_read_bio_Parameters_ex`, `EVP_PKEY_CTX_new_from_pkey`, `EVP_PKEY_param_check`, `PEM_write_bio_Parameters`/`EVP_PKEY_print_params`, `BIO_free`/`BIO_free_all` | No defect. `inbio` and `out` are released once on every return; the `-check` valid arm keeps the context live until after the write; `BIO_write`'s length is the 21-byte literal. |
+| `src/apps/pkey.rs` | `load_key`/`load_pubkey`, `EVP_PKEY_CTX_new`/`EVP_PKEY_check`, `PEM_write_bio_PrivateKey`/`_traditional`/`PUBKEY`, `i2d_PKCS8PrivateKey_bio`/`i2d_PUBKEY_bio`/`i2d_PrivateKey_bio`, `EVP_PKEY_print_*`, output BIO | No defect. `pkey`/`out` are released once on every exit; the `-ec_conv_form`/`-ec_param_enc` arm frees both before refusing; `private` is retained only for the shared permission divergence below. |
+| `src/apps/prime.rs` | `BN_hex2bn`/`BN_dec2bn` out-slot, `BN_print`/`BN_check_prime`, `BN_bn2hex`/`BN_bn2dec` adoption through `OwnedBlock`, `BIO_get_line`/`BUFSIZE` bounds, `hex_digit_prefix` | No defect. `BIO_get_line` writes at most `BUFSIZE-1` bytes and NUL-terminates, so `hex_digit_prefix` stops at index `BUFSIZE-1` and `buf[n] = 0` is in bounds; the `BN_bn2hex`/`BN_bn2dec` block is one adopted allocation with the `OPENSSL_free` seam at `(NULL, 0)`. |
+| `src/apps/rand.rs` | `opt_long`/`strtol` suffix parse, `RAND_bytes_ex` chunking, `BIO_f_base64` push, `BIO_write`/`BIO_puts`/`BIO_ctrl` flush, output BIO | No defect. `chunk <= 1<<16` and `hex.len() <= 1<<17` fit the `c_int` write count; `scaled_num` is bounded by `UINT64_MAX >> 3` before the loop; the base64 chain is released once by `BIO_free_all`. Matches OpenSSL 3.6.4 (which has no `-n`). |
+| `src/apps/req.rs` | `load_csr` BIO ownership/stdin arm, `X509_REQ_get0_pubkey`, `X509_REQ_verify`, `X509_REQ_print_ex`, `print_name`, `PEM_write_bio_PUBKEY`, request writers, output BIO | Repaired two defects: a NULL `X509_REQ_get0_pubkey` result skipped `-verify` and could exit 0; and `load_csr` refused a NULL filename instead of reading stdin as `load_csr_autofmt` does. `req`/`out` are released once on every return. |
+| `src/apps/rsa.rs` | `load_key`/`load_pubkey`, `EVP_PKEY_is_a`, `EVP_PKEY_get_bn_param`/`BN_print`, `EVP_PKEY_CTX_new_from_pkey`/`EVP_PKEY_check`, `OSSL_ENCODER_CTX_new_for_pkey`/`to_bio`/`_free`, `try_legacy_encoding`, output BIO | Repaired one compatibility defect: `-RSAPublicKey_in` set `pubin = 2` but `keyio::load_pubkey` has no PKCS#1 public-key arm, so it decoded a different format; the arm now reaches `not_landed`. `pkey`, `out` and `ectx` are released once on every exit. |
+| `src/apps/sess_id.rs` | `load_sess_id` BIO ownership, `PEM_read_bio_SSL_SESSION`, `SSL_SESSION_get0_peer`, `SSL_SESSION_set1_id_context`, `SSL_SESSION_print`/`_print_keylog`, `X509_print`, `i2d_X509_bio`, request writers, output BIO | No defect. `peer` is borrowed from `x` and used only while `x` is live; `out` is NULL when `-noout` suppresses printing and `BIO_free_all(NULL)` is the authority's no-op; `x`/`out` are released once on every return. |
+| `src/apps/skeyutl.rs` | `EVP_SKEYMGMT_fetch`/`EVP_SKEY_generate`, `EVP_SKEY_get0_*` getters, `EVP_SKEY_free`/`EVP_SKEYMGMT_free`, `EVP_CIPHER_free`, `bio_err` BIO | No defect. `cstr` never retains a getter pointer past the call; `skey` is NULL-or-live before the single `EVP_SKEY_free`; `mgmt` is released after `skey`; the stderr BIO is NOCLOSE and freed once per arm. |
+
+**Defects repaired (none is UB).** `req` silently skipped `-verify` when
+`X509_REQ_get0_pubkey` answered NULL and could then return success (medium,
+verification bypass by false success); `req` refused a NULL `-in` instead of
+reading stdin (low, incomplete transcription); `rsa -RSAPublicKey_in` accepted
+the flag but used the SubjectPublicKeyInfo decoder (low, wrong format accepted).
+No invalid free, double free, null dereference, alias, uninitialised read or new
+hidden obligation was found.
+
+**New unsafe assumptions (hidden must be 0).** None. No unsafe operation was
+added: the `req` guard reuses the existing `X509_REQ_get0_pubkey` and
+`X509_REQ_free` calls, the stdin arm reuses `keyio::bio_open_default`, and the
+`rsa` arm only returns `not_landed`. No new FFI symbol, allocator coordinate,
+`#[repr(C)]` layout or signature. Contracts reused: the `Opts` copying/bounds
+contract (`rest`/`num_rest`/`check_rest_arg`), the keyio `bio_open_default`
+stdio/file contract, OB-3-style NULL-tolerant single release, the `OwnedBlock`
+adoption contract for `BN_bn2hex`/`BN_bn2dec`, and the `BIO_NOCLOSE`
+standard-stream contract.
+
+**Evidence.** FAST: fmt clean; `cargo check --lib` PASS; `cargo test --lib --
+apps::` **0 passed / 0 failed** (1,675 filtered — these front-ends have no unit
+tests); `cargo test --lib -- x509_req` **3 passed**. Targeted control: a direct
+`apps::req::main` probe on the court's `req.pem` returned 0 with `Certificate
+request self-signature verify OK`; the same CSR with its SPKI algorithm OID
+rewritten to unassigned `1.2.840.113549.1.1.99` (so `X509_REQ_get0_pubkey` is
+NULL) returned **1** and printed no OK line. BATCH: clippy `--all-targets -D
+warnings` PASS; library **1648 passed / 0 failed / 27 ignored** serially
+(220.78 s) and with `--test-threads=4` (93.48 s). No test removed or newly
+ignored.
+
+**NOT_RUN.** `courts/phase17/rt_cli_bodies_probe.sh` was not run: the crate has no
+CLI bin target and the probe's candidate shim points at the pre-batch
+`artifacts/phase2/openssl`. The `-RSAPublicKey_in` decoder path is unlanded, so
+its authority parity is untested. Miri (Stacked/Tree Borrows), ASan/TSan/Loom,
+authority differential replay for all eight units, independent adversarial
+review and SEAL are `NOT_RUN`. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`.
+
+**Retained obligations (non-UB).** The shared `bio_open_owner` permission
+divergence remains for `pkey`/`rsa` private-key output (and the other apps that
+use `bio_open_default` for an owner-mode file); `req` parses `-days` with
+`str::parse`/`unwrap_or(0)` where the authority uses `opt_int_arg` and
+`UNSET_DAYS = -2` (only the unlanded `-x509` arm consumes it); `pkey`/`rsa`
+accept only the PEM/DER input formats, not the authority's `OPT_FMT_ANY`
+`P12`; every error tail omits the pointer-bearing `ERR_print_errors` lines;
+`-RSAPublicKey_in` is now explicitly unlanded until a PKCS#1 public-key decoder
+is added to `keyio`.
+
+**Queue.** `REMAINING-AUDIT.txt` 430 → **422**; `AUDITED-FILES.txt` 333 → **341**.
+
+**Next eight (stable order).** `src/apps/speed.rs`, `src/apps/spkac.rs`,
+`src/apps/storeutl.rs`, `src/apps/ts.rs`, `src/apps/verify.rs`,
+`src/apps/version.rs`, `src/apps/x509.rs`, `src/asn1_dsa.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M37.json`](atlas-refresh/mechanism-sweep-M37.json).
