@@ -37,7 +37,7 @@ use core::ptr::{self, NonNull};
 
 use crate::asn1::layout::{Asn1String, V_ASN1_UNDEF};
 use crate::asn1::p8_pkey::{PKCS8_pkey_get0, Pkcs8PrivKeyInfo};
-use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_STRING_get0_data, ASN1_STRING_length};
+use crate::asn1::string::{ASN1_STRING_clear_free, ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::asn1::typ::d2i_ASN1_OCTET_STRING;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_get0};
 use crate::ec::curve25519::{ossl_ed25519_public_from_private, ossl_x25519_public_from_private};
@@ -517,6 +517,11 @@ pub unsafe extern "C" fn ossl_ecx_key_op(
 /// [`ossl_ecx_key_op`]'s `p == NULL` check — and frees the decoded `ASN1_OCTET_STRING` even when
 /// it is NULL.
 ///
+/// **Recorded safety improvement.** The decoded octet string is a copy of the raw private
+/// scalar, so it is released with `ASN1_STRING_clear_free` rather than the authority's plain
+/// `ASN1_OCTET_STRING_free`: the bytes hold key material and must not remain in a freed block.
+/// The allocation/free seam coordinates and the return value are unchanged.
+///
 /// # Safety
 /// `p8inf` is live; `libctx`/`propq` are NULL or live; the answer is a fresh key the caller owns.
 #[no_mangle]
@@ -561,8 +566,9 @@ pub unsafe extern "C" fn ossl_ecx_key_from_pkcs8(
             propq,
         )
     };
-    // SAFETY: `oct` is NULL or live and this call owns it.
-    unsafe { ASN1_OCTET_STRING_free(oct) };
+    // SAFETY: `oct` is NULL or live and this call owns it. The clear-free variant cleanses the
+    // private-key octets before release; the authority's plain free is the recorded deviation.
+    unsafe { ASN1_STRING_clear_free(oct) };
     ecx
 }
 

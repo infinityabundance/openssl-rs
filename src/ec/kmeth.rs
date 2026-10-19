@@ -57,8 +57,9 @@ use crate::runtime::ex_data::{CRYPTO_new_ex_data, CRYPTO_EX_INDEX_EC_KEY};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 
 /// The translation-unit coordinate the `OPENSSL_zalloc`/`OPENSSL_strdup`/`OPENSSL_free` sites in
-/// this unit are attributed to, as the allocator reports them.
-const FILE: *const c_char = c"crypto/ec/ec_kmeth.c".as_ptr();
+/// this unit are attributed to, as the allocator reports it. `crypto/ec/ec_kmeth.c` is a
+/// source-tree file, so its `__FILE__` carries the admitted build record's prefix.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c".as_ptr();
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of the objects this unit allocates
