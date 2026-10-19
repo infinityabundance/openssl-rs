@@ -4565,3 +4565,95 @@ provider-table termination/NUL contract, the reserve/unreserve callback pairing
 **Next eight (stable order).** `src/evp/e_aes_cbc_hmac_sha256.rs`,
 `src/evp/e_bf.rs`, `src/evp/e_cast.rs`, `src/evp/e_des.rs`, `src/evp/e_idea.rs`,
 `src/evp/e_rc4_hmac_md5.rs`, `src/evp/e_rc4.rs`, `src/evp/e_seed.rs`.
+
+## 61. Per-file audit M54 — legacy EVP cipher carriers (eight files)
+
+**Candidate.** `integrate/safe-c33` at `e686b3642` plus this batch's worktree edits.
+Files: `src/evp/e_aes_cbc_hmac_sha256.rs`, `src/evp/e_bf.rs`,
+`src/evp/e_cast.rs`, `src/evp/e_des.rs`, `src/evp/e_idea.rs`,
+`src/evp/e_rc4_hmac_md5.rs`, `src/evp/e_rc4.rs`, `src/evp/e_seed.rs`.
+Authority: the pinned 3.6.4 `crypto/evp/e_*.c` files (cross-checked against
+3.5.9, 3.4.8, 3.0.0 and 1.1.1w where an expression was in doubt).
+
+**Disposition.** Seven files are clean transcriptions whose statics, mode
+loops, key lengths, block sizes, flags, ASN.1 views and ctx sizes match the
+authority field for field. Two genuine defects were found and repaired in the
+stitched AES-CBC-HMAC-SHA256 carrier, and one authority-UB reproduction was
+closed in the RC4-HMAC-MD5 control.
+
+**Defects repaired.**
+- M54-D1 (high, compatibility / caller buffer sizing):
+  `src/evp/e_aes_cbc_hmac_sha256.rs:220` answered
+  `EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE` with the SHA-1 digest constant
+  (`arg + 20 + 16`) instead of the SHA-256 one (`arg + 32 + 16`; authority
+  `e_aes_cbc_hmac_sha256.c:807-808` in every checked release). For a
+  representative TLS fragment of 16384 the answer was 16437 instead of 16453;
+  a caller sizing a multiblock output buffer from the control answer could be
+  sixteen bytes short. The value is now computed by
+  `tls11_multiblock_max_bufsize`, which uses `SHA256_DIGEST_LENGTH` and
+  refuses an overflowing fragment size with `-1` (the authority's signed
+  addition is undefined there). Controls:
+  `evp::e_aes_cbc_hmac_sha256::tests::the_tls11_max_bufsize_reserves_a_sha256_digest`
+  and `..._refuses_overflow` (2 passed).
+- M54-D2 (medium, authority-UB reproduction):
+  `src/evp/e_rc4_hmac_md5.rs:228` passed a negative
+  `EVP_CTRL_AEAD_SET_MAC_KEY` length through `arg as usize`, i.e. a
+  `SIZE_MAX`-byte read from the caller's pointer. The authority converts the
+  same `int` to `size_t` and faults; a negative key length is never valid, so
+  the callback now answers `-1` instead of reproducing the fault (§17).
+- M54-D3 (medium, authority-UB reproduction): the same command in
+  `src/evp/e_aes_cbc_hmac_sha256.rs:181` now refuses a negative length, and
+  its `EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT` arm now refuses an `arg` smaller
+  than `EvpCtrlTls11MultiblockParam` before dereferencing `ptr_`, matching the
+  provider arm's recorded deliberate divergence and the `_AAD` sibling's
+  existing test.
+
+**Adjacent observation (not edited).** The already-audited sibling
+`src/evp/e_aes_cbc_hmac_sha1.rs` (AUDITED-FILES.txt:282) carries the same two
+negative/undersized legacy-control patterns at `:191` and `:255`. It was not
+in this batch and was not re-audited; queue it for a small follow-up repair
+with the same two guards (its `MAX_BUFSIZE` constant is already the correct
+SHA-1 `20`).
+
+**Secret-bearing storage and cleansing.** Every key schedule
+(`ProvAesHmacSha256Ctx.ks`, `head/tail/md`, `Rc4Key`, `BfKey`, `CastKey`,
+`DesKeySchedule`, `IdeaKeySchedule`, `SeedKeySchedule`) lives in the legacy
+`cipher_data` block and is cleansed by the shared
+`EVP_CIPHER_CTX_reset`/`OwnedCtx` path with `OPENSSL_cleanse(cipher_data,
+ctx_size)` before `CRYPTO_free`; no per-file `cleanup` callback is needed and
+none is installed, matching the authority's NULL `cleanup`. The scratch
+`hmac_key[64]` in RC4-HMAC-MD5 and in the provider's
+`aesni_cbc_hmac_sha256_set_mac_key` is cleansed before return. IDEA's decryption
+schedule temporary is `MaybeUninit`, filled by `IDEA_set_encrypt_key`, and
+cleansed after use. `aux`/`payload_length` hold TLS AAD and length metadata
+(public), and are not cleansed. The RC4-HMAC-MD5 local `mac` holds the wire
+MAC (public) and is not cleansed. No constant-time claim is made anywhere in
+this batch.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`evp::e_` **18 passed / 0 failed** (including the two new formula controls).
+BATCH: `cargo clippy --all-targets -- -D warnings` clean; full library
+**1662 passed / 0 failed / 27 ignored** serial (64.31 s) and with
+`--test-threads=4` (98.74 s; 1689 total), in the court with
+`CARGO_BUILD_JOBS=4`. No newly ignored test and no unexplained removal
+(previous batch: 1660 passed / 27 ignored; +2 are this batch's controls).
+
+**NOT_RUN.** Miri (no component in the pinned toolchain); ASan/valgrind on the
+negative-length arms (no in-tree fixture constructs a legacy cipher context
+for these private controls; the guards are compile- and review-verified);
+constant-time/dudect analysis (no secret-dependent branch was introduced; the
+authority parity claim is not a timing result); `RT-CIPHER` differential for
+the MAX_BUFSIZE answer; FRF/probe suite; SEAL.
+
+**Assumptions.** Eliminated: 1 (the wrong size answer no longer exists).
+Relocated: 0. New: 0. Hidden: 0. No new production unsafe operation was
+introduced; no exported symbol, signature, `#[repr(C)]` layout, or allocator
+coordinate changed. The legacy `EVP_CIPHER` objects remain carriers whose
+`ctrl` callbacks are reachable only through an engine; their caller contract
+is unchanged, and the three new refusals only reject calls that were invalid
+or undefined in the authority.
+
+**Queue.** `REMAINING-AUDIT.txt` 289 -> **281**; `AUDITED-FILES.txt` 474 -> **482**.
+**Next eight (stable order).** `src/evp/e_sm4.rs`, `src/evp/evp_cnf.rs`,
+`src/evp/evp_lib.rs`, `src/evp/e_xcbc_d.rs`, `src/evp/keymgmt_lib.rs`,
+`src/evp/legacy_blake2.rs`, `src/evp/legacy_evp.rs`, `src/evp/legacy_md4.rs`.

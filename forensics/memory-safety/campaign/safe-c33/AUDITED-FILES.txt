@@ -472,3 +472,11 @@ src/x509/x_ietfatt.rs
 src/x509/x_name.rs
 src/x509/x_pubkey.rs
 src/x509/x_x509.rs
+src/evp/e_aes_cbc_hmac_sha256.rs
+src/evp/e_bf.rs
+src/evp/e_cast.rs
+src/evp/e_des.rs
+src/evp/e_idea.rs
+src/evp/e_rc4_hmac_md5.rs
+src/evp/e_rc4.rs
+src/evp/e_seed.rs
