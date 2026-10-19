@@ -177,6 +177,16 @@ pub unsafe extern "C" fn PKCS12_PBE_keyivgen_ex(
 
     // SAFETY: `cipher` is live per the contract; `md` is live per the contract.
     let klen = unsafe { EVP_CIPHER_get_key_length(cipher) };
+    // SAFETY: `cipher` is live per the contract.
+    let ivlen = unsafe { EVP_CIPHER_get_iv_length(cipher) };
+    // `key`/`iv` are the authority's `EVP_MAX_KEY_LENGTH`/`EVP_MAX_IV_LENGTH` stack arrays, and
+    // the derivation writes exactly `klen`/`ivlen` bytes. A cipher advertising a longer key or IV
+    // overruns them in the authority; §17 forbids reproducing that, so refuse before deriving.
+    if klen > EVP_MAX_KEY_LENGTH as c_int || ivlen > EVP_MAX_IV_LENGTH as c_int {
+        // SAFETY: `pbe` is this call's own decode.
+        unsafe { ASN1_item_free(pbe.cast::<c_void>(), &PBEPARAM_ITEM) };
+        return 0;
+    }
     // SAFETY: `pass` is a string per the contract; the other arguments are as declared.
     let keygen = unsafe {
         PKCS12_key_gen_utf8_ex(
@@ -198,11 +208,17 @@ pub unsafe extern "C" fn PKCS12_PBE_keyivgen_ex(
         unsafe { raise_site(&err_sites::PKCS12_CRPT_55) };
         // SAFETY: `pbe` is this call's own decode.
         unsafe { ASN1_item_free(pbe.cast::<c_void>(), &PBEPARAM_ITEM) };
+        // The authority returns without cleansing its stack buffers. `key` is secret and may
+        // hold a partial derivation; cleanse both, a deliberate failure-path improvement.
+        // SAFETY: both buffers are this frame's own.
+        unsafe {
+            OPENSSL_cleanse(key.as_mut_ptr().cast(), EVP_MAX_KEY_LENGTH);
+            OPENSSL_cleanse(iv.as_mut_ptr().cast(), EVP_MAX_IV_LENGTH);
+        }
         return 0;
     }
 
     // SAFETY: `cipher` is live per the contract.
-    let ivlen = unsafe { EVP_CIPHER_get_iv_length(cipher) };
     let piv: *const c_uchar = if ivlen > 0 {
         // SAFETY: `pass` is a string per the contract; `iv` is this frame's 16-byte buffer and
         // `ivlen <= 16` for every cipher the table names.
@@ -226,6 +242,13 @@ pub unsafe extern "C" fn PKCS12_PBE_keyivgen_ex(
             unsafe { raise_site(&err_sites::PKCS12_CRPT_64) };
             // SAFETY: `pbe` is this call's own decode.
             unsafe { ASN1_item_free(pbe.cast::<c_void>(), &PBEPARAM_ITEM) };
+            // `key` already holds the derived key; cleanse both buffers before returning (the
+            // authority does not), a deliberate failure-path improvement.
+            // SAFETY: both buffers are this frame's own.
+            unsafe {
+                OPENSSL_cleanse(key.as_mut_ptr().cast(), EVP_MAX_KEY_LENGTH);
+                OPENSSL_cleanse(iv.as_mut_ptr().cast(), EVP_MAX_IV_LENGTH);
+            }
             return 0;
         }
         iv.as_ptr()

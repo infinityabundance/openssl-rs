@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/pem/pem_x509.rs
-src/pem/pem_xaux.rs
-src/pkcs12/p12_add.rs
-src/pkcs12/p12_asn.rs
-src/pkcs12/p12_attr.rs
-src/pkcs12/p12_crpt.rs
-src/pkcs12/p12_decr.rs
-src/pkcs12/p12_init.rs
 src/pkcs12/p12_key.rs
 src/pkcs12/p12_mutl.rs
 src/pkcs12/p12_npas.rs

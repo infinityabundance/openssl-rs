@@ -73,7 +73,7 @@ pub unsafe extern "C" fn PKCS12_get_attr_gen(
 /// `crypto/pkcs12/p12_attr.c:17-26`.
 ///
 /// # Safety
-/// `bag` is live; `name` is readable for `namelen` bytes.
+/// `bag` is live; `name` is readable for `namelen` bytes, or NUL-terminated when `namelen == -1`.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_add_localkeyid(
     bag: *mut Pkcs12Safebag,
@@ -114,7 +114,8 @@ pub unsafe extern "C" fn PKCS8_add_keyusage(p8: *mut Pkcs8PrivKeyInfo, usage: c_
 /// `crypto/pkcs12/p12_attr.c:39-48`.
 ///
 /// # Safety
-/// `bag` is live; `name` is readable for `namelen` bytes.
+/// `bag` is live; `name` is readable for `namelen` bytes, or NUL-terminated when `namelen == -1`
+/// (the callee's `ASN1_STRING_set_by_NID` arm measures the string then).
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_add_friendlyname_asc(
     bag: *mut Pkcs12Safebag,
@@ -138,7 +139,7 @@ pub unsafe extern "C" fn PKCS12_add_friendlyname_asc(
 /// `crypto/pkcs12/p12_attr.c:50-59`.
 ///
 /// # Safety
-/// `bag` is live; `name` is readable for `namelen` bytes.
+/// `bag` is live; `name` is readable for `namelen` bytes, or NUL-terminated when `namelen == -1`.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_add_friendlyname_utf8(
     bag: *mut Pkcs12Safebag,
@@ -162,7 +163,7 @@ pub unsafe extern "C" fn PKCS12_add_friendlyname_utf8(
 /// int namelen)` — `crypto/pkcs12/p12_attr.c:61-70`.
 ///
 /// # Safety
-/// `bag` is live; `name` is readable for `namelen` bytes.
+/// `bag` is live; `name` is readable for `namelen` bytes, or NUL-terminated when `namelen == -1`.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_add_friendlyname_uni(
     bag: *mut Pkcs12Safebag,
@@ -186,7 +187,7 @@ pub unsafe extern "C" fn PKCS12_add_friendlyname_uni(
 /// `crypto/pkcs12/p12_attr.c:72-80`.
 ///
 /// # Safety
-/// `bag` is live; `name` is readable for `namelen` bytes.
+/// `bag` is live; `name` is readable for `namelen` bytes, or NUL-terminated when `namelen == -1`.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_add_CSPName_asc(
     bag: *mut Pkcs12Safebag,
@@ -250,7 +251,9 @@ pub unsafe extern "C" fn PKCS12_add1_attr_by_txt(
 /// [`OPENSSL_uni2utf8`].
 ///
 /// # Safety
-/// `bag` is live. The answer is a fresh allocation the caller owns.
+/// `bag` is live, and a present `NID_friendlyName` attribute is a well-formed `ASN1_TYPE`
+/// (a successful decode or one of this unit's add helpers establishes that). The answer is a
+/// fresh allocation the caller owns.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS12_get_friendlyname(bag: *mut Pkcs12Safebag) -> *mut c_char {
     // SAFETY: `bag` is live.

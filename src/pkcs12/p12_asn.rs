@@ -635,7 +635,7 @@ const _: () = {
 
 /// The authority's `__FILE__` for this unit, used by the memory functions whose file/line are the
 /// call's rather than a raised coordinate.
-const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_asn.c";
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/pkcs12/p12_asn.c";
 
 /// `PKCS12_seq_tt` — `ASN1_SEQUENCE(PKCS12)` at `crypto/pkcs12/p12_asn.c:19-23`: `version`, the
 /// `authsafes` `PKCS7` and the optional `mac`. The order is the template's, not the struct's
