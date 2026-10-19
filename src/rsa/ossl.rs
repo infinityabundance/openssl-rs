@@ -2233,6 +2233,13 @@ unsafe extern "C" fn rsa_ossl_init(rsa: *mut Rsa) -> c_int {
 /// whose caches were never built — the common case for a key that was only ever used publicly, and
 /// for every object this crate constructs in a court — is released correctly.
 ///
+/// **Every released slot is cleared.** `RSA_set_method` calls this hook on each method transition
+/// and then installs the new table; the authority leaves the freed pointers in the slots, so a
+/// second `RSA_set_method` (or the next private operation, through `BN_MONT_CTX_set_locked`'s
+/// non-NULL fast path) would read or release freed storage. Clearing the slots is a deliberate
+/// divergence from `rsa_ossl.c:1179-1195` (§17: do not reproduce the authority's UB) and is not
+/// observable to any caller that uses a released context correctly.
+///
 /// The extra-prime loop is `#ifndef FIPS_MODULE`'s, which holds on this profile. `RSA_MAX_PRIME_NUM`
 /// bounds nothing here: the loop runs to the stack's own count, and `RSA_set0_multi_prime_params`
 /// is what refused an over-long stack.
@@ -2249,12 +2256,18 @@ unsafe extern "C" fn rsa_ossl_finish(rsa: *mut Rsa) -> c_int {
             // SAFETY: the stack's elements are `RSA_PRIME_INFO` records of this object's, and
             // `m` is NULL or a Montgomery context this object's cache arm created.
             BN_MONT_CTX_free((*pinfo).m);
+            // SAFETY: `pinfo` is the same live record read above; the context it named was just
+            // released, so the slot is cleared before any second `finish` can see it.
+            (*pinfo).m = ptr::null_mut();
             n += 1;
         }
 
         BN_MONT_CTX_free((*rsa)._method_mod_n);
+        (*rsa)._method_mod_n = ptr::null_mut();
         BN_MONT_CTX_free((*rsa)._method_mod_p);
+        (*rsa)._method_mod_p = ptr::null_mut();
         BN_MONT_CTX_free((*rsa)._method_mod_q);
+        (*rsa)._method_mod_q = ptr::null_mut();
     }
     1
 }
@@ -2393,6 +2406,26 @@ mod tests {
                 crate::rsa::object::RSA_test_flags(&rsa, RSA_FLAG_CACHE_PRIVATE),
                 0
             );
+            assert_eq!(rsa_ossl_finish(&mut rsa), 1);
+        }
+    }
+
+    /// `rsa_ossl_finish` clears every slot it releases, so calling it twice is a no-op rather
+    /// than a second release of freed storage. `RSA_set_method` invokes it on every method
+    /// transition, so the dangling-pointer state the authority leaves behind would be reachable
+    /// through a second `RSA_set_method` (or the next private operation's cache lookup).
+    #[test]
+    fn the_finish_hook_clears_every_slot_it_releases() {
+        // SAFETY: every object is created and released here; the hook takes only the object.
+        unsafe {
+            let mut rsa = super::super::mp::zeroed_rsa();
+            let mont = crate::bn::mont::BN_MONT_CTX_new();
+            assert!(!mont.is_null());
+            rsa._method_mod_n = mont;
+
+            assert_eq!(rsa_ossl_finish(&mut rsa), 1);
+            assert!(rsa._method_mod_n.is_null());
+            // The negative control: before the repair this second call released the same block.
             assert_eq!(rsa_ossl_finish(&mut rsa), 1);
         }
     }
