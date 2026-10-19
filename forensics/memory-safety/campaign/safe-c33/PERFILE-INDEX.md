@@ -3365,3 +3365,92 @@ NULL-refused by the library, matching the authority.
 
 **Machine-readable receipt:**
 [`atlas-refresh/mechanism-sweep-M38.json`](atlas-refresh/mechanism-sweep-M38.json).
+
+## 43. Mechanism sweep M39 — 2026-10-19
+
+**Source identity:** `integrate/safe-c33` at `e14d89768` plus the four repairs
+described below; contracts checked against OpenSSL 3.6.4
+(`crypto/asn1/{evp_asn1,i2d_evp,nsseq,p5_pbe,p5_pbev2,p5_scrypt,p8_pkey}.c` and
+the generated `ASN1_ITEM`/`ASN1_TEMPLATE` descriptors).
+
+**Scope:** the eight files M38 named as next. The audit covered the ASN.1 item
+descriptors and their callbacks, allocated-block ownership in the PBE/PBKDF2/
+scrypt builders, the fixed `EVP_MAX_IV_LENGTH` stack buffers, PKCS#8 private-key
+cleansing and release, and the provided/legacy key DER writer hand-offs. Salt
+and IV buffers were classified as public AlgorithmIdentifier contents; the
+`PKCS8_PRIV_KEY_INFO.pkey` octets as secret and cleansing-required.
+
+| File | Mechanisms exercised | Disposition |
+|---|---|---|
+| `src/asn1/evp_asn1.rs` | `asn1_int_oct`/`asn1_oct_int` items, borrowed local octet string over the caller's buffer, `ASN1_TYPE_pack_sequence`/`_unpack_sequence`, unpack-temporary free | No defect. The local string is a view and is never freed; the temporary is released once on every arm. The added `n > 0`/non-NULL guards only change the authority's C-invalid inputs (where it has UB). |
+| `src/asn1/i2d_evp.rs` | `i2d_provided` chain walk, ENCODER context lifecycle, legacy `ameth` encoders, `ossl_evp_pkey2pkcs8` temporary | No defect. Each ENCODER context is released once; the temporary PKCS#8 is released once through the p8_pkey item (and now takes the repaired cleanse/release). Output buffers are caller-owned. |
+| `src/asn1/layout.rs` | `repr(C)` item/template/AUX/ADB/TLC/PCTX/SCTX descriptors, four `unsafe impl Sync` claims | No defect. Definition-only unit; the Sync claims cover load-once statics of scalars, raw pointers and function pointers. |
+| `src/asn1/nsseq.rs` | `NETSCAPE_CERT_SEQUENCE` item, `nsseq_cb` NEW_POST, shared `OBJ_nid2obj` static, item codecs | No defect. The callback borrows the static OID exactly as the authority; object free refuses the static origin. Certificates are public data. |
+| `src/asn1/p5_pbe.rs` | `PBEPARAM` item, `SaltBuf`, `ASN1_STRING_set0` transfer, `X509_ALGOR_set0` adoption | Repaired one allocator-seam coordinate: the RAND-failure block is released at `p5_pbe.c:76` (the `OPENSSL_free` the `goto` reaches), not at the `:59` goto. Ownership and ordering already matched. |
+| `src/asn1/p5_pbev2.rs` | `PBE2PARAM`/`PBKDF2PARAM`/`PBMAC1PARAM` items, `SaltBuf` at asn1_lib coordinates, 16-byte stack IV, cipher-context lifecycle | Repaired a latent stack overflow: the IV copy/draw trusted `EVP_CIPHER_get_iv_length` with no upper bound, reachable via `EVP_CIPHER_meth_set_iv_length`. Lengths above `EVP_MAX_IV_LENGTH` now take the bare `err:` tail (cms_enc/pem_bridge precedent). |
+| `src/asn1/p5_scrypt.rs` | `SCRYPT_PARAMS` item, `ASN1_STRING_set` salt copy/grow, 16-byte stack IV, `EVP_PBE_scrypt` probe | Repaired the same unvalidated-IV-length overflow. Salt handling (copy, in-place draw, negative-length strlen semantics) matches the authority. |
+| `src/asn1/p8_pkey.rs` | `PKCS8_PRIV_KEY_INFO` item, `pkey_cb` FREE_PRE/D2I_POST, `PKCS8_pkey_set0`/`_get0`, attributes | Repaired a private-key block leak: FREE_PRE cleansed the `ASN1_STRING` object itself, zeroing the `data`/`length` that `ASN1_STRING_free` reads next, so every PKCS#8 free leaked the octets. Only the contents are cleansed now (`length` clamped at zero), matching `p8_pkey.c:27`; a regression test pins that the owner stays releasable. |
+
+**Defects repaired.** One resource/compatibility leak and two latent
+memory-safety defects: `p8_pkey.rs:202` zeroed the octet string object in
+`ASN1_OP_FREE_PRE`, leaking `pkey->data` on every `PKCS8_PRIV_KEY_INFO_free`
+(medium, no UB) and on the `i2d_evp` temporary path; `p5_pbev2.rs:489` and
+`p5_scrypt.rs:444` filled a 16-byte stack IV with an unbounded
+`EVP_CIPHER_get_iv_length`, reachable from a caller-registered cipher (medium,
+latent UB reproduced from the authority and now refused); `p5_pbe.rs:267`
+released the salt block at the authority's `goto` line instead of its
+`OPENSSL_free` line (low, allocator-seam compatibility). No invalid free,
+double free, alias, uninitialised read or new hidden obligation was found.
+
+**Secret-bearing buffers.** `PKCS8_PRIV_KEY_INFO.pkey->data` is
+`SECRET_DATA`/`CLEANSING_REQUIRED`: its contents are cleansed in
+`ASN1_OP_FREE_PRE` on every item-free path (`PKCS8_PRIV_KEY_INFO_free`, d2i
+failure cleanup, the `ossl_evp_pkey2pkcs8` temporary) and then released plainly
+by `ASN1_STRING_free`, matching the authority. A negative `penclen` (accepted by
+the authority's `PKCS8_pkey_set0`) clamps the cleanse at zero rather than
+reproducing the authority's implicit `size_t` overrun. PBE/PBKDF2/scrypt salts
+and IVs are `PUBLIC_DATA`: they are neither cleansed nor clear-freed, and the
+Drop/ownership-transfer release arms are unchanged.
+
+**New unsafe assumptions (hidden must be 0).** None. No unsafe function, FFI
+symbol, allocator coordinate (other than the corrected release line),
+`#[repr(C)]` layout or exported signature was added. The invalid assumption that
+`ASN1_OP_FREE_PRE` may destroy the member owner's metadata was removed rather
+than relocated. Contracts reused: RC-1 descriptor layout, OB-1 release-seam
+discipline for `SaltBuf`, OB-1/OB-4 `ASN1_STRING_set0` transfer, the ASN.1 item
+lifecycle and `D2I_POST` version contract, the `EVP_MAX_IV_LENGTH` stack-buffer
+contract, `X509_ALGOR_set0` adoption, and `ASN1_STRING_set`'s negative-length
+semantics.
+
+**Evidence.** FAST: `cargo fmt --all -- --check` clean; focused
+`asn1::p8_pkey` **4 passed / 0 failed** (including the new FREE_PRE regression)
+and `asn1::` **40 passed / 0 failed / 1 ignored**. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1649 passed / 0 failed / 27
+ignored** serially (101.12 s) and with `--test-threads=4` (104.39 s). No test
+removed or newly ignored.
+
+**NOT_RUN.** The FRF runtime courts for this surface (`rt-evp-pbe`,
+`rt-asn1`, `rt-asn1-template`) were not run: the FRF tooling container is not up
+and the candidate probe artifacts predate this build, so they cannot observe
+this change. The allocator-hook canary for the repaired PKCS#8 release event,
+Miri (Stacked/Tree Borrows), ASan/TSan/Loom, authority differential replay,
+the caller/dependency closure (BOUNDARY), independent adversarial review and
+SEAL are `NOT_RUN`. Nothing is promoted to `SAFETY_DISCHARGED` or
+`SAFE_COMPATIBLE`; the two IV bounds are deliberate §17 divergences and the
+leak repair is evidenced by a unit assertion rather than an allocator trace.
+
+**Retained obligations (non-UB).** `p5_scrypt` keeps the authority's
+negative-`saltlen` strlen semantics (a negative length with a non-NULL salt
+requires a NUL-terminated string); `PKCS8_pkey_set0` still accepts a negative
+`penclen`; `p8_pkey` cleanses only the private-key octets, not attribute values;
+salts/IVs remain un-cleansed public data; error tails still omit the
+pointer-bearing `ERR_print_errors` lines.
+
+**Queue.** `REMAINING-AUDIT.txt` 414 → **406**; `AUDITED-FILES.txt` 349 → **357**.
+
+**Next eight (stable order).** `src/asn1/t_pkey.rs`, `src/asn1/t_spki.rs`,
+`src/asn1/typ.rs`, `src/asn1/x_bignum.rs`, `src/asn1/x_info.rs`,
+`src/asn1/x_int64.rs`, `src/asn1/x_long.rs`, `src/asn1/x_pkey.rs`.
+
+**Machine-readable receipt:**
+[`atlas-refresh/mechanism-sweep-M39.json`](atlas-refresh/mechanism-sweep-M39.json).
