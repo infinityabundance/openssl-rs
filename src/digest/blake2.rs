@@ -240,13 +240,17 @@ pub mod blake2b {
     /// `ossl_blake2b_init` — `blake2b_prov.c:125-129`.
     ///
     /// # Safety
-    /// `c` and `p` must be live.
+    /// `c` and `p` must be live, and `p.b[0]` (the digest length that
+    /// [`final_`](Self::final_) copies out) must be in `1..=OUTBYTES`. The provider's
+    /// `set_ctx_params` establishes that bound; a caller writing `Param.b` directly must
+    /// establish it itself.
     pub unsafe fn init(c: *mut Ctx, p: *const Param) {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
     }
 
-    /// `ossl_blake2b_init_key` — `blake2b_prov.c:135-151`.
+    /// `ossl_blake2b_init_key` — `blake2b_prov.c:135-151` (the key-length bounds are stated
+    /// below and enforced before the copy).
     ///
     /// **The key is not hashed as a key; it is zero-padded to one whole block and *updated* as the
     /// first block of data.** That is BLAKE2's keying rule, and it is why the MAC row zero-pads a
@@ -255,18 +259,24 @@ pub mod blake2b {
     /// entire block, so the padding is what the algorithm sees.
     ///
     /// # Safety
-    /// `c` and `p` must be live; `key` readable for `(*p).b[1]` bytes.
+    /// `c` and `p` must be live; `(*p).b[1]` is the key length and must be in
+    /// `1..=KEYBYTES`; `key` must be non-NULL and readable for that many bytes.
     pub unsafe fn init_key(c: *mut Ctx, p: *const Param, key: *const u8) -> c_int {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
 
         let mut block = [0u8; BLOCKBYTES];
-        // SAFETY: `p` is live; byte 1 of the parameter image is `key_length`, which
-        // `param_set_key_length` cannot have set above `KEYBYTES`.
+        // SAFETY: `p` is live.
         let keylen = unsafe { (*p).b[1] } as usize;
-        debug_assert!(keylen <= KEYBYTES);
-        // SAFETY: `key` is readable for `keylen` bytes per the caller's contract, and
-        // `keylen <= KEYBYTES <= BLOCKBYTES`, so the copy stays inside `block`.
+        // The parameter image is a public byte array, so `key_length` is not constrained by
+        // its type. Refuse an out-of-range length before the copy rather than let a hostile
+        // parameter image drive an out-of-bounds stack write; every provider caller already
+        // validates this bound (`blake2_mac_impl.c`'s `setkey` and `blake2_prov.c`'s
+        // `set_ctx_params`), so no valid caller observes the refusal.
+        if keylen == 0 || keylen > KEYBYTES {
+            return 0;
+        }
+        // SAFETY: `keylen` is now in `1..=KEYBYTES <= BLOCKBYTES` and `key` is readable for it.
         unsafe { ptr::copy_nonoverlapping(key, block.as_mut_ptr(), keylen) };
         // SAFETY: `block` is this frame's own and `c` is live.
         let r = unsafe { update(c, block.as_ptr(), BLOCKBYTES) };
@@ -301,7 +311,10 @@ pub mod blake2b {
     /// `blake2b_compress` — `blake2b_prov.c:153-254`.
     ///
     /// # Safety
-    /// `blocks` must be readable for `len` bytes.
+    /// `blocks` must be readable for `len` bytes, and every block start the loop compresses
+    /// must have a whole `BLOCKBYTES` readable: the compressor always loads sixteen words from
+    /// the current block, including the final short one. Callers satisfy that by passing whole
+    /// blocks or the `BLOCKBYTES` staging buffer.
     unsafe fn compress(s: &mut Ctx, blocks: *const u8, mut len: usize) {
         let increment = if len < BLOCKBYTES { len } else { BLOCKBYTES };
         let mut v = [0u64; 16];
@@ -395,7 +408,8 @@ pub mod blake2b {
     /// `ossl_blake2b_final` — `blake2b_prov.c:305-332`.
     ///
     /// # Safety
-    /// `c` must be live; `md` writable for `c.outlen` bytes.
+    /// `c` must be live and its `outlen` established by [`init`](Self::init) in
+    /// `1..=OUTBYTES`; `md` writable for `c.outlen` bytes.
     pub unsafe fn final_(md: *mut u8, c: *mut Ctx) -> c_int {
         // SAFETY: `c` is live.
         let s = unsafe { &mut *c };
@@ -576,7 +590,10 @@ pub mod blake2s {
     /// `ossl_blake2s_init` — `blake2s_prov.c:118-122`.
     ///
     /// # Safety
-    /// `c` and `p` must be live.
+    /// `c` and `p` must be live, and `p.b[0]` (the digest length that
+    /// [`final_`](Self::final_) copies out) must be in `1..=OUTBYTES`. The provider's
+    /// `set_ctx_params` establishes that bound; a caller writing `Param.b` directly must
+    /// establish it itself.
     pub unsafe fn init(c: *mut Ctx, p: *const Param) {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
@@ -585,16 +602,23 @@ pub mod blake2s {
     /// `ossl_blake2s_init_key` — `blake2s_prov.c:128-144`, the same shape as the BLAKE2b pair.
     ///
     /// # Safety
-    /// `c` and `p` must be live; `key` readable for `(*p).b[1]` bytes.
+    /// `c` and `p` must be live; `(*p).b[1]` is the key length and must be in
+    /// `1..=KEYBYTES`; `key` must be non-NULL and readable for that many bytes.
     pub unsafe fn init_key(c: *mut Ctx, p: *const Param, key: *const u8) -> c_int {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
 
         let mut block = [0u8; BLOCKBYTES];
-        // SAFETY: `p` is live; byte 1 of the parameter image is `key_length`.
+        // SAFETY: `p` is live.
         let keylen = unsafe { (*p).b[1] } as usize;
-        debug_assert!(keylen <= KEYBYTES);
-        // SAFETY: `key` is readable for `keylen` bytes and `keylen <= KEYBYTES <= BLOCKBYTES`.
+        // The parameter image is a public byte array, so `key_length` is not constrained by
+        // its type. Refuse an out-of-range length before the copy rather than let a hostile
+        // parameter image drive an out-of-bounds stack write; every provider caller already
+        // validates this bound, so no valid caller observes the refusal.
+        if keylen == 0 || keylen > KEYBYTES {
+            return 0;
+        }
+        // SAFETY: `keylen` is now in `1..=KEYBYTES <= BLOCKBYTES` and `key` is readable for it.
         unsafe { ptr::copy_nonoverlapping(key, block.as_mut_ptr(), keylen) };
         // SAFETY: `block` is this frame's own and `c` is live.
         let r = unsafe { update(c, block.as_ptr(), BLOCKBYTES) };
@@ -629,7 +653,10 @@ pub mod blake2s {
     /// `blake2s_compress` — `blake2s_prov.c:146-245`.
     ///
     /// # Safety
-    /// `blocks` must be readable for `len` bytes.
+    /// `blocks` must be readable for `len` bytes, and every block start the loop compresses
+    /// must have a whole `BLOCKBYTES` readable: the compressor always loads sixteen words from
+    /// the current block, including the final short one. Callers satisfy that by passing whole
+    /// blocks or the `BLOCKBYTES` staging buffer.
     unsafe fn compress(s: &mut Ctx, blocks: *const u8, mut len: usize) {
         let increment = if len < BLOCKBYTES {
             len as u32
@@ -725,7 +752,8 @@ pub mod blake2s {
     /// `ossl_blake2s_final` — `blake2s_prov.c:296-323`.
     ///
     /// # Safety
-    /// `c` must be live; `md` writable for `c.outlen` bytes.
+    /// `c` must be live and its `outlen` established by [`init`](Self::init) in
+    /// `1..=OUTBYTES`; `md` writable for `c.outlen` bytes.
     pub unsafe fn final_(md: *mut u8, c: *mut Ctx) -> c_int {
         // SAFETY: `c` is live.
         let s = unsafe { &mut *c };
@@ -800,6 +828,54 @@ mod tests {
             hex(&out),
             "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982"
         );
+    }
+
+    /// A parameter image is a public byte array, so `key_length` can be written past
+    /// `KEYBYTES` by a caller that bypasses `param_set_key_length`. `init_key` refuses it
+    /// before the copy: the zero arm never feeds the block, and an over-long arm never reaches
+    /// the stack buffer. (Pre-repair the `debug_assert!` vanished in release and the copy used
+    /// the raw byte as its length.)
+    #[test]
+    fn a_key_length_outside_one_to_keybytes_is_refused() {
+        let key_b = [0u8; blake2b::KEYBYTES];
+        for keylen in [0u8, 1, blake2b::KEYBYTES as u8 + 1, u8::MAX] {
+            let mut b = blake2b::Ctx {
+                h: [0; 8],
+                t: [0; 2],
+                f: [0; 2],
+                buf: [0; blake2b::BLOCKBYTES],
+                buflen: 0,
+                outlen: 0,
+            };
+            let mut param = blake2b::Param { b: [0; 64] };
+            blake2b::param_init(&mut param);
+            param.b[1] = keylen;
+            // SAFETY: the context, parameter image and key are live locals; the length is
+            // exactly the byte `init_key` reads, and the fix guarantees it is not used as a
+            // copy length when out of range.
+            let r = unsafe { blake2b::init_key(&mut b, &param, key_b.as_ptr()) };
+            let expected = i32::from((1..=blake2b::KEYBYTES as u8).contains(&keylen));
+            assert_eq!(r, expected, "blake2b keylen {keylen}");
+        }
+
+        let key_s = [0u8; blake2s::KEYBYTES];
+        for keylen in [0u8, 1, blake2s::KEYBYTES as u8 + 1, u8::MAX] {
+            let mut s = blake2s::Ctx {
+                h: [0; 8],
+                t: [0; 2],
+                f: [0; 2],
+                buf: [0; blake2s::BLOCKBYTES],
+                buflen: 0,
+                outlen: 0,
+            };
+            let mut param = blake2s::Param { b: [0; 32] };
+            blake2s::param_init(&mut param);
+            param.b[1] = keylen;
+            // SAFETY: as above.
+            let r = unsafe { blake2s::init_key(&mut s, &param, key_s.as_ptr()) };
+            let expected = i32::from((1..=blake2s::KEYBYTES as u8).contains(&keylen));
+            assert_eq!(r, expected, "blake2s keylen {keylen}");
+        }
     }
 
     fn hex(bytes: &[u8]) -> String {
