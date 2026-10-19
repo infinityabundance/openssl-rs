@@ -55,7 +55,7 @@ use crate::ocsp::ocsp_ext::OCSP_request_add1_nonce;
 use crate::ocsp::ocsp_lib::OCSP_cert_to_id;
 use crate::ocsp::ocsp_prn::OCSP_REQUEST_print;
 use crate::runtime::bio::{BIO_free, BIO_free_all};
-use crate::x509::x_x509::X509;
+use crate::x509::x_x509::{X509_free, X509};
 
 /// `FORMAT_UNDEF` — `apps/include/fmt.h:24`.
 const FORMAT_UNDEF: c_int = 0;
@@ -107,6 +107,45 @@ fn add_ocsp_cert(
     true
 }
 
+/// The request-building state owned across the command's option loop.
+///
+/// Each pointer is either NULL or this frame's single owned reference:
+/// `OCSP_REQUEST_new`/`load_cert`/`EVP_MD_fetch` produced it, and `Drop` is the
+/// release the authority performs at `end:` (`apps/ocsp.c:900-911`). A static
+/// legacy method (`EVP_sha1`) is a valid `cert_id_md`; `EVP_MD_free` is the
+/// authority's own no-op for it.
+struct OcspState {
+    req: *mut OcspRequest,
+    issuer: *mut X509,
+    cert: *mut X509,
+    cert_id_md: *mut EvpMd,
+}
+
+impl OcspState {
+    fn new() -> Self {
+        OcspState {
+            req: core::ptr::null_mut(),
+            issuer: core::ptr::null_mut(),
+            cert: core::ptr::null_mut(),
+            cert_id_md: core::ptr::null_mut(),
+        }
+    }
+}
+
+impl Drop for OcspState {
+    fn drop(&mut self) {
+        // SAFETY: each pointer is NULL or this frame's single owned reference, and each
+        // release accepts NULL. They are independent objects, so the authority's order is
+        // not load-bearing.
+        unsafe {
+            EVP_MD_free(self.cert_id_md);
+            X509_free(self.cert);
+            X509_free(self.issuer);
+            OCSP_REQUEST_free(self.req);
+        }
+    }
+}
+
 /// `int ocsp_main(int argc, char **argv)` — `apps/ocsp.c:254-924`.
 #[allow(clippy::never_loop)] // every arm returns or breaks; the authority's loop never iterates
 pub fn main(argv: &[String]) -> i32 {
@@ -114,9 +153,7 @@ pub fn main(argv: &[String]) -> i32 {
     // `opt_set_unknown_name("digest");` — `apps/ocsp.c:304`.
     opts.enable_unknown("digest");
 
-    let mut req: *mut OcspRequest = core::ptr::null_mut();
-    let mut issuer: *mut X509 = core::ptr::null_mut();
-    let mut cert_id_md: *mut EvpMd = core::ptr::null_mut();
+    let mut state = OcspState::new();
     let mut outfile: Option<String> = None;
     let mut reqout: Option<String> = None;
     let mut add_nonce: c_int = 1;
@@ -184,24 +221,39 @@ pub fn main(argv: &[String]) -> i32 {
             // `case OPT_ISSUER: issuer = load_cert(...); sk_X509_push(issuers, issuer);` —
             // `apps/ocsp.c:468-478`.
             OptMatch::Value("issuer", v) => {
+                // The authority keeps every issuer on its stack until `end:`; with a
+                // single slot the previous reference is released here instead. The
+                // certificate id copies the name/key digest, so no later step aliases it.
+                if !state.issuer.is_null() {
+                    // SAFETY: `issuer` is NULL or this frame's single reference.
+                    unsafe { X509_free(state.issuer) };
+                    state.issuer = core::ptr::null_mut();
+                }
                 let x = load_cert(Some(v.as_str()), FORMAT_UNDEF, "issuer certificate");
                 if x.is_null() {
                     return 1;
                 }
-                issuer = x;
+                state.issuer = x;
             }
             // `case OPT_CERT: reset_unknown(); X509_free(cert); cert = load_cert(...);
             // ... add_ocsp_cert(...); ...` — `apps/ocsp.c:479-492`.
             OptMatch::Value("cert", v) => {
                 opts.reset_unknown();
-                if cert_id_md.is_null() {
-                    cert_id_md = EVP_sha1() as *mut EvpMd;
+                // `X509_free(cert); cert = load_cert(...);` — `apps/ocsp.c:480-483`.
+                if !state.cert.is_null() {
+                    // SAFETY: `cert` is NULL or this frame's single reference.
+                    unsafe { X509_free(state.cert) };
+                    state.cert = core::ptr::null_mut();
                 }
                 let c = load_cert(Some(v.as_str()), FORMAT_UNDEF, "certificate");
                 if c.is_null() {
                     return 1;
                 }
-                if !add_ocsp_cert(&mut req, c, cert_id_md, issuer) {
+                state.cert = c;
+                if state.cert_id_md.is_null() {
+                    state.cert_id_md = EVP_sha1() as *mut EvpMd;
+                }
+                if !add_ocsp_cert(&mut state.req, state.cert, state.cert_id_md, state.issuer) {
                     return 1;
                 }
                 trailing_md = false;
@@ -234,8 +286,8 @@ pub fn main(argv: &[String]) -> i32 {
                     Some(m) => {
                         // SAFETY: `cert_id_md` is a live or NULL slot; `EVP_MD_free`
                         // accepts NULL.
-                        unsafe { EVP_MD_free(cert_id_md) };
-                        cert_id_md = m;
+                        unsafe { EVP_MD_free(state.cert_id_md) };
+                        state.cert_id_md = m;
                     }
                     None => {
                         eprintln!("{}: Use -help for summary.", opts.prog());
@@ -305,53 +357,45 @@ pub fn main(argv: &[String]) -> i32 {
     // `if (req == NULL && reqin == NULL && respin == NULL && !(port && ridx)) goto opthelp;`
     // — `apps/ocsp.c:595-598`. The responder arms are not landed, so their
     // operands are always NULL here.
-    if req.is_null() {
+    if state.req.is_null() {
         eprintln!("{}: Use -help for summary.", opts.prog());
         return 1;
     }
     // `if (req != NULL && add_nonce) { OCSP_request_add1_nonce(req, NULL, -1); }` —
     // `apps/ocsp.c:721-724`. A non-`-no_nonce` request is random and recorded.
     if add_nonce != 0 {
-        // SAFETY: `req` is live; the nonce is the RAND-driven default length.
-        unsafe { OCSP_request_add1_nonce(req, core::ptr::null_mut(), -1) };
+        // SAFETY: `state.req` is live; the nonce is the RAND-driven default length.
+        unsafe { OCSP_request_add1_nonce(state.req, core::ptr::null_mut(), -1) };
     }
 
     // `out = bio_open_default(outfile, 'w', FORMAT_TEXT);` — `apps/ocsp.c:751-753`.
     let out = bio_open_default(outfile.as_deref(), true);
     if out.is_null() {
-        // SAFETY: `req` is live and not freed again.
-        unsafe { OCSP_REQUEST_free(req) };
         return 1;
     }
     // `if (req_text && req != NULL) OCSP_REQUEST_print(out, req, 0);` —
     // `apps/ocsp.c:755-756`.
     if req_text {
-        // SAFETY: `out`/`req` are live.
-        unsafe { OCSP_REQUEST_print(out, req, 0) };
+        // SAFETY: `out`/`state.req` are live.
+        unsafe { OCSP_REQUEST_print(out, state.req, 0) };
     }
     // `if (reqout != NULL) { derbio = bio_open_default(reqout, 'w', FORMAT_ASN1);
     // i2d_OCSP_REQUEST_bio(derbio, req); BIO_free(derbio); }` — `apps/ocsp.c:758-764`.
     if let Some(rq) = &reqout {
         let derbio = bio_open_default(Some(rq.as_str()), true);
         if derbio.is_null() {
-            // SAFETY: the live pointers are not freed again.
-            unsafe {
-                BIO_free_all(out);
-                OCSP_REQUEST_free(req);
-            }
+            // SAFETY: `out` is live and not freed again.
+            unsafe { BIO_free_all(out) };
             return 1;
         }
-        // SAFETY: `derbio`/`req` are live; the item is the crate's own.
-        unsafe { ASN1_item_i2d_bio(OCSP_REQUEST_it(), derbio, req.cast::<c_void>()) };
+        // SAFETY: `derbio`/`state.req` are live; the item is the crate's own.
+        unsafe { ASN1_item_i2d_bio(OCSP_REQUEST_it(), derbio, state.req.cast::<c_void>()) };
         // SAFETY: `derbio` is live and not freed again.
         unsafe { BIO_free(derbio) };
     }
 
     // No responder, no response, no index: `ret = 0; goto end;` — `apps/ocsp.c:795-798`.
-    // SAFETY: the live pointers are not freed again.
-    unsafe {
-        BIO_free_all(out);
-        OCSP_REQUEST_free(req);
-    }
+    // SAFETY: `out` is live and not freed again; `state` releases the rest at `end:`.
+    unsafe { BIO_free_all(out) };
     0
 }

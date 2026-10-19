@@ -16,6 +16,14 @@ src/apps/errstr.rs
 src/apps/genrsa.rs
 src/apps/info.rs
 src/apps/kdf.rs
+src/apps/keyio.rs
+src/apps/mac.rs
+src/apps/nseq.rs
+src/apps/ocsp.rs
+src/apps/passwd.rs
+src/apps/pkcs12.rs
+src/apps/pkcs7.rs
+src/apps/pkcs8.rs
 src/apps/pkeyutl.rs
 src/apps/smime.rs
 src/aria.rs
