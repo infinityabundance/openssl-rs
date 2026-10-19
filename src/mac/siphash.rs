@@ -177,7 +177,8 @@ pub(crate) fn SipHash_ctx_size() -> usize {
 /// context that has never been initialised answers 0 rather than the maximum.
 ///
 /// # Safety
-/// `ctx` is NULL or live.
+/// `ctx` must be a live, non-NULL context: the authority dereferences it unconditionally, so this
+/// function does too.
 pub(crate) unsafe fn SipHash_hash_size(ctx: *mut Siphash) -> usize {
     // SAFETY: the caller's contract.
     unsafe { (*ctx).hash_size as usize }
@@ -200,7 +201,8 @@ fn siphash_adjust_hash_size(hash_size: usize) -> usize {
 /// context whose `hash_size` is still 0 can be asked for 0 and end up at 16.
 ///
 /// # Safety
-/// `ctx` is NULL or live.
+/// `ctx` must be a live, non-NULL context. The authority reads and writes `ctx->hash_size` and
+/// `ctx->v1` without a NULL test; a NULL is the caller's contract violation, not a refusal.
 pub(crate) unsafe fn SipHash_set_hash_size(ctx: *mut Siphash, hash_size: usize) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
