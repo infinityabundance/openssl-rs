@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/ocsp/ocsp_lib.rs
-src/ocsp/ocsp_prn.rs
-src/ocsp/ocsp_srv.rs
-src/ocsp/v3_ocsp.rs
-src/param_build_set.rs
-src/params/dup.rs
-src/params/from_text.rs
-src/pem/pem_oth.rs
 src/pem/pem_x509.rs
 src/pem/pem_xaux.rs
 src/pkcs12/p12_add.rs
