@@ -4003,10 +4003,11 @@ unsafe fn pbkdf2_derive(
             return 0;
         }
 
-        // Deliberate §17 divergence: the authority truncates these sizes to `int` at the HMAC /
-        // PBKDF2 boundary. Refuse before any allocation or buffer read. Exact refused set:
-        // `passlen > i32::MAX` or `saltlen < 0` (the latter is an upstream `salt_len > i32::MAX`
-        // truncation). `keylen` is not refused: the loop below is widened to `usize`.
+        // Deliberate §17 divergence: the authority truncates these sizes to `int` at the HMAC
+        // boundary. Refuse before any allocation or buffer read. Exact refused set:
+        // `passlen > i32::MAX`; `saltlen < 0` is a defensive check (the provider entry point
+        // refuses every `salt_len > i32::MAX` before casting). `keylen` is **not** refused: the
+        // loop below is widened to `usize`.
         if passlen > c_int::MAX as usize || saltlen < 0 {
             return 0;
         }
@@ -4289,6 +4290,12 @@ unsafe extern "C" fn pbkdf2_ctx_derive(
         }
         if (*ctx).salt.is_null() {
             return fail_at(&err_sites::PROV_PBKDF2_275);
+        }
+        // Deliberate §17 divergence: refuse every salt length above `i32::MAX` *before* the cast
+        // below, so the `k * 2^32 + r` truncation cannot silently use a prefix. The authority
+        // casts to `int` and truncates. Exact refused set: `salt_len > i32::MAX`.
+        if (*ctx).salt_len > c_int::MAX as usize {
+            return 0;
         }
         let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
         pbkdf2_derive(
@@ -13402,6 +13409,10 @@ mod tests {
         };
         use crate::params::OSSL_PARAM_construct_uint32;
 
+        // This test fetches/frees KDFs and their digests/MACs; hold the crate-wide lock so no
+        // sibling test can perturb the shared method-store reference counts.
+        let _g = crate::test_support::lock_global_state();
+
         let mut cases = parse_argon2_vectors(ARGON2_VECTORS);
         assert_eq!(cases.len(), 23, "the file's `KDF =` cases");
 
@@ -13501,6 +13512,9 @@ mod tests {
             1
         }
 
+        // The method is created and freed here; hold the crate-wide lock so the shared method
+        // store cannot be perturbed by a sibling test.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns every object it touches.
         unsafe {
             for key_len in [16usize, 23, 24] {
@@ -13547,6 +13561,10 @@ mod tests {
     fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
         use core::sync::atomic::Ordering;
 
+        // The fetched SHA256 and the method store are shared process-global state; holding the
+        // crate-wide lock keeps the before/after refcount readings free of a sibling's ±1.
+        let _g = crate::test_support::lock_global_state();
+
         // SAFETY: this test owns every object it touches.
         unsafe {
             let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
@@ -13585,6 +13603,9 @@ mod tests {
     /// NULL `ctx_init`. When the source has a MAC context, the duplicate owns a distinct one.
     #[test]
     fn kbkdf_dup_copies_uninitialised_and_initialised_mac_states() {
+        // The HMAC fetch/free and the MAC context are process-global method-store state; hold the
+        // crate-wide lock so no sibling test can perturb the cache between them.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns every context it creates.
         unsafe {
             let bare = kbkdf_new(ptr::null_mut());
@@ -13641,6 +13662,9 @@ mod tests {
     /// so the failure path must cleanse/release it and `free` must not release it again.
     #[test]
     fn argon2_failed_fill_releases_the_secret_matrix() {
+        // `kdf_argon2_derive` fetches the BLAKE2B MAC/digest from the shared cache; hold the
+        // crate-wide lock so its fetch/free cannot race a sibling's refcount assertion.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns the context and its matrix.
         unsafe {
             let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
