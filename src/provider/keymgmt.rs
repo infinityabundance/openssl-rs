@@ -1217,11 +1217,18 @@ unsafe fn dh_gen_common_set_params(genctx: *mut c_void, params: *const OsslParam
                 return 0;
             }
             let group = ossl_ffc_name_to_dh_named_group((*p).data.cast::<c_char>());
-            if group.is_null() || ossl_ffc_named_group_get_uid(group) == NID_undef {
+            if group.is_null() {
                 raise_site(&err_sites::PROV_DH_KMGMT_558);
                 return 0;
             }
+            // The authority assigns the UID before testing it, so a rejected group leaves
+            // `NID_undef` in the context rather than the previously selected group. Keep that
+            // observable failure-path state.
             (*gctx).group_nid = ossl_ffc_named_group_get_uid(group);
+            if (*gctx).group_nid == NID_undef {
+                raise_site(&err_sites::PROV_DH_KMGMT_558);
+                return 0;
+            }
         }
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_FFC_PBITS);
         if !p.is_null() && OSSL_PARAM_get_size_t(p, ptr::addr_of_mut!((*gctx).pbits)) == 0 {

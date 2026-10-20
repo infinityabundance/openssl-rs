@@ -584,3 +584,11 @@ src/provider/encode_key2blob.rs
 src/provider/encode_key2ms.rs
 src/provider/endecoder_common.rs
 src/provider/file_store_any2obj.rs
+src/provider/kem_util.rs
+src/provider/keymgmt.rs
+src/provider/legacyprov.rs
+src/provider/mac_legacy_sig.rs
+src/provider/ml_common_codecs.rs
+src/provider/ml_dsa_sig.rs
+src/provider/ml_kem_codecs.rs
+src/provider/ml_kem_kem.rs
