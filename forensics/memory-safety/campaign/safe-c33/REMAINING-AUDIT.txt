@@ -1,12 +1,4 @@
-src/ssl/methods.rs
-src/ssl/quic/quic_impl.rs
-src/ssl/quic/quic_method.rs
-src/ssl/quic/quic_tls_api.rs
 src/ssl/record/rec_layer_s3.rs
-src/ssl/rio/poll_immediate.rs
-src/ssl/s3_lib.rs
-src/ssl/ssl_asn1.rs
-src/ssl/ssl_cert_comp.rs
 src/ssl/ssl_init.rs
 src/ssl/ssl_mcnf.rs
 src/ssl/ssl_rsa_legacy.rs
