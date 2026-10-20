@@ -7098,3 +7098,88 @@ ordinary position.** `src/slh_dsa/params.rs`. **Next eight.**
 `src/slh_dsa/params.rs`, `src/slh_dsa/xmss.rs`, `src/sm2/crypt.rs`,
 `src/sm2/sign.rs`, `src/sm3/legacy_sm3.rs`, `src/sm4.rs`,
 `src/ssl/d1_lib.rs`, `src/ssl/d1_srtp.rs`.
+
+## M79 (mechanism) — per-file contract sweep (SLH-DSA params/XMSS, SM2 cipher/signature, legacy SM3, SM4, DTLS state and SRTP)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M79.json`](atlas-refresh/mechanism-sweep-M79.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`091b06366`. Four changes, none ABI-visible: two secret-cleansing releases in the
+SM2 cipher, a latent slice-extent guard in the SM2 verifier, cleansing of the
+SM4 key-schedule stack temporary, and three completed XMSS Safety contracts. No
+`#[repr(C)]` layout, exported symbol, signature or allocation coordinate changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/slh_dsa/params.rs` | `#[repr(C)]` `SLH_DSA_PARAMS` field order, 13-row `static` table + `Sync`, `NULL`-terminated name lookup, FIPS 205 values and the SHA-2 zero-pad bounds | no defect; all twelve rows match FIPS 205 Table 2 and `slh_params.c` |
+| `src/slh_dsa/xmss.rs` | recursive node arithmetic, WOTS+ method-table dispatch, in-place `H`, `WPACKET` auth-path allocation, `PACKET` cursor reads, `lnode`/`rnode` cleansing | **M79-D4** low: row/height bounds added to the three Safety contracts |
+| `src/sm2/crypt.rs` | `SM2_Ciphertext` ASN.1 template/offsets, `d2i`/`i2d` ownership, `BN_CTX` pool, `CRYPTO_calloc`/`zalloc` seam, X9.63 KDF, retry loop, error tail | **M79-D1** medium: the ECDH shared point and KDF mask were plainly released |
+| `src/sm2/sign.rs` | Z-digest four-update chain, `BN_CTX` scalars, sign/verify equations, `r`/`s` transfer into `ECDSA_SIG`, canonical DER re-encode, `OwnedBuf` | **M79-D2** low: a negative/zero `i2d` length could reach `from_raw_parts` |
+| `src/sm3/legacy_sm3.rs` | global-origin `EVP_MD`, zero `flags`, legacy `md_data` callbacks, `Sync` on a never-written static | no defect |
+| `src/sm4.rs` | S-box/rotated-table identities, big-endian word I/O, 32-word schedule, encryption/decryption round groups, `#[repr(C)]` `SM4_KEY` | **M79-D3** low: the local schedule temporary was not cleansed |
+| `src/ssl/d1_lib.rs` | OB-3 `OwnedCtx`/`CtxDestroy` for the zero-valid `Dtls1State`, `dtls1_new`/`free`, `DTLSv1_listen` parser, timer callback slot, `d1 == NULL` guards | no defect; the reduced cookie stage stays an explicit measured divergence |
+| `src/ssl/d1_srtp.rs` | static profile table + `Sync`, `:`-separated parser, duplicate/unknown refusals, borrowed profile getters, QUIC guard | no defect |
+
+**Defects repaired.** `sm2/crypt.rs` released `x2y2` (the ECDH shared point) and
+`msg_mask` (the X9.63 KDF output, which is still the raw mask on a failure before
+the xor) with the authority's plain `CRYPTO_free`. Both are `SECRET_DATA`; the
+release now keeps the authority's `file`/`line` and the exact allocation extent
+but selects `CRYPTO_clear_free` (the same §5.1 deviation already recorded for
+`ecdh_ossl.rs`). `sm2/sign.rs` created `from_raw_parts` slices from an `i2d`
+length without excluding a negative/zero result; the explicit `derlen <= 0`
+test keeps that arm at the authority's own encoding error site and cannot change
+a valid input. `sm4.rs` now cleanses its four-word stack schedule copy; the
+caller's `SM4_KEY` is unchanged and is cleansed by the provider context's
+whole-block release. `xmss.rs` Safety contracts now state `h <= hm` and
+`node_id < 2^h` / `< 2^hm`, which the callers establish (key generation uses
+`node_id = 0`; the hypertree leaf index is masked to `(1 << hm) - 1`).
+
+**Contracts reused.** OB-3 `OwnedCtx`/`CtxDestroy` (all-zero validity, empty
+member destructor, exact alloc/free coordinates); OB-1 `OwnedBuf` plain adoption
+for the SM2 verifier's re-encoded DER; RC-1 for the static `EVP_MD` refcount
+refusal; B19 `BN_free`/`BN_clear_free` cleansing for the SM2/BIGNUM scalars; the
+SLH-DSA `#[repr(C)]` key/address/hash layouts; `WPACKET`/`Packet` cursor
+contracts; the `guard_ffi` panic boundary. No shared owner, contract or
+precondition was edited.
+
+**Secret-bearing buffers.** XMSS `lnode`/`rnode` are cleansed on every `h > 0`
+exit; `tmp_adrs` and the addresses are public. SM2 `x2y2` and `msg_mask` are now
+cleansed on every exit (including allocation-failure and all-zero-mask paths);
+`c3`/`computed_c3` are public digests and stay plainly released; `ptext_buf` is
+zeroed on failure and transferred to the caller on success, as the authority
+does. SM2 signature `Z`, `e` and the DER encoding are public; the nonce/private
+scalars live in `BN_CTX` and are covered by B19's secure-flag cleansing. The SM3
+legacy object holds no secret; its `md_data` digest state is cleared by the
+`EVP_MD_CTX` owner. SM4's caller schedule is cleansed by the provider's
+whole-context `CRYPTO_clear_free`; its stack temporary is now cleansed here. The
+DTLS/SRTP files hold no secret contents.
+
+**Gates observed (final worktree).** FAST fmt and clippy clean; focused `sm2`
+**10/10**, `slh_dsa` **9/9**, `sm4` **5/5**, `legacy_sm3` **2/2**, `d1_`
+**3 passed / 1 ignored** (the process-global allocator probe). BATCH full
+library **1694 passed / 0 failed / 27 ignored** serially (253.04 s) and with
+`--test-threads=4` (89.52 s). Affected differential courts on the exact
+candidate: Phase 8 **all pass**, including **RT-ASYM-CIPHER 118**,
+**RT-SIGNATURE 472**, **RT-CIPHER 7291** (+ the one recorded `defltwrap.pad21`
+divergence), **RT-CIPHER-MEM 382** and **RT-DIGEST 670** observations; Phase 14
+**11/11** pass, including **RT-DTLS 42** observations.
+
+**NOT_RUN.** ASan (no reachable extent or new UB repair); Miri (unavailable on
+the pinned toolchain); Loom/TSan (no concurrency change); dudect/ctgrind (no
+constant-time claim; the new cleansing is storage, not timing); dependency-graph
+regeneration (no shared contract edited); full Phase-25 forensic regeneration;
+FRF/SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations after the repairs: **0**; new unsafe
+assumptions: **0**; the only new unsafe operation is the SM4 local cleanse, whose
+extent is the frame's own array.
+
+**Queue.** `REMAINING-AUDIT.txt` **79**, `AUDITED-FILES.txt` **684**. **Next
+ordinary position.** `src/ssl/methods.rs`. **Next eight.**
+`src/ssl/methods.rs`, `src/ssl/quic/quic_impl.rs`,
+`src/ssl/quic/quic_method.rs`, `src/ssl/quic/quic_tls_api.rs`,
+`src/ssl/record/rec_layer_s3.rs`, `src/ssl/rio/poll_immediate.rs`,
+`src/ssl/s3_lib.rs`, `src/ssl/ssl_asn1.rs`.
