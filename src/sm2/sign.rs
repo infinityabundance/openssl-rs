@@ -667,7 +667,14 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
             }
             /* Ensure signature uses DER and doesn't have trailing garbage */
             let derlen = i2d_ECDSA_SIG(s, ptr::addr_of_mut!(der));
-            if derlen != sig_len
+            // `i2d` answers a negative length when its own allocation fails. A negative (or
+            // zero, which no valid DER sequence has) length must never reach `from_raw_parts`,
+            // whose length argument is unsigned; the authority's `memcmp` would only see that
+            // arm when `sig_len` is negative too, which `d2i` has already refused. The explicit
+            // test keeps the pathological arm out of the safe slice and keeps the failure at the
+            // authority's own encoding error site.
+            if derlen <= 0
+                || derlen != sig_len
                 || core::slice::from_raw_parts(sig, derlen as usize)
                     != core::slice::from_raw_parts(der, derlen as usize)
             {
