@@ -6035,3 +6035,92 @@ again), `src/provider/init.rs` (provider-init boundary — defer again),
 `src/provider/ml_kem_kmgmt.rs`, `src/provider/mlx_kem.rs`,
 `src/provider/rsa_enc.rs`, `src/provider/rsa_kem.rs`,
 `src/provider/securitycheck_default.rs`, `src/provider/securitycheck.rs`.
+
+## M69 — boundary sweep B22 (method-store constructing dispatch and provider initialisation)
+
+Receipt: [`atlas-refresh/boundary-sweep-B22.json`](atlas-refresh/boundary-sweep-B22.json).
+
+**Candidate identity.** `integrate/safe-c33` at source HEAD `ff2595b4e`.
+Worktree blobs: `src/evp/method_store.rs` `2695423fc`, `src/provider/init.rs`
+`faad135a1`. Authority: `crypto/core_fetch.c` (sha256 `f8900fd6b…`, 5,661
+bytes) and `crypto/provider_core.c` (sha256 `da796e074…`, 85,492 bytes), read
+whole from `forensics/authorities/src/openssl-3.6.4/`.
+
+**Disposition.** CONTRACTED for both files, not `SAFETY_DISCHARGED`.
+Four method-store boundaries (B22-MCM-1..4) reuse the B9/B10/B21 registry
+serialization contract: `reserve_store` takes the method-store lock and holds
+it across pre, every construct/put/destruct and post, giving the order
+method-store -> provider opbits. Five provider-init boundaries (B22-PINIT-1..5)
+cover path resolution, the `OSSL_provider_init` callback and partial-init state,
+the unbounded provider dispatch walk, the reason-strings copy, and teardown.
+The mcm callback contract (put increments the refcount; a NULL store names the
+global store; the temporary store belongs to the mcm owner; no callback may
+re-enter the held store lock) and the provider ABI contracts remain caller
+obligations, which is why neither file is discharged.
+
+**Defects repaired.**
+- B22-D1 (medium, `provider/init.rs:359-366` pre-fix, now `:372`): the
+dispatch walk transmuted a NULL `GET_REASON_STRINGS` function straight into a
+non-Option `fn`; the authority's accessor macro answers NULL and its caller
+guards it. The arm is now a match guard, so a NULL entry stays absent.
+- B22-D2 (low, `provider/init.rs:265` pre-fix, now `:269`): a failed
+`DSO_merge` still called `DSO_load(dso, NULL, …)`, raising
+`DSO_R_NO_FILENAME` where the authority short-circuits. The load is now skipped
+when the merge answer is NULL; the release path is unchanged.
+- B22-D3 (low, test-only, `evp/method_store.rs` fixtures): the seven tests share
+one `SAW` counter set and raced `reset()` under `--test-threads=4` (observed
+once as 7 passed / 1 failed). A test-only `Mutex` now serialises them; poison is
+recovered and no production code changed.
+
+**New control.** `provider_init::tests::a_null_reason_strings_entry_is_ignored_like_the_authority`
+publishes an id-1029 entry with a NULL function and asserts that initialisation,
+publication and free all succeed. Honest limitation: restoring the unguarded
+transmute does **not** make this test fail, because `Option<fn>` uses the null
+niche and `Some(NULL)` is representationally `None`; the test is a parity
+control, not a detector for the invalid-value class. Miri is that detector and
+is `NOT_RUN`.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`provider::init::tests` + `evp::method_store` **8 passed / 0 failed** (1,692
+filtered) threaded; `cargo clippy --all-targets -- -D warnings` clean (the first
+guard form was rejected as `collapsible_match` and rewritten as a match guard).
+BATCH full library **1673 passed / 0 failed / 27 ignored** (1,700 total) serial
+in 267.45 s and threaded in 110.07 s, in the court with `CARGO_BUILD_JOBS=4`.
+The single new test accounts for the 1,699 -> 1,700 total; no test was removed
+or newly ignored.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: **0**. No
+production unsafe operation added or removed; one operation (the typed
+dispatch-slot transmute) was narrowed by a validity guard and one FFI call is
+skipped on an allocation-failure path. No safe caller can reach either walk:
+`ossl_method_construct` is `pub(crate) unsafe` with no caller until 7.2.
+Residuals are the provider table/termination/reason-string lifetime contracts,
+the mcm refcount/temporary-store ownership contract, the store-lock re-entry
+ban, the late-init failure state, the NULL reason-string table safety
+improvement, and the unlocked init flag (B22-R1..R6).
+
+**NOT_RUN.** Miri/Stacked+Tree Borrows (`cargo miri` reports the component is
+not available for the court's stable 1.98.1); ASan (no allocation, ownership or
+access-pattern change; the invalid-value class is Miri's); Loom/TSan (neither
+file declares a lock or atomic — the new `Mutex` is test-only and the
+cross-mechanism order is B9/B10/B21's, unchanged); `RT-FETCH` named-provider and
+temporary-store differential (no caller yet); authority provider-load
+differential (no harness loads a real module provider under this unit); the FRF
+suite and SEAL.
+
+**Residuals.** (1) `provider/init.rs` and `evp/method_store.rs` are now audited;
+their external contracts are recorded, not discharged. (2) The method-store
+lock is held across caller callbacks and they must not re-enter it. (3) The
+provider dispatch and reason-strings tables are terminated and kept alive by
+the provider. (4) A late init failure leaves `provctx` published with the flag
+clear, so free performs no teardown — authority parity. (5) A NULL
+reason-strings table is refused here where the authority dereferences it
+(deliberate section 17 improvement); `ERR_load_strings` remains a no-op in this
+crate. (6) Init exclusivity is the caller's, stated in the `# Safety` contract.
+
+**Queue.** `REMAINING-AUDIT.txt` 169 -> **167**; `AUDITED-FILES.txt` 594 ->
+**596**. **Next ordinary position.** `src/provider/ml_kem_kmgmt.rs`. **Next
+eight.** `src/provider/ml_kem_kmgmt.rs`, `src/provider/mlx_kem.rs`,
+`src/provider/rsa_enc.rs`, `src/provider/rsa_kem.rs`,
+`src/provider/securitycheck_default.rs`, `src/provider/securitycheck.rs`,
+`src/provider/seeding.rs`, `src/provider/skeymgmt.rs`.

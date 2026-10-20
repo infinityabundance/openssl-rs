@@ -487,6 +487,20 @@ mod tests {
     use crate::runtime::err::ERR_peek_last_error_all;
     use core::ffi::CStr;
     use core::sync::atomic::{AtomicI32, Ordering};
+    use std::sync::{Mutex, MutexGuard};
+
+    /// The observation record below is one process-wide set and the callbacks cannot capture,
+    /// so the tests that share it are serialised rather than allowed to race `reset()` against
+    /// each other under a multi-threaded harness. Poisoning is recovered: every mutation is a
+    /// completed atomic store, so a panicking test leaves no half-written state that a later
+    /// test could observe.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn test_guard() -> MutexGuard<'static, ()> {
+        TEST_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 
     /// The observation record a test's `mcm` writes into. One static set, because these are C
     /// callbacks and cannot capture.
@@ -609,6 +623,7 @@ mod tests {
     /// that must cache says so.
     #[test]
     fn temporary_is_no_store_and_not_force_store() {
+        let _guard = test_guard();
         let mut plain = ConstructData {
             libctx: ptr::null_mut(),
             store: ptr::null_mut(),
@@ -645,6 +660,7 @@ mod tests {
     /// methods constructed for the first operation would be invisible to the second.
     #[test]
     fn the_temporary_store_is_obtained_once() {
+        let _guard = test_guard();
         reset();
         TMP_STORE.store(0x1000, Ordering::SeqCst);
         let m = mcm();
@@ -672,6 +688,7 @@ mod tests {
     /// object they were not given.
     #[test]
     fn a_permanent_store_is_not_obtained_and_is_passed_as_null() {
+        let _guard = test_guard();
         reset();
         TMP_STORE.store(0x1000, Ordering::SeqCst);
         let m = mcm();
@@ -700,6 +717,7 @@ mod tests {
     /// what leaks if only one of them is written.
     #[test]
     fn this_puts_only_into_a_temporary_store_and_always_destructs() {
+        let _guard = test_guard();
         reset();
         TMP_STORE.store(0x1000, Ordering::SeqCst);
         METHOD.store(0x2000, Ordering::SeqCst);
@@ -768,6 +786,7 @@ mod tests {
     /// failure of the walk.
     #[test]
     fn a_refused_construction_is_skipped_without_putting_or_destructing() {
+        let _guard = test_guard();
         reset();
         TMP_STORE.store(0x1000, Ordering::SeqCst);
         METHOD.store(0, Ordering::SeqCst); // construct answers NULL
@@ -832,6 +851,7 @@ mod tests {
     /// a caller sees — and the coordinate is the observable, not the refusal.
     #[test]
     fn a_null_result_is_refused_at_the_authority_coordinate() {
+        let _guard = test_guard();
         reset();
         let mut data = ConstructData {
             libctx: ptr::null_mut(),
@@ -868,6 +888,7 @@ mod tests {
     /// reason this function is callable with a NULL provider.
     #[test]
     fn a_temporary_store_inverts_the_answer_without_asking_the_provider() {
+        let _guard = test_guard();
         reset();
         let mut data = ConstructData {
             libctx: ptr::null_mut(),

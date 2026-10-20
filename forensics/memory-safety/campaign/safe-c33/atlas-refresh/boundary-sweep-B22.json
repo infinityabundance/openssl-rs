@@ -1,0 +1,273 @@
+{
+  "receipt": "boundary-sweep-B22",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "ff2595b4e",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/evp/method_store.rs",
+      "src/provider/init.rs"
+    ],
+    "working_tree_blob": {
+      "src/evp/method_store.rs": "2695423fcd164ed3094e6172427a57def091e149",
+      "src/provider/init.rs": "faad135a1abebc968b4b84a71be92a6b7444a5c5"
+    }
+  },
+  "stop_status": "CLEAR after repair. One validity defect (medium) and one compatibility divergence (low) were repaired in provider init, plus one test-only race in the method-store fixtures. No memory-safety defect, ABI change, layout change, weakened detector, or new hidden obligation remains.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/core_fetch.c (sha256 f8900fd6ba977a60f57007ac3f74b43f47804e341f99ca2591afc079d2b49172, 5661 bytes) compared whole against src/evp/method_store.rs; crypto/provider_core.c (sha256 da796e07498a5229d08daf0a1a5031ce9571bdbe46388eb55e5943e333ec9699, 85492 bytes), provider_init at :947-1148 and the flag_initialized release arms at :748-762, compared against src/provider/init.rs.",
+    "abi": "No export, signature, #[repr(C)] layout or unsafe lint attribute changed. `ossl_method_construct` remains pub(crate) unsafe extern \"C\" without #[no_mangle]; the five callback typedefs and ConstructData/OsslMethodConstructMethod layouts are unchanged; `provider_init` and `ossl_provider_teardown` remain pub(crate) unsafe fns; OsslItem/ErrStringData layouts are unchanged.",
+    "external_contracts": [
+      "The caller's OSSL_METHOD_CONSTRUCT_METHOD table names live functions for get_tmp_store, lock_store, unlock_store, get, put, construct and destruct; mcm_data is opaque and is handed back unchanged. A NULL mcm is a caller error, as in the authority.",
+      "put increments the constructed method's reference count; this file calls construct (+1), put (+1) and destruct (-1), so the store's reference is the one that survives. The temporary store is owned by the mcm owner, not by this file.",
+      "get(NULL, ...) names the global method store; get(temp_store, ...) names the temporary one. The mcm's get writes back which provider answered through the caller's provider_rw.",
+      "reserve_store is called once per map and, after a successful reserve, unreserve_store is called on every exit path (B21 contract, reused). The method-store lock is held across pre, every fn_, put/construct/destruct and post, so those callbacks must not re-enter it; lock order is method-store lock then provider opbits lock.",
+      "An OSSL_provider_init callback receives the provider object as its handle and must answer 0 (failure), or 1 with a NULL dispatch table or with a table terminated by function_id == 0. The table, and every string it points at, stays valid for the provider's lifetime.",
+      "A dispatch entry whose function is NULL is a published id with no implementation. The authority's OSSL_FUNC_* accessor macros answer NULL for it and the callers that need a typed function test for NULL first.",
+      "The reason-strings table returned by provider_get_reason_strings is terminated by id == 0, and no id may already carry a library number. Its `ptr` fields are borrowed for the duration of provider_init. The crate refuses a NULL table where the authority dereferences it.",
+      "provider_init requires a live, uninitialised provider that is not concurrently reachable: the flag test and the final flag set are unlocked, and the authority's caller initialises before publishing the provider in the store. The init callback runs with no crate lock held, so it may re-enter the library.",
+      "provider teardown is called once, on the last reference, only when flag_initialized is set and the provider is not a child; it receives the provctx the init callback published."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B22-MCM-1",
+      "file": "src/evp/method_store.rs",
+      "mechanism": "reserve_store/unreserve_store: temporary store acquisition and locking, callback ordering",
+      "disposition": "CONTRACTED",
+      "contract": "cbdata is a live ConstructData whose mcm is live; is_temporary_method_store is no_store && !force_store. A temporary store is obtained at most once per walk (store == NULL guard) and before any lock is taken, so get_tmp_store runs on an unlocked object. A NULL temp store refuses with 0 and no lock is taken or released; otherwise lock_store's answer is the result. unreserve_store is called only after a successful reserve and unlocks exactly the store reserve locked.",
+      "defects": [],
+      "residuals": [
+        "B22-R2",
+        "B22-R3"
+      ]
+    },
+    {
+      "id": "B22-MCM-2",
+      "file": "src/evp/method_store.rs",
+      "mechanism": "precondition/postcondition operation-bit policy and the authority's inverted answer",
+      "disposition": "CONTRACTED",
+      "contract": "provider live, cbdata a live ConstructData, result NULL or writable for a c_int. A NULL result raises the pinned site and refuses. A temporary store skips the provider bit entirely (pre leaves 0, post returns 1 without touching the provider); otherwise ossl_provider_test_operation_bit is called under the caller's store lock and the answer is inverted. Post writes 1 before deciding, so a failed set still reports the authority's result value.",
+      "defects": [],
+      "residuals": [
+        "B22-R2"
+      ]
+    },
+    {
+      "id": "B22-MCM-3",
+      "file": "src/evp/method_store.rs",
+      "mechanism": "construct -> put -> destruct reference balance and permanent/temporary store selection",
+      "disposition": "CONTRACTED",
+      "contract": "provider live, algo a live OSSL_ALGORITHM whose algorithm_names/property_definition are NULL or NUL-terminated for the put callback, cbdata a live ConstructData. A NULL constructed method is skipped with no put and no destruct. Otherwise put receives the temporary store when no_store is set and NULL (the global-store spelling) when it is not, then destruct drops the constructor's reference unconditionally, including when put fails.",
+      "defects": [],
+      "residuals": [
+        "B22-R3"
+      ]
+    },
+    {
+      "id": "B22-MCM-4",
+      "file": "src/evp/method_store.rs",
+      "mechanism": "two-lookup tail and provider_rw write-back",
+      "disposition": "CONTRACTED",
+      "contract": "provider_rw is NULL or points at a NULL-or-live provider. The temporary store is consulted first when the walk created one, then the global store with a NULL store argument. The caller's get owns every lock it needs and may write the answering provider through provider_rw; this file neither reads nor retains the pointee after the call.",
+      "defects": [],
+      "residuals": [
+        "B22-R3"
+      ]
+    },
+    {
+      "id": "B22-PINIT-1",
+      "file": "src/provider/init.rs",
+      "mechanism": "module path resolution, DSO load and owned load-directory/path/merged-path strings",
+      "disposition": "CONTRACTED",
+      "contract": "prov is live, uninitialised and not concurrently reachable; name is NULL or NUL-terminated and stays valid; path is NULL or NUL-terminated. default_path is read under the store's read lock and dup'ed before the unlock; the environment/modules-dir fallbacks are borrowed. DSO_convert_filename/DSO_merge answers are fresh blocks owned by OwnedStr and released once at the authority's coordinates. A NULL module_path or a NULL merge answer skips DSO_load and releases the module, matching the authority's short-circuit.",
+      "defects": [
+        "B22-D2"
+      ],
+      "residuals": []
+    },
+    {
+      "id": "B22-PINIT-2",
+      "file": "src/provider/init.rs",
+      "mechanism": "OSSL_provider_init invocation, dispatch/provctx publication, flag_initialized and partial-init state",
+      "disposition": "CONTRACTED",
+      "contract": "The callback is the provider's own ABI entry point, called with the provider handle and the core dispatch table while no crate lock is held, so it may re-enter the library. On 0 the temporary provctx is discarded and failure is reported; on 1 provctx/dispatch are published and the remainder of initialisation runs. flag_initialized is set only after every later step succeeds; a late failure leaves the provider uninitialised and the authority performs no teardown for it.",
+      "defects": [],
+      "residuals": [
+        "B22-R4",
+        "B22-R6"
+      ]
+    },
+    {
+      "id": "B22-PINIT-3",
+      "file": "src/provider/init.rs",
+      "mechanism": "provider-supplied dispatch-table walk: termination, NULL entries and typed reason-strings slot",
+      "disposition": "CONTRACTED",
+      "contract": "provider_dispatch is NULL or a provider-owned table terminated by function_id == 0. The walk stops only at that terminator, so termination is a provider ABI obligation that neither the crate nor the authority can verify. Eight ids are stored as raw NULL-or-function pointers; the reason-strings id is stored as a typed fn only when its function is non-NULL, mirroring the authority's NULL-answering accessor macro and NULL guard.",
+      "defects": [
+        "B22-D1"
+      ],
+      "residuals": [
+        "B22-R1"
+      ]
+    },
+    {
+      "id": "B22-PINIT-4",
+      "file": "src/provider/init.rs",
+      "mechanism": "reason-strings table scan, ERR_STRING_DATA copy, calloc arithmetic and ownership handover",
+      "disposition": "CONTRACTED",
+      "contract": "The table is NULL (refused by the crate, see B22-R5) or terminated by id == 0; ids carrying a library number are refused before allocation; text pointers are borrowed from the provider. The scan count is checked and translated to failure, the copy size uses checked_add plus CRYPTO_calloc's own product check, the block is adopted from the seam and transferred to prov->error_strings once, and ERR_load_strings is handed the same array exactly as the authority does.",
+      "defects": [],
+      "residuals": [
+        "B22-R4",
+        "B22-R5"
+      ]
+    },
+    {
+      "id": "B22-PINIT-5",
+      "file": "src/provider/init.rs",
+      "mechanism": "ossl_provider_teardown callback and child gating",
+      "disposition": "CONTRACTED",
+      "contract": "prov is NULL or live. A NULL teardown or a child provider returns without calling anything. Otherwise the stored function is called with the provctx published by init. The only caller is ossl_provider_free on the last reference, with no lock held and flag_initialized set, so the callback may re-enter the library.",
+      "defects": [],
+      "residuals": []
+    }
+  ],
+  "defects": [
+    {
+      "id": "B22-D1",
+      "file": "src/provider/init.rs",
+      "severity": "medium",
+      "kind": "invalid_value_null_function_pointer",
+      "status": "fixed",
+      "description": "The dispatch walk transmuted a GET_REASON_STRINGS entry's `function` straight into a non-Option `unsafe extern \"C\" fn` and wrapped it in Some, without testing for NULL. The pinned authority reads the same entry through OSSL_FUNC_provider_get_reason_strings, whose NULL answer is then excluded by `if (p_get_reason_strings != NULL)`. A provider that publishes id 1029 with a NULL function is therefore authority-valid, but the crate formed a NULL Rust fn value, which has an invalid representation.",
+      "fix": "The arm is now guarded by `if !(*d).function.is_null()`, so NULL leaves the slot absent and the table is skipped, exactly as the authority's NULL check does. Repaired at src/provider/init.rs:372."
+    },
+    {
+      "id": "B22-D2",
+      "file": "src/provider/init.rs",
+      "severity": "low",
+      "kind": "failure_path_compatibility_divergence",
+      "status": "fixed",
+      "description": "When DSO_merge failed, the crate called DSO_load(dso, NULL, ...) unconditionally. The authority's condition is `merged_path == NULL || DSO_load(...) == NULL`, so it never calls the loader in that case. The crate's call raised DSO_R_NO_FILENAME, adding an error to the queue that the authority does not produce. No memory-safety consequence: the loader refuses a NULL filename before touching it.",
+      "fix": "The load is now skipped when merged_ptr is NULL and the same release path runs; the authority's short-circuit is reproduced at src/provider/init.rs:269."
+    },
+    {
+      "id": "B22-D3",
+      "file": "src/evp/method_store.rs",
+      "severity": "low",
+      "kind": "test_only_shared_fixture_race",
+      "status": "fixed",
+      "description": "The seven method-store tests share one process-wide SAW counter array and LAST_PUT_STORE because C callbacks cannot capture, and they call reset() without serialisation. Under --test-threads=4 the two-filter focused run produced one failure (a_refused_construction... saw CONSTRUCT == 0 after another test's reset). Production code is unaffected, but the BATCH threaded gate is unreliable.",
+      "fix": "A test-only `static TEST_LOCK: Mutex<()>` serialises the seven tests (poison recovered; every guarded mutation is a completed atomic store). src/evp/method_store.rs:497, with a guard in each test."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (the first form of the guard was rejected as collapsible_match and rewritten as a match guard)",
+      "focused_tests": "cargo test --lib -- --test-threads=4 provider::init::tests evp::method_store: 8 passed / 0 failed / 0 ignored (1692 filtered)"
+    },
+    "controls_observed": [
+      "The new provider-init test publishes a dispatch table whose GET_REASON_STRINGS entry has a NULL function and asserts that initialisation still succeeds, the dispatch pointer is published, the typed slot is absent (no teardown is stored) and the provider frees cleanly. It pins the authority's NULL-entry behaviour.",
+      "A negative-control attempt restored the unguarded transmute and re-ran that test. It still passed: Option<fn> uses the null niche, so Some(NULL) is representationally None and the call is not made. The test is therefore a parity control, not a detector for the invalid-value class; the only detector for that class is Miri, which is NOT_RUN. The unguarded form was restored from a saved copy and cmp-verified before the batch gates.",
+      "The DSO short-circuit has a source witness (provider_core.c:1023-1030) rather than a runtime control: reaching it needs a failing DSO_merge allocation, which no unit test can induce without an allocator hook.",
+      "The method-store fixture race was observed once (7 passed / 1 failed) before the lock and did not reproduce in three subsequent unguarded threaded runs; after the lock, the same two-filter threaded invocation passed repeatedly and the full suite passed under both schedules.",
+      "The full library suite was run twice on the final blob with --test-threads=1 and --test-threads=4, so the global fixtures and the new provider test ran under both schedules."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1673 passed, 0 failed, 27 ignored (1700 total, 110.07 s).",
+      "serial": "cargo test --lib -- --test-threads=1: 1673 passed, 0 failed, 27 ignored (1700 total, 267.45 s).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: clean",
+      "venue": "docker/openssl-rs-court.sh, CARGO_BUILD_JOBS=4, dev profile; host available memory checked before builds (64 GiB)."
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "No miri component is installed: `cargo miri` reports the component is not available for the court's stable 1.98.1-x86_64-unknown-linux-gnu toolchain. The relevant path also crosses the allocator, DSO and provider-dispatch FFI."
+  },
+  "asan": {
+    "status": "NOT_RUN",
+    "reason": "The repaired paths change a validity guard and skip one DSO call on an allocation-failure path; no allocation size, ownership or access pattern changed. The invalid-value class is Miri's, not ASan's. The ASan court was not built for this batch."
+  },
+  "loom_or_tsan": "NOT_RUN. Neither file declares a lock or atomic of its own: method_store's callbacks lock the caller's store and provider_init takes only default_path_lock, releasing it before DSO_load or any provider callback. The new Mutex is test-only. The cross-mechanism lock order is B9/B10/B21's and was not edited.",
+  "invalidated_evidence": {
+    "closed": "No prior mechanism receipt covered either file; both had been inspected and deferred in M63-M68. The B21 receipt names method_store's callback lock discipline as a retained obligation, which this sweep now states as B22-R2.",
+    "not_invalidated": "The B9/B10/B21 registry serialization, operation-bit, activated-provider sweep and query/unquery evidence is unchanged. No allocation coordinate, #[repr(C)] layout, export or symbol changed, so the DSO, owned-string, ERR and provider-lifecycle receipts were not invalidated. The test-only Mutex changes no production code."
+  },
+  "hidden_obligations": [],
+  "hidden_obligations_note": "0. Every precondition of every remaining unsafe operation is either established in-frame (ConstructData and its mcm are the caller's live objects; provider_dispatch/provctx come from the just-returned init callback; result is written only after the NULL check) or is a stated caller/provider ABI contract (B22-R1..R6).",
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "None. No new unsafe operation was introduced in production code. The ONE validity guard removes the formation of an invalid fn value; the ONLY load-call guard removes a call, not an assumption. The new test fn is test-only.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "No unsafe expression was deleted. The GET_REASON_STRINGS transmute remains but is now unreachable with NULL, and the DSO_load call is skipped on the NULL-merge path. The count is therefore 0 removed / 0 introduced; one operation was narrowed by a validity guard.",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 1,
+  "boundary_size": "Two files, 107 insertions and 6 deletions (method_store.rs +21 test-only; init.rs +86/-6, of which the regression test is ~50 lines). No allocation size, #[repr(C)] layout, exported symbol or signature changed.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Every entry point in both files is an unsafe fn or an unsafe extern \"C\" callback whose preconditions are stated. No safe wrapper was added, and no safe Rust caller can reach the method-store walk: ossl_method_construct has no caller until 7.2's inner_evp_generic_fetch. Provider-supplied code is arbitrary native code at the ABI edge, governed by the stated contracts.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B22-R1",
+      "file": "src/provider/init.rs",
+      "severity": "medium",
+      "disposition": "RECORDED external provider contract - authority parity",
+      "description": "The provider-owned dispatch table and reason-strings table are walked until an id of 0. A missing terminator is over-read exactly as the authority's loop over-reads it; NULL entries are tolerated per id (raw NULL for the void* fields, skipped for reason strings), and a NULL reason-strings table is refused where the authority would dereference it. Termination and pointer lifetime are the provider ABI's obligations and cannot be verified here."
+    },
+    {
+      "id": "B22-R2",
+      "file": "src/evp/method_store.rs",
+      "severity": "medium",
+      "disposition": "RECORDED callback contract - authority parity; reuses B9/B10/B21",
+      "description": "The caller's reserve_store takes the method-store lock and holds it across pre, every construct/put/destruct, and post. Those callbacks must not re-enter that non-reentrant lock; the cross-lock order is method-store then provider opbits. This file takes no lock of its own and allocates nothing."
+    },
+    {
+      "id": "B22-R3",
+      "file": "src/evp/method_store.rs",
+      "severity": "medium",
+      "disposition": "RECORDED mcm contract - caller obligation until 7.2 lands",
+      "description": "The mcm must provide live entries, increment the method refcount in put, interpret a NULL store as the global store, and own/free the temporary store it returned without this file releasing it. ossl_method_construct has no caller yet, so the obligation is retained, not discharged by evidence."
+    },
+    {
+      "id": "B22-R4",
+      "file": "src/provider/init.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity",
+      "description": "If the init callback succeeds but a later step fails (an id already carrying a library number), provctx and dispatch are published while flag_initialized stays clear, so a later free runs neither teardown nor the error-strings release. The authority's `goto end` has the same shape. The id refusal precedes the allocation, so no allocated error-strings block can be leaked on this path."
+    },
+    {
+      "id": "B22-R5",
+      "file": "src/provider/init.rs",
+      "severity": "low",
+      "disposition": "RECORDED deliberate safety improvement",
+      "description": "A provider that returns NULL from get_reason_strings is ignored here; the authority dereferences the NULL table. This exempts undefined behaviour in the authority (AGENTS section 17), not a compatibility claim. Separately, this crate's ERR_load_strings is a no-op, so the copied table is recorded and handed over but is not renderable."
+    },
+    {
+      "id": "B22-R6",
+      "file": "src/provider/init.rs",
+      "severity": "low",
+      "disposition": "RECORDED caller obligation - authority parity",
+      "description": "The initialisation flag is tested and set without a lock, so two concurrent provider_init calls on the same provider would both run the init callback. The authority relies on its caller initialising a provider before publishing it in the store; the # Safety contract now says so explicitly."
+    }
+  ],
+  "queue": {
+    "remaining_before": 169,
+    "remaining_after": 167,
+    "audited_before": 594,
+    "audited_after": 596,
+    "next_ordinary": "src/provider/ml_kem_kmgmt.rs",
+    "next_eight": [
+      "src/provider/ml_kem_kmgmt.rs",
+      "src/provider/mlx_kem.rs",
+      "src/provider/rsa_enc.rs",
+      "src/provider/rsa_kem.rs",
+      "src/provider/securitycheck_default.rs",
+      "src/provider/securitycheck.rs",
+      "src/provider/seeding.rs",
+      "src/provider/skeymgmt.rs"
+    ]
+  }
+}
