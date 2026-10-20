@@ -441,12 +441,25 @@ fn clear_dealloc(p: *mut c_void, n: usize, file: *const c_char, line: c_int) {
 /// Two branches, and they disagree about a zero-length request: with an
 /// allocator installed the caller's allocator answers, and by default the answer
 /// is NULL with no error raised. See the module documentation.
+///
+/// ## `file`
+///
+/// `file` is authority debug metadata, and the allocation-failure path reads it
+/// as a NUL-terminated C string (`ossl_report_alloc_err` → `err_set_debug`). It
+/// must be NULL or point to a NUL-terminated string that stays valid for the
+/// call. The C ABI supplies `__FILE__` literals; a Rust caller must not pass an
+/// arbitrary raw pointer merely because this entry point is safe to name — the
+/// pointer is a C-string precondition, not a safe Rust value.
 #[no_mangle]
 pub extern "C" fn CRYPTO_malloc(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || malloc_request(num, file, line))
 }
 
 /// `void *CRYPTO_zalloc(size_t num, const char *file, int line)`
+///
+/// ## `file`
+/// As for [`CRYPTO_malloc`]: NULL or a NUL-terminated string valid for the call.
+/// The failure path reads it as a C string.
 #[no_mangle]
 pub extern "C" fn CRYPTO_zalloc(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
@@ -465,6 +478,10 @@ pub extern "C" fn CRYPTO_zalloc(num: usize, file: *const c_char, line: c_int) ->
 /// `ossl_size_mul(num, size)` then `CRYPTO_zalloc(bytes)`. Overflow raises
 /// `CRYPTO_R_INTEGER_OVERFLOW` and returns NULL; there is no incoming pointer to
 /// release.
+///
+/// ## `file`
+/// As for [`CRYPTO_malloc`]: NULL or a NUL-terminated string valid for the call.
+/// Both the allocation-failure and overflow paths read it as a C string.
 #[no_mangle]
 pub extern "C" fn CRYPTO_calloc(
     num: usize,
@@ -490,6 +507,10 @@ pub extern "C" fn CRYPTO_calloc(
 /// `CRYPTO_R_INTEGER_OVERFLOW`, returns NULL, and — unlike the realloc forms —
 /// has no pointer to release. A zero `size` is not a special case: the product is
 /// zero and the zero-length arm of `CRYPTO_malloc` answers.
+///
+/// ## `file`
+/// As for [`CRYPTO_malloc`]: NULL or a NUL-terminated string valid for the call.
+/// Both the allocation-failure and overflow paths read it as a C string.
 #[no_mangle]
 pub extern "C" fn CRYPTO_malloc_array(
     num: usize,
@@ -912,6 +933,19 @@ pub unsafe extern "C" fn OPENSSL_cleanse(ptr: *mut c_void, len: usize) {
 /// # Safety
 /// Any function supplied must be valid for the lifetime of the process; every
 /// later allocation of that kind routes through it.
+///
+/// ## Reentrancy
+///
+/// The allocator hooks run while ERR holds `&mut` on the calling thread's error
+/// state (`runtime::err::with_state`), because ERR allocates and releases through
+/// this seam. A supplied hook must therefore **not re-enter the ERR API on the
+/// same thread** — not `ERR_raise*`, `ERR_set_error*`, `ERR_get_error*`, or any
+/// entry point that reaches `with_state`/`ERR_get_state`. Such a re-entry would
+/// form a second `&mut` to the same `ERR_STATE`, which is undefined behaviour in
+/// Rust (the C authority has the same recursion hazard). The hooks may allocate
+/// and release freely, and may re-enter ERR from a different thread. This is an
+/// external contract on the installer, not a runtime check; see also
+/// `runtime::err::with_state`, which records the same retained obligation.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_set_mem_functions(
     malloc_fn: Option<MallocFn>,

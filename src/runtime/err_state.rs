@@ -95,6 +95,19 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_free(es: *mut ErrState) {
 /// `memcpy` tolerates that aliasing, but holding `&mut *es` and the thread state's
 /// `&mut` at the same time would be undefined in Rust, so the input is excluded
 /// rather than reproduced.
+///
+/// ## Destination ownership and provenance
+///
+/// The destination is cleared before the transfer (`clear_all(true)`), and that
+/// clear **releases** every slot whose `ERR_TXT_MALLOCED` flag is set. The caller
+/// must therefore ensure that `es` was produced by `OSSL_ERR_STATE_new`, or that
+/// every MALLOCED slot satisfies the slot contract documented on
+/// [`crate::runtime::err::ErrState::clear_data`]: the pointer is the base of one
+/// whole `CRYPTO_*` seam block, `es` is its exclusive owner, and this state's
+/// release is its single free. A state with a borrowed MALLOCED slot, a slot
+/// shared with another state, or a slot already released makes the clear an
+/// invalid free. `es` must also be exclusively owned by the caller for the
+/// duration of the call and must not be mutated concurrently.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
     if es.is_null() {
@@ -126,6 +139,13 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
 /// `es` must be NULL or a live state owned by the caller, and must not be the
 /// calling thread's own state (the destination `&mut` and the thread state's `&mut`
 /// taken inside `with_state` would alias).
+///
+/// The destination is cleared slot by slot (`clear(i, true)`) before each moved
+/// value is installed, so every MALLOCED slot already in `es` is released. The
+/// same destination ownership/provenance contract as [`OSSL_ERR_STATE_save`]
+/// applies: `es` must come from `OSSL_ERR_STATE_new`, or every MALLOCED slot must
+/// be one whole seam block exclusively owned by `es` and unreleased. `es` must be
+/// exclusively owned and not mutated concurrently.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
     if es.is_null() {
@@ -203,6 +223,19 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
 /// `es` must be NULL or point to a live state owned by the caller; it must not be
 /// the calling thread's own state, because `&*es` would alias the `&mut` that
 /// `with_state` takes on it.
+///
+/// ## Source extent, termination and stability
+///
+/// Every slot the loop reads must satisfy the slot contract:
+///
+/// * a non-NULL `err_data` with a non-zero `err_data_size` is readable for
+///   exactly `err_data_size` bytes; those bytes are copied out, so the size is
+///   trusted as the extent (this is the consumer of the check `openssl_rs_err_finish_data`
+///   and `ERR_set_error_data` establish when the slot is written);
+/// * `err_file` and `err_func` are NULL or NUL-terminated C strings that stay
+///   valid until this call returns — `set_debug` duplicates them;
+/// * `es` is not mutated concurrently with this call (the loop holds `&*es` for
+///   its duration), and the caller does not release the state while it runs.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     if es.is_null() {

@@ -8451,3 +8451,49 @@ artifact: `atlas-refresh/post-census-delta.json`; campaign summary:
 **Not claimed.** No `SAFETY_DISCHARGED`, no file-level discharge, no
 `SAFE_COMPATIBLE`. A full census regeneration and re-binding of the 761 audit
 records remains a SEAL obligation.
+
+## Boundary sweep B33 — ERR mechanism repair (NEO-ERR-1..7) — 2026-10-20
+
+**Source identity:** `integrate/safe-c33` at `241118587` (B32 dossier merge)
+plus the uncommitted B33 working-tree changes; blobs `err.rs`
+`6b0a74560f…`, `err_state.rs` `7970a7ecf9…`, `err_variadic.c`
+`fc27a27234…`, `mem.rs` `764e78570d…`, `courts/phase4/rt_err_borrowed_data_probe.c`
+`3fffe37c96…`. **STOP:** repaired — the boundary STOP condition (NEO-ERR-1,
+external-ABI UB) was fixed at the ownership source. Nothing is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| boundary | file | disposition | mechanism |
+|---|---|---|---|
+| `B33-ERR-1` | `src/runtime/err.rs:1100-1184` | `FIXED` | `take_data` now always returns NULL or one seam block; borrowed slot data is copied, so the C adapter's unconditional `CRYPTO_realloc` can never see caller storage |
+| `B33-ERR-2` | `src/runtime/err.rs:1186-1243` | `FIXED` (contract + check) | `finish_data` states extent/NUL preconditions and releases a zero-extent MALLOCED block instead of storing it |
+| `B33-ERR-3` | `src/runtime/err_state.rs:92-190` | `CONTRACT_ONLY` (retained) | save/save_to_mark destination provenance and exclusive ownership |
+| `B33-ERR-4` | `src/runtime/err_state.rs:192-269` | `CONTRACT_ONLY` (retained) | restore source extent, NUL termination and no-concurrent-mutation |
+| `B33-ERR-5` | `src/runtime/err.rs:2096-2129` | `FIXED` (contract) | `ERR_error_string(e, NULL)` global-buffer serialization is now in `# Safety`; the authority-compatible static is retained |
+| `B33-ERR-6` | `src/runtime/mem.rs:216-240, 439-526` | `CONTRACT_ONLY` (retained) | safe `CRYPTO_malloc` family documents the `file` C-string precondition; the safe-interface soundness gap remains |
+| `B33-ERR-7` | `src/runtime/mem.rs:903-967` | `CONTRACT_ONLY` (retained) | allocator hooks must not re-enter ERR on the same thread; stated at `CRYPTO_set_mem_functions`, guard not implemented |
+
+**NEO-ERR-1 proof.** `courts/phase4/rt_err_borrowed_data_probe.c` drives the real
+C adapter: `ERR_new` -> `ERR_set_debug` -> `ERR_set_error_data(static borrowed,
+flags=0)` -> `ERR_set_error(fmt)`. Observed `data=[raised: ok]`, `flags=3`, the
+borrowed buffer unchanged. The Rust unit test
+`take_data_copies_borrowed_data_before_the_adapter_reallocs` repeats the
+adapter's exact grow-to-1024/shrink realloc sequence on the returned block and
+asserts `taken != borrowed`. The pre-fix shape is the negative control: plain
+build aborts with `realloc(): invalid pointer` (RC 134); ASan reports
+`attempting free on address which was not malloc()-ed` / `bad-free` at
+`CRYPTO_realloc`; the same ASan report is reproduced from the env-gated Rust
+test with `OPENSSL_RS_ERR_NEGATIVE_CONTROL=1`.
+
+**Evidence.** FAST: fmt and `cargo check --lib` clean; focused ERR 13/13. BATCH:
+clippy `--all-targets -D warnings` PASS; library **1705 passed / 0 failed / 31
+ignored** serially (264.17 s) and with `--test-threads=4` (97.35 s). Miri Stacked
+Borrows 13/13 and Tree Borrows 17/17; ASan 17/17; TSan 17/17 (`-Zbuild-std`,
+64 TiB shadow); the C probe passes under GCC ASan. **NOT_RUN:** the six items in
+`boundary-sweep-B33.json.not_run` (authority differential, Miri over C, clang
+ASan, hook reentrancy execution, independent review, Loom/Kani).
+
+**Lifecycle.** Consumer C2 ERR scope remains `ESTABLISHED` (NEO-ERR-5's contract
+repair is pending independent review); full ERR mechanism remains `CONTRACTED`.
+NEO-ERR-3/4/6/7 are retained obligations; documentation alone is not discharge.
+Consumer `SAFE_COMPATIBLE` stays **0/33**. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B33.json`](atlas-refresh/boundary-sweep-B33.json).
