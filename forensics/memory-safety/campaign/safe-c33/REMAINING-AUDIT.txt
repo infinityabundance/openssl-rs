@@ -1,12 +1,4 @@
 src/evp/method_store.rs
-src/provider/dsa_kmgmt.rs
-src/provider/ecdh_exch.rs
-src/provider/ecx_exch.rs
-src/provider/ecx_kem.rs
-src/provider/encode_key2blob.rs
-src/provider/encode_key2ms.rs
-src/provider/endecoder_common.rs
-src/provider/file_store_any2obj.rs
 src/provider/init.rs
 src/provider/kem_util.rs
 src/provider/keymgmt.rs

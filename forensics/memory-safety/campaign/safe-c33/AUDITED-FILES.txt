@@ -576,3 +576,11 @@ src/provider/der_rsa_sig.rs
 src/provider/der_slh_dsa_key.rs
 src/provider/der_sm2_sig.rs
 src/provider/digest_to_nid.rs
+src/provider/dsa_kmgmt.rs
+src/provider/ecdh_exch.rs
+src/provider/ecx_exch.rs
+src/provider/ecx_kem.rs
+src/provider/encode_key2blob.rs
+src/provider/encode_key2ms.rs
+src/provider/endecoder_common.rs
+src/provider/file_store_any2obj.rs
