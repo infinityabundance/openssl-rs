@@ -3,9 +3,9 @@
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-20",
   "branch": "integrate/safe-c33",
-  "source_head": "98aa601cd594ca70f7be669d656b6a179be6a9f3",
-  "source_head_subject": "Merge stage/p25/b30: census refresh and campaign status",
-  "source_head_note": "Rebound at the B31 bookkeeping batch; git diff 1ae550590..98aa601cd shows no src/ change. The pinned census remains c09eef8b.",
+  "source_head": "30541bae71656f883c71e030f9e4127f4ed83113",
+  "source_head_subject": "Merge stage/p25/b36: ERR SeamFile helper repair",
+  "source_head_note": "Rebound at the independent ERR re-adjudication (B36 merge). The pinned census remains c09eef8b; no census refresh is claimed here.",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -184,6 +184,16 @@
       "merge": "3e9ebd582",
       "evidence": ["OB3-CHECKS.md", "OB3-CALLERS.md", "DESTRUCTOR-CONTRACTS.md"],
       "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation."
+    },
+    {
+      "id": "ERR-1",
+      "mechanism": "ERR error-queue ownership and allocator file-coordinate seam",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 88,
+      "source": "30541bae7",
+      "evidence": ["mechanism-discharge-ERR.json", "boundary-sweep-B36.json"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation. Scope: ERR queue/raise/adapter/state paths and the allocator file coordinate they consume, on x86_64-unknown-linux-gnu. Consumer SAFE_COMPATIBLE remains 0/33."
     }
   ],
   "scoped_boundary_discharges": [

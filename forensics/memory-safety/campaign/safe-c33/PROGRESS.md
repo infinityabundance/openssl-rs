@@ -20,11 +20,15 @@ generator is measurement-only and claims no discharge.
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
   (**50.0%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
-- **Mechanism-level `SAFETY_DISCHARGED` (4):** RC-1 shared reference counting
+- **Mechanism-level `SAFETY_DISCHARGED` (5):** RC-1 shared reference counting
   (subphase 84, source `544222da4`), OB-1 `OwnedBuf` (subphase 85,
-  `70cfe8381`), OB-2 `OwnedStr` (subphase 86, `4f3093ad0`) and OB-3
-  `OwnedCtx`/`RawCtx` (subphase 87, `bfe27c84b`, merge `3e9ebd582`). These are
-  mechanism-scope discharges, not file-level or consumer-level graduation.
+  `70cfe8381`), OB-2 `OwnedStr` (subphase 86, `4f3093ad0`), OB-3
+  `OwnedCtx`/`RawCtx` (subphase 87, `bfe27c84b`, merge `3e9ebd582`) and ERR
+  error-queue ownership and the allocator file-coordinate seam (subphase 88,
+  source `30541bae7`, merge of `stage/p25/b36`; independent re-adjudication in
+  `atlas-refresh/mechanism-discharge-ERR.json`). These are mechanism-scope
+  discharges, not file-level or consumer-level graduation; the consumer
+  `SAFE_COMPATIBLE` count is unchanged at **0/33**.
 - **Scoped boundary discharges (3, separate from the mechanism list):** B23
   WPACKET failed-initialisation and `put_value` (`B23-WPKT-1`/`B23-WPKT-2`,
   `atlas-refresh/boundary-sweep-B23.json`); B25 record-layer `RL-4`/`RL-5`
