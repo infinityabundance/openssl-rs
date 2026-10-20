@@ -6319,3 +6319,102 @@ The borrowed key and `alg`/`id` lifetimes are EVP caller obligations.
 `src/rand/pool.rs`, `src/rand/prov_seed.rs`, `src/rand/rand_uniform.rs`,
 `src/rand/sys.rs`, `src/rc2.rs`, `src/rc4.rs`, `src/rsa/asn1.rs`,
 `src/rsa/backend.rs`.
+
+---
+
+## BOUNDARY SWEEP B23 — shared `WPACKET` failed-initialisation class (closes the M70-D1 queue item)
+
+Receipt: [`atlas-refresh/boundary-sweep-B23.json`](atlas-refresh/boundary-sweep-B23.json).
+Candidate: `integrate/safe-c33` at `9079a19a4`; working-tree blobs
+`src/packet.rs` `936f16db4`, `src/provider/slh_dsa_sig.rs` `8ccbdaaf`,
+`src/provider/sm2_sig.rs` `be621233`. Three files, +165/-36.
+
+**Result.** The class is closed crate-wide. `wpacket_intern_init_len` now writes
+`curr = 0`, `written = 0` and `subs = NULL` **before** the `WPACKET_SUB`
+allocation, mirroring the authority's direct
+`pkt->subs = OPENSSL_zalloc(...)` assignment (which leaves NULL on failure).
+The argument-refusal guards of `WPACKET_init_static_len`, `WPACKET_init_der` and
+`WPACKET_init_len` also write `subs = NULL`, so **every** `WPACKET_init_*` entry
+point writes `subs` on **every** return path. `WPACKET_cleanup` may therefore be
+called unconditionally after a refusal, as the provider call sites do. The
+SLH-DSA and SM2 local zeroing workarounds (M70-D1) were reverted to the common
+`MaybeUninit` shape; the root fix is the single repair.
+
+**Boundaries.**
+
+| ID | Mechanism | Disposition |
+|---|---|---|
+| B23-WPKT-1 | failed-init state of `wpacket_intern_init_len` + every `WPACKET_init_*`, consumed by `WPACKET_cleanup` | `SAFETY_DISCHARGED` (scope-limited) |
+| B23-WPKT-2 | `put_value` backward cursor walk | `SAFETY_DISCHARGED` |
+
+**Defects.**
+
+| ID | Location | Severity | Class | Repair |
+|---|---|---|---|---|
+| B23-D1 | `src/packet.rs` `wpacket_intern_init_len` + init guards | medium | uninitialised read / invalid free on a failed init | clear `subs` before the node allocation and on every argument refusal; docs state the cleanable failure state |
+| B23-D2 | `src/packet.rs:606` pre-fix (`put_value`) | medium | out-of-bounds pointer arithmetic | discovered by Miri in the existing round-trip test: the cursor was decremented after the final write. The decrement is now guarded by `if len > 0`; bytes written are unchanged. The authority's `data--` has the same C UB, so this is a deliberate safety improvement. |
+
+**Caller closure (14 entries in the receipt).**
+
+| File | Caller | Disposition |
+|---|---|---|
+| `provider/ecdsa_sig.rs` | `ecdsa_setup_md` | SAFE (root fix) |
+| `provider/dsa_sig.rs` | `dsa_setup_md` | SAFE (root fix) |
+| `provider/eddsa_sig.rs` | `eddsa_setup_md`, including the unknown-key arm | SAFE (root fix) |
+| `provider/ml_dsa_sig.rs` | `set_alg_id_buffer` | SAFE (root fix) |
+| `provider/ml_kem_kmgmt.rs` | KEMRI KDF AlgorithmIdentifier (`ret &=` still evaluates writers) | SAFE; `subs` NULL makes the first start/close guard refuse, as in the authority |
+| `provider/kdf.rs` | `der_encode_sharedinfo` (x942, both passes) | SAFE (root fix) |
+| `provider/kdf.rs` | `hkdf_expand` label builder | SAFE (root fix) |
+| `provider/slh_dsa_sig.rs` | `slh_dsa_set_alg_id_buffer` | SAFE; local zeroing workaround reverted |
+| `provider/sm2_sig.rs` | `sm2sig_digest_signverify_init` | SAFE; local zeroing workaround reverted |
+| `provider/rsa_sig.rs` | `rsa_generate_signature_aid` | SAFE (unchanged; returns on refusal without cleanup) |
+| `provider/encode_key2any.rs` | RSA-PSS two-pass builder | SAFE (unchanged; zeroed packet) |
+| `packet.rs` | all six `wpacket_intern_init_len` callers | SAFE (root) |
+| `asn1_dsa.rs`, `dsa/sign.rs`, `der_writer.rs`, `ml_dsa/encoders.rs`, `punycode.rs`, `slh_dsa/{dsa,fors,wots}.rs`, `ssl/statem/*` | remaining init callers | SAFE (unchanged; zeroed packet or return-on-refusal) |
+| `provider/der_{ec_sig,ecx_key,rsa_key,rsa_sig,sm2_sig}.rs` | unit tests | SAFE (test-only; init asserted successful) |
+
+**Controls observed.** Two new tests in `src/packet.rs`: (1)
+`a_failed_sub_alloc_leaves_a_fully_initialised_cleanable_packet` forces the
+next `WPACKET_SUB` allocation to fail through a `#[cfg(test)]` thread-local
+hook, starts from `MaybeUninit`, reads every field, asserts `subs` NULL, then
+cleans up; (2) `a_failed_sub_alloc_overwrites_a_poisoned_subs_field` pre-fills
+the packet with `0xAA` and fails the assertion before cleanup if the failure
+path leaves `subs` untouched (the deterministic negative control). The existing
+SLH-DSA argument-refusal control still passes. Miri's pre-fix failure at
+`put_value` and post-fix pass are the B23-D2 witness.
+
+**Gates observed (final blob).** FAST fmt, clippy and focused `packet::tests`
+5/0. BATCH clippy clean; full library **1676 passed / 0 failed / 27 ignored**
+threaded (93.17 s) and serial (257.56 s); `scripts/adv-probe.sh` 26/26.
+Targeted Miri on `packet::tests` passed under both Stacked Borrows and Tree
+Borrows (`nightly-2026-10-01`). One earlier threaded invocation of the same
+suite failed 17 `runtime::secure` heap tests; the immediate rerun passed. That
+is an unrelated process-global fixture ordering issue (B23-R3), not reachable
+from packet/provider code.
+
+**Hidden obligations: 0. Safe callers can cause UB: no.** The one remaining
+restriction is explicit: after an argument-guard refusal only `subs` is
+written, so no other field may be read; every provider site passes a valid
+buffer, so its refusal is the allocation-failure arm, which writes every field.
+
+**Invalidated evidence.** All prior evidence bound to `src/packet.rs` (including
+any Miri result) is invalidated by B23-D2 and the failed-init write. M70-D1's
+evidence for `slh_dsa_sig.rs` and `sm2_sig.rs` is invalidated by removing the
+workaround; their functional success paths are unchanged. The shared contract
+refreshes the failure-path portion of the six provider callers' evidence.
+Allocator seam coordinates, `#[repr(C)]` layouts, exports and signatures are
+unchanged, so those receipts survive.
+
+**NOT_RUN.** Authority byte diff / executable differential (the pinned
+tree is absent from this checkout); ASan (no extent/ownership change; the
+defect classes are Miri's); Loom/TSan (no production lock/atomic); dependency-
+graph regeneration; FRF and SEAL; constant-time (no secret-dependent flow).
+
+**Classification.** `SAFETY_DISCHARGED` for the two named mechanism scopes only.
+This is not a whole-file or consumer-family `SAFE_COMPATIBLE` graduation.
+
+**Queue.** No ordinary-file count changes (this is a boundary sweep):
+`REMAINING-AUDIT.txt` **151**, `AUDITED-FILES.txt` **612**. **Next ordinary
+position.** `src/rand/pool.rs`. **Next eight.** `src/rand/pool.rs`,
+`src/rand/prov_seed.rs`, `src/rand/rand_uniform.rs`, `src/rand/sys.rs`,
+`src/rc2.rs`, `src/rc4.rs`, `src/rsa/asn1.rs`, `src/rsa/backend.rs`.

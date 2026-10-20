@@ -389,14 +389,11 @@ unsafe extern "C" fn sm2sig_digest_signverify_init(
          * as long as it's not used to construct anything that needs an AlgorithmIdentifier.
          */
         (*ctx).aid_len = 0;
-        // SAFETY: `Wpacket` is a `#[repr(C)]` record of raw pointers, `size_t`s and an
-        // `unsigned int : 1`, so the all-zero image is a valid packet (`subs` NULL). The zeroing
-        // is what makes the `WPACKET_cleanup` below defined when `WPACKET_init_der` refuses:
-        // that refusal also covers a failed node allocation, after which the authority's own
-        // unconditional cleanup would read an uninitialised `subs` field. `init_der` writes
-        // every field on success, so no reachable path observes the zeroed image.
-        let mut pkt = core::mem::zeroed::<Wpacket>();
-        let pkt = ptr::addr_of_mut!(pkt);
+        // `WPACKET_init_der` leaves a cleanable failed-init state (`subs` NULL) when it refuses,
+        // so the unconditional `WPACKET_cleanup` below is defined on both the success and the
+        // refusal path; every field is written by the init before it is read.
+        let mut pkt = core::mem::MaybeUninit::<Wpacket>::uninit();
+        let pkt = pkt.as_mut_ptr();
         let mut aid: *mut u8 = ptr::null_mut();
         if WPACKET_init_der(pkt, (*ctx).aid_buf.as_mut_ptr(), OSSL_MAX_ALGORITHM_ID_SIZE) != 0
             && ossl_DER_w_algorithmIdentifier_SM2_with_MD(pkt, -1, (*ctx).ec, md_nid) != 0
@@ -405,8 +402,8 @@ unsafe extern "C" fn sm2sig_digest_signverify_init(
             WPACKET_get_total_written(pkt, ptr::addr_of_mut!((*ctx).aid_len));
             aid = WPACKET_get_curr(pkt).cast::<u8>();
         }
-        // SAFETY: `pkt` is a valid packet either way -- `init_der` initialised it on success and
-        // it is the zeroed image (empty sub-packet chain) when the initialisation refused -- and
+        // SAFETY: `pkt` is a valid packet either way -- `init_der` initialises it on success and
+        // the failed-init state is `subs` NULL (an empty sub-packet chain) when it refuses -- and
         // it is cleaned up exactly once.
         WPACKET_cleanup(pkt);
         if !aid.is_null() && (*ctx).aid_len != 0 {
