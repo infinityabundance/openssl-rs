@@ -71,6 +71,7 @@ use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     object_create, object_free, object_new, Asn1Object, OBJ_nid2obj, OBJ_obj2nid,
     ASN1_OBJECT_FLAG_DYNAMIC, ASN1_OBJECT_FLAG_DYNAMIC_DATA, ASN1_OBJECT_FLAG_DYNAMIC_STRINGS,
@@ -1494,7 +1495,7 @@ pub unsafe extern "C" fn d2i_ASN1_UINTEGER(
 #[no_mangle]
 pub extern "C" fn ASN1_PCTX_new() -> *mut Asn1Pctx {
     guard_ffi(core::ptr::null_mut(), || {
-        OwnedBlock::<Asn1Pctx>::zalloc(1, OBJECT_FILE.as_ptr(), LINE)
+        OwnedBlock::<Asn1Pctx>::zalloc(1, SeamFile::new(OBJECT_FILE), LINE)
             .map_or(core::ptr::null_mut(), |blk| blk.into_raw())
     })
 }
@@ -1508,7 +1509,7 @@ pub extern "C" fn ASN1_SCTX_new(
     scan_cb: Option<unsafe extern "C" fn(*mut Asn1Sctx) -> c_int>,
 ) -> *mut Asn1Sctx {
     guard_ffi(core::ptr::null_mut(), || {
-        let Some(blk) = OwnedBlock::<Asn1Sctx>::zalloc(1, OBJECT_FILE.as_ptr(), LINE) else {
+        let Some(blk) = OwnedBlock::<Asn1Sctx>::zalloc(1, SeamFile::new(OBJECT_FILE), LINE) else {
             return core::ptr::null_mut();
         };
         // SAFETY: `blk.as_ptr()` is a fresh zeroed `ASN1_SCTX`.
@@ -2020,7 +2021,7 @@ pub unsafe extern "C" fn a2d_ASN1_OBJECT(
                         // frees before it reallocates.
                         drop(heap.take());
                         tmpsize = blsize as usize + 32;
-                        heap = OwnedBlock::<u8>::malloc(tmpsize, OBJECT_FILE.as_ptr(), LINE);
+                        heap = OwnedBlock::<u8>::malloc(tmpsize, SeamFile::new(OBJECT_FILE), LINE);
                         if heap.is_none() {
                             break 'body 0;
                         }

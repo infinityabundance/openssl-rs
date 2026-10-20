@@ -40,6 +40,7 @@ use crate::pkcs7::{ossl_pkcs7_ctx_get0_libctx, ossl_pkcs7_ctx_get0_propq};
 use crate::runtime::bio::sys::{strlen, FILE as StdioFile};
 use crate::runtime::bio::Bio;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/pkcs12/p12_utl.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_utl.c";
@@ -68,7 +69,8 @@ struct OwnedBuf {
 
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, line)
@@ -147,7 +149,7 @@ pub unsafe extern "C" fn OPENSSL_asc2uni(
         return core::ptr::null_mut();
     };
     // SAFETY: `ulen` is a positive byte count.
-    let Some(mut buf) = OwnedBuf::new(ulen as usize, FILE.as_ptr(), LINE) else {
+    let Some(mut buf) = OwnedBuf::new(ulen as usize, SeamFile::new(FILE), LINE) else {
         return core::ptr::null_mut();
     };
     {
@@ -210,7 +212,7 @@ pub unsafe extern "C" fn OPENSSL_uni2asc(uni: *const c_uchar, unilen: c_int) -> 
         unsafe { uni.add(1) }
     };
     // SAFETY: `asclen` is a positive byte count.
-    let Some(mut buf) = OwnedBuf::new(asclen as usize, FILE.as_ptr(), LINE) else {
+    let Some(mut buf) = OwnedBuf::new(asclen as usize, SeamFile::new(FILE), LINE) else {
         return core::ptr::null_mut();
     };
     {
@@ -284,7 +286,7 @@ pub unsafe extern "C" fn OPENSSL_utf82uni(
     };
 
     // SAFETY: `ulen` is a positive byte count.
-    let Some(mut buf) = OwnedBuf::new(ulen as usize, FILE.as_ptr(), LINE) else {
+    let Some(mut buf) = OwnedBuf::new(ulen as usize, SeamFile::new(FILE), LINE) else {
         return core::ptr::null_mut();
     };
     {
@@ -421,7 +423,7 @@ pub unsafe extern "C" fn OPENSSL_uni2utf8(uni: *const c_uchar, unilen: c_int) ->
     }
 
     // SAFETY: `asclen` is a positive byte count.
-    let Some(mut buf) = OwnedBuf::new(asclen as usize, FILE.as_ptr(), LINE) else {
+    let Some(mut buf) = OwnedBuf::new(asclen as usize, SeamFile::new(FILE), LINE) else {
         return core::ptr::null_mut();
     };
     {

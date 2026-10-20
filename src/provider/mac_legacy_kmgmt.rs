@@ -62,6 +62,7 @@ use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 use crate::selftest::OsslCallback;
 
@@ -85,8 +86,10 @@ const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x03;
 
 /// The unit's own `__FILE__`. `mac_legacy_kmgmt.c` is a plain `.c`, so it carries the source-tree
 /// prefix, as the crate's own `../../src/openssl-3.6.4/` spelling does.
-const FILE: *const c_char =
-    c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c".as_ptr();
+const FILE_C: &core::ffi::CStr =
+    c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -165,7 +168,8 @@ impl OwnedBuf {
 
     /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its
     /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_secure(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `file` is NULL or this unit's NUL-terminated `FILE`.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
@@ -476,7 +480,7 @@ unsafe fn mac_key_fromdata(key: *mut MacKey, params: *const OsslParam) -> c_int 
             } else {
                 1
             };
-            let Some(buf) = OwnedBuf::new_secure(priv_len, FILE, 192) else {
+            let Some(buf) = OwnedBuf::new_secure(priv_len, FILE_SEAM, 192) else {
                 return 0;
             };
             ptr::copy_nonoverlapping((*p).data.cast::<u8>(), buf.as_ptr(), (*p).data_size);
@@ -856,7 +860,7 @@ unsafe fn mac_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             // The fresh answer replaces the member (the authority overwrites the previous pointer
             // without releasing it here); `OwnedBuf` owns it until it is handed over.
             (*gctx).priv_key = ptr::null_mut();
-            let Some(buf) = OwnedBuf::new_secure((*p).data_size, FILE, 425) else {
+            let Some(buf) = OwnedBuf::new_secure((*p).data_size, FILE_SEAM, 425) else {
                 return 0;
             };
             ptr::copy_nonoverlapping((*p).data.cast::<u8>(), buf.as_ptr(), (*p).data_size);

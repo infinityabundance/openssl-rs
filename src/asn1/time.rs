@@ -52,6 +52,7 @@ use crate::runtime::bio::Bio;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::str::OPENSSL_strnlen;
 use crate::runtime::time::{OPENSSL_gmtime, OPENSSL_gmtime_adj, OPENSSL_gmtime_diff, TimeT, Tm};
 
@@ -983,7 +984,8 @@ pub unsafe extern "C" fn ASN1_TIME_set_string_X509(
                 else {
                     return 0;
                 };
-                let Some(data) = OwnedBlock::<c_uchar>::zalloc(count, FILE.as_ptr(), LINE) else {
+                let Some(data) = OwnedBlock::<c_uchar>::zalloc(count, SeamFile::new(FILE), LINE)
+                else {
                     return 0;
                 };
                 t.data = data.as_ptr();

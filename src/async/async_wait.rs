@@ -137,7 +137,8 @@ struct OwnedFdLookup {
 
 impl OwnedFdLookup {
     /// `CRYPTO_zalloc(size_of::<FdLookup>(), file, line)`, or `None` when it answers NULL.
-    fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedFdLookup> {
+    fn new_zeroed(file: SeamFile, line: c_int) -> Option<OwnedFdLookup> {
+        let file = file.as_ptr();
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<FdLookup>()` bytes, which is exactly the node's layout.
         let raw = unsafe {
@@ -225,7 +226,7 @@ pub unsafe extern "C" fn ASYNC_WAIT_CTX_set_wait_fd(
     >,
 ) -> c_int {
     guard_ffi(0, || {
-        let Some(fdlookup) = OwnedFdLookup::new_zeroed(FILE, LINE_LOOKUP) else {
+        let Some(fdlookup) = OwnedFdLookup::new_zeroed(FILE_SEAM, LINE_LOOKUP) else {
             return 0;
         };
         // SAFETY: `fdlookup` is this call's own fresh node and `ctx` is live per the contract.

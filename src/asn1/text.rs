@@ -37,6 +37,7 @@ use crate::runtime::bio::{BIO_dump, BIO_gets, BIO_write};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2txt};
 use crate::runtime::str::OPENSSL_hexchar2int;
 
@@ -78,7 +79,8 @@ struct OwnedBuf {
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for the fixed render buffer, or `None` when the allocator
     /// answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, line)
@@ -222,7 +224,7 @@ pub unsafe extern "C" fn i2a_ASN1_OBJECT(
                 unsafe { raise_site(&err_sites::A_OBJECT_198) };
                 return -1;
             }
-            let Some(h) = OwnedBuf::new(i as usize + 1, OBJECT_FILE.as_ptr(), LINE) else {
+            let Some(h) = OwnedBuf::new(i as usize + 1, SeamFile::new(OBJECT_FILE), LINE) else {
                 return -1;
             };
             let p = h.as_ptr().cast::<c_char>();

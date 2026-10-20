@@ -61,6 +61,7 @@ use crate::asn1::utl;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack};
 
@@ -105,7 +106,7 @@ unsafe fn item_flags_i2d(
         // SAFETY: `len` is the size the sizing pass just computed, and it is
         // positive here. Ownership passes to the caller's slot, so the handle gives
         // the block up with `into_raw`.
-        let Some(buf) = OwnedBlock::<u8>::malloc(len as usize, FILE.as_ptr(), LINE) else {
+        let Some(buf) = OwnedBlock::<u8>::malloc(len as usize, SeamFile::new(FILE), LINE) else {
             // The authority returns -1 here without raising: a caller distinguishes
             // "could not allocate" from "would not fit" by the sign, not by the
             // queue.
@@ -1015,11 +1016,11 @@ unsafe fn set_seq_out(
     let count = n.max(0) as usize;
     // SAFETY: the caller's measurement, non-negative because it was accumulated.
     let buflen = skcontlen.max(0) as usize;
-    let derlst = OwnedBlock::<DerEnc>::malloc(count, FILE.as_ptr(), LINE);
+    let derlst = OwnedBlock::<DerEnc>::malloc(count, SeamFile::new(FILE), LINE);
     let Some(derlst) = derlst else {
         return 0;
     };
-    let tmpdat = OwnedBlock::<u8>::malloc(buflen, FILE.as_ptr(), LINE);
+    let tmpdat = OwnedBlock::<u8>::malloc(buflen, SeamFile::new(FILE), LINE);
     let Some(tmpdat) = tmpdat else {
         // `derlst`'s `Drop` releases the list on this path.
         return 0;

@@ -17,6 +17,7 @@ use crate::asn1::string::{ASN1_INTEGER_free, ASN1_STRING_get0_data, ASN1_STRING_
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_dup, X509_ALGOR_free};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{BIO_free_all, Bio};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::stack::OpenSslStack;
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
@@ -410,7 +411,7 @@ pub(crate) unsafe extern "C" fn TS_REQ_to_TS_VERIFY_CTX(
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     }
     // `len` is positive, so this is the authority's own `OPENSSL_malloc(hashed_msg->length)`.
-    let Some(buf) = OwnedBlock::<c_uchar>::malloc(len as usize, FILE.as_ptr(), 168) else {
+    let Some(buf) = OwnedBlock::<c_uchar>::malloc(len as usize, SeamFile::new(FILE), 168) else {
         // SAFETY: the err: arm releases the context per the authority.
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     };

@@ -92,6 +92,7 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `bio.h`'s `BIO_get_flags(b)` — `#define BIO_get_flags(b) ((b)->flags)`.
 ///
@@ -148,9 +149,13 @@ const fn evp_encode_length(l: usize) -> usize {
 }
 
 /// `OPENSSL_FILE` at the allocation and free sites below, per authority unit.
-const FILE_B64: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c".as_ptr();
+const FILE_B64_C: &CStr = c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c";
+const FILE_B64: *const c_char = FILE_B64_C.as_ptr();
 /// `crypto/evp/bio_enc.c`.
-const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c".as_ptr();
+const FILE_ENC_C: &CStr = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c";
+const FILE_ENC: *const c_char = FILE_ENC_C.as_ptr();
+const FILE_B64_SEAM: SeamFile = SeamFile::new(FILE_B64_C);
+const FILE_ENC_SEAM: SeamFile = SeamFile::new(FILE_ENC_C);
 
 /// An owned BIO context block (`BioB64Ctx`/`BioEncCtx`).
 ///
@@ -171,7 +176,8 @@ struct OwnedCtx<T: CtxDestroy> {
 impl<T: CtxDestroy> OwnedCtx<T> {
     /// `CRYPTO_zalloc(sizeof(T), file, alloc_line)`, or `None` when the allocator answers NULL. The
     /// handle's later `Drop` releases the block at `release_line` -- the `*_new` error path.
-    fn zalloc(file: *const c_char, alloc_line: c_int, release_line: c_int) -> Option<OwnedCtx<T>> {
+    fn zalloc(file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<OwnedCtx<T>> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
@@ -351,7 +357,7 @@ unsafe fn b64_ctx(bi: *mut Bio) -> *mut BioB64Ctx {
 /// # Safety
 /// `bi` must be the live BIO `BIO_new` is creating.
 unsafe extern "C" fn b64_new(bi: *mut Bio) -> c_int {
-    let Some(ctx) = OwnedCtx::<BioB64Ctx>::zalloc(FILE_B64, 70, 77) else {
+    let Some(ctx) = OwnedCtx::<BioB64Ctx>::zalloc(FILE_B64_SEAM, 70, 77) else {
         return 0;
     };
     let p = ctx.as_ptr();
@@ -1286,7 +1292,7 @@ unsafe fn enc_ctx(b: *mut Bio) -> *mut BioEncCtx {
 /// # Safety
 /// `bi` must be the live BIO `BIO_new` is creating.
 unsafe extern "C" fn enc_new(bi: *mut Bio) -> c_int {
-    let Some(ctx) = OwnedCtx::<BioEncCtx>::zalloc(FILE_ENC, 68, 73) else {
+    let Some(ctx) = OwnedCtx::<BioEncCtx>::zalloc(FILE_ENC_SEAM, 68, 73) else {
         return 0;
     };
     let p = ctx.as_ptr();

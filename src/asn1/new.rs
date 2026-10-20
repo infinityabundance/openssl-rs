@@ -41,6 +41,7 @@ use crate::asn1::string::ASN1_STRING_type_new;
 use crate::asn1::utl;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_nid2obj;
 use crate::runtime::stack::OPENSSL_sk_new_null;
 
@@ -232,7 +233,7 @@ pub(crate) unsafe fn item_embed_new(
                 // The block is owned here until it is published to the caller's slot; the
                 // allocation is `item.size` bytes at the authority's `file`/`line`.
                 let Some(fresh) =
-                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE)
+                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, SeamFile::new(FILE), LINE)
                 else {
                     // SAFETY: the caller's slot is writable; the authority leaves it NULL
                     // when the allocation is refused.
@@ -291,7 +292,7 @@ pub(crate) unsafe fn item_embed_new(
                 // ownership leaves this frame with the value published to the caller's slot.
                 // SAFETY: the allocation is `item.size` bytes at the authority's `file`/`line`.
                 let Some(fresh) =
-                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, FILE.as_ptr(), LINE)
+                    OwnedBlock::<u8>::zalloc(item.size.max(0) as usize, SeamFile::new(FILE), LINE)
                 else {
                     // SAFETY: the caller's slot is writable; the authority leaves it NULL
                     // when the allocation is refused.
@@ -565,7 +566,7 @@ unsafe fn primitive_new(pval: *mut *mut c_void, it: *const Asn1Item, embed: c_in
             // explicitly, and the union's other bytes are not part of the value. The
             // owner holds the block until both fields are set and it is published.
             // SAFETY: the allocation is one `ASN1_TYPE` at the authority's `file`/`line`.
-            let Some(typ) = OwnedBlock::<Asn1Type>::malloc(1, FILE.as_ptr(), LINE) else {
+            let Some(typ) = OwnedBlock::<Asn1Type>::malloc(1, SeamFile::new(FILE), LINE) else {
                 return 0;
             };
             let raw = typ.as_ptr();
