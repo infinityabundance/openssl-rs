@@ -1132,6 +1132,10 @@ pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
 /// veto makes it answer 0; after a veto the object cannot be released by retrying.
 /// When the count reaches zero the method's `destroy` and the `ex_data` teardown
 /// run and the object is freed, so `bio` must not be used again.
+///
+/// The BIO's method table must stay valid until the last reference is released:
+/// `destroy` is dispatched through it. A method table released before its BIOs
+/// is caller UB that this function cannot detect.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
     guard_ffi(0, || {
@@ -1225,6 +1229,11 @@ pub unsafe extern "C" fn BIO_vfree(bio: *mut Bio) {
 /// function can detect. NULL ends the walk. An element whose count is above one
 /// is shared, so the walk releases that element and stops without touching the
 /// remainder.
+///
+/// The free callback and `destroy` of an element must not release or unlink the
+/// remaining chain: the walk re-reads each link only after the previous element
+/// has been released, so a callback that frees the tail turns the next iteration
+/// into a use-after-free.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free_all(bio: *mut Bio) {
     guard_ffi((), || {
