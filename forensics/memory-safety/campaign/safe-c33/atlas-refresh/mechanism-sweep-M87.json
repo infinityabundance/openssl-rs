@@ -1,0 +1,128 @@
+{
+  "receipt": "mechanism-sweep-M87",
+  "branch": "integrate/safe-c33",
+  "source_head": "61f061111",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the affected RT-STORE differential probe. Eight files audited; no memory-safety defect and no ABI/layout regression found; two unsafe-contract corrections (an over-permissive NULL allowance) plus one stale module note in v3_skid.rs, documentation-only; no behavioural edit; no new unsafe operation and no new hidden obligation.",
+  "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the OSSL_ATTRIBUTES_SYNTAX item group and its two i2r rows; the singleUse and sOAIdentifier ASN1_NULL rows; the subject-key-identifier helpers and row; the TLS_FEATURE item, i2v/v2i pair and row; the OSSL_USER_NOTICE_SYNTAX item group, print_notice and row; the UTF8 string pair and its one-row table; and the X509_ACERT/OSSL_ISSUER_SERIAL/OSSL_OBJECT_DIGEST_INFO setters.",
+  "files": [
+    "src/x509/v3_sda.rs",
+    "src/x509/v3_single_use.rs",
+    "src/x509/v3_skid.rs",
+    "src/x509/v3_soa_id.rs",
+    "src/x509/v3_tlsf.rs",
+    "src/x509/v3_usernotice.rs",
+    "src/x509/v3_utf8.rs",
+    "src/x509/x509aset.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M87-D1",
+      "file": "src/x509/v3_skid.rs",
+      "line": 87,
+      "severity": "low",
+      "class": "unsafe-contract",
+      "detail": "s2i_ASN1_OCTET_STRING's # Safety section declared `str` as \"NULL or NUL-terminated\", but the body forwards it to OPENSSL_hexstr2buf, whose ossl_hexstr2buf_sep starts with strlen(str_). A caller obeying the declared contract could therefore pass NULL and reach undefined behaviour; the authority has the same unguarded `strlen` precondition, so the correct contract is non-NULL. Corrected to \"a non-NULL NUL-terminated string\"; no code change."
+    },
+    {
+      "id": "M87-D2",
+      "file": "src/x509/v3_skid.rs",
+      "line": 204,
+      "severity": "low",
+      "class": "unsafe-contract",
+      "detail": "s2i_skey_id's # Safety section declared `str` as \"NULL or NUL-terminated\", but both prefix tests call strcmp(str_, ...) and the non-\"hash\" arm forwards to s2i_ASN1_OCTET_STRING. NULL is undefined behaviour, and the authority also calls strcmp without a NULL check. Corrected to a non-NULL NUL-terminated string; `ctx` remains NULL-or-live, which the body does guard. No code change."
+    },
+    {
+      "id": "M87-D3",
+      "file": "src/x509/v3_skid.rs",
+      "line": 263,
+      "severity": "info",
+      "class": "stale-documentation",
+      "detail": "The row's doc comment still said the s2i slot is None because s2i_skey_id was withheld, while the initialiser has carried Some(s2i_skey_id) since D472. Rewritten to state that every slot is the authority's. No code change."
+    }
+  ],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "test_only_unsafe_operations": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [
+    "src/x509/v3_skid.rs:87: the s2i_ASN1_OCTET_STRING SAFETY contract narrowed from NULL-or-NUL-terminated to non-NULL NUL-terminated, matching OPENSSL_hexstr2buf's strlen precondition and the authority's own contract.",
+    "src/x509/v3_skid.rs:204: the s2i_skey_id SAFETY contract narrowed the same way for `str`, because both prefix tests are strcmp; `ctx` stays NULL-or-live.",
+    "src/x509/v3_skid.rs:263: stale row note claiming the s2i slot was withheld/None corrected to describe the authority-faithful Some(s2i_skey_id)."
+  ],
+  "boundary_control": [
+    "No negative control was added: the batch found no memory-safety defect and changed no executable code. The affected RT-STORE court drives the ASN1 item groups and extension surfaces this batch's units publish (new/build/encode/decode/re-encode/free) against the pinned authority; it passed with 1038 observations and 0 residuals, both exits 0.",
+    "The extension rows in this batch are unexported internal data; RT-STORE reaches their shared ASN1 item and helper surface but does not name every row callback. v3_single_use, v3_soa_id and the two v3_sda rows therefore remain reviewed-against-authority plus link/reference-covered rather than behaviourally driven by name."
+  ],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean (17.72 s incremental)",
+    "focused": "cargo test --lib x509::v3 -- --test-threads=4: 20 passed / 0 failed / 0 ignored (1711 filtered); cargo test --lib x509::x_ -- --test-threads=4: 14 passed / 0 failed / 0 ignored (1717 filtered)",
+    "full_lib_serial": "1700 passed / 0 failed / 31 ignored (1731 total), 241.42 s, --test-threads=1",
+    "full_lib_threads4": "1700 passed / 0 failed / 31 ignored (1731 total), 93.63 s, --test-threads=4",
+    "affected_probe": "RT-STORE 1038 authority and 1038 candidate observations, 0 residuals, authority and candidate exits both 0; candidate binary sha256 14e62df0538d7c877e5627c7dde2fc542f3928ae9523b2cfb25446e59880a38a, candidate libcrypto.so.3 sha256 c82bf5209a20297ebb8efdf0093047f95ec36f518bbafdb114cd1cae5f2bfc4b"
+  },
+  "retained_obligations": [
+    "src/x509/v3_sda.rs: the exported OSSL_ATTRIBUTES_SYNTAX item group follows the ASN1_ITEM contract (NULL-or-writable slot, readable cursor and extent for d2i; NULL-or-live value and NULL-or-writable cursor for i2d; NULL-or-live value for free); `i2r` receives a live BIO and a NULL-or-live STACK_OF(X509_ATTRIBUTE) whose elements are live, each attribute's object is NULL-or-live and each counted value is live for the printer; the descriptor names the crate-owned static X509_ATTRIBUTE item.",
+    "src/x509/v3_single_use.rs: the four callbacks ignore their value/context arguments; i2r answers 1 without writing; r2i/s2i answer the ASN1_NULL_new sentinel; i2s answers one allocator-seam CRYPTO_strdup block transferred to the caller; the row's item is ASN1_NULL_it.",
+    "src/x509/v3_skid.rs: `i2s_ASN1_OCTET_STRING` requires a live ASN1_OCTET_STRING whose data is valid for length (the authority does not NULL-check it); `s2i_ASN1_OCTET_STRING` requires a non-NULL NUL-terminated string and takes ownership of OPENSSL_hexstr2buf's block on success, freeing the fresh string on failure; `ossl_x509_pubkey_hash` accepts NULL or a live X509_PUBKEY, borrows pk for pklen bytes, writes into a 64-byte EVP_MAX_MD_SIZE buffer, and frees the fetched EVP_MD and the string exactly once on every arm; `s2i_skey_id` requires a non-NULL NUL-terminated string and NULL-or-live X509V3_CTX whose subject_cert/subject_req are live when selectable; the row's i2s cast is the authority's two-pointer ABI-compatible cast.",
+    "src/x509/v3_soa_id.rs: identical shape to v3_single_use.rs; i2s transfers one CRYPTO_strdup block and the row's item is ASN1_NULL_it.",
+    "src/x509/v3_tlsf.rs: the exported TLS_FEATURE allocator pair follows the ASN1_ITEM contract over the crate-owned static integer template; the pop_free thunk receives NULL or a live ASN1_INTEGER; `i2v` receives live stacks; `v2i` receives a live STACK_OF(CONF_VALUE) whose elements are live and whose value-or-name is NUL-terminated, and every invalid-id/new/set/push arm frees the current integer and the partially built list exactly once.",
+    "src/x509/v3_usernotice.rs: the exported item group follows the ASN1_ITEM contract; `NoticeBuf` adopts exactly one i2s_ASN1_INTEGER block and releases it once through CRYPTO_free at the authority's failure (48) or success (51) coordinate; `print_notice` receives a live BIO and USERNOTICE whose noticeref, organization, noticenos elements and exptext satisfy the ASN1 item's non-NULL/length invariants; a NULL stack element follows the authority's `(null)` then NULL-i2s refusal.",
+    "src/x509/v3_utf8.rs: `i2s_ASN1_UTF8STRING` accepts NULL or a live ASN1_UTF8STRING with data valid for length (zero length is refused), uses checked_add for length+1, fills exactly length bytes plus the NUL, and transfers the OwnedBlock to the caller; `s2i_ASN1_UTF8STRING` accepts NULL or a NUL-terminated string, frees the fresh string on ASN1_STRING_set failure and returns it otherwise; the one-row table's two casts are the authority's ABI-compatible function-type casts.",
+    "src/x509/x509aset.rs: `replace_gentime` requires a writable ASN1_STRING slot and a live source, refuses a non-GENERALIZEDTIME type, no-ops on identity and replaces only after a successful duplicate; `replace_dirName` requires a writable GENERAL_NAMES slot and a live X509_NAME, builds name-copy/stack/name and hands the copy to GENERAL_NAME_set0_value, freeing each partial build once and releasing the caller-owned old stack only on success; the twelve exported setters require a live containing object and a live source (or a transferred value for set0_holder_*), and every copy/duplicate failure follows the authority's answer."
+  ],
+  "not_discharged": [
+    "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "Miri/ASan/Loom/TSan were not run: no owner, extent, aliasing or concurrency mechanism changed.",
+    "No dudect/ctgrind claim is made.",
+    "The other phase-10 courts were not re-run (not affected); the phase-11 X.509 suite was not re-run for this batch and its last candidate-bound pass is reused.",
+    "v3_single_use, v3_soa_id and the two v3_sda rows have no RT-STORE arm by name (their rows are unexported and the probe does not name them); they are reviewed against the authority and link/reference-covered only. v3_skid's octet-string pair, v3_tlsf/v3_usernotice item groups, v3_utf8's helpers and the x509aset setters are reviewed but are not all named by the affected probe.",
+    "FRF and the SEAL-level forensic regeneration were not run."
+  ],
+  "deferred": [],
+  "residuals": [
+    "M87-R1 (info, authority behaviour preserved): s2i_ASN1_OCTET_STRING assigns `length as c_int`; a hex input over INT_MAX bytes would truncate. The authority assigns `long` to the int field with the same truncation, and ASN.1 parse/encode keeps lengths non-negative and bounded, so the arm is unreachable in practice and is not a newly introduced memory-safety obligation.",
+    "M87-R2 (info, authority behaviour preserved): i2s_ASN1_OCTET_STRING passes a negative `length` through to OPENSSL_buf2hexstr exactly as the authority does; a live ASN1_OCTET_STRING from the parser has a non-negative length."
+  ],
+  "unrelated_residuals": [],
+  "secret_bearing_buffers": "No secret-bearing buffer or cleansing claim changed. Every audited unit handles public certificate configuration, extension and attribute data; the only allocations are public strings, ASN.1 values and object stacks, released by the receiving item, extension machinery or NoticeBuf's single Drop.",
+  "shared_boundary_files": [
+    "src/asn1/layout.rs (Asn1Item/Asn1Template/Asn1String layouts and the repr(C) assertions)",
+    "src/asn1/new.rs, src/asn1/d2i.rs, src/asn1/i2d.rs, src/asn1/fre.rs (the exported item four)",
+    "src/asn1/items.rs (the referenced item descriptors)",
+    "src/asn1/owned.rs (OwnedBlock and the checked allocation helper)",
+    "src/asn1/string.rs (ASN1_STRING_dup/copy/free/set and the typed allocators)",
+    "src/runtime/stack.rs (OPENSSL_sk_* NULL/range discipline and pop_free)",
+    "src/runtime/mem.rs (CRYPTO_strdup/CRYPTO_free and the allocator seam)",
+    "src/runtime/str.rs (OPENSSL_buf2hexstr/OPENSSL_hexstr2buf and their strlen precondition)",
+    "src/runtime/err.rs (raise_site and the ErrSite coordinates)",
+    "src/x509/v3_lib.rs (X509V3_EXT_METHOD callback types and MULTILINE)",
+    "src/x509/v3_utl.rs (i2s_ASN1_INTEGER, X509V3_add_value, X509V3_add_value_int)",
+    "src/x509/v3_genn.rs, src/x509/x_name.rs, src/x509/x509_acert.rs, src/x509/v3_ac_tgt.rs (GENERAL_NAME/X509_NAME and ACERT layouts)"
+  ],
+  "next_queue": {
+    "next_file": "src/x509/x509cset.rs",
+    "then": [
+      "src/x509/x509cset.rs",
+      "src/x509/x509_d2.rs",
+      "src/x509/x509_ext.rs",
+      "src/x509/x509_meth.rs",
+      "src/x509/x509_obj.rs",
+      "src/x509/x509_r2x.rs",
+      "src/x509/x509rset.rs",
+      "src/x509/x509spki.rs"
+    ]
+  },
+  "queue_after": {
+    "remaining": 14,
+    "audited": 749
+  }
+}
