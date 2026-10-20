@@ -67,6 +67,7 @@ probes=(
   "provider::ml_dsa_sig::adv_probe::refused_signature_copy_cleanses_the_dupctx_entropy"
   "provider::kdf::tests::adv_probe::argon2_memory_boundary_refusal_matrix"
   "provider::kdf::tests::adv_probe::hmac_drbg_entropy_replacement_cleanses_the_incumbent"
+  "provider::kdf::tests::adv_probe::password_kdf_width_guards_refuse_before_allocating"
 )
 
 failures=0
