@@ -132,8 +132,9 @@ const SSL_R_UNEXPECTED_MESSAGE: c_int = 244;
 const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
 /// `SSL_R_BAD_SIGNATURE` — `sslerr.h:148`.
 const SSL_R_BAD_SIGNATURE: c_int = 148;
-/// `SSL_R_BAD_KEY_SHARE` — `sslerr.h`.
-const SSL_R_BAD_KEY_SHARE: c_int = 384;
+/// `SSL_R_BAD_KEY_SHARE` — `sslerr.h:43` (108). The previous 384 is
+/// `SSL_R_INVALID_COMMAND`'s neighbour in the authority's table and was never this reason.
+const SSL_R_BAD_KEY_SHARE: c_int = 108;
 /// `SSL_R_SSL3_SESSION_ID_TOO_LONG` — `sslerr.h:300`.
 const SSL_R_SSL3_SESSION_ID_TOO_LONG: c_int = 300;
 
@@ -2360,8 +2361,8 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         return 0;
     }
     // The signed data is `client_random || server_random || ServerECDHParams`.
-    let mut tbs = [0u8; 32 + 32 + 128];
-    if params.len() > 128 {
+    let mut tbs = [0u8; 32 + 32 + 192];
+    if params.len() > 192 {
         return 0;
     }
     // SAFETY: `s` is live; both randoms are 32-byte arrays.
@@ -2383,29 +2384,26 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         unsafe { ossl_statem_fatal(s, SSL_AD_DECRYPT_ERROR, SSL_R_BAD_SIGNATURE) };
         return 0;
     }
-    // Wrap the server's point; the reduced path only completes X25519.
-    if group != crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 {
+    // `tls_process_ske_ecdhe` (`statem_clnt.c:2402-2405`): the server must have picked one of
+    // the groups this side offered and this crate can complete.
+    if crate::ssl::t1_lib::tls1_group_id2kex(group).is_none()
+        // SAFETY: `s` is live.
+        || !unsafe { crate::ssl::t1_lib::tls1_get_supported_groups(s) }.contains(&group)
+    {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_KEY_SHARE) };
         return 0;
     }
-    // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
-    // SAFETY: `point` is `ptlen` readable bytes.
-    let peer = unsafe {
-        crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
-            libctx,
-            c"X25519".as_ptr(),
-            propq,
-            point.as_ptr(),
-            point.len(),
-        )
-    };
+    // SAFETY: `s` is live; `point` is `ptlen` readable bytes and is an encoded point for `group`.
+    let peer =
+        unsafe { crate::ssl::statem::statem_srvr::tls12_peer_key_from_point(s, group, point) };
     if peer.is_null() {
         return 0;
     }
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; `peer` is this frame's fresh key and the slot's previous owner is
+    // released first.
     unsafe {
+        crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
         (*s).peer_tmp = peer.cast();
         (*s).group_id = group;
     }
@@ -2491,67 +2489,139 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{
-        evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EvpPkey,
-    };
+    use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+    use crate::ssl::ssl_ciph_table as ct;
     use crate::ssl::tls13_enc::write_handshake_message;
+
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
-    let mut params = [crate::params::END; 1];
-    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; and
-    // `evp_pkey_keygen` is the matching constructor, answering the whole, aligned key block (or
-    // NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
-    // `EVP_PKEY_free` -- its single release.
-    let Some(pkey) = (unsafe {
-        OwnedCtx::<EvpPkey>::new(evp_pkey_keygen(
-            libctx,
-            c"X25519".as_ptr(),
-            propq,
-            params.as_mut_ptr(),
-        ))
-    }) else {
-        return 0;
-    };
-    let mut pub_ = core::ptr::null_mut::<u8>();
-    // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
-    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey.as_ptr(), &mut pub_) };
-    if publen == 0 || publen > 255 {
-        // The refusal releases the key it built: returning drops `pkey`. `pub_` stays as the
-        // authority leaves it (the failed `get1` does not hand one back).
-        return 0;
-    }
-    // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
-    // frame no longer writes a `CRYPTO_free` by hand.
-    // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
-    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
-    else {
-        return 0;
-    };
-    // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
-    unsafe {
-        if !(*s).pkey.is_null() {
-            EVP_PKEY_free((*s).pkey.cast());
+    let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
+    let mut pms = [0u8; 80];
+    let pmslen;
+    let mut body = [0u8; 512];
+    let bodylen;
+    if (mkey & ct::SSL_kRSA) != 0 && (mkey & ct::SSL_kECDHE) == 0 {
+        // `tls_construct_cke_rsa` (`statem_clnt.c:3153-3225`): 48-byte pre-master
+        // (`client_version || 46 random bytes`) encrypted under the server certificate's RSA key
+        // with PKCS#1 v1.5 padding, preceded by a two-byte length in TLS1.2.
+        // SAFETY: `s` is live.
+        let peer_cert = unsafe { (*s).peer_cert };
+        if peer_cert.is_null() {
+            return 0;
         }
-        (*s).pkey = pkey.into_raw().cast();
+        // SAFETY: `peer_cert` is a live certificate.
+        let server_key = unsafe { crate::x509::x509_cmp::X509_get0_pubkey(peer_cert.cast()) };
+        if server_key.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; this is the TLS1.2 client's advertised version.
+        let client_version = unsafe { (*s).client_version };
+        pms[0] = (client_version >> 8) as u8;
+        pms[1] = client_version as u8;
+        // SAFETY: `pms[2..]` is 46 writable bytes.
+        if unsafe { crate::rand::rand_lib::RAND_bytes(pms.as_mut_ptr().add(2), 46) } <= 0 {
+            return 0;
+        }
+        // SAFETY: `s` is live.
+        let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+        // SAFETY: `server_key` is live; `libctx`/`propq` are the context's.
+        let ctx =
+            unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_pkey(libctx, server_key, propq) };
+        if ctx.is_null() {
+            return 0;
+        }
+        let mut enclen = 0usize;
+        // SAFETY: `ctx` is live; a NULL output is the authority's size query; `pms` is readable.
+        let ok = unsafe {
+            crate::evp::asymcipher::EVP_PKEY_encrypt_init(ctx) > 0
+                && crate::evp::asymcipher::EVP_PKEY_encrypt(
+                    ctx,
+                    core::ptr::null_mut(),
+                    &mut enclen,
+                    pms.as_ptr(),
+                    crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH,
+                ) > 0
+        };
+        if !ok || enclen == 0 || 2 + enclen > body.len() {
+            // SAFETY: `ctx` is this frame's own context.
+            unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_free(ctx) };
+            return 0;
+        }
+        body[0] = (enclen >> 8) as u8;
+        body[1] = enclen as u8;
+        // SAFETY: `ctx` is live; `body[2..]` is writable for `enclen`; `pms` is readable.
+        let ok = unsafe {
+            crate::evp::asymcipher::EVP_PKEY_encrypt(
+                ctx,
+                body.as_mut_ptr().add(2),
+                &mut enclen,
+                pms.as_ptr(),
+                crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH,
+            )
+        } > 0;
+        // SAFETY: `ctx` is this frame's own context.
+        unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_free(ctx) };
+        if !ok {
+            return 0;
+        }
+        bodylen = 2 + enclen;
+        pmslen = crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH;
+    } else if (mkey & ct::SSL_kECDHE) != 0 {
+        // `tls_construct_cke_ecdhe` (`statem_clnt.c:3257-3285`): generate the ephemeral for the
+        // group the server selected in its ServerKeyExchange and send its encoded point.
+        // SAFETY: `s` is live.
+        let group = unsafe { (*s).group_id };
+        // SAFETY: `s` is live; the constructor's handle owns the whole generated key.
+        let Some(pkey) =
+            (unsafe { crate::ssl::statem::statem_srvr::tls12_generate_ecdh_key(s, group) })
+        else {
+            return 0;
+        };
+        let mut pub_ = core::ptr::null_mut::<u8>();
+        // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
+        let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey.as_ptr(), &mut pub_) };
+        if publen == 0 || publen > 255 {
+            // The refusal releases the key it built: returning drops `pkey`.
+            return 0;
+        }
+        // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
+        let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
+        else {
+            return 0;
+        };
+        // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
+        unsafe {
+            if !(*s).pkey.is_null() {
+                EVP_PKEY_free((*s).pkey.cast());
+            }
+            (*s).pkey = pkey.into_raw().cast();
+        }
+        let mut got = 0usize;
+        // SAFETY: `s` is live; the ephemerals are set; `pms` is writable for 80 bytes.
+        if unsafe {
+            crate::ssl::tls13_enc::tls13_derive_shared(
+                s,
+                (*s).pkey,
+                (*s).peer_tmp,
+                pms.as_mut_ptr(),
+                pms.len(),
+                &mut got,
+            )
+        } == 0
+        {
+            return 0;
+        }
+        pmslen = got;
+        body[0] = publen as u8;
+        // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
+        unsafe { core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(1), publen) };
+        // The `get1` block's single release is this drop.
+        drop(pub_);
+        bodylen = 1 + publen;
+    } else {
+        return 0;
     }
     // Derive the pre-master secret and the key schedule (`ssl_derive`, `s3_lib.c:5474`).
-    let mut pms = [0u8; 64];
-    let mut pmslen = 0usize;
-    // SAFETY: `s` is live; the ephemerals are set.
-    if unsafe {
-        crate::ssl::tls13_enc::tls13_derive_shared(
-            s,
-            (*s).pkey,
-            (*s).peer_tmp,
-            pms.as_mut_ptr(),
-            pms.len(),
-            &mut pmslen,
-        )
-    } == 0
-    {
-        return 0;
-    }
-    // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
+    // SAFETY: `s` is live; `pms[..pmslen]` is the pre-master secret.
     if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
         return 0;
     }
@@ -2559,21 +2629,8 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     if unsafe { crate::ssl::t1_enc::tls12_derive_key_block(s) } == 0 {
         return 0;
     }
-    let mut body = [0u8; 256];
-    body[0] = publen as u8;
-    // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
-    unsafe { core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(1), publen) };
-    // The `get1` block's single release is this drop, at the authority's own release point.
-    drop(pub_);
-    // SAFETY: `s` is live; `body` is `1 + publen` initialised bytes.
-    unsafe {
-        write_handshake_message(
-            s,
-            SSL3_MT_CLIENT_KEY_EXCHANGE as u8,
-            body.as_ptr(),
-            1 + publen,
-        )
-    }
+    // SAFETY: `s` is live; `body` is `bodylen` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_CLIENT_KEY_EXCHANGE as u8, body.as_ptr(), bodylen) }
 }
 
 /// `CON_FUNC_RETURN tls_construct_cert_verify(...)` (`statem_lib.c:313-439`) for TLS1.2: sign the
@@ -2645,7 +2702,15 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                         }
                         return -1;
                     }
-                    (*s).hand_state = TLS_ST_CR_KEY_EXCH;
+                    // A `ServerKeyExchange` follows the Certificate only for the suites whose
+                    // key exchange needs it (`send_server_key_exchange`, `statem_srvr.c:353`).
+                    // A static-RSA server goes straight to CertificateRequest/ServerHelloDone.
+                    (*s).hand_state =
+                        if crate::ssl::statem::statem_srvr::send_server_key_exchange(s) {
+                            TLS_ST_CR_KEY_EXCH
+                        } else {
+                            TLS_ST_CR_CERT_REQ
+                        };
                 }
                 TLS_ST_CR_KEY_EXCH => {
                     let Some((buf, n)) = tls12_read_handshake(s) else {
