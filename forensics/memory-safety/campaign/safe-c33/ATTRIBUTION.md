@@ -15,12 +15,21 @@ Source: `forensics/memory-safety/campaign/safe-c33/atlas-refresh/unsafe-census.j
 | files ZERO_UNSAFE (no production site) | 92 |
 | files BOUNDARY_COVERED | 15 |
 | files PARTIAL | 761 |
+| post-census files classified (delta) | 9 |
+| current source files at HEAD `1ae550590` | 877 |
+| **unaccounted files at current HEAD** | **0** |
 | **unattributed files** | **761** |
 | worklist rows | 1,357 |
 | worklist rows joined to a production site | 275 |
 | worklist rows with no production unsafe site | 1,082 |
 
 Boundary counts are exclusive: the first matching predicate in the fixed precedence list wins, so a site is counted once.
+
+The census counts remain bound to `c09eef8b`. The nine post-census files are
+classified separately in `atlas-refresh/post-census-delta.json`: 6 test-only
+models/probes and 3 `PARTIAL` production helpers. The combined current-tree
+partition is 92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6
+test-only = 877 files, 0 unaccounted.
 
 ## Sites by boundary
 
@@ -157,3 +166,36 @@ Predicate: `kind in {EXTERN_C_FN_DEF, NONALLOC_FFI_CALL}`
 | per-file production/test/seam counts | match |
 | per-kind production totals | match |
 | source content hash vs census | match |
+
+## Post-census delta (877-file reconciliation, 2026-10-20)
+
+The census above is pinned to `c09eef8b` (868 files). Nine `src/**/*.rs` files
+exist at HEAD `1ae550590` that did not exist in that commit. They are classified
+in `atlas-refresh/post-census-delta.json`, produced with the same
+`unsafe_census.py` scanner and `unsafe_attribution.py` boundary predicates.
+
+| file | class | production sites | boundary / receipt |
+|---|---|---:|---|
+| `src/runtime/bio/owned_ctx_model.rs` | TEST_ONLY | 0 (7 test-only ops) | `cfg(test)` `#[path]`; OB-3 model |
+| `src/runtime/bio/zero_state.rs` | TEST_ONLY | 0 (2) | `cfg(test)`; OB-3 zero-state sweep |
+| `src/runtime/member_slot_model.rs` | TEST_ONLY | 0 (8) | `cfg(test)`; OB-4b model |
+| `src/runtime/owned_buf_model.rs` | TEST_ONLY | 0 (12) | `cfg(test)` `#[path]`; OB-1 model |
+| `src/runtime/owned_str_model.rs` | TEST_ONLY | 0 (7) | `cfg(test)` `#[path]`; OB-2 model |
+| `src/runtime/release_probe.rs` | TEST_ONLY | 0 (0) | `cfg(test)`; release-arm probes |
+| `src/runtime/foreign.rs` | PARTIAL | 19 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md`, `OWNER-DUPLICATES.md` section 5, subphase 89 |
+| `src/runtime/mem_coords.rs` | PARTIAL | 1 | `B-ALLOC-SEAM`; subphase 70 |
+| `src/runtime/member_slot.rs` | PARTIAL | 4 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md`, subphase 89 |
+
+Combined partition at HEAD `1ae550590`: **92** `ZERO_UNSAFE` + **15**
+`BOUNDARY_COVERED` + **764** `PARTIAL` + **6** test-only = **877**; unaccounted
+**0**.
+
+The six test-only files are `cfg(test)`-only models/probes and are not
+production audit surface. The three production helpers remain `PARTIAL`, not
+`BOUNDARY_COVERED`: the census boundary registry has no predicate for an
+`unsafe trait` declaration, for `OwnedCtx::new`, or for the OB-4 member-slot
+proof boundaries. Their sites carry explicit `# Safety` contracts in the shared
+boundary receipts, but this table is classification, not a per-site discharge.
+
+This delta does not re-pin the census and does not invalidate the 761 per-file
+audit records bound to `c09eef8b`.

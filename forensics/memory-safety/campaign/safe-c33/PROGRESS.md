@@ -18,10 +18,40 @@ comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
-  (**50.0%**); **0** files have fully discharged obligations; **3 shared
-  mechanisms** (RC-1 reference counting, OB-1 `OwnedBuf`, OB-2 `OwnedStr`) are
-  `SAFETY_DISCHARGED`; **0/33** consumers are `SAFE_COMPATIBLE`.
-- Whole tree: **868** `src/**/*.rs`; **377** files have a seam.
+  (**50.0%**); **0** files have fully discharged obligations; **0/33**
+  consumers are `SAFE_COMPATIBLE`.
+- **Mechanism-level `SAFETY_DISCHARGED` (4):** RC-1 shared reference counting
+  (subphase 84, source `544222da4`), OB-1 `OwnedBuf` (subphase 85,
+  `70cfe8381`), OB-2 `OwnedStr` (subphase 86, `4f3093ad0`) and OB-3
+  `OwnedCtx`/`RawCtx` (subphase 87, `bfe27c84b`, merge `3e9ebd582`). These are
+  mechanism-scope discharges, not file-level or consumer-level graduation.
+- **Scoped boundary discharges (3, separate from the mechanism list):** B23
+  WPACKET failed-initialisation and `put_value` (`B23-WPKT-1`/`B23-WPKT-2`,
+  `atlas-refresh/boundary-sweep-B23.json`); B25 record-layer `RL-4`/`RL-5`
+  (`atlas-refresh/boundary-sweep-B25.json`; `RL-1..3` remain `CONTRACTED`); B29
+  `UI-1`/`UI-2`/`UI-3` (`atlas-refresh/boundary-sweep-B29.json`; `UI-4` remains
+  `CONTRACTED`).
+- **Per-file audit:** **761/761 `PARTIAL` files audited, 0 remaining**
+  (`REMAINING-AUDIT.txt` is empty; `AUDITED-FILES.txt` has 763 lines = 761
+  `PARTIAL` plus two `BOUNDARY_COVERED` files that also received boundary
+  receipts). Audit completion is not discharge.
+- **Census reconciliation:** the pinned census is **868** files at `c09eef8b`
+  (92 `ZERO_UNSAFE`, 15 `BOUNDARY_COVERED`, 761 `PARTIAL`); the current tree is
+  **877**. The nine post-census files are classified in
+  `atlas-refresh/post-census-delta.json`: **6 test-only** models/probes and
+  **3 production helpers** at existing shared boundaries. Combined partition:
+  **92 + 15 + 764 + 6 = 877**, **0 unaccounted**. The delta does not re-pin the
+  census and does not invalidate the audit records.
+- **Tests and courts:** library **1702 passed / 0 failed / 31 ignored** (the
+  ignored set is probes run separately by design). Phase 8 is **18/18 pass**
+  with two accepted and witnessed divergences: `RT-CIPHER` `defltwrap.pad21`
+  (D561) and `RT-RSA` `rsa.obj_upref.zero_ref_after` (D562).
+- **Remaining:** independent review/adjudication, SEAL dependency closure,
+  census-bound evidence refresh (full regeneration at a seal point) and the
+  downstream consumer courts.
+- Whole tree at HEAD `1ae550590`: **877** `src/**/*.rs`. The call-site and seam
+  figures below are bound to the atlas measurement candidate `e48a1b519`
+  (868 files) and are not re-derived by this bookkeeping batch.
 - Disjoint call-site classes: **700** production allocation calls in **240**
   files; **657** production release calls in **212** files; **123** test-only;
   **71** in the allocator-seam implementations (`src/runtime/mem.rs`,
@@ -79,16 +109,10 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the established baseline is **1391** passed,
-**22 ignored**, and **22/22** probes via `scripts/adv-probe.sh`)
-(one concurrent-refcount test added in subphase 39, eight
-reference-count/re-entrancy tests added in subphase 40, seven
-alias/ownership tests added in subphase 41, one lookup-`free` re-entrancy
-test added in subphase 42, one isolated allocator-hook size/release test
-added in subphase 43, and one isolated `CRYPTO_RWLOCK` allocator-hook
-size/release test added in subphase 44) and the adversarial
-probes are `#[ignore]`d and run separately via `scripts/adv-probe.sh`; as of
-subphase 73 there are **21** probes).
+`cargo test --lib` (must pass; the current baseline is **1702 passed / 0 failed
+/ 31 ignored**, the ignored set being the probes that are run separately by
+design; see the latest M89 receipt). Do not accept unexplained test loss or a
+newly ignored test.
 
 ## Open STOP blockers
 
@@ -1374,14 +1398,18 @@ Not one percentage; report each axis honestly.
    module-local destructor traits are `unsafe trait`** with explicit contracts.
 2. **Safe-interior coverage** — *not yet comprehensively measured*; the sparsest
    structural conversions so far are sparse_array and the X.509 policy tree.
-3. **Discharged safety obligations** — **RC-1 (shared reference counting),
-   OB-1 (`OwnedBuf` release state) and OB-2 (`OwnedStr`) are
-   `SAFETY_DISCHARGED`** (subphases 84–86): complete contracts, per-caller
-   audits with 0 unattributed rows, independent models and mutation negative
-   controls, with every blocker fixed rather than documented. All other
-   mechanisms remain `ESTABLISHED` or `CONTRACTED`; a converted site is not a
-   discharged obligation. Full file-level discharge still awaits the per-file
-   campaign and the seal.
+3. **Discharged safety obligations** — **four mechanism-level discharges**
+   (RC-1, OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`/`RawCtx`;
+   subphases 84–87), each with complete contracts, per-caller audits with 0
+   unattributed rows, independent models/mutation controls, and every blocker
+   fixed rather than documented. Three **scoped boundary discharges** are
+   recorded separately and are not mechanism-level: B23 (`B23-WPKT-1/2`), B25
+   (`B25-RL-4/5`) and B29 (`B29-UI-1/2/3`); B25 `RL-1..3` and B29 `UI-4`
+   remain `CONTRACTED`. All other mechanisms remain `ESTABLISHED` or
+   `CONTRACTED`; a converted site is not a discharged obligation. The
+   761-file per-file audit is complete (761/761, 0 remaining) but is **not**
+   file-level discharge: independent review/adjudication, SEAL dependency
+   closure and the consumer courts remain.
 4. **Cryptographic assurance** — bounded; no new vectors run in this campaign
    (WycHEproof/ACVP/constant-time remain at their Phase-25 evidence state).
 5. **Safe-compatible consumers** — 0 new families graduated (per AGENTS.md §7 a
@@ -1471,7 +1499,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `258bcca51` (verification-scheduling merge; OB-4b slots unified at `52fb41554`, OB-4a repairs `a46dbfd68`)
+**Last observed HEAD:** `1ae550590` (M89; the 761-file per-file audit queue is complete).
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1485,9 +1513,9 @@ session can resume from Git + the receipt without reconstructing reasoning.
    - `cargo fmt --all -- --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4`
-   The most recent reported library baseline is **1391** tests (22 ignored;
-   22/22 adversarial probes via `scripts/adv-probe.sh`). Do not accept
-   unexplained test loss. Check available memory before builds.
+   The most recent reported library baseline is **1702** tests
+   (0 failed, 31 ignored; the ignored set is the probes run separately by
+   design). Do not accept unexplained test loss. Check available memory before builds.
 7. Commit and push the verified batch, merge it into `integrate/safe-c33`, and update this ledger with exact files, mechanisms, gate results and remaining obligations. Repeat with another bounded batch.
 
 ### Outstanding targeted work
@@ -1502,7 +1530,7 @@ and their fields are private.
 `OPENSSL_STACK` and `OPENSSL_LHASH` are deliberately option A
 (`OPAQUE-REPRESENTATIONS.md`). The file-level conversion queue is **empty**; the
 remaining work is per-site obligation evidence over
-`atlas-refresh/site-worklist.json` (1,669 production allocation/release calls)
+`atlas-refresh/site-worklist.json` (1,357 production allocation/release calls)
 and the boundary families below.
 
 Preserve and expand the adversarial allocator-refusal tests as these ownership
@@ -1514,26 +1542,35 @@ the new pair after), not soundness under arbitrary application callbacks that
 recurse back into the object — that remains a §21 boundary obligation to state
 and discharge explicitly.
 
-### Next executable subphase — obligation denominator (unsafe-operation census)
+### Next workstream — after the per-file audit
 
-**Status: done** (`15157bc32`; see “Unsafe-operation denominator” above and
-`atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty and
-the unsafe-obligation denominator now exists.
+**Prior subphase status (done):** the unsafe-operation denominator exists
+(`15157bc32`; see “Unsafe-operation denominator” above and
+`atlas-refresh/UNSAFE-CENSUS.md`). The file-level conversion queue is empty.
 
-**Next in sequence:** continue the per-file obligation audit with the repeatable
-unit in `PERFILE-AUDIT.md`. Owner consolidation is complete (170 of 173
-identical groups; 42 of 61 local `OwnedCtx`/`RawCtx` copies; 39 of 41
-`CtxDestroy` traits), and the queue is the **761 `PARTIAL` files** in
-`ATTRIBUTION.md`, ordered by unattributed-site count and consumer reachability
-(`ssl/ssl_lib.rs` 1,125; `evp/pkey_ctx.rs` 975; `provider/cipher.rs` 825;
-`evp/cipher_ctx.rs` 652; `provider/kdf.rs` 518; `evp/pkey.rs` 485; …). Each
-file produces grouped rows (operation, contract, caller/ABI establishment, ABI
-class, dependency id, state, evidence needed, residuals). Groups marked
-UNATTRIBUTED are investigated against the pinned authority and fixed when they
-are real defects, as the `evp/digest.rs` pilot did (three soundness defects
-fixed). After the file audits: seal evidence (ASan, loom, differential courts
-against `forensics/authorities/src/openssl-3.6.4/`, the 8 L7-functional
-consumers) and only then `SAFETY_DISCHARGED` / `SAFE_COMPATIBLE` promotions.
+**Next in sequence (2026-10-20):** the per-file obligation audit is **complete**
+— 761/761 `PARTIAL` files audited, `REMAINING-AUDIT.txt` empty. This is not
+file-level discharge. The next workstream is, in order:
+
+1. **Independent review/adjudication** of the per-file and boundary receipts
+   (no record yet claims `INDEPENDENTLY_CHECKED`).
+2. **Consumer-court inventory and execution:** replay/deepen L7 evidence for
+   the eight families that already reached `L7-functional` — curl, haproxy,
+   isync, monit, nginx, openssh, pure-ftpd, redis — and raise the 25
+   `L4-only` families to meaningful L7 evidence where their surface warrants it.
+3. **Census-bound evidence refresh** at a SEAL point: full regeneration of the
+   pinned `c09eef8b` census and re-binding of the audit records to the new
+   candidate. The nine post-census files are already classified by
+   `atlas-refresh/post-census-delta.json` (6 test-only, 3 `PARTIAL` production
+   helpers), so the current tree has 0 unaccounted files.
+4. **SEAL dependency closure**, and only then any `SAFE_COMPATIBLE` promotion.
+
+The file-level conversion queue remains empty; do not invent new conversion
+work. The per-file groups encode operation, contract, caller/ABI establishment,
+ABI class, dependency id, state, evidence needed and residuals. Groups marked
+`UNATTRIBUTED` were investigated against the pinned authority and fixed when
+they were real defects, as the `evp/digest.rs` pilot did (three soundness
+defects fixed).
 
 **Mechanism-contract batch M1 (2026-10-18, HEAD `258bcca51` + worktree):** the
 next coherent ASN.1/X.509/CMS/PKCS7/params cluster (12 ordinary files) was swept
