@@ -706,3 +706,4 @@ src/ssl/tls_depr.rs
 src/ts/mod.rs
 src/ts/ts_lib.rs
 src/ts/ts_req_print.rs
+src/store/store_meth.rs

@@ -69,6 +69,7 @@ use crate::provider::{
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
+use crate::runtime::mem_coords::SeamFile;
 
 use super::{
     OsslStoreLoader, StorePAttachFn, StorePCloseFn, StorePDeleteFn, StorePEofFn,
@@ -95,6 +96,19 @@ const ERR_R_UNSUPPORTED: c_int = 524556;
 /// `ERR_R_FETCH_FAILED` — `err.h:367`, `269 | ERR_RFLAG_COMMON`.
 const ERR_R_FETCH_FAILED: c_int = 524557;
 
+/// `crypto/store/store_meth.c`, as the admitted build record spells it. The allocator-seam
+/// coordinates below are this unit's own; using the same spelling for the error sites keeps one
+/// constant rather than two that could drift.
+const STORE_METH_FILE: &CStr = c"../../src/openssl-3.6.4/crypto/store/store_meth.c";
+
+/// `new_loader`'s `OPENSSL_zalloc(sizeof(*loader))` — `store_meth.c:50`.
+const LINE_ALLOC_LOADER: c_int = 50;
+/// `OSSL_STORE_LOADER_free`'s `OPENSSL_free(loader)` — `store_meth.c:39`.
+const LINE_FREE_LOADER: c_int = 39;
+/// `new_loader`'s failure tail, `OPENSSL_free(loader)` after the refused provider up-ref —
+/// `store_meth.c:55`.
+const LINE_FREE_LOADER_FAILED: c_int = 55;
+
 /// One `store_meth.c` raise coordinate. `line` and `func` are the authority file's own.
 const fn meth_site(
     line: c_int,
@@ -103,7 +117,7 @@ const fn meth_site(
     dynamic_reason: bool,
 ) -> err_sites::ErrSite {
     err_sites::ErrSite {
-        file: c"../../src/openssl-3.6.4/crypto/store/store_meth.c",
+        file: STORE_METH_FILE,
         line,
         func,
         lib: ERR_LIB_OSSL_STORE,
@@ -227,9 +241,17 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
         }
     }
     // The last reference (or a legacy loader): reclaim the owner, whose `Drop` runs the
-    // authority's own provider release and single block release.
+    // authority's own provider release and single block release. Both the provider and the
+    // legacy loader are released by the authority's `OPENSSL_free(loader)` at `:39`, so the
+    // release coordinate is this function's own for either kind.
     // SAFETY: `loader` is a live loader this crate allocated and has not released.
-    drop(unsafe { OwnedCtx::<OsslStoreLoader>::from_raw(loader) });
+    drop(unsafe {
+        OwnedCtx::<OsslStoreLoader>::from_raw_at(
+            loader,
+            SeamFile::new(STORE_METH_FILE),
+            LINE_FREE_LOADER,
+        )
+    });
 }
 
 /// `static OSSL_STORE_LOADER *new_loader(OSSL_PROVIDER *prov)` — `store_meth.c:46-62`.
@@ -239,9 +261,16 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_free(loader: *mut OsslStoreLoader) {
 /// loader's scheme is not a constant string.
 ///
 /// # Safety
-/// `prov` must be live.
+/// `prov` must be a non-NULL, live provider.
 unsafe fn new_loader(prov: *mut OsslProvider) -> *mut OsslStoreLoader {
-    let Some(loader) = OwnedCtx::<OsslStoreLoader>::zalloc() else {
+    // The authority allocates at `store_meth.c:50` and releases through
+    // `OSSL_STORE_LOADER_free` at `:39`; the refused up-ref takes the `:55` tail instead.
+    let Some(mut loader) = OwnedCtx::<OsslStoreLoader>::zalloc_at(
+        SeamFile::new(STORE_METH_FILE),
+        LINE_ALLOC_LOADER,
+        SeamFile::new(STORE_METH_FILE),
+        LINE_FREE_LOADER,
+    ) else {
         return ptr::null_mut();
     };
     let p = loader.as_ptr();
@@ -250,7 +279,8 @@ unsafe fn new_loader(prov: *mut OsslProvider) -> *mut OsslStoreLoader {
     // SAFETY: `prov` is live per the contract.
     if unsafe { ossl_provider_up_ref(prov) } == 0 {
         // `loader` drops here: `prov` is still NULL, so the destructor body releases no provider and
-        // the block alone is freed -- the authority's own error path.
+        // the block alone is freed -- the authority's own error path, at its own release line.
+        loader.set_release_line(LINE_FREE_LOADER_FAILED);
         return ptr::null_mut();
     }
     // SAFETY: `p` is live.
@@ -463,8 +493,14 @@ unsafe extern "C" fn dealloc_tmp_loader_store(store: *mut c_void) {
 
 /// `static OSSL_METHOD_STORE *get_loader_store(OSSL_LIB_CTX *libctx)` —
 /// `store_meth.c:108-111`.
-fn get_loader_store(libctx: *mut c_void) -> *mut OsslMethodStore {
-    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the read is not guarded.
+///
+/// # Safety
+/// `libctx` must be NULL or a live `OSSL_LIB_CTX`. `lib_ctx_get_data` is a safe wrapper in this
+/// crate (D113), but it forwards the raw context to `OSSL_LIB_CTX_get_data`, which dereferences
+/// it; the liveness obligation therefore stays here rather than at an unguarded safe boundary.
+unsafe fn get_loader_store(libctx: *mut c_void) -> *mut OsslMethodStore {
+    // `lib_ctx_get_data` is declared safe in this crate (D113), but its body dereferences the
+    // context; this function's contract is where that obligation is stated.
     lib_ctx_get_data(libctx, OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX).cast::<OsslMethodStore>()
 }
 
@@ -476,8 +512,8 @@ unsafe extern "C" fn reserve_loader_store(store: *mut c_void, data: *mut c_void)
     let methdata = data.cast::<LoaderDataSt>();
     let mut store = store.cast::<OsslMethodStore>();
     if store.is_null() {
-        // SAFETY: `methdata` is live per the contract.
-        store = get_loader_store(unsafe { (*methdata).libctx });
+        // SAFETY: `methdata` is live per the contract, so its `libctx` is NULL or live.
+        store = unsafe { get_loader_store((*methdata).libctx) };
         if store.is_null() {
             return 0;
         }
@@ -494,8 +530,8 @@ unsafe extern "C" fn unreserve_loader_store(store: *mut c_void, data: *mut c_voi
     let methdata = data.cast::<LoaderDataSt>();
     let mut store = store.cast::<OsslMethodStore>();
     if store.is_null() {
-        // SAFETY: `methdata` is live per the contract.
-        store = get_loader_store(unsafe { (*methdata).libctx });
+        // SAFETY: `methdata` is live per the contract, so its `libctx` is NULL or live.
+        store = unsafe { get_loader_store((*methdata).libctx) };
         if store.is_null() {
             return 0;
         }
@@ -634,9 +670,10 @@ unsafe fn inner_loader_fetch(
     scheme: *const c_char,
     properties: *const c_char,
 ) -> *mut OsslStoreLoader {
-    // SAFETY: `methdata` is live per the contract.
+    // SAFETY: `methdata` is live per the contract, so its `libctx` is NULL or live.
     let libctx = unsafe { (*methdata).libctx };
-    let store = get_loader_store(libctx);
+    // SAFETY: `libctx` was read from the live `methdata` above, so it is NULL or live.
+    let store = unsafe { get_loader_store(libctx) };
     let namemap = ossl_namemap_stored(libctx);
     let propq: *const c_char = if !properties.is_null() {
         properties
@@ -783,7 +820,8 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_fetch(
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn ossl_store_loader_store_cache_flush(libctx: *mut c_void) -> c_int {
-    let store = get_loader_store(libctx);
+    // SAFETY: `libctx` is NULL or live per this function's contract.
+    let store = unsafe { get_loader_store(libctx) };
     if !store.is_null() {
         // SAFETY: `store` is the live slot-15 store.
         return unsafe { ossl_method_store_cache_flush_all(store) };
@@ -799,9 +837,10 @@ pub(crate) unsafe fn ossl_store_loader_store_cache_flush(libctx: *mut c_void) ->
 pub(crate) unsafe fn ossl_store_loader_store_remove_all_provided(
     prov: *const OsslProvider,
 ) -> c_int {
-    // SAFETY: `prov` is live per the contract.
+    // SAFETY: `prov` is live per the contract, so its context is NULL or live.
     let libctx = unsafe { ossl_provider_libctx(prov) };
-    let store = get_loader_store(libctx);
+    // SAFETY: `libctx` is the provider's own context, hence NULL or live.
+    let store = unsafe { get_loader_store(libctx) };
     if !store.is_null() {
         // SAFETY: the slot-15 store is live and `prov` is live.
         return unsafe { ossl_method_store_remove_all_provided(store, prov) };
@@ -917,7 +956,8 @@ struct DoOneData {
 /// `static void do_one(int id, void *method, void *arg)` — `store_meth.c:461-466`.
 ///
 /// # Safety
-/// `method` must be a live loader and `arg` a live [`DoOneData`].
+/// `method` must be a live loader and `arg` a live [`DoOneData`]. The loader is borrowed from the
+/// store for the duration of the call; this thunk neither takes nor releases its reference.
 unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
     // SAFETY: `arg` is a live `DoOneData` per the contract.
     let data = arg.cast::<DoOneData>();
@@ -935,7 +975,10 @@ unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
 /// the refusal arms `RT-STORE` observed.
 ///
 /// # Safety
-/// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.
+/// `libctx` NULL or live; `user_fn` a valid, non-NULL callback. The callback is given a
+/// **borrowed** loader: it must not release the reference the store holds, and it must acquire
+/// its own reference with [`OSSL_STORE_LOADER_up_ref`] if it keeps the loader past the call.
+/// `user_arg` is opaque to this file.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_LOADER_do_all_provided(
     libctx: *mut c_void,
@@ -977,7 +1020,9 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_do_all_provided(
 /// void (*fn)(const char *name, void *data), void *data)` — `store_meth.c:488-503`.
 ///
 /// # Safety
-/// `loader` must be NULL or live; `fn` NULL or a valid callback.
+/// `loader` must be NULL or live; `fn` NULL or a valid callback. Each name passed to `fn` is
+/// borrowed from the loader's name map and is valid only for the duration of that callback
+/// (`ossl_namemap_doall_names` releases the map lock before invoking it).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_LOADER_names_do_all(
     loader: *const OsslStoreLoader,
@@ -1002,7 +1047,9 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_names_do_all(
 /// `const OSSL_PARAM *OSSL_STORE_LOADER_settable_ctx_params(const OSSL_STORE_LOADER *loader)`
 /// — `store_meth.c:505-511`.
 ///
-/// Passes **NULL** to the provider callback, exactly as the authority does.
+/// Passes **NULL** to the provider callback, exactly as the authority does. The returned
+/// parameter array (when non-NULL) is the provider's own, borrowed for as long as the loader's
+/// provider reference is held; the caller must not free it.
 ///
 /// # Safety
 /// `loader` must be NULL or live.
