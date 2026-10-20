@@ -7183,3 +7183,74 @@ ordinary position.** `src/ssl/methods.rs`. **Next eight.**
 `src/ssl/quic/quic_method.rs`, `src/ssl/quic/quic_tls_api.rs`,
 `src/ssl/record/rec_layer_s3.rs`, `src/ssl/rio/poll_immediate.rs`,
 `src/ssl/s3_lib.rs`, `src/ssl/ssl_asn1.rs`.
+
+## M80 (mechanism) — per-file contract sweep (method tables, QUIC reduced units, SSL_poll readout, s3_lib, SSL_SESSION DER, certificate compression)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M80.json`](atlas-refresh/mechanism-sweep-M80.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`24242f88d`. One documentation-only correction; no code, `#[repr(C)]` layout,
+exported symbol, signature or allocation coordinate changed.
+
+**Files audited (8, one substituted).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ssl/methods.rs` | 21 constructor exports returning process-lifetime `SslMethod` statics, version/flags/mask/enc_flags rows, `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm reachability | no defect; every `unsafe extern "C"` body only takes a static's address |
+| `src/ssl/quic/quic_impl.rs` | `SSL_inject_net_dgram` NULL/`SSL_is_quic` refusal arm, `guard_ffi`, unreachable QUIC arm | no defect; the Phase 15 reduction is the module's recorded divergence |
+| `src/ssl/quic/quic_method.rs` | three `SslMethod` statics, `Sync`, timeout/version/role predicates | no defect |
+| `src/ssl/quic/quic_tls_api.rs` | `QuicTlsCallbacks` table, NUL-terminated `OSSL_DISPATCH` walk, partial-table refusal, `qtls` NULL refusals, `guard_ffi` | no defect; the authority also accumulates into `sc->qtcb`, so a failed partial call leaves the same state |
+| `src/ssl/rio/poll_immediate.rs` | `SSL_POLL_ITEM` `#[repr(C)]`, stride arithmetic, NULL-SSL no-op, three refusal arms, `FAIL_FROM` tail zeroing | no defect; no panic is reachable for a contract-satisfying call (the export has no `guard_ffi`, recorded as an observation) |
+| `src/ssl/s3_lib.rs` | SNI control copy-before-clear (D563), member-buffer slot clear/store, ticket-key callback store, group-name accessors, renegotiate/set-state transitions | no defect; all transitions match `s3_lib.c:5161-5208` |
+| `src/ssl/ssl_asn1.rs` | `SSL_SESSION_ASN1` `#[repr(C)]` field/offset/template triples, `SslSessionAsn1` zero-validity, d2i block adoption (negative length/`EMBED` refusal), member-slot duplication, `peer`/`peer_rpk` transfer, error tail | no defect |
+| `src/ssl/ssl_cert_comp.rs` | `OsslCompCert` RC-1 release, `OwnedBuf` adoption of `CRYPTO_memdup`, `OsslCompCert` record ownership, `ossl_comp_has_alg` gating (alg 0..3 vs limit 4), refusal exports | **M80-D1** low: the header misdescribed the preference exports' empty-list arm |
+
+**Deferred (NOT_RUN).** `src/ssl/record/rec_layer_s3.rs` is a BIO
+write/read callback and flush-resumption boundary and was not audited; it stays
+queued. `src/ssl/ssl_cert_comp.rs` was substituted from the next queue position
+so eight files were still covered.
+
+**Defect and correction.** `ssl_cert_comp.rs` claimed that
+`SSL_CTX_set1_cert_comp_preference`/`SSL_set1_cert_comp_preference` accept the
+empty list and return 1. The admitted production build defines
+`OPENSSL_NO_COMP_ALG`, and the authority's exports are `#else return 0;` for
+every input (`ssl_cert_comp.c:362-382`); the candidate already returned 0. Only
+the compiled-out helper has the empty-list/1 arm. The header bullet now states
+the unconditional refusal. This is documentation-only and changed no behaviour.
+
+**Contracts reused.** OB-4 member-buffer slots (`MemberCStrSlot` and
+`MemberBufSlot` for `ext_hostname`, PSK identity/hint, SRP username, `ext_tick`,
+`alpn_selected`, `ticket_appdata`); OB-1 `OwnedBuf` plain adoption/release; RC-1
+refcount protocol for `OsslCompCert`; the D563 copy-before-clear SNI ordering;
+the `#[repr(C)]` session/template offsets; `guard_ffi`. No shared owner,
+contract or precondition was edited.
+
+**Secret-bearing buffers.** The session master key, PSK material, ticket, ALPN
+and ticket appdata are secret or sensitive. `i2d` borrows the session's own
+buffers; `d2i` duplicates or adopts the decoded blocks into the session's member
+slots, and the peer RPK DER block is adopted by `OwnedBuf` and released once.
+No allocation, release coordinate or cleansing claim changed; no constant-time
+property is asserted.
+
+**Gates observed (final worktree).** FAST/BATCH fmt and clippy clean; focused
+`ssl::` **65 passed / 0 failed / 15 ignored**. Affected SSL member-buffer
+adversarial probes each run alone and pass: `s3_lib` SNI self-aliasing,
+`ssl_sess` self-aliasing setters, `ssl_rsa` serverinfo realloc. Full library
+**1694 passed / 0 failed / 27 ignored** with `--test-threads=4` (91.62 s) and
+serially (259.37 s).
+
+**NOT_RUN.** `rec_layer_s3.rs` (deferred callback boundary); QUIC differential
+courts (the Phase 15 object is unbuilt and the reachable arms are unchanged);
+ASan/Miri/Loom (no new owner, extent or concurrency change); dudect/ctgrind (no
+constant-time claim); full Phase-25 forensic regeneration; FRF/SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**; new unsafe assumptions: **0**;
+unsafe operations introduced/removed/relocated: **0/0/0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **71**, `AUDITED-FILES.txt` **692**.
+**Next ordinary position.** `src/ssl/record/rec_layer_s3.rs` (deferred, still
+queued). **Next eight.** `src/ssl/record/rec_layer_s3.rs`,
+`src/ssl/ssl_init.rs`, `src/ssl/ssl_mcnf.rs`, `src/ssl/ssl_rsa_legacy.rs`,
+`src/ssl/ssl_stat.rs`, `src/ssl/ssl_txt.rs`,
+`src/ssl/statem/extensions_cust.rs`, `src/ssl/statem/extensions_srvr.rs`.
