@@ -674,3 +674,11 @@ src/slh_dsa/hash_ctx.rs
 src/slh_dsa/hash.rs
 src/slh_dsa/hypertree.rs
 src/slh_dsa/mod.rs
+src/slh_dsa/params.rs
+src/slh_dsa/xmss.rs
+src/sm2/crypt.rs
+src/sm2/sign.rs
+src/sm3/legacy_sm3.rs
+src/sm4.rs
+src/ssl/d1_lib.rs
+src/ssl/d1_srtp.rs

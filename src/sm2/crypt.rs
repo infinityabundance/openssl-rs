@@ -20,6 +20,17 @@
 //! `ossl_ecdh_kdf_X9_63` (`src/ec/kdf.rs`) computes the mask, and the all-zero mask is retried with
 //! a fresh `k` — the `again:` label the loop below mirrors.
 //!
+//! ## The two derived-secret buffers are cleansed on release
+//!
+//! `x2y2` holds the ECDH shared point (`x2 || y2`) and `msg_mask` the X9.63 KDF output; both are
+//! `SECRET_DATA` (after the xor `msg_mask` is the public C2, but a failure before the xor leaves
+//! the raw mask in the block). The authority releases each with a plain `CRYPTO_free` at its
+//! `done:` label (`sm2_crypt.c:281-282`, `:422-423`). This transcription keeps the authority's
+//! allocation and release coordinates and extent but selects the cleansing release, a deliberate
+//! AGENTS.md §5.1 deviation recorded here and in the batch receipt: it is memory-only, so a
+//! caller-installed allocator hook observes the same `file`/`line` free. The digests `c3` and
+//! `computed_c3` are public and stay plainly released.
+//!
 //! ## The evidence is the authority's own published vectors
 //!
 //! `test/sm2_internal_test.c` carries the GM/T 0003.5-2012 Annex C encryption known answer: a
@@ -65,7 +76,9 @@ use crate::evp::digest::{
     EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name, EVP_MD_get_size, EvpMd, EvpMdCtx,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_memcmp, CRYPTO_zalloc};
+use crate::runtime::mem::{
+    CRYPTO_calloc, CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp, CRYPTO_zalloc,
+};
 
 /// The unit's own `__FILE__`. `sm2_crypt.c` is a source-tree file, so the compiler records the
 /// admitted build record's prefix.
@@ -301,6 +314,11 @@ pub(crate) unsafe fn ossl_sm2_encrypt(
     let mut x2y2: *mut u8 = ptr::null_mut();
     let mut c3: *mut u8 = ptr::null_mut();
     let mut fetched_digest: *mut EvpMd = ptr::null_mut();
+    // The extents of the two secret-bearing blocks, set where each block is allocated. A refused
+    // allocation leaves the length zero and the pointer NULL, which the cleansing release accepts
+    // as its no-op. Declared here because the shared `done` tail is outside the `'done` block.
+    let mut x2y2_len: usize = 0;
+    let mut msg_mask_len: usize = 0;
     let mut ctext = Sm2Ciphertext {
         c1x: ptr::null_mut(),
         c1y: ptr::null_mut(),
@@ -334,6 +352,7 @@ pub(crate) unsafe fn ossl_sm2_encrypt(
                 raise_site(&err_sites::SM2_CRYPT_152);
                 break 'done;
             }
+            x2y2_len = 2 * field_size as usize;
 
             k_g = EC_POINT_new(group);
             k_p = EC_POINT_new(group);
@@ -372,6 +391,7 @@ pub(crate) unsafe fn ossl_sm2_encrypt(
             if msg_mask.is_null() {
                 break 'done;
             }
+            msg_mask_len = msg_len;
 
             'again: loop {
                 if BN_priv_rand_range_ex(k, order, 0, ctx) == 0 {
@@ -483,8 +503,8 @@ pub(crate) unsafe fn ossl_sm2_encrypt(
         EVP_MD_free(fetched_digest);
         ASN1_OCTET_STRING_free(ctext.c2);
         ASN1_OCTET_STRING_free(ctext.c3);
-        CRYPTO_free(msg_mask.cast(), FILE, 281);
-        CRYPTO_free(x2y2.cast(), FILE, 282);
+        CRYPTO_clear_free(msg_mask.cast(), msg_mask_len, FILE, 281);
+        CRYPTO_clear_free(x2y2.cast(), x2y2_len, FILE, 282);
         CRYPTO_free(c3.cast(), FILE, 283);
         EVP_MD_CTX_free(hash);
         if !ctx.is_null() {
@@ -522,6 +542,8 @@ pub(crate) unsafe fn ossl_sm2_decrypt(
     let mut computed_c3: *mut u8 = ptr::null_mut();
     let mut msg_mask: *mut u8 = ptr::null_mut();
     let mut hash: *mut EvpMdCtx = ptr::null_mut();
+    // The KDF-mask extent, for the cleansing release at the shared tail (see encrypt).
+    let mut msg_mask_len: usize = 0;
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe {
@@ -554,6 +576,7 @@ pub(crate) unsafe fn ossl_sm2_decrypt(
             let c2 = ASN1_STRING_get0_data((*sm2_ctext).c2);
             let c3_ptr = ASN1_STRING_get0_data((*sm2_ctext).c3);
             let msg_len = ASN1_STRING_length((*sm2_ctext).c2) as usize;
+            msg_mask_len = msg_len;
             if *ptext_len < msg_len {
                 raise_site(&err_sites::SM2_CRYPT_338);
                 break 'done;
@@ -664,8 +687,8 @@ pub(crate) unsafe fn ossl_sm2_decrypt(
             ptr::write_bytes(ptext_buf, 0, *ptext_len);
         }
 
-        CRYPTO_free(msg_mask.cast(), FILE, 422);
-        CRYPTO_free(x2y2.cast(), FILE, 423);
+        CRYPTO_clear_free(msg_mask.cast(), msg_mask_len, FILE, 422);
+        CRYPTO_clear_free(x2y2.cast(), 2 * field_size as usize, FILE, 423);
         CRYPTO_free(computed_c3.cast(), FILE, 424);
         EC_POINT_free(c1);
         if !ctx.is_null() {

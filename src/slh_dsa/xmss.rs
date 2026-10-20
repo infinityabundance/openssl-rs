@@ -34,7 +34,9 @@ use super::{SlhDsaHashCtx, SLH_MAX_N};
 /// `slh_xmss.c:36-68`.
 ///
 /// # Safety
-/// `ctx` is live; every span is as the arguments say.
+/// `ctx` is live; every span is as the arguments say, `h` is at most the context's parameter-set
+/// `hm`, and `node_id < 2^h` (the callers derive both from a tree of that height, so the
+/// `2 * node_id` recursion is in range).
 pub(crate) unsafe fn ossl_slh_xmss_node(
     ctx: *mut SlhDsaHashCtx,
     sk_seed: *const u8,
@@ -131,7 +133,8 @@ pub(crate) unsafe fn ossl_slh_xmss_node(
 /// `slh_xmss.c:88-120`.
 ///
 /// # Safety
-/// `ctx` is live; `sig_wpkt` is the caller's signature builder.
+/// `ctx` is live; `sig_wpkt` is the caller's signature builder and `node_id < 2^hm` for the
+/// context's parameter set (the leaf index the callers decode is masked to that range).
 pub(crate) unsafe fn ossl_slh_xmss_sign(
     ctx: *mut SlhDsaHashCtx,
     msg: *const u8,
@@ -192,7 +195,8 @@ pub(crate) unsafe fn ossl_slh_xmss_sign(
 /// `size_t pk_out_len)` — `slh_xmss.c:142-184`.
 ///
 /// # Safety
-/// `ctx` is live; `sig_rpkt` is a live cursor into the caller's signature buffer.
+/// `ctx` is live; `sig_rpkt` is a live cursor into the caller's signature buffer; `node_id < 2^hm`
+/// for the context's parameter set (the leaf index the callers decode is masked to that range).
 pub(crate) unsafe fn ossl_slh_xmss_pk_from_sig(
     ctx: *mut SlhDsaHashCtx,
     mut node_id: u32,
