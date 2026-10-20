@@ -7615,22 +7615,105 @@ published ctx then has `loader = NULL` with a closed `loader_ctx`, and `OSSL_STO
 `OSSL_STORE_load` dereference `(*ctx).loader` (`:652`, `:1273`). A C-valid `params` array the
 provider legitimately refuses reaches it (for `file`, a repeated `properties` key or an
 `expect` parameter of the wrong type). The authority has the identical defect at
-`store_lib.c:1093-1098` / `:585-590`. Out of this single-repair batch by instruction; it
-blocks promotion of `store_lib.rs` and is the next boundary repair. Proposed control: an
-attach probe with a refused params array that then calls `OSSL_STORE_close` and
-`OSSL_STORE_load` under ASan.
+`store_lib.c:1093-1098` / `:585-590`. Out of the B27 single-repair batch by instruction;
+**CLOSED by boundary sweep B28** (source witness `src/store/store_lib.rs:1670-1699`, blob
+`d26766300d99aeeee0d62f82ffda0f097f42629b`: `loader_ctx` is assigned only on the accepted-params
+path, so a refusal leaves it NULL and the attach returns NULL).
 
 **NOT_RUN.** Miri (the path needs the installable allocator seam and real provider machinery),
 Loom/TSan (no lock/atomic protocol edited), `RT-STORE`/`RT-FETCH` differential, FRF/SEAL.
 
 **Classification.** `SAFETY_DISCHARGED` for the B26-X1 mechanism; no safe-Rust caller can cause
-UB through the repaired path (`safe_callers_can_cause_ub: false`). The file is **not** ready to
-promote because of the open C-ABI finding B27-X2.
+UB through the repaired path (`safe_callers_can_cause_ub: false`). At B27 the file was **not**
+ready to promote because of the open C-ABI finding B27-X2; B28 closes that finding.
 
 **Queue.** `REMAINING-AUDIT.txt` **54**, `AUDITED-FILES.txt` **709** (the repaired file was
 already audited; no queue movement).
-**Next ordinary position.** `src/ui/ui_openssl.rs`. Before promoting `src/store/store_lib.rs`,
-repair B27-X2 (`OSSL_STORE_attach`'s refused `loader_set_params` path).
+**Next ordinary position.** `src/ui/ui_openssl.rs`. B27-X2 is repaired by B28
+(`OSSL_STORE_attach`'s refused `loader_set_params` path).
+**Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
+`src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
+`src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.
+
+## BOUNDARY SWEEP B28 — `OSSL_STORE_attach` refused `loader_set_params` (`store/store_lib.rs`)
+
+Receipt: [`atlas-refresh/boundary-sweep-B28.json`](atlas-refresh/boundary-sweep-B28.json).
+
+**Candidate identity.** `integrate/safe-c33` at source HEAD `a7157ed10`; worktree
+`src/store/store_lib.rs` blob `d26766300d99aeeee0d62f82ffda0f097f42629b` (pre-fix
+`42160a17fa2f8e1805eac5cffb91a44dd3c9672b`). Authority:
+`crypto/store/store_lib.c:1028-1102` (`OSSL_STORE_attach`), `:1093-1098` (the published
+`loader = NULL`/closed `loader_ctx` state), `:577-597` (`ossl_store_close_it`), `:420-490`
+(`OSSL_STORE_load`); the `file` row's `attach`/`close` and duplicate-key refusal in
+`providers/implementations/storemgmt/file_store.c` (candidate `src/provider/file_store.rs:499-531,
+613-645,1298-1326`).
+
+**Disposition.** `SAFETY_DISCHARGED` for the exact scope B27-X2 named: the refused
+`loader_set_params` path in `OSSL_STORE_attach`'s fetched branch. `B27-X2` is **CLOSED**. The
+rest of the file's M1 boundaries and the B27 `open_ex` repair are unchanged.
+
+**State table (post-fix).**
+
+| attach path | `fetched_loader` | `loader` | `loader_ctx` | result |
+|---|---|---|---|---|
+| legacy loader, `attach` absent/NULL | NULL | non-NULL | NULL | NULL (no store) |
+| legacy loader, `attach` answers a context | NULL | non-NULL | live | store; close/load use the legacy callbacks |
+| fetched, `cbio`/`p_attach` unavailable | NULL | NULL | NULL | NULL (loader freed) |
+| fetched, `p_attach` answers NULL | NULL | NULL | NULL | NULL (loader freed) |
+| fetched, `loader_set_params` refuses | NULL | NULL | **NULL** | **NULL; context closed, loader freed, nothing published** |
+| fetched, `loader_set_params` accepts | owned | same loader | live | store; close/load use the fetched callbacks |
+
+**Ownership trace (one release per acquired resource).** The fetched branch acquires one
+`OSSL_STORE_LOADER_fetch` reference and one provider `p_attach` context. On refusal the context
+is closed exactly once through `p_close`, the fetch reference is released exactly once through
+`OSSL_STORE_LOADER_free`, the core-BIO wrapper releases its BIO reference in the common tail,
+and `loader_ctx` is never assigned. `open_ex` keeps its existing shape and is not touched. The
+success path still transfers both the loader reference and the context to the published store.
+
+**Defect repaired.** `B27-X2` (high, NULL dereference). Pre-fix, `loader_ctx = attached` ran
+before `loader_set_params`; the refusal closed the context and nulled `fetched_loader` but left
+the local non-NULL, so the `loader_ctx.is_null()` guard did not fire and the store was published
+with `loader = NULL`. Close reached `(*(*ctx).loader).closefn` (`:655`) and load reached
+`OSSL_STORE_eof`'s `(*(*ctx).loader).eof` (`:1491`). The fix moves the assignment to the
+accepted-params arm (`src/store/store_lib.rs:1670-1699`), so the refusal returns NULL. The
+authority publishes the closed context with `loader = NULL` (`store_lib.c:1093-1098`); that UB is
+not reproduced (§17), and the divergence is the refusal itself. Every non-refusal path, export,
+signature, `#[repr(C)]` layout, allocator size/`file`/`line`, and lint attribute is unchanged.
+
+**Controls observed.** New `store::store_lib::adv_probe::refused_loader_params_refuses_the_attach_without_publishing_a_null_loader`
+forces the `file` row's legitimate duplicate-key refusal (two `expect` parameters) after a real
+provider attach, asserts the attach returns NULL, proves the provider's `close` ran by reading
+the probe BIO's public reference count (1, not 2, after attach), asserts `OSSL_STORE_close(NULL)
+== 1`, and reuses the B26-X1 cache/implementation accounting to assert the fetched loader
+reference is released exactly once with no double release. It fails on the temporarily restored
+pre-fix ordering at the "must refuse the attach" assertion. New
+`canary_published_null_loader_store_faults_on_close_and_load` drives the pre-fix published shape
+in isolated child processes and observes the fault at both call sites (`close` at `:655`, `load`
+through `:1491`); it passes in the normal court and under ASan. The existing B26-X1 probe and
+the double-release canary still pass.
+
+**Gates observed (final blob).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; full library **1697 passed / 0 failed / 31
+ignored** (1728 total) with `--test-threads=4` (93.81 s) and `--test-threads=1` (220.59 s), in
+the court with `CARGO_BUILD_JOBS=4`; the new refusal probe and the canary **1 passed / 0 failed**
+each, alone, in the normal court and under the ASan venue (`target/asan-focus`,
+nightly-2026-10-05). The affected store probes (B26-X1 and the double-release canary) also pass.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: **0**. Test-only unsafe added: 2
+probe tests (the existing allocator/BIO/provider APIs; `#[cfg(test)]`, `#[ignore]`d, never in a
+release build). Residual: `B27-R1` (the pre-existing `OwnedCtx::zalloc`/`ossl_pw_set_ui_method`
+refusal leak in `OSSL_STORE_attach`, authority-parity, not UB) remains open and unchanged.
+
+**NOT_RUN.** Miri (the path needs the installable allocator seam and real provider machinery),
+Loom/TSan (no lock/atomic protocol edited), `RT-STORE`/`RT-FETCH` differential, FRF/SEAL.
+
+**Classification.** `SAFETY_DISCHARGED` for B27-X2; no safe-Rust caller can cause UB through
+the repaired path (`safe_callers_can_cause_ub: false`). With B27-X2 closed, `src/store/store_lib.rs`
+is ready to promote subject to the unchanged mechanisms above.
+
+**Queue.** `REMAINING-AUDIT.txt` **54**, `AUDITED-FILES.txt` **709** (the repaired file was
+already audited; no queue movement).
+**Next ordinary position.** `src/ui/ui_openssl.rs`.
 **Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
 `src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
 `src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.

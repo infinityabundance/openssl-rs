@@ -576,9 +576,10 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
 /// *loader_ctx, const OSSL_PARAM params[], const char *propq)` — `store_lib.c:35-61`.
 ///
 /// `loader->p_set_ctx_params` is dereferenced unconditionally by the authority when
-/// `params != NULL`; the crate spells that as a skip, because the only callers are in
-/// the fetched branch, which no candidate transcript reaches while no store row is
-/// published (see the module doc).
+/// `params != NULL`; the crate spells that as a skip, because both callers are in the
+/// fetched branch and a provider loader may legitimately leave `p_set_ctx_params` NULL
+/// (`store_meth.rs` treats it as optional), where `OSSL_STORE_ctrl`'s own convention is
+/// that a loader without one ignores the parameters and answers 1.
 ///
 /// # Safety
 /// `loader` must be live; `params` NULL or a terminated array; `propq` NULL or
@@ -1670,22 +1671,30 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
                 } else {
                     ptr::null_mut()
                 };
-                loader_ctx = attached.cast::<OsslStoreLoaderCtx>();
-                if loader_ctx.is_null() {
+                if attached.is_null() {
                     // SAFETY: `fetched_loader` is live and not kept.
                     unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
                     fetched_loader = ptr::null_mut();
                 // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
                 } else if unsafe { loader_set_params(fetched_loader, attached, params, propq) } == 0
                 {
+                    // A refused params set closes the context and refuses the attach: publishing a
+                    // store whose loader is NULL would make `OSSL_STORE_close`/`OSSL_STORE_load`
+                    // dereference that NULL loader (B27-X2). `loader_ctx` is assigned only on the
+                    // accepted-params path below, so this refusal leaves it NULL and the guard at
+                    // the end of this function returns NULL. The authority publishes the closed
+                    // context with `loader = NULL` (store_lib.c:1093-1098); that UB is not
+                    // reproduced (§17).
                     // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
                     if let Some(p_close) = unsafe { (*fetched_loader).p_close } {
-                        // SAFETY: `attached` is the provider's own context.
+                        // SAFETY: `attached` is the provider's own context and this is its close.
                         unsafe { p_close(attached) };
                     }
                     // SAFETY: `fetched_loader` is live and not kept.
                     unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
                     fetched_loader = ptr::null_mut();
+                } else {
+                    loader_ctx = attached.cast::<OsslStoreLoaderCtx>();
                 }
             }
             loader = fetched_loader;
@@ -2819,6 +2828,213 @@ mod adv_probe {
         adv_alloc::assert_no_double_free();
 
         let _ = std::fs::remove_file(path);
+    }
+
+    /// A refused `loader_set_params` must refuse the attach, not publish a store whose
+    /// `loader` is NULL and whose `loader_ctx` is already closed.
+    ///
+    /// **Pre-fix (`store_lib.rs:1672-1687`).** The fetched branch assigned `loader_ctx`
+    /// before calling `loader_set_params`. On refusal it closed that context, freed and
+    /// nulled `fetched_loader`, and left the local `loader_ctx` non-NULL, so the
+    /// `loader_ctx.is_null()` guard did not fire: the function published a store with
+    /// `loader = NULL`, `fetched_loader = NULL` and a closed `loader_ctx`. Both
+    /// `OSSL_STORE_close` (through `ossl_store_close_it`) and `OSSL_STORE_load` then
+    /// dereferenced `(*ctx).loader` (NULL).
+    ///
+    /// **Post-fix.** `loader_ctx` is assigned only on the accepted-params path, so the
+    /// refusal leaves it NULL and the attach returns NULL. The provider's `close` still ran:
+    /// the file loader's context holds one reference on the probe's BIO, so after attach the
+    /// BIO's public reference count is 1 (the probe's own). A missing `p_close` would leave it
+    /// at 2; a second `p_close` would release the probe's reference and make the explicit
+    /// `BIO_free` below a double release.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn refused_loader_params_refuses_the_attach_without_publishing_a_null_loader() {
+        use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
+        use crate::runtime::bio::BIO_free;
+
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        // SAFETY: the caller holds the process-global state lock.
+        unsafe { load_providers() };
+
+        let propq = c"provider=default";
+        // Warm the loader store's cache so the loader block has independent cache and
+        // implementation references; the probe then watches the fetch reference's release.
+        // SAFETY: `scheme`/`propq` are NUL-terminated literals, and this fetch returns a
+        // reference this frame owns.
+        let loader = unsafe {
+            crate::store::store_meth::OSSL_STORE_LOADER_fetch(
+                ptr::null_mut(),
+                c"file".as_ptr(),
+                propq.as_ptr(),
+            )
+        };
+        assert!(!loader.is_null(), "the published `file` row resolves");
+        // SAFETY: `loader` is live and the accessor only reads its provider pointer.
+        let provider = unsafe { crate::store::store_meth::OSSL_STORE_LOADER_get0_provider(loader) };
+        // SAFETY: this releases exactly the reference the warm-up fetch returned.
+        unsafe { crate::store::store_meth::OSSL_STORE_LOADER_free(loader) };
+
+        // A memory BIO the file loader can attach to. The probe keeps one reference; the
+        // file loader's context takes another, and `OSSL_STORE_attach`'s core-BIO wrapper a
+        // third. The reference accounting below depends on all three.
+        // SAFETY: the literal is live for the call and `BIO_new_mem_buf` copies no ownership
+        // of a read-only buffer; the returned BIO carries this frame's reference.
+        let bio = unsafe { BIO_new_mem_buf(c"b27x2-probe".as_ptr().cast(), 11) };
+        assert!(!bio.is_null(), "the probe's memory BIO is created");
+
+        // `file_set_ctx_params_decoder` refuses a repeated key, so `file_set_ctx_params`
+        // answers 0 and `loader_set_params` answers 0. This is a C-valid params array and a
+        // defined provider refusal, not a malformed call.
+        let mut expect: c_int = 0;
+        // SAFETY: the key is a static literal and `expect` is writable for an `int`.
+        let duplicated =
+            unsafe { OSSL_PARAM_construct_int(OSSL_STORE_PARAM_EXPECT.as_ptr(), &mut expect) };
+        let params = [duplicated, duplicated, OSSL_PARAM_construct_end()];
+
+        adv_alloc::reset();
+        // SAFETY: every pointer is NULL or live per `OSSL_STORE_attach`'s contract; `params` is
+        // a terminated array with a duplicated key, which the provider legitimately refuses.
+        let ctx = unsafe {
+            OSSL_STORE_attach(
+                bio,
+                c"file".as_ptr(),
+                ptr::null_mut(),
+                propq.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                params.as_ptr(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(
+            ctx.is_null(),
+            "B27-X2: a refused loader_set_params must refuse the attach, not publish a store with loader = NULL"
+        );
+
+        // Drop the probe's BIO reference. If the provider's `close` ran, the attach left
+        // exactly this one reference on the BIO (its core-BIO wrapper took and released one,
+        // and the file context took one that `file_close` released); if `p_close` did not run,
+        // the count is still 2 here and the context's reference leaks. The BIO is a `Box`, so
+        // the CRYPTO-seam transcript cannot observe it: its public reference count is the
+        // witness.
+        // SAFETY: `bio` is this frame's live reference (the attach released the other two),
+        // so its public reference count is readable.
+        let references = unsafe { (*bio).references.load(core::sync::atomic::Ordering::SeqCst) };
+        assert_eq!(
+            references, 1,
+            "B27-X2: the refused attach must close the loader context exactly once (the BIO must be left with only the probe's reference)"
+        );
+        // SAFETY: `bio` is the live reference this frame owns and this is its single release.
+        let freed = unsafe { BIO_free(bio) };
+        assert_eq!(freed, 1, "the probe's BIO free succeeds");
+        adv_alloc::assert_no_double_free();
+
+        // `OSSL_STORE_close` accepts NULL and answers 1. `OSSL_STORE_load` requires a live
+        // context; the refusal publishes none, so there is no store through which it could
+        // reach a NULL loader. The negative control below drives the pre-fix published shape
+        // through both call sites in isolated child processes.
+        // SAFETY: NULL is the documented no-op input.
+        assert_eq!(unsafe { OSSL_STORE_close(ptr::null_mut()) }, 1);
+
+        // The fetched loader reference the attach acquired was released by the refusal: after
+        // flushing the cache entry's own reference the block is not freed, and after removing
+        // the implementation entry's reference it is freed exactly once. A leaked fetch
+        // reference would leave the count at one and produce no release.
+        // SAFETY: NULL selects the default library context's loader store.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_cache_flush(ptr::null_mut());
+        }
+        let freed_by_flush = adv_alloc::events()
+            .iter()
+            .any(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize));
+        assert!(
+            !freed_by_flush,
+            "the loader store cache released a loader the implementation entry still owns"
+        );
+        // SAFETY: `provider` is live (both providers remain loaded) and this is the store that
+        // holds the `file` loader's implementation entry.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_remove_all_provided(provider);
+        }
+        let loader_releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize))
+            .count();
+        assert_eq!(
+            loader_releases, 1,
+            "the loader block must be released exactly once across the refused attach, the cache flush and the store removal"
+        );
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// Negative control (§16): the pre-fix published shape faults at both call sites.
+    ///
+    /// A zeroed `OsslStoreCtx` with `loader = NULL`, `fetched_loader = NULL` and a non-NULL
+    /// (already closed) `loader_ctx` is exactly what the pre-fix attach published. `close`
+    /// reaches `(*(*ctx).loader).closefn` and `load` reaches `OSSL_STORE_eof`'s
+    /// `(*(*ctx).loader).eof`; both dereference the NULL loader. Each call runs in its own
+    /// child process so the fault is contained and the parent can observe it. This control
+    /// proves the shipped probe's NULL assertion is not vacuous.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_published_null_loader_store_faults_on_close_and_load() {
+        const CHILD_ENV: &str = "OPENSSL_RS_B27X2_CANARY";
+        const THIS: &str = "store::store_lib::adv_probe::canary_published_null_loader_store_faults_on_close_and_load";
+
+        if let Ok(mode) = std::env::var(CHILD_ENV) {
+            // SAFETY: this is the pre-fix published shape: no live loader, so both call sites
+            // dereference NULL. The fault is the control's expected outcome.
+            unsafe {
+                let mut ctx: OsslStoreCtx = core::mem::zeroed();
+                ctx.loader = ptr::null();
+                ctx.fetched_loader = ptr::null_mut();
+                ctx.loader_ctx = core::ptr::dangling_mut::<OsslStoreLoaderCtx>();
+                if mode == "close" {
+                    let _ = ossl_store_close_it(&mut ctx);
+                } else {
+                    let _ = OSSL_STORE_load(&mut ctx);
+                }
+            }
+            // Reaching here means the pre-fix shape did not fault, so the control is dead.
+            std::process::exit(1);
+        }
+
+        use std::os::unix::process::ExitStatusExt;
+
+        let exe = std::env::current_exe().expect("the test binary has a path");
+        let run = |mode: &str| {
+            std::process::Command::new(&exe)
+                .args([
+                    "--exact",
+                    THIS,
+                    "--ignored",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(CHILD_ENV, mode)
+                // Under ASan, let the kernel deliver the fault so the parent observes SIGSEGV
+                // rather than ASan's intercepted exit code.
+                .env("ASAN_OPTIONS", "handle_segv=0")
+                .status()
+                .expect("the canary child starts")
+        };
+
+        for mode in ["close", "load"] {
+            let status = run(mode);
+            let signal = status.signal();
+            // The pre-fix shape has no loader, so the call dereferences NULL. In a debug court
+            // Rust's own null check turns that into a non-unwinding panic (SIGABRT); an
+            // optimised or sanitised venue may deliver SIGSEGV instead. Either is the fault
+            // this control exists to observe; a normal exit is not.
+            assert!(
+                matches!(signal, Some(6) | Some(11)),
+                "the pre-fix published shape must fault on {mode} (observed signal {signal:?})"
+            );
+        }
     }
 
     /// Negative control (§16): the recording allocator's double-release detector must fire on a

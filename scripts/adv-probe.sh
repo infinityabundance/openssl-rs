@@ -54,6 +54,8 @@ probes=(
   "provider::kdf::tests::adv_probe::pbkdf1_derived_key_is_cleansed_before_release"
   "provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair"
   "store::store_lib::adv_probe::refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader"
+  "store::store_lib::adv_probe::refused_loader_params_refuses_the_attach_without_publishing_a_null_loader"
+  "store::store_lib::adv_probe::canary_published_null_loader_store_faults_on_close_and_load"
   "store::store_lib::adv_probe::canary_double_release_is_detected"
 )
 
