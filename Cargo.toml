@@ -32,7 +32,7 @@ name = "openssl-rs"
 # be published. 0.0.x is used deliberately: no symbol is `PARITY_VERIFIED`, so the
 # version must not imply a compatibility claim it does not carry (docs/PARITY_MODEL.md,
 # docs/NON_CLAIMS.md).
-version = "0.0.27"
+version = "0.0.29"
 edition = "2021"
 rust-version = "1.98.1"
 description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
@@ -105,6 +105,13 @@ exclude = [
     # product and must never reach a published package.
     "court/**",
     "artifacts/**",
+    # Sanitizer, Miri and TSan build directories are court scratch, not product.
+    # They are also gitignored; excluding them here prevents `cargo package`
+    # from ever shipping multi-gigabyte instrumented artifacts.
+    ".asan-*/**",
+    ".miri-*/**",
+    ".tsan-*/**",
+    ".ob4work/**",
     ".gemel/**",
     ".github/**",
 ]
