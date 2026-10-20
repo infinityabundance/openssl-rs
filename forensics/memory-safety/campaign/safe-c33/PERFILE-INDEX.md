@@ -8192,3 +8192,91 @@ the probe does not name them); they are otherwise link/reference-covered only.
 **Next eight from the file head.** `src/x509/x509cset.rs`, `src/x509/x509_d2.rs`,
 `src/x509/x509_ext.rs`, `src/x509/x509_meth.rs`, `src/x509/x509_obj.rs`,
 `src/x509/x509_r2x.rs`, `src/x509/x509rset.rs`, `src/x509/x509spki.rs`.
+
+## M88 (mechanism) — per-file contract sweep (X509_CRL/REVOKED accessors, STORE load drivers, extension accessors, lookup-method object, oneline printer, request-to-X509, request setters, Netscape SPKI)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M88.json`](atlas-refresh/mechanism-sweep-M88.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`c37442691`. One low-severity compatibility repair in `x509cset.rs` (the
+`_set1_nextUpdate` NULL-`tm` rejection), one documentation correction in
+`x509_obj.rs`, and one focused regression test. No `#[repr(C)]` layout, exported
+symbol/signature, allocator coordinate, excluded symbol or lint attribute changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/x509cset.rs` | the 21 landed `X509_CRL`/`X509_REVOKED` accessors and setters; version allocation; issuer and time slots through `ossl_x509_set1_time`; `X509_CRL_sort`'s comparator and sequence renumbering; signature/tbs and serial accessors; `i2d_re_X509_CRL_tbs` | one defect `M88-D1`: `_set1_nextUpdate` rejected a NULL `tm`, while the authority clears and answers 1; repaired plus regression test. Everything else matches `x509cset.c:19-185` |
+| `src/x509/x509_d2.rs` | the nine `X509_STORE_load_*`/`set_default_paths` drivers over `X509_STORE_add_lookup` and the file/dir/store ctrl macros; NULL file/path/uri arms; ignored default-load answers and `ERR_clear_error` | no defect; matches `x509_d2.c:15-117` |
+| `src/x509/x509_ext.rs` | the 27 extension accessors over `X509`, `X509_CRL` and `X509_REVOKED`; the static `delete_ext` empty-list release; `X509V3_get_d2i`/`add1_i2d` delegations; the `free_x509_extension` pop_free thunk | no defect; matches `x509_ext.c:19-169`, including the unconditional empty-list `pop_free` arm |
+| `src/x509/x509_meth.rs` | `RawMethod` zero-block construction and block-only error release; `OwnedMethod` name+block `Drop`; `X509_LOOKUP_meth_new`/`_free`; the eighteen vtable setters/getters | no defect; matches `x509_meth.c:20-157` |
+| `src/x509/x509_obj.rs` | `OnelineBuf`'s BUF_MEM structure-only transfer versus full-free destructor; `X509_NAME_oneline`'s NULL-buffer growth, caller-buffer limit, NULL-name arm, GeneralString packing, escaping and shrink-on-fit arm; the three raise coordinates | no defect; matches `x509_obj.c:25-179`; the module note named only two of the three generated sites — corrected |
+| `src/x509/x509_r2x.rs` | `X509_REQ_to_X509`'s version-on-attributes, subject/issuer copy, validity, public key and MD5 sign; every `goto err` free; the `X509_new` raise | no defect; matches `x509_r2x.c:20-66`; `OPENSSL_sk_num(NULL) == -1` preserves the attribute test |
+| `src/x509/x509rset.rs` | the three `X509_REQ` setters; the invalid-version/NULL-request raise; cached-encoding invalidation before each delegation | no defect; matches `x509rset.c:18-42` |
+| `src/x509/x509spki.rs` | the SPKI public-key pair; `b64_decode`'s length rule, decode, d2i and block release; `b64_encode`'s sizing, DER encode and exact-extent base64; `OwnedBuf` transfers | no defect; matches `x509spki.c:14-75`, retaining the documented §17 exact-extent correction |
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated. Every unsafe operation already carries its contract: the
+OB-3 raw/owned partial-construction split for `RawMethod`/`OwnedMethod` and
+`OnelineBuf`; the OB-4 member-buffer slots for the CRL/REVOKED/extension fields;
+the B1/B2/B6–B29 callback contracts for the lookup-method vtable and the
+extension destructor thunk; the `ossl_x509_set1_time` duplicate/identity/clear
+contract; the `X509_NAME_set`/`X509_PUBKEY_set` slot contracts; the
+`OPENSSL_sk_*` NULL/range/sort/`pop_free` discipline; the ASN.1 d2i/i2d cursor
+contract; and the `CRYPTO_*` allocator seam. Hidden obligations: **0**.
+
+**Contracts reused.** OB-1 `OwnedBuf` (the two x509spki scratch blocks); OB-1/OB-2
+block and string transfer (`CRYPTO_strdup` in x509_meth); OB-3 raw/owned
+partial construction (x509_meth, x509_obj); OB-4 member-buffer slots; the callback
+contracts from B1/B2/B6–B29; `RC-1` for every borrowed object field; the
+`ossl_x509_set1_time` and `X509_NAME_set`/`X509_PUBKEY_set` contracts; the
+`OPENSSL_sk_*` discipline; the `raise_site`/`ErrSite` coordinates (four generated
+`x509_obj` plus one local `x509rset` and one local `x509_r2x`); and the `CRYPTO_*`
+allocator seam.
+
+**Defect repaired.** `M88-D1` (low, compatibility): `X509_CRL_set1_nextUpdate`
+rejected a NULL `tm` with 0. In the exact authority tag
+(`openssl-3.6.4/crypto/x509/x509cset.c:50-55`) only a NULL `x` is refused; the
+NULL `tm` reaches `ossl_x509_set1_time`, which frees the old time, writes NULL,
+sets `enc.modified` and answers 1. The old code left the previous `nextUpdate`
+in place, so `X509_CRL_diff` (`x509_vfy.rs:1416`) would raise `X509_VFY_2463`
+where the authority succeeds. The extra test was removed and the contract
+widened to NULL-or-live; a focused regression test pins the clear-and-answer-1
+behaviour. The sibling setters (`_set1_lastUpdate`, `X509_REVOKED_set_revocationDate`)
+correctly keep the authority's NULL rejection.
+
+**Documentation correction.** `x509_obj.rs`'s module note named only
+`X509_OBJ_75`/`X509_OBJ_175`; the second `NAME_TOO_LONG` site is
+`X509_OBJ_116`, and the note now names all three generated coordinates.
+
+**Residuals.** `M88-R1` (info, authority behaviour preserved):
+`NETSCAPE_SPKI_b64_encode` allocates the exact encoder extent instead of the
+authority's `2 * der_len`, which under-sizes for 1-, 2- and 4-byte DER. This is
+the already-documented §17 correction; the returned string's observable content
+is unchanged and no memory-safety obligation is introduced.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean (also
+after the documentation-only edit); `cargo clippy --all-targets -- -D warnings`
+clean; focused `x509::x509cset::tests::next_update_clears_on_null_like_the_authority`
+**1 passed / 0 failed** (1731 filtered); full library **1701 passed / 0 failed /
+31 ignored** (1732 total) serially (209.38 s) and with `--test-threads=4`
+(91.67 s), in the court with `CARGO_BUILD_JOBS=4`. No unexplained test removal
+and no newly ignored test.
+
+**NOT_RUN.** RT-STORE was not re-run: its `X509_CRL_set1_nextUpdate` arm passes a
+non-NULL `tm`, so the corrected NULL path does not change its transcript; the
+repaired branch is covered by the new unit test and by differential reading of
+the exact 3.6.4 tag. Miri/ASan/Loom/TSan (no owner, extent, aliasing or
+concurrency mechanism changed); dudect/ctgrind (no constant-time claim); the
+other phase-10/phase-11 courts (not affected); full Phase-25 forensic
+regeneration; FRF and SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **6**, `AUDITED-FILES.txt` **757**.
+**Next ordinary position.** `src/x509/x509_trust.rs`.
+**Next eight from the file head (only six remain).** `src/x509/x509_trust.rs`,
+`src/x509/x509type.rs`, `src/x509/x_attrib.rs`, `src/x509/x_exten.rs`,
+`src/x509/x_req.rs`, `src/x509/x_x509a.rs`.
