@@ -154,21 +154,37 @@ const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/ml
 
 /// `ml_kem_kmgmt.c:115`, `ml_kem_pairwise_test`'s `OPENSSL_malloc(v->ctext_bytes)`.
 const LINE_PCT_CTEXT: c_int = 115;
-/// `ml_kem_kmgmt.c:162`, `ossl_prov_ml_kem_new`'s `ossl_ml_kem_key_new` line -- not an allocation.
+/// `ml_kem_kmgmt.c:158`, `ml_kem_pairwise_test`'s `err:` tail
+/// `OPENSSL_clear_free(ctext, v->ctext_bytes)`.
+const LINE_PCT_CTEXT_FREE: c_int = 158;
 /// `ml_kem_kmgmt.c:269`, `ml_kem_export`'s `OPENSSL_malloc(v->pubkey_bytes)`.
 const LINE_EXPORT_PUB: c_int = 269;
-/// `ml_kem_kmgmt.c:283`/`289`/`294`, `ml_kem_export`'s three `OPENSSL_secure_zalloc` calls.
+/// `ml_kem_kmgmt.c:339`, `ml_kem_export`'s `err:` tail
+/// `OPENSSL_clear_free(pubenc, v->pubkey_bytes)`.
+const LINE_EXPORT_PUB_FREE: c_int = 339;
+/// `ml_kem_kmgmt.c:283`, `ml_kem_export`'s seed `OPENSSL_secure_zalloc(seedlen)`.
 const LINE_EXPORT_SEED: c_int = 283;
-/// `ml_kem_kmgmt.c:289`.
+/// `ml_kem_kmgmt.c:337`, `ml_kem_export`'s `err:` tail
+/// `OPENSSL_secure_clear_free(seedenc, seedlen)`.
+const LINE_EXPORT_SEED_FREE: c_int = 337;
+/// `ml_kem_kmgmt.c:289`, `ml_kem_export`'s private-key `OPENSSL_secure_zalloc(prvlen)`.
 const LINE_EXPORT_PRV: c_int = 289;
-/// `ml_kem_kmgmt.c:294`.
+/// `ml_kem_kmgmt.c:294`, `ml_kem_export`'s encoded-DK `OPENSSL_secure_zalloc(prvlen)`.
 const LINE_EXPORT_DKENC: c_int = 294;
+/// `ml_kem_kmgmt.c:338`, the `err:` tail that frees both `prvenc` provenances.
+const LINE_EXPORT_PRV_FREE: c_int = 338;
 /// `ml_kem_kmgmt.c:377`, `check_prvenc`'s `OPENSSL_malloc(len)`.
 const LINE_CHECK_PRVENC: c_int = 377;
-/// `ml_kem_kmgmt.c:535`, `ml_kem_load`'s `OPENSSL_secure_clear_free`.
-const LINE_LOAD_CLEAR: c_int = 535;
+/// `ml_kem_kmgmt.c:383`, `check_prvenc`'s `OPENSSL_clear_free(buf, len)`.
+const LINE_CHECK_PRVENC_FREE: c_int = 383;
+/// `ml_kem_kmgmt.c:558`, `ml_kem_load`'s success-path `OPENSSL_secure_clear_free`.
+const LINE_LOAD_CLEAR: c_int = 558;
+/// `ml_kem_kmgmt.c:565`, `ml_kem_load`'s `err:`-arm `OPENSSL_secure_clear_free`.
+const LINE_LOAD_ERR_CLEAR: c_int = 565;
 /// `ml_kem_kmgmt.c:734`, `ml_kem_gen_set_params`'s `OPENSSL_free(gctx->propq)`.
-const LINE_GEN_FREE_PROPQ: c_int = 734;
+const LINE_GEN_PROPQ_FREE: c_int = 734;
+/// `ml_kem_kmgmt.c:735`, the replacement `OPENSSL_strdup`'s allocation site.
+const LINE_GEN_PROPQ_STRDUP: c_int = 735;
 /// `ml_kem_kmgmt.c:767`, `ml_kem_gen_init`'s `OPENSSL_zalloc(sizeof(*gctx))`.
 const LINE_GEN_ZALLOC: c_int = 767;
 /// `ml_kem_kmgmt.c:839`/`840`, `ml_kem_gen_cleanup`'s two frees.
@@ -269,8 +285,13 @@ unsafe fn ml_kem_pairwise_test(key: *const MlKemKey, key_flags: c_int) -> c_int 
         'err: {
             // The ciphertext scratch is this frame's own block; the handle releases it through
             // the authority's own cleansing free on every path out of the block.
-            let Some(buf) = OwnedBuf::new_cleansed((*v).ctext_bytes, FILE_SEAM, LINE_PCT_CTEXT)
-            else {
+            let Some(buf) = OwnedBuf::new_cleansed_released(
+                (*v).ctext_bytes,
+                FILE_SEAM,
+                LINE_PCT_CTEXT,
+                FILE_SEAM,
+                LINE_PCT_CTEXT_FREE,
+            ) else {
                 break 'err;
             };
             let ctext = buf.as_ptr();
@@ -501,9 +522,13 @@ unsafe extern "C" fn ml_kem_export(
                     return 0;
                 }
             } else if selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY != 0 {
-                let Some(buf) =
-                    OwnedBuf::new_cleansed((*v).pubkey_bytes, FILE_SEAM, LINE_EXPORT_PUB)
-                else {
+                let Some(buf) = OwnedBuf::new_cleansed_released(
+                    (*v).pubkey_bytes,
+                    FILE_SEAM,
+                    LINE_EXPORT_PUB,
+                    FILE_SEAM,
+                    LINE_EXPORT_PUB_FREE,
+                ) else {
                     break 'err;
                 };
                 let ok = ossl_ml_kem_encode_public_key(buf.as_ptr(), (*v).pubkey_bytes, key) != 0;
@@ -518,11 +543,12 @@ unsafe extern "C" fn ml_kem_export(
                 // configured; `ossl_param_build_set_octet_string` will then use it too.
                 if ossl_ml_kem_have_seed(key) {
                     seedlen = ML_KEM_SEED_BYTES;
-                    let Some(buf) =
+                    let Some(mut buf) =
                         OwnedBuf::new_secure_zalloc_cleansed(seedlen, FILE_SEAM, LINE_EXPORT_SEED)
                     else {
                         break 'err;
                     };
+                    buf.set_release_line(LINE_EXPORT_SEED_FREE);
                     let ok = ossl_ml_kem_encode_seed(buf.as_ptr(), seedlen, key) != 0;
                     seedenc = Some(buf);
                     if !ok {
@@ -531,11 +557,12 @@ unsafe extern "C" fn ml_kem_export(
                 }
                 if ossl_ml_kem_have_prvkey(key) {
                     prvlen = (*v).prvkey_bytes;
-                    let Some(buf) =
+                    let Some(mut buf) =
                         OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE_SEAM, LINE_EXPORT_PRV)
                     else {
                         break 'err;
                     };
+                    buf.set_release_line(LINE_EXPORT_PRV_FREE);
                     let ok = ossl_ml_kem_encode_private_key(buf.as_ptr(), prvlen, key) != 0;
                     prvenc = Some(buf);
                     if !ok {
@@ -543,11 +570,12 @@ unsafe extern "C" fn ml_kem_export(
                     }
                 } else if ossl_ml_kem_have_dkenc(key) {
                     prvlen = (*v).prvkey_bytes;
-                    let Some(buf) =
+                    let Some(mut buf) =
                         OwnedBuf::new_secure_zalloc_cleansed(prvlen, FILE_SEAM, LINE_EXPORT_DKENC)
                     else {
                         break 'err;
                     };
+                    buf.set_release_line(LINE_EXPORT_PRV_FREE);
                     ptr::copy_nonoverlapping((*key).encoded_dk, buf.as_ptr(), prvlen);
                     prvenc = Some(buf);
                 }
@@ -922,7 +950,13 @@ unsafe fn check_prvenc(prvenc: *const u8, key: *mut MlKemKey) -> c_int {
     unsafe {
         // The scratch is this frame's own block; the handle releases it through the authority's own
         // cleansing free once the comparison is made.
-        let buf = OwnedBuf::new_cleansed(len, FILE_SEAM, LINE_CHECK_PRVENC);
+        let buf = OwnedBuf::new_cleansed_released(
+            len,
+            FILE_SEAM,
+            LINE_CHECK_PRVENC,
+            FILE_SEAM,
+            LINE_CHECK_PRVENC_FREE,
+        );
         let mut ret = 0;
         if let Some(b) = buf.as_ref() {
             let encoded = ossl_ml_kem_encode_private_key(b.as_ptr(), len, key) != 0;
@@ -1166,14 +1200,14 @@ unsafe extern "C" fn ml_kem_load(reference: *const c_void, reference_sz: usize) 
 ///
 /// # Safety
 /// `key` is this call's own. `encoded_dk` is NULL or the block `ml_kem_load`
-/// detached from `(*key).encoded_dk` (`:1117-1120`); when non-NULL it is the
+/// detached from `(*key).encoded_dk` (`:531-535`); when non-NULL it is the
 /// secure-heap allocation the P8 decoder made with
 /// `CRYPTO_secure_malloc((*p8fmt).priv_length, ...)` (`ml_kem_codecs.rs:696`),
 /// whose extent equals `key->vinfo->prvkey_bytes` (the codec checks that equality
 /// at `ml_kem_codecs.rs:627-628`). Ownership transfers here, which releases it
 /// exactly once through `CRYPTO_secure_clear_free(encoded_dk, prvkey_bytes, ...)`
 /// — the authority's `err:` arm `OPENSSL_secure_clear_free(encoded_dk,
-/// key->vinfo->prvkey_bytes)` (`ml_kem_kmgmt.c:535`, `LINE_LOAD_CLEAR`) — via
+/// key->vinfo->prvkey_bytes)` (`ml_kem_kmgmt.c:565`, `LINE_LOAD_ERR_CLEAR`) — via
 /// `OwnedBuf::adopt_secure_cleansed`. A plain `CRYPTO_malloc` block is excluded;
 /// the secure allocator's documented uninitialised-heap plain fallback is
 /// covered. `seed` is `ML_KEM_SEED_BYTES` writable, initialized bytes and is
@@ -1191,7 +1225,7 @@ unsafe fn load_err(
                 encoded_dk.cast::<c_uchar>(),
                 prvkey_bytes,
                 FILE_SEAM,
-                LINE_LOAD_CLEAR,
+                LINE_LOAD_ERR_CLEAR,
             ));
         }
         OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
@@ -1432,12 +1466,13 @@ unsafe extern "C" fn ml_kem_gen_set_params(vgctx: *mut c_void, params: *const Os
             drop(OwnedBuf::adopt_plain(
                 (*gctx).propq.cast::<c_uchar>(),
                 FILE_SEAM,
-                LINE_GEN_FREE_PROPQ,
+                LINE_GEN_PROPQ_FREE,
             ));
             (*gctx).propq = OwnedBuf::adopt_plain(
-                CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_FREE_PROPQ).cast::<c_uchar>(),
+                CRYPTO_strdup((*p.propq).data.cast(), FILE, LINE_GEN_PROPQ_STRDUP)
+                    .cast::<c_uchar>(),
                 FILE_SEAM,
-                LINE_GEN_FREE_PROPQ,
+                LINE_GEN_CLEANUP_PROPQ,
             )
             .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
             if (*gctx).propq.is_null() {

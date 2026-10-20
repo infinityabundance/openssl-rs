@@ -512,9 +512,13 @@ unsafe extern "C" fn mlx_kem_decapsulate(
             let cbuf = ctext.add((1 - ml_kem_slot) as usize * (*(*key).minfo).ctext_bytes);
             sbuf = shsec.add((1 - ml_kem_slot) as usize * ML_KEM_SHARED_SECRET_BYTES);
             ctx = EVP_PKEY_CTX_new_from_pkey((*key).libctx, (*key).xkey, (*key).propq);
+            // The authority's `ctx == NULL || (xkey = EVP_PKEY_new()) == NULL`: a failed
+            // context allocation must not allocate the peer key.
+            if ctx.is_null() {
+                break 'end;
+            }
             xkey = EVP_PKEY_new();
-            if ctx.is_null()
-                || xkey.is_null()
+            if xkey.is_null()
                 || EVP_PKEY_copy_parameters(xkey, (*key).xkey) <= 0
                 || EVP_PKEY_set1_encoded_public_key(xkey, cbuf, decap_clen) <= 0
                 || EVP_PKEY_derive_init(ctx) <= 0

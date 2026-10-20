@@ -1,0 +1,162 @@
+{
+ "receipt": "mechanism-sweep-M69",
+ "branch": "integrate/safe-c33",
+ "source_head": "2d24ba8f5",
+ "worktree": true,
+ "date": "2026-10-20",
+ "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression or hidden obligation); three findings repaired (one failure-path allocation divergence, one secret-residue plus release-coordinate class, one allocator-seam release-coordinate class).",
+ "scope": "Per-file contract audit of provider ML-KEM key management, the MLX hybrid KEM, RSA asymmetric cipher and RSASVE KEM, the default-provider security checks and digest map, provider seeding up-calls and the generic/AES symmetric-key management units. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred.",
+ "files": [
+  "src/provider/ml_kem_kmgmt.rs",
+  "src/provider/mlx_kem.rs",
+  "src/provider/rsa_enc.rs",
+  "src/provider/rsa_kem.rs",
+  "src/provider/securitycheck_default.rs",
+  "src/provider/securitycheck.rs",
+  "src/provider/seeding.rs",
+  "src/provider/skeymgmt.rs"
+ ],
+ "files_not_run": [],
+ "defects": [
+  {
+   "id": "M69-D1",
+   "file": "src/provider/mlx_kem.rs",
+   "lines_pre_fix": "514-518",
+   "line_post_fix": 514,
+   "severity": "low",
+   "class": "failure-path allocator/ownership divergence",
+   "description": "mlx_kem_decapsulate assigned the ECDH context and then unconditionally called EVP_PKEY_new() before testing the context, so a failed EVP_PKEY_CTX_new_from_pkey still allocated the peer key. The authority guards the context first and only then allocates the peer, so under allocator-failure injection the Rust unit produced one extra EVP_PKEY allocation. The context-null arm now breaks the end block before the peer allocation; success-path behaviour is unchanged."
+  },
+  {
+   "id": "M69-D2",
+   "file": "src/provider/rsa_enc.rs",
+   "lines_pre_fix": "362-395, 462-519",
+   "line_post_fix": 362,
+   "severity": "low",
+   "class": "secret residue plus allocator-seam release coordinate",
+   "description": "Both OAEP scratch buffers (tbuf) were plain OwnedBuf::new blocks that recorded the allocation line as their release line. The encrypt scratch holds the OAEP-padded plaintext and the decrypt scratch holds the RSA decrypted EM, yet the authority's plain OPENSSL_free was mirrored with no cleansing. Each handle now uses new_cleansed_released at the authority's own allocation and release coordinates (rsa_enc.c.in 197/202/215/220 for encrypt; 272/281/289/304/311 for decrypt) and set_release_line selects the correct early-arm coordinate. Cleanse-before-free is a deliberate improvement over the authority's OPENSSL_free and is not observable through the API."
+  },
+  {
+   "id": "M69-D3",
+   "file": "src/provider/ml_kem_kmgmt.rs",
+   "lines_pre_fix": "154-177, 269-280, 501-553, 922-927, 1166-1195, 1432-1440",
+   "line_post_fix": 154,
+   "severity": "low",
+   "class": "allocator-seam release coordinate",
+   "description": "Eight scratch handles recorded their allocation coordinate as their release coordinate: the pairwise ctext block (alloc 115, tail free 158), the export public/seed/private/encoded-DK blocks (269/339, 283/337, 289/338, 294/338), check_prvenc (377/383), and the replacement propq strdup (old free 734, new alloc 735). In addition, ml_kem_load's success and err arms shared LINE_LOAD_CLEAR=535, a line that is not a free site at all (the authority frees at 558 on success and 565 on error). new_*_released constructors and set_release_line now carry the separate pairs; allocation sizes and every successful-path release remain unchanged."
+  }
+ ],
+ "documentation_corrections": [
+  "ml_kem_kmgmt's load_err doc now names the detach lines 531-535 and the err-arm free at 565, and the success arm names LINE_LOAD_CLEAR=558.",
+  "rsa_enc's OAEP scratch comments now name the allocation and each early release coordinate at the .c.in lines the campaign treats as the pinned authority for this generated unit."
+ ],
+ "new_unsafe_assumptions": [],
+ "hidden_obligations": [],
+ "retained_obligations": [
+  "Dispatch callbacks receive borrowed raw pointers under the provider ABI; the key/context lifetime is the EVP caller's obligation (unchanged).",
+  "provider_seeding's eight file statics are written by ossl_prov_seeding_from_dispatch during provider initialisation and read by the up-calls; provider init is serialised by the provider core, as in the authority.",
+  "ProvMlxKemCtx.key is borrowed, not owned; the MLX key outlives the operation context under the KEM dispatch contract.",
+  "ProvRsaCtx/ProvMlxKemCtx/ProvSkey destructors rely on the OB-3 zero-validity and member-body contracts; all three are covered by the zero_state_sweep controls."
+ ],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [
+  "src/provider/rsa_enc.rs OAEP encrypt scratch: alloc 197 with early frees 202/215 and normal free 220; cleansed release.",
+  "src/provider/rsa_enc.rs OAEP/TLS decrypt scratch: alloc 272 with early frees 281/289/304 and normal free 311; cleansed release.",
+  "src/provider/ml_kem_kmgmt.rs pairwise ctext: alloc 115, free 158.",
+  "src/provider/ml_kem_kmgmt.rs export public copy: alloc 269, free 339.",
+  "src/provider/ml_kem_kmgmt.rs export seed copy: alloc 283, free 337.",
+  "src/provider/ml_kem_kmgmt.rs export private/DK copies: alloc 289/294, free 338.",
+  "src/provider/ml_kem_kmgmt.rs check_prvenc scratch: alloc 377, free 383.",
+  "src/provider/ml_kem_kmgmt.rs load encoded_dk: success free 558, err free 565 (was 535 for both).",
+  "src/provider/ml_kem_kmgmt.rs gen-set-params propq: old free 734, replacement strdup 735, cleanup free 839."
+ ],
+ "excluded_symbol_changes": [],
+ "unsafe_operations_introduced": [],
+ "unsafe_operations_removed": [],
+ "contracts_reused": [
+  "OB-1 OwnedBuf: new_cleansed_released / new_secure_zalloc_cleansed / set_release_line / adopt_plain / adopt_secure_cleansed",
+  "OB-3 OwnedCtx / CtxDestroy and the zero-validity obligation",
+  "OB-4 member-buffer slots for ProvSkey.data, ProvRsaCtx.rsa/oaep_label and ProvMlxKemCtx.key",
+  "RC-1 reference counting for RSA_up_ref/RSA_free and EVP_MD_up_ref/EVP_MD_free",
+  "B19 BIGNUM cleansing reached through RSA_free for the private key carried by ProvRsaCtx",
+  "Provider callback contract for OSSL_CALLBACK in ml_kem_export, generic_export and aes_export",
+  "Provider dispatch lifetime and the CRYPTO_* allocator seam"
+ ],
+ "secret_bearing_buffers": [
+  "src/provider/rsa_enc.rs encrypt tbuf: OAEP-padded plaintext; now CRYPTO_clear_free on the success path and on the oaep-md-fetch and padding-refusal arms.",
+  "src/provider/rsa_enc.rs decrypt tbuf: RSA decrypted EM; now CRYPTO_clear_free on the wrong-length, oaep-md-fetch, missing-client-version and success arms.",
+  "src/provider/rsa_enc.rs ProvRsaCtx.rsa: borrowed reference to an RSA key carrying the private key; RSA_free releases it and B19's BIGNUM cleansing covers the components.",
+  "src/provider/rsa_kem.rs rsasve_generate secret: caller-owned output; cleansed with OPENSSL_cleanse when RSA_public_encrypt fails, matching the authority. ProvRsaCtx.rsa is released through RSA_free.",
+  "src/provider/ml_kem_kmgmt.rs pairwise secret/out/entropy: stack buffers cleansed on every exit; ctext clear-freed at the err tail.",
+  "src/provider/ml_kem_kmgmt.rs export seedenc/prvenc: secure-heap zalloc, secure clear-free on every exit; pubenc clear-freed; the OSSL_PARAM copies are cleansed before OSSL_PARAM_free.",
+  "src/provider/ml_kem_kmgmt.rs check_prvenc buf: encoded private key, clear-freed after the comparison.",
+  "src/provider/ml_kem_kmgmt.rs load encoded_dk: secure clear-free on success (558) and error (565); the stack seed is cleansed on both arms.",
+  "src/provider/ml_kem_kmgmt.rs gen seedbuf: cleansed in ml_kem_gen and again in ml_kem_gen_cleanup; propq is public metadata released plainly.",
+  "src/provider/mlx_kem.rs shsec: caller-owned combined shared secret, cleansed on every failure path after the length checks; the size-query returns deliberately skip the cleanse, matching the authority. The ephemeral ECDH private key is owned by xkey and released through EVP_PKEY_free.",
+  "src/provider/skeymgmt.rs ProvSkey.data: CRYPTO_clear_free on the destructor, which also runs on the rejected AES-length and failed-import paths.",
+  "src/provider/securitycheck.rs, src/provider/securitycheck_default.rs, src/provider/seeding.rs: no secret-bearing storage; seeding only forwards caller entropy/nonce buffers."
+ ],
+ "gates": {
+  "fast_fmt": "PASS: cargo fmt --all -- --check, court container",
+  "fast_focused_tests": "PASS: provider::mlx_kem 1, provider::skeymgmt 1, provider::securitycheck 3, provider::rsa_kem 1, provider::seeding/rsa_enc/ml_kem_kmgmt 0 tests present; runtime::owned_buf 30, runtime::bio::owned 19; provider:: subset 174 passed / 1 failed once (provider::ec_kem isolation)",
+  "isolation_rerun": "PASS: provider::ec_kem::tests::the_dhkem_round_trip_agrees_in_crate passes when rerun alone; recorded as the known test-isolation issue, not a regression",
+  "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+  "full_lib_serial": "PASS: 1673 passed / 0 failed / 27 ignored in 201.74 s",
+  "full_lib_threaded": "PASS: 1673 passed / 0 failed / 27 ignored in 93.39 s with --test-threads=4",
+  "structural_guards": "No #[repr(C)] layout, exported symbol, signature, unsafe lint attribute, allocator size or FILE value changed; only release lines and the release kind of two internally owned scratch blocks changed."
+ },
+ "boundary_control": {
+  "negative_control_added": false,
+  "reason": "No ownership mechanism was changed. The repairs are one failure-path allocation guard, one release-coordinate class and cleanse-before-free for two internally owned scratch buffers; the existing runtime::owned_buf model tests already fire on a wrong release mode/length."
+ },
+ "next_queue": {
+  "file": "src/provider/slh_dsa_kmgmt.rs",
+  "then": [
+   "src/provider/slh_dsa_sig.rs",
+   "src/provider/sm2_enc.rs",
+   "src/provider/sm2_sig.rs",
+   "src/provider/stores.rs",
+   "src/provider/util.rs",
+   "src/punycode.rs",
+   "src/quic_vlint.rs"
+  ]
+ },
+ "deferred": [
+  {
+   "gate": "Miri / Stacked Borrows / Tree Borrows and ASan over the RSA cipher, RSASVE and ML-KEM keymgmt contexts",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "allocator-hook differential observing CRYPTO_set_mem_functions file/line events for the corrected coordinates",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "authority differential court for RSA OAEP/TLS decryption, RSASVE and ML-KEM key export/load",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "constant-time measurement for RSA OAEP/TLS padding and the ML-KEM/KEM operations",
+   "status": "NOT_RUN",
+   "runs_at": "SEAL"
+  },
+  {
+   "gate": "dependency-graph regeneration against the exact candidate",
+   "status": "NOT_RUN",
+   "runs_at": "BATCH checkpoint after commit"
+  },
+  {
+   "gate": "FRF suite and SEAL",
+   "status": "NOT_RUN",
+   "runs_at": "SEAL"
+  }
+ ],
+ "residuals": [
+  "The RSA OAEP and TLS-padding paths use the authority's constant-time selection helpers but no new timing evidence was produced; no constant-time claim is made.",
+  "provider_seeding's static callback slots assume provider initialisation is serialised by the provider core; that is the provider ABI contract, not enforced by this unit.",
+  "src/provider/ml_kem_kmgmt.rs and src/provider/mlx_kem.rs remain file-level obligation audits, not SAFETY_DISCHARGED results."
+ ],
+ "not_discharged": true
+}
