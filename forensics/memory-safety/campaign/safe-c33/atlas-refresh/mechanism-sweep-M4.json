@@ -1,0 +1,139 @@
+{
+  "receipt": "mechanism-sweep-M4",
+  "date": "2026-10-18",
+  "branch": "integrate/safe-c33",
+  "source_head": "38cf6d5a6",
+  "worktree": "dirty: uncommitted rand_lib.rs release-coordinate repairs and provider/digest.rs SHAKE get-parameter repair plus its regression test",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "verification_level": "BATCH",
+  "scope": "mechanism-contract sweep over the next twelve ordinary queue files (X.509 extensions, RSA ameth, RNG, decoder, CMP context, name constraints, ECX ameth, provider DRBG/digest); not full D-group enumeration",
+  "not_discharged": true,
+  "files": [
+    "src/x509/v3_san.rs",
+    "src/rsa/ameth.rs",
+    "src/x509/v3_timespec.rs",
+    "src/rand/rand_lib.rs",
+    "src/x509/v3_conf.rs",
+    "src/evp/rand.rs",
+    "src/decoder_lib.rs",
+    "src/cmp/cmp_ctx.rs",
+    "src/x509/v3_ncons.rs",
+    "src/ec/ecx_meth.rs",
+    "src/provider/rand.rs",
+    "src/provider/digest.rs"
+  ],
+  "dispositions": {
+    "src/x509/v3_san.rs": "no defect: v2i_GENERAL_NAMES's reserved push, copy_issuer/copy_email error tails and do_othername/do_dirname partial releases match v3_san.c; the authority's own duplicate %.*s print is reproduced",
+    "src/rsa/ameth.rs": "no defect: rsa_priv_encode cleanses at rklen, every ossl_rsa_pss_to_ctx failure tail frees the decoded params, and import/export ownership arms match rsa_ameth.c",
+    "src/x509/v3_timespec.rs": "no defect: repr(C) layouts/offsets match x509v3.h and the generated lifecycle functions forward the item contract; the unit owns no allocation",
+    "src/rand/rand_lib.rs": "M4-D1 low: two random_provider_name releases now use the authority's free coordinates (set_random_provider_name 112; RAND_set1_random_provider NULL arm 1090) instead of the duplicate's 113; the DRBG reference chains and set0 slot displacement match",
+    "src/x509/v3_conf.rs": "no defect: the DER owner is emptied on the octet handoff and the do_ext_i2d error tail frees once; X509V3_EXT_add_nconf_sk reorder/replace/push-failure arms match v3_conf.c",
+    "src/evp/rand.rs": "no defect: EVP_RAND_CTX_new's failure arm releases the constructor context, block and parent reference once; generate chunking and nonce/get-param defaults match evp_rand.c",
+    "src/decoder_lib.rs": "no defect: half-built instance destructor is per-field, dup error arms release only what they acquired, and decoder_process frees its mem BIO and restores start_input_type on every tail",
+    "src/cmp/cmp_ctx.rs": "no defect: secretValue cleansed at its actual extent on replacement and destruction; up-ref-then-replace, set1_certs and set0 arms match cmp_ctx.c. Residual: generated setters use the file's Phase-12.4 seam convention (line 0/short path), unchanged",
+    "src/x509/v3_ncons.rs": "no defect: every adoption/free line matches v3_ncons.c and the permitted/excluded prefix reads stay in bounds",
+    "src/ec/ecx_meth.rs": "no defect: publication encoders cleanse at the exact extents, validate_ecx_derive NULL checks match, and sign/verify length and ownership arms match ecx_meth.c",
+    "src/provider/rand.rs": "no defect: secure clear-free sizes, *_free member order and the dfree error path match; generate chunking, reseed triggers and parent locking match drbg.c/drbg_{ctr,hash,hmac}.c.in",
+    "src/provider/digest.rs": "M4-D2 low (compatibility): shake_get_ctx_params now fills every located alias (xoflen and size), as the authority's get-decoder does; regression test added. The set path still refuses duplicate aliases without an error site (none generated for SHA3)"
+  },
+  "defects": [
+    {
+      "id": "M4-D1",
+      "file": "src/rand/rand_lib.rs",
+      "pre_fix_lines": [1878, 1913],
+      "post_fix_lines": [1882, 1917],
+      "severity": "low (allocator-seam fidelity; not UB)",
+      "class": "two releases of dgbl->random_provider_name adopted the duplicate's line 113; the authority's OPENSSL_free calls are at rand_lib.c:112 (set_random_provider_name) and :1090 (RAND_set1_random_provider, NULL arm)",
+      "fix": "added L_PROVIDER_NAME_SET_FREE=112 and L_PROVIDER_NAME_SET1_FREE=1090 and used each at its release site; allocation coordinate remains 113",
+      "witness": "cargo fmt/clippy and the full library suite; no behaviour change (the seam records coordinates only)"
+    },
+    {
+      "id": "M4-D2",
+      "file": "src/provider/digest.rs",
+      "pre_fix_lines": [1429, 1438],
+      "post_fix_lines": [1424, 1444],
+      "severity": "low (compatibility; not UB)",
+      "class": "shake_get_ctx_params returned 0 when the caller's params array named both xoflen and size; the authority's generated get-decoder maps them to separate fields and sets every located field (sha3_prov.c.in:588-610, 'Size is an alias of xoflen but separate them for compatibility')",
+      "fix": "set each located alias independently and fail only if a setter refuses",
+      "witness": "provider::digest::sha3::tests::shake_get_ctx_params_sets_both_aliases (new) plus the full library suite"
+    }
+  ],
+  "retained_obligations": [
+    "src/x509/v3_san.rs: v2i callbacks and the i2v chain are provider/config callbacks; the GENERAL_NAME union arm is selected by the live selector and checked at every read",
+    "src/rand/rand_lib.rs: the legacy RAND_METHOD callbacks are caller-installed function pointers; RAND_get_rand_method returns a borrowed table and no Rust borrow is held across a callback",
+    "src/evp/rand.rs: provider newctx/freectx/instantiate/uninstantiate/generate/reseed callbacks are foreign; each is passed a raw algctx and the context lock discipline mirrors the authority",
+    "src/decoder_lib.rs: decoder->decode/construct/export_object and the stack visitors are provider callbacks; decoder_process passes raw handles and forbids object references at the recursion edge",
+    "src/cmp/cmp_ctx.rs: certConf/http/transfer/log callbacks are application-controlled reentrancy edges; dispatch stores a raw CbPtr and holds no Rust borrow across a call; generated setters keep the file's line-0 allocator convention",
+    "src/x509/v3_ncons.rs: ossl_a2ulabel/OSSL_parse_url allocate internally; their buffers are adopted as seam owners and freed at the authority's own lines",
+    "src/ec/ecx_meth.rs: ossl_ecx_key_op/fromdata and the keymgmt import callbacks are provider-controlled; the key transfer is an EVP_PKEY_assign handoff",
+    "src/provider/rand.rs: GET_SEED/NONCE/LOCK/UNLOCK/ENABLE_LOCKING parent callbacks are foreign; the parent lock is taken around each and the DRBG lock is a raw CRYPTO_RWLOCK",
+    "src/provider/digest.rs: digest dispatch callbacks and OSSL_PARAM descriptors are caller-controlled; the local OwnedCtx carries only block ownership (no owned member pointers)"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": 0,
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_removed": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 2,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "cargo_check_all_targets": "PASS",
+    "lib_serial": "1572 passed / 0 failed / 26 ignored (1598 run)",
+    "lib_test_threads_4": "1572 passed / 0 failed / 26 ignored (1598 run)",
+    "affected_adversarial_probes": "0 defined in src/rand/rand_lib.rs or src/provider/digest.rs; the non-affected probe suite is NOT_RUN at BATCH (BOUNDARY/SEAL)"
+  },
+  "deferred": [
+    {
+      "gate": "full per-file D-group records for the twelve files",
+      "status": "NOT_RUN",
+      "runs_at": "next per-file audit pass"
+    },
+    {
+      "gate": "targeted Miri/ASan and dependency-graph regeneration",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY/SEAL and the BATCH checkpoint after the orchestrator commits"
+    },
+    {
+      "gate": "differential SHAKE get_ctx_params compatibility court",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY/SEAL"
+    },
+    {
+      "gate": "src/runtime/bio/bss_dgram.rs (rank 59)",
+      "status": "NOT_RUN",
+      "reason": "BIO callback/reentrancy boundary; deferred to its own batch with bss_dgram_pair.rs and bss_conn.rs"
+    },
+    {
+      "gate": "src/ssl/ssl_sess.rs (rank 61)",
+      "status": "NOT_RUN",
+      "reason": "SSL session ownership/reference-count boundary; deferred to the SSL ownership batch"
+    },
+    {
+      "gate": "src/ssl/statem/statem_clnt.rs (rank 50)",
+      "status": "NOT_RUN",
+      "reason": "TLS state-machine callback/reentrancy boundary"
+    }
+  ],
+  "next_queue": {
+    "file": "src/cms/cms_lib.rs",
+    "rank_in_attribution": 62,
+    "unattributed_sites": 177,
+    "then": [
+      "src/evp/cipher.rs (176)",
+      "src/provider/mac.rs (176)",
+      "src/evp/pem_bridge.rs (173)",
+      "src/rsa/object.rs (172)",
+      "src/provider/file_store.rs (171)"
+    ],
+    "skipped_boundary_files": [
+      "src/ssl/statem/statem_clnt.rs (rank 50, TLS state machine)",
+      "src/runtime/bio/bss_dgram.rs (rank 59, BIO callbacks)",
+      "src/ssl/ssl_sess.rs (rank 61, SSL session ownership)",
+      "src/ml_dsa/encoders.rs (rank 43, secure-memory secret boundary)",
+      "src/ssl/ssl_lib.rs (rank 1)",
+      "src/ssl/statem/statem_srvr.rs (rank 31)"
+    ]
+  }
+}

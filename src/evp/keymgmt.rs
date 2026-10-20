@@ -58,7 +58,9 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -71,9 +73,10 @@ use crate::evp::pkey::evp_pkey_name2type;
 use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::NID_undef;
 use crate::selftest::OsslCallback;
 
@@ -310,6 +313,27 @@ pub struct EvpKeyMgmt {
     pub(crate) dup: Option<KeymgmtDupFn>,
 }
 
+// SAFETY: a zeroed `EvpKeyMgmt` is the authority's own constructed state -- every pointer is NULL,
+// every function pointer is `None` (the null pointer) and `refcnt` is 0 -- and `keymgmt_new` sets
+// `refcnt` to 1 before the object is published. `destroy_body` is the authority's
+// `EVP_KEYMGMT_free` body for the object's single reference: the owned first name and the provider
+// reference `keymgmt_from_algorithm` takes after the structural check. It never releases the
+// enclosing block, which `OwnedCtx` does at `LINE_FREE_KEYMGMT`.
+unsafe impl CtxDestroy for EvpKeyMgmt {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_KEYMGMT;
+    const LINE_FREE: c_int = LINE_FREE_KEYMGMT;
+
+    unsafe fn destroy_body(ptr: *mut EvpKeyMgmt) {
+        // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or the string
+        // this object owns and `prov` is NULL or the reference it holds.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // The method object
 // ---------------------------------------------------------------------------------------------
@@ -341,19 +365,11 @@ unsafe extern "C" fn evp_keymgmt_free(data: *mut c_void) {
 ///
 /// # Safety
 /// No preconditions: it allocates and writes one field.
-unsafe fn keymgmt_new() -> *mut EvpKeyMgmt {
-    let keymgmt = CRYPTO_zalloc(
-        core::mem::size_of::<EvpKeyMgmt>(),
-        FILE,
-        LINE_ZALLOC_KEYMGMT,
-    )
-    .cast::<EvpKeyMgmt>();
-    if keymgmt.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `keymgmt` is a fresh zeroed block this call owns.
-    unsafe { (*keymgmt).refcnt = AtomicI32::new(1) };
-    keymgmt
+unsafe fn keymgmt_new() -> Option<OwnedCtx<EvpKeyMgmt>> {
+    let keymgmt = OwnedCtx::<EvpKeyMgmt>::zalloc()?;
+    // SAFETY: `keymgmt.as_ptr()` is this call's own zeroed object.
+    unsafe { (*keymgmt.as_ptr()).refcnt = AtomicI32::new(1) };
+    Some(keymgmt)
 }
 
 /// `static void help_get_legacy_alg_type_from_keymgmt(const char *keytype, void *arg)`.
@@ -437,24 +453,25 @@ unsafe extern "C" fn keymgmt_from_algorithm(
 
     // SAFETY: this allocates a fresh object and reads nothing.
     let keymgmt = unsafe { keymgmt_new() };
-    if keymgmt.is_null() {
+    let Some(keymgmt) = keymgmt else {
         return ptr::null_mut();
-    }
+    };
+    let keymgmt_ptr = keymgmt.as_ptr();
 
     // SAFETY: `keymgmt` is live.
-    unsafe { (*keymgmt).name_id = name_id };
+    unsafe { (*keymgmt_ptr).name_id = name_id };
 
     // SAFETY: `algodef` is live per the contract.
     let type_name = unsafe { ossl_algorithm_get1_first_name(algodef) };
     if type_name.is_null() {
-        // SAFETY: `keymgmt` is this call's own object.
-        unsafe { EVP_KEYMGMT_free(keymgmt) };
+        // Dropping the owner releases the (empty) member set and the block, exactly as the
+        // authority's `EVP_KEYMGMT_free` on its single reference does.
         return ptr::null_mut();
     }
     // SAFETY: `keymgmt` is live and `type_name` is the string just allocated for it.
-    unsafe { (*keymgmt).type_name = type_name };
+    unsafe { (*keymgmt_ptr).type_name = type_name };
     // SAFETY: `algodef` is live and `keymgmt` is live.
-    unsafe { (*keymgmt).description = (*algodef).algorithm_description };
+    unsafe { (*keymgmt_ptr).description = (*algodef).algorithm_description };
 
     // The eight counters, in the authority's declaration order.
     let mut setparamfncnt = 0;
@@ -473,118 +490,123 @@ unsafe extern "C" fn keymgmt_from_algorithm(
     unsafe {
         while (*entry).function_id != OSSL_DISPATCH_END {
             match (*entry).function_id {
-                OSSL_FUNC_KEYMGMT_NEW if (*keymgmt).new.is_none() => {
-                    (*keymgmt).new = entry_function::<KeymgmtNewFn>(entry);
+                OSSL_FUNC_KEYMGMT_NEW if (*keymgmt_ptr).new.is_none() => {
+                    (*keymgmt_ptr).new = entry_function::<KeymgmtNewFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN_INIT if (*keymgmt).gen_init.is_none() => {
-                    (*keymgmt).gen_init = entry_function::<KeymgmtGenInitFn>(entry);
+                OSSL_FUNC_KEYMGMT_GEN_INIT if (*keymgmt_ptr).gen_init.is_none() => {
+                    (*keymgmt_ptr).gen_init = entry_function::<KeymgmtGenInitFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE if (*keymgmt).gen_set_template.is_none() => {
-                    (*keymgmt).gen_set_template = entry_function::<KeymgmtGenSetTemplateFn>(entry);
+                OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE if (*keymgmt_ptr).gen_set_template.is_none() => {
+                    (*keymgmt_ptr).gen_set_template =
+                        entry_function::<KeymgmtGenSetTemplateFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS if (*keymgmt).gen_set_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS if (*keymgmt_ptr).gen_set_params.is_none() => {
                     setgenparamfncnt += 1;
-                    (*keymgmt).gen_set_params = entry_function::<KeymgmtGenSetParamsFn>(entry);
+                    (*keymgmt_ptr).gen_set_params = entry_function::<KeymgmtGenSetParamsFn>(entry);
                 }
                 OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS
-                    if (*keymgmt).gen_settable_params.is_none() =>
+                    if (*keymgmt_ptr).gen_settable_params.is_none() =>
                 {
                     setgenparamfncnt += 1;
-                    (*keymgmt).gen_settable_params =
+                    (*keymgmt_ptr).gen_settable_params =
                         entry_function::<KeymgmtGenSettableParamsFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS if (*keymgmt).gen_get_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS if (*keymgmt_ptr).gen_get_params.is_none() => {
                     getgenparamfncnt += 1;
-                    (*keymgmt).gen_get_params = entry_function::<KeymgmtGenGetParamsFn>(entry);
+                    (*keymgmt_ptr).gen_get_params = entry_function::<KeymgmtGenGetParamsFn>(entry);
                 }
                 OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS
-                    if (*keymgmt).gen_gettable_params.is_none() =>
+                    if (*keymgmt_ptr).gen_gettable_params.is_none() =>
                 {
                     getgenparamfncnt += 1;
-                    (*keymgmt).gen_gettable_params =
+                    (*keymgmt_ptr).gen_gettable_params =
                         entry_function::<KeymgmtGenGettableParamsFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN if (*keymgmt).gen.is_none() => {
-                    (*keymgmt).gen = entry_function::<KeymgmtGenFn>(entry);
+                OSSL_FUNC_KEYMGMT_GEN if (*keymgmt_ptr).gen.is_none() => {
+                    (*keymgmt_ptr).gen = entry_function::<KeymgmtGenFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GEN_CLEANUP if (*keymgmt).gen_cleanup.is_none() => {
-                    (*keymgmt).gen_cleanup = entry_function::<KeymgmtGenCleanupFn>(entry);
+                OSSL_FUNC_KEYMGMT_GEN_CLEANUP if (*keymgmt_ptr).gen_cleanup.is_none() => {
+                    (*keymgmt_ptr).gen_cleanup = entry_function::<KeymgmtGenCleanupFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_FREE if (*keymgmt).free.is_none() => {
-                    (*keymgmt).free = entry_function::<KeymgmtFreeFn>(entry);
+                OSSL_FUNC_KEYMGMT_FREE if (*keymgmt_ptr).free.is_none() => {
+                    (*keymgmt_ptr).free = entry_function::<KeymgmtFreeFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_LOAD if (*keymgmt).load.is_none() => {
-                    (*keymgmt).load = entry_function::<KeymgmtLoadFn>(entry);
+                OSSL_FUNC_KEYMGMT_LOAD if (*keymgmt_ptr).load.is_none() => {
+                    (*keymgmt_ptr).load = entry_function::<KeymgmtLoadFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GET_PARAMS if (*keymgmt).get_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_GET_PARAMS if (*keymgmt_ptr).get_params.is_none() => {
                     getparamfncnt += 1;
-                    (*keymgmt).get_params = entry_function::<KeymgmtGetParamsFn>(entry);
+                    (*keymgmt_ptr).get_params = entry_function::<KeymgmtGetParamsFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS if (*keymgmt).gettable_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS if (*keymgmt_ptr).gettable_params.is_none() => {
                     getparamfncnt += 1;
-                    (*keymgmt).gettable_params = entry_function::<KeymgmtGettableParamsFn>(entry);
+                    (*keymgmt_ptr).gettable_params =
+                        entry_function::<KeymgmtGettableParamsFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_SET_PARAMS if (*keymgmt).set_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_SET_PARAMS if (*keymgmt_ptr).set_params.is_none() => {
                     setparamfncnt += 1;
-                    (*keymgmt).set_params = entry_function::<KeymgmtSetParamsFn>(entry);
+                    (*keymgmt_ptr).set_params = entry_function::<KeymgmtSetParamsFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS if (*keymgmt).settable_params.is_none() => {
+                OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS if (*keymgmt_ptr).settable_params.is_none() => {
                     setparamfncnt += 1;
-                    (*keymgmt).settable_params = entry_function::<KeymgmtSettableParamsFn>(entry);
+                    (*keymgmt_ptr).settable_params =
+                        entry_function::<KeymgmtSettableParamsFn>(entry);
                 }
                 OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME
-                    if (*keymgmt).query_operation_name.is_none() =>
+                    if (*keymgmt_ptr).query_operation_name.is_none() =>
                 {
-                    (*keymgmt).query_operation_name =
+                    (*keymgmt_ptr).query_operation_name =
                         entry_function::<KeymgmtQueryOperationNameFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_HAS if (*keymgmt).has_.is_none() => {
-                    (*keymgmt).has_ = entry_function::<KeymgmtHasFn>(entry);
+                OSSL_FUNC_KEYMGMT_HAS if (*keymgmt_ptr).has_.is_none() => {
+                    (*keymgmt_ptr).has_ = entry_function::<KeymgmtHasFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_DUP if (*keymgmt).dup.is_none() => {
-                    (*keymgmt).dup = entry_function::<KeymgmtDupFn>(entry);
+                OSSL_FUNC_KEYMGMT_DUP if (*keymgmt_ptr).dup.is_none() => {
+                    (*keymgmt_ptr).dup = entry_function::<KeymgmtDupFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_VALIDATE if (*keymgmt).validate.is_none() => {
-                    (*keymgmt).validate = entry_function::<KeymgmtValidateFn>(entry);
+                OSSL_FUNC_KEYMGMT_VALIDATE if (*keymgmt_ptr).validate.is_none() => {
+                    (*keymgmt_ptr).validate = entry_function::<KeymgmtValidateFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_MATCH if (*keymgmt).match_.is_none() => {
-                    (*keymgmt).match_ = entry_function::<KeymgmtMatchFn>(entry);
+                OSSL_FUNC_KEYMGMT_MATCH if (*keymgmt_ptr).match_.is_none() => {
+                    (*keymgmt_ptr).match_ = entry_function::<KeymgmtMatchFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_IMPORT if (*keymgmt).import.is_none() => {
+                OSSL_FUNC_KEYMGMT_IMPORT if (*keymgmt_ptr).import.is_none() => {
                     importfncnt += 1;
-                    (*keymgmt).import = entry_function::<KeymgmtImportFn>(entry);
+                    (*keymgmt_ptr).import = entry_function::<KeymgmtImportFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_IMPORT_TYPES if (*keymgmt).import_types.is_none() => {
+                OSSL_FUNC_KEYMGMT_IMPORT_TYPES if (*keymgmt_ptr).import_types.is_none() => {
                     if importtypesfncnt == 0 {
                         importfncnt += 1;
                     }
                     importtypesfncnt += 1;
-                    (*keymgmt).import_types = entry_function::<KeymgmtImportTypesFn>(entry);
+                    (*keymgmt_ptr).import_types = entry_function::<KeymgmtImportTypesFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX if (*keymgmt).import_types_ex.is_none() => {
+                OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX if (*keymgmt_ptr).import_types_ex.is_none() => {
                     if importtypesfncnt == 0 {
                         importfncnt += 1;
                     }
                     importtypesfncnt += 1;
-                    (*keymgmt).import_types_ex = entry_function::<KeymgmtImportTypesExFn>(entry);
+                    (*keymgmt_ptr).import_types_ex =
+                        entry_function::<KeymgmtImportTypesExFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_EXPORT if (*keymgmt).export.is_none() => {
+                OSSL_FUNC_KEYMGMT_EXPORT if (*keymgmt_ptr).export.is_none() => {
                     exportfncnt += 1;
-                    (*keymgmt).export = entry_function::<KeymgmtExportFn>(entry);
+                    (*keymgmt_ptr).export = entry_function::<KeymgmtExportFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_EXPORT_TYPES if (*keymgmt).export_types.is_none() => {
+                OSSL_FUNC_KEYMGMT_EXPORT_TYPES if (*keymgmt_ptr).export_types.is_none() => {
                     if exporttypesfncnt == 0 {
                         exportfncnt += 1;
                     }
                     exporttypesfncnt += 1;
-                    (*keymgmt).export_types = entry_function::<KeymgmtExportTypesFn>(entry);
+                    (*keymgmt_ptr).export_types = entry_function::<KeymgmtExportTypesFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX if (*keymgmt).export_types_ex.is_none() => {
+                OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX if (*keymgmt_ptr).export_types_ex.is_none() => {
                     if exporttypesfncnt == 0 {
                         exportfncnt += 1;
                     }
                     exporttypesfncnt += 1;
-                    (*keymgmt).export_types_ex = entry_function::<KeymgmtExportTypesExFn>(entry);
+                    (*keymgmt_ptr).export_types_ex =
+                        entry_function::<KeymgmtExportTypesExFn>(entry);
                 }
                 _ => {}
             }
@@ -598,18 +620,20 @@ unsafe extern "C" fn keymgmt_from_algorithm(
     // import or export."
     // SAFETY: `keymgmt` is live.
     let has_a_constructor = unsafe {
-        (*keymgmt).new.is_some() || (*keymgmt).gen.is_some() || (*keymgmt).load.is_some()
+        (*keymgmt_ptr).new.is_some()
+            || (*keymgmt_ptr).gen.is_some()
+            || (*keymgmt_ptr).load.is_some()
     };
     // SAFETY: `keymgmt` is live.
     let gen_incomplete = unsafe {
-        (*keymgmt).gen.is_some()
-            && ((*keymgmt).gen_init.is_none() || (*keymgmt).gen_cleanup.is_none())
+        (*keymgmt_ptr).gen.is_some()
+            && ((*keymgmt_ptr).gen_init.is_none() || (*keymgmt_ptr).gen_cleanup.is_none())
     };
     // SAFETY: `keymgmt` is live.
-    let refused = unsafe { (*keymgmt).free.is_none() }
+    let refused = unsafe { (*keymgmt_ptr).free.is_none() }
         || !has_a_constructor
         // SAFETY: `keymgmt` is live.
-        || unsafe { (*keymgmt).has_.is_none() }
+        || unsafe { (*keymgmt_ptr).has_.is_none() }
         || (getparamfncnt != 0 && getparamfncnt != 2)
         || (setparamfncnt != 0 && setparamfncnt != 2)
         || (setgenparamfncnt != 0 && setgenparamfncnt != 2)
@@ -618,30 +642,36 @@ unsafe extern "C" fn keymgmt_from_algorithm(
         || (exportfncnt != 0 && exportfncnt != 2)
         || gen_incomplete;
     if refused {
-        // SAFETY: `keymgmt` is this call's own object.
-        unsafe { EVP_KEYMGMT_free(keymgmt) };
+        // The owner's `Drop` runs the authority's free body and releases the block once.
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::KEYMGMT_METH_252) };
         return ptr::null_mut();
     }
 
-    // The provider reference is taken **after** the check, and the two are not symmetric: the
-    // authority assigns the field first and then up-refs conditionally, so a NULL provider is stored
-    // and not referenced.
-    // SAFETY: `keymgmt` is live.
-    unsafe { (*keymgmt).prov = prov };
+    // The provider reference is taken **after** the check, and a NULL provider is stored and not
+    // referenced. The authority ignores a failed up-ref here (`keymgmt_meth.c:255-257`), but the
+    // rollback on failure happens only on `ossl_provider_up_ref`'s child-provider arm; returning
+    // the object after a child-arm refusal would make its `Drop` release a reference it does not
+    // hold. Refusing instead is a deliberate safety improvement over the authority (not a
+    // compatibility-preserving transcription). The non-child overflow arm returns 0 without
+    // rollback, so its increment is retained (practically unreachable i32-wrap leak, matching the
+    // authority's callers).
     if !prov.is_null() {
         // SAFETY: `prov` is live.
-        unsafe { ossl_provider_up_ref(prov) };
+        if unsafe { ossl_provider_up_ref(prov) } == 0 {
+            return ptr::null_mut();
+        }
     }
+    // SAFETY: `keymgmt` is live.
+    unsafe { (*keymgmt_ptr).prov = prov };
 
     // The legacy NID the method's names imply. `evp_pkey_name2type` is `p_lib.c`'s and is partially
     // landed in `src/evp/pkey.rs`: its twelve-name table is there and its `EVP_PKEY_type` fallback
     // is Phase 8's (D163). The fill is written and calls it, so nothing here is omitted.
     // SAFETY: `keymgmt` is live.
-    unsafe { (*keymgmt).legacy_alg = get_legacy_alg_type_from_keymgmt(keymgmt) };
+    unsafe { (*keymgmt_ptr).legacy_alg = get_legacy_alg_type_from_keymgmt(keymgmt_ptr) };
 
-    keymgmt.cast::<c_void>()
+    keymgmt.into_raw().cast::<c_void>()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -711,9 +741,11 @@ pub unsafe extern "C" fn EVP_KEYMGMT_fetch(
 /// `keymgmt` must be a live `EvpKeyMgmt`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_up_ref(keymgmt: *mut EvpKeyMgmt) -> c_int {
-    // SAFETY: `keymgmt` is live per the contract.
-    unsafe { (*keymgmt).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `keymgmt` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*keymgmt).refcnt) }
 }
 
 /// `void EVP_KEYMGMT_free(EVP_KEYMGMT *keymgmt)`.
@@ -725,21 +757,19 @@ pub unsafe extern "C" fn EVP_KEYMGMT_free(keymgmt: *mut EvpKeyMgmt) {
     if keymgmt.is_null() {
         return;
     }
-    // SAFETY: `keymgmt` is live per the contract.
-    let last = unsafe { (*keymgmt).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `keymgmt` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*keymgmt).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEYMGMT_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
-    unsafe {
-        CRYPTO_free(
-            (*keymgmt).type_name.cast::<c_void>(),
-            FILE,
-            LINE_FREE_TYPE_NAME,
-        );
-        ossl_provider_free((*keymgmt).prov);
-        CRYPTO_free(keymgmt.cast::<c_void>(), FILE, LINE_FREE_KEYMGMT);
-    }
+    // SAFETY: the count reached zero, so this is the last reference. The block was handed out by
+    // `keymgmt_from_algorithm`'s `into_raw`, and `OwnedCtx`'s `Drop` runs the authority's member
+    // release followed by the block's single release.
+    drop(unsafe { OwnedCtx::<EvpKeyMgmt>::from_raw(keymgmt) });
 }
 
 /// `const OSSL_PROVIDER *EVP_KEYMGMT_get0_provider(const EVP_KEYMGMT *keymgmt)`.
@@ -1668,3 +1698,7 @@ mod tests {
         crate::runtime::err::ERR_clear_error();
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpKeyMgmt => zero_state_sweep_evp_key_mgmt);

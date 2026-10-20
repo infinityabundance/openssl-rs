@@ -64,7 +64,9 @@ use crate::runtime::ctype::{ossl_ctype_check, ossl_isascii, ossl_isspace, ossl_t
 use crate::runtime::ctype_table::mask::MASK_UPPER;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -374,11 +376,14 @@ unsafe extern "C" fn free_inner_stack_with_entries(elem: *mut c_void) {
 unsafe extern "C" fn x509_name_ex_new(val: *mut *mut c_void, it: *const Asn1Item) -> c_int {
     let _ = it;
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ret = CRYPTO_zalloc(
-        core::mem::size_of::<X509Name>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_EX_NEW,
-    )
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Name>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_EX_NEW,
+        )
+    }
     .cast::<X509Name>();
     if ret.is_null() {
         return 0;
@@ -709,7 +714,11 @@ unsafe fn x509_name_canon(a: *mut X509Name) -> c_int {
     // SAFETY: `a` is live.
     unsafe { (*a).canon_enclen = len };
     // SAFETY: the allocator takes the file/line for its mdbg record only; `len` is positive here.
-    let p = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_CANON_MALLOC).cast::<c_uchar>();
+    let p = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_CANON_MALLOC)
+    }
+    .cast::<c_uchar>();
     if p.is_null() {
         // SAFETY: `intname` is live.
         unsafe { OPENSSL_sk_pop_free(intname, Some(free_inner_stack_with_entries)) };
@@ -1014,14 +1023,17 @@ pub unsafe extern "C" fn X509_NAME_print(
     if b.is_null() {
         return 0;
     }
+    // The string is the printer's own; the handle is its single release, at the authority's own
+    // line for the path that reaches it.
+    // SAFETY: `b` is a live string `X509_NAME_oneline` allocated and no one else owns.
+    let mut b =
+        unsafe { OwnedBuf::adopt_plain_nullable(b.cast(), SeamFile::new(FILE), LINE_FREE_PRINT) };
     // SAFETY: `b` is a NUL-terminated string the printer returned.
-    if unsafe { *b } == 0 {
-        // SAFETY: `b` came from the printer's allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT) };
+    if unsafe { *b.as_ptr().cast::<c_char>() } == 0 {
         return 1;
     }
     // SAFETY: `b` is NUL-terminated, so the byte past the first slash exists.
-    let mut s: *mut c_char = unsafe { b.add(1) };
+    let mut s: *mut c_char = unsafe { b.as_ptr().cast::<c_char>().add(1) };
     let mut c: *mut c_char = s;
     loop {
         // SAFETY: `s` walks a NUL-terminated string; the reads below are within its bounds
@@ -1047,8 +1059,8 @@ pub unsafe extern "C" fn X509_NAME_print(
             if unsafe { BIO_write(bp, c.cast::<c_void>(), i) } != i {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::X509_NAME_536) };
-                // SAFETY: `b` came from the printer and is not owned elsewhere.
-                unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT_ERR) };
+                // The authority releases the string at its own line 537 on this arm.
+                b.set_release_line(LINE_FREE_PRINT_ERR);
                 return 0;
             }
             // SAFETY: `s` is not past the terminator when `at_sep` held.
@@ -1059,8 +1071,8 @@ pub unsafe extern "C" fn X509_NAME_print(
                 if unsafe { BIO_write(bp, c", ".as_ptr().cast::<c_void>(), 2) } != 2 {
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::X509_NAME_536) };
-                    // SAFETY: `b` came from the printer and is not owned elsewhere.
-                    unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT_ERR) };
+                    // The authority releases the string at its own line 537 on this arm.
+                    b.set_release_line(LINE_FREE_PRINT_ERR);
                     return 0;
                 }
             }
@@ -1072,8 +1084,6 @@ pub unsafe extern "C" fn X509_NAME_print(
         // SAFETY: `s` advances one byte, still inside the string until the terminator.
         s = unsafe { s.add(1) };
     }
-    // SAFETY: `b` came from the printer's allocator and is not owned elsewhere.
-    unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT) };
     1
 }
 

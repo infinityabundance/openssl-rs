@@ -39,6 +39,7 @@
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::bn::arith::{BN_add, BN_cmp, BN_div, BN_rshift1, BN_sub};
 use crate::bn::bignum::{
     BN_clear_free, BN_copy, BN_free, BN_is_negative, BN_is_odd, BN_is_zero, BN_new, BN_num_bits,
@@ -79,22 +80,266 @@ use crate::runtime::ex_data::{CRYPTO_get_ex_data, CRYPTO_set_ex_data};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_ppBasis, NID_X9_62_tpBasis, NID_undef,
 };
 
 /// The translation-unit coordinate the `OPENSSL_zalloc`/`OPENSSL_malloc`/`OPENSSL_strdup`/
 /// `OPENSSL_free` sites in this unit are attributed to, as the allocator reports them.
-const FILE: *const c_char = c"crypto/ec/ec_lib.c".as_ptr();
+const FILE_C: &core::ffi::CStr = c"crypto/ec/ec_lib.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 // `#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128` holds on this profile, so `PCT_nistp224` ..
 // `PCT_nistp521` compile to empty arms in the two pre-computation switches. The four arms are
 // therefore written as one no-op arm where the authority writes four `break`s. `PCT_nistz256`'s
 // arm reads `EC_nistz256_pre_comp_free`/`_dup` (`crypto/ec/ecp_nistz256.c`), which is not given
 // a module because its field construction is perlasm-only; §8 of the plan records that boundary
-// as `D-EC-2`, and the two arms are therefore the **named omission** that record describes
-// rather than an untaken branch: the pre-computation path is unreachable while no nistz256 group
+// as `D-EC-2`, and the two arms are the **named omission** that record describes rather
+// than an untaken branch: the pre-computation path is unreachable while no nistz256 group
 // can be constructed, and the two names are given here so nothing is silently dropped.
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the group and point blocks
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's plain and cleansing `*_free` bodies for one of this unit's `#[repr(C)]`
+/// objects, without the block's own release, which [`OwnedCtx`]'s `Drop` performs.
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body` and `clear_destroy_body` each run the authority's
+///   plain/cleansing `*_free` member body **exactly once** for that object; each releases
+///   **exactly** the members the object owns (every releaser is the authority's own and accepts the
+///   not-yet-set NULL/zero state) and **never** releases the enclosing block, which [`OwnedCtx`]'s
+///   `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which both bodies
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs a
+/// destructor body on a value that is not a valid `Self`.
+unsafe trait CtxDestroy: Sized {
+    /// The authority's plain `*_free` body (`EC_GROUP_free`/`EC_POINT_free`).
+    ///
+    /// # Safety
+    /// `ptr` is a live object this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+
+    /// The authority's `*_clear_free` body (`EC_GROUP_clear_free`/`EC_POINT_clear_free`), which
+    /// cleanses every member it releases.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this unit allocated and has not released.
+    unsafe fn clear_destroy_body(ptr: *mut Self);
+}
+
+/// An owned `EC_GROUP`/`EC_POINT` block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back, and it is a member of another object), but its *ownership* is
+/// this type: [`Self::new`] allocates it through the crate's allocator seam at the authority's own
+/// `(file, alloc_line)` and `Drop` releases it at the authority's own `(file, line)` -- with the
+/// cleansing release when the reclaiming site is a `*_clear_free`. It stays a
+/// `CRYPTO_zalloc`/`CRYPTO_free`/`CRYPTO_clear_free` at the authority's own size rather than a Rust
+/// `Box`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size
+/// and its release exactly as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    /// The `__LINE__` this handle's `Drop` records for the block release.
+    line: c_int,
+    /// Whether `Drop` runs the cleansing `*_clear_free` body and release (`true`) or the plain
+    /// `*_free` pair (`false`).
+    cleansing: bool,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// Allocate a fresh zeroed block of `T`'s size at `file`/`alloc_line`, or `None` when the seam
+    /// answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new(file: SeamFile, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        let file = file.as_ptr();
+        // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
+        // bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line,
+            cleansing: false,
+        })
+    }
+
+    /// The block's stable address the exported ABI and the enclosing objects hold.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer or to its enclosing object.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller or an enclosing object,
+    /// for release by `Drop` through the plain `*_free` pair.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line,
+            cleansing: false,
+        })
+    }
+
+    /// Reclaim a block released through the cleansing `*_clear_free` pair, for release by `Drop`.
+    ///
+    /// # Safety
+    /// As [`Self::from_raw`].
+    unsafe fn from_raw_clear(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line,
+            cleansing: true,
+        })
+    }
+
+    /// Release the block without the destructor body, at `line` -- the authority's own bare
+    /// `OPENSSL_free` in a constructor's error arm, which runs before the object is a live object
+    /// and does not reach the object's destructor. The destructor body is skipped deliberately:
+    /// this is the one place the owner is not the destructor, and it is the authority's own partial
+    /// teardown.
+    fn release_block(self, line: c_int) {
+        let ptr = self.ptr.as_ptr().cast::<c_void>();
+        let file = self.file;
+        core::mem::forget(self);
+        // SAFETY: `ptr` is the block `new` allocated and this is its single release; the authority's
+        // error arm writes its own bare `CRYPTO_free`.
+        unsafe { CRYPTO_free(ptr, file, line) };
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's own `*_free`/`*_clear_free` body
+    /// ([`CtxDestroy::destroy_body`]/[`CtxDestroy::clear_destroy_body`]) followed by the block
+    /// release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw`/`from_raw_clear`
+        // reclaimed) and this is its single release; `Drop` runs once and the body is the
+        // authority's own.
+        unsafe {
+            if self.cleansing {
+                T::clear_destroy_body(self.ptr.as_ptr());
+                CRYPTO_clear_free(
+                    self.ptr.as_ptr().cast::<c_void>(),
+                    core::mem::size_of::<T>(),
+                    self.file,
+                    self.line,
+                );
+            } else {
+                T::destroy_body(self.ptr.as_ptr());
+                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            }
+        }
+    }
+}
+
+// The two destructor bodies are exactly what the authority's own `*_free`/`*_clear_free`
+// performed by hand, minus the block release `OwnedCtx`'s `Drop` now owns.
+
+// SAFETY: (a) holds: `destroy_body`/`clear_destroy_body` are `EC_GROUP_free`/`EC_GROUP_clear_free`
+// minus the block -- the method finish callback, pre-computation, montgomery data, generator,
+// order, cofactor and the two names, each releaser NULL-tolerant, never the enclosing block. (b)
+// holds: an all-zero group has every member NULL/zero, so both bodies are the authority's own
+// all-empty teardown -- what the safe `OwnedCtx::new` leans on. The authority's `EC_GROUP_free`
+// and `EC_GROUP_clear_free` dereference `group->meth` unconditionally, but no constructed group
+// has a NULL method (`ossl_ec_group_new_ex` requires one); the clear body's NULL test is a
+// failure-path safety improvement for the zero state, not a constructed-path change.
+unsafe impl CtxDestroy for EcGroup {
+    unsafe fn destroy_body(ptr: *mut EcGroup) {
+        // SAFETY: `ptr` is a live group per the trait contract.
+        unsafe {
+            if let Some(group_finish) = (*ptr).meth.as_ref().and_then(|m| m.group_finish) {
+                group_finish(ptr);
+            }
+            EC_pre_comp_free(ptr);
+            BN_MONT_CTX_free((*ptr).mont_data);
+            EC_POINT_free((*ptr).generator);
+            BN_free((*ptr).order);
+            BN_free((*ptr).cofactor);
+            CRYPTO_free((*ptr).seed.cast(), FILE, 136);
+            CRYPTO_free((*ptr).propq.cast(), FILE, 137);
+        }
+    }
+
+    unsafe fn clear_destroy_body(ptr: *mut EcGroup) {
+        // SAFETY: `ptr` is a live group per the trait contract; the method is NULL only on the
+        // all-zero block a safe `OwnedCtx::new` can build, which has no finish callback.
+        unsafe {
+            if !(*ptr).meth.is_null() {
+                let meth = (*ptr).meth;
+                if let Some(clear_finish) = (*meth).group_clear_finish {
+                    clear_finish(ptr);
+                } else if let Some(finish) = (*meth).group_finish {
+                    finish(ptr);
+                }
+            }
+            EC_pre_comp_free(ptr);
+            BN_MONT_CTX_free((*ptr).mont_data);
+            EC_POINT_clear_free((*ptr).generator);
+            BN_clear_free((*ptr).order);
+            BN_clear_free((*ptr).cofactor);
+            // `OPENSSL_clear_free(group->seed, group->seed_len)`, line 157.
+            CRYPTO_clear_free((*ptr).seed.cast(), (*ptr).seed_len, FILE, 157);
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body`/`clear_destroy_body` are `EC_POINT_free`/`EC_POINT_clear_free`
+// minus the block -- the point finish callback, never the enclosing block. (b) holds: an all-zero
+// point has a NULL method, so both bodies are the authority's own all-empty teardown -- what the
+// safe `OwnedCtx::new` leans on. The authority's `EC_POINT_free`/`EC_POINT_clear_free` dereference
+// `point->meth` unconditionally, but no constructed point has a NULL method (`EC_POINT_new`
+// requires one); the clear body's NULL test is a failure-path safety improvement for the zero
+// state, not a constructed-path change.
+unsafe impl CtxDestroy for EcPoint {
+    unsafe fn destroy_body(ptr: *mut EcPoint) {
+        // SAFETY: `ptr` is a live point per the trait contract.
+        unsafe {
+            if let Some(point_finish) = (*ptr).meth.as_ref().and_then(|m| m.point_finish) {
+                point_finish(ptr);
+            }
+        }
+    }
+
+    unsafe fn clear_destroy_body(ptr: *mut EcPoint) {
+        // SAFETY: `ptr` is a live point per the trait contract; the method is NULL only on the
+        // all-zero block a safe `OwnedCtx::new` can build, which has no finish callback.
+        unsafe {
+            if !(*ptr).meth.is_null() {
+                let meth = (*ptr).meth;
+                if let Some(clear_finish) = (*meth).point_clear_finish {
+                    clear_finish(ptr);
+                } else if let Some(finish) = (*meth).point_finish {
+                    finish(ptr);
+                }
+            }
+        }
+    }
+}
 
 /// `EC_GROUP *ossl_ec_group_new_ex(OSSL_LIB_CTX *libctx, const char *propq,
 /// const EC_METHOD *meth)` — `crypto/ec/ec_lib.c:30-75`.
@@ -128,57 +373,61 @@ pub unsafe extern "C" fn ossl_ec_group_new_ex(
             return ptr::null_mut();
         }
 
-        // `OPENSSL_zalloc(sizeof(*ret))`, line 44.
-        let ret = CRYPTO_zalloc(core::mem::size_of::<EcGroup>(), FILE, 44).cast::<EcGroup>();
-        if ret.is_null() {
+        // `OPENSSL_zalloc(sizeof(*ret))`, line 44. The block is allocated through the crate's
+        // allocator seam at the authority's own alloc site and owned by `ret` until it is handed to
+        // the caller; each refusal below releases it through the owner.
+        let Some(ret) = OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) else {
             return ptr::null_mut();
-        }
+        };
+        let g = ret.as_ptr();
 
-        (*ret).libctx = libctx;
+        (*g).libctx = libctx;
         if !propq.is_null() {
-            (*ret).propq = CRYPTO_strdup(propq, FILE, 50);
-            if (*ret).propq.is_null() {
+            (*g).propq = CRYPTO_strdup(propq, FILE, 50);
+            if (*g).propq.is_null() {
                 return new_ex_err(ret);
             }
         }
-        (*ret).meth = meth;
+        (*g).meth = meth;
         if (*meth).flags & crate::ec::EC_FLAGS_CUSTOM_CURVE == 0 {
-            (*ret).order = BN_new();
-            if (*ret).order.is_null() {
+            (*g).order = BN_new();
+            if (*g).order.is_null() {
                 return new_ex_err(ret);
             }
-            (*ret).cofactor = BN_new();
-            if (*ret).cofactor.is_null() {
+            (*g).cofactor = BN_new();
+            if (*g).cofactor.is_null() {
                 return new_ex_err(ret);
             }
         }
-        (*ret).asn1_flag = OPENSSL_EC_EXPLICIT_CURVE;
-        (*ret).asn1_form = crate::ec::POINT_CONVERSION_UNCOMPRESSED;
+        (*g).asn1_flag = OPENSSL_EC_EXPLICIT_CURVE;
+        (*g).asn1_form = crate::ec::POINT_CONVERSION_UNCOMPRESSED;
         let Some(group_init) = (*meth).group_init else {
             unreachable!("checked above")
         };
-        if group_init(ret) == 0 {
+        if group_init(g) == 0 {
             return new_ex_err(ret);
         }
-        ret
+        ret.into_raw()
     }
 }
 
 /// The authority's `err:` label of [`ossl_ec_group_new_ex`] (`ec_lib.c:69-74`): release the two
-/// BIGNUMs, the property string and the object.
+/// BIGNUMs and the property string, then the object through the owner's own bare release -- the one
+/// place the owner is not the destructor, because the group was never published.
 ///
 /// # Safety
 ///
 /// `group` is the object this constructor just allocated and has not published.
-unsafe fn new_ex_err(group: *mut EcGroup) -> *mut EcGroup {
+unsafe fn new_ex_err(group: OwnedCtx<EcGroup>) -> *mut EcGroup {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
-        BN_free((*group).order);
-        BN_free((*group).cofactor);
+        let g = group.as_ptr();
+        BN_free((*g).order);
+        BN_free((*g).cofactor);
         // `OPENSSL_free(ret->propq)` / `OPENSSL_free(ret)`, lines 72-73.
-        CRYPTO_free((*group).propq.cast(), FILE, 72);
-        CRYPTO_free(group.cast(), FILE, 73);
+        CRYPTO_free((*g).propq.cast(), FILE, 72);
     }
+    group.release_block(73);
     ptr::null_mut()
 }
 
@@ -235,25 +484,9 @@ pub unsafe extern "C" fn EC_pre_comp_free(group: *mut EcGroup) {
 /// `group` is NULL or a live, owned group.
 #[no_mangle]
 pub unsafe extern "C" fn EC_GROUP_free(group: *mut EcGroup) {
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
-    unsafe {
-        if group.is_null() {
-            return;
-        }
-
-        if let Some(group_finish) = (*group).meth.as_ref().and_then(|m| m.group_finish) {
-            group_finish(group);
-        }
-
-        EC_pre_comp_free(group);
-        BN_MONT_CTX_free((*group).mont_data);
-        EC_POINT_free((*group).generator);
-        BN_free((*group).order);
-        BN_free((*group).cofactor);
-        CRYPTO_free((*group).seed.cast(), FILE, 136);
-        CRYPTO_free((*group).propq.cast(), FILE, 137);
-        CRYPTO_free(group.cast(), FILE, 138);
-    }
+    // SAFETY: `group` is NULL or a live, owned group; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own `EC_GROUP_free` body followed by the block release.
+    unsafe { drop(OwnedCtx::<EcGroup>::from_raw(group, FILE, 138)) };
 }
 
 /// `void EC_GROUP_clear_free(EC_GROUP *group)` — `crypto/ec/ec_lib.c:142-159`.
@@ -266,29 +499,10 @@ pub unsafe extern "C" fn EC_GROUP_free(group: *mut EcGroup) {
 /// `group` is NULL or a live, owned group.
 #[no_mangle]
 pub unsafe extern "C" fn EC_GROUP_clear_free(group: *mut EcGroup) {
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
-    unsafe {
-        if group.is_null() {
-            return;
-        }
-
-        let meth = (*group).meth;
-        if let Some(clear_finish) = (*meth).group_clear_finish {
-            clear_finish(group);
-        } else if let Some(finish) = (*meth).group_finish {
-            finish(group);
-        }
-
-        EC_pre_comp_free(group);
-        BN_MONT_CTX_free((*group).mont_data);
-        EC_POINT_clear_free((*group).generator);
-        BN_clear_free((*group).order);
-        BN_clear_free((*group).cofactor);
-        // `OPENSSL_clear_free(group->seed, group->seed_len)`, line 157.
-        CRYPTO_clear_free((*group).seed.cast(), (*group).seed_len, FILE, 157);
-        // `OPENSSL_clear_free(group, sizeof(*group))`, line 158.
-        CRYPTO_clear_free(group.cast(), core::mem::size_of::<EcGroup>(), FILE, 158);
-    }
+    // SAFETY: `group` is NULL or a live, owned group; `from_raw_clear` reclaims it (NULL is a
+    // no-op) and `Drop` runs the authority's own `EC_GROUP_clear_free` body followed by the
+    // cleansing block release.
+    unsafe { drop(OwnedCtx::<EcGroup>::from_raw_clear(group, FILE, 158)) };
 }
 
 /// `int EC_GROUP_copy(EC_GROUP *dest, const EC_GROUP *src)` — `crypto/ec/ec_lib.c:162-269`.
@@ -431,14 +645,15 @@ pub unsafe extern "C" fn EC_GROUP_dup(a: *const EcGroup) -> *mut EcGroup {
         }
 
         let t = ossl_ec_group_new_ex((*a).libctx, (*a).propq, (*a).meth);
-        if t.is_null() {
+        // SAFETY: `t` is NULL or the group `ossl_ec_group_new_ex` just handed out, owned here until
+        // the copy succeeds.
+        let Some(t) = OwnedCtx::<EcGroup>::from_raw(t, FILE, 138) else {
+            return ptr::null_mut();
+        };
+        if EC_GROUP_copy(t.as_ptr(), a) == 0 {
             return ptr::null_mut();
         }
-        if EC_GROUP_copy(t, a) == 0 {
-            EC_GROUP_free(t);
-            return ptr::null_mut();
-        }
-        t
+        t.into_raw()
     }
 }
 
@@ -1247,26 +1462,29 @@ pub unsafe extern "C" fn EC_POINT_new(group: *const EcGroup) -> *mut EcPoint {
             return ptr::null_mut();
         }
 
-        // `OPENSSL_zalloc(sizeof(*ret))`, line 729.
-        let ret = CRYPTO_zalloc(core::mem::size_of::<EcPoint>(), FILE, 729).cast::<EcPoint>();
-        if ret.is_null() {
-            return ptr::null_mut();
-        }
-
-        (*ret).meth = (*group).meth;
-        (*ret).curve_name = (*group).curve_name;
-
-        let Some(point_init) = (*(*ret).meth).point_init else {
-            // A NULL `point_init` cannot occur on a landed table.
-            CRYPTO_free(ret.cast(), FILE, 737);
+        // `OPENSSL_zalloc(sizeof(*ret))`, line 729. The block is allocated through the crate's
+        // allocator seam at the authority's own alloc site and owned by `ret` until it is handed to
+        // the caller; each refusal below releases it through the owner.
+        let Some(ret) = OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) else {
             return ptr::null_mut();
         };
-        if point_init(ret) == 0 {
-            CRYPTO_free(ret.cast(), FILE, 737);
+        let p = ret.as_ptr();
+
+        (*p).meth = (*group).meth;
+        (*p).curve_name = (*group).curve_name;
+
+        let Some(point_init) = (*(*p).meth).point_init else {
+            // A NULL `point_init` cannot occur on a landed table. The constructor's own bare
+            // release: the point is not yet a live object, so the destructor body does not run.
+            ret.release_block(737);
+            return ptr::null_mut();
+        };
+        if point_init(p) == 0 {
+            ret.release_block(737);
             return ptr::null_mut();
         }
 
-        ret
+        ret.into_raw()
     }
 }
 
@@ -1280,17 +1498,9 @@ pub unsafe extern "C" fn EC_POINT_new(group: *const EcGroup) -> *mut EcPoint {
 /// `point` is NULL or a live, owned point.
 #[no_mangle]
 pub unsafe extern "C" fn EC_POINT_free(point: *mut EcPoint) {
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
-    unsafe {
-        if point.is_null() {
-            return;
-        }
-
-        if let Some(point_finish) = (*point).meth.as_ref().and_then(|m| m.point_finish) {
-            point_finish(point);
-        }
-        CRYPTO_free(point.cast(), FILE, 754);
-    }
+    // SAFETY: `point` is NULL or a live, owned point; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own `EC_POINT_free` body followed by the block release.
+    unsafe { drop(OwnedCtx::<EcPoint>::from_raw(point, FILE, 754)) };
 }
 
 /// `void EC_POINT_clear_free(EC_POINT *point)` — `crypto/ec/ec_lib.c:758-768`.
@@ -1300,21 +1510,10 @@ pub unsafe extern "C" fn EC_POINT_free(point: *mut EcPoint) {
 /// `point` is NULL or a live, owned point.
 #[no_mangle]
 pub unsafe extern "C" fn EC_POINT_clear_free(point: *mut EcPoint) {
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
-    unsafe {
-        if point.is_null() {
-            return;
-        }
-
-        let meth = (*point).meth;
-        if let Some(clear_finish) = (*meth).point_clear_finish {
-            clear_finish(point);
-        } else if let Some(finish) = (*meth).point_finish {
-            finish(point);
-        }
-        // `OPENSSL_clear_free(point, sizeof(*point))`, line 767.
-        CRYPTO_clear_free(point.cast(), core::mem::size_of::<EcPoint>(), FILE, 767);
-    }
+    // SAFETY: `point` is NULL or a live, owned point; `from_raw_clear` reclaims it (NULL is a
+    // no-op) and `Drop` runs the authority's own `EC_POINT_clear_free` body followed by the
+    // cleansing block release.
+    unsafe { drop(OwnedCtx::<EcPoint>::from_raw_clear(point, FILE, 767)) };
 }
 
 /// `int EC_POINT_copy(EC_POINT *dest, const EC_POINT *src)` — `crypto/ec/ec_lib.c:770-786`.
@@ -1370,14 +1569,15 @@ pub unsafe extern "C" fn EC_POINT_dup(a: *const EcPoint, group: *const EcGroup) 
         }
 
         let t = EC_POINT_new(group);
-        if t.is_null() {
+        // SAFETY: `t` is NULL or the point `EC_POINT_new` just handed out, owned here until the
+        // copy succeeds.
+        let Some(t) = OwnedCtx::<EcPoint>::from_raw(t, FILE, 754) else {
+            return ptr::null_mut();
+        };
+        if EC_POINT_copy(t.as_ptr(), a) == 0 {
             return ptr::null_mut();
         }
-        if EC_POINT_copy(t, a) == 0 {
-            EC_POINT_free(t);
-            return ptr::null_mut();
-        }
-        t
+        t.into_raw()
     }
 }
 
@@ -2900,9 +3100,87 @@ pub unsafe extern "C" fn EC_GROUP_to_params(
         }
 
         OSSL_PARAM_BLD_free(tmpl);
-        CRYPTO_free(gen_buf.cast(), FILE, 1796);
+        // The `gen_buf` block `ossl_ec_group_todata` allocated is owned here; its `Drop` is its
+        // single release at the authority's own line.
+        // SAFETY: `gen_buf` is NULL or the block `ossl_ec_group_todata` allocated for this call.
+        drop(OwnedBlock::<core::ffi::c_uchar>::from_raw(
+            gen_buf, FILE, 1796,
+        ));
         BN_CTX_end(bnctx);
         BN_CTX_free(new_bnctx);
         params
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+    use super::*;
+
+    /// D3/D4 negative control: the safe `OwnedCtx::new` builds an all-zero group/point whose
+    /// method is NULL. Both the plain body (selected by `new`) and the clear body (selected by
+    /// `from_raw_clear`) must be a no-op on that state and release the block exactly once.
+    #[test]
+    fn a_zeroed_group_and_point_drop_through_both_bodies() {
+        // Plain owners: `Drop` selects `destroy_body`, which reads the method through `as_ref()`.
+        let Some(group) = OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: the owner holds a live, zero-initialised block for these reads.
+        unsafe {
+            let g = group.as_ptr();
+            assert!((*g).meth.is_null(), "the zero state has no EC_METHOD");
+            assert!((*g).mont_data.is_null());
+            assert!((*g).generator.is_null());
+            assert!((*g).order.is_null());
+            assert!((*g).cofactor.is_null());
+            assert!((*g).seed.is_null());
+            assert_eq!((*g).seed_len, 0);
+            assert!((*g).propq.is_null());
+        }
+        drop(group);
+
+        let Some(point) = OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: the owner holds a live, zero-initialised block for these reads.
+        unsafe {
+            let p = point.as_ptr();
+            assert!((*p).meth.is_null(), "the zero state has no EC_METHOD");
+            assert!((*p).x.is_null());
+            assert!((*p).y.is_null());
+            assert!((*p).z.is_null());
+        }
+        drop(point);
+
+        // Clear owners: reclaim the same zeroed shape through the cleansing selection. The block
+        // is still the one `new` allocated, live and exclusively owned here.
+        let group = match OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) {
+            Some(owner) => owner.into_raw(),
+            None => panic!("CRYPTO_zalloc answered NULL"),
+        };
+        // SAFETY: `group` is the live, zero-initialised block `new` just allocated and this frame
+        // has not released it; `from_raw_clear` reclaims it and its `Drop` is the single cleansing
+        // release at the authority's line.
+        unsafe {
+            let Some(group) = OwnedCtx::<EcGroup>::from_raw_clear(group, FILE, 158) else {
+                panic!("the block is non-NULL");
+            };
+            assert!((*group.as_ptr()).meth.is_null());
+            drop(group);
+        }
+
+        let point = match OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) {
+            Some(owner) => owner.into_raw(),
+            None => panic!("CRYPTO_zalloc answered NULL"),
+        };
+        // SAFETY: as above, for the point block.
+        unsafe {
+            let Some(point) = OwnedCtx::<EcPoint>::from_raw_clear(point, FILE, 767) else {
+                panic!("the block is non-NULL");
+            };
+            assert!((*point.as_ptr()).meth.is_null());
+            drop(point);
+        }
     }
 }

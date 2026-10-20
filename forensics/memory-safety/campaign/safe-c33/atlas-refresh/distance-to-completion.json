@@ -1,0 +1,323 @@
+{
+  "generated": "2026-10-20",
+  "candidate": "e786b2d9e",
+  "branch": "integrate/safe-c33",
+  "method": "Recomputed only from canonical machine-readable files; no prose used. Every count below is the result of a jq query recorded in the subagent report.",
+  "sources": {
+    "campaign_status": {
+      "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "source_head": "30541bae71656f883c71e030f9e4127f4ed83113",
+      "generated_date": "2026-10-20"
+    },
+    "state_registry": {
+      "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+      "head_sha": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
+      "note": "Coarse 9-mechanism registry; predates the mechanism/consumer discharge plane and is stale (see disagreements)."
+    },
+    "site_worklist": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/site-worklist.json",
+      "schema": "openssl-rs/p25-safe-c33/atlas-refresh/site-worklist/1",
+      "candidate_head_sha": "8751ea75f742c90c19b92564257566f71d606dcd",
+      "generated_utc": "2026-10-17T20:31:17Z"
+    },
+    "attribution": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/attribution.json",
+      "candidate_head_sha": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+      "census_generated_utc": "2026-10-17T21:31:36Z"
+    },
+    "consumers": [
+      "atlas-refresh/consumer-status-C1.json",
+      "atlas-refresh/consumer-closure-C2.json",
+      "atlas-refresh/consumer-closure-C3.json"
+    ],
+    "boundary_receipts": "atlas-refresh/boundary-sweep-B*.json (33 receipts, 249 boundary rows)",
+    "mechanism_sweeps": "atlas-refresh/mechanism-sweep-M*.json (88 file-batch sweep receipts; NOT one-per-mechanism)"
+  },
+  "files": {
+    "total": 877,
+    "audited": 761,
+    "clean": 489,
+    "with_open_sites": 272,
+    "boundary_covered": 18,
+    "zero_unsafe": 92,
+    "test_only": 6,
+    "clean_definition": "PARTIAL files with zero rows in site-worklist.json (allocation/release inventory). This is NOT a safety-clean claim: attribution.json reports unattributed unsafe sites > 0 for all 761 PARTIAL files."
+  },
+  "sites": {
+    "total": 1357,
+    "open": null,
+    "repaired": null,
+    "open_upper_bound": 1357,
+    "alloc": 700,
+    "release": 657,
+    "files_with_rows": 276,
+    "in_safe33_closure_true": 1071,
+    "in_safe33_closure_false": 286,
+    "seam_bearing_file_true": 1280,
+    "status_note": "site-worklist schema has no status/mechanism field: keys are callee,family,file,function,in_safe33_closure,kind,line,seam_bearing_file. It is an unstatused inventory, so open vs repaired cannot be derived from it. open_upper_bound is the whole inventory, not a measured open count.",
+    "unsafe_ops_removed_in_sweeps": 7,
+    "unsafe_ops_introduced_in_sweeps": 9,
+    "unsafe_ops_note": "Sum of mechanism-sweep-M*.json unsafe_operations_removed/introduced arrays; a different metric from worklist sites."
+  },
+  "mechanisms": {
+    "discharged": [
+      "RC-1",
+      "OB-1",
+      "OB-2",
+      "OB-3",
+      "ERR-1",
+      "B23 (B23-WPKT-1, B23-WPKT-2)"
+    ],
+    "independently_checked": [
+      "B39 (B39-BIO-1, B39-BIO-2; boundary scope only; graduation.safety_discharged=false)",
+      "ERR (independent review B35 at f152e82c4 INDEPENDENTLY_CHECKED; superseded by ERR-1 mechanism discharge at 30541bae7)"
+    ],
+    "contracted": [
+      "BIO (per B39: mechanism CONTRACTED)",
+      "B25 retained B25-RL-1..3",
+      "B29 retained B29-UI-4",
+      "RAND_CMS_STORE_KEYFMT",
+      "EVP_PKEY_PROVIDER",
+      "X509_VERIFY_POLICY",
+      "RUNTIME_CONCURRENCY",
+      "SSL_SESSION"
+    ],
+    "unsafe_open": [
+      "RUNTIME_ALLOC_OWNERSHIP",
+      "ASN1_OCSP"
+    ],
+    "registry_state_counts": {
+      "source": "state.json#/mechanisms (9 entries)",
+      "UNSAFE_OPEN": 4,
+      "OWNERSHIP_RECONSTRUCTED": 5,
+      "SAFETY_DISCHARGED": 0,
+      "ids_unsafe_open": [
+        "ERR",
+        "BIO",
+        "RUNTIME_ALLOC_OWNERSHIP",
+        "ASN1_OCSP"
+      ],
+      "ids_ownership_reconstructed": [
+        "RAND_CMS_STORE_KEYFMT",
+        "EVP_PKEY_PROVIDER",
+        "X509_VERIFY_POLICY",
+        "RUNTIME_CONCURRENCY",
+        "SSL_SESSION"
+      ]
+    },
+    "boundary_census": {
+      "receipts": 33,
+      "boundary_rows": 249,
+      "discharged_or_independently_checked": 11,
+      "independently_checked_rows": 2,
+      "contracted_rows": 221,
+      "ownership_reconstructed_rows": 6,
+      "fixed_author_only_rows": 13,
+      "discharged_ids": [
+        "B23-WPKT-1",
+        "B23-WPKT-2",
+        "B25-RL-4",
+        "B25-RL-5",
+        "B26-X1",
+        "B27-X2",
+        "B29-UI-1",
+        "B29-UI-2",
+        "B29-UI-3"
+      ],
+      "independently_checked_ids": [
+        "B39-BIO-1",
+        "B39-BIO-2"
+      ],
+      "ownership_reconstructed_ids": [
+        "B12-BN-GF2M-1",
+        "B12-BN-GF2M-2",
+        "B12-BN-MONT-2",
+        "B12-BN-MONT-3",
+        "B12-BN-RECP-2",
+        "B12-BN-RECP-3"
+      ]
+    }
+  },
+  "consumers": {
+    "l7": 8,
+    "safe_compatible": 0,
+    "total": 33,
+    "l4_only": 25,
+    "l7_names": [
+      "curl",
+      "haproxy",
+      "isync",
+      "monit",
+      "nginx",
+      "openssh",
+      "pure-ftpd",
+      "redis"
+    ],
+    "families": [
+      {"family": "curl", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "haproxy", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "isync", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "monit", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "nginx", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "openssh", "l7_pass": true, "closure": "unknown", "graduation": "NOT_RECORDED (cohort SAFE_COMPATIBLE=0/33)"},
+      {"family": "pure-ftpd", "l7_pass": true, "closure": "0/4", "graduation": "BLOCKED"},
+      {"family": "redis", "l7_pass": true, "closure": "1/7", "graduation": "BLOCKED"},
+      {"family": "cyrus-sasl", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "dovecot", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "fetchmail", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "fossil", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "hiredis-ssl", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "iperf3", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "keepalived", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "kmod", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "ldns", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "libarchive", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "libevent", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "librdkafka", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "libretls", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "links", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "mosquitto", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "openvpn", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "proxytunnel", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "rsync", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "socat", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "squid", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "sslscan", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "ssmtp", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "stunnel", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "tinc", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"},
+      {"family": "tnftp", "l7_pass": false, "closure": "unknown", "graduation": "NOT_GRADUATED (L4-linked only)"}
+    ],
+    "closure_note": "Only pure-ftpd (C2) and redis (C3) have per-family closure receipts. The other 31 families have no per-family discharged/total figure in C1/C2/C3; their closure is UNKNOWN, not zero."
+  },
+  "disagreements": [
+    {
+      "id": "D1",
+      "mechanism": "ERR",
+      "receipt": "CAMPAIGN-STATUS #/mechanism_discharges[id=ERR-1] = SAFETY_DISCHARGED (30541bae7); mechanism-discharge-ERR.json full_err_mechanism = SAFETY_DISCHARGED; independent-review-ERR.json verdict = INDEPENDENTLY_CHECKED at f152e82c4",
+      "conflicting_file": "state.json#/mechanisms[id=ERR].state = UNSAFE_OPEN",
+      "resolution": "state.json registry is stale; the later candidate-bound discharge supersedes it. Flag only."
+    },
+    {
+      "id": "D2",
+      "mechanism": "BIO",
+      "receipt": "boundary-sweep-B39.json: graduation.state=BOUNDARY_INDEPENDENTLY_CHECKED, safety_discharged=false, mechanism remains CONTRACTED (13d61a0a1 / base 1ea4eac71)",
+      "conflicting_file": "state.json#/mechanisms[id=BIO].state = UNSAFE_OPEN",
+      "resolution": "state.json predates B39. Neither file claims mechanism discharge."
+    },
+    {
+      "id": "D3",
+      "mechanism": "B39 BIO and B35 ERR independent review",
+      "receipt": "CAMPAIGN-STATUS #/remaining_obligations[0] states 'no record claims INDEPENDENTLY_CHECKED'",
+      "conflicting_file": "boundary-sweep-B39.json (BOUNDARY_INDEPENDENTLY_CHECKED); independent-review-ERR.json (INDEPENDENTLY_CHECKED)",
+      "resolution": "CAMPAIGN-STATUS prose is stale; its own scoped_boundary_discharges omits B39. Flag only."
+    },
+    {
+      "id": "D4",
+      "mechanism": "B26-X1 / B27-X2 scoped discharges",
+      "receipt": "boundary-sweep-B27.json B26-X1=SAFETY_DISCHARGED; B27-X2=SAFETY_DISCHARGED (scope-limited)",
+      "conflicting_file": "CAMPAIGN-STATUS #/scoped_boundary_discharges lists only B23, B25, B29",
+      "resolution": "Two scoped discharges are not aggregated into CAMPAIGN-STATUS. Flag only; not reclassified here."
+    }
+  ],
+  "unknowns": [
+    "site-worklist open vs repaired counts: schema has no status field (sites.open and sites.repaired are null; open_upper_bound=1357).",
+    "Whether the 489 PARTIAL files with zero worklist rows are safety-clean: attribution.json reports unattributed unsafe sites for all 761 PARTIAL files, so 'clean' here means only 'no allocation/release inventory row'.",
+    "Latest mechanism state per mechanism-sweep receipt: M*.json are 88 file-batch sweeps with no mechanism id and no state field; they cannot supply a per-mechanism state. Latest M date is 2026-10-20 (M88, M89).",
+    "The 9 state.json mechanisms' current state: only state.json records all nine, and it is stale for ERR/BIO; no newer per-mechanism registry exists.",
+    "Per-family mechanism closure for 31 of 33 consumers (only pure-ftpd 0/4 and redis 1/7 are recorded).",
+    "Whether the 13 'FIXED (author)' boundary rows are sound: not independently checked."
+  ],
+  "next_units": [
+    {
+      "rank": 1,
+      "unit": "BIO connection/datagram method-table and ctrl callback boundaries (src/runtime/bio/bss_conn.rs, bss_dgram.rs, bss_dgram_pair.rs; B2-CN/DG/DP)",
+      "mechanism": "BIO",
+      "why": "BIO blocks 32 of 33 families including all 8 L7 families; 21 CONTRACTED boundaries; application-controlled ctrl/callback edges are a §0/§21 reentrancy risk; medium site count, high consequence.",
+      "est_sites": 11,
+      "est_boundaries": 21,
+      "source": "site-worklist rows 8+0+3; boundary-sweep-B2"
+    },
+    {
+      "rank": 2,
+      "unit": "ERR consumer-scope re-adjudication for redis (ERR_peek_last_error, ERR_reason_error_string)",
+      "mechanism": "ERR",
+      "why": "ERR-1 is already mechanism-scope SAFETY_DISCHARGED; C3 records the redis consumer mapping as RE_ADJUDICATION_PENDING. Two entry points, tiny effort, converts redis's single discharged mechanism into an adjudicated one (consumer cannot graduate on 1/7 regardless).",
+      "est_sites": 2,
+      "est_boundaries": 0,
+      "source": "consumer-closure-C3.json verdict/mechanisms"
+    },
+    {
+      "rank": 3,
+      "unit": "RUNTIME_ALLOC_OWNERSHIP: B-ALLOC-SEAM caller sweep (src/runtime/mem*, secure, ex_data, stack, lhash)",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "why": "31 families and the foundational boundary every other mechanism rests on; 281 attributed B-ALLOC-SEAM sites; allocator-hook observability is observable behaviour. Large effort, but highest structural leverage.",
+      "est_sites": 281,
+      "est_boundaries": 0,
+      "source": "attribution.json totals.attributed_by_boundary.B-ALLOC-SEAM; state.json worklist rank 5"
+    },
+    {
+      "rank": 4,
+      "unit": "SSL_SESSION ownership: src/ssl/ssl_sess.rs plus session paths in src/ssl/ssl_lib.rs (B4-SL, B17-SSL, B3-SL)",
+      "mechanism": "SSL_SESSION",
+      "why": "25 families; SSL/lib is the largest CONTRACTED boundary cluster (14 rows in ssl_lib.rs plus 5 in ssl_sess.rs); session ownership/cert lifetimes are security-critical and consumer-universal.",
+      "est_sites": 53,
+      "est_boundaries": 19,
+      "source": "site-worklist rows 14+39; boundary-sweep B3/B4/B17"
+    },
+    {
+      "rank": 5,
+      "unit": "TLS server state-machine ownership: src/ssl/statem/statem_srvr.rs (B3-SS-1..9)",
+      "mechanism": "SSL_SESSION",
+      "why": "25 families; 9 CONTRACTED state-machine boundaries; protocol state transitions are the highest-consequence reachable surface after BIO; bounded to one file.",
+      "est_sites": 8,
+      "est_boundaries": 9,
+      "source": "site-worklist rows 8; boundary-sweep-B3"
+    },
+    {
+      "rank": 6,
+      "unit": "RAND_poll boundary in src/rand/rand_lib.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "why": "33 families (max reach) and the only RAND symbol used by redis; currently has NO boundary receipt at all (C3). Six inventory sites, no contracted boundary, so effort is low relative to reach.",
+      "est_sites": 6,
+      "est_boundaries": 0,
+      "source": "site-worklist rows 6; consumer-closure-C3.json"
+    },
+    {
+      "rank": 7,
+      "unit": "EVP/provider KDF allocation-release sweep: src/provider/kdf.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "why": "32 families; provider/kdf.rs is the single largest worklist file (114 sites) and therefore the highest raw repair volume under the largest mechanism (90.8k unsafe ops). High effort, so ranked below smaller high-leverage units.",
+      "est_sites": 114,
+      "est_boundaries": 0,
+      "source": "site-worklist group-by-file; state.json worklist rank 4"
+    },
+    {
+      "rank": 8,
+      "unit": "X509 policy-tree ownership and the hidden TYPE-CHECK TRANSMUTE (src/x509/pcy_tree.rs)",
+      "mechanism": "X509_VERIFY_POLICY",
+      "why": "31 families and the strongest existing sub-evidence, but state.json records the TRANSMUTE at vm-type-confusion-crypto-x509 as still HIDDEN, which is a §21 STOP-class unknown; bounded to the policy-tree file.",
+      "est_sites": 4,
+      "est_boundaries": 0,
+      "source": "site-worklist rows 4; state.json worklist rank 7"
+    },
+    {
+      "rank": 9,
+      "unit": "Runtime concurrency globals: src/runtime/thread_events.rs and src/runtime/init.rs (B15-TE-1..5, B15-IN-1..5)",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "why": "25 families with only 9 source files (highest leverage per file); 10 CONTRACTED boundaries and 25 unsynchronized mutable globals per state.json. Loom/TSan is the required court, so cost is verification-heavy.",
+      "est_sites": 16,
+      "est_boundaries": 10,
+      "source": "site-worklist rows 14+2; boundary-sweep-B15"
+    },
+    {
+      "rank": 10,
+      "unit": "ASN.1 primitive d2i/i2d depth/length contracts: src/asn1/prim.rs (plus asn_mime.rs, string.rs, text.rs)",
+      "mechanism": "ASN1_OCSP",
+      "why": "31 families; parser boundary with hostile-input reachability and no contracted boundary receipt in the B-sweep set; ranking last because it is parser-wide effort and less TLS-path-specific than the units above.",
+      "est_sites": 6,
+      "est_boundaries": 0,
+      "source": "site-worklist rows 6; state.json worklist rank 6"
+    }
+  ]
+}

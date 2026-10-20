@@ -1,0 +1,418 @@
+{
+  "schema": "openssl-rs/safe-c33/post-census-delta/v1",
+  "kind": "census-classification-delta",
+  "generated_date": "2026-10-20",
+  "branch": "integrate/safe-c33",
+  "source_head": "98aa601cd594ca70f7be669d656b6a179be6a9f3",
+  "source_head_note": "Rebound at the B31 bookkeeping batch; git diff 1ae550590..98aa601cd shows no src/ change. The pinned census itself remains c09eef8b.",
+  "pinned_census": {
+    "candidate_head": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+    "src_content_sha256": "dadc34c4f1da59e05b25b0076123b0d7715784a92c41903d15a6730ba7154a6a",
+    "src_rs_files": 868,
+    "partition": {
+      "ZERO_UNSAFE": 92,
+      "BOUNDARY_COVERED": 15,
+      "PARTIAL": 761
+    },
+    "artifacts": [
+      "atlas-refresh/unsafe-census.json",
+      "atlas-refresh/attribution.json",
+      "ATTRIBUTION.md"
+    ],
+    "binding_note": "The pinned census and the 761 per-file audit records remain bound to this candidate. This delta classifies the nine files added after it; it does not re-pin or invalidate the audit records."
+  },
+  "current_tree": {
+    "src_rs_files": 877
+  },
+  "delta": {
+    "count": 9,
+    "files": [
+      {
+        "path": "src/runtime/bio/owned_ctx_model.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 7,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only model",
+        "gated_by": "src/runtime/bio/owned.rs `#[cfg(test)] #[path = \"owned_ctx_model.rs\"] mod release_model_tests;`",
+        "receipts": [
+          "PROGRESS.md subphase 87 (OB-3 model)",
+          "OB3-CHECKS.md"
+        ]
+      },
+      {
+        "path": "src/runtime/bio/zero_state.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 2,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only sweep",
+        "gated_by": "src/runtime/bio/mod.rs `#[cfg(test)] pub(crate) mod zero_state;`",
+        "receipts": [
+          "PROGRESS.md subphase 87 (130/130 CtxDestroy zero-state sweep)"
+        ]
+      },
+      {
+        "path": "src/runtime/foreign.rs",
+        "status": "BOUNDARY_COVERED",
+        "cfg_test_gated": false,
+        "production_sites": 19,
+        "test_only_sites": 0,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {
+          "UNSAFE_TRAIT": 1,
+          "UNSAFE_FN_DEF": 7,
+          "UNSAFE_BLOCK": 6,
+          "UNSAFE_IMPL": 5
+        },
+        "counts_by_boundary": {
+          "B-DESTRUCTOR": 5
+        },
+        "unattributed": [
+          {
+            "line": 32,
+            "kind": "UNSAFE_TRAIT",
+            "function": "<top-level>"
+          },
+          {
+            "line": 37,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 66,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "new"
+          },
+          {
+            "line": 88,
+            "kind": "UNSAFE_BLOCK",
+            "function": "drop"
+          },
+          {
+            "line": 99,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 101,
+            "kind": "UNSAFE_BLOCK",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 112,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 114,
+            "kind": "UNSAFE_BLOCK",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 125,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 127,
+            "kind": "UNSAFE_BLOCK",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 138,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 140,
+            "kind": "UNSAFE_BLOCK",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 151,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "free_on_drop"
+          },
+          {
+            "line": 153,
+            "kind": "UNSAFE_BLOCK",
+            "function": "free_on_drop"
+          }
+        ],
+        "class": "production shared-owner helper",
+        "mechanisms": [
+          "OwnedCtx<T>",
+          "unsafe trait FreeOnDrop"
+        ],
+        "boundaries": [
+          "B-DESTRUCTOR",
+          "B-OWNER-ADOPT"
+        ],
+        "receipts": [
+          "DESTRUCTOR-CONTRACTS.md (FreeOnDrop)",
+          "OWNER-DUPLICATES.md \u00a75 (shared OwnedCtx)",
+          "PROGRESS.md subphase 89 (six statem copies moved to runtime::foreign)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "107d0d503",
+        "boundary_coverage": {
+          "state": "BOUNDARY_COVERED",
+          "sites_total": 19,
+          "sites_covered": 19,
+          "groups": [
+            {
+              "sites": "line 32 (unsafe trait FreeOnDrop), line 37 (free_on_drop declaration)",
+              "boundary": "B-DESTRUCTOR (FreeOnDrop owner family)",
+              "receipt": "DESTRUCTOR-CONTRACTS.md section 1 (FreeOnDrop trait contract: complete *_free, no zero-validity claim)"
+            },
+            {
+              "sites": "lines 96, 109, 122, 135, 148 (unsafe impl FreeOnDrop)",
+              "boundary": "B-DESTRUCTOR (mechanical census attribution)",
+              "receipt": "DESTRUCTOR-CONTRACTS.md section 4 (FreeOnDrop impls, EST 7; 5 unique after subphase 89)"
+            },
+            {
+              "sites": "lines 99/101, 112/114, 125/127, 138/140, 151/153 (impl free_on_drop fn + block)",
+              "boundary": "B-DESTRUCTOR",
+              "receipt": "DESTRUCTOR-CONTRACTS.md section 4; each impl runs the complete matching *_free exactly once"
+            },
+            {
+              "sites": "line 88 (OwnedCtx::drop calls T::free_on_drop)",
+              "boundary": "B-DESTRUCTOR",
+              "receipt": "DESTRUCTOR-CONTRACTS.md section 5 (impl<T: FreeOnDrop> Drop for OwnedCtx; single release, no block/destructor split)"
+            },
+            {
+              "sites": "line 66 (unsafe fn OwnedCtx::new)",
+              "boundary": "B-OWNER-ADOPT (shared adoption constructor)",
+              "receipt": "PROGRESS.md subphase 47 (STOP-2: safe new made unsafe fn with provenance/extent/alignment/init/exclusivity contract); OWNER-DUPLICATES.md section 9.1; subphase 89 relocation"
+            }
+          ]
+        },
+        "census_note": "All 19 production sites are covered by the shared FreeOnDrop/OwnedCtx boundary receipts. Five are mechanically B-DESTRUCTOR in the pinned census; the other 14 are the same shared boundary but the census registry has no predicate for an unsafe trait declaration, its method declaration, an unsafe adoption constructor, or the generic Drop body. The delta classifies them BOUNDARY_COVERED by receipt, not by a new census predicate; a full regeneration must encode this boundary explicitly."
+      },
+      {
+        "path": "src/runtime/mem_coords.rs",
+        "status": "BOUNDARY_COVERED",
+        "cfg_test_gated": false,
+        "production_sites": 1,
+        "test_only_sites": 1,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {
+          "UNSAFE_FN_DEF": 1
+        },
+        "counts_by_boundary": {},
+        "unattributed": [
+          {
+            "line": 43,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "from_static_ptr"
+          }
+        ],
+        "class": "production shared-owner helper",
+        "mechanisms": [
+          "SeamFile static allocator coordinate"
+        ],
+        "boundaries": [
+          "B-ALLOC-SEAM"
+        ],
+        "receipts": [
+          "PROGRESS.md subphase 70 (static lifetime for allocator file coordinates)",
+          "OWNER-DUPLICATES.md (OwnedBuf/OwnedStr coordinate)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "4307d47fc",
+        "boundary_coverage": {
+          "state": "BOUNDARY_COVERED",
+          "sites_total": 1,
+          "sites_covered": 1,
+          "groups": [
+            {
+              "sites": "line 43 (unsafe const fn SeamFile::from_static_ptr)",
+              "boundary": "B-ALLOC-SEAM (SeamFile static allocator coordinate)",
+              "receipt": "PROGRESS.md subphase 70 (safe new(&'static CStr) is the only safe route; from_static_ptr states the static-storage obligation; adversarial review PASS, one contract paragraph corrected)"
+            }
+          ]
+        },
+        "census_note": "The single production site is the contracted `unsafe fn from_static_ptr`; the pinned B-ALLOC-SEAM worklist is line-exact and predates this file. The delta classifies it BOUNDARY_COVERED under the SeamFile/B-ALLOC-SEAM receipt; a full regeneration must add this file to the seam worklist."
+      },
+      {
+        "path": "src/runtime/member_slot.rs",
+        "status": "BOUNDARY_COVERED",
+        "cfg_test_gated": false,
+        "production_sites": 4,
+        "test_only_sites": 22,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {
+          "UNSAFE_FN_DEF": 3,
+          "UNSAFE_BLOCK": 1
+        },
+        "counts_by_boundary": {},
+        "unattributed": [
+          {
+            "line": 73,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "of"
+          },
+          {
+            "line": 89,
+            "kind": "UNSAFE_BLOCK",
+            "function": "clear"
+          },
+          {
+            "line": 108,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "assume_empty"
+          },
+          {
+            "line": 164,
+            "kind": "UNSAFE_FN_DEF",
+            "function": "store_raw"
+          }
+        ],
+        "class": "production shared-owner helper",
+        "mechanisms": [
+          "OB-4 CStrSlot/EmptyCStrSlot member-buffer token"
+        ],
+        "boundaries": [
+          "OB-4 member-buffer boundary (not one of the seven B-* predicates)"
+        ],
+        "receipts": [
+          "MEMBER-BUFFER-MODEL.md section 7 (CStrSlot)",
+          "PROGRESS.md subphase 89 (OB-4b member-slot unification + OwnedCStr)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "107d0d503",
+        "boundary_coverage": {
+          "state": "BOUNDARY_COVERED",
+          "sites_total": 4,
+          "sites_covered": 4,
+          "groups": [
+            {
+              "sites": "line 73 (unsafe fn CStrSlot::of)",
+              "boundary": "OB-4 member-buffer boundary",
+              "receipt": "MEMBER-BUFFER-MODEL.md section 7; contract requires a live object's member field obeying the NULL-or-owned-NUL-terminated-block invariant for 'a"
+            },
+            {
+              "sites": "line 89 (unsafe block in CStrSlot::clear)",
+              "boundary": "OB-4 member-buffer boundary",
+              "receipt": "MEMBER-BUFFER-MODEL.md section 7; clear is safe because the borrow plus the invariant establish the single release of the incumbent"
+            },
+            {
+              "sites": "line 108 (unsafe fn CStrSlot::assume_empty)",
+              "boundary": "OB-4 member-buffer boundary",
+              "receipt": "MEMBER-BUFFER-MODEL.md section 7 (fresh-zeroed-object arm; caller asserts the field is NULL with exclusive access)"
+            },
+            {
+              "sites": "line 164 (unsafe fn EmptyCStrSlot::store_raw)",
+              "boundary": "OB-4 member-buffer boundary",
+              "receipt": "MEMBER-BUFFER-MODEL.md section 7 (audited foreign-transfer route; full AGENTS.md section 1 provenance/extent/alignment/init/exclusivity contract)"
+            }
+          ],
+          "miri": "PROGRESS.md subphase 89: member_slot 7/7 under both Stacked and Tree Borrows"
+        },
+        "census_note": "All 4 production sites are the proof boundaries of the slot (`of`, `clear`, `assume_empty`, `store_raw`) and are covered by the OB-4 member-buffer receipt. The pinned census registry has no OB-4 predicate; the delta classifies them BOUNDARY_COVERED by receipt, and a full regeneration must encode this boundary explicitly."
+      },
+      {
+        "path": "src/runtime/member_slot_model.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 8,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only model",
+        "gated_by": "src/runtime/mod.rs `#[cfg(test)] pub(crate) mod member_slot_model;`",
+        "receipts": [
+          "PROGRESS.md subphase 89 (OB-4b)",
+          "MEMBER-BUFFER-MODEL.md"
+        ]
+      },
+      {
+        "path": "src/runtime/owned_buf_model.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 12,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only model",
+        "gated_by": "src/runtime/owned_buf.rs `#[cfg(test)] #[path = \"owned_buf_model.rs\"]`",
+        "receipts": [
+          "PROGRESS.md subphase 85 (OB-1 model)",
+          "OWNER-CHECKS.md"
+        ]
+      },
+      {
+        "path": "src/runtime/owned_str_model.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 7,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only model",
+        "gated_by": "src/runtime/owned_str.rs `#[cfg(test)] #[path = \"owned_str_model.rs\"]`",
+        "receipts": [
+          "PROGRESS.md subphase 86 (OB-2 model)",
+          "OB2-CHECKS.md"
+        ]
+      },
+      {
+        "path": "src/runtime/release_probe.rs",
+        "status": "TEST_ONLY",
+        "cfg_test_gated": true,
+        "production_sites": 0,
+        "test_only_sites": 0,
+        "allocator_seam_sites": 0,
+        "production_by_kind": {},
+        "counts_by_boundary": {},
+        "unattributed": [],
+        "class": "test-only probe",
+        "gated_by": "src/runtime/mod.rs `#[cfg(test)] pub(crate) mod release_probe;`",
+        "receipts": [
+          "PROGRESS.md subphases 85/87 (release-arm probes)"
+        ]
+      }
+    ]
+  },
+  "delta_partition": {
+    "TEST_ONLY": 6,
+    "BOUNDARY_COVERED": 3
+  },
+  "combined_partition": {
+    "ZERO_UNSAFE": 92,
+    "BOUNDARY_COVERED": 18,
+    "PARTIAL": 761,
+    "TEST_ONLY": 6,
+    "total": 877
+  },
+  "unaccounted_files": 0,
+  "classification_rules": {
+    "TEST_ONLY": "file is pulled in by a cfg(test) module or a cfg(test)-gated #[path] module; not production audit surface",
+    "ZERO_UNSAFE": "no production unsafe operation",
+    "BOUNDARY_COVERED": "every production site is covered by a declared shared-boundary receipt; for the delta this includes boundaries the pinned census's seven-predicate registry does not encode (OB-4 member-buffer, FreeOnDrop/unsafe-trait)",
+    "PARTIAL": "at least one production site has no registered per-site boundary",
+    "scanner": "unsafe_census.py and unsafe_attribution.py (imported, not modified)"
+  },
+  "non_claims": [
+    "This delta is classification and bookkeeping, not SAFETY_DISCHARGED.",
+    "No consumer family is SAFE_COMPATIBLE.",
+    "The three production helpers are BOUNDARY_COVERED by the cited shared-boundary receipts; the six models/probes are test-only and are not production audit surface.",
+    "The pinned census boundary registry has no OB-4 predicate and no predicate for an unsafe-trait declaration or OwnedCtx::new; the delta classifies those sites by receipt, and a full census regeneration must encode these boundaries explicitly at the SEAL gate.",
+    "This reclassification is bookkeeping, not a new per-site proof and not SAFETY_DISCHARGED. The receipts it cites are the existing audited contracts; no Rust was changed."
+  ]
+}

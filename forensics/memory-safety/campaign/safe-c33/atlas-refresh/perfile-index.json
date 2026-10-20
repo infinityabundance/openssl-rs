@@ -1,0 +1,128 @@
+{
+  "candidate_head": "d5255e262c602383645fcae2adc43e04faf9d4a3",
+  "files": [
+    {
+      "file": "src/cms/cms_env.rs",
+      "groups": 127,
+      "not_discharged": true,
+      "production_sites": 549,
+      "record": "per-file/src__cms__cms_env.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 123,
+        "ESTABLISHED": 0,
+        "UNATTRIBUTED": 4
+      }
+    },
+    {
+      "file": "src/evp/cipher_ctx.rs",
+      "groups": 181,
+      "not_discharged": true,
+      "production_sites": 672,
+      "record": "per-file/src__evp__cipher_ctx.rs.md",
+      "reviewer": "PASS (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 129,
+        "ESTABLISHED": 35,
+        "UNATTRIBUTED": 17
+      }
+    },
+    {
+      "file": "src/evp/digest.rs",
+      "groups": 254,
+      "not_discharged": true,
+      "production_sites": 711,
+      "record": "per-file/src__evp__digest.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 158,
+        "ESTABLISHED": 95,
+        "UNATTRIBUTED": 1
+      }
+    },
+    {
+      "file": "src/evp/pkey.rs",
+      "groups": 238,
+      "not_discharged": true,
+      "production_sites": 568,
+      "record": "per-file/src__evp__pkey.rs.md",
+      "reviewer": "PASS (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 236,
+        "ESTABLISHED": 1,
+        "UNATTRIBUTED": 1
+      }
+    },
+    {
+      "file": "src/evp/pkey_ctx.rs",
+      "groups": 462,
+      "not_discharged": true,
+      "production_sites": 1024,
+      "record": "per-file/src__evp__pkey_ctx.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 277,
+        "ESTABLISHED": 178,
+        "UNATTRIBUTED": 7
+      }
+    },
+    {
+      "file": "src/hpke/mod.rs",
+      "groups": 93,
+      "not_discharged": true,
+      "production_sites": 416,
+      "record": "per-file/src__hpke__mod.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 69,
+        "ESTABLISHED": 17,
+        "UNATTRIBUTED": 7
+      }
+    },
+    {
+      "file": "src/provider/cipher.rs",
+      "groups": 930,
+      "not_discharged": true,
+      "production_sites": 1098,
+      "record": "per-file/src__provider__cipher.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 848,
+        "ESTABLISHED": 65,
+        "UNATTRIBUTED": 17
+      }
+    },
+    {
+      "file": "src/provider/kdf.rs",
+      "groups": 541,
+      "not_discharged": true,
+      "production_sites": 716,
+      "record": "per-file/src__provider__kdf.rs.md",
+      "reviewer": "PASS after correction (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 519,
+        "ESTABLISHED": 20,
+        "UNATTRIBUTED": 2
+      }
+    },
+    {
+      "file": "src/x509/v3_addr.rs",
+      "groups": 123,
+      "not_discharged": true,
+      "production_sites": 498,
+      "record": "per-file/src__x509__v3_addr.rs.md",
+      "reviewer": "pending adversarial review (not INDEPENDENTLY_CHECKED)",
+      "states": {
+        "CONTRACTED": 80,
+        "ESTABLISHED": 38,
+        "UNATTRIBUTED": 5
+      }
+    }
+  ],
+  "totals": {
+    "audited": 9,
+    "boundary_covered": 0,
+    "partial_files": 9,
+    "zero_unsafe": 0
+  }
+}

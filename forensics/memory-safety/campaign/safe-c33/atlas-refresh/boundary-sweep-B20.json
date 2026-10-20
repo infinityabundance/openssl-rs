@@ -1,0 +1,283 @@
+{
+  "receipt": "boundary-sweep-B20",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "1a515f901",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_table.rs"
+    ],
+    "working_tree_blob": {
+      "src/engine/eng_dyn.rs": "124e41d77fcb15f632af26e1f991848358dcaff3",
+      "src/engine/eng_table.rs": "216a561b5f3726f4921d18e05cc673b2854c059b"
+    }
+  },
+  "stop_status": "CLEAR after repair. One confirmed memory-model defect (a Rust data race on the ENGINE_TABLE slot) was repaired and the ThreadSanitizer negative control fires on the pre-repair shape while the repaired shape is clean. One overflow panic across an extern \"C\" comparison was removed, and four implicit preconditions (non-NULL register target, borrowed-entry lifetime, doall lock/no-mutation, pile-destructor lock, per-ENGINE dynamic-loader exclusivity) were made explicit. No ABI regression, no new allocator-seam coordinate, no weakened detector and no new hidden obligation. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/engine/eng_dyn.c (dynamic_data_ctx construction/free, dynamic_ctrl commands, int_load, using_libcrypto_11, dynamic_load rollback/bind/list-add, engine_dynamic registration) and crypto/engine/eng_table.c (engine_pile hash/cmp, int_table_check, register, unregister, cleanup, ossl_engine_table_select, engine_table_doall), cross-checked against the crate bodies and the existing RC-1/OB-3 evidence.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout or unsafe lint attribute changed. The only production unsafe operation removed is the unlocked slot dereference in ossl_engine_table_select; no production unsafe operation was introduced. A const layout guard was added for the dynamic_fns block handed to loaded libraries.",
+    "external_contracts": [
+      "An ENGINE_TABLE slot is a process-global `AtomicPtr`-shaped static in the tb_* units, but the table helpers receive a `*mut *mut` view. Every access must therefore be serialised by global_engine_lock; the tb_asnmth walk's atomic load is taken under the read lock.",
+      "engine_table_register stores a borrowed ENGINE * and takes no reference. The global engine list's structural reference is the owner; ENGINE_remove retires the borrow from every table under the lock before dropping that reference. An engine registered while not in the global list must be kept alive by its registrant until unregistered.",
+      "Engine init/finish/destroy hooks are application code and run under the engine write lock in register/select/unregister/cleanup (authority parity). They must not re-enter engine APIs; this crate's recursive write acquisition is refused rather than deadlocking, but a read acquisition can block.",
+      "dynamic_ctrl and dynamic_load mutate the ex_data context without a per-ENGINE lock. Concurrent control/load/destruction of the same ENGINE is outside the contract (authority parity); dynamic_get_data_ctx's pre-lock ex_data read has the same requirement.",
+      "The loaded library's v_check and bind_engine run without the engine lock, may re-enter the crate, and receive a stack-scoped dynamic_fns pointer they must not retain past the call. bind_engine may replace ENGINE members; the failure path restores the pre-bind snapshot.",
+      "engine_table_doall callers hold the engine lock (read or write) for the walk and must not mutate or free the table from the callback."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B20-DYN-1",
+      "file": "src/engine/eng_dyn.rs",
+      "mechanism": "DynamicDataCtx ownership: RawDataCtx staged construction, ex_data free hook, CtxDestroy body",
+      "disposition": "CONTRACTED",
+      "contract": "The context is one CRYPTO_zalloc block released exactly once: through the ENGINE ex_data free hook (eng_dyn.c:147) or the constructor's end: path (eng_dyn.c:193). The DSO, the two duplicated names and the dirs stack are the destructor's members; the dirs strings are released through int_free_str at :125. A zeroed context is a valid value and the destructor is sound on it.",
+      "defects": [],
+      "residuals": ["B20-R7", "B20-R8"]
+    },
+    {
+      "id": "B20-DYN-2",
+      "file": "src/engine/eng_dyn.rs",
+      "mechanism": "dynamic_ctrl command ownership: SO_PATH, NO_VCHECK, ID, LIST_ADD, DIR_LOAD, DIR_ADD, LOAD",
+      "disposition": "CONTRACTED",
+      "contract": "String commands accept NULL or a NUL-terminated string; a replaced name is freed at the authority's own site before the fresh duplication is stored; DIR_ADD transfers a fresh duplicate to the dirs stack or frees it on push refusal at :351. The context's fields are unsynchronised, so the caller has exclusive use of the ENGINE for the call.",
+      "defects": ["B20-D6"],
+      "residuals": ["B20-R5"]
+    },
+    {
+      "id": "B20-DYN-3",
+      "file": "src/engine/eng_dyn.rs",
+      "mechanism": "dynamic_load: DSO creation/load, version check, bind callback, ENGINE snapshot and rollback, list add",
+      "disposition": "CONTRACTED",
+      "contract": "The context is stored in the ENGINE's ex_data and is uninitialised on entry. v_check/bind_engine are unlocked library code that must not retain the dynamic_fns pointer. Every failure arm releases the DSO and the cached hooks; the bind-failure arm restores the full ENGINE snapshot. The mandatory list-add failure preserves the authority's poisoned-but-live state.",
+      "defects": [],
+      "residuals": ["B20-R6", "B20-R8"]
+    },
+    {
+      "id": "B20-DYN-4",
+      "file": "src/engine/eng_dyn.rs",
+      "mechanism": "engine_dynamic construction and engine_load_dynamic_int registration",
+      "disposition": "CONTRACTED",
+      "contract": "A fresh ENGINE is populated by the authority's setters; a refused setter releases the one structural reference. Registration takes its own reference on success and the caller releases its own; the mark/pop pair keeps the already-added conflict out of the caller's error queue.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B20-TBL-1",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "EnginePile ownership: RawCtx::malloc, field staging, assume_init, lhash ownership, cleanup doall destructor",
+      "disposition": "CONTRACTED",
+      "contract": "The pile block is allocated at eng_table.c:106 and released once at :113 (failure) or :184 (normal). All four fields are written before assume_init. The destructor body frees the pile's own borrowed-element stack and finishes a non-NULL cached default; whenever funct is non-NULL the engine lock is held.",
+      "defects": ["B20-D5"],
+      "residuals": ["B20-R1", "B20-R3"]
+    },
+    {
+      "id": "B20-TBL-2",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "engine_table_register: table creation, cleanup registration, pile insertion, stack replacement, default caching",
+      "disposition": "CONTRACTED",
+      "contract": "All slot and pile mutation happens under global_engine_lock. e is a live non-NULL ENGINE; the nids array supplies num_nids entries; cleanup stays valid until engine cleanup; the stored entry borrows e until unregistration.",
+      "defects": ["B20-D3"],
+      "residuals": ["B20-R1", "B20-R2", "B20-R3", "B20-R4"]
+    },
+    {
+      "id": "B20-TBL-3",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "engine_table_unregister/_locked, int_unregister_cb, engine_table_cleanup",
+      "disposition": "CONTRACTED",
+      "contract": "The public form takes the engine lock itself; the _locked form requires the caller to hold it. Unregistration removes every occurrence and finishes a matching cached default; cleanup walks the lhash, runs the pile destructor on each node and then frees the empty lhash. The doall snapshot makes node release inside the callback safe.",
+      "defects": [],
+      "residuals": ["B20-R2", "B20-R3"]
+    },
+    {
+      "id": "B20-TBL-4",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "ossl_engine_table_select: slot check, cached-default init, candidate walk, select_end",
+      "disposition": "CONTRACTED",
+      "contract": "The slot is checked only after global_engine_lock is acquired, so every slot access is serialised. init/finish run under the lock. select_end restores uptodate, unlocks and pops the error mark on every exit.",
+      "defects": ["B20-D1"],
+      "residuals": ["B20-R1", "B20-R2", "B20-R3"]
+    },
+    {
+      "id": "B20-TBL-5",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "engine_table_doall / int_dall callback walk",
+      "disposition": "CONTRACTED",
+      "contract": "The caller holds the engine lock for the whole walk and does not mutate the table from the callback. The walk hands each pile's borrowed stack, cached default and nid to the caller's callback without forming Rust references.",
+      "defects": ["B20-D4"],
+      "residuals": ["B20-R2"]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B20-D1",
+      "file": "src/engine/eng_table.rs",
+      "severity": "medium",
+      "kind": "data_race (Rust UB)",
+      "status": "fixed",
+      "description": "ossl_engine_table_select read the ENGINE_TABLE slot through a non-atomic *mut view before taking global_engine_lock (the authority's `if (*table == NULL) return NULL` fast path), while engine_table_register/engine_table_cleanup wrote the same slot under the lock. Concurrent select and registration/cleanup is therefore a data race. The later in-lock recheck prevented a use-after-free, but not the race itself.",
+      "fix": "The select acquires global_engine_lock before its first slot access; a NULL table then takes the existing select_end refusal. The unlocked fast path is deliberately not reproduced (AGENTS.md section 17). The new concurrency test pins the interleaving."
+    },
+    {
+      "id": "B20-D2",
+      "file": "src/engine/eng_table.rs",
+      "severity": "low",
+      "kind": "panic_across_c_abi (overflow)",
+      "status": "fixed",
+      "description": "engine_pile_cmp computed (*a).nid - (*b).nid. Two arbitrary nids can overflow a c_int; the authority's C subtraction is UB there, and a debug build would panic across the unsafe extern \"C\" lhash callback (abort, or an unwinding boundary the lhash does not expect).",
+      "fix": "wrapping_sub reproduces the authority's two's-complement release result deterministically with no panic boundary."
+    },
+    {
+      "id": "B20-D3",
+      "file": "src/engine/eng_table.rs",
+      "severity": "low",
+      "kind": "contract_defect (hidden obligation)",
+      "status": "fixed",
+      "description": "The engine_table_register safety contract permitted a NULL ENGINE while the setdefault arm passes e to engine_unlocked_init, which dereferences it; it also omitted that the stored stack entry borrows e beyond the call.",
+      "fix": "The contract now requires a live non-NULL e, states that cleanup must remain valid until engine cleanup, and states the entry's lifetime/bystander-owner rule."
+    },
+    {
+      "id": "B20-D4",
+      "file": "src/engine/eng_table.rs",
+      "severity": "low",
+      "kind": "contract_defect (hidden obligation)",
+      "status": "fixed",
+      "description": "engine_table_doall dereferences piles and hands their borrowed members to the callback, but its contract did not require the engine lock or forbid table mutation from the callback. Only the read-locked tb_asnmth caller is correct today.",
+      "fix": "The contract now requires the engine lock (read or write) for the walk and prohibits mutating or freeing the table from the callback."
+    },
+    {
+      "id": "B20-D5",
+      "file": "src/engine/eng_table.rs",
+      "severity": "low",
+      "kind": "contract_defect (hidden obligation)",
+      "status": "fixed",
+      "description": "EnginePile::destroy_body calls engine_unlocked_finish, which requires global_engine_lock, but the destructor contract did not say so. The only non-NULL-funct owners are the cleanup walk (lock held) and the register failure arms (funct NULL), so today's paths are correct.",
+      "fix": "The CtxDestroy safety comment now states the lock requirement and identifies the only owners that can carry a non-NULL funct."
+    },
+    {
+      "id": "B20-D6",
+      "file": "src/engine/eng_dyn.rs",
+      "severity": "low",
+      "kind": "contract_defect (hidden obligation)",
+      "status": "fixed",
+      "description": "dynamic_get_data_ctx, dynamic_ctrl and dynamic_load mutate/read the per-ENGINE ex_data context without a per-ENGINE lock, and the loaded library receives a stack-scoped dynamic_fns block. The authority leaves both obligations implicit; the crate's safety comments did not state them.",
+      "fix": "The three safety contracts now require exclusive use of the ENGINE for the call and state that v_check/bind_engine may re-enter the crate but must not retain dynamic_fns. A const layout guard pins the dynamic_fns ABI."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS",
+      "focused_tests": "cargo test --lib engine::eng_dyn: 1 passed. cargo test --lib engine::eng_table: 4 passed / 0 failed (including the new concurrency control)."
+    },
+    "controls_observed": [
+      "ThreadSanitizer positive control on the repaired candidate (nightly-2026-10-05, -Zsanitizer=thread -Zbuild-std, CARGO_TARGET_DIR=/work/.tsan-target, one test, --test-threads=1): 1 passed, no ThreadSanitizer finding.",
+      "ThreadSanitizer negative control with the pre-repair unlocked fast path restored in the working tree: WARNING: ThreadSanitizer: data race, ossl_engine_table_select at src/engine/eng_table.rs:472 (read) versus engine_table_cleanup at src/engine/eng_table.rs:444 (write under the lock). The repair was then restored.",
+      "The two existing cached-default tests still pin the authority's unowned-return arm (B20-R1)."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1660 passed, 0 failed, 27 ignored (93.68 s).",
+      "serial": "cargo test --lib -- --test-threads=1: 1660 passed, 0 failed, 27 ignored (277.26 s).",
+      "test_count_delta": "One test added (concurrent_select_and_cleanup_serialise_on_the_engine_lock); none removed and none newly ignored (1687 collected)."
+    },
+    "asan": "NOT_RUN for this class: the defect is a slot access-ordering race, with no allocation extent, ownership or lifetime change on the repaired path. ThreadSanitizer is the applicable instrument and was run in the dedicated sanitizer venue."
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "No `miri` component is installed in the court's stable 1.98.1 toolchain or the sanitizer venue's nightly-2026-10-05 toolchain, and the exercised path crosses the allocator and pthread FFI."
+  },
+  "loom_or_tsan": "TSan RUN (see controls_observed). The slot is a process-global raw C static, not a Loom-modelled synchronization primitive, so Loom is NOT_RUN.",
+  "invalidated_evidence": {
+    "closed": "No prior mechanism receipt named B20-D1; the race was latent in the conversion's slot representation. The RC-1 caller notes' borrowed-entry and unowned-return observations are unchanged and remain residuals.",
+    "not_invalidated": "The TB_* register/unregister callers and the eng_lib/eng_list ownership evidence are unchanged: the repair changes only the order in which select takes the existing lock and restores the authority's refusal path. The B15/B16 ctrl and ASN.1-table evidence is reused for the callback-under-lock and borrowed-method contracts."
+  },
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No new production unsafe operation was introduced. The removed unlocked slot dereference is replaced by an already-required lock acquisition. The new test's unsafe blocks are cfg(test) and confined to its own heap slot and the engine lock.",
+  "unsafe_operations_removed": 1,
+  "unsafe_operations_removed_detail": "The unlocked `*table` read in ossl_engine_table_select.",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 3,
+  "boundary_size": "Two files changed (111 insertions, 17 deletions). No allocator-seam coordinate, #[repr(C)] layout, export or signature changed; one const ABI layout guard added.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "The audited interfaces are unsafe fn / unsafe extern \"C\" functions whose preconditions are now stated, or safe functions operating on atomics (ENGINE_get/set_table_flags). No safe Rust interface was added or changed. The residual callback-under-lock and borrowed-entry obligations belong to the C ABI and are recorded, not hidden.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B20-R1",
+      "file": "src/engine/eng_table.rs",
+      "severity": "medium",
+      "disposition": "RECORDED authority hazard - retained, tested",
+      "description": "When the cached default's engine_unlocked_init refuses and the pile is uptodate, select returns the cached funct without an acquired functional reference. The authority has the same arm; the crate adds the i32::MAX refusal trigger. Callers must not treat that return as owning a reference. Two tests pin it."
+    },
+    {
+      "id": "B20-R2",
+      "file": "src/engine/eng_table.rs",
+      "severity": "medium",
+      "disposition": "RECORDED authority hazard - deliberately narrowed",
+      "description": "Table entries borrow ENGINE * and take no reference. The global-list removal path retires every table borrow before dropping the list's structural reference (a crate improvement over the authority). An engine registered while not in the global list must be kept alive by its registrant until engine_table_unregister."
+    },
+    {
+      "id": "B20-R3",
+      "file": "src/engine/eng_table.rs",
+      "severity": "medium",
+      "disposition": "RECORDED authority parity - lock/callback edge",
+      "description": "Engine init, finish and destroy hooks run under the engine write lock in register, select, unregister and cleanup. They must be short and must not re-enter engine APIs. A recursive write is refused; a read acquisition can block."
+    },
+    {
+      "id": "B20-R4",
+      "file": "src/engine/eng_table.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity - allocator edge",
+      "description": "Pile/stack/lhash allocation and release occur under the engine lock. A user-installed CRYPTO allocator hook that re-enters engine APIs can fail or block."
+    },
+    {
+      "id": "B20-R5",
+      "file": "src/engine/eng_dyn.rs",
+      "severity": "medium",
+      "disposition": "RECORDED authority parity - external contract",
+      "description": "dynamic_ctrl/dynamic_load and the ex_data read in dynamic_get_data_ctx are not per-ENGINE serialised. Concurrent control, load or destruction of the same ENGINE is outside the contract (and would race on the context fields)."
+    },
+    {
+      "id": "B20-R6",
+      "file": "src/engine/eng_dyn.rs",
+      "severity": "medium",
+      "disposition": "RECORDED external contract",
+      "description": "v_check and bind_engine are arbitrary loaded-library code. They run unlocked and may re-enter the crate; they must not retain the stack-scoped dynamic_fns pointer. bind_engine may replace ENGINE members; the rollback snapshot is the recovery mechanism."
+    },
+    {
+      "id": "B20-R7",
+      "file": "src/engine/eng_dyn.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity - bounded leak",
+      "description": "If the engine lock cannot be acquired while lazily creating the dynamic ex_data index, the freshly registered index is not published and is leaked. The authority has the same path; the leak is bounded by failed registrations and is not UB."
+    },
+    {
+      "id": "B20-R8",
+      "file": "src/engine/eng_dyn.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority parity - failure state",
+      "description": "When LIST_ADD is mandatory and ENGINE_add fails, dynamic_load returns 0 with the loaded ENGINE still bound and its DSO loaded; the context's initialised flag prevents a subsequent LOAD. This is the authority's own poisoned-but-live failure state."
+    }
+  ],
+  "queue": {
+    "remaining_before": 300,
+    "remaining_after": 298,
+    "audited_before": 463,
+    "audited_after": 465,
+    "next_ordinary": "src/engine/tb_eckey.rs",
+    "next_eight": [
+      "src/engine/tb_eckey.rs",
+      "src/engine/tb_pkmeth.rs",
+      "src/engine/tb_rand.rs",
+      "src/engine/tb_rsa.rs",
+      "src/ess/ess_asn1.rs",
+      "src/evp/algorithm.rs",
+      "src/evp/c_allc.rs",
+      "src/evp/c_alld.rs"
+    ]
+  }
+}

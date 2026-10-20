@@ -1,0 +1,244 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "e14d89768",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by M38 (src/asn1/{evp_asn1,i2d_evp,layout,nsseq,p5_pbe,p5_pbev2,p5_scrypt,p8_pkey}.rs). Contract checks against OpenSSL 3.6.4 for ASN.1 item descriptors and callbacks, allocated-block ownership in the PBE/PBKDF2/scrypt builders, the fixed EVP_MAX_IV_LENGTH stack buffers, PKCS#8 private-key octet cleansing and release, and the provided/legacy key DER writer hand-offs. Three genuine defects across three files repaired (one private-key block leak and two unvalidated IV-length overflows); one allocator-seam coordinate corrected. No new unsafe operation or FFI symbol introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/asn1/p8_pkey.rs, src/asn1/p5_pbev2.rs, src/asn1/p5_scrypt.rs and src/asn1/p5_pbe.rs repaired; src/asn1/{evp_asn1,i2d_evp,layout,nsseq}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 43 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 349,
+    "canonical_unaudited_before_batch": 414,
+    "canonical_audited_after_batch": 357,
+    "canonical_unaudited_after_batch": 406,
+    "mechanism_sweep_files_union_before_batch": 289,
+    "mechanism_sweep_files_union_after_batch": 297,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight files added here were the first eight entries of REMAINING-AUDIT.txt and were inserted at their existing asn1-block positions (evp_asn1 after der, i2d_evp/layout after i2d, nsseq/p5_pbe/p5_pbev2/p5_scrypt/p8_pkey after new).",
+    "difference_from_349": "M38 left 349 audited / 414 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/asn1/evp_asn1.rs",
+    "src/asn1/i2d_evp.rs",
+    "src/asn1/layout.rs",
+    "src/asn1/nsseq.rs",
+    "src/asn1/p5_pbe.rs",
+    "src/asn1/p5_pbev2.rs",
+    "src/asn1/p5_scrypt.rs",
+    "src/asn1/p8_pkey.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/asn1/evp_asn1.rs",
+      "mechanisms": [
+        "asn1_int_oct / asn1_oct_int private items",
+        "borrowed local ASN1_OCTET_STRING over the caller's buffer",
+        "ASN1_TYPE_pack_sequence / ASN1_TYPE_unpack_sequence",
+        "ASN1_item_free of the unpacked temporary"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The local octet string is a view of the caller's buffer and is never freed; the unpacked temporary is released exactly once on every arm. The Rust copy guards the authority's unconditional memcpy with n > 0 / non-NULL, which only changes C-invalid inputs (negative copy length or a NULL destination) where the authority has UB. num truncation (long -> int32) is the authority's assignment."
+    },
+    {
+      "file": "src/asn1/i2d_evp.rs",
+      "mechanisms": [
+        "i2d_provided chain walk",
+        "OSSL_ENCODER_CTX_new_for_pkey / OSSL_ENCODER_to_data / OSSL_ENCODER_CTX_free",
+        "legacy ameth param_encode / old_priv_encode / priv_encode",
+        "ossl_evp_pkey2pkcs8 -> i2d_PKCS8_PRIV_KEY_INFO -> PKCS8_PRIV_KEY_INFO_free"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The ENCODER context is released once per chain entry; the temporary PKCS#8 structure is released once after the encode, through the p8_pkey item, so its private-key octets take the FREE_PRE cleanse path (and, before this batch, the leak repaired there). The caller owns every output buffer; no internal secret buffer is copied or retained."
+    },
+    {
+      "file": "src/asn1/layout.rs",
+      "mechanisms": [
+        "repr(C) ASN1_ITEM/TEMPLATE/AUX/ADB/TLC/PCTX/SCTX descriptors",
+        "unsafe Sync impls for Asn1Item, Asn1Template, Asn1PrimitiveFuncs and BitStringBitname"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Definition-only unit. The four Sync claims cover statics built from scalars, raw pointers and function pointers, written once at load and never mutated through the shared reference; no function or ownership transition lives here."
+    },
+    {
+      "file": "src/asn1/nsseq.rs",
+      "mechanisms": [
+        "NETSCAPE_CERT_SEQUENCE item/templates",
+        "nsseq_cb ASN1_OP_NEW_POST",
+        "OBJ_nid2obj shared static object",
+        "ASN1_item_new / d2i / i2d / free"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The callback borrows the process-static OID object exactly as the authority does; ASN1_OBJECT_free refuses the static origin on the release path. Certificate values are public data; no secret buffer."
+    },
+    {
+      "file": "src/asn1/p5_pbe.rs",
+      "mechanisms": [
+        "PBEPARAM item/templates",
+        "SaltBuf (CRYPTO_malloc + Drop)",
+        "ASN1_STRING_set0 ownership transfer",
+        "X509_ALGOR_set0 adoption"
+      ],
+      "disposition": "repaired_compatibility",
+      "note": "SaltBuf's failure-path release used the authority's goto line (p5_pbe.c:59) instead of the OPENSSL_free it reaches (p5_pbe.c:76). Corrected so a caller-installed allocator hook observes the authority's free coordinate. Ownership/order (drop salt, then PBEPARAM_free, then packed-string free on set0 refusal) already matched."
+    },
+    {
+      "file": "src/asn1/p5_pbev2.rs",
+      "mechanisms": [
+        "PBE2PARAM / PBKDF2PARAM / PBMAC1PARAM items",
+        "SaltBuf (CRYPTO_malloc + Drop at asn1_lib.c coordinates)",
+        "EVP_MAX_IV_LENGTH stack IV buffer",
+        "EVP_CIPHER_CTX lifecycle and ASN1_TYPE_pack_sequence"
+      ],
+      "disposition": "repaired_memory_safety",
+      "note": "The IV copy/draw trusted EVP_CIPHER_get_iv_length into a 16-byte stack array, reachable with a caller-registered method whose iv_len is larger (EVP_CIPHER_meth_set_iv_length). Refused above EVP_MAX_IV_LENGTH on the bare err tail, following the cms_enc/pem_bridge precedent. Salt and IV are public AlgorithmIdentifier contents, released plainly."
+    },
+    {
+      "file": "src/asn1/p5_scrypt.rs",
+      "mechanisms": [
+        "SCRYPT_PARAMS item/templates",
+        "ASN1_STRING_set for salt (copy or grow), RAND_bytes draw",
+        "EVP_MAX_IV_LENGTH stack IV buffer",
+        "EVP_PBE_scrypt parameter probe"
+      ],
+      "disposition": "repaired_memory_safety",
+      "note": "Same unvalidated iv_len overflow as p5_pbev2, repaired the same way. The salt is copied by ASN1_STRING_set and drawn in place when absent, exactly as the authority; a negative saltlen keeps the authority's strlen semantics. Salt is public, released plainly."
+    },
+    {
+      "file": "src/asn1/p8_pkey.rs",
+      "mechanisms": [
+        "PKCS8_PRIV_KEY_INFO item/templates",
+        "pkey_cb ASN1_OP_FREE_PRE cleanse and ASN1_OP_D2I_POST version contract",
+        "PKCS8_pkey_set0 / PKCS8_pkey_get0",
+        "attributes add/get",
+        "ASN1_item_free release path"
+      ],
+      "disposition": "repaired_resource",
+      "note": "ASN1_OP_FREE_PRE cleansed the whole ASN1_STRING object, zeroing the data pointer and length that ASN1_STRING_free reads immediately afterwards; every PKCS8_PRIV_KEY_INFO free therefore leaked the private-key octet block. Only the contents are now cleansed (length clamped to 0), matching p8_pkey.c:27, and a regression test pins that the owner stays releasable."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/asn1/p8_pkey.rs",
+      "line": 202,
+      "severity": "medium",
+      "kind": "private-key octet block leaked on every PKCS#8 free",
+      "detail": "pkey_cb's ASN1_OP_FREE_PRE cleansed size_of::<Asn1String>() bytes at the pkey string itself, so the item layer's subsequent ASN1_STRING_free saw data == NULL and length == 0 and released only the string object. The authority cleanses key->pkey->data for key->pkey->length (p8_pkey.c:27) and leaves the owner intact. Now only the contents are cleansed, clamped at zero.",
+      "ub": false
+    },
+    {
+      "file": "src/asn1/p5_pbev2.rs",
+      "line": 489,
+      "severity": "medium",
+      "kind": "stack buffer overflow from unvalidated IV length",
+      "detail": "iv[EVP_MAX_IV_LENGTH] (16) was filled with EVP_CIPHER_get_iv_length(cipher) bytes with no upper bound. A caller-registered EVP_CIPHER with a longer iv_len (EVP_CIPHER_meth_set_iv_length) makes both the aiv copy and the RAND draw overrun. The authority has the same overrun; §17 forbids reproducing it. Refused above EVP_MAX_IV_LENGTH at the authority's err tail (no authority error site exists on this arm).",
+      "ub": true
+    },
+    {
+      "file": "src/asn1/p5_scrypt.rs",
+      "line": 444,
+      "severity": "medium",
+      "kind": "stack buffer overflow from unvalidated IV length",
+      "detail": "Same 16-byte iv array filled with an unchecked EVP_CIPHER_get_iv_length; repaired with the same refusal as p5_pbev2.",
+      "ub": true
+    },
+    {
+      "file": "src/asn1/p5_pbe.rs",
+      "line": 267,
+      "severity": "low",
+      "kind": "allocator seam coordinate divergence",
+      "detail": "SaltBuf released the RAND-failure block at p5_pbe.c:59 (the goto) rather than :76 (the OPENSSL_free at the err tail it reaches). A caller-installed free hook observed the wrong line. Corrected to 76.",
+      "ub": false
+    }
+  ],
+  "secret_buffers": [
+    {
+      "buffer": "PKCS8_PRIV_KEY_INFO.pkey->data (PrivateKey octets)",
+      "file": "src/asn1/p8_pkey.rs",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "cleansed_on": "ASN1_OP_FREE_PRE for every item release (PKCS8_PRIV_KEY_INFO_free, d2i failure cleanup, ossl_evp_pkey2pkcs8 temporary)",
+      "released_on": "the item layer's ASN1_STRING_free immediately after the callback (plain free, matching the authority's OPENSSL_free)",
+      "note": "Contents are cleansed and released on all item-free paths. A negative length (possible only through PKCS8_pkey_set0 with penclen < 0, as in the authority) clamps the cleanse to zero instead of the authority's implicit size_t overrun."
+    },
+    {
+      "buffer": "PBEPARAM.salt (p5_pbe), PBKDF2PARAM.salt (p5_pbev2), SCRYPT_PARAMS.salt (p5_scrypt)",
+      "file": "src/asn1/{p5_pbe,p5_pbev2,p5_scrypt}.rs",
+      "classification": ["PUBLIC_DATA"],
+      "cleansed_on": "none",
+      "released_on": "the owning ASN1 item's free (ASN1_STRING_free / item free), plain",
+      "note": "The salt is stored in the public AlgorithmIdentifier alongside the ciphertext; the authority neither cleanses nor clear-frees it. Release arms are preserved: Drop on RAND failure, or ownership transfer to ASN1_STRING_set0/the item."
+    },
+    {
+      "buffer": "PKCS5 IV (iv[EVP_MAX_IV_LENGTH])",
+      "file": "src/asn1/{p5_pbev2,p5_scrypt}.rs",
+      "classification": ["PUBLIC_DATA"],
+      "cleansed_on": "none (stack frame dies)",
+      "released_on": "n/a",
+      "note": "IVs are public; the security-critical property is the length bound, now enforced."
+    },
+    {
+      "buffer": "i2d_provided output and legacy DER output",
+      "file": "src/asn1/i2d_evp.rs",
+      "classification": ["PUBLIC_DATA", "caller-owned"],
+      "cleansed_on": "none",
+      "released_on": "caller (OUTPUT allocation) or BIO writer",
+      "note": "The only secret-bearing temporary on this path is the PKCS#8 structure passed to PKCS8_PRIV_KEY_INFO_free, which takes the cleanse above."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "contracts_reused": [
+    "RC-1 item descriptor/template layout (offset-asserted repr(C) + static descriptor)",
+    "OB-1 release-seam discipline for a bespoke CRYPTO_malloc owner (SaltBuf: one Drop, authority coordinates, into_raw only on adoption)",
+    "OB-1/OB-4 ASN1_STRING_set0 ownership transfer and member-buffer release",
+    "ASN1 item lifecycle contract (ASN1_item_new / d2i / i2d / ASN1_item_free; callback NEW_POST/D2I_POST/FREE_PRE)",
+    "ASN1_OP_D2I_POST version contract (v1 only without kpub; 0..=1)",
+    "EVP_MAX_IV_LENGTH stack-buffer contract from cms_enc.rs and pem_bridge.rs (refuse ivlen > 16 rather than reproduce the authority overrun)",
+    "X509_ALGOR_set0 adoption semantics (failure leaves ownership with the caller on the authority's paths)",
+    "ASN1_STRING_set length semantics (negative len = strlen) for the scrypt salt"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check clean",
+      "focused_tests": "cargo test --lib -- --test-threads=4 asn1::p8_pkey 4 passed / 0 failed (includes the new FREE_PRE regression); cargo test --lib -- --test-threads=4 asn1:: 40 passed / 0 failed / 1 ignored"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "lib_serial": "1649 passed / 0 failed / 27 ignored (101.12 s)",
+      "lib_threads4": "1649 passed / 0 failed / 27 ignored (104.39 s)",
+      "removed_or_newly_ignored_tests": 0
+    }
+  },
+  "not_run": [
+    "FRF runtime courts for this surface (rt-evp-pbe, rt-asn1, rt-asn1-template): the FRF tooling container is not up and the candidate probe artifacts predate this build",
+    "allocator-hook canary observing the repaired PKCS#8 release event",
+    "Miri Stacked/Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units (BOUNDARY)",
+    "caller/dependency closure for the PBE/PKCS#8 consumers (BOUNDARY)",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "retained_obligations": [
+    "p5_scrypt keeps the authority's negative-saltlen strlen semantics: a negative length with a non-NULL salt requires a NUL-terminated readable string",
+    "PKCS8_pkey_set0 still accepts a negative penclen exactly as the authority; the cleanse clamps at zero (deliberate divergence from the authority's implicit size_t overrun, no observable allocator event change)",
+    "p8_pkey cleanses only the PrivateKey octets, not attribute values, matching the authority",
+    "PBE salts and IVs are not cleansed by design (public AlgorithmIdentifier contents)",
+    "ivlen > EVP_MAX_IV_LENGTH is now refused with the bare err tail: a deliberate §17 divergence with no error raise because the authority has no coordinate on that arm",
+    "error tails still omit the pointer-bearing ERR_print_errors lines, as established for this crate",
+    "caller/dependency closure and BOUNDARY evidence remain pending"
+  ],
+  "queue": {
+    "remaining_audit_before": 414,
+    "remaining_audit_after": 406,
+    "audited_before": 349,
+    "audited_after": 357,
+    "next_batch": [
+      "src/asn1/t_pkey.rs",
+      "src/asn1/t_spki.rs",
+      "src/asn1/typ.rs",
+      "src/asn1/x_bignum.rs",
+      "src/asn1/x_info.rs",
+      "src/asn1/x_int64.rs",
+      "src/asn1/x_long.rs",
+      "src/asn1/x_pkey.rs"
+    ]
+  }
+}

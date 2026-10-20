@@ -1,0 +1,168 @@
+{
+  "receipt": "mechanism-sweep-M61",
+  "branch": "integrate/safe-c33",
+  "source_head": "954ab90d0",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no confirmed UB left unrepaired, no ABI regression, no hidden obligation and no remaining unsafe-safe-Rust API); four # Safety-contract repairs and one allocator-seam coordinate repair",
+  "scope": "Per-file contract audit of the OCSP CERTID builder/comparators, OCSP text printers, OCSP responder builders, the five OCSP extension tables and callbacks, the seven param_build_set two-way writers, OSSL_PARAM_dup/merge/free (including the secure-block terminator), OSSL_PARAM_allocate_from_text/print_to_bio, and PEM_ASN1_read_bio. evp/method_store.rs was deferred as the method-store registry boundary; pem/pem_oth.rs was substituted from the head of the stable queue. OCSP and PEM payloads are public data; params temporaries may carry key material and are classified SECRET_DATA where applicable. No constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/ocsp/ocsp_lib.rs",
+    "src/ocsp/ocsp_prn.rs",
+    "src/ocsp/ocsp_srv.rs",
+    "src/ocsp/v3_ocsp.rs",
+    "src/param_build_set.rs",
+    "src/params/dup.rs",
+    "src/params/from_text.rs",
+    "src/pem/pem_oth.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M61-D1",
+      "file": "src/ocsp/ocsp_lib.rs",
+      "line_pre_fix": 93,
+      "line_post_fix": 93,
+      "also": "src/ocsp/ocsp_lib.rs:126",
+      "severity": "low",
+      "class": "unsafe # Safety contract permits a NULL the body dereferences",
+      "description": "OCSP_cert_to_id said subject and issuer may each be NULL, but issuer is read for its subject name and public-key bit string; OCSP_cert_id_new said issuerName/issuerKey may be NULL, but X509_NAME_digest requires a live name and the EVP_Digest arm reads (*issuerKey).data unconditionally.",
+      "fix": "Contracts now require a live issuer carrying a public-key bit string and live (non-NULL) issuerName/issuerKey. serialNumber, subject and dgst retain their NULL-allowed forms, which the bodies handle. No code or ABI change.",
+      "witness": "Source comparison with crypto/ocsp/ocsp_lib.c:22-90; focused ocsp:: 1 passed and the full library suite pass."
+    },
+    {
+      "id": "M61-D2",
+      "file": "src/params/dup.rs",
+      "line_pre_fix": 265,
+      "line_post_fix": 299,
+      "severity": "low",
+      "class": "unsafe # Safety contract understates the readable extent of a _PTR entry",
+      "description": "ossl_param_dup's contract required each data field to be readable for its data_size, but OSSL_PARAM_OCTET_PTR/OSSL_PARAM_UTF8_PTR entries read one full *const c_void from data, and data_size describes the pointed-to string rather than the pointer storage.",
+      "fix": "The contract now requires the _PTR arm's data to be aligned and readable for one pointer, and keeps data_size readability for every non-_PTR entry. No code change.",
+      "witness": "Source comparison with crypto/params_dup.c:96-126; focused params:: 53 passed and the full library suite pass."
+    },
+    {
+      "id": "M61-D3",
+      "file": "src/params/from_text.rs",
+      "line_pre_fix": 57,
+      "line_post_fix": 61,
+      "severity": "low",
+      "class": "unsafe # Safety contract permits a NULL the body dereferences",
+      "description": "has_hex_prefix documented s as NULL-or-NUL-terminated but dereferenced s immediately; a caller following the contract could pass NULL and cause UB.",
+      "fix": "Contract now requires non-NULL and NUL-terminated. No code change.",
+      "witness": "Source comparison with HAS_PREFIX in crypto/params_from_text.c:35; focused params:: 53 passed."
+    },
+    {
+      "id": "M61-D4",
+      "file": "src/params/from_text.rs",
+      "line_pre_fix": 302,
+      "line_post_fix": 309,
+      "severity": "low",
+      "class": "unsafe # Safety contract omits a readable-extent precondition",
+      "description": "OSSL_PARAM_allocate_from_text documented value as NUL-terminated, but the non-hex OSSL_PARAM_OCTET_STRING arm copies value_n bytes, which need not include a terminator.",
+      "fix": "Contract now states value must be NUL-terminated for the string forms and readable for value_n bytes for the octet-string form. No code change.",
+      "witness": "Source comparison with crypto/params_from_text.c:307-334; focused params:: 53 passed."
+    },
+    {
+      "id": "M61-D5",
+      "file": "src/params/dup.rs",
+      "line_pre_fix": 48,
+      "line_post_fix": 50,
+      "also": "src/params/dup.rs:53-57; src/params/from_text.rs:50,53-54",
+      "severity": "low",
+      "class": "allocator-seam coordinate mismatch (observable compatibility)",
+      "description": "Both modules passed the bare translation-unit path and line 0 to CRYPTO_zalloc/CRYPTO_secure_zalloc/CRYPTO_free/CRYPTO_secure_clear_free. The authority's plain .c units carry the ../../src/openssl-3.6.4/ __FILE__ prefix, and each allocation/release has its own line; the file and line are forwarded to a caller-installed CRYPTO_set_mem_functions hook.",
+      "fix": "FILE now uses the admitted build's prefixed spelling; dup uses alloc :46, failed-duplicate free :133, merge alloc :191, secure free :240, array free :241; from_text uses alloc :325 and failure free :332. OwnedParamBlock stores its release line and OwnedBuf::new_zeroed_released separates from_text's alloc/release coordinates. No size, layout, export or signature changed.",
+      "witness": "Source comparison with crypto/params_dup.c:46,133,191,240,241 and crypto/params_from_text.c:325,332; compiled and focused tests pass. No allocator-coordinate differential harness exists for these units (NOT_RUN)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [
+    "src/params/dup.rs: FILE c\"crypto/params_dup.c\" -> c\"../../src/openssl-3.6.4/crypto/params_dup.c\"; LINE 0 -> 46 (buf alloc), 133 (failed duplicate free), 191 (merge alloc), 240 (secure free), 241 (array free)",
+    "src/params/from_text.rs: FILE c\"crypto/params_from_text.c\" -> c\"../../src/openssl-3.6.4/crypto/params_from_text.c\"; LINE 0 -> 325 (zalloc), 332 (failure free)"
+  ],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf: validated single release, including new_zeroed_released's explicit allocation/release coordinate pair",
+    "OB-4 secure-block terminator: OSSL_PARAM_ALLOCATED_END == 127 carries the secure block and its size, and OSSL_PARAM_free releases it with CRYPTO_secure_clear_free before the public array",
+    "C ABI caller contracts: NULL-or-live optional pointers, caller-sized buffers and caller-terminated key arrays",
+    "BIGNUM ownership: BN_asc2bn/BN_hex2bn produce a live BIGNUM that the caller releases with BN_free on every arm",
+    "ASN.1 item ownership: OCSP_*_new / OCSP_*_free and ASN1_item_* produce or consume whole values",
+    "CRYPTO_* allocator seam at the authority's exact size/file/line, now including the prefixed plain-.c __FILE__ spelling"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry boundary.",
+    "OSSL_PARAM_allocate_from_text's failure path plainly frees a buffer that OPENSSL_hexstr2buf_ex may have partially filled with parameter text; the authority does the same. A cleansing release would be a deliberate improvement and is a hardening candidate.",
+    "from_text's q.data_size * 8 range test can overflow on a hostile descriptor: a debug build panics (caught by guard_ffi), the release build wraps as the authority does. Hardening candidate, not a reachable memory-safety defect.",
+    "OSSL_PARAM_print_to_bio does not free the BIGNUM that OSSL_PARAM_get_BN allocates for a wide integer, matching the authority's own leak; recorded rather than silently changed.",
+    "The OCSP printers and builders retain the authority's unconditional dereference of mandatory decoded members (certStatus, thisUpdate, requestList entries), which a successful ASN.1 decode establishes.",
+    "No constant-time claim is made for the OCSP or PEM units from source inspection."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "check_lib": "PASS (cargo check --lib)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 268.56 s; --test-threads=1; rerun after the seam repair)",
+    "lib_test_threads_4": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 97.51 s; rerun after the seam repair)",
+    "focused_tests": "PASS (77 passed / 0 failed: params 53, ocsp 1, pem 19, rsa::backend 4)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for the params, OCSP or PEM-other families)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "The four contract repairs are source-level precondition corrections with no code change; the seam repair is pinned by the authority's own file/line coordinates and compiled, but no harness installs a CRYPTO_set_mem_functions hook to observe OSSL_PARAM_dup/merge/allocate_from_text. Miri/ASan/valgrind, an allocator-coordinate differential, dudect/ctgrind and the negative controls are BOUNDARY/SEAL work."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/pem/pem_x509.rs",
+      "src/pem/pem_xaux.rs",
+      "src/pkcs12/p12_add.rs",
+      "src/pkcs12/p12_asn.rs",
+      "src/pkcs12/p12_attr.rs",
+      "src/pkcs12/p12_crpt.rs",
+      "src/pkcs12/p12_decr.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "allocator-coordinate differential for OSSL_PARAM_dup/_merge/allocate_from_text under a CRYPTO_set_mem_functions hook",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / ASan / valgrind over the params duplicate/merge and OCSP builder paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement of any secret-dependent params path (dudect/ctgrind under the exact build profile)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, FRF suite, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    }
+  ]
+}

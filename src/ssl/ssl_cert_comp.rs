@@ -12,9 +12,10 @@
 //! `BIO_f_*` probes are `NULL`. Every other function in the unit is gated on that predicate, so
 //! the whole unit reduces to its refusal arms in this build:
 //!
-//! * `SSL_CTX_set1_cert_comp_preference`/`SSL_set1_cert_comp_preference` accept the empty list
-//!   (`len == 0` or `algs == NULL`, clearing the preferences and returning 1) and refuse a
-//!   non-empty one (no algorithm is supported, `found == 0`, returning 0);
+//! * `SSL_CTX_set1_cert_comp_preference`/`SSL_set1_cert_comp_preference` return 0 for every input:
+//!   the exports' `OPENSSL_NO_COMP_ALG` arm is `return 0`, so even the empty list (`len == 0` or
+//!   `algs == NULL`) is refused. The helper's empty-list arm (`ssl_set_cert_comp_pref`, which would
+//!   return 1) is transcribed below but is not reached in this build;
 //! * `SSL_compress_certs`/`SSL_CTX_compress_certs` return 0;
 //! * `SSL_get1_compressed_cert`/`SSL_CTX_get1_compressed_cert` return 0;
 //! * `SSL_set1_compressed_cert` (a non-server connection, and the algorithm unsupported) and
@@ -40,16 +41,20 @@
 
 use core::ffi::{c_char, c_int};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::{BIO_f_brotli, BIO_f_zlib, BIO_f_zstd};
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::ssl::ssl_lib::{cert_active_key, Cert, CertKey, Ssl, SslCtx, TLSEXT_COMP_CERT_LIMIT};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_cert_comp.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_cert_comp.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 
@@ -77,15 +82,9 @@ pub struct OsslCompCert {
     pub alg: c_int,
 }
 
-/// `CRYPTO_DOWN_REF` — the release fetch-sub the authority's header defines.
-fn down_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_sub(1, Ordering::Release) - 1
-}
-
-/// `CRYPTO_UP_REF` — the relaxed fetch-add the authority's header defines.
-fn up_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_add(1, Ordering::Relaxed) + 1
-}
+// ---------------------------------------------------------------------------------------------
+// Ownership of the record and its data block
+// ---------------------------------------------------------------------------------------------
 
 /// `size_t ossl_calculate_comp_expansion(int alg, size_t length)` — `ssl_cert_comp.c:16-43`.
 #[allow(dead_code)] // reachable only behind an enabled compression algorithm
@@ -125,37 +124,61 @@ fn ossl_comp_has_alg(a: c_int) -> bool {
 /// int alg)` — `ssl_cert_comp.c:61-81`.
 ///
 /// # Safety
-/// `data` must be NULL or an owned allocation this function takes over.
+///
+/// `data` is NULL or the exclusive block returned by this crate's
+/// `CRYPTO_memdup(src, len, ...)` in `OSSL_COMP_CERT_from_compressed_data`
+/// (`ssl_cert_comp.rs:180`), the only caller. A non-NULL block therefore comes from
+/// the **plain** `CRYPTO_*` seam and its allocation extent is exactly `len` bytes
+/// (`CRYPTO_memdup` copies `len`; it answers NULL for `len == 0`, so non-NULL implies
+/// `len >= 1`). A secure-heap or `Box`/`Vec` block is excluded.
+///
+/// Ownership transfers to this function. On any refusal the frame's `OwnedBuf`
+/// releases the block exactly once with `CRYPTO_free` — the authority's
+/// `OPENSSL_free(data)` at `ssl_cert_comp.c:78`; on success the block moves to the
+/// returned record and `OSSL_COMP_CERT_free` releases it with `CRYPTO_free`
+/// (authority `OPENSSL_free(cc->data)`, `ssl_cert_comp.c:145`). No copy is made.
+///
+/// The authority compiles this helper only under `#ifndef OPENSSL_NO_COMP_ALG`;
+/// this crate transcribes it in reduced form and `ossl_comp_has_alg` always answers
+/// false, so the success path is unreachable in this build. The adoption is retained
+/// because its seam is the `CRYPTO_memdup` above, not an unowned caller pointer.
 unsafe fn OSSL_COMP_CERT_new(
     data: *mut u8,
     len: usize,
     orig_len: usize,
     alg: c_int,
 ) -> *mut OsslCompCert {
-    let mut ret: *mut OsslCompCert = ptr::null_mut();
-    // SAFETY: the checks and the allocation are the authority's; a NULL `data` or an unsupported
-    // algorithm takes the `err` arm.
+    // The caller gives over the data block; the frame's owner releases it on every refusal path,
+    // exactly as the authority's `err:` label does.
+    // SAFETY: `data` is NULL or the owned allocation the caller gives over per this function's
+    // contract.
+    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+    let data = unsafe { OwnedBuf::adopt_plain_nullable(data, FILE_SEAM, 0) };
+    // The predicate short-circuits the allocation, as the authority's `||` does; a NULL `data` or
+    // an unsupported algorithm is the authority's first `err` arm.
+    let ret = if !ossl_comp_has_alg(alg) || data.as_ptr().is_null() {
+        None
+    } else {
+        // A fresh zeroed record at the authority's own site; `Drop` is its single release.
+        OwnedBuf::new_zeroed(core::mem::size_of::<OsslCompCert>(), FILE_SEAM, 0)
+    };
+    let Some(ret) = ret else {
+        // SAFETY: the error queue is thread-local state.
+        unsafe { raise_with(ERR_LIB_SSL, 1, FILE, 79) };
+        return ptr::null_mut();
+    };
+    // SAFETY: `ret` is a fresh zeroed block; every field is written before it is read. `data` is
+    // handed to the record, whose own free path releases it, so the frame's owner gives up its
+    // release.
     unsafe {
-        if !ossl_comp_has_alg(alg) || data.is_null() {
-            // `if` short-circuits before the allocation, as the authority's `||` does.
-        } else {
-            ret = CRYPTO_zalloc(core::mem::size_of::<OsslCompCert>(), FILE, 0).cast();
-            if ret.is_null() {
-                // fall through to err
-            } else {
-                (*ret).references = AtomicI32::new(1);
-                (*ret).data = data;
-                (*ret).len = len;
-                (*ret).orig_len = orig_len;
-                (*ret).alg = alg;
-                return ret;
-            }
-        }
-        raise_with(ERR_LIB_SSL, 1, FILE, 79);
-        CRYPTO_free(data.cast(), FILE, 0);
-        CRYPTO_free(ret.cast(), FILE, 0);
-        ptr::null_mut()
+        let cc = ret.as_ptr().cast::<OsslCompCert>();
+        (*cc).references = AtomicI32::new(1);
+        (*cc).data = data.into_raw();
+        (*cc).len = len;
+        (*cc).orig_len = orig_len;
+        (*cc).alg = alg;
     }
+    ret.into_raw().cast::<OsslCompCert>()
 }
 
 /// `__owur static OSSL_COMP_CERT *OSSL_COMP_CERT_from_compressed_data(...)` —
@@ -188,14 +211,26 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
     if cc.is_null() {
         return;
     }
-    // SAFETY: `cc` is live per the caller's contract.
+    // SAFETY: `cc` is live per this function's contract, and the caller owns the one reference
+    // this call releases. On `Last` this frame is the unique destructor runner; `Remaining` and
+    // `Retired` owe no teardown, so a re-entrant or over-release is a defined no-op while the
+    // block is still live.
     unsafe {
-        let i = down_ref(&(*cc).references);
-        if i > 0 {
-            return;
+        match down_ref(&(*cc).references) {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        CRYPTO_free((*cc).data.cast(), FILE, 0);
-        CRYPTO_free(cc.cast(), FILE, 0);
+        // The count moved `1 -> REF_DESTROYING`, so this frame holds the record's exclusive
+        // ownership; its destructor releases the `data` block first, then the record block, at the
+        // authority's own sites.
+        // SAFETY: `data` is NULL or this record's own block.
+        drop(OwnedBuf::adopt_plain_nullable((*cc).data, FILE_SEAM, 0));
+        // SAFETY: `cc` is the record this frame exclusively owns.
+        drop(OwnedBuf::adopt_plain_nullable(
+            cc.cast::<u8>(),
+            FILE_SEAM,
+            0,
+        ));
     }
 }
 
@@ -204,16 +239,11 @@ pub unsafe fn OSSL_COMP_CERT_free(cc: *mut OsslCompCert) {
 /// # Safety
 /// `cc` must be a live `OsslCompCert`.
 pub unsafe fn OSSL_COMP_CERT_up_ref(cc: *mut OsslCompCert) -> c_int {
-    // SAFETY: `cc` is live per the caller's contract.
-    let i = unsafe { up_ref(&(*cc).references) };
-    if i <= 0 {
-        return 0;
-    }
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `cc` is live per the contract; this call acts for an existing owner and acquires
+    // exactly one new reference, which that owner must release exactly once.
+    unsafe { up_ref(&(*cc).references) }
 }
 
 /// `static int ssl_set_cert_comp_pref(int *prefs, int *algs, size_t len)` —
@@ -289,10 +319,15 @@ unsafe fn ssl_compress_one_cert(ssl: *mut Ssl, cpk: *mut CertKey, alg: c_int) ->
     if length == 0 {
         return 0;
     }
-    // SAFETY: `cert_data` is owned and handed over to the constructor.
-    let comp_cert = unsafe { OSSL_COMP_CERT_from_compressed_data(cert_data, length, length, alg) };
-    // SAFETY: `cert_data` is this frame's own allocation.
-    unsafe { CRYPTO_free(cert_data.cast(), FILE, 0) };
+    // The block `ssl_get_cert_to_compress` produced is this frame's; the owner is its single
+    // release at the authority's own site, after the constructor has copied it.
+    // SAFETY: `cert_data` is NULL or this frame's own allocation.
+    let cert_data = unsafe { OwnedBuf::adopt_plain_nullable(cert_data, FILE_SEAM, 0) };
+    // SAFETY: `cert_data` is readable for `length` bytes; the constructor copies it.
+    let comp_cert =
+        unsafe { OSSL_COMP_CERT_from_compressed_data(cert_data.as_ptr(), length, length, alg) };
+    // The authority releases the frame's block before it tests the constructor's result.
+    drop(cert_data);
     if comp_cert.is_null() {
         return 0;
     }
@@ -552,3 +587,65 @@ pub unsafe extern "C" fn SSL_set1_compressed_cert(
 const _: () = {
     assert!(core::mem::size_of::<*mut OsslCompCert>() > 0);
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::refcount::REF_DESTROYING;
+
+    /// A record whose count is already retired: the storage is the test's own and stays live, so
+    /// both releases legitimately observe `Retired` and neither runs a teardown.
+    fn retired_record(count: i32) -> OsslCompCert {
+        OsslCompCert {
+            references: AtomicI32::new(count),
+            data: ptr::null_mut(),
+            len: 0,
+            orig_len: 0,
+            alg: TLSEXT_COMP_CERT_NONE,
+        }
+    }
+
+    #[test]
+    fn double_free_of_a_retired_record_is_a_defined_noop() {
+        for count in [0, REF_DESTROYING] {
+            let mut cc = retired_record(count);
+            // SAFETY: `cc` is a live stack record; the zero and destroying counts model a record
+            // already released. Both calls are the protocol's defined `Retired` no-op and read
+            // only the still-live count.
+            unsafe {
+                OSSL_COMP_CERT_free(&mut cc);
+                OSSL_COMP_CERT_free(&mut cc);
+            }
+            assert_eq!(
+                cc.references.load(core::sync::atomic::Ordering::Relaxed),
+                count
+            );
+        }
+    }
+
+    #[test]
+    fn up_ref_refuses_zero_and_destroying_without_changing_the_count() {
+        for count in [0, REF_DESTROYING] {
+            let mut cc = retired_record(count);
+            // SAFETY: `cc` is a live stack record; a refused increment acquires no reference, so
+            // the test owes no release.
+            assert_eq!(unsafe { OSSL_COMP_CERT_up_ref(&mut cc) }, 0);
+            assert_eq!(
+                cc.references.load(core::sync::atomic::Ordering::Relaxed),
+                count
+            );
+        }
+    }
+
+    #[test]
+    fn up_ref_refuses_i32_max_without_changing_the_count() {
+        let mut cc = retired_record(i32::MAX);
+        // SAFETY: `cc` is a live stack record; a refused increment acquires no reference, so the
+        // test owes no release.
+        assert_eq!(unsafe { OSSL_COMP_CERT_up_ref(&mut cc) }, 0);
+        assert_eq!(
+            cc.references.load(core::sync::atomic::Ordering::Relaxed),
+            i32::MAX
+        );
+    }
+}

@@ -51,7 +51,7 @@ use crate::runtime::err::err_sites::{
     BSS_DGRAM_PAIR_376, BSS_DGRAM_PAIR_382, BSS_DGRAM_PAIR_388, BSS_DGRAM_PAIR_465,
 };
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc};
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
     CRYPTO_THREAD_write_lock, CryptoRwlock,
@@ -59,6 +59,7 @@ use crate::runtime::thread::{
 
 use super::addr::{BIO_ADDR_free, BioAddr};
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::{
     Bio, BioMethod, BioMsg, BIO_CTRL_DGRAM_GET_CAPS, BIO_CTRL_DGRAM_GET_EFFECTIVE_CAPS,
     BIO_CTRL_DGRAM_GET_LOCAL_ADDR_CAP, BIO_CTRL_DGRAM_GET_LOCAL_ADDR_ENABLE,
@@ -118,7 +119,11 @@ impl RingBuf {
     /// `ring_buf_init`
     fn init(&mut self, nbytes: usize) -> bool {
         // SAFETY: `CRYPTO_malloc` returns a fresh allocation of `nbytes`.
-        let p = CRYPTO_malloc(nbytes, ptr::null(), 0).cast::<u8>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(nbytes, ptr::null(), 0)
+        }
+        .cast::<u8>();
         if p.is_null() {
             return false;
         }
@@ -246,6 +251,22 @@ struct BioDgramPairSt {
     grows_on_write: bool,
 }
 
+/// The authority's `dgram_pair_free` body *minus* the block release [`OwnedCtx`]'s `Drop`
+/// performs: the read/write lock the context owns. `CRYPTO_THREAD_lock_free` is NULL-tolerant, so
+/// the context's constructor failure path (a refused lock) releases the block alone through the
+/// handle, exactly as `dgram_pair_init` frees it by hand.
+// SAFETY: (a) `destroy_body` is the authority's `dgram_pair_free` member body, releasing exactly
+// this context's read/write lock once (the free tolerates the unset NULL) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `BioDgramPairSt` is a `#[repr(C)]` record of raw pointers,
+// integers, a plain `RingBuf` (`*mut u8` + `usize`s) and `bool`s, so an all-zero block is a valid
+// `BioDgramPairSt` the body is sound on.
+unsafe impl CtxDestroy for BioDgramPairSt {
+    unsafe fn destroy_body(ptr: *mut BioDgramPairSt) {
+        // SAFETY: `ptr` is a live context per the trait contract; `lock` is NULL or owned.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+    }
+}
+
 /// The method name the authority reports for the pair half.
 const PAIR_NAME: &[u8] = b"BIO dgram pair\0";
 /// The method name the authority reports for the memory BIO.
@@ -336,23 +357,24 @@ unsafe fn is_pair(b: *mut BioDgramPairSt) -> bool {
 /// # Safety
 /// `bio` must be a live BIO.
 unsafe extern "C" fn dgram_pair_init(bio: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let b: *mut BioDgramPairSt =
-        CRYPTO_zalloc(core::mem::size_of::<BioDgramPairSt>(), ptr::null(), 0).cast();
-    if b.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioDgramPairSt>::zalloc() else {
         return 0;
-    }
+    };
+    let b = ctx.as_ptr();
     // SAFETY: `b` is a fresh allocation.
     unsafe {
         (*b).mtu = DEFAULT_MTU;
         (*b).req_buf_len = 9 * (core::mem::size_of::<DgramHdr>() + (*b).mtu);
         (*b).lock = CRYPTO_THREAD_lock_new();
         if (*b).lock.is_null() {
-            CRYPTO_free(b.cast(), ptr::null(), 0);
+            // The context never escaped; the handle's `Drop` releases it and the NULL lock.
             return 0;
         }
         (*bio).ptr = b.cast();
     }
+    // The context is now the BIO's; `dgram_pair_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -395,11 +417,8 @@ unsafe extern "C" fn dgram_pair_free(bio: *mut Bio) -> c_int {
     }
     // SAFETY: `bio` is live and holds this context type.
     unsafe { dgram_pair_ctrl_destroy_bio_pair(bio) };
-    // SAFETY: `b` is live and owns its lock.
-    unsafe {
-        CRYPTO_THREAD_lock_free((*b).lock);
-        CRYPTO_free(b.cast(), ptr::null(), 0);
-    }
+    // SAFETY: the context is the BIO's own; `Drop` frees the lock it owns and then the block.
+    unsafe { drop(OwnedCtx::<BioDgramPairSt>::from_raw(b)) };
     1
 }
 
@@ -1239,7 +1258,14 @@ unsafe fn dgram_pair_write_inner(b: *mut BioDgramPairSt, buf: *const u8, mut sz:
                 break;
             }
             // SAFETY: `b` is live.
-            let new_len = unsafe { compute_rbuf_growth((*b).req_buf_len + sz, (*b).req_buf_len) };
+            let req_buf_len = unsafe { (*b).req_buf_len };
+            // A target that cannot be represented cannot be allocated. Treat the
+            // overflow as "no space" rather than wrapping, which would leave the
+            // growth loop spinning on an unchanged ring.
+            let Some(target) = req_buf_len.checked_add(sz) else {
+                break;
+            };
+            let new_len = compute_rbuf_growth(target, req_buf_len);
             if new_len == 0 {
                 break;
             }
@@ -1723,3 +1749,7 @@ pub unsafe extern "C" fn BIO_new_bio_dgram_pair(
         ret
     })
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioDgramPairSt => zero_state_sweep_bio_dgram_pair_st);

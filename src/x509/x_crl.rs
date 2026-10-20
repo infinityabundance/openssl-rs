@@ -51,7 +51,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
 use crate::asn1::a_dup::ASN1_item_dup;
 use crate::asn1::a_verify::ASN1_item_verify_ex;
@@ -65,10 +65,13 @@ use crate::asn1::prim::ASN1_INTEGER_cmp;
 use crate::asn1::string::ASN1_STRING_cmp;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_cmp, X509_ALGOR_it};
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_reasons::X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -176,6 +179,21 @@ pub struct X509CrlMethod {
     pub(crate) crl_verify: Option<unsafe extern "C" fn(*mut X509Crl, *mut c_void) -> c_int>,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a dynamic `X509_CRL_METHOD`
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `X509_CRL_METHOD_free` body: an `X509_CRL_METHOD` owns no sub-resources, so
+/// only the block release [`OwnedCtx`]'s `Drop` performs is left.
+// SAFETY: (a) holds: `destroy_body` is the authority's no-op `X509_CRL_METHOD` free body -- the
+// record owns no releasable members -- and it never releases the enclosing block, which
+// `OwnedCtx`'s `Drop` owns. (b) holds: `X509CrlMethod` is a `#[repr(C)]` record of an integer and
+// four `Option<unsafe extern "C" fn>` slots, so an all-zero block is a valid value and the empty
+// body is sound on it.
+unsafe impl CtxDestroy for X509CrlMethod {
+    unsafe fn destroy_body(_ptr: *mut X509CrlMethod) {}
+}
+
 /// `static X509_CRL_METHOD int_crl_meth = { 0, 0, 0, def_crl_lookup, def_crl_verify }` --
 /// `crypto/x509/x_crl.c:33-38`.
 ///
@@ -277,7 +295,11 @@ pub struct X509Crl {
     /// `ASN1_BIT_STRING signature` — embedded.
     pub(crate) signature: Asn1String,
     /// `CRYPTO_REF_COUNT references` — the count `X509_CRL_up_ref`/`X509_CRL_free` move.
-    pub(crate) references: c_int,
+    ///
+    /// The authority's `CRYPTO_REF_COUNT` is an atomic `int`; [`AtomicI32`] is the same size
+    /// and alignment, so this field stays at offset 128 while the exported refcount pair and
+    /// the ASN.1 item layer become race-free.
+    pub(crate) references: AtomicI32,
     /// `int flags` — the `EXFLAG_*` word.
     pub(crate) flags: c_int,
     /// `AUTHORITY_KEYID *akid` — cached authority key identifier (type withheld).
@@ -304,11 +326,19 @@ pub struct X509Crl {
     pub(crate) lock: *mut CryptoRwlock,
     /// `OSSL_LIB_CTX *libctx` — the object's library context.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — the object's property query, owned.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — the object's property query, an object-owned C-string **member buffer**.
+    /// Its ownership invariant is stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/
+    /// [`X509Crl::propq`]; see the `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this
+    /// exact offset so the `#[repr(C)]` layout is the authority's, and it is **module-private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    propq: *mut c_char,
 }
 
 const _: () = {
+    // `AtomicI32` must remain the authority's four-byte `int` so that `ref_offset = 128`
+    // addresses the same bytes for the ASN.1 item layer.
+    assert!(core::mem::size_of::<AtomicI32>() == core::mem::size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(core::mem::size_of::<X509Crl>() == 248);
     assert!(core::mem::offset_of!(X509Crl, crl) == 0);
     assert!(core::mem::offset_of!(X509Crl, sig_alg) == 88);
@@ -329,6 +359,38 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Crl, libctx) == 232);
     assert!(core::mem::offset_of!(X509Crl, propq) == 240);
 };
+
+impl X509Crl {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `X509_CRL::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. `X509_CRL::propq` is private, the item layer zeroes the
+/// object at construction, and the member is written only through this handle, so [`Self::of`]
+/// is **safe**.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    pub(crate) fn of(x: &'a mut X509Crl) -> PropqSlot<'a> {
+        // SAFETY: `x` is live; `propq` is private to this module, constructed NULL by
+        // the item layer and written only by this handle, so the invariant holds and
+        // the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut x.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The `X509_REVOKED` item — `ASN1_SEQUENCE(X509_REVOKED)` (`:22-26`)
@@ -718,18 +780,17 @@ unsafe extern "C" fn crl_cb(
                 }
                 crate::asn1::string::ASN1_INTEGER_free((*crl).crl_number);
                 crate::asn1::string::ASN1_INTEGER_free((*crl).base_crl_number);
-                CRYPTO_free(
-                    (*crl).propq.cast(),
-                    FILE.as_ptr(),
-                    LINE_FREE_PROPQ_FREE_POST,
-                );
+                // `crl` is live and its `propq` obeys the member-buffer invariant, so `clear` is
+                // that block's one release at the authority's own site (`:269`); a NULL incumbent
+                // makes it a no-op.
+                PropqSlot::of(&mut *crl).clear(SeamFile::new(FILE), LINE_FREE_PROPQ_FREE_POST);
             }
         }
         ASN1_OP_DUP_POST => {
             // SAFETY: `exarg` is the source `X509_CRL` for this operation.
             let old = exarg.cast::<X509Crl>();
             // SAFETY: `crl` and `old` are live.
-            if unsafe { ossl_x509_crl_set0_libctx(crl, (*old).libctx, (*old).propq) } == 0 {
+            if unsafe { ossl_x509_crl_set0_libctx(crl, (*old).libctx, (*old).propq()) } == 0 {
                 return 0;
             }
         }
@@ -1004,7 +1065,7 @@ unsafe extern "C" fn def_crl_verify(crl: *mut X509Crl, r: *mut c_void) -> c_int 
             ptr::null(),
             r.cast::<EvpPkey>(),
             (*crl).libctx,
-            (*crl).propq,
+            (*crl).propq(),
         )
     }
 }
@@ -1166,26 +1227,30 @@ pub unsafe extern "C" fn X509_CRL_METHOD_new(
     >,
     crl_verify: Option<unsafe extern "C" fn(*mut X509Crl, *mut c_void) -> c_int>,
 ) -> *mut X509CrlMethod {
-    // SAFETY: the allocator answers NULL or one `X509_CRL_METHOD`-sized block; the file and line
-    // are this unit's `OPENSSL_malloc` expansion.
-    let m = CRYPTO_malloc(
-        core::mem::size_of::<X509CrlMethod>(),
-        FILE.as_ptr(),
+    // `RawCtx::malloc_at` is the authority's own `OPENSSL_malloc(sizeof(*m))` at this unit's line;
+    // every field is set below before `assume_init` hands the block to the caller.
+    // SAFETY: the allocator answers NULL or a fresh block, and every field is written below
+    // before the validated transition.
+    let Some(raw) = RawCtx::<X509CrlMethod>::malloc_at(
+        SeamFile::new(FILE),
         LINE_METHOD_NEW,
-    )
-    .cast::<X509CrlMethod>();
-    if m.is_null() {
+        SeamFile::new(FILE),
+        LINE_METHOD_FREE,
+    ) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `m` is a fresh, unaliased allocation.
+    };
+    let p = raw.as_ptr();
+    // SAFETY: `p` is a fresh, unaliased allocation.
     unsafe {
-        (*m).crl_init = crl_init;
-        (*m).crl_free = crl_free;
-        (*m).crl_lookup = crl_lookup;
-        (*m).crl_verify = crl_verify;
-        (*m).flags = X509_CRL_METHOD_DYNAMIC;
+        (*p).crl_init = crl_init;
+        (*p).crl_free = crl_free;
+        (*p).crl_lookup = crl_lookup;
+        (*p).crl_verify = crl_verify;
+        (*p).flags = X509_CRL_METHOD_DYNAMIC;
     }
-    m
+    // SAFETY: every field of the method has been written above.
+    let m = unsafe { raw.assume_init() };
+    m.into_raw()
 }
 
 /// `void X509_CRL_METHOD_free(X509_CRL_METHOD *m)` -- `crypto/x509/x_crl.c:511-516`.
@@ -1202,9 +1267,11 @@ pub unsafe extern "C" fn X509_CRL_METHOD_free(m: *mut X509CrlMethod) {
     if unsafe { (*m).flags } & X509_CRL_METHOD_DYNAMIC == 0 {
         return;
     }
-    // SAFETY: `m` is the caller's `X509_CRL_METHOD_new` block, freed with this unit's
-    // `OPENSSL_free` expansion.
-    unsafe { CRYPTO_free(m.cast::<c_void>(), FILE.as_ptr(), LINE_METHOD_FREE) };
+    // SAFETY: `m` is the caller's `X509_CRL_METHOD_new` block; reclaiming it releases the block at
+    // the authority's own `OPENSSL_free` site.
+    drop(unsafe {
+        OwnedCtx::<X509CrlMethod>::from_raw_at(m, SeamFile::new(FILE), LINE_METHOD_FREE)
+    });
 }
 
 /// `void X509_CRL_set_meth_data(X509_CRL *crl, void *dat)` -- `crypto/x509/x_crl.c:518-521`.
@@ -1230,17 +1297,21 @@ pub unsafe extern "C" fn X509_CRL_get_meth_data(crl: *mut X509Crl) -> *mut c_voi
 }
 
 /// `int X509_CRL_up_ref(X509_CRL *crl)` — `crypto/x509/x509cset.c:74-84`, the CRL half of the
-/// reference-count pair `X509_CRL_it` maintains. It is landed here with the object it counts.
+/// reference-count pair `X509_CRL_it` maintains. It is landed here with the object it counts,
+/// and uses the shared [`crate::runtime::refcount::up_ref`] protocol (answers `1` when the new
+/// count is greater than one, `0` without changing it on a zero/destroying count or at
+/// `i32::MAX`).
 ///
 /// # Safety
 /// `crl` is live.
 #[no_mangle]
 pub unsafe extern "C" fn X509_CRL_up_ref(crl: *mut X509Crl) -> c_int {
-    // SAFETY: `crl` is live per the contract.
-    let i = unsafe { (*crl).references.wrapping_add(1) };
-    // SAFETY: `crl` is live and writable.
-    unsafe { (*crl).references = i };
-    c_int::from(i > 1)
+    // SAFETY: `crl` is live per the contract and owns the reference it is acting for; this
+    // call acquires exactly one new reference for the caller.
+    let refs = unsafe { &(*crl).references };
+    // SAFETY: `refs` is the live count field of the live object; the caller owns the
+    // existing reference this call acts for, and the acquired reference is owned once.
+    unsafe { crate::runtime::refcount::up_ref(refs) }
 }
 
 /// `int ossl_x509_crl_set0_libctx(X509_CRL *x, OSSL_LIB_CTX *libctx, const char *propq)` —
@@ -1257,16 +1328,22 @@ pub unsafe extern "C" fn ossl_x509_crl_set0_libctx(
     propq: *const c_char,
 ) -> c_int {
     if !x.is_null() {
-        // SAFETY: `x` is live per the contract.
+        // SAFETY: `x` is live per the contract and its `propq` obeys the member-buffer invariant.
         unsafe {
             (*x).libctx = libctx;
-            CRYPTO_free((*x).propq.cast(), FILE.as_ptr(), LINE_FREE_PROPQ);
-            (*x).propq = ptr::null_mut();
+            let mut slot = PropqSlot::of(&mut *x);
+            // Release any incumbent at the authority's own site (`:533`), leaving it unset. A NULL
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does. The
+            // returned token is the only way to store into the now-empty field.
+            let empty = slot.clear(SeamFile::new(FILE), LINE_FREE_PROPQ);
             if !propq.is_null() {
-                (*x).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_PROPQ);
-                if (*x).propq.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract; the seam answers a
+                // fresh block this call owns.
+                let Some(copy) = OwnedCStr::dup(propq, SeamFile::new(FILE), LINE_STRDUP_PROPQ)
+                else {
                     return 0;
-                }
+                };
+                empty.store(copy);
             }
         }
     }
@@ -1285,7 +1362,7 @@ mod tests {
         unsafe {
             let crl = X509_CRL_new();
             assert!(!crl.is_null());
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             assert_eq!((*crl).idp_reasons, CRLDP_ALL_REASONS);
             assert!(!(*crl).meth.is_null());
             assert!((*crl).crl_number.is_null());
@@ -1300,11 +1377,11 @@ mod tests {
         // SAFETY: `crl` is a live object this test owns.
         unsafe {
             let crl = X509_CRL_new();
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             assert_eq!(X509_CRL_up_ref(crl), 1);
-            assert_eq!((*crl).references, 2);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 2);
             X509_CRL_free(crl);
-            assert_eq!((*crl).references, 1);
+            assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
             X509_CRL_free(crl);
         }
     }
@@ -1335,3 +1412,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509CrlMethod => zero_state_sweep_x509_crl_method);

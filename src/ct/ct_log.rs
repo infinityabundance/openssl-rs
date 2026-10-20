@@ -26,6 +26,8 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
@@ -33,6 +35,7 @@ use crate::ct::ct_b64::CTLOG_new_from_base64_ex;
 use crate::ct::ct_sct::CT_V1_HASHLEN;
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys;
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::conf::lib::{NCONF_free, NCONF_get_string, NCONF_load, NCONF_new};
@@ -45,7 +48,8 @@ use crate::runtime::err::err_reasons::{
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -168,20 +172,59 @@ struct CtlogStoreLoadCtx {
     invalid_log_entries: usize,
 }
 
-/// `static CTLOG_STORE_LOAD_CTX *ctlog_store_load_ctx_new(void)` — `crypto/ct/ct_log.c:61-66`.
-fn ctlog_store_load_ctx_new() -> *mut CtlogStoreLoadCtx {
-    CRYPTO_zalloc(core::mem::size_of::<CtlogStoreLoadCtx>(), ptr::null(), 0)
-        .cast::<CtlogStoreLoadCtx>()
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `CTLOG`/`CTLOG_STORE` records, the load context, the duplicated strings and the
+// encoder scratch block
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `CTLOG_STORE_free` body (`crypto/ct/ct_log.c:131-138`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the property query and the log stack.
+// SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_STORE_free` body minus the block --
+// the property query and the log stack, each releaser NULL-tolerant, never the enclosing block.
+// (b) holds: an all-zero store has both members NULL, so the body is the authority's own all-empty
+// teardown -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for CtlogStore {
+    unsafe fn destroy_body(ptr: *mut CtlogStore) {
+        // SAFETY: `ptr` is a live record per the trait contract; its `propq` is NULL or this file's
+        // `CRYPTO_strdup` block and its `logs` is NULL or a live stack of `CTLOG`.
+        unsafe {
+            CRYPTO_free((*ptr).propq.cast::<c_void>(), ptr::null(), 0);
+            OPENSSL_sk_pop_free((*ptr).logs, Some(ctlog_free_void));
+        }
+    }
 }
 
-/// `static void ctlog_store_load_ctx_free(CTLOG_STORE_LOAD_CTX *ctx)` — `crypto/ct/ct_log.c:68-71`.
-///
-/// # Safety
-///
-/// `ctx` is NULL or a value [`ctlog_store_load_ctx_new`] returned.
-unsafe fn ctlog_store_load_ctx_free(ctx: *mut CtlogStoreLoadCtx) {
-    // SAFETY: `ctx` is NULL or this unit's own allocation per the contract.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+/// The authority's `CTLOG_free` body (`crypto/ct/ct_log.c:291-299`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the name, the key reference and the property query.
+// SAFETY: (a) holds: `destroy_body` is the authority's `CTLOG_free` body minus the block -- the
+// name, the key reference and the property query, each releaser NULL-tolerant, never the enclosing
+// block. (b) holds: an all-zero log has every member NULL, so the body is the authority's own
+// all-empty teardown -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for Ctlog {
+    unsafe fn destroy_body(ptr: *mut Ctlog) {
+        // SAFETY: `ptr` is a live record per the trait contract; `name`/`propq` are NULL or this
+        // file's `CRYPTO_strdup` blocks and `public_key` is NULL or an owned key.
+        unsafe {
+            CRYPTO_free((*ptr).name.cast::<c_void>(), ptr::null(), 0);
+            EVP_PKEY_free((*ptr).public_key);
+            CRYPTO_free((*ptr).propq.cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
+/// The authority's `ctlog_store_load_ctx_free` body (`crypto/ct/ct_log.c:68-71`) plus the separate
+/// `NCONF_free(conf)` every exit of [`CTLOG_STORE_load_file`] performs, without the block release
+/// [`OwnedCtx`]'s `Drop` performs.
+// SAFETY: (a) holds: `destroy_body` is `ctlog_store_load_ctx_free`'s body (`NCONF_free(conf)`) minus
+// the block -- NULL-tolerant, never the enclosing block. (b) holds: an all-zero load context has a
+// NULL `conf`, so the body is the authority's own all-empty teardown -- what the safe
+// `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for CtlogStoreLoadCtx {
+    unsafe fn destroy_body(ptr: *mut CtlogStoreLoadCtx) {
+        // SAFETY: `ptr` is a live load context per the trait contract; its `conf` is NULL or a live
+        // `CONF`.
+        unsafe { NCONF_free((*ptr).conf) };
+    }
 }
 
 /// `void ctlog_free_void(void *p)` — the `FreeFn` thunk `CTLOG_STORE_free` installs.
@@ -204,6 +247,9 @@ unsafe fn ct_v1_log_id_from_pkey(log: *mut Ctlog, pkey: *mut EvpPkey) -> c_int {
     let mut pkey_der: *mut c_uchar = ptr::null_mut();
     // SAFETY: `pkey` is live per the contract; `pkey_der` is an out-slot.
     let pkey_der_len = unsafe { i2d_PUBKEY(pkey, &mut pkey_der) };
+    // The encoder's block is owned from here; `Drop` is the authority's own tail release.
+    // SAFETY: `pkey_der` is NULL or a live block this crate allocated that no one else owns.
+    let pkey_der_owner = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, SeamFile::NULL, 0) };
     let mut len: c_uint = 0;
     let mut sha256: *mut EvpMd = ptr::null_mut();
 
@@ -237,8 +283,8 @@ unsafe fn ct_v1_log_id_from_pkey(log: *mut Ctlog, pkey: *mut EvpPkey) -> c_int {
 
     // SAFETY: `sha256` is NULL or the fetched digest this call owns.
     unsafe { EVP_MD_free(sha256) };
-    // SAFETY: `pkey_der` is NULL or the encoder's block.
-    unsafe { CRYPTO_free(pkey_der.cast::<c_void>(), ptr::null(), 0) };
+    // `pkey_der_owner`'s `Drop` is the authority's own `OPENSSL_free(pkey_der)`, after `sha256`.
+    drop(pkey_der_owner);
     ret
 }
 
@@ -253,39 +299,37 @@ pub unsafe extern "C" fn CTLOG_STORE_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut CtlogStore {
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<CtlogStore>(), ptr::null(), 0).cast::<CtlogStore>();
-    if ret.is_null() {
+    let Some(store) = OwnedCtx::<CtlogStore>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0)
+    else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ret` is a fresh zeroed allocation; `libctx` is a pointer value.
-    unsafe { (*ret).libctx = libctx };
+    // SAFETY: `store.as_ptr()` is a fresh zeroed record; `libctx` is a pointer value.
+    unsafe { (*store.as_ptr()).libctx = libctx };
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
-        let propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
-        if propq_copy.is_null() {
-            // SAFETY: `ret` is the allocation this call owns.
-            unsafe { CTLOG_STORE_free(ret) };
+        let propq_copy =
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
+        // The authority's failure path runs the whole `CTLOG_STORE_free`; the handle's `Drop` is
+        // that same release over the partially built record.
+        let Some(propq_copy) = propq_copy else {
             return ptr::null_mut();
-        }
-        // SAFETY: `ret` is live; `propq_copy` is the copy this call owns.
-        unsafe { (*ret).propq = propq_copy };
+        };
+        // SAFETY: `store` is live.
+        unsafe { (*store.as_ptr()).propq = propq_copy.into_raw() };
     }
 
     // `OPENSSL_sk_new_null` answers NULL or a live stack.
     let logs = OPENSSL_sk_new_null();
-    // SAFETY: `ret` is live and its `logs` field is a writable slot.
-    unsafe { (*ret).logs = logs };
+    // SAFETY: `store` is live and its `logs` field is a writable slot.
+    unsafe { (*store.as_ptr()).logs = logs };
     if logs.is_null() {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_LOG_116) };
-        // SAFETY: `ret` is the allocation this call owns.
-        unsafe { CTLOG_STORE_free(ret) };
         return ptr::null_mut();
     }
 
-    ret
+    store.into_raw()
 }
 
 /// `CTLOG_STORE *CTLOG_STORE_new(void)` — `crypto/ct/ct_log.c:126-129`.
@@ -302,15 +346,10 @@ pub extern "C" fn CTLOG_STORE_new() -> *mut CtlogStore {
 /// `store` is NULL or a live `CTLOG_STORE` this crate owns and that is not used afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn CTLOG_STORE_free(store: *mut CtlogStore) {
-    if store.is_null() {
-        return;
-    }
-    // SAFETY: `store` is live per the contract; each field is NULL or owned.
-    unsafe {
-        CRYPTO_free((*store).propq.cast::<c_void>(), ptr::null(), 0);
-        OPENSSL_sk_pop_free((*store).logs, Some(ctlog_free_void));
-        CRYPTO_free(store.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `store` is NULL or a live `CTLOG_STORE` this crate owns and that is not used
+    // afterwards; `from_raw` reclaims it and `Drop` runs the authority's own free body and block
+    // release.
+    drop(unsafe { OwnedCtx::<CtlogStore>::from_raw_at(store, SeamFile::NULL, 0) });
 }
 
 /// `static int ctlog_new_from_conf(CTLOG_STORE *store, CTLOG **ct_log, const CONF *conf, const char
@@ -375,16 +414,28 @@ unsafe extern "C" fn ctlog_store_load_log(
     }
 
     // SAFETY: `log_name` is readable for `log_name_len` bytes per the contract.
-    let tmp = unsafe { CRYPTO_strndup(log_name, log_name_len as usize, ptr::null(), 0) };
-    if tmp.is_null() {
+    let tmp = unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strndup(log_name, log_name_len as usize, ptr::null(), 0),
+            SeamFile::NULL,
+            0,
+        )
+    };
+    let Some(tmp) = tmp else {
         return -1;
-    }
+    };
 
     // SAFETY: `load_ctx` is live per the contract; `tmp` is NUL-terminated.
-    let ret =
-        unsafe { ctlog_new_from_conf((*load_ctx).log_store, &mut ct_log, (*load_ctx).conf, tmp) };
-    // SAFETY: `tmp` is the `CRYPTO_strndup` this call owns.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), ptr::null(), 0) };
+    let ret = unsafe {
+        ctlog_new_from_conf(
+            (*load_ctx).log_store,
+            &mut ct_log,
+            (*load_ctx).conf,
+            tmp.as_ptr(),
+        )
+    };
+    // The authority releases `tmp` right after the lookup; `Drop` is that release.
+    drop(tmp);
 
     if ret < 0 {
         return ret;
@@ -417,47 +468,42 @@ pub unsafe extern "C" fn CTLOG_STORE_load_file(
     store: *mut CtlogStore,
     file: *const c_char,
 ) -> c_int {
-    let mut ret: c_int = 0;
-    let load_ctx = ctlog_store_load_ctx_new();
-
-    if load_ctx.is_null() {
-        return 0;
-    }
-    // SAFETY: `load_ctx` is live per the constructor.
+    let ret: c_int = 0;
+    // The load context owns its `CONF` and its block; `Drop` is the authority's own
+    // `NCONF_free(conf)` + `ctlog_store_load_ctx_free` at every exit, in that order.
+    let Some(load_ctx) =
+        OwnedCtx::<CtlogStoreLoadCtx>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0)
+    else {
+        return ret;
+    };
+    // SAFETY: `load_ctx.as_ptr()` is a fresh zeroed load context.
     unsafe {
-        (*load_ctx).log_store = store;
-        (*load_ctx).conf = NCONF_new(ptr::null_mut::<ConfMethod>());
+        (*load_ctx.as_ptr()).log_store = store;
+        (*load_ctx.as_ptr()).conf = NCONF_new(ptr::null_mut::<ConfMethod>());
     }
     // SAFETY: `load_ctx` is live.
-    if unsafe { (*load_ctx).conf }.is_null() {
-        // SAFETY: `load_ctx` is live; `conf` is NULL.
-        unsafe { NCONF_free((*load_ctx).conf) };
-        // SAFETY: `load_ctx` is this call's allocation.
-        unsafe { ctlog_store_load_ctx_free(load_ctx) };
+    if unsafe { (*load_ctx.as_ptr()).conf }.is_null() {
         return ret;
     }
 
     // SAFETY: `load_ctx` is live; `file` is NUL-terminated.
-    if unsafe { NCONF_load((*load_ctx).conf, file, ptr::null_mut()) } <= 0 {
+    if unsafe { NCONF_load((*load_ctx.as_ptr()).conf, file, ptr::null_mut()) } <= 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_LOG_229) };
-        // SAFETY: `load_ctx` is live; `conf` is live.
-        unsafe { NCONF_free((*load_ctx).conf) };
-        // SAFETY: `load_ctx` is this call's allocation.
-        unsafe { ctlog_store_load_ctx_free(load_ctx) };
         return ret;
     }
 
     // SAFETY: `load_ctx` is live; its `conf` is live.
-    let enabled_logs =
-        unsafe { NCONF_get_string((*load_ctx).conf, ptr::null(), c"enabled_logs".as_ptr()) };
+    let enabled_logs = unsafe {
+        NCONF_get_string(
+            (*load_ctx.as_ptr()).conf,
+            ptr::null(),
+            c"enabled_logs".as_ptr(),
+        )
+    };
     if enabled_logs.is_null() {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_LOG_235) };
-        // SAFETY: `load_ctx` is live; `conf` is live.
-        unsafe { NCONF_free((*load_ctx).conf) };
-        // SAFETY: `load_ctx` is this call's allocation.
-        unsafe { ctlog_store_load_ctx_free(load_ctx) };
         return ret;
     }
 
@@ -468,26 +514,17 @@ pub unsafe extern "C" fn CTLOG_STORE_load_file(
             b',' as c_int,
             1,
             Some(ctlog_store_load_log),
-            load_ctx.cast::<c_void>(),
+            load_ctx.as_ptr().cast::<c_void>(),
         )
     };
     // SAFETY: `load_ctx` is live.
-    if parsed == 0 || unsafe { (*load_ctx).invalid_log_entries } > 0 {
+    if parsed == 0 || unsafe { (*load_ctx.as_ptr()).invalid_log_entries } > 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_LOG_240) };
-        // SAFETY: `load_ctx` is live; `conf` is live.
-        unsafe { NCONF_free((*load_ctx).conf) };
-        // SAFETY: `load_ctx` is this call's allocation.
-        unsafe { ctlog_store_load_ctx_free(load_ctx) };
         return ret;
     }
 
-    ret = 1;
-    // SAFETY: `load_ctx` is live; `conf` is live.
-    unsafe { NCONF_free((*load_ctx).conf) };
-    // SAFETY: `load_ctx` is this call's allocation.
-    unsafe { ctlog_store_load_ctx_free(load_ctx) };
-    ret
+    1
 }
 
 /// `int CTLOG_STORE_load_default_file(CTLOG_STORE *store)` — `crypto/ct/ct_log.c:161-169`.
@@ -524,45 +561,42 @@ pub unsafe extern "C" fn CTLOG_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut Ctlog {
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Ctlog>(), ptr::null(), 0).cast::<Ctlog>();
-    if ret.is_null() {
+    let Some(ctlog) = OwnedCtx::<Ctlog>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ret` is a fresh zeroed allocation; `libctx` is a pointer value.
-    unsafe { (*ret).libctx = libctx };
+    // SAFETY: `ctlog.as_ptr()` is a fresh zeroed record; `libctx` is a pointer value.
+    unsafe { (*ctlog.as_ptr()).libctx = libctx };
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
-        let propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
-        if propq_copy.is_null() {
-            // SAFETY: `ret` is the allocation this call owns.
-            unsafe { CTLOG_free(ret) };
+        let propq_copy =
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
+        // The authority's failure path runs the whole `CTLOG_free`; the handle's `Drop` is that
+        // same release over the partially built record.
+        let Some(propq_copy) = propq_copy else {
             return ptr::null_mut();
-        }
-        // SAFETY: `ret` is live; `propq_copy` is the copy this call owns.
-        unsafe { (*ret).propq = propq_copy };
+        };
+        // SAFETY: `ctlog` is live.
+        unsafe { (*ctlog.as_ptr()).propq = propq_copy.into_raw() };
     }
 
     // SAFETY: `name` is NUL-terminated per the contract.
-    let name_copy = unsafe { CRYPTO_strdup(name, ptr::null(), 0) };
-    if name_copy.is_null() {
-        // SAFETY: `ret` is the allocation this call owns.
-        unsafe { CTLOG_free(ret) };
+    let name_copy =
+        unsafe { OwnedStr::adopt(CRYPTO_strdup(name, ptr::null(), 0), SeamFile::NULL, 0) };
+    let Some(name_copy) = name_copy else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ret` is live; `name_copy` is the copy this call owns.
-    unsafe { (*ret).name = name_copy };
+    };
+    // SAFETY: `ctlog` is live.
+    unsafe { (*ctlog.as_ptr()).name = name_copy.into_raw() };
 
-    // SAFETY: `ret` is live; `public_key` is live per the contract.
-    if unsafe { ct_v1_log_id_from_pkey(ret, public_key) } != 1 {
-        // SAFETY: `ret` is the allocation this call owns.
-        unsafe { CTLOG_free(ret) };
+    // SAFETY: `ctlog` is live; `public_key` is live per the contract.
+    if unsafe { ct_v1_log_id_from_pkey(ctlog.as_ptr(), public_key) } != 1 {
         return ptr::null_mut();
     }
 
-    // SAFETY: `ret` is live; `public_key`'s ownership passes here.
-    unsafe { (*ret).public_key = public_key };
-    ret
+    // SAFETY: `ctlog` is live; `public_key`'s ownership passes here.
+    unsafe { (*ctlog.as_ptr()).public_key = public_key };
+    ctlog.into_raw()
 }
 
 /// `CTLOG *CTLOG_new(EVP_PKEY *public_key, const char *name)` — `crypto/ct/ct_log.c:285-288`.
@@ -584,16 +618,9 @@ pub unsafe extern "C" fn CTLOG_new(public_key: *mut EvpPkey, name: *const c_char
 /// `log` is NULL or a live `CTLOG` this crate owns and that is not used afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn CTLOG_free(log: *mut Ctlog) {
-    if log.is_null() {
-        return;
-    }
-    // SAFETY: `log` is live per the contract; each field is NULL or owned.
-    unsafe {
-        CRYPTO_free((*log).name.cast::<c_void>(), ptr::null(), 0);
-        EVP_PKEY_free((*log).public_key);
-        CRYPTO_free((*log).propq.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(log.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `log` is NULL or a live `CTLOG` this crate owns and that is not used afterwards;
+    // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
+    drop(unsafe { OwnedCtx::<Ctlog>::from_raw_at(log, SeamFile::NULL, 0) });
 }
 
 /// `const char *CTLOG_get0_name(const CTLOG *log)` — `crypto/ct/ct_log.c:301-304`.
@@ -651,16 +678,25 @@ pub unsafe extern "C" fn CTLOG_STORE_get0_log_by_id(
 ) -> *const Ctlog {
     // SAFETY: `store` is live per the contract.
     let num = unsafe { OPENSSL_sk_num((*store).logs) };
+    // The stored ID is fixed at `CT_V1_HASHLEN` bytes. The authority compares the caller's
+    // length against it unconditionally (`memcmp(log->log_id, log_id, log_id_len)`), which reads
+    // past the field whenever `log_id_len > CT_V1_HASHLEN`. Only a full-length v1 log ID can name
+    // a log, so refuse every other length instead of reproducing that out-of-bounds read
+    // (§17: UB in the C authority is not reproduced; the compatibility delta is a NULL answer
+    // for a call the authority's own C would have read past its buffer).
+    if log_id_len != CT_V1_HASHLEN {
+        return ptr::null();
+    }
     let mut i = 0;
     while i < num {
         // SAFETY: `store->logs` is live and `i` is in bounds.
         let log = unsafe { OPENSSL_sk_value((*store).logs, i) }.cast::<Ctlog>();
-        // SAFETY: `log` is a live element; both buffers are readable for `log_id_len` bytes.
+        // SAFETY: `log` is a live element; both buffers are readable for `CT_V1_HASHLEN` bytes.
         if unsafe {
             sys::memcmp(
                 (*log).log_id.as_ptr().cast::<c_void>(),
                 log_id.cast::<c_void>(),
-                log_id_len,
+                CT_V1_HASHLEN,
             )
         } == 0
         {
@@ -669,4 +705,44 @@ pub unsafe extern "C" fn CTLOG_STORE_get0_log_by_id(
         i += 1;
     }
     ptr::null()
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CtlogStore => zero_state_sweep_ctlog_store, Ctlog => zero_state_sweep_ctlog, CtlogStoreLoadCtx => zero_state_sweep_ctlog_store_load_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Only a full-length v1 log ID may match, and an over-long caller length must be refused
+    /// before `memcmp` reads past the fixed `log_id` field (the authority reads past it).
+    #[test]
+    fn an_over_long_log_id_is_refused_without_reading_past_the_field() {
+        // SAFETY: `Ctlog`'s fields are pointers, a byte array and an integer, so zero is valid.
+        let mut log: Ctlog = unsafe { core::mem::zeroed() };
+        log.log_id = [0xAB; CT_V1_HASHLEN];
+        let stack = OPENSSL_sk_new_null();
+        assert!(!stack.is_null());
+        // SAFETY: `stack` is live and takes the pointer as its element.
+        assert!(unsafe { OPENSSL_sk_push(stack, (&mut log as *mut Ctlog).cast::<c_void>()) } > 0);
+        let store = CtlogStore {
+            libctx: ptr::null_mut(),
+            propq: ptr::null_mut(),
+            logs: stack,
+        };
+        let id = [0xABu8; CT_V1_HASHLEN];
+        // SAFETY: `store` is live for this frame, the stack holds `&log`, and `id` is readable.
+        unsafe {
+            assert_eq!(
+                CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), CT_V1_HASHLEN),
+                &log as *const Ctlog
+            );
+            // A length past the field must not reach `memcmp`; the old body read byte 33.
+            assert!(CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), CT_V1_HASHLEN + 1).is_null());
+            assert!(CTLOG_STORE_get0_log_by_id(&store, id.as_ptr(), 0).is_null());
+            // `OPENSSL_sk_free` releases the stack and its array, never the elements.
+            crate::runtime::stack::OPENSSL_sk_free(stack);
+        }
+    }
 }

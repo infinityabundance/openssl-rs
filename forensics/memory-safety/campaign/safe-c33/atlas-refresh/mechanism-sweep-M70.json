@@ -1,0 +1,179 @@
+{
+ "receipt": "mechanism-sweep-M70",
+ "branch": "integrate/safe-c33",
+ "source_head": "44e389df3",
+ "worktree": true,
+ "date": "2026-10-20",
+ "verification_level": "FAST plus BATCH; STOP invoked on one confirmed memory-safety defect class (uninitialised read / invalid free on an allocation-failure path) and repaired in this batch; one unsafe-contract understatement repaired; targeted Miri control added and run under both aliasing models.",
+ "scope": "Per-file contract audit of the SLH-DSA key management and signature provider rows, the SM2 asymmetric-cipher and signature rows, the provider method-store/cache bridges, the shared provider utility helpers (cipher, digest, MAC context, memdup), the RFC 3492 punycode decoder and the QUIC variable-length integer codec. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred.",
+ "files": [
+  "src/provider/slh_dsa_kmgmt.rs",
+  "src/provider/slh_dsa_sig.rs",
+  "src/provider/sm2_enc.rs",
+  "src/provider/sm2_sig.rs",
+  "src/provider/stores.rs",
+  "src/provider/util.rs",
+  "src/punycode.rs",
+  "src/quic_vlint.rs"
+ ],
+ "files_not_run": [],
+ "defects": [
+  {
+   "id": "M70-D1",
+   "files": [
+    "src/provider/slh_dsa_sig.rs",
+    "src/provider/sm2_sig.rs"
+   ],
+   "lines_pre_fix": "slh_dsa_sig.rs:389-402; sm2_sig.rs:392-402",
+   "line_post_fix": 389,
+   "severity": "medium",
+   "class": "uninitialised read / invalid free on an allocation-failure path",
+   "description": "Both AlgorithmIdentifier builders declared the packet as MaybeUninit::<Wpacket>::uninit() and then called WPACKET_cleanup unconditionally, mirroring the authority. WPACKET_init_der can refuse for two reasons: a bad argument (null buffer or zero length), which returns before writing anything, and a failed WPACKET_SUB allocation inside wpacket_intern_init_len, which has written curr/written but not subs. WPACKET_cleanup reads (*pkt).subs, so on that allocation-failure arm the Rust read an uninitialised *mut WpacketSub and could dereference or free a garbage pointer (the C authority has the same defect). The packet is now core::mem::zeroed::<Wpacket>() with a SAFETY: note; Wpacket is a #[repr(C)] record of raw pointers, size_t values and one unsigned int bitfield, so all-zero is a valid value and leaves an empty sub-packet chain. WPACKET_init_der writes every field on success, so no reachable success-path behaviour changes. A test-only negative control drives the argument refusal into the same early-return state and cleans up the zeroed packet."
+  },
+  {
+   "id": "M70-D2",
+   "file": "src/quic_vlint.rs",
+   "lines_pre_fix": "163-166, 184-186",
+   "line_post_fix": 163,
+   "severity": "low",
+   "class": "unsafe-contract understatement",
+   "description": "ossl_quic_vlint_decode's # Safety contract read '`v` is NULL or writable', but the body writes *v unconditionally on success (the authority dereferences it without a NULL test). A caller obeying the stated contract could therefore cause UB through a documented precondition. The contract now requires v to be non-NULL and writable and the inline SAFETY: note says the caller's contract is the only guard. No code changed."
+  }
+ ],
+ "class_findings_outside_batch": {
+  "summary": "The M70-D1 pattern (cleanup of a non-zeroed packet after a possibly-refused WPACKET initialisation) remains in six other source files. It is a shared-callee defect: wpacket_intern_init_len allocates the first WPACKET_SUB after writing curr/written but without clearing subs on failure.",
+  "unrepaired_sites": [
+   "src/provider/ecdsa_sig.rs:288-300",
+   "src/provider/dsa_sig.rs:259-311",
+   "src/provider/eddsa_sig.rs:348-376",
+   "src/provider/ml_dsa_sig.rs:313-325",
+   "src/provider/ml_kem_kmgmt.rs:1355-1373",
+   "src/provider/kdf.rs:2114-2150",
+   "src/provider/kdf.rs:4905-4923"
+  ],
+  "already_guarded": [
+   "src/provider/rsa_sig.rs:669-681 (returns before cleanup when init refuses)",
+   "src/provider/der_rsa_sig.rs, der_ec_sig.rs, der_sm2_sig.rs, der_ecx_key.rs (cleanup inside the successful-init branch or test-only)"
+  ],
+  "recommended_repair": "Clear (*pkt).subs in wpacket_intern_init_len before OwnedSub::zalloc, so every initialiser that reaches it leaves a cleanable packet on refusal. That is a change to a shared ownership mechanism and requires its own BOUNDARY sweep (independent caller audit, targeted Miri, negative control) rather than being folded into this per-file batch.",
+  "severity": "medium",
+  "status": "QUEUED"
+ },
+ "documentation_corrections": [
+  "ossl_quic_vlint_decode's # Safety contract now names v as non-NULL and writable instead of NULL-or-writable.",
+  "The two repaired AlgorithmIdentifier builders carry a SAFETY: note recording why the zeroed image is valid for Wpacket and what the refusal path does."
+ ],
+ "new_unsafe_assumptions": [],
+ "hidden_obligations": [],
+ "retained_obligations": [
+  "The provider dispatch callbacks receive borrowed raw pointers; key and context lifetimes are the EVP caller's obligation.",
+  "ProvSlhDsaCtx.alg is a borrowed static algorithm-name literal supplied by this file's own MAKE_SIGNATURE_FUNCTIONS expansion; the newctx dispatch contract is the guard.",
+  "ProvSlhDsaCtx.key and ProvSm2Ctx.key / ProvSm2SigCtx.ec are borrowed EVP/EC objects carrying their own reference; the destructor body releases exactly that reference.",
+  "ProvSlhDsaCtx and SlhDsaGenCtx destructors rely on the OB-3 zero-validity contract, covered by the existing zero_state_sweep controls.",
+  "The method-store slots in provider/stores.rs hold objects context_init built and released once; the bridge's typed cast is valid only under that slot invariant.",
+  "slh_dsa_signverify_msg_init replaces ctx->hash_ctx without releasing a previous one when an init with a key is repeated: the authority's own leak, not UB, intentionally preserved."
+ ],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [],
+ "excluded_symbol_changes": [],
+ "unsafe_operations_introduced": [
+  "src/provider/slh_dsa_sig.rs: core::mem::zeroed::<Wpacket>() replaces MaybeUninit::<Wpacket>::uninit(); it establishes the valid all-zero packet that makes the conditional cleanup defined, with a SAFETY: note.",
+  "src/provider/sm2_sig.rs: the same core::mem::zeroed::<Wpacket>() replacement with its SAFETY: note.",
+  "test-only: core::mem::zeroed::<Wpacket>() in the M70-D1 negative control."
+ ],
+ "unsafe_operations_removed": [],
+ "contracts_reused": [
+  "OB-1 OwnedBuf (adopt_plain, new, new_zeroed, into_raw)",
+  "OB-2 OwnedStr (adopt) for the SLH-DSA generation property query",
+  "OB-3 OwnedCtx / RawCtx / CtxDestroy and the zero-validity obligation",
+  "OB-4 member-buffer slots",
+  "RC-1 reference counting for EC_KEY_up_ref/EC_KEY_free and EVP_MD_up_ref/EVP_MD_free",
+  "Provider dispatch lifetime, the OSSL_CALLBACK borrower contract, the WPACKET init/cleanup contract and the CRYPTO_* allocator seam"
+ ],
+ "secret_bearing_buffers": [
+  "src/provider/slh_dsa_kmgmt.rs SlhDsaGenCtx.entropy: the caller-supplied seed; cleansed by SlhDsaGenCtx::destroy_body on gen_cleanup and on the gen_init failure path, and the buffer is the authority's own OPENSSL_zalloc block.",
+  "src/provider/slh_dsa_kmgmt.rs export params: the private-key octet-string copy made by OSSL_PARAM_BLD is cleansed for every entry (also the public one) before OSSL_PARAM_free, matching the authority's loop.",
+  "src/provider/slh_dsa_sig.rs ProvSlhDsaCtx.add_random: the caller's test entropy; cleansed in ProvSlhDsaCtx::destroy_body (freectx and the newctx/dupctx failure paths) and never before the signature that consumes it.",
+  "src/provider/slh_dsa_sig.rs slh_dsa_sign add_rand: the provider-drawn one-time randomness; cleansed after the sign when and only when the provider drew it (the authority's own rule). The caller's test-entropy buffer is borrowed and not cleansed by this unit.",
+  "src/provider/slh_dsa_sig.rs context_string: public context metadata, not cleansed (authority parity).",
+  "src/provider/slh_dsa_sig.rs, slh_dsa_kmgmt.rs private key: borrowed through EVP_PKEY and released by its owner, never copied by these units.",
+  "src/provider/sm2_enc.rs, src/provider/sm2_sig.rs private key: borrowed EC_KEY with its own reference; released through EC_KEY_free; B19's BIGNUM cleansing covers the key components.",
+  "src/provider/sm2_sig.rs id (SM2 distid): public user identity, released plainly through the authority's free sites; propq is public metadata.",
+  "src/provider/sm2_sig.rs digest arrays: the public Z||message digest, not secret-bearing.",
+  "src/provider/util.rs ossl_prov_memdup: copies a caller's bucket (its KDF callers copy secret material); the caller's own destructor performs the cleanse, as in the authority. The helper stores no state.",
+  "src/provider/stores.rs, src/punycode.rs, src/quic_vlint.rs: no secret-bearing storage."
+ ],
+ "gates": {
+  "fast_fmt": "PASS: cargo fmt --all -- --check, court container",
+  "fast_check": "PASS: cargo check --lib",
+  "fast_focused_tests": "PASS: --test-threads=4 slh_dsa 8 passed / 0 failed; sm2 10 passed / 0 failed; the new control provider::slh_dsa_sig::tests::a_refused_der_init_leaves_a_cleanable_packet 1 passed / 0 failed",
+  "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+  "full_lib_threaded": "PASS: 1674 passed / 0 failed / 27 ignored in 102.23 s with --test-threads=4",
+  "full_lib_serial": "PASS: 1674 passed / 0 failed / 27 ignored in 223.14 s with --test-threads=1",
+  "miri_control": "PASS: cargo miri test --lib a_refused_der_init_leaves_a_cleanable_packet under Stacked Borrows and under Tree Borrows (pinned nightly-2026-10-01, -Zmiri-disable-isolation)",
+  "structural_guards": "No #[repr(C)] layout, exported symbol, signature, unsafe lint attribute, allocation size or FILE value changed. The only production code changes are the zeroed packet image in two builders and a doc contract correction."
+ },
+ "boundary_control": {
+  "negative_control_added": true,
+  "name": "provider::slh_dsa_sig::tests::a_refused_der_init_leaves_a_cleanable_packet",
+  "reason": "The repaired branch is only reachable through WPACKET_init_der's node-allocation refusal, and no allocator-injection harness exists for it. The control drives the argument refusal, which takes the same early-return path out of the initialiser, and then runs WPACKET_cleanup on the image the repair establishes; under Miri an uninitialised subs read is an error, so a regression to MaybeUninit fails the control rather than passing silently."
+ },
+ "next_queue": {
+  "file": "src/rand/pool.rs",
+  "then": [
+   "src/rand/prov_seed.rs",
+   "src/rand/rand_uniform.rs",
+   "src/rand/sys.rs",
+   "src/rc2.rs",
+   "src/rc4.rs",
+   "src/rsa/asn1.rs",
+   "src/rsa/backend.rs"
+  ]
+ },
+ "deferred": [
+  {
+   "gate": "allocator-failure injection exercising the repaired WPACKET refusal end to end",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY (with the shared-callee repair)"
+  },
+  {
+   "gate": "authority differential for the twelve SLH-DSA keymgmt/signature rows and the SM2 cipher/signature rows",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "ASan over the SLH-DSA and SM2 provider contexts",
+   "status": "NOT_RUN",
+   "runs_at": "BOUNDARY"
+  },
+  {
+   "gate": "constant-time measurement for SLH-DSA signing and SM2 sign/verify",
+   "status": "NOT_RUN",
+   "runs_at": "SEAL"
+  },
+  {
+   "gate": "dependency-graph regeneration against the exact candidate",
+   "status": "NOT_RUN",
+   "runs_at": "BATCH checkpoint after commit"
+  },
+  {
+   "gate": "root-cause repair of the shared wpacket_intern_init_len refusal image, with independent review of the remaining six callers",
+   "status": "NOT_RUN",
+   "runs_at": "dedicated BOUNDARY sweep"
+  },
+  {
+   "gate": "FRF suite and SEAL",
+   "status": "NOT_RUN",
+   "runs_at": "SEAL"
+  }
+ ],
+ "residuals": [
+  "The eight files are audited, not SAFETY_DISCHARGED.",
+  "The M70-D1 class remains in six other source files until the shared-callee repair is scheduled; those sites are enumerated above.",
+  "slh_dsa_signverify_msg_init overwrites ctx->hash_ctx without releasing the previous context on a repeated init with a key: authority parity, a leak, not UB.",
+  "ossl_prov_memdup leaves *dest untouched on allocation failure where the authority assigns NULL; no in-crate caller reads *dest after a 0 answer.",
+  "Borrowed key, algorithm-name and distid lifetimes are EVP caller obligations.",
+  "No constant-time claim is made for any operation in these files."
+ ],
+ "not_discharged": true
+}

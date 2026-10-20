@@ -43,7 +43,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::bn::arith::BN_cmp;
@@ -101,9 +101,9 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -150,12 +150,18 @@ const OSSL_GEN_PARAM_ITERATION: *const c_char = c"iteration".as_ptr();
 /// The unit's own `__FILE__`. `dsa_kmgmt.c` is a plain `.c`, so it carries the source-tree prefix.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
     1
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a generation-context key buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `ossl_assert` — `include/internal/assert.h`, the NDEBUG form.
 fn ossl_assert(expr: bool) -> c_int {
@@ -803,7 +809,11 @@ unsafe extern "C" fn dsa_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let mut gctx = CRYPTO_zalloc(core::mem::size_of::<DsaGenCtx>(), FILE, 416).cast::<DsaGenCtx>();
+    let mut gctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<DsaGenCtx>(), FILE, 416)
+    }
+    .cast::<DsaGenCtx>();
     if !gctx.is_null() {
         // SAFETY: `gctx` is this call's own allocation.
         unsafe {
@@ -853,14 +863,27 @@ unsafe extern "C" fn dsa_gen_set_template(genctx: *mut c_void, templ: *mut c_voi
 unsafe fn dsa_set_gen_seed(gctx: *mut DsaGenCtx, seed: *mut u8, seedlen: usize) -> c_int {
     // SAFETY: `gctx` is live per the contract.
     unsafe {
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE, 454);
+        // The old seed's handle releases and cleanses it at the authority's own site; the
+        // replacement is the helper's fresh block, handed to the field through a second handle, and
+        // a refusal leaves the field NULL.
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).seed.cast::<c_uchar>(),
+            (*gctx).seedlen,
+            FILE_SEAM,
+            454,
+        ));
         (*gctx).seed = ptr::null_mut();
         (*gctx).seedlen = 0;
         if !seed.is_null() && seedlen > 0 {
-            (*gctx).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE, 458).cast::<u8>();
-            if (*gctx).seed.is_null() {
+            let Some(buf) = OwnedBuf::adopt_cleansed(
+                CRYPTO_memdup(seed.cast(), seedlen, FILE, 458).cast::<c_uchar>(),
+                seedlen,
+                FILE_SEAM,
+                458,
+            ) else {
                 return 0;
-            }
+            };
+            (*gctx).seed = buf.into_raw().cast::<u8>();
             (*gctx).seedlen = seedlen;
         }
     }
@@ -940,22 +963,44 @@ unsafe extern "C" fn dsa_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdname.cast(), FILE, 513);
-            (*gctx).mdname = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 514);
-            if (*gctx).mdname.is_null() {
+            // The old string releases through its handle at the authority's own plain free; the
+            // replacement is the helper's fresh block, handed to the field through a second
+            // handle, and a refusal leaves the field NULL.
+            drop(OwnedBuf::adopt_plain(
+                (*gctx).mdname.cast::<c_uchar>(),
+                FILE_SEAM,
+                513,
+            ));
+            let Some(buf) = OwnedBuf::adopt_plain(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 514).cast::<c_uchar>(),
+                FILE_SEAM,
+                514,
+            ) else {
+                (*gctx).mdname = ptr::null_mut();
                 return 0;
-            }
+            };
+            (*gctx).mdname = buf.into_raw().cast::<c_char>();
         }
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_FFC_DIGEST_PROPS);
         if !p.is_null() {
             if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdprops.cast(), FILE, 523);
-            (*gctx).mdprops = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 524);
-            if (*gctx).mdprops.is_null() {
+            // As above, for the digest-properties string.
+            drop(OwnedBuf::adopt_plain(
+                (*gctx).mdprops.cast::<c_uchar>(),
+                FILE_SEAM,
+                523,
+            ));
+            let Some(buf) = OwnedBuf::adopt_plain(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE, 524).cast::<c_uchar>(),
+                FILE_SEAM,
+                524,
+            ) else {
+                (*gctx).mdprops = ptr::null_mut();
                 return 0;
-            }
+            };
+            (*gctx).mdprops = buf.into_raw().cast::<c_char>();
         }
     }
     1
@@ -1219,9 +1264,25 @@ unsafe extern "C" fn dsa_gen_cleanup(genctx: *mut c_void) {
 
     // SAFETY: `gctx` is this call's own context and every member is its own allocation.
     unsafe {
-        CRYPTO_free((*gctx).mdname.cast(), FILE, 706);
-        CRYPTO_free((*gctx).mdprops.cast(), FILE, 707);
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE, 708);
+        // Each owned field's handle releases its own block at the authority's own site -- the
+        // `seed` cleanses, the two strings are plain -- and the context block itself stays on the
+        // raw seam (its release is part of this destructor body).
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).mdname.cast::<c_uchar>(),
+            FILE_SEAM,
+            706,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).mdprops.cast::<c_uchar>(),
+            FILE_SEAM,
+            707,
+        ));
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).seed.cast::<c_uchar>(),
+            (*gctx).seedlen,
+            FILE_SEAM,
+            708,
+        ));
         CRYPTO_free(gctx.cast(), FILE, 709);
     }
 }

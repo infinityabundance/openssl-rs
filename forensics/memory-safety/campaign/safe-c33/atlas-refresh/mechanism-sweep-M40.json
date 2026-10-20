@@ -1,0 +1,237 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "49933eef4",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by M39 (src/asn1/{t_pkey,t_spki,typ,x_bignum,x_info,x_int64,x_long,x_pkey}.rs). Contract checks against OpenSSL 3.6.4 for the two number printers, the SPKI printer, the generated d2i_*/i2d_* wrapper layer and ASN1_NULL sentinel, the BIGNUM/CBIGNUM primitive hooks, the LONG/ZLONG slot-resident primitives, the eight fixed-width integer primitives, and the X509_INFO/X509_PKEY lifecycles. Two inaccurate unsafe-contract statements repaired, both documentation-only with no behaviour change. No new unsafe operation, FFI symbol, allocator coordinate or repr(C) layout introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/asn1/t_spki.rs and src/asn1/x_int64.rs contract statements repaired; src/asn1/{t_pkey,typ,x_bignum,x_info,x_long,x_pkey}.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 44 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 357,
+    "canonical_unaudited_before_batch": 406,
+    "canonical_audited_after_batch": 365,
+    "canonical_unaudited_after_batch": 398,
+    "mechanism_sweep_files_union_before_batch": 297,
+    "mechanism_sweep_files_union_after_batch": 305,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight files added here were the first eight entries of REMAINING-AUDIT.txt and were inserted at their alphabetical asn1-block positions (t_pkey/t_spki after string, typ after time, x_bignum/x_info/x_int64/x_long/x_pkey after x_algor).",
+    "difference_from_357": "M39 left 357 audited / 406 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/asn1/t_pkey.rs",
+    "src/asn1/t_spki.rs",
+    "src/asn1/typ.rs",
+    "src/asn1/x_bignum.rs",
+    "src/asn1/x_info.rs",
+    "src/asn1/x_int64.rs",
+    "src/asn1/x_long.rs",
+    "src/asn1/x_pkey.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/asn1/t_pkey.rs",
+      "mechanisms": [
+        "ASN1_buf_print / ASN1_bn_print exported printers",
+        "BIO_indent / BIO_printf / BIO_puts / BIO_write",
+        "BN_is_negative / BN_is_zero / BN_bn2bin and limb magnitude length",
+        "OwnedBuf::new_cleansed scratch for the wide-number magnitude"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The wide-number scratch is nbytes + 1 bytes with a leading zero for the sign pad; BN_bn2bin writes exactly nbytes at +1 and the buf[1] & 0x80 decision, formats, signs, widths and failure tails match t_pkey.c. The local owner is the authority's single cleansing free on both exits. A null number is not part of the stated contract and is never dereferenced in Rust."
+    },
+    {
+      "file": "src/asn1/t_spki.rs",
+      "mechanisms": [
+        "NETSCAPE_SPKI_print layout",
+        "X509_PUBKEY_get0_param / X509_PUBKEY_get / EVP_PKEY_print_public / EVP_PKEY_free",
+        "OBJ_obj2nid / OBJ_nid2ln shared static names",
+        "challenge and signature octet printers"
+      ],
+      "disposition": "repaired_contract",
+      "note": "The # Safety contract named only spkac, while the body also reads spkac->pubkey, spkac->challenge, sig_algor.algorithm and signature. The contract now names those mandatory template fields (the item descriptors make all five present on a valid value). No code change."
+    },
+    {
+      "file": "src/asn1/typ.rs",
+      "mechanisms": [
+        "item_functions! generated d2i_*/i2d_* wrappers for string and multistring types",
+        "d2i_ASN1_SEQUENCE_ANY / i2d_ASN1_SEQUENCE_ANY / d2i_ASN1_SET_ANY / i2d_ASN1_SET_ANY",
+        "ASN1_NULL_new sentinel and ASN1_NULL_free no-op",
+        "ASN1_NULL d2i/i2d wrappers"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Every wrapper is the authority's one-line forward through the shared item codec; a null value slot is handled by item_d2i, pp remains the caller's obligation, and the ASN1_NULL sentinel (ASN1_VALUE *)1 is returned and never dereferenced, matching tasn_typ.c. The stack wrappers cast the value-slot representation only and immediately hand it to the item layer."
+    },
+    {
+      "file": "src/asn1/x_bignum.rs",
+      "mechanisms": [
+        "BIGNUM / CBIGNUM ASN1_PRIMITIVE_FUNCS hook tables",
+        "bn_new / bn_secure_new / bn_free",
+        "bn_i2c / bn_c2i / bn_secure_c2i",
+        "bn_print"
+      ],
+      "disposition": "audited_no_change",
+      "note": "bn_free reads BN_SENSITIVE from the item and takes BN_clear_free for CBIGNUM; a failed decode frees the value this call allocated and nulls the slot, matching x_bignum.c. The pad decision (BN_num_bits & 0x7), magnitude write and BN_FLG_CONSTTIME stamp match. No intermediate ASN1_STRING is built."
+    },
+    {
+      "file": "src/asn1/x_info.rs",
+      "mechanisms": [
+        "X509_INFO repr(C) layout and offset assertions",
+        "CtxDestroy member body (X509/X509_CRL/X509_PKEY/enc_data)",
+        "OwnedCtx::zalloc / from_raw / into_raw",
+        "CRYPTO_free(enc_data) at x_info.c:35"
+      ],
+      "disposition": "audited_no_change",
+      "note": "_new is the authority's zero-allocation and _free releases certificate, CRL, private key and enc_data, then the record, each exactly once. The zeroed image is the authority's own constructed state, so the OB-3 zero-state sweep is sound."
+    },
+    {
+      "file": "src/asn1/x_int64.rs",
+      "mechanisms": [
+        "eight fixed-width items with size used as a flags word",
+        "uint64_new / uint32_new and uint64_free / uint32_free",
+        "uint64_i2c / uint32_i2c and uint64_c2i / uint32_c2i",
+        "ossl_i2c_uint64_int / ossl_c2i_uint64_int hand-off",
+        "uint64_print / uint32_print"
+      ],
+      "disposition": "repaired_contract",
+      "note": "A decoded UINT32 is allocated by uint64_new (eight bytes), which is the authority's own uint32_c2i choice, while prim_new allocates four bytes through uint32_new. uint32_free's SAFETY statement claimed the four-byte allocation unconditionally; it now states both provenances and that OwnedBlock's Drop releases the base pointer, which is extent-independent and frees the wider decode block whole. The arithmetic, truncation, ABS_INT32_MIN guard and error coordinates match x_int64.c. No code change."
+    },
+    {
+      "file": "src/asn1/x_long.rs",
+      "mechanisms": [
+        "LONG / ZLONG ASN1_PRIMITIVE_FUNCS (slot-resident value)",
+        "long_new / long_free (slot sentinel write)",
+        "long_i2c / long_c2i arithmetic and padding/sign rules",
+        "long_print and item size sentinel"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The value lives in the ASN1_VALUE slot itself; reads and writes use read_unaligned/write_unaligned at the slot address, exactly the authority's memcpy. The negative encode is 0 - utmp - 1, padding/sign tests and the ASN1_LONG_UNDEF/zero sentinels match, and every refusal raises the authority's coordinate."
+    },
+    {
+      "file": "src/asn1/x_pkey.rs",
+      "mechanisms": [
+        "X509_PKEY repr(C) layout and offset assertions",
+        "RawCtx publication window before both members exist",
+        "X509_ALGOR_new / ASN1_OCTET_STRING_new failure path",
+        "CtxDestroy member body and key_free gate",
+        "OwnedCtx::from_raw"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The raw window releases only the block if allocation fails; the two members are written before assume_init; the failure path drops the partially built value (members then block) and raises X509_PKEY_28. Member release order, EVP_PKEY_free and the key_free test match x_pkey.c."
+    }
+  ],
+  "defects": [
+    {
+      "file": "src/asn1/x_int64.rs",
+      "line": 242,
+      "severity": "low",
+      "kind": "unsafe contract understated the allocation extent of a UINT32 value",
+      "detail": "uint32_free's SAFETY comment said the slot always held the four-byte block uint32_new installs, but uint32_c2i deliberately allocates through uint64_new (eight bytes), as the authority does. OwnedBlock's Drop releases the allocation base pointer and never uses the typed extent, so the release was already whole and no UB or leak existed; the false statement is now corrected to name both provenances and the extent-independent release.",
+      "ub": false
+    },
+    {
+      "file": "src/asn1/t_spki.rs",
+      "line": 32,
+      "severity": "low",
+      "kind": "unsafe contract omitted mandatory template fields the body dereferences",
+      "detail": "The # Safety contract named only spkac, while NETSCAPE_SPKI_print reads spkac->pubkey, spkac->challenge, sig_algor.algorithm and signature. A valid item value always has them (ASN1_SIMPLE/ASN1_EMBED templates), but the stated contract did not establish it. The contract now names all five. No code change; the authority dereferences the same fields.",
+      "ub": false
+    }
+  ],
+  "secret_buffers": [
+    {
+      "buffer": "CBIGNUM value limbs",
+      "file": "src/asn1/x_bignum.rs",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "cleansed_on": "bn_free's BN_clear_free when the item size carries BN_SENSITIVE",
+      "released_on": "the same BN_clear_free (BN_SENSITIVE is read from the item, not the algorithm)",
+      "note": "The secure-heap allocation and BN_FLG_CONSTTIME stamp are preserved; the clear-free arm is never replaced by BN_free for a sensitive item."
+    },
+    {
+      "buffer": "ASN1_bn_print magnitude scratch (OwnedBuf::new_cleansed)",
+      "file": "src/asn1/t_pkey.rs",
+      "classification": ["SECRET_DATA", "CLEANSING_REQUIRED"],
+      "cleansed_on": "OwnedBuf's Drop over the full allocation length on every exit, including a failed BIO_printf",
+      "released_on": "the same Drop",
+      "note": "The authority uses OPENSSL_clear_free(buf, buflen); the owner keeps both the allocation length and the cleansing release."
+    },
+    {
+      "buffer": "X509_PKEY.dec_pkey (decrypted EVP_PKEY)",
+      "file": "src/asn1/x_pkey.rs",
+      "classification": ["SECRET_DATA"],
+      "cleansed_on": "EVP_PKEY_free's own key-type destructor (not a local copy)",
+      "released_on": "EVP_PKEY_free in destroy_body",
+      "note": "The record owns the pointer and releases it exactly once in the authority's order."
+    },
+    {
+      "buffer": "X509_PKEY.key_data",
+      "file": "src/asn1/x_pkey.rs",
+      "classification": ["PUBLIC_DATA"],
+      "cleansed_on": "none",
+      "released_on": "CRYPTO_free at x_pkey.c:44 when key_free is set",
+      "note": "The legacy PEM record's encrypted-key scratch; the authority releases it plainly and only when key_free is set."
+    },
+    {
+      "buffer": "NETSCAPE_SPKI challenge, signature and public key",
+      "file": "src/asn1/t_spki.rs",
+      "classification": ["PUBLIC_DATA"],
+      "cleansed_on": "none",
+      "released_on": "caller-owned item values; the temporary EVP_PKEY from X509_PUBKEY_get is freed here",
+      "note": "The only owned temporary on this path is the EVP_PKEY, released once after printing."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "contracts_reused": [
+    "RC-1 repr(C) ASN1_ITEM/ASN1_TEMPLATE descriptor layout (offset-asserted, static item)",
+    "OB-1 OwnedBlock allocation/release seam (zalloc/from_raw/into_raw; Drop is the single plain release)",
+    "OB-3 OwnedCtx/CtxDestroy member-body contract, including the zero-state obligation",
+    "ASN.1 item lifecycle (ASN1_item_new/d2i/i2d/free) and primitive-hook contract (new/free/clear/c2i/i2c/print)",
+    "d2i_*/i2d_* value-slot, pp and out conventions (null a redirected by the shared decoder; out NULL lengths and *out NULL allocates)",
+    "CBIGNUM BN_SENSITIVE clear-free rule read from the item size",
+    "ASN1_buf_print/BIO formatting contract (width 15, ASN1_PRINT_MAX_INDENT 128, indent+4 for wide magnitudes)"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check clean",
+      "focused_tests": "cargo test --lib -- --test-threads=4 asn1:: 40 passed / 0 failed / 1 ignored"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "lib_serial": "1649 passed / 0 failed / 27 ignored (254.34 s)",
+      "lib_threads4": "1649 passed / 0 failed / 27 ignored (88.20 s)",
+      "removed_or_newly_ignored_tests": 0,
+      "affected_probes": "none: both repairs are contract statements with no generated code change"
+    }
+  },
+  "not_run": [
+    "FRF runtime courts for this surface (rt-asn1, rt-asn1-str, rt-asn1-template): the FRF tooling container is not up",
+    "rt-mem-* allocator-hook courts (no allocator event changed)",
+    "Miri Stacked/Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units (BOUNDARY)",
+    "caller/dependency closure for the ASN.1 primitive and PEM-record consumers (BOUNDARY)",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "retained_obligations": [
+    "ASN1_bn_print keeps the authority's number-as-%s form; a null number is not part of the stated contract even though the authority would pass it to printf",
+    "NETSCAPE_SPKI_print still dereferences the item-mandatory fields, exactly as the authority does",
+    "allocator file/line coordinates remain 0 under the OPENSSL_NO_CRYPTO_MDEBUG convention",
+    "error tails still omit the pointer-bearing ERR_print_errors lines, as established for this crate",
+    "caller/dependency closure and BOUNDARY evidence remain pending"
+  ],
+  "queue": {
+    "remaining_audit_before": 406,
+    "remaining_audit_after": 398,
+    "audited_before": 357,
+    "audited_after": 365,
+    "next_batch": [
+      "src/asn1/x_sig.rs",
+      "src/asn1/x_spki.rs",
+      "src/asn1/x_val.rs",
+      "src/async/arch/async_posix.rs",
+      "src/async/async.rs",
+      "src/async/async_wait.rs",
+      "src/blowfish.rs",
+      "src/bn/bn_srp.rs"
+    ]
+  }
+}

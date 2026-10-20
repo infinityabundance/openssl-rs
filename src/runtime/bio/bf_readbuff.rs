@@ -23,10 +23,11 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_realloc, CRYPTO_zalloc};
 
 use super::bf_buff::{BioBufferCtx, DEFAULT_BUFFER_SIZE};
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::OwnedCtx;
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_INFO, BIO_CTRL_PENDING,
     BIO_CTRL_RESET, BIO_C_FILE_SEEK, BIO_C_FILE_TELL, BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY,
@@ -78,24 +79,25 @@ unsafe fn ctx(b: *mut Bio) -> *mut BioBufferCtx {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn readbuffer_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let c: *mut BioBufferCtx =
-        CRYPTO_zalloc(core::mem::size_of::<BioBufferCtx>(), ptr::null(), 0).cast();
-    if c.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioBufferCtx>::zalloc() else {
         return 0;
-    }
+    };
+    let c = ctx.as_ptr();
     // SAFETY: `c` is a fresh allocation.
     unsafe {
         (*c).ibuf_size = DEFAULT_BUFFER_SIZE;
         (*c).ibuf = CRYPTO_zalloc(DEFAULT_BUFFER_SIZE as usize, ptr::null(), 0).cast();
         if (*c).ibuf.is_null() {
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            // The context never escaped; the handle's `Drop` releases it (and the NULL members).
             return 0;
         }
         (*bi).init = 1;
         (*bi).ptr = c.cast();
         (*bi).flags = 0;
     }
+    // The context is now the BIO's; `readbuffer_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -110,10 +112,10 @@ unsafe extern "C" fn readbuffer_free(a: *mut Bio) -> c_int {
     // SAFETY: `a` is live and holds a `BioBufferCtx`.
     let c = unsafe { ctx(a) };
     if !c.is_null() {
-        // SAFETY: the buffer was allocated by `readbuffer_new`.
+        // SAFETY: the context is the BIO's own; `Drop` frees the input buffer it owns and then the
+        // block, exactly as `readbuffer_free` frees them by hand.
         unsafe {
-            CRYPTO_free((*c).ibuf.cast(), ptr::null(), 0);
-            CRYPTO_free(c.cast(), ptr::null(), 0);
+            drop(OwnedCtx::<BioBufferCtx>::from_raw(c));
             (*a).ptr = ptr::null_mut();
             (*a).init = 0;
             (*a).flags = 0;
@@ -129,8 +131,18 @@ unsafe extern "C" fn readbuffer_free(a: *mut Bio) -> c_int {
 /// `c` must be a live readbuffer context.
 unsafe fn readbuffer_resize(c: *mut BioBufferCtx, sz: c_int) -> bool {
     // SAFETY: `c` is live.
-    let mut sz = unsafe { (*c).ibuf_off } + DEFAULT_BUFFER_SIZE - 1 + sz;
-    sz = DEFAULT_BUFFER_SIZE * (sz / DEFAULT_BUFFER_SIZE);
+    let base = unsafe { (*c).ibuf_off };
+    // Round up to whole blocks, counting the bytes already consumed. The
+    // authority's `int` addition overflows for a huge request, after which its
+    // comparison is false and a later read writes past the cache. Refuse the
+    // resize instead; non-overflowing requests keep the authority's arithmetic.
+    let Some(total) = base
+        .checked_add(DEFAULT_BUFFER_SIZE - 1)
+        .and_then(|v| v.checked_add(sz))
+    else {
+        return false;
+    };
+    let sz = DEFAULT_BUFFER_SIZE * (total / DEFAULT_BUFFER_SIZE);
     // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
     if sz > unsafe { (*c).ibuf_size } {
         // SAFETY: `ibuf` is owned here and `sz > 0`.
@@ -401,4 +413,27 @@ unsafe extern "C" fn readbuffer_gets(b: *mut Bio, buf: *mut c_char, size: c_int)
     // SAFETY: `out` is inside the caller's buffer.
     unsafe { *out = 0 };
     num
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resize_refuses_an_offset_that_would_overflow() {
+        let mut c = BioBufferCtx {
+            ibuf_size: DEFAULT_BUFFER_SIZE,
+            obuf_size: 0,
+            ibuf: ptr::null_mut(),
+            ibuf_len: 0,
+            ibuf_off: c_int::MAX - 16,
+            obuf: ptr::null_mut(),
+            obuf_len: 0,
+            obuf_off: 0,
+        };
+        // SAFETY: `c` is a live local context; the overflowing size is refused
+        // before any allocation or write.
+        assert!(!unsafe { readbuffer_resize(&mut c, 64) });
+        assert_eq!(c.ibuf_size, DEFAULT_BUFFER_SIZE);
+    }
 }

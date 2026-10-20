@@ -54,6 +54,26 @@
 //! `X509_R_UNABLE_TO_FIND_PARAMETERS_IN_CHAIN` = 107, `X509_R_UNKNOWN_PURPOSE_ID` = 121 and
 //! `X509_R_UNKNOWN_TRUST_ID` = 120, against `ERR_LIB_X509` = 11.
 //!
+//! ## Ownership: the store context owns itself
+//!
+//! `X509_STORE_CTX_new_ex`'s `X509StoreCtx` block is the unit's only allocator-seam allocation, and
+//! it owns itself: [`OwnedCtx`] allocates it at the authority's own size, file and line 2695, the
+//! `propq` refusal re-points its release to the authority's line 2704, and `X509_STORE_CTX_free`
+//! reclaims it so its `Drop` is the single release at line 2726 -- running the authority's own
+//! `X509_STORE_CTX_free` body (`X509_STORE_CTX_cleanup`, then the `propq` release at line 2725)
+//! before the block. It stays a `CRYPTO_zalloc` on the crate's allocator seam, so a caller-installed
+//! `CRYPTO_set_mem_functions` hook observes the same allocation and release, and the `propq` copy
+//! stays a `CRYPTO_strdup` whose release is the object's own.
+//!
+//! **What stays raw and is the documented boundary.** Every other release in this unit is another
+//! object's own: `X509_STORE_CTX_cleanup` releases the parameter block and policy tree through
+//! `X509_VERIFY_PARAM_free`/`X509_policy_tree_free`, the chain through `OPENSSL_sk_pop_free`, and
+//! `X509_CRL_diff` releases its half-built CRL through `X509_CRL_free` -- each is that object's own
+//! free body, in its own unit, so it is called rather than re-expressed. `check_hosts` releases
+//! `vpm->peername`, a `#[repr(C)]` member of `X509VerifyParam` (`x509_vpm.rs`) that the following
+//! `X509_check_host` re-points, so it stays the field's own release, exactly as the authority writes
+//! it.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
@@ -85,6 +105,7 @@ use crate::ocsp::ocsp_cl::{
 use crate::ocsp::ocsp_lib::{OCSP_cert_to_id, OCSP_id_cmp};
 use crate::ocsp::ocsp_srv::OCSP_id_get0_info;
 use crate::ocsp::ocsp_vfy::OCSP_basic_verify;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::sys::time;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_reasons::{
@@ -99,11 +120,13 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
     CRYPTO_EX_INDEX_X509_STORE_CTX,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_commonName, NID_delta_crl,
     NID_issuing_distribution_point, NID_subject_alt_name, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::{
     OPENSSL_sk_delete_ptr, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -138,12 +161,13 @@ use crate::x509::x509_ext::{
     X509_CRL_get_ext_count, X509_get_ext_d2i,
 };
 use crate::x509::x509_lu::{
-    ossl_x509_store_ctx_get_by_subject, X509Store, X509StoreCtx, X509_OBJECT_free, X509_OBJECT_new,
-    X509_STORE_CTX_cert_crl_fn, X509_STORE_CTX_check_crl_fn, X509_STORE_CTX_check_issued_fn,
-    X509_STORE_CTX_check_policy_fn, X509_STORE_CTX_check_revocation_fn, X509_STORE_CTX_cleanup_fn,
-    X509_STORE_CTX_get1_certs, X509_STORE_CTX_get1_crls, X509_STORE_CTX_get_crl_fn,
-    X509_STORE_CTX_get_issuer_fn, X509_STORE_CTX_lookup_certs_fn, X509_STORE_CTX_lookup_crls_fn,
-    X509_STORE_CTX_verify_cb, X509_STORE_CTX_verify_fn, X509_LU_NONE, X509_LU_X509,
+    ossl_x509_store_ctx_get_by_subject, PropqSlot, X509Store, X509StoreCtx, X509_OBJECT_free,
+    X509_OBJECT_new, X509_STORE_CTX_cert_crl_fn, X509_STORE_CTX_check_crl_fn,
+    X509_STORE_CTX_check_issued_fn, X509_STORE_CTX_check_policy_fn,
+    X509_STORE_CTX_check_revocation_fn, X509_STORE_CTX_cleanup_fn, X509_STORE_CTX_get1_certs,
+    X509_STORE_CTX_get1_crls, X509_STORE_CTX_get_crl_fn, X509_STORE_CTX_get_issuer_fn,
+    X509_STORE_CTX_lookup_certs_fn, X509_STORE_CTX_lookup_crls_fn, X509_STORE_CTX_verify_cb,
+    X509_STORE_CTX_verify_fn, X509_LU_NONE, X509_LU_X509,
 };
 use crate::x509::x509_set::{
     X509_get0_extensions, X509_get0_notAfter, X509_get0_notBefore, X509_get_signature_info,
@@ -195,6 +219,29 @@ const X509_ADD_FLAG_UP_REF: c_int = 0x1;
 
 /// `OPENSSL_FILE` for this unit's allocator expansions.
 const FILE: &CStr = c"crypto/x509/x509_vfy.c";
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the store-context block
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `X509_STORE_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the idempotent cleanup and the property query the cleanup preserves.
+// SAFETY: (a) holds: `destroy_body` is `X509_STORE_CTX_free` minus the block -- the idempotent
+// `X509_STORE_CTX_cleanup` and the `propq` clear (NULL-tolerant) -- and never the enclosing block.
+// (b) holds: a zeroed context is valid and both `cleanup` and the `propq` clear are sound for it --
+// the obligation the safe `OwnedCtx::<X509StoreCtx>::zalloc_at` in `X509_STORE_CTX_new_ex` leans on.
+unsafe impl CtxDestroy for X509StoreCtx {
+    unsafe fn destroy_body(ptr: *mut X509StoreCtx) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe {
+            X509_STORE_CTX_cleanup(ptr);
+            // `ptr` is live and its `propq` obeys the member-buffer invariant, so `clear` is that
+            // block's one release at the authority's own site (`:2725`); a NULL incumbent makes it
+            // a no-op.
+            PropqSlot::of(&mut *ptr).clear(SeamFile::new(FILE), 2725);
+        }
+    }
+}
 
 /// One `x509_vfy.c` raise coordinate, declared locally (see the module doc).
 const fn x509_vfy_site(line: c_int, func: &'static CStr, reason: c_int) -> ErrSite {
@@ -1345,7 +1392,7 @@ pub unsafe extern "C" fn X509_CRL_diff(
 
     // Create new CRL.
     // SAFETY: `base` is live.
-    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq) };
+    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq()) };
     let mut failed = false;
     'body: {
         // SAFETY: `crl` is NULL or a fresh object; `newer` is live.
@@ -1451,24 +1498,30 @@ pub unsafe extern "C" fn X509_STORE_CTX_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut X509StoreCtx {
-    // SAFETY: the block is zeroed on allocation.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<X509StoreCtx>(), FILE.as_ptr(), 2695)
-        .cast::<X509StoreCtx>();
-    if ctx.is_null() {
+    // The context block, allocated through the crate's allocator seam; `Drop` is its single release
+    // on the refusal below and `into_raw` hands it out on success.
+    let Some(mut ctx) =
+        OwnedCtx::<X509StoreCtx>::zalloc_at(SeamFile::new(FILE), 2695, SeamFile::new(FILE), 2726)
+    else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `ctx` is a fresh zeroed block.
     unsafe {
-        (*ctx).libctx = libctx;
+        (*ctx.as_ptr()).libctx = libctx;
         if !propq.is_null() {
-            (*ctx).propq = CRYPTO_strdup(propq, FILE.as_ptr(), 2702);
-            if (*ctx).propq.is_null() {
-                CRYPTO_free(ctx.cast(), FILE.as_ptr(), 2704);
+            // `propq` is NUL-terminated per the contract; the block is freshly zeroed, so the
+            // field is empty and the token transfers ownership of this call's own dup to `ctx`.
+            let Some(dup) = OwnedCStr::dup(propq, SeamFile::new(FILE), 2702) else {
+                // The authority releases the context at its own line 2704 on this refusal.
+                ctx.set_release_line(2704);
                 return ptr::null_mut();
-            }
+            };
+            // SAFETY: `ctx` is a fresh zeroed block, so its `propq` member is NULL.
+            let empty = PropqSlot::of(&mut *ctx.as_ptr()).assume_empty();
+            empty.store(dup);
         }
     }
-    ctx
+    ctx.into_raw()
 }
 
 /// `X509_STORE_CTX *X509_STORE_CTX_new(void)` — `crypto/x509/x509_vfy.c:2712-2715`.
@@ -1487,15 +1540,15 @@ pub extern "C" fn X509_STORE_CTX_new() -> *mut X509StoreCtx {
 /// `ctx` must be NULL or a live context.
 #[no_mangle]
 pub unsafe extern "C" fn X509_STORE_CTX_free(ctx: *mut X509StoreCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract.
+    // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
     unsafe {
-        X509_STORE_CTX_cleanup(ctx);
-        CRYPTO_free((*ctx).propq.cast(), FILE.as_ptr(), 2725);
-        CRYPTO_free(ctx.cast(), FILE.as_ptr(), 2726);
-    }
+        drop(OwnedCtx::<X509StoreCtx>::from_raw_at(
+            ctx,
+            SeamFile::new(FILE),
+            2726,
+        ))
+    };
 }
 
 /// `void X509_STORE_CTX_cleanup(X509_STORE_CTX *ctx)` — `crypto/x509/x509_vfy.c:2884-2908`.
@@ -3179,6 +3232,9 @@ unsafe fn check_hosts(x: *mut X509, vpm: *mut X509VerifyParam) -> c_int {
     unsafe {
         let n = OPENSSL_sk_num((*vpm).hosts);
         if !(*vpm).peername.is_null() {
+            // The `X509VerifyParam` object's own `#[repr(C)]` member (`x509_vpm.rs`), which the
+            // following `X509_check_host` re-points: the field keeps its own release, exactly as
+            // the authority writes it.
             CRYPTO_free((*vpm).peername.cast(), FILE.as_ptr(), 930);
             (*vpm).peername = ptr::null_mut();
         }
@@ -5460,3 +5516,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509StoreCtx => zero_state_sweep_x509_store_ctx);

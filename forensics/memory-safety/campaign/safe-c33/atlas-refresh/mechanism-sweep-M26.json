@@ -1,0 +1,145 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "f479783f8",
+  "worktree": "dirty: src/runtime/bio/addr.rs, src/runtime/bio/addr_info.rs, src/runtime/bio/sys.rs (M26 fixes and controls) plus this receipt and the PERFILE-INDEX entry",
+  "scope": "Eight ordinary files from the M25-named batch, ranked by production unsafe-site count in the frozen census: src/provider/core_dispatch.rs (75), src/provider/exchange.rs (74), src/slh_dsa/wots.rs (74), src/runtime/bio/addr.rs (74), src/runtime/bio/addr_info.rs (74), src/evp/evp_pkey.rs (74), src/x509/v3_genn.rs (73), src/x509/v3_akid.rs (73). None was a newly discovered boundary, so neither substitution (src/dsa/pmeth.rs, src/dh/ctrl.rs) was used.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/provider/core_dispatch.rs",
+    "src/provider/exchange.rs",
+    "src/slh_dsa/wots.rs",
+    "src/runtime/bio/addr.rs",
+    "src/runtime/bio/addr_info.rs",
+    "src/evp/evp_pkey.rs",
+    "src/x509/v3_genn.rs",
+    "src/x509/v3_akid.rs"
+  ],
+  "files_not_run": [],
+  "dispositions": [
+    {
+      "file": "src/provider/core_dispatch.rs",
+      "mechanisms": "C ABI callback table (OSSL_DISPATCH), provider handle casts, ERR_vset_error va_list boundary, OSSL_PARAM descriptor statics with unsafe Sync, entropy/nonce cleanup handoff",
+      "result": "No defect. The 54-entry table (53 entries plus OSSL_DISPATCH_END) reproduces the authority's order and ids 11/12 (not 121/122), the three PARAM_TYPES descriptors are immutable literals, and every entropy cleanup forwards the paired get's buffer. All casts remain live-provider-handle obligations."
+    },
+    {
+      "file": "src/provider/exchange.rs",
+      "mechanisms": "OB-1 OwnedBuf for kdf_cekalg/kdf_ukm, OB-3-style manual ProvDhCtx/ProvKdfCtx construction and release, CRYPTO_zalloc/strdup/memdup seams, keyexch dupctx up-ref rollback, OSSL_PARAM repeated-key decoders, X9.42 derive scratch",
+      "result": "No defect. dh_dupctx nulls every owned destination field before each up-ref and its failure tails release exactly what was acquired; dh_freectx keeps the authority's plain/cleansed release split; kdf_newctx/dupctx failure tails match kdf_exch.c."
+    },
+    {
+      "file": "src/slh_dsa/wots.rs",
+      "mechanisms": "WOTS+ stack buffers (SLH_WOTS_LEN_MAX * SLH_MAX_N), WPACKET/PACKET cursor discipline, method-table callbacks, OPENSSL_cleanse on every exit, checksum nibble arithmetic",
+      "result": "No defect. Chain address arithmetic, the 12-bit checksum (2*n <= 64 keeps 15*len in u16), and every success/error cleanse site match slh_wots.c:92-319; PRF/T pass the authority's buffer lengths."
+    },
+    {
+      "file": "src/runtime/bio/addr.rs",
+      "mechanisms": "BIO_ADDR ownership (OwnedAddr zalloc/from_raw/Drop), unaligned SockAddrIn/SockAddrIn6 views, CRYPTO_strdup result ownership, getnameinfo buffer extents, sockaddr-family casts",
+      "result": "M26-D2 fixed (alignment invariant made explicit). No other defect: rawmake/copy/rawaddress/rawport/string accessors match bio_addr.c, including the plain-socket BIO_ADDR storage size divergence documented in D37/D199."
+    },
+    {
+      "file": "src/runtime/bio/addr_info.rs",
+      "mechanisms": "BIO_ADDRINFO OwnedNode ownership, OwnedStr/CRYPTO_strndup adoption in BIO_parse_hostserv, getaddrinfo copy/freeaddrinfo handoff, addrinfo_wrap rawmake failure path",
+      "result": "M26-D1 fixed (compatibility defect: an ignored rawmake failure returned success for an over-long AF_UNIX path). No other defect; parse_hostserv's bracket/ambiguity branches and out-parameter cleanup match bio_addr.c."
+    },
+    {
+      "file": "src/evp/evp_pkey.rs",
+      "mechanisms": "OB-1 OwnedBuf adopt_cleansed for PKCS#8 private DER, OB-2/OB-3 handoff to the decoder framework, legacy priv_decode callback selection, X509at attribute pass-throughs",
+      "result": "No defect. The decoder-first arm, the NULL-keytype retry, the legacy fallback, and the clear_free-before-context-free order match evp_pkey.c:73-124; attribute accessors are exact X509at_* dispatch."
+    },
+    {
+      "file": "src/x509/v3_genn.rs",
+      "mechanisms": "ASN1 item/template ownership (OTHERNAME, EDIPARTYNAME, GENERAL_NAME CHOICE, GENERAL_NAMES SEQUENCE OF), union selector writes, function-pointer transmutes for ASN1_dup, GENERAL_NAME_set0/set1 ownership transfer",
+      "result": "No defect. Struct sizes/offsets and all nine CHOICE alternatives match the authority; set0_value preserves the unknown-selector no-write behaviour and set1_X509_NAME releases only the freshly built name on failure."
+    },
+    {
+      "file": "src/x509/v3_akid.rs",
+      "mechanisms": "OB-2 OwnedStr adoption for i2s_ASN1_OCTET_STRING, AUTHORITY_KEYID/GENERAL_NAME stack ownership, X509V3 error-site coordinates, i2v/v2i callback thunks",
+      "result": "No defect. The err tails release exactly what each local owns (stack only when this call built it), the n==1 \"none\" fast path and the keyid/issuer/serial ownership transfer match v3_akid.c:38-237."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M26-D1",
+      "file": "src/runtime/bio/addr_info.rs",
+      "pre_fix_lines": [314],
+      "post_fix_lines": [295, 315, 321, 324],
+      "severity": "medium (compatibility divergence; no memory-safety impact)",
+      "class": "ignored authority failure result in addrinfo_wrap (AGENTS.md sections 8 and 17)",
+      "description": "addrinfo_wrap called BIO_ADDR_rawmake and discarded its result, then published the address unconditionally. The authority checks the result, frees the fresh BIO_ADDR and the node, writes NULL to *bai and returns 0. The reachable difference is AF_UNIX with strlen(host)+1 > sizeof(sun_path): the authority refuses (and BIO_lookup_ex raises ERR_R_BIO_LIB), while the crate returned success with a zeroed AF_UNSPEC address in the chain. The allocation-failure arm also failed to write NULL to *bai as OPENSSL_zalloc assignment does.",
+      "fix": "Check BIO_ADDR_rawmake; on refusal release the fresh address and let the existing null-address arm provide the authority's node cleanup. On OwnedNode::new failure write NULL to *bai. Control: runtime::bio::addr_info::tests::a_unix_path_that_cannot_be_terminated_is_refused pins both the 107-byte success boundary and the 108-byte refusal, including *res == NULL.",
+      "divergence": "None for conforming callers; the refusal and out-parameter behaviour are restored to bio_addr.c:606-651."
+    },
+    {
+      "id": "M26-D2",
+      "file": "src/runtime/bio/sys.rs",
+      "pre_fix_lines": [328],
+      "post_fix_lines": [335],
+      "severity": "high (Rust alignment invariant; potential undefined behaviour, no observed runtime failure)",
+      "class": "under-aligned storage used for stronger-aligned references (AGENTS.md sections 2, 10 and 21)",
+      "description": "SockAddrStorage was #[repr(C)] with fields u16 + [u8;126], so its alignment (and BioAddr's) was 2. addr.rs nevertheless derives *mut//const SockAddrIn, SockAddrIn6 and SockAddrUn pointers/references from that storage in BIO_ADDR_rawmake, BIO_ADDR_rawport and BIO_ADDR_rawaddress (and make_from_sockaddr copies through them). Those target types require 4-byte alignment. Heap instances are incidentally aligned by CRYPTO_malloc, but the type itself does not guarantee it for stack zeroed() values or embedded members, so the references were not sound by construction.",
+      "fix": "Declare SockAddrStorage #[repr(C, align(4))] (the authority union's own alignment; size stays 128) and add compile-time assertions in addr.rs that the storage alignment covers SockAddrIn, SockAddrIn6 and SockAddrUn, so a future weakening becomes a compile error rather than UB.",
+      "divergence": "None observable: size is unchanged and BioAddr remains opaque to callers; only the type-level alignment guarantee increases."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/guard_ffi and the error-site coordinates",
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption and release modes",
+    "OB-2 OwnedStr adoption",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy and manual context construction",
+    "OB-4 member-buffer slot replacement protocol",
+    "ASN1 item / ASN1_STRING / GENERAL_NAME union ownership convention",
+    "BIO control/read/write callback contract and BIO_ADDR opaque storage",
+    "provider keyexch/kdf dispatch and OSSL_PARAM decoder contract",
+    "secret scratch cleanse at the authority's failure tails"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 0,
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; no CRYPTO_* coordinate or allocation size changed",
+    "repr_c_and_exports": "no exported symbol or signature changed; SockAddrStorage alignment raised to 4 with size unchanged at 128",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained)",
+    "controls": "compile-time alignment assertions in src/runtime/bio/addr.rs; runtime::bio::addr_info::tests::a_unix_path_that_cannot_be_terminated_is_refused"
+  },
+  "compatibility": "M26-D1 restores the authority's refusal for an over-long AF_UNIX path and its NULL out-parameter on allocation failure. M26-D2 has no observable compatibility delta.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1627 passed / 0 failed / 27 ignored (201.53 s)",
+    "lib_tests_threads_4": "1627 passed / 0 failed / 27 ignored (126.99 s)",
+    "focused": "runtime::bio::addr 13 passed / 0 failed (includes the new M26-D1 control)"
+  },
+  "not_run": [
+    "RT-BIO-ADDR differential probe: phase4_courts.py links the committed artifacts/phase2 distribution shell, which predates this worktree; running it would compare the authority against a stale candidate. No artifact was regenerated in this batch.",
+    "Miri (Stacked and Tree Borrows) on the SockAddrStorage alignment change and the BIO_ADDR accessors - BOUNDARY gate for the changed alignment invariant.",
+    "ASan on the AF_UNIX refusal path - BOUNDARY negative-control gate; the control asserts the refusal and NULL out-parameter without executing an overrun.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; every record remains a file-level obligation check. M26-D2's BOUNDARY runtime confirmation is PENDING/NOT_RUN.",
+  "next_batch": {
+    "files": [
+      "src/dh/ctrl.rs (73)",
+      "src/dsa/pmeth.rs (73)",
+      "src/provider/decode_msblob2key.rs (72)",
+      "src/runtime/bio/bss_mem.rs (72)",
+      "src/x509/v3_attrmap.rs (72)",
+      "src/runtime/bio/bio_sock2.rs (70)",
+      "src/x509/by_file.rs (70)",
+      "src/runtime/bio/method.rs (69)"
+    ],
+    "triage": "src/dh/ctrl.rs and src/dsa/pmeth.rs are the M25-named substitutions and are ordinary. If one proves a genuinely new boundary it is NOT_RUN and the next ranked ordinary file is src/x509/x_x509.rs (69), then src/asn1/a_sign.rs (68).",
+    "skipped": [
+      "src/provider/legacyprov.rs (73) - provider dispatch boundary, deferred NOT_RUN.",
+      "src/provider/child.rs (71) - child-provider callback boundary, deferred NOT_RUN.",
+      "src/runtime/lhash.rs (71) - BOUNDARY_COVERED, not an ordinary file.",
+      "src/dh/key.rs (71) - already covered by B14-D1; no re-audit needed.",
+      "src/ssl/record/rec_layer_s3.rs (69) - protocol state-machine boundary, deferred NOT_RUN.",
+      "the four M22-retained boundaries (async/async, evp/keymgmt_lib, provider/decode_der2key, engine/eng_table, store/store_meth)"
+    ]
+  }
+}

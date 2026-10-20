@@ -78,6 +78,15 @@ pub(crate) const BN_FLG_FIXED_TOP: c_int = 0x10;
 /// object that will later `BN_free` them.
 pub(crate) const BN_FLG_STATIC_DATA: c_int = 0x02;
 
+/// `BN_FLG_SECURE` — `include/openssl/bn.h:68`. In the authority the bit makes
+/// `bn_free_d` release the limbs through `OPENSSL_secure_clear_free`, so **even a plain
+/// `BN_free` cleanses a secure bignum's magnitude**. This crate cannot model the secure
+/// heap itself (the limb vector is an ordinary Rust allocation, recorded as
+/// `OBL-BN-ALLOCATOR`), so the bit is modelled where it is observable and load-bearing:
+/// `BN_secure_new` sets it and `BN_free` honours it by cleansing the allocation.
+/// `BN_get_flags` reports it as the authority does.
+pub(crate) const BN_FLG_SECURE: c_int = 0x08;
+
 /// The authority's `BIGNUM`.
 #[repr(C)]
 pub struct BigNum {
@@ -190,6 +199,45 @@ pub(crate) fn static_data_bignum(cache: &AtomicPtr<BigNum>, bytes: &[u8]) -> *co
     }
 }
 
+/// Zero every limb of `d`'s allocation, not merely its current length.
+///
+/// This is the representation's analogue of the authority's
+/// `OPENSSL_cleanse(a->d, sizeof(*a->d) * a->dmax)` in `BN_clear` and
+/// `OPENSSL_clear_free(a->d, a->dmax * sizeof(*a->d))` in `BN_clear_free`: `capacity()`
+/// is the allocated limb extent, whereas `len()` is only the normalised top. The spare
+/// capacity can still hold limbs from a larger earlier value, because `Vec::clear`,
+/// `truncate` and `limbs::normalise` discard the length without writing the storage.
+/// Volatile writes plus the fence are what stop the optimiser eliding the wipe.
+///
+/// The loop mirrors `runtime::mem::cleanse` element-wise rather than asking it to wipe
+/// `capacity() * size_of::<Limb>()` bytes, so no size multiplication has to be trusted
+/// not to overflow (§3).
+fn cleanse_storage(d: &mut Vec<Limb>) {
+    let p = d.as_mut_ptr();
+    for i in 0..d.capacity() {
+        // SAFETY: `i < capacity`, so `p.add(i)` lies inside the allocation `d` owns.
+        // `Limb` is `Copy` with no destructor, so zeroing spare (still uninitialised)
+        // capacity is sound and does not change the length or drop anything.
+        unsafe { core::ptr::write_volatile(p.add(i), 0) };
+    }
+    core::sync::atomic::compiler_fence(Ordering::SeqCst);
+}
+
+/// Replace `dst`'s magnitude with `src`, keeping `dst`'s allocation where it fits.
+///
+/// In-place reuse is what the authority does (`BN_copy` writes through `bn_wexpand`),
+/// and it keeps the old block alive so a later `BN_clear`/`BN_clear_free` can cleanse
+/// it. If the copy forces a reallocation the old block is released here instead, so it
+/// is cleansed first — the obligation `bn_expand2`'s `bn_free_d(b, 1)` discharges when
+/// the authority grows a limb array.
+fn assign_limbs(dst: &mut Vec<Limb>, src: &[Limb]) {
+    if dst.capacity() < src.len() {
+        cleanse_storage(dst);
+    }
+    dst.clear();
+    dst.extend_from_slice(src);
+}
+
 /// The magnitude and sign of an optional object; `(empty, false)` for null.
 pub(crate) fn parts(b: Option<&BigNum>) -> (Vec<Limb>, bool) {
     match b {
@@ -215,11 +263,24 @@ pub(crate) fn store(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool
     }
 }
 
-/// Copy `s` into memory the caller can release with `OPENSSL_free`.
+/// Copy `s` into a NUL-terminated block the caller owns.
+///
+/// This is the caller-ownership ABI edge: the block is one `CRYPTO_malloc(n, FILE, LINE)`
+/// allocation through the crate's allocator seam for `n == bytes.len() + 1` bytes, every byte of
+/// that extent is initialised (the payload followed by the terminator), and ownership transfers to
+/// the caller when this function returns. This frame keeps no owner, so the caller releases the
+/// block exactly once with `OPENSSL_free`/`CRYPTO_free`. The length sum is `checked_add`-guarded;
+/// on overflow the module's allocation-failure outcome (NULL) is returned without asking the
+/// allocator for a wrapped size.
 pub(crate) fn dup_cstring(s: &str) -> *mut c_char {
     let bytes = s.as_bytes();
-    let n = bytes.len() + 1;
-    let p = crate::runtime::mem::CRYPTO_malloc(n, FILE.as_ptr(), LINE);
+    let Some(n) = bytes.len().checked_add(1) else {
+        return core::ptr::null_mut();
+    };
+    let p = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        crate::runtime::mem::CRYPTO_malloc(n, FILE.as_ptr(), LINE)
+    };
     if p.is_null() {
         return core::ptr::null_mut();
     }
@@ -340,12 +401,22 @@ pub unsafe extern "C" fn BN_new() -> *mut BigNum {
 /// Takes no pointers; see `BN_new`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_secure_new() -> *mut BigNum {
-    guard_ffi(core::ptr::null_mut(), || new_owned(Vec::new(), 0))
+    guard_ffi(core::ptr::null_mut(), || {
+        let p = new_owned(Vec::new(), 0);
+        // SAFETY: `p` is a live object this call just created. `new_owned` never
+        // answers NULL (an allocation failure aborts, which `OBL-BN-ALLOCATOR`
+        // records), so the pointer is valid here.
+        unsafe { (*p).flags |= BN_FLG_SECURE };
+        p
+    })
 }
 
 /// `void BN_free(BIGNUM *a)`
 ///
-/// A null pointer is explicitly allowed and does nothing.
+/// A null pointer is explicitly allowed and does nothing. An object carrying
+/// `BN_FLG_SECURE` has its whole limb allocation cleansed before release, because the
+/// authority's `bn_free_d` sends that arm through `OPENSSL_secure_clear_free` even for
+/// this non-clearing entry point.
 ///
 /// **An object carrying `BN_FLG_STATIC_DATA` is left completely alone**, which is
 /// `crypto/bn/bn_lib.c:224-232`'s first test and the reason the flag exists. In the
@@ -373,7 +444,11 @@ pub unsafe extern "C" fn BN_free(a: *mut BigNum) {
         }
         // SAFETY: as above, and the flag test just established that this object is not
         // one of the shared constants, so reclaiming the box is exactly what is owed.
-        drop(unsafe { Box::from_raw(a) });
+        let mut b = unsafe { Box::from_raw(a) };
+        if (b.flags & BN_FLG_SECURE) != 0 {
+            cleanse_storage(&mut b.d);
+        }
+        drop(b);
     });
 }
 
@@ -402,17 +477,25 @@ pub unsafe extern "C" fn BN_clear_free(a: *mut BigNum) {
         }
         // SAFETY: as `BN_free` — `a` is a live box this module allocated.
         let mut b = unsafe { Box::from_raw(a) };
-        for limb in b.d.iter_mut() {
-            // SAFETY: `limb` is a valid, aligned, uniquely-owned `u64`, and
-            // `write_volatile` is what stops the optimiser eliding the clear,
-            // which is the entire point of this function.
-            unsafe { core::ptr::write_volatile(limb, 0) };
-        }
+        // The authority clears `a->dmax` limbs, the whole allocation, not `a->top`
+        // limbs. `capacity()` is the corresponding extent here.
+        cleanse_storage(&mut b.d);
         drop(b);
     });
 }
 
 /// `void BN_clear(BIGNUM *a)`
+///
+/// The authority (`crypto/bn/bn_lib.c:391-401`) cleanses `a->d[0..a->dmax]`, clears
+/// `neg` and `top`, and clears `BN_FLG_FIXED_TOP`; other flags are left alone. The
+/// allocation is retained, not released. This is the same contract with `capacity()`
+/// standing in for `dmax`: the whole limb allocation is zeroed (including spare
+/// capacity holding limbs from a previously larger value) before the length is
+/// discarded, so a subsequent `BN_free` cannot leave secret residue in the freed block.
+///
+/// `BN_FLG_CONSTTIME`, `BN_FLG_MALLOCED` and `BN_FLG_STATIC_DATA` survive, which is the
+/// authority's own mask. As in the authority, cleansing a `BN_FLG_STATIC_DATA` object
+/// mutates shared constant storage; callers must not call this on one.
 ///
 /// # Safety
 ///
@@ -423,13 +506,22 @@ pub unsafe extern "C" fn BN_clear(a: *mut BigNum) {
         // SAFETY: null-or-live per this function's `# Safety` section, and the only
         // read of the pointer.
         if let Some(b) = unsafe { as_mut(a) } {
+            cleanse_storage(&mut b.d);
             b.d.clear();
             b.neg = 0;
+            b.flags &= !BN_FLG_FIXED_TOP;
         }
     });
 }
 
 /// `void BN_zero_ex(BIGNUM *a)` — the function behind the `BN_zero` macro.
+///
+/// **Recorded strengthening.** The authority's `BN_zero_ex` (`bn_lib.c:1040-1045`) only
+/// drops the top and sign and clears `BN_FLG_FIXED_TOP`; it does **not** cleanse the
+/// limbs, because the limbs stay reachable through `d` and are cleansed at teardown.
+/// Delegating to `BN_clear` zeroes them earlier as well. Value, sign and flags are
+/// exactly the authority's; only the storage contents change, which is the safe
+/// direction and matters because callers use `BN_zero` on secret temporaries.
 ///
 /// # Safety
 ///
@@ -478,20 +570,25 @@ pub unsafe extern "C" fn BN_dup(a: *const BigNum) -> *mut BigNum {
 
 /// `BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b)`
 ///
+/// `a == b` is a valid authority call and answers `a` unchanged
+/// (`bn_lib.c:341-342`'s own early return), so it is handled **before** any borrow of
+/// either pointer is formed.
+///
 /// # Safety
 ///
-/// `a` and `b` must each be null or live, and must not be the same object when
-/// both are non-null.
+/// `a` and `b` must each be null or live.
 #[no_mangle]
 pub unsafe extern "C" fn BN_copy(a: *mut BigNum, b: *const BigNum) -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: `a` and `b` are null or live and distinct, which is this
-        // function's `# Safety` section; the only read of either pointer.
+        if a.cast_const() == b {
+            return a;
+        }
+        // SAFETY: `a` and `b` are null or live, which is this function's `# Safety`
+        // section; the only read of either pointer.
         let (dst, src) = unsafe { (as_mut(a), as_ref(b)) };
         match (dst, src) {
             (Some(dst), Some(src)) => {
-                dst.d.clear();
-                dst.d.extend_from_slice(&src.d);
+                assign_limbs(&mut dst.d, &src.d);
                 dst.neg = src.neg;
                 a
             }
@@ -687,7 +784,15 @@ pub unsafe extern "C" fn BN_set_word(a: *mut BigNum, w: c_ulong) -> c_int {
         // SAFETY: null-or-live per this function's `# Safety` section.
         match unsafe { as_mut(a) } {
             Some(b) => {
-                b.d = limbs::from_u64(w as Limb);
+                // Reuse the allocation the way the authority's `bn_wexpand` does, so a
+                // previously secret magnitude is not freed un-cleansed here. Stale
+                // limbs above the new top remain in the retained allocation and are
+                // cleansed by `BN_clear`/`BN_clear_free` at teardown, exactly as the
+                // authority leaves them until `dmax` is cleared.
+                b.d.clear();
+                if w != 0 {
+                    b.d.push(w as Limb);
+                }
                 b.neg = 0;
                 1
             }
@@ -845,8 +950,7 @@ pub unsafe extern "C" fn BN_with_flags(dest: *mut BigNum, b: *const BigNum, flag
         // SAFETY: null-or-live and distinct per this function's `# Safety` section.
         let (dst, src) = unsafe { (as_mut(dest), as_ref(b)) };
         if let (Some(dst), Some(src)) = (dst, src) {
-            dst.d.clear();
-            dst.d.extend_from_slice(&src.d);
+            assign_limbs(&mut dst.d, &src.d);
             dst.neg = src.neg;
             dst.flags = src.flags | flags;
         }
@@ -1906,6 +2010,21 @@ mod tests {
         }
     }
 
+    /// `BN_copy(a, a)` is a valid call in the authority (`bn_lib.c:341-342` returns `a`
+    /// before any write). It must not form aliasing borrows or clear the source.
+    #[test]
+    fn copying_a_number_onto_itself_preserves_it() {
+        let mut p: *mut BigNum = core::ptr::null_mut();
+        // SAFETY: `p` is a writable slot and the string is NUL-terminated.
+        unsafe { BN_hex2bn(&mut p, c"deadbeefcafebabe".as_ptr()) };
+        // SAFETY: `p` is live; the authority's own self-copy case.
+        assert_eq!(unsafe { BN_copy(p, p) }, p);
+        // SAFETY: `p` is live.
+        assert!(unsafe { same_value(p, p) });
+        // SAFETY: `p` was allocated by this test and is live.
+        unsafe { BN_free(p) };
+    }
+
     /// Test-only equality, so this test does not have to reach for `BN_cmp` in
     /// another module to say what it means.
     ///
@@ -2019,6 +2138,89 @@ mod tests {
             assert_eq!(BN_security_bits(256, 0), 0);
             BN_free(a);
             BN_free(big);
+        }
+    }
+
+    /// `BN_clear` must wipe the whole limb allocation, not just drop `len`. The
+    /// authority cleanses `dmax` limbs; `Vec::capacity()` is that extent here, and the
+    /// spare capacity can still hold limbs from a larger earlier value.
+    #[test]
+    fn bn_clear_cleanses_the_whole_limb_allocation() {
+        const SENTINEL: Limb = 0xDEAD_BEEF_CAFE_BABE;
+        // SAFETY: every pointer is an object this test created and keeps live until its
+        // `BN_free`; the raw inspection stays inside the allocation's capacity.
+        unsafe {
+            let a = new_owned(vec![SENTINEL; 8], 1);
+            assert_eq!(bn_get_top(a), 8, "the sentinel value occupies eight limbs");
+            BN_set_flags(a, BN_FLG_CONSTTIME);
+            (*a).flags |= BN_FLG_FIXED_TOP;
+
+            BN_clear(a);
+
+            assert_eq!(BN_is_zero(a), 1, "the public value is zero");
+            assert_eq!((*a).neg, 0, "a cleared value is never negative");
+            assert_eq!(
+                BN_get_flags(a, BN_FLG_FIXED_TOP),
+                0,
+                "BN_clear drops the fixed-top marker, as bn_lib.c:400 does"
+            );
+            assert_eq!(
+                BN_get_flags(a, BN_FLG_CONSTTIME),
+                BN_FLG_CONSTTIME,
+                "flags other than fixed-top survive"
+            );
+
+            let cap = (*a).d.capacity();
+            assert!(cap >= 8, "the allocation is retained across BN_clear");
+            for i in 0..cap {
+                // SAFETY: the cleanse wrote every element up to `capacity`, so these
+                // reads are initialised; `i < cap` is inside the allocation.
+                assert_eq!(
+                    core::ptr::read_volatile((*a).d.as_ptr().add(i)),
+                    0,
+                    "limb {i} of {cap} survived BN_clear"
+                );
+            }
+            // SAFETY: `a` is live and owned by this test.
+            BN_free(a);
+        }
+    }
+
+    /// Negative control for the test above: the pre-repair reset (`Vec::clear` alone)
+    /// leaves the sentinel in the allocation. The inspection used above must see it, so
+    /// the positive test is not vacuous.
+    #[test]
+    fn the_cleansing_control_detects_an_uncleansed_reset() {
+        const SENTINEL: Limb = 0xDEAD_BEEF_CAFE_BABE;
+        // SAFETY: `a` is an object this test created and owns; element 0 was initialised
+        // by `new_owned` and remains inside the retained allocation after `clear`.
+        unsafe {
+            let a = new_owned(vec![SENTINEL; 4], 0);
+            assert!(bn_get_top(a) == 4);
+            (*a).d.clear();
+            assert_eq!(
+                core::ptr::read_volatile((*a).d.as_ptr()),
+                SENTINEL,
+                "the detector must see the residue an uncleansed reset leaves behind"
+            );
+            // Do not leave the canary's own residue in the freed block.
+            cleanse_storage(&mut (*a).d);
+            // SAFETY: `a` is live and owned by this test.
+            BN_free(a);
+        }
+    }
+
+    /// `BN_secure_new` carries `BN_FLG_SECURE`, which is what makes a plain `BN_free`
+    /// cleanse the magnitude (the authority's `bn_free_d` secure arm).
+    #[test]
+    fn secure_bignums_carry_the_secure_flag() {
+        // SAFETY: `s` is an object this test created and owns.
+        unsafe {
+            let s = BN_secure_new();
+            assert_eq!(BN_get_flags(s, BN_FLG_SECURE), BN_FLG_SECURE);
+            assert_eq!(BN_get_flags(s, BN_FLG_MALLOCED), BN_FLG_MALLOCED);
+            // SAFETY: `s` is live; `BN_free` is the secure-aware release path.
+            BN_free(s);
         }
     }
 }

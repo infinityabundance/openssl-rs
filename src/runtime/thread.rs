@@ -11,7 +11,7 @@
 //! ## Signatures and platform types
 //!
 //! Taken from the authority's installed `crypto.h`, not from memory. On the
-//! admitted `linux-x86_64` profile (`e_os2.h`/`crypto.h`):
+//! admitted `linux-gnu`/`x86_64` profile (`e_os2.h`/`crypto.h`):
 //!
 //! ```text
 //! CRYPTO_RWLOCK        typedef void
@@ -84,6 +84,35 @@
 //!
 //! The orderings are the authority's: `AcqRel` for the read-modify-write
 //! operations, `Acquire` for loads, `Release` for stores.
+//!
+//! ## Ownership classification
+//!
+//! Option B from `OPAQUE-REPRESENTATIONS.md` is used **only** for the measured
+//! `linux-gnu`/`x86_64`/64-bit target (`target_os = "linux"`,
+//! `target_env = "gnu"`, `target_arch = "x86_64"`,
+//! `target_pointer_width = "64"`), where [`CryptoRwlock`] (`CRYPTO_RWLOCK`) is
+//! represented by the authority's exact 56-byte `pthread_rwlock_t` block:
+//! `CRYPTO_THREAD_lock_new` allocates it through `CRYPTO_zalloc` at
+//! `crypto/threads_pthread.c:910` and writes an [`RwlockInner`] inline;
+//! `CRYPTO_THREAD_lock_free` runs `drop_in_place` and releases the same block at
+//! `:1005`. A caller-installed `CRYPTO_set_mem_functions` hook therefore observes
+//! the authority's byte count and coordinates, including the NULL-on-refusal
+//! behaviour. Compile-time `size_of`/`align_of` asserts make a growing Rust type
+//! a build error rather than out-of-bounds storage.
+//!
+//! Every other profile — musl or any other `target_env`, any non-x86_64
+//! architecture, and any non-Linux target — uses option A
+//! (`Box<RwlockInner>`) and makes **no allocator-size parity claim** with the
+//! authority. A future profile that wants option B must have its authority
+//! layout measured and be added deliberately; it must not inherit this profile's
+//! constants.
+//!
+//! The internal `ossl_crypto_mutex_*` / `ossl_crypto_condvar_*` primitives remain
+//! `pub(crate)` Rust-owned `Box` representations and are not exported; they are
+//! outside this decision. `RwlockInner` itself contains only `Mutex`/`Condvar`, so
+//! the `Vec`-style secondary allocations the other opaque objects retain do not
+//! exist here. This still promotes nothing to `SAFETY_DISCHARGED`: the §7
+//! independent-check package is outstanding.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
@@ -92,6 +121,13 @@ use std::time::Duration;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::sys::{self, Timespec, Timeval};
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 // ---------------------------------------------------------------------------
 // pthread bindings
@@ -149,15 +185,116 @@ struct RwlockInner {
     cond: Condvar,
 }
 
+/// The authority's `sizeof(pthread_rwlock_t)` for the `USE_RWLOCK` profile on
+/// the measured `linux-gnu`/`x86_64`/64-bit target
+/// (`crypto/threads_pthread.c:910`). The other branch, which the admitted build
+/// does not select, allocates a 40-byte `pthread_mutex_t`. No other profile has
+/// a measured authority layout; those profiles keep option A and make no
+/// allocator-size parity claim.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_CRYPTO_RWLOCK_SIZE: usize = 56;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const AUTHORITY_CRYPTO_RWLOCK_ALIGN: usize = 8;
+
+// The 56-byte derivation assumes an 8-byte pointer and a 4-byte C `int`, and an
+// `RwlockInner` that fits. Each is checked here rather than trusted.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<usize>() == 8);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<*mut c_void>() == 8);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(core::mem::size_of::<c_int>() == 4);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::size_of::<RwlockInner>() <= AUTHORITY_CRYPTO_RWLOCK_SIZE,
+    "RwlockInner no longer fits the authority-sized CRYPTO_RWLOCK block"
+);
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const _: () = assert!(
+    core::mem::align_of::<RwlockInner>() <= AUTHORITY_CRYPTO_RWLOCK_ALIGN,
+    "RwlockInner alignment exceeds what the C allocator guarantees"
+);
+
+/// The authority's allocation coordinate (`OPENSSL_zalloc(sizeof(...))` at
+/// `crypto/threads_pthread.c:910`) and release coordinate (`:1005`).
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const FILE: &core::ffi::CStr = c"crypto/threads_pthread.c";
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const LINE_ALLOC: c_int = 910;
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+const LINE_FREE: c_int = 1005;
+
+/// The state the authority's `pthread_rwlock_init` establishes.
+fn new_inner() -> RwlockInner {
+    RwlockInner {
+        state: Mutex::new(LockState {
+            writer: false,
+            writer_id: None,
+            readers: 0,
+        }),
+        cond: Condvar::new(),
+    }
+}
+
 /// # Safety
 /// `lock` must be non-NULL and point to a live `RwlockInner` produced by
 /// [`CRYPTO_THREAD_lock_new`] and not yet freed.
-unsafe fn rwlock_inner<'a>(lock: *mut CryptoRwlock) -> &'a RwlockInner {
-    // SAFETY: `CRYPTO_THREAD_lock_new` boxes an `RwlockInner` and casts it to
-    // `*mut CryptoRwlock`; the caller guarantees the pointer is live and
-    // non-NULL. The returned reference's lifetime is the caller's contract for
-    // the duration of one C call.
-    unsafe { &*lock.cast::<RwlockInner>() }
+unsafe fn with_rwlock_inner<R>(lock: *mut CryptoRwlock, f: impl FnOnce(&RwlockInner) -> R) -> R {
+    // SAFETY: `CRYPTO_THREAD_lock_new` writes an `RwlockInner` into the block it
+    // returns and casts it to `*mut CryptoRwlock`; the caller guarantees the
+    // pointer is live and non-NULL. The argument is higher-ranked, so the closure
+    // cannot retain the borrow beyond this call.
+    unsafe { f(&*lock.cast::<RwlockInner>()) }
 }
 
 /// Locks the inner mutex, recovering from poisoning.
@@ -194,23 +331,54 @@ fn current_id() -> CryptoThreadId {
 // Locks
 // ---------------------------------------------------------------------------
 
+/// Option B: one `CRYPTO_zalloc` block of the authority's exact size, with the
+/// Rust state written into it. The compile-time asserts above establish both the
+/// extent and the alignment obligation; a refusal is NULL, as in the authority
+/// (which deliberately raises no error here).
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+fn alloc_lock() -> *mut CryptoRwlock {
+    let block = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(AUTHORITY_CRYPTO_RWLOCK_SIZE, FILE.as_ptr(), LINE_ALLOC)
+    }
+    .cast::<RwlockInner>();
+    if block.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `CRYPTO_zalloc` returned a fresh, exclusively-owned, writable block
+    // of `AUTHORITY_CRYPTO_RWLOCK_SIZE` bytes. The compile-time asserts prove that
+    // is at least `size_of::<RwlockInner>()`; the C allocator contract guarantees
+    // an alignment at least as strict as `AUTHORITY_CRYPTO_RWLOCK_ALIGN`. No other
+    // reference to the block exists, so one `write` initialises the whole value.
+    unsafe { block.write(new_inner()) };
+    block.cast::<CryptoRwlock>()
+}
+
+/// Option A for every profile outside the measured
+/// `linux-gnu`/`x86_64`/64-bit one. It makes no allocator-size parity claim with
+/// the authority.
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+)))]
+fn alloc_lock() -> *mut CryptoRwlock {
+    Box::into_raw(Box::new(new_inner())).cast::<CryptoRwlock>()
+}
+
 /// `CRYPTO_RWLOCK *CRYPTO_THREAD_lock_new(void)`
 ///
 /// Returns NULL when allocation fails. The authority deliberately sets no error
 /// here ("to avoid recursion blowup" in its own comment), so neither does this.
 #[no_mangle]
 pub extern "C" fn CRYPTO_THREAD_lock_new() -> *mut CryptoRwlock {
-    guard_ffi(core::ptr::null_mut(), || {
-        let inner = RwlockInner {
-            state: Mutex::new(LockState {
-                writer: false,
-                writer_id: None,
-                readers: 0,
-            }),
-            cond: Condvar::new(),
-        };
-        Box::into_raw(Box::new(inner)).cast::<CryptoRwlock>()
-    })
+    guard_ffi(core::ptr::null_mut(), alloc_lock)
 }
 
 /// `int CRYPTO_THREAD_read_lock(CRYPTO_RWLOCK *lock)`
@@ -228,20 +396,23 @@ pub unsafe extern "C" fn CRYPTO_THREAD_read_lock(lock: *mut CryptoRwlock) -> c_i
             return 0;
         }
         // SAFETY: `lock` is a live, unfreed lock per the caller's contract.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        loop {
-            if !state.writer {
-                state.readers += 1;
-                return 1;
-            }
-            if state.writer_id == Some(me) {
-                // A read request while this thread holds the write lock is the
-                // authority's EDEADLK path, surfaced as 0.
-                return 0;
-            }
-            state = wait_state(inner, state);
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                loop {
+                    if !state.writer {
+                        state.readers += 1;
+                        return 1;
+                    }
+                    if state.writer_id == Some(me) {
+                        // A read request while this thread holds the write lock is the
+                        // authority's EDEADLK path, surfaced as 0.
+                        return 0;
+                    }
+                    state = wait_state(inner, state);
+                }
+            })
         }
     })
 }
@@ -261,30 +432,38 @@ pub unsafe extern "C" fn CRYPTO_THREAD_write_lock(lock: *mut CryptoRwlock) -> c_
             return 0;
         }
         // SAFETY: as `CRYPTO_THREAD_read_lock`.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        while state.writer || state.readers > 0 {
-            if state.writer_id == Some(me) {
-                return 0;
-            }
-            state = wait_state(inner, state);
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                while state.writer || state.readers > 0 {
+                    if state.writer_id == Some(me) {
+                        return 0;
+                    }
+                    state = wait_state(inner, state);
+                }
+                state.writer = true;
+                state.writer_id = Some(me);
+                1
+            })
         }
-        state.writer = true;
-        state.writer_id = Some(me);
-        1
     })
 }
 
 /// `int CRYPTO_THREAD_unlock(CRYPTO_RWLOCK *lock)`
 ///
 /// Releases whichever kind of lock this thread holds — the C API does not say
-/// which — and returns 1 on success. Returns 0 when the lock is not held by this
-/// thread (the authority's `EPERM` case) or when `lock` is NULL.
+/// which — and returns 1 on success. Returns 0 when the lock is NULL, when this
+/// thread holds the write lock but not as the writer, or when no lock is held.
+///
+/// Reader ownership is not attributed per thread: a read unlock by a thread that
+/// did not acquire one is the authority's own undefined case (a plain
+/// `pthread_rwlock_t` does not detect it either), and here it decrements the
+/// reader count. Every caller in the crate unlocks only what it acquired.
 ///
 /// # Safety
 /// `lock` must be NULL or a live lock returned by [`CRYPTO_THREAD_lock_new`] and
-/// not yet freed.
+/// not yet freed, and the calling thread must hold the lock it is releasing.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int {
     guard_ffi(0, || {
@@ -292,26 +471,80 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
             return 0;
         }
         // SAFETY: as `CRYPTO_THREAD_read_lock`.
-        let inner = unsafe { rwlock_inner(lock) };
-        let me = current_id();
-        let mut state = lock_state(inner);
-        if state.writer {
-            if state.writer_id == Some(me) {
-                state.writer = false;
-                state.writer_id = None;
-                inner.cond.notify_all();
-                return 1;
-            }
-            // Held by another thread.
-            return 0;
+        unsafe {
+            with_rwlock_inner(lock, |inner| {
+                let me = current_id();
+                let mut state = lock_state(inner);
+                if state.writer {
+                    if state.writer_id == Some(me) {
+                        state.writer = false;
+                        state.writer_id = None;
+                        inner.cond.notify_all();
+                        return 1;
+                    }
+                    // Held by another thread.
+                    return 0;
+                }
+                if state.readers > 0 {
+                    state.readers -= 1;
+                    inner.cond.notify_all();
+                    return 1;
+                }
+                0
+            })
         }
-        if state.readers > 0 {
-            state.readers -= 1;
-            inner.cond.notify_all();
-            return 1;
-        }
-        0
     })
+}
+
+/// Releases the authority-sized block after the Rust state has been dropped. The
+/// guard makes the block release happen exactly once even if a destructor ever
+/// unwinds.
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+struct BlockRelease(*mut CryptoRwlock);
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+impl Drop for BlockRelease {
+    fn drop(&mut self) {
+        // SAFETY: the block came from `CRYPTO_zalloc` at `FILE`/`LINE_ALLOC` in
+        // `alloc_lock`, and this guard is its single release at the authority's
+        // freeing coordinate.
+        unsafe { CRYPTO_free(self.0.cast::<c_void>(), FILE.as_ptr(), LINE_FREE) };
+    }
+}
+
+#[cfg(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+))]
+unsafe fn free_lock(lock: *mut CryptoRwlock) {
+    let _release = BlockRelease(lock);
+    // SAFETY: `lock` is a live, initialized `RwlockInner` from `alloc_lock`,
+    // exclusively owned by the caller, and this is its single destructor.
+    unsafe { core::ptr::drop_in_place(lock.cast::<RwlockInner>()) };
+}
+
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+)))]
+unsafe fn free_lock(lock: *mut CryptoRwlock) {
+    // SAFETY: `lock` came from `Box::into_raw` in `alloc_lock` and is not freed
+    // elsewhere.
+    unsafe { drop(Box::from_raw(lock.cast::<RwlockInner>())) };
 }
 
 /// `void CRYPTO_THREAD_lock_free(CRYPTO_RWLOCK *lock)`
@@ -329,9 +562,10 @@ pub unsafe extern "C" fn CRYPTO_THREAD_lock_free(lock: *mut CryptoRwlock) {
         if lock.is_null() {
             return;
         }
-        // SAFETY: `lock` came from `Box::into_raw` in `CRYPTO_THREAD_lock_new`
-        // and is not used again by the caller.
-        drop(unsafe { Box::from_raw(lock.cast::<RwlockInner>()) });
+        // SAFETY: `lock` came from `CRYPTO_THREAD_lock_new` and is not used again
+        // by the caller; `free_lock` is the single release path for either
+        // representation.
+        unsafe { free_lock(lock) };
     })
 }
 
@@ -870,6 +1104,147 @@ mod tests {
         unsafe { CRYPTO_THREAD_lock_free(core::ptr::null_mut()) };
     }
 
+    /// Contended readers and writers on the measured option-B target. Writers
+    /// perform a non-atomic read-modify-write under the write lock, so a lost
+    /// update proves the lock failed to exclude; readers check that the counter
+    /// never decreases. Every thread has bounded work, so the outcome does not
+    /// depend on timing or scheduling.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn rwlock_contested_readers_and_writers_serialise_updates() {
+        use std::sync::atomic::AtomicBool;
+
+        const READERS: usize = 8;
+        const WRITERS: usize = 4;
+        const WRITER_ITERS: usize = 250;
+        const READER_ITERS: usize = 250;
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "lock allocation must succeed");
+        let shared = std::sync::Arc::new(SendLock(lock));
+        let counter = std::sync::Arc::new(AtomicUsize::new(0));
+        let in_write = std::sync::Arc::new(AtomicBool::new(false));
+
+        let mut handles = Vec::new();
+        for _ in 0..WRITERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let counter = std::sync::Arc::clone(&counter);
+            let in_write = std::sync::Arc::clone(&in_write);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..WRITER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_write_lock(shared.0) }, 1);
+                    let overlapped = in_write.swap(true, Ordering::SeqCst);
+                    let value = counter.load(Ordering::SeqCst);
+                    counter.store(value + 1, Ordering::SeqCst);
+                    in_write.store(false, Ordering::SeqCst);
+                    // SAFETY: this thread holds the write lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert!(!overlapped, "two writers held the write lock at once");
+                }
+            }));
+        }
+        for _ in 0..READERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let counter = std::sync::Arc::clone(&counter);
+            handles.push(std::thread::spawn(move || {
+                let mut last = 0;
+                for _ in 0..READER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_read_lock(shared.0) }, 1);
+                    let value = counter.load(Ordering::SeqCst);
+                    // SAFETY: this thread holds the read lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert!(
+                        value >= last,
+                        "readers must never observe the counter decreasing"
+                    );
+                    last = value;
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "a contested worker panicked");
+        }
+
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            WRITERS * WRITER_ITERS,
+            "writers lost an update, so write locks did not exclude"
+        );
+
+        // SAFETY: every user has joined and the lock is unheld.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
+    /// A writer updates a two-field invariant under one write lock; readers
+    /// must never observe the fields disagreeing. This checks reader/writer
+    /// exclusion independently of the writer-serialisation counter test.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn rwlock_contested_readers_never_observe_a_partial_write() {
+        const READERS: usize = 8;
+        const WRITERS: usize = 2;
+        const WRITER_ITERS: usize = 200;
+        const READER_ITERS: usize = 200;
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "lock allocation must succeed");
+        let shared = std::sync::Arc::new(SendLock(lock));
+        let pair = std::sync::Arc::new((AtomicUsize::new(0), AtomicUsize::new(0)));
+
+        let mut handles = Vec::new();
+        for _ in 0..WRITERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let pair = std::sync::Arc::clone(&pair);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..WRITER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_write_lock(shared.0) }, 1);
+                    let next = pair.0.load(Ordering::SeqCst) + 1;
+                    pair.0.store(next, Ordering::SeqCst);
+                    pair.1.store(next, Ordering::SeqCst);
+                    // SAFETY: this thread holds the write lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                }
+            }));
+        }
+        for _ in 0..READERS {
+            let shared = std::sync::Arc::clone(&shared);
+            let pair = std::sync::Arc::clone(&pair);
+            handles.push(std::thread::spawn(move || {
+                for _ in 0..READER_ITERS {
+                    // SAFETY: `shared.0` is a live lock owned by the test.
+                    assert_eq!(unsafe { CRYPTO_THREAD_read_lock(shared.0) }, 1);
+                    let first = pair.0.load(Ordering::SeqCst);
+                    let second = pair.1.load(Ordering::SeqCst);
+                    // SAFETY: this thread holds the read lock.
+                    assert_eq!(unsafe { CRYPTO_THREAD_unlock(shared.0) }, 1);
+                    assert_eq!(first, second, "a reader observed a partial write");
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "a contested worker panicked");
+        }
+
+        assert_eq!(pair.0.load(Ordering::SeqCst), WRITERS * WRITER_ITERS);
+        assert_eq!(pair.1.load(Ordering::SeqCst), WRITERS * WRITER_ITERS);
+
+        // SAFETY: every user has joined and the lock is unheld.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
     // -------- thread identity ---------------------------------------------
 
     #[test]
@@ -1025,6 +1400,141 @@ mod tests {
         // SAFETY: no user remains.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
     }
+
+    // -------- rwlock option-B allocator hook --------------------------------
+
+    /// The allocator seam latches shut after a process's first `CRYPTO_*`
+    /// allocation, so the observation is made in a fresh process in which this is
+    /// the only test that runs. That is what makes it deterministic: no other
+    /// test can allocate first or race the counters.
+    #[cfg(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu",
+        target_pointer_width = "64"
+    ))]
+    mod lock_hook {
+        use super::super::*;
+        use crate::runtime::mem::CRYPTO_set_mem_functions;
+        use core::ffi::{c_char, c_int, c_void};
+        use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
+
+        extern "C" {
+            fn malloc(n: usize) -> *mut c_void;
+            fn realloc(p: *mut c_void, n: usize) -> *mut c_void;
+            fn free(p: *mut c_void);
+        }
+
+        static MALLOCS: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_SIZE: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_FILE: AtomicUsize = AtomicUsize::new(0);
+        static MALLOC_LINE: AtomicI32 = AtomicI32::new(0);
+        static FREES: AtomicUsize = AtomicUsize::new(0);
+        static FREED_PTR: AtomicUsize = AtomicUsize::new(0);
+        static FREE_FILE: AtomicUsize = AtomicUsize::new(0);
+        static FREE_LINE: AtomicI32 = AtomicI32::new(0);
+
+        unsafe extern "C" fn hook_malloc(
+            n: usize,
+            file: *const c_char,
+            line: c_int,
+        ) -> *mut c_void {
+            MALLOCS.fetch_add(1, Ordering::SeqCst);
+            MALLOC_SIZE.store(n, Ordering::SeqCst);
+            MALLOC_FILE.store(file as usize, Ordering::SeqCst);
+            MALLOC_LINE.store(line, Ordering::SeqCst);
+            // SAFETY: `malloc` has no preconditions.
+            unsafe { malloc(n) }
+        }
+
+        unsafe extern "C" fn hook_realloc(
+            p: *mut c_void,
+            n: usize,
+            _file: *const c_char,
+            _line: c_int,
+        ) -> *mut c_void {
+            // SAFETY: `p` is NULL or a block from `hook_malloc`.
+            unsafe { realloc(p, n) }
+        }
+
+        unsafe extern "C" fn hook_free(p: *mut c_void, file: *const c_char, line: c_int) {
+            FREES.fetch_add(1, Ordering::SeqCst);
+            FREED_PTR.store(p as usize, Ordering::SeqCst);
+            FREE_FILE.store(file as usize, Ordering::SeqCst);
+            FREE_LINE.store(line, Ordering::SeqCst);
+            // SAFETY: `p` is NULL or a block from `hook_malloc`.
+            unsafe { free(p) }
+        }
+
+        const CHILD_ENV: &str = "OPENSSL_RS_RWLOCK_HOOK_CHILD";
+
+        #[test]
+        fn hook_observes_authority_size_and_single_release() {
+            if std::env::var_os(CHILD_ENV).is_some() {
+                run_probe();
+                return;
+            }
+
+            let exe = std::env::current_exe().unwrap_or_default();
+            assert!(!exe.as_os_str().is_empty(), "the test binary has no path");
+            let ran_and_passed = std::process::Command::new(exe)
+                .args([
+                    "--exact",
+                    "runtime::thread::tests::lock_hook::hook_observes_authority_size_and_single_release",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(CHILD_ENV, "1")
+                .status()
+                .map(|status| status.success())
+                .unwrap_or(false);
+            assert!(ran_and_passed, "the isolated hook probe failed");
+        }
+
+        fn run_probe() {
+            // SAFETY: the hooks forward to libc and stay valid for the process;
+            // this process runs exactly this test, so the seam has not latched.
+            let installed = unsafe {
+                CRYPTO_set_mem_functions(Some(hook_malloc), Some(hook_realloc), Some(hook_free))
+            };
+            assert_eq!(installed, 1, "the allocator seam refused installation");
+
+            let lock = CRYPTO_THREAD_lock_new();
+            assert!(!lock.is_null(), "CRYPTO_THREAD_lock_new returned NULL");
+
+            assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "one block allocation");
+            assert_eq!(
+                MALLOC_SIZE.load(Ordering::SeqCst),
+                AUTHORITY_CRYPTO_RWLOCK_SIZE,
+                "the hook must observe the authority's sizeof(pthread_rwlock_t)"
+            );
+            assert_eq!(
+                MALLOC_FILE.load(Ordering::SeqCst),
+                FILE.as_ptr() as usize,
+                "the allocation reports the authority's file"
+            );
+            assert_eq!(MALLOC_LINE.load(Ordering::SeqCst), LINE_ALLOC);
+
+            // Every operation must work through the inline representation.
+            // SAFETY: `lock` is live and unheld.
+            assert_eq!(unsafe { CRYPTO_THREAD_read_lock(lock) }, 1);
+            // SAFETY: this thread holds the read lock.
+            assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+            // SAFETY: `lock` is live and unheld.
+            assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 1);
+            // SAFETY: this thread holds the write lock.
+            assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+
+            // SAFETY: `lock` is live and unheld; this is its single release.
+            unsafe { CRYPTO_THREAD_lock_free(lock) };
+
+            assert_eq!(FREES.load(Ordering::SeqCst), 1, "exactly one release");
+            assert_eq!(FREED_PTR.load(Ordering::SeqCst), lock as usize);
+            assert_eq!(FREE_FILE.load(Ordering::SeqCst), FILE.as_ptr() as usize);
+            assert_eq!(FREE_LINE.load(Ordering::SeqCst), LINE_FREE);
+            assert_eq!(MALLOCS.load(Ordering::SeqCst), 1, "no second allocation");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1101,33 +1611,51 @@ pub(crate) fn ossl_crypto_mutex_new() -> *mut CryptoMutex {
     Box::into_raw(Box::new(m))
 }
 
+/// Runs `f` with the parking flag of `m`, scoped to this call.
+///
+/// # Safety
+/// `m` must be non-NULL and live.
+unsafe fn with_mutex_flag<R>(m: *mut CryptoMutex, f: impl FnOnce(&Mutex<bool>) -> R) -> R {
+    // SAFETY: `m` is a live object produced by `ossl_crypto_mutex_new` per the
+    // caller's contract. The argument is higher-ranked, so the closure cannot
+    // retain the field borrow beyond this call.
+    unsafe { f(&(*m).held) }
+}
+
+/// Blocks until `m` is free, then takes it. This is both the lock itself and the
+/// re-acquisition half of the condition-variable waits: setting the flag without
+/// waiting would let the waiter and a second locker both believe they hold `m`.
+///
+/// # Safety
+/// `m` must be non-NULL and live.
+unsafe fn mutex_acquire(m: *mut CryptoMutex) {
+    // SAFETY: `m` is live per the caller's contract.
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            while *flag {
+                // SAFETY: `m` is live per the caller's contract.
+                flag = match (*m).released.wait(flag) {
+                    Ok(g) => g,
+                    Err(p) => p.into_inner(),
+                };
+            }
+            *flag = true;
+        })
+    };
+}
+
 /// `void ossl_crypto_mutex_lock(CRYPTO_MUTEX *mutex)`
 ///
 /// # Safety
 /// `mutex` must be non-NULL and live, and not already held by this thread (the
 /// authority's non-recursive mutex deadlocks on that, and so does this).
-unsafe fn mutex_held(m: *mut CryptoMutex) -> &'static Mutex<bool> {
-    // SAFETY: `mutex` is a live object produced by `ossl_crypto_mutex_new` per
-    // the caller's contract; the returned reference borrows one of its fields
-    // for the duration of one C call.
-    unsafe { &(*m).held }
-}
-
 pub(crate) unsafe fn ossl_crypto_mutex_lock(m: *mut CryptoMutex) {
     if m.is_null() {
         return;
     }
     // SAFETY: `m` is live per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    while *flag {
-        // SAFETY: `m` is live per the caller's contract.
-        flag = match unsafe { &(*m).released }.wait(flag) {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-    }
-    *flag = true;
+    unsafe { mutex_acquire(m) };
 }
 
 /// Locks, recovering from poisoning, as the rwlock helpers above do.
@@ -1148,12 +1676,16 @@ pub(crate) unsafe fn ossl_crypto_mutex_try_lock(m: *mut CryptoMutex) -> c_int {
         return 0;
     }
     // SAFETY: `m` is live per the caller's contract.
-    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
-    if *flag {
-        return 0;
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if *flag {
+                return 0;
+            }
+            *flag = true;
+            1
+        })
     }
-    *flag = true;
-    1
 }
 
 /// `void ossl_crypto_mutex_unlock(CRYPTO_MUTEX *mutex)`
@@ -1164,12 +1696,16 @@ pub(crate) unsafe fn ossl_crypto_mutex_unlock(m: *mut CryptoMutex) {
     if m.is_null() {
         return;
     }
-    // SAFETY: `m` is live per the caller's contract.
-    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
-    *flag = false;
-    drop(flag);
-    // SAFETY: `m` is live per the caller's contract.
-    unsafe { &(*m).released }.notify_one();
+    // SAFETY: `m` is live per the caller's contract, and the closure ends the
+    // borrow of `held` before the notification below.
+    unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            *flag = false;
+        });
+        // SAFETY: `m` is live per the caller's contract.
+        (*m).released.notify_one();
+    }
 }
 
 /// `void ossl_crypto_mutex_free(CRYPTO_MUTEX **mutex)` — frees and NULLs.
@@ -1244,19 +1780,25 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     };
 
     // SAFETY: `m` is live and held by this thread per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    if !*flag {
+    let was_held = unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if !*flag {
+                return false;
+            }
+            *flag = false;
+            true
+        })
+    };
+    if !was_held {
         // The caller did not hold it. `pthread_cond_wait` is undefined there too,
         // so this returns rather than waiting on a mutex it does not own.
         drop(gate);
         return;
     }
-    *flag = false;
-    drop(flag);
     // Wake one `ossl_crypto_mutex_lock` waiter, now that the flag is clear.
     // SAFETY: `m` is live.
-    unsafe { &(*m).released }.notify_one();
+    unsafe { (*m).released.notify_one() };
 
     // SAFETY: `cv` is live; the guard belongs to the gate, and `wait` releases it
     // for the duration of the wait, which is what lets a signaller through.
@@ -1266,10 +1808,11 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     };
     drop(gate);
 
-    // Re-acquire the caller's mutex, restoring the flag so the next `unlock`
-    // releases it rather than corrupting the state.
-    let mut flag = lock_state_poisoned(held);
-    *flag = true;
+    // Re-acquire the caller's mutex exactly as `ossl_crypto_mutex_lock` does. A
+    // second thread may have taken it between the signal and this return, so
+    // setting the flag without waiting would leave both holding it.
+    // SAFETY: `m` is live and this frame is the waiter that released it.
+    unsafe { mutex_acquire(m) };
 }
 
 /// `OSSL_TIME_INFINITY` — `include/internal/time.h`, the sentinel `ossl_time_is_infinite` compares
@@ -1359,16 +1902,22 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait_timeout(
     };
 
     // SAFETY: `m` is live and held by this thread per the caller's contract.
-    let held = unsafe { mutex_held(m) };
-    let mut flag = lock_state_poisoned(held);
-    if !*flag {
+    let was_held = unsafe {
+        with_mutex_flag(m, |held| {
+            let mut flag = lock_state_poisoned(held);
+            if !*flag {
+                return false;
+            }
+            *flag = false;
+            true
+        })
+    };
+    if !was_held {
         drop(gate);
         return;
     }
-    *flag = false;
-    drop(flag);
     // SAFETY: `m` is live.
-    unsafe { &(*m).released }.notify_one();
+    unsafe { (*m).released.notify_one() };
 
     let now = monotonic_now_nanos();
     let remaining = deadline.saturating_sub(now);
@@ -1380,8 +1929,10 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait_timeout(
     };
     drop(gate);
 
-    let mut flag = lock_state_poisoned(held);
-    *flag = true;
+    // As in the untimed wait: the caller's mutex must be reacquired by waiting,
+    // not by overwriting whatever state the parking flag is in now.
+    // SAFETY: `m` is live and this frame is the waiter that released it.
+    unsafe { mutex_acquire(m) };
 }
 
 /// `void ossl_crypto_condvar_signal(CRYPTO_CONDVAR *cv)` — wakes one waiter.
@@ -1657,5 +2208,61 @@ mod condvar_tests {
     #[test]
     fn the_clock_never_reports_the_infinity_sentinel() {
         assert_ne!(monotonic_now_nanos(), OSSL_TIME_INFINITY);
+    }
+
+    /// A waiter woken by a signal must **re-acquire** the caller's mutex before
+    /// returning. Stamping the parking flag without waiting for it to clear lets the
+    /// woken thread and a second locker both proceed, which is the data race the
+    /// mutex exists to prevent. The holder here signals and then stays inside the
+    /// critical section longer than the waiter could need, so a waiter that only
+    /// set the flag observes `HOLDER_EXITED` still false.
+    #[test]
+    fn a_woken_waiter_waits_for_the_mutex_before_returning() {
+        use core::sync::atomic::AtomicBool;
+
+        static HOLDER_INSIDE: AtomicBool = AtomicBool::new(false);
+        static HOLDER_EXITED: AtomicBool = AtomicBool::new(false);
+
+        HOLDER_INSIDE.store(false, Ordering::SeqCst);
+        HOLDER_EXITED.store(false, Ordering::SeqCst);
+
+        // SAFETY: both objects are created here, are live until both threads have
+        // finished with them, and are released exactly once at the end.
+        unsafe {
+            let mut m = ossl_crypto_mutex_new();
+            let mut cv = ossl_crypto_condvar_new();
+            assert!(!m.is_null() && !cv.is_null());
+
+            ossl_crypto_mutex_lock(m);
+
+            let m_addr = m as usize;
+            let cv_addr = cv as usize;
+            let holder = std::thread::spawn(move || {
+                let m = m_addr as *mut CryptoMutex;
+                let cv = cv_addr as *mut CryptoCondvar;
+                // The objects outlive this thread; the test joins it before either
+                // object is released.
+                ossl_crypto_mutex_lock(m);
+                HOLDER_INSIDE.store(true, Ordering::SeqCst);
+                ossl_crypto_condvar_signal(cv);
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                HOLDER_EXITED.store(true, Ordering::SeqCst);
+                ossl_crypto_mutex_unlock(m);
+            });
+
+            // Releases `m` and waits; only after that can the holder take it.
+            ossl_crypto_condvar_wait(cv, m);
+
+            assert!(HOLDER_INSIDE.load(Ordering::SeqCst));
+            assert!(
+                HOLDER_EXITED.load(Ordering::SeqCst),
+                "condvar_wait returned while another thread still held the mutex"
+            );
+            ossl_crypto_mutex_unlock(m);
+
+            assert!(holder.join().is_ok(), "the holder thread must not panic");
+            ossl_crypto_mutex_free(&raw mut m);
+            ossl_crypto_condvar_free(&raw mut cv);
+        }
     }
 }

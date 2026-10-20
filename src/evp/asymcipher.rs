@@ -39,7 +39,7 @@
 
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -61,18 +61,21 @@ use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_count_to_mark,
     ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_OP_ASYM_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_ASYM_CIPHER: c_int = 13;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c");
 /// The buffer size the authority's `ERR_raise_data` messages are formatted into —
 /// `ERR_MAX_DATA_SIZE`, `include/internal/err.h`.
 const ERR_DATA_BUFFER: usize = 1024;
@@ -82,6 +85,8 @@ const LINE_ZALLOC_CIPHER: c_int = 352;
 const LINE_FREE_TYPE_NAME: c_int = 494;
 /// `EVP_ASYM_CIPHER_free`'s `OPENSSL_free(cipher)` (line 497).
 const LINE_FREE_CIPHER: c_int = 497;
+/// `evp_asym_cipher_new`'s `OPENSSL_free(cipher)` when the up-ref fails (line 360).
+const LINE_FREE_CIPHER_UP_REF: c_int = 360;
 /// `evp_pkey_decrypt_alloc`'s `OPENSSL_malloc(*outlenp)` (line 337).
 const LINE_MALLOC_DECRYPT_ALLOC: c_int = 337;
 /// `evp_pkey_decrypt_alloc`'s `OPENSSL_clear_free(*outp, *outlenp)` (line 343).
@@ -186,6 +191,117 @@ pub struct EvpAsymCipher {
     pub(crate) settable_ctx_params: Option<AsymCipherSettableCtxParamsFn>,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `EVP_ASYM_CIPHER` object and the decrypted-output block
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `EVP_ASYM_CIPHER_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the type name and the provider *reference*, in the authority's own order.
+// SAFETY: (a) holds: `destroy_body` is `EVP_ASYM_CIPHER_free` minus the block -- the type name and
+// the provider reference, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
+// all-zero cipher has both members NULL, so the body is the authority's own all-empty teardown --
+// what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for EvpAsymCipher {
+    unsafe fn destroy_body(ptr: *mut EvpAsymCipher) {
+        // SAFETY: `ptr` is a live object per the trait contract; `type_name` is NULL or this file's
+        // own `ossl_algorithm_get1_first_name` string and `prov` is NULL or a live provider the
+        // constructor took a reference on.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
+/// An owned secret-bearing byte buffer: the authority's own `CRYPTO_malloc` block whose release is
+/// this type, so its single release is `Drop` and the cleanse-then-free arm is not written by hand at
+/// the call site.
+///
+/// [`Self::take`] adopts a block the frame allocated through the crate's allocator seam at the
+/// authority's own size/`file`/`line`, so a caller-installed `CRYPTO_set_mem_functions` hook observes
+/// the allocation and its release exactly as it observes the authority's.
+struct OwnedBlock {
+    ptr: *mut c_void,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl OwnedBlock {
+    /// Adopt a block the frame's seam answered, or `None` for NULL. `len` is the length the
+    /// cleansing release covers.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a block the crate's allocator seam produced, is owned by the caller, and
+    /// will not be freed or handed to any other owner -- this handle's `Drop` is its single release.
+    unsafe fn take(
+        ptr: *mut c_void,
+        len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBlock> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBlock {
+                ptr,
+                len,
+                file,
+                line,
+            })
+        }
+    }
+}
+
+impl Drop for OwnedBlock {
+    /// The buffer's single release: the authority's own `OPENSSL_clear_free`, which cleanses `len`
+    /// bytes and then frees through the same seam.
+    fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Cleansed { len: self.len },
+            self.file,
+            self.line,
+        );
+        // SAFETY: `self.ptr` is a block this seam allocated (or NULL, a no-op) that `Drop` has not
+        // released before; `self.len` is its cleanse length and the authority's own
+        // `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr, self.len, self.file, self.line) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+    use core::ffi::CStr;
+
+    const FILE_TEST: &CStr = c"test/evp_asymcipher.rs";
+
+    /// D1-style drift guard: this family's release is the **cleansed** arm over its
+    /// stored length, at its per-instance coordinates -- never a plain free.
+    #[test]
+    fn release_is_cleansed_over_the_stored_length() {
+        release_probe::clear();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, FILE_TEST.as_ptr(), 11)
+        };
+        assert!(!raw.is_null());
+        // SAFETY: `raw` is the fresh seam block this test owns; `len` is its extent.
+        let block = unsafe { OwnedBlock::take(raw, 16, FILE_TEST.as_ptr(), 12) }
+            .expect("a non-NULL block is owned");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Cleansed { len: 16 });
+        assert_eq!(call.file, FILE_TEST.as_ptr());
+        assert_eq!(call.line, 12);
+    }
+}
+
 /// `static void evp_asym_cipher_free(void *data)` — the shape `evp_generic_fetch` wants.
 ///
 /// # Safety
@@ -210,23 +326,34 @@ unsafe extern "C" fn evp_asym_cipher_up_ref(data: *mut c_void) -> c_int {
 /// # Safety
 /// `prov` must be live.
 unsafe fn evp_asym_cipher_new(prov: *mut OsslProvider) -> *mut EvpAsymCipher {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate: it validates its own argument. */
-    let cipher = CRYPTO_zalloc(
-        core::mem::size_of::<EvpAsymCipher>(),
-        FILE,
+    let Some(cipher) = OwnedCtx::<EvpAsymCipher>::zalloc_at(
+        FILE_SEAM,
         LINE_ZALLOC_CIPHER,
-    )
-    .cast::<EvpAsymCipher>();
-    if cipher.is_null() {
+        FILE_SEAM,
+        LINE_ZALLOC_CIPHER,
+    ) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `cipher` is this call's own object and `prov` is live.
     unsafe {
-        (*cipher).refcnt = AtomicI32::new(1);
-        (*cipher).prov = prov;
-        ossl_provider_up_ref(prov);
+        let p = cipher.as_ptr();
+        (*p).refcnt = AtomicI32::new(1);
+        // The authority refuses on a failed up-ref *before* assigning `prov`
+        // (`asymcipher.c:357-363`). Only the child-provider arm of `ossl_provider_up_ref` rolls
+        // the increment back (via `ossl_provider_free`); the non-child overflow arm returns 0
+        // without rollback. Assigning `prov` here would double-release on the child arm; on the
+        // (practically unreachable i32-wrap) overflow arm it retains the increment as a leak,
+        // matching the authority's callers.
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            // The authority's failure arm frees the fresh block directly, at its own coordinate
+            // (`asymcipher.c:360`); no member has been assigned yet.
+            core::mem::forget(cipher);
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_CIPHER_UP_REF);
+            return ptr::null_mut();
+        }
+        (*p).prov = prov;
     }
-    cipher
+    cipher.into_raw()
 }
 
 /// `static void *evp_asym_cipher_from_algorithm(int name_id, const OSSL_ALGORITHM *algodef,
@@ -371,19 +498,18 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
     if cipher.is_null() {
         return;
     }
-    // SAFETY: `cipher` is live per the contract.
-    let last = unsafe { (*cipher).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `cipher` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*cipher).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_ASYM_CIPHER_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: `cipher` is live and this was the last reference.
-    let (type_name, prov) = unsafe { ((*cipher).type_name, (*cipher).prov) };
-    // SAFETY: `type_name` was allocated for this object.
-    unsafe { CRYPTO_free(type_name.cast(), FILE, LINE_FREE_TYPE_NAME) };
-    // SAFETY: `prov` is live and holds the reference `evp_asym_cipher_new` took.
-    unsafe { ossl_provider_free(prov) };
-    // SAFETY: `cipher` is this object's own allocation.
-    unsafe { CRYPTO_free(cipher.cast(), FILE, LINE_FREE_CIPHER) };
+    // SAFETY: `cipher` is live and this was its last reference, so no other owner will release it;
+    // `Drop` runs the authority's own free body and this is the block's single release.
+    drop(unsafe { OwnedCtx::<EvpAsymCipher>::from_raw_at(cipher, FILE_SEAM, LINE_FREE_CIPHER) });
 }
 
 /// `int EVP_ASYM_CIPHER_up_ref(EVP_ASYM_CIPHER *cipher)`.
@@ -392,9 +518,11 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_free(cipher: *mut EvpAsymCipher) {
 /// `cipher` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_ASYM_CIPHER_up_ref(cipher: *mut EvpAsymCipher) -> c_int {
-    // SAFETY: `cipher` is live per the contract.
-    unsafe { (*cipher).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `cipher` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*cipher).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_ASYM_CIPHER_get0_provider(const EVP_ASYM_CIPHER *cipher)`.
@@ -1107,10 +1235,16 @@ pub(crate) unsafe fn evp_pkey_decrypt_alloc(
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::ASYMCIPHER_342) };
-        // SAFETY: `buffer` is this call's own allocation of `*outlenp` bytes.
+        // SAFETY: `buffer` is this call's own allocation, the second call wrote the produced length
+        // into `outlenp`; `Drop` is the authority's own cleanse-then-release at its `:343` site.
         unsafe {
             let produced = *outlenp;
-            CRYPTO_clear_free(buffer.cast(), produced, FILE, LINE_CLEAR_FREE_DECRYPT_ALLOC);
+            drop(OwnedBlock::take(
+                buffer.cast(),
+                produced,
+                FILE,
+                LINE_CLEAR_FREE_DECRYPT_ALLOC,
+            ));
         }
         // SAFETY: `outp` is writable and its value is this call's own allocation.
         unsafe { *outp = ptr::null_mut() };
@@ -1289,3 +1423,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpAsymCipher => zero_state_sweep_evp_asym_cipher);

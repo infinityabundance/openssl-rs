@@ -21,9 +21,20 @@
 //!
 //! ## Aliasing
 //!
-//! Every function accepts `r` aliasing `a` or `b`, which the authority allows and its
-//! own code relies on. Each therefore computes into a local magnitude and assigns at
-//! the end rather than writing through `r` as it goes.
+//! Each entry point reads its operands through shared references whose last use
+//! precedes the write, then borrows the output once at the store. No `&mut` and `&`
+//! to the same object are ever live together, so a supported aliased call is not UB.
+//!
+//! The supported output aliases are the authority's documented or source-visible
+//! ones. `r` may alias `a` or `b` for `BN_add`, `BN_sub`, `BN_uadd`, `BN_usub`,
+//! `BN_mul` and `BN_gcd`; `r` may alias `a` for `BN_sqr`, `BN_nnmod`, `BN_lshift`,
+//! `BN_rshift` and `BN_mod_inverse`; `r` may alias `a` or `p` for `BN_exp` and
+//! `BN_mod_exp`; and `in` may alias `a` for `BN_mod_sqrt`. `BN_nnmod` rejects
+//! `r == m`, as the authority's `bn_mod.c:21-24` does. `BN_mod_inverse`'s manual
+//! calls `r == n` an error, but the authority's `int_bn_mod_inverse` copies `n`
+//! before writing the result, so this implementation defines that case too.
+//! `BN_mod_exp`'s `r == m` and `BN_mod_sqrt`'s `in == p` are likewise defined here
+//! but are not authority-guaranteed.
 
 use core::ffi::{c_int, c_ulong};
 
@@ -60,10 +71,13 @@ fn div_rem_mag(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec<Limb>)> {
 #[no_mangle]
 pub unsafe extern "C" fn BN_add(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: all three pointers are null-or-live per this function's `# Safety`
-        // section, and this is the only place any of them is read.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, bn) = parts(y);
         let (mag, neg) = if an == bn {
             (limbs::add(&ad, &bd), an)
@@ -74,7 +88,9 @@ pub unsafe extern "C" fn BN_add(r: *mut BigNum, a: *const BigNum, b: *const BigN
                 core::cmp::Ordering::Less => (limbs::sub(&bd, &ad), bn),
             }
         };
-        c_int::from(store(dst, mag, neg))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, mag, neg))
     })
 }
 
@@ -86,9 +102,13 @@ pub unsafe extern "C" fn BN_add(r: *mut BigNum, a: *const BigNum, b: *const BigN
 #[no_mangle]
 pub unsafe extern "C" fn BN_sub(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, bn) = parts(y);
         let (mag, neg) = if an != bn {
             (limbs::add(&ad, &bd), an)
@@ -99,7 +119,9 @@ pub unsafe extern "C" fn BN_sub(r: *mut BigNum, a: *const BigNum, b: *const BigN
                 core::cmp::Ordering::Less => (limbs::sub(&bd, &ad), !bn),
             }
         };
-        c_int::from(store(dst, mag, neg))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, mag, neg))
     })
 }
 
@@ -112,11 +134,17 @@ pub unsafe extern "C" fn BN_sub(r: *mut BigNum, a: *const BigNum, b: *const BigN
 #[no_mangle]
 pub unsafe extern "C" fn BN_uadd(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
-        c_int::from(store(dst, limbs::add(&ad, &bd), false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::add(&ad, &bd), false))
     })
 }
 
@@ -136,16 +164,22 @@ pub unsafe extern "C" fn BN_uadd(r: *mut BigNum, a: *const BigNum, b: *const Big
 #[no_mangle]
 pub unsafe extern "C" fn BN_usub(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
         if ad.len() < bd.len() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_ADD_142) };
             return 0;
         }
-        c_int::from(store(dst, limbs::sub(&ad, &bd), false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::sub(&ad, &bd), false))
     })
 }
 
@@ -287,11 +321,17 @@ pub unsafe extern "C" fn BN_mul(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, bn) = parts(y);
-        c_int::from(store(dst, limbs::mul(&ad, &bd), an != bn))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::mul(&ad, &bd), an != bn))
     })
 }
 
@@ -303,11 +343,14 @@ pub unsafe extern "C" fn BN_mul(
 #[no_mangle]
 pub unsafe extern "C" fn BN_sqr(r: *mut BigNum, a: *const BigNum, _ctx: *mut BnCtx) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut(r), as_ref(a)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section; its
+        // shared borrow ends at `parts`, before the output is borrowed.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
         // A square is never negative, whatever the operand's sign.
-        c_int::from(store(dst, limbs::mul(&ad, &ad), false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared read above has ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::mul(&ad, &ad), false))
     })
 }
 
@@ -330,10 +373,19 @@ pub unsafe extern "C" fn BN_div(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (q_out, r_out, x, y) = unsafe { (as_mut(dv), as_mut(rem), as_ref(a), as_ref(b)) };
-        let (ad, an) = parts(x);
-        let (bd, bn) = parts(y);
+        // SAFETY: null-or-live per this function's `# Safety` section. The inputs are
+        // read through shared references whose uses end before either output is
+        // borrowed, so `a`/`b` may alias each other or either output.
+        let (ad, an) = {
+            // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+            let x = unsafe { as_ref(a) };
+            parts(x)
+        };
+        let (bd, bn) = {
+            // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+            let y = unsafe { as_ref(b) };
+            parts(y)
+        };
         let (q, r) = match div_rem_mag(&ad, &bd) {
             Some(qr) => qr,
             None => {
@@ -343,14 +395,19 @@ pub unsafe extern "C" fn BN_div(
             }
         };
         // The quotient is negative exactly when the signs differ, and the remainder
-        // takes the dividend's sign. The remainder is stored first so that a caller
-        // passing the same object for both slots sees the remainder, which is the
-        // authority's order too.
+        // takes the dividend's sign. Each output is borrowed and released in turn, so
+        // two `&mut` are never alive at once when a caller passes the same object for
+        // both slots. The remainder is stored first and the quotient last, so that
+        // aliased case ends with the quotient.
         let mut ok = true;
-        if let Some(dst) = r_out {
+        // SAFETY: `rem` is null-or-live per this function's `# Safety` section.
+        let rem_out = unsafe { as_mut(rem) };
+        if let Some(dst) = rem_out {
             ok &= store(Some(dst), r, an);
         }
-        if let Some(dst) = q_out {
+        // SAFETY: `dv` is null-or-live per this function's `# Safety` section.
+        let dv_out = unsafe { as_mut(dv) };
+        if let Some(dst) = dv_out {
             ok &= store(Some(dst), q, an != bn);
         }
         c_int::from(ok)
@@ -376,9 +433,13 @@ pub unsafe extern "C" fn BN_nnmod(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(m)) };
+        // SAFETY: `a` and `m` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
+        // SAFETY: as above for `m`.
+        let y = unsafe { as_ref(m) };
         let (md, _) = parts(y);
         if core::ptr::eq(r.cast_const(), m) {
             // SAFETY: the site is a compile-time constant.
@@ -398,7 +459,9 @@ pub unsafe extern "C" fn BN_nnmod(
         if an && !rem.is_empty() {
             rem = limbs::sub(&md, &rem);
         }
-        c_int::from(store(dst, rem, false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, rem, false))
     })
 }
 
@@ -649,9 +712,13 @@ pub unsafe extern "C" fn BN_mod_inverse(
     _ctx: *mut BnCtx,
 ) -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(n)) };
+        // SAFETY: `a` and `n` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: as above for `n`.
+        let y = unsafe { as_ref(n) };
         let (nd, _) = parts(y);
         let inv = match limbs::mod_inverse(&ad, &nd) {
             Some(v) => v,
@@ -663,7 +730,9 @@ pub unsafe extern "C" fn BN_mod_inverse(
                 return core::ptr::null_mut();
             }
         };
-        match dst {
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        match unsafe { as_mut(r) } {
             None => new_owned(inv, 0),
             Some(dst) => {
                 if store(Some(dst), inv, false) {
@@ -687,10 +756,13 @@ pub unsafe extern "C" fn BN_lshift(r: *mut BigNum, a: *const BigNum, n: c_int) -
         if n < 0 {
             return 0;
         }
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut(r), as_ref(a)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section; its
+        // shared borrow ends at `parts`, before the output is borrowed.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
-        c_int::from(store(dst, limbs::shl(&ad, n as usize), an))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared read above has ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::shl(&ad, n as usize), an))
     })
 }
 
@@ -716,10 +788,13 @@ pub unsafe extern "C" fn BN_rshift(r: *mut BigNum, a: *const BigNum, n: c_int) -
         if n < 0 {
             return 0;
         }
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut(r), as_ref(a)) };
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section; its
+        // shared borrow ends at `parts`, before the output is borrowed.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
-        c_int::from(store(dst, limbs::shr(&ad, n as usize), an))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared read above has ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::shr(&ad, n as usize), an))
     })
 }
 
@@ -934,13 +1009,16 @@ pub unsafe extern "C" fn BN_exp(
     ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(p)) };
+        // SAFETY: `p` is null-or-live per this function's `# Safety` section; its
+        // shared borrow ends at `parts`, before the output is borrowed.
+        let y = unsafe { as_ref(p) };
         // The authority's ladder is driven by `BN_num_bits`/`BN_is_bit_set`, which read
         // the exponent's *magnitude*, so a negative exponent is not rejected: it
         // computes `a^|p|`. `BN_exp` is explicit about that in `bn_exp.c` — there is no
         // sign test anywhere in it.
         let (pd, _) = parts(y);
+        // SAFETY: as above for `a`.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
         let mut acc: Vec<Limb> = vec![1];
         let mut base = ad;
@@ -953,7 +1031,9 @@ pub unsafe extern "C" fn BN_exp(
             }
         }
         let _ = ctx;
-        c_int::from(store(dst, acc, false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, acc, false))
     })
 }
 
@@ -975,13 +1055,23 @@ pub unsafe extern "C" fn BN_mod_exp(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y, z) = unsafe { (as_mut(r), as_ref(a), as_ref(p), as_ref(m)) };
+        // SAFETY: `a`, `p` and `m` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: as above for `p`.
+        let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // SAFETY: as above for `m`.
+        let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
         match mod_exp_core(&ad, &pd, &md) {
-            Some(v) => c_int::from(store(dst, v, false)),
+            Some(v) => {
+                // SAFETY: `r` is null-or-live per this function's `# Safety` section;
+                // the shared reads above have ended.
+                c_int::from(store(unsafe { as_mut(r) }, v, false))
+            }
             None => {
                 // A zero modulus reaches `BN_div` inside the authority's ladder, so
                 // the coordinate is `BN_div`'s.
@@ -1074,11 +1164,17 @@ pub unsafe extern "C" fn BN_gcd(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: as above for `b`.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
-        c_int::from(store(dst, limbs::gcd(&ad, &bd), false))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended, so an aliased `r` is not borrowed twice.
+        c_int::from(store(unsafe { as_mut(r) }, limbs::gcd(&ad, &bd), false))
     })
 }
 
@@ -1121,9 +1217,13 @@ pub unsafe extern "C" fn BN_mod_sqrt(
     _ctx: *mut BnCtx,
 ) -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(inp), as_ref(a), as_ref(p)) };
+        // SAFETY: `a` and `p` are null-or-live per this function's `# Safety`
+        // section. Each shared borrow ends at its `parts` call, before `inp` is
+        // borrowed for the store.
+        let x = unsafe { as_ref(a) };
         let (ad, an) = parts(x);
+        // SAFETY: as above for `p`.
+        let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
 
         // `p` must be an odd prime. The authority rejects an even `p` — and `|p| == 1` —
@@ -1133,7 +1233,9 @@ pub unsafe extern "C" fn BN_mod_sqrt(
         if pd.is_empty() || limbs::is_even(&pd) || (pd.len() == 1 && pd[0] == 1) {
             if pd.len() == 1 && pd[0] == 2 {
                 // The only even prime: the root is `a`'s low bit.
-                return finish_sqrt(dst, inp, limbs::rem(&ad, &pd));
+                // SAFETY: `inp` is null-or-live per this function's `# Safety`
+                // section; the shared reads above have ended.
+                return finish_sqrt(unsafe { as_mut(inp) }, inp, limbs::rem(&ad, &pd));
             }
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_SQRT_43) };
@@ -1207,7 +1309,9 @@ pub unsafe extern "C" fn BN_mod_sqrt(
             t = limbs::rem(&limbs::mul(&t, &c), &pd);
             r = limbs::rem(&limbs::mul(&r, &b), &pd);
         }
-        finish_sqrt(dst, inp, r)
+        // SAFETY: `inp` is null-or-live per this function's `# Safety` section; the
+        // shared reads above have ended.
+        finish_sqrt(unsafe { as_mut(inp) }, inp, r)
     })
 }
 
@@ -1237,6 +1341,262 @@ fn finish_sqrt(dst: Option<&mut BigNum>, inp: *mut BigNum, value: Vec<Limb>) -> 
                 inp
             } else {
                 core::ptr::null_mut()
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::bignum::{BN_copy, BN_free, BN_get_word, BN_new, BN_set_word};
+
+    /// A `BIGNUM` holding a machine word.
+    fn word(w: c_ulong) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        // SAFETY: `b` is live.
+        assert_eq!(unsafe { BN_set_word(b, w) }, 1);
+        b
+    }
+
+    /// Copy an object so an aliased-output call does not destroy the input used by
+    /// the distinct-output reference computation.
+    fn copy_of(src: *const BigNum) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let dst = unsafe { BN_new() };
+        // SAFETY: `dst` is live and `src` is live for the duration of the call.
+        assert!(!unsafe { BN_copy(dst, src) }.is_null());
+        dst
+    }
+
+    /// Compare an aliased output with the distinct-output reference.
+    fn assert_same(aliased: *const BigNum, reference: *const BigNum, what: &str) {
+        // SAFETY: both objects are live.
+        assert_eq!(unsafe { BN_ucmp(aliased, reference) }, 0, "{what}");
+    }
+
+    /// One object used for both `BN_div` outputs must stay defined: the two output
+    /// borrows are taken in turn rather than simultaneously, and the remainder is
+    /// stored first so the quotient is what remains in the shared object.
+    #[test]
+    fn div_accepts_one_object_for_both_outputs() {
+        // SAFETY: `BN_new` has no preconditions.
+        let a = unsafe { BN_new() };
+        // SAFETY: as above.
+        let b = unsafe { BN_new() };
+        // SAFETY: as above.
+        let out = unsafe { BN_new() };
+        assert!(!a.is_null() && !b.is_null() && !out.is_null());
+        // SAFETY: the three objects are live and this test owns them.
+        unsafe {
+            assert_eq!(BN_set_word(a, 17), 1);
+            assert_eq!(BN_set_word(b, 5), 1);
+            assert_eq!(BN_div(out, out, a, b, core::ptr::null_mut()), 1);
+            assert_eq!(BN_get_word(out), 3, "the quotient is stored last");
+            BN_free(a);
+            BN_free(b);
+            BN_free(out);
+        }
+    }
+
+    /// The M18-D1 regression control for this file (B13). Every entry point that
+    /// formed `as_mut(r)` and `as_ref(input)` in one tuple computes a
+    /// distinct-output reference and then the same call with the output aliasing a
+    /// supported input. Before the repair those calls created overlapping borrows.
+    ///
+    /// The alias set is the one stated in this file's `Aliasing` section: the
+    /// authority's documented/source-visible cases, plus the implementation-defined
+    /// `BN_mod_exp r == m` and `BN_mod_sqrt in == p`, pinned so a future edit cannot
+    /// silently change them.
+    #[test]
+    fn aliased_outputs_match_the_distinct_form() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        let a = word(17);
+        let b = word(5);
+        let m = word(11);
+        let p = word(4);
+        let base = word(3);
+        let sqrt_a = word(2);
+        let sqrt_p = word(7);
+
+        // SAFETY: every object above is live; each call satisfies its `# Safety`
+        // section, and each aliased object is live and uniquely owned by this test.
+        unsafe {
+            // BN_add, BN_sub, BN_uadd and BN_usub: r == a and r == b.
+            let two_input: [(
+                unsafe extern "C" fn(*mut BigNum, *const BigNum, *const BigNum) -> c_int,
+                &str,
+            ); 4] = [
+                (BN_add, "add"),
+                (BN_sub, "sub"),
+                (BN_uadd, "uadd"),
+                (BN_usub, "usub"),
+            ];
+            for (f, name) in two_input {
+                let reference = BN_new();
+                assert_eq!(f(reference, a, b), 1);
+                for alias_first in [true, false] {
+                    let x = if alias_first { copy_of(a) } else { copy_of(b) };
+                    assert_eq!(
+                        if alias_first { f(x, x, b) } else { f(x, a, x) },
+                        1,
+                        "{name}: aliased call failed"
+                    );
+                    assert_same(x, reference, name);
+                    BN_free(x);
+                }
+                BN_free(reference);
+            }
+
+            // BN_mul takes an unused context: r == a and r == b.
+            let product = BN_new();
+            assert_eq!(BN_mul(product, a, b, NULL), 1);
+            for alias_first in [true, false] {
+                let x = if alias_first { copy_of(a) } else { copy_of(b) };
+                assert_eq!(
+                    if alias_first {
+                        BN_mul(x, x, b, NULL)
+                    } else {
+                        BN_mul(x, a, x, NULL)
+                    },
+                    1
+                );
+                assert_same(x, product, "mul");
+                BN_free(x);
+            }
+            BN_free(product);
+
+            // BN_sqr: r == a.
+            let square = BN_new();
+            assert_eq!(BN_sqr(square, a, NULL), 1);
+            let alias_square = copy_of(a);
+            assert_eq!(BN_sqr(alias_square, alias_square, NULL), 1);
+            assert_same(alias_square, square, "sqr");
+            BN_free(alias_square);
+            BN_free(square);
+
+            // BN_nnmod: r == a; r == m is the authority's rejection case.
+            let reduced = BN_new();
+            assert_eq!(BN_nnmod(reduced, a, m, NULL), 1);
+            let alias_reduced = copy_of(a);
+            assert_eq!(BN_nnmod(alias_reduced, alias_reduced, m, NULL), 1);
+            assert_same(alias_reduced, reduced, "nnmod r == a");
+            BN_free(alias_reduced);
+            let alias_modulus = copy_of(m);
+            assert_eq!(
+                BN_nnmod(alias_modulus, a, alias_modulus, NULL),
+                0,
+                "nnmod rejects r == m"
+            );
+            BN_free(alias_modulus);
+            BN_free(reduced);
+
+            // BN_mod_inverse: r == a and r == n (defined here; see the module doc).
+            let inverse = BN_mod_inverse(core::ptr::null_mut(), a, m, NULL);
+            assert!(!inverse.is_null());
+            let alias_inverse_a = copy_of(a);
+            assert_eq!(
+                BN_mod_inverse(alias_inverse_a, alias_inverse_a, m, NULL),
+                alias_inverse_a
+            );
+            assert_same(alias_inverse_a, inverse, "mod_inverse r == a");
+            BN_free(alias_inverse_a);
+            let alias_inverse_n = copy_of(m);
+            assert_eq!(
+                BN_mod_inverse(alias_inverse_n, a, alias_inverse_n, NULL),
+                alias_inverse_n
+            );
+            assert_same(alias_inverse_n, inverse, "mod_inverse r == n");
+            BN_free(alias_inverse_n);
+            BN_free(inverse);
+
+            // BN_lshift and BN_rshift: r == a.
+            let shifted = BN_new();
+            assert_eq!(BN_lshift(shifted, a, 2), 1);
+            let alias_lshift = copy_of(a);
+            assert_eq!(BN_lshift(alias_lshift, alias_lshift, 2), 1);
+            assert_same(alias_lshift, shifted, "lshift");
+            BN_free(alias_lshift);
+            BN_free(shifted);
+
+            let shifted = BN_new();
+            assert_eq!(BN_rshift(shifted, a, 2), 1);
+            let alias_rshift = copy_of(a);
+            assert_eq!(BN_rshift(alias_rshift, alias_rshift, 2), 1);
+            assert_same(alias_rshift, shifted, "rshift");
+            BN_free(alias_rshift);
+            BN_free(shifted);
+
+            // BN_exp: r == a and r == p.
+            let power = BN_new();
+            assert_eq!(BN_exp(power, base, p, NULL), 1);
+            let alias_exp_a = copy_of(base);
+            assert_eq!(BN_exp(alias_exp_a, alias_exp_a, p, NULL), 1);
+            assert_same(alias_exp_a, power, "exp r == a");
+            BN_free(alias_exp_a);
+            let alias_exp_p = copy_of(p);
+            assert_eq!(BN_exp(alias_exp_p, base, alias_exp_p, NULL), 1);
+            assert_same(alias_exp_p, power, "exp r == p");
+            BN_free(alias_exp_p);
+            BN_free(power);
+
+            // BN_mod_exp: r == a, r == p, and (implementation-defined) r == m.
+            let residue = BN_new();
+            assert_eq!(BN_mod_exp(residue, base, p, m, NULL), 1);
+            let alias_modexp_a = copy_of(base);
+            assert_eq!(BN_mod_exp(alias_modexp_a, alias_modexp_a, p, m, NULL), 1);
+            assert_same(alias_modexp_a, residue, "mod_exp r == a");
+            BN_free(alias_modexp_a);
+            let alias_modexp_p = copy_of(p);
+            assert_eq!(BN_mod_exp(alias_modexp_p, base, alias_modexp_p, m, NULL), 1);
+            assert_same(alias_modexp_p, residue, "mod_exp r == p");
+            BN_free(alias_modexp_p);
+            let alias_modexp_m = copy_of(m);
+            assert_eq!(BN_mod_exp(alias_modexp_m, base, p, alias_modexp_m, NULL), 1);
+            assert_same(alias_modexp_m, residue, "mod_exp r == m");
+            BN_free(alias_modexp_m);
+            BN_free(residue);
+
+            // BN_gcd: r == a and r == b.
+            let gcd = BN_new();
+            assert_eq!(BN_gcd(gcd, a, b, NULL), 1);
+            for alias_first in [true, false] {
+                let x = if alias_first { copy_of(a) } else { copy_of(b) };
+                assert_eq!(
+                    if alias_first {
+                        BN_gcd(x, x, b, NULL)
+                    } else {
+                        BN_gcd(x, a, x, NULL)
+                    },
+                    1
+                );
+                assert_same(x, gcd, "gcd");
+                BN_free(x);
+            }
+            BN_free(gcd);
+
+            // BN_mod_sqrt: in == a and (implementation-defined) in == p.
+            let root = BN_mod_sqrt(core::ptr::null_mut(), sqrt_a, sqrt_p, NULL);
+            assert!(!root.is_null(), "2 is a quadratic residue modulo 7");
+            let alias_sqrt_a = copy_of(sqrt_a);
+            assert_eq!(
+                BN_mod_sqrt(alias_sqrt_a, alias_sqrt_a, sqrt_p, NULL),
+                alias_sqrt_a
+            );
+            assert_same(alias_sqrt_a, root, "mod_sqrt in == a");
+            BN_free(alias_sqrt_a);
+            let alias_sqrt_p = copy_of(sqrt_p);
+            assert_eq!(
+                BN_mod_sqrt(alias_sqrt_p, sqrt_a, alias_sqrt_p, NULL),
+                alias_sqrt_p
+            );
+            assert_same(alias_sqrt_p, root, "mod_sqrt in == p");
+            BN_free(alias_sqrt_p);
+            BN_free(root);
+
+            for x in [a, b, m, p, base, sqrt_a, sqrt_p] {
+                BN_free(x);
             }
         }
     }

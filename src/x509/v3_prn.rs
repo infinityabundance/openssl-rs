@@ -46,8 +46,9 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::FILE;
 use crate::runtime::bio::{BIO_free, BIO_new_fp, Bio, BIO_NOCLOSE};
 use crate::runtime::conf::types::ConfValue;
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier, OBJ_obj2nid};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::v3_lib::{X509V3_EXT_get, X509V3_EXT_MULTILINE};
 use crate::x509::v3_utl::X509V3_conf_free;
@@ -60,6 +61,16 @@ use crate::x509::x_exten::X509Extension;
 const FILE: &CStr = c"crypto/x509/v3_prn.c";
 /// `X509V3_EXT_print`'s `err:` `OPENSSL_free(value)` — `crypto/x509/v3_prn.c:130`.
 const LINE_FREE_VALUE: c_int = 130;
+
+// An `i2s` callback result owned by the frame that received it (`OwnedStr`).
+//
+// The authority's `X509V3_EXT_print` writes the callback result to `char *value` and its `err:`
+// label runs `OPENSSL_free(value)` (`crypto/x509/v3_prn.c:106,130`); the public `i2s_ASN1_*`
+// family says "It is the caller's responsibility to free the returned string"
+// (`doc/man3/s2i_ASN1_IA5STRING.pod`). The corresponding caller obligation is stated on
+// `X509V3ExtI2s` in `v3_lib.rs`: a non-NULL result is the base of one whole `OPENSSL_malloc`/
+// `CRYPTO_strdup` block, NUL-terminated within its `strlen + 1`-byte C-string extent, whose
+// ownership transfers to this print path. The shared owner makes the release here the only one.
 
 /// `#define X509V3_EXT_UNKNOWN_MASK (0xfL << 16)` — `include/openssl/x509v3.h.in:518`.
 const X509V3_EXT_UNKNOWN_MASK: c_ulong = 0xf << 16;
@@ -204,7 +215,6 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     flag: c_ulong,
     indent: c_int,
 ) -> c_int {
-    let mut value: *mut c_char = ptr::null_mut();
     // SAFETY: `ext` is live per the contract.
     let extoct = unsafe { X509_EXTENSION_get_data(ext) };
     // SAFETY: `extoct` is the extension's embedded octet string.
@@ -250,14 +260,19 @@ pub unsafe extern "C" fn X509V3_EXT_print(
         )
     };
     let mut nval: *mut OpenSslStack = ptr::null_mut();
+    let mut value: Option<OwnedStr> = None;
     if let Some(f) = i2s {
-        // SAFETY: `method`/`ext_str` are the callback's contract.
-        value = unsafe { f(method, ext_str) };
-        if value.is_null() {
-            ok = 0;
+        // SAFETY: `method`/`ext_str` are the callback's contract. The result is NULL or the
+        // callback's exclusively owned seam block per `X509V3ExtI2s`: whole-block base,
+        // NUL-terminated within its `strlen + 1`-byte C-string extent, ownership transferred to
+        // this frame, whose `Drop` is its single release at `v3_prn.c:130`.
+        value =
+            unsafe { OwnedStr::adopt(f(method, ext_str), SeamFile::new(FILE), LINE_FREE_VALUE) };
+        if let Some(v) = value.as_ref() {
+            // SAFETY: `out` is live; `v` is NUL-terminated.
+            unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), v.as_ptr()) };
         } else {
-            // SAFETY: `out` is live; `value` is NUL-terminated.
-            unsafe { BIO_printf(out, c"%*s%s".as_ptr(), indent, c"".as_ptr(), value) };
+            ok = 0;
         }
     } else if let Some(f) = i2v {
         // SAFETY: `method`/`ext_str` are the callback's contract; the destination slot is NULL.
@@ -279,8 +294,8 @@ pub unsafe extern "C" fn X509V3_EXT_print(
 
     // SAFETY: `nval` is NULL or this call's own `CONF_VALUE` stack.
     unsafe { OPENSSL_sk_pop_free(nval, Some(conf_value_free_thunk)) };
-    // SAFETY: `value` is NULL or this call's own; the site is constant.
-    unsafe { CRYPTO_free(value.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_VALUE) };
+    // The authority's `err:` order: release the value at :130, then the decoded structure.
+    drop(value);
     if let Some(it) = it {
         // SAFETY: `ext_str` is the item value; `it()` answers the item it describes.
         unsafe { ASN1_item_free(ext_str, it()) };
@@ -398,4 +413,68 @@ pub unsafe extern "C" fn X509V3_EXT_print_fp(
     // SAFETY: `bio_tmp` is this call's own.
     unsafe { BIO_free(bio_tmp) };
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::{
+        ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set,
+    };
+    use crate::asn1::typ::i2d_ASN1_OCTET_STRING;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{BIO_free, BIO_new};
+    use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
+    use crate::x509::x_exten::X509_EXTENSION_free;
+
+    /// Drive the `method->i2s` arm that owns the callback result through
+    /// `OwnedStr`: the standard subject-key-identifier method builds its string
+    /// with `CRYPTO_strdup`, this call adopts it, and `Drop` releases it once.
+    #[test]
+    fn print_an_octet_string_extension_owns_the_i2s_result() {
+        let oct = ASN1_OCTET_STRING_new();
+        assert!(!oct.is_null(), "the octet string must be allocatable");
+        let bytes = [0xA1u8, 0xB2, 0xC3, 0xD4];
+        // SAFETY: `oct` is live and uniquely owned; `bytes` is readable for 4 bytes.
+        assert_eq!(unsafe { ASN1_OCTET_STRING_set(oct, bytes.as_ptr(), 4) }, 1);
+        // SAFETY: `oct` is live; a NULL `out` asks only for the encoded length.
+        let der_len = unsafe { i2d_ASN1_OCTET_STRING(oct, ptr::null_mut()) };
+        assert!(der_len > 0, "the DER length must be positive");
+        let mut der = vec![0u8; der_len as usize];
+        let mut out = der.as_mut_ptr();
+        // SAFETY: `oct` is live and `der` has room for `der_len` bytes.
+        assert_eq!(unsafe { i2d_ASN1_OCTET_STRING(oct, &raw mut out) }, der_len);
+        let ext_value = ASN1_OCTET_STRING_new();
+        assert!(
+            !ext_value.is_null(),
+            "the extension value must be allocatable"
+        );
+        // SAFETY: `ext_value` is live and uniquely owned; `der` is `der_len` bytes.
+        let set_ok = unsafe { ASN1_OCTET_STRING_set(ext_value, der.as_ptr(), der_len) };
+        assert_eq!(set_ok, 1);
+        // SAFETY: `ext_value` is live and `X509_EXTENSION_create_by_NID` copies its contents.
+        let ext = unsafe {
+            X509_EXTENSION_create_by_NID(ptr::null_mut(), NID_subject_key_identifier, 0, ext_value)
+        };
+        // SAFETY: the extension copied the octets; release this test's references.
+        unsafe {
+            ASN1_OCTET_STRING_free(oct);
+            ASN1_OCTET_STRING_free(ext_value);
+        }
+        assert!(!ext.is_null(), "the extension must be created");
+
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: `bio` and `ext` are live; the standard SKID method's `i2s` runs,
+        // and this call's `OwnedStr` is the result's sole release.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 0) };
+        assert_eq!(ret, 1, "the i2s path must print successfully");
+
+        // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
 }

@@ -60,6 +60,7 @@ use crate::provider::cipher::{param_int, param_octet_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::der_slh_dsa_key::ossl_DER_w_algorithmIdentifier_SLH_DSA;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
@@ -136,23 +137,156 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `PROV_SLH_DSA_CTX` block and the property query it holds
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `PROV_SLH_DSA_CTX` block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size, but its
+/// *ownership* is this type: [`Self::new_zeroed`] allocates it, [`Self::from_raw`] takes back the
+/// block the C ABI hands to [`slh_dsa_freectx`], and `Drop` runs the authority's own free body
+/// ([`CtxDestroy::destroy_body`]) followed by its single block release. A Rust `Box` would hide both
+/// the release and a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), FILE, 81)`, or `None` when it answers NULL. The zeroed image is
+    /// the authority's own starting state -- every owned member is NULL -- so
+    /// [`CtxDestroy::destroy_body`] on it is the authority's own all-empty free.
+    fn new_zeroed() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, LINE_ZALLOC_CTX)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the context to the C ABI's answer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block the C ABI hands to [`slh_dsa_freectx`], for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live context this file allocated that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The context's destructor: the authority's own free body followed by its single block release,
+    /// through the same allocator seam.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; `destroy_body` is
+        // the authority's own free body and this is the block's single release.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE_CTX);
+        }
+    }
+}
+
+/// The authority's `slh_dsa_freectx` body (`slh_dsa_sig.c:64-72`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the hash context, the property query and the malleated
+/// `add_random` buffer.
+// SAFETY: (a) holds: `destroy_body` is `slh_dsa_freectx` minus the block -- it releases exactly the
+// context's own hash context and property query (each NULL-tolerant) and cleanses its own
+// `add_random` buffer, never the enclosing block. (b) holds: an all-zero context is valid -- with the
+// empty `add_random` cleanse a no-op -- what the safe `OwnedCtx::new_zeroed` leans on.
+unsafe impl CtxDestroy for ProvSlhDsaCtx {
+    unsafe fn destroy_body(ptr: *mut ProvSlhDsaCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `hash_ctx`/`propq` are NULL or this
+        // file's own allocations and `add_random` is this context's own buffer.
+        unsafe {
+            ossl_slh_dsa_hash_ctx_free((*ptr).hash_ctx);
+            CRYPTO_free((*ptr).propq.cast(), FILE, LINE_FREE_PROPQ);
+            OPENSSL_cleanse(
+                (*ptr).add_random.as_mut_ptr().cast(),
+                (*ptr).add_random.len(),
+            );
+        }
+    }
+}
+
+/// An owned `PROV_SLH_DSA_CTX` block still aliasing its source.
+///
+/// [`slh_dsa_dupctx`] takes a bitwise `CRYPTO_memdup` copy of its source, whose `propq`/`hash_ctx`
+/// still alias the source's own allocations until it replaces them; running the destructor over that
+/// window would double-release. [`RawCtx`] owns the block, never runs `destroy_body`, and releases
+/// the **block alone**; [`Self::assume_init`] is the one validated transition to [`OwnedCtx`] once
+/// the aliased members are replaced.
+struct RawCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CtxDestroy> RawCtx<T> {
+    /// `CRYPTO_memdup(src, size_of::<T>(), FILE, 108)`, or `None` when it answers NULL.
+    ///
+    /// # Safety
+    ///
+    /// `src` is a live `T` this call may read `size_of::<T>()` bytes from.
+    unsafe fn memdup(src: *mut T) -> Option<RawCtx<T>> {
+        // SAFETY: the caller's contract; `CRYPTO_memdup` copies `size_of::<T>()` bytes from `src`
+        // into a fresh block or answers NULL.
+        let raw =
+            unsafe { CRYPTO_memdup(src.cast(), core::mem::size_of::<T>(), FILE, LINE_MEMDUP_CTX) }
+                .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| RawCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// The validated transition: the storage now holds a valid `T` whose owned members are unique.
+    ///
+    /// # Safety
+    ///
+    /// Every member [`CtxDestroy::destroy_body`] reads has been written and no owned member aliases
+    /// another owner, so the block is a valid `T` and no other owner will release it: the returned
+    /// handle's `Drop` is the block's single release.
+    unsafe fn assume_init(self) -> OwnedCtx<T> {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        OwnedCtx { ptr }
+    }
+}
+
+impl<T: CtxDestroy> Drop for RawCtx<T> {
+    /// Releases the **block alone**, at the authority's own `freectx` site: the copy's members still
+    /// alias its source, so its destructor body must not run.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not handed out; the authority's
+        // own `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE_CTX) };
+    }
+}
+
 /// `static void slh_dsa_freectx(void *vctx)` — `slh_dsa_sig.c:64-72`.
 ///
 /// # Safety
 /// The signature `freectx` dispatch contract.
 unsafe extern "C" fn slh_dsa_freectx(vctx: *mut c_void) {
-    let ctx = vctx.cast::<ProvSlhDsaCtx>();
-
-    // SAFETY: `ctx` is the caller's context.
-    unsafe {
-        ossl_slh_dsa_hash_ctx_free((*ctx).hash_ctx);
-        CRYPTO_free((*ctx).propq.cast(), FILE, LINE_FREE_PROPQ);
-        OPENSSL_cleanse(
-            (*ctx).add_random.as_mut_ptr().cast(),
-            (*ctx).add_random.len(),
-        );
-        CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX);
-    }
+    // SAFETY: the `freectx` dispatch contract; `vctx` is NULL or a live context this file allocated
+    // and `Drop` is its single release, running the authority's own free body.
+    drop(unsafe { OwnedCtx::<ProvSlhDsaCtx>::from_raw(vctx.cast()) });
 }
 
 /// `slh_dsa_sig.c:69`, the `OPENSSL_free(ctx->propq)` in `slh_dsa_freectx`.
@@ -174,27 +308,26 @@ unsafe fn slh_dsa_newctx(
         return ptr::null_mut();
     }
 
-    // SAFETY: `CRYPTO_zalloc` answers a zeroed block or NULL.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSlhDsaCtx>(), FILE, LINE_ZALLOC_CTX)
-        .cast::<ProvSlhDsaCtx>();
-    if ctx.is_null() {
+    let Some(ctx) = OwnedCtx::<ProvSlhDsaCtx>::new_zeroed() else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    // SAFETY: `ctx` is this call's own zeroed block; `provctx` is the caller's context and `propq` is
+    // NULL or NUL-terminated.
     unsafe {
-        (*ctx).libctx = prov_libctx_of(provctx);
+        let p = ctx.as_ptr();
+        (*p).libctx = prov_libctx_of(provctx);
         if !propq.is_null() {
-            (*ctx).propq = CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ctx).propq.is_null() {
-                slh_dsa_freectx(ctx.cast());
+            (*p).propq = CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ);
+            if (*p).propq.is_null() {
+                // `ctx`'s `Drop` releases the half-built context at the authority's own site.
                 return ptr::null_mut();
             }
         }
-        (*ctx).alg = alg;
-        (*ctx).msg_encode = SLH_DSA_MESSAGE_ENCODE_PURE;
+        (*p).alg = alg;
+        (*p).msg_encode = SLH_DSA_MESSAGE_ENCODE_PURE;
     }
-    ctx.cast()
+    ctx.into_raw().cast()
 }
 
 /// `slh_dsa_sig.c:86`, the `OPENSSL_strdup(propq)` in `slh_dsa_newctx`.
@@ -214,38 +347,35 @@ unsafe extern "C" fn slh_dsa_dupctx(vctx: *mut c_void) -> *mut c_void {
     /*
      * Note that the `SLH_DSA_KEY` is ref counted via `EVP_PKEY` so we can just copy the key here.
      */
-    // SAFETY: `CRYPTO_memdup` copies `size` bytes from a readable source or answers NULL.
-    let ret = unsafe {
-        CRYPTO_memdup(
-            src.cast(),
-            core::mem::size_of::<ProvSlhDsaCtx>(),
-            FILE,
-            LINE_MEMDUP_CTX,
-        )
-    }
-    .cast::<ProvSlhDsaCtx>();
-    if ret.is_null() {
+    // SAFETY: `src` is the caller's live source context.
+    let Some(raw) = (unsafe { RawCtx::<ProvSlhDsaCtx>::memdup(src) }) else {
         return ptr::null_mut();
-    }
-
-    // SAFETY: `ret` is a fresh copy of `src`; the three owned pointers are replaced below.
+    };
+    // SAFETY: `raw` is this call's own bitwise copy of `src`; the two owned pointers alias `src` and
+    // are replaced below before the block becomes an owned context.
     unsafe {
-        (*ret).propq = ptr::null_mut();
-        (*ret).hash_ctx = ptr::null_mut();
+        (*raw.as_ptr()).propq = ptr::null_mut();
+        (*raw.as_ptr()).hash_ctx = ptr::null_mut();
+    }
+    // The copy's owned members are now unique and NULL, so it is a valid `ProvSlhDsaCtx`.
+    // SAFETY: as above; no other owner will release the block.
+    let ret = unsafe { raw.assume_init() };
+    let p = ret.as_ptr();
+    // SAFETY: `p` is this call's own copy and `src` is the live source.
+    unsafe {
         if !(*src).propq.is_null() {
-            (*ret).propq = CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ret).propq.is_null() {
-                slh_dsa_freectx(ret.cast());
+            (*p).propq = CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ);
+            if (*p).propq.is_null() {
+                // `ret`'s `Drop` releases the half-built copy at the authority's own site.
                 return ptr::null_mut();
             }
         }
-        (*ret).hash_ctx = ossl_slh_dsa_hash_ctx_dup((*src).hash_ctx);
-        if (*ret).hash_ctx.is_null() {
-            slh_dsa_freectx(ret.cast());
+        (*p).hash_ctx = ossl_slh_dsa_hash_ctx_dup((*src).hash_ctx);
+        if (*p).hash_ctx.is_null() {
             return ptr::null_mut();
         }
     }
-    ret.cast()
+    ret.into_raw().cast()
 }
 
 /// `static int slh_dsa_set_alg_id_buffer(PROV_SLH_DSA_CTX *ctx)` — `slh_dsa_sig.c:125-149`.
@@ -260,6 +390,9 @@ unsafe fn slh_dsa_set_alg_id_buffer(ctx: *mut ProvSlhDsaCtx) -> c_int {
     // SAFETY: `ctx` is live per the contract.
     unsafe {
         (*ctx).aid_len = 0;
+        // `WPACKET_init_der` leaves a cleanable failed-init state (`subs` NULL) when it refuses,
+        // so the unconditional `WPACKET_cleanup` below is defined on both the success and the
+        // refusal path; every field is written by the init before it is read.
         let mut pkt = core::mem::MaybeUninit::<Wpacket>::uninit();
         let pkt = pkt.as_mut_ptr();
         let mut ret =
@@ -272,6 +405,9 @@ unsafe fn slh_dsa_set_alg_id_buffer(ctx: *mut ProvSlhDsaCtx) -> c_int {
             WPACKET_get_total_written(pkt, ptr::addr_of_mut!((*ctx).aid_len));
             aid = WPACKET_get_curr(pkt).cast::<u8>();
         }
+        // SAFETY: `pkt` is a valid packet either way -- `init_der` initialises it on success and
+        // the failed-init state is `subs` NULL (an empty sub-packet chain) when it refuses -- and
+        // it is cleaned up exactly once.
         WPACKET_cleanup(pkt);
         if !aid.is_null() && (*ctx).aid_len != 0 {
             ptr::copy(aid, (*ctx).aid_buf.as_mut_ptr(), (*ctx).aid_len);
@@ -921,3 +1057,34 @@ make_signature_functions!(
 /// `SLH_DSA_MESSAGE_ENCODE_RAW` is the value `set_ctx_params` writes for a raw message; named here
 /// so a reader sees both encodings the unit carries.
 const _: c_int = SLH_DSA_MESSAGE_ENCODE_RAW;
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSlhDsaCtx => zero_state_sweep_prov_slh_dsa_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// API-level control for cleanup after a refused `WPACKET_init_der` in the SLH-DSA caller.
+    ///
+    /// The packet-level controls in `src/packet.rs` force the allocation-failure arm; this one
+    /// exercises the argument refusal (null buffer, zero length), which also leaves `subs` NULL.
+    /// The authority's body cleans up unconditionally, so a refusal must remain cleanable. The
+    /// cleanup is the control: it consumes `subs`, so a regression to an uninitialised image is
+    /// an uninitialised read here (and under Miri an error), not a silent pass.
+    #[test]
+    fn a_refused_der_init_leaves_a_cleanable_packet() {
+        // SAFETY: `Wpacket`'s fields are raw pointers and integers, for which all-zero is valid.
+        let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
+        let p = ptr::addr_of_mut!(pkt);
+        // SAFETY: `p` is this frame's own packet and the refusal writes nothing to it. The
+        // cleanup is the control: it consumes `subs`, which the zeroed image leaves NULL, so a
+        // regression to an uninitialised image is an uninitialised read here (and under Miri an
+        // error), not a silent pass.
+        unsafe {
+            assert_eq!(WPACKET_init_der(p, ptr::null_mut(), 0), 0);
+            WPACKET_cleanup(p);
+        }
+    }
+}

@@ -1,0 +1,163 @@
+{
+ "schema": "safe-c33/mechanism-sweep/v1",
+ "branch": "integrate/safe-c33",
+ "source_head": "5845eca15",
+ "date": "2026-10-19",
+ "scope": "The eight files named as next by M45: src/dh/mod.rs, src/dh/prn.rs, src/dh/rfc5114.rs, src/digest/blake2.rs, src/digest/md4.rs, src/digest/md5.rs, src/digest/md5_sha1.rs, src/digest/mdc2.rs. One latent memory-safety defect repaired in src/digest/blake2.rs::init_key (unvalidated key_length from the public Param image) with a focused refusal test; safety-contract text tightened in blake2 compress/init/final_, rfc5114 make_dh, dh DH_meth_free/DH_meth_set1_name and mdc2 Update/Final. No new unsafe operation, FFI symbol, allocator coordinate, repr(C) layout or exported signature introduced.",
+ "verification_level": "FAST+BATCH",
+ "worktree": "source changes: src/digest/blake2.rs (guard + tests), src/dh/mod.rs, src/dh/rfc5114.rs, src/digest/mdc2.rs (contract text); queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 51 and this file.",
+ "reconciliation": {
+  "canonical_audited_before_batch": 407,
+  "canonical_unaudited_before_batch": 356,
+  "canonical_audited_after_batch": 415,
+  "canonical_unaudited_after_batch": 348,
+  "audited_this_batch": 8,
+  "not_run_this_batch": 0,
+  "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from the head of REMAINING-AUDIT.txt and merged in alphabetical order into AUDITED-FILES.txt.",
+  "difference_from_407": "M46 moves exactly the eight named ordinary files; no file is skipped or substituted."
+ },
+ "files": [
+  "src/dh/mod.rs",
+  "src/dh/prn.rs",
+  "src/dh/rfc5114.rs",
+  "src/digest/blake2.rs",
+  "src/digest/md4.rs",
+  "src/digest/md5.rs",
+  "src/digest/md5_sha1.rs",
+  "src/digest/mdc2.rs"
+ ],
+ "not_run": [
+  "constant-time/dudect for BLAKE2, MD4, MD5, MD5-SHA1 and MDC-2 (SECRET_DEPENDENT_CONTROL; source inspection is not a timing result)",
+  "Wycheproof/ACVP (batch ran the crate's published vectors only)",
+  "RT-DIGEST / RT-DH authority differential (not built or replayed)",
+  "Miri (no component in the court toolchain)",
+  "ASan (the repaired arm is a bounds refusal, not an observed memory access)",
+  "BOUNDARY (no shared mechanism changed; guard is local to init_key and valid-input behaviour is unchanged)",
+  "SEAL"
+ ],
+ "files_dispositions_summary": {
+  "audited_no_change": 7,
+  "defect_repaired": 1
+ },
+ "file_dispositions": [
+  {
+   "file": "src/dh/mod.rs",
+   "mechanisms": [
+    "DH_meth_new / DH_meth_free / DH_meth_dup",
+    "DH_meth_set1_name and the other DH_meth_get/set_* accessors",
+    "RawMethod partial-construction owner (block-only Drop)",
+    "OwnedMethod name-then-table Drop (OB-2 OwnedStr, CRYPTO_* seam)"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dh/dh_meth.c:20-171, all twenty-one exports. zalloc/malloc/strdup coordinates and FILE_DH_METH preserved; DH_meth_new stores flags before the name so its error path can release the block alone; DH_meth_dup copies the 72-byte table before the one deep field and does not release the copied name alias on failure; set1_name duplicates before releasing the old name. Contract text now states that DH_meth_free/DH_meth_set1_name require a table this file created (not DH_OpenSSL's static table). No source behaviour change."
+  },
+  {
+   "file": "src/dh/prn.rs",
+   "mechanisms": [
+    "DHparams_print_fp FILE* wrapper (BIO_s_file, BIO_ctrl SET_FILE_PTR/BIO_NOCLOSE, DHparams_print, BIO_free)",
+    "ERR_raise at dh_prn.c:28 reconstructed from static FILE/FUNC strings"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dh/dh_prn.c:22-35. BIO owns no caller FILE because the close flag is BIO_NOCLOSE; the single allocation is released on both arms; the raise uses the authority's __FILE__/__LINE__/__func__ values. No ownership transfer, no change."
+  },
+  {
+   "file": "src/dh/rfc5114.rs",
+   "mechanisms": [
+    "make_dh macro expansions: DH_new, three BN_dup, DH_free on any NULL duplicate",
+    "DH_get_1024_160 / DH_get_2048_224 / DH_get_2048_256 exports",
+    "owned-vs-shared group constants asymmetry and NID cache behaviour"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/dh/dh_rfc5114.c:28-49. Assignment order p,g,q and direct field stores (no set0_pqg, no dirty_cnt bump) are the authority's and are pinned by tests. Contract text now states that each *_of argument must return a live BigNum; only the three constant accessors are passed. No source behaviour change."
+  },
+  {
+   "file": "src/digest/blake2.rs",
+   "mechanisms": [
+    "BLAKE2b/BLAKE2s parameter byte images and settled param setters",
+    "init / init_key / update / final_ entry points",
+    "compress block loop and load32/load64/store32/store64",
+    "kitchen-sink providers' set_ctx_params digest/key bounds (callers)"
+   ],
+   "disposition": "defect_repaired",
+   "note": "providers/implementations/digests/blake2b_prov.c and blake2s_prov.c. init_key derived its copy length from the public (*p).b[1] with only debug_assert!, so a release build could copy past the stack block (b: keylen > 128; s: > 64) and read past key; keylen 0 also fed a zero block. Repaired with `if keylen == 0 || keylen > KEYBYTES { return 0; }` before the context, copy or cleanse (guard is observed by the new test; provider setkey/set_ctx_params already enforce 1..=KEYBYTES, so valid-caller results are unchanged). compress now documents the whole-block read at each block start; init/final_ document the 1..=OUTBYTES digest-length invariant established by the provider."
+  },
+  {
+   "file": "src/digest/md4.rs",
+   "mechanisms": [
+    "Md4Ctx repr(C) layout and offset asserts",
+    "md4_block_data_order over the shared md32 collector",
+    "Md32 impl (nl_nh/num/data_ptr/block/make_string)",
+    "MD4_Init/Update/Final/Transform/MD4 exports and one-shot cleanse"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/md4/md4_dgst.c and md4_one.c. The RFC's own F/G/H spellings and the three constant bands match the generated table; the collector's block contract (num * MD32_CBLOCK readable) is the only pointer obligation. One-shot cleanses its local context after Final; the static-NULL answer matches the authority."
+  },
+  {
+   "file": "src/digest/md5.rs",
+   "mechanisms": [
+    "Md5Ctx repr(C) layout and offset asserts",
+    "md5_block with the authority's A,D,C,B destination cycle",
+    "Md32 impl and the five exports",
+    "one-shot static-NULL arm and local cleanse"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/md5/md5_dgst.c and md5_one.c. Zeroing in MD5_Init is load-bearing (the first update reads num); the generated word/rotation/constant tables are read rather than recalled; no length-field placement is assumed beyond the asserted layout. No change."
+  },
+  {
+   "file": "src/digest/md5_sha1.rs",
+   "mechanisms": [
+    "Md5Sha1Ctx two-context repr(C) layout",
+    "ossl_md5_sha1_init/update/final",
+    "ossl_md5_sha1_ctrl SSLv3 master-secret arm",
+    "temporary md5tmp/sha1tmp cleanse and re-initialisation"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/md5/md5_sha1.c:20-108. MD5 pads are 48 bytes and SHA-1 pads 40, matching the authority; the ctrl arm refuses a mismatched cmd, NULL context and mslen != 48 without touching state, and the intermediates are cleansed before the second phase. No export. No change."
+  },
+  {
+   "file": "src/digest/mdc2.rs",
+   "mechanisms": [
+    "Mdc2Ctx repr(C) layout and offset asserts",
+    "c2l/l2c and mdc2_body over two DES lanes",
+    "MDC2_Init/Update/Final and the one-shot",
+    "process-global one-shot output buffer"
+   ],
+   "disposition": "audited_no_change",
+   "note": "crypto/mdc2/mdc2dgst.c:24-132 and mdc2_one.c. num is only advanced to 7 until Update flushes a full block, so Final's data[i] padding and skip(i) stay in range; that invariant is now stated on Update/Final because num is a public C header field (the authority shares the exposure). Both pad arms reproduce the published recipe vectors. No source change."
+  }
+ ],
+ "safety_contract_repairs": [
+  "blake2b/blake2s compress: blocks readable for len bytes AND a whole BLOCKBYTES at every block start (staging buffer is BLOCKBYTES wide)",
+  "blake2b/blake2s init/final_: digest length 1..=OUTBYTES established by the provider's set_ctx_params",
+  "blake2b/blake2s init_key: key length 1..=KEYBYTES, key non-NULL and readable for it; enforced at runtime",
+  "rfc5114 make_dh: each *_of returns a live BigNum valid for the call",
+  "dh DH_meth_free / DH_meth_set1_name: table allocated by this file's seam, name a CRYPTO_strdup block (never a built-in static table)",
+  "mdc2 MDC2_Update / MDC2_Final: num < MDC2_BLOCK, maintained by Init/Update; externally written num is C-invalid"
+ ],
+ "new_unsafe_assumptions": 0,
+ "hidden_obligations": 0,
+ "unsafe_ops_removed": 0,
+ "unsafe_ops_relocated": 0,
+ "tests": {
+  "focused": "digest::blake2 2 passed/0 failed; dh:: 56 passed/0 failed/2 ignored; digest::md 10 passed/0 failed",
+  "adv_probes": "dh::object::adv_probe::dh_new_refused_alloc_returns_null_without_free and dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup, 1 passed each",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "fmt": "cargo fmt --all -- --check clean",
+  "library_serial": "1658 passed / 0 failed / 27 ignored (216.09 s)",
+  "library_threads4": "1658 passed / 0 failed / 27 ignored (93.57 s)"
+ },
+ "queue_after_batch": {
+  "remaining_audit": 348,
+  "audited_files": 415,
+  "next_eight": [
+   "src/digest/ripemd.rs",
+   "src/digest/sha1.rs",
+   "src/digest/sha3.rs",
+   "src/digest/sm3.rs",
+   "src/digest/wp.rs",
+   "src/dsa/asn1.rs",
+   "src/dsa/backend.rs",
+   "src/dsa/check.rs"
+  ]
+ }
+}

@@ -121,13 +121,13 @@ use crate::provider::cipher::{
     ossl_cipher_generic_initkey, ossl_cipher_generic_set_ctx_params,
     ossl_cipher_generic_settable_ctx_params, ossl_cipher_generic_stream_final,
     ossl_cipher_hw_tdes_cbc, ossl_tdes_get_ctx_params, ossl_tdes_gettable_ctx_params, tdes_freectx,
-    ProvCipherCtx, ProvCipherHw, ProvTdesCtx, CTX_ENC, EVP_CIPH_WRAP_MODE, FILE_TDES, LINE,
+    OwnedCtx, ProvCipherCtx, ProvCipherHw, ProvTdesCtx, CTX_ENC, EVP_CIPH_WRAP_MODE,
     PROV_CIPHER_FLAG_CUSTOM_IV, PROV_CIPHER_FLAG_RAND_KEY,
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::buffer::BUF_reverse;
 use crate::runtime::err::{err_reasons, err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_memcmp, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_memcmp, OPENSSL_cleanse};
 
 /// `ERR_LIB_PROV` — `include/openssl/proverr.h`.
 const ERR_LIB_PROV: c_int = 57;
@@ -213,7 +213,7 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 unsafe fn des_ede3_unwrap(
     ctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
-    mut in_: *const c_uchar,
+    in_: *const c_uchar,
     inl: usize,
 ) -> c_int {
     // SAFETY: the caller's contract.
@@ -238,13 +238,26 @@ unsafe fn des_ede3_unwrap(
          * If decrypting in place move whole output along a block so the next
          * des_ede_cbc_cipher is in place.
          */
-        if out == in_.cast_mut() {
-            ptr::copy(out, out.add(8), inl - 8);
-            in_ = in_.sub(8);
+        let in_place = out == in_.cast_mut();
+        if in_place {
+            // The authority's `memmove(out, out + 8, inl - 8)` (`cipher_tdes_wrap.c:57`) moves the
+            // central blocks left; `ptr::copy` takes the source first. The previous argument order
+            // shifted right instead, decrypting the wrong blocks on every in-place unwrap.
+            ptr::copy(out.add(8), out, inl - 8);
         }
-        ((*(*ctx).hw).cipher)(ctx, out, in_.add(8), inl - 16);
+        // The authority's `in -= 8` moves the pointer outside the caller's block before it adds
+        // the offsets back (`cipher_tdes_wrap.c:56-59`). `in - 8` is never dereferenced there, but
+        // forming it is undefined in Rust, so the two reads it denotes are named directly: after
+        // the shift above an in-place central read starts at `in`, and the shifted final block
+        // sits at `in + inl - 16` (the untouched last block remains at `in + inl - 8`).
+        let (central, final_iv) = if in_place {
+            (in_, in_.add(inl - 16))
+        } else {
+            (in_.add(8), in_.add(inl - 8))
+        };
+        ((*(*ctx).hw).cipher)(ctx, out, central, inl - 16);
         /* Decrypt final block which will be IV */
-        ((*(*ctx).hw).cipher)(ctx, iv.as_mut_ptr(), in_.add(inl - 8), 8);
+        ((*(*ctx).hw).cipher)(ctx, iv.as_mut_ptr(), final_iv, 8);
         /* Reverse order of everything */
         BUF_reverse(icv.as_mut_ptr(), ptr::null(), 8);
         BUF_reverse(out, ptr::null(), inl - 16);
@@ -288,7 +301,11 @@ unsafe fn des_ede3_wrap(
         let mut sha1tmp = [0u8; SHA_DIGEST_LENGTH];
         let ivlen = TDES_IVLEN;
         let icvlen = TDES_IVLEN;
-        let len = inl + ivlen + icvlen;
+        // The authority's `inl + ivlen + icvlen`, checked so the length guard below can never be
+        // bypassed by a wrapped sum.
+        let Some(len) = inl.checked_add(ivlen).and_then(|n| n.checked_add(icvlen)) else {
+            return 0;
+        };
 
         if len > INT_MAX {
             return 0;
@@ -350,6 +367,43 @@ unsafe fn tdes_wrap_cipher_internal(
     }
 }
 
+/// The extent `tdes_wrap_cipher_internal` writes when it reaches its write, or `None` when the
+/// authority's own precedence refuses before writing.
+///
+/// `des_ede3_wrap` writes `inl + ivlen + icvlen` bytes (`cipher_tdes_wrap.c:86,105-108`);
+/// `des_ede3_unwrap` writes only `inl - 16`, which the authority's `outsize < inl` check already
+/// covers. That check (`:139`) lets an encrypting call with `inl <= outsize < inl + 16` overrun the
+/// caller's buffer, so the crate keeps it and adds this one — a deliberate memory-safety
+/// improvement, following the D561 precedent in `provider/cipher.rs`.
+///
+/// # Safety
+/// `ctx` is live; `out`/`in_` are NULL or as the dispatch contract requires.
+unsafe fn required_write_extent(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> Option<usize> {
+    // `out == NULL` is `des_ede3_wrap`'s size-query arm (`:90-91`), which returns before the first
+    // store; a NULL `in` is left to the pre-existing input contract.
+    if out.is_null() || in_.is_null() {
+        return None;
+    }
+    // `tdes_wrap_cipher_internal`'s guard (`:120`), which precedes either body.
+    if inl >= EVP_MAXCHUNK || !inl.is_multiple_of(8) {
+        return None;
+    }
+    // Only encryption writes beyond `inl`. `des_ede3_wrap`'s `len > INT_MAX` refusal (`:88-89`)
+    // also returns before writing, and without an error, so it keeps that result.
+    // SAFETY: `ctx` is live per the function's contract.
+    if unsafe { (*ctx).bits } & CTX_ENC == 0 {
+        return None;
+    }
+    inl.checked_add(TDES_IVLEN)
+        .and_then(|n| n.checked_add(TDES_IVLEN))
+        .filter(|&n| n <= INT_MAX)
+}
+
 /// `tdes_wrap_cipher` — `cipher_tdes_wrap.c:128-150`.
 ///
 /// # Safety
@@ -372,6 +426,11 @@ unsafe extern "C" fn tdes_wrap_cipher(
 
         if outsize < inl {
             return fail_at(&WRAP_140);
+        }
+        if let Some(required) = required_write_extent(ctx, out, in_, inl) {
+            if outsize < required {
+                return fail_at(&WRAP_140);
+            }
         }
 
         let ret = tdes_wrap_cipher_internal(ctx, out, in_, inl);
@@ -404,6 +463,11 @@ unsafe extern "C" fn tdes_wrap_update(
         }
         if outsize < inl {
             return fail_at(&WRAP_160);
+        }
+        if let Some(required) = required_write_extent(vctx.cast(), out, in_, inl) {
+            if outsize < required {
+                return fail_at(&WRAP_160);
+            }
         }
 
         if tdes_wrap_cipher(vctx, out, outl, outsize, in_, inl) == 0 {
@@ -450,20 +514,26 @@ unsafe extern "C" fn tdes_wrap_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let tctx = CRYPTO_zalloc(core::mem::size_of::<ProvTdesCtx>(), FILE_TDES, LINE);
-        if !tctx.is_null() {
-            ossl_cipher_generic_initkey(
-                tctx,
-                64 * 3,
-                64,
-                0,
-                EVP_CIPH_WRAP_MODE,
-                TDES_WRAP_FLAGS,
-                ptr::addr_of!(TDES_WRAP_CBC_HW),
-                provctx,
-            );
-        }
-        tctx
+        // The authority's `CRYPTO_zalloc(sizeof(*ctx))` at `cipher_tdes_common.c`'s
+        // `ossl_tdes_newctx`; `OwnedCtx::new` allocates through the same seam at the same
+        // `FILE_TDES`/line, and a zeroed `PROV_TDES_CTX` is its valid constructed state. The
+        // owner's `Drop` is `ossl_tdes_freectx`: the member reset followed by the cleansing
+        // `CRYPTO_clear_free` of the whole block, which is why this context stays owned until
+        // the dispatch takes it.
+        let Some(tctx) = OwnedCtx::<ProvTdesCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            tctx.as_ptr().cast(),
+            64 * 3,
+            64,
+            0,
+            EVP_CIPH_WRAP_MODE,
+            TDES_WRAP_FLAGS,
+            ptr::addr_of!(TDES_WRAP_CBC_HW),
+            provctx,
+        );
+        tctx.into_raw().cast()
     }
 }
 
@@ -545,3 +615,137 @@ pub(crate) static TDES_WRAP_CBC_FUNCTIONS: [OsslDispatch; 14] = [
         function: ptr::null_mut(),
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The encrypting arm writes `IV || 3DES-CBC(in) || ICV`, i.e. `inl + 2 * TDES_IVLEN` bytes.
+    /// The authority's only guard is `outsize < inl` (`cipher_tdes_wrap.c:139`), so an `outsize`
+    /// in `[inl, inl + 16)` would overrun. The derived check must refuse before the first write and
+    /// leave the caller's buffer untouched, on both dispatch entry points.
+    #[test]
+    fn wrap_refuses_an_output_buffer_too_small_for_the_iv_and_icv() {
+        let tctx = OwnedCtx::<ProvTdesCtx>::new();
+        assert!(tctx.is_some(), "the allocator refused a TDES context");
+        let Some(tctx) = tctx else { return };
+        // SAFETY: `tctx` is a live zeroed `PROV_TDES_CTX`; its first member is the base the
+        // dispatch receives, and neither call below reaches the (uninstalled) hardware path.
+        unsafe {
+            let base = tctx.as_ptr().cast::<ProvCipherCtx>();
+            (*base).bits = CTX_ENC;
+
+            let input = [0x11u8; 8];
+            let mut out = [0xa5u8; 24];
+            let mut outl = usize::MAX;
+            let ret = tdes_wrap_cipher(
+                base.cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                input.len() + TDES_IVLEN,
+                input.as_ptr(),
+                input.len(),
+            );
+            assert_eq!(ret, 0, "the cipher entry point must refuse");
+            assert_eq!(outl, 0);
+            assert!(
+                out.iter().all(|&b| b == 0xa5),
+                "the cipher entry point wrote before refusing"
+            );
+
+            let mut out = [0xa5u8; 24];
+            let mut outl = usize::MAX;
+            let ret = tdes_wrap_update(
+                base.cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                input.len() + TDES_IVLEN,
+                input.as_ptr(),
+                input.len(),
+            );
+            assert_eq!(ret, 0, "the update entry point must refuse");
+            assert_eq!(outl, 0);
+            assert!(
+                out.iter().all(|&b| b == 0xa5),
+                "the update entry point wrote before refusing"
+            );
+        }
+    }
+
+    /// The in-place unwrap must read exactly the bytes the authority's `in -= 8` arithmetic denotes
+    /// (`cipher_tdes_wrap.c:56-59`). The mock block function records every range it is handed, so
+    /// the two forms are compared on the bytes they actually read, not on an outcome the failure
+    /// tail would mask. This is the witness for the removal of the out-of-block `in - 8` pointer
+    /// computation.
+    #[test]
+    fn the_in_place_unwrap_reads_the_same_bytes_as_the_out_of_place_form() {
+        std::thread_local! {
+            static READS: std::cell::RefCell<Vec<Vec<u8>>> =
+                const { std::cell::RefCell::new(Vec::new()) };
+        }
+
+        unsafe extern "C" fn mock_init(
+            _ctx: *mut ProvCipherCtx,
+            _key: *const c_uchar,
+            _keylen: usize,
+        ) -> c_int {
+            1
+        }
+        unsafe extern "C" fn mock_cipher(
+            _ctx: *mut ProvCipherCtx,
+            out: *mut c_uchar,
+            in_: *const c_uchar,
+            len: usize,
+        ) -> c_int {
+            // A data-dependent, position-free transform: equal input bytes give equal output.
+            // SAFETY: `out` is writable and `in_` readable for `len` bytes per the hw contract.
+            unsafe {
+                let seen = core::slice::from_raw_parts(in_, len).to_vec();
+                READS.with(|r| r.borrow_mut().push(seen));
+                for i in 0..len {
+                    *out.add(i) = (*in_.add(i)).wrapping_mul(3).wrapping_add(7);
+                }
+            }
+            1
+        }
+        static MOCK_HW: ProvCipherHw = ProvCipherHw {
+            init: mock_init,
+            cipher: mock_cipher,
+            copyctx: None,
+        };
+
+        let input: Vec<u8> = (0..48u8)
+            .map(|b| b.wrapping_mul(5).wrapping_add(1))
+            .collect();
+        let mut out_of_place = vec![0u8; input.len()];
+        let mut in_place = input.clone();
+        // SAFETY: both contexts are zeroed records whose only live member below is `hw`, and the
+        // mock block function never reads `ctx`.
+        let mut plain: ProvCipherCtx = unsafe { core::mem::zeroed() };
+        // SAFETY: as above.
+        let mut copy: ProvCipherCtx = unsafe { core::mem::zeroed() };
+        // SAFETY: the two contexts carry `MOCK_HW`; each buffer is this frame's `input.len()`-byte
+        // block, and the in-place call deliberately passes the same pointer for `out` and `in_`.
+        unsafe {
+            plain.hw = &MOCK_HW;
+            copy.hw = &MOCK_HW;
+            READS.with(|r| r.borrow_mut().clear());
+            let a = des_ede3_unwrap(
+                &mut plain,
+                out_of_place.as_mut_ptr(),
+                input.as_ptr(),
+                input.len(),
+            );
+            let reads_a = READS.with(|r| core::mem::take(&mut *r.borrow_mut()));
+            let buf = in_place.as_mut_ptr();
+            let b = des_ede3_unwrap(&mut copy, buf, buf, in_place.len());
+            let reads_b = READS.with(|r| core::mem::take(&mut *r.borrow_mut()));
+
+            assert_eq!(a, b, "the two forms disagreed on the ICV verdict");
+            assert_eq!(
+                reads_a, reads_b,
+                "the in-place form read a different byte sequence"
+            );
+        }
+    }
+}

@@ -81,8 +81,9 @@
 //!
 //! ## Allocation coordinates
 //!
-//! The context is allocated with [`CRYPTO_zalloc`] and released with
-//! [`CRYPTO_free`], not with a Rust `Box`, so that an application which installs
+//! The context is allocated with [`CRYPTO_zalloc`](crate::runtime::mem::CRYPTO_zalloc)
+//! and released with [`CRYPTO_free`](crate::runtime::mem::CRYPTO_free), not with a Rust `Box`, so
+//! that an application which installs
 //! its own allocator through `CRYPTO_set_mem_functions` sees these allocations
 //! exactly as it sees the authority's. The reported source coordinates are the
 //! authority's own, from `crypto/context.c`, because they are what a failing
@@ -98,10 +99,10 @@
 //!   Phase 3 deferral, and this module does not change it: `CRYPTO_EX_INDEX_OSSL_LIB_CTX`
 //!   is observable only through the ex-data API, which `RT-EXDATA` already
 //!   covers as a process-global one. It stays a recorded deferral.
-//! * `ossl_ctx_thread_stop(ctx)` runs in `context_deinit` in the authority. The
-//!   per-thread state it releases cannot exist until 6.6e registers threads
-//!   against a context, so the call is not made yet and the omission is named
-//!   here rather than silently absent.
+//! * `ossl_ctx_thread_stop(ctx)` runs in `context_deinit` in the authority and
+//!   is made first there too; it landed with 6.6e-ii's per-thread event-handler
+//!   table. `ossl_do_ex_data_init`/`ossl_crypto_cleanup_all_ex_data_int` remain
+//!   the process-global ex-data deferral described just above.
 
 use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_void};
@@ -109,7 +110,8 @@ use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 
 use crate::ffi::guard_ffi;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::{
     CRYPTO_THREAD_cleanup_local, CRYPTO_THREAD_get_local, CRYPTO_THREAD_init_local,
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock,
@@ -191,6 +193,7 @@ pub(crate) const OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX: c_int = 15;
 /// Derived from the admitted build record (`forensics/authorities/`), never
 /// hand-typed.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/context.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/context.c");
 
 /// `OPENSSL_zalloc(sizeof(*ctx))` is at `crypto/context.c:436`, `OPENSSL_free(ctx)`
 /// at 439 (the failed-`context_init` arm) and at 495 (`OSSL_LIB_CTX_free`).
@@ -300,6 +303,37 @@ impl OsslLibCtx {
         ischild: 0,
         conf_diagnostics: 0,
     };
+}
+
+// SAFETY: (a) the free body this impl runs is `OSSL_LIB_CTX_free`'s member teardown -- the
+// child deregistration, then `context_deinit` -- which releases each slot exactly once and
+// never the enclosing block; `context_deinit`/`context_deinit_objs` accept the all-NULL state of
+// a zeroed or partially initialised context (every slot release is NULL-guarded or accepts
+// NULL). (b) an all-zero block is the authority's own constructed input: `context_init` reads no
+// field before writing it, and `context_deinit` on it is a no-op set of NULL releases.
+//
+// `LINE_FREE_INIT_FAILURE` is the authority's failed-`context_init` arm
+// (`crypto/context.c:439`), the only release a `RawCtx` performs when initialisation refuses.
+// Success validates the block with `RawCtx::assume_init` and publishes it with `OwnedCtx::into_raw`;
+// `OSSL_LIB_CTX_free` then reclaims it with `OwnedCtx::from_raw_at(.., :495)`, so the same
+// `destroy_body` runs for both the shared owner and the C lifecycle.
+unsafe impl CtxDestroy for OsslLibCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CTX;
+    const LINE_FREE: c_int = LINE_FREE_INIT_FAILURE;
+
+    /// `OSSL_LIB_CTX_free`'s member body, without the block release: the child deregistration
+    /// (skipped for the zeroed `ischild == 0` state) followed by [`context_deinit`].
+    unsafe fn destroy_body(ptr: *mut OsslLibCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; the branch and the teardown
+        // are the authority's own, and both accept a zeroed/partially built object.
+        unsafe {
+            if (*ptr).ischild != 0 {
+                crate::provider::child::ossl_provider_deinit_child(ptr.cast::<c_void>());
+            }
+            context_deinit(ptr);
+        }
+    }
 }
 
 /// The process-global default context, with a stable address.
@@ -708,18 +742,14 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         }
     }
 
-    // The decoder cache, slot 20, and the decoder method store, slot 11 -- released in the
-    // authority's `P2` position, immediately before the encoder store, for the same reason: the
-    // cache's entries own decoder contexts whose decoders point at providers, and the store's
-    // implementations do too.
+    // The decoder method store, slot 11, and the decoder cache, slot 20 -- released in the
+    // authority's `P2` position, immediately before the encoder store, and in its internal order:
+    // `context_deinit_objs` frees `decoder_store` before `decoder_cache`. Both own provider-backed
+    // implementations, so both must go before the provider store.
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
     // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
     // that the object is no longer in use. Each slot is released exactly once and re-NULLed.
     unsafe {
-        if !(*ctx).decoder_cache.is_null() {
-            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
-            (*ctx).decoder_cache = ptr::null_mut();
-        }
         if !(*ctx).decoder_store.is_null() {
             crate::property::store::ossl_method_store_free(
                 (*ctx)
@@ -727,6 +757,10 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::property::store::OsslMethodStore>(),
             );
             (*ctx).decoder_store = ptr::null_mut();
+        }
+        if !(*ctx).decoder_cache.is_null() {
+            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
+            (*ctx).decoder_cache = ptr::null_mut();
         }
     }
 
@@ -764,21 +798,11 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         }
     }
 
-    // The child-provider globals, released after the provider-config object. The authority's
-    // `context_deinit_objs` reaches `child_provider` through `ossl_provider_deinit_child` and
-    // then releases the slot; the deregistration is 6.6d's call site, and releasing the object
-    // here is what keeps the slot's lifetime this stratum's.
-    // SAFETY: `ctx` is a live context being torn down; each slot is released once.
-    unsafe {
-        if !(*ctx).child_provider.is_null() {
-            crate::provider::child::ossl_child_prov_ctx_free((*ctx).child_provider);
-            (*ctx).child_provider = ptr::null_mut();
-        }
-    }
-
     // The provider store, released **first among the slot objects the authority marks P1**,
     // because the child-provider data that 6.8e lands must be freed after it. Releasing it
-    // here is what makes the P1 relation hold once that arrives.
+    // here is what makes the P1 relation hold: during this release each provider is
+    // deactivated, and a child provider's parent-reference callbacks read the slot 18 globals
+    // (`ossl_provider_up_ref_parent`/`ossl_provider_free_parent`).
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other
     // thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the
     // caller contract is that the object is no longer in use. Each slot is released exactly
@@ -891,6 +915,20 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::thread_data::OsslLibCtxThreads>(),
             );
             (*ctx).threads = ptr::null_mut();
+        }
+    }
+
+    // The child-provider globals, released **last among the slot objects that own memory**, which
+    // is the authority's low-priority position: after the provider store (P1) and after the thread
+    // slot. The provider store's deactivation path reads these globals through
+    // `ossl_lib_ctx_get_data(.., OSSL_LIB_CTX_CHILD_PROVIDER_INDEX)`, so freeing them earlier
+    // would silently skip the parent-reference callbacks. The deregistration itself
+    // (`ossl_provider_deinit_child`) is `destroy_body`'s, before `context_deinit`.
+    // SAFETY: `ctx` is a live context being torn down; each slot is released once.
+    unsafe {
+        if !(*ctx).child_provider.is_null() {
+            crate::provider::child::ossl_child_prov_ctx_free((*ctx).child_provider);
+            (*ctx).child_provider = ptr::null_mut();
         }
     }
 
@@ -1045,19 +1083,24 @@ fn lib_ctx_is_default(ctx: *mut OsslLibCtx) -> c_int {
 #[no_mangle]
 pub extern "C" fn OSSL_LIB_CTX_new() -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<OsslLibCtx>(), FILE, LINE_ZALLOC_CTX)
-            .cast::<OsslLibCtx>();
-        if ctx.is_null() {
+        // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*ctx))` at
+        // `crypto/context.c:436`. The block is not a valid context until `context_init`
+        // publishes every slot, so it stays a `RawCtx` (whose `Drop` releases the block alone)
+        // through initialisation.
+        let Some(ctx) = RawCtx::<OsslLibCtx>::zalloc() else {
+            return ptr::null_mut();
+        };
+        if !context_init(ctx.as_ptr()) {
+            // The owner's `Drop` is the authority's failed-`context_init` release at
+            // `crypto/context.c:439`: the block alone, never a slot teardown.
             return ptr::null_mut();
         }
-        if !context_init(ctx) {
-            // SAFETY: `ctx` came from `CRYPTO_zalloc` above, was never published,
-            // and `context_init` failed -- so nothing else holds it and it is
-            // released exactly once, here.
-            unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_INIT_FAILURE) };
-            return ptr::null_mut();
-        }
-        ctx.cast::<c_void>()
+        // Success publishes the stable address; the C lifecycle then owns it until
+        // `OSSL_LIB_CTX_free` reclaims it through `OwnedCtx::from_raw_at(.., :495)`.
+        // SAFETY: `context_init` wrote every slot this crate builds and the allocator zeroed
+        // the rest, so the block holds a fully initialised `OsslLibCtx`; `destroy_body` is sound
+        // on it and only this frame hands it out.
+        unsafe { ctx.assume_init() }.into_raw().cast::<c_void>()
     })
 }
 
@@ -1245,18 +1288,17 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_free(ctx: *mut c_void) {
         }
         // `if (ctx->ischild) ossl_provider_deinit_child(ctx);` -- before the slot objects
         // are released, because the deregistration tells the parent that this child is
-        // gone and the parent may reach back through the globals it stored in slot 18.
-        // SAFETY: `ctx` is live and not the default, so this call owns it.
-        if unsafe { (*ctx).ischild } != 0 {
-            // SAFETY: `ctx` is live; the callee reads slot 18, which is still allocated at
-            // this point in the teardown.
-            unsafe { crate::provider::child::ossl_provider_deinit_child(ctx.cast::<c_void>()) };
-        }
-        context_deinit(ctx);
-        // SAFETY: `ctx` is not the default, so this call owns it, and
-        // `context_deinit` has released everything it held. It is freed exactly
-        // once.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE) };
+        // gone and the parent may reach back through the globals it stored in slot 18. The
+        // reclaim runs the authority's own `destroy_body` (that branch and `context_deinit`)
+        // and `Drop` releases the block at `crypto/context.c:495`.
+        // SAFETY: `ctx` is not the default, so this call owns it; `from_raw_at` reclaims the
+        // block a previous `into_raw` published, and `Drop` runs the destructor body followed
+        // by the block release. It is freed exactly once.
+        unsafe {
+            drop(OwnedCtx::<OsslLibCtx>::from_raw_at(
+                ctx, FILE_SEAM, LINE_FREE,
+            ))
+        };
     })
 }
 
@@ -1490,15 +1532,25 @@ pub(crate) fn lib_ctx_default_deinit() {
     };
 }
 
-/// `void ossl_release_default_drbg_ctx(void)` — internal. Phase 9 owns the DRBG
-/// slot; this is here because the authority's only caller is the cleanup path
-/// this module drives, and a slot release belongs with the slot.
-#[allow(dead_code)] // unreachable until the DRBG slot exists
+/// `void ossl_release_default_drbg_ctx(void)` — internal. The authority's caller
+/// is `ossl_rand_cleanup_int`, which this crate drives from its own RAND cleanup;
+/// a slot release belongs with the slot.
+///
+/// The slot was filled by `context_init` when Phase 9 landed the RAND global, so
+/// this must release it before clearing the pointer — a bare NULL store would
+/// leak the DRBG and its owned DRBGs. The authority's order is free-then-clear.
 pub(crate) fn release_default_drbg_ctx() {
-    // SAFETY: the global default object exists for the life of the process; the
-    // field is a plain pointer and Phase 9 has not filled it yet, so this is a
-    // NULL store today and the release goes on this line when it lands.
-    unsafe { (*global_default()).drbg = ptr::null_mut() };
+    // SAFETY: the global default object exists for the life of the process; its
+    // `drbg` field is NULL or the live RAND global `context_init` stored there,
+    // owned by this slot until this release nulls it. `context_deinit` later sees
+    // NULL and skips its own release, so the object is freed exactly once.
+    unsafe {
+        let drbg = (*global_default()).drbg;
+        if !drbg.is_null() {
+            crate::rand::rand_lib::ossl_rand_ctx_free(drbg);
+            (*global_default()).drbg = ptr::null_mut();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1579,3 +1631,7 @@ mod tests {
         assert_eq!(gd, OSSL_LIB_CTX_get0_global_default());
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslLibCtx => zero_state_sweep_ossl_lib_ctx);

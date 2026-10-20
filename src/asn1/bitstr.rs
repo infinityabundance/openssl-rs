@@ -41,6 +41,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{
     as_str, as_str_mut, string_type_new, ASN1_STRING_free, ASN1_STRING_set, ASN1_STRING_set0,
 };
@@ -50,7 +51,8 @@ use crate::runtime::bio::Bio;
 use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site_dynamic;
-use crate::runtime::mem::{CRYPTO_clear_realloc, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_clear_realloc;
+use crate::runtime::mem_coords::SeamFile;
 
 extern "C" {
     /// `int strcmp(const char *, const char *)`.
@@ -63,6 +65,40 @@ extern "C" {
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/a_bitstr.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
+
+/// `CRYPTO_clear_realloc` over a bit string's content member — the authority's in-place growth in
+/// `ASN1_BIT_STRING_set_bit`.
+///
+/// The allocation stays the authority's own `CRYPTO_clear_realloc` at its exact `old`/`new`
+/// extents and `(FILE, LINE)`, so a caller-installed `CRYPTO_set_mem_functions` hook observes the
+/// growth. On success the member is the regrown block and remains the string's; the caller zeroes
+/// the cleared tail and updates `length`. On a NULL answer the member is unchanged and still owns
+/// the old block, exactly `realloc` semantics, so the failure path cannot turn into a release.
+///
+/// # Safety
+/// `s` is a live, uniquely-owned bit string, so `s.data` is NULL or the string's own allocator
+/// block allocated for `old_len` bytes, and no other owner will release it during this call.
+/// `new_len > 0`.
+unsafe fn clear_realloc_content(s: &mut Asn1String, old_len: usize, new_len: usize) -> Option<()> {
+    debug_assert!(new_len > 0, "a bit-string regrow is never a release");
+    // SAFETY: per this function's contract the incumbent is NULL or the string's own block of
+    // `old_len` bytes; a NULL answer means the allocator kept that block.
+    let raw = unsafe {
+        CRYPTO_clear_realloc(
+            s.data.cast::<c_void>(),
+            old_len,
+            new_len,
+            FILE.as_ptr(),
+            LINE,
+        )
+    }
+    .cast::<u8>();
+    if raw.is_null() {
+        return None;
+    }
+    s.data = raw;
+    Some(())
+}
 
 /// `ossl_asn1_string_set_bits_left` — record the unused-bit count, from
 /// `asn1_lib.c`.
@@ -308,28 +344,40 @@ pub(crate) unsafe fn ossl_c2i_ASN1_BIT_STRING(
     unsafe { set_bits_left(ret, i) };
 
     let mut len = len;
+    // The fresh block this call may own, before it is transferred to `ret` below. A NULL member
+    // (the declared length was exactly 1) leaves it `None`.
+    let mut owned: Option<OwnedBlock<u8>> = None;
     let s: *mut u8;
     if len > 1 {
         // The count byte is already consumed, so the content is `len - 1` octets.
         len -= 1;
-        // SAFETY: `len` is the new allocation's size, and it is at least 1 here.
-        let buf = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE) as *mut u8;
-        if buf.is_null() {
+        // The conversion is checked so an impossible wrapped request never reaches the allocator;
+        // a refusal is the same arm as a refused allocation.
+        let Some(len_usize) = usize::try_from(len).ok() else {
+            // SAFETY: `ret` is live and this call may release it.
+            return unsafe { c2i_err(a, i, ret) };
+        };
+        // SAFETY: `len_usize` is the new allocation's size, and it is at least 1 here. `OwnedBlock`
+        // records the authority's own `(FILE, LINE)` and its `Drop` is the block's single release
+        // until ownership is transferred to `ret` below.
+        let Some(buf) = OwnedBlock::<u8>::malloc(len_usize, SeamFile::new(FILE), LINE) else {
             // Reaches `err` with `i` still holding the count byte, which the
             // authority then raises as a reason code. Reproduced; see the module
             // doc.
             // SAFETY: `ret` is live and this call may release it.
             return unsafe { c2i_err(a, i, ret) };
-        }
-        // SAFETY: `buf` holds `len` writable bytes and `p` is readable for the
-        // same `len` bytes of content.
+        };
+        let dst = buf.as_ptr();
+        // SAFETY: `dst` holds `len_usize` writable bytes and `p` is readable for the
+        // same `len_usize` bytes of content.
         unsafe {
-            core::ptr::copy_nonoverlapping(p, buf, len as usize);
-            *buf.add(len as usize - 1) &= (0xffu16 << i) as c_uchar;
+            core::ptr::copy_nonoverlapping(p, dst, len_usize);
+            *dst.add(len_usize - 1) &= (0xffu16 << i) as c_uchar;
         }
-        // SAFETY: `p` is readable for those `len` bytes.
-        p = unsafe { p.add(len as usize) };
-        s = buf;
+        // SAFETY: `p` is readable for those `len_usize` bytes.
+        p = unsafe { p.add(len_usize) };
+        s = dst;
+        owned = Some(buf);
     } else {
         // The authority's `if (len-- > 1)` post-decrements, so a declared length of
         // exactly 1 leaves a length of 0 and no buffer at all.
@@ -337,8 +385,15 @@ pub(crate) unsafe fn ossl_c2i_ASN1_BIT_STRING(
         s = core::ptr::null_mut();
     }
 
-    // SAFETY: `ret` is live and uniquely owned; `s` is a fresh allocation or null,
-    // and ownership of it moves to the string.
+    // The block is `ret`'s from here: give up the local owner so it is not released on this path.
+    // The authority transfers it by the field store in `ASN1_STRING_set0`, and `ret` releases it
+    // through `ASN1_STRING_free` later.
+    let s = match owned {
+        Some(buf) => buf.into_raw(),
+        None => s,
+    };
+    // SAFETY: `ret` is live and uniquely owned; `s` is the fresh block whose ownership just moved
+    // to this call, or null.
     unsafe { ASN1_STRING_set0(ret, s.cast::<c_void>(), len as c_int) };
     // SAFETY: `ret` is live.
     unsafe { (*ret).type_ = V_ASN1_BIT_STRING };
@@ -398,32 +453,28 @@ pub unsafe extern "C" fn ASN1_BIT_STRING_set_bit(
             // string's length — with a negative length clamped to 0 rather than
             // converted to a `size_t`, which is a divergence only for a struct a
             // caller filled in by hand (docs/SECURITY_DIVERGENCE_POLICY.md).
-            // SAFETY: `s.data` came from this allocator or is null; the new size is
-            // `w + 1`.
-            let c = unsafe {
-                CRYPTO_clear_realloc(
-                    s.data.cast::<c_void>(),
-                    s.length.max(0) as usize,
-                    (w + 1) as usize,
-                    FILE.as_ptr(),
-                    LINE,
-                )
-            } as *mut u8;
-            if c.is_null() {
+            // The authority's `w + 1`, in fallible form: a wrapped size never reaches the
+            // allocator, and overflow is the same refusal as a refused regrow.
+            let Some(new_len) = usize::try_from(w).ok().and_then(|w| w.checked_add(1)) else {
+                return 0;
+            };
+            let old_len = s.length.max(0) as usize;
+            // SAFETY: `s` is a live, uniquely-owned bit string, so `s.data` is NULL or its own
+            // allocator block of `old_len` bytes; `new_len` is at least 1. A refusal leaves the
+            // member exactly as it was and still owned by the string.
+            if unsafe { clear_realloc_content(s, old_len, new_len) }.is_none() {
                 return 0;
             }
-            if w + 1 - s.length > 0 {
-                // SAFETY: `c` holds `w + 1` bytes, of which the first `s.length` are
+            let c = s.data;
+            // `old_len` is the clamped (non-negative) length, and `new_len` is the
+            // checked `w + 1`. Comparing and subtracting in `usize` keeps the
+            // authority's `w + 1 - a->length > 0` test without a signed overflow
+            // for a hand-filled negative length (§3).
+            if new_len > old_len {
+                // SAFETY: `c` holds `w + 1` bytes, of which the first `old_len` are
                 // the old content; the rest are zeroed.
-                unsafe {
-                    core::ptr::write_bytes(
-                        c.add(s.length.max(0) as usize),
-                        0,
-                        (w + 1 - s.length.max(0)) as usize,
-                    )
-                };
+                unsafe { core::ptr::write_bytes(c.add(old_len), 0, new_len - old_len) }
             }
-            s.data = c;
             s.length = w + 1;
         }
         // SAFETY: `s.length >= w + 1` and `s.data` is non-null, so octet `w` is

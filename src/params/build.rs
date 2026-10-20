@@ -44,9 +44,21 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::secure::{CRYPTO_secure_allocated, CRYPTO_secure_free, CRYPTO_secure_malloc};
 
 /// The authority translation unit this module reconstructs.
-pub(crate) const FILE: &core::ffi::CStr = c"crypto/param_build.c";
-/// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-pub(crate) const LINE: c_int = 0;
+///
+/// `param_build.c` is a plain `.c` (not a generated `.c.in`), so the admitted build's
+/// `__FILE__` carries the source-tree prefix. The allocator seam records exactly that
+/// string; the error-raise sites use the same path independently in `runtime::err_sites`.
+pub(crate) const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/param_build.c";
+
+/// The authority's allocation/release lines this unit's seam operations reproduce.
+const LINE_ZALLOC_DEF: c_int = 55;
+const LINE_FREE_DEF_PUSH: c_int = 68;
+const LINE_ZALLOC_BUILDER: c_int = 93;
+const LINE_FREE_ALL_PARAMS: c_int = 110;
+const LINE_FREE_BUILDER: c_int = 119;
+const LINE_SECURE_MALLOC_PARAMS: c_int = 469;
+const LINE_MALLOC_PARAMS: c_int = 475;
+const LINE_SECURE_FREE_PARAMS: c_int = 477;
 
 /// `BN_FLG_SECURE` — the flag `push_BN` reads to decide which block a value belongs in.
 const BN_FLG_SECURE: c_int = 0x08;
@@ -78,29 +90,114 @@ struct ParamBldDef {
 
 /// `struct ossl_param_bld_st` — the builder itself.
 ///
-/// The authority's `params` member is a `STACK_OF(OSSL_PARAM_BLD_DEF)`; this is a `Vec`
-/// of the same pointers. Both are private, both preserve insertion order (which is the
-/// order the parameter array is written in), and the stack's failure mode — a growth
-/// failure — has no observable difference from a `Vec`'s, because a `push` that cannot
-/// allocate is a failure either way.
+/// The authority's `params` member is a `STACK_OF(OSSL_PARAM_BLD_DEF) *`; this is a pointer to a
+/// Rust-owned `Vec` of the same pointers. Both are private, both preserve insertion order (which
+/// is the order the parameter array is written in), and the stack's failure mode — a growth
+/// failure — has no observable difference from a `Vec`'s, because a push that cannot allocate is
+/// a failure either way.
+///
+/// Keeping the `Vec` behind a pointer rather than inline preserves the authority's block size
+/// (`3 * sizeof(void *)`), so a caller's allocator hook observes the same `num` for the builder
+/// allocation. The `Vec` itself is Rust-owned storage, as the stack element array is in every
+/// other converted stack owner.
 // The name is the authority's own typedef, and `ABI-PROTOTYPE` resolves an export
 // by its declared name, so it is kept rather than camel-cased.
+#[repr(C)]
 #[allow(non_camel_case_types)]
 pub struct OSSL_PARAM_BLD {
     total_blocks: usize,
     secure_blocks: usize,
-    params: Vec<*mut ParamBldDef>,
+    params: *mut ParamDefs,
+}
+
+/// The Rust-owned body behind [`OSSL_PARAM_BLD::params`].
+struct ParamDefs {
+    defs: Vec<*mut ParamBldDef>,
 }
 
 impl OSSL_PARAM_BLD {
     /// `sk_OSSL_PARAM_BLD_DEF_num(bld->params)`.
     fn len(&self) -> usize {
-        self.params.len()
+        // SAFETY: `params` is set by `OSSL_PARAM_BLD_new` before the builder is published, and
+        // `OSSL_PARAM_BLD_free` is the only release; a live builder therefore has a live body.
+        unsafe { (*self.params).defs.len() }
     }
 
     /// `sk_OSSL_PARAM_BLD_DEF_value(bld->params, i)`.
     fn at(&self, i: usize) -> *mut ParamBldDef {
-        self.params[i]
+        // SAFETY: as `len`; callers pass `i < len()`.
+        unsafe { (&(*self.params).defs)[i] }
+    }
+}
+
+/// An owned `ParamBldDef` block allocated through the crate's `CRYPTO_zalloc` seam.
+///
+/// The builder's `params` body holds the raw pointers the conversion reads, so this handle owns a
+/// definition only for the windows around a transition: between its allocation and the push, and
+/// between reclaiming it from the body and the authority's plain `CRYPTO_free`. `Drop` is the
+/// block's single release. A zeroed block is a valid `ParamBldDef` — every member is a raw pointer,
+/// an integer or a `bool` — so `zalloc` hands one out directly.
+struct OwnedDef {
+    ptr: *mut ParamBldDef,
+    /// The authority's release line for this window: `param_push`'s failed-push arm (68) or
+    /// `free_all_params`'s pop loop (110).
+    release_line: c_int,
+}
+
+impl OwnedDef {
+    /// `CRYPTO_zalloc(sizeof(ParamBldDef), FILE, LINE_ZALLOC_DEF)`, or `None` when the allocator
+    /// answers NULL.
+    fn zalloc() -> Option<OwnedDef> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ParamBldDef>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_DEF,
+            )
+        }
+        .cast::<ParamBldDef>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedDef {
+            ptr: raw,
+            release_line: LINE_FREE_DEF_PUSH,
+        })
+    }
+
+    /// Reclaim a definition the builder's `params` `Vec` holds, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is a live `ParamBldDef` this module allocated through the seam and no other owner
+    /// will release.
+    unsafe fn adopt(ptr: *mut ParamBldDef) -> OwnedDef {
+        OwnedDef {
+            ptr,
+            release_line: LINE_FREE_ALL_PARAMS,
+        }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut ParamBldDef {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the `params` `Vec` entry that takes it over.
+    fn into_raw(self) -> *mut ParamBldDef {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedDef {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc`/`adopt` took and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), self.release_line) };
     }
 }
 
@@ -122,11 +219,10 @@ unsafe fn param_push(
     type_: c_uint,
     secure: bool,
 ) -> *mut ParamBldDef {
-    let pd = CRYPTO_zalloc(core::mem::size_of::<ParamBldDef>(), FILE.as_ptr(), LINE)
-        .cast::<ParamBldDef>();
-    if pd.is_null() {
+    let Some(def) = OwnedDef::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let pd = def.as_ptr();
     // SAFETY: `pd` is a fresh zeroed block of exactly this type.
     unsafe {
         (*pd).key = key;
@@ -137,12 +233,27 @@ unsafe fn param_push(
     }
     // SAFETY: `pd` is live.
     let blocks = unsafe { (*pd).alloc_blocks };
-    if secure {
-        bld.secure_blocks += blocks;
-    } else {
-        bld.total_blocks += blocks;
+    // The conversion advances by `alloc_blocks * OSSL_PARAM_ALIGN_SIZE` and the counters are
+    // summed into the allocation size. Both must be representable, or a later `to_param`
+    // would under-allocate and then write past the block. Overflow fails the push instead.
+    if blocks.checked_mul(OSSL_PARAM_ALIGN_SIZE).is_none() {
+        return ptr::null_mut();
     }
-    bld.params.push(pd);
+    let counted = if secure {
+        bld.secure_blocks
+    } else {
+        bld.total_blocks
+    };
+    let Some(counted) = counted.checked_add(blocks) else {
+        return ptr::null_mut();
+    };
+    if secure {
+        bld.secure_blocks = counted;
+    } else {
+        bld.total_blocks = counted;
+    }
+    // SAFETY: `bld.params` is the live body `OSSL_PARAM_BLD_new` installed.
+    unsafe { (*bld.params).defs.push(def.into_raw()) };
     pd
 }
 
@@ -187,16 +298,26 @@ unsafe fn param_push_num(
 #[no_mangle]
 pub extern "C" fn OSSL_PARAM_BLD_new() -> *mut OSSL_PARAM_BLD {
     crate::ffi::guard_ffi(ptr::null_mut(), || {
-        let r = CRYPTO_zalloc(core::mem::size_of::<OSSL_PARAM_BLD>(), FILE.as_ptr(), LINE)
-            .cast::<OSSL_PARAM_BLD>();
+        let r = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<OSSL_PARAM_BLD>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_BUILDER,
+            )
+        }
+        .cast::<OSSL_PARAM_BLD>();
         if !r.is_null() {
-            // SAFETY: `r` is a fresh zeroed block; writing a `Vec` over it is the
-            // initialisation the authority's `sk_..._new_null()` performs.
+            // The authority allocates the stack header with `sk_..._new_null()`; the Rust body is
+            // ordinary Rust storage behind the pointer member. The builder block itself keeps the
+            // authority's three-word size.
+            let defs = Box::into_raw(Box::new(ParamDefs { defs: Vec::new() }));
+            // SAFETY: `r` is a fresh zeroed block; the write initialises every member.
             unsafe {
                 r.write(OSSL_PARAM_BLD {
                     total_blocks: 0,
                     secure_blocks: 0,
-                    params: Vec::new(),
+                    params: defs,
                 })
             };
         }
@@ -208,9 +329,11 @@ pub extern "C" fn OSSL_PARAM_BLD_new() -> *mut OSSL_PARAM_BLD {
 /// and the `BIGNUM` a `push_BN` recorded is *not* one of them: the caller keeps ownership
 /// of a `BIGNUM` it passed, which is why `to_param` can read it after the push.
 fn free_all_params(bld: &mut OSSL_PARAM_BLD) {
-    for pd in bld.params.drain(..) {
-        // SAFETY: `pd` is a block from this allocator that nothing else holds.
-        unsafe { CRYPTO_free(pd.cast(), FILE.as_ptr(), LINE) };
+    // SAFETY: `bld.params` is the live body `OSSL_PARAM_BLD_new` installed.
+    for pd in unsafe { (*bld.params).defs.drain(..) } {
+        // SAFETY: `pd` is a block from this allocator that nothing else holds; the handle's `Drop`
+        // performs the authority's own plain `CRYPTO_free`.
+        drop(unsafe { OwnedDef::adopt(pd) });
     }
 }
 
@@ -229,10 +352,15 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_free(bld: *mut OSSL_PARAM_BLD) {
         // SAFETY: `bld` is live per the caller's contract.
         let b = unsafe { &mut *bld };
         free_all_params(b);
-        // SAFETY: `b` is live; its `params` field is a live `Vec`.
-        unsafe { ptr::drop_in_place(&mut b.params) };
+        // SAFETY: `b.params` is the body installed by `OSSL_PARAM_BLD_new` and this is its single
+        // release; the Vec it contains is empty after `free_all_params`.
+        if !b.params.is_null() {
+            // SAFETY: `b.params` is a pointer from `Box::into_raw` in `OSSL_PARAM_BLD_new`, and
+            // this is its single reconstruction.
+            drop(unsafe { Box::from_raw(b.params) });
+        }
         // SAFETY: `bld` is a block from this allocator and has been emptied.
-        unsafe { CRYPTO_free(bld.cast(), FILE.as_ptr(), LINE) };
+        unsafe { CRYPTO_free(bld.cast(), FILE.as_ptr(), LINE_FREE_BUILDER) };
     })
 }
 
@@ -852,13 +980,19 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_push_utf8_string(
             bsize
         };
         let secure = CRYPTO_secure_allocated(buf.cast()) != 0;
+        // The terminator slot is one byte beyond `size`; a `size` of `usize::MAX` cannot reserve
+        // it. The authority's `size + 1` wraps there and later under-allocates, so this refuses
+        // instead of reproducing the under-allocation.
+        let Some(alloc) = size.checked_add(1) else {
+            return 0;
+        };
         // SAFETY: `bld` is live; `key` outlives it.
         let pd = unsafe {
             param_push(
                 &mut *bld,
                 key,
                 size,
-                size + 1,
+                alloc,
                 crate::params::OSSL_PARAM_UTF8_STRING,
                 secure,
             )
@@ -1124,14 +1258,30 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_to_param(bld: *mut OSSL_PARAM_BLD) -> *m
         // SAFETY: `bld` is live per the caller's contract.
         let b = unsafe { &mut *bld };
         let num = b.len();
-        let p_blks = ossl_param_bytes_to_blocks((1 + num) * core::mem::size_of::<OsslParam>());
-        let total = OSSL_PARAM_ALIGN_SIZE * (p_blks + b.total_blocks);
-        let ss = OSSL_PARAM_ALIGN_SIZE * b.secure_blocks;
+        // Every term below feeds an allocation size or a pointer offset that `param_bld_convert`
+        // writes through. Overflow fails the call before any block is acquired; a wrapped value
+        // would under-allocate and the conversion would then write past it.
+        let Some(param_bytes) = num
+            .checked_add(1)
+            .and_then(|n| n.checked_mul(core::mem::size_of::<OsslParam>()))
+        else {
+            return ptr::null_mut();
+        };
+        let p_blks = ossl_param_bytes_to_blocks(param_bytes);
+        let Some(total_blocks) = p_blks.checked_add(b.total_blocks) else {
+            return ptr::null_mut();
+        };
+        let Some(total) = OSSL_PARAM_ALIGN_SIZE.checked_mul(total_blocks) else {
+            return ptr::null_mut();
+        };
+        let Some(ss) = OSSL_PARAM_ALIGN_SIZE.checked_mul(b.secure_blocks) else {
+            return ptr::null_mut();
+        };
 
         let mut secure_block: *mut u8 = ptr::null_mut();
         if ss > 0 {
             // SAFETY: a plain size argument.
-            let s = unsafe { CRYPTO_secure_malloc(ss, FILE.as_ptr(), LINE) };
+            let s = unsafe { CRYPTO_secure_malloc(ss, FILE.as_ptr(), LINE_SECURE_MALLOC_PARAMS) };
             if s.is_null() {
                 // `CRYPTO_R_SECURE_MALLOC_FAILURE` at crypto/param_build.c:471.
                 // SAFETY: a compile-time-constant site.
@@ -1140,10 +1290,15 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_to_param(bld: *mut OSSL_PARAM_BLD) -> *m
             }
             secure_block = s.cast();
         }
-        let params = CRYPTO_malloc(total, FILE.as_ptr(), LINE);
+        let params = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(total, FILE.as_ptr(), LINE_MALLOC_PARAMS)
+        };
         if params.is_null() {
             // SAFETY: `secure_block` is NULL or the secure block just allocated.
-            unsafe { CRYPTO_secure_free(secure_block.cast(), FILE.as_ptr(), LINE) };
+            unsafe {
+                CRYPTO_secure_free(secure_block.cast(), FILE.as_ptr(), LINE_SECURE_FREE_PARAMS)
+            };
             return ptr::null_mut();
         }
         let params = params.cast::<OsslParam>();
@@ -1163,4 +1318,39 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_to_param(bld: *mut OSSL_PARAM_BLD) -> *m
         free_all_params(b);
         params
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_push_BN_pad, OSSL_PARAM_BLD,
+    };
+
+    /// The authority's `struct ossl_param_bld_st` is two `size_t`s and a stack pointer. The Rust
+    /// block keeps that shape (the `Vec` lives behind the pointer), so an allocator hook sees the
+    /// same `num` for the builder allocation.
+    #[test]
+    fn builder_block_keeps_the_authority_three_word_size() {
+        assert_eq!(
+            core::mem::size_of::<OSSL_PARAM_BLD>(),
+            3 * core::mem::size_of::<usize>()
+        );
+    }
+
+    /// A recorded value whose block extent is not representable must be refused at push time.
+    /// Before the checked arithmetic, `usize::MAX` wrapped to zero blocks and `to_param` would
+    /// later have written `usize::MAX` bytes into a block sized for the wrapped count.
+    #[test]
+    fn unrepresentable_value_extent_is_refused_at_push() {
+        let bld = OSSL_PARAM_BLD_new();
+        assert!(!bld.is_null());
+        // SAFETY: the builder is fresh and the key is a static NUL-terminated string; `bn` is
+        // NULL, so only the caller-supplied padding size is recorded.
+        let r = unsafe {
+            OSSL_PARAM_BLD_push_BN_pad(bld, c"k".as_ptr(), core::ptr::null(), usize::MAX)
+        };
+        assert_eq!(r, 0, "an unrepresentable extent is a refused push");
+        // SAFETY: `bld` is still the live, empty builder.
+        unsafe { OSSL_PARAM_BLD_free(bld) };
+    }
 }

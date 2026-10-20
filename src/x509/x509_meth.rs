@@ -22,8 +22,9 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::mem::size_of;
+use core::ptr::NonNull;
 
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::x509::x509_lu::{
@@ -46,6 +47,111 @@ const LINE_FREE_METH_NAME: c_int = 40;
 /// `X509_LOOKUP_meth_free`'s `OPENSSL_free(method)` (`:41`).
 const LINE_FREE_METH: c_int = 41;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the method block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `X509_LOOKUP_METHOD` block still under construction.
+///
+/// `X509_LOOKUP_meth_new` allocates the block zeroed and fills its `name`; until the block is handed
+/// to the caller its release is the block alone -- the authority's own error-path
+/// `OPENSSL_free(method)` at `:33` -- so the full destructor (`X509_LOOKUP_meth_free`) over a `name`
+/// that may not be set must not run. [`Self::finish`] hands the block to the caller on success.
+///
+/// Every member of the block is a raw pointer or an optional `extern "C"` callback
+/// ([`crate::x509::x509_lu::X509LookupMethod`]), for which an all-zero block is a valid value, so the
+/// zeroed block *is* a valid instance from its first byte.
+struct RawMethod {
+    ptr: NonNull<X509LookupMethod>,
+}
+
+impl RawMethod {
+    /// `CRYPTO_zalloc(sizeof(X509_LOOKUP_METHOD), FILE, 22)`, or `None` when it answers NULL.
+    fn new() -> Option<RawMethod> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh zeroed block of
+        // `size_of::<X509LookupMethod>()` bytes, which is exactly `X509_LOOKUP_METHOD`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                size_of::<X509LookupMethod>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_METH,
+            )
+        }
+        .cast::<X509LookupMethod>();
+        NonNull::new(raw).map(|ptr| RawMethod { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut X509LookupMethod {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the caller.
+    fn finish(self) -> *mut X509LookupMethod {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawMethod {
+    /// The authority's `X509_LOOKUP_meth_new` error-path release (`:33`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the `err:` path.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_METH_NEW,
+            )
+        };
+    }
+}
+
+/// An owned `X509_LOOKUP_METHOD` the C ABI hands back.
+///
+/// `X509_LOOKUP_meth_free` releases the method's `name` and the method; [`Self::from_raw`] reclaims a
+/// block a previous [`RawMethod::finish`] handed to a C caller, so both releases are its `Drop`.
+struct OwnedMethod {
+    ptr: NonNull<X509LookupMethod>,
+}
+
+impl OwnedMethod {
+    /// Reclaim a method the C ABI hands back, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live `X509_LOOKUP_METHOD` this file allocated through the `CRYPTO_*` seam
+    /// that no other owner will release; its `name` is NULL or this file's own `CRYPTO_strdup`
+    /// block. `Drop` performs both releases, at the authority's own sites.
+    unsafe fn from_raw(ptr: *mut X509LookupMethod) -> Option<OwnedMethod> {
+        NonNull::new(ptr).map(|ptr| OwnedMethod { ptr })
+    }
+}
+
+impl Drop for OwnedMethod {
+    /// The method's release (`X509_LOOKUP_meth_free`): its `name` (`:40`) then the block (`:41`).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the live method `from_raw` reclaimed and `Drop` runs once; `name`
+        // is NULL (a `CRYPTO_free` no-op) or the block this file's `new` strdup'd, and both releases
+        // are the authority's own.
+        unsafe {
+            CRYPTO_free(
+                (*self.ptr.as_ptr()).name.cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_METH_NAME,
+            );
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_METH,
+            );
+        }
+    }
+}
+
 /// `X509_LOOKUP_METHOD *X509_LOOKUP_meth_new(const char *name)` — `crypto/x509/x509_meth.c:20-35`.
 ///
 /// A zeroed method whose `name` is a copy of `name`. A failed allocation or a NULL `name` (whose
@@ -56,25 +162,19 @@ const LINE_FREE_METH: c_int = 41;
 /// `name` must be NULL or a NUL-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn X509_LOOKUP_meth_new(name: *const c_char) -> *mut X509LookupMethod {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let method = CRYPTO_zalloc(
-        size_of::<X509LookupMethod>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_METH,
-    )
-    .cast::<X509LookupMethod>();
-    if !method.is_null() {
-        // SAFETY: `method` is this call's own fresh allocation.
-        let dup = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_METH) };
-        // SAFETY: `method` is live and writable.
-        unsafe { (*method).name = dup };
-        if dup.is_null() {
-            // SAFETY: `method` is this call's own object.
-            unsafe { CRYPTO_free(method.cast(), FILE.as_ptr(), LINE_FREE_METH_NEW) };
-            return core::ptr::null_mut();
-        }
+    let Some(method) = RawMethod::new() else {
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `name` is NULL or NUL-terminated per the contract; the allocator takes the file/line
+    // for its mdbg record only.
+    let dup = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_METH) };
+    // SAFETY: `method` is this call's own fresh zeroed block, live and writable.
+    unsafe { (*method.as_ptr()).name = dup };
+    if dup.is_null() {
+        // `method`'s `Drop` performs the authority's error-path release (`:33`).
+        return core::ptr::null_mut();
     }
-    method
+    method.finish()
 }
 
 /// `void X509_LOOKUP_meth_free(X509_LOOKUP_METHOD *method)` —
@@ -87,12 +187,9 @@ pub unsafe extern "C" fn X509_LOOKUP_meth_new(name: *const c_char) -> *mut X509L
 /// `method` must be NULL or a live `X509_LOOKUP_METHOD`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_LOOKUP_meth_free(method: *mut X509LookupMethod) {
-    if !method.is_null() {
-        // SAFETY: `method` is live per the contract.
-        unsafe { CRYPTO_free((*method).name.cast(), FILE.as_ptr(), LINE_FREE_METH_NAME) };
-    }
-    // SAFETY: `method` is NULL or this object; the allocator takes file/line for its record.
-    unsafe { CRYPTO_free(method.cast(), FILE.as_ptr(), LINE_FREE_METH) };
+    // SAFETY: `method` is NULL or a live `X509_LOOKUP_METHOD` this file allocated whose ownership no
+    // other holder retains (the C contract); `OwnedMethod`'s `Drop` is its release.
+    drop(unsafe { OwnedMethod::from_raw(method) });
 }
 
 /// `int X509_LOOKUP_meth_set_new_item(X509_LOOKUP_METHOD *method, int (*new_item)(X509_LOOKUP

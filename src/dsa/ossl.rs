@@ -978,12 +978,21 @@ unsafe extern "C" fn dsa_init(dsa: *mut Dsa) -> c_int {
 /// `static int dsa_finish(DSA *dsa)` — `dsa_ossl.c:466-471`. Releases the cached Montgomery
 /// context.
 ///
+/// The slot is cleared after the release. `DSA_set_method` runs the outgoing table's `finish` and
+/// `DSA_free` runs it again through `destroy_body`, so leaving the freed pointer installed would
+/// make the second pass free it a second time (the M17-D1 class in `rsa/ossl.rs`). The authority
+/// leaves the dangling pointer in place; this is a deliberate safety divergence recorded at
+/// `docs/SECURITY_DIVERGENCE_POLICY.md`.
+///
 /// # Safety
 ///
 /// `dsa` is a live object.
 unsafe extern "C" fn dsa_finish(dsa: *mut Dsa) -> c_int {
     // SAFETY: `dsa` is live and `method_mont_p` is NULL or the object's own context.
-    unsafe { BN_MONT_CTX_free((*dsa).method_mont_p) };
+    unsafe {
+        BN_MONT_CTX_free((*dsa).method_mont_p);
+        (*dsa).method_mont_p = ptr::null_mut();
+    }
     1
 }
 
@@ -1029,4 +1038,31 @@ unsafe fn dsa_mod_inverse_fermat(
         BN_CTX_end(ctx);
     }
     ptr::null_mut()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::mont::BN_MONT_CTX_new;
+    use crate::dsa::object::{DSA_free, DSA_new, DSA_set_method};
+
+    /// `DSA_set_method` runs the outgoing `finish`, and a later `DSA_free` runs it again. The
+    /// first pass must clear the cache so the second cannot release the same context twice.
+    #[test]
+    fn the_finish_hook_clears_the_mont_cache_it_releases() {
+        // SAFETY: the object and the cached context are this test's own; all three calls are the
+        // public lifecycle entry points under their documented contracts.
+        unsafe {
+            let d = DSA_new();
+            assert!(!d.is_null());
+            (*d).method_mont_p = BN_MONT_CTX_new();
+            assert!(!(*d).method_mont_p.is_null());
+            assert_eq!(DSA_set_method(d, DSA_OpenSSL()), 1);
+            assert!(
+                (*d).method_mont_p.is_null(),
+                "the finished cache must not remain installed"
+            );
+            DSA_free(d);
+        }
+    }
 }

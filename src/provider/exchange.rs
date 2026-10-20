@@ -23,7 +23,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::bn::bignum::BigNum;
@@ -66,10 +66,12 @@ use crate::provider::ecx_exch::{X25519_KEYEXCH_FUNCTIONS, X448_KEYEXCH_FUNCTIONS
 use crate::provider::keymgmt::{ossl_kdf_data_free, ossl_kdf_data_up_ref, KdfData};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-};
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap buffer
 
 /// `struct { void *provctx; EVP_KDF_CTX *kdfctx; KDF_DATA *kdfdata; }` — `kdf_exch.c:39-43`.
 #[repr(C)]
@@ -606,6 +608,7 @@ const DH_EXCH_NAME_SIZE: usize = 80;
 
 /// `FILE_DH_EXCH` — the generated unit's own `__FILE__`, which carries no source-tree prefix.
 const FILE_DH_EXCH: *const c_char = c"providers/implementations/exchange/dh_exch.c".as_ptr();
+const FILE_DH_EXCH_SEAM: SeamFile = SeamFile::new(c"providers/implementations/exchange/dh_exch.c");
 
 /// `enum kdf_type` — `dh_exch.c:57-60`.
 const PROV_DH_KDF_NONE: c_int = 0;
@@ -650,8 +653,11 @@ unsafe extern "C" fn dh_newctx(provctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    let pdhctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 95).cast::<ProvDhCtx>();
+    let pdhctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 95)
+    }
+    .cast::<ProvDhCtx>();
     if pdhctx.is_null() {
         return ptr::null_mut();
     }
@@ -824,12 +830,14 @@ unsafe fn dh_X9_42_kdf_derive(
         if dh_plain_derive(vpdhctx, ptr::null_mut(), &mut stmplen, 0, 1) == 0 {
             return 0;
         }
-        let stmp = CRYPTO_secure_malloc(stmplen, FILE_DH_EXCH, 239).cast::<u8>();
-        if stmp.is_null() {
+        // The derived shared secret is this frame's scratch, allocated through the crate's
+        // allocator seam at `stmplen`; its release is the authority's cleansing
+        // `CRYPTO_secure_clear_free`, run by `Drop` at the authority's own site.
+        // SAFETY: `stmplen` is the size the previous call measured.
+        let Some(stmp) = OwnedBuf::new_secure_cleansed(stmplen, FILE_DH_EXCH_SEAM, 239) else {
             return 0;
-        }
-        if dh_plain_derive(vpdhctx, stmp, &mut stmplen, stmplen, 1) == 0 {
-            CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_DH_EXCH, 258);
+        };
+        if dh_plain_derive(vpdhctx, stmp.as_ptr(), &mut stmplen, stmplen, 1) == 0 {
             return 0;
         }
 
@@ -838,7 +846,7 @@ unsafe fn dh_X9_42_kdf_derive(
             && ossl_dh_kdf_X9_42_asn1(
                 secret,
                 (*pdhctx).kdf_outlen,
-                stmp,
+                stmp.as_ptr(),
                 stmplen,
                 (*pdhctx).kdf_cekalg,
                 (*pdhctx).kdf_ukm,
@@ -848,11 +856,9 @@ unsafe fn dh_X9_42_kdf_derive(
                 ptr::null(),
             ) == 0
         {
-            CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_DH_EXCH, 258);
             return 0;
         }
         *secretlen = (*pdhctx).kdf_outlen;
-        CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_DH_EXCH, 258);
     }
     1
 }
@@ -894,18 +900,23 @@ unsafe extern "C" fn dh_freectx(vpdhctx: *mut c_void) {
         return;
     }
 
-    // SAFETY: `pdhctx` is this provider's own context.
+    // SAFETY: `pdhctx` is this provider's own context; each field buffer releases its own block
+    // at the authority's own site, and the context block stays on the raw seam.
     unsafe {
-        CRYPTO_free((*pdhctx).kdf_cekalg.cast(), FILE_DH_EXCH, 286);
+        drop(OwnedBuf::adopt_plain(
+            (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
+            FILE_DH_EXCH_SEAM,
+            286,
+        ));
         DH_free((*pdhctx).dh);
         DH_free((*pdhctx).dhpeer);
         EVP_MD_free((*pdhctx).kdf_md);
-        CRYPTO_clear_free(
-            (*pdhctx).kdf_ukm.cast(),
+        drop(OwnedBuf::adopt_cleansed(
+            (*pdhctx).kdf_ukm.cast::<c_uchar>(),
             (*pdhctx).kdf_ukmlen,
-            FILE_DH_EXCH,
+            FILE_DH_EXCH_SEAM,
             290,
-        );
+        ));
         CRYPTO_free(pdhctx.cast(), FILE_DH_EXCH, 292);
     }
 }
@@ -923,8 +934,11 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    let dstctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 303).cast::<ProvDhCtx>();
+    let dstctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 303)
+    }
+    .cast::<ProvDhCtx>();
     if dstctx.is_null() {
         return ptr::null_mut();
     }
@@ -958,25 +972,35 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
 
         /* Duplicate UKM data if present */
         if !(*srcctx).kdf_ukm.is_null() && (*srcctx).kdf_ukmlen > 0 {
-            (*dstctx).kdf_ukm = CRYPTO_memdup(
-                (*srcctx).kdf_ukm.cast(),
+            let ukm = OwnedBuf::adopt_cleansed(
+                CRYPTO_memdup(
+                    (*srcctx).kdf_ukm.cast(),
+                    (*srcctx).kdf_ukmlen,
+                    FILE_DH_EXCH,
+                    331,
+                )
+                .cast::<c_uchar>(),
                 (*srcctx).kdf_ukmlen,
-                FILE_DH_EXCH,
+                FILE_DH_EXCH_SEAM,
                 331,
-            )
-            .cast();
-            if (*dstctx).kdf_ukm.is_null() {
+            );
+            let Some(ukm) = ukm else {
                 dh_freectx(dstctx.cast());
                 return ptr::null_mut();
-            }
+            };
+            (*dstctx).kdf_ukm = ukm.into_raw().cast::<u8>();
         }
 
         if !(*srcctx).kdf_cekalg.is_null() {
-            (*dstctx).kdf_cekalg = CRYPTO_strdup((*srcctx).kdf_cekalg, FILE_DH_EXCH, 338);
-            if (*dstctx).kdf_cekalg.is_null() {
+            let Some(cekalg) = OwnedBuf::adopt_plain(
+                CRYPTO_strdup((*srcctx).kdf_cekalg, FILE_DH_EXCH, 338).cast::<c_uchar>(),
+                FILE_DH_EXCH_SEAM,
+                338,
+            ) else {
                 dh_freectx(dstctx.cast());
                 return ptr::null_mut();
-            }
+            };
+            (*dstctx).kdf_cekalg = cekalg.into_raw().cast::<c_char>();
         }
     }
     dstctx.cast()
@@ -1163,7 +1187,11 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
             let mut tmp_ukm: *mut c_void = ptr::null_mut();
             let mut tmp_ukmlen: usize = 0;
 
-            CRYPTO_free((*pdhctx).kdf_ukm.cast(), FILE_DH_EXCH, 435);
+            drop(OwnedBuf::adopt_plain(
+                (*pdhctx).kdf_ukm.cast::<c_uchar>(),
+                FILE_DH_EXCH_SEAM,
+                435,
+            ));
             (*pdhctx).kdf_ukm = ptr::null_mut();
             (*pdhctx).kdf_ukmlen = 0;
             /* ukm is an optional field so it can be NULL */
@@ -1171,7 +1199,15 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
                 if OSSL_PARAM_get_octet_string(p.ukm, &mut tmp_ukm, 0, &mut tmp_ukmlen) == 0 {
                     return 0;
                 }
-                (*pdhctx).kdf_ukm = tmp_ukm.cast::<u8>();
+                // `tmp_ukm` is the helper's own fresh block; the handle gives it to the context
+                // field, which releases it through the authority's cleansing `CRYPTO_clear_free`.
+                let ukm = OwnedBuf::adopt_cleansed(
+                    tmp_ukm.cast::<c_uchar>(),
+                    tmp_ukmlen,
+                    FILE_DH_EXCH_SEAM,
+                    435,
+                );
+                (*pdhctx).kdf_ukm = ukm.map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
                 (*pdhctx).kdf_ukmlen = tmp_ukmlen;
             }
         }
@@ -1184,17 +1220,25 @@ unsafe extern "C" fn dh_set_ctx_params(vpdhctx: *mut c_void, params: *const Ossl
         }
 
         if !p.cekalg.is_null() {
-            CRYPTO_free((*pdhctx).kdf_cekalg.cast(), FILE_DH_EXCH, 456);
+            drop(OwnedBuf::adopt_plain(
+                (*pdhctx).kdf_cekalg.cast::<c_uchar>(),
+                FILE_DH_EXCH_SEAM,
+                456,
+            ));
             (*pdhctx).kdf_cekalg = ptr::null_mut();
             if !(*p.cekalg).data.is_null() && (*p.cekalg).data_size != 0 {
                 let mut str_ = name.as_mut_ptr();
                 if OSSL_PARAM_get_utf8_string(p.cekalg, &mut str_, DH_EXCH_NAME_SIZE) == 0 {
                     return 0;
                 }
-                (*pdhctx).kdf_cekalg = CRYPTO_strdup(name.as_ptr(), FILE_DH_EXCH, 461);
-                if (*pdhctx).kdf_cekalg.is_null() {
+                let Some(cekalg) = OwnedBuf::adopt_plain(
+                    CRYPTO_strdup(name.as_ptr(), FILE_DH_EXCH, 461).cast::<c_uchar>(),
+                    FILE_DH_EXCH_SEAM,
+                    461,
+                ) else {
                     return 0;
-                }
+                };
+                (*pdhctx).kdf_cekalg = cekalg.into_raw().cast::<c_char>();
             }
         }
     }

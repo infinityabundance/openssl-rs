@@ -46,8 +46,8 @@
 use core::ffi::{c_char, c_int, c_void};
 
 use crate::property::parse::ossl_property_free;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// The authority's translation unit.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/property/property.c".as_ptr();
@@ -77,6 +77,29 @@ pub(crate) struct OsslGlobalProperties {
     no_mirrored: u32,
 }
 
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
+
+// SAFETY: (a) `destroy_body` releases the holder's one separately allocated member, `list`, by
+// the authority's own `ossl_property_free`, and never the enclosing block, which `OwnedCtx`
+// releases; `ossl_property_free` accepts NULL, so the empty holder is handled. (b) an all-zero
+// block is a valid empty holder (`list` NULL, `no_mirrored` zero), which is the state the
+// authority's `OPENSSL_zalloc` constructor leaves, and `destroy_body` is sound on it.
+unsafe impl CtxDestroy for OsslGlobalProperties {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_GLOBP;
+    const LINE_FREE: c_int = LINE_FREE_GLOBP;
+
+    /// `ossl_ctx_global_properties_free`'s body without the block release: release the current
+    /// property list exactly once, through the authority's own releaser.
+    unsafe fn destroy_body(ptr: *mut OsslGlobalProperties) {
+        // SAFETY: `ptr` is a live holder per the owner's contract; `list` is NULL or one list this
+        // crate owns, and `ossl_property_free` accepts NULL and releases it once.
+        unsafe { ossl_property_free((*ptr).list) };
+    }
+}
+
 /// `NO_MIRRORED`'s bit, so the field is written by name rather than by a bare `1`.
 #[allow(dead_code)] // its two readers are the accessors below, which are not yet reached
 const NO_MIRRORED: u32 = 1;
@@ -89,28 +112,26 @@ const NO_MIRRORED: u32 = 1;
 /// `vglobp` must be NULL or a pointer returned by
 /// [`ossl_ctx_global_properties_new`] and not already released.
 pub(crate) unsafe fn ossl_ctx_global_properties_free(vglobp: *mut c_void) {
-    if vglobp.is_null() {
-        return;
-    }
-    let globp = vglobp.cast::<OsslGlobalProperties>();
-    // SAFETY: `globp` is the live slot object. `list` is NULL today and a list this
-    // crate allocated once 6.7b can make one; `ossl_property_free` accepts NULL.
-    unsafe {
-        let list = (*globp).list;
-        ossl_property_free(list);
-        CRYPTO_free(vglobp, FILE, LINE_FREE_GLOBP);
-    }
+    // SAFETY: `vglobp` is NULL or a block a previous
+    // `ossl_ctx_global_properties_new` handed out and `Drop` has not released; `from_raw`
+    // reclaims it (NULL yields `None`), and its `Drop` runs the authority's list release first and
+    // then the block release at `FILE`/`LINE_FREE_GLOBP`, exactly once.
+    drop(unsafe {
+        OwnedCtx::<OsslGlobalProperties>::from_raw(vglobp.cast::<OsslGlobalProperties>())
+    });
 }
 
 /// `void *ossl_ctx_global_properties_new(OSSL_LIB_CTX *ctx)` — the slot 14 constructor.
 ///
 /// One zeroed block. The `ctx` argument is accepted and unused, as in the authority.
 pub(crate) fn ossl_ctx_global_properties_new(_ctx: *mut c_void) -> *mut c_void {
-    CRYPTO_zalloc(
-        core::mem::size_of::<OsslGlobalProperties>(),
-        FILE,
-        LINE_ZALLOC_GLOBP,
-    )
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(OSSL_GLOBAL_PROPERTIES))` at
+    // `property.c:126`; a zeroed block is the authority's constructed empty holder. The returned
+    // raw pointer transfers ownership to the slot, whose release edge is
+    // `ossl_ctx_global_properties_free`.
+    OwnedCtx::<OsslGlobalProperties>::zalloc().map_or(core::ptr::null_mut(), |globp| {
+        globp.into_raw().cast::<c_void>()
+    })
 }
 
 /// `OSSL_PROPERTY_LIST **ossl_ctx_global_properties(OSSL_LIB_CTX *libctx, int loadconfig)`.
@@ -196,3 +217,7 @@ pub(crate) unsafe fn ossl_global_properties_stop_mirroring(libctx: *mut c_void) 
         unsafe { (*globp).no_mirrored |= NO_MIRRORED };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslGlobalProperties => zero_state_sweep_ossl_global_properties);

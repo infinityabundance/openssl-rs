@@ -276,7 +276,8 @@ pub type OsslI2dOfVoidCtx =
 /// The signature is exactly `pem_password_cb`'s, because the function is one.
 ///
 /// # Safety
-/// `buf` writable for `num` bytes; `userdata` NULL or a NUL-terminated string.
+/// `buf` writable for `num` bytes with `num >= 0`; `userdata` NULL or a NUL-terminated
+/// string.
 #[no_mangle]
 pub unsafe extern "C" fn PEM_def_callback(
     buf: *mut c_char,
@@ -286,13 +287,16 @@ pub unsafe extern "C" fn PEM_def_callback(
 ) -> c_int {
     if !userdata.is_null() {
         // SAFETY: `userdata` is NUL-terminated per the contract.
-        let mut i = unsafe { strlen(userdata.cast::<c_char>()) } as c_int;
-        if i > num {
-            i = num;
-        }
-        // SAFETY: `buf` is `num` writable bytes and `userdata` is `i` readable bytes.
-        unsafe { memcpy(buf.cast::<c_void>(), userdata, i as usize) };
-        return i;
+        let n = unsafe { strlen(userdata.cast::<c_char>()) };
+        // The authority stores `strlen` in an `int` and passes the truncated value to
+        // `memcpy`; a string longer than `INT_MAX` (or a negative `num`) therefore becomes
+        // an enormous `size_t`. Clamp instead: for every valid `(num >= 0, n <= INT_MAX)`
+        // the copied length is exactly the authority's.
+        let n = n.min(num.max(0) as usize);
+        // SAFETY: `buf` is `num` writable bytes (with `num >= 0`) and `userdata` is `n`
+        // readable bytes.
+        unsafe { memcpy(buf.cast::<c_void>(), userdata, n) };
+        return n as c_int;
     }
 
     // SAFETY: `EVP_get_pw_prompt` touches only its own static.
@@ -315,6 +319,109 @@ pub unsafe extern "C" fn PEM_def_callback(
     }
     // SAFETY: `buf` holds a NUL-terminated pass phrase written by the prompt path.
     unsafe { strlen(buf) as c_int }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the reader's three buffers and the writer's DER buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned scratch buffer from the `PEM_MALLOC`/`PEM_FREE` seam.
+///
+/// `pem_bytes_read_bio_flags` holds three of these across its read loop; each stays a block the
+/// reader produced (the `PEM_FLAG_SECURE` dispatch is the seam's own), so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes it. Only its *ownership* is this type: [`Self::adopt`]
+/// takes up a block the reader produced, `Drop` is its single [`pem_free`] at the recorded site,
+/// [`Self::release`] re-points that site for the arm that reaches it, and [`Self::into_raw`] hands
+/// it to a caller's out-parameter.
+struct PemBuf {
+    ptr: *mut c_void,
+    flags: c_uint,
+    num: usize,
+    line: c_int,
+}
+
+impl PemBuf {
+    /// Adopt a block the reader produced, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block `pem_malloc` produced under `flags` that no other owner will
+    /// release -- this handle's `Drop` is its single release; `num` is the block's byte count and
+    /// `line` the authority's own release site for the path that reaches it.
+    unsafe fn adopt(ptr: *mut c_void, flags: c_uint, num: usize, line: c_int) -> Option<PemBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(PemBuf {
+                ptr,
+                flags,
+                num,
+                line,
+            })
+        }
+    }
+
+    /// The block's address.
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to a caller's out-parameter.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Release the block at `line`, the authority's own `PEM_FREE` site for the arm that reaches it.
+    fn release(mut self, line: c_int) {
+        self.line = line;
+        // `self`'s `Drop` performs the `pem_free` here.
+    }
+}
+
+impl Drop for PemBuf {
+    /// The block's single release, through the same seam and flag dispatch.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the reader produced and has not handed out; `pem_free`
+        // dispatches on the recorded flags and accepts NULL.
+        unsafe { pem_free(self.ptr, self.flags, self.num, FILE, self.line) };
+    }
+}
+
+/// An owned DER scratch buffer from this unit's direct `CRYPTO_malloc` seam.
+///
+/// `PEM_ASN1_write_bio_internal` allocates it at `:363`; it holds the plaintext DER, so
+/// `asn1_write_epilogue` clears it with `OPENSSL_clear_free` at `:424` -- the clearing arm is what
+/// keeps the plaintext from surviving the release, and the handle's `Drop` performs that very arm.
+struct OwnedDer {
+    ptr: *mut c_uchar,
+    num: usize,
+    line: c_int,
+}
+
+impl OwnedDer {
+    /// Adopt the frame's own `CRYPTO_malloc` block, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this unit allocated through the crate's `CRYPTO_malloc` seam
+    /// that no other owner will release -- this handle's `Drop` is its single release; `num` is the
+    /// block's byte count.
+    unsafe fn from_raw(ptr: *mut c_uchar, num: usize, line: c_int) -> Option<OwnedDer> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedDer { ptr, num, line })
+        }
+    }
+}
+
+impl Drop for OwnedDer {
+    /// The block's single release: the authority's own `OPENSSL_clear_free(data, dsize)`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, readable for
+        // `self.num` bytes; `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.num, FILE, self.line) };
+    }
 }
 
 /// `static int pem_bytes_read_bio_flags(...)` — `crypto/pem/pem_lib.c:243-284`.
@@ -342,27 +449,24 @@ unsafe fn pem_bytes_read_bio_flags(
     // SAFETY: the all-zero `EvpCipherInfo` is a valid value and `PEM_get_EVP_CIPHER_INFO`
     // overwrites both fields before they are read.
     let mut cipher: EvpCipherInfo = unsafe { core::mem::zeroed() };
-    let mut nm: *mut c_char = ptr::null_mut();
-    let mut header: *mut c_char = ptr::null_mut();
-    let mut data: *mut c_uchar = ptr::null_mut();
+    // The reader's three buffers, held across the loop; each handle releases its own block at the
+    // authority's own site (the loop-top frees at `:255`-`:257`, the epilogue's at `:279`-`:282`).
+    let mut nm_buf: Option<PemBuf> = None;
+    let mut header_buf: Option<PemBuf> = None;
+    let mut data_buf: Option<PemBuf> = None;
     let mut len: c_long = 0;
     let mut ret: c_int = 0;
 
     loop {
-        // `PEM_FREE(nm, flags, 0)`, `PEM_FREE(header, flags, 0)`, `PEM_FREE(data, flags, len)`.
-        // SAFETY: each pointer is NULL or a block from the previous iteration's `pem_malloc`, and
-        // `len` is that iteration's length.
-        unsafe {
-            pem_free(nm.cast::<c_void>(), flags, 0, FILE, LINE_BYTES_255);
-            pem_free(header.cast::<c_void>(), flags, 0, FILE, LINE_BYTES_256);
-            pem_free(
-                data.cast::<c_void>(),
-                flags,
-                len as usize,
-                FILE,
-                LINE_BYTES_257,
-            );
-        }
+        // `PEM_FREE(nm, flags, 0)`, `PEM_FREE(header, flags, 0)`, `PEM_FREE(data, flags, len)`: the
+        // handles release the previous pass's blocks at the authority's own sites.
+        drop(nm_buf.take());
+        drop(header_buf.take());
+        drop(data_buf.take());
+
+        let mut nm: *mut c_char = ptr::null_mut();
+        let mut header: *mut c_char = ptr::null_mut();
+        let mut data: *mut c_uchar = ptr::null_mut();
         // SAFETY: `bp` is live and the three out-parameters are this frame's own.
         if unsafe {
             crate::evp::pem_bridge::PEM_read_bio_ex(
@@ -382,65 +486,95 @@ unsafe fn pem_bytes_read_bio_flags(
             }
             return 0;
         }
+        // Adopt the reader's three blocks; each handle releases its own on the next pass or in the
+        // exit below, and `data`'s byte count is the reader's `len`.
+        // SAFETY: `nm` is NULL or a fresh block `PEM_read_bio_ex` produced under `flags`, owned by
+        // this frame and not released elsewhere.
+        nm_buf = unsafe { PemBuf::adopt(nm.cast::<c_void>(), flags, 0, LINE_BYTES_255) };
+        // SAFETY: as above, for the reader's header block.
+        header_buf = unsafe { PemBuf::adopt(header.cast::<c_void>(), flags, 0, LINE_BYTES_256) };
+        // SAFETY: as above, for the reader's data block, whose byte count is `len`.
+        data_buf =
+            unsafe { PemBuf::adopt(data.cast::<c_void>(), flags, len as usize, LINE_BYTES_257) };
         // SAFETY: `nm` and `name` are NUL-terminated.
         if unsafe { check_pem(nm, name) } != 0 {
             break;
         }
     }
+
+    let nm = nm_buf
+        .as_ref()
+        .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_char>());
+    let header = header_buf
+        .as_ref()
+        .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_char>());
+    let data = data_buf
+        .as_ref()
+        .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_uchar>());
+
     // SAFETY: `header` is the reader's header string and `cipher` is this frame's own.
     if unsafe { crate::evp::pem_bridge::PEM_get_EVP_CIPHER_INFO(header, &mut cipher) } == 0 {
-        // SAFETY: the buffers are this frame's own and `flags` the caller's.
-        return unsafe { bytes_read_epilogue(ret, pnm, nm, header, data, len, flags) };
+        // SAFETY: the buffers are this frame's own handles and `pnm` the caller's.
+        return unsafe { bytes_read_epilogue(ret, pnm, nm_buf, header_buf, data_buf) };
     }
     // SAFETY: `cipher`/`data`/`len` are this frame's own and `cb`/`u` are the caller's.
     if unsafe { PEM_do_header(&mut cipher, data, &mut len, cb, u) } == 0 {
-        // SAFETY: the buffers are this frame's own and `flags` the caller's.
-        return unsafe { bytes_read_epilogue(ret, pnm, nm, header, data, len, flags) };
+        // SAFETY: the buffers are this frame's own handles and `pnm` the caller's.
+        return unsafe { bytes_read_epilogue(ret, pnm, nm_buf, header_buf, data_buf) };
     }
 
     // SAFETY: the three out-parameters are the caller's per the contract.
     unsafe {
         *pdata = data;
         *plen = len;
-        if !pnm.is_null() {
-            *pnm = nm;
-        }
     }
     ret = 1;
-    // SAFETY: the buffers are this frame's own and `flags` the caller's.
-    unsafe { bytes_read_epilogue(ret, pnm, nm, header, data, len, flags) }
+    // The data block is handed to `*pdata`; the header is always released. The name is handed to
+    // `*pnm` when the caller asked for it, and otherwise released by the epilogue at the
+    // authority's own site.
+    if let Some(b) = data_buf.take() {
+        let _ = b.into_raw();
+    }
+    if !pnm.is_null() {
+        // SAFETY: `pnm` is writable per the contract; it takes the name block.
+        unsafe { *pnm = nm };
+        if let Some(b) = nm_buf.take() {
+            let _ = b.into_raw();
+        }
+        // SAFETY: the header handle is this frame's own.
+        unsafe { bytes_read_epilogue(ret, pnm, None, header_buf, None) }
+    } else {
+        // SAFETY: the name and header handles are this frame's own.
+        unsafe { bytes_read_epilogue(ret, pnm, nm_buf, header_buf, None) }
+    }
 }
 
 /// `err:` of `pem_bytes_read_bio_flags` — `crypto/pem/pem_lib.c:277-283`.
 ///
-/// Three frees whose guards differ: the name is released unless it is being handed back
-/// (`pnm != NULL` on success), the header always, and the data only on failure.
+/// Three releases whose guards differ: the name is released unless it is being handed back
+/// (`pnm != NULL` on success), the header always, and the data only on failure. Each handle
+/// performs its own `pem_free` at the authority's own release site for the arm that reaches it.
 ///
 /// # Safety
-/// `nm`/`header`/`data` are NULL or blocks from `pem_malloc` under `flags`; `len` is the data's.
+/// Each handle is this frame's own and holds a block the reader produced under its recorded `flags`.
 unsafe fn bytes_read_epilogue(
     ret: c_int,
     pnm: *mut *mut c_char,
-    nm: *mut c_char,
-    header: *mut c_char,
-    data: *mut c_uchar,
-    len: c_long,
-    flags: c_uint,
+    nm: Option<PemBuf>,
+    header: Option<PemBuf>,
+    data: Option<PemBuf>,
 ) -> c_int {
-    // SAFETY: the pointers are NULL or ours.
-    unsafe {
-        if ret == 0 || pnm.is_null() {
-            pem_free(nm.cast::<c_void>(), flags, 0, FILE, LINE_BYTES_279);
+    if ret == 0 || pnm.is_null() {
+        if let Some(b) = nm {
+            b.release(LINE_BYTES_279);
         }
-        pem_free(header.cast::<c_void>(), flags, 0, FILE, LINE_BYTES_280);
-        if ret == 0 {
-            pem_free(
-                data.cast::<c_void>(),
-                flags,
-                len as usize,
-                FILE,
-                LINE_BYTES_282,
-            );
+    }
+    if let Some(b) = header {
+        b.release(LINE_BYTES_280);
+    }
+    if ret == 0 {
+        if let Some(b) = data {
+            b.release(LINE_BYTES_282);
         }
     }
     ret
@@ -670,8 +804,9 @@ unsafe fn check_pem(nm: *const c_char, name: *const c_char) -> c_int {
 /// The `LONG_MAX > INT_MAX` guard is active on this platform.
 ///
 /// # Safety
-/// `cipher` live; `data` writable for `*plen` bytes plus a cipher block; `plen` writable; `cb`
-/// NULL or a `pem_password_cb`; `u` passed through to the callback.
+/// `cipher` live; `data` writable for `*plen` bytes plus a cipher block; `plen` writable and
+/// `*plen >= 0`; `cb` NULL or a `pem_password_cb` (which must answer at most `PEM_BUFSIZE`);
+/// `u` passed through to the callback.
 #[no_mangle]
 pub unsafe extern "C" fn PEM_do_header(
     cipher: *mut EvpCipherInfo,
@@ -685,7 +820,9 @@ pub unsafe extern "C" fn PEM_do_header(
     let mut key = [0 as c_uchar; EVP_MAX_KEY_LENGTH];
     let mut buf = [0 as c_char; PEM_BUFSIZE as usize];
 
-    if len > INT_MAX {
+    if !(0..=INT_MAX).contains(&len) {
+        // The authority tests only the upper bound; a negative `*plen` would reach
+        // `EVP_DecryptUpdate` as an invalid byte count, so it is rejected here too.
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::PEM_LIB_459) };
         return 0;
@@ -780,8 +917,9 @@ pub unsafe extern "C" fn PEM_do_header(
 ///
 /// # Safety
 /// `i2d`/`i2d_ctx` one non-NULL; `name` NUL-terminated; `bp` a live writable BIO; `x` the object
-/// the encoder reads; `enc` NULL or live; `kstr` NULL or `klen` readable bytes; `cb`/`u` as
-/// [`PEM_do_header`].
+/// the encoder reads, and the chosen encoder must answer a non-negative length on both passes
+/// (the second pass must not exceed the `dsize` the first reported); `enc` NULL or live; `kstr`
+/// NULL or `klen >= 0` readable bytes; `cb`/`u` as [`PEM_do_header`].
 #[allow(clippy::too_many_arguments)]
 #[allow(non_snake_case)]
 unsafe fn PEM_ASN1_write_bio_internal(
@@ -854,13 +992,17 @@ unsafe fn PEM_ASN1_write_bio_internal(
             dsize = 0;
             break 'body;
         }
-        // Allocate enough space for one extra cipher block.
+        // Allocate enough space for one extra cipher block. The block holds the plaintext DER; the
+        // epilogue's handle performs the authority's own `OPENSSL_clear_free` of it.
         // SAFETY: `CRYPTO_malloc` validates its own allocation.
-        data = CRYPTO_malloc(
-            dsize as usize + EVP_MAX_BLOCK_LENGTH,
-            FILE,
-            LINE_ASN1_WRITE_ALLOC,
-        )
+        data = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                dsize as usize + EVP_MAX_BLOCK_LENGTH,
+                FILE,
+                LINE_ASN1_WRITE_ALLOC,
+            )
+        }
         .cast::<c_uchar>();
         if data.is_null() {
             break 'body;
@@ -874,6 +1016,11 @@ unsafe fn PEM_ASN1_write_bio_internal(
                 (None, None) => 0,
             }
         };
+        if i < 0 {
+            // A caller-supplied encoder that fails its second pass would otherwise reach
+            // `EVP_EncryptUpdate` or `PEM_write_bio` with a negative byte count.
+            break 'body;
+        }
 
         if !enc.is_null() {
             if kstr.is_null() {
@@ -978,13 +1125,13 @@ unsafe fn PEM_ASN1_write_bio_internal(
 
 /// `err:` of `PEM_ASN1_write_bio_internal` — `crypto/pem/pem_lib.c:419-425`.
 ///
-/// The shared exit: cleanse the derived key, the IV and the header buffer, free the cipher
-/// context and clear-free the DER buffer. The `dsize`-length clear-free is the one that matters —
-/// a plain `CRYPTO_free` would leave the plaintext DER behind.
+/// The shared exit: cleanse the derived key, the IV and the header buffer, free the cipher context
+/// and clear-free the DER buffer. The `dsize`-length clear-free is the one that matters — a plain
+/// `CRYPTO_free` would leave the plaintext DER behind — so the buffer is adopted into [`OwnedDer`],
+/// whose `Drop` performs the authority's own `OPENSSL_clear_free` at `:424`.
 ///
 /// # Safety
 /// `ctx` NULL or this call's context; `data` NULL or this call's `dsize`-byte DER buffer.
-#[allow(clippy::too_many_arguments)]
 unsafe fn asn1_write_epilogue(
     ret: c_int,
     ctx: *mut crate::evp::cipher_ctx::EvpCipherCtx,
@@ -994,18 +1141,18 @@ unsafe fn asn1_write_epilogue(
     data: *mut c_uchar,
     dsize: c_int,
 ) -> c_int {
-    // SAFETY: the three arrays are this frame's own and the context was created here.
+    // SAFETY: the three arrays are this frame's own and the context was created here; `data` is
+    // this frame's own DER buffer under the caller's contract.
     unsafe {
         OPENSSL_cleanse(key.as_mut_ptr().cast::<c_void>(), key.len());
         OPENSSL_cleanse(iv.as_mut_ptr().cast::<c_void>(), iv.len());
         EVP_CIPHER_CTX_free(ctx);
         OPENSSL_cleanse(buf.as_mut_ptr().cast::<c_void>(), buf.len());
-        CRYPTO_clear_free(
-            data.cast::<c_void>(),
+        drop(OwnedDer::from_raw(
+            data,
             dsize.max(0) as usize,
-            FILE,
             LINE_ASN1_WRITE_FREE,
-        );
+        ));
     }
     ret
 }
@@ -1208,3 +1355,30 @@ const LINE_ASN1_WRITE_FREE: c_int = 424;
 /// and method-object types the `check_pem` signature reads in one place.
 #[allow(dead_code)]
 fn _method_types_are_named(_e: *const Engine, _m: *const EvpPkeyAsn1Method) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn def_callback_clamps_a_negative_length() {
+        let mut buf = [0 as c_char; 8];
+        let userdata = c"secret".as_ptr().cast_mut().cast::<c_void>();
+        // SAFETY: `buf` is eight writable bytes and `userdata` is NUL-terminated. A
+        // negative `num` is outside the documented contract; the clamp keeps the copy at
+        // zero bytes instead of turning the length into an enormous `size_t`.
+        let n = unsafe { PEM_def_callback(buf.as_mut_ptr(), -1, 0, userdata) };
+        assert_eq!(n, 0);
+        assert!(buf.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn def_callback_copies_at_most_num_bytes() {
+        let mut buf = [0 as c_char; 8];
+        let userdata = c"secret".as_ptr().cast_mut().cast::<c_void>();
+        // SAFETY: `buf` is eight writable bytes and `userdata` is NUL-terminated.
+        let n = unsafe { PEM_def_callback(buf.as_mut_ptr(), 3, 0, userdata) };
+        assert_eq!(n, 3);
+        assert_eq!(&buf[..3], &[b's' as c_char, b'e' as c_char, b'c' as c_char]);
+    }
+}

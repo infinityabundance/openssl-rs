@@ -55,9 +55,10 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::layout::Asn1Item;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null,
@@ -101,7 +102,31 @@ pub type X509V3ExtI2v = Option<
 pub type X509V3ExtV2i = Option<
     unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void,
 >;
-/// `X509V3_EXT_I2S` — `include/openssl/x509v3.h:54-55`.
+/// `X509V3_EXT_I2S` — `include/openssl/x509v3.h.in:54-55`.
+///
+/// # ABI contract for an application-supplied `i2s`
+///
+/// On a non-NULL return the callback must hand over the **base pointer of one
+/// whole allocation from the process's active OpenSSL allocator seam**:
+/// `OPENSSL_malloc`/`CRYPTO_malloc`, `CRYPTO_strdup`, or an authority helper that
+/// allocates through one of them. The block must be NUL-terminated within its
+/// allocated extent and contain a C string of `strlen + 1` bytes (exactly the
+/// allocation extent when produced by `CRYPTO_strdup`; a larger `CRYPTO_malloc`
+/// block is valid when the terminator is inside it).
+///
+/// Ownership transfers to the extension machinery: `X509V3_EXT_print` consumes
+/// the result as a C string and releases it exactly once with
+/// `OPENSSL_free(value)` at `crypto/x509/v3_prn.c:130`. The callback must not
+/// free, retain, cache, or otherwise reuse the block, and must not return a
+/// pointer to static, stack, borrowed, or non-seam storage. Returning NULL
+/// transfers nothing and is reported by `X509V3_EXT_print` as a print failure.
+///
+/// Authority: `X509V3_EXT_print` assigns `method->i2s(method, ext_str)` to
+/// `char *value` and its `err:` label runs `OPENSSL_free(value)`
+/// (`crypto/x509/v3_prn.c:106,130`); the public `i2s_ASN1_*` family documents
+/// "It is the caller's responsibility to free the returned string"
+/// (`doc/man3/s2i_ASN1_IA5STRING.pod`). Registration through
+/// [`X509V3_EXT_add`] accepts rows whose `i2s` slot carries this contract.
 pub type X509V3ExtI2s =
     Option<unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char>;
 /// `X509V3_EXT_S2I` — `include/openssl/x509v3.h:56-57`.
@@ -183,6 +208,21 @@ const _: () = {
 // what lets those rows be `static` so the dispatch can hold their addresses, the same reason
 // `Asn1Item` and `Asn1Template` claim it in `src/asn1/layout.rs`.
 unsafe impl Sync for X509V3ExtMethod {}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the dynamic `X509V3_EXT_DYNAMIC` rows
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `ext_list_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// a copied row owns nothing itself, so only the block release is left.
+// SAFETY: (a) holds: `destroy_body` is the authority's no-op `ext_list_free` body -- the row owns
+// no releasable members -- and it never releases the enclosing block, which `OwnedCtx`'s `Drop`
+// owns. (b) holds: `X509V3ExtMethod` is a `#[repr(C)]` record of integers,
+// `Option<unsafe extern "C" fn>` callback slots and one raw pointer, so an all-zero block is a valid
+// value and the empty body is sound on it.
+unsafe impl CtxDestroy for X509V3ExtMethod {
+    unsafe fn destroy_body(_ptr: *mut X509V3ExtMethod) {}
+}
 
 /// `#define X509V3_EXT_DYNAMIC 0x1` — `include/openssl/x509v3.h:121`.
 pub(crate) const X509V3_EXT_DYNAMIC: c_int = 0x1;
@@ -337,8 +377,12 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
     if !method.is_null() {
         // SAFETY: the slot holds a method pointer per the stack contract.
         if unsafe { (*method).ext_flags } & X509V3_EXT_DYNAMIC != 0 {
-            // SAFETY: a DYNAMIC row was `OPENSSL_malloc`ed by `X509V3_EXT_add_alias`.
-            unsafe { CRYPTO_free(ext, FILE.as_ptr(), LINE_FREE) };
+            // A DYNAMIC row was `CRYPTO_malloc`ed by `X509V3_EXT_add_alias`; reclaiming it runs the
+            // row's single block release at the authority's own `:119` site.
+            // SAFETY: `method` is a live DYNAMIC row this module allocated and has not released.
+            drop(unsafe {
+                OwnedCtx::<X509V3ExtMethod>::from_raw_at(method, SeamFile::new(FILE), LINE_FREE)
+            });
         }
     }
 }
@@ -346,11 +390,20 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
 /// `int X509V3_EXT_add(X509V3_EXT_METHOD *ext)` — `crypto/x509/v3_lib.c:25-37`.
 ///
 /// Lazily creates the list with [`ext_cmp`], then pushes the caller's row (the list does not own
-/// it unless it is `X509V3_EXT_DYNAMIC`).
+/// it unless it is `X509V3_EXT_DYNAMIC`). The authority's body is only the list creation and
+/// `sk_X509V3_EXT_METHOD_push` (`crypto/x509/v3_lib.c:25-37`); it does not inspect or take over
+/// the row's callbacks.
 ///
 /// # Safety
 ///
 /// `ext` is a live `X509V3_EXT_METHOD` that outlives the list or is `X509V3_EXT_DYNAMIC`.
+///
+/// In addition, when `ext.i2s` is `Some`, the callback must satisfy the ownership contract on
+/// [`X509V3ExtI2s`]: every non-NULL result is the base of a whole `OPENSSL_malloc`/
+/// `CRYPTO_strdup` block, NUL-terminated within its `strlen + 1`-byte C-string extent, whose
+/// ownership transfers to `X509V3_EXT_print` and is released once there. Registering a callback
+/// that returns borrowed or static storage makes the later `OPENSSL_free` invalid; this function
+/// cannot verify the callback.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_add(ext: *mut X509V3ExtMethod) -> c_int {
     if EXT_LIST.load(Ordering::Acquire).is_null() {
@@ -514,28 +567,33 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
         unsafe { raise_site(&err_sites::V3_LIB_95) };
         return 0;
     }
+    // `tmpext` owns the fresh copy; a failed `X509V3_EXT_add` releases it at the authority's own
+    // `:104` site, and a successful one gives the block up to the `ext_list`.
     // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
-    let tmpext = CRYPTO_malloc(
-        core::mem::size_of::<X509V3ExtMethod>(),
-        FILE.as_ptr(),
+    let Some(raw) = RawCtx::<X509V3ExtMethod>::malloc_at(
+        SeamFile::new(FILE),
         LINE_MALLOC_ALIAS,
-    )
-    .cast::<X509V3ExtMethod>();
-    if tmpext.is_null() {
+        SeamFile::new(FILE),
+        LINE_FREE_ALIAS,
+    ) else {
         return 0;
-    }
-    // SAFETY: `tmpext` is a fresh, unaliased allocation of one row; `ext` is a live row.
+    };
+    let p = raw.as_ptr();
+    // SAFETY: `p` is a fresh, unaliased allocation of one row; `ext` is a live row.
     unsafe {
-        ptr::write(tmpext, ptr::read(ext));
-        (*tmpext).ext_nid = nid_to;
-        (*tmpext).ext_flags |= X509V3_EXT_DYNAMIC;
+        ptr::write(p, ptr::read(ext));
+        (*p).ext_nid = nid_to;
+        (*p).ext_flags |= X509V3_EXT_DYNAMIC;
     }
-    // SAFETY: `tmpext` is this call's own row, so `X509V3_EXT_add`'s contract holds.
-    if unsafe { X509V3_EXT_add(tmpext) } == 0 {
-        // SAFETY: `tmpext` is this call's own allocation, not owned by the list on this path.
-        unsafe { CRYPTO_free(tmpext.cast(), FILE.as_ptr(), LINE_FREE_ALIAS) };
+    // SAFETY: every field of the row has been written above.
+    let tmpext = unsafe { raw.assume_init() };
+    // SAFETY: `tmpext.as_ptr()` is this call's own row, so `X509V3_EXT_add`'s contract holds.
+    if unsafe { X509V3_EXT_add(tmpext.as_ptr()) } == 0 {
+        // `tmpext` drops here, at the authority's `:104` site.
         return 0;
     }
+    // The `ext_list` owns the row now.
+    let _ = tmpext.into_raw();
     1
 }
 
@@ -773,3 +831,7 @@ pub unsafe extern "C" fn X509V3_add1_i2d(
     unsafe { *x = ret };
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509V3ExtMethod => zero_state_sweep_x509_v3_ext_method);

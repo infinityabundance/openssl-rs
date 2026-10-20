@@ -222,7 +222,10 @@ unsafe extern "C" fn default_free(p: *mut c_void, _file: *const c_char, _line: c
 /// `file` is NULL **and** `line` is 0, which is the guard `err.c`'s own state
 /// allocation relies on to avoid a report loop while the error subsystem is
 /// itself allocating.
-fn report_alloc_err(file: *const c_char, line: c_int) {
+///
+/// # Safety
+/// `file` must be NULL or a NUL-terminated C string valid for the call.
+unsafe fn report_alloc_err(file: *const c_char, line: c_int) {
     if file.is_null() && line == 0 {
         return;
     }
@@ -233,21 +236,34 @@ fn report_alloc_err(file: *const c_char, line: c_int) {
 
 /// Raise the overflow `ossl_size_mul`/`ossl_size_add` raise, attributed to the
 /// caller's file and line.
-fn raise_integer_overflow(file: *const c_char, line: c_int) {
+///
+/// # Safety
+/// `file` must be NULL or a NUL-terminated C string valid for the call.
+unsafe fn raise_integer_overflow(file: *const c_char, line: c_int) {
     // SAFETY: `file` came from the caller as a debug string.
     unsafe { err::raise_with(ERR_LIB_CRYPTO, CRYPTO_R_INTEGER_OVERFLOW, file, line) };
 }
 
 /// The authority's `CRYPTO_malloc` body, both branches.
-fn malloc_request(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
+///
+/// # Safety
+/// `file` must be NULL or a NUL-terminated C string valid for the call. That
+/// holds for the C ABI (`__FILE__` literals) and for every in-crate caller,
+/// which passes a static C-string coordinate; the contract is unsafe because the
+/// failure arm forwards `file` to the installed allocator hook and to
+/// `err::raise_with`, both of which may read it as a C string.
+unsafe fn malloc_request(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
     if !malloc_is_default() {
         // A caller's allocator decides for itself what a zero-length request
         // means, and the authority returns whatever it returned without raising.
-        let p = alloc(num, file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per this function's contract;
+        // the installed allocator's own contract covers the rest.
+        let p = unsafe { alloc(num, file, line) };
         if !p.is_null() || num == 0 {
             return p;
         }
-        report_alloc_err(file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per this function's contract.
+        unsafe { report_alloc_err(file, line) };
         return ptr::null_mut();
     }
     if num == 0 {
@@ -256,18 +272,21 @@ fn malloc_request(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
         return ptr::null_mut();
     }
     ALLOW_CUSTOMIZE.store(false, Ordering::Relaxed);
-    let p = alloc(num, file, line);
+    // SAFETY: as above.
+    let p = unsafe { alloc(num, file, line) };
     if !p.is_null() {
         return p;
     }
-    report_alloc_err(file, line);
+    // SAFETY: as above.
+    unsafe { report_alloc_err(file, line) };
     ptr::null_mut()
 }
 
 /// The authority's `CRYPTO_realloc` body, both branches.
 ///
 /// # Safety
-/// `addr` must be NULL or a live block from whichever allocator is installed.
+/// `addr` must be NULL or a live block from whichever allocator is installed,
+/// and `file` must be NULL or a NUL-terminated C string valid for the call.
 unsafe fn realloc_request(
     addr: *mut c_void,
     num: usize,
@@ -282,23 +301,28 @@ unsafe fn realloc_request(
         if num == 0 || !ret.is_null() {
             return ret;
         }
-        report_alloc_err(file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        unsafe { report_alloc_err(file, line) };
         return ptr::null_mut();
     }
     if addr.is_null() {
-        return malloc_request(num, file, line);
+        // SAFETY: `addr` is NULL and `file` is NULL or NUL-terminated per the
+        // caller's contract.
+        return unsafe { malloc_request(num, file, line) };
     }
     if num == 0 {
         // The default branch releases, where `clear_realloc`'s does not differ:
         // both release on zero. `RT-MEM-DEFAULT` observes this one through its
         // libc interposer, because the NULL return value hides it.
-        dealloc(addr, file, line);
+        // SAFETY: `addr` is a live block and `file` is NULL or NUL-terminated.
+        unsafe { dealloc(addr, file, line) };
         return ptr::null_mut();
     }
     // SAFETY: `addr` is a live block, and `default_realloc` is libc `realloc`.
     let ret = unsafe { (realloc_fn())(addr, num, file, line) };
     if ret.is_null() {
-        report_alloc_err(file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        unsafe { report_alloc_err(file, line) };
     }
     ret
 }
@@ -306,7 +330,8 @@ unsafe fn realloc_request(
 /// The authority's `CRYPTO_clear_realloc` body.
 ///
 /// # Safety
-/// `addr` must be NULL or a live block of at least `old_num` bytes.
+/// `addr` must be NULL or a live block of at least `old_num` bytes, and `file`
+/// must be NULL or a NUL-terminated C string valid for the call.
 unsafe fn clear_realloc_request(
     addr: *mut c_void,
     old_num: usize,
@@ -315,10 +340,14 @@ unsafe fn clear_realloc_request(
     line: c_int,
 ) -> *mut c_void {
     if addr.is_null() {
-        return malloc_request(num, file, line);
+        // SAFETY: `addr` is NULL and `file` is NULL or NUL-terminated per the
+        // caller's contract.
+        return unsafe { malloc_request(num, file, line) };
     }
     if num == 0 {
-        clear_dealloc(addr, old_num, file, line);
+        // SAFETY: `addr` is live for `old_num` bytes and `file` is NULL or
+        // NUL-terminated per the caller's contract.
+        unsafe { clear_dealloc(addr, old_num, file, line) };
         return ptr::null_mut();
     }
     if num < old_num {
@@ -329,12 +358,15 @@ unsafe fn clear_realloc_request(
         unsafe { cleanse(addr.cast::<u8>().add(num), old_num - num) };
         return addr;
     }
-    let ret = malloc_request(num, file, line);
+    // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+    let ret = unsafe { malloc_request(num, file, line) };
     if !ret.is_null() {
         // SAFETY: `ret` is a fresh block of `num >= old_num` bytes and `addr` is
         // live for `old_num`; the blocks cannot overlap.
         unsafe { memcpy(ret, addr, old_num) };
-        clear_dealloc(addr, old_num, file, line);
+        // SAFETY: `addr` is live for `old_num` bytes and `file` is NULL or
+        // NUL-terminated per the caller's contract.
+        unsafe { clear_dealloc(addr, old_num, file, line) };
     }
     ret
 }
@@ -411,13 +443,21 @@ fn free_fn() -> FreeFn {
 }
 
 /// Allocate `n` bytes through the installed allocator.
-fn alloc(n: usize, file: *const c_char, line: c_int) -> *mut c_void {
+///
+/// # Safety
+/// `file` must be NULL or a NUL-terminated C string valid for the call; the
+/// installed allocator receives it and may read it.
+unsafe fn alloc(n: usize, file: *const c_char, line: c_int) -> *mut c_void {
     // SAFETY: the installed allocator's contract is the caller's.
     unsafe { (malloc_fn())(n, file, line) }
 }
 
 /// Release a block through the installed allocator. NULL is ignored.
-fn dealloc(p: *mut c_void, file: *const c_char, line: c_int) {
+///
+/// # Safety
+/// `p` must be NULL or a live block from this allocator, and `file` must be NULL
+/// or a NUL-terminated C string valid for the call.
+unsafe fn dealloc(p: *mut c_void, file: *const c_char, line: c_int) {
     if p.is_null() {
         return;
     }
@@ -427,13 +467,19 @@ fn dealloc(p: *mut c_void, file: *const c_char, line: c_int) {
 
 /// Cleanse then release. Used by `CRYPTO_clear_free` and by the shrinking and
 /// failing paths of the clear-* helpers.
-fn clear_dealloc(p: *mut c_void, n: usize, file: *const c_char, line: c_int) {
+///
+/// # Safety
+/// `p` must be NULL or live for `n` bytes from this allocator, and `file` must be
+/// NULL or a NUL-terminated C string valid for the call.
+unsafe fn clear_dealloc(p: *mut c_void, n: usize, file: *const c_char, line: c_int) {
     if p.is_null() {
         return;
     }
     // SAFETY: `p` is live for `n` bytes per the caller's contract.
     unsafe { cleanse(p.cast::<u8>(), n) };
-    dealloc(p, file, line);
+    // SAFETY: `p` is live for `n` bytes and `file` is NULL or NUL-terminated per
+    // the caller's contract.
+    unsafe { dealloc(p, file, line) }
 }
 
 /// `void *CRYPTO_malloc(size_t num, const char *file, int line)`
@@ -441,16 +487,39 @@ fn clear_dealloc(p: *mut c_void, n: usize, file: *const c_char, line: c_int) {
 /// Two branches, and they disagree about a zero-length request: with an
 /// allocator installed the caller's allocator answers, and by default the answer
 /// is NULL with no error raised. See the module documentation.
+///
+/// # Safety
+/// `file` must be NULL or point to a NUL-terminated C string that stays valid
+/// for the call. The allocation-failure path reads it as a C string
+/// (`ossl_report_alloc_err` → `err_set_debug`), and the installed allocator hook
+/// may read it as well. The C ABI supplies `__FILE__` literals; a Rust caller
+/// must prove this precondition, which is why the entry point is `unsafe`.
 #[no_mangle]
-pub extern "C" fn CRYPTO_malloc(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
-    guard_ffi(ptr::null_mut(), || malloc_request(num, file, line))
+pub unsafe extern "C" fn CRYPTO_malloc(
+    num: usize,
+    file: *const c_char,
+    line: c_int,
+) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        unsafe { malloc_request(num, file, line) }
+    })
 }
 
 /// `void *CRYPTO_zalloc(size_t num, const char *file, int line)`
+///
+/// # Safety
+/// As for [`CRYPTO_malloc`]: `file` must be NULL or a NUL-terminated C string
+/// valid for the call. The failure path reads it as a C string.
 #[no_mangle]
-pub extern "C" fn CRYPTO_zalloc(num: usize, file: *const c_char, line: c_int) -> *mut c_void {
+pub unsafe extern "C" fn CRYPTO_zalloc(
+    num: usize,
+    file: *const c_char,
+    line: c_int,
+) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
-        let p = malloc_request(num, file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        let p = unsafe { malloc_request(num, file, line) };
         if !p.is_null() {
             // SAFETY: `p` is at least `num` bytes, freshly allocated and not yet
             // observable by anyone else.
@@ -465,8 +534,13 @@ pub extern "C" fn CRYPTO_zalloc(num: usize, file: *const c_char, line: c_int) ->
 /// `ossl_size_mul(num, size)` then `CRYPTO_zalloc(bytes)`. Overflow raises
 /// `CRYPTO_R_INTEGER_OVERFLOW` and returns NULL; there is no incoming pointer to
 /// release.
+///
+/// # Safety
+/// As for [`CRYPTO_malloc`]: `file` must be NULL or a NUL-terminated C string
+/// valid for the call. Both the allocation-failure and overflow paths read it as
+/// a C string.
 #[no_mangle]
-pub extern "C" fn CRYPTO_calloc(
+pub unsafe extern "C" fn CRYPTO_calloc(
     num: usize,
     size: usize,
     file: *const c_char,
@@ -476,11 +550,14 @@ pub extern "C" fn CRYPTO_calloc(
         let total = match num.checked_mul(size) {
             Some(t) => t,
             None => {
-                raise_integer_overflow(file, line);
+                // SAFETY: `file` is NULL or NUL-terminated per the caller's
+                // contract.
+                unsafe { raise_integer_overflow(file, line) };
                 return ptr::null_mut();
             }
         };
-        CRYPTO_zalloc(total, file, line)
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        unsafe { CRYPTO_zalloc(total, file, line) }
     })
 }
 
@@ -490,17 +567,24 @@ pub extern "C" fn CRYPTO_calloc(
 /// `CRYPTO_R_INTEGER_OVERFLOW`, returns NULL, and — unlike the realloc forms —
 /// has no pointer to release. A zero `size` is not a special case: the product is
 /// zero and the zero-length arm of `CRYPTO_malloc` answers.
+///
+/// # Safety
+/// As for [`CRYPTO_malloc`]: `file` must be NULL or a NUL-terminated C string
+/// valid for the call. Both the allocation-failure and overflow paths read it as
+/// a C string.
 #[no_mangle]
-pub extern "C" fn CRYPTO_malloc_array(
+pub unsafe extern "C" fn CRYPTO_malloc_array(
     num: usize,
     size: usize,
     file: *const c_char,
     line: c_int,
 ) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || match num.checked_mul(size) {
-        Some(total) => malloc_request(total, file, line),
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        Some(total) => unsafe { malloc_request(total, file, line) },
         None => {
-            raise_integer_overflow(file, line);
+            // SAFETY: as above.
+            unsafe { raise_integer_overflow(file, line) };
             ptr::null_mut()
         }
     })
@@ -516,7 +600,8 @@ pub extern "C" fn CRYPTO_malloc_array(
 /// as a separate out-parameter.
 ///
 /// # Safety
-/// `freeptr` must be NULL or writable for one pointer.
+/// `freeptr` must be NULL or writable for one pointer; `file` must be NULL or a
+/// NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_aligned_alloc(
     num: usize,
@@ -542,11 +627,14 @@ pub unsafe extern "C" fn CRYPTO_aligned_alloc(
         let total = match num.checked_add(align) {
             Some(t) => t,
             None => {
-                raise_integer_overflow(file, line);
+                // SAFETY: `file` is NULL or NUL-terminated per the caller's
+                // contract.
+                unsafe { raise_integer_overflow(file, line) };
                 return ptr::null_mut();
             }
         };
-        let base = malloc_request(total, file, line);
+        // SAFETY: as above.
+        let base = unsafe { malloc_request(total, file, line) };
         if base.is_null() {
             return ptr::null_mut();
         }
@@ -573,7 +661,8 @@ pub unsafe extern "C" fn CRYPTO_aligned_alloc(
 /// `void *CRYPTO_aligned_alloc_array(size_t num, size_t size, size_t align, void **freeptr, const char *file, int line)`
 ///
 /// # Safety
-/// `freeptr` must be NULL or writable for one pointer.
+/// `freeptr` must be NULL or writable for one pointer; `file` must be NULL or a
+/// NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_aligned_alloc_array(
     num: usize,
@@ -594,7 +683,9 @@ pub unsafe extern "C" fn CRYPTO_aligned_alloc_array(
                         // SAFETY: writable per the caller's contract.
                         unsafe { *freeptr = ptr::null_mut() };
                     }
-                    raise_integer_overflow(file, line);
+                    // SAFETY: `file` is NULL or NUL-terminated per the caller's
+                    // contract.
+                    unsafe { raise_integer_overflow(file, line) };
                     return ptr::null_mut();
                 }
             }
@@ -613,7 +704,8 @@ pub unsafe extern "C" fn CRYPTO_aligned_alloc_array(
 ///
 /// # Safety
 /// `addr` must be NULL or a block previously returned by this allocator and not
-/// yet freed.
+/// yet freed; `file` must be NULL or a NUL-terminated C string valid for the
+/// call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_realloc(
     addr: *mut c_void,
@@ -635,7 +727,8 @@ pub unsafe extern "C" fn CRYPTO_realloc(
 ///
 /// # Safety
 /// `addr` must be NULL or a block of at least `old_num` bytes from this
-/// allocator and not yet freed.
+/// allocator and not yet freed; `file` must be NULL or a NUL-terminated C
+/// string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_clear_realloc(
     addr: *mut c_void,
@@ -659,7 +752,8 @@ pub unsafe extern "C" fn CRYPTO_clear_realloc(
 /// product is zero, and `CRYPTO_realloc(addr, 0)` is what releases a live `addr`.
 ///
 /// # Safety
-/// `addr` must be NULL or a block from this allocator and not yet freed.
+/// `addr` must be NULL or a block from this allocator and not yet freed; `file`
+/// must be NULL or a NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_realloc_array(
     addr: *mut c_void,
@@ -673,7 +767,9 @@ pub unsafe extern "C" fn CRYPTO_realloc_array(
             // SAFETY: `addr` is NULL or a live block per the caller's contract.
             Some(total) => unsafe { realloc_request(addr, total, file, line) },
             None => {
-                raise_integer_overflow(file, line);
+                // SAFETY: `file` is NULL or NUL-terminated per the caller's
+                // contract.
+                unsafe { raise_integer_overflow(file, line) };
                 ptr::null_mut()
             }
         }
@@ -691,7 +787,8 @@ pub unsafe extern "C" fn CRYPTO_realloc_array(
 ///
 /// # Safety
 /// `addr` must be NULL or a block holding at least `old_num * size` bytes from
-/// this allocator and not yet freed.
+/// this allocator and not yet freed; `file` must be NULL or a NUL-terminated C
+/// string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_clear_realloc_array(
     addr: *mut c_void,
@@ -708,14 +805,17 @@ pub unsafe extern "C" fn CRYPTO_clear_realloc_array(
         let old_bytes = match old_num.checked_mul(size) {
             Some(t) => t,
             None => {
-                raise_integer_overflow(file, line);
+                // SAFETY: `file` is NULL or NUL-terminated per the caller's
+                // contract.
+                unsafe { raise_integer_overflow(file, line) };
                 return ptr::null_mut();
             }
         };
         let new_bytes = match num.checked_mul(size) {
             Some(t) => t,
             None => {
-                raise_integer_overflow(file, line);
+                // SAFETY: as above.
+                unsafe { raise_integer_overflow(file, line) };
                 return ptr::null_mut();
             }
         };
@@ -728,10 +828,14 @@ pub unsafe extern "C" fn CRYPTO_clear_realloc_array(
 /// `void CRYPTO_free(void *ptr, const char *file, int line)`
 ///
 /// # Safety
-/// `ptr` must be NULL or a block from this allocator that has not been freed.
+/// `ptr` must be NULL or a block from this allocator that has not been freed;
+/// `file` must be NULL or a NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_free(ptr: *mut c_void, file: *const c_char, line: c_int) {
-    guard_ffi((), || dealloc(ptr, file, line))
+    guard_ffi((), || {
+        // SAFETY: `ptr` and `file` are per the caller's contract.
+        unsafe { dealloc(ptr, file, line) }
+    })
 }
 
 /// `void CRYPTO_clear_free(void *ptr, size_t num, const char *file, int line)`
@@ -740,7 +844,8 @@ pub unsafe extern "C" fn CRYPTO_free(ptr: *mut c_void, file: *const c_char, line
 ///
 /// # Safety
 /// `ptr` must be NULL or a block of at least `num` bytes from this allocator
-/// that has not been freed.
+/// that has not been freed; `file` must be NULL or a NUL-terminated C string
+/// valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_clear_free(
     ptr: *mut c_void,
@@ -748,7 +853,11 @@ pub unsafe extern "C" fn CRYPTO_clear_free(
     file: *const c_char,
     line: c_int,
 ) {
-    guard_ffi((), || clear_dealloc(ptr, num, file, line))
+    guard_ffi((), || {
+        // SAFETY: `ptr` is live for `num` bytes and `file` is NULL or
+        // NUL-terminated per the caller's contract.
+        unsafe { clear_dealloc(ptr, num, file, line) }
+    })
 }
 
 /// `void *CRYPTO_memdup(const void *str, size_t siz, const char *file, int line)`
@@ -764,7 +873,8 @@ pub unsafe extern "C" fn CRYPTO_clear_free(
 /// routes through `CRYPTO_malloc(0)`.
 ///
 /// # Safety
-/// `src` must be NULL or readable for `siz` bytes.
+/// `src` must be NULL or readable for `siz` bytes; `file` must be NULL or a
+/// NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_memdup(
     src: *const c_void,
@@ -776,7 +886,8 @@ pub unsafe extern "C" fn CRYPTO_memdup(
         if src.is_null() || siz >= i32::MAX as usize {
             return ptr::null_mut();
         }
-        let p = malloc_request(siz, file, line);
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        let p = unsafe { malloc_request(siz, file, line) };
         if !p.is_null() {
             // SAFETY: `src` is readable for `siz` bytes and `p` is a fresh block
             // of `siz`; they cannot overlap.
@@ -789,7 +900,8 @@ pub unsafe extern "C" fn CRYPTO_memdup(
 /// `char *CRYPTO_strdup(const char *str, const char *file, int line)`
 ///
 /// # Safety
-/// `s` must be NULL or a NUL-terminated C string.
+/// `s` must be NULL or a NUL-terminated C string; `file` must be NULL or a
+/// NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_strdup(
     s: *const c_char,
@@ -802,7 +914,8 @@ pub unsafe extern "C" fn CRYPTO_strdup(
         }
         // SAFETY: `s` is NUL-terminated per the caller's contract.
         let len = unsafe { strlen(s) };
-        let p = malloc_request(len + 1, file, line).cast::<c_char>();
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        let p = unsafe { malloc_request(len + 1, file, line).cast::<c_char>() };
         if !p.is_null() {
             // SAFETY: `s` is `len + 1` readable bytes including the terminator,
             // and `p` is a fresh block of the same size.
@@ -818,7 +931,8 @@ pub unsafe extern "C" fn CRYPTO_strdup(
 /// allocated empty string, not NULL: `maxlen + 1` is still a non-zero request.
 ///
 /// # Safety
-/// `s` must be NULL or readable for `max` bytes.
+/// `s` must be NULL or readable for `max` bytes; `file` must be NULL or a
+/// NUL-terminated C string valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_strndup(
     s: *const c_char,
@@ -832,7 +946,8 @@ pub unsafe extern "C" fn CRYPTO_strndup(
         }
         // SAFETY: `s` is readable for `max` bytes.
         let len = unsafe { strnlen(s, max) };
-        let p = malloc_request(len + 1, file, line).cast::<c_char>();
+        // SAFETY: `file` is NULL or NUL-terminated per the caller's contract.
+        let p = unsafe { malloc_request(len + 1, file, line).cast::<c_char>() };
         if !p.is_null() {
             if len > 0 {
                 // SAFETY: `s` is readable for `len <= max` bytes and `p` is a
@@ -912,6 +1027,21 @@ pub unsafe extern "C" fn OPENSSL_cleanse(ptr: *mut c_void, len: usize) {
 /// # Safety
 /// Any function supplied must be valid for the lifetime of the process; every
 /// later allocation of that kind routes through it.
+///
+/// ## Reentrancy
+///
+/// The allocator hooks run while ERR holds `&mut` on the calling thread's error
+/// state (`runtime::err::with_state`), because ERR allocates and releases through
+/// this seam. A supplied hook must therefore **not re-enter the ERR API on the
+/// same thread** — not `ERR_raise*`, `ERR_set_error*`, `ERR_get_error*`, or any
+/// entry point that reaches `with_state`/`ERR_get_state`. Such a re-entry would
+/// form a second `&mut` to the same `ERR_STATE`, which is undefined behaviour in
+/// Rust (the C authority has the same recursion hazard). The hooks may allocate
+/// and release freely, and may re-enter ERR from a different thread. This is an
+/// external contract on the installer. Since B34 it is also defence in depth:
+/// `runtime::err::with_state` refuses a same-thread re-entry with a thread-local
+/// guard, returning the no-state outcome instead of forming the second `&mut`,
+/// so a hook that violates the contract fails closed rather than causing UB.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_set_mem_functions(
     malloc_fn: Option<MallocFn>,
@@ -1066,7 +1196,10 @@ mod tests {
     /// property of the code rather than of the process state.
     #[test]
     fn zalloc_and_calloc_are_zeroed() {
-        let p = CRYPTO_calloc(4, 8, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(4, 8, ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: 32 bytes were requested and returned.
         unsafe {
@@ -1080,7 +1213,10 @@ mod tests {
     #[test]
     fn array_overflow_returns_null_and_raises() {
         err::ERR_clear_error();
-        let p = CRYPTO_malloc_array(usize::MAX, 2, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(usize::MAX, 2, ptr::null(), 0)
+        };
         assert!(p.is_null());
         // 15 << 23 | 127 == 0x0780007F, the value the authority produces.
         assert_eq!(err::ERR_get_error(), 0x0780_007F);
@@ -1088,7 +1224,10 @@ mod tests {
 
     #[test]
     fn clear_realloc_shrinking_keeps_the_pointer_and_cleanses() {
-        let p = CRYPTO_malloc(32, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(32, ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: 32 bytes were requested; the shrink path must not move it.
         unsafe {
@@ -1102,7 +1241,10 @@ mod tests {
 
     #[test]
     fn clear_realloc_zero_releases() {
-        let p = CRYPTO_malloc(16, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: `p` is live and the zero-length path releases it.
         unsafe {
@@ -1153,7 +1295,10 @@ mod tests {
 
     #[test]
     fn cleanse_zeroes_volatilely() {
-        let p = CRYPTO_malloc(64, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(64, ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: 64 bytes were requested and returned.
         unsafe {

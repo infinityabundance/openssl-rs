@@ -1,0 +1,246 @@
+{
+  "receipt": "boundary-sweep-B18",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "7fc72ede5",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/async/async.rs",
+      "src/async/async_wait.rs"
+    ],
+    "working_tree_blob": {
+      "src/async/async.rs": "362453bb1852287282f81e54c5e62b8cd7bc7b00",
+      "src/async/async_wait.rs": "2bd2d2b521306b924e122f01c01c8f7de4b139bc"
+    }
+  },
+  "stop_status": "CLEAR after repair. One confirmed memory-safety defect was stopped on and repaired: B18-D1, a heap-use-after-free in AsyncWaitCtx::destroy_body. The application cleanup callback received the live ASYNC_WAIT_CTX and could legitimately call ASYNC_WAIT_CTX_clear_fd for another entry; when that entry was the next link captured before the callback, clear_fd unlinked and released it, and destroy_body continued through the released node and released it again. The next link is now read after the callback, which is the authority's order (async_wait.c:31-40), so a relink performed by the callback is observed. The pre-fix ASan control reported the predicted READ of size 4; the post-fix control and the full suite are clean. No unresolved STOP condition remains. Hidden obligations are 0 after the retained contracts below were made explicit in the source. No safe Rust caller can cause UB through the audited interfaces under the stated contracts. Nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/async/async.c:35-98 (context, job), :100-150 (pool get/release, start func), :175-330 (ASYNC_start_job, ASYNC_pause_job, empty pool), :351-429 (ASYNC_init_thread, thread-stop handler, ASYNC_cleanup_thread), :432-481 (accessors and pause block/unblock); crypto/async/async_wait.c:15-217 (new/free and all fd accessors), :219-247 (reset counts). Behavioural contracts from doc/man3/ASYNC_start_job.pod:44-54 (no outstanding jobs at cleanup; automatic per-thread cleanup) and doc/man3/ASYNC_WAIT_CTX_new.pod:99-111 (cleanup callback receives the context and the entry's key/fd/data).",
+    "abi": "C ABI unchanged: no exported symbol, signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. The only production change is the order of a list-link read relative to an existing callback call; the new tests are #[cfg(test)].",
+    "external_contracts": [
+      "The async context and job pool are thread-local. Only their owning thread may use them; the pool and context are created lazily and are per-thread, with no lock (authority parity).",
+      "The authority requires that no asynchronous job is outstanding when ASYNC_cleanup_thread (or the automatic thread-stop handler) runs. A paused job's fibre still refers to the dispatcher this path releases, so violating the requirement is a use-after-free in both implementations.",
+      "ASYNC_start_job takes a writable *job slot and a writable ret, a wctx from ASYNC_WAIT_CTX_new (the documented call shape), args valid for size, and a C job function. A non-NULL *job must be the handle the preceding ASYNC_PAUSE returned for this thread; between calls the job is owned by the pool/context.",
+      "A paused ASYNC_JOB is caller-owned through the handle ASYNC_start_job wrote back. A finished job returns to the pool and the caller must not release it. The copied funcargs block is owned by the job and released on its single return to the pool.",
+      "ASYNC_WAIT_CTX fd nodes are private. Keys and custom_data are borrowed; the caller sizes get_all_fds/get_changed_fds buffers from the counts (addfd/delfd may be NULL).",
+      "The ASYNC_WAIT_CTX cleanup callback runs from free with the live context. It may add or remove other entries (the authority reads curr->next after the callback); it must not release the entry it is invoked for or the context itself, which would invalidate the walk (authority parity, recorded as B18-R2).",
+      "callback/callback_arg stored by ASYNC_WAIT_CTX_set_callback are caller-owned and are never invoked by this unit.",
+      "When the thread-event framework invokes the async thread-stop handler it holds the B15 register lock; the allocator free hook and any caller-installed ASYNC stack-free hook reached from there must not re-enter thread registration (authority parity, now stated in async_delete_thread_state)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B18-ASY-1",
+      "file": "src/async/async.rs",
+      "mechanism": "per-thread async context: async_ctx_new, async_get_ctx, async_ctx_free, dispatcher storage and TLS publication",
+      "disposition": "CONTRACTED",
+      "contract": "The context block and dispatcher storage come from the CRYPTO_* seam and are fully initialised before the TLS key is published. A failed dispatcher allocation or TLS store releases only the resources acquired by that call. The key is this thread's own; async_ctx_free clears the key before releasing the context and dispatcher, and a refused clear leaves the context reachable (authority parity).",
+      "defects": [],
+      "residuals": ["B18-R3"]
+    },
+    {
+      "id": "B18-ASY-2",
+      "file": "src/async/async.rs",
+      "mechanism": "ASYNC_JOB ownership: async_job_new/free, fibre storage, stack, copied funcargs",
+      "disposition": "CONTRACTED",
+      "contract": "A job is a zeroed block with a separately allocated zeroed ucontext_t; the fibre is only entered after makecontext succeeds. async_job_free is the single release of funcargs, stack, fibre storage and block, and is called only on a job that is not on a stack (never made runnable, or parked after STOPPING, or idle in the pool). A failed makecontext leaves a zeroed uc_stack, so the stack release is the authority's free(NULL).",
+      "defects": [],
+      "residuals": ["B18-R3", "B18-R7"]
+    },
+    {
+      "id": "B18-ASY-3",
+      "file": "src/async/async.rs",
+      "mechanism": "pool ownership and reuse: ASYNC_init_thread, async_get_pool_job, async_release_job, async_empty_pool, async_delete_thread_state",
+      "disposition": "CONTRACTED",
+      "contract": "The pool block and its STACK_OF(ASYNC_JOB) are allocated together and published only after max/init sizes are validated and every pre-created job is complete. Every failure arm releases the jobs and stack it created and then the pool block. release returns a job to the same thread's pool, freeing funcargs first and leaving the pointer NULL; empty-pool/thread-stop release every parked job and then the pool block. No lock is needed because the pool is thread-local by contract.",
+      "defects": [],
+      "residuals": ["B18-R1", "B18-R3", "B18-R6"]
+    },
+    {
+      "id": "B18-ASY-4",
+      "file": "src/async/async.rs",
+      "mechanism": "ASYNC_start_job state machine, libctx save/restore, async_start_job_err release path",
+      "disposition": "CONTRACTED",
+      "contract": "Every status arm matches the authority: FINISH clears waitctx before returning the job to the pool; PAUSE writes the job handle back and disowns it; PAUSED requires a non-NULL handle before resuming. The default libctx is restored on every exit, including swap failure. All three error gotos share one release path that returns the job to the pool, clears ctx->currjob and clears the caller's slot.",
+      "defects": [],
+      "residuals": ["B18-R1", "B18-R3", "B18-R4", "B18-R5"]
+    },
+    {
+      "id": "B18-ASY-5",
+      "file": "src/async/async.rs",
+      "mechanism": "ASYNC_pause_job, block/unblock depth, thread-stop handler edge",
+      "disposition": "CONTRACTED",
+      "contract": "Pause is a no-op success outside a job or while blocked. It sets PAUSING before the switch and resets the wait-context counts only after the fibre resumes. The thread-stop handler releases the pool first and the context second, as the authority, and is idempotent. It holds no Rust borrow across any callback and does not re-enter thread registration.",
+      "defects": [],
+      "residuals": ["B18-R1", "B18-R4", "B18-R6"]
+    },
+    {
+      "id": "B18-WAIT-1",
+      "file": "src/async/async_wait.rs",
+      "mechanism": "ASYNC_WAIT_CTX block ownership: new/free, CtxDestroy body, node release",
+      "disposition": "CONTRACTED",
+      "contract": "The context is one zeroed OwnedCtx block; its node list and every node are released by the CtxDestroy body, each node at the authority's own free coordinate, and the enclosing block by OwnedCtx exactly once. FREE skips the cleanup callback for entries already marked deleted, as the authority. The zero state is the authority's empty teardown.",
+      "defects": ["B18-D1"],
+      "residuals": ["B18-R2", "B18-R8"]
+    },
+    {
+      "id": "B18-WAIT-2",
+      "file": "src/async/async_wait.rs",
+      "mechanism": "fd-list surgery: set_wait_fd, get_fd, get_all_fds, get_changed_fds, clear_fd, reset_counts",
+      "disposition": "CONTRACTED",
+      "contract": "Nodes are prepended on set. The getters traverse only live entries; clear_fd unlinks and releases an added entry or marks an existing one deleted; reset_counts clears the counts and add flags and unlinks/releases every deleted entry. Unlink uses the node's own successor captured before its release; no callback runs in these paths. Caller output buffers follow the documented size/count contract.",
+      "defects": [],
+      "residuals": ["B18-R5"]
+    },
+    {
+      "id": "B18-WAIT-3",
+      "file": "src/async/async_wait.rs",
+      "mechanism": "cleanup callback reentrancy, engine callback/status accessors",
+      "disposition": "CONTRACTED",
+      "contract": "destroy_body invokes each live entry's cleanup callback with the live context and that entry's key/fd/data, then reads the successor and releases the entry. The successor read now follows the callback, so a callback that legitimately removes a later entry through clear_fd is observed through the relinked list. The callback must not release its own entry or the context. The engine callback stored by set_callback is borrowed and is never invoked here.",
+      "defects": ["B18-D1"],
+      "residuals": ["B18-R2", "B18-R8"]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B18-D1",
+      "file": "src/async/async_wait.rs",
+      "lines_pre_fix": "99-118 (AsyncWaitCtx::destroy_body; next captured with the other fields before the callback at 113 and the release at 117)",
+      "lines_post_fix": "99-125 (next read at 122, after the callback)",
+      "severity": "high",
+      "class": "heap-use-after-free read and double release of a wait-context node",
+      "description": "destroy_body read curr->next into a local before invoking the application cleanup callback. The callback receives the live ctx and may call ASYNC_WAIT_CTX_clear_fd for another watched fd; when that fd was the captured successor and still carried add == 1, clear_fd unlinked and released the node. destroy_body then released curr, assigned the released successor to curr, and dereferenced it in the next iteration (and would have released it again). The authority reads curr->next only after the callback, so the relink is visible. The repair restores that order and states the callback's no-self-release contract.",
+      "control": "crypto_async::async_wait::tests::a_cleanup_callback_may_remove_another_entry. Pre-fix ASan (dedicated venue, -Zsanitizer=address -Zbuild-std): heap-use-after-free, READ of size 4 at async_wait.rs:101 in destroy_body, freed by OwnedFdLookup::drop through ASYNC_WAIT_CTX_clear_fd. Post-fix: the same test passes with no AddressSanitizer finding."
+    }
+  ],
+  "sweep": [
+    {
+      "concern": "constructors and failure arms",
+      "result": "Every allocating constructor in both files was traced on success, allocation failure and publication failure. Context, job, pool and wait-context blocks are fully initialised before publication; each failure path releases only what it acquired, and none runs a complete destructor on a partially constructed value."
+    },
+    {
+      "concern": "callback and thread-stop reentrancy edges",
+      "result": "The job function, the wait-context cleanup callback, the engine callback accessors and the thread-stop handler were classified. No Rust reference, Rust-owned buffer or crate lock is held across the job function or the thread-stop handler. The engine callback is stored/retrieved only. The cleanup callback is the one edge that runs application code during a traversal; its successor read is now ordered as the authority orders it, and the self-release/context-free prohibition is explicit."
+    },
+    {
+      "concern": "lock ordering and allocation under locks",
+      "result": "Neither file takes a crate lock. The thread-stop handler may run under the B15 thread-event register lock; it performs TLS and allocator work there (authority parity) and does not re-enter registration. The job function and cleanup callback run without any crate lock."
+    },
+    {
+      "concern": "aliasing and reference formation",
+      "result": "All interior traversal uses raw pointers and re-reads every field after a callback. No &T/&mut T is formed to a context or node, no from_raw_parts-style slice is formed from caller lengths, and no borrow outlives its owner. The only reference-like reborrows are the copy_nonoverlapping source/destination derived from the documented args/size contract."
+    },
+    {
+      "concern": "fallible arithmetic and allocation",
+      "result": "The fixed struct sizes are compile-time constants. ASYNC_init_thread validates init_size <= max_size and max_size <= c_int::MAX before the int-sized reserve, as the authority. The caller's args size goes to OwnedBuf::new (CRYPTO_malloc of exactly size, no unchecked product) and then copy_nonoverlapping. Counts are usize additions bounded by node count."
+    },
+    {
+      "concern": "release and cleansing taxonomy",
+      "result": "The wait context is public protocol state and the fd nodes/metadata are public; the copied job funcargs are caller data whose authority release is a plain free. No cleansing claim is made for funcargs (B18-R7). Every release uses the CRYPTO_* seam at the authority's file/line."
+    },
+    {
+      "concern": "thread/init contract reuse (B15) and condvar protocol (B11)",
+      "result": "The unit uses B15's thread-stop registration and initialisation reachability; the handler's double registration is idempotent and no handler re-registers. There is no condition variable or shared counter in this unit, so the B11 condvar protocol is not exercised."
+    }
+  ],
+  "compatibility": {
+    "authority_order_restored": "A cleanup callback that removes a later fd entry now behaves exactly as the authority: the removal is linked out and the walk continues from the relinked successor. A callback that does not mutate the list sees identical calls and allocation events. A callback that clears its own entry (add == 1) or frees the context remains undefined in both implementations (B18-R2).",
+    "no_other_behaviour_change": "async.rs has no production behaviour change: the edits are documentation of existing contracts plus a test. async_wait.rs changes only the read order of the successor link.",
+    "fail_closed_divergences": "The crate returns 0 from async_start_func for a NULL job function (the authority would call NULL), and returns from async_wait_ctx_reset_counts for a NULL context (the authority would dereference it). Both are recorded UB-elimination divergences, not reproduced authority behaviour.",
+    "leaks": "The authority's leak arms are preserved: a second ASYNC_init_thread on one thread replaces and leaks the previous pool, async_release_job with no pool leaks the job, a refused TLS null-store in async_ctx_free leaks the context, and an impossible STACK push failure would leak the job. These are not memory-safety defects and are recorded as B18-R3.",
+    "abi": "No exported symbol, signature, repr(C) layout, allocator coordinate or lint attribute changed. Both files remain under deny(unsafe_op_in_unsafe_fn), deny(undocumented_unsafe_blocks) and deny(missing_safety_doc)."
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "cargo test --lib crypto_async -- --test-threads=4: 7 passed, 0 failed, 1671 filtered (the pre-edit focused async_wait run was 2 passed/0 failed)."
+    },
+    "negative_controls_observed": [
+      "B18-D1 pre-fix ASan: heap-use-after-free, READ of size 4 at src/async/async_wait.rs:101 in AsyncWaitCtx::destroy_body; the 48-byte node was freed by OwnedFdLookup::drop through ASYNC_WAIT_CTX_clear_fd called from the cleanup callback."
+    ],
+    "asan_post_fix": "Dedicated ASan venue, nightly-2026-10-05, -Zsanitizer=address -Zbuild-std, default ASAN_OPTIONS: crypto_async::async_wait::tests::a_cleanup_callback_may_remove_another_entry 1 passed, 0 failed, no AddressSanitizer finding. The same binary base as the pre-fix run.",
+    "batch": "cargo test --lib -- --test-threads=1: 1651 passed, 0 failed, 27 ignored (233.04 s). cargo test --lib -- --test-threads=4: 1651 passed, 0 failed, 27 ignored (98.86 s). Two tests added (a_cleanup_callback_may_remove_another_entry, thread_cleanup_releases_a_finished_job_and_is_idempotent); none removed and none newly ignored.",
+    "affected_probes": "NOT_APPLICABLE. Neither file carries an OPENSSL_RS_ADV_PROBE arm; no probe script was run."
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's product toolchain (rustc 1.98.1) has no miri component, as in B11/B15/B17. The dedicated ASan venue covered the one memory-safety control; no Miri model was available for the list traversal or the TLS ownership."
+  },
+  "loom_or_tsan": "NOT_RUN. No shared-memory concurrency was changed: the context, pool and wait context are thread-local or caller-exclusive by contract, and the only cross-thread edges are the B15 thread-stop handler and allocator hooks. The full suite was run serially and with four test threads; no deterministic interleaving model was constructed.",
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No new production unsafe operation or caller obligation was introduced. The successor read moved from before to after an existing callback, inside the same documented unsafe body. The retained obligations that were previously implicit are now stated in the source: the no-outstanding-job precondition of ASYNC_cleanup_thread, the cleanup callback's no-self-release/no-context-free rule, and the no-reentry rule for hooks reached under the B15 register lock.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "None. The defect was an ordering error inside an existing unsafe body, not a redundant unsafe operation.",
+  "unsafe_operations_introduced": 0,
+  "unsafe_operations_introduced_detail": "None in production code. The repair adds no unsafe expression; it relocates one existing field read to the authority's position.",
+  "test_only_unsafe_added": 5,
+  "boundary_size": "8 ASYNC job/context exports and 11 ASYNC_WAIT_CTX exports. 110 unsafe blocks in src/async/async.rs and 37 in src/async/async_wait.rs (test modules included; 147 total). Every remaining unsafe operation has an explicit SAFETY comment and a validity contract.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Under the stated contracts, no safe Rust caller can cause UB through the audited interfaces. Every memory-touching entry point is an unsafe extern C function with documented pointer/lifetime preconditions; the only safe exports (ASYNC_WAIT_CTX_new and the crate-internal async_init/async_deinit) allocate or return owner handles. The application callbacks are C contracts and, for the cleanup edge, their self-release and context-free obligations are now explicit.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B18-R1",
+      "file": "src/async/async.rs",
+      "severity": "medium",
+      "disposition": "CONTRACT-BOUND - documented",
+      "description": "ASYNC_cleanup_thread and the automatic thread-stop handler assume the authority's documented precondition that no asynchronous job is outstanding. A paused job's fibre still refers to the dispatcher released by async_ctx_free, and a job that calls cleanup from inside its own fibre invalidates the saved context; either violation is a use-after-free in the authority as well. The no-outstanding-job requirement is now stated on ASYNC_cleanup_thread and recorded here rather than left hidden."
+    },
+    {
+      "id": "B18-R2",
+      "file": "src/async/async_wait.rs",
+      "severity": "medium",
+      "disposition": "CONTRACT-BOUND - documented",
+      "description": "A cleanup callback that clears the entry it is invoked for (while add == 1) releases the node destroy_body is iterating, or one that frees the context invalidates the walk. The authority has the same consequence. Destroy_body now states that the callback must not release its own entry or the context; it may add or remove other entries, which the restored authority ordering handles safely."
+    },
+    {
+      "id": "B18-R3",
+      "file": "src/async/async.rs",
+      "severity": "low",
+      "disposition": "AUTHORITY-PARITY LEAKS - not repaired",
+      "description": "A second ASYNC_init_thread on the same thread replaces the thread-local pool without releasing the previous one; async_release_job with no pool returns after raising and leaves the job and its funcargs unreleased; a refused CRYPTO_THREAD_set_local in async_ctx_free returns 0 and leaks the context; and an impossible STACK push failure would leak a job. All match the authority's arms."
+    },
+    {
+      "id": "B18-R4",
+      "file": "src/async/async.rs",
+      "severity": "low",
+      "disposition": "RECORDED divergence - UB elimination",
+      "description": "async_start_func treats a NULL job function as returning 0, where the authority calls the NULL pointer; async_wait_ctx_reset_counts returns for a NULL wait context, where the authority dereferences it. These inputs are outside the documented call shape, and the crate fails closed instead of reproducing the crash."
+    },
+    {
+      "id": "B18-R5",
+      "file": "src/async/async.rs, src/async/async_wait.rs",
+      "severity": "low",
+      "disposition": "CONTRACT-BOUND - authority parity",
+      "description": "The context, pool, job and wait context are thread-local or caller-exclusive, and neither file synchronises them. Concurrent use from two threads, use of a job handle after it was released to the pool, or a nested ASYNC_start_job call from inside a job is outside the authority's supported contract; no lock was added because none exists in the authority."
+    },
+    {
+      "id": "B18-R6",
+      "file": "src/async/async.rs",
+      "severity": "low",
+      "disposition": "CONTRACT-BOUND - documented",
+      "description": "When the B15 thread-event framework invokes async_delete_thread_state it holds the global register write lock. The CRYPTO_free hook and any ASYNC_set_mem_functions stack-free hook reached while the pool's jobs are released therefore run under that lock, as in the authority. Those hooks must not re-enter thread registration; this is now stated in the handler's documentation."
+    },
+    {
+      "id": "B18-R7",
+      "file": "src/async/async.rs",
+      "severity": "low",
+      "disposition": "AUTHORITY-PARITY - no cleansing claim",
+      "description": "The copied funcargs block is released with the authority's plain CRYPTO_free at async.c:95. No secret classification or cleansing is claimed for caller job arguments; a caller that places secret material there must clean it itself, exactly as with the authority."
+    },
+    {
+      "id": "B18-R8",
+      "file": "src/async/async_wait.rs",
+      "severity": "low",
+      "disposition": "CONTRACT-BOUND",
+      "description": "callback and callback_arg stored by ASYNC_WAIT_CTX_set_callback are borrowed: the context neither invokes nor releases them in this unit. The engine must keep them valid until it clears/replaces them or the context is freed."
+    }
+  ],
+  "graduation": "CONTRACTED for all eight boundaries. Every remaining unsafe operation has an explicit validity contract and SAFETY comment, every required precondition is established by its callers or by the C ABI/documented contract, and no safe caller can cause UB through the audited interfaces under those contracts. Hidden obligations 0. Not SAFETY_DISCHARGED: full Miri (Stacked/Tree Borrows), Loom/TSan, authority differentials for the async state machine, independent review and SEAL are NOT_RUN. Neither boundary is part of a graduated SAFE_COMPATIBLE consumer family.",
+  "next_ordinary_position": "src/bn/intern.rs, then src/bn/kron.rs, src/bn/nist.rs, src/bn/rsa_fips186_4.rs, src/camellia.rs, src/cast.rs. src/async/async.rs and src/async/async_wait.rs were the two queued NOT_RUN boundary carriers and leave the boundary queue; this sweep does not consume an ordinary queue position."
+}

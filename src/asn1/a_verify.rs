@@ -63,8 +63,9 @@ use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_get0_pkey, EVP_PKEY_R
 use crate::ffi::guard_ffi;
 use crate::rsa::ameth::ossl_rsa_pss_to_ctx;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_clear_free`
 /// expansions.
@@ -73,6 +74,10 @@ const FILE: &CStr = c"crypto/asn1/a_verify.c";
 const LINE_MALLOC_IN: c_int = 56;
 /// `ASN1_verify`'s `OPENSSL_clear_free(buf_in, inl)` (`:65`).
 const LINE_CLEAR_IN: c_int = 65;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the verification scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `int ASN1_verify(i2d_of_void *i2d, X509_ALGOR *a, ASN1_BIT_STRING *signature, char *data,
 /// EVP_PKEY *pkey)` — `crypto/asn1/a_verify.c:27-84`.
@@ -138,14 +143,19 @@ pub unsafe extern "C" fn ASN1_verify(
             unsafe { EVP_MD_CTX_free(ctx) };
             return ret;
         }
-        // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_IN` are the authority's.
-        let buf_in = CRYPTO_malloc(inl as usize, FILE.as_ptr(), LINE_MALLOC_IN).cast::<c_uchar>();
-        if buf_in.is_null() {
+        // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_IN` are the authority's, and the
+        // handle's `Drop` is the authority's own `OPENSSL_clear_free` at `LINE_CLEAR_IN`.
+        let Some(buf_in) = OwnedBuf::new_cleansed_at(
+            inl as usize,
+            SeamFile::new(FILE),
+            LINE_MALLOC_IN,
+            LINE_CLEAR_IN,
+        ) else {
             // SAFETY: `ctx` is this call's own.
             unsafe { EVP_MD_CTX_free(ctx) };
             return ret;
-        }
-        let mut p = buf_in;
+        };
+        let mut p = buf_in.as_ptr();
 
         // SAFETY: `p` has room for the encoded length `inl`.
         unsafe { i2d(data.cast::<c_void>(), &mut p) };
@@ -153,18 +163,13 @@ pub unsafe extern "C" fn ASN1_verify(
         // `EVP_DigestUpdate`; `type_` is live; the buffer holds `inl` bytes.
         ret = c_int::from(
             unsafe { EVP_DigestInit_ex(ctx, type_, ptr::null_mut()) } != 0
-                && unsafe { EVP_DigestUpdate(ctx, buf_in.cast::<c_void>(), inl as usize) } != 0,
+                && unsafe { EVP_DigestUpdate(ctx, buf_in.as_ptr().cast::<c_void>(), inl as usize) }
+                    != 0,
         );
 
-        // SAFETY: `buf_in` is this call's own allocation of `inl` bytes.
-        unsafe {
-            CRYPTO_clear_free(
-                buf_in.cast::<c_void>(),
-                inl as usize,
-                FILE.as_ptr(),
-                LINE_CLEAR_IN,
-            )
-        };
+        // The buffer is this frame's; its `Drop` cleanses and releases it over `inl` bytes, exactly
+        // as the authority's `OPENSSL_clear_free(buf_in, inl)`.
+        drop(buf_in);
 
         if ret == 0 {
             // SAFETY: a compile-time-constant site.
@@ -426,6 +431,15 @@ pub unsafe extern "C" fn ASN1_item_verify_ctx(
             return -1;
         }
         let inll = inl as usize;
+        // Adopt the block `ASN1_item_i2d` allocated through the crate's seam; the handle's `Drop`
+        // is the authority's own `OPENSSL_clear_free(buf_in, inll)` on every exit path below.
+        // SAFETY: `buf_in` is the non-NULL block the helper above allocated in full and no other
+        // owner releases; `inll` is its extent; `FILE` is a NUL-terminated literal.
+        let Some(buf_in) =
+            (unsafe { OwnedBuf::adopt_cleansed(buf_in, inll, SeamFile::new(FILE), LINE_CLEAR_IN) })
+        else {
+            return -1;
+        };
 
         // SAFETY: `ctx` is live; `signature` is live; `buf_in` is readable for `inl` bytes.
         ret = unsafe {
@@ -433,22 +447,18 @@ pub unsafe extern "C" fn ASN1_item_verify_ctx(
                 ctx,
                 (*signature).data,
                 (*signature).length as usize,
-                buf_in,
+                buf_in.as_ptr(),
                 inl as usize,
             )
         };
         if ret <= 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_VERIFY_219) };
-            // SAFETY: `buf_in` is this frame's allocation of `inll` bytes.
-            unsafe {
-                CRYPTO_clear_free(buf_in.cast::<c_void>(), inll, FILE.as_ptr(), LINE_CLEAR_IN)
-            };
+            // `buf_in`'s `Drop` is the authority's `OPENSSL_clear_free(buf_in, inll)`.
             return ret;
         }
         ret = 1;
-        // SAFETY: `buf_in` is this frame's allocation of `inll` bytes.
-        unsafe { CRYPTO_clear_free(buf_in.cast::<c_void>(), inll, FILE.as_ptr(), LINE_CLEAR_IN) };
+        // `buf_in`'s `Drop` cleanses and releases it over `inll` bytes on this path too.
         ret
     })
 }

@@ -80,19 +80,27 @@ pub(crate) unsafe fn ossl_ffc_generate_private_key(
         /* The authority's `goto err` here releases a `two_powN` that is still NULL. */
         return 0;
     }
+    /* `2 * s` is the authority's signed `int` doubling. A strength that overflows it is refused
+     * rather than wrapped or panicked on: the authority's expression is undefined in that case,
+     * so refusing is the AGENTS.md section 17 divergence. Every in-tree caller passes a bounded
+     * constant (`MIN_STRENGTH` or `ossl_ifc_ffc_compute_security_bits`, at most 1200). */
+    let two_s = match s.checked_mul(2) {
+        Some(v) => v,
+        None => return 0,
+    };
     if n == 0 {
         // SAFETY: `params` is live.
         n = unsafe {
             if (*params).keylength != 0 {
                 (*params).keylength
             } else {
-                2 * s
+                two_s
             }
         };
     }
 
     /* Step (2) : check range of N */
-    if n < 2 * s || n > qbits {
+    if n < two_s || n > qbits {
         return 0;
     }
 
@@ -223,6 +231,33 @@ mod tests {
         fn drop(&mut self) {
             // SAFETY: `self.params` is a live object this test owns.
             unsafe { ossl_ffc_params_cleanup(&raw mut self.params) };
+        }
+    }
+
+    /// A strength whose doubling overflows `c_int` is refused before any allocation or shift.
+    /// The authority's `2 * s` is signed overflow (undefined); the debug build of the pre-repair
+    /// port panicked and the release build wrapped, so the refusal is observable in both profiles.
+    #[test]
+    fn a_strength_whose_doubling_overflows_is_refused() {
+        let group = Group::new();
+        // SAFETY: the group and the context are this test's own objects.
+        unsafe {
+            let ctx = BN_CTX_new_ex(ptr::null_mut());
+            assert!(!ctx.is_null());
+            let priv_ = BN_new();
+            assert!(!priv_.is_null());
+
+            assert_eq!(
+                ossl_ffc_generate_private_key(ctx, group.as_ref(), 0, c_int::MAX, priv_),
+                0
+            );
+            assert_eq!(
+                ossl_ffc_generate_private_key(ctx, group.as_ref(), 0, c_int::MIN, priv_),
+                0
+            );
+
+            BN_free(priv_);
+            BN_CTX_free(ctx);
         }
     }
 

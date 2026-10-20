@@ -70,8 +70,9 @@ use crate::ffi::guard_ffi;
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_dsaWithSHA1, NID_sm2, OBJ_find_sigid_by_algs, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this file's `OPENSSL_malloc`/`OPENSSL_clear_free`
 /// expansions.
@@ -94,6 +95,10 @@ const LINE_CLEAR_SIGN_OUT: c_int = 286;
 /// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` — `include/openssl/core_names.h`, the key a signature
 /// provider answers the `AlgorithmIdentifier` DER under.
 const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the signing scratch buffers
+// ---------------------------------------------------------------------------------------------
 
 /// `int ASN1_sign(i2d_of_void *i2d, X509_ALGOR *algor1, X509_ALGOR *algor2,
 /// ASN1_BIT_STRING *signature, char *data, EVP_PKEY *pkey, const EVP_MD *type)` —
@@ -195,28 +200,26 @@ pub unsafe extern "C" fn ASN1_sign(
             return 0;
         }
         let inll = inl as usize;
-        // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_IN` are the authority's.
-        let buf_in = CRYPTO_malloc(inll, FILE.as_ptr(), LINE_MALLOC_IN).cast::<c_uchar>();
+        let buf_in =
+            OwnedBuf::new_cleansed_at(inll, SeamFile::new(FILE), LINE_MALLOC_IN, LINE_CLEAR_IN);
         // SAFETY: `pkey` is a live key.
         outl = unsafe { EVP_PKEY_get_size(pkey) };
         let outll = outl as usize;
-        // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_OUT` are the authority's.
-        let buf_out = CRYPTO_malloc(outll, FILE.as_ptr(), LINE_MALLOC_OUT).cast::<c_uchar>();
-        if buf_in.is_null() || buf_out.is_null() {
-            // SAFETY: both buffers are NULL or this call's own allocations.
-            unsafe {
-                CRYPTO_clear_free(buf_in.cast::<c_void>(), inll, FILE.as_ptr(), LINE_CLEAR_IN);
-                CRYPTO_clear_free(
-                    buf_out.cast::<c_void>(),
-                    outll,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_OUT,
-                );
-                EVP_MD_CTX_free(ctx);
-            }
+        let buf_out =
+            OwnedBuf::new_cleansed_at(outll, SeamFile::new(FILE), LINE_MALLOC_OUT, LINE_CLEAR_OUT);
+        if buf_in.is_none() || buf_out.is_none() {
+            // The authority's `err:` tail on a refused allocation: release whichever buffer the
+            // seam produced (a `None` is the authority's own no-op `clear_free(NULL)`) and the
+            // context, in the authority's order.
+            drop(buf_in);
+            drop(buf_out);
+            // SAFETY: `ctx` is this call's own context.
+            unsafe { EVP_MD_CTX_free(ctx) };
             return 0;
         }
-        let mut p = buf_in;
+        let buf_in_ptr = buf_in.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+        let buf_out_ptr = buf_out.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+        let mut p = buf_in_ptr;
         // SAFETY: `p` has room for the encoded length `inl`.
         unsafe { i2d(data.cast::<c_void>(), &mut p) };
 
@@ -225,33 +228,31 @@ pub unsafe extern "C" fn ASN1_sign(
         // `EVP_DigestUpdate`; `type_` is live; the buffers hold the lengths given them.
         let ok = unsafe {
             EVP_DigestInit_ex(ctx, type_, ptr::null_mut()) != 0
-                && EVP_DigestUpdate(ctx, buf_in.cast::<c_void>(), inl as usize) != 0
-                && EVP_SignFinal(ctx, buf_out, &mut outl_u, pkey) != 0
+                && EVP_DigestUpdate(ctx, buf_in_ptr.cast::<c_void>(), inl as usize) != 0
+                && EVP_SignFinal(ctx, buf_out_ptr, &mut outl_u, pkey) != 0
         };
         if !ok {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_SIGN_94) };
-            // SAFETY: both buffers are this call's own.
-            unsafe {
-                CRYPTO_clear_free(buf_in.cast::<c_void>(), inll, FILE.as_ptr(), LINE_CLEAR_IN);
-                CRYPTO_clear_free(
-                    buf_out.cast::<c_void>(),
-                    outll,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_OUT,
-                );
-                EVP_MD_CTX_free(ctx);
-            }
+            drop(buf_in);
+            drop(buf_out);
+            // SAFETY: `ctx` is this call's own context.
+            unsafe { EVP_MD_CTX_free(ctx) };
             return 0;
         }
         outl = outl_u as c_int;
-        // SAFETY: `signature` is live and uniquely owned; `buf_out` is handed over and nulled.
+        // The signature block is handed to the bit string, which owns it from here.
+        let sig = buf_out.map_or(ptr::null_mut(), OwnedBuf::into_raw);
+        // SAFETY: `signature` is live and uniquely owned; `sig` is handed over and not freed here.
         unsafe {
-            ASN1_STRING_set0(signature, buf_out.cast::<c_void>(), outl);
+            ASN1_STRING_set0(signature, sig.cast::<c_void>(), outl);
             set_bits_left(signature, 0);
-            CRYPTO_clear_free(buf_in.cast::<c_void>(), inll, FILE.as_ptr(), LINE_CLEAR_IN);
-            EVP_MD_CTX_free(ctx);
         }
+        // `buf_in`'s `Drop` is the authority's own `OPENSSL_clear_free(buf_in, inll)`, before the
+        // context is released.
+        drop(buf_in);
+        // SAFETY: `ctx` is this call's own context.
+        unsafe { EVP_MD_CTX_free(ctx) };
         outl
     })
 }
@@ -527,86 +528,64 @@ pub unsafe extern "C" fn ASN1_item_sign_ctx(
             }
         }
 
-        let mut buf_in: *mut c_uchar = ptr::null_mut();
-        // SAFETY: `data` is a live value of `it`'s type; `buf_in` is a null slot.
-        let buf_len = unsafe { ASN1_item_i2d(data, &mut buf_in, it) };
+        let mut buf_in_raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `data` is a live value of `it`'s type; `buf_in_raw` is a null slot.
+        let buf_len = unsafe { ASN1_item_i2d(data, &mut buf_in_raw, it) };
         if buf_len <= 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_SIGN_256) };
             return 0;
         }
         let inl = buf_len as usize;
+        // The encoder's block is owned from here; `Drop` is the authority's own cleansing tail.
+        // SAFETY: `buf_in_raw` is a live block `ASN1_item_i2d` allocated in full through the
+        // crate's allocator seam and no one else owns; `inl` is the length that encoder returned,
+        // i.e. both the allocation extent and the cleansing length.
+        let buf_in = unsafe {
+            OwnedBuf::adopt_cleansed(buf_in_raw, inl, SeamFile::new(FILE), LINE_CLEAR_SIGN_IN)
+        };
+        let buf_in_ptr = buf_in.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         // SAFETY: `ctx` is live; a null signature buffer asks for the length.
-        if unsafe { EVP_DigestSign(ctx, ptr::null_mut(), &mut outll, buf_in, inl) } == 0 {
+        if unsafe { EVP_DigestSign(ctx, ptr::null_mut(), &mut outll, buf_in_ptr, inl) } == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_SIGN_262) };
-            // SAFETY: `buf_in` is this call's own allocation.
-            unsafe {
-                CRYPTO_clear_free(
-                    buf_in.cast::<c_void>(),
-                    inl,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_SIGN_IN,
-                )
-            };
+            // `buf_in`'s `Drop` is the authority's own `OPENSSL_clear_free(buf_in, inl)`.
+            drop(buf_in);
             return 0;
         }
         outl = outll;
-        // SAFETY: the allocator's contract; `FILE`/`LINE_MALLOC_SIGN` are the authority's.
-        let buf_out = CRYPTO_malloc(outll, FILE.as_ptr(), LINE_MALLOC_SIGN).cast::<c_uchar>();
-        if buf_in.is_null() || buf_out.is_null() {
-            // SAFETY: both buffers are NULL or this call's own allocations.
-            unsafe {
-                CRYPTO_clear_free(
-                    buf_in.cast::<c_void>(),
-                    inl,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_SIGN_IN,
-                );
-                CRYPTO_clear_free(
-                    buf_out.cast::<c_void>(),
-                    outll,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_SIGN_OUT,
-                );
-            }
+        let buf_out = OwnedBuf::new_cleansed_at(
+            outll,
+            SeamFile::new(FILE),
+            LINE_MALLOC_SIGN,
+            LINE_CLEAR_SIGN_OUT,
+        );
+        if buf_in.is_none() || buf_out.is_none() {
+            drop(buf_in);
+            drop(buf_out);
             return 0;
         }
+        let buf_out_ptr = buf_out.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
-        // SAFETY: `ctx` is live, `buf_out` is writable for `outl` bytes, and `buf_in` holds `inl`.
-        if unsafe { EVP_DigestSign(ctx, buf_out, &mut outl, buf_in, inl) } == 0 {
+        // SAFETY: `ctx` is live, `buf_out_ptr` is writable for `outl` bytes, and `buf_in_ptr` holds
+        // `inl`.
+        if unsafe { EVP_DigestSign(ctx, buf_out_ptr, &mut outl, buf_in_ptr, inl) } == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_SIGN_274) };
-            // SAFETY: both buffers are this call's own.
-            unsafe {
-                CRYPTO_clear_free(
-                    buf_in.cast::<c_void>(),
-                    inl,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_SIGN_IN,
-                );
-                CRYPTO_clear_free(
-                    buf_out.cast::<c_void>(),
-                    outll,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_SIGN_OUT,
-                );
-            }
+            drop(buf_in);
+            drop(buf_out);
             return 0;
         }
-        // SAFETY: `signature` is live and uniquely owned; `buf_out` is handed over and not freed
-        // on the success path (the authority sets it to NULL).
+        // The signature block is handed to the bit string, which owns it from here.
+        let sig = buf_out.map_or(ptr::null_mut(), OwnedBuf::into_raw);
+        // SAFETY: `signature` is live and uniquely owned; `sig` is handed over and not freed here.
         unsafe {
-            ASN1_STRING_set0(signature, buf_out.cast::<c_void>(), outl as c_int);
+            ASN1_STRING_set0(signature, sig.cast::<c_void>(), outl as c_int);
             set_bits_left(signature, 0);
-            CRYPTO_clear_free(
-                buf_in.cast::<c_void>(),
-                inl,
-                FILE.as_ptr(),
-                LINE_CLEAR_SIGN_IN,
-            );
         }
+        // `buf_in`'s `Drop` is the authority's own `OPENSSL_clear_free(buf_in, inl)`.
+        drop(buf_in);
         outl as c_int
     })
 }

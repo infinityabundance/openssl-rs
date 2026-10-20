@@ -123,7 +123,7 @@ use crate::mac::hmac::{
 use crate::runtime::constant_time::constant_time_msb_u32;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{err_clear_last_constant_time, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::sparse_array::{
     ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_set, OpenSslSa, OsslUintMax,
 };
@@ -144,6 +144,7 @@ use super::{
     RSA_padding_check_PKCS1_type_2, RSA_padding_check_X931,
 };
 use super::{Rsa, RsaMethod};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -154,6 +155,8 @@ use super::{Rsa, RsaMethod};
 /// it does in `src/rsa/mod.rs`: `file` reaches an application through `CRYPTO_set_mem_functions`.
 #[allow(dead_code)] // read by the four crypt entry points' `OPENSSL_malloc`, none of which has a caller here yet
 const FILE_RSA_OSSL: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c".as_ptr();
+const FILE_RSA_OSSL_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c");
 
 /// The allocation-tracking `file` argument for `rsa_crpt.c`'s allocations — the `BN_BLINDING`
 /// lookup's and the constructor's, neither of which allocates: `rsa_get_public_exp`'s
@@ -777,9 +780,7 @@ unsafe extern "C" fn rsa_ossl_public_encrypt(
 
         // The authority's `ctx` starts NULL and the `goto err` that follows a failed allocation
         // still runs the label, whose three statements all accept NULL.
-        let mut num: c_int = 0;
         let mut r: c_int = -1;
-        let mut buf: *mut c_uchar = ptr::null_mut();
 
         let ctx: *mut BnCtx = BN_CTX_new_ex((*rsa).libctx);
         if ctx.is_null() {
@@ -787,20 +788,24 @@ unsafe extern "C" fn rsa_ossl_public_encrypt(
             // `BN_CTX_free(NULL)` are no-ops and the buffer was never allocated.
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
         BN_CTX_start(ctx);
         let f = BN_CTX_get(ctx);
         let ret = BN_CTX_get(ctx);
-        num = bn_num_bytes((*rsa).n);
-        buf = CRYPTO_malloc(num as usize, FILE_RSA_OSSL, LINE).cast::<c_uchar>();
-        if ret.is_null() || buf.is_null() {
+        let num: c_int = bn_num_bytes((*rsa).n);
+        // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
+            return r;
+        };
+        if ret.is_null() {
+            BN_CTX_end(ctx);
+            BN_CTX_free(ctx);
             return r;
         }
+        let buf = buf_owner.as_ptr();
 
         let mut i: c_int = 0;
         let mut refused = false;
@@ -874,10 +879,10 @@ unsafe extern "C" fn rsa_ossl_public_encrypt(
             r = BN_bn2binpad(ret, to, num);
         }
 
-        // The authority's `err:` label.
+        // The authority's `err:` label. `buf_owner`'s `Drop` performs the buffer's single release
+        // after `r` is evaluated, at the authority's own cleansing site.
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
         r
     }
 }
@@ -917,29 +922,31 @@ unsafe extern "C" fn rsa_ossl_private_encrypt(
 ) -> c_int {
     // SAFETY: `rsa` and its fields are live per this function's `# Safety` section.
     unsafe {
-        let mut num: c_int = 0;
         let mut r: c_int = -1;
-        let mut buf: *mut c_uchar = ptr::null_mut();
         let mut blinding: *mut Blinding = ptr::null_mut();
 
         let ctx: *mut BnCtx = BN_CTX_new_ex((*rsa).libctx);
         if ctx.is_null() {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
         BN_CTX_start(ctx);
         let f = BN_CTX_get(ctx);
         let ret = BN_CTX_get(ctx);
-        num = bn_num_bytes((*rsa).n);
-        buf = CRYPTO_malloc(num as usize, FILE_RSA_OSSL, LINE).cast::<c_uchar>();
-        if ret.is_null() || buf.is_null() {
+        let num: c_int = bn_num_bytes((*rsa).n);
+        // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
+            return r;
+        };
+        if ret.is_null() {
+            BN_CTX_end(ctx);
+            BN_CTX_free(ctx);
             return r;
         }
+        let buf = buf_owner.as_ptr();
 
         let mut i: c_int = 0;
         let mut refused = false;
@@ -1077,10 +1084,10 @@ unsafe extern "C" fn rsa_ossl_private_encrypt(
             r = BN_bn2binpad(res, to, num);
         }
 
-        // The authority's `err:` label.
+        // The authority's `err:` label. `buf_owner`'s `Drop` performs the buffer's single release
+        // after `r` is evaluated, at the authority's own cleansing site.
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
         r
     }
 }
@@ -1270,9 +1277,7 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
             padding = RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING;
         }
 
-        let mut num: c_int = 0;
         let mut r: c_int = -1;
-        let mut buf: *mut c_uchar = ptr::null_mut();
         let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
         let mut blinding: *mut Blinding = ptr::null_mut();
 
@@ -1280,7 +1285,6 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
         if ctx.is_null() {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
         BN_CTX_start(ctx);
@@ -1290,17 +1294,16 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
             raise_site(&err_sites::RSA_OSSL_549);
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
-        num = bn_num_bytes((*rsa).n);
-        buf = CRYPTO_malloc(num as usize, FILE_RSA_OSSL, LINE).cast::<c_uchar>();
-        if buf.is_null() {
+        let num: c_int = bn_num_bytes((*rsa).n);
+        // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
-        }
+        };
+        let buf = buf_owner.as_ptr();
 
         /*
          * This check was for equality but PGP does evil things and chops off the top '0' bytes
@@ -1309,7 +1312,6 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
             raise_site(&err_sites::RSA_OSSL_562);
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
 
@@ -1317,7 +1319,6 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
             raise_site(&err_sites::RSA_OSSL_567);
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
 
@@ -1465,10 +1466,10 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
         raise_site(&err_sites::RSA_OSSL_691);
         err_clear_last_constant_time((1 & !constant_time_msb_u32(r as u32)) as c_int);
 
-        // The authority's `err:` label.
+        // The authority's `err:` label. `buf_owner`'s `Drop` performs the buffer's single release
+        // after `r` is evaluated, at the authority's own cleansing site.
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
         r
     }
 }
@@ -1519,15 +1520,12 @@ unsafe extern "C" fn rsa_ossl_public_decrypt(
             return -1;
         }
 
-        let mut num: c_int = 0;
         let mut r: c_int = -1;
-        let mut buf: *mut c_uchar = ptr::null_mut();
 
         let ctx: *mut BnCtx = BN_CTX_new_ex((*rsa).libctx);
         if ctx.is_null() {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
         BN_CTX_start(ctx);
@@ -1537,17 +1535,16 @@ unsafe extern "C" fn rsa_ossl_public_decrypt(
             raise_site(&err_sites::RSA_OSSL_735);
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
-        num = bn_num_bytes((*rsa).n);
-        buf = CRYPTO_malloc(num as usize, FILE_RSA_OSSL, LINE).cast::<c_uchar>();
-        if buf.is_null() {
+        let num: c_int = bn_num_bytes((*rsa).n);
+        // `CRYPTO_malloc` at the authority's exact size/`file`/`line`; `Drop` is its single release.
+        let Some(buf_owner) = OwnedBuf::new_cleansed(num as usize, FILE_RSA_OSSL_SEAM, LINE) else {
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
-        }
+        };
+        let buf = buf_owner.as_ptr();
 
         /*
          * This check was for equality but PGP does evil things and chops off the top '0' bytes
@@ -1556,7 +1553,6 @@ unsafe extern "C" fn rsa_ossl_public_decrypt(
             raise_site(&err_sites::RSA_OSSL_748);
             BN_CTX_end(ctx);
             BN_CTX_free(ctx);
-            CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
             return r;
         }
 
@@ -1626,10 +1622,10 @@ unsafe extern "C" fn rsa_ossl_public_decrypt(
             raise_site(&err_sites::RSA_OSSL_793);
         }
 
-        // The authority's `err:` label.
+        // The authority's `err:` label. `buf_owner`'s `Drop` performs the buffer's single release
+        // after `r` is evaluated, at the authority's own cleansing site.
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        CRYPTO_clear_free(buf.cast::<c_void>(), num as usize, FILE_RSA_OSSL, LINE);
         r
     }
 }
@@ -2237,6 +2233,13 @@ unsafe extern "C" fn rsa_ossl_init(rsa: *mut Rsa) -> c_int {
 /// whose caches were never built — the common case for a key that was only ever used publicly, and
 /// for every object this crate constructs in a court — is released correctly.
 ///
+/// **Every released slot is cleared.** `RSA_set_method` calls this hook on each method transition
+/// and then installs the new table; the authority leaves the freed pointers in the slots, so a
+/// second `RSA_set_method` (or the next private operation, through `BN_MONT_CTX_set_locked`'s
+/// non-NULL fast path) would read or release freed storage. Clearing the slots is a deliberate
+/// divergence from `rsa_ossl.c:1179-1195` (§17: do not reproduce the authority's UB) and is not
+/// observable to any caller that uses a released context correctly.
+///
 /// The extra-prime loop is `#ifndef FIPS_MODULE`'s, which holds on this profile. `RSA_MAX_PRIME_NUM`
 /// bounds nothing here: the loop runs to the stack's own count, and `RSA_set0_multi_prime_params`
 /// is what refused an over-long stack.
@@ -2253,12 +2256,18 @@ unsafe extern "C" fn rsa_ossl_finish(rsa: *mut Rsa) -> c_int {
             // SAFETY: the stack's elements are `RSA_PRIME_INFO` records of this object's, and
             // `m` is NULL or a Montgomery context this object's cache arm created.
             BN_MONT_CTX_free((*pinfo).m);
+            // SAFETY: `pinfo` is the same live record read above; the context it named was just
+            // released, so the slot is cleared before any second `finish` can see it.
+            (*pinfo).m = ptr::null_mut();
             n += 1;
         }
 
         BN_MONT_CTX_free((*rsa)._method_mod_n);
+        (*rsa)._method_mod_n = ptr::null_mut();
         BN_MONT_CTX_free((*rsa)._method_mod_p);
+        (*rsa)._method_mod_p = ptr::null_mut();
         BN_MONT_CTX_free((*rsa)._method_mod_q);
+        (*rsa)._method_mod_q = ptr::null_mut();
     }
     1
 }
@@ -2397,6 +2406,26 @@ mod tests {
                 crate::rsa::object::RSA_test_flags(&rsa, RSA_FLAG_CACHE_PRIVATE),
                 0
             );
+            assert_eq!(rsa_ossl_finish(&mut rsa), 1);
+        }
+    }
+
+    /// `rsa_ossl_finish` clears every slot it releases, so calling it twice is a no-op rather
+    /// than a second release of freed storage. `RSA_set_method` invokes it on every method
+    /// transition, so the dangling-pointer state the authority leaves behind would be reachable
+    /// through a second `RSA_set_method` (or the next private operation's cache lookup).
+    #[test]
+    fn the_finish_hook_clears_every_slot_it_releases() {
+        // SAFETY: every object is created and released here; the hook takes only the object.
+        unsafe {
+            let mut rsa = super::super::mp::zeroed_rsa();
+            let mont = crate::bn::mont::BN_MONT_CTX_new();
+            assert!(!mont.is_null());
+            rsa._method_mod_n = mont;
+
+            assert_eq!(rsa_ossl_finish(&mut rsa), 1);
+            assert!(rsa._method_mod_n.is_null());
+            // The negative control: before the repair this second call released the same block.
             assert_eq!(rsa_ossl_finish(&mut rsa), 1);
         }
     }

@@ -366,7 +366,7 @@ unsafe extern "C" fn rc2_get_asn1_type_and_iv(c: *mut c_void, type_: *mut c_void
     let c = c.cast::<EvpCipherCtx>();
     let type_ = type_.cast::<Asn1Type>();
     let mut num: c_long = 0;
-    let i: c_int = 0;
+    let mut i: c_int = 0;
     let mut iv: [c_uchar; EVP_MAX_IV_LENGTH] = [0; EVP_MAX_IV_LENGTH];
     if !type_.is_null() {
         // SAFETY: `c` is live per the contract.
@@ -375,9 +375,8 @@ unsafe extern "C" fn rc2_get_asn1_type_and_iv(c: *mut c_void, type_: *mut c_void
         // length is checked by the caller.
         // SAFETY: `type_` is live; `iv` holds `EVP_MAX_IV_LENGTH` writable bytes and `l` is a
         // cipher IV length bounded by it.
-        let got =
-            unsafe { ASN1_TYPE_get_int_octetstring(type_, &mut num, iv.as_mut_ptr(), l as c_int) };
-        if got != l as c_int {
+        i = unsafe { ASN1_TYPE_get_int_octetstring(type_, &mut num, iv.as_mut_ptr(), l as c_int) };
+        if i != l as c_int {
             return -1;
         }
         // SAFETY: `num` is a plain integer and `rc2_magic_to_meth` only reads it.
@@ -385,7 +384,7 @@ unsafe extern "C" fn rc2_get_asn1_type_and_iv(c: *mut c_void, type_: *mut c_void
         if key_bits == 0 {
             return -1;
         }
-        if got > 0 {
+        if i > 0 {
             // SAFETY: `c` is live and `iv` is readable for `l` bytes; the direction is kept.
             if unsafe {
                 EVP_CipherInit_ex(

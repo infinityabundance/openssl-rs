@@ -38,11 +38,28 @@
 //! characters"`) carry their formatted message through `raise_site_data`, as `src/asn1/a_mbstr.rs`
 //! does for the same shape.
 //!
+//! ## Ownership: the three objects and the `strdup` copies are owned Rust, the prompt is the ABI
+//!
+//! Each `UI`, `UI_STRING` and `UI_METHOD` block is an owned [`OwnedCtx`]: it is a `CRYPTO_zalloc` at
+//! the authority's own size (so a caller-installed `CRYPTO_set_mem_functions` hook observes the
+//! allocation and its release), its *ownership* is the handle, and `Drop` runs the authority's
+//! `UI_free` body before releasing the block. `UI_new_method`'s half-built object and
+//! `UI_create_method`'s use a [`RawCtx`] instead, because their refusal paths write a bare block
+//! free that must not run the full destructor. The four `CRYPTO_strdup` copies a `UI_dup_*`
+//! allocates are [`OwnedStr`]s, released by `Drop` on the authority's `err:` line and handed to the
+//! `UI_STRING` that takes them over with `into_raw`.
+//!
+//! `UI_construct_prompt`'s `OPENSSL_malloc` stays raw on the seam, and so do the `#[repr(C)]`
+//! object buffers and pointers the ABI hands out and reads back (a `UI_STRING`'s `out_string` and
+//! `boolean_data` strings, a `UI_METHOD`'s `name`): the object is the only place that can own them,
+//! their releases live in the destructors above, and changing that would change the layout.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys::{memcpy, strchr, strlen};
 use crate::runtime::err::{
@@ -52,7 +69,9 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_UI, CRYPTO_EX_INDEX_UI_METHOD,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -64,6 +83,7 @@ use crate::ui::ui_openssl::UI_get_default_method;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c");
 
 /// `UI_METHOD` — `include/openssl/ui.h:294`'s `struct ui_method_st` (`crypto/ui/ui_local.h:20-59`).
 ///
@@ -258,6 +278,112 @@ const UI_CTRL_PRINT_ERRORS: c_int = 1;
 /// `UI_CTRL_IS_REDOABLE` — `ui.h:217`.
 const UI_CTRL_IS_REDOABLE: c_int = 2;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the three objects
+// ---------------------------------------------------------------------------------------------
+
+// The blocks are the canonical [`OwnedCtx`] (fully built, `Drop` runs the destructor body) and
+// [`RawCtx`] (still being built, `Drop` releases the block alone). Both stay `CRYPTO_zalloc`
+// blocks at `size_of::<T>()` rather than Rust `Box`es on purpose: a caller-installed
+// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+// the authority's, which a Rust global allocation would hide. The per-path release line is the
+// canonical handle's `line` (`zalloc_at`/`from_raw_at`), so `UI_new_method`'s abandoned block and
+// `UI_free`'s release each record their own site.
+
+// The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
+// the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
+// `CRYPTO_free`/`CRYPTO_free_ex_data` calls, at the authority's own `__LINE__`.
+
+// SAFETY: (a) holds: `destroy_body` is `UI_STRING_free` minus the block -- the freeable `out_string`
+// and, for a boolean string, the three owned strings, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: an all-zero string has `flags` 0, so no member is released -- what the
+// safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for UiString {
+    unsafe fn destroy_body(ptr: *mut UiString) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        unsafe {
+            if (*ptr).flags & OUT_STRING_FREEABLE != 0 {
+                // SAFETY: `out_string` is owned when the flag says so.
+                CRYPTO_free(
+                    (*ptr).out_string.cast_mut().cast::<c_void>(),
+                    FILE,
+                    LINE_FREE_STRING_OUT,
+                );
+                // SAFETY: the type selector decides which union arm is live; a boolean string's
+                // three strings are owned with it.
+                if (*ptr).type_ == UIT_BOOLEAN {
+                    let b = (*ptr).payload.boolean_data;
+                    CRYPTO_free(
+                        b.action_desc.cast_mut().cast::<c_void>(),
+                        FILE,
+                        LINE_FREE_STRING_ACTION,
+                    );
+                    CRYPTO_free(
+                        b.ok_chars.cast_mut().cast::<c_void>(),
+                        FILE,
+                        LINE_FREE_STRING_OK,
+                    );
+                    CRYPTO_free(
+                        b.cancel_chars.cast_mut().cast::<c_void>(),
+                        FILE,
+                        LINE_FREE_STRING_CANCEL,
+                    );
+                }
+            }
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is `UI_free` minus the block -- the method's destroy-data
+// callback, the string queue, the ex-data and the lock, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: an all-zero `UI` has `flags` 0 and NULL members, so the body is the
+// authority's own all-empty teardown -- what the safe `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for Ui {
+    unsafe fn destroy_body(ptr: *mut Ui) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        unsafe {
+            if (*ptr).flags & UI_FLAG_DUPL_DATA != 0 {
+                // SAFETY: `meth` is a live method (set by `UI_new_method`) and `user_data` is the
+                // value the duplicator produced.
+                if let Some(destroy) = (*(*ptr).meth).ui_destroy_data {
+                    destroy(ptr, (*ptr).user_data);
+                }
+            }
+            // SAFETY: `strings` is NULL or the queue this object owns; `free_string` frees its
+            // elements.
+            OPENSSL_sk_pop_free((*ptr).strings, Some(free_string));
+            // SAFETY: `ptr` is live and `ex_data` is its own.
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_UI,
+                ptr.cast::<c_void>(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            // SAFETY: `lock` was created by `UI_new_method` and is not used again.
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is `UI_destroy_method` minus the block -- the ex-data and the
+// name, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero method has
+// both members NULL/zero, so the body is the authority's own all-empty teardown -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl CtxDestroy for UiMethod {
+    unsafe fn destroy_body(ptr: *mut UiMethod) {
+        // SAFETY: `ptr` is a live object per the trait contract and `ex_data` is its own.
+        unsafe {
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_UI_METHOD,
+                ptr.cast::<c_void>(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            // SAFETY: the name was allocated by `CRYPTO_strdup` (or is NULL).
+            CRYPTO_free((*ptr).name.cast::<c_void>(), FILE, LINE_DESTROY_METHOD_NAME);
+            (*ptr).name = ptr::null_mut();
+        }
+    }
+}
+
 /// `UI_new` reads `UI_get_default_method`, which is `ui_openssl.c`'s; a method object's
 /// `ui_destroy_data` is called with two arguments and answers nothing.
 ///
@@ -284,22 +410,27 @@ pub unsafe extern "C" fn UI_new() -> *mut Ui {
 /// `method` is NULL or a live `UI_METHOD` that outlives the returned `UI`.
 #[no_mangle]
 pub unsafe extern "C" fn UI_new_method(method: *const UiMethod) -> *mut Ui {
-    // SAFETY: no preconditions.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Ui>(), FILE, LINE_NEW_METHOD_ZALLOC).cast::<Ui>();
-
-    if ret.is_null() {
+    // The context block, allocated through the crate's allocator seam and owned by `ret` until it
+    // is handed to the caller below. Its abandoned-block release is the authority's own bare
+    // `OPENSSL_free(ret)` on the lock failure, which is why this is a [`RawCtx`] and not the full
+    // [`OwnedCtx`] `UI_free` uses.
+    let Some(ret) = RawCtx::<Ui>::zalloc_at(
+        FILE_SEAM,
+        LINE_NEW_METHOD_ZALLOC,
+        FILE_SEAM,
+        LINE_NEW_METHOD_FREE,
+    ) else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: no preconditions.
     let lock = CRYPTO_THREAD_lock_new();
     // SAFETY: `ret` is the object just allocated and is ours alone.
-    unsafe { (*ret).lock = lock };
+    unsafe { (*ret.as_ptr()).lock = lock };
     if lock.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::UI_LIB_32) };
-        // SAFETY: `ret` is ours and fully ours to free (no `ex_data` yet).
-        unsafe { CRYPTO_free(ret.cast::<c_void>(), FILE, LINE_NEW_METHOD_FREE) };
+        // SAFETY: `ret` is ours and fully ours to free (no `ex_data` yet); `Drop` is that release.
         return ptr::null_mut();
     }
 
@@ -313,22 +444,23 @@ pub unsafe extern "C" fn UI_new_method(method: *const UiMethod) -> *mut Ui {
         method = UI_null();
     }
     // SAFETY: `ret` is ours; `method` is a live method object.
-    unsafe { (*ret).meth = method };
+    unsafe { (*ret.as_ptr()).meth = method };
 
     // SAFETY: `ret` is live and `(*ret).ex_data` is a field of it, zeroed by `CRYPTO_zalloc`.
     if unsafe {
         CRYPTO_new_ex_data(
             CRYPTO_EX_INDEX_UI,
-            ret.cast::<c_void>(),
-            ptr::addr_of_mut!((*ret).ex_data),
+            ret.as_ptr().cast::<c_void>(),
+            ptr::addr_of_mut!((*ret.as_ptr()).ex_data),
         )
     } == 0
     {
-        // SAFETY: `ret` is a live object this call created.
-        unsafe { UI_free(ret) };
+        // SAFETY: `ret` is a live object this call created; `UI_free` reclaims it (the authority's
+        // `ex_data`-failure path) and its `Drop` is the release.
+        unsafe { UI_free(ret.into_raw()) };
         return ptr::null_mut();
     }
-    ret
+    ret.into_raw()
 }
 
 /// `static void free_string(UI_STRING *uis)` — `crypto/ui/ui_lib.c:50-69`.
@@ -341,47 +473,15 @@ pub unsafe extern "C" fn UI_new_method(method: *const UiMethod) -> *mut Ui {
 ///
 /// `uis` is NULL or a heap `UI_STRING` whose owning stack is being torn down.
 unsafe extern "C" fn free_string(uis: *mut c_void) {
-    let uis = uis.cast::<UiString>();
-    if uis.is_null() {
-        return;
-    }
-    // SAFETY: `uis` is a live object.
-    if unsafe { (*uis).flags } & OUT_STRING_FREEABLE != 0 {
-        // SAFETY: `out_string` is owned when the flag says so.
-        unsafe {
-            CRYPTO_free(
-                (*uis).out_string.cast_mut().cast::<c_void>(),
-                FILE,
-                LINE_FREE_STRING_OUT,
-            )
-        };
-        // SAFETY: `uis` is live; the type selector decides which union arm is live.
-        if unsafe { (*uis).type_ } == UIT_BOOLEAN {
-            // SAFETY: a boolean string's three strings are owned with it; copying the arm out of
-            // the union is a plain read of three pointers.
-            let b = unsafe { (*uis).payload.boolean_data };
-            // SAFETY: each is owned by this object.
-            unsafe {
-                CRYPTO_free(
-                    b.action_desc.cast_mut().cast::<c_void>(),
-                    FILE,
-                    LINE_FREE_STRING_ACTION,
-                );
-                CRYPTO_free(
-                    b.ok_chars.cast_mut().cast::<c_void>(),
-                    FILE,
-                    LINE_FREE_STRING_OK,
-                );
-                CRYPTO_free(
-                    b.cancel_chars.cast_mut().cast::<c_void>(),
-                    FILE,
-                    LINE_FREE_STRING_CANCEL,
-                );
-            }
-        }
-    }
-    // SAFETY: `uis` was allocated by `CRYPTO_zalloc` and is not referenced again.
-    unsafe { CRYPTO_free(uis.cast::<c_void>(), FILE, LINE_FREE_STRING_FREE) };
+    // SAFETY: `uis` is NULL or a heap `UI_STRING` whose owning stack is being torn down;
+    // `from_raw` reclaims it and `Drop` runs the payload releases and the block release.
+    unsafe {
+        drop(OwnedCtx::<UiString>::from_raw_at(
+            uis.cast::<UiString>(),
+            FILE_SEAM,
+            LINE_FREE_STRING_FREE,
+        ))
+    };
 }
 
 /// `void UI_free(UI *ui)` — `crypto/ui/ui_lib.c:71-82`.
@@ -394,33 +494,9 @@ unsafe extern "C" fn free_string(uis: *mut c_void) {
 /// `ui` is NULL or a live object from `UI_new`/`UI_new_method` that is not referenced afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn UI_free(ui: *mut Ui) {
-    if ui.is_null() {
-        return;
-    }
-    // SAFETY: `ui` is live.
-    if unsafe { (*ui).flags } & UI_FLAG_DUPL_DATA != 0 {
-        // SAFETY: `ui->meth` is a live method (set by `UI_new_method`) and `user_data` is the
-        // value the duplicator produced.
-        unsafe {
-            if let Some(destroy) = (*(*ui).meth).ui_destroy_data {
-                destroy(ui, (*ui).user_data);
-            }
-        }
-    }
-    // SAFETY: `strings` is NULL or the queue this object owns; `free_string` frees its elements.
-    unsafe { OPENSSL_sk_pop_free((*ui).strings, Some(free_string)) };
-    // SAFETY: `ui` is live and `ex_data` is its own.
-    unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_UI,
-            ui.cast::<c_void>(),
-            ptr::addr_of_mut!((*ui).ex_data),
-        )
-    };
-    // SAFETY: `lock` was created by `UI_new_method` and is not used again.
-    unsafe { CRYPTO_THREAD_lock_free((*ui).lock) };
-    // SAFETY: `ui` is the object allocated by `UI_new_method`.
-    unsafe { CRYPTO_free(ui.cast::<c_void>(), FILE, LINE_FREE_UI) };
+    // SAFETY: `ui` is NULL or a live object; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own `UI_free` body followed by the block release.
+    unsafe { drop(OwnedCtx::<Ui>::from_raw_at(ui, FILE_SEAM, LINE_FREE_UI)) };
 }
 
 /// `static int allocate_string_stack(UI *ui)` — `crypto/ui/ui_lib.c:84-93`.
@@ -448,7 +524,9 @@ unsafe fn allocate_string_stack(ui: *mut Ui) -> c_int {
 ///
 /// The three-way guard is the whole contract: a NULL prompt raises `ERR_R_PASSED_NULL_PARAMETER`,
 /// a prompt type with a NULL `result_buf` raises `UI_R_NO_RESULT_BUFFER`, and otherwise the
-/// object is allocated. It answers NULL on every refusal and never otherwise.
+/// object is allocated. It answers `None` on every refusal and never otherwise; the returned owner
+/// is handed to the `UI_STRING` queue by the caller (`into_raw`) or released by its `Drop` when the
+/// push does not adopt it.
 ///
 /// # Safety
 ///
@@ -460,8 +538,8 @@ unsafe fn general_allocate_prompt(
     type_: c_int,
     input_flags: c_int,
     result_buf: *mut c_char,
-) -> *mut UiString {
-    let mut ret: *mut UiString = ptr::null_mut();
+) -> Option<OwnedCtx<UiString>> {
+    let mut ret: Option<OwnedCtx<UiString>> = None;
 
     if prompt.is_null() {
         // SAFETY: the site is a compile-time constant.
@@ -472,21 +550,24 @@ unsafe fn general_allocate_prompt(
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::UI_LIB_107) };
     } else {
-        // SAFETY: `CRYPTO_zalloc` takes the size, file and line and zeroes its own allocation.
-        ret = CRYPTO_zalloc(core::mem::size_of::<UiString>(), FILE, LINE_ALLOCATE_PROMPT)
-            .cast::<UiString>();
-        if !ret.is_null() {
-            // SAFETY: `ret` is the object just allocated and is ours alone.
+        ret = OwnedCtx::<UiString>::zalloc_at(
+            FILE_SEAM,
+            LINE_ALLOCATE_PROMPT,
+            FILE_SEAM,
+            LINE_FREE_STRING_FREE,
+        );
+        if let Some(s) = ret.as_ref() {
+            // SAFETY: `s` is the object just allocated and is ours alone.
             unsafe {
-                (*ret).out_string = prompt;
-                (*ret).flags = if prompt_freeable != 0 {
+                (*s.as_ptr()).out_string = prompt;
+                (*s.as_ptr()).flags = if prompt_freeable != 0 {
                     OUT_STRING_FREEABLE
                 } else {
                     0
                 };
-                (*ret).input_flags = input_flags;
-                (*ret).type_ = type_;
-                (*ret).result_buf = result_buf;
+                (*s.as_ptr()).input_flags = input_flags;
+                (*s.as_ptr()).type_ = type_;
+                (*s.as_ptr()).result_buf = result_buf;
             }
         }
     }
@@ -515,31 +596,32 @@ unsafe fn general_allocate_string(
     test_buf: *const c_char,
 ) -> c_int {
     let mut ret: c_int = -1;
-    // SAFETY: the caller's contract.
+    // SAFETY: the caller's contract. The owner is handed to the queue on a successful push, or
+    // released by its `Drop` when the push or the queue's allocation fails.
     let s = unsafe {
         general_allocate_prompt(ui, prompt, prompt_freeable, type_, input_flags, result_buf)
     };
 
-    if !s.is_null() {
+    if let Some(s) = s {
         // SAFETY: `ui` is live per the contract.
         if unsafe { allocate_string_stack(ui) } >= 0 {
             // SAFETY: `s` is the object just allocated and `ui` is live.
             unsafe {
-                (*s).payload.string_data.result_minsize = minsize;
-                (*s).payload.string_data.result_maxsize = maxsize;
-                (*s).payload.string_data.test_buf = test_buf;
+                (*s.as_ptr()).payload.string_data.result_minsize = minsize;
+                (*s.as_ptr()).payload.string_data.result_maxsize = maxsize;
+                (*s.as_ptr()).payload.string_data.test_buf = test_buf;
             }
             // SAFETY: `ui->strings` is a live stack and `s` is transferred to it.
-            ret = unsafe { OPENSSL_sk_push((*ui).strings, s.cast::<c_void>()) };
+            ret = unsafe { OPENSSL_sk_push((*ui).strings, s.as_ptr().cast::<c_void>()) };
             if ret <= 0 {
                 ret -= 1;
-                // SAFETY: the push did not adopt `s`, so this call still owns it.
-                unsafe { free_string(s.cast::<c_void>()) };
+                return ret;
             }
-        } else {
-            // SAFETY: `s` was not adopted by a stack.
-            unsafe { free_string(s.cast::<c_void>()) };
+            // The stack adopted `s`; give up ownership.
+            let _ = s.into_raw();
+            return ret;
         }
+        // `s` was not adopted by a stack; released by its `Drop` as this call returns.
     }
     ret
 }
@@ -589,31 +671,32 @@ unsafe fn general_allocate_boolean(
             p = unsafe { p.add(1) };
         }
 
-        // SAFETY: the caller's contract.
+        // SAFETY: the caller's contract. The owner is handed to the queue on a successful push,
+        // or released by its `Drop` when the push or the queue's allocation fails.
         let s = unsafe {
             general_allocate_prompt(ui, prompt, prompt_freeable, type_, input_flags, result_buf)
         };
 
-        if !s.is_null() {
+        if let Some(s) = s {
             // SAFETY: `ui` is live per the contract.
             if unsafe { allocate_string_stack(ui) } >= 0 {
                 // SAFETY: `s` is the object just allocated.
                 unsafe {
-                    (*s).payload.boolean_data.action_desc = action_desc;
-                    (*s).payload.boolean_data.ok_chars = ok_chars;
-                    (*s).payload.boolean_data.cancel_chars = cancel_chars;
+                    (*s.as_ptr()).payload.boolean_data.action_desc = action_desc;
+                    (*s.as_ptr()).payload.boolean_data.ok_chars = ok_chars;
+                    (*s.as_ptr()).payload.boolean_data.cancel_chars = cancel_chars;
                 }
                 // SAFETY: `ui->strings` is a live stack and `s` is transferred to it.
-                ret = unsafe { OPENSSL_sk_push((*ui).strings, s.cast::<c_void>()) };
+                ret = unsafe { OPENSSL_sk_push((*ui).strings, s.as_ptr().cast::<c_void>()) };
                 if ret <= 0 {
                     ret -= 1;
-                    // SAFETY: the push did not adopt `s`.
-                    unsafe { free_string(s.cast::<c_void>()) };
+                    return ret;
                 }
-            } else {
-                // SAFETY: `s` was not adopted by a stack.
-                unsafe { free_string(s.cast::<c_void>()) };
+                // The stack adopted `s`; give up ownership.
+                let _ = s.into_raw();
+                return ret;
             }
+            // `s` was not adopted by a stack; released by its `Drop` as this call returns.
         }
     }
     ret
@@ -667,21 +750,30 @@ pub unsafe extern "C" fn UI_dup_input_string(
     minsize: c_int,
     maxsize: c_int,
 ) -> c_int {
-    let mut prompt_copy: *mut c_char = ptr::null_mut();
-
-    if !prompt.is_null() {
-        // SAFETY: `prompt` is NUL-terminated per the contract.
-        prompt_copy = unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT) };
-        if prompt_copy.is_null() {
-            return 0;
+    // The prompt copy, owned until `general_allocate_string` takes it over or the failed add's
+    // return releases it; a NULL prompt stays NULL, as in the authority.
+    let prompt_copy = if prompt.is_null() {
+        None
+    } else {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_INPUT_PROMPT);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_INPUT_FREE)
+        } {
+            Some(copy) => Some(copy),
+            None => return 0,
         }
-    }
+    };
 
     // SAFETY: the caller's contract; `prompt_copy` is ours.
     let ret = unsafe {
         general_allocate_string(
             ui,
-            prompt_copy,
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_PROMPT,
             flags,
@@ -691,10 +783,13 @@ pub unsafe extern "C" fn UI_dup_input_string(
             ptr::null(),
         )
     };
-    if ret <= 0 {
-        // SAFETY: the failed add did not adopt `prompt_copy`.
-        unsafe { CRYPTO_free(prompt_copy.cast::<c_void>(), FILE, LINE_DUP_INPUT_FREE) };
+    if ret > 0 {
+        // The add adopted `prompt_copy`; give up ownership.
+        if let Some(copy) = prompt_copy {
+            let _ = copy.into_raw();
+        }
     }
+    // On a failed add `prompt_copy` is released by its `Drop` as this call returns.
     ret
 }
 
@@ -738,21 +833,30 @@ pub unsafe extern "C" fn UI_dup_verify_string(
     maxsize: c_int,
     test_buf: *const c_char,
 ) -> c_int {
-    let mut prompt_copy: *mut c_char = ptr::null_mut();
-
-    if !prompt.is_null() {
-        // SAFETY: `prompt` is NUL-terminated per the contract.
-        prompt_copy = unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT) };
-        if prompt_copy.is_null() {
-            return -1;
+    // The prompt copy, owned until `general_allocate_string` takes it over or the failed add's
+    // return releases it; a NULL prompt stays NULL, as in the authority.
+    let prompt_copy = if prompt.is_null() {
+        None
+    } else {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_VERIFY_PROMPT);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_VERIFY_FREE)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
+    };
 
     // SAFETY: the caller's contract; `prompt_copy` is ours.
     let ret = unsafe {
         general_allocate_string(
             ui,
-            prompt_copy,
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_VERIFY,
             flags,
@@ -762,10 +866,13 @@ pub unsafe extern "C" fn UI_dup_verify_string(
             test_buf,
         )
     };
-    if ret <= 0 {
-        // SAFETY: the failed add did not adopt `prompt_copy`.
-        unsafe { CRYPTO_free(prompt_copy.cast::<c_void>(), FILE, LINE_DUP_VERIFY_FREE) };
+    if ret > 0 {
+        // The add adopted `prompt_copy`; give up ownership.
+        if let Some(copy) = prompt_copy {
+            let _ = copy.into_raw();
+        }
     }
+    // On a failed add `prompt_copy` is released by its `Drop` as this call returns.
     ret
 }
 
@@ -819,84 +926,82 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
     flags: c_int,
     result_buf: *mut c_char,
 ) -> c_int {
-    let mut prompt_copy: *mut c_char = ptr::null_mut();
-    let mut action_desc_copy: *mut c_char = ptr::null_mut();
-    let mut ok_chars_copy: *mut c_char = ptr::null_mut();
-    let mut cancel_chars_copy: *mut c_char = ptr::null_mut();
-
-    if !prompt.is_null() {
-        // SAFETY: `prompt` is NUL-terminated per the contract.
-        prompt_copy = unsafe { CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT) };
-        if prompt_copy.is_null() {
-            // SAFETY: everything copied so far is NULL.
-            unsafe {
-                dup_bool_err(
-                    prompt_copy,
-                    action_desc_copy,
-                    ok_chars_copy,
-                    cancel_chars_copy,
-                )
-            };
-            return -1;
+    // The four copies, owned until `general_allocate_boolean` takes them over or an `err:` return
+    // releases them. Each is NULL when its source is NULL, as in the authority; a failed dup
+    // releases the copies made so far -- the guards' `Drop` is exactly `dup_bool_err`.
+    let prompt_copy = if prompt.is_null() {
+        None
+    } else {
+        // SAFETY: `prompt` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(prompt, FILE, LINE_DUP_BOOL_PROMPT);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
-    if !action_desc.is_null() {
-        // SAFETY: `action_desc` is NUL-terminated per the contract.
-        action_desc_copy = unsafe { CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION) };
-        if action_desc_copy.is_null() {
-            // SAFETY: the non-NULL copies are ours and freed here.
-            unsafe {
-                dup_bool_err(
-                    prompt_copy,
-                    action_desc_copy,
-                    ok_chars_copy,
-                    cancel_chars_copy,
-                )
-            };
-            return -1;
+    };
+    let action_desc_copy = if action_desc.is_null() {
+        None
+    } else {
+        // SAFETY: `action_desc` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(action_desc, FILE, LINE_DUP_BOOL_ACTION);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
-    if !ok_chars.is_null() {
-        // SAFETY: `ok_chars` is NUL-terminated per the contract.
-        ok_chars_copy = unsafe { CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK) };
-        if ok_chars_copy.is_null() {
-            // SAFETY: the non-NULL copies are ours and freed here.
-            unsafe {
-                dup_bool_err(
-                    prompt_copy,
-                    action_desc_copy,
-                    ok_chars_copy,
-                    cancel_chars_copy,
-                )
-            };
-            return -1;
+    };
+    let ok_chars_copy = if ok_chars.is_null() {
+        None
+    } else {
+        // SAFETY: `ok_chars` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(ok_chars, FILE, LINE_DUP_BOOL_OK);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
-    if !cancel_chars.is_null() {
-        // SAFETY: `cancel_chars` is NUL-terminated per the contract.
-        cancel_chars_copy = unsafe { CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL) };
-        if cancel_chars_copy.is_null() {
-            // SAFETY: the non-NULL copies are ours and freed here.
-            unsafe {
-                dup_bool_err(
-                    prompt_copy,
-                    action_desc_copy,
-                    ok_chars_copy,
-                    cancel_chars_copy,
-                )
-            };
-            return -1;
+    };
+    let cancel_chars_copy = if cancel_chars.is_null() {
+        None
+    } else {
+        // SAFETY: `cancel_chars` is NUL-terminated per the contract, and the `CRYPTO_strdup` block
+        // this adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(cancel_chars, FILE, LINE_DUP_BOOL_CANCEL);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_BOOL_ERR)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
+    };
 
     // SAFETY: the caller's contract; the four copies are ours.
     let ret = unsafe {
         general_allocate_boolean(
             ui,
-            prompt_copy,
-            action_desc_copy,
-            ok_chars_copy,
-            cancel_chars_copy,
+            prompt_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
+            action_desc_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
+            ok_chars_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
+            cancel_chars_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_BOOLEAN,
             flags,
@@ -904,38 +1009,23 @@ pub unsafe extern "C" fn UI_dup_input_boolean(
         )
     };
     if ret <= 0 {
-        // SAFETY: the failed add did not adopt the four copies.
-        unsafe {
-            dup_bool_err(
-                prompt_copy,
-                action_desc_copy,
-                ok_chars_copy,
-                cancel_chars_copy,
-            )
-        };
+        // The failed add did not adopt the four copies; their `Drop` is `dup_bool_err`'s release.
         return -1;
     }
-    ret
-}
-
-/// `err:` of `UI_dup_input_boolean` — `crypto/ui/ui_lib.c:307-312`. Frees all four copies.
-///
-/// # Safety
-///
-/// Each argument is NULL or a string produced by `CRYPTO_strdup`.
-unsafe fn dup_bool_err(
-    prompt_copy: *mut c_char,
-    action_desc_copy: *mut c_char,
-    ok_chars_copy: *mut c_char,
-    cancel_chars_copy: *mut c_char,
-) {
-    // SAFETY: each pointer is NULL or ours; `CRYPTO_free` ignores NULL.
-    unsafe {
-        CRYPTO_free(prompt_copy.cast::<c_void>(), FILE, LINE_DUP_BOOL_ERR);
-        CRYPTO_free(action_desc_copy.cast::<c_void>(), FILE, LINE_DUP_BOOL_ERR);
-        CRYPTO_free(ok_chars_copy.cast::<c_void>(), FILE, LINE_DUP_BOOL_ERR);
-        CRYPTO_free(cancel_chars_copy.cast::<c_void>(), FILE, LINE_DUP_BOOL_ERR);
+    // The add adopted the four copies; give up ownership of each.
+    if let Some(copy) = prompt_copy {
+        let _ = copy.into_raw();
     }
+    if let Some(copy) = action_desc_copy {
+        let _ = copy.into_raw();
+    }
+    if let Some(copy) = ok_chars_copy {
+        let _ = copy.into_raw();
+    }
+    if let Some(copy) = cancel_chars_copy {
+        let _ = copy.into_raw();
+    }
+    ret
 }
 
 /// `int UI_add_info_string(UI *ui, const char *text)` — `crypto/ui/ui_lib.c:315-319`.
@@ -956,21 +1046,30 @@ pub unsafe extern "C" fn UI_add_info_string(ui: *mut Ui, text: *const c_char) ->
 /// `ui` live; `text` readable.
 #[no_mangle]
 pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) -> c_int {
-    let mut text_copy: *mut c_char = ptr::null_mut();
-
-    if !text.is_null() {
-        // SAFETY: `text` is NUL-terminated per the contract.
-        text_copy = unsafe { CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT) };
-        if text_copy.is_null() {
-            return -1;
+    // The text copy, owned until `general_allocate_string` takes it over or the failed add's
+    // return releases it; a NULL text stays NULL, as in the authority.
+    let text_copy = if text.is_null() {
+        None
+    } else {
+        // SAFETY: `text` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(text, FILE, LINE_DUP_INFO_PROMPT);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_INFO_FREE)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
+    };
 
     // SAFETY: the caller's contract; `text_copy` is ours.
     let ret = unsafe {
         general_allocate_string(
             ui,
-            text_copy,
+            text_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_INFO,
             0,
@@ -980,10 +1079,13 @@ pub unsafe extern "C" fn UI_dup_info_string(ui: *mut Ui, text: *const c_char) ->
             ptr::null(),
         )
     };
-    if ret <= 0 {
-        // SAFETY: the failed add did not adopt `text_copy`.
-        unsafe { CRYPTO_free(text_copy.cast::<c_void>(), FILE, LINE_DUP_INFO_FREE) };
+    if ret > 0 {
+        // The add adopted `text_copy`; give up ownership.
+        if let Some(copy) = text_copy {
+            let _ = copy.into_raw();
+        }
     }
+    // On a failed add `text_copy` is released by its `Drop` as this call returns.
     ret
 }
 
@@ -1017,21 +1119,30 @@ pub unsafe extern "C" fn UI_add_error_string(ui: *mut Ui, text: *const c_char) -
 /// `ui` live; `text` readable.
 #[no_mangle]
 pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -> c_int {
-    let mut text_copy: *mut c_char = ptr::null_mut();
-
-    if !text.is_null() {
-        // SAFETY: `text` is NUL-terminated per the contract.
-        text_copy = unsafe { CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT) };
-        if text_copy.is_null() {
-            return -1;
+    // The text copy, owned until `general_allocate_string` takes it over or the failed add's
+    // return releases it; a NULL text stays NULL, as in the authority.
+    let text_copy = if text.is_null() {
+        None
+    } else {
+        // SAFETY: `text` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+        // adopts is freshly allocated on that seam, owned by this call, and released only by
+        // `OwnedStr`'s `Drop`.
+        match unsafe {
+            let copy = CRYPTO_strdup(text, FILE, LINE_DUP_ERROR_PROMPT);
+            OwnedStr::adopt(copy, FILE_SEAM, LINE_DUP_ERROR_FREE)
+        } {
+            Some(copy) => Some(copy),
+            None => return -1,
         }
-    }
+    };
 
     // SAFETY: the caller's contract; `text_copy` is ours.
     let ret = unsafe {
         general_allocate_string(
             ui,
-            text_copy,
+            text_copy
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr().cast_const()),
             1,
             UIT_ERROR,
             0,
@@ -1041,10 +1152,13 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
             ptr::null(),
         )
     };
-    if ret <= 0 {
-        // SAFETY: the failed add did not adopt `text_copy`.
-        unsafe { CRYPTO_free(text_copy.cast::<c_void>(), FILE, LINE_DUP_ERROR_FREE) };
+    if ret > 0 {
+        // The add adopted `text_copy`; give up ownership.
+        if let Some(copy) = text_copy {
+            let _ = copy.into_raw();
+        }
     }
+    // On a failed add `text_copy` is released by its `Drop` as this call returns.
     ret
 }
 
@@ -1055,6 +1169,11 @@ pub unsafe extern "C" fn UI_dup_error_string(ui: *mut Ui, text: *const c_char) -
 /// `"Enter <phrase_desc> for <object_name>:"` is built with `OPENSSL_malloc`,
 /// `OPENSSL_strlcpy` and `OPENSSL_strlcat`, and the caller owns it. A NULL `phrase_desc` answers
 /// NULL before anything is allocated.
+///
+/// The default prompt's `OPENSSL_malloc` is deliberately **not** an owned handle: the export
+/// answers the caller a `char *` the caller releases (`EVP_read_pw_string_min`'s path frees it
+/// after `UI_add_*_string`), so this is the ABI's own out-pointer and its release is the caller's,
+/// not this frame's.
 ///
 /// # Safety
 ///
@@ -1089,7 +1208,11 @@ pub unsafe extern "C" fn UI_construct_prompt(
     len += c":".to_bytes().len() as c_int;
 
     // SAFETY: `CRYPTO_malloc` validates its own allocation.
-    let prompt = CRYPTO_malloc((len + 1) as usize, FILE, LINE_CONSTRUCT_PROMPT).cast::<c_char>();
+    let prompt = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc((len + 1) as usize, FILE, LINE_CONSTRUCT_PROMPT)
+    }
+    .cast::<c_char>();
     if prompt.is_null() {
         return ptr::null_mut();
     }
@@ -1525,58 +1648,56 @@ pub unsafe extern "C" fn UI_set_method(ui: *mut Ui, meth: *const UiMethod) -> *c
 /// `name` must be a readable NUL-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod {
-    // SAFETY: `CRYPTO_zalloc` validates its own allocation.
-    let ui_method = CRYPTO_zalloc(
-        core::mem::size_of::<UiMethod>(),
-        FILE,
+    // The zeroed method block, allocated through the crate's allocator seam and owned until it is
+    // handed to the caller; the refusal path's release is the authority's own bare block free plus
+    // the name free, so the abandoned block uses a [`RawCtx`] and the name an [`OwnedStr`].
+    let Some(ui_method) = RawCtx::<UiMethod>::zalloc_at(
+        FILE_SEAM,
         LINE_CREATE_METHOD_ZALLOC,
-    )
-    .cast::<UiMethod>();
-
-    // SAFETY: `ui_method` is NULL or ours; `name` is NUL-terminated per the contract.
-    let name_copy = if ui_method.is_null() {
-        ptr::null_mut()
-    } else {
-        // SAFETY: `name` is NUL-terminated per the contract.
-        unsafe { CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP) }
+        FILE_SEAM,
+        LINE_CREATE_METHOD_FREE,
+    ) else {
+        return ptr::null_mut();
     };
 
-    // SAFETY: `ui_method` is ours when non-NULL; the field assignment is ours to make.
-    let ex_ok = if !ui_method.is_null() && !name_copy.is_null() {
-        // SAFETY: `ui_method` is ours and `name_copy` is the dup just made.
+    // SAFETY: `name` is NUL-terminated per the contract, and the `CRYPTO_strdup` block this
+    // adopts is freshly allocated on that seam, owned by this call, and released only by
+    // `OwnedStr`'s `Drop`.
+    let name_copy = unsafe {
+        let copy = CRYPTO_strdup(name, FILE, LINE_CREATE_METHOD_DUP);
+        OwnedStr::adopt(copy, FILE_SEAM, LINE_CREATE_METHOD_FREE_NAME)
+    };
+
+    let ex_ok = if let Some(copy) = name_copy.as_ref() {
+        // SAFETY: `ui_method` is ours and `copy` is the dup just made; the field assignment is ours
+        // to make.
         unsafe {
-            (*ui_method).name = name_copy;
+            (*ui_method.as_ptr()).name = copy.as_ptr();
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_UI_METHOD,
-                ui_method.cast::<c_void>(),
-                ptr::addr_of_mut!((*ui_method).ex_data),
+                ui_method.as_ptr().cast::<c_void>(),
+                ptr::addr_of_mut!((*ui_method.as_ptr()).ex_data),
             ) != 0
         }
     } else {
         false
     };
 
-    if ui_method.is_null() || name_copy.is_null() || !ex_ok {
-        if !ui_method.is_null() {
-            // SAFETY: `ui_method` is ours; `name` is non-NULL exactly on the `ex_data` failure.
-            if !unsafe { (*ui_method).name }.is_null() {
-                // SAFETY: the site is a compile-time constant.
-                unsafe { raise_site(&err_sites::UI_LIB_617) };
-            }
-            // SAFETY: the name is ours and was allocated by `CRYPTO_strdup`.
-            unsafe {
-                CRYPTO_free(
-                    (*ui_method).name.cast::<c_void>(),
-                    FILE,
-                    LINE_CREATE_METHOD_FREE_NAME,
-                )
-            };
+    if name_copy.is_none() || !ex_ok {
+        if name_copy.is_some() {
+            // The name was allocated but `CRYPTO_new_ex_data` failed -- the authority's `err:` on
+            // the `ex_data` failure, the only refusal that raises; its `name` free is `name_copy`'s
+            // `Drop` and its block free is `ui_method`'s.
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_site(&err_sites::UI_LIB_617) };
         }
-        // SAFETY: `ui_method` is NULL or ours.
-        unsafe { CRYPTO_free(ui_method.cast::<c_void>(), FILE, LINE_CREATE_METHOD_FREE) };
         return ptr::null_mut();
     }
-    ui_method
+    // The name's ownership moves into the method object's field.
+    if let Some(copy) = name_copy {
+        let _ = copy.into_raw();
+    }
+    ui_method.into_raw()
 }
 
 /// `void UI_destroy_method(UI_METHOD *ui_method)` — `crypto/ui/ui_lib.c:631-640`.
@@ -1589,29 +1710,15 @@ pub unsafe extern "C" fn UI_create_method(name: *const c_char) -> *mut UiMethod 
 /// `ui_method` is NULL or a heap object from `UI_create_method`.
 #[no_mangle]
 pub unsafe extern "C" fn UI_destroy_method(ui_method: *mut UiMethod) {
-    if ui_method.is_null() {
-        return;
-    }
-    // SAFETY: `ui_method` is ours and `ex_data` is its own.
+    // SAFETY: `ui_method` is NULL or a live object; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own `UI_destroy_method` body plus the block release.
     unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_UI_METHOD,
-            ui_method.cast::<c_void>(),
-            ptr::addr_of_mut!((*ui_method).ex_data),
-        )
+        drop(OwnedCtx::<UiMethod>::from_raw_at(
+            ui_method,
+            FILE_SEAM,
+            LINE_DESTROY_METHOD,
+        ))
     };
-    // SAFETY: the name was allocated by `CRYPTO_strdup` (or is NULL).
-    unsafe {
-        CRYPTO_free(
-            (*ui_method).name.cast::<c_void>(),
-            FILE,
-            LINE_DESTROY_METHOD_NAME,
-        )
-    };
-    // SAFETY: `ui_method` is ours.
-    unsafe { (*ui_method).name = ptr::null_mut() };
-    // SAFETY: `ui_method` is the heap object.
-    unsafe { CRYPTO_free(ui_method.cast::<c_void>(), FILE, LINE_DESTROY_METHOD) };
 }
 
 /// `int UI_method_set_opener(UI_METHOD *method, int (*opener)(UI *ui))` —
@@ -2370,3 +2477,7 @@ mod tests {
         unsafe { UI_free(ui) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(UiString => zero_state_sweep_ui_string, Ui => zero_state_sweep_ui, UiMethod => zero_state_sweep_ui_method);

@@ -37,14 +37,14 @@ static RSA_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 static DUMMY_NID: c_int = 1;
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn rsa_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn rsa_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(RSA_TABLE) as *mut *mut OpenSslLhash
 }
 
 /// `void ENGINE_unregister_RSA(ENGINE *e)` — `crypto/engine/tb_rsa.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_RSA(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -60,7 +60,7 @@ unsafe extern "C" fn engine_unregister_all_rsa() {
 /// `int ENGINE_register_RSA(ENGINE *e)` — `:28-35`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_RSA(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -95,7 +95,7 @@ pub extern "C" fn ENGINE_register_all_RSA() {
 /// `int ENGINE_set_default_RSA(ENGINE *e)` — `:45-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_RSA(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -125,7 +125,7 @@ pub extern "C" fn ENGINE_get_default_RSA() -> *mut Engine {
 /// `const RSA_METHOD *ENGINE_get_RSA(const ENGINE *e)` — `:66-69`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_RSA(e: *const Engine) -> *const c_void {
     // SAFETY: `e` is the caller's engine.
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn ENGINE_get_RSA(e: *const Engine) -> *const c_void {
 /// `int ENGINE_set_RSA(ENGINE *e, const RSA_METHOD *rsa_meth)` — `:72-76`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_RSA(e: *mut Engine, rsa_meth: *const c_void) -> c_int {
     // SAFETY: `e` is the caller's engine.

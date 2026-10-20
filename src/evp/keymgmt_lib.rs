@@ -122,6 +122,85 @@ pub(crate) struct OpCacheElem {
     pub(crate) selection: c_int,
 }
 
+/// An owned `OP_CACHE_ELEM` record allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_malloc(sizeof(*p), FILE, 268)`. On the successful path it is handed to
+/// the operation-cache stack through [`Self::into_raw`], where `op_cache_free` is its single
+/// release; when `evp_keymgmt_util_cache_keydata` fails before the push, the handle's `Drop`
+/// releases the block at the authority's own failure site. Only the *ownership* is this type -- a
+/// Rust `Box` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook.
+struct OwnedCacheElem {
+    ptr: *mut OpCacheElem,
+    /// The authority's `OPENSSL_free` site for this block.
+    line: c_int,
+}
+
+impl OwnedCacheElem {
+    /// `CRYPTO_malloc(sizeof(OP_CACHE_ELEM), FILE, LINE_MALLOC_CACHE_ELEM)`, released on `Drop` at
+    /// `free_line`, or `None` when the allocator answers NULL.
+    fn new(free_line: c_int) -> Option<OwnedCacheElem> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<OpCacheElem>()` bytes, which is exactly the context's layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<OpCacheElem>(),
+                FILE,
+                LINE_MALLOC_CACHE_ELEM,
+            )
+        }
+        .cast::<OpCacheElem>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedCacheElem {
+                ptr: raw,
+                line: free_line,
+            })
+        }
+    }
+
+    /// Reclaim a block the stack hands back to `op_cache_free`, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live element this file allocated and `Drop` has not released; it is NULL
+    /// or a block from the crate's `CRYPTO_malloc` seam that no other owner will release.
+    unsafe fn from_raw(ptr: *mut OpCacheElem, line: c_int) -> Option<OwnedCacheElem> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedCacheElem { ptr, line })
+        }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut OpCacheElem {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's own failure site for the path that reaches it.
+    fn set_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up ownership of the block to the operation-cache stack.
+    fn into_raw(self) -> *mut OpCacheElem {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedCacheElem {
+    /// The block's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, self.line) };
+    }
+}
+
 /// `struct evp_keymgmt_util_try_import_data_st` — the callback's argument.
 ///
 /// `keydata` is `NULL` on entry when the destination has nothing yet, and the callback allocates on
@@ -278,10 +357,12 @@ pub(crate) unsafe fn evp_keymgmt_util_make_pkey(
 /// `int evp_keymgmt_util_export(const EVP_PKEY *pk, int selection, OSSL_CALLBACK *export_cb,
 /// void *export_cbarg)`.
 ///
-/// Two NULL guards, then a delegation to the origin's own exporter. It reads `pk->keymgmt` and
-/// `pk->keydata` with no test on either, so a **typed but unassigned** provider key — `keymgmt`
-/// non-NULL, `keydata` NULL — reaches `evp_keymgmt_export` with a NULL keydata, which the provider
-/// sees. `evp_pkey_export_to_provider` guards that case before calling here; nothing else does.
+/// Three NULL guards, then a delegation to the origin's own exporter. A **typed but unassigned**
+/// provider key — `keymgmt` non-NULL, `keydata` NULL — reaches `evp_keymgmt_export` with a NULL
+/// keydata, which the provider sees. An **unassigned** key (including a fresh `EVP_PKEY_new()`) is
+/// refused before the callback: the authority tests only `pk` and `export_cb` and then dereferences
+/// `pk->keymgmt`, so that input is a NULL dereference in the C authority. Refusing it is the §17
+/// deliberate divergence — a C-valid untyped key must not produce UB.
 ///
 /// # Safety
 /// `pk` NULL or live; `export_cb` NULL or a valid callback.
@@ -296,6 +377,9 @@ pub(crate) unsafe fn evp_keymgmt_util_export(
     }
     // SAFETY: `pk` is live per the contract.
     let (keymgmt, keydata) = unsafe { ((*pk).keymgmt, (*pk).keydata) };
+    if keymgmt.is_null() {
+        return 0;
+    }
     // SAFETY: `keymgmt` is live and `export_cb` is valid.
     unsafe { evp_keymgmt_export(keymgmt, keydata, selection, export_cb, export_cbarg) }
 }
@@ -327,7 +411,10 @@ pub(crate) unsafe fn evp_keymgmt_util_export(
 /// own. It is the only exit that returns a pointer this call did not produce.
 ///
 /// # Safety
-/// `pk` NULL or live; `keymgmt` NULL or live.
+/// `pk` must be live — the authority dereferences it before any NULL test, so a NULL `pk` is a C
+/// caller's ABI violation rather than an accepted input; `keymgmt` NULL or live. When
+/// `pk->keydata` is non-NULL, `pk->keymgmt` is a live method for it (the assign/copy boundary
+/// establishes that pair).
 pub(crate) unsafe fn evp_keymgmt_util_export_to_provider(
     pk: *mut EvpPkey,
     keymgmt: *mut EvpKeyMgmt,
@@ -470,8 +557,10 @@ unsafe extern "C" fn op_cache_free(e: *mut c_void) {
     unsafe { evp_keymgmt_freedata(keymgmt, keydata) };
     // SAFETY: `keymgmt` is live and the cache holds one reference to it.
     unsafe { EVP_KEYMGMT_free(keymgmt) };
-    // SAFETY: `elem` was allocated with `CRYPTO_malloc`.
-    unsafe { CRYPTO_free(e, FILE, LINE_FREE_CACHE_ELEM) };
+    // Adopt the element the stack owns and release its block through the handle; `op_cache_free` is
+    // the stack's own free function, so the element is not released anywhere else.
+    // SAFETY: `e` is an element of the cache per the contract and no other owner releases it.
+    drop(unsafe { OwnedCacheElem::from_raw(elem, LINE_FREE_CACHE_ELEM) });
 }
 
 /// `int evp_keymgmt_util_clear_operation_cache(EVP_PKEY *pk)`.
@@ -568,38 +657,34 @@ pub(crate) unsafe fn evp_keymgmt_util_cache_keydata(
             unsafe { (*pk).operation_cache = stack };
         }
 
-        // SAFETY: this allocates a fresh object and reads nothing.
-        let p = CRYPTO_malloc(
-            core::mem::size_of::<OpCacheElem>(),
-            FILE,
-            LINE_MALLOC_CACHE_ELEM,
-        )
-        .cast::<OpCacheElem>();
-        if p.is_null() {
+        // SAFETY: this allocates a fresh object and reads nothing. The element's handle releases
+        // it at the authority's `up_ref`-failure site until it is re-pointed below.
+        let Some(mut p) = OwnedCacheElem::new(LINE_FREE_CACHE_ELEM_FAILED_UPREF) else {
             return 0;
-        }
+        };
         // SAFETY: `p` is this call's own allocation.
         unsafe {
-            (*p).keydata = keydata;
-            (*p).keymgmt = keymgmt;
-            (*p).selection = selection;
+            (*p.as_ptr()).keydata = keydata;
+            (*p.as_ptr()).keymgmt = keymgmt;
+            (*p.as_ptr()).selection = selection;
         }
 
         // SAFETY: `keymgmt` is live.
         if unsafe { EVP_KEYMGMT_up_ref(keymgmt) } == 0 {
-            // SAFETY: `p` is this call's own allocation.
-            unsafe { CRYPTO_free(p.cast(), FILE, LINE_FREE_CACHE_ELEM_FAILED_UPREF) };
+            // `p`'s `Drop` releases the element at the authority's `up_ref`-failure site.
             return 0;
         }
+        p.set_line(LINE_FREE_CACHE_ELEM_FAILED_PUSH);
 
         // SAFETY: `pk` is live and its cache stack was created above or already existed.
-        if unsafe { OPENSSL_sk_push((*pk).operation_cache, p.cast::<c_void>()) } == 0 {
+        if unsafe { OPENSSL_sk_push((*pk).operation_cache, p.as_ptr().cast::<c_void>()) } == 0 {
             // SAFETY: `keymgmt` is live and the push did not take the entry's reference.
             unsafe { EVP_KEYMGMT_free(keymgmt) };
-            // SAFETY: `p` is this call's own allocation.
-            unsafe { CRYPTO_free(p.cast(), FILE, LINE_FREE_CACHE_ELEM_FAILED_PUSH) };
+            // `p`'s `Drop` releases the element at the authority's push-failure site.
             return 0;
         }
+        // The stack now owns the element; give up the handle's ownership.
+        let _ = p.into_raw();
     }
     1
 }
@@ -1128,6 +1213,33 @@ mod tests {
             );
             crate::evp::pkey::EVP_PKEY_free(pkey);
         }
+    }
+
+    /// Exporting an **unassigned** key is refused before the exporter is reached. The authority
+    /// dereferences `pk->keymgmt` without a NULL test here, so a fresh `EVP_PKEY_new()` — a
+    /// documented, reachable input to `EVP_PKEY_export`/`EVP_PKEY_todata` — is UB there; this is
+    /// the §17 divergence that keeps it a refusal.
+    #[test]
+    fn exporting_an_unassigned_key_is_refused_before_the_method_dereference() {
+        unsafe extern "C" fn never_called(_: *const OsslParam, _: *mut c_void) -> c_int {
+            1
+        }
+
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        // SAFETY: `pkey` is this test's own object; its `keymgmt` is NULL, which the repair refuses.
+        let answer = unsafe {
+            evp_keymgmt_util_export(
+                pkey,
+                crate::evp::pkey::OSSL_KEYMGMT_SELECT_ALL,
+                Some(never_called),
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(answer, 0, "an untyped key has no method to export through");
+        // SAFETY: `pkey` is this test's own object.
+        unsafe { crate::evp::pkey::EVP_PKEY_free(pkey) };
     }
 
     /// `evp_keymgmt_util_clear_operation_cache` answers **1** for a NULL key and for a key with no

@@ -76,6 +76,7 @@ use crate::evp::encode::{
     EvpEncodeCtx,
 };
 use crate::runtime::bio::method::{bread_conv, bwrite_conv};
+use crate::runtime::bio::owned::CtxDestroy;
 use crate::runtime::bio::{
     BIO_callback_ctrl, BIO_clear_flags, BIO_copy_next_retry, BIO_ctrl, BIO_get_callback,
     BIO_get_callback_ex, BIO_get_data, BIO_get_init, BIO_read, BIO_set_data, BIO_set_init,
@@ -91,6 +92,7 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `bio.h`'s `BIO_get_flags(b)` — `#define BIO_get_flags(b) ((b)->flags)`.
 ///
@@ -147,9 +149,126 @@ const fn evp_encode_length(l: usize) -> usize {
 }
 
 /// `OPENSSL_FILE` at the allocation and free sites below, per authority unit.
-const FILE_B64: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c".as_ptr();
+const FILE_B64_C: &CStr = c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c";
+const FILE_B64: *const c_char = FILE_B64_C.as_ptr();
 /// `crypto/evp/bio_enc.c`.
-const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c".as_ptr();
+const FILE_ENC_C: &CStr = c"../../src/openssl-3.6.4/crypto/evp/bio_enc.c";
+const FILE_ENC: *const c_char = FILE_ENC_C.as_ptr();
+const FILE_B64_SEAM: SeamFile = SeamFile::new(FILE_B64_C);
+const FILE_ENC_SEAM: SeamFile = SeamFile::new(FILE_ENC_C);
+
+/// An owned BIO context block (`BioB64Ctx`/`BioEncCtx`).
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc`
+/// size/`file`/`line`, and stays the `BIO_get_data` value the dispatch exposes; its *ownership* is
+/// this type. `Drop` runs the authority's own destructor body ([`CtxDestroy::destroy_body`]) and then
+/// releases the block at the site recorded on the handle. That site is an instance property rather
+/// than a per-type constant because the authority's `*_new` error path and `*_free` destructor record
+/// the *same* allocation at different lines (`bio_b64.c:77` vs `:99`, `bio_enc.c:73` vs `:97`), and
+/// only the encoder's destructor cleanses the block (`OPENSSL_clear_free`).
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+    cleansed: bool,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// `CRYPTO_zalloc(sizeof(T), file, alloc_line)`, or `None` when the allocator answers NULL. The
+    /// handle's later `Drop` releases the block at `release_line` -- the `*_new` error path.
+    fn zalloc(file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<OwnedCtx<T>> {
+        let file = file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line: release_line,
+            cleansed: false,
+        })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the `BIO_get_data` slot that takes it over.
+    fn finish(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block the BIO dispatch hands back, for release by `Drop` at `(file, line)`, cleansing
+    /// it first when `cleansed`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live context this file allocated that `Drop` has not released.
+    unsafe fn reclaim(
+        ptr: *mut T,
+        file: *const c_char,
+        line: c_int,
+        cleansed: bool,
+    ) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx {
+            ptr,
+            file,
+            line,
+            cleansed,
+        })
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's own free body, then its single block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc`/`reclaim` took and this is its single release;
+        // `Drop` runs once and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            if self.cleansed {
+                CRYPTO_clear_free(
+                    self.ptr.as_ptr().cast::<c_void>(),
+                    core::mem::size_of::<T>(),
+                    self.file,
+                    self.line,
+                );
+            } else {
+                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            }
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the `b64_new`/`b64_free` release minus the block -- the base64
+// context, NULL only on the `b64_new` error path where `EVP_ENCODE_CTX_free(NULL)` is the
+// authority's own no-op, never the enclosing block. (b) holds: an all-zero context has a NULL base64
+// context, so the body is the authority's own all-empty teardown -- what the safe `OwnedCtx::zalloc`
+// leans on.
+unsafe impl CtxDestroy for BioB64Ctx {
+    unsafe fn destroy_body(ptr: *mut BioB64Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract; the base64 context is NULL only on
+        // the `b64_new` error path, where `EVP_ENCODE_CTX_free(NULL)` is the authority's own no-op.
+        unsafe { EVP_ENCODE_CTX_free((*ptr).base64) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the `enc_new`/`enc_free` release minus the block -- the
+// cipher context, NULL only on the `enc_new` error path where `EVP_CIPHER_CTX_free(NULL)` is the
+// authority's own no-op, never the enclosing block. (b) holds: an all-zero context has a NULL cipher
+// context, so the body is the authority's own all-empty teardown -- what the safe `OwnedCtx::zalloc`
+// leans on.
+unsafe impl CtxDestroy for BioEncCtx {
+    unsafe fn destroy_body(ptr: *mut BioEncCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; the cipher context is NULL only on
+        // the `enc_new` error path, where `EVP_CIPHER_CTX_free(NULL)` is the authority's own no-op.
+        unsafe { EVP_CIPHER_CTX_free((*ptr).cipher) };
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // `crypto/evp/bio_b64.c` — `BIO_f_base64`
@@ -238,20 +357,21 @@ unsafe fn b64_ctx(bi: *mut Bio) -> *mut BioB64Ctx {
 /// # Safety
 /// `bi` must be the live BIO `BIO_new` is creating.
 unsafe extern "C" fn b64_new(bi: *mut Bio) -> c_int {
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<BioB64Ctx>(), FILE_B64, 70).cast::<BioB64Ctx>();
-    if ctx.is_null() {
+    let Some(ctx) = OwnedCtx::<BioB64Ctx>::zalloc(FILE_B64_SEAM, 70, 77) else {
         return 0;
-    }
-    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    };
+    let p = ctx.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns.
     unsafe {
-        (*ctx).cont = 1;
-        (*ctx).start = 1;
-        (*ctx).base64 = EVP_ENCODE_CTX_new();
-        if (*ctx).base64.is_null() {
-            CRYPTO_free(ctx.cast(), FILE_B64, 77);
+        (*p).cont = 1;
+        (*p).start = 1;
+        (*p).base64 = EVP_ENCODE_CTX_new();
+        if (*p).base64.is_null() {
+            // `ctx`'s `Drop` runs the authority's own error-path release: the block alone, at
+            // `bio_b64.c:77`.
             return 0;
         }
-        BIO_set_data(bi, ctx.cast());
+        BIO_set_data(bi, ctx.finish().cast());
         BIO_set_init(bi, 1);
     }
     1
@@ -271,10 +391,12 @@ unsafe extern "C" fn b64_free(a: *mut Bio) -> c_int {
     if ctx.is_null() {
         return 0;
     }
+    // `ctx`'s `Drop` runs the authority's own destructor (releasing `base64`) and the block release
+    // at `bio_b64.c:99`.
     // SAFETY: `ctx` is this BIO's own context.
+    drop(unsafe { OwnedCtx::<BioB64Ctx>::reclaim(ctx, FILE_B64, 99, false) });
+    // SAFETY: `a` is live.
     unsafe {
-        EVP_ENCODE_CTX_free((*ctx).base64);
-        CRYPTO_free(ctx.cast(), FILE_B64, 99);
         BIO_set_data(a, ptr::null_mut());
         BIO_set_init(a, 0);
     }
@@ -1170,22 +1292,23 @@ unsafe fn enc_ctx(b: *mut Bio) -> *mut BioEncCtx {
 /// # Safety
 /// `bi` must be the live BIO `BIO_new` is creating.
 unsafe extern "C" fn enc_new(bi: *mut Bio) -> c_int {
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<BioEncCtx>(), FILE_ENC, 68).cast::<BioEncCtx>();
-    if ctx.is_null() {
+    let Some(ctx) = OwnedCtx::<BioEncCtx>::zalloc(FILE_ENC_SEAM, 68, 73) else {
         return 0;
-    }
-    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    };
+    let p = ctx.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns.
     unsafe {
-        (*ctx).cipher = EVP_CIPHER_CTX_new();
-        if (*ctx).cipher.is_null() {
-            CRYPTO_free(ctx.cast(), FILE_ENC, 73);
+        (*p).cipher = EVP_CIPHER_CTX_new();
+        if (*p).cipher.is_null() {
+            // `ctx`'s `Drop` runs the authority's own error-path release: the block alone, at
+            // `bio_enc.c:73`.
             return 0;
         }
-        (*ctx).cont = 1;
-        (*ctx).ok = 1;
-        (*ctx).read_start = BUF_OFFSET;
-        (*ctx).read_end = BUF_OFFSET;
-        BIO_set_data(bi, ctx.cast());
+        (*p).cont = 1;
+        (*p).ok = 1;
+        (*p).read_start = BUF_OFFSET;
+        (*p).read_end = BUF_OFFSET;
+        BIO_set_data(bi, ctx.finish().cast());
         BIO_set_init(bi, 1);
     }
     1
@@ -1205,10 +1328,12 @@ unsafe extern "C" fn enc_free(a: *mut Bio) -> c_int {
     if b.is_null() {
         return 0;
     }
+    // `b`'s `Drop` runs the authority's own destructor (releasing `cipher`) and the bespoke
+    // cleansing `OPENSSL_clear_free` at `bio_enc.c:97`.
     // SAFETY: `b` is this BIO's own context.
+    drop(unsafe { OwnedCtx::<BioEncCtx>::reclaim(b, FILE_ENC, 97, true) });
+    // SAFETY: `a` is live.
     unsafe {
-        EVP_CIPHER_CTX_free((*b).cipher);
-        CRYPTO_clear_free(b.cast(), core::mem::size_of::<BioEncCtx>(), FILE_ENC, 97);
         BIO_set_data(a, ptr::null_mut());
         BIO_set_init(a, 0);
     }
@@ -2263,3 +2388,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioB64Ctx => zero_state_sweep_bio_b64_ctx, BioEncCtx => zero_state_sweep_bio_enc_ctx);

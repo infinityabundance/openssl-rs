@@ -26,7 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
 
 use crate::bn::arith::{BN_add, BN_cmp, BN_mod_add, BN_mod_mul, BN_sub};
@@ -51,11 +51,13 @@ use crate::evp::digest::{
     EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name, EVP_MD_get_size, EvpMd, EvpMdCtx,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `sm2_sign.c` is a source-tree file, so the compiler records the
 /// admitted build record's prefix.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c");
 
 /// `UINT16_MAX` — `include/internal/numbers.h`'s `0xffff`. The guard is `id_len >= UINT16_MAX / 8`,
 /// the largest user ID whose `ENTL = 8 * id_len` still fits a `uint16_t`.
@@ -93,7 +95,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
     let mut rc: c_int = 0;
     let mut ctx: *mut BnCtx = ptr::null_mut();
     let mut hash: *mut EvpMdCtx = ptr::null_mut();
-    let mut buf: *mut u8 = ptr::null_mut();
+    let mut buf: Option<OwnedBuf> = None;
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe {
@@ -162,10 +164,11 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             }
 
             let p_bytes = bn_num_bytes(p);
-            buf = CRYPTO_zalloc(p_bytes as usize, FILE, 114).cast::<u8>();
-            if buf.is_null() {
+            buf = OwnedBuf::new_zeroed(p_bytes as usize, FILE_SEAM, 114);
+            let Some(buf) = buf.as_ref() else {
                 break 'done;
-            }
+            };
+            let buf = buf.as_ptr();
 
             if BN_bn2binpad(a, buf, p_bytes) < 0
                 || EVP_DigestUpdate(hash, buf.cast::<c_void>(), p_bytes as usize) == 0
@@ -196,7 +199,7 @@ pub(crate) unsafe fn ossl_sm2_compute_z_digest(
             rc = 1;
         }
 
-        CRYPTO_free(buf.cast(), FILE, 144);
+        drop(buf);
         if !ctx.is_null() {
             BN_CTX_end(ctx);
         }
@@ -221,7 +224,7 @@ unsafe fn sm2_compute_msg_hash(
     msg_len: usize,
 ) -> *mut BigNum {
     let mut e: *mut BigNum = ptr::null_mut();
-    let mut z: *mut u8 = ptr::null_mut();
+    let mut z: Option<OwnedBuf> = None;
     let mut fetched_digest: *mut EvpMd = ptr::null_mut();
 
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
@@ -241,10 +244,11 @@ unsafe fn sm2_compute_msg_hash(
                 break 'done;
             }
 
-            z = CRYPTO_zalloc(md_size as usize, FILE, 174).cast::<u8>();
-            if z.is_null() {
+            z = OwnedBuf::new_zeroed(md_size as usize, FILE_SEAM, 174);
+            let Some(z) = z.as_ref() else {
                 break 'done;
-            }
+            };
+            let z = z.as_ptr();
 
             fetched_digest = EVP_MD_fetch(libctx, EVP_MD_get0_name(digest), propq);
             if fetched_digest.is_null() {
@@ -274,7 +278,7 @@ unsafe fn sm2_compute_msg_hash(
         }
 
         EVP_MD_free(fetched_digest);
-        CRYPTO_free(z.cast(), FILE, 204);
+        drop(z);
         EVP_MD_CTX_free(hash);
     }
     e
@@ -663,7 +667,14 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
             }
             /* Ensure signature uses DER and doesn't have trailing garbage */
             let derlen = i2d_ECDSA_SIG(s, ptr::addr_of_mut!(der));
-            if derlen != sig_len
+            // `i2d` answers a negative length when its own allocation fails. A negative (or
+            // zero, which no valid DER sequence has) length must never reach `from_raw_parts`,
+            // whose length argument is unsigned; the authority's `memcmp` would only see that
+            // arm when `sig_len` is negative too, which `d2i` has already refused. The explicit
+            // test keeps the pathological arm out of the safe slice and keeps the failure at the
+            // authority's own encoding error site.
+            if derlen <= 0
+                || derlen != sig_len
                 || core::slice::from_raw_parts(sig, derlen as usize)
                     != core::slice::from_raw_parts(der, derlen as usize)
             {
@@ -680,7 +691,8 @@ pub(crate) unsafe fn ossl_sm2_internal_verify(
             ret = sm2_sig_verify(eckey, s, e);
         }
 
-        CRYPTO_free(der.cast(), FILE, 539);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(der, FILE_SEAM, 539));
         BN_free(e);
         ECDSA_SIG_free(s);
     }

@@ -1,0 +1,196 @@
+{
+  "source_head": "124a35b50",
+  "worktree": true,
+  "scope": "mechanism-contract sweep over attribution ranks 118-127 (unattributed-site ranking). Eight ordinary files audited: src/evp/fetch.rs (118), src/ssl/tls13_enc.rs (119), src/ts/ts_rsp_utils.rs (120), src/evp/p_legacy.rs (121), src/cms/cms_ess.rs (122), src/evp/pmeth_gn.rs (125), src/provider/rsa_sig.rs (126), src/ssl/ssl_cert.rs (127). src/x509/x509_vpm.rs (121) was skipped because B1 already boundary-audited it. src/rsa/mod.rs (123) and src/provider/mod.rs (124) were not reached under the eight-file cap; provider/mod.rs joins the BOUNDARY queue for its provider lifecycle/refcount edge.",
+  "verification_level": "FAST plus BATCH; one STOP-class off-by-one/null read repaired, four length-boundary repairs, one failure-path leak, two checked-arithmetic hardenings; no open STOP",
+  "files": [
+    "src/evp/fetch.rs",
+    "src/ssl/tls13_enc.rs",
+    "src/ts/ts_rsp_utils.rs",
+    "src/evp/p_legacy.rs",
+    "src/cms/cms_ess.rs",
+    "src/evp/pmeth_gn.rs",
+    "src/provider/rsa_sig.rs",
+    "src/ssl/ssl_cert.rs"
+  ],
+  "files_not_run": [
+    "src/x509/x509_vpm.rs",
+    "src/rsa/mod.rs",
+    "src/provider/mod.rs"
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1600 passed / 0 failed / 27 ignored; --test-threads=1; 212.44 s)",
+    "lib_test_threads_4": "PASS (1600 passed / 0 failed / 27 ignored; 87.21 s; no secure-heap isolation failure)",
+    "focused_tests": "PASS (evp::fetch 5/0; ssl::tls13_enc 2/0 plus the new HKDF label control and the pre-existing tls13 bounds tests 2/0 + 1 ignored; evp::p_legacy 4/0 including the new negative-length control; evp::pmeth_gn 1/0 new keygen-info control; ssl::ssl_cert 3/0 via ssl_cert_comp; cms::cms_ess and provider::rsa_sig have no in-module tests)",
+    "affected_adversarial_probes": "NOT_RUN (no probe in scripts/adv-probe.sh covers the changed units; the cms_ess receipt-verify leak needs a crafted CMS fixture and the rsa_sig int-truncation controls need >2 GiB inputs)"
+  },
+  "contracts_reused": [
+    "OB-1 OwnedBuf plain construction/adoption (fetch property rendering, cms_ess ReceiptRequest DER)",
+    "OB-3 OwnedCtx/CtxDestroy shape for the module-local OwnedRsaCtx (CRYPTO_zalloc -> member releases -> CRYPTO_clear_free at authority coordinates)",
+    "C-ABI exported-symbol signatures, out-parameter writability and NULL-tolerant destructor contracts (fetch, ts_rsp_utils, p_legacy, cms_ess, ssl_cert)",
+    "Provider dispatch contracts for signature/keygen callbacks (OsslMethodConstructMethod, OSSL_FUNC_signature_*, OSSL_FUNC_keymgmt_gen_*)",
+    "SSL stack ownership contract: set0 adopts, add0 borrows, add1 takes a reference, get1 duplicates (ssl_cert chain/CA lists)",
+    "ASN.1 item/template ownership (ASN1_item_new/free/unpack, ASN1_STRING_set0 adoption) and the authority err-label cleanup shape"
+  ],
+  "defects": [
+    {
+      "id": "M13-D1",
+      "file": "src/evp/pmeth_gn.rs",
+      "lines_post_fix": "551-561",
+      "severity": "high",
+      "class": "off-by-one stack read / NULL dereference reproduced from the authority",
+      "description": "EVP_PKEY_CTX_get_keygen_info accepted idx == keygen_info_count as in range, while EVP_PKEY_generate attaches a two-element stack array and sets count = 2: idx 2 read one int past the array. Before any generation the same comparison admitted idx 0 with keygen_info == NULL, dereferencing NULL. Both are reachable from a C caller (and from an application keygen callback) as C-valid calls; the authority has the same defect.",
+      "fix": "The guard is idx >= count and answers 0. Valid indices 0..count are unchanged; only the out-of-range index, previously Undefined Behaviour, now returns 0.",
+      "witness": "evp::pmeth_gn::tests::keygen_info_refuses_the_index_it_does_not_have pins the attached two-slot array (index 2 -> 0) and the unattached context (index 0 -> 0)."
+    },
+    {
+      "id": "M13-D2",
+      "file": "src/ssl/tls13_enc.rs",
+      "lines_post_fix": "176-190, 258-272",
+      "severity": "medium",
+      "class": "unstated length precondition -> stack-buffer overflow / silent length truncation",
+      "description": "hkdf_expand_label copies context_len bytes into a 512-byte HkdfLabel buffer after writing context_len as a single byte, and hkdf_expand builds T(i-1) | info | i in a 512-byte scratch block. Neither function's contract bounded context_len, label length or info_len, so a caller passing a context above 255 produced a truncated label length plus an out-of-bounds copy, and an info above the scratch capacity overflowed it. All current TLS callers pass a transcript hash or an 8-byte ticket nonce, so the paths were latent rather than reachable from the wire.",
+      "fix": "hkdf_expand_label refuses out_len > u16::MAX, full label > u8::MAX and context_len > u8::MAX before writing; hkdf_expand refuses a hash size above EVP_MAX_MD_SIZE and any info_len + hash_len + 1 above 512. Valid schedule inputs are unchanged.",
+      "witness": "ssl::tls13_enc::tests::hkdf_expand_label_refuses_a_context_that_does_not_fit_its_length_byte (256-byte context -> 0; 32-byte SHA-256 transcript -> 1 with non-zero output)."
+    },
+    {
+      "id": "M13-D3",
+      "file": "src/ssl/tls13_enc.rs",
+      "lines_post_fix": "1298-1315, 1410-1418, 541-552, 1511-1514",
+      "severity": "medium",
+      "class": "unchecked record/inner extent and nonce precondition",
+      "description": "tls13_encrypt_record copied len bytes into a TLS13_HS_BUF_LEN + 1 inner buffer and wrote len + 1 + tag_len into a two-byte record-length field without checking either bound; tls13_decrypt_record and the sealer called make_nonce with iv_len without requiring 8..=16, where make_nonce indexes iv_len - 8. transcript_update computed hs_buf_len + len and write_handshake_message computed 4 + body_len in usize, both unchecked. The record layer currently fragments at 16384 and fetches a 12-byte IV, so the valid path was unaffected.",
+      "fix": "checked_add guards refuse inner_len > TLS13_HS_BUF_LEN + 1 and rec_len > u16::MAX; both record paths refuse iv_len outside 8..=16; transcript_update and write_handshake_message use checked_add. Valid TLS 1.3 records produce identical bytes.",
+      "witness": "The pre-existing oversized-TLS1.3-flight test and the full SSL suite pass; no direct record-sealer control was added because the guard is an extent refusal above the record-layer maximum."
+    },
+    {
+      "id": "M13-D4",
+      "file": "src/cms/cms_ess.rs",
+      "lines_post_fix": "632-786",
+      "severity": "medium",
+      "class": "failure-path release (decoded receipt leaked on nine exits)",
+      "description": "ossl_cms_Receipt_verify returns early on a missing msgSigDigest, digest mismatch, wrong length, content-type mismatch, missing receipt request and content-identifier mismatch after ASN1_item_unpack has built the CMS_Receipt. The authority funnels every exit through its err: label, which frees rct; the transcribed returns ran none of that cleanup, so each rejected receipt leaked the decoded structure. A peer sending malformed receipts repeatedly grows the process without bound.",
+      "fix": "The post-unpack body is a labelled block whose refusals break to the shared cleanup (CMS_ReceiptRequest_free(rr); m_asn1_free(rct, cms_receipt_it())). Return codes and error sites are unchanged.",
+      "witness": "No in-module test exists; the control needs a crafted CMS receipt fixture and is recorded as BOUNDARY NOT_RUN."
+    },
+    {
+      "id": "M13-D5",
+      "file": "src/cms/cms_ess.rs",
+      "lines_post_fix": "288-301",
+      "severity": "low",
+      "class": "negative ASN.1 length",
+      "description": "CMS_ReceiptRequest_create0_ex passed a negative idlen straight to ASN1_STRING_set0, which every later encoder converts to a huge size_t while the length field remains negative (authority UB).",
+      "fix": "A negative idlen is refused at the allocation's own CMS error coordinate and the fresh request is freed; id is not adopted on that path, so the caller keeps it. Non-negative lengths are unchanged.",
+      "witness": "Refusal path only; no fixture added."
+    },
+    {
+      "id": "M13-D6",
+      "file": "src/evp/p_legacy.rs",
+      "lines_post_fix": "183-191, 687-694, 853-860, 878-884, 893-903",
+      "severity": "medium",
+      "class": "int -> size_t conversion of a negative length (authority UB)",
+      "description": "EVP_BytesToKey passed a negative datal to EVP_DigestUpdate as usize, EVP_OpenInit passed a negative ekl to EVP_PKEY_decrypt as usize, and EVP_SealInit fed a fixed 64-byte stack key to EVP_CIPHER_CTX_rand_key before checking the context key length, then used EVP_PKEY_get_size (int) as a capacity. Each is a C-valid call that the authority also mishandles; the first three are out-of-bounds reads or writes on hostile lengths.",
+      "fix": "Negative datal/ekl are refused (0) after the authority's NULL-data/early-success arms, so those observables are preserved. EVP_SealInit refuses a context key length outside 0..=EVP_MAX_KEY_LENGTH before the random draw, rechecks it before the key install, and refuses EVP_PKEY_get_size <= 0.",
+      "witness": "evp::p_legacy::tests::a_negative_bytestokey_length_is_refused (datal = -1 -> 0; datal = 8 -> 16)."
+    },
+    {
+      "id": "M13-D7",
+      "file": "src/provider/rsa_sig.rs",
+      "lines_post_fix": "1195-1200, 1339-1345, 1531-1536, 1721-1727",
+      "severity": "low",
+      "class": "size_t -> int truncation feeding RSA padding length arithmetic",
+      "description": "rsa_sign_directly's no-digest arm, rsa_verify_directly and rsa_verify_recover passed a size_t tbslen/siglen to RSA_private_encrypt/RSA_public_decrypt/RSA_verify as int. Above INT_MAX the value becomes negative, the padding routines' flen tests are bypassed and their copy length becomes a huge size_t (authority UB).",
+      "fix": "Each path refuses a length above c_int::MAX before the RSA call (the sign arm uses its own 821/730 coordinates; the verify/recover arms return 0). Valid provider calls are unchanged.",
+      "witness": "No in-module test exists and a control needs a >2 GiB input; recorded as BOUNDARY NOT_RUN."
+    },
+    {
+      "id": "M13-D8",
+      "file": "src/ssl/ssl_cert.rs",
+      "lines_post_fix": "650-662",
+      "severity": "low",
+      "class": "unchecked path-length sum",
+      "description": "SSL_add_dir_cert_subjects_to_stack computed dlen + flen + 2 in usize before comparing with the 1024-byte path buffer. The authority's sum is unchecked too; the operands are strlen results and the overflow is not reachable in a real address space, but the bound check is the kind of extent arithmetic §3 requires to be total.",
+      "fix": "checked_add twice, with any overflow taking the existing SSL_R_PATH_TOO_LONG arm.",
+      "witness": "Valid directory walk is exercised only by the full suite; no dedicated fixture."
+    }
+  ],
+  "no_defect_found": [
+    "src/evp/fetch.rs: the fetch half is allow(dead_code) and matches evp_fetch.c; NULL store/name/context are handled by callees (ossl_method_store_do_all ignores NULL, name2num_n keys on the empty vector, list_to_string handles a NULL list). The default-property half's def_prop adoption/caller-free split and both render passes match the authority.",
+    "src/ts/ts_rsp_utils.rs: every setter dups and replaces as the authority does, NULL-tolerant destructors match, and the set0/adopt edges carry their documented ownership."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "test_only_unsafe_added": [
+    "src/evp/pmeth_gn.rs tests::keygen_info_refuses_the_index_it_does_not_have: hand-built EvpPkeyCtx and two calls to the audited accessor, each with a SAFETY comment",
+    "src/ssl/tls13_enc.rs tests::hkdf_expand_label_refuses_a_context_that_does_not_fit_its_length_byte: two calls with frame-owned buffers, each with a SAFETY comment",
+    "src/evp/p_legacy.rs tests::a_negative_bytestokey_length_is_refused: two EVP_BytesToKey calls with static method tables and frame-owned buffers"
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "boundary_control": {
+    "status": "PARTIAL",
+    "reason": "M13-D1 and M13-D2/D6 have direct regression controls in the library suite. The cms_ess failure-path leak (D4), the rsa_sig int-truncation refusals (D7), the record extent guards (D3) and the ssl_cert path sum (D8) have no runtime negative control in this batch: D4 needs a crafted CMS receipt fixture, D7 needs >2 GiB inputs, D3 needs an over-maximum plaintext driver, and D8's overflow is unreachable in a real address space. ASan/Miri for the repaired boundaries and authority differentials for the refusal divergences are BOUNDARY gates."
+  },
+  "not_discharged": true,
+  "deferred": [
+    {
+      "gate": "ASan/Miri controls for M13-D1/D2/D3/D4 and the allocator-injection refusal paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Crafted CMS receipt-verify fixture proving the decoded receipt is released on every refusal",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Authority differentials for the recorded refusal divergences (negative datal/ekl/idlen, out-of-range keygen_info index, iv/nonce and label lengths)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "src/provider/mod.rs provider lifecycle/refcount boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "src/rsa/mod.rs ordinary per-file audit (not reached under the eight-file cap)",
+      "status": "NOT_RUN",
+      "runs_at": "next ordinary batch"
+    },
+    {
+      "gate": "Full adv-probe suite and SEAL regeneration / dependency closure / independent review",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/x509/x509_vpm.rs was not re-audited; B1's boundary record stands.",
+    "EVP_BytesToKey still takes the authority's ~2^32 unsigned loop for a negative count. That is a liveness/compatibility property, not memory unsafety, and was left as authority parity.",
+    "cms_ess ossl_cms_Receipt_verify compares the message-signature digest with a Rust slice comparison, matching the authority's memcmp (public digest, not secret data); no constant-time claim is made.",
+    "add_uris_recursive continues on a NULL OSSL_STORE_load while eof/error are clear, exactly as the authority does; a store backend that answers NULL without advancing would spin. Left as authority parity, recorded rather than repaired.",
+    "src/evp/pmeth_gn.rs and src/provider/rsa_sig.rs provider callback entries still rely on the dispatch contract's pointer validity; this batch bounded the lengths they act on, not the callers' pointer provenance.",
+    "src/evp/fetch.rs's fetch half remains unreachable (allow(dead_code)) until the EVP_MD/EVP_CIPHER classes land; its audit is a contract review, not a reachable-path result."
+  ],
+  "next_queue": {
+    "file": "src/cms/cms_pwri.rs",
+    "rank_in_attribution": 128,
+    "then": [
+      "src/runtime/bio/mod.rs (129)",
+      "src/x509/v3_pci.rs (130)",
+      "src/cms/cms_ec.rs (131)"
+    ],
+    "boundary_queue": [
+      "src/provider/mod.rs (124)",
+      "src/rsa/mod.rs (123, large-file deferral; boundary check before audit)"
+    ]
+  },
+  "receipt": "mechanism-sweep-M13",
+  "branch": "integrate/safe-c33",
+  "date": "2026-10-19"
+}

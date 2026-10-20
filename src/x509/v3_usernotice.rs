@@ -55,6 +55,55 @@ const LINE_FREE_FAIL: c_int = 48;
 /// The same function's success-path `OPENSSL_free(tmp)` (`v3_usernotice.c:51`).
 const LINE_FREE_OK: c_int = 51;
 
+/// An owned conversion string from `i2s_ASN1_INTEGER`.
+///
+/// `i2s_ASN1_INTEGER` answers a `CRYPTO_malloc`-family block this caller owns; the authority
+/// releases it with `OPENSSL_free` at `v3_usernotice.c:48` (the `BIO_puts` refusal) or `:51`
+/// (the success path). The block stays at those coordinates; `Drop` is its single plain
+/// release.
+struct NoticeBuf {
+    ptr: *mut c_char,
+    line: c_int,
+}
+
+impl NoticeBuf {
+    /// Adopt a block `i2s_ASN1_INTEGER` allocated in full, or `None` for its NULL answer.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's allocator seam produced in full (not a
+    /// sub-range), NUL-terminated and initialized for every byte `BIO_puts` reads; this frame
+    /// exclusively owns it, has not released it, and no other owner will release it.
+    unsafe fn adopt(ptr: *mut c_char) -> Option<NoticeBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(NoticeBuf {
+                ptr,
+                line: LINE_FREE_OK,
+            })
+        }
+    }
+
+    /// The NUL-terminated string `BIO_puts` reads.
+    fn as_ptr(&self) -> *const c_char {
+        self.ptr
+    }
+
+    /// Re-point the release at the authority's failure site for this path.
+    fn set_release_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+}
+
+impl Drop for NoticeBuf {
+    /// The authority's own `OPENSSL_free(tmp)`, at the line for the path that reaches it.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took in and has not handed out; `Drop` runs
+        // once, so this is its single release at the authority's own coordinate.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `OSSL_USER_NOTICE_SYNTAX_item_tt` — `ASN1_ITEM_TEMPLATE(OSSL_USER_NOTICE_SYNTAX)`'s single
 /// template (`crypto/x509/v3_usernotice.c:14`): `ASN1_EX_TEMPLATE_TYPE(ASN1_TFLG_SEQUENCE_OF, 0,
 /// OSSL_USER_NOTICE_SYNTAX, USERNOTICE)`.
@@ -191,19 +240,20 @@ unsafe fn print_notice(out: *mut Bio, notice: *mut UserNotice, indent: c_int) ->
             if num.is_null() && unsafe { BIO_puts(out, c"(null)".as_ptr()) } <= 0 {
                 return 0;
             } else {
-                // SAFETY: `num` is the element at `i`; `i2s_ASN1_INTEGER` answers NULL for NULL.
-                let tmp = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), num) };
-                if tmp.is_null() {
+                // SAFETY: `num` is the element at `i`; `i2s_ASN1_INTEGER` answers NULL for
+                // NULL and otherwise a block this frame owns exclusively.
+                let Some(mut tmp) =
+                    (unsafe { NoticeBuf::adopt(i2s_ASN1_INTEGER(ptr::null_mut(), num)) })
+                else {
                     return 0;
-                }
+                };
                 // SAFETY: `out` is live; `tmp` is NUL-terminated.
-                if unsafe { BIO_puts(out, tmp) } <= 0 {
-                    // SAFETY: `tmp` is this call's own allocation.
-                    unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_FAIL) };
+                if unsafe { BIO_puts(out, tmp.as_ptr()) } <= 0 {
+                    // The authority frees at `:48` on this refusal; `Drop` runs on the return.
+                    tmp.set_release_line(LINE_FREE_FAIL);
                     return 0;
                 }
-                // SAFETY: `tmp` is this call's own allocation.
-                unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_OK) };
+                // `tmp` drops here at `:51`, the authority's success-path free.
             }
             i += 1;
         }

@@ -83,6 +83,7 @@ use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
 };
+use crate::evp::mac::EVP_MAC_CTX_free;
 use crate::modes::ccm::{
     CRYPTO_ccm128_aad, CRYPTO_ccm128_decrypt, CRYPTO_ccm128_encrypt, CRYPTO_ccm128_init,
     CRYPTO_ccm128_setiv, CRYPTO_ccm128_tag, CcmCtx,
@@ -379,15 +380,25 @@ struct ProvSkey {
     length: usize,
 }
 
+/// The `bits` lane, read.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may read for the duration of the
+/// borrow. The token/context owner must keep it alive and must not mutate it concurrently.
 #[inline]
-fn bits(ctx: *const ProvCipherCtx) -> c_uint {
-    // SAFETY: the caller holds a live context.
+unsafe fn bits(ctx: *const ProvCipherCtx) -> c_uint {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).bits }
 }
 
+/// The `bits` lane, written.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may exclusively borrow for the
+/// duration of the call; no other reference may alias it while the write happens.
 #[inline]
-fn bits_set(ctx: *mut ProvCipherCtx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn bits_set(ctx: *mut ProvCipherCtx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).bits |= mask;
@@ -423,6 +434,401 @@ fn is_running() -> c_int {
 #[inline]
 fn fail() -> c_int {
     0
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a context block
+// ---------------------------------------------------------------------------------------------
+
+/// The `__FILE__` a cipher unit's context block names, and its whole context destructor.
+///
+/// `destroy_body` is the authority's `*_freectx` body *minus* the block release -- the member
+/// releases (`ossl_cipher_generic_reset_ctx`'s TLS MAC, `CRYPTO_ocb128_cleanup`'s L-table, the
+/// SIV `cleanup` and GCM-SIV `clean_ctx` hardware teardowns and the GCM-SIV AAD) -- and `FILE` is
+/// the `__FILE__` the block's own release records. Implementing the trait on each `#[repr(C)]`
+/// context lets [`OwnedCtx`] run the right destructor from `Drop` without a `CRYPTO_clear_free`
+/// written at any call site.
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_freectx` member body
+///   **exactly once** for that object; it releases **exactly** the members the object owns (every
+///   releaser is the authority's own and accepts the not-yet-set NULL/zero state) and **never**
+///   releases the enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// [`OwnedRaw`] is the partial-construction counterpart: its `Drop` runs only the block's plain
+/// `CRYPTO_free` and **never** `destroy_body`, because a duplicate that has not yet repaired every
+/// member may still alias its source; only a fully built object owned by [`OwnedCtx`] satisfies the
+/// (a) precondition.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+pub(crate) unsafe trait CipherDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+
+    /// The authority's `*_freectx` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned cipher context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the dispatch hands
+/// it out as `*mut c_void` and takes it back in `*_freectx`), but its *ownership* is this type:
+/// `new` allocates it through the crate's allocator seam and `Drop` is its single release. The
+/// block stays a `CRYPTO_zalloc` at `size_of::<T>()` and is released with `CRYPTO_clear_free` at
+/// the authority's own size rather than a Rust `Box` on purpose -- a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and the cleansing release
+/// exactly as it observes the authority's, which a Rust global allocation would hide.
+pub(crate) struct OwnedCtx<T: CipherDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CipherDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
+    /// when it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    pub(crate) fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the dispatch hands out and `*_freectx` takes back.
+    pub(crate) fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    pub(crate) fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: CipherDestroy> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_freectx` body ([`Self::destroy_body`]) followed
+    /// by the block's cleansing release, through the same allocator seam the block was allocated
+    /// on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own `*_freectx`
+        // body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_clear_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                core::mem::size_of::<T>(),
+                T::FILE,
+                LINE,
+            );
+        }
+    }
+}
+
+/// An owned block whose single release is the authority's **plain** (non-cleansing) `CRYPTO_free`.
+///
+/// This is the release a row's `*_dupctx` performs on a *partially built copy*: the copy's members
+/// may still alias the source's (for instance `aes_wrap_dupctx`'s failed TLS-MAC `CRYPTO_memdup`
+/// leaves `tlsmac` pointing at the source's own buffer), so the context destructor must not run and
+/// the block is not cleansed. The block stays a `CRYPTO_malloc`/`CRYPTO_memdup` at `size_of::<T>()`
+/// on the seam, so a caller's `CRYPTO_set_mem_functions` hook observes the allocation and its size
+/// exactly as it observes the authority's; only its error-path *release* is this handle's `Drop`.
+/// A copy that succeeds is handed back out through [`Self::into_raw`] and is released, later, by the
+/// row's `*_freectx` (an [`OwnedCtx`]).
+struct OwnedRaw<T: CipherDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: CipherDestroy> OwnedRaw<T> {
+    /// Adopt a block `CRYPTO_malloc`/`CRYPTO_memdup` answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `raw` is NULL or a live block the crate's `CRYPTO_malloc`/`CRYPTO_memdup` seam allocated in
+    /// full at `size_of::<T>()` (not a sub-range) and aligned for `T`; this frame exclusively owns it
+    /// and has not released it. The block may be a *partially built* copy whose members still alias
+    /// the source's (for instance a failed TLS-MAC `CRYPTO_memdup`), so only its single plain
+    /// `CRYPTO_free` release may run on it -- never `T`'s full destructor -- until the duplicate has
+    /// repaired every member.
+    unsafe fn adopt(raw: *mut T) -> Option<OwnedRaw<T>> {
+        ptr::NonNull::new(raw).map(|ptr| OwnedRaw { ptr })
+    }
+
+    /// The block's address, for the copy the duplicate makes.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller: the duplicate succeeded.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: CipherDestroy> Drop for OwnedRaw<T> {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the row's `*_dupctx` allocated and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE) };
+    }
+}
+
+// The per-context destructors: each is exactly what its `*_freectx` performed by hand, minus the
+// block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
+// calls, relocated to the context's `Drop`.
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesCtx {
+    const FILE: *const c_char = FILE_AES;
+    unsafe fn destroy_body(ptr: *mut ProvAesCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvCamelliaCtx {
+    const FILE: *const c_char = FILE_CAMELLIA;
+    unsafe fn destroy_body(ptr: *mut ProvCamelliaCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvTdesCtx {
+    const FILE: *const c_char = FILE_TDES;
+    unsafe fn destroy_body(ptr: *mut ProvTdesCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesWrapCtx {
+    const FILE: *const c_char = FILE_AES_WRAP;
+    unsafe fn destroy_body(ptr: *mut ProvAesWrapCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesXtsCtx {
+    const FILE: *const c_char = FILE_AES_XTS;
+    unsafe fn destroy_body(ptr: *mut ProvAesXtsCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4XtsCtx {
+    const FILE: *const c_char = FILE_SM4_XTS;
+    unsafe fn destroy_body(ptr: *mut ProvSm4XtsCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesOcbCtx {
+    const FILE: *const c_char = FILE_AES_OCB;
+    unsafe fn destroy_body(ptr: *mut ProvAesOcbCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `aes_ocb_freectx` releases the
+        // OCB L-table before the generic reset.
+        unsafe {
+            CRYPTO_ocb128_cleanup(ptr::addr_of_mut!((*ptr).ocb));
+            ossl_cipher_generic_reset_ctx(ptr.cast());
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesCcmCtx {
+    const FILE: *const c_char = FILE_CCM;
+    unsafe fn destroy_body(_ptr: *mut ProvAesCcmCtx) {
+        // `aes_ccm_freectx` releases the block alone; there is no member to release.
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAriaCcmCtx {
+    const FILE: *const c_char = FILE_ARIA_CCM;
+    unsafe fn destroy_body(_ptr: *mut ProvAriaCcmCtx) {
+        // `aria_ccm_freectx` releases the block alone; there is no member to release.
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4CcmCtx {
+    const FILE: *const c_char = FILE_SM4_CCM;
+    unsafe fn destroy_body(_ptr: *mut ProvSm4CcmCtx) {
+        // `sm4_ccm_freectx` releases the block alone; there is no member to release.
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesSivCtx {
+    const FILE: *const c_char = FILE_SIV;
+    unsafe fn destroy_body(ptr: *mut ProvAesSivCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract. A constructed context always has
+        // `hw` installed by `aes_siv_newctx`; the NULL test covers the all-zero block that the safe
+        // `OwnedCtx::new` can drop before installation. `aes_siv_freectx` dereferences `ctx->hw`
+        // unconditionally, but it never sees that state because `aes_siv_newctx` installs `hw`
+        // before returning -- this is a failure-path safety improvement, not a constructed-path
+        // change. The constructed event order (`hw->cleanup(ctx)` then the block release) is kept.
+        unsafe {
+            if !(*ptr).hw.is_null() {
+                ((*(*ptr).hw).cleanup)(ptr.cast());
+            }
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// this context owns no member released separately, and it never releases the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvNullCtx {
+    const FILE: *const c_char = FILE_NULL;
+    unsafe fn destroy_body(_ptr: *mut ProvNullCtx) {
+        // `null_freectx` releases the block alone; there is no member to release.
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesHmacSha1Ctx {
+    const FILE: *const c_char = FILE_CBC_HMAC;
+    unsafe fn destroy_body(ptr: *mut ProvAesHmacSha1Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesHmacSha256Ctx {
+    const FILE: *const c_char = FILE_CBC_HMAC;
+    unsafe fn destroy_body(ptr: *mut ProvAesHmacSha256Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAesGcmSivCtx {
+    const FILE: *const c_char = FILE_GCM_SIV;
+    unsafe fn destroy_body(ptr: *mut ProvAesGcmSivCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `ossl_aes_gcm_siv_freectx`
+        // releases the AAD (over `aad_len`, the used length) and then the hardware context. The
+        // AAD release already accepts the all-zero state; the NULL test on `hw` covers the block
+        // that the safe `OwnedCtx::new` can drop before `ossl_aes_gcm_siv_newctx` installs it. The
+        // authority's `ossl_aes_gcm_siv_freectx` dereferences `ctx->hw` unconditionally, but its
+        // constructor installs `hw` before returning and so never drops that state -- this is a
+        // failure-path safety improvement, not a constructed-path change. The constructed event
+        // order (AAD release, `hw->clean_ctx`, then the block release) is kept.
+        unsafe {
+            CRYPTO_clear_free((*ptr).aad.cast(), (*ptr).aad_len, FILE_GCM_SIV, LINE);
+            if !(*ptr).hw.is_null() {
+                ((*(*ptr).hw).clean_ctx)(ptr.cast());
+            }
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvChacha20Ctx {
+    const FILE: *const c_char = FILE_CHACHA20;
+    unsafe fn destroy_body(ptr: *mut ProvChacha20Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvChacha20Poly1305Ctx {
+    const FILE: *const c_char = FILE_CHACHA20_POLY1305;
+    unsafe fn destroy_body(ptr: *mut ProvChacha20Poly1305Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvSm4Ctx {
+    const FILE: *const c_char = FILE_SM4;
+    unsafe fn destroy_body(ptr: *mut ProvSm4Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+// exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+unsafe impl CipherDestroy for ProvAriaCtx {
+    const FILE: *const c_char = FILE_ARIA;
+    unsafe fn destroy_body(ptr: *mut ProvAriaCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+    }
 }
 
 /// `ERR_raise(lib, reason)` at a recorded authority site, for a refusal whose value is not `0`.
@@ -2313,9 +2719,10 @@ unsafe extern "C" fn cipher_hw_aes_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract.
 unsafe extern "C" fn cipher_hw_aes_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_AES_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_AES_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAesCtx>(), dst.cast::<ProvAesCtx>(), 1);
+        ptr::copy(src.cast::<ProvAesCtx>(), dst.cast::<ProvAesCtx>(), 1);
         (*dst.cast::<ProvAesCtx>()).base.ks =
             ptr::addr_of!((*dst.cast::<ProvAesCtx>()).ks.ks).cast();
     }
@@ -2361,9 +2768,10 @@ unsafe extern "C" fn cipher_hw_camellia_copyctx(
     dst: *mut ProvCipherCtx,
     src: *const ProvCipherCtx,
 ) {
-    // SAFETY: the caller's contract; both are `PROV_CAMELLIA_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_CAMELLIA_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(
+        ptr::copy(
             src.cast::<ProvCamelliaCtx>(),
             dst.cast::<ProvCamelliaCtx>(),
             1,
@@ -2423,9 +2831,10 @@ pub(crate) unsafe extern "C" fn cipher_hw_tdes_copyctx(
     dst: *mut ProvCipherCtx,
     src: *const ProvCipherCtx,
 ) {
-    // SAFETY: the caller's contract; both are `PROV_TDES_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_TDES_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
+        ptr::copy(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
         (*dst.cast::<ProvTdesCtx>()).base.ks =
             ptr::addr_of!((*dst.cast::<ProvTdesCtx>()).tks).cast();
     }
@@ -2720,11 +3129,8 @@ unsafe extern "C" fn ossl_cipher_hw_tdes_cfb1(
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast());
-        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesCtx>(), FILE_AES, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesCtx>::from_raw(vctx.cast())) };
 }
 
 /// `aes_dupctx` — `cipher_aes.c:33-47`.
@@ -2761,16 +3167,8 @@ unsafe extern "C" fn aes_dupctx(ctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn camellia_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast());
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvCamelliaCtx>(),
-            FILE_CAMELLIA,
-            LINE,
-        );
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvCamelliaCtx>::from_raw(vctx.cast())) };
 }
 
 /// `camellia_dupctx` — `cipher_camellia.c:33-47`.
@@ -2807,11 +3205,8 @@ unsafe extern "C" fn camellia_dupctx(ctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 pub(crate) unsafe extern "C" fn tdes_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast());
-        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvTdesCtx>(), FILE_TDES, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvTdesCtx>::from_raw(vctx.cast())) };
 }
 
 /// `ossl_tdes_dupctx` — `cipher_tdes_common.c:40-55`.
@@ -2954,23 +3349,25 @@ macro_rules! cipher_row {
             if is_running() == 0 {
                 return ptr::null_mut();
             }
-            let ctx = CRYPTO_zalloc(core::mem::size_of::<$ctx>(), $file, LINE);
-            if !ctx.is_null() {
-                // SAFETY: `ctx` is a fresh zeroed context of this row's type.
-                unsafe {
-                    ossl_cipher_generic_initkey(
-                        ctx,
-                        $kbits,
-                        $blkbits,
-                        $ivbits,
-                        $mode,
-                        $flags,
-                        ptr::addr_of!($hw),
-                        provctx,
-                    );
-                }
+            // The context block, allocated through the crate's allocator seam and owned by `ctx`
+            // until it is handed to the caller below.
+            let Some(ctx) = OwnedCtx::<$ctx>::new() else {
+                return ptr::null_mut();
+            };
+            // SAFETY: `ctx` is a fresh zeroed context of this row's type.
+            unsafe {
+                ossl_cipher_generic_initkey(
+                    ctx.as_ptr().cast(),
+                    $kbits,
+                    $blkbits,
+                    $ivbits,
+                    $mode,
+                    $flags,
+                    ptr::addr_of!($hw),
+                    provctx,
+                );
             }
-            ctx
+            ctx.into_raw().cast()
         }
 
         unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
@@ -3266,24 +3663,26 @@ unsafe fn aes_wrap_newctx(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let wctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesWrapCtx>(), FILE_AES_WRAP, LINE);
-        if !wctx.is_null() {
-            ossl_cipher_generic_initkey(
-                wctx,
-                kbits,
-                blkbits,
-                ivbits,
-                mode,
-                flags,
-                ptr::null(),
-                ptr::null_mut(),
-            );
-            // `ctx->pad = (ctx->ivlen == AES_WRAP_PAD_IVLEN)` — the generic `initkey` had set
-            // padding on unconditionally.
-            let ctx = wctx.cast::<ProvCipherCtx>();
-            bits_set(ctx, CTX_PAD, (*ctx).ivlen == AES_WRAP_PAD_IVLEN);
-        }
-        wctx
+        // The context block, allocated through the crate's allocator seam and owned by `wctx`
+        // until it is handed to the caller below.
+        let Some(wctx) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            wctx.as_ptr().cast(),
+            kbits,
+            blkbits,
+            ivbits,
+            mode,
+            flags,
+            ptr::null(),
+            ptr::null_mut(),
+        );
+        // `ctx->pad = (ctx->ivlen == AES_WRAP_PAD_IVLEN)` — the generic `initkey` had set
+        // padding on unconditionally.
+        let ctx = wctx.as_ptr().cast::<ProvCipherCtx>();
+        bits_set(ctx, CTX_PAD, (*ctx).ivlen == AES_WRAP_PAD_IVLEN);
+        wctx.into_raw().cast()
     }
 }
 
@@ -3297,29 +3696,34 @@ unsafe extern "C" fn aes_wrap_dupctx(wctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 || wctx.is_null() {
             return ptr::null_mut();
         }
-        let dctx = CRYPTO_memdup(
-            wctx,
-            core::mem::size_of::<ProvAesWrapCtx>(),
-            FILE_AES_WRAP,
-            LINE,
-        );
-        if !dctx.is_null() {
-            let d = dctx.cast::<ProvAesWrapCtx>();
-            if !(*d).base.tlsmac.is_null() && (*d).base.alloced != 0 {
-                let tm = CRYPTO_memdup(
-                    (*d).base.tlsmac.cast(),
-                    (*d).base.tlsmacsize,
-                    FILE_AES_WRAP,
-                    LINE,
-                );
-                if tm.is_null() {
-                    CRYPTO_free(dctx, FILE_AES_WRAP, LINE);
-                    return ptr::null_mut();
-                }
-                (*d).base.tlsmac = tm.cast();
+        // The copy, allocated through the crate's allocator seam; the one member that needs its
+        // own allocation is re-duplicated below, and a failure releases the whole copy through
+        // the owner's `Drop` (the authority's plain `CRYPTO_free`).
+        let Some(dctx) = OwnedRaw::<ProvAesWrapCtx>::adopt(
+            CRYPTO_memdup(
+                wctx,
+                core::mem::size_of::<ProvAesWrapCtx>(),
+                FILE_AES_WRAP,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let d = dctx.as_ptr();
+        if !(*d).base.tlsmac.is_null() && (*d).base.alloced != 0 {
+            let tm = CRYPTO_memdup(
+                (*d).base.tlsmac.cast(),
+                (*d).base.tlsmacsize,
+                FILE_AES_WRAP,
+                LINE,
+            );
+            if tm.is_null() {
+                return ptr::null_mut();
             }
+            (*d).base.tlsmac = tm.cast();
         }
-        dctx
+        dctx.into_raw().cast()
     }
 }
 
@@ -3328,16 +3732,8 @@ unsafe extern "C" fn aes_wrap_dupctx(wctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// `vctx` is a context from [`aes_wrap_newctx`] or NULL.
 unsafe extern "C" fn aes_wrap_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast());
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAesWrapCtx>(),
-            FILE_AES_WRAP,
-            LINE,
-        );
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesWrapCtx>::from_raw(vctx.cast())) };
 }
 
 /// `aes_wrap_init` — `cipher_aes_wrp.c:99-148`.
@@ -3437,7 +3833,10 @@ unsafe extern "C" fn aes_wrap_dinit(
 /// `aes_wrap_cipher_internal` — `cipher_aes_wrp.c:164-222`.
 ///
 /// # Safety
-/// `vctx` is live; `out`/`input` as the caller's contract.
+/// `vctx` is live; `input` is readable for `inlen`; and `out`, when non-NULL, is writable for the
+/// whole extent this call produces: `up8(inlen) + 8` on the encrypting arm (`inlen + 8` when
+/// padding is off) and `inlen - 8` on the decrypting arm. [`aes_wrap_cipher`] establishes that
+/// extent from `outsize` before calling this helper.
 unsafe fn aes_wrap_cipher_internal(
     vctx: *mut c_void,
     out: *mut c_uchar,
@@ -3530,6 +3929,16 @@ unsafe extern "C" fn aes_wrap_final(
 
 /// `aes_wrap_cipher` — `cipher_aes_wrp.c:234-260`.
 ///
+/// The authority checks only `outsize < inl` (`cipher_aes_wrp.c:249`). That is enough for the
+/// decrypting arm but not for encryption, which writes `up8(inl) + 8` with padding (or `inl + 8`
+/// without). The crate keeps the authority's check and adds the actual write-extent check, a
+/// deliberate memory-safety improvement recorded in `docs/DECISIONS.md` (D561).
+///
+/// The added check runs only where the authority's helper would write: `input == NULL` returns 0
+/// before any write (`:174`), `out == NULL` is the size-query arm (`:203`), and the input-length
+/// refusals (`:178-192`) precede the write. It therefore cannot preempt either a size query or an
+/// `INVALID_INPUT_LENGTH` result.
+///
 /// # Safety
 /// As the dispatch's `update`: `out` is writable for `outsize` bytes and `input` readable for
 /// `inl`.
@@ -3552,6 +3961,31 @@ unsafe extern "C" fn aes_wrap_cipher(
         }
         if outsize < inl {
             return fail_at(&err_sites::PROV_CIPHER_AES_WRP_250);
+        }
+        // The authority's check above covers decryption (`inl - 8`) but not the encrypting arm's
+        // `inl + 8` prefix or the padded arm's `up8(inl) + 8`. Enforce that extent only for a
+        // write the authority's helper would actually perform. Its order is: NULL `in` -> 0
+        // (`cipher_aes_wrp.c:174`), input-length refusals (`:178-192`), NULL `out` size query
+        // (`:203`), then the write. Skipping the added check in the first three cases keeps the
+        // authority's result and error precedence.
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let enc = bits(ctx) & CTX_ENC != 0;
+        let pad = bits(ctx) & CTX_PAD != 0;
+        let valid_input = inl <= c_int::MAX as usize
+            && (enc || (inl >= 16 && inl & 0x7 == 0))
+            && (pad || inl & 0x7 == 0);
+        if !input.is_null() && !out.is_null() && valid_input {
+            let required = if enc {
+                let n = if pad { inl.div_ceil(8) * 8 } else { inl };
+                n.checked_add(8)
+            } else {
+                inl.checked_sub(8)
+            };
+            if let Some(required) = required {
+                if outsize < required {
+                    return fail_at(&err_sites::PROV_CIPHER_AES_WRP_250);
+                }
+            }
         }
         // `size_t len` in the authority, assigned from an `int`-returning callee: a refusal
         // that returns `-1` becomes `SIZE_MAX`, `len <= 0` is then false, and the row answers
@@ -4354,23 +4788,25 @@ macro_rules! cts_row {
             if is_running() == 0 {
                 return ptr::null_mut();
             }
-            let ctx = CRYPTO_zalloc(core::mem::size_of::<$ctx>(), $file, LINE);
-            if !ctx.is_null() {
-                // SAFETY: `ctx` is a fresh zeroed context of this row's type.
-                unsafe {
-                    ossl_cipher_generic_initkey(
-                        ctx,
-                        $kbits,
-                        128,
-                        128,
-                        EVP_CIPH_CBC_MODE,
-                        PROV_CIPHER_FLAG_CTS,
-                        ptr::addr_of!($hw),
-                        provctx,
-                    );
-                }
+            // The context block, allocated through the crate's allocator seam and owned by `ctx`
+            // until it is handed to the caller below.
+            let Some(ctx) = OwnedCtx::<$ctx>::new() else {
+                return ptr::null_mut();
+            };
+            // SAFETY: `ctx` is a fresh zeroed context of this row's type.
+            unsafe {
+                ossl_cipher_generic_initkey(
+                    ctx.as_ptr().cast(),
+                    $kbits,
+                    128,
+                    128,
+                    EVP_CIPH_CBC_MODE,
+                    PROV_CIPHER_FLAG_CTS,
+                    ptr::addr_of!($hw),
+                    provctx,
+                );
             }
-            ctx
+            ctx.into_raw().cast()
         }
 
         unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
@@ -4635,9 +5071,10 @@ unsafe extern "C" fn cipher_hw_aes_xts_generic_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract; both are `PROV_AES_XTS_CTX`.
 unsafe extern "C" fn cipher_hw_aes_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_AES_XTS_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_AES_XTS_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
+        ptr::copy(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
         let d = dst.cast::<ProvAesXtsCtx>();
         (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1.ks).cast();
         (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2.ks).cast();
@@ -4722,21 +5159,23 @@ unsafe fn aes_xts_newctx(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesXtsCtx>(), FILE_AES_XTS, LINE);
-        if !ctx.is_null() {
-            ossl_cipher_generic_initkey(
-                ctx,
-                kbits,
-                blkbits,
-                ivbits,
-                mode,
-                flags,
-                ptr::addr_of!(AES_XTS_HW),
-                ptr::null_mut(),
-            );
-        }
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAesXtsCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            ctx.as_ptr().cast(),
+            kbits,
+            blkbits,
+            ivbits,
+            mode,
+            flags,
+            ptr::addr_of!(AES_XTS_HW),
+            ptr::null_mut(),
+        );
         let _ = provctx;
-        ctx
+        ctx.into_raw().cast()
     }
 }
 
@@ -4745,16 +5184,8 @@ unsafe fn aes_xts_newctx(
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_xts_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast());
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAesXtsCtx>(),
-            FILE_AES_XTS,
-            LINE,
-        );
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesXtsCtx>::from_raw(vctx.cast())) };
 }
 
 /// `aes_xts_dupctx` — `cipher_aes_xts.c:148-174`.
@@ -5244,9 +5675,10 @@ unsafe extern "C" fn cipher_hw_sm4_xts_generic_initkey(
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract; both are `ProvSm4XtsCtx`.
 unsafe extern "C" fn cipher_hw_sm4_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract; both are `PROV_SM4_XTS_CTX`.
+    // SAFETY: the caller's contract; both are `PROV_SM4_XTS_CTX`. `ptr::copy` is the defined
+    // equivalent of the authority's `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvSm4XtsCtx>(), dst.cast::<ProvSm4XtsCtx>(), 1);
+        ptr::copy(src.cast::<ProvSm4XtsCtx>(), dst.cast::<ProvSm4XtsCtx>(), 1);
         let d = dst.cast::<ProvSm4XtsCtx>();
         (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1).cast();
         (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2).cast();
@@ -5365,20 +5797,22 @@ unsafe fn sm4_xts_newctx(
 ) -> *mut c_void {
     // SAFETY: the caller's contract.
     unsafe {
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm4XtsCtx>(), FILE_SM4_XTS, LINE);
-        if !ctx.is_null() {
-            ossl_cipher_generic_initkey(
-                ctx.cast(),
-                kbits,
-                blkbits,
-                ivbits,
-                mode,
-                flags,
-                ossl_prov_cipher_hw_sm4_xts(kbits),
-                ptr::null_mut(),
-            );
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvSm4XtsCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            ctx.as_ptr().cast(),
+            kbits,
+            blkbits,
+            ivbits,
+            mode,
+            flags,
+            ossl_prov_cipher_hw_sm4_xts(kbits),
+            ptr::null_mut(),
+        );
+        ctx.into_raw().cast()
     }
 }
 
@@ -5388,16 +5822,8 @@ unsafe fn sm4_xts_newctx(
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sm4_xts_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvSm4XtsCtx>(),
-            FILE_SM4_XTS,
-            LINE,
-        );
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvSm4XtsCtx>::from_raw(vctx.cast())) };
 }
 
 /// `sm4_xts_dupctx` — `cipher_sm4_xts.c:98-119`.
@@ -5896,6 +6322,12 @@ static AES_OCB_HW: ProvCipherHw = ProvCipherHw {
 /// (`cipher_aes_ocb.c:332-349`), so the hw table has no `copyctx` to offer. The never-called stub
 /// stands in for the authority's `NULL` field.
 ///
+/// Reachability: `AES_OCB_FUNCTIONS` registers `aes_ocb_dupctx` for
+/// `OSSL_FUNC_CIPHER_DUPCTX` (`src/provider/cipher.rs`, the `aes_ocb_functions!` dispatch table),
+/// so the OCB row never enters `aes_dupctx`/`camellia_dupctx`/`tdes_dupctx` or the XTS/SM4/ARIA
+/// duplicate bodies, which are the only readers of `ProvCipherHw::copyctx`. The stub body is
+/// therefore empty and performs no copy at all (in particular, no `copy_nonoverlapping`).
+///
 /// # Safety
 /// Never called.
 unsafe extern "C" fn cipher_hw_aes_ocb_copyctx_unused(
@@ -6212,22 +6644,24 @@ unsafe fn aes_ocb_newctx(
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesOcbCtx>(), FILE_AES_OCB, LINE);
-        if !ctx.is_null() {
-            ossl_cipher_generic_initkey(
-                ctx,
-                kbits,
-                blkbits,
-                ivbits,
-                mode,
-                flags,
-                ptr::addr_of!(AES_OCB_HW),
-                ptr::null_mut(),
-            );
-            (*ctx.cast::<ProvAesOcbCtx>()).taglen = OCB_DEFAULT_TAG_LEN;
-        }
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAesOcbCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_cipher_generic_initkey(
+            ctx.as_ptr().cast(),
+            kbits,
+            blkbits,
+            ivbits,
+            mode,
+            flags,
+            ptr::addr_of!(AES_OCB_HW),
+            ptr::null_mut(),
+        );
+        (*ctx.as_ptr()).taglen = OCB_DEFAULT_TAG_LEN;
         let _ = provctx;
-        ctx
+        ctx.into_raw().cast()
     }
 }
 
@@ -6236,20 +6670,8 @@ unsafe fn aes_ocb_newctx(
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_ocb_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vctx.is_null() {
-            let ctx = vctx.cast::<ProvAesOcbCtx>();
-            CRYPTO_ocb128_cleanup(ptr::addr_of_mut!((*ctx).ocb));
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvAesOcbCtx>(),
-                FILE_AES_OCB,
-                LINE,
-            );
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesOcbCtx>::from_raw(vctx.cast())) };
 }
 
 /// `aes_ocb_dupctx` — `cipher_aes_ocb.c:332-349`. The shallow copy is repaired by
@@ -6266,16 +6688,20 @@ unsafe extern "C" fn aes_ocb_dupctx(vctx: *mut c_void) -> *mut c_void {
         }
 
         let in_ = vctx.cast::<ProvAesOcbCtx>();
-        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAesOcbCtx>(), FILE_AES_OCB, LINE);
-        if ret.is_null() {
+        // The copy, allocated through the crate's allocator seam; if the shallow copy cannot be
+        // repaired it is released through the owner's `Drop` (the authority's plain `CRYPTO_free`).
+        let Some(ret) = OwnedRaw::<ProvAesOcbCtx>::adopt(
+            CRYPTO_malloc(core::mem::size_of::<ProvAesOcbCtx>(), FILE_AES_OCB, LINE).cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        // `*ret = *in` is the authority's whole-context assignment; `ptr::copy` is the defined
+        // Rust equivalent, and the copy is a fresh `CRYPTO_malloc` block distinct from `in_`.
+        ptr::copy(in_, ret.as_ptr(), 1);
+        if aes_generic_ocb_copy_ctx(ret.as_ptr(), in_) == 0 {
             return ptr::null_mut();
         }
-        ptr::copy_nonoverlapping(in_, ret.cast::<ProvAesOcbCtx>(), 1);
-        if aes_generic_ocb_copy_ctx(ret.cast::<ProvAesOcbCtx>(), in_) == 0 {
-            CRYPTO_free(ret, FILE_AES_OCB, LINE);
-            return ptr::null_mut();
-        }
-        ret
+        ret.into_raw().cast()
     }
 }
 
@@ -8935,11 +9361,13 @@ unsafe fn aes_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesCcmCtx>(), FILE_CCM, LINE);
-        if !ctx.is_null() {
-            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_aes_hw_ccm(keybits));
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAesCcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_ccm_initctx(ctx.as_ptr().cast(), keybits, ossl_prov_aes_hw_ccm(keybits));
+        ctx.into_raw().cast()
     }
 }
 
@@ -8983,8 +9411,8 @@ unsafe extern "C" fn aes_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_ccm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `aes_ccm_newctx` allocated.
-    unsafe { CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesCcmCtx>(), FILE_CCM, LINE) };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesCcmCtx>::from_raw(vctx.cast())) };
 }
 
 /// The allocation-tracking `file` argument for this section's allocations: `cipher_aes_ccm.c`.
@@ -9280,11 +9708,13 @@ unsafe fn aria_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void 
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAriaCcmCtx>(), FILE_ARIA_CCM, LINE);
-        if !ctx.is_null() {
-            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_aria_hw_ccm(keybits));
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAriaCcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_ccm_initctx(ctx.as_ptr().cast(), keybits, ossl_prov_aria_hw_ccm(keybits));
+        ctx.into_raw().cast()
     }
 }
 
@@ -9328,15 +9758,8 @@ unsafe extern "C" fn aria_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aria_ccm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `aria_ccm_newctx` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAriaCcmCtx>(),
-            FILE_ARIA_CCM,
-            LINE,
-        )
-    };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAriaCcmCtx>::from_raw(vctx.cast())) };
 }
 
 /// `sm4_ccm_newctx` — `cipher_sm4_ccm.c:18-29`.
@@ -9350,11 +9773,13 @@ unsafe fn sm4_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm4CcmCtx>(), FILE_SM4_CCM, LINE);
-        if !ctx.is_null() {
-            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_sm4_hw_ccm(keybits));
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvSm4CcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_ccm_initctx(ctx.as_ptr().cast(), keybits, ossl_prov_sm4_hw_ccm(keybits));
+        ctx.into_raw().cast()
     }
 }
 
@@ -9397,15 +9822,8 @@ unsafe extern "C" fn sm4_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sm4_ccm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `sm4_ccm_newctx` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvSm4CcmCtx>(),
-            FILE_SM4_CCM,
-            LINE,
-        )
-    };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvSm4CcmCtx>::from_raw(vctx.cast())) };
 }
 
 // `IMPLEMENT_aead_cipher(aria, ccm, CCM, AEAD_FLAGS, <kbits>, 8, 96)` — `cipher_aria_ccm.c:53-58`,
@@ -9547,17 +9965,19 @@ unsafe fn aes_siv_newctx(
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
-        if !ctx.is_null() {
-            let ctx = ctx.cast::<ProvAesSivCtx>();
-            (*ctx).taglen = SIV_LEN;
-            (*ctx).mode = mode;
-            (*ctx).keylen = keybits / 8;
-            (*ctx).hw = ossl_prov_cipher_hw_aes_siv();
-            /* Unconditional, as the authority's line is: `PROV_LIBCTX_OF` is itself NULL-safe. */
-            (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed to the caller below.
+        let Some(owner) = OwnedCtx::<ProvAesSivCtx>::new() else {
+            return ptr::null_mut();
+        };
+        let ctx = owner.as_ptr();
+        (*ctx).taglen = SIV_LEN;
+        (*ctx).mode = mode;
+        (*ctx).keylen = keybits / 8;
+        (*ctx).hw = ossl_prov_cipher_hw_aes_siv();
+        /* Unconditional, as the authority's line is: `PROV_LIBCTX_OF` is itself NULL-safe. */
+        (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
+        owner.into_raw().cast()
     }
 }
 
@@ -9566,14 +9986,8 @@ unsafe fn aes_siv_newctx(
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_siv_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `aes_siv_newctx` allocated.
-    unsafe {
-        if !vctx.is_null() {
-            let ctx = vctx.cast::<ProvAesSivCtx>();
-            ((*(*ctx).hw).cleanup)(vctx);
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesSivCtx>::from_raw(vctx.cast())) };
 }
 
 /// `siv_dupctx` — `cipher_aes_siv.c:65-82`. The copy is made by the hw's `dupctx`, which
@@ -9589,15 +10003,17 @@ unsafe extern "C" fn siv_dupctx(vctx: *mut c_void) -> *mut c_void {
         }
 
         let in_ = vctx.cast::<ProvAesSivCtx>();
-        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
-        if ret.is_null() {
+        // The copy, allocated through the crate's allocator seam; if the hardware duplicate fails
+        // it is released through the owner's `Drop` (the authority's plain `CRYPTO_free`).
+        let Some(ret) = OwnedRaw::<ProvAesSivCtx>::adopt(
+            CRYPTO_malloc(core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE).cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        if ((*(*in_).hw).dupctx)(vctx, ret.as_ptr().cast()) == 0 {
             return ptr::null_mut();
         }
-        if ((*(*in_).hw).dupctx)(vctx, ret) == 0 {
-            CRYPTO_free(ret, FILE_SIV, LINE);
-            return ptr::null_mut();
-        }
-        ret
+        ret.into_raw().cast()
     }
 }
 
@@ -9937,12 +10353,17 @@ unsafe fn aes_siv_initkey(vctx: *mut c_void, key: *const c_uchar, keylen: usize)
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW_AES_SIV::dupctx` contract; `in_vctx` and `out_vctx` are live
-/// `PROV_AES_SIV_CTX`es.
+/// `PROV_AES_SIV_CTX`es. A self-duplicate returns 0 before acquiring anything, because the struct
+/// copy would clear the source's embedded pointers.
 unsafe fn aes_siv_dupctx(in_vctx: *mut c_void, out_vctx: *mut c_void) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
         let in_ = in_vctx.cast::<ProvAesSivCtx>();
         let out = out_vctx.cast::<ProvAesSivCtx>();
+
+        if core::ptr::eq(in_, out) {
+            return 0;
+        }
 
         if !(*in_).cbc.is_null() && EVP_CIPHER_up_ref((*in_).cbc) == 0 {
             return 0;
@@ -9952,12 +10373,22 @@ unsafe fn aes_siv_dupctx(in_vctx: *mut c_void, out_vctx: *mut c_void) -> c_int {
             return 0;
         }
 
-        // SAFETY: the bitwise copy C's `*out = *in` performs; both are live `PROV_AES_SIV_CTX`es.
-        ptr::copy_nonoverlapping(in_, out, 1);
+        // SAFETY: the bitwise copy C's `*out = *in` performs; both are live `PROV_AES_SIV_CTX`es
+        // and the identity case was refused above.
+        ptr::copy(in_, out, 1);
         (*out).siv.cipher_ctx = ptr::null_mut();
         (*out).siv.mac_ctx_init = ptr::null_mut();
         (*out).siv.mac = ptr::null_mut();
         if ossl_siv128_copy_ctx(ptr::addr_of_mut!((*out).siv), ptr::addr_of_mut!((*in_).siv)) == 0 {
+            // The caller releases the failed duplicate with a plain `CRYPTO_free` (`OwnedRaw`),
+            // which does not run `aes_siv_cleanup`. Release everything this attempt acquired:
+            // the two cipher references and the partially built embedded context. On every
+            // failure return of `ossl_siv128_copy_ctx`, `siv.mac` is either NULL or the source's
+            // unowned pointer, so it is deliberately not freed here.
+            EVP_MAC_CTX_free((*out).siv.mac_ctx_init);
+            EVP_CIPHER_CTX_free((*out).siv.cipher_ctx);
+            EVP_CIPHER_free((*out).cbc);
+            EVP_CIPHER_free((*out).ctr);
             return 0;
         }
 
@@ -10190,7 +10621,12 @@ unsafe extern "C" fn null_newctx(_provctx: *mut c_void) -> *mut c_void {
     if is_running() == 0 {
         return ptr::null_mut();
     }
-    CRYPTO_zalloc(core::mem::size_of::<ProvNullCtx>(), FILE_NULL, LINE)
+    // The context block, allocated through the crate's allocator seam; it is handed to the caller
+    // as this function's result, so no owner outlives it.
+    match OwnedCtx::<ProvNullCtx>::new() {
+        Some(ctx) => ctx.into_raw().cast(),
+        None => ptr::null_mut(),
+    }
 }
 
 /// `null_freectx` — `cipher_null.c:33-37`.
@@ -10198,8 +10634,8 @@ unsafe extern "C" fn null_newctx(_provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn null_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `null_newctx` allocated.
-    unsafe { CRYPTO_clear_free(vctx, core::mem::size_of::<ProvNullCtx>(), FILE_NULL, LINE) };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvNullCtx>::from_raw(vctx.cast())) };
 }
 
 /// `null_einit` — `cipher_null.c:39-51`.
@@ -10748,9 +11184,14 @@ unsafe fn aux_set_tls_ver(ctx: *mut ProvAesHmacShaCtx, v: c_uint) {
 }
 
 /// `ctx->base.enc` — the `enc` bitfield.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvCipherCtx` that this call may read for the duration of the
+/// borrow.
 #[inline]
-fn ctx_enc(ctx: *const ProvCipherCtx) -> bool {
-    bits(ctx) & CTX_ENC != 0
+unsafe fn ctx_enc(ctx: *const ProvCipherCtx) -> bool {
+    // SAFETY: the caller's contract.
+    unsafe { bits(ctx) & CTX_ENC != 0 }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -10823,20 +11264,21 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
     }
 }
 
-/// `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656`.
+/// The body of `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656` —
+/// with the 64-byte ipad/opad scratch supplied by the caller so a test can observe its final
+/// state. The authority's final `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))` is the crate's
+/// volatile-write primitive, not a removable `write_bytes` dead store.
 ///
 /// # Safety
-/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
-pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
-    vctx: *mut c_void,
+/// `ctx` is a live `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
+unsafe fn aesni_cbc_hmac_sha1_set_mac_key_body(
+    ctx: *mut ProvAesHmacSha1Ctx,
     mac: *const c_uchar,
     len: usize,
+    hmac_key: &mut [u8; 64],
 ) {
     // SAFETY: the caller's contract.
     unsafe {
-        let ctx = vctx.cast::<ProvAesHmacSha1Ctx>();
-        let mut hmac_key = [0u8; 64];
-
         if len > hmac_key.len() {
             SHA1_Init(ptr::addr_of_mut!((*ctx).head));
             sha1_update(ptr::addr_of_mut!((*ctx).head), mac.cast(), len);
@@ -10866,8 +11308,26 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
             hmac_key.len(),
         );
 
-        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`.
-        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))` — the volatile-write primitive, so the
+        // compiler cannot turn the last use into a removable dead store.
+        OPENSSL_cleanse(hmac_key.as_mut_ptr().cast(), hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
+    vctx: *mut c_void,
+    mac: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; `hmac_key` is this frame's scratch and is cleansed before it
+    // goes out of scope.
+    unsafe {
+        let mut hmac_key = [0u8; 64];
+        aesni_cbc_hmac_sha1_set_mac_key_body(vctx.cast(), mac, len, &mut hmac_key);
     }
 }
 
@@ -11463,20 +11923,20 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
     }
 }
 
-/// `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+/// The body of `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+/// The authority's `OPENSSL_cleanse` is kept as the crate's volatile-write primitive; the scratch
+/// is caller-supplied so a test can observe that it is zeroed before return.
 ///
 /// # Safety
-/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
-pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
-    vctx: *mut c_void,
+/// `ctx` is a live `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
+unsafe fn aesni_cbc_hmac_sha256_set_mac_key_body(
+    ctx: *mut ProvAesHmacSha256Ctx,
     mackey: *const c_uchar,
     len: usize,
+    hmac_key: &mut [u8; 64],
 ) {
     // SAFETY: the caller's contract.
     unsafe {
-        let ctx = vctx.cast::<ProvAesHmacSha256Ctx>();
-        let mut hmac_key = [0u8; 64];
-
         if len > hmac_key.len() {
             SHA256_Init(ptr::addr_of_mut!((*ctx).head));
             sha256_update(ptr::addr_of_mut!((*ctx).head), mackey.cast(), len);
@@ -11506,7 +11966,25 @@ pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
             hmac_key.len(),
         );
 
-        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`.
+        OPENSSL_cleanse(hmac_key.as_mut_ptr().cast(), hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
+    vctx: *mut c_void,
+    mackey: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; `hmac_key` is this frame's scratch and is cleansed before it
+    // goes out of scope.
+    unsafe {
+        let mut hmac_key = [0u8; 64];
+        aesni_cbc_hmac_sha256_set_mac_key_body(vctx.cast(), mackey, len, &mut hmac_key);
     }
 }
 
@@ -12351,23 +12829,21 @@ unsafe fn aes_cbc_hmac_sha1_newctx(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(
-            core::mem::size_of::<ProvAesHmacSha1Ctx>(),
-            FILE_CBC_HMAC,
-            LINE,
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed to the caller below.
+        let Some(owner) = OwnedCtx::<ProvAesHmacSha1Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        cbchmac_base_init(
+            provctx,
+            owner.as_ptr().cast::<ProvAesHmacShaCtx>(),
+            ossl_prov_cipher_hw_aes_cbc_hmac_sha1(),
+            kbits,
+            blkbits,
+            ivbits,
+            flags,
         );
-        if !ctx.is_null() {
-            cbchmac_base_init(
-                provctx,
-                ctx.cast::<ProvAesHmacShaCtx>(),
-                ossl_prov_cipher_hw_aes_cbc_hmac_sha1(),
-                kbits,
-                blkbits,
-                ivbits,
-                flags,
-            );
-        }
-        ctx
+        owner.into_raw().cast()
     }
 }
 
@@ -12395,18 +12871,8 @@ unsafe extern "C" fn aes_cbc_hmac_sha1_dupctx(provctx: *mut c_void) -> *mut c_vo
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_cbc_hmac_sha1_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vctx.is_null() {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvAesHmacSha1Ctx>(),
-                FILE_CBC_HMAC,
-                LINE,
-            );
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesHmacSha1Ctx>::from_raw(vctx.cast())) };
 }
 
 /// `aes_cbc_hmac_sha256_newctx` — `cipher_aes_cbc_hmac_sha.c:356-371`.
@@ -12425,23 +12891,21 @@ unsafe fn aes_cbc_hmac_sha256_newctx(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(
-            core::mem::size_of::<ProvAesHmacSha256Ctx>(),
-            FILE_CBC_HMAC,
-            LINE,
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed to the caller below.
+        let Some(owner) = OwnedCtx::<ProvAesHmacSha256Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        cbchmac_base_init(
+            provctx,
+            owner.as_ptr().cast::<ProvAesHmacShaCtx>(),
+            ossl_prov_cipher_hw_aes_cbc_hmac_sha256(),
+            kbits,
+            blkbits,
+            ivbits,
+            flags,
         );
-        if !ctx.is_null() {
-            cbchmac_base_init(
-                provctx,
-                ctx.cast::<ProvAesHmacShaCtx>(),
-                ossl_prov_cipher_hw_aes_cbc_hmac_sha256(),
-                kbits,
-                blkbits,
-                ivbits,
-                flags,
-            );
-        }
-        ctx
+        owner.into_raw().cast()
     }
 }
 
@@ -12469,18 +12933,8 @@ unsafe extern "C" fn aes_cbc_hmac_sha256_dupctx(provctx: *mut c_void) -> *mut c_
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_cbc_hmac_sha256_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vctx.is_null() {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvAesHmacSha256Ctx>(),
-                FILE_CBC_HMAC,
-                LINE,
-            );
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesHmacSha256Ctx>::from_raw(vctx.cast())) };
 }
 
 /// `IMPLEMENT_CIPHER` — `cipher_aes_cbc_hmac_sha.c:393-427`.
@@ -12901,15 +13355,23 @@ const _: () = {
 };
 
 /// The six bit accessors, so the bodies below read the way the authority's do.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvAesGcmSivCtx` that this call may read for the duration of the
+/// borrow.
 #[inline]
-fn gsiv_flag(ctx: *const ProvAesGcmSivCtx, mask: c_uint) -> bool {
-    // SAFETY: the caller holds a live context.
+unsafe fn gsiv_flag(ctx: *const ProvAesGcmSivCtx, mask: c_uint) -> bool {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).flags & mask != 0 }
 }
 /// Set one bitfield.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvAesGcmSivCtx` that this call may exclusively borrow for the
+/// duration of the call.
 #[inline]
-fn gsiv_set(ctx: *mut ProvAesGcmSivCtx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn gsiv_set(ctx: *mut ProvAesGcmSivCtx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).flags |= mask;
@@ -13480,15 +13942,17 @@ unsafe fn ossl_aes_gcm_siv_newctx(provctx: *mut c_void, keybits: usize) -> *mut 
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesGcmSivCtx>(), FILE_GCM_SIV, LINE)
-            .cast::<ProvAesGcmSivCtx>();
-        if !ctx.is_null() {
-            (*ctx).key_len = keybits / 8;
-            (*ctx).hw = ossl_prov_cipher_hw_aes_gcm_siv(keybits);
-            (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed to the caller below.
+        let Some(owner) = OwnedCtx::<ProvAesGcmSivCtx>::new() else {
+            return ptr::null_mut();
+        };
+        let ctx = owner.as_ptr();
+        (*ctx).key_len = keybits / 8;
+        (*ctx).hw = ossl_prov_cipher_hw_aes_gcm_siv(keybits);
+        (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
+        (*ctx).provctx = provctx;
+        owner.into_raw().cast()
     }
 }
 
@@ -13501,21 +13965,9 @@ unsafe fn ossl_aes_gcm_siv_newctx(provctx: *mut c_void, keybits: usize) -> *mut 
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn ossl_aes_gcm_siv_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if vctx.is_null() {
-            return;
-        }
-        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
-        CRYPTO_clear_free((*ctx).aad.cast(), (*ctx).aad_len, FILE_GCM_SIV, LINE);
-        ((*(*ctx).hw).clean_ctx)(vctx);
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAesGcmSivCtx>(),
-            FILE_GCM_SIV,
-            LINE,
-        );
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release
+    // (the AAD member release and the hardware `clean_ctx` included).
+    unsafe { drop(OwnedCtx::<ProvAesGcmSivCtx>::from_raw(vctx.cast())) };
 }
 
 /// `static void *ossl_aes_gcm_siv_dupctx(void *vctx)` — `cipher_aes_gcm_siv.c:56-89`.
@@ -14548,20 +15000,35 @@ static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 140]> = SyncCell(UnsafeCell::n
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
-/// authority does with `exported_ciphers`. The invariant is that the sole write precedes every
-/// read, which is `ossl_default_provider_init`'s contract rather than a property of the type.
-struct SyncCell<T>(UnsafeCell<T>);
-// SAFETY: see `SyncCell`'s own note: one write at init, then read-only sharing, which is the
-// authority's own discipline for the same object.
-unsafe impl<T> Sync for SyncCell<T> {}
-
-/// `void ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` — `defltprov.c:804`,
-/// called from `ossl_default_provider_init`.
+/// authority does with `exported_ciphers`.
 ///
-/// # Safety
-/// Called once, before the provider is published.
-pub(crate) unsafe fn cache_exported_ciphers() {
-    // SAFETY: the caller's contract, and the destination is this module's own array.
+/// **Invariant witness.** Stored: the fixed `[OsslAlgorithm; 140]` table whose pointers name
+/// `'static` literals and `'static` dispatch tables. Writer: [`fill_exported_ciphers`], reached
+/// only through [`EXPORTED_CIPHERS_INIT`]'s `Once`, so there is exactly one write and it is
+/// serialised against every other caller. Readers: [`exported_ciphers`] also enters the same
+/// `Once`; `Once::call_once` publishes with release semantics and every returning caller has the
+/// acquire edge, after which the cell is never mutated. `Sync` is therefore sound for this
+/// concrete array: shared access is either the serialised initialisation or the immutable
+/// post-initialisation read, never a concurrent write/read pair. The impl is deliberately not
+/// generic over `T`, because that would claim the discipline for types whose access patterns the
+/// module cannot see.
+struct SyncCell<T>(UnsafeCell<T>);
+// SAFETY: the field is written only inside `EXPORTED_CIPHERS_INIT`'s `Once` initialiser and is
+// read-only afterwards; see the invariant witness above.
+unsafe impl Sync for SyncCell<[OsslAlgorithm; 140]> {}
+
+/// Serialises the single fill of [`EXPORTED_CIPHERS`]. The authority has no lock here and relies
+/// on `ossl_default_provider_init` running before publication; this crate keeps that ordering but
+/// makes it a property of the cell rather than a caller comment, because two concurrent
+/// `OSSL_PROVIDER` constructions can each call the init function before either is inserted into
+/// the provider store.
+static EXPORTED_CIPHERS_INIT: std::sync::Once = std::sync::Once::new();
+
+/// The one write of [`EXPORTED_CIPHERS`]; `Once` guarantees it runs once and never concurrently
+/// with a reader.
+fn fill_exported_ciphers() {
+    // SAFETY: `DEFLT_CIPHERS` is the module's own NULL-named terminated table and the destination
+    // is the module's own array of the same length; `Once` makes this the sole writer.
     unsafe {
         ossl_prov_cache_exported_algorithms(
             DEFLT_CIPHERS.as_ptr(),
@@ -14570,12 +15037,24 @@ pub(crate) unsafe fn cache_exported_ciphers() {
     }
 }
 
+/// `void ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` — `defltprov.c:804`,
+/// called from `ossl_default_provider_init`.
+///
+/// The authority's caller obligation (fill once, before publication) is enforced here by
+/// [`EXPORTED_CIPHERS_INIT`], so this is a safe function.
+pub(crate) fn cache_exported_ciphers() {
+    EXPORTED_CIPHERS_INIT.call_once(fill_exported_ciphers);
+}
+
 /// The `OSSL_OP_CIPHER` arm's table: the capability-filtered copy, once
 /// [`cache_exported_ciphers`] has run.
 ///
 /// Before that call its first row is `NULL`-named, which is the authority's own state and the
-/// reason `ossl_prov_cache_exported_algorithms`'s guard is the test it is.
+/// reason `ossl_prov_cache_exported_algorithms`'s guard is the test it is. Entering the same
+/// `Once` here gives the reader the acquire edge from the writer (and lets a reader that races
+/// ahead of provider publication perform the idempotent fill itself).
 pub(crate) fn exported_ciphers() -> *const OsslAlgorithm {
+    EXPORTED_CIPHERS_INIT.call_once(fill_exported_ciphers);
     EXPORTED_CIPHERS.0.get().cast()
 }
 
@@ -14906,13 +15385,14 @@ unsafe extern "C" fn chacha20_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvChacha20Ctx>(), FILE_CHACHA20, LINE)
-            .cast::<ProvChacha20Ctx>();
-        if !ctx.is_null() {
-            ossl_chacha20_initctx(ctx);
-        }
+        // The context block, allocated through the crate's allocator seam and owned by `ctx`
+        // until it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvChacha20Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_chacha20_initctx(ctx.as_ptr());
         let _ = provctx;
-        ctx.cast()
+        ctx.into_raw().cast()
     }
 }
 
@@ -14922,18 +15402,8 @@ unsafe extern "C" fn chacha20_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn chacha20_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vctx.is_null() {
-            ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvChacha20Ctx>(),
-                FILE_CHACHA20,
-                LINE,
-            );
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvChacha20Ctx>::from_raw(vctx.cast())) };
 }
 
 /// `static void *chacha20_dupctx(void *vctx)` — `cipher_chacha20.c:76-95`.
@@ -14954,27 +15424,34 @@ unsafe extern "C" fn chacha20_dupctx(vctx: *mut c_void) -> *mut c_void {
         if ctx.is_null() {
             return ptr::null_mut();
         }
-        let dupctx = CRYPTO_memdup(
-            ctx.cast(),
-            core::mem::size_of::<ProvChacha20Ctx>(),
-            FILE_CHACHA20,
-            LINE,
-        )
-        .cast::<ProvChacha20Ctx>();
-        if !dupctx.is_null() && !(*dupctx).base.tlsmac.is_null() && (*dupctx).base.alloced != 0 {
-            (*dupctx).base.tlsmac = CRYPTO_memdup(
-                (*dupctx).base.tlsmac.cast(),
-                (*dupctx).base.tlsmacsize,
+        // The copy, allocated through the crate's allocator seam; the MAC buffer is the one field
+        // that needs its own allocation, and its failure releases the whole copy through the
+        // owner's `Drop` (the authority's plain `CRYPTO_free`).
+        let Some(dupctx) = OwnedRaw::<ProvChacha20Ctx>::adopt(
+            CRYPTO_memdup(
+                ctx.cast(),
+                core::mem::size_of::<ProvChacha20Ctx>(),
+                FILE_CHACHA20,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let d = dupctx.as_ptr();
+        if !(*d).base.tlsmac.is_null() && (*d).base.alloced != 0 {
+            (*d).base.tlsmac = CRYPTO_memdup(
+                (*d).base.tlsmac.cast(),
+                (*d).base.tlsmacsize,
                 FILE_CHACHA20,
                 LINE,
             )
             .cast::<c_uchar>();
-            if (*dupctx).base.tlsmac.is_null() {
-                CRYPTO_free(dupctx.cast(), FILE_CHACHA20, LINE);
+            if (*d).base.tlsmac.is_null() {
                 return ptr::null_mut();
             }
         }
-        dupctx.cast()
+        dupctx.into_raw().cast()
     }
 }
 
@@ -15415,18 +15892,26 @@ pub(crate) struct ProvChacha20Poly1305Ctx {
 }
 
 /// The two-bit lane, read.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvChacha20Poly1305Ctx` that this call may read for the duration of
+/// the borrow.
 #[inline]
-fn cpp_flag(ctx: *const ProvChacha20Poly1305Ctx, mask: c_uint) -> bool {
-    // SAFETY: the caller holds a live context.
+unsafe fn cpp_flag(ctx: *const ProvChacha20Poly1305Ctx, mask: c_uint) -> bool {
+    // SAFETY: the caller's contract.
     unsafe { (*ctx).flags & mask != 0 }
 }
 
 /// The two-bit lane, written — **one bit at a time**, because the authority's `ctx->aad = 0` assigns
 /// the `aad` bitfield and leaves `mac_inited` alone. Clearing the whole lane would be a different
 /// program.
+///
+/// # Safety
+/// `ctx` is a live, aligned `ProvChacha20Poly1305Ctx` that this call may exclusively borrow for
+/// the duration of the call.
 #[inline]
-fn cpp_set(ctx: *mut ProvChacha20Poly1305Ctx, mask: c_uint, on: bool) {
-    // SAFETY: the caller holds a live context.
+unsafe fn cpp_set(ctx: *mut ProvChacha20Poly1305Ctx, mask: c_uint, on: bool) {
+    // SAFETY: the caller's contract.
     unsafe {
         if on {
             (*ctx).flags |= mask;
@@ -16174,28 +16659,26 @@ unsafe fn chacha20_poly1305_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(
-            core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
-            FILE_CHACHA20_POLY1305,
-            LINE,
-        )
-        .cast::<ProvChacha20Poly1305Ctx>();
-        if !ctx.is_null() {
-            ossl_cipher_generic_initkey(
-                ctx.cast(),
-                CHACHA20_POLY1305_KEYLEN * 8,
-                CHACHA20_POLY1305_BLKLEN * 8,
-                CHACHA20_POLY1305_IVLEN * 8,
-                CHACHA20_POLY1305_MODE,
-                CHACHA20_POLY1305_FLAGS,
-                ossl_prov_cipher_hw_chacha20_poly1305(CHACHA20_POLY1305_KEYLEN * 8),
-                ptr::null_mut(),
-            );
-            (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
-            ossl_chacha20_initctx(core::ptr::addr_of_mut!((*ctx).chacha));
-        }
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed to the caller below.
+        let Some(owner) = OwnedCtx::<ProvChacha20Poly1305Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        let ctx = owner.as_ptr();
+        ossl_cipher_generic_initkey(
+            ctx.cast(),
+            CHACHA20_POLY1305_KEYLEN * 8,
+            CHACHA20_POLY1305_BLKLEN * 8,
+            CHACHA20_POLY1305_IVLEN * 8,
+            CHACHA20_POLY1305_MODE,
+            CHACHA20_POLY1305_FLAGS,
+            ossl_prov_cipher_hw_chacha20_poly1305(CHACHA20_POLY1305_KEYLEN * 8),
+            ptr::null_mut(),
+        );
+        (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+        ossl_chacha20_initctx(core::ptr::addr_of_mut!((*ctx).chacha));
         let _ = provctx;
-        ctx.cast()
+        owner.into_raw().cast()
     }
 }
 
@@ -16215,27 +16698,34 @@ unsafe extern "C" fn chacha20_poly1305_dupctx(vctx: *mut c_void) -> *mut c_void 
         if ctx.is_null() {
             return ptr::null_mut();
         }
-        let dctx = CRYPTO_memdup(
-            ctx.cast(),
-            core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
-            FILE_CHACHA20_POLY1305,
-            LINE,
-        )
-        .cast::<ProvChacha20Poly1305Ctx>();
-        if !dctx.is_null() && !(*dctx).base.tlsmac.is_null() && (*dctx).base.alloced != 0 {
-            (*dctx).base.tlsmac = CRYPTO_memdup(
-                (*dctx).base.tlsmac.cast(),
-                (*dctx).base.tlsmacsize,
+        // The copy, allocated through the crate's allocator seam; the MAC buffer is the one field
+        // that needs its own allocation, and its failure releases the whole copy through the
+        // owner's `Drop` (the authority's plain `CRYPTO_free`).
+        let Some(dctx) = OwnedRaw::<ProvChacha20Poly1305Ctx>::adopt(
+            CRYPTO_memdup(
+                ctx.cast(),
+                core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
+                FILE_CHACHA20_POLY1305,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let d = dctx.as_ptr();
+        if !(*d).base.tlsmac.is_null() && (*d).base.alloced != 0 {
+            (*d).base.tlsmac = CRYPTO_memdup(
+                (*d).base.tlsmac.cast(),
+                (*d).base.tlsmacsize,
                 FILE_CHACHA20_POLY1305,
                 LINE,
             )
             .cast::<c_uchar>();
-            if (*dctx).base.tlsmac.is_null() {
-                CRYPTO_free(dctx.cast(), FILE_CHACHA20_POLY1305, LINE);
+            if (*d).base.tlsmac.is_null() {
                 return ptr::null_mut();
             }
         }
-        dctx.cast()
+        dctx.into_raw().cast()
     }
 }
 
@@ -16245,18 +16735,8 @@ unsafe extern "C" fn chacha20_poly1305_dupctx(vctx: *mut c_void) -> *mut c_void 
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn chacha20_poly1305_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if !vctx.is_null() {
-            ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
-                FILE_CHACHA20_POLY1305,
-                LINE,
-            );
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvChacha20Poly1305Ctx>::from_raw(vctx.cast())) };
 }
 
 /// `static int chacha20_poly1305_get_params(OSSL_PARAM params[])` —
@@ -16921,9 +17401,10 @@ unsafe extern "C" fn cipher_hw_sm4_initkey(
 /// # Safety
 /// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
 unsafe extern "C" fn cipher_hw_sm4_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract.
+    // SAFETY: the caller's contract. `ptr::copy` is the defined equivalent of the authority's
+    // `*dctx = *sctx`, including a self-copy.
     unsafe {
-        core::ptr::copy_nonoverlapping(src.cast::<ProvSm4Ctx>(), dst.cast::<ProvSm4Ctx>(), 1);
+        core::ptr::copy(src.cast::<ProvSm4Ctx>(), dst.cast::<ProvSm4Ctx>(), 1);
     }
 }
 
@@ -16933,11 +17414,8 @@ unsafe extern "C" fn cipher_hw_sm4_copyctx(dst: *mut ProvCipherCtx, src: *const 
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sm4_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
-        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvSm4Ctx>(), FILE_SM4, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvSm4Ctx>::from_raw(vctx.cast())) };
 }
 
 /// `static void *sm4_dupctx(void *ctx)` — `cipher_sm4.c:27-41`.
@@ -17251,9 +17729,10 @@ unsafe extern "C" fn cipher_hw_aria_initkey(
 /// # Safety
 /// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
 unsafe extern "C" fn cipher_hw_aria_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-    // SAFETY: the caller's contract.
+    // SAFETY: the caller's contract. `ptr::copy` is the defined equivalent of the authority's
+    // `*dctx = *sctx`, including a self-copy.
     unsafe {
-        ptr::copy_nonoverlapping(src.cast::<ProvAriaCtx>(), dst.cast::<ProvAriaCtx>(), 1);
+        ptr::copy(src.cast::<ProvAriaCtx>(), dst.cast::<ProvAriaCtx>(), 1);
     }
 }
 
@@ -17263,11 +17742,8 @@ unsafe extern "C" fn cipher_hw_aria_copyctx(dst: *mut ProvCipherCtx, src: *const
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aria_freectx(vctx: *mut c_void) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
-        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAriaCtx>(), FILE_ARIA, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAriaCtx>::from_raw(vctx.cast())) };
 }
 
 /// `static void *aria_dupctx(void *ctx)` — `cipher_aria.c:27-41`. No NULL check on `vctx`, and the
@@ -17955,23 +18431,25 @@ pub(crate) mod legacy {
                 if is_running() == 0 {
                     return ptr::null_mut();
                 }
-                let ctx = CRYPTO_zalloc(core::mem::size_of::<$ctx>(), $file, LINE);
-                if !ctx.is_null() {
-                    // SAFETY: `ctx` is a fresh zeroed context of this row's type.
-                    unsafe {
-                        ossl_cipher_generic_initkey(
-                            ctx,
-                            $kbits,
-                            $blkbits,
-                            $ivbits,
-                            $mode,
-                            $flags,
-                            ptr::addr_of!($hw).cast::<ProvCipherHw>(),
-                            provctx,
-                        );
-                    }
+                // The context block, allocated through the crate's allocator seam and owned by
+                // `ctx` until it is handed to the caller below.
+                let Some(ctx) = OwnedCtx::<$ctx>::new() else {
+                    return ptr::null_mut();
+                };
+                // SAFETY: `ctx` is a fresh zeroed context of this row's type.
+                unsafe {
+                    ossl_cipher_generic_initkey(
+                        ctx.as_ptr().cast(),
+                        $kbits,
+                        $blkbits,
+                        $ivbits,
+                        $mode,
+                        $flags,
+                        ptr::addr_of!($hw).cast::<ProvCipherHw>(),
+                        provctx,
+                    );
                 }
-                ctx
+                ctx.into_raw().cast()
             }
 
             unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
@@ -18327,11 +18805,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn cast5_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvCastCtx>(), FILE_CAST5, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvCastCtx>::from_raw(vctx.cast())) };
     }
 
     /// `cast5_dupctx` — `cipher_cast5.c:36-50`.
@@ -18678,16 +19153,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn blowfish_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvBlowfishCtx>(),
-                FILE_BLOWFISH,
-                LINE,
-            );
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvBlowfishCtx>::from_raw(vctx.cast())) };
     }
 
     /// `blowfish_dupctx` — `cipher_blowfish.c:35-49`.
@@ -19053,11 +19520,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn idea_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvIdeaCtx>(), FILE_IDEA, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvIdeaCtx>::from_raw(vctx.cast())) };
     }
 
     /// `idea_dupctx` — `cipher_idea.c:34-48`.
@@ -19384,11 +19848,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn seed_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvSeedCtx>(), FILE_SEED, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvSeedCtx>::from_raw(vctx.cast())) };
     }
 
     /// `seed_dupctx` — `cipher_seed.c:33-47`.
@@ -19767,11 +20228,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn rc2_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvRc2Ctx>(), FILE_RC2, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvRc2Ctx>::from_raw(vctx.cast())) };
     }
 
     /// `rc2_dupctx` — `cipher_rc2.c:44-58`.
@@ -20026,24 +20484,26 @@ pub(crate) mod legacy {
                 if is_running() == 0 {
                     return ptr::null_mut();
                 }
-                let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvRc2Ctx>(), FILE_RC2, LINE);
-                if !ctx.is_null() {
-                    // SAFETY: a fresh zeroed `PROV_RC2_CTX`.
-                    unsafe {
-                        ossl_cipher_generic_initkey(
-                            ctx,
-                            $kbits,
-                            $blkbits,
-                            $ivbits,
-                            $mode,
-                            $flags,
-                            ptr::addr_of!($hw).cast::<ProvCipherHw>(),
-                            provctx,
-                        );
-                        (*ctx.cast::<ProvRc2Ctx>()).key_bits = $kbits;
-                    }
+                // The context block, allocated through the crate's allocator seam and owned by
+                // `ctx` until it is handed to the caller below.
+                let Some(ctx) = OwnedCtx::<ProvRc2Ctx>::new() else {
+                    return ptr::null_mut();
+                };
+                // SAFETY: a fresh zeroed `PROV_RC2_CTX`.
+                unsafe {
+                    ossl_cipher_generic_initkey(
+                        ctx.as_ptr().cast(),
+                        $kbits,
+                        $blkbits,
+                        $ivbits,
+                        $mode,
+                        $flags,
+                        ptr::addr_of!($hw).cast::<ProvCipherHw>(),
+                        provctx,
+                    );
+                    (*ctx.as_ptr()).key_bits = $kbits;
                 }
-                ctx
+                ctx.into_raw().cast()
             }
 
             unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
@@ -20274,11 +20734,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn rc4_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvRc4Ctx>(), FILE_RC4, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvRc4Ctx>::from_raw(vctx.cast())) };
     }
 
     /// `rc4_dupctx` — `cipher_rc4.c:37-51`.
@@ -20445,9 +20902,10 @@ pub(crate) mod legacy {
     /// # Safety
     /// The `PROV_CIPHER_HW::copyctx` contract.
     unsafe extern "C" fn cipher_hw_des_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
-        // SAFETY: both are `PROV_DES_CTX`.
+        // SAFETY: both are `PROV_DES_CTX`; `ptr::copy` is the defined equivalent of the
+        // authority's `*dctx = *sctx`, including a self-copy.
         unsafe {
-            ptr::copy_nonoverlapping(src.cast::<ProvDesCtx>(), dst.cast::<ProvDesCtx>(), 1);
+            ptr::copy(src.cast::<ProvDesCtx>(), dst.cast::<ProvDesCtx>(), 1);
             (*dst.cast::<ProvDesCtx>()).base.ks =
                 ptr::addr_of!((*dst.cast::<ProvDesCtx>()).dks).cast();
         }
@@ -20757,11 +21215,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn des_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvDesCtx>(), FILE_DES, LINE);
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvDesCtx>::from_raw(vctx.cast())) };
     }
 
     /// `des_dupctx` — `cipher_des.c:47-61`.
@@ -20774,22 +21229,25 @@ pub(crate) mod legacy {
             if is_running() == 0 {
                 return ptr::null_mut();
             }
-            let ret = CRYPTO_malloc(core::mem::size_of::<ProvDesCtx>(), FILE_DES, LINE);
-            if ret.is_null() {
+            // The copy, allocated through the crate's allocator seam; the one unreachable NULL
+            // arm releases it through the owner's `Drop` (the authority's plain `CRYPTO_free`).
+            let Some(ret) = OwnedRaw::<ProvDesCtx>::adopt(
+                CRYPTO_malloc(core::mem::size_of::<ProvDesCtx>(), FILE_DES, LINE).cast(),
+            ) else {
                 return ptr::null_mut();
-            }
+            };
             let in_ = ctx.cast::<ProvDesCtx>();
             let copy = match (*(*in_).base.hw).copyctx {
                 Some(f) => f,
                 // The authority calls through this pointer unconditionally; every DES hw static
                 // publishes one, so this arm is unreachable for a correct transcription.
-                None => {
-                    CRYPTO_free(ret, FILE_DES, LINE);
-                    return ptr::null_mut();
-                }
+                None => return ptr::null_mut(),
             };
-            copy(ret.cast::<ProvCipherCtx>(), ctx.cast::<ProvCipherCtx>());
-            ret
+            copy(
+                ret.as_ptr().cast::<ProvCipherCtx>(),
+                ctx.cast::<ProvCipherCtx>(),
+            );
+            ret.into_raw().cast()
         }
     }
 
@@ -21126,23 +21584,25 @@ pub(crate) mod legacy {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvTdesCtx>(), FILE_TDES, LINE);
-        if !ctx.is_null() {
-            // SAFETY: a fresh zeroed `PROV_TDES_CTX`.
-            unsafe {
-                ossl_cipher_generic_initkey(
-                    ctx,
-                    192,
-                    64,
-                    64,
-                    EVP_CIPH_CBC_MODE,
-                    TDES_FLAGS,
-                    ptr::addr_of!(TDES_DESX_CBC_HW),
-                    provctx,
-                );
-            }
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvTdesCtx>::new() else {
+            return ptr::null_mut();
+        };
+        // SAFETY: a fresh zeroed `PROV_TDES_CTX`.
+        unsafe {
+            ossl_cipher_generic_initkey(
+                ctx.as_ptr().cast(),
+                192,
+                64,
+                64,
+                EVP_CIPH_CBC_MODE,
+                TDES_FLAGS,
+                ptr::addr_of!(TDES_DESX_CBC_HW),
+                provctx,
+            );
         }
-        ctx
+        ctx.into_raw().cast()
     }
 
     /// `tdes_desx_cbc_get_params` — `cipher_desx.c:20`'s `IMPLEMENT_tdes_cipher`.
@@ -21398,16 +21858,8 @@ pub(crate) mod legacy {
     /// # Safety
     /// The dispatch contract.
     unsafe extern "C" fn rc4_hmac_md5_freectx(vctx: *mut c_void) {
-        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
-        unsafe {
-            ossl_cipher_generic_reset_ctx(vctx.cast());
-            CRYPTO_clear_free(
-                vctx,
-                core::mem::size_of::<ProvRc4HmacMd5Ctx>(),
-                FILE_RC4_HMAC_MD5,
-                LINE,
-            );
-        }
+        // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` releases it.
+        unsafe { drop(OwnedCtx::<ProvRc4HmacMd5Ctx>::from_raw(vctx.cast())) };
     }
 
     /// `rc4_hmac_md5_dupctx` — `cipher_rc4_hmac_md5.c:75-82`.
@@ -21623,27 +22075,25 @@ pub(crate) mod legacy {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(
-            core::mem::size_of::<ProvRc4HmacMd5Ctx>(),
-            FILE_RC4_HMAC_MD5,
-            LINE,
-        );
-        if !ctx.is_null() {
-            // SAFETY: a fresh zeroed `PROV_RC4_HMAC_MD5_CTX`.
-            unsafe {
-                ossl_cipher_generic_initkey(
-                    ctx,
-                    128,
-                    8,
-                    0,
-                    0,
-                    RC4_HMAC_MD5_FLAGS,
-                    ptr::addr_of!(RC4_HMAC_MD5_HW).cast::<ProvCipherHw>(),
-                    provctx,
-                );
-            }
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvRc4HmacMd5Ctx>::new() else {
+            return ptr::null_mut();
+        };
+        // SAFETY: a fresh zeroed `PROV_RC4_HMAC_MD5_CTX`.
+        unsafe {
+            ossl_cipher_generic_initkey(
+                ctx.as_ptr().cast(),
+                128,
+                8,
+                0,
+                0,
+                RC4_HMAC_MD5_FLAGS,
+                ptr::addr_of!(RC4_HMAC_MD5_HW).cast::<ProvCipherHw>(),
+                provctx,
+            );
         }
-        ctx
+        ctx.into_raw().cast()
     }
 
     legacy_table!(
@@ -21661,10 +22111,102 @@ pub(crate) mod legacy {
         rc4_hmac_md5_gettable_ctx_params,
         rc4_hmac_md5_settable_ctx_params
     );
+
+    // The legacy rows' per-context destructors: each is exactly what its `*_freectx` performed by
+    // hand, minus the block release `OwnedCtx`'s `Drop` now owns.
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvCastCtx {
+        const FILE: *const c_char = FILE_CAST5;
+        unsafe fn destroy_body(ptr: *mut ProvCastCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvBlowfishCtx {
+        const FILE: *const c_char = FILE_BLOWFISH;
+        unsafe fn destroy_body(ptr: *mut ProvBlowfishCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvIdeaCtx {
+        const FILE: *const c_char = FILE_IDEA;
+        unsafe fn destroy_body(ptr: *mut ProvIdeaCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvSeedCtx {
+        const FILE: *const c_char = FILE_SEED;
+        unsafe fn destroy_body(ptr: *mut ProvSeedCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc2Ctx {
+        const FILE: *const c_char = FILE_RC2;
+        unsafe fn destroy_body(ptr: *mut ProvRc2Ctx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc4Ctx {
+        const FILE: *const c_char = FILE_RC4;
+        unsafe fn destroy_body(ptr: *mut ProvRc4Ctx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvDesCtx {
+        const FILE: *const c_char = FILE_DES;
+        unsafe fn destroy_body(ptr: *mut ProvDesCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
+
+    // SAFETY: (a) holds: `destroy_body` is the authority's `*_freectx` body minus the block --
+    // exactly the context's own members, each releaser NULL/zero tolerant, never the enclosing block.
+    // (b) holds: an all-zero context is valid with every release a no-op -- what `OwnedCtx::new` leans on.
+    unsafe impl CipherDestroy for ProvRc4HmacMd5Ctx {
+        const FILE: *const c_char = FILE_RC4_HMAC_MD5;
+        unsafe fn destroy_body(ptr: *mut ProvRc4HmacMd5Ctx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            unsafe { ossl_cipher_generic_reset_ctx(ptr.cast()) };
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
     use super::*;
     use crate::aes::AES_MAXNR;
 
@@ -21728,10 +22270,12 @@ mod tests {
             unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[138].alg.algorithm_names) };
         assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
         // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
-        // cannot drift apart silently.
-        // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
-        let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
-        assert_eq!(filtered.len(), 140);
+        // cannot drift apart silently. Read it through the `Once`-guarded accessor: going through
+        // the cell directly would bypass the publication edge the `Sync` impl relies on.
+        let filtered = exported_ciphers();
+        // SAFETY: `exported_ciphers` answers the Once-initialised 140-row table; row 139 is its
+        // terminator (`DEFLT_CIPHERS` is 139 named rows plus the NULL row).
+        assert!(unsafe { (*filtered.add(139)).algorithm_names.is_null() });
     }
 
     #[test]
@@ -22284,5 +22828,418 @@ mod tests {
             ks: core::ptr::null(),
             libctx: core::ptr::null_mut(),
         }
+    }
+
+    /// D1/D2 negative control: `OwnedCtx::new` hands `Drop` an all-zero block, so `hw` is NULL and
+    /// the destructor body must be a no-op. Before the guard this test dereferenced NULL; it runs
+    /// without the process-global allocator hook and asserts the zero state it is testing.
+    #[test]
+    fn a_zeroed_siv_context_drops_without_a_hardware_table() {
+        let Some(siv) = OwnedCtx::<ProvAesSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: `siv` owns a live, zero-initialised block of `ProvAesSivCtx` for this read.
+        unsafe {
+            let ctx = siv.as_ptr();
+            assert!((*ctx).hw.is_null(), "the zero state has no hardware table");
+            assert!((*ctx).ctr.is_null());
+            assert!((*ctx).cbc.is_null());
+            assert_eq!((*ctx).keylen, 0);
+        }
+        // `Drop` runs `ProvAesSivCtx::destroy_body` and the single cleansing block release. The
+        // body must skip `hw->cleanup`; reaching here without a fault proves the null guard.
+        drop(siv);
+
+        let Some(gsiv) = OwnedCtx::<ProvAesGcmSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        // SAFETY: `gsiv` owns a live, zero-initialised block of `ProvAesGcmSivCtx` for this read.
+        unsafe {
+            let ctx = gsiv.as_ptr();
+            assert!((*ctx).hw.is_null(), "the zero state has no hardware table");
+            assert!((*ctx).ecb_ctx.is_null());
+            assert!((*ctx).aad.is_null());
+            assert_eq!((*ctx).aad_len, 0);
+        }
+        // `Drop` runs the AAD release (NULL, length 0), skips `hw->clean_ctx`, and releases the
+        // block exactly once through `OwnedCtx`.
+        drop(gsiv);
+    }
+
+    /// C183/C187 regression: the authority's `outsize < inl` check accepts a buffer that cannot
+    /// hold the encrypting arm's padded output. With encryption and padding on, a nine-byte input
+    /// produces `up8(9) + 8 == 24` bytes, so a 16-byte destination must be refused before the wrap
+    /// function runs. The buffer is filled with a canary to prove nothing was written.
+    #[test]
+    fn aes_wrap_cipher_refuses_a_padded_output_extent() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live, zero-initialised `ProvAesWrapCtx`; only the `bits` lane is
+        // touched, and this frame has exclusive access to it.
+        unsafe {
+            bits_set(ctx, CTX_ENC, true);
+            bits_set(ctx, CTX_PAD, true);
+        }
+
+        let input = [0x5au8; 9];
+        let mut out = [0xaau8; 16];
+        let mut outl = usize::MAX;
+        // SAFETY: the context is live and the buffers are this frame's; `out` is deliberately
+        // shorter than the padded output so the extent check must fire before any write.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                out.len(),
+                input.as_ptr(),
+                input.len(),
+            )
+        };
+        assert_eq!(ret, 0, "an under-sized destination must be refused");
+        assert_eq!(outl, usize::MAX, "the failure must not publish a length");
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "the refusal must not write through the caller's buffer"
+        );
+    }
+
+    /// The authority's size-query arm is `out == NULL` (`cipher_aes_wrp.c:203`), not a NULL
+    /// input. The added extent check must not preempt it: a query carries no writable buffer, so
+    /// `outsize` may be smaller than the would-be output. Both the no-padding (`inl + 8`) and the
+    /// padded (`up8(inl) + 8`) query results are observed.
+    #[test]
+    fn aes_wrap_cipher_length_query_is_not_preempted() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context and this frame has exclusive access to its `bits`.
+        unsafe { bits_set(ctx, CTX_ENC, true) };
+
+        let input = [0x5au8; 9];
+        let mut outl = 0usize;
+        // No padding, eight-byte input: the authority's query answer is `inl + 8`.
+        // SAFETY: `out` is NULL (the query arm) and `input` is readable for `inl`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                ptr::null_mut(),
+                &mut outl,
+                8,
+                input.as_ptr(),
+                8,
+            )
+        };
+        assert_eq!(ret, 1, "the size query must succeed");
+        assert_eq!(outl, 16, "no-padding query answer is inl + 8");
+
+        // Padding on, nine-byte input: the query answer is `up8(9) + 8 == 24`.
+        // SAFETY: as above; this frame still owns the context exclusively.
+        unsafe { bits_set(ctx, CTX_PAD, true) };
+        let mut padded_outl = 0usize;
+        // SAFETY: `out` is NULL (the query arm) and `input` is readable for `inl`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                ptr::null_mut(),
+                &mut padded_outl,
+                9,
+                input.as_ptr(),
+                9,
+            )
+        };
+        assert_eq!(ret, 1, "the padded size query must succeed");
+        assert_eq!(padded_outl, 24, "padded query answer is up8(inl) + 8");
+    }
+
+    /// A NULL input is not a size query: the authority's helper returns 0 before any write or
+    /// length check (`cipher_aes_wrp.c:174`). The added extent check must not turn that into an
+    /// `OUTPUT_BUFFER_TOO_SMALL` error.
+    #[test]
+    fn aes_wrap_cipher_null_input_returns_zero() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context and this frame has exclusive access to its `bits`.
+        unsafe { bits_set(ctx, CTX_ENC, true) };
+
+        let mut out = [0xaau8; 16];
+        let mut outl = usize::MAX;
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: `input` is NULL, which the contract permits; `out` is writable for `outsize`.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                8,
+                ptr::null(),
+                8,
+            )
+        };
+        assert_eq!(ret, 0, "a NULL input returns 0, not a length");
+        assert_eq!(
+            crate::runtime::err::peek_last_reason(),
+            0,
+            "a NULL input must not raise an output-extent error"
+        );
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "a NULL input must not write through the caller's buffer"
+        );
+    }
+
+    /// Error precedence: for an invalid no-padding input the authority reaches its own
+    /// `INVALID_INPUT_LENGTH` (`cipher_aes_wrp.c:190`) before any write. The added extent check
+    /// must not answer `OUTPUT_BUFFER_TOO_SMALL` first. The authority's `-1` becomes `SIZE_MAX` in
+    /// `aes_wrap_cipher`'s `size_t len`, so the row answers success with `*outl = SIZE_MAX` while
+    /// the error is queued -- the quirk the helper's own comment records.
+    #[test]
+    fn aes_wrap_cipher_keeps_invalid_input_error_precedence() {
+        let Some(wrap) = OwnedCtx::<ProvAesWrapCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = wrap.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `wrap` owns a live context; encryption without padding is the arm under test.
+        unsafe {
+            bits_set(ctx, CTX_ENC, true);
+            bits_set(ctx, CTX_PAD, false);
+        }
+
+        let input = [0x5au8; 9];
+        let mut out = [0xaau8; 16];
+        let mut outl = 0usize;
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: the context is live and both buffers are this frame's. `outsize` passes the
+        // authority's `outsize < inl` check, so the helper's validation arm is reached.
+        let ret = unsafe {
+            aes_wrap_cipher(
+                wrap.as_ptr().cast(),
+                out.as_mut_ptr(),
+                &mut outl,
+                9,
+                input.as_ptr(),
+                input.len(),
+            )
+        };
+        assert_eq!(ret, 1, "the authority's SIZE_MAX arm reports success");
+        assert_eq!(outl, usize::MAX, "the refused call publishes SIZE_MAX");
+        assert_eq!(
+            crate::runtime::err::peek_last_reason(),
+            err_sites::PROV_CIPHER_AES_WRP_190.reason as core::ffi::c_ulong,
+            "the helper's INVALID_INPUT_LENGTH must win over the extent check"
+        );
+        assert!(
+            out.iter().all(|&b| b == 0xaa),
+            "the refused call must not write through the caller's buffer"
+        );
+    }
+
+    /// C516/C517 regression: the authority ends both set-MAC-key bodies with
+    /// `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`. The scratch is supplied by this test so the
+    /// post-call bytes are observable; they must all be zero, not the pre-filled canary.
+    #[test]
+    fn set_mac_key_cleanses_its_scratch() {
+        let mac = [0x5au8; 48];
+
+        let Some(sha1) = OwnedCtx::<ProvAesHmacSha1Ctx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let mut sha1_scratch = [0xaau8; 64];
+        // SAFETY: `sha1` owns a live context and `mac`/`sha1_scratch` are this frame's buffers.
+        unsafe {
+            aesni_cbc_hmac_sha1_set_mac_key_body(
+                sha1.as_ptr(),
+                mac.as_ptr(),
+                mac.len(),
+                &mut sha1_scratch,
+            );
+        }
+        assert_eq!(
+            sha1_scratch, [0u8; 64],
+            "the SHA-1 ipad/opad scratch must be cleansed before return"
+        );
+
+        let Some(sha256) = OwnedCtx::<ProvAesHmacSha256Ctx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let mut sha256_scratch = [0xaau8; 64];
+        // SAFETY: `sha256` owns a live context and `mac`/`sha256_scratch` are this frame's buffers.
+        unsafe {
+            aesni_cbc_hmac_sha256_set_mac_key_body(
+                sha256.as_ptr(),
+                mac.as_ptr(),
+                mac.len(),
+                &mut sha256_scratch,
+            );
+        }
+        assert_eq!(
+            sha256_scratch, [0u8; 64],
+            "the SHA-256 ipad/opad scratch must be cleansed before return"
+        );
+    }
+
+    /// C122/C123/C126/C132 regression: `IMPLEMENT_CIPHER_HW_COPYCTX` is `*dctx = *sctx`, which is
+    /// defined for `dst == src`. The crate's `ptr::copy` must keep that property while still
+    /// repairing the destination's key-schedule pointer.
+    #[test]
+    fn copyctx_self_copy_is_defined() {
+        let Some(aes) = OwnedCtx::<ProvAesCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let aes_ctx = aes.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `aes` owns a live `ProvAesCtx`; a self-copy is the case under test.
+        unsafe {
+            cipher_hw_aes_copyctx(aes_ctx, aes_ctx);
+            assert_eq!(
+                (*aes_ctx.cast::<ProvAesCtx>()).base.ks,
+                ptr::addr_of!((*aes_ctx.cast::<ProvAesCtx>()).ks.ks).cast()
+            );
+        }
+
+        let Some(tdes) = OwnedCtx::<ProvTdesCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let tdes_ctx = tdes.as_ptr().cast::<ProvCipherCtx>();
+        // SAFETY: `tdes` owns a live `ProvTdesCtx`; a self-copy is the case under test.
+        unsafe {
+            cipher_hw_tdes_copyctx(tdes_ctx, tdes_ctx);
+            assert_eq!(
+                (*tdes_ctx.cast::<ProvTdesCtx>()).base.ks,
+                ptr::addr_of!((*tdes_ctx.cast::<ProvTdesCtx>()).tks).cast()
+            );
+        }
+    }
+
+    /// The eight legacy `CipherDestroy` bodies are all `ossl_cipher_generic_reset_ctx`: their
+    /// only releasable member is `base.tlsmac`, and `reset_ctx` tests `base.alloced` before
+    /// touching it. An all-zero block is therefore a valid input whose release is a no-op. This
+    /// runs each body directly on the zero state (then again through `Drop`) so the witness is
+    /// executed, not asserted from the table.
+    #[test]
+    fn every_legacy_cipher_destroy_body_is_zero_valid() {
+        macro_rules! zero_valid {
+            ($t:ty) => {{
+                let Some(ctx) = OwnedCtx::<$t>::new() else {
+                    panic!("CRYPTO_zalloc answered NULL");
+                };
+                let p = ctx.as_ptr();
+                // SAFETY: `ctx` owns a live, freshly zeroed `$t`; the trait contract is satisfied.
+                unsafe { <$t as CipherDestroy>::destroy_body(p) };
+                // SAFETY: `p` is still owned by `ctx` and has not been released.
+                unsafe {
+                    assert_eq!((*p).base.alloced, 0, "the zero state has nothing allocated");
+                    assert!(
+                        (*p).base.tlsmac.is_null(),
+                        "the zero state owns no TLS-MAC block"
+                    );
+                }
+                // `Drop` runs the same body again: with `alloced == 0` it must stay a no-op.
+                drop(ctx);
+            }};
+        }
+
+        zero_valid!(legacy::ProvCastCtx);
+        zero_valid!(legacy::ProvBlowfishCtx);
+        zero_valid!(legacy::ProvIdeaCtx);
+        zero_valid!(legacy::ProvSeedCtx);
+        zero_valid!(legacy::ProvRc2Ctx);
+        zero_valid!(legacy::ProvRc4Ctx);
+        zero_valid!(legacy::ProvDesCtx);
+        zero_valid!(legacy::ProvRc4HmacMd5Ctx);
+    }
+
+    /// C463/C464: a duplicate onto its own block would clear the source's embedded SIV pointers
+    /// after the copy. A zeroed context would also fail later in `ossl_siv128_copy_ctx`, so this
+    /// test installs a real `cipher_ctx` sentinel: the guard must return before clearing it, which
+    /// distinguishes the guard from the incidental failure of the zero state.
+    #[test]
+    fn siv_dupctx_refuses_a_self_duplicate() {
+        let Some(siv) = OwnedCtx::<ProvAesSivCtx>::new() else {
+            panic!("CRYPTO_zalloc answered NULL");
+        };
+        let ctx = siv.as_ptr();
+        // SAFETY: `ctx` is a live, zero-initialised context owned by `siv`.
+        let sentinel = EVP_CIPHER_CTX_new();
+        assert!(!sentinel.is_null(), "the sentinel context must allocate");
+        // SAFETY: `ctx` is live and this frame has exclusive access; the sentinel is a real
+        // `EVP_CIPHER_CTX` the guard must leave untouched.
+        unsafe { (*ctx).siv.cipher_ctx = sentinel };
+
+        // SAFETY: `siv` owns a live context; the identity arm reads only addresses and must not
+        // touch the embedded state.
+        let ret = unsafe { aes_siv_dupctx(ctx.cast(), ctx.cast()) };
+        assert_eq!(ret, 0, "a self-duplicate must be refused");
+        // SAFETY: `ctx` is still live and owned by `siv`.
+        let observed = unsafe { (*ctx).siv.cipher_ctx };
+        assert_eq!(
+            observed, sentinel,
+            "the guard must return before clearing the source's embedded context"
+        );
+        // SAFETY: the sentinel is this frame's allocation and has not been handed out.
+        unsafe { EVP_CIPHER_CTX_free(sentinel) };
+    }
+
+    /// C463/C464 failure arm: `aes_siv_dupctx` takes the two cipher references before
+    /// `ossl_siv128_copy_ctx`, and that function returns 0 on an unarmed source `cipher_ctx`
+    /// (`EVP_CIPHER_CTX_copy` refuses a NULL `in->cipher`). The failure path must release exactly
+    /// the two references it took — the refcounts returning to 1 prove both the release and the
+    /// absence of a second release (a double free would drive one to 0 and destroy the dummy).
+    #[test]
+    fn siv_dupctx_failure_releases_only_the_refs_it_acquired() {
+        use core::sync::atomic::{AtomicI32, Ordering};
+
+        fn dummy_dynamic_cipher() -> EvpCipher {
+            // SAFETY: `EvpCipher` is a `#[repr(C)]` record of raw pointers, function options and
+            // an `AtomicI32`; the all-zero image is valid, and the two fields written below are
+            // the ones `EVP_CIPHER_up_ref`/`free` inspect.
+            let mut cipher: EvpCipher = unsafe { core::mem::zeroed() };
+            // `EVP_ORIG_DYNAMIC` is `0` (`include/crypto/evp.h`, and private to `evp::cipher`).
+            cipher.origin = 0;
+            cipher.refcnt = AtomicI32::new(1);
+            cipher
+        }
+
+        let _g = crate::test_support::lock_global_state();
+        let cbc = Box::new(dummy_dynamic_cipher());
+        let ctr = Box::new(dummy_dynamic_cipher());
+        // SAFETY: a source `PROV_AES_SIV_CTX`; the all-zero image is the state `OwnedCtx::new`
+        // produces, and every field the duplicate reads is written below.
+        let mut src: ProvAesSivCtx = unsafe { core::mem::zeroed() };
+        let unarmed = EVP_CIPHER_CTX_new();
+        assert!(
+            !unarmed.is_null(),
+            "the unarmed source context must allocate"
+        );
+        src.hw = &AES_SIV_HW;
+        src.cbc = (&*cbc as *const EvpCipher).cast_mut();
+        src.ctr = (&*ctr as *const EvpCipher).cast_mut();
+        // An unarmed `EVP_CIPHER_CTX` (`cipher == NULL`) makes `ossl_siv128_copy_ctx` return 0
+        // **after** `aes_siv_dupctx` has taken both cipher references.
+        src.siv.cipher_ctx = unarmed;
+
+        // SAFETY: `src` is a live root for the duration of the call; its `hw` and cipher pointers
+        // are installed above.
+        let dup = unsafe { siv_dupctx((&mut src as *mut ProvAesSivCtx).cast()) };
+        assert!(
+            dup.is_null(),
+            "the duplicate must be refused when the embedded copy fails"
+        );
+        assert_eq!(
+            cbc.refcnt.load(Ordering::Acquire),
+            1,
+            "the CBC reference taken before the failure came back"
+        );
+        assert_eq!(
+            ctr.refcnt.load(Ordering::Acquire),
+            1,
+            "the CTR reference taken before the failure came back"
+        );
+        // SAFETY: `unarmed` is this frame's allocation and the duplicate did not take it.
+        unsafe { EVP_CIPHER_CTX_free(unarmed) };
     }
 }

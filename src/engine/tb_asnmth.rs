@@ -30,7 +30,7 @@ use crate::engine::eng_table::{
     ossl_engine_table_select,
 };
 use crate::evp::pkey_asn1::{EVP_PKEY_asn1_free, EvpPkeyAsn1Method};
-use crate::runtime::err::err_sites::{TB_ASNMTH_200, TB_ASNMTH_92};
+use crate::runtime::err::err_sites::{TB_ASNMTH_200, TB_ASNMTH_213, TB_ASNMTH_92};
 use crate::runtime::err::raise_site;
 use crate::runtime::lhash::OpenSslLhash;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
@@ -51,16 +51,21 @@ const LINE_SELECT: c_int = 80;
 static PKEY_ASN1_METH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn pkey_asn1_meth_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn pkey_asn1_meth_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(PKEY_ASN1_METH_TABLE) as *mut *mut OpenSslLhash
 }
 
 /// `void ENGINE_unregister_pkey_asn1_meths(ENGINE *e)` — `crypto/engine/tb_asnmth.c:28-31`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be NULL or point to a live [`Engine`]. NULL is a no-op: it cannot name a
+/// registered engine, and `engine_table_unregister`'s callback dereferences a NULL cached
+/// default if it is handed one.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_pkey_asn1_meths(e: *mut Engine) {
+    if e.is_null() {
+        return;
+    }
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
     unsafe { engine_table_unregister(pkey_asn1_meth_table_slot(), e) };
 }
@@ -74,7 +79,8 @@ unsafe extern "C" fn engine_unregister_all_pkey_asn1_meths() {
 /// `int ENGINE_register_pkey_asn1_meths(ENGINE *e)` — `:38-49`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be non-NULL and point to a live [`Engine`]; its `pkey_asn1_meths` callback, if
+/// set, must obey the authority's contract (it fills `nids` and answers the count).
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_pkey_asn1_meths(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -119,7 +125,8 @@ pub extern "C" fn ENGINE_register_all_pkey_asn1_meths() {
 /// `int ENGINE_set_default_pkey_asn1_meths(ENGINE *e)` — `:59-70`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be non-NULL and point to a live [`Engine`]; its `pkey_asn1_meths` callback, if
+/// set, must obey the authority's contract.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_pkey_asn1_meths(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -159,7 +166,8 @@ pub extern "C" fn ENGINE_get_pkey_asn1_meth_engine(nid: c_int) -> *mut Engine {
 /// `const EVP_PKEY_ASN1_METHOD *ENGINE_get_pkey_asn1_meth(ENGINE *e, int nid)` — `:87-96`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be non-NULL and point to a live [`Engine`]; `nid` is any NID the engine may
+/// implement. The callback it selects is application-controlled.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_pkey_asn1_meth(
     e: *mut Engine,
@@ -184,7 +192,7 @@ pub unsafe extern "C" fn ENGINE_get_pkey_asn1_meth(
 /// `ENGINE_PKEY_ASN1_METHS_PTR ENGINE_get_pkey_asn1_meths(const ENGINE *e)` — `:99-102`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be non-NULL and point to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_pkey_asn1_meths(
     e: *const Engine,
@@ -196,7 +204,7 @@ pub unsafe extern "C" fn ENGINE_get_pkey_asn1_meths(
 /// `int ENGINE_set_pkey_asn1_meths(ENGINE *e, ENGINE_PKEY_ASN1_METHS_PTR f)` — `:105-109`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be non-NULL and point to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_pkey_asn1_meths(
     e: *mut Engine,
@@ -252,7 +260,8 @@ pub(crate) unsafe fn engine_pkey_asn1_meths_free(e: *mut Engine) {
 ///     int len)` — `:139-159`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be non-NULL and point to a live [`Engine`]. When `len == -1`, `str_` must be
+/// NUL-terminated; otherwise it must be readable for `len` bytes (`len == 0` reads nothing).
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_pkey_asn1_meth_str(
     e: *mut Engine,
@@ -373,7 +382,10 @@ unsafe extern "C" fn look_str_cb(
 ///     int len)` — `:188-221`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `pe` must be a writable output slot; `str_` must be readable for `len` bytes. Unlike
+/// `ENGINE_get_pkey_asn1_meth_str`, `len == -1` is not a length query: the walk compares
+/// `strlen(pem_str)` with `len` exactly. On a refused structural reference the authority
+/// leaves `*pe` untouched and answers NULL; this function does the same.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_pkey_asn1_find_str(
     pe: *mut *mut Engine,
@@ -406,14 +418,129 @@ pub unsafe extern "C" fn ENGINE_pkey_asn1_find_str(
         );
     }
     // SAFETY: `fstr.e` is NULL or an engine the walk found.
+    let mut took_ref = true;
     if !fstr.e.is_null() {
-        let mut r: c_int = 0;
-        // SAFETY: `fstr.e` is a live engine and `struct_ref` its refcount.
-        unsafe { up_ref(ptr::addr_of_mut!((*fstr.e).struct_ref), &mut r) };
+        // SAFETY: `fstr.e` is a live engine found by the table walk and `struct_ref` its
+        // refcount. The table stores a **borrowed** `ENGINE *`; the structural reference
+        // this call acts for is the one `engine_list_add` took for the global engine list
+        // (`ENGINE_add`), not a reference held by the table. `engine_list_remove` retires
+        // that borrow (`engine_unregister_from_all_tables`) under the write lock before it
+        // drops the reference, and this walk holds the read lock, so the entry is live here.
+        // The caller receives exactly one new reference. A refused increment cannot hand
+        // out a structural reference, so neither `*pe` nor the borrowed method pointer may
+        // be returned: the authority unlocks, raises and answers NULL.
+        if unsafe { up_ref(ptr::addr_of_mut!((*fstr.e).struct_ref)) } == 0 {
+            took_ref = false;
+            fstr.e = ptr::null_mut();
+        }
+    }
+    if !took_ref {
+        // SAFETY: the read lock is held.
+        unsafe { CRYPTO_THREAD_unlock(crate::engine::eng_lib::global_engine_lock()) };
+        // SAFETY: `TB_ASNMTH_213` is a generated constant whose strings are static.
+        unsafe { raise_site(&TB_ASNMTH_213) };
+        return ptr::null();
     }
     // SAFETY: `pe` is the caller's output slot.
     unsafe { *pe = fstr.e };
     // SAFETY: the read lock is held.
     unsafe { CRYPTO_THREAD_unlock(crate::engine::eng_lib::global_engine_lock()) };
     fstr.ameth
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::evp::pkey_asn1::EvpPkeyAsn1Method;
+    use crate::test_support::lock_global_state;
+    use core::sync::atomic::{AtomicPtr, Ordering};
+
+    /// The single NID the fixture engine advertises.
+    static NIDS: [c_int; 1] = [0x4d9];
+    /// The method the fixture returns for the lookup arm (`NULL` when unset).
+    static METHOD: AtomicPtr<EvpPkeyAsn1Method> = AtomicPtr::new(ptr::null_mut());
+
+    /// The fixture implementation of `ENGINE_PKEY_ASN1_METHS_PTR`: the count arm fills `nids`,
+    /// the method arm hands back [`METHOD`].
+    unsafe extern "C" fn one_method(
+        _e: *mut Engine,
+        method: *mut *mut c_void,
+        nids: *mut *const c_int,
+        _nid: c_int,
+    ) -> c_int {
+        if !nids.is_null() {
+            // SAFETY: `nids` is the callback's writable out-slot.
+            unsafe { *nids = NIDS.as_ptr() };
+            return NIDS.len() as c_int;
+        }
+        if !method.is_null() {
+            // SAFETY: `method` is the callback's writable out-slot.
+            unsafe { *method = METHOD.load(Ordering::Acquire).cast() };
+            return 1;
+        }
+        0
+    }
+
+    /// `ENGINE_unregister_pkey_asn1_meths(NULL)` is a documented NULL-tolerant call. The
+    /// pre-repair path forwarded it to `engine_table_unregister`, whose pile walk compared the
+    /// NULL argument with a NULL cached default and called `engine_unlocked_finish(NULL)`.
+    #[test]
+    fn unregister_with_null_is_refused_before_the_pile_walk() {
+        let _g = lock_global_state();
+        // SAFETY: the fixture engine is created and released here; the table stores a borrow it
+        // is told to retire before the release.
+        unsafe {
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            (*e).pkey_asn1_meths = Some(one_method);
+            assert_eq!(ENGINE_register_pkey_asn1_meths(e), 1);
+            // Pre-repair this dereferenced the pile's NULL `funct`.
+            ENGINE_unregister_pkey_asn1_meths(ptr::null_mut());
+            ENGINE_unregister_pkey_asn1_meths(e);
+            ENGINE_free(e);
+        }
+    }
+
+    /// A refused structural reference must not hand out the borrowed method pointer: the caller
+    /// would own a pointer into an engine it has no reference to. The authority unlocks, raises
+    /// `ERR_R_CRYPTO_LIB` and answers NULL, leaving `*pe` untouched.
+    #[test]
+    fn a_refused_structural_reference_returns_no_method() {
+        let _g = lock_global_state();
+        // SAFETY: every object is this test's and is released before it returns; the method is
+        // stack storage whose lifetime covers the synchronous lookup.
+        unsafe {
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            let mut method: EvpPkeyAsn1Method = core::mem::zeroed();
+            method.pem_str = c"TEST".as_ptr() as *mut c_char;
+            METHOD.store(ptr::addr_of_mut!(method), Ordering::Release);
+            (*e).pkey_asn1_meths = Some(one_method);
+            assert_eq!(ENGINE_register_pkey_asn1_meths(e), 1);
+            let direct = ENGINE_get_pkey_asn1_meth_str(e, c"TEST".as_ptr(), -1);
+            assert_eq!(
+                direct,
+                ptr::addr_of!(method),
+                "the fixture callback must match"
+            );
+
+            // The shared checked increment refuses `i32::MAX` without changing the count.
+            (*e).struct_ref.store(i32::MAX, Ordering::SeqCst);
+            let sentinel = std::ptr::dangling_mut::<Engine>();
+            let mut pe = sentinel;
+            let ameth = ENGINE_pkey_asn1_find_str(&mut pe, c"TEST".as_ptr(), 4);
+            assert!(ameth.is_null());
+            assert_eq!(
+                pe, sentinel,
+                "the authority leaves *pe untouched on refusal"
+            );
+
+            (*e).struct_ref.store(1, Ordering::SeqCst);
+            METHOD.store(ptr::null_mut(), Ordering::Release);
+            ENGINE_unregister_pkey_asn1_meths(e);
+            ENGINE_free(e);
+            crate::runtime::err::ERR_clear_error();
+        }
+    }
 }

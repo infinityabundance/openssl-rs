@@ -1,0 +1,133 @@
+{
+  "receipt": "mechanism-sweep-M82",
+  "branch": "integrate/safe-c33",
+  "source_head": "3bc0edda7",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the five affected SSL member-buffer/member-slot adversarial probes. Seven files audited, one deferred (store_meth.rs, a retained loader/callback boundary), two low-severity latent-bound repairs, two caller-contract clarifications, no UB, no ABI regression and no hidden obligation.",
+  "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the handshake state machine, the TLS1.2 key schedule and record protection, the signature-algorithm/max-fragment-length surface, the deprecated ENGINE/temporary-DH setters, and the timestamping print helpers. src/store/store_meth.rs was deferred NOT_RUN because it is a genuine store-loader/callback dispatch boundary, already excluded as retained by earlier sweeps.",
+  "files": [
+    "src/ssl/statem/statem.rs",
+    "src/ssl/t1_enc.rs",
+    "src/ssl/t1_lib.rs",
+    "src/ssl/tls_depr.rs",
+    "src/ts/mod.rs",
+    "src/ts/ts_lib.rs",
+    "src/ts/ts_req_print.rs"
+  ],
+  "files_not_run": [
+    "src/store/store_meth.rs"
+  ],
+  "defects": [
+    {
+      "id": "M82-D1",
+      "file": "src/ssl/statem/statem.rs",
+      "line": "48-50 (pre-fix)",
+      "severity": "low",
+      "class": "safety-relevant documentation inconsistency",
+      "description": "The module header said ossl_statem_send_fatal does not send an alert, while the body sends the two alert bytes through ssl3_write_bytes whenever a write BIO is installed. The header was corrected to describe the implemented behaviour; no code changed."
+    },
+    {
+      "id": "M82-D2",
+      "file": "src/ssl/t1_enc.rs",
+      "line": "344, 382 (pre-fix); 346-352, 386-392 (post-fix)",
+      "severity": "low",
+      "class": "latent out-of-bounds copy / unchecked destination extent",
+      "description": "tls12_install_write and tls12_install_read copied cipher_key_len bytes into the fixed [u8; 32] enc_key/dec_key arrays. cipher_key_len is a pub field populated by either the TLS1.2 setup helper or the TLS1.3 schedule, and tls12_derive_key_block accepts key lengths up to 60, so the cross-function invariant key_len <= 32 was not expressed. Both installation helpers now refuse key_len > enc_key.len()/dec_key.len() before the copy and before the 2 * key_len arithmetic. Every reachable valid path is unchanged."
+    },
+    {
+      "id": "M82-D3",
+      "file": "src/ssl/t1_lib.rs",
+      "line": "730 (post-fix 733-736)",
+      "severity": "low",
+      "class": "incomplete safety contract (caller-chosen lifetime)",
+      "description": "tls1_get_supported_groups returns &'static [u16] borrowed from the connection's element-counted supportedgroups list. The obligation not to use the slice after the list is freed/replaced or the connection is destroyed was stated only in a body comment; it is now in the # Safety section. The false-'static signature is retained and disclosed, not silently discharged."
+    },
+    {
+      "id": "M82-D4",
+      "file": "src/ssl/t1_lib.rs",
+      "line": "769 (post-fix 768-771)",
+      "severity": "low",
+      "class": "incomplete safety contract (implicit free of caller pointer)",
+      "description": "tls1_set_groups releases the caller's previous *grpext through OwnedBuf::adopt_plain_nullable. The # Safety section now requires *grpext to be NULL or an initialised, exclusively-owned block from the crate's CRYPTO_* malloc seam. Both current callers pass a context/connection member buffer that satisfies it."
+    }
+  ],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [
+    "src/ssl/statem/statem.rs: module divergence note for ossl_statem_send_fatal now matches the alert-writing body (M82-D1).",
+    "src/ssl/t1_lib.rs: tls1_get_supported_groups # Safety now names the borrow-duration obligation (M82-D3).",
+    "src/ssl/t1_lib.rs: tls1_set_groups # Safety now names the previous-*grpext ownership/release obligation (M82-D4)."
+  ],
+  "not_discharged": [
+    "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "tls1_get_supported_groups retains a &'static slice borrowed from connection-owned memory; this receipt discloses the caller obligation but does not tie the lifetime to the owner in the type system.",
+    "The TLS1.2 record-protection path is audited for the four reduced GCM suites of the non-resuming flow; CBC/CCM/ChaCha and MAC-then-encrypt remain unbuilt.",
+    "The reduced state machine does not build the authority's full message layer; only the fresh-connection and reduced flight-driver paths are reachable.",
+    "No Miri/ASan/Loom run was made: no owner, extent, aliasing or concurrency mechanism changed. No dudect/ctgrind claim is made.",
+    "src/store/store_meth.rs was not audited (deferred as a retained loader/callback boundary)."
+  ],
+  "retained_obligations": [
+    "src/ssl/statem/statem.rs: s is NULL or a live connection for the readers/drivers, and live for the mutators; the in_handshake increment/decrement pair must be balanced by the driver (C-level obligation, same as the authority).",
+    "src/ssl/t1_enc.rs: s is live, the cipher is set up, plain/ct are readable for their lengths, out is writable for the documented capacity, and content_type is writable.",
+    "src/ssl/t1_lib.rs: s/ctx/session are NULL or live; out-parameters are NULL or writable; the previous *grpext is NULL or an exclusively-owned CRYPTO_* block; the supportedgroups slice is used only while the connection owns it.",
+    "src/ssl/tls_depr.rs: ctx/e/ssl are live (NULL is accepted only where the authority's SSL_CONNECTION_FROM_SSL helper accepts it); the stored ENGINE remains borrowed and is never dereferenced in this reduced build.",
+    "src/ts/mod.rs: the error coordinate is a compile-time constant and msg is NULL or NUL-terminated.",
+    "src/ts/ts_lib.rs and src/ts/ts_req_print.rs: bio is live; object/algorithm/extension/request pointers are NULL only where the function documents a NULL arm; the extension stack's elements are live."
+  ],
+  "residuals": [
+    "M82-R1: SSL_get1_builtin_sigalgs allocates the final string in one exact-size OwnedBuf block at the authority's line 2298, while the authority starts at SIGLEN_BUF_INCREMENT (100) and reallocs. The returned bytes and the OPENSSL_free hand-off agree; an allocator hook observes a different size. Compatibility-only, recorded rather than restructured.",
+    "M82-R2: the TLS1.2 master secret, key block and write/read keys live in the Ssl block owned by ssl_lib's SSL_free, and the P_hash scratch arrays (a/buf/h) are not explicitly cleansed. This is a cross-file secret-hygiene observation against AGENTS §5, not a new unsafe assumption; the owning destructor is outside this batch.",
+    "src/ssl/statem/statem.rs indexes and writes only plain scalar members; a corrupted hand_state is an authority-level value, not a memory extent.",
+    "src/ssl/t1_lib.rs SSL_get_shared_sigalgs' element fields are answered as NID_undef/0 because the array is never populated in this reduced build; the reachable answer is the authority's empty-state answer."
+  ],
+  "unrelated_residuals": [],
+  "next_queue": {
+    "file": "src/ui/ui_openssl.rs",
+    "pinned_retained_boundary": "src/store/store_meth.rs",
+    "then": [
+      "src/ui/ui_util.rs",
+      "src/x509/by_store.rs",
+      "src/x509/pcy_data.rs",
+      "src/x509/pcy_lib.rs",
+      "src/x509/pcy_node.rs",
+      "src/x509/t_acert.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "file": "src/store/store_meth.rs",
+      "reason": "store-loader/callback dispatch boundary (STORE method-store callbacks, CtxDestroy, provider up-ref/free, method-store lock/unlock, get/put/construct callbacks); a genuinely new retained boundary, kept in REMAINING-AUDIT.txt."
+    }
+  ],
+  "shared_boundary_files": [
+    "src/ssl/ssl_lib.rs (Ssl owner: TLS1.2 secret fields, supportedgroups raw boundary, SSL_free)",
+    "src/ssl/tls13_enc.rs (shares hs_md_len/cipher_key_len and the transcript hash)"
+  ],
+  "secret_bearing_buffers": "t1_enc.rs derives the TLS1.2 master secret and key block into Ssl-owned fixed arrays (released by ssl_lib's SSL_free) and uses PRF scratch arrays that are not explicitly cleansed. ts_lib/ts_req_print print ASN.1 values through BIO and allocate only the BN_bn2hex string (freed plainly, as the authority's OPENSSL_free). No allocation, release coordinate or cleansing claim changed in this batch; no constant-time property is asserted.",
+  "boundary_control": [],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "check": "cargo check --lib clean (9.60 s)",
+    "focused_ssl_statem": "4 passed / 0 failed / 5 ignored (--test-threads=4)",
+    "focused_ts_filter": "1548 passed / 0 failed / 4 ignored (broad ts:: substring filter, --test-threads=4)",
+    "adv_probe_serverinfo_refused": "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner passed (one process, --ignored, --exact)",
+    "adv_probe_serverinfo_reentrancy": "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_reentrancy_reads_member passed (one process, --ignored, --exact)",
+    "adv_probe_canary_refusal": "ssl::ssl_lib::adv_realloc_probe::canary_realloc_refusal_instrument_fires passed (one process, --ignored, --exact)",
+    "adv_probe_canary_reenter": "ssl::ssl_lib::adv_realloc_probe::canary_reenter_observer_fires passed (one process, --ignored, --exact)",
+    "adv_probe_self_aliasing": "ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc passed (one process, --ignored, --exact)",
+    "full_lib_threads4": "1697 passed / 0 failed / 27 ignored (93.60 s)",
+    "full_lib_serial": "1697 passed / 0 failed / 27 ignored (78.90 s)"
+  },
+  "queue_after": {
+    "remaining": 55,
+    "audited": 708
+  }
+}

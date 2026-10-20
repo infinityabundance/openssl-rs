@@ -33,6 +33,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::p5_pbe::PKCS5_pbe_set_ex;
 use crate::asn1::p5_pbev2::PKCS5_pbe2_set_iv_ex;
 use crate::asn1::p8_pkey::{PKCS8_PRIV_KEY_INFO_it, Pkcs8PrivKeyInfo};
@@ -45,7 +46,7 @@ use crate::pkcs12::p12_decr::PKCS12_item_i2d_encrypt_ex;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::CRYPTO_zalloc;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/pkcs12/p12_p8e.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_p8e.c";
@@ -215,21 +216,24 @@ pub unsafe extern "C" fn PKCS8_set0_pbe_ex(
         return ptr::null_mut();
     }
 
-    // SAFETY: a non-zero byte count; a failed allocation answers NULL.
-    let p8 = CRYPTO_zalloc(core::mem::size_of::<X509Sig>(), FILE.as_ptr(), 83).cast::<X509Sig>();
-
-    if p8.is_null() {
+    // `OwnedBlock::zalloc` is the authority's `OPENSSL_zalloc(sizeof(X509_SIG))` at
+    // `p12_p8e.c:83`, at the same size and coordinates. The block stays owned (never runs a
+    // destructor) until both slots below are written, so a partial initialisation releases only
+    // the block.
+    let Some(p8) = OwnedBlock::<X509Sig>::zalloc(1, SeamFile::new(FILE), 83) else {
         // SAFETY: `enckey` is this call's own octet string.
         unsafe { ASN1_OCTET_STRING_free(enckey) };
         return ptr::null_mut();
-    }
-    // SAFETY: `p8` is a fresh zeroed `X509_SIG`, so both slots are writable; `pbe` is adopted.
+    };
+    let p8_ptr = p8.as_ptr();
+    // SAFETY: `p8_ptr` is a fresh zeroed `X509_SIG`, so both slots are writable; `pbe` is adopted.
     unsafe {
-        (*p8).algor = pbe;
-        (*p8).digest = enckey;
+        (*p8_ptr).algor = pbe;
+        (*p8_ptr).digest = enckey;
     }
 
-    p8
+    // Ownership of the fully initialised block transfers to the caller here.
+    p8.into_raw()
 }
 
 /// `X509_SIG *PKCS8_set0_pbe(const char *pass, int passlen, PKCS8_PRIV_KEY_INFO *p8inf,

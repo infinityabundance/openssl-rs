@@ -98,11 +98,19 @@ const _: () = {
 
 /// `static void *async_stack_alloc(size_t *num)` — `async_posix.c:82-85`.
 ///
+/// The authority allocates with `OPENSSL_malloc`; this crate zero-fills through
+/// `CRYPTO_zalloc`. The allocator hook, request size and `(FILE, LINE)` coordinate are
+/// unchanged: a deliberate safety improvement that keeps uninitialised fibre-stack bytes
+/// out of reach, recorded rather than silently substituted.
+///
 /// # Safety
 /// `num` must be a live `size_t`.
 pub(crate) unsafe extern "C" fn async_stack_alloc(num: *mut usize) -> *mut c_void {
     // SAFETY: `num` is live per the contract.
-    CRYPTO_zalloc(unsafe { *num }, FILE, LINE_ALLOC)
+    unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(*num, FILE, LINE_ALLOC)
+    }
 }
 
 /// `static void async_stack_free(void *addr)` — `async_posix.c:87-90`.
@@ -249,16 +257,72 @@ pub unsafe extern "C" fn ASYNC_get_mem_functions(
     })
 }
 
+/// An owned fibre's opaque `ucontext_t` storage.
+///
+/// The block keeps the authority's own size (`sizeof(ucontext_t)`, reported by the C shim), its
+/// `CRYPTO_zalloc` coordinate ([`FILE`], [`LINE_ALLOC`]) and the stable address the C ABI hands to
+/// the job/context structures, but its *ownership* is this type: [`Self::alloc`] allocates it,
+/// [`Self::into_raw`] hands it out and [`Self::from_raw`] reclaims it from the two free helpers, and
+/// `Drop` is its single release at the authority's own `(FILE, LINE_FREE)` site. A Rust `Box` would
+/// hide both the allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook.
+struct OwnedFibre {
+    ptr: *mut c_void,
+}
+
+impl OwnedFibre {
+    /// `CRYPTO_zalloc(sizeof(ucontext_t), FILE, LINE_ALLOC)`, or `None` when it answers NULL.
+    fn alloc() -> Option<OwnedFibre> {
+        // SAFETY: `openssl_rs_ucontext_size` takes no arguments and answers the storage size.
+        let size = unsafe { openssl_rs_ucontext_size() };
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size` bytes, exactly the `ucontext_t` layout the shim names.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size, FILE, LINE_ALLOC)
+        };
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedFibre { ptr: raw })
+        }
+    }
+
+    /// Give up ownership of the storage to the job/context structure that holds it.
+    fn into_raw(self) -> *mut c_void {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a live fibre's storage from a free helper, for release by `Drop`. NULL is `None`,
+    /// matching the authority's own `free(NULL)` no-op.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live storage block [`Self::alloc`] produced that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut c_void) -> Option<OwnedFibre> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedFibre { ptr })
+        }
+    }
+}
+
+impl Drop for OwnedFibre {
+    /// The storage's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `alloc` produced and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at `(FILE, LINE_FREE)`.
+        unsafe { CRYPTO_free(self.ptr, FILE, LINE_FREE) };
+    }
+}
+
 /// Allocate the opaque `ucontext_t` storage for one fibre.
 ///
 /// # Safety
 /// None beyond the module's invariants; the returned block is owned by the caller.
 pub(crate) unsafe fn async_fibre_alloc() -> *mut c_void {
-    // SAFETY: `openssl_rs_ucontext_size` takes no arguments and answers the storage size.
-    let size = unsafe { openssl_rs_ucontext_size() };
-    // SAFETY: the storage's alignment is `malloc`'s, which the shim's `_Alignof(ucontext_t)`
-    // probe is asserted against in the unit test below.
-    CRYPTO_zalloc(size, FILE, LINE_ALLOC)
+    OwnedFibre::alloc().map_or_else(null_mut, |f| f.into_raw())
 }
 
 /// `int async_fibre_makecontext(async_fibre *fibre)` — `async_posix.c:96-126`.
@@ -339,8 +403,9 @@ pub(crate) unsafe fn async_fibre_release(fibre: *mut c_void) {
     }
     // SAFETY: `fibre` is live per the contract.
     unsafe { async_fibre_free(fibre) };
-    // SAFETY: `fibre` is this call's own allocation and is no longer referenced.
-    unsafe { CRYPTO_free(fibre, FILE, LINE_FREE) };
+    // SAFETY: `fibre` is storage `async_fibre_alloc` produced, this frame owns it and its stack has
+    // just been released; `OwnedFibre`'s `Drop` is the storage's single release.
+    drop(unsafe { OwnedFibre::from_raw(fibre) });
 }
 
 /// Release one fibre's opaque storage **without** touching its stack.
@@ -352,11 +417,9 @@ pub(crate) unsafe fn async_fibre_release(fibre: *mut c_void) {
 /// # Safety
 /// `fibre` must be storage from [`async_fibre_alloc`] that is not live on any stack.
 pub(crate) unsafe fn async_fibre_storage_free(fibre: *mut c_void) {
-    if fibre.is_null() {
-        return;
-    }
-    // SAFETY: `fibre` is this call's own allocation.
-    unsafe { CRYPTO_free(fibre, FILE, LINE_FREE) };
+    // SAFETY: `fibre` is storage `async_fibre_alloc` produced and this frame owns it; NULL is the
+    // authority's own no-op release, and `OwnedFibre`'s `Drop` is the storage's single release.
+    drop(unsafe { OwnedFibre::from_raw(fibre) });
 }
 
 /// `async_fibre_swapcontext(o, n, r)` — `async_posix.h:72-88`'s `swapcontext` arm.

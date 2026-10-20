@@ -45,18 +45,10 @@
 //!   more than once. A slot whose `ERR_FLAG_CLEAR` bit is set is skipped, which is
 //!   how a lazy clear is honoured across the boundary.
 
-use core::ffi::c_void;
-
 use crate::runtime::err::{
-    with_state, ErrState, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS, ERR_TXT_MALLOCED_FLAG,
+    slot_buf_alloc, with_state, ErrState, OwnedErrState, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS,
+    ERR_TXT_MALLOCED_FLAG,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
-
-/// The `file`/`line` the authority's `OSSL_ERR_STATE_free` passes to `CRYPTO_free`.
-/// They are 0 and NULL in the authority's own source for this allocate/free pair,
-/// because it uses the allocator directly rather than the `OPENSSL_free` macro.
-const NO_FILE: *const core::ffi::c_char = core::ptr::null();
-const NO_LINE: core::ffi::c_int = 0;
 
 /// `ERR_STATE *OSSL_ERR_STATE_new(void)`
 ///
@@ -67,7 +59,12 @@ const NO_LINE: core::ffi::c_int = 0;
 /// shape and is reproduced rather than tidied.
 #[no_mangle]
 pub extern "C" fn OSSL_ERR_STATE_new() -> *mut ErrState {
-    CRYPTO_zalloc(core::mem::size_of::<ErrState>(), NO_FILE, NO_LINE).cast::<ErrState>()
+    // The owned handle allocates the block through the seam and gives it up to the C caller;
+    // the matching `OSSL_ERR_STATE_free` reclaims it and its `Drop` is the release.
+    match OwnedErrState::new() {
+        Some(state) => state.into_raw(),
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// `void OSSL_ERR_STATE_free(ERR_STATE *es)`
@@ -80,14 +77,11 @@ pub extern "C" fn OSSL_ERR_STATE_new() -> *mut ErrState {
 /// already been freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_free(es: *mut ErrState) {
-    if es.is_null() {
-        return;
-    }
-    // SAFETY: `es` is a live state per the caller's contract, and this function is
-    // the only place that frees it, so the reference cannot outlive the call.
-    unsafe { (*es).clear_all(true) };
-    // SAFETY: as above; the pointer came from `CRYPTO_zalloc`.
-    unsafe { CRYPTO_free(es.cast::<c_void>(), NO_FILE, NO_LINE) };
+    // NULL is a no-op; otherwise `from_raw` reclaims the block and `Drop` runs the authority's
+    // own free body (`clear_all(true)` then the block release), so this is its single release.
+    // SAFETY: `es` is NULL or a live state from `OSSL_ERR_STATE_new` that `Drop` has not
+    // released.
+    unsafe { drop(OwnedErrState::from_raw(es)) };
 }
 
 /// `void OSSL_ERR_STATE_save(ERR_STATE *es)`
@@ -96,7 +90,24 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_free(es: *mut ErrState) {
 /// module header for why the destination is cleared first.
 ///
 /// # Safety
-/// `es` must be NULL or a live state owned by the caller.
+/// `es` must be NULL or a live state owned by the caller. It must **not** be the
+/// calling thread's own state (the pointer `ERR_get_state` returns): the authority's
+/// `memcpy` tolerates that aliasing, but holding `&mut *es` and the thread state's
+/// `&mut` at the same time would be undefined in Rust, so the input is excluded
+/// rather than reproduced.
+///
+/// ## Destination ownership and provenance
+///
+/// The destination is cleared before the transfer (`clear_all(true)`), and that
+/// clear **releases** every slot whose `ERR_TXT_MALLOCED` flag is set. The caller
+/// must therefore ensure that `es` was produced by `OSSL_ERR_STATE_new`, or that
+/// every MALLOCED slot satisfies the slot contract documented on
+/// [`crate::runtime::err::ErrState::clear_data`]: the pointer is the base of one
+/// whole `CRYPTO_*` seam block, `es` is its exclusive owner, and this state's
+/// release is its single free. A state with a borrowed MALLOCED slot, a slot
+/// shared with another state, or a slot already released makes the clear an
+/// invalid free. `es` must also be exclusively owned by the caller for the
+/// duration of the call and must not be mutated concurrently.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
     if es.is_null() {
@@ -125,7 +136,16 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
 /// queue moves; with no queue at all the destination is left empty.
 ///
 /// # Safety
-/// `es` must be NULL or a live state owned by the caller.
+/// `es` must be NULL or a live state owned by the caller, and must not be the
+/// calling thread's own state (the destination `&mut` and the thread state's `&mut`
+/// taken inside `with_state` would alias).
+///
+/// The destination is cleared slot by slot (`clear(i, true)`) before each moved
+/// value is installed, so every MALLOCED slot already in `es` is released. The
+/// same destination ownership/provenance contract as [`OSSL_ERR_STATE_save`]
+/// applies: `es` must come from `OSSL_ERR_STATE_new`, or every MALLOCED slot must
+/// be one whole seam block exclusively owned by `es` and unreleased. `es` must be
+/// exclusively owned and not mutated concurrently.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
     if es.is_null() {
@@ -200,7 +220,32 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
 /// `top = count - 1`) that walks exactly `0 .. count - 1`.
 ///
 /// # Safety
-/// `es` must be NULL or point to a live state. It is only read.
+/// `es` must be NULL or point to a live state owned by the caller; it must not be
+/// the calling thread's own state, because `&*es` would alias the `&mut` that
+/// `with_state` takes on it.
+///
+/// ## Source extent, termination and stability
+///
+/// Every slot the loop reads must satisfy the slot contract:
+///
+/// * a non-NULL `err_data` with a non-zero `err_data_size` is readable for
+///   exactly `err_data_size` bytes; those bytes are copied out, so the size is
+///   trusted as the extent (this is the consumer of the check `openssl_rs_err_finish_data`
+///   and `ERR_set_error_data` establish when the slot is written);
+/// * `err_file` and `err_func` are NULL or NUL-terminated C strings that stay
+///   valid until this call returns — `set_debug` duplicates them;
+/// * `err_data_size` is the authoritative extent of `err_data`; a cached size
+///   larger than the actual block is outside this contract and is not detectable
+///   here without allocator provenance metadata;
+/// * `es` is not mutated concurrently with this call (the loop holds `&*es` for
+///   its duration), and the caller does not release the state while it runs.
+///
+/// The ring indices are the one part of that contract this function can cheaply
+/// check: an out-of-range `top`/`bottom` would make the ring walk below
+/// non-terminating, so such a state is treated as empty. The authority trusts the
+/// indices; it can only produce in-range values itself, so the rejection is
+/// unobservable for every authority-produced state and is recorded as a
+/// transcription addition.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     if es.is_null() {
@@ -208,6 +253,10 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     }
     // SAFETY: `es` is a live state per the caller's contract and is only read here.
     let src = unsafe { &*es };
+    let slots = ERR_STATE_SLOTS as i32;
+    if !(0..slots).contains(&src.top) || !(0..slots).contains(&src.bottom) {
+        return;
+    }
     if src.bottom == src.top {
         return;
     }
@@ -226,29 +275,35 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
 
             thread_es.err_flags[top] = src.err_flags[from];
             thread_es.err_buffer[top] = src.err_buffer[from];
-            thread_es.set_debug(
-                top,
-                src.err_file[from],
-                src.err_line[from],
-                src.err_func[from],
-            );
+            // SAFETY: the source slots hold NULL or NUL-terminated strings owned by
+            // the caller's state, per restore's contract.
+            unsafe {
+                thread_es.set_debug(
+                    top,
+                    src.err_file[from],
+                    src.err_line[from],
+                    src.err_func[from],
+                )
+            };
 
             if !src.err_data[from].is_null() && src.err_data_size[from] != 0 {
                 let size = src.err_data_size[from];
-                let copy = crate::runtime::mem::CRYPTO_malloc(size, NO_FILE, NO_LINE);
-                if !copy.is_null() {
-                    // SAFETY: `copy` is a fresh allocation of `size` bytes and the
-                    // source holds at least that many, per its own size field.
+                // The copy is a fresh seam allocation handed to the slot raw; its release is the
+                // slot's `Drop` path. A refused allocation skips the copy, as the authority's own
+                // NULL `CRYPTO_malloc` does.
+                if let Some(copy) = slot_buf_alloc(size) {
+                    // SAFETY: `copy` is `size` fresh bytes and the source holds at least that
+                    // many, per its own size field.
                     unsafe {
                         core::ptr::copy_nonoverlapping(
                             src.err_data[from].cast::<u8>(),
-                            copy.cast::<u8>(),
+                            copy.as_ptr().cast::<u8>(),
                             size,
                         )
                     };
                     thread_es.set_data(
                         top,
-                        copy.cast(),
+                        copy.into_raw(),
                         size,
                         src.err_data_flags[from] | ERR_TXT_MALLOCED_FLAG,
                     );
@@ -286,6 +341,21 @@ mod tests {
             assert_eq!((*es).bottom, 0);
             OSSL_ERR_STATE_free(es);
             OSSL_ERR_STATE_free(core::ptr::null_mut());
+        }
+    }
+
+    #[test]
+    fn restore_rejects_an_out_of_range_ring_instead_of_walking_forever() {
+        let es = OSSL_ERR_STATE_new();
+        assert!(!es.is_null());
+        // SAFETY: `es` is a fresh, exclusively owned state. Writing an out-of-range
+        // index models a C caller that broke the ring contract; `restore` must
+        // treat it as empty rather than index out of bounds or fail to terminate.
+        unsafe {
+            (*es).top = ERR_STATE_SLOTS as i32 + 7;
+            (*es).bottom = 0;
+            OSSL_ERR_STATE_restore(es);
+            OSSL_ERR_STATE_free(es);
         }
     }
 

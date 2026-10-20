@@ -1,0 +1,134 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "f5b42eef2",
+  "date": "2026-10-19",
+  "scope": "Canonical structured audit queue, then the first eight security-relevant unaudited ordinary files from that queue: the AES mode exports and an ASN.1/BN ownership cluster.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "dirty: src/asn1/a_print.rs and src/bn/ctx.rs repairs, PERFILE-INDEX.md section 36, this receipt, and the new canonical queue files; untracked .asan-target/ and .ob4work/ were already present",
+  "reconciliation": {
+    "source_rs_files": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "canonical_audited_before_batch": 293,
+    "canonical_unaudited_before_batch": 470,
+    "canonical_audited_after_batch": 301,
+    "canonical_unaudited_after_batch": 462,
+    "mechanism_sweep_files_union": 233,
+    "m1_index_section_files": 12,
+    "full_per_file_records": 9,
+    "boundary_sweep_files": 48,
+    "mechanism_boundary_overlap": 9,
+    "method": "AUDITED-FILES.txt is the sorted union of each mechanism sweep's structured .files array (M2-M31, 233 unique), the twelve M1 files named in PERFILE-INDEX.md section 3a, the nine structured per-file records in perfile-index.json, and each boundary sweep's structured .boundaries[].file (48 unique, 9 also named by a mechanism sweep). PARTIAL-FILES.txt is attribution.json .files[].path where status == PARTIAL (761). REMAINING-AUDIT.txt is comm -23 of the two.",
+    "difference_from_268": "The previous 268 figure counted only mechanism sweeps plus full records at an earlier HEAD and omitted the 39 boundary-only files. The canonical record is 293 because it additionally includes those boundary audited files (per task step 2), the 12 M1 files, and M31's 8 files added after the earlier prose count. The old prose also claimed a 225-file mechanism union; the structured arrays at f5b42eef2 hold 233 unique paths. No file is counted from next_batch/skipped/deferred/prose."
+  },
+  "files": [
+    "src/aes.rs",
+    "src/asn1/a_d2i_fp.rs",
+    "src/asn1/a_dup.rs",
+    "src/asn1/a_digest.rs",
+    "src/asn1/a_i2d_fp.rs",
+    "src/asn1/a_print.rs",
+    "src/asn1/a_type.rs",
+    "src/bn/ctx.rs"
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption provenance and single release",
+    "OB-3 OwnedCtx/RawCtx item ownership at the ASN1_TYPE and duplication boundaries",
+    "B1-B17 BIO and application callback reentrancy contract (raw pointers only, no Rust borrow held across a callback)",
+    "RC-1 refcount-free separation is not applicable in this batch; BN_CTX pool ownership and BN_GENCB callback dispatch were checked instead",
+    "AGENTS.md section 3 checked extent arithmetic at ASN.1 allocation and BIO read sites"
+  ],
+  "defects": [
+    {
+      "id": "M32-D1",
+      "file": "src/asn1/a_print.rs",
+      "pre_fix_lines": [
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "post_fix_lines": [
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114
+      ],
+      "status": "fixed",
+      "severity": "medium (memory safety; invalid ASN1_STRING extent, not reachable from a well-formed parse)",
+      "class": "AGENTS.md section 2/21 validity-before-reference: ASN1_UNIVERSALSTRING_to_string checked only length % 4 before core::slice::from_raw_parts_mut(data, length as usize); a negative length is congruent to 0 modulo 4 and becomes an enormous slice, which is immediate UB. The authority instead writes one terminator byte at offset zero.",
+      "fix": "Refuse a negative length before forming the slice, and state the nonnegative-extent precondition in the safety contract. Added the negative-control test asn1::a_print::tests::universalstring_refuses_a_negative_length_without_forming_a_slice.",
+      "divergence": "For an ASN1_STRING whose length is invalid (negative) the candidate returns 0 instead of performing the authority's one-byte write; AGENTS.md section 17 forbids reproducing undefined behaviour."
+    },
+    {
+      "id": "M32-D2",
+      "file": "src/bn/ctx.rs",
+      "pre_fix_lines": [
+        247,
+        248,
+        249,
+        250
+      ],
+      "post_fix_lines": [
+        250,
+        251,
+        252,
+        253,
+        254
+      ],
+      "status": "fixed",
+      "severity": "low (compatibility and security-relevant state: a reused BN_CTX slot could retain BN_FLG_CONSTTIME)",
+      "class": "Authority divergence: bn_ctx.c:237 clears BN_FLG_CONSTTIME on every BN_CTX_get, because a temporary returned to the pool may carry a flag set by a previous frame. The crate cleared only the value and sign.",
+      "fix": "Clear BN_FLG_CONSTTIME after BN_clear on the reused/returned object. Added bn::ctx::tests::ctx_get_clears_a_leaked_consttime_flag.",
+      "divergence": "None; this restores the authority's observable BN_get_flags result."
+    }
+  ],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "retained_obligations": [
+    "src/asn1/a_digest.rs: the second i2d pass's return is ignored and EVP_Digest reads the sized extent, matching the authority; a short-writing caller encoder leaves uninitialised tail bytes, as in C. Retained for authority parity, not repaired.",
+    "src/asn1/a_dup.rs: ASN1_item_dup preserves the authority's leak of the decoded value when a DUP_POST callback fails, and of b when ASN1_item_i2d reports an error after allocating. Resource leak, not UB.",
+    "src/asn1/a_i2d_fp.rs: a short second i2d pass leaves uninitialised tail bytes readable by write_all, exactly as the authority's OPENSSL_malloc/write loop. Retained.",
+    "src/bn/ctx.rs: BN_CTX and BN_GENCB are Rust Box/Vec owned, so CRYPTO_set_mem_functions does not observe them (documented module boundary), Box allocation aborts rather than returning NULL on OOM, and BN_CTX_get does not model the authority's too_many/err_stack suppression. Compatibility residuals, not memory-safety defects.",
+    "src/bn/ctx.rs: BN_GENCB_set(cb, NULL, arg) makes BN_GENCB_call answer 0 instead of calling through the authority's null function pointer; retained as the documented section 17 divergence."
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy": "PASS (--all-targets -- -D warnings)",
+    "focused": "PASS: asn1::a_print 1/1, bn::ctx 1/1",
+    "library_serial": "1648 passed / 0 failed / 27 ignored (285.88 s, --test-threads=1)",
+    "library_parallel": "1648 passed / 0 failed / 27 ignored (95.94 s, --test-threads=4)",
+    "removed_or_newly_ignored_tests": 0,
+    "probes": "NOT_RUN (no adversarial probe touched by these two repairs)"
+  },
+  "not_run": [
+    "Miri under Stacked Borrows and Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential courts for the negative-length refusal",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "next_queue": [
+    "src/aria.rs",
+    "src/asn1/asn1_item_list.rs",
+    "src/asn1/asn_mstbl.rs",
+    "src/asn1/asn_pack.rs",
+    "src/asn1/a_strnid.rs",
+    "src/asn1/a_utf8.rs",
+    "src/asn1/d2i_param.rs",
+    "src/asn1/d2i_pu.rs"
+  ],
+  "next_queue_note": "The literal first eight lines of REMAINING-AUDIT.txt are the src/apps/* CLI front-ends; this queue keeps the stable order but prefers library modules. src/apps/* remain queued and are deferred, not excluded."
+}

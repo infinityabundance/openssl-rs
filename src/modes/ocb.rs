@@ -35,13 +35,13 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_void;
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::modes::{Block128F, Ocb128F};
+use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array, CRYPTO_memcmp,
-    CRYPTO_realloc_array, OPENSSL_cleanse,
+    CRYPTO_clear_free, CRYPTO_malloc_array, CRYPTO_memcmp, CRYPTO_realloc_array, OPENSSL_cleanse,
 };
 
 /// The translation-unit coordinates, as the allocator reports them.
@@ -76,6 +76,34 @@ pub struct OcbCtx {
     sum: [u8; 16],
     offset: [u8; 16],
     checksum: [u8; 16],
+}
+
+/// The authority's `CRYPTO_ocb128_cleanup` body minus any block release: the `l` table and the
+/// context cleanse. [`RawCtx`] uses this type only for its `#[repr(C)]` layout and its
+/// `FILE`/`LINE` coordinates; the exported [`CRYPTO_ocb128_cleanup`] runs the body directly, and
+/// the caller pairs it with its own `OPENSSL_free` of the block.
+// SAFETY: (a) `destroy_body` is the authority's `CRYPTO_ocb128_cleanup` member body, releasing the
+// `l` table once (the releaser accepts the not-yet-set NULL) and cleansing only the context, never
+// the enclosing block; (b) `OcbCtx` is a `#[repr(C)]` record of raw pointers, integers, `Option<fn>`
+// slots and byte arrays, so an all-zero block is a valid `OcbCtx` the body is sound on.
+unsafe impl CtxDestroy for OcbCtx {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(ptr: *mut OcbCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `l` is NULL or the table this
+        // file's allocator produced and `max_l_index` its element count.
+        unsafe {
+            CRYPTO_clear_free(
+                (*ptr).l.cast(),
+                (*ptr).max_l_index * 16,
+                FILE.as_ptr(),
+                LINE,
+            );
+            OPENSSL_cleanse(ptr.cast(), core::mem::size_of::<OcbCtx>());
+        }
+    }
 }
 
 /// `static u32 ocb_ntz(u64 n)` — `crypto/modes/ocb128.c:20-37`.
@@ -173,13 +201,14 @@ pub unsafe extern "C" fn CRYPTO_ocb128_new(
 ) -> *mut OcbCtx {
     // SAFETY: the caller's contract.
     unsafe {
-        let octx =
-            CRYPTO_malloc(core::mem::size_of::<OcbCtx>(), FILE.as_ptr(), LINE).cast::<OcbCtx>();
-        if !octx.is_null() {
-            if CRYPTO_ocb128_init(octx, keyenc, keydec, encrypt, decrypt, stream) != 0 {
-                return octx;
-            }
-            CRYPTO_free(octx.cast(), FILE.as_ptr(), LINE);
+        // The block is owned storage that is not yet a valid `OcbCtx`: `init` below fills it, and on
+        // failure its `Drop` releases the block **alone** -- the authority's own `OPENSSL_free`,
+        // running no context destructor.
+        let Some(octx) = RawCtx::<OcbCtx>::malloc() else {
+            return ptr::null_mut();
+        };
+        if CRYPTO_ocb128_init(octx.as_ptr(), keyenc, keydec, encrypt, decrypt, stream) != 0 {
+            return octx.into_raw();
         }
         ptr::null_mut()
     }
@@ -242,9 +271,15 @@ pub unsafe extern "C" fn CRYPTO_ocb128_init(
 /// `int CRYPTO_ocb128_copy_ctx(OCB128_CONTEXT *dest, OCB128_CONTEXT *src, void *keyenc,
 /// void *keydec)` — `crypto/modes/ocb128.c:194-208`.
 ///
+/// `memcpy(dest, src, sizeof(*dest))` is a whole-object identity when `dest == src`, which the
+/// authority's `memcpy` performs without a guard and then returns 1 after allocating a second
+/// L-table (leaking the original). This transcription short-circuits the identity case instead:
+/// the state is already what the copy asks for, and `ptr::copy_nonoverlapping` must not be handed
+/// overlapping regions.
+///
 /// # Safety
 /// `dest` is caller storage large enough for an `OcbCtx`; `src` is live; the key pointers are
-/// NULL or live schedules owned by the caller.
+/// NULL or live schedules owned by the caller. `dest == src` is accepted.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_ocb128_copy_ctx(
     dest: *mut OcbCtx,
@@ -252,7 +287,21 @@ pub unsafe extern "C" fn CRYPTO_ocb128_copy_ctx(
     keyenc: *mut c_void,
     keydec: *mut c_void,
 ) -> core::ffi::c_int {
-    // SAFETY: the caller's contract.
+    if ptr::eq(dest.cast_const(), src) {
+        // The authority's two overrides still run in its identity case; only its second L-table
+        // allocation (and the leak it creates) is skipped here.
+        // SAFETY: `dest` is live and equals `src` per the test above.
+        unsafe {
+            if !keyenc.is_null() {
+                (*dest).keyenc = keyenc;
+            }
+            if !keydec.is_null() {
+                (*dest).keydec = keydec;
+            }
+        }
+        return 1;
+    }
+    // SAFETY: the caller's contract, and the identity case was handled above.
     unsafe {
         ptr::copy_nonoverlapping(
             src.cast::<u8>(),
@@ -500,8 +549,15 @@ pub unsafe extern "C" fn CRYPTO_ocb128_encrypt(
                 f((*ctx).offset.as_ptr(), pad.as_mut_ptr(), (*ctx).keyenc);
             }
 
+            // The caller's `in`/`out` may be the same buffer (in-place AEAD). Copy the
+            // ciphertext tail out first so the input is never borrowed while `out` is
+            // mutably borrowed: `from_raw_parts(inp, ..)` and
+            // `from_raw_parts_mut(outp, ..)` over an aliasing range would be undefined
+            // behaviour even though the byte XOR is read-then-write.
+            let mut tail = [0u8; 16];
+            ptr::copy_nonoverlapping(inp, tail.as_mut_ptr(), last_len);
             ocb_block_xor(
-                core::slice::from_raw_parts(inp, last_len),
+                &tail[..last_len],
                 &pad,
                 last_len,
                 core::slice::from_raw_parts_mut(outp, last_len),
@@ -509,7 +565,7 @@ pub unsafe extern "C" fn CRYPTO_ocb128_encrypt(
 
             let mut cell = (*ctx).checksum;
             let mut star_block = [0u8; 16];
-            star_block[..last_len].copy_from_slice(core::slice::from_raw_parts(inp, last_len));
+            star_block[..last_len].copy_from_slice(&tail[..last_len]);
             star_block[last_len] = 0x80;
             xor16(&mut cell, &star_block);
             (*ctx).checksum = cell;
@@ -613,8 +669,12 @@ pub unsafe extern "C" fn CRYPTO_ocb128_decrypt(
                 f((*ctx).offset.as_ptr(), pad.as_mut_ptr(), (*ctx).keyenc);
             }
 
+            // As in the encrypt arm: `in`/`out` may alias, so the ciphertext tail is
+            // copied before `out` is mutably borrowed.
+            let mut tail = [0u8; 16];
+            ptr::copy_nonoverlapping(inp, tail.as_mut_ptr(), last_len);
             ocb_block_xor(
-                core::slice::from_raw_parts(inp, last_len),
+                &tail[..last_len],
                 &pad,
                 last_len,
                 core::slice::from_raw_parts_mut(outp, last_len),
@@ -704,13 +764,8 @@ pub unsafe extern "C" fn CRYPTO_ocb128_cleanup(ctx: *mut OcbCtx) {
     // SAFETY: the caller's contract.
     unsafe {
         if !ctx.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).l.cast(),
-                (*ctx).max_l_index * 16,
-                FILE.as_ptr(),
-                LINE,
-            );
-            OPENSSL_cleanse(ctx.cast(), core::mem::size_of::<OcbCtx>());
+            // `destroy_body` is the authority's own `CRYPTO_ocb128_cleanup` body.
+            <OcbCtx as CtxDestroy>::destroy_body(ctx);
         }
     }
 }
@@ -855,4 +910,122 @@ mod tests {
             CRYPTO_ocb128_cleanup(ctx);
         }
     }
+
+    /// `in == out` is permitted (EVP's block update may pass one buffer), and the
+    /// partial-block arm copies the input tail before forming the output borrow. Pinning
+    /// the in-place result to the out-of-place one keeps the bytes and the tag identical
+    /// while removing the overlapping `&`/`&mut` that `from_raw_parts(_mut)` would form.
+    #[test]
+    fn ocb_partial_block_in_place_matches_out_of_place() {
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        let iv = unhex("000102030405060708090a0b");
+        let aad = unhex("0001020304050607");
+        // Thirteen bytes: one full block is impossible, so the partial arm runs.
+        let pt = unhex("000102030405060708090a0b0c");
+        // SAFETY: live locals and live schedules.
+        unsafe {
+            let ke = schedule(&key, 128);
+            let kd = schedule_dec(&key, 128);
+
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut ct = [0u8; 13];
+            assert_eq!(
+                CRYPTO_ocb128_encrypt(ctx, pt.as_ptr(), ct.as_mut_ptr(), pt.len()),
+                1
+            );
+            let mut tag = [0u8; 16];
+            assert_eq!(CRYPTO_ocb128_tag(ctx, tag.as_mut_ptr(), 16), 1);
+            CRYPTO_ocb128_cleanup(ctx);
+
+            // In-place encryption of the same thirteen bytes.
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut buf = [0u8; 13];
+            buf.copy_from_slice(&pt);
+            assert_eq!(
+                CRYPTO_ocb128_encrypt(ctx, buf.as_ptr(), buf.as_mut_ptr(), buf.len()),
+                1
+            );
+            assert_eq!(buf, ct);
+            let mut in_place_tag = [0u8; 16];
+            assert_eq!(CRYPTO_ocb128_tag(ctx, in_place_tag.as_mut_ptr(), 16), 1);
+            assert_eq!(in_place_tag, tag);
+            CRYPTO_ocb128_cleanup(ctx);
+
+            // In-place decryption recovers the plaintext and verifies the tag.
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            assert_eq!(CRYPTO_ocb128_setiv(ctx, iv.as_ptr(), iv.len(), 16), 1);
+            assert_eq!(CRYPTO_ocb128_aad(ctx, aad.as_ptr(), aad.len()), 1);
+            let mut buf = [0u8; 13];
+            buf.copy_from_slice(&ct);
+            assert_eq!(
+                CRYPTO_ocb128_decrypt(ctx, buf.as_ptr(), buf.as_mut_ptr(), buf.len()),
+                1
+            );
+            assert_eq!(&buf[..], &pt[..]);
+            assert_eq!(CRYPTO_ocb128_finish(ctx, tag.as_ptr(), tag.len()), 0);
+            CRYPTO_ocb128_cleanup(ctx);
+        }
+    }
+
+    /// The authority's `memcpy(dest, src, sizeof(*dest))` is the identity when `dest == src`; the
+    /// Rust transcription must not hand that overlap to `ptr::copy_nonoverlapping`, and it must
+    /// not replace (or leak) the existing L-table either.
+    #[test]
+    fn ocb_copy_ctx_accepts_the_identity() {
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        // SAFETY: live locals and live schedules.
+        unsafe {
+            let ke = schedule(&key, 128);
+            let kd = schedule_dec(&key, 128);
+            let ctx = CRYPTO_ocb128_new(
+                (&ke as *const AesKey).cast_mut().cast(),
+                (&kd as *const AesKey).cast_mut().cast(),
+                aes_block,
+                aes_dec_block,
+                None,
+            );
+            assert!(!ctx.is_null());
+            let before = (*ctx).l;
+            assert_eq!(
+                CRYPTO_ocb128_copy_ctx(ctx, ctx, ptr::null_mut(), ptr::null_mut()),
+                1,
+                "an identity copy is the authority's answer"
+            );
+            assert_eq!(
+                (*ctx).l,
+                before,
+                "the identity copy must keep the existing L-table"
+            );
+            CRYPTO_ocb128_cleanup(ctx);
+        }
+    }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OcbCtx => zero_state_sweep_ocb_ctx);

@@ -23,7 +23,9 @@ use crate::cmp::cmp_util::{ossl_cmp_log_str, OSSL_CMP_LOG_ERR, OSSL_CMP_LOG_WARN
 use crate::crmf::crmf_asn::CrmfCertTemplate;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_shift,
     OPENSSL_sk_value, OpenSslStack,
@@ -31,7 +33,7 @@ use crate::runtime::stack::{
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_purp::X509_get_extension_flags;
 use crate::x509::x509_cmp::{
-    ossl_x509_add_cert_new, ossl_x509_add_certs_new, X509_add_cert, X509_get_subject_name,
+    ossl_x509_add_cert_new, X509_add_cert, X509_add_certs, X509_get_subject_name,
 };
 use crate::x509::x509_lu::{
     X509Store, X509StoreCtx, X509_STORE_CTX_get0_store, X509_STORE_add_cert, X509_STORE_free,
@@ -123,6 +125,9 @@ unsafe fn cert_msg(
 ) {
     // SAFETY: `cert` is live.
     let subj = unsafe { X509_NAME_oneline(X509_get_subject_name(cert), ptr::null_mut(), 0) };
+    // SAFETY: `X509_NAME_oneline` answers NULL or one allocator block this frame owns; its single
+    // release is the authority's own `(FILE, 31)`.
+    let subj = unsafe { OwnedStr::adopt(subj, SeamFile::new(FILE), 31) };
     // SAFETY: `ctx` is live.
     let level_name = if level == OSSL_CMP_LOG_WARNING {
         c"WARN".as_ptr()
@@ -141,19 +146,18 @@ unsafe fn cert_msg(
                 "{}:certificate from '{}' with subject '{}' {}",
                 std::ffi::CStr::from_ptr(level_name).to_string_lossy(),
                 source.to_string_lossy(),
-                if subj.is_null() {
-                    String::new()
-                } else {
-                    std::ffi::CStr::from_ptr(subj)
+                if let Some(subj) = subj.as_ref() {
+                    std::ffi::CStr::from_ptr(subj.as_ptr())
                         .to_string_lossy()
                         .into_owned()
+                } else {
+                    String::new()
                 },
                 msg.to_string_lossy(),
             ),
         )
     };
-    // SAFETY: `subj` is NULL or this call's own.
-    unsafe { crate::runtime::mem::CRYPTO_free(subj.cast(), FILE.as_ptr(), 31) };
+    // `subj`'s owner drops here, after the log call, which is the authority's free site.
 }
 
 /// `static int ossl_X509_check(OSSL_CMP_CTX *ctx, const char *source, X509 *cert, int type_CA,`
@@ -403,14 +407,14 @@ pub unsafe extern "C" fn OSSL_CMP_get1_caCerts(
     }
     // SAFETY: no preconditions.
     let out_stack = OPENSSL_sk_new_reserve(None, unsafe { OPENSSL_sk_num(certs) });
-    // SAFETY: `out` is writable.
-    unsafe { *out = out_stack };
-    // SAFETY: `out_stack` is NULL or a fresh stack; `certs` is live.
+    // SAFETY: `out_stack` is NULL or a fresh stack; `certs` is live. The authority calls
+    // `X509_add_certs(*out, ...)`, whose slot is the stack itself; `X509_add_certs` answers 0
+    // on the NULL stack.
     if out_stack.is_null()
         // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
         || unsafe {
-            ossl_x509_add_certs_new(
-                out_stack as *mut *mut OpenSslStack,
+            X509_add_certs(
+                out_stack,
                 certs,
                 X509_ADD_FLAG_UP_REF | X509_ADD_FLAG_NO_DUP,
             )
@@ -421,6 +425,9 @@ pub unsafe extern "C" fn OSSL_CMP_get1_caCerts(
         // SAFETY: `out` is writable.
         unsafe { *out = ptr::null_mut() };
         ret = 0;
+    } else {
+        // SAFETY: `out` is writable.
+        unsafe { *out = out_stack };
     }
     // SAFETY: `itav` is live.
     unsafe { OSSL_CMP_ITAV_free(itav) };

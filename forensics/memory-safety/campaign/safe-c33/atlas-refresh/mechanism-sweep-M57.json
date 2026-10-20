@@ -1,0 +1,134 @@
+{
+  "receipt": "mechanism-sweep-M57",
+  "branch": "integrate/safe-c33",
+  "source_head": "526fa34db",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; three repairs (one pointer-validity repair, one safety-contract correction, one fallible-arithmetic guard). No STOP remains open.",
+  "scope": "Per-file contract audit of seven EVP/FFC units plus the FFC private-key generator: the two RSA-only legacy pkey wrappers, the legacy set1/get0/get1 assign helpers, the engine remainder of p_lib.c, the seven pmeth_check entry points, the FFC provider import bridge, and FFC private-key generation. method_store.rs was deferred again as the method-store registry boundary; ffc/key_generate.rs was substituted from the head of the stable queue.",
+  "files": [
+    "src/evp/pbe.rs",
+    "src/evp/p_dec.rs",
+    "src/evp/p_enc.rs",
+    "src/evp/p_legacy_assign.rs",
+    "src/evp/p_lib.rs",
+    "src/evp/pmeth_check.rs",
+    "src/ffc/backend.rs",
+    "src/ffc/key_generate.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M57-D1",
+      "file": "src/evp/pbe.rs",
+      "line_pre_fix": 151,
+      "line_post_fix": 156,
+      "severity": "medium",
+      "class": "mutable descriptor pointer derived from immutable storage",
+      "description": "EVP_PBE_scrypt_ex built the four numeric OSSL_PARAM descriptors with `&n as *const u64 as *mut u64` over immutable parameters. OSSL_PARAM_construct_uint64 publishes a `*mut u64`, so a provider that writes the parameter would write through a pointer derived from a shared borrow (undefined behaviour under Stacked Borrows). The in-tree SCRYPT decoder only reads these parameters, so today's path is not observed to write.",
+      "fix": "The four scalars are now `mut` parameters and the descriptors use `core::ptr::addr_of_mut!`, so the published pointer is derived from mutable storage. The `mut` parameter patterns do not change the exported signature or ABI.",
+      "witness": "Compile and code review. A runtime control would need a provider that writes an input parameter; no in-tree provider does (NOT_RUN)."
+    },
+    {
+      "id": "M57-D2",
+      "file": "src/ffc/backend.rs",
+      "line_pre_fix": 82,
+      "line_post_fix": 82,
+      "severity": "low",
+      "class": "safety contract weaker than the body's requirement",
+      "description": "ossl_ffc_params_fromdata documented `ffc` as 'NULL or a live, writable FFC_PARAMS', but the body unconditionally dereferences `(*ffc)` for gindex/pcounter/h and both set0 calls. A caller relying on the stated contract could pass NULL and cause UB. The same contract also omitted that DIGEST/DIGEST_PROPS UTF8 data is stored by pointer, not copied.",
+      "fix": "The `# Safety` section now requires a live, writable, non-NULL `ffc`, and states that DIGEST/DIGEST_PROPS data must outlive the object (authority-faithful borrowing). No code change.",
+      "witness": "Documentation-only; the four ffc::backend tests pass unchanged."
+    },
+    {
+      "id": "M57-D3",
+      "file": "src/ffc/key_generate.rs",
+      "line_pre_fix": 89,
+      "line_post_fix": 87,
+      "severity": "low",
+      "class": "fallible signed arithmetic (strength doubling)",
+      "description": "ossl_ffc_generate_private_key computed `2 * s` twice on `c_int` values without a bound. The authority's expression is signed overflow (undefined); the debug port panicked and the release port wrapped. The wrapped path for s = c_int::MIN reaches BN_priv_rand_range_ex with range 1 and the `priv >= M` loop never terminates. Every current in-tree caller passes MIN_STRENGTH or ossl_ifc_ffc_compute_security_bits (at most 1200), so the path is not reachable today.",
+      "fix": "Compute the doubled strength once with `checked_mul(2)` and refuse on overflow, before any allocation or shift. Recorded as the AGENTS.md section 17 divergence from the authority's undefined expression.",
+      "witness": "ffc::key_generate::tests::a_strength_whose_doubling_overflows_is_refused (new; c_int::MAX and c_int::MIN both answer 0)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OSSL_PARAM terminated-array and caller-owned output-buffer contract (params arrays are frames' own; key/keydata extents are the caller's)",
+    "KDF provider input-parameter convention: set_ctx_params reads input descriptors and copies password/salt into its own clear-free-owned buffers; it does not write the caller's parameter buffers",
+    "EVP_PKEY_CTX provider/legacy discrimination: `-1` from try_provided_check means 'not a provider context' and is never an invalid-key answer",
+    "Refcount set1 contract: up_ref before EVP_PKEY_assign, free the acquired reference only when the assignment refuses",
+    "FFC_PARAMS ownership contract: set0_pqg/set0_j take ownership with NULL and same-pointer no-ops; the authority err label frees j, p, q, g in that order",
+    "BIGNUM secret-output convention (B19): generation writes the private key directly into the caller's BIGNUM; releasing/cleansing that BIGNUM remains the caller's obligation",
+    "RC-1 allocator seam and #[repr(C)] layouts: untouched by this batch"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains deferred as the method-store registry boundary.",
+    "pmeth_check.rs uses PMETH_CHECK_78 (OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE) for both the EVP_PKEY_NONE test and the not_supported label. The authority raises NO_KEY_SET at the NONE test. Both statements sit in the legacy arm, which is unreachable in this crate because try_provided_check returns -1 only when ctx->keymgmt is NULL and no legacy context can be built; no code change was made because the exact authority coordinate for that raise is not available in this checkout (authority differential NOT_RUN).",
+    "ffc/backend.rs stores DIGEST and DIGEST_PROPS as borrowed pointers (the authority does the same); the obligation is now explicit in the safety contract and remains the caller's.",
+    "pbe.rs does not cleanse the caller-owned `key` output on a failed derive; the authority does not either and the buffer belongs to the caller. No internal secret buffer exists in this unit (password/salt are only pointed at by descriptors; the provider copies them into its own clear-free-owned storage).",
+    "p_dec/p_enc write caller-owned plaintext/ciphertext buffers and keep no internal copy; p_lib/pmeth_check borrow private keydata without copying it; ffc/backend handles public parameters. No new cleansing obligation was introduced by this batch.",
+    "ffc/key_generate.rs writes the private key directly into the caller's BIGNUM. DH key generation releases its temporary with BN_clear_free; dsa/key.rs keygen_err uses BN_free, which is the authority's own ordering (noted as a follow-up outside this batch, not repaired here).",
+    "No constant-time claim is made for any unit in this batch; no secret-dependent branch or comparison was introduced."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 62.08 s)",
+    "lib_test_threads_4": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 94.83 s)",
+    "focused_tests": "PASS (21 passed / 0 failed: ffc::backend 4, ffc::key_generate 3, evp::p_lib 1, evp::evp_pbe 5, evp::p5_scrypt 2, evp::p5_crpt 6)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for the RSA legacy wrappers, scrypt PBE wrapper, pmeth_check or FFC generation)"
+  },
+  "boundary_control": {
+    "status": "PARTIAL",
+    "reason": "M57-D3 has a positive regression control that exercises the repaired arithmetic boundary. M57-D1 and M57-D2 are compile-/review-verified only: no in-tree provider writes an input parameter, and the ffc contract is documentation-only."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/ffc/key_validate.rs",
+      "src/ffc/params_validate.rs",
+      "src/http/http_lib.rs",
+      "src/idea.rs",
+      "src/mac/hmac.rs",
+      "src/mac/poly1305.rs",
+      "src/mac/siphash.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "runtime control for a provider writing an input OSSL_PARAM",
+      "status": "NOT_RUN",
+      "reason": "no in-tree provider writes input descriptors",
+      "runs_at": "BOUNDARY if a writable-parameter provider path is added"
+    },
+    {
+      "gate": "authority differential for the pmeth_check NONE-branch error reason",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint once the pinned authority source coordinates are available"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, dudect/constant-time on the touched units",
+      "status": "NOT_RUN",
+      "reason": "not invoked in this batch; no new secret-dependent branch",
+      "runs_at": "BOUNDARY or SEAL, whichever touches these units next"
+    },
+    {
+      "gate": "FRF/probe suite, dependency-graph regeneration, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ]
+}

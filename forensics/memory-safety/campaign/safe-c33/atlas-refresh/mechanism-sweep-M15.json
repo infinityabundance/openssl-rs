@@ -1,0 +1,115 @@
+{
+  "receipt": "mechanism-sweep-M15",
+  "branch": "integrate/safe-c33",
+  "worktree": true,
+  "date": "2026-10-19",
+  "source_head": "2d04ee98b",
+  "verification_level": "FAST plus BATCH; no STOP-class defect; two error-path resource leaks and one non-faithful size guard repaired",
+  "scope": "ordinary mechanism-contract sweep starting at the queued src/cms/cms_ec.rs (live rank 168) and continuing down the production-site ranking. Eight ordinary files audited: src/cms/cms_ec.rs (168), src/pkcs7/pk7_asn1.rs (146), src/x509/x_crl.rs (149), src/x509/x509name.rs (169), src/cmp/cmp_protect.rs (170), src/pem/key_legacy.rs (173), src/pem/pem_pk8.rs (174), src/ess/ess_lib.rs (179). src/http/http_client.rs (171), src/params/build.rs (172), src/runtime/err.rs (175), src/provider/rsa_kmgmt.rs (176) and src/evp/pkey_asn1.rs (177) were classified as boundary work and skipped to files_not_run.",
+  "files": [
+    "src/cms/cms_ec.rs",
+    "src/pkcs7/pk7_asn1.rs",
+    "src/x509/x_crl.rs",
+    "src/x509/x509name.rs",
+    "src/cmp/cmp_protect.rs",
+    "src/pem/key_legacy.rs",
+    "src/pem/pem_pk8.rs",
+    "src/ess/ess_lib.rs"
+  ],
+  "files_not_run": [
+    "src/http/http_client.rs (rank 171) — OSSL_HTTP_bio_cb_t application BIO callback and request-context lifecycle; BOUNDARY.",
+    "src/params/build.rs (rank 172) — secure-heap block classification and to_param ownership transfer; BOUNDARY (allocator/ownership).",
+    "src/runtime/err.rs (rank 175) — error-queue/ERR_STATE ownership; BOUNDARY.",
+    "src/provider/rsa_kmgmt.rs (rank 176) — provider keymgmt callback/param surface; BOUNDARY.",
+    "src/evp/pkey_asn1.rs (rank 177) — process-global mutable ASN.1 method registry and owned pem_str/info members; BOUNDARY (global ownership)."
+  ],
+  "defects": [
+    {
+      "id": "M15-D1",
+      "file": "src/cms/cms_ec.rs",
+      "lines_post_fix": "137-145",
+      "severity": "medium",
+      "class": "error-path leak of EVP_PKEY_CTX",
+      "description": "pkey_type2param's V_ASN1_OBJECT arm returned NULL when EVP_PKEY_paramgen_init failed without releasing the context it had just created. cms_ec.c's single err label frees pctx on that path.",
+      "fix": "Split the NULL test from the init test and free pctx in the init-failure arm; the later decode/set/paramgen failure arms already free it."
+    },
+    {
+      "id": "M15-D2",
+      "file": "src/cms/cms_ec.rs",
+      "lines_post_fix": "611",
+      "severity": "low",
+      "class": "non-faithful size_t-to-INT_MAX guard",
+      "description": "ecdh_cms_encrypt compared the size_t encoded-public-key length after casting it to c_long. A value above i64::MAX would wrap negative and evade the authority's enckeylen > INT_MAX refusal, then be truncated by the c_int ASN1_STRING length. Unreachable under the allocator, but the guard no longer expressed the authority's check.",
+      "fix": "Compare in usize (enckeylen > INT_MAX as usize) before the existing zero test; reachable behaviour is unchanged."
+    },
+    {
+      "id": "M15-D3",
+      "file": "src/cmp/cmp_protect.rs",
+      "lines_post_fix": "442-457",
+      "severity": "low",
+      "class": "error-path leak of OSSL_CRMF_PBMPARAMETER",
+      "description": "pbmac_algor returned without freeing pbm on the i2d failure and ASN1_STRING_set failure arms; cmp_protect.c frees pbm at its single err label on every arm.",
+      "fix": "Free pbm on both arms, matching the already-correct early and final cleanup paths."
+    }
+  ],
+  "no_defect_found": [
+    "src/pkcs7/pk7_asn1.rs: the six ADB arms, the seven item templates, the PKCS7 ATTR_SIGN/ATTR_VERIFY templates, pk7_cb's four streaming arms, si_cb/ri_cb FREE_POST releases, PKCS7_new_ex's propq copy, PKCS7_free's propq-then-item order and d2i_PKCS7's carried libctx/propq all match pk7_asn1.c. No defect.",
+    "src/x509/x_crl.rs: X509_REVOKED/X509_CRL_INFO/X509_CRL layouts and templates, crl_inf_cb, crl_cb's NEW_POST/D2I_PRE/FREE_POST/DUP_POST arms, the comparator/key convention in def_crl_lookup, the lock-protected sort, the method object lifecycle and ossl_x509_crl_set0_libctx match x_crl.c. The D2I_POST extension/cache arm and the akid/idp/issuers frees remain withheld exactly as documented in the module. No new defect.",
+    "src/x509/x509name.rs: text/index/entry accessors, delete_entry's set fixup, add_entry's clamp/set/inc/renumber logic, the three create-by-* wrappers, set_object and set_data match x509name.c. No defect.",
+    "src/pem/key_legacy.rs: the seven d2i/i2d void shims, the plain writer bodies, the write_cb writers, PEM_read_bio_DHparams' name-selected decoder and owned name/data blocks, PEM_read_DHparams' BIO lifetime and the three pkey_get_* ownership transitions match pem_all.c. No defect.",
+    "src/pem/pem_pk8.rs: do_pk8pkey's encoder arm, legacy encrypted/unencrypted arms, cleanse site, failure releases and OSSL_ENCODER_CTX lifetime, d2i_PKCS8PrivateKey_bio's length/password/decrypt path and the _fp BIO wrappers match pem_pk8.c. No defect.",
+    "src/ess/ess_lib.rs: ESS_CERT_ID(_V2)_new_init's per-arm releases, the signing-cert builders' push-versus-error ownership, find's digest fetch/fallback/cleanse-free path and OSSL_ESS_check_signing_certs' independent v1/v2 traversal match ess_lib.c. No defect."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "contracts_reused": [
+    "RC-1 refcount/up_ref protocol and the item-layer do_lock refcount/lock contract",
+    "OB-1 OwnedBuf/OwnedBlock adoption and into_raw suppression",
+    "OB-3 OwnedCtx/RawCtx malloc/from_raw_at and CtxDestroy",
+    "OB-4 member-buffer slots (CStrSlot/PropqSlot) for PKCS7_CTX::propq and X509_CRL::propq",
+    "ASN.1 item/template/free/dup/d2i/i2d contracts, including callback operation ordering",
+    "B1/B2 BIO lifecycle and B7 PEM pass-phrase callback contract",
+    "OpenSSL stack element/comparator/key convention (address-of-slot comparator arguments)",
+    "C-ABI exported-symbol, out-parameter and destructor contracts"
+  ],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 1,
+  "test_only_unsafe_added": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: x_crl:: 4/0, cms::cms_env:: PASS, pem:: PASS, x509::x_name:: PASS, pkey_asn1:: PASS, merged filters 100 passed / 0 failed / 3 ignored and cmp filter 9/0",
+    "library_tests_serial": "PASS: 1604 passed / 0 failed / 27 ignored (318.51 s)",
+    "library_tests_threads_4": "PASS: 1604 passed / 0 failed / 27 ignored (110.42 s)",
+    "affected_adversarial_probes": "NOT_RUN: none of the eight files carries an OPENSSL_RS_ADV_PROBE arm"
+  },
+  "residuals": [
+    "x_crl's ASN1_OP_D2I_POST arm and the AUTHORITY_KEYID/ISSUING_DIST_POINT/GENERAL_NAMES cache frees remain withheld by name; akid/idp/issuers are never populated in the current slice, so no leak is reachable and no hidden obligation is introduced.",
+    "ecdh_cms_set_kdf_param resolves the digest through EVP_get_digestbyname(OBJ_nid2sn(nid)) because the crate has no EVP_get_digestbynid; the short-name table covers the authority's KDF digest NIDs.",
+    "The cms_ec INT_MAX comparison and the cmp_protect pbm releases are error-path/defensive corrections; no reachable success path changes.",
+    "ASan/Miri/Loom/TSan, full-suite sanitizers, FRF-Fuzz, the authority differential, independent review and SEAL regeneration are NOT_RUN."
+  ],
+  "not_discharged": true,
+  "next_queue": {
+    "file": "src/dsa/object.rs",
+    "rank_in_attribution": 178,
+    "then": [
+      "src/x509/v3_ac_tgt.rs (190)",
+      "src/cmp/cmp_hdr.rs (191)",
+      "src/cms/cms_dh.rs (192)",
+      "src/slh_dsa/dsa.rs (193)",
+      "src/x509/dane.rs (194)",
+      "src/x509/pcy_cache.rs (195)"
+    ],
+    "boundary_queue": [
+      "src/http/http_client.rs",
+      "src/params/build.rs",
+      "src/runtime/err.rs",
+      "src/provider/rsa_kmgmt.rs",
+      "src/evp/pkey_asn1.rs"
+    ]
+  }
+}

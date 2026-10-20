@@ -55,7 +55,9 @@ use crate::runtime::err::err_sites::{
 use crate::runtime::err::{
     peek_last_lib, peek_last_reason, raise_site, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free};
+use crate::runtime::mem::CRYPTO_calloc;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
     OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -98,9 +100,27 @@ const BN_R_NO_INVERSE: c_int = 108;
 /// unreachable on this profile (`pairwise_test` is always 0 outside `FIPS_MODULE`),
 /// but the constant is the one the authority's own call site would report.
 const FILE_RSA_GEN: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c".as_ptr();
+const FILE_RSA_GEN_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+/// `OPENSSL_calloc(num, size)` as a plainly released owner, or `None` when the allocator answers
+/// NULL.
+///
+/// The allocation keeps the authority's exact request (element count and element size passed
+/// separately, so the seam performs the authority's own overflow check) at its `file`/`line`;
+/// `Drop` is the block's single `OPENSSL_free` at those same coordinates.
+fn calloc(num: usize, size: usize) -> Option<OwnedBuf> {
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(num, size, FILE_RSA_GEN, LINE)
+    }
+    .cast::<c_uchar>();
+    // SAFETY: `raw` is NULL or a live zeroed block the crate's `CRYPTO_*` seam allocated in full
+    // and no other owner will release it.
+    unsafe { OwnedBuf::adopt_plain(raw, FILE_RSA_GEN_SEAM, LINE) }
+}
 
 /// `##__VA_ARGS__`-free `OPENSSL_FILE`/`OPENSSL_LINE` for the two `OPENSSL_free`
 /// calls the pairwise test makes; the authority's `OPENSSL_free` is
@@ -1074,7 +1094,6 @@ unsafe fn rsa_keygen_pairwise_test(
 ) -> c_int {
     let mut ret: c_int = 0;
     const PADDING: c_int = 3; /* RSA_NO_PADDING */
-    let mut plaintxt: *mut c_uchar = core::ptr::null_mut();
 
     // SAFETY: `OSSL_SELF_TEST_new` takes no caller pointers and answers a fresh
     // object or NULL.
@@ -1097,14 +1116,14 @@ unsafe fn rsa_keygen_pairwise_test(
      */
     // SAFETY: `rsa` is live with a live `n`.
     let plaintxt_len = unsafe { RSA_size(rsa) };
-    // `OPENSSL_calloc(plaintxt_len, 3)`.
-    let block = CRYPTO_calloc(plaintxt_len as usize, 3, FILE_RSA_GEN, LINE).cast::<c_uchar>();
+    // `OPENSSL_calloc(plaintxt_len, 3)`; the owner preserves the request and its coordinates.
+    let block = calloc(plaintxt_len as usize, 3);
 
     'body: {
-        if block.is_null() {
+        let Some(block) = block.as_ref() else {
             break 'body;
-        }
-        plaintxt = block;
+        };
+        let plaintxt = block.as_ptr();
         // SAFETY: `block` was allocated this call for `3 * plaintxt_len` octets, so
         // both offsets are in bounds.
         let ciphertxt = unsafe { plaintxt.add(plaintxt_len as usize) };
@@ -1147,15 +1166,13 @@ unsafe fn rsa_keygen_pairwise_test(
         ret = 1;
     }
 
-    // SAFETY: `st` is live or NULL; `plaintxt` is the block this call allocated or
-    // NULL.
+    // SAFETY: `st` is live or NULL. The plaintext owner's `Drop` performs the authority's
+    // release after the self-test teardown, on every path.
     unsafe {
         OSSL_SELF_TEST_onend(st, ret);
         OSSL_SELF_TEST_free(st);
-        if !plaintxt.is_null() {
-            CRYPTO_free(plaintxt.cast(), FILE_RSA_GEN, LINE);
-        }
     }
+    drop(block);
 
     ret
 }

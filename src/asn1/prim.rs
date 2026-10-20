@@ -44,11 +44,23 @@
 //! differential court cannot compare a crash, so none of those paths is exercised
 //! there either.
 //!
+//! ## Ownership
+//!
+//! The file's own transient state is owned. `a2d_ASN1_OBJECT`'s digit heap is an
+//! [`OwnedBlock`] whose `Drop` is its only release, reseated through `Option::take`
+//! where the authority frees before it reallocates; the `ASN1_PCTX`/`ASN1_SCTX`
+//! context objects are `OwnedBlock`s the `*_new` hands out with `into_raw` and the
+//! `*_free` reclaims with `from_raw`, so `Drop` is their single release. The blocks
+//! stay `CRYPTO_*` allocations at the authority's exact sizes and through this
+//! file's own `__FILE__`, so an installed `CRYPTO_set_mem_functions` hook observes
+//! them exactly as it observes the authority's.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{
     as_str, as_str_mut, string_embed_free, string_set_body, string_type_new, ASN1_STRING_set0,
 };
@@ -58,7 +70,8 @@ use crate::ffi::guard_ffi;
 use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     object_create, object_free, object_new, Asn1Object, OBJ_nid2obj, OBJ_obj2nid,
     ASN1_OBJECT_FLAG_DYNAMIC, ASN1_OBJECT_FLAG_DYNAMIC_DATA, ASN1_OBJECT_FLAG_DYNAMIC_STRINGS,
@@ -504,7 +517,10 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
         // SAFETY: `ret` is live and owned here.
         unsafe { (*ret).length = 0 };
         // SAFETY: `CRYPTO_malloc` answers null or `length` writable bytes.
-        let fresh = CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
+        let fresh = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE)
+        } as *mut u8;
         if fresh.is_null() {
             // The authority raises with `i` still holding the loop counter, which
             // is `length` at this point. That is the authority's own behaviour and
@@ -666,7 +682,10 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
         let slot = unsafe { *pp };
         let (p, allocated) = if slot.is_null() {
             // SAFETY: `CRYPTO_malloc` answers null or `objsize` writable bytes.
-            let fresh = CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
+            let fresh = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE)
+            } as *mut u8;
             if fresh.is_null() {
                 return 0;
             }
@@ -1425,7 +1444,10 @@ pub unsafe extern "C" fn d2i_ASN1_UINTEGER(
         // here exactly as it fails there.
         let want = (len as c_int).wrapping_add(1);
         // SAFETY: `want` is the requested size, possibly unsatisfiable.
-        let s = CRYPTO_malloc(want as usize, INT_FILE.as_ptr(), LINE) as *mut u8;
+        let s = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(want as usize, INT_FILE.as_ptr(), LINE)
+        } as *mut u8;
         if s.is_null() {
             // `i` is still 0, so this arm raises nothing — the caller learns of it
             // from the null return alone.
@@ -1466,13 +1488,15 @@ pub unsafe extern "C" fn d2i_ASN1_UINTEGER(
 // ---------------------------------------------------------------------------
 
 /// `ASN1_PCTX *ASN1_PCTX_new(void)` — zeroed, so every flag starts clear.
+///
+/// The block is an [`OwnedBlock`] until it is handed to the caller: `into_raw`
+/// gives up ownership, and the matching [`ASN1_PCTX_free`] reclaims it so `Drop`
+/// releases it through the same allocator seam.
 #[no_mangle]
 pub extern "C" fn ASN1_PCTX_new() -> *mut Asn1Pctx {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_PCTX)` zeroed
-        // bytes.
-        CRYPTO_zalloc(core::mem::size_of::<Asn1Pctx>(), OBJECT_FILE.as_ptr(), LINE)
-            .cast::<Asn1Pctx>()
+        OwnedBlock::<Asn1Pctx>::zalloc(1, SeamFile::new(OBJECT_FILE), LINE)
+            .map_or(core::ptr::null_mut(), |blk| blk.into_raw())
     })
 }
 
@@ -1485,16 +1509,12 @@ pub extern "C" fn ASN1_SCTX_new(
     scan_cb: Option<unsafe extern "C" fn(*mut Asn1Sctx) -> c_int>,
 ) -> *mut Asn1Sctx {
     guard_ffi(core::ptr::null_mut(), || {
-        // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_SCTX)` zeroed
-        // bytes.
-        let ret = CRYPTO_zalloc(core::mem::size_of::<Asn1Sctx>(), OBJECT_FILE.as_ptr(), LINE)
-            .cast::<Asn1Sctx>();
-        if ret.is_null() {
+        let Some(blk) = OwnedBlock::<Asn1Sctx>::zalloc(1, SeamFile::new(OBJECT_FILE), LINE) else {
             return core::ptr::null_mut();
-        }
-        // SAFETY: `ret` is a fresh zeroed `ASN1_SCTX`.
-        unsafe { (*ret).cb = scan_cb };
-        ret
+        };
+        // SAFETY: `blk.as_ptr()` is a fresh zeroed `ASN1_SCTX`.
+        unsafe { (*blk.as_ptr()).cb = scan_cb };
+        blk.into_raw()
     })
 }
 
@@ -1506,11 +1526,11 @@ pub extern "C" fn ASN1_SCTX_new(
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_free(p: *mut Asn1Sctx) {
     guard_ffi((), || {
-        if p.is_null() {
-            return;
-        }
-        // SAFETY: `p` came from this layer's allocator per the caller's contract.
-        unsafe { CRYPTO_free(p.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
+        // Reclaim the owner a matching `ASN1_SCTX_new` handed out; its `Drop`
+        // releases the block through the allocator seam.
+        // SAFETY: `p` is null or a block `ASN1_SCTX_new` gave up per the caller's
+        // contract, not freed before.
+        drop(unsafe { OwnedBlock::<Asn1Sctx>::from_raw(p, OBJECT_FILE.as_ptr(), LINE) });
     });
 }
 
@@ -1601,11 +1621,11 @@ pub unsafe extern "C" fn ASN1_SCTX_set_app_data(p: *mut Asn1Sctx, data: *mut c_v
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_free(p: *mut Asn1Pctx) {
     guard_ffi((), || {
-        if p.is_null() {
-            return;
-        }
-        // SAFETY: `p` came from this layer's allocator per the caller's contract.
-        unsafe { CRYPTO_free(p.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
+        // Reclaim the owner a matching `ASN1_PCTX_new` handed out; its `Drop`
+        // releases the block through the allocator seam.
+        // SAFETY: `p` is null or a block `ASN1_PCTX_new` gave up per the caller's
+        // contract, not freed before.
+        drop(unsafe { OwnedBlock::<Asn1Pctx>::from_raw(p, OBJECT_FILE.as_ptr(), LINE) });
     });
 }
 
@@ -1871,10 +1891,11 @@ pub unsafe extern "C" fn a2d_ASN1_OBJECT(
     guard_ffi(0, || {
         let mut num = num;
         // The authority's `char ftmp[24]` and its heap replacement, kept as one slot so
-        // the cleanup path does not have to know which is in use.
+        // the cleanup path does not have to know which is in use. The heap slot is an
+        // [`OwnedBlock`] whose `Drop` is its only release.
         let mut ftmp = [0u8; 24];
         let mut tmpsize: usize = 24;
-        let mut heap: *mut u8 = core::ptr::null_mut();
+        let mut heap: Option<OwnedBlock<u8>> = None;
         let mut bl: *mut BigNum = core::ptr::null_mut();
         let mut len: c_int = 0;
 
@@ -1996,22 +2017,18 @@ pub unsafe extern "C" fn a2d_ASN1_OBJECT(
                     let mut blsize = unsafe { BN_num_bits(bl) };
                     blsize = (blsize + 6) / 7;
                     if blsize as usize > tmpsize {
-                        if !heap.is_null() {
-                            // SAFETY: `heap` came from this allocator.
-                            unsafe {
-                                CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE)
-                            };
-                        }
+                        // Drop the old heap through its handle, exactly as the authority
+                        // frees before it reallocates.
+                        drop(heap.take());
                         tmpsize = blsize as usize + 32;
-                        heap = CRYPTO_malloc(tmpsize, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
-                        if heap.is_null() {
+                        heap = OwnedBlock::<u8>::malloc(tmpsize, SeamFile::new(OBJECT_FILE), LINE);
+                        if heap.is_none() {
                             break 'body 0;
                         }
                     }
-                    let tmp: *mut u8 = if heap.is_null() {
-                        ftmp.as_mut_ptr()
-                    } else {
-                        heap
+                    let tmp: *mut u8 = match &heap {
+                        Some(h) => h.as_ptr(),
+                        None => ftmp.as_mut_ptr(),
                     };
                     let mut left = blsize;
                     while left > 0 {
@@ -2042,7 +2059,10 @@ pub unsafe extern "C" fn a2d_ASN1_OBJECT(
                     }
                 }
 
-                let tmp: *const u8 = if heap.is_null() { ftmp.as_ptr() } else { heap };
+                let tmp: *const u8 = match &heap {
+                    Some(h) => h.as_ptr(),
+                    None => ftmp.as_ptr(),
+                };
                 if !out.is_null() {
                     if len + i as c_int > olen {
                         // SAFETY: a compile-time-constant site.
@@ -2067,10 +2087,6 @@ pub unsafe extern "C" fn a2d_ASN1_OBJECT(
             len
         };
 
-        if !heap.is_null() {
-            // SAFETY: `heap` came from this allocator and is not owned elsewhere.
-            unsafe { CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
-        }
         if !bl.is_null() {
             // SAFETY: `bl` is this call's `BIGNUM`.
             unsafe { BN_free(bl) };

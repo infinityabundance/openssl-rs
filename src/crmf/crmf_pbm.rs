@@ -30,8 +30,10 @@ use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::err_reasons::*;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/crmf/crmf_pbm.c";
@@ -88,33 +90,33 @@ pub unsafe extern "C" fn OSSL_CRMF_pbmp_new(
     if pbm.is_null() {
         return ptr::null_mut();
     }
+    // The salt is this frame's block, allocated through the crate's allocator seam at the
+    // authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own site.
     // SAFETY: `slen` is the caller's requested salt length.
-    let salt = CRYPTO_malloc(slen, FILE.as_ptr(), 42).cast::<u8>();
-    if salt.is_null() {
+    let Some(mut salt) = OwnedBuf::new(slen, SeamFile::new(FILE), 42) else {
         // SAFETY: `pbm` is live; the free accepts NULL salt.
         unsafe { OSSL_CRMF_PBMPARAMETER_free(pbm) };
         return ptr::null_mut();
-    }
+    };
+    // The authority releases the salt at its error tail (`:98`) or, on success, at `:95`.
+    salt.set_release_line(98);
     // SAFETY: `libctx` is the caller's; `salt` is writable for `slen` bytes.
-    if unsafe { RAND_bytes_ex(libctx, salt, slen, 0) } <= 0 {
+    if unsafe { RAND_bytes_ex(libctx, salt.as_ptr(), slen, 0) } <= 0 {
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
         unsafe {
             raise_crmf(45, c"OSSL_CRMF_pbmp_new", CRMF_R_FAILURE_OBTAINING_RANDOM);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
         };
         return ptr::null_mut();
     }
     // SAFETY: `pbm` is live and its `salt` is a fresh octet string.
     unsafe {
-        if ASN1_OCTET_STRING_set((*pbm).salt, salt, slen as c_int) == 0 {
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
+        if ASN1_OCTET_STRING_set((*pbm).salt, salt.as_ptr(), slen as c_int) == 0 {
             OSSL_CRMF_PBMPARAMETER_free(pbm);
             return ptr::null_mut();
         }
         if X509_ALGOR_set0((*pbm).owf, OBJ_nid2obj(owfnid), UNDEF, ptr::null_mut()) == 0 {
             raise_crmf(57, c"OSSL_CRMF_pbmp_new", CRMF_R_SETTING_OWF_ALGOR_FAILURE);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
             return ptr::null_mut();
         }
@@ -123,7 +125,6 @@ pub unsafe extern "C" fn OSSL_CRMF_pbmp_new(
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
         unsafe {
             raise_crmf(72, c"OSSL_CRMF_pbmp_new", CRMF_R_ITERATIONCOUNT_BELOW_100);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
         };
         return ptr::null_mut();
@@ -132,7 +133,6 @@ pub unsafe extern "C" fn OSSL_CRMF_pbmp_new(
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
         unsafe {
             raise_crmf(76, c"OSSL_CRMF_pbmp_new", CRMF_R_BAD_PBM_ITERATIONCOUNT);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
         };
         return ptr::null_mut();
@@ -141,19 +141,17 @@ pub unsafe extern "C" fn OSSL_CRMF_pbmp_new(
     unsafe {
         if ASN1_INTEGER_set((*pbm).iteration_count, itercnt as c_long) == 0 {
             raise_crmf(81, c"OSSL_CRMF_pbmp_new", CRMF_R_CRMFERROR);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
             return ptr::null_mut();
         }
         if X509_ALGOR_set0((*pbm).mac, OBJ_nid2obj(macnid), UNDEF, ptr::null_mut()) == 0 {
             raise_crmf(91, c"OSSL_CRMF_pbmp_new", CRMF_R_SETTING_MAC_ALGOR_FAILURE);
-            CRYPTO_free(salt.cast(), FILE.as_ptr(), 98);
             OSSL_CRMF_PBMPARAMETER_free(pbm);
             return ptr::null_mut();
         }
     }
-    // SAFETY: `salt` is a heap buffer this function owns.
-    unsafe { CRYPTO_free(salt.cast(), FILE.as_ptr(), 95) };
+    // The authority releases the salt at its success site, `:95`.
+    salt.set_release_line(95);
     pbm
 }
 
@@ -196,11 +194,14 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
         unsafe { raise_crmf(134, c"OSSL_CRMF_pbm_new", CRMF_R_NULL_ARGUMENT) };
         return 0;
     }
+    // The MAC result is this frame's block, allocated through the crate's allocator seam at the
+    // authority's own size/`file`/`line`; its release is run by `Drop`, or handed to the caller.
     // SAFETY: `EVP_MAX_MD_SIZE` is the authority's upper bound.
-    let mac_res = CRYPTO_malloc(EVP_MAX_MD_SIZE, FILE.as_ptr(), 137).cast::<u8>();
-    if mac_res.is_null() {
+    let Some(mut mac_res) = OwnedBuf::new(EVP_MAX_MD_SIZE, SeamFile::new(FILE), 137) else {
         return 0;
-    }
+    };
+    // The authority releases the result at its `:214` cleanup, or hands it to the caller on success.
+    mac_res.set_release_line(214);
     // SAFETY: `pbmp` is live per the check above; `mdname` is writable.
     unsafe {
         OBJ_obj2txt(
@@ -214,20 +215,14 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
     let owf = unsafe { EVP_MD_fetch(libctx, mdname.as_ptr(), propq) };
     if owf.is_null() {
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
-        unsafe {
-            raise_crmf(147, c"OSSL_CRMF_pbm_new", CRMF_R_UNSUPPORTED_ALGORITHM);
-            CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214);
-        };
+        unsafe { raise_crmf(147, c"OSSL_CRMF_pbm_new", CRMF_R_UNSUPPORTED_ALGORITHM) };
         return 0;
     }
     // SAFETY: no preconditions.
     let ctx = EVP_MD_CTX_new();
     if ctx.is_null() {
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
-        unsafe {
-            EVP_MD_free(owf);
-            CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214);
-        };
+        unsafe { EVP_MD_free(owf) };
         return 0;
     }
     // SAFETY: `ctx`/`owf` are live; the code drains the secret then the salt.
@@ -249,7 +244,6 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
             OPENSSL_cleanse(basekey.as_mut_ptr().cast(), bklen as usize);
             EVP_MD_free(owf);
             EVP_MD_CTX_free(ctx);
-            CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214);
             return 0;
         }
         while {
@@ -263,7 +257,6 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
                 OPENSSL_cleanse(basekey.as_mut_ptr().cast(), bklen as usize);
                 EVP_MD_free(owf);
                 EVP_MD_CTX_free(ctx);
-                CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214);
                 return 0;
             }
         }
@@ -287,7 +280,6 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
             OPENSSL_cleanse(basekey.as_mut_ptr().cast(), bklen as usize);
             EVP_MD_free(owf);
             EVP_MD_CTX_free(ctx);
-            CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214);
             return 0;
         }
         if EVP_Q_mac(
@@ -300,7 +292,7 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
             bklen as usize,
             msg,
             msglen,
-            mac_res,
+            mac_res.as_ptr(),
             EVP_MAX_MD_SIZE,
             outlen,
         )
@@ -317,11 +309,11 @@ pub unsafe extern "C" fn OSSL_CRMF_pbm_new(
 
     if ok == 1 {
         // SAFETY: `out` is writable per the check above.
-        unsafe { *out = mac_res };
+        unsafe { *out = mac_res.into_raw() };
         return 1;
     }
-    // SAFETY: `mac_res` is a heap buffer this function owns.
-    unsafe { CRYPTO_free(mac_res.cast(), FILE.as_ptr(), 214) };
+    // The authority releases the result at its `:214` cleanup on the failure tail.
+    drop(mac_res);
     // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
     if !pbmp.is_null() && !unsafe { (*pbmp).mac }.is_null() {
         let mut buf = [0i8; 128];

@@ -67,6 +67,17 @@
 //! conditionally would have leaked or double-freed exactly one caller pattern —
 //! a `d2i_*` into an existing string on an allocation failure.
 //!
+//! ## Ownership
+//!
+//! The two transient blocks this decoder allocates are owned handles whose `Drop`
+//! is their only release. [`Collected`] (the constructed-string collector) grows
+//! through `CRYPTO_realloc`, hands its block to the content codec through
+//! `take_raw`, and reclaims it with `adopt` when the codec leaves it unconsumed;
+//! its tail and error-path frees are the handle's. The joined error string in
+//! `add_error_data` is an [`OwnedBlock`]. Both stay `CRYPTO_*` allocations through
+//! this file's own `__FILE__`, so an installed `CRYPTO_set_mem_functions` hook
+//! observes them exactly as it observes the authority's.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
@@ -74,13 +85,15 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use crate::asn1::a_type::{ASN1_TYPE_free, ASN1_TYPE_new, ASN1_TYPE_set};
 use crate::asn1::bitstr::ossl_c2i_ASN1_BIT_STRING;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::{ossl_c2i_ASN1_INTEGER, ossl_c2i_ASN1_OBJECT};
 use crate::asn1::string::{string_type_new, ASN1_STRING_free, ASN1_STRING_set, ASN1_STRING_set0};
 use crate::asn1::utl;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push, OpenSslStack,
@@ -172,15 +185,28 @@ impl Collected {
         1
     }
 
-    /// Release the buffer. Used only on failure paths: on success ownership passes
-    /// to an `ASN1_STRING`.
-    fn discard(&mut self) {
-        if !self.data.is_null() {
-            // SAFETY: `data` came from this allocator and is not used again.
-            unsafe { CRYPTO_free(self.data.cast::<c_void>(), FILE.as_ptr(), LINE) };
-            self.data = core::ptr::null_mut();
-            self.len = 0;
-            self.cap = 0;
+    /// Give up ownership of the buffer to a raw pointer, so `Drop` no longer
+    /// releases it. Used at the one handoff on the decode path, where the content
+    /// codec may take the block; `adopt` reclaims it when the codec does not.
+    fn take_raw(&mut self) -> *mut u8 {
+        let data = self.data;
+        self.data = core::ptr::null_mut();
+        self.len = 0;
+        self.cap = 0;
+        data
+    }
+
+    /// Reclaim a buffer `take_raw` gave up, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `data` is NULL or a block a previous `take_raw` on this frame gave up and
+    /// `Drop` has not released.
+    unsafe fn adopt(data: *mut u8) -> Collected {
+        Collected {
+            data,
+            len: 0,
+            cap: 0,
         }
     }
 
@@ -214,6 +240,19 @@ impl Collected {
         // non-null because `cap > 0`.
         unsafe { *self.data.add(self.len) = 0 };
         1
+    }
+}
+
+impl Drop for Collected {
+    /// The single release: the whole buffer is freed through the allocator seam it
+    /// was grown on. A buffer handed to the content codec has already been taken by
+    /// `take_raw`, so `data` is null and this is a no-op.
+    fn drop(&mut self) {
+        if !self.data.is_null() {
+            // SAFETY: `self.data` came from this allocator (or is null, handled
+            // above) and `Drop` runs once, so this is its single release.
+            unsafe { CRYPTO_free(self.data.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        }
     }
 }
 
@@ -608,7 +647,6 @@ unsafe fn d2i_ex_primitive(
         let mut q = p;
         // SAFETY: `q` is readable for `plen` bytes.
         if unsafe { collect(&mut buf, &mut q, plen, inf != 0, -1, V_ASN1_UNIVERSAL, 0) } == 0 {
-            buf.discard();
             return 0;
         }
         // The *content* length, read before the terminator is appended: the
@@ -617,7 +655,6 @@ unsafe fn d2i_ex_primitive(
         let content = buf.len as c_long;
         // SAFETY: `buf` is ours.
         if unsafe { buf.terminate() } == 0 {
-            buf.discard();
             return 0;
         }
         p = q;
@@ -631,13 +668,19 @@ unsafe fn d2i_ex_primitive(
         p = unsafe { p.add(plen.max(0) as usize) };
     }
 
+    // The block's ownership passes through `free_cont`: the content codec clears it
+    // when it takes the buffer. Take the block off the handle before the call so its
+    // `Drop` cannot release a block the codec now owns, and reclaim it below when the
+    // codec leaves it unconsumed -- on both the failure and the success path -- so
+    // the handle's `Drop` remains the only release.
+    let handed = buf.take_raw();
     // SAFETY: `pval` is a live slot; `cont` is readable for `len` bytes; `it` is
     // live and the caller owns it.
     let ok = unsafe { ex_c2i(pval, cont, len, utype, &mut free_cont, it) };
-    // The content codec clears `free_cont` when it takes the buffer; whatever is
-    // left belongs to this frame, on both the failure and the success path.
     if free_cont {
-        buf.discard();
+        // SAFETY: `handed` is the block `take_raw` gave up and the codec did not take;
+        // it is not used again, so `Drop` releases it through the seam.
+        drop(unsafe { Collected::adopt(handed) });
     }
     if ok == 0 {
         return 0;
@@ -942,6 +985,17 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
     n
 }
 
+/// Accumulate the joined length with `checked_add`, answering `None` on overflow. The
+/// authority's failure semantics for this diagnostic path are "no additional data", so
+/// overflow takes the same silent arm as a refused allocation.
+fn checked_sum_len(lengths: impl Iterator<Item = usize>) -> Option<usize> {
+    let mut total = 0usize;
+    for n in lengths {
+        total = total.checked_add(n)?;
+    }
+    Some(total)
+}
+
 /// Join NUL-terminated pieces and append them to the queue's top entry, the way
 /// `ERR_add_error_data(n, ...)` does.
 ///
@@ -959,26 +1013,32 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
 ///
 /// Every element of `parts` must be null or a NUL-terminated C string.
 unsafe fn add_error_data(parts: &[*const c_char]) {
-    // SAFETY: the caller's contract covers every element.
-    let total: usize = parts
-        .iter()
-        .map(|p| {
-            if p.is_null() {
-                0
-            } else {
-                // SAFETY: each element is NUL-terminated.
-                unsafe { c_strlen(*p) }
-            }
-        })
-        .sum();
+    // The sum is the allocation's byte length, so it is a §3 checked sum: an overflow
+    // takes the module's existing failure arm (no allocation, no error data) rather than
+    // wrapping to a too-small request. Unreachable on the 64-bit target, but every
+    // allocation length sum is checked.
+    let Some(total) = checked_sum_len(parts.iter().filter_map(|p| {
+        if p.is_null() {
+            None
+        } else {
+            // SAFETY: each element is NUL-terminated per the caller's contract.
+            Some(unsafe { c_strlen(*p) })
+        }
+    })) else {
+        return;
+    };
     if total == 0 {
         return;
     }
-    // SAFETY: the buffer is `total + 1` bytes.
-    let buf = CRYPTO_malloc(total + 1, FILE.as_ptr(), LINE) as *mut c_char;
-    if buf.is_null() {
+    let Some(size) = error_buffer_len(total) else {
         return;
-    }
+    };
+    // SAFETY: the buffer is `size` = `total + 1` bytes, and `size` did not wrap.
+    let Some(buf) = OwnedBlock::<u8>::malloc(size, SeamFile::new(FILE), LINE) else {
+        return;
+    };
+    // The block's stable address, for the raw copies and the append below.
+    let dst = buf.as_ptr().cast::<c_char>();
     let mut at = 0usize;
     for p in parts {
         if p.is_null() {
@@ -986,18 +1046,26 @@ unsafe fn add_error_data(parts: &[*const c_char]) {
         }
         // SAFETY: each element is NUL-terminated, so `total` bytes fit.
         let n = unsafe { c_strlen(*p) };
-        // SAFETY: `buf` has room for `total` bytes plus the terminator, and `p`
+        // SAFETY: `dst` has room for `total` bytes plus the terminator, and `p`
         // is readable for `n`.
-        unsafe { core::ptr::copy_nonoverlapping(*p, buf.add(at), n) };
+        unsafe { core::ptr::copy_nonoverlapping(*p, dst.add(at), n) };
         at += n;
     }
     // SAFETY: `at == total`, so the terminator is in range.
-    unsafe { *buf.add(at) = 0 };
-    // SAFETY: `buf` is a NUL-terminated string; the empty separator makes this a plain
+    unsafe { *dst.add(at) = 0 };
+    // SAFETY: `dst` is a NUL-terminated string; the empty separator makes this a plain
     // append.
-    unsafe { crate::runtime::err::ERR_add_error_txt(c"".as_ptr(), buf) };
-    // SAFETY: `buf` came from this allocator.
-    unsafe { CRYPTO_free(buf.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    unsafe { crate::runtime::err::ERR_add_error_txt(c"".as_ptr(), dst) };
+    // `buf`'s `Drop` releases the joined string through the allocator seam.
+}
+
+/// The joined error buffer's length, `total + 1`.
+///
+/// The authority's `strlen` sum cannot overflow on any string a process can hold, but the sum is
+/// caller-influenced and the allocation size must not wrap (AGENTS.md §3). `None` is the same
+/// failure outcome as a refused allocation: the error text is simply not appended.
+fn error_buffer_len(total: usize) -> Option<usize> {
+    total.checked_add(1)
 }
 
 /// `ASN1_item_d2i_ex` — redirect a null value slot, clear a cache, decode.
@@ -2191,4 +2259,28 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
     // SAFETY: the caller's slot is writable.
     unsafe { *in_ = p };
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// §3 boundary: the diagnostic buffer length is a checked sum, and overflow takes
+    /// the no-additional-data arm instead of wrapping to a too-small request.
+    #[test]
+    fn checked_error_length_sums_translate_overflow_to_failure() {
+        assert_eq!(checked_sum_len([1usize, 2, 3].into_iter()), Some(6));
+        assert_eq!(checked_sum_len([usize::MAX, 1].into_iter()), None);
+        assert_eq!(
+            checked_sum_len([usize::MAX / 2, 1, usize::MAX / 2, 1].into_iter()),
+            None
+        );
+    }
+
+    #[test]
+    fn error_buffer_length_rejects_usize_max() {
+        assert_eq!(error_buffer_len(0), Some(1));
+        assert_eq!(error_buffer_len(usize::MAX - 1), Some(usize::MAX));
+        assert_eq!(error_buffer_len(usize::MAX), None);
+    }
 }

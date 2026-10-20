@@ -1,0 +1,174 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "4452e95ac",
+  "date": "2026-10-19",
+  "scope": "The eight files named as next by M43: the CRMF PasswordBasedMac unit (crmf_pbm) and the seven CT units (ct_b64, ct_policy, ct_prn, ct_sct_ctx, ct_sct, ct_vfy, ct_x509v3). All eight are audited against the pinned openssl-3.6.4 authority with no source change. No new unsafe operation, FFI symbol, allocator coordinate, repr(C) layout or signature introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source unchanged; queue/receipt only: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 49 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 391,
+    "canonical_unaudited_before_batch": 372,
+    "canonical_audited_after_batch": 399,
+    "canonical_unaudited_after_batch": 364,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 0,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. The eight audited files were removed from REMAINING-AUDIT.txt and inserted at their alphabetical positions in AUDITED-FILES.txt.",
+    "difference_from_391": "M44 moves exactly the eight named ordinary files; no file is skipped or substituted."
+  },
+  "files": [
+    "src/crmf/crmf_pbm.rs",
+    "src/ct/ct_b64.rs",
+    "src/ct/ct_policy.rs",
+    "src/ct/ct_prn.rs",
+    "src/ct/ct_sct_ctx.rs",
+    "src/ct/ct_sct.rs",
+    "src/ct/ct_vfy.rs",
+    "src/ct/ct_x509v3.rs"
+  ],
+  "not_run": [],
+  "file_dispositions": [
+    {
+      "file": "src/crmf/crmf_pbm.rs",
+      "mechanisms": [
+        "OSSL_CRMF_pbmp_new salt OwnedBuf and parameter construction",
+        "OSSL_CRMF_pbm_new OWF iteration loop and EVP_Q_mac tail",
+        "basekey cleansing on every success/failure arm",
+        "ERR_LIB_CRMF raise coordinates and ERR_add_error_data tail"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Line-for-line crmf_pbm.c:27-223. The salt block is a CRYPTO_malloc at :42 with its authority release coordinate, the MAC result at :137 with the :214 cleanup, and basekey is cleansed before every EVP_MD_free/EVP_MD_CTX_free arm. The null-argument set and the ASN1 OCTET/INTEGER and X509_ALGOR_set0 failure tails match. The size_t-to-int salt length and size_t-to-long iteration count conversions are the authority's own implicit conversions and are unchanged."
+    },
+    {
+      "file": "src/ct/ct_b64.rs",
+      "mechanisms": [
+        "ct_base64_decode static scratch buffer",
+        "SCT_new_from_base64 three decoded-block hand-offs",
+        "CTLOG_new_from_base64_ex key decode and CTLOG hand-off"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_b64.c:24-174. The decoder's output block is allocated for 3*(inlen/4), adopted as OwnedBuf, and either dropped on every refusal or into_raw'd only after the setter takes it. EVP_DecodeBlock guarantees a multiple-of-four non-empty group, so the padding walk cannot underflow; the three setter ownership arms match SCT_set0_log_id/SCT_set0_extensions/signature copy semantics. The key DER block is dropped after d2i_PUBKEY_ex, and the CTLOG failure arm frees the pkey reference."
+    },
+    {
+      "file": "src/ct/ct_policy.rs",
+      "mechanisms": [
+        "CtPolicyEvalCtx repr(C) and offsets",
+        "CtxDestroy member body plus OB-3 zero-state sweep",
+        "CT_POLICY_EVAL_CTX_new_ex clock reconstruction",
+        "cert/issuer/log_store/time setters and getters"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_policy.c:28-113. zalloc produces the all-zero context the CtxDestroy body is written for; propq is CRYPTO_strdup'd and released by OwnedBlock::take in the destructor. The gettimeofday/seconds2time/add/time2ms expression is the authority's wrapping/saturating arithmetic. setters keep the authority's X509_up_ref-then-store behavior."
+    },
+    {
+      "file": "src/ct/ct_prn.rs",
+      "mechanisms": [
+        "timestamp_print ASN1_GENERALIZEDTIME scratch and release",
+        "SCT_signature_algorithms_print accessors",
+        "SCT_print / SCT_LIST_print stack walk"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_prn.c:132-240. Every ASN1_GENERALIZEDTIME_new has one free on every arm after the NULL guard; BIO_snprintf writes a bounded 20-byte scratch string; the stack walk uses sk_num per iteration exactly as the authority. Output fields and indent arithmetic match."
+    },
+    {
+      "file": "src/ct/ct_sct_ctx.rs",
+      "mechanisms": [
+        "SctCtx repr(C) and CtxDestroy member body plus OB-3 zero-state sweep",
+        "SCT_CTX_new/free and OwnedStr propq duplicate",
+        "ct_x509_get_ext / ct_x509_cert_fixup",
+        "SCT_CTX_set1_cert DER owner hand-off",
+        "ct_public_key_hash allocation/reuse path",
+        "SCT_CTX_set1_pubkey / set1_issuer_pubkey"
+      ],
+      "disposition": "audited_no_change",
+      "note": "sct_ctx.c:23-274. certder/preder are owned from the encoder result and either installed into sctx or dropped on the authority's err order (cert DER, pre DER, duplicate); pretmp has a single X509_free. The authority's ct_public_key_hash error path that frees a reused *hash block (its md == *hash alias is freed unconditionally) is reproduced as documented at module lines 383-388 and site line 469; it is a retained, pre-existing compatibility obligation, not a new assumption. No in-crate caller can reach it: both callers pass a fresh context whose hash slot is NULL, and the functions are pub(crate) unsafe."
+    },
+    {
+      "file": "src/ct/ct_sct.rs",
+      "mechanisms": [
+        "Sct repr(C) and CtxDestroy member body plus OB-3 zero-state sweep",
+        "SCT_new/free and SCT_LIST_free pop-free thunk",
+        "set0/set1 member setters and their incumbent release",
+        "accessors, completeness predicates and source mapping",
+        "SCT_validate/SCT_LIST_validate SCT_CTX lifetime"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_sct.c:22-385. set0 releases the incumbent through the seam before storing the adopter's block; set1 clears and re-duplicates exactly as the authority; set-version/entry-type/signature nid re-raise the same coordinates. SCT_validate creates one SCT_CTX, builds at most two X509_PUBKEY wrappers, and releases both wrappers and the context on every exit (including the UNVERIFIED early break)."
+    },
+    {
+      "file": "src/ct/ct_vfy.rs",
+      "mechanisms": [
+        "sct_ctx_update DigitallySigned serialization",
+        "SCT_CTX_verify length/hash/time checks and EVP context lifetime",
+        "five locally declared CT raise coordinates"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_vfy.c:29-137. tmpbuf is 12 bytes and the writes are exactly 1+1+8+2; the later l2n3/s2n reuse is 3/2 bytes. SCT_is_complete gates the log-id and signature reads before memcmp; the pkey presence test precedes pkeyhash use. EVP_MD_CTX_new has one free on each init/update/verify arm. The log-id comparison is the authority's public-data memcmp, not a secret comparison."
+    },
+    {
+      "file": "src/ct/ct_x509v3.rs",
+      "mechanisms": [
+        "i2s/s2i poison hooks",
+        "i2r_SCT_LIST printer adapter",
+        "x509/ocsp d2i_SCT_LIST wrappers and source tagging",
+        "ossl_v3_ct_scts three-row table with ABI-compatible callback casts"
+      ],
+      "disposition": "audited_no_change",
+      "note": "ct_x509v3.c:16-104. The decoder result has one SCT_LIST_free on the source-tag failure arm and the caller's *a slot is cleared; the success result is returned unowned by this frame, matching the ext_free row. The four const-fn transmutes reconnect typed callbacks to the table's void-based signatures with identical pointer-size ABI, the established v3-table pattern. No ownership crosses the table."
+    }
+  ],
+  "defects_repaired": [],
+  "new_unsafe_assumptions": {
+    "eliminated": 0,
+    "relocated": 0,
+    "new": 0,
+    "hidden": 0,
+    "note": "No source change. Every remaining unsafe operation in the eight files has an existing explicit SAFETY contract. The ct_sct_ctx ct_public_key_hash reused-buffer error arm is a documented retained authority-parity obligation, not a hidden one. The crmf size_t->int/long conversions are the authority's implicit conversions."
+  },
+  "contracts_reused": [
+    "OB-1 OwnedBuf (new, adopt_plain_nullable, into_raw, Drop)",
+    "OB-2 OwnedStr (SCT_CTX propq duplicate)",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy plus zero-state sweeps (Sct, SctCtx, CtPolicyEvalCtx)",
+    "OB-4 member-buffer slots (SCT, SCT_CTX and CT_POLICY_EVAL_CTX member releases)",
+    "RC-1 CRYPTO_* allocator seam coordinates",
+    "B19 cleansing discipline (crmf basekey)",
+    "B1/B2/B6-B18 callback contracts for the x509v3 table callbacks"
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check clean",
+      "focused_ct": "27 passed / 0 failed / 4 ignored (ct:: filter also matched object:: names; all CT units and their zero-state sweeps pass)",
+      "focused_crmf": "0 tests (no crmf unit tests in the crate)"
+    },
+    "batch": {
+      "clippy": "cargo clippy --all-targets -- -D warnings clean",
+      "serial_test_threads_1": "1656 passed / 0 failed / 27 ignored (233.36 s)",
+      "parallel_test_threads_4": "1656 passed / 0 failed / 27 ignored (102.99 s)",
+      "affected_probe": "none exists: no CI/CRMF adversarial probe or dedicated CT court is present; the three zero-state sweeps and the ct_log log-id boundary test are the affected focused evidence and pass"
+    }
+  },
+  "promotions": [],
+  "not_run_gates": [
+    "BOUNDARY (audit-only batch; no shared mechanism or trust boundary changed)",
+    "Miri (no component in the court toolchain)",
+    "ASan",
+    "authority differential (no semantic change; source comparison only)",
+    "SEAL"
+  ],
+  "queue": {
+    "remaining_before": 372,
+    "remaining_after": 364,
+    "audited_before": 391,
+    "audited_after": 399,
+    "next_eight": [
+      "src/der_writer.rs",
+      "src/dh/asn1.rs",
+      "src/dh/backend.rs",
+      "src/dh/check.rs",
+      "src/dh/depr.rs",
+      "src/dh/gen.rs",
+      "src/dh/group_params.rs",
+      "src/dh/kdf.rs"
+    ]
+  }
+}

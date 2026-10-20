@@ -1,0 +1,257 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "a5a807ccb",
+  "date": "2026-10-19",
+  "scope": "The eight ordinary files named as next by M41: the BIGNUM internals (intern/kron/nist/rsa_fips186_4) and four cipher/transport units (camellia, cast, chacha, cmp_http). Three defects repaired (one aliasing, two ABI-reachable out-of-bounds paths) and three unsafe-contract statements made precise. The two B18-audited async files are moved out of the queue as bookkeeping only; they were not re-audited here. No new unsafe operation, FFI symbol, allocator coordinate or repr(C) layout introduced.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "source: src/bn/intern.rs, src/cast.rs repaired; src/camellia.rs and src/cmp/cmp_http.rs contract statements repaired; src/bn/kron.rs, src/bn/nist.rs, src/bn/rsa_fips186_4.rs, src/chacha.rs audited with no source change. queue/receipt: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 46 and this file.",
+  "reconciliation": {
+    "canonical_audited_before_batch": 373,
+    "canonical_unaudited_before_batch": 390,
+    "canonical_audited_after_batch": 383,
+    "canonical_unaudited_after_batch": 380,
+    "audited_this_batch": 10,
+    "not_run_this_batch": 0,
+    "method": "AUDITED-FILES.txt is the union of each mechanism sweep's structured .files array, the M1 files, the structured per-file records and each boundary sweep's structured boundaries. This batch removed the eight ordinary queue entries plus the two B18-audited async files from REMAINING-AUDIT.txt and inserted all ten at their normalized alphabetical positions. The async files are bookkeeping moves: their audit evidence is boundary-sweep-B18.json, not this sweep.",
+    "difference_from_373": "M41 left 373 audited / 390 unaudited, with the two B18-audited async files still queued. This batch audits eight ordinary files and moves the two async files, leaving 383 audited / 380 unaudited."
+  },
+  "files": [
+    "src/bn/intern.rs",
+    "src/bn/kron.rs",
+    "src/bn/nist.rs",
+    "src/bn/rsa_fips186_4.rs",
+    "src/camellia.rs",
+    "src/cast.rs",
+    "src/chacha.rs",
+    "src/cmp/cmp_http.rs",
+    "src/async/async.rs",
+    "src/async/async_wait.rs"
+  ],
+  "bookkeeping_only": [
+    {
+      "file": "src/async/async.rs",
+      "evidence": "atlas-refresh/boundary-sweep-B18.json",
+      "reason": "audited by B18; removed from REMAINING-AUDIT.txt and added to AUDITED-FILES.txt as queue bookkeeping only, not re-audited in M42"
+    },
+    {
+      "file": "src/async/async_wait.rs",
+      "evidence": "atlas-refresh/boundary-sweep-B18.json",
+      "reason": "audited by B18 (D1 repaired); removed from REMAINING-AUDIT.txt and added to AUDITED-FILES.txt as queue bookkeeping only, not re-audited in M42"
+    }
+  ],
+  "not_run": [],
+  "file_dispositions": [
+    {
+      "file": "src/bn/intern.rs",
+      "mechanisms": [
+        "bn_compute_wNAF modified-wNAF generation and its OwnedBuf refusal arms",
+        "bn_get_dmax / bn_get_top representational accessor",
+        "bn_set_all_zero padding clear",
+        "bn_copy_words / bn_get_words / bn_set_words word bridges"
+      ],
+      "disposition": "audited_and_repaired",
+      "note": "M42-D1: bn_set_all_zero held as_mut(a) and then called bn_get_dmax(a), which built a shared reference over the same object; the padding write then used a unique borrow invalidated by that foreign read. dmax is now derived from the live unique borrow (top == dmax in this representation). bn_get_words' contract now forbids stores through its shared-derived pointer."
+    },
+    {
+      "file": "src/bn/kron.rs",
+      "mechanisms": [
+        "BN_kronecker Cohen algorithm and sign conventions",
+        "trailing_zeros and limb rem/shr temporaries"
+      ],
+      "disposition": "audited_no_change",
+      "note": "parts() copies both magnitudes, so no borrow escapes and no raw pointer pair aliases. Every refusal answer is the authority's -2; the export is wrapped by guard_ffi."
+    },
+    {
+      "file": "src/bn/nist.rs",
+      "mechanisms": [
+        "BN_nist_mod_192/224/256/384/521 dispatchers",
+        "BN_nist_mod_func value-based selection",
+        "static NIST prime accessors"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The reducers delegate to BN_nnmod against the same static constants, which is the authority's own small/negative arm. Selection reads a copied magnitude and a NULL p selects nothing rather than dereferencing."
+    },
+    {
+      "file": "src/bn/rsa_fips186_4.rs",
+      "mechanisms": [
+        "lazy ossl_bn_inv_sqrt_2 cached static constant",
+        "auxiliary probable-prime search",
+        "ossl_bn_rsa_fips186_4_gen_prob_primes BN_CTX pool and cleanup",
+        "ossl_bn_rsa_fips186_4_derive_prime CRT construction and MR loop"
+      ],
+      "disposition": "audited_no_change",
+      "note": "The cached constant is published once; the losing thread frees only its own object. Every pool slot is null-checked before use; cleanup clears exactly the internally drawn slots and always unwinds the BN_CTX frame. Residual M42-R1 records the shared BN_clear cleansing gap, which is out of this file's repair scope."
+    },
+    {
+      "file": "src/camellia.rs",
+      "mechanisms": [
+        "CamelliaKey repr(C) layout and size assertions",
+        "get_u32/put_u32 bounds",
+        "Ekeygen schedule for 128/192/256",
+        "Feistel and FL/FL-inverse round loops",
+        "ECB/CBC/CFB1/CFB8/CFB128/OFB/CTR entry points"
+      ],
+      "disposition": "audited_contract_repaired",
+      "note": "No memory-safety defect. Camellia_set_key validates both pointers and all three key sizes. Every mode entry now states that the key must be a schedule produced by Camellia_set_key (grand_rounds 3 or 4); a zeroed CamelliaKey is a valid value but not a valid schedule."
+    },
+    {
+      "file": "src/cast.rs",
+      "mechanisms": [
+        "CastKey repr(C) layout and size assertions",
+        "CAST_set_key schedule (short-key selection)",
+        "E_CAST rounds",
+        "ECB/CBC/CFB64/OFB64 modes and n2l/l2n/n2ln/l2nn helpers"
+      ],
+      "disposition": "audited_and_repaired",
+      "note": "M42-D2: a negative len was cast to usize, turning the authority's empty signed loop into a huge read of data; the loop now uses a non-negative count. M42-D3: a negative CBC length made l + 8 negative, and its cast to c_uint made n2ln/l2nn read or write far outside the buffers; the partial arm now selects only a 1..7-byte remainder (the authority's out-of-contract whole-block write on a negative length is not reproduced, per section 17). Two regression tests added."
+    },
+    {
+      "file": "src/chacha.rs",
+      "mechanisms": [
+        "CHACHA_U8TOU32 / u8tou32 word loads",
+        "chacha20_core quarter-round core",
+        "ChaCha20_ctr32 counter and XOR loop"
+      ],
+      "disposition": "audited_no_change",
+      "note": "Key and counter reads are bounded by the contract; the byte-wise XOR preserves out == inp; the 32-bit counter advance and the zero-length no-op match the authority's body."
+    },
+    {
+      "file": "src/cmp/cmp_http.rs",
+      "mechanisms": [
+        "raise_cmp error-site helper",
+        "keep_alive body-type policy",
+        "cmp_debug formatted log path",
+        "CONF_VALUE header stack and free callback",
+        "OSSL_CMP_MSG_http_perform encode/transfer/decode ownership"
+      ],
+      "disposition": "audited_contract_repaired",
+      "note": "No memory-safety defect. headers is released on every early return; req_mem and rsp each have one release; a NULL rsp is handled by the item layer. The req->body non-NULL precondition the authority relies on is now stated in the Safety section."
+    },
+    {
+      "file": "src/async/async.rs",
+      "mechanisms": [
+        "B18 boundary evidence (context, job/fibre/stack, pool, start/resume, thread-stop edge)"
+      ],
+      "disposition": "bookkeeping_only",
+      "note": "Already audited by B18 (CONTRACTED, no defect). Listed here only because this batch moves it from REMAINING-AUDIT.txt to AUDITED-FILES.txt."
+    },
+    {
+      "file": "src/async/async_wait.rs",
+      "mechanisms": [
+        "B18 boundary evidence (context/node ownership, fd-list surgery, cleanup reentrancy)"
+      ],
+      "disposition": "bookkeeping_only",
+      "note": "Already audited by B18 (CONTRACTED after D1 repair). Listed here only because this batch moves it from REMAINING-AUDIT.txt to AUDITED-FILES.txt."
+    }
+  ],
+  "defects_repaired": [
+    {
+      "severity": "medium",
+      "file": "src/bn/intern.rs",
+      "line": 315,
+      "kind": "aliasing_ub",
+      "note": "bn_set_all_zero derived a shared reference to the BIGNUM through bn_get_dmax(a) while its unique borrow from as_mut(a) was live, and then wrote through that unique borrow. dmax is now taken from the unique borrow; the empty padding range is unchanged."
+    },
+    {
+      "severity": "high",
+      "file": "src/cast.rs",
+      "line": 110,
+      "kind": "out_of_bounds_read",
+      "note": "CAST_set_key's loop bound was `len as usize`; a negative signed len wrapped to a near-usize::MAX bound and read past data. The authority's signed loop runs zero iterations for a negative len, which is what the non-negative count now does."
+    },
+    {
+      "severity": "high",
+      "file": "src/cast.rs",
+      "line": 565,
+      "kind": "out_of_bounds_read_write",
+      "note": "CAST_cbc_encrypt's partial-block arm ran for any l != -8; for a negative caller length l + 8 is negative, and its c_uint cast made n2ln/l2nn walk (and write) far outside the caller's buffers. The arm now runs only when l > -8, i.e. a true 1..7-byte remainder."
+    },
+    {
+      "severity": "low",
+      "file": "src/bn/intern.rs",
+      "line": 367,
+      "kind": "unsafe_contract_statement",
+      "note": "bn_get_words now forbids stores through its shared-derived pointer; constructing a mutable pointer from a shared borrow was previously an unreported write obligation. Documentation-only."
+    },
+    {
+      "severity": "low",
+      "file": "src/camellia.rs",
+      "line": 537,
+      "kind": "unsafe_contract_statement",
+      "note": "Every Camellia mode entry now states that the key must be a schedule produced by Camellia_set_key (grand_rounds 3 or 4); a zeroed key is a valid value but would index outside rd_key. Documentation-only."
+    },
+    {
+      "severity": "low",
+      "file": "src/cmp/cmp_http.rs",
+      "line": 142,
+      "kind": "unsafe_contract_statement",
+      "note": "OSSL_CMP_MSG_http_perform now states the req->body non-NULL precondition the authority's keep_alive read relies on. Documentation-only."
+    }
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf allocation/release and into_raw transfer (bn_compute_wNAF)",
+    "as_ref/as_mut null-or-live BIGNUM accessor contract and its aliasing obligations",
+    "BN_CTX get/start/end pool-slot lifetime and clear-on-reuse discipline",
+    "CRYPTO_* cipher mode helpers' in/out/iv/num buffer contracts (camellia, cast)",
+    "guard_ffi panic containment at the C ABI edge",
+    "ASN.1 item encode/decode ownership and BIO single-release discipline",
+    "OPENSSL_sk_pop_free + X509V3_conf_free stacked-value release"
+  ],
+  "new_unsafe_assumptions": [],
+  "residual_findings": [
+    {
+      "id": "M42-R1",
+      "file": "src/bn/bignum.rs",
+      "severity": "medium",
+      "kind": "secret_cleansing_divergence",
+      "status": "deferred_shared_mechanism",
+      "note": "BN_clear sets the Vec length to zero without cleansing the limb storage, while the authority OPENSSL_cleanse's d[0..dmax] before setting top = 0. Reachable from rsa_fips186_4's auxiliary-prime cleanup and BN_CTX_get's slot reset. This is not a Rust soundness defect, and repairing the shared BIGNUM owner invalidates the dependent evidence closure, so it is queued for a dedicated BIGNUM shared-mechanism sweep rather than edited here."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS",
+      "focused_tests": {
+        "bn::intern": "7 passed / 0 failed",
+        "bn::rsa_fips186_4": "5 passed / 0 failed",
+        "camellia": "4 passed / 0 failed",
+        "cast": "5 passed / 0 failed (two new negative-length controls)",
+        "chacha": "14 passed / 0 failed"
+      }
+    },
+    "batch": {
+      "serial": "cargo test --lib: 1653 passed / 0 failed / 27 ignored (62.32 s)",
+      "threads_4": "cargo test --lib -- --test-threads=4: 1653 passed / 0 failed / 27 ignored (84.88 s)",
+      "tests_added": 2,
+      "tests_removed": 0,
+      "tests_newly_ignored": 0,
+      "affected_probes": "none of the eight files carries an OPENSSL_RS_ADV_PROBE arm"
+    }
+  },
+  "not_run_gates": [
+    "Miri Stacked Borrows / Tree Borrows (no miri component in the court toolchain)",
+    "targeted ASan confirmation of the M42-D2/D3 controls (BOUNDARY gate; the new plain tests are the FAST controls)",
+    "Loom / TSan (no shared-memory change in this batch)",
+    "authority differentials for the repaired CAST bounds",
+    "independent reviewer adjudication (author is the sole reviewer in this run)",
+    "SEAL / full dependency closure"
+  ],
+  "promotions": [],
+  "queue": {
+    "remaining_after_batch": 380,
+    "audited_after_batch": 383,
+    "next_eight": [
+      "src/cms/cms_att.rs",
+      "src/cms/cms_dd.rs",
+      "src/cms/cms_io.rs",
+      "src/cms/cms_kem.rs",
+      "src/context/core_bio.rs",
+      "src/context/dispatch.rs",
+      "src/context/mod.rs",
+      "src/context/thread_data.rs"
+    ],
+    "note": "REMAINING-AUDIT.txt 390 -> 380; AUDITED-FILES.txt 373 -> 383. The ten moved entries are the eight ordinary audited files plus the two B18-audited async files."
+  }
+}

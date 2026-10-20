@@ -123,9 +123,13 @@ pub unsafe extern "C" fn X509_CRL_set1_lastUpdate(x: *mut X509Crl, tm: *const As
 /// `int X509_CRL_set1_nextUpdate(X509_CRL *x, const ASN1_TIME *tm)` —
 /// `crypto/x509/x509cset.c:50-55`.
 ///
+/// Unlike `_set1_lastUpdate` (and `X509_REVOKED_set_revocationDate`), the authority rejects
+/// only a NULL `x` here: a NULL `tm` reaches `ossl_x509_set1_time`, which clears the slot,
+/// marks the encoding stale and answers 1.
+///
 /// # Safety
 ///
-/// `x` must be NULL or live; `tm` must be a live `ASN1_TIME`.
+/// `x` must be NULL or live; `tm` must be NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn X509_CRL_set1_nextUpdate(x: *mut X509Crl, tm: *const Asn1String) -> c_int {
     if x.is_null() {
@@ -412,5 +416,40 @@ pub unsafe extern "C" fn i2d_re_X509_CRL_tbs(crl: *mut X509Crl, pp: *mut *mut c_
     unsafe {
         (*crl).crl.enc.modified = 1;
         i2d_X509_CRL_INFO(&raw const (*crl).crl, pp)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::ASN1_TIME_free;
+    use crate::x509::x509_vfy::X509_gmtime_adj;
+    use crate::x509::x_crl::{X509_CRL_free, X509_CRL_new};
+    use core::ptr;
+
+    /// `_set1_nextUpdate` is this unit's one time setter whose authority does not reject a NULL
+    /// `tm`: `ossl_x509_set1_time` clears the slot and answers 1. The `lastUpdate` setter (and
+    /// `X509_REVOKED_set_revocationDate`) do reject NULL, which is checked alongside.
+    #[test]
+    fn next_update_clears_on_null_like_the_authority() {
+        let crl = X509_CRL_new();
+        assert!(!crl.is_null());
+        // SAFETY: `crl` is live and this frame holds its only reference; `tm` is a fresh
+        // `ASN1_TIME` owned by this frame.
+        unsafe {
+            let tm = X509_gmtime_adj(ptr::null_mut(), 0);
+            assert!(!tm.is_null());
+            assert_eq!(X509_CRL_set1_nextUpdate(crl, tm), 1);
+            assert!(!X509_CRL_get0_nextUpdate(crl).is_null());
+            ASN1_TIME_free(tm);
+
+            assert_eq!(X509_CRL_set1_nextUpdate(crl, ptr::null()), 1);
+            assert!(X509_CRL_get0_nextUpdate(crl).is_null());
+
+            // The rejected-NULL sibling keeps the authority's 0 answer.
+            assert_eq!(X509_CRL_set1_lastUpdate(crl, ptr::null()), 0);
+
+            X509_CRL_free(crl);
+        }
     }
 }

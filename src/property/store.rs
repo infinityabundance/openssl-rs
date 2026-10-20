@@ -63,6 +63,7 @@
 // restate this paragraph, and what retires it is 7.2.
 #![allow(dead_code)]
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
@@ -80,6 +81,7 @@ use crate::runtime::lhash::{
     OpenSslLhash,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::rdtsc::OPENSSL_rdtsc;
 use crate::runtime::sparse_array::{
     ossl_sa_doall, ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_num,
@@ -97,11 +99,14 @@ use crate::runtime::thread::{
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/property/property.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/property/property.c");
 
 /// `ossl_method_store_new`'s `OPENSSL_zalloc(sizeof(*res))` (line 247).
 const LINE_ZALLOC_STORE: c_int = 247;
 /// `ossl_method_store_add`'s `OPENSSL_malloc(sizeof(*impl))` (line 337).
 const LINE_MALLOC_IMPL: c_int = 337;
+/// `ossl_method_store_add`'s `OPENSSL_free(impl)` on a refused method up-ref (line 344).
+const LINE_FREE_IMPL_ADD: c_int = 344;
 /// `ossl_method_store_add`'s `OPENSSL_zalloc(sizeof(*alg))` (line 390).
 const LINE_ZALLOC_ALG: c_int = 390;
 /// `alg_cleanup`'s `OPENSSL_free(a)` (line 233).
@@ -116,6 +121,13 @@ const LINE_FREE_STORE: c_int = 268;
 const LINE_MALLOC_QUERY: c_int = 922;
 /// `alg_copy`'s `OPENSSL_memdup(alg, sizeof(ALGORITHM))` (line 563).
 const LINE_MEMDUP_ALG: c_int = 563;
+/// `del_tmpalg`'s `OPENSSL_free(alg)` (line 575), which is a different site from
+/// `alg_cleanup`'s release of a resident entry at line 233.
+const LINE_FREE_TMPALG: c_int = 575;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `int (*up_ref)(void *)` and `void (*free)(void *)` — the reference count and the destructor a
 /// method carries, so the store can hold one without knowing what it is.
@@ -453,11 +465,14 @@ unsafe extern "C" fn impl_free_thunk(implementation: *mut c_void) {
 /// `ctx` must be NULL or a live `OSSL_LIB_CTX`.
 pub(crate) unsafe fn ossl_method_store_new(ctx: *mut c_void) -> *mut OsslMethodStore {
     // SAFETY: `ctx` is stored, not read.
-    let res = CRYPTO_zalloc(
-        core::mem::size_of::<OsslMethodStore>(),
-        FILE,
-        LINE_ZALLOC_STORE,
-    )
+    let res = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<OsslMethodStore>(),
+            FILE,
+            LINE_ZALLOC_STORE,
+        )
+    }
     .cast::<OsslMethodStore>();
     if res.is_null() {
         return res;
@@ -658,11 +673,14 @@ pub(crate) unsafe fn ossl_method_store_add(
     }
 
     // SAFETY: `Implementation` is this module's own `#[repr(C)]` type.
-    let impl_ = CRYPTO_zalloc(
-        core::mem::size_of::<Implementation>(),
-        FILE,
-        LINE_MALLOC_IMPL,
-    )
+    let impl_ = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(
+            core::mem::size_of::<Implementation>(),
+            FILE,
+            LINE_MALLOC_IMPL,
+        )
+    }
     .cast::<Implementation>();
     if impl_.is_null() {
         return 0;
@@ -674,7 +692,7 @@ pub(crate) unsafe fn ossl_method_store_add(
         (*impl_).method.free = method_destruct;
         // SAFETY: `impl_` is live, so the `Method` field is this module's own.
         if ossl_method_up_ref(ptr::addr_of_mut!((*impl_).method)) == 0 {
-            CRYPTO_free(impl_.cast::<c_void>(), FILE, LINE_MALLOC_IMPL);
+            CRYPTO_free(impl_.cast::<c_void>(), FILE, LINE_FREE_IMPL_ADD);
             return 0;
         }
         (*impl_).provider = prov;
@@ -726,8 +744,11 @@ pub(crate) unsafe fn ossl_method_store_add(
     if alg.is_null() {
         // `CRYPTO_zalloc` is a SAFE function in this crate (D113), so the allocation needs no
         // block even though this function is `unsafe`.
-        alg = CRYPTO_zalloc(core::mem::size_of::<Algorithm>(), FILE, LINE_ZALLOC_ALG)
-            .cast::<Algorithm>();
+        alg = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<Algorithm>(), FILE, LINE_ZALLOC_ALG)
+        }
+        .cast::<Algorithm>();
         if alg.is_null() {
             // SAFETY: `store` is locked by this thread.
             unsafe {
@@ -747,7 +768,10 @@ pub(crate) unsafe fn ossl_method_store_add(
                 || ossl_method_store_insert(store, alg) == 0
             {
                 ossl_property_unlock(store);
-                alg_cleanup(0, ptr::null_mut(), ptr::null_mut());
+                // The authority's `err:` releases the entry it just allocated: the array
+                // never took ownership of it, so passing NULL here would leak the block and
+                // any member acquired before the refusal.
+                alg_cleanup(0, alg.cast::<c_void>(), ptr::null_mut());
                 impl_free(impl_);
                 return 0;
             }
@@ -1147,7 +1171,6 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         return 0;
     }
     let mut res: c_int = 1;
-    let mut p: *mut Query = ptr::null_mut();
     // SAFETY: `store` is live per the contract.
     unsafe {
         if ossl_property_write_lock(store) == 0 {
@@ -1159,7 +1182,14 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         let alg = ossl_method_store_retrieve(store, nid);
         if alg.is_null() {
             res = 0;
-            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_QUERY);
+            // The authority's error tail frees the still-NULL cache entry; an empty handle is that
+            // same no-op `free(NULL)` at the entry's own release line.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE_SEAM,
+                LINE_FREE_QUERY,
+            ));
             ossl_property_unlock(store);
             return res;
         }
@@ -1186,47 +1216,76 @@ pub(crate) unsafe fn ossl_method_store_cache_set(
         }
 
         // `sizeof(QUERY) + strlen(prop_query)`, which is exactly enough for a header whose `body`
-        // already holds one `char` plus the text and its terminator.
+        // already holds one `char` plus the text and its terminator. A length that overflows the
+        // size computation takes the allocation-failure tail rather than wrapping.
         let len = c_strlen(prop_query);
-        p = CRYPTO_malloc(core::mem::size_of::<Query>() + len, FILE, LINE_MALLOC_QUERY)
-            .cast::<Query>();
-        if !p.is_null() {
-            (*p).query = ptr::addr_of!((*p).body).cast::<c_char>();
-            (*p).provider = prov;
-            (*p).method.method = method;
-            (*p).method.up_ref = method_up_ref;
-            (*p).method.free = method_destruct;
-            if ossl_method_up_ref(ptr::addr_of_mut!((*p).method)) == 0 {
-                res = 0;
-                CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
-                ossl_property_unlock(store);
-                return res;
-            }
-            c_memcpy(
-                (*p).query.cast_mut().cast::<c_void>(),
-                prop_query.cast(),
-                len + 1,
-            );
-            let old = OPENSSL_LH_insert((*alg).cache, p.cast::<c_void>()).cast::<Query>();
-            if !old.is_null() {
-                impl_cache_free(old);
-                ossl_property_unlock(store);
-                return res;
-            }
-            if OPENSSL_LH_error((*alg).cache) == 0 {
-                (*store).cache_nelem += 1;
-                if (*store).cache_nelem >= IMPL_CACHE_FLUSH_THRESHOLD {
-                    (*store).cache_need_flush = 1;
-                }
-                ossl_property_unlock(store);
-                return res;
-            }
-            // The insert failed: the table did not take the entry, so the reference it took is
-            // dropped here -- and the block is released by the shared `err:` path below.
-            ossl_method_free(ptr::addr_of_mut!((*p).method));
+        let Some(size) = core::mem::size_of::<Query>().checked_add(len) else {
+            // The authority's error tail frees the still-NULL entry and reports 0.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE_SEAM,
+                LINE_MALLOC_QUERY,
+            ));
+            res = 0;
+            ossl_property_unlock(store);
+            return res;
+        };
+        // The cache entry is this frame's block, allocated through the crate's allocator seam at the
+        // authority's own size/`file`/`line`; `Drop` is its single release, or `into_raw` hands it
+        // to the table.
+        let Some(buf) = OwnedBuf::new(size, FILE_SEAM, LINE_MALLOC_QUERY) else {
+            // The authority's error tail frees the still-NULL entry and reports 0.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ptr::null_mut(),
+                FILE_SEAM,
+                LINE_MALLOC_QUERY,
+            ));
+            res = 0;
+            ossl_property_unlock(store);
+            return res;
+        };
+        let p = buf.as_ptr().cast::<Query>();
+        (*p).query = ptr::addr_of!((*p).body).cast::<c_char>();
+        (*p).provider = prov;
+        (*p).method.method = method;
+        (*p).method.up_ref = method_up_ref;
+        (*p).method.free = method_destruct;
+        if ossl_method_up_ref(ptr::addr_of_mut!((*p).method)) == 0 {
+            res = 0;
+            drop(buf);
+            ossl_property_unlock(store);
+            return res;
         }
+        c_memcpy(
+            (*p).query.cast_mut().cast::<c_void>(),
+            prop_query.cast(),
+            len + 1,
+        );
+        let old = OPENSSL_LH_insert((*alg).cache, p.cast::<c_void>()).cast::<Query>();
+        if !old.is_null() {
+            impl_cache_free(old);
+            // The table took the entry over; the handle gives it up.
+            let _ = buf.into_raw();
+            ossl_property_unlock(store);
+            return res;
+        }
+        if OPENSSL_LH_error((*alg).cache) == 0 {
+            (*store).cache_nelem += 1;
+            if (*store).cache_nelem >= IMPL_CACHE_FLUSH_THRESHOLD {
+                (*store).cache_need_flush = 1;
+            }
+            // The table took the entry over; the handle gives it up.
+            let _ = buf.into_raw();
+            ossl_property_unlock(store);
+            return res;
+        }
+        // The insert failed: the table did not take the entry, so the reference it took is dropped
+        // here -- and the handle releases the block on drop.
+        ossl_method_free(ptr::addr_of_mut!((*p).method));
         res = 0;
-        CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
+        drop(buf);
         ossl_property_unlock(store);
     }
     res
@@ -1455,7 +1514,7 @@ unsafe extern "C" fn del_tmpalg(alg: *mut c_void) {
     // SAFETY: `alg` is a copy this module made, so `impls` is the duplicate stack it created.
     unsafe {
         OPENSSL_sk_free((*alg).impls);
-        CRYPTO_free(alg.cast::<c_void>(), FILE, LINE_FREE_ALG);
+        CRYPTO_free(alg.cast::<c_void>(), FILE, LINE_FREE_TMPALG);
     }
 }
 

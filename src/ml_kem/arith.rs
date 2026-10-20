@@ -184,7 +184,8 @@ pub(crate) unsafe fn hash_h(
 /// `hash_h_pubkey(pkhash, mdctx, key)` — `ml_kem.c:706-729`, the incremental form.
 ///
 /// # Safety
-/// `key` must be live with a populated `t`/`rho`.
+/// `key` must be live with a populated `t`/`rho`, and `rank >= 1` (the authority's
+/// `do`-less loop body encodes one scalar before the first bound test).
 pub(crate) unsafe fn hash_h_pubkey(
     pkhash: *mut u8,
     mdctx: *mut EvpMdCtx,
@@ -874,7 +875,8 @@ pub(crate) unsafe fn vector_compress(a: *mut Scalar, bits: c_int, rank: c_int) {
 /// `inner_product(out, lhs, rhs, rank)` — `ml_kem.c:1269-1275`.
 ///
 /// # Safety
-/// The output must not overlap the inputs, and all must be live for `rank` scalars.
+/// `rank >= 1`. The output must not overlap the inputs, and all must be live for `rank`
+/// scalars.
 pub(crate) unsafe fn inner_product(
     out: *mut Scalar,
     lhs: *const Scalar,
@@ -899,7 +901,8 @@ pub(crate) unsafe fn inner_product(
 /// `matrix_mult_intt(out, m, a, rank)` — `ml_kem.c:1281-1293`, result inverse-NTT'd.
 ///
 /// # Safety
-/// The output must not overlap the inputs, and all must be live for `rank * rank`/`rank` scalars.
+/// `rank >= 1`. The output must not overlap the inputs, and all must be live for
+/// `rank * rank`/`rank` scalars.
 pub(crate) unsafe fn matrix_mult_intt(
     out: *mut Scalar,
     m: *const Scalar,
@@ -932,7 +935,8 @@ pub(crate) unsafe fn matrix_mult_intt(
 /// `matrix_mult_transpose_add(out, m, a, rank)` — `ml_kem.c:1296-1307`.
 ///
 /// # Safety
-/// The output must not overlap the inputs, and all must be live for `rank * rank`/`rank` scalars.
+/// `rank >= 1`. The output must not overlap the inputs, and all must be live for
+/// `rank * rank`/`rank` scalars.
 pub(crate) unsafe fn matrix_mult_transpose_add(
     out: *mut Scalar,
     m: *const Scalar,
@@ -1142,7 +1146,9 @@ pub(crate) unsafe fn gencbd_vector(
         let mut n = rank;
 
         ptr::copy_nonoverlapping(seed, input.as_mut_ptr(), ML_KEM_RANDOM_BYTES);
-        loop {
+        // The authority's counted loop runs `rank` times; a non-positive `rank` performs
+        // no sample and still answers success, so this does not write through `out`.
+        while n > 0 {
             input[ML_KEM_RANDOM_BYTES] = *counter;
             *counter = counter.read().wrapping_add(1);
             if cbd(o, input.as_mut_ptr(), mdctx, key) == 0 {
@@ -1150,10 +1156,9 @@ pub(crate) unsafe fn gencbd_vector(
             }
             o = o.add(1);
             n -= 1;
-            if n <= 0 {
-                ret = 1;
-                break;
-            }
+        }
+        if n <= 0 {
+            ret = 1;
         }
 
         crate::runtime::mem::OPENSSL_cleanse(input.as_mut_ptr().cast(), input.len());
@@ -1182,7 +1187,9 @@ pub(crate) unsafe fn gencbd_vector_ntt(
         let mut n = rank;
 
         ptr::copy_nonoverlapping(seed, input.as_mut_ptr(), ML_KEM_RANDOM_BYTES);
-        loop {
+        // As [`gencbd_vector`]: the authority's counted loop runs `rank` times, so a
+        // non-positive `rank` samples and transforms nothing.
+        while n > 0 {
             input[ML_KEM_RANDOM_BYTES] = *counter;
             *counter = counter.read().wrapping_add(1);
             if cbd(o, input.as_mut_ptr(), mdctx, key) == 0 {
@@ -1191,10 +1198,9 @@ pub(crate) unsafe fn gencbd_vector_ntt(
             scalar_ntt(o);
             o = o.add(1);
             n -= 1;
-            if n <= 0 {
-                ret = 1;
-                break;
-            }
+        }
+        if n <= 0 {
+            ret = 1;
         }
 
         crate::runtime::mem::OPENSSL_cleanse(input.as_mut_ptr().cast(), input.len());
@@ -1215,7 +1221,9 @@ pub(crate) fn cbd1(evp_type: c_int) -> CbdFunc {
 /// `encrypt_cpa(out, message, r, tmp, mdctx, key)` — `ml_kem.c:1512-1564`, FIPS 203 Algorithm 14.
 ///
 /// # Safety
-/// `tmp` must be live for `2 * rank` scalars and `key` must be a populated public key.
+/// `rank >= 1`; `tmp` must be live for `2 * rank` scalars, `message` and `r` readable for
+/// `ML_KEM_RANDOM_BYTES` (32) bytes, `out` writable for `key->vinfo`'s ciphertext size, and
+/// `key` must be a populated public key.
 pub(crate) unsafe fn encrypt_cpa(
     out: *mut u8,
     message: *const u8,
@@ -1286,7 +1294,8 @@ pub(crate) unsafe fn encrypt_cpa(
 /// `decrypt_cpa(out, ctext, u, key)` — `ml_kem.c:1569-1590`, FIPS 203 Algorithm 15.
 ///
 /// # Safety
-/// `u` must be live for `rank` scalars.
+/// `rank >= 1`; `u` must be live for `rank` scalars, `ctext` readable for `key->vinfo`'s
+/// ciphertext size, and `out` writable for `ML_KEM_SHARED_SECRET_BYTES` (32) bytes.
 pub(crate) unsafe fn decrypt_cpa(
     out: *mut u8,
     ctext: *const u8,

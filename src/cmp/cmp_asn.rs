@@ -34,7 +34,8 @@ use crate::cmp::crmf_asn::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_authority_key_identifier, NID_crl_distribution_points, NID_id_it_caCerts,
     NID_id_it_caKeyUpdateInfo, NID_id_it_caProtEncCert, NID_id_it_certProfile,
@@ -46,6 +47,7 @@ use crate::runtime::obj::{
     NID_id_it_unsupportedOIDs, NID_id_regCtrl_algId, NID_id_regCtrl_rsaKeyLen,
     NID_issuing_distribution_point, OBJ_nid2obj, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve,
     OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -1615,17 +1617,25 @@ pub(crate) unsafe fn ossl_cmp_msg_set0_libctx(
         // SAFETY: `msg` is live per the contract.
         unsafe {
             (*msg).libctx = libctx;
-            CRYPTO_free((*msg).propq.cast(), FILE.as_ptr(), 46);
+            // The old `propq` block; the handle's `Drop` is the authority's own
+            // `CRYPTO_free((*msg).propq, FILE, 46)`.
+            drop(OwnedStr::adopt((*msg).propq, SeamFile::new(FILE), 46));
             (*msg).propq = ptr::null_mut();
         }
         if !propq.is_null() {
-            // SAFETY: `propq` is a NUL-terminated string per the contract.
-            let dup = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 49) };
-            // SAFETY: `msg` is live.
-            unsafe { (*msg).propq = dup };
-            if dup.is_null() {
+            // SAFETY: `propq` is a NUL-terminated string per the contract; the handle is its only
+            // owner until it is installed into the message.
+            let Some(dup) = (unsafe {
+                OwnedStr::adopt(
+                    CRYPTO_strdup(propq, FILE.as_ptr(), 49),
+                    SeamFile::new(FILE),
+                    49,
+                )
+            }) else {
                 return 0;
-            }
+            };
+            // SAFETY: `msg` is live.
+            unsafe { (*msg).propq = dup.into_raw() };
         }
     }
     1
@@ -1647,8 +1657,9 @@ unsafe extern "C" fn ossl_cmp_msg_cb(
     let msg = unsafe { *pval } as *mut CmpMsg;
     match operation {
         ASN1_OP_FREE_POST => {
-            // SAFETY: `msg` is live.
-            unsafe { CRYPTO_free((*msg).propq.cast(), FILE.as_ptr(), 854) };
+            // SAFETY: `msg` is live; its `propq` is NULL or the block this unit strdup'd, and the
+            // handle's `Drop` is the authority's own `CRYPTO_free((*msg).propq, FILE, 854)`.
+            unsafe { drop(OwnedStr::adopt((*msg).propq, SeamFile::new(FILE), 854)) };
         }
         ASN1_OP_DUP_POST => {
             let old = exarg as *const CmpMsg;

@@ -32,7 +32,8 @@ use crate::evp::digest::EVP_MD_CTX_free;
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
 use crate::evp::pkey_ctx::EVP_PKEY_CTX_free;
 use crate::runtime::bio::Bio;
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_ct_authData, NID_id_smime_ct_authEnvelopedData,
     NID_id_smime_ct_compressedData, NID_id_smime_ori_kem, NID_pkcs7_data, NID_pkcs7_digest,
@@ -84,11 +85,61 @@ pub(crate) const CMS_RECIPINFO_KEM: c_int = 5;
 // The structures
 // ---------------------------------------------------------------------------------------------
 
-/// `CMS_CTX` — `cms_local.h:47-50`.
+/// `CMS_CTX` — `cms_local.h:47-50`. The library context and property query a `CMS_ContentInfo`
+/// resolves its fetches in; embedded in the object and borrowed by each sub-object.
 #[repr(C)]
 pub(crate) struct CmsCtx {
     pub(crate) libctx: *mut c_void,
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — an object-owned C-string **member buffer**. Its ownership invariant is
+    /// stated once by [`CmsPropqSlot`] and mediated by [`CmsPropqSlot`]/[`CmsCtx::propq`]; see the
+    /// `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this exact offset so the
+    /// `#[repr(C)]` layout is the authority's, and it is **module-private** here because every
+    /// read, write and release now goes through this module's handle/reader — compile-time
+    /// enforcement of the model's "writers are enumerable" property.
+    propq: *mut c_char,
+}
+
+impl CmsCtx {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`CmsPropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `CMS_CTX::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. This thin wrapper keeps the
+/// `CmsPropqSlot::of(&mut ctx)` shape over the private field. The field is private and
+/// every read, write and release goes through [`CmsCtx::propq`] and this handle, so
+/// [`Self::of`] is **safe**: the invariant follows from the item layer's zeroing
+/// allocation and from this being the field's only writer.
+pub(crate) struct CmsPropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> CmsPropqSlot<'a> {
+    /// Derive the handle from a live object's embedded context.
+    pub(crate) fn of(ctx: &'a mut CmsCtx) -> CmsPropqSlot<'a> {
+        // SAFETY: `ctx` is live; `propq` is private to this module, constructed NULL
+        // by the item layer and written only by this handle, so the invariant holds
+        // and the `&mut` borrow is exclusive for `'a`.
+        CmsPropqSlot(unsafe { CStrSlot::of(&mut ctx.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+
+    /// Assert that the freshly zeroed field is empty and answer the store token.
+    ///
+    /// # Safety
+    /// The caller establishes that `ctx.propq` is currently NULL.
+    pub(crate) unsafe fn assume_empty(self) -> EmptyCStrSlot<'a> {
+        // SAFETY: the caller establishes the field is NULL.
+        unsafe { self.0.assume_empty() }
+    }
 }
 
 /// `CMS_ContentInfo` — `cms_local.h:52-68`. The `d` union is at offset 8; every arm is a pointer.
@@ -650,8 +701,10 @@ unsafe extern "C" fn cms_cb(
             }
         }
         ASN1_OP_FREE_POST => {
-            // SAFETY: `cms` is live and `ctx.propq` is its own allocation.
-            unsafe { CRYPTO_free((*cms).ctx.propq.cast(), FILE.as_ptr(), 375) };
+            // SAFETY: `cms` is live; its `ctx.propq` obeys the member-buffer invariant (NULL or
+            // this object's own single `CRYPTO_strdup` block), so `clear` is that block's one
+            // release at the authority's own site (`cms_asn1.c:375`).
+            unsafe { CmsPropqSlot::of(&mut (*cms).ctx).clear(SeamFile::new(FILE), 375) };
         }
         _ => {}
     }

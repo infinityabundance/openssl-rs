@@ -75,11 +75,12 @@ use crate::params::{
 use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memcmp};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::selftest::OsslCallback;
 
@@ -148,12 +149,18 @@ const OSSL_PKEY_PARAM_DHKEM_IKM: *const c_char = c"dhkem-ikm".as_ptr();
 /// The generated unit's own `__FILE__`. `ecx_kmgmt.c.in` is `.c.in`-generated, so it is the bare
 /// build-relative path.
 const FILE_ECX_KMGMT: *const c_char = c"providers/implementations/keymgmt/ecx_kmgmt.c".as_ptr();
+const FILE_ECX_KMGMT_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/keymgmt/ecx_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
     1
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the generator block and the property/secret buffers
+// ---------------------------------------------------------------------------------------------
 
 /// `struct ecx_gen_ctx` — `ecx_kmgmt.c:84-91`.
 #[repr(C)]
@@ -170,6 +177,30 @@ struct EcxGenCtx {
     dhkem_ikm: *mut u8,
     /// `size_t dhkem_ikmlen`.
     dhkem_ikmlen: usize,
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// object's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero object is valid with every release a no-op -- what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for EcxGenCtx {
+    const FILE: *const c_char = FILE_ECX_KMGMT;
+    const LINE_ALLOC: c_int = 998;
+    const LINE_FREE: c_int = 1413;
+
+    /// `ecx_gen_cleanup`'s body, without the block release: the secret DHKEM IKM and the property
+    /// query.
+    unsafe fn destroy_body(ptr: *mut EcxGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            CRYPTO_clear_free(
+                (*ptr).dhkem_ikm.cast(),
+                (*ptr).dhkem_ikmlen,
+                FILE_ECX_KMGMT,
+                1411,
+            );
+            CRYPTO_free((*ptr).propq.cast(), FILE_ECX_KMGMT, 1412);
+        }
+    }
 }
 
 /// `static ossl_inline int ecx_key_type_is_ed(ECX_KEY_TYPE type)` — `ecx_kmgmt.c:104-107`.
@@ -893,13 +924,18 @@ unsafe extern "C" fn ed448_gettable_params(_provctx: *mut c_void) -> *const Ossl
 unsafe fn set_property_query(ecxkey: *mut EcxKey, propq: *const c_char) -> c_int {
     // SAFETY: `ecxkey` is live and its own `propq` is released and replaced here.
     unsafe {
-        CRYPTO_free((*ecxkey).propq.cast(), FILE_ECX_KMGMT, 848);
+        drop(OwnedBuf::adopt_plain(
+            (*ecxkey).propq.cast(),
+            FILE_ECX_KMGMT_SEAM,
+            848,
+        ));
         (*ecxkey).propq = ptr::null_mut();
         if !propq.is_null() {
-            (*ecxkey).propq = CRYPTO_strdup(propq, FILE_ECX_KMGMT, 851);
-            if (*ecxkey).propq.is_null() {
+            // SAFETY: `propq` is NUL-terminated per the contract.
+            let Some(buf) = OwnedBuf::new_strdup(propq, FILE_ECX_KMGMT_SEAM, 851) else {
                 return 0;
-            }
+            };
+            (*ecxkey).propq = buf.into_raw().cast();
         }
     }
     1
@@ -947,7 +983,23 @@ unsafe fn ecx_set_params_decoder(params: *const OsslParam, r: &mut EcxSetParams)
 /// `static int ecx_set_params(void *key, const OSSL_PARAM params[])` — `ecx_kmgmt.c:915-942`.
 ///
 /// # Safety
-/// The keymgmt `set_params` dispatch contract.
+/// The keymgmt `set_params` dispatch contract. Additionally, for a non-NULL `key`
+/// (a live `EcxKey` this call may mutate):
+///
+/// * `(*key).privkey` is NULL or the exclusive block
+///   `ossl_ecx_key_allocate_privkey` obtained from
+///   `CRYPTO_secure_zalloc((*key).keylen, ...)` (`ec/ecx_key.rs:105`, entered at
+///   `ecx_key.c:244`); its allocation extent is exactly `keylen`, and no other
+///   owner will release it. The octet-string arm takes that ownership and
+///   releases it once through `CRYPTO_secure_clear_free(ptr, keylen, ...)` — the
+///   destructor's seam (`ecx_key.c:81`) — at `ecx_kmgmt.c:930`'s coordinate,
+///   then stores NULL. A plain `CRYPTO_malloc` block is excluded; the secure
+///   allocator's documented uninitialised-heap plain fallback is covered.
+/// * `params` is NULL or key-terminated. Its `OSSL_PKEY_PARAM_PROPERTIES` value is
+///   **borrowed, not adopted**: it must be an `OSSL_PARAM_UTF8_STRING` whose
+///   `data` is NUL-terminated, `set_property_query` copies it with
+///   `CRYPTO_strdup` (`ecx_kmgmt.c:851`), and the caller retains its block. The
+///   `OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY` value is read only.
 unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) -> c_int {
     let ecxkey = key.cast::<EcxKey>();
     let mut p = EcxSetParams {
@@ -970,12 +1022,18 @@ unsafe extern "C" fn ecx_set_params(key: *mut c_void, params: *const OsslParam) 
             {
                 return 0;
             }
-            CRYPTO_clear_free(
+            // `privkey` is a `CRYPTO_secure_zalloc(keylen)` block (`ec/ecx_key.rs:244`), so its
+            // release must route through the secure allocator. `adopt_secure_cleansed` uses
+            // `CRYPTO_secure_clear_free`, which also routes that allocator's documented plain
+            // fallback when the secure heap is uninitialised. The authority's own `:930` is a
+            // plain `OPENSSL_clear_free` of this secure block (an invalid free once the heap is
+            // initialised); per §17 that UB is not reproduced. The extent stays `keylen`.
+            drop(OwnedBuf::adopt_secure_cleansed(
                 (*ecxkey).privkey.cast(),
                 (*ecxkey).keylen,
-                FILE_ECX_KMGMT,
+                FILE_ECX_KMGMT_SEAM,
                 930,
-            );
+            ));
             (*ecxkey).privkey = ptr::null_mut();
             (*ecxkey).haspubkey = 1;
         }
@@ -1066,25 +1124,25 @@ unsafe fn ecx_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx =
-        CRYPTO_zalloc(core::mem::size_of::<EcxGenCtx>(), FILE_ECX_KMGMT, 998).cast::<EcxGenCtx>();
-    if gctx.is_null() {
+    let Some(gctx) = OwnedCtx::<EcxGenCtx>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let gctx_ptr = gctx.as_ptr();
 
-    // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
+    // SAFETY: `gctx_ptr` is this call's own allocation; `provctx` is the caller's.
     unsafe {
-        (*gctx).libctx = prov_libctx_of(provctx);
-        (*gctx).type_ = type_;
-        (*gctx).selection = selection;
+        (*gctx_ptr).libctx = prov_libctx_of(provctx);
+        (*gctx_ptr).type_ = type_;
+        (*gctx_ptr).selection = selection;
     }
-    // SAFETY: `gctx` is non-NULL; `params` is the caller's array.
-    if unsafe { ecx_gen_set_params(gctx.cast(), params) } == 0 {
-        // SAFETY: `gctx` is this call's own allocation, not yet published.
-        unsafe { ecx_gen_cleanup(gctx.cast()) };
+    // SAFETY: `gctx_ptr` is non-NULL; `params` is the caller's array.
+    if unsafe { ecx_gen_set_params(gctx_ptr.cast(), params) } == 0 {
+        // SAFETY: `gctx` is this call's own allocation, not yet published; `Drop` is its single
+        // release.
+        drop(gctx);
         return ptr::null_mut();
     }
-    gctx.cast()
+    gctx.into_raw().cast()
 }
 
 /// `static void *x25519_gen_init(void *provctx, int selection, const OSSL_PARAM params[])` —
@@ -1255,15 +1313,28 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
             if (*p.kdfpropq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).propq.cast(), FILE_ECX_KMGMT, 1152);
-            (*gctx).propq = CRYPTO_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT, 1153);
-            if (*gctx).propq.is_null() {
+            drop(OwnedBuf::adopt_plain(
+                (*gctx).propq.cast(),
+                FILE_ECX_KMGMT_SEAM,
+                1152,
+            ));
+            (*gctx).propq = ptr::null_mut();
+            // SAFETY: `p.kdfpropq`'s UTF8 value is NUL-terminated.
+            let Some(buf) =
+                OwnedBuf::new_strdup((*p.kdfpropq).data.cast(), FILE_ECX_KMGMT_SEAM, 1153)
+            else {
                 return 0;
-            }
+            };
+            (*gctx).propq = buf.into_raw().cast();
         }
 
         if !p.ikm.is_null() && (*p.ikm).data_size != 0 && !(*p.ikm).data.is_null() {
-            CRYPTO_free((*gctx).dhkem_ikm.cast(), FILE_ECX_KMGMT, 1160);
+            // Release the member's previous block, then let the helper write the replacement.
+            drop(OwnedBuf::adopt_plain(
+                (*gctx).dhkem_ikm.cast(),
+                FILE_ECX_KMGMT_SEAM,
+                1160,
+            ));
             (*gctx).dhkem_ikm = ptr::null_mut();
             let slot: *mut *mut u8 = &raw mut (*gctx).dhkem_ikm;
             if OSSL_PARAM_get_octet_string(
@@ -1472,23 +1543,11 @@ unsafe extern "C" fn ed448_gen(
 /// # Safety
 /// The keymgmt `gen_cleanup` dispatch contract.
 unsafe extern "C" fn ecx_gen_cleanup(genctx: *mut c_void) {
-    let gctx = genctx.cast::<EcxGenCtx>();
-
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's context, allocated by `ecx_gen_init`.
-    unsafe {
-        CRYPTO_clear_free(
-            (*gctx).dhkem_ikm.cast(),
-            (*gctx).dhkem_ikmlen,
-            FILE_ECX_KMGMT,
-            1411,
-        );
-        CRYPTO_free((*gctx).propq.cast(), FILE_ECX_KMGMT, 1412);
-        CRYPTO_free(gctx.cast(), FILE_ECX_KMGMT, 1413);
-    }
+    // `genctx` is NULL or the block `ecx_gen_init` gave up through `into_raw`; `Drop` runs the
+    // authority's own destructor body and the block's single release.
+    // SAFETY: `genctx` is NULL or a live block a previous `into_raw` gave up and `Drop` has not
+    // released.
+    drop(unsafe { OwnedCtx::<EcxGenCtx>::from_raw(genctx.cast::<EcxGenCtx>()) });
 }
 
 /// `void *ecx_load(const void *reference, size_t reference_sz)` — `ecx_kmgmt.c:1416-1428`. The
@@ -1882,3 +1941,134 @@ pub(crate) static ED448_KEYMGMT_FUNCTIONS: [OsslDispatch; 21] = ecx_keymgmt_func
     ed448_gen_init,
     ed448_gen,
 );
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::ec::ecx_key::ECX_KEY_TYPE_X25519;
+    use crate::provider::cipher::param_octet_string_with;
+    use crate::runtime::secure::{
+        test_arena_bytes, test_offset_of, CRYPTO_secure_actual_size, CRYPTO_secure_allocated,
+        CRYPTO_secure_malloc_done, CRYPTO_secure_malloc_init, CRYPTO_secure_malloc_initialized,
+        CRYPTO_secure_used,
+    };
+
+    const PUBLIC_KEY: [u8; X25519_KEYLEN] = [0x11; X25519_KEYLEN];
+
+    /// An X25519 key whose private scalar is made by the authority's
+    /// `ossl_ecx_key_allocate_privkey`: a secure-heap chunk when the heap is live, the
+    /// allocator's documented plain fallback otherwise.
+    fn x25519_key_with_private_scalar() -> *mut EcxKey {
+        // SAFETY: a NULL libctx and propq are permitted by the constructor's contract.
+        let key = unsafe { ossl_ecx_key_new(ptr::null_mut(), ECX_KEY_TYPE_X25519, 0, ptr::null()) };
+        assert!(!key.is_null(), "the key block must allocate");
+        // SAFETY: `key` is live.
+        let scalar = unsafe { ossl_ecx_key_allocate_privkey(key) };
+        assert!(!scalar.is_null(), "the private scalar must allocate");
+        // SAFETY: `scalar` is the live `keylen`-byte allocation just made.
+        unsafe { ptr::write_bytes(scalar, 0xA5, X25519_KEYLEN) };
+        key
+    }
+
+    /// The `encoded-pub-key` parameter that drives `ecx_set_params`' release arm.
+    fn encoded_public_key_param() -> [OsslParam; 2] {
+        [
+            param_octet_string_with(
+                OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
+                PUBLIC_KEY.as_ptr().cast_mut().cast(),
+                PUBLIC_KEY.len(),
+            ),
+            END,
+        ]
+    }
+
+    /// With the secure heap live the scalar must be released through
+    /// `CRYPTO_secure_clear_free`: the arena chunk is cleansed and the secure accounting
+    /// drops. The plain `CRYPTO_clear_free` this call used to use would free an arena
+    /// pointer (an invalid free) once the heap is initialised.
+    #[test]
+    fn ecx_set_params_releases_the_scalar_through_the_secure_heap() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        let init = CRYPTO_secure_malloc_init(1 << 20, 16);
+        assert!(
+            init == 1 || init == 2,
+            "the secure heap must initialise for this test (init returned {init})"
+        );
+
+        let key = x25519_key_with_private_scalar();
+        // SAFETY: `key` is live and holds the allocation just made.
+        let scalar = unsafe { (*key).privkey };
+        assert_eq!(
+            CRYPTO_secure_allocated(scalar.cast()),
+            1,
+            "the scalar must live in the arena"
+        );
+        let offset = test_offset_of(scalar.cast()).expect("an arena pointer has an offset");
+        let used_before = CRYPTO_secure_used();
+        let actual_size = CRYPTO_secure_actual_size(scalar.cast());
+        assert!(actual_size >= X25519_KEYLEN);
+
+        let params = encoded_public_key_param();
+        // SAFETY: `key` is live and `params` is this frame's terminated array.
+        assert_eq!(unsafe { ecx_set_params(key.cast(), params.as_ptr()) }, 1);
+
+        // SAFETY: `key` is live.
+        unsafe {
+            assert!((*key).privkey.is_null(), "the authority clears the field");
+            assert_eq!((*key).haspubkey, 1);
+        }
+        assert_eq!(
+            CRYPTO_secure_used(),
+            used_before - actual_size,
+            "the scalar must leave the secure accounting"
+        );
+        assert!(
+            test_arena_bytes(offset, X25519_KEYLEN)
+                .iter()
+                .all(|&b| b == 0),
+            "the secure release must cleanse the scalar before returning the chunk"
+        );
+
+        // SAFETY: `key` is live; its scalar is now NULL, so this releases the key alone.
+        unsafe { ossl_ecx_key_free(key) };
+        let _ = CRYPTO_secure_malloc_done();
+    }
+
+    /// Without a heap, `CRYPTO_secure_zalloc` returns the plain allocator's block and
+    /// `CRYPTO_secure_clear_free` cleanses `keylen` before the plain release. The adoption
+    /// must stay valid on that documented fallback path.
+    #[test]
+    fn ecx_set_params_releases_the_plain_fallback_scalar() {
+        let _guard = crate::test_support::lock_global_state();
+        let _ = CRYPTO_secure_malloc_done();
+        assert_eq!(CRYPTO_secure_malloc_initialized(), 0);
+
+        let key = x25519_key_with_private_scalar();
+        // SAFETY: `key` is live and holds the allocation just made.
+        let scalar = unsafe { (*key).privkey };
+        assert_eq!(
+            CRYPTO_secure_allocated(scalar.cast()),
+            0,
+            "an uninitialised heap yields the plain fallback"
+        );
+
+        let params = encoded_public_key_param();
+        // SAFETY: `key` is live and `params` is this frame's terminated array.
+        assert_eq!(unsafe { ecx_set_params(key.cast(), params.as_ptr()) }, 1);
+
+        // SAFETY: `key` is live.
+        unsafe {
+            assert!((*key).privkey.is_null());
+            assert_eq!((*key).haspubkey, 1);
+        }
+
+        // SAFETY: `key` is live; its scalar is now NULL, so this releases the key alone.
+        unsafe { ossl_ecx_key_free(key) };
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcxGenCtx => zero_state_sweep_ecx_gen_ctx);

@@ -47,15 +47,16 @@ use crate::provider::util::prov_digest::{
     ossl_prov_digest_copy, ossl_prov_digest_fetch, ossl_prov_digest_load, ossl_prov_digest_md,
     ossl_prov_digest_reset, ProvDigest,
 };
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::sm2::crypt::{
     ossl_sm2_ciphertext_size, ossl_sm2_decrypt, ossl_sm2_encrypt, ossl_sm2_plaintext_size,
 };
 
 /// The unit's own `__FILE__`. `sm2_enc.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
-const FILE: *const c_char = c"providers/implementations/asymciphers/sm2_enc.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/asymciphers/sm2_enc.c");
 
 /// `OSSL_ASYM_CIPHER_PARAM_DIGEST` — `core_names.h`.
 const OSSL_ASYM_CIPHER_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
@@ -76,23 +77,43 @@ struct ProvSm2Ctx {
     md: ProvDigest,
 }
 
+// SAFETY: (a) `destroy_body` is the authority's `sm2_freectx` member body, releasing exactly this
+// context's own key reference and resetting its digest once (each releaser accepts the unset NULL)
+// and never the enclosing block, which `OwnedCtx` releases; (b) `ProvSm2Ctx` is a `#[repr(C)]`
+// record of raw pointers and a `PROV_DIGEST` of raw pointers, so an all-zero block is a valid
+// `ProvSm2Ctx` the body is sound on (`EC_KEY_free(NULL)` and a reset of an all-NULL digest).
+unsafe impl CtxDestroy for ProvSm2Ctx {
+    unsafe fn destroy_body(ptr: *mut ProvSm2Ctx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            EC_KEY_free((*ptr).key);
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ptr).md));
+        }
+    }
+}
+
+// The two states are the canonical [`OwnedCtx`] (fully built, `Drop` runs `sm2_freectx`'s body) and
+// [`RawCtx`] (a `sm2_dupctx` copy whose members still alias its source, released block-alone).
+
 /// `static void *sm2_newctx(void *provctx)` — `sm2_enc.c:55-64`.
 ///
 /// # Safety
 /// The asym_cipher `newctx` dispatch contract.
 unsafe extern "C" fn sm2_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm2Ctx>(), FILE, 57).cast::<ProvSm2Ctx>();
-    if ctx.is_null() {
+    // A fresh zeroed `PROV_SM2_CTX` is the authority's own starting state, so this is
+    // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
+    // `sm2_freectx`'s own site.
+    let Some(ctx) = OwnedCtx::<ProvSm2Ctx>::zalloc_at(FILE_SEAM, 57, FILE_SEAM, 135) else {
         return ptr::null_mut();
-    }
+    };
+    let p = ctx.as_ptr();
 
-    // SAFETY: `ctx` is this call's own allocation.
+    // SAFETY: `p` is this call's own fresh zeroed allocation.
     unsafe {
-        (*ctx).libctx = prov_libctx_of(provctx);
+        (*p).libctx = prov_libctx_of(provctx);
     }
 
-    ctx.cast()
+    ctx.into_raw().cast()
 }
 
 /// `static int sm2_init(void *vpsm2ctx, void *vkey, const OSSL_PARAM params[])` —
@@ -215,13 +236,10 @@ unsafe extern "C" fn sm2_asym_decrypt(
 unsafe extern "C" fn sm2_freectx(vpsm2ctx: *mut c_void) {
     let psm2ctx = vpsm2ctx.cast::<ProvSm2Ctx>();
 
-    // SAFETY: `psm2ctx` is the caller's context.
-    unsafe {
-        EC_KEY_free((*psm2ctx).key);
-        ossl_prov_digest_reset(ptr::addr_of_mut!((*psm2ctx).md));
-
-        CRYPTO_free(psm2ctx.cast(), FILE, 135);
-    }
+    // SAFETY: `psm2ctx` is NULL or the caller's context and no other owner has released it;
+    // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `sm2_freectx` body
+    // (the key release and the digest reset) and block release at the authority's own site.
+    drop(unsafe { OwnedCtx::<ProvSm2Ctx>::from_raw_at(psm2ctx, FILE_SEAM, 135) });
 }
 
 /// `static void *sm2_dupctx(void *vpsm2ctx)` — `sm2_enc.c:138-161`.
@@ -231,14 +249,19 @@ unsafe extern "C" fn sm2_freectx(vpsm2ctx: *mut c_void) {
 unsafe extern "C" fn sm2_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
     let srcctx = vpsm2ctx.cast::<ProvSm2Ctx>();
 
-    // SAFETY: `srcctx` is the caller's context.
-    unsafe {
-        let dstctx =
-            CRYPTO_zalloc(core::mem::size_of::<ProvSm2Ctx>(), FILE, 143).cast::<ProvSm2Ctx>();
-        if dstctx.is_null() {
-            return ptr::null_mut();
-        }
+    // The duplicate is built in two states. Until its borrowed key's own reference is taken and
+    // its `md` is reset, the copied members are not the block's to release, so its release is the
+    // block alone (`OPENSSL_free(dstctx)` at `:152`); afterwards it is a valid context whose
+    // release is `sm2_freectx` (`:135`).
+    // SAFETY: a fresh zeroed allocation of this call's own context at the authority's exact
+    // size/`file`/`line`.
+    let Some(mut dst) = RawCtx::<ProvSm2Ctx>::zalloc_at(FILE_SEAM, 143, FILE_SEAM, 152) else {
+        return ptr::null_mut();
+    };
+    let dstctx = dst.as_ptr();
 
+    // SAFETY: `srcctx` is the caller's live context and `dstctx` this call's own fresh block.
+    unsafe {
         ptr::copy_nonoverlapping(srcctx, dstctx, 1);
         (*dstctx).md = ProvDigest {
             md: ptr::null(),
@@ -247,18 +270,29 @@ unsafe extern "C" fn sm2_dupctx(vpsm2ctx: *mut c_void) -> *mut c_void {
         };
 
         if !(*dstctx).key.is_null() && EC_KEY_up_ref((*dstctx).key) == 0 {
-            CRYPTO_free(dstctx.cast(), FILE, 152);
+            // The block alone: `dst`'s `Drop` releases the block and no member is owned yet.
             return ptr::null_mut();
         }
-
-        if ossl_prov_digest_copy(ptr::addr_of_mut!((*dstctx).md), ptr::addr_of!((*srcctx).md)) == 0
-        {
-            sm2_freectx(dstctx.cast());
-            return ptr::null_mut();
-        }
-
-        dstctx.cast()
     }
+
+    // The key's own reference is taken, so the block is now a valid context whose release is the
+    // authority's `sm2_freectx` body followed by the block release at `:135`.
+    dst.set_release_line(135);
+    // SAFETY: the block holds a fully initialised `ProvSm2Ctx` -- `key` carries its own reference,
+    // `libctx` was copied and `md` is the reset all-NULL digest -- and no other owner will release
+    // it.
+    let dst = unsafe { dst.assume_init() };
+
+    // SAFETY: `dstctx` is `dst`'s own block and `srcctx` is the caller's live context.
+    if unsafe {
+        ossl_prov_digest_copy(ptr::addr_of_mut!((*dstctx).md), ptr::addr_of!((*srcctx).md))
+    } == 0
+    {
+        // `dst`'s `Drop` runs `sm2_freectx`'s body and block release.
+        return ptr::null_mut();
+    }
+
+    dst.into_raw().cast()
 }
 
 /// `struct sm2_get_ctx_params_st` — the `produce_param_decoder` expansion at `sm2_enc.c:170-174`.
@@ -511,3 +545,7 @@ pub(crate) static SM2_ASYM_CIPHER_FUNCTIONS: [OsslDispatch; 12] = [
         function: ptr::null_mut(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSm2Ctx => zero_state_sweep_prov_sm2_ctx);

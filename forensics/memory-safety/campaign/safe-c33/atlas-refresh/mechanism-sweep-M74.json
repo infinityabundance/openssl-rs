@@ -1,0 +1,129 @@
+{
+  "receipt": "mechanism-sweep-M74",
+  "branch": "integrate/safe-c33",
+  "source_head": "09214fed6",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; one callback-state repair in COMP_CTX_new, two socket compatibility repairs, one dump output-contract repair, three focused tests, the full library suite serially and with four threads, clippy and fmt, and a focused C differential against the pinned authority from a freshly built staticlib. The shared owned.rs seam was audited and left unchanged, so OB-1/OB-3 evidence remains valid.",
+  "scope": "Per-file contract audit of the syslog, null and socket BIO methods, the COMP_CTX object API, the core BIO handle, BIO_dump/BIO_hex_string, the legacy host/port helpers, and the BIO owned-handle seam. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred and none was a newly discovered callback boundary. owned.rs is a shared ownership mechanism: no defect was found and it was not modified.",
+  "files": [
+    "src/runtime/bio/bss_log.rs",
+    "src/runtime/bio/bss_null.rs",
+    "src/runtime/bio/bss_sock.rs",
+    "src/runtime/bio/comp.rs",
+    "src/runtime/bio/core_bio.rs",
+    "src/runtime/bio/dump.rs",
+    "src/runtime/bio/legacy_host.rs",
+    "src/runtime/bio/owned.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M74-D1",
+      "file": "src/runtime/bio/comp.rs",
+      "lines_pre_fix": "271-301",
+      "line_post_fix": 272,
+      "severity": "high",
+      "class": "method callback run on a partially initialised context",
+      "description": "COMP_CTX_new allocated an OwnedCtx, stored meth and ran meth->init. When init returned 0 the handle was dropped, so OwnedCtx::drop ran CtxDestroy::destroy_body, which invokes meth->finish. The authority's failure arm is a bare OPENSSL_free(ctx), never COMP_CTX_free(ctx), so finish is not called for a refused init. A conforming method may rely on init having built the state that finish releases (for example a non-NULL ctx->data), so running finish here is a fault the authority never permits. The constructor now allocates a RawCtx, writes meth, and calls the existing assume_init transition only after init succeeds; the refusal drops the block alone.",
+      "divergence": "Removes a finish invocation the authority never makes; every successful construction and every successful free is unchanged."
+    },
+    {
+      "id": "M74-D2",
+      "file": "src/runtime/bio/bss_sock.rs",
+      "lines_pre_fix": "193-207",
+      "line_post_fix": 198,
+      "severity": "medium",
+      "class": "wrong retry classification of zero and the non-minus-one negatives",
+      "description": "The port consulted errno only for -1 and answered ((i << 24) >> 31) & 1 for negative values. The pinned authority's BIO_sock_should_retry consults errno for both 0 and -1 and answers 0 for every other input, including -2 and -5. A zero-length read/write leaves a possibly stale retryable errno that the authority classifies; the port did not, and the port called -2/-5 retryable where the authority does not. The body now matches the authority's two-value test.",
+      "divergence": "Restores the authority's exact classifier for every input."
+    },
+    {
+      "id": "M74-D3",
+      "file": "src/runtime/bio/bss_sock.rs",
+      "lines_pre_fix": "293-319",
+      "line_post_fix": 292,
+      "severity": "medium",
+      "class": "NULL-output read arm peeked and zero-length read skipped EOF",
+      "description": "For a NULL out, the authority's sock_read answers 0 without reading the socket and without clearing retry flags. The port peeked one byte with MSG_PEEK and reported it, which made BIO_read(b, NULL, n) consume a readiness observation the authority does not make. The port also returned before the syscall for outl == 0, so a non-NULL zero-length read never set BIO_FLAGS_IN_EOF although the authority's read returns 0 and sets it. The arm now reads only when out is non-NULL, clears the retry flags at the authority's point, and lets a zero-length read reach recv.",
+      "divergence": "Restores the authority's observable result and flags for both arms."
+    },
+    {
+      "id": "M74-D4",
+      "file": "src/runtime/bio/dump.rs",
+      "lines_pre_fix": "86-94 and 319-327",
+      "line_post_fix": 321,
+      "severity": "medium",
+      "class": "row offsets above 64 KiB truncated to four hex digits",
+      "description": "The authority formats each row offset with BIO_snprintf(..., \"%04x - \", i * dump_width). %04x is a minimum width, so an offset above 0xffff keeps every digit. The port wrote a fixed four-digit field, so a dump longer than 64 KiB printed a wrapped offset (for example 0000 at the row whose real offset is 10000). format_offset now emits at least four digits and however many the value needs, written through the same scratch-space checks.",
+      "divergence": "Restores the authority's exact offset text for dumps above 64 KiB; shorter dumps are byte-identical."
+    }
+  ],
+  "deferred": [
+    "ASan: the COMP change moves an existing release between two already-audited owners; the socket and dump changes are scalar and formatting logic. No new extent or pointer arithmetic.",
+    "Miri/Loom: no aliasing or concurrency change; the repaired paths are single-threaded.",
+    "Allocator-failure injection specifically on the RawCtx::zalloc refusal arm of COMP_CTX_new.",
+    "Dependency-graph regeneration, FRF and SEAL.",
+    "The Phase 4 court harnesses (RT-BIO, RT-BIO-SOCK, RT-BIO-COMP) and the Phase 2 ABI courts, which require rebuilding the distribution shell from the final source; a focused C differential from a fresh staticlib was run instead.",
+    "Constant-time review (no secret-dependent control-flow claim)."
+  ],
+  "not_discharged": [
+    "All eight files are audited, not SAFETY_DISCHARGED.",
+    "core_bio's NULL guard in ossl_core_bio_up_ref is a recorded divergence (D-OSSL-CORE-BIO-1) from the authority's unconditional dereference.",
+    "legacy_host's NULL-tolerant ip/port_ptr and strlen(NULL) arms are recorded safety divergences from the authority's faults.",
+    "COMP_compress_block/COMP_expand_block clamp a negative int length to 0 instead of letting the authority's int-to-size_t conversion widen it; retained as a safety divergence for inputs the hook cannot honour.",
+    "COMP_CTX_get_method, COMP_CTX_get_type, COMP_compress_block and COMP_expand_block remain unreachable through this profile's public ABI; no consumer evidence exists for them here.",
+    "The owned.rs seam remains a file-level audit, not a new promotion."
+  ],
+  "retained_obligations": [
+    "The owned.rs seam's contracts are unchanged: CtxDestroy implementers must free owned members exactly once, never the enclosing block, and a zeroed block must be a valid T; OwnedBlock::take still requires seam provenance and exclusive ownership.",
+    "COMP_CTX_new requires meth to be NULL or a live CompMethod that outlives the context; init/finish/compress/expand hooks carry the authority's contracts.",
+    "sock_read/sock_write require a live BIO and, for a non-NULL buffer, validity for the full length; BIO_sock_should_retry reads the calling thread's errno for 0 and -1.",
+    "BIO_dump* require a valid callback and u; s must be readable for len bytes when len > 0. BIO_hex_string requires a live BIO and data readable for datalen bytes.",
+    "bss_log's slg_write keeps the authority's NUL-terminated copy and prefix strip; the mapping's final zero-length entry is the default level.",
+    "core_bio's RawCtx window leaves bio uninitialised until a constructor writes it; every success path writes it before the C ABI reclaims the block as an OwnedCtx.",
+    "legacy_host keeps the authority's host= label for the service argument and the growing ERR_add_error_data concatenation."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [],
+  "next_queue": {
+    "file": "src/runtime/bio/print_engine.rs",
+    "then": [
+      "src/runtime/bio/print.rs",
+      "src/runtime/bio/retry.rs",
+      "src/runtime/bio/sys.rs",
+      "src/runtime/buffer.rs",
+      "src/runtime/conf/init_settings.rs",
+      "src/runtime/confmod/asn1.rs",
+      "src/runtime/conf/modparse.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "bss_sock's module header and BIO_sock_should_retry doc now state that only 0 and -1 consult errno, matching the authority.",
+    "bss_sock's sock_read doc now describes the NULL-output no-op arm and the zero-length IN_EOF behaviour instead of the removed MSG_PEEK arm.",
+    "comp's COMP_CTX_new doc records the authority's bare-free failure arm and why finish must not run.",
+    "dump's offset helper is documented as a minimum-width %04x formatter."
+  ],
+  "shared_boundary_files": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [
+    "src/runtime/bio/comp.rs:299: one call to the existing RawCtx::assume_init after every field is initialised and meth->init has succeeded; the precondition is established locally and by the RawCtx API contract."
+  ],
+  "unsafe_operations_removed": [],
+  "secret_bearing_buffers": [
+    "bss_log copies the caller's log line into an OwnedStr for prefix comparison and syslog; it makes no cleansing claim, matching the authority, and the block is released normally.",
+    "comp moves caller buffers through method hooks and stores no buffer of its own; no key material is retained.",
+    "core_bio, owned and bss_null own only handles, blocks and the wrapped BIO; no secret-bearing storage.",
+    "dump reads caller-supplied data and writes formatted hex; it copies no data into any owned secret buffer.",
+    "legacy_host handles public host/service strings and resolver addresses.",
+    "bss_sock moves application bytes through recv/send and owns no secret buffer."
+  ],
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "runtime::bio::comp::comp_api_tests::a_refused_init_does_not_run_the_finish_hook; runtime::bio::comp::comp_api_tests::a_hand_built_method_exercises_the_paths_no_factory_reaches (finish-after-free positive control); runtime::bio::bss_sock::tests::should_retry_reads_errno_only_for_zero_and_minus_one; runtime::bio::dump::tests::a_row_offset_is_a_minimum_width_hex_field",
+    "reason": "The comp control drives a method whose init refuses and whose finish increments a counter: the repair leaves it at 0, while the old OwnedCtx path made it 1. The companion assertion in the existing construction test proves the same instrument observes finish on a successful free. The socket control pins all four classifier classes against a set retryable and non-retryable errno. The dump control pins the 0xffff/0x10000 boundary. The authority-vs-candidate C differential reproduced all 15 observations identically after the repairs."
+  }
+}

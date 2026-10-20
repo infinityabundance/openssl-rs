@@ -105,6 +105,127 @@ const LINE_MALLOC_PS: c_int = 129;
 /// `new_property_string`'s `OPENSSL_free(ps)` on an index wrap.
 const LINE_FREE_PS_WRAP: c_int = 136;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership seams
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `PropertyStringData` block — the slot's object.
+///
+/// The block stays the `CRYPTO_zalloc(size_of::<PropertyStringData>(), FILE, LINE_ZALLOC_DATA)` the
+/// authority makes, at this unit's own size and site, because a Rust `Box` would hide both the
+/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook. Only its
+/// *ownership* is this type: [`Self::zalloc`] allocates it, `Drop` runs the authority's own
+/// [`ossl_property_string_data_free`] (the five member releases and then the block itself), and
+/// [`Self::into_raw`] hands it to the slot's caller on success.
+struct OwnedData {
+    ptr: *mut PropertyStringData,
+}
+
+impl OwnedData {
+    /// `CRYPTO_zalloc(size_of::<PropertyStringData>(), FILE, LINE_ZALLOC_DATA)`, or `None` when the
+    /// allocator answers NULL.
+    fn zalloc() -> Option<OwnedData> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, exclusively owned, zeroed
+        // block of exactly this type's size.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<PropertyStringData>(),
+                FILE,
+                LINE_ZALLOC_DATA,
+            )
+        }
+        .cast::<PropertyStringData>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedData { ptr: raw })
+        }
+    }
+
+    /// The block's stable address, for the member writes the constructor makes.
+    fn as_ptr(&self) -> *mut PropertyStringData {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the slot's caller on success.
+    fn into_raw(self) -> *mut PropertyStringData {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedData {
+    /// The block's single release, through the authority's own `ossl_property_string_data_free`
+    /// (its five member releases in order, then the block itself).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released, so it satisfies
+        // `ossl_property_string_data_free`'s own contract (NULL, or a block from
+        // `ossl_property_string_data_new` that has not been released).
+        unsafe { ossl_property_string_data_free(self.ptr.cast::<c_void>()) };
+    }
+}
+
+/// A `PropertyString` block under construction.
+///
+/// The block stays the `CRYPTO_malloc(size_of::<PropertyString>() + l, FILE, LINE_MALLOC_PS)` the
+/// authority makes, at the authority's own size and site, so a caller-installed hook observes it
+/// exactly as it observes the authority's. Only the window before the element is published is owned
+/// here: `Drop` is the authority's own wrap-line `OPENSSL_free(ps)` (the whole block, because `s`
+/// points inside it), and [`Self::into_raw`] gives it up to the table's `property_free` once it is
+/// published.
+struct OwnedString {
+    ptr: *mut PropertyString,
+}
+
+impl OwnedString {
+    /// `CRYPTO_malloc(size_of::<PropertyString>() + l, FILE, LINE_MALLOC_PS)`, or `None` when the
+    /// allocator answers NULL.
+    ///
+    /// # Safety
+    /// `l` must be the byte length (excluding the terminator) of the NUL-terminated string that
+    /// will be copied into the block, so `size_of + l` covers the header plus `l + 1` tail bytes.
+    unsafe fn new(l: usize) -> Option<OwnedString> {
+        // `CRYPTO_malloc` is the authority's `OPENSSL_malloc`; the sum is the authority's own
+        // `sizeof(*ps) + l`. A length that overflows the size computation cannot describe a live
+        // allocation, so it takes the allocator-failure arm (`None`) rather than wrapping.
+        let size = core::mem::size_of::<PropertyString>().checked_add(l)?;
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size, FILE, LINE_MALLOC_PS)
+        }
+        .cast::<PropertyString>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedString { ptr: raw })
+        }
+    }
+
+    /// The block's writable start, for the copy the constructor makes.
+    fn as_ptr(&self) -> *mut PropertyString {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the table on success.
+    fn into_raw(self) -> *mut PropertyString {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedString {
+    /// The block's single release before it is published, through the authority's own wrap-line
+    /// plain `OPENSSL_free(ps)`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own wrap-line plain `CRYPTO_free` is the whole release.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, LINE_FREE_PS_WRAP) };
+    }
+}
+
 /// `struct PROPERTY_STRING`.
 ///
 /// Only ever reached through a raw pointer: the element is allocated by
@@ -237,16 +358,11 @@ pub(crate) unsafe fn ossl_property_string_data_free(vpropdata: *mut c_void) {
 ///
 /// The `ctx` argument is accepted and unused, as in the authority.
 pub(crate) fn ossl_property_string_data_new(_ctx: *mut c_void) -> *mut PropertyStringData {
-    let propdata = CRYPTO_zalloc(
-        core::mem::size_of::<PropertyStringData>(),
-        FILE,
-        LINE_ZALLOC_DATA,
-    )
-    .cast::<PropertyStringData>();
-    if propdata.is_null() {
+    let Some(owned) = OwnedData::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `propdata` is a fresh, exclusively owned block of exactly this type.
+    };
+    let propdata = owned.as_ptr();
+    // SAFETY: `propdata` is a fresh, exclusively owned, zeroed block of exactly this type.
     let complete = unsafe {
         (*propdata).lock = CRYPTO_THREAD_lock_new();
         (*propdata).prop_names = OPENSSL_LH_new(Some(property_hash), Some(property_cmp));
@@ -260,14 +376,13 @@ pub(crate) fn ossl_property_string_data_new(_ctx: *mut c_void) -> *mut PropertyS
             && !(*propdata).prop_values.is_null()
     };
     if !complete {
-        // SAFETY: `propdata` was created above and is not published, so it is
-        // released exactly once, here. Any of the five that was created is released
-        // by the same function, and the ones that were not are NULL, which every
+        // The block is not published, so its handle releases it here, exactly once, through the
+        // authority's own `ossl_property_string_data_free`. Any of the five that was created is
+        // released by the same destructor, and the ones that were not are NULL, which every
         // releaser accepts.
-        unsafe { ossl_property_string_data_free(propdata.cast::<c_void>()) };
         return ptr::null_mut();
     }
-    propdata
+    owned.into_raw()
 }
 
 /// `static PROPERTY_STRING *new_property_string(const char *s, OSSL_PROPERTY_IDX *pidx)`
@@ -284,28 +399,28 @@ unsafe fn new_property_string(s: *const c_char, pidx: *mut c_int) -> *mut Proper
     let l = unsafe { strlen(s) };
     // The block is `size_of::<PropertyString>() + l`, which is where `body` lives;
     // `CRYPTO_malloc` is the authority's `OPENSSL_malloc`.
-    let ps = CRYPTO_malloc(
-        core::mem::size_of::<PropertyString>() + l,
-        FILE,
-        LINE_MALLOC_PS,
-    )
-    .cast::<PropertyString>();
-    if !ps.is_null() {
-        // SAFETY: `ps` is a fresh block of `size_of + l`, so `l + 1` bytes written
-        // at `body` (offset 12) stay inside it, and `pidx` is the caller's live
-        // counter.
-        unsafe {
-            ptr::copy_nonoverlapping(s, ptr::addr_of_mut!((*ps).body).cast::<c_char>(), l + 1);
-            (*ps).s = ptr::addr_of!((*ps).body).cast::<c_char>();
-            *pidx += 1;
-            (*ps).idx = *pidx;
-            if (*ps).idx == 0 {
-                CRYPTO_free(ps.cast::<c_void>(), FILE, LINE_FREE_PS_WRAP);
-                return ptr::null_mut();
-            }
-        }
+    // SAFETY: `l` is a NUL-terminated string's length per the contract above.
+    let Some(owned) = (unsafe { OwnedString::new(l) }) else {
+        return ptr::null_mut();
+    };
+    let ps = owned.as_ptr();
+    // SAFETY: `ps` is a fresh block of `size_of + l`, so `l + 1` bytes written
+    // at `body` (offset 12) stay inside it, and `pidx` is the caller's live
+    // counter.
+    let wrapped = unsafe {
+        ptr::copy_nonoverlapping(s, ptr::addr_of_mut!((*ps).body).cast::<c_char>(), l + 1);
+        (*ps).s = ptr::addr_of!((*ps).body).cast::<c_char>();
+        *pidx += 1;
+        (*ps).idx = *pidx;
+        (*ps).idx == 0
+    };
+    if wrapped {
+        // The index wrapped to 0, the "no entry" index: the block is not published,
+        // so its handle releases it here, through the authority's own wrap-line
+        // `OPENSSL_free(ps)`, and the constructor refuses.
+        return ptr::null_mut();
     }
-    ps
+    owned.into_raw()
 }
 
 /// `static OSSL_PROPERTY_IDX ossl_property_string(OSSL_LIB_CTX *ctx, int name, int create, const char *s)`
@@ -456,7 +571,7 @@ unsafe fn ossl_property_str(name: c_int, ctx: *mut c_void, idx: c_int) -> *const
         } else {
             (*propdata).prop_valuelist
         };
-        OPENSSL_sk_value(list, idx - 1).cast::<c_char>()
+        OPENSSL_sk_value(list, idx.wrapping_sub(1)).cast::<c_char>()
     };
     // SAFETY: this thread holds a read lock on `propdata`.
     unsafe { CRYPTO_THREAD_unlock((*propdata).lock) };

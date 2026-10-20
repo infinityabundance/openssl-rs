@@ -18,6 +18,7 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
 use core::ptr;
 
@@ -35,7 +36,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::x509::x_pubkey::d2i_PUBKEY_ex;
 
 /// `ERR_LIB_CT` — `include/openssl/err.h.in:115`.
@@ -82,6 +83,10 @@ const CT_B64_149: ErrSite =
 const CT_B64_157: ErrSite =
     ct_b64_site(157, c"CTLOG_new_from_base64_ex", CT_R_LOG_CONF_INVALID_KEY);
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
 /// `static int ct_base64_decode(const char *in, unsigned char **out)` —
 /// `crypto/ct/ct_b64.c:24-59`.
 ///
@@ -101,20 +106,19 @@ unsafe fn ct_base64_decode(in_: *const c_char, out: *mut *mut c_uchar) -> c_int 
         return 0;
     }
 
-    let mut outlen: c_int = ((inlen / 4) * 3) as c_int;
+    let outlen: c_int = ((inlen / 4) * 3) as c_int;
     // SAFETY: `outlen` is non-negative (`3 * (inlen/4) <= 3 * INT_MAX/4`).
-    let outbuf = CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>();
-    if outbuf.is_null() {
+    let Some(buf) = OwnedBuf::new(outlen as usize, SeamFile::NULL, 0) else {
         return -1;
-    }
+    };
 
-    // SAFETY: `outbuf` has `outlen` writable bytes; `in_` is readable for `inlen`.
-    outlen = unsafe { EVP_DecodeBlock(outbuf, in_.cast::<c_uchar>(), inlen as c_int) };
+    // SAFETY: `buf` has `outlen` writable bytes; `in_` is readable for `inlen`.
+    let mut outlen =
+        unsafe { EVP_DecodeBlock(buf.as_ptr(), in_.cast::<c_uchar>(), inlen as c_int) };
     if outlen < 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_B64_42) };
-        // SAFETY: `outbuf` is this call's block.
-        unsafe { CRYPTO_free(outbuf.cast::<c_void>(), ptr::null(), 0) };
+        // `buf`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
         return -1;
     }
 
@@ -131,14 +135,13 @@ unsafe fn ct_base64_decode(in_: *const c_char, out: *mut *mut c_uchar) -> c_int 
         outlen -= 1;
         i += 1;
         if i > 2 {
-            // SAFETY: `outbuf` is this call's block.
-            unsafe { CRYPTO_free(outbuf.cast::<c_void>(), ptr::null(), 0) };
+            // `buf`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
             return -1;
         }
     }
 
-    // SAFETY: `out` is writable per the contract.
-    unsafe { *out = outbuf };
+    // SAFETY: `out` is writable per the contract; the block is handed to the caller.
+    unsafe { *out = buf.into_raw() };
     outlen
 }
 
@@ -159,7 +162,6 @@ pub unsafe extern "C" fn SCT_new_from_base64(
     signature_base64: *const c_char,
 ) -> *mut Sct {
     let sct = SCT_new();
-    let mut dec: *mut c_uchar = ptr::null_mut();
 
     if sct.is_null() {
         // SAFETY: the site is a compiled-in constant.
@@ -176,28 +178,34 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         return ptr::null_mut();
     }
 
+    // The log id. A decoder failure leaves `dec` NULL, so there is nothing to release.
+    let mut dec: *mut c_uchar = ptr::null_mut();
     // SAFETY: `logid_base64` is NUL-terminated; `&mut dec` is writable.
-    let mut declen = unsafe { ct_base64_decode(logid_base64, &mut dec) };
+    let declen = unsafe { ct_base64_decode(logid_base64, &mut dec) };
     if declen < 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_B64_87) };
-        // SAFETY: `dec` is NULL; `sct` is the value this call owns.
+        // SAFETY: `sct` is the value this call owns.
         unsafe { SCT_free(sct) };
         return ptr::null_mut();
     }
-    // SAFETY: `sct` is live; `dec` is the decoder's block, taken over on success.
-    if unsafe { SCT_set0_log_id(sct, dec, declen as usize) } == 0 {
-        // SAFETY: `dec` is still this call's block; `sct` is this call's value.
-        unsafe {
-            CRYPTO_free(dec.cast::<c_void>(), ptr::null(), 0);
-            SCT_free(sct);
-        }
+    // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
+    // SAFETY: `sct` is live; `dec` is handed to it only when the setter answers non-zero.
+    if unsafe { SCT_set0_log_id(sct, dec.as_ptr(), declen as usize) } == 0 {
+        // The setter kept ownership, so release the block and the half-built value.
+        drop(dec);
+        // SAFETY: `sct` is this call's value.
+        unsafe { SCT_free(sct) };
         return ptr::null_mut();
     }
-    dec = ptr::null_mut();
+    // The value owns the log id now.
+    let _ = dec.into_raw();
 
+    // The extensions. `SCT_set0_extensions` never fails, so the block is handed over outright.
+    let mut dec: *mut c_uchar = ptr::null_mut();
     // SAFETY: `extensions_base64` is NUL-terminated; `&mut dec` is writable.
-    declen = unsafe { ct_base64_decode(extensions_base64, &mut dec) };
+    let declen = unsafe { ct_base64_decode(extensions_base64, &mut dec) };
     if declen < 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_B64_96) };
@@ -205,12 +213,17 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         unsafe { SCT_free(sct) };
         return ptr::null_mut();
     }
-    // SAFETY: `sct` is live; `dec` is the decoder's block, taken over.
-    unsafe { SCT_set0_extensions(sct, dec, declen as usize) };
-    dec = ptr::null_mut();
+    // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
+    // SAFETY: `sct` is live; the setter takes the block over.
+    unsafe { SCT_set0_extensions(sct, dec.as_ptr(), declen as usize) };
+    // The value owns the extensions now.
+    let _ = dec.into_raw();
 
+    // The signature. `o2i_SCT_signature` only reads the block, so it stays this frame's.
+    let mut dec: *mut c_uchar = ptr::null_mut();
     // SAFETY: `signature_base64` is NUL-terminated; `&mut dec` is writable.
-    declen = unsafe { ct_base64_decode(signature_base64, &mut dec) };
+    let declen = unsafe { ct_base64_decode(signature_base64, &mut dec) };
     if declen < 0 {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_B64_104) };
@@ -218,19 +231,19 @@ pub unsafe extern "C" fn SCT_new_from_base64(
         unsafe { SCT_free(sct) };
         return ptr::null_mut();
     }
-
-    let mut p: *const c_uchar = dec;
+    // SAFETY: `dec` is the decoder's block, left for this frame and owned by no one else.
+    let dec = unsafe { OwnedBuf::adopt_plain_nullable(dec, SeamFile::NULL, 0) };
+    let mut p: *const c_uchar = dec.as_ptr();
     // SAFETY: `sct` is live; `p` is readable for `declen` bytes.
     if unsafe { o2i_SCT_signature(sct, &mut p, declen as usize) } <= 0 {
-        // SAFETY: `dec` is this call's block; `sct` is this call's value.
-        unsafe {
-            CRYPTO_free(dec.cast::<c_void>(), ptr::null(), 0);
-            SCT_free(sct);
-        }
+        // The block is still this frame's; `dec`'s `Drop` releases it.
+        drop(dec);
+        // SAFETY: `sct` is this call's value.
+        unsafe { SCT_free(sct) };
         return ptr::null_mut();
     }
-    // SAFETY: `dec` is this call's block.
-    unsafe { CRYPTO_free(dec.cast::<c_void>(), ptr::null(), 0) };
+    // The signature has been copied out, so the scratch block is released.
+    drop(dec);
 
     // SAFETY: `sct` is live.
     unsafe { SCT_set_timestamp(sct, timestamp) };
@@ -276,7 +289,9 @@ pub unsafe extern "C" fn CTLOG_new_from_base64_ex(
         return 0;
     }
 
-    let mut p: *const c_uchar = pkey_der;
+    // SAFETY: `pkey_der` is the decoder's block, left for this frame and owned by no one else.
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(pkey_der, SeamFile::NULL, 0) };
+    let mut p: *const c_uchar = der.as_ptr();
     // SAFETY: `p` is readable for `pkey_der_len` bytes; the optional args are checked values.
     let pkey = unsafe {
         d2i_PUBKEY_ex(
@@ -287,8 +302,8 @@ pub unsafe extern "C" fn CTLOG_new_from_base64_ex(
             propq,
         )
     };
-    // SAFETY: `pkey_der` is this call's block.
-    unsafe { CRYPTO_free(pkey_der.cast::<c_void>(), ptr::null(), 0) };
+    // The decoder's block has been read in full; `der`'s `Drop` is the authority's own release.
+    drop(der);
     if pkey.is_null() {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&CT_B64_157) };

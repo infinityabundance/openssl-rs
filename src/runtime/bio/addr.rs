@@ -54,15 +54,17 @@
 //! `BIO_ADDRINFO_next(NULL)` are defined by the authority and matched exactly.
 
 use core::ffi::{c_char, c_int, c_void, CStr};
-use core::ptr;
+use core::ptr::{self, NonNull};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BIO_ADDR_251, BIO_ADDR_256};
 use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::bss_sock::BIO_sock_init;
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The `file`/`line` recorded by an allocation, mirroring the authority's
 /// `__FILE__`/`__LINE__` so a leak report points at this module.
@@ -90,6 +92,23 @@ pub struct BioAddr {
 
 /// The `sin_addr`/`sin6_addr`/`sun_path` region starts after the family word.
 const ADDR_OFFSET: usize = 2;
+
+// The accessors below form `SockAddrIn`/`SockAddrIn6`/`SockAddrUn` references from a
+// `BioAddr` (for example `BIO_ADDR_rawmake` writes through `*mut SockAddrIn`). Those
+// types need four-byte alignment, so the containing storage must guarantee it; the
+// assertion turns a later weakening of `SockAddrStorage` into a compile error rather
+// than undefined behaviour.
+const _: () = {
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrIn>()
+    );
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrIn6>()
+    );
+    assert!(
+        core::mem::align_of::<sys::SockAddrStorage>() >= core::mem::align_of::<sys::SockAddrUn>()
+    );
+};
 
 /// `sizeof(BIO_ADDR)` in the authority.
 ///
@@ -132,27 +151,75 @@ pub(crate) unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
     }
 }
 
-/// Allocate a zeroed address, or NULL if the allocator refused.
-fn alloc_zeroed() -> *mut BioAddr {
-    let raw = CRYPTO_malloc(
-        core::mem::size_of::<BioAddr>(),
-        ALLOC_FILE.as_ptr(),
-        ALLOC_LINE,
-    );
-    let p = raw.cast::<BioAddr>();
-    if !p.is_null() {
-        // SAFETY: `p` is a fresh block of `size_of::<BioAddr>()` bytes.
-        unsafe { sys::memset(p.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>()) };
-    }
-    p
+// ---------------------------------------------------------------------------------------------
+// Ownership of the addresses and the resolved-name strings
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `BIO_ADDR` block allocated through the crate's allocator seam.
+///
+/// The block keeps the authority's size and its stable address (the C ABI hands it out through
+/// [`BIO_ADDR_new`]/[`BIO_ADDR_dup`] and takes it back in [`BIO_ADDR_free`]), but its *ownership*
+/// is this type: [`Self::zalloc`] allocates it and `Drop` is its single release, at this module's
+/// own `file`/`line`. It stays a `CRYPTO_malloc` (rather than a Rust `Box`) so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the allocation, its size and its release exactly as it
+/// observes the authority's.
+struct OwnedAddr {
+    ptr: NonNull<BioAddr>,
 }
 
-/// # Safety
-/// `p` must be NULL or a pointer returned by [`alloc_zeroed`] that has not been freed.
-unsafe fn free_addr(p: *mut BioAddr) {
-    if !p.is_null() {
-        // SAFETY: `p` came from `CRYPTO_malloc` and has not been freed.
-        unsafe { CRYPTO_free(p.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+impl OwnedAddr {
+    /// A fresh zeroed block of `BioAddr`'s size, or `None` when the allocator answers NULL — the
+    /// authority's `OPENSSL_zalloc`.
+    fn zalloc() -> Option<OwnedAddr> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<BioAddr>(),
+                ALLOC_FILE.as_ptr(),
+                ALLOC_LINE,
+            )
+        };
+        let p = raw.cast::<BioAddr>();
+        if !p.is_null() {
+            // SAFETY: `p` is a fresh block of `size_of::<BioAddr>()` bytes.
+            unsafe { sys::memset(p.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>()) };
+        }
+        NonNull::new(p).map(|ptr| OwnedAddr { ptr })
+    }
+
+    /// The stable address the C ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut BioAddr {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's address pointer.
+    fn into_raw(self) -> *mut BioAddr {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` (or a C caller) handed back, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live `BioAddr` block this module allocated and has not released.
+    unsafe fn from_raw(ptr: *mut BioAddr) -> Option<OwnedAddr> {
+        NonNull::new(ptr).map(|ptr| OwnedAddr { ptr })
+    }
+}
+
+impl Drop for OwnedAddr {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns (`zalloc`/`from_raw`) and has not
+        // released; its single release is the authority's own plain `CRYPTO_free`.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                ALLOC_FILE.as_ptr(),
+                ALLOC_LINE,
+            )
+        };
     }
 }
 
@@ -242,7 +309,12 @@ pub(crate) unsafe fn make_from_sockaddr(dst: *mut BioAddr, sa: *const sys::SockA
 /// `BIO_ADDR *BIO_ADDR_new(void)`
 #[no_mangle]
 pub extern "C" fn BIO_ADDR_new() -> *mut BioAddr {
-    guard_ffi(ptr::null_mut(), alloc_zeroed)
+    guard_ffi(ptr::null_mut(), || {
+        // A zeroed `BioAddr` (family `AF_UNSPEC`, zeroed storage) is the authority's own
+        // constructed state, so `OwnedAddr::zalloc` may validate it; `into_raw` hands the C caller
+        // the stable address `BIO_ADDR_free` later reclaims.
+        OwnedAddr::zalloc().map_or(ptr::null_mut(), |a| a.into_raw())
+    })
 }
 
 /// A zeroed address, for the places the authority keeps one on the stack.
@@ -362,8 +434,10 @@ pub(crate) unsafe fn store_in6(ap: *mut BioAddr, val: sys::SockAddrIn6) {
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_free(ap: *mut BioAddr) {
     guard_ffi((), || {
-        // SAFETY: the caller passes NULL or an owned address.
-        unsafe { free_addr(ap) };
+        // `ap` is NULL or a value `BIO_ADDR_new`/`BIO_ADDR_dup` returned; `from_raw` reclaims it
+        // and its `Drop` is the block's single release.
+        // SAFETY: `ap` is NULL or a live block this module allocated and has not released.
+        drop(unsafe { OwnedAddr::from_raw(ap) });
     })
 }
 
@@ -382,18 +456,16 @@ pub unsafe extern "C" fn BIO_ADDR_dup(ap: *const BioAddr) -> *mut BioAddr {
         let Some(src) = (unsafe { ap.as_ref() }) else {
             return ptr::null_mut();
         };
-        let dst = alloc_zeroed();
-        if dst.is_null() {
+        let Some(dst) = OwnedAddr::zalloc() else {
             return ptr::null_mut();
-        }
+        };
         // SAFETY: `dst` is freshly allocated and `src` is live and distinct.
-        let copied = unsafe { copy_addr(dst, src) };
+        let copied = unsafe { copy_addr(dst.as_ptr(), src) };
         if copied != 1 {
-            // SAFETY: `dst` came from `alloc_zeroed` and has not been published.
-            unsafe { free_addr(dst) };
+            // The copy was not published, so its own `Drop` releases the block.
             return ptr::null_mut();
         }
-        dst
+        dst.into_raw()
     })
 }
 
@@ -758,34 +830,39 @@ unsafe fn addr_strings(
     // `getnameinfo`, or after the decimal fallback above.
     let hostname = unsafe {
         if want_host {
-            CRYPTO_strdup(host.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE)
+            OwnedStr::adopt(
+                CRYPTO_strdup(host.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                SeamFile::new(ALLOC_FILE),
+                ALLOC_LINE,
+            )
         } else {
-            ptr::null_mut()
+            None
         }
     };
     // SAFETY: as above.
     let service = unsafe {
         if want_service {
-            CRYPTO_strdup(serv.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE)
+            OwnedStr::adopt(
+                CRYPTO_strdup(serv.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                SeamFile::new(ALLOC_FILE),
+                ALLOC_LINE,
+            )
         } else {
-            ptr::null_mut()
+            None
         }
     };
 
-    if (want_host && hostname.is_null()) || (want_service && service.is_null()) {
-        // SAFETY: each is either NULL or a string this function allocated.
-        unsafe {
-            if !hostname.is_null() {
-                CRYPTO_free(hostname.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
-            }
-            if !service.is_null() {
-                CRYPTO_free(service.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
-            }
-        }
+    if (want_host && hostname.is_none()) || (want_service && service.is_none()) {
+        // A requested name's allocation failed; the other, if any, is released here by its own
+        // `Drop` — the authority's own cleanup block at `bio_addr.c:288-296`.
         return (false, ptr::null_mut(), ptr::null_mut());
     }
 
-    (true, hostname, service)
+    (
+        true,
+        hostname.map_or(ptr::null_mut(), OwnedStr::into_raw),
+        service.map_or(ptr::null_mut(), OwnedStr::into_raw),
+    )
 }
 
 /// `char *BIO_ADDR_hostname_string(const BIO_ADDR *ap, int numeric)`

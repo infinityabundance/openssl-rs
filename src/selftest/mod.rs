@@ -46,7 +46,7 @@ use core::ptr;
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_SELF_TEST_CB_INDEX};
 use crate::ffi::guard_ffi;
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OsslParam};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 
 pub mod indicator;
 
@@ -65,13 +65,17 @@ pub type OsslIndicatorCallback =
 /// The authority's translation unit, so an allocation that fails records the
 /// coordinates a consumer would see from the authority.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/self_test_core.c".as_ptr();
-/// `OPENSSL_zalloc(sizeof(*stcb))` is at `crypto/self_test_core.c:40`,
-/// `OPENSSL_free(stcb)` at 45, `OPENSSL_zalloc(sizeof(*ret))` at 88 and
-/// `OPENSSL_free(st)` at 103.
-const LINE_ZALLOC_CB: c_int = 40;
-const LINE_FREE_CB: c_int = 45;
-const LINE_ZALLOC_ST: c_int = 88;
-const LINE_FREE_ST: c_int = 103;
+/// `OPENSSL_zalloc(sizeof(*stcb))` is at `crypto/self_test_core.c:38`,
+/// `OPENSSL_free(stcb)` at 44, `OPENSSL_zalloc(sizeof(*ret))` at 92 and
+/// `OPENSSL_free(st)` at 108.
+const LINE_ZALLOC_CB: c_int = 38;
+const LINE_FREE_CB: c_int = 44;
+const LINE_ZALLOC_ST: c_int = 92;
+const LINE_FREE_ST: c_int = 108;
+
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementations below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
 
 /// `OSSL_SELF_TEST_PHASE_*` and `OSSL_SELF_TEST_TYPE_NONE` / `_DESC_NONE`, from
 /// `openssl/self_test.h`. The `NONE` spellings really are the string `"None"` for
@@ -102,11 +106,28 @@ pub(crate) struct SelfTestCb {
     cbarg: *mut c_void,
 }
 
+// SAFETY: (a) the block owns no separately allocated member, so `destroy_body` never releases the
+// enclosing block, which `OwnedCtx` releases; (b) an all-zero block is a valid `SelfTestCb` (a NULL
+// callback is `None` and a NULL argument is a valid raw pointer) and `destroy_body` is sound on it.
+unsafe impl CtxDestroy for SelfTestCb {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CB;
+    const LINE_FREE: c_int = LINE_FREE_CB;
+
+    /// `ossl_self_test_set_callback_free`'s body without the block release: the holder owns
+    /// neither the callback nor its argument, so there is nothing to release first.
+    unsafe fn destroy_body(_ptr: *mut SelfTestCb) {}
+}
+
 /// `void *ossl_self_test_set_callback_new(OSSL_LIB_CTX *ctx)`
 ///
 /// The `ctx` argument is accepted and unused, as in the authority.
 pub(crate) fn ossl_self_test_set_callback_new(_ctx: *mut c_void) -> *mut SelfTestCb {
-    CRYPTO_zalloc(core::mem::size_of::<SelfTestCb>(), FILE, LINE_ZALLOC_CB).cast::<SelfTestCb>()
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*stcb))` at
+    // `crypto/self_test_core.c:40`; a zeroed pair is the authority's constructed state. The
+    // returned raw pointer transfers ownership to the calling context, whose release edge is
+    // `ossl_self_test_set_callback_free`.
+    OwnedCtx::<SelfTestCb>::zalloc().map_or(ptr::null_mut(), OwnedCtx::into_raw)
 }
 
 /// `void ossl_self_test_set_callback_free(void *stcb)` — accepts NULL.
@@ -115,12 +136,10 @@ pub(crate) fn ossl_self_test_set_callback_new(_ctx: *mut c_void) -> *mut SelfTes
 /// `stcb` must be NULL or a pointer returned by
 /// [`ossl_self_test_set_callback_new`] and not already released.
 pub(crate) unsafe fn ossl_self_test_set_callback_free(stcb: *mut SelfTestCb) {
-    if stcb.is_null() {
-        return;
-    }
-    // SAFETY: the block came from `CRYPTO_zalloc` in the constructor and is
-    // released exactly once here.
-    unsafe { CRYPTO_free(stcb.cast::<c_void>(), FILE, LINE_FREE_CB) };
+    // SAFETY: `stcb` is NULL or a block a previous `into_raw` handed out and `Drop` has not
+    // released; `from_raw` reclaims it, and its `Drop` is the authority's `OPENSSL_free(stcb)` at
+    // `crypto/self_test_core.c:45`.
+    drop(unsafe { OwnedCtx::<SelfTestCb>::from_raw(stcb) });
 }
 
 /// `get_self_test_callback(libctx)` — the slot lookup, through the context
@@ -147,6 +166,20 @@ pub struct OsslSelfTest {
     cb: Option<OsslCallback>,
     params: [OsslParam; 4],
     cb_arg: *mut c_void,
+}
+
+// SAFETY: (a) the object owns neither the callback nor its argument and the `params` array
+// references its own fields, so `destroy_body` never releases the enclosing block, which
+// `OwnedCtx` releases; (b) an all-zero block is a valid `OsslSelfTest` (NULL pointers, `None`, and a
+// zeroed `OsslParam` array of plain pointer/scalar fields) and `destroy_body` is sound on it.
+unsafe impl CtxDestroy for OsslSelfTest {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_ST;
+    const LINE_FREE: c_int = LINE_FREE_ST;
+
+    /// `OSSL_SELF_TEST_free`'s body without the block release: the object owns no separately
+    /// allocated member, so only the block itself is released, by [`OwnedCtx`]'s `Drop`.
+    unsafe fn destroy_body(_ptr: *mut OsslSelfTest) {}
 }
 
 /// `static void self_test_setparams(OSSL_SELF_TEST *st)`
@@ -185,23 +218,28 @@ unsafe fn self_test_setparams(st: *mut OsslSelfTest) {
 #[no_mangle]
 pub extern "C" fn OSSL_SELF_TEST_new(cb: Option<OsslCallback>, cbarg: *mut c_void) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
-        let st = CRYPTO_zalloc(core::mem::size_of::<OsslSelfTest>(), FILE, LINE_ZALLOC_ST)
-            .cast::<OsslSelfTest>();
-        if st.is_null() {
+        // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*ret))` at
+        // `crypto/self_test_core.c:88`. The block is not a valid object until every field below is
+        // written, so it stays staged -- a partial initialisation would release the block alone,
+        // never run the destructor body.
+        let Some(st) = RawCtx::<OsslSelfTest>::zalloc() else {
             return ptr::null_mut();
-        }
-        // SAFETY: `st` is a fresh block of exactly this struct's size that no
-        // other thread can observe yet; these are its only writes before it is
-        // published.
+        };
+        let p = st.as_ptr();
+        // SAFETY: `p` is a fresh block of exactly this struct's size that no other thread can
+        // observe yet; these are its only writes before it is published.
         unsafe {
-            (*st).cb = cb;
-            (*st).cb_arg = cbarg;
-            (*st).phase = EMPTY.as_ptr();
-            (*st).type_ = EMPTY.as_ptr();
-            (*st).desc = EMPTY.as_ptr();
-            self_test_setparams(st);
+            (*p).cb = cb;
+            (*p).cb_arg = cbarg;
+            (*p).phase = EMPTY.as_ptr();
+            (*p).type_ = EMPTY.as_ptr();
+            (*p).desc = EMPTY.as_ptr();
+            self_test_setparams(p);
         }
-        st.cast::<c_void>()
+        // SAFETY: every field has been written above, so the storage is a valid `OsslSelfTest`
+        // whose destructor body (a no-op) is sound; the returned raw pointer transfers ownership
+        // to the caller, whose release edge is `OSSL_SELF_TEST_free`.
+        unsafe { st.assume_init() }.into_raw().cast::<c_void>()
     })
 }
 
@@ -213,13 +251,10 @@ pub extern "C" fn OSSL_SELF_TEST_new(cb: Option<OsslCallback>, cbarg: *mut c_voi
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_SELF_TEST_free(st: *mut c_void) {
     guard_ffi((), || {
-        if st.is_null() {
-            return;
-        }
-        // SAFETY: the block came from `CRYPTO_zalloc` in the constructor and is
-        // released exactly once here. The object owns neither the callback nor
-        // its argument, so nothing else is released.
-        unsafe { CRYPTO_free(st, FILE, LINE_FREE_ST) };
+        // SAFETY: `st` is NULL or a value returned by [`OSSL_SELF_TEST_new`] and not already
+        // released; `from_raw` reclaims it (NULL yields `None`) and its `Drop` is the authority's
+        // `OPENSSL_free(st)` at `crypto/self_test_core.c:103`.
+        drop(unsafe { OwnedCtx::<OsslSelfTest>::from_raw(st.cast::<OsslSelfTest>()) });
     })
 }
 
@@ -648,3 +683,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SelfTestCb => zero_state_sweep_self_test_cb, OsslSelfTest => zero_state_sweep_ossl_self_test);

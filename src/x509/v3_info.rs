@@ -46,8 +46,10 @@ use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::{X509V3_R_BAD_OBJECT, X509V3_R_INVALID_SYNTAX};
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_info_access, NID_sinfo_access, OBJ_txt2obj};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -108,6 +110,10 @@ const V3_INFO_127: crate::runtime::err::err_sites::ErrSite =
 /// `v2i_AUTHORITY_INFO_ACCESS`'s bad method object at `v3_info.c:138`.
 const V3_INFO_138: crate::runtime::err::err_sites::ErrSite =
     v3_info_site(138, c"v2i_AUTHORITY_INFO_ACCESS", X509V3_R_BAD_OBJECT);
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the strings the two callbacks allocate
+// ---------------------------------------------------------------------------------------------
 
 /// `struct ACCESS_DESCRIPTION_st` — `ACCESS_DESCRIPTION`, from `include/openssl/x509v3.h`.
 #[repr(C)]
@@ -342,12 +348,18 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
         unsafe { i2t_ASN1_OBJECT(objtmp.as_mut_ptr(), 80, (*desc).method) };
         // SAFETY: both strings are NUL-terminated.
         let nlen = unsafe { strlen(objtmp.as_ptr()) + 3 + strlen((*vtmp).name) } + 1;
-        // SAFETY: `nlen` is the exact byte count the authority frees.
-        let ntmp = CRYPTO_malloc(nlen, FILE.as_ptr(), LINE_MALLOC).cast::<c_char>();
+        // SAFETY: `nlen` is the exact byte count the authority allocates at `:84`; the allocator
+        // answers NULL or a fresh block, which is handed to `vtmp->name` below.
+        let ntmp = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(nlen, FILE.as_ptr(), LINE_MALLOC)
+        }
+        .cast::<c_char>();
         if ntmp.is_null() {
             return i2v_ainfo_err(ret, tret);
         }
-        // SAFETY: `ntmp` has `nlen` bytes; both sources are NUL-terminated.
+        // SAFETY: `ntmp` has `nlen` bytes; both sources are NUL-terminated, and `(*vtmp).name` is
+        // the `CONF_VALUE`'s own string.
         unsafe {
             BIO_snprintf(
                 ntmp,
@@ -356,7 +368,14 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
                 objtmp.as_ptr(),
                 (*vtmp).name,
             );
-            CRYPTO_free((*vtmp).name.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_NAME);
+            // The authority's `OPENSSL_free(vtmp->name)` at `:88`: hand the old name to an owner
+            // whose `Drop` is that release, then install the fresh block, which `vtmp->name` now
+            // owns (released later by the `CONF_VALUE` destructor).
+            drop(OwnedStr::adopt(
+                (*vtmp).name,
+                SeamFile::new(FILE),
+                LINE_FREE_NAME,
+            ));
             (*vtmp).name = ntmp;
         }
         i += 1;
@@ -448,33 +467,38 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
             return v2i_ainfo_err(ainfo);
         }
         // SAFETY: `cnf->name` is NUL-terminated; the length is the `;` prefix.
+        // SAFETY: `cnf` is live and its `name` is NUL-terminated; the allocator answers NULL or a
+        // fresh block the authority releases at its own `:140` site.
         let objtmp = unsafe {
-            CRYPTO_strndup(
-                (*cnf).name,
-                (ptmp as usize) - ((*cnf).name as usize),
-                FILE.as_ptr(),
-                LINE_STRNDUP,
+            OwnedStr::adopt(
+                CRYPTO_strndup(
+                    (*cnf).name,
+                    (ptmp as usize) - ((*cnf).name as usize),
+                    FILE.as_ptr(),
+                    LINE_STRNDUP,
+                ),
+                SeamFile::new(FILE),
+                LINE_FREE_OBJ,
             )
         };
-        if objtmp.is_null() {
+        let Some(objtmp) = objtmp else {
             return v2i_ainfo_err(ainfo);
-        }
+        };
         // SAFETY: `objtmp` is NUL-terminated; `no_name` is 0.
-        unsafe { (*acc).method = OBJ_txt2obj(objtmp, 0) };
+        unsafe { (*acc).method = OBJ_txt2obj(objtmp.as_ptr(), 0) };
         // SAFETY: `acc` is live.
         if unsafe { (*acc).method }.is_null() {
             let mut msg: Vec<u8> = b"value=".to_vec();
             // SAFETY: `objtmp` is NUL-terminated.
-            unsafe { push_cstr(&mut msg, objtmp) };
+            unsafe { push_cstr(&mut msg, objtmp.as_ptr()) };
             msg.push(0);
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site_data(&V3_INFO_138, msg.as_ptr().cast::<c_char>()) };
-            // SAFETY: `objtmp` is this call's own.
-            unsafe { CRYPTO_free(objtmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_OBJ) };
+            // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`.
             return v2i_ainfo_err(ainfo);
         }
-        // SAFETY: `objtmp` is this call's own.
-        unsafe { CRYPTO_free(objtmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_OBJ) };
+        // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`; it runs at the end
+        // of this iteration.
         i += 1;
     }
     ainfo.cast::<c_void>()

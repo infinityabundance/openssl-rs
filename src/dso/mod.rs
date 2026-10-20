@@ -63,13 +63,16 @@ pub mod dlfcn;
 
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::dso::dlfcn::DSO_METHOD_openssl;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::ex_data::CryptoExData;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -84,6 +87,8 @@ extern "C" {
 
 /// The authority's translation unit.
 pub(crate) const FILE_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c".as_ptr();
+pub(crate) const FILE_LIB_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c");
 
 /// `DSO_new_method`'s `OPENSSL_zalloc`.
 const LINE_ZALLOC: c_int = 17;
@@ -182,22 +187,64 @@ pub(crate) const DSO_FLAG_NAME_TRANSLATION_EXT_ONLY: c_int = 0x02;
 /// `DSO_FLAG_GLOBAL_SYMBOLS`.
 pub(crate) const DSO_FLAG_GLOBAL_SYMBOLS: c_int = 0x20;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the object block and its two names
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is `DSO_free` minus the block -- the method-data stack and the
+// two names, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero `DSO`
+// has a NULL stack and two NULL names, so the body is the authority's own all-empty teardown (its
+// own doc) -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for Dso {
+    /// `DSO_free`'s body minus the block release: `OPENSSL_sk_free(meth_data)`, then the two
+    /// names. A zeroed (partially built) object has a NULL stack and two NULL names, so this is
+    /// the authority's own all-empty teardown there.
+    unsafe fn destroy_body(ptr: *mut Dso) {
+        // SAFETY: `ptr` is a live object per the trait contract, so its fields are readable and its
+        // stack is one this layer created.
+        unsafe {
+            OPENSSL_sk_free((*ptr).meth_data);
+            if !(*ptr).filename.is_null() {
+                CRYPTO_free(
+                    (*ptr).filename.cast::<c_void>(),
+                    FILE_LIB,
+                    LINE_FREE_FILENAME,
+                );
+            }
+            if !(*ptr).loaded_filename.is_null() {
+                CRYPTO_free(
+                    (*ptr).loaded_filename.cast::<c_void>(),
+                    FILE_LIB,
+                    LINE_FREE_LOADED,
+                );
+            }
+        }
+    }
+}
+
 /// `static DSO *DSO_new_method(DSO_METHOD *meth)`
 ///
 /// # Safety
 /// `meth` must be NULL or a `'static` method.
 unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Dso>(), FILE_LIB, LINE_ZALLOC).cast::<Dso>();
-    if ret.is_null() {
+    // Allocation and validity are separate states: `RawCtx::zalloc_at` is the authority's
+    // `OPENSSL_zalloc` and its `Drop` releases the block alone until every field is written.
+    let Some(mut raw) =
+        RawCtx::<Dso>::zalloc_at(FILE_LIB_SEAM, LINE_ZALLOC, FILE_LIB_SEAM, LINE_FREE_DSO)
+    else {
         return ptr::null_mut();
-    }
+    };
+    let ret = raw.as_ptr();
     // SAFETY: `ret` is a fresh, exclusively owned block of exactly this type.
     unsafe {
         (*ret).meth_data = OPENSSL_sk_new_null();
         if (*ret).meth_data.is_null() {
             // `sk_new` raises nothing of its own, so the authority raises here.
             raise_site(&err_sites::DSO_LIB_23);
-            CRYPTO_free(ret.cast::<c_void>(), FILE_LIB, LINE_FREE_STACK_FAIL);
+            // The authority's error arm releases the block alone at `:26`, before the object is
+            // handed out; the raw owner's `Drop` is exactly that release.
+            raw.set_release_line(LINE_FREE_STACK_FAIL);
+            drop(raw);
             return ptr::null_mut();
         }
         // The `meth` argument is accepted and **discarded**: the authority assigns
@@ -209,6 +256,9 @@ unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
         (*ret).meth = DSO_METHOD_openssl();
         (*ret).references = AtomicI32::new(1);
     }
+    // SAFETY: every field of `Dso` has been written above (the only early return released the raw
+    // block before this point), so the storage is a valid `Dso`.
+    let owned = unsafe { raw.assume_init() };
     // The authority's `CRYPTO_NEW_REF` cannot fail for an inline atomic, so its failure
     // arm (`sk_void_free` then `OPENSSL_free`, at line 30) is unreachable here. The
     // ordering it documents — the stack released before the object — is in the arm
@@ -218,12 +268,16 @@ unsafe fn new_method(meth: *mut DsoMethod) -> *mut Dso {
     unsafe {
         if let Some(init) = (*ret).meth.as_ref().and_then(|m| m.init) {
             if init(ret) == 0 {
-                DSO_free(ret);
+                // The authority's failure arm calls `DSO_free(ret)`: hand the block over to the
+                // C ABI's own reclaim path rather than running the destructor body here, so the
+                // unload/finish the authority performs are the authority's.
+                let raw = owned.into_raw();
+                DSO_free(raw);
                 return ptr::null_mut();
             }
         }
     }
-    ret
+    owned.into_raw()
 }
 
 /// `DSO *DSO_new(void)`
@@ -241,25 +295,35 @@ pub unsafe extern "C" fn DSO_new() -> *mut Dso {
 /// `int DSO_free(DSO *dso)`
 ///
 /// A NULL object answers **1**, so a caller may free unconditionally. The unload is
-/// skipped entirely when `DSO_FLAG_NO_UNLOAD_ON_FREE` is set, and a method that reports
-/// a failed unload or finish leaves the object **unreleased** and raises: the object is
-/// still owned by the caller at that point.
+/// skipped entirely when `DSO_FLAG_NO_UNLOAD_ON_FREE` is set.
+///
+/// A method that reports a failed unload or finish raises and answers 0, but the caller's
+/// reference is **already consumed**: the down-ref reaches and claims the last reference
+/// (installing the destroying sentinel) before the hooks run. The object is therefore not
+/// still owned by the caller, and a retry observes `Retired`, answers 0 without running
+/// the teardown, and cannot reclaim the block. The authority has the same ordering
+/// (`dso_lib.c:54-72` decrements before `dso_unload`/`finish` and returns 0 on their
+/// failure), so its object leaks there too; the crate's retry is at least a defined no-op
+/// instead of a second `fetch_sub` on an already-zero count.
 ///
 /// # Safety
-/// `dso` must be NULL or a live object not already released.
+/// `dso` must be NULL or a live object not already released. This call consumes the
+/// caller's reference even when it answers 0.
 #[no_mangle]
 pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
     guard_ffi(0, || {
         if dso.is_null() {
             return 1;
         }
-        // SAFETY: `dso` is live per the contract.
-        let now = unsafe { (*dso).references.fetch_sub(1, Ordering::AcqRel) };
-        if now <= 0 {
-            return 0;
-        }
-        if now > 1 {
-            return 1;
+        // SAFETY: `dso` is live per the contract. The shared gate claims the last reference
+        // with the destroying sentinel; `dso_unload` and `finish` are method callbacks and a
+        // re-entrant `DSO_free` from one must not run the teardown a second time. This frame
+        // owns the reference being released and, on `Last`, is the unique destructor runner.
+        match unsafe { crate::runtime::refcount::down_ref(&(*dso).references) } {
+            crate::runtime::refcount::DownRef::Last => {}
+            crate::runtime::refcount::DownRef::Remaining => return 1,
+            // The authority answers 0 when its down-ref observed an already-zero count.
+            crate::runtime::refcount::DownRef::Retired => return 0,
         }
         // SAFETY: `dso` is live, so its method pointer is a `'static` method.
         unsafe {
@@ -278,22 +342,11 @@ pub unsafe extern "C" fn DSO_free(dso: *mut Dso) -> c_int {
                     return 0;
                 }
             }
-            OPENSSL_sk_free((*dso).meth_data);
-            if !(*dso).filename.is_null() {
-                CRYPTO_free(
-                    (*dso).filename.cast::<c_void>(),
-                    FILE_LIB,
-                    LINE_FREE_FILENAME,
-                );
-            }
-            if !(*dso).loaded_filename.is_null() {
-                CRYPTO_free(
-                    (*dso).loaded_filename.cast::<c_void>(),
-                    FILE_LIB,
-                    LINE_FREE_LOADED,
-                );
-            }
-            CRYPTO_free(dso.cast::<c_void>(), FILE_LIB, LINE_FREE_DSO);
+        }
+        // The last reference is gone: reclaim the block and run the object's destructor body.
+        // SAFETY: `dso` is a live object a previous `into_raw` gave up and `Drop` has not released.
+        if let Some(owned) = unsafe { OwnedCtx::from_raw_at(dso, FILE_LIB_SEAM, LINE_FREE_DSO) } {
+            drop(owned);
         }
         1
     })
@@ -331,9 +384,10 @@ pub unsafe extern "C" fn DSO_up_ref(dso: *mut Dso) -> c_int {
             unsafe { raise_site(&err_sites::DSO_LIB_92) };
             return 0;
         }
-        // SAFETY: `dso` is live.
-        let i = unsafe { (*dso).references.fetch_add(1, Ordering::AcqRel) } + 1;
-        c_int::from(i > 1)
+        // SAFETY: `dso` is live. The shared protocol takes a relaxed increment on a live
+        // count and refuses a zero, destroying or `i32::MAX` count without changing it. This
+        // call acts for the caller's existing reference and acquires exactly one new one.
+        unsafe { crate::runtime::refcount::up_ref(&(*dso).references) }
     })
 }
 
@@ -565,14 +619,18 @@ pub unsafe extern "C" fn DSO_set_filename(dso: *mut Dso, filename: *const c_char
             if copied.is_null() {
                 return 0;
             }
+            // SAFETY: `copied` is a live duplicate no one else owns.
+            let dup = OwnedStr::adopt_nullable(copied, FILE_LIB_SEAM, LINE_FREE_FILENAME);
             if !(*dso).filename.is_null() {
-                CRYPTO_free(
-                    (*dso).filename.cast::<c_void>(),
-                    FILE_LIB,
+                // SAFETY: the object's current name is a live block this unit owns; release it at
+                // the authority's own site.
+                drop(OwnedStr::adopt_nullable(
+                    (*dso).filename,
+                    FILE_LIB_SEAM,
                     LINE_FREE_FILENAME,
-                );
+                ));
             }
-            (*dso).filename = copied;
+            (*dso).filename = dup.into_raw();
         }
         1
     })
@@ -707,20 +765,24 @@ pub unsafe extern "C" fn DSO_dsobyaddr(addr: *mut c_void, flags: c_int) -> *mut 
             return ptr::null_mut();
         }
         // SAFETY: `len` is a positive length, so the allocation is at least a byte.
-        let filename = CRYPTO_malloc(len as usize, FILE_LIB, LINE_MALLOC_BYADDR).cast::<c_char>();
+        let filename = OwnedStr::new(
+            len as usize,
+            FILE_LIB_SEAM,
+            LINE_MALLOC_BYADDR,
+            FILE_LIB_SEAM,
+            LINE_FREE_BYADDR,
+        );
         let mut ret = ptr::null_mut();
-        if !filename.is_null() {
-            // SAFETY: `filename` has `len` writable bytes.
-            if unsafe { DSO_pathbyaddr(addr, filename, len) } == len {
-                // SAFETY: `filename` is NUL-terminated by the call above, and the
-                // method is chosen by `DSO_load` itself (a NULL method).
-                ret = unsafe { DSO_load(ptr::null_mut(), filename, ptr::null_mut(), flags) };
+        if let Some(f) = &filename {
+            // SAFETY: `f` has `len` writable bytes.
+            if unsafe { DSO_pathbyaddr(addr, f.as_ptr(), len) } == len {
+                // SAFETY: `f` is NUL-terminated by the call above, and the method is chosen by
+                // `DSO_load` itself (a NULL method); `DSO_load` copies the name, so `f` may be
+                // released when this frame ends.
+                ret = unsafe { DSO_load(ptr::null_mut(), f.as_ptr(), ptr::null_mut(), flags) };
             }
         }
-        if !filename.is_null() {
-            // SAFETY: the block came from `CRYPTO_malloc`.
-            unsafe { CRYPTO_free(filename.cast::<c_void>(), FILE_LIB, LINE_FREE_BYADDR) };
-        }
+        // `filename` is released by its `Drop` at `LINE_FREE_BYADDR` as this frame ends.
         ret
     })
 }
@@ -881,6 +943,43 @@ pub(crate) unsafe fn meth_data_value(dso: *mut Dso, i: c_int) -> *mut c_void {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    static FINISH_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The method's `finish` hook is application-controlled. Re-entering `DSO_free` from it
+    /// must observe the destroying sentinel, not run the teardown a second time.
+    unsafe extern "C" fn reentrant_finish(dso: *mut Dso) -> c_int {
+        let target = FINISH_TARGET.load(Ordering::SeqCst) as *mut Dso;
+        if dso == target {
+            FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: `dso` is the object whose last reference is being released and whose
+            // block is still allocated here.
+            let _ = unsafe { DSO_free(dso) };
+        }
+        1
+    }
+
+    #[test]
+    fn free_reentry_from_the_finish_hook_is_a_noop() {
+        // SAFETY: the test builds and releases one object it exclusively owns.
+        unsafe {
+            let d = DSO_new();
+            assert!(!d.is_null());
+            let mut meth: DsoMethod = core::mem::zeroed();
+            meth.finish = Some(reentrant_finish);
+            let meth = Box::into_raw(Box::new(meth));
+            (*d).meth = meth;
+            FINISH_TARGET.store(d as usize, Ordering::SeqCst);
+            FINISH_CALLS.store(0, Ordering::SeqCst);
+            assert_eq!(DSO_free(d), 1);
+            FINISH_TARGET.store(0, Ordering::SeqCst);
+            assert_eq!(FINISH_CALLS.load(Ordering::SeqCst), 1);
+            // The method table is this test's own heap block; `Dso` borrowed it.
+            drop(Box::from_raw(meth));
+        }
+    }
 
     #[test]
     fn a_new_object_has_the_openssl_method_a_null_name_and_flag_zero() {
@@ -960,6 +1059,53 @@ mod tests {
         }
     }
 
+    static FAILED_FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn failing_finish(_dso: *mut Dso) -> c_int {
+        FAILED_FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+        0
+    }
+
+    /// `DSO_free` consumes the caller's last reference before running `finish`, so a failed
+    /// hook cannot return ownership (authority `dso_lib.c:54-72`). A retry is the shared
+    /// protocol's defined `Retired` no-op, not a second release.
+    #[test]
+    fn failed_finish_consumes_the_reference_and_a_retry_is_a_noop() {
+        // SAFETY: the test builds and releases one object and one method table it owns.
+        unsafe {
+            let d = DSO_new();
+            assert!(!d.is_null());
+            let mut meth: DsoMethod = core::mem::zeroed();
+            meth.finish = Some(failing_finish);
+            let meth = Box::into_raw(Box::new(meth));
+            (*d).meth = meth;
+            FAILED_FINISH_CALLS.store(0, Ordering::SeqCst);
+
+            assert_eq!(DSO_free(d), 0, "a failed finish reports failure");
+            assert_eq!(
+                (*d).references.load(Ordering::Relaxed),
+                crate::runtime::refcount::REF_DESTROYING,
+                "the caller's reference was consumed before the hook"
+            );
+            assert_eq!(DSO_free(d), 0, "a retry observes Retired: a defined no-op");
+            assert_eq!(
+                FAILED_FINISH_CALLS.load(Ordering::SeqCst),
+                1,
+                "the finish hook ran exactly once"
+            );
+
+            // Reclaim what the authority's failure path leaves unreleased; the test owns it.
+            // SAFETY: `d` is the block `DSO_new` allocated, its last reference was consumed
+            // above, and no other owner exists, so its destructor body runs exactly once here.
+            drop(OwnedCtx::<Dso>::from_raw_at(
+                d,
+                FILE_LIB_SEAM,
+                LINE_FREE_DSO,
+            ));
+            drop(Box::from_raw(meth));
+        }
+    }
+
     #[test]
     fn set_filename_copies_and_refuses_to_change_a_loaded_name() {
         // SAFETY: `d` is live and the literals are NUL-terminated.
@@ -981,3 +1127,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Dso => zero_state_sweep_dso);

@@ -26,7 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
@@ -34,6 +34,8 @@ use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_up_ref, EvpMd};
 use crate::evp::legacy_evp::{EVP_get_cipherbyname, EVP_get_digestbyname};
 use crate::params::{OsslParam, OSSL_PARAM_UTF8_STRING};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use crate::evp::mac::{
     EVP_MAC_CTX_free, EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_free,
@@ -42,6 +44,7 @@ use crate::evp::mac::{
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_utf8_string_ptr,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_ORIG_GLOBAL` — `crypto/evp/evp_lib.c`'s method-origin values, as
 /// `src/evp/cipher.rs:85` declares it. Repeated rather than re-exported for the same reason the
@@ -664,8 +667,9 @@ const FILE_PROVIDER_UTIL: *const c_char =
 /// A non-NULL `src` is `OPENSSL_memdup`'s copy, and a failed allocation is the only refusal.
 ///
 /// # Safety
-/// `src` is NULL or readable for `src_len` bytes; `dest`/`dest_len` are writable and `*dest` is
-/// either NULL or a block this allocator owns.
+/// `src` is NULL or readable for `src_len` bytes; `dest`/`dest_len` are writable. Any prior
+/// `*dest` is overwritten without being read or released. On success the caller's context owns
+/// the returned block and releases it through the allocator seam.
 pub(crate) unsafe fn ossl_prov_memdup(
     src: *const c_void,
     src_len: usize,
@@ -676,11 +680,14 @@ pub(crate) unsafe fn ossl_prov_memdup(
     // contract; `CRYPTO_memdup` is the authority's `OPENSSL_memdup`.
     unsafe {
         if !src.is_null() {
-            let copy = crate::runtime::mem::CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0);
-            if copy.is_null() {
+            let copy = CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0).cast::<u8>();
+            // SAFETY: the seam answered NULL or one fresh block this frame owns exclusively; it is
+            // not borrowed from `src` and no other owner will release it.
+            let Some(copy) = OwnedBuf::adopt_plain(copy.cast::<c_uchar>(), SeamFile::NULL, 0)
+            else {
                 return 0;
-            }
-            *dest = copy.cast::<u8>();
+            };
+            *dest = copy.into_raw().cast::<u8>();
             *dest_len = src_len;
         } else {
             *dest = ptr::null_mut();

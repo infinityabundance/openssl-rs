@@ -139,7 +139,9 @@ pub fn main(argv: &[String]) -> i32 {
             },
             // `case OPT_ITER: maciter = iter = opt_int_arg();` — `apps/pkcs12.c:306-308`.
             OptMatch::Value("iter", v) => {
-                iter = v.parse().unwrap_or(0);
+                // `opt_int_arg` returns -1 when the conversion fails (and prints its own
+                // diagnostic); preserve that value rather than silently defaulting to 0.
+                iter = v.parse().unwrap_or(-1);
             }
             // `case OPT_NOITER: iter = 1;` — `apps/pkcs12.c:309-311`.
             OptMatch::Flag("noiter") => iter = 1,

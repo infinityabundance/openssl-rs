@@ -31,7 +31,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::asn_pack::ASN1_item_pack;
@@ -47,6 +47,7 @@ use crate::asn1::x_algor::{X509Algor, X509_ALGOR_free, X509_ALGOR_new, X509_ALGO
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_nid2obj;
 
 /// `PKCS5_DEFAULT_ITER` — `include/openssl/evp.h:45`.
@@ -54,6 +55,62 @@ const PKCS5_DEFAULT_ITER: c_int = 2048;
 
 /// `PKCS5_DEFAULT_PBE1_SALT_LEN` — `include/crypto/evp.h:26`, which is `PKCS5_SALT_LEN`.
 const PKCS5_DEFAULT_PBE1_SALT_LEN: c_int = 8;
+
+/// An owned salt block drawn for [`PKCS5_pbe_set0_algor_ex`].
+///
+/// The authority allocates it with `OPENSSL_malloc` at `p5_pbe.c:53` and releases it at `:76`
+/// when the `RAND_bytes_ex` draw fails; on success `ASN1_STRING_set0` takes it over. The block
+/// stays a `CRYPTO_malloc` at the authority's own size and `file`/`line`; only its ownership is
+/// this type, whose `Drop` is the single plain release on the failure path.
+struct SaltBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl SaltBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)`, released by `Drop` at `file`/`release_line`, or
+    /// `None` when the allocator answers NULL. `len` is a byte count, so there is no product to
+    /// guard.
+    fn new(len: usize, file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<SaltBuf> {
+        let file = file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, alloc_line)
+        }
+        .cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(SaltBuf {
+                ptr: raw,
+                file,
+                line: release_line,
+            })
+        }
+    }
+
+    /// The block's address, for the caller-supplied copy or the `RAND` draw.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership to `ASN1_STRING_set0`, which takes the block over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for SaltBuf {
+    /// The authority's `OPENSSL_free(sstr)` at its own line, on the path that reaches it.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; `Drop` runs
+        // once, so this is its single release at the authority's own coordinates.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `struct PBEPARAM_st` — `include/openssl/x509.h:261-264`. The item's two columns in
 /// order: the salt octets and the iteration count (`ASN1_INTEGER` is an `ASN1_STRING`).
@@ -198,20 +255,31 @@ pub unsafe extern "C" fn PKCS5_pbe_set0_algor_ex(
             saltlen
         };
 
-        let sstr = CRYPTO_malloc(saltlen as usize, FILE.as_ptr(), 53).cast::<c_uchar>();
-        if sstr.is_null() {
+        // `saltlen` is positive here (zero became `PKCS5_DEFAULT_PBE1_SALT_LEN`, negatives
+        // refused above); the checked conversion keeps a hypothetical out-of-range value on the
+        // authority's allocation-failure arm rather than wrapping it into a short request.
+        let Ok(salt_bytes) = usize::try_from(saltlen) else {
             PBEPARAM_free(pbe);
             return 0;
-        }
+        };
+
+        // `SaltBuf::new` is the authority's `OPENSSL_malloc(saltlen)` at `p5_pbe.c:53`; its
+        // `Drop` is the `OPENSSL_free` at `:76` on the one failure path that reaches it.
+        let Some(sstr) = SaltBuf::new(salt_bytes, SeamFile::new(FILE), 53, 76) else {
+            PBEPARAM_free(pbe);
+            return 0;
+        };
         if !salt.is_null() {
-            ptr::copy_nonoverlapping(salt, sstr, saltlen as usize);
-        } else if RAND_bytes_ex(ctx, sstr, saltlen as usize, 0) <= 0 {
-            CRYPTO_free(sstr.cast::<c_void>(), FILE.as_ptr(), 59);
+            ptr::copy_nonoverlapping(salt, sstr.as_ptr(), salt_bytes);
+        } else if RAND_bytes_ex(ctx, sstr.as_ptr(), salt_bytes, 0) <= 0 {
+            // The authority frees `sstr` at `:59` *before* `PBEPARAM_free`; dropping it here
+            // keeps that order.
+            drop(sstr);
             PBEPARAM_free(pbe);
             return 0;
         }
 
-        ASN1_STRING_set0((*pbe).salt, sstr.cast::<c_void>(), saltlen);
+        ASN1_STRING_set0((*pbe).salt, sstr.into_raw().cast::<c_void>(), saltlen);
 
         let mut pbe_str: *mut Asn1String = ptr::null_mut();
         if ASN1_item_pack(pbe.cast::<c_void>(), PBEPARAM_it(), &mut pbe_str).is_null() {

@@ -83,7 +83,9 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_sbgp_autonomousSysNum;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_reserve,
     OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -122,6 +124,64 @@ const LINE_CANONIZE_MALLOC: c_int = 431;
 const LINE_V2I_STRDUP: c_int = 574;
 /// The same function's `OPENSSL_free(s)` (`v3_asid.c:580`).
 const LINE_V2I_FREE: c_int = 580;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the helper-allocated strings and the canonize block
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `AsRange` block still under construction.
+///
+/// [`as_identifier_choice_canonize`] allocates a fresh range for the merge and installs it into an
+/// `ASIdOrRange` element; until it is installed its release is the block alone, at the authority's
+/// own `OPENSSL_malloc` site (`:431`). [`Self::finish`] hands it to the element that takes it over.
+struct RawRange {
+    ptr: ptr::NonNull<AsRange>,
+}
+
+impl RawRange {
+    /// `CRYPTO_malloc(sizeof(*r), FILE, 431)`, or `None` when it answers NULL.
+    fn new() -> Option<RawRange> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<AsRange>()` bytes, which is exactly `ASRange`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<AsRange>(),
+                FILE.as_ptr(),
+                LINE_CANONIZE_MALLOC,
+            )
+        }
+        .cast::<AsRange>();
+        ptr::NonNull::new(raw).map(|ptr| RawRange { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut AsRange {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the `ASIdOrRange` element that takes it over.
+    fn finish(self) -> *mut AsRange {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawRange {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_CANONIZE_MALLOC,
+            )
+        };
+    }
+}
 
 /// One `v3_asid.c` raise coordinate, declared locally (see the module doc).
 const fn v3_asid_site(
@@ -654,43 +714,72 @@ unsafe fn i2r_ASIdentifierChoice(
                     ASIdOrRange_id => {
                         // SAFETY: the union's `id` arm is live under this selector.
                         let id = unsafe { (*aor).u.cast::<Asn1String>() };
-                        // SAFETY: `id` is a live integer; `i2s_ASN1_INTEGER` accepts a NULL method.
-                        let s = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), id) };
-                        if s.is_null() {
+                        // SAFETY: `id` is a live integer; `i2s_ASN1_INTEGER` accepts a NULL method
+                        // and answers a string this frame owns (or NULL).
+                        let s = unsafe {
+                            OwnedStr::adopt(
+                                i2s_ASN1_INTEGER(ptr::null_mut(), id),
+                                SeamFile::new(FILE),
+                                LINE_FREE_ID,
+                            )
+                        };
+                        let Some(s) = s else {
                             return 0;
-                        }
+                        };
                         // SAFETY: `out` is live and `s` is NUL-terminated.
                         unsafe {
-                            BIO_printf(out, c"%*s%s\n".as_ptr(), indent + 2, c"".as_ptr(), s)
+                            BIO_printf(
+                                out,
+                                c"%*s%s\n".as_ptr(),
+                                indent + 2,
+                                c"".as_ptr(),
+                                s.as_ptr(),
+                            )
                         };
-                        // SAFETY: `s` is this call's own allocation.
-                        unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_ID) };
+                        // `s` drops at the arm's end, releasing it at the authority's own `:83`.
                     }
                     ASIdOrRange_range => {
                         // SAFETY: the union's `range` arm is live under this selector.
                         let range = unsafe { (*aor).u.cast::<AsRange>() };
-                        // SAFETY: the range's `min` is a live integer.
-                        let s = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), (*range).min) };
-                        if s.is_null() {
-                            return 0;
-                        }
-                        // SAFETY: `out` is live and `s` is NUL-terminated.
-                        unsafe { BIO_printf(out, c"%*s%s-".as_ptr(), indent + 2, c"".as_ptr(), s) };
-                        // SAFETY: `s` is this call's own allocation.
-                        unsafe {
-                            CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_RANGE_MIN)
+                        // SAFETY: the range's `min` is a live integer; the seam answers a string this
+                        // frame owns (or NULL).
+                        let s = unsafe {
+                            OwnedStr::adopt(
+                                i2s_ASN1_INTEGER(ptr::null_mut(), (*range).min),
+                                SeamFile::new(FILE),
+                                LINE_FREE_RANGE_MIN,
+                            )
                         };
-                        // SAFETY: the range's `max` is a live integer.
-                        let s = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), (*range).max) };
-                        if s.is_null() {
+                        let Some(s) = s else {
                             return 0;
-                        }
-                        // SAFETY: `out` is live and `s` is NUL-terminated.
-                        unsafe { BIO_printf(out, c"%s\n".as_ptr(), s) };
-                        // SAFETY: `s` is this call's own allocation.
-                        unsafe {
-                            CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_RANGE_MAX)
                         };
+                        // SAFETY: `out` is live and `s` is NUL-terminated.
+                        unsafe {
+                            BIO_printf(
+                                out,
+                                c"%*s%s-".as_ptr(),
+                                indent + 2,
+                                c"".as_ptr(),
+                                s.as_ptr(),
+                            )
+                        };
+                        // The authority's own `:89` release of the lower bound.
+                        drop(s);
+                        // SAFETY: the range's `max` is a live integer; the seam answers a string
+                        // this frame owns (or NULL).
+                        let s = unsafe {
+                            OwnedStr::adopt(
+                                i2s_ASN1_INTEGER(ptr::null_mut(), (*range).max),
+                                SeamFile::new(FILE),
+                                LINE_FREE_RANGE_MAX,
+                            )
+                        };
+                        let Some(s) = s else {
+                            return 0;
+                        };
+                        // SAFETY: `out` is live and `s` is NUL-terminated.
+                        unsafe { BIO_printf(out, c"%s\n".as_ptr(), s.as_ptr()) };
+                        // `s` drops at the arm's end, releasing it at the authority's own `:93`.
                     }
                     _ => return 0,
                 }
@@ -1210,23 +1299,19 @@ unsafe fn as_identifier_choice_canonize(choice: *mut AsIdentifierChoice) -> c_in
                 // SAFETY: `a` is live.
                 match unsafe { (*a).type_ } {
                     ASIdOrRange_id => {
-                        // `CRYPTO_malloc` is the authority's safe `OPENSSL_malloc`.
-                        let r = CRYPTO_malloc(
-                            core::mem::size_of::<AsRange>(),
-                            FILE.as_ptr(),
-                            LINE_CANONIZE_MALLOC,
-                        )
-                        .cast::<AsRange>();
-                        if r.is_null() {
+                        let Some(r) = RawRange::new() else {
                             break 'done;
-                        }
-                        // SAFETY: `r` is a fresh allocation; `a` is live.
+                        };
+                        let rp = r.as_ptr();
+                        // SAFETY: `rp` is a fresh allocation; `a` is live.
                         unsafe {
-                            (*r).min = a_min;
-                            (*r).max = b_max;
+                            (*rp).min = a_min;
+                            (*rp).max = b_max;
                             (*a).type_ = ASIdOrRange_range;
-                            (*a).u = r.cast::<c_void>();
+                            (*a).u = rp.cast::<c_void>();
                         }
+                        // The `ASIdOrRange` element owns the block now.
+                        let _ = r.finish();
                     }
                     ASIdOrRange_range => {
                         // SAFETY: the `range` arm is live under the selector.
@@ -1430,13 +1515,21 @@ unsafe extern "C" fn v2i_ASIdentifiers(
                 break 'each ptr::null_mut();
             }
         } else {
-            // SAFETY: `value` is NUL-terminated; the file/line are this unit's.
-            let s = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP) };
-            if s.is_null() {
+            // SAFETY: `value` is NUL-terminated; the seam answers a string this frame owns (or
+            // NULL).
+            let dup = unsafe {
+                OwnedStr::adopt(
+                    CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP),
+                    SeamFile::new(FILE),
+                    LINE_V2I_FREE,
+                )
+            };
+            let Some(dup) = dup else {
                 break 'each ptr::null_mut();
-            }
+            };
+            let s = dup.as_ptr();
             // Recompute the split offsets the number arm above measured.
-            // SAFETY: `s` is a NUL-terminated duplicate owned by this frame.
+            // SAFETY: `s` is a NUL-terminated duplicate owned by `dup`.
             let i1 = unsafe { strspn(s, b"0123456789") };
             let i2 = {
                 // SAFETY: `s.add(i1)` points inside the same NUL-terminated buffer.
@@ -1450,8 +1543,8 @@ unsafe extern "C" fn v2i_ASIdentifiers(
             min = unsafe { s2i_ASN1_INTEGER(ptr::null_mut(), s) };
             // SAFETY: as above.
             max = unsafe { s2i_ASN1_INTEGER(ptr::null_mut(), s.add(i2)) };
-            // SAFETY: `s` is this call's own allocation.
-            unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_FREE) };
+            // The authority's own `:580` release of the duplicate.
+            drop(dup);
             if min.is_null() || max.is_null() {
                 // SAFETY: the site is a compiled-in constant.
                 unsafe { raise_site(&V3_ASID_582) };

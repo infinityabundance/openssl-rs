@@ -36,14 +36,14 @@ static EC_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 static DUMMY_NID: c_int = 1;
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn ec_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn ec_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(EC_TABLE) as *mut *mut OpenSslLhash
 }
 
 /// `void ENGINE_unregister_EC(ENGINE *e)` — `crypto/engine/tb_eckey.c:18-21`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_EC(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -59,7 +59,7 @@ unsafe extern "C" fn engine_unregister_all_ec() {
 /// `int ENGINE_register_EC(ENGINE *e)` — `:28-35`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_EC(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -94,7 +94,7 @@ pub extern "C" fn ENGINE_register_all_EC() {
 /// `int ENGINE_set_default_EC(ENGINE *e)` — `:45-52`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_EC(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -124,7 +124,7 @@ pub extern "C" fn ENGINE_get_default_EC() -> *mut Engine {
 /// `const EC_KEY_METHOD *ENGINE_get_EC(const ENGINE *e)` — `:66-69`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_EC(e: *const Engine) -> *const c_void {
     // SAFETY: `e` is the caller's engine.
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn ENGINE_get_EC(e: *const Engine) -> *const c_void {
 /// `int ENGINE_set_EC(ENGINE *e, const EC_KEY_METHOD *ec_meth)` — `:72-76`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_EC(e: *mut Engine, ec_meth: *const c_void) -> c_int {
     // SAFETY: `e` is the caller's engine.

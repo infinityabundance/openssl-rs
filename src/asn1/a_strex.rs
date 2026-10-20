@@ -60,6 +60,7 @@ use crate::asn1::a_mbstr::ASN1_mbstring_copy;
 use crate::asn1::a_type::i2d_ASN1_TYPE;
 use crate::asn1::der::ASN1_tag2str;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::as_str;
 use crate::asn1::text::to_hex;
 use crate::ffi::guard_ffi;
@@ -70,7 +71,7 @@ use crate::runtime::bio::sys::{fwrite, FILE};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_nid2ln, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::str::OPENSSL_strnlen;
 use crate::x509::x509name::{
@@ -507,18 +508,17 @@ unsafe fn do_dump(
     if der_len <= 0 {
         return -1;
     }
-    // SAFETY: `CRYPTO_malloc` answers null or `der_len` bytes.
-    let der_buf = CRYPTO_malloc(der_len as usize, FILE.as_ptr(), LINE).cast::<c_uchar>();
-    if der_buf.is_null() {
+    // The block is a local temporary: `OwnedBlock` allocates it at the authority's exact
+    // size/`file`/`line` and its `Drop` is the single plain release.
+    let Some(der_buf) = OwnedBlock::<c_uchar>::malloc(der_len as usize, SeamFile::new(FILE), LINE)
+    else {
         return -1;
-    }
-    let mut p = der_buf;
+    };
+    let mut p = der_buf.as_ptr();
     // SAFETY: `der_buf` owns `der_len` bytes and `p` advances within it.
     unsafe { i2d_ASN1_TYPE(&t, &mut p) };
     // SAFETY: `der_buf` holds `der_len` bytes.
-    let outlen = unsafe { do_hex_dump(io_ch, arg, der_buf, der_len) };
-    // SAFETY: `der_buf` came from this allocator and is not owned elsewhere.
-    unsafe { CRYPTO_free(der_buf.cast(), FILE.as_ptr(), LINE) };
+    let outlen = unsafe { do_hex_dump(io_ch, arg, der_buf.as_ptr(), der_len) };
     if outlen < 0 {
         return -1;
     }

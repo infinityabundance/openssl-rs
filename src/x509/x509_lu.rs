@@ -101,9 +101,11 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::mem::{offset_of, size_of, MaybeUninit};
 use core::ptr;
+use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::asn1::layout::Asn1String;
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{
@@ -111,6 +113,9 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_X509_STORE,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_find, OPENSSL_sk_find_all, OPENSSL_sk_free,
     OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
@@ -502,7 +507,12 @@ pub struct X509Store {
     /// `CRYPTO_EX_DATA ex_data` — the application extension block.
     pub(crate) ex_data: CryptoExData,
     /// `CRYPTO_REF_COUNT references` — the count `X509_STORE_up_ref`/`_free` move.
-    pub(crate) references: c_int,
+    ///
+    /// The authority's `CRYPTO_REF_COUNT` is an `int` moved through its atomic
+    /// `CRYPTO_UP_REF`/`CRYPTO_DOWN_REF` macros. `AtomicI32` has the same size and
+    /// alignment, so this field is layout-compatible with the C member while making
+    /// the exported refcount pair race-free.
+    pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` — the lock guarding `objs`.
     pub(crate) lock: *mut CryptoRwlock,
 }
@@ -528,7 +538,189 @@ const _: () = {
     assert!(offset_of!(X509Store, ex_data) == 128);
     assert!(offset_of!(X509Store, references) == 144);
     assert!(offset_of!(X509Store, lock) == 152);
+    assert!(core::mem::align_of::<X509Store>() == 8);
+    // The atomic swap above must not disturb the C layout: `CRYPTO_REF_COUNT` is a
+    // 4-byte, 4-aligned `int` on every supported target.
+    assert!(size_of::<AtomicI32>() == size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
 };
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the file's three heap records
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `X509_LOOKUP` block still under construction.
+///
+/// `X509_LOOKUP_new` allocates the record and runs the method's `new_item` hook; a hook that answers
+/// 0 reaches the authority's error path (`:27`), which releases the block *alone* -- the method's
+/// `free` hook must not run (the authority runs it only in `X509_LOOKUP_free`). This handle is that
+/// block-only release; [`Self::finish`] hands the block to the C caller, where [`OwnedCtx`] later
+/// releases it through the `free` hook and the block release at `:39`.
+struct RawLookup {
+    ptr: ptr::NonNull<X509Lookup>,
+}
+
+impl RawLookup {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 20)`, or `None` when it answers NULL.
+    fn new() -> Option<RawLookup> {
+        // `CRYPTO_zalloc` is a safe function.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<X509Lookup>(), FILE.as_ptr(), LINE_ZALLOC_LOOKUP)
+        }
+        .cast::<X509Lookup>();
+        ptr::NonNull::new(raw).map(|ptr| RawLookup { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut X509Lookup {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn finish(self) -> *mut X509Lookup {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawLookup {
+    /// The authority's `X509_LOOKUP_new` error-path release (`:27`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_LOOKUP_NEW,
+            )
+        };
+    }
+}
+
+/// An owned `X509_STORE` block still under construction.
+///
+/// `X509_STORE_new` zeroes the record and builds its members one at a time; a member that fails to
+/// build reaches the authority's `err:` label (`:222`), which releases only what has been built.
+/// Because the authority's constructor is `OPENSSL_zalloc`, every member is already a valid NULL/0
+/// on that path, so this handle's `Drop` is exactly the authority's partial release; only
+/// [`Self::finish`] hands the block to the C caller, where [`OwnedCtx`] later releases it through
+/// the full `X509_STORE_free` body.
+struct RawStore {
+    ptr: ptr::NonNull<X509Store>,
+}
+
+impl RawStore {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 184)`, or `None` when it answers NULL.
+    fn new() -> Option<RawStore> {
+        // `CRYPTO_zalloc` is a safe function.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<X509Store>(), FILE.as_ptr(), LINE_ZALLOC_STORE)
+        }
+        .cast::<X509Store>();
+        ptr::NonNull::new(raw).map(|ptr| RawStore { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut X509Store {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn finish(self) -> *mut X509Store {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawStore {
+    /// The authority's `X509_STORE_new` `err:` label (`:222`): the members built so far, released in
+    /// the authority's order, then the block. Every member is a valid NULL/0 when its constructor
+    /// has not been reached, and each release accepts NULL.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the zeroed block `new` allocated; each member is NULL/0 or owned by
+        // it.
+        unsafe {
+            X509_VERIFY_PARAM_free((*self.ptr.as_ptr()).param);
+            OPENSSL_sk_free((*self.ptr.as_ptr()).objs);
+            OPENSSL_sk_free((*self.ptr.as_ptr()).get_cert_methods);
+            CRYPTO_THREAD_lock_free((*self.ptr.as_ptr()).lock);
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_STORE_NEW,
+            );
+        }
+    }
+}
+
+// The three destructor bodies: each is what its unit's `*_free` performed by hand, minus the block
+// release `OwnedCtx`'s `Drop` now owns.
+
+// SAFETY: (a) holds: `destroy_body` is `X509_LOOKUP_free` -- it runs the method's `free` hook
+// exactly once (or nothing when the method is NULL) and never releases the enclosing block. (b)
+// holds: a zeroed lookup has a NULL method, so `destroy_body` is a no-op and the record is valid.
+unsafe impl CtxDestroy for X509Lookup {
+    /// Runs the method's `free` hook (the authority's `X509_LOOKUP_free` body).
+    unsafe fn destroy_body(ptr: *mut X509Lookup) {
+        // SAFETY: `ptr` is a live lookup per the trait contract; its method may be NULL.
+        unsafe {
+            let method = (*ptr).method;
+            if !method.is_null() {
+                if let Some(free_fn) = (*method).free {
+                    free_fn(ptr);
+                }
+            }
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is `x509_object_free_internal` -- it releases the object the
+// union names, by tag, and never the enclosing block. (b) holds: a zeroed object is tagged
+// `X509_LU_NONE` (0), for which the body frees nothing -- the obligation the safe
+// `OwnedCtx::<X509Object>::zalloc_at` in `X509_OBJECT_new` leans on.
+unsafe impl CtxDestroy for X509Object {
+    /// Releases the object the union names, by type (the authority's `x509_object_free_internal`).
+    unsafe fn destroy_body(ptr: *mut X509Object) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        unsafe { x509_object_free_internal(ptr) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is `X509_STORE_free` minus the block -- it shuts down and
+// frees exactly the store's own lookups, cache, extension block, verify parameters and lock, and
+// never the enclosing block. (b) holds: a zeroed store has every member NULL/0, so every release is
+// a NULL-tolerant no-op -- the obligation the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for X509Store {
+    /// The authority's `X509_STORE_free` body, without the block release [`OwnedCtx`]'s `Drop`
+    /// performs: shuts down and releases each lookup, the object cache, the extension block, the
+    /// verify parameters and the lock.
+    unsafe fn destroy_body(ptr: *mut X509Store) {
+        // SAFETY: `ptr` is a live store per the trait contract whose lookup stack is live.
+        unsafe {
+            let sk = (*ptr).get_cert_methods;
+            let num = OPENSSL_sk_num(sk);
+            for i in 0..num {
+                let lu = OPENSSL_sk_value(sk, i).cast::<X509Lookup>();
+                X509_LOOKUP_shutdown(lu);
+                X509_LOOKUP_free(lu);
+            }
+            OPENSSL_sk_free(sk);
+            OPENSSL_sk_pop_free((*ptr).objs, Some(x509_object_free_void));
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_X509_STORE,
+                ptr.cast(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            X509_VERIFY_PARAM_free((*ptr).param);
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+        }
+    }
+}
 
 /// `struct x509_store_ctx_st` — `X509_STORE_CTX`, from `include/crypto/x509.h:215-287`.
 ///
@@ -615,8 +807,12 @@ pub struct X509StoreCtx {
     pub(crate) rpk: *mut EvpPkey,
     /// `OSSL_LIB_CTX *libctx` — the library context the read path threads through.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — the property query the read path threads through.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — the property query the read path threads through. Private: every read goes
+    /// through [`X509StoreCtx::propq`] and every write through [`PropqSlot`], so the member-buffer
+    /// invariant is enforced at compile time (see [`MEMBER-BUFFER-MODEL.md`] and [`PropqSlot`]).
+    ///
+    /// [`MEMBER-BUFFER-MODEL.md`]: ../../forensics/memory-safety/campaign/safe-c33/MEMBER-BUFFER-MODEL.md
+    propq: *mut c_char,
 }
 
 const _: () = {
@@ -661,6 +857,47 @@ const _: () = {
     assert!(offset_of!(X509StoreCtx, propq) == 280);
 };
 
+impl X509StoreCtx {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `X509StoreCtx::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. `X509StoreCtx::propq` is private, `X509_STORE_CTX_new_ex`
+/// allocates the object zeroed, and the member is written only through this handle, so
+/// [`Self::of`] is **safe**.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    pub(crate) fn of(x: &'a mut X509StoreCtx) -> PropqSlot<'a> {
+        // SAFETY: `x` is live; `propq` is private to this module, constructed NULL by
+        // the zeroing allocation and written only by this handle, so the invariant
+        // holds and the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut x.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+
+    /// Assert that the freshly zeroed field is empty and answer the store token.
+    ///
+    /// # Safety
+    /// The caller establishes that `x.propq` is currently NULL.
+    pub(crate) unsafe fn assume_empty(self) -> EmptyCStrSlot<'a> {
+        // SAFETY: the caller establishes the field is NULL.
+        unsafe { self.0.assume_empty() }
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // X509_LOOKUP — `crypto/x509/x509_lu.c:18-158`.
 // ---------------------------------------------------------------------------------------------
@@ -675,23 +912,21 @@ const _: () = {
 /// `method` must be a live `X509_LOOKUP_METHOD` (the authority dereferences it unconditionally).
 #[no_mangle]
 pub unsafe extern "C" fn X509_LOOKUP_new(method: *mut X509LookupMethod) -> *mut X509Lookup {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ret = CRYPTO_zalloc(size_of::<X509Lookup>(), FILE.as_ptr(), LINE_ZALLOC_LOOKUP)
-        .cast::<X509Lookup>();
-    if ret.is_null() {
+    // `RawLookup` owns the fresh zeroed record; the hook's failure drops it (the block-only
+    // release), and success hands it to the caller.
+    let Some(ret) = RawLookup::new() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ret` is this call's own fresh allocation; `method` is live per the contract.
+    };
+    // SAFETY: `ret` is this call's own fresh zeroed block; `method` is live per the contract.
     unsafe {
-        (*ret).method = method;
+        (*ret.as_ptr()).method = method;
         if let Some(new_item) = (*method).new_item {
-            if new_item(ret) == 0 {
-                CRYPTO_free(ret.cast(), FILE.as_ptr(), LINE_FREE_LOOKUP_NEW);
+            if new_item(ret.as_ptr()) == 0 {
                 return ptr::null_mut();
             }
         }
     }
-    ret
+    ret.finish()
 }
 
 /// `void X509_LOOKUP_free(X509_LOOKUP *ctx)` — `crypto/x509/x509_lu.c:33-40`.
@@ -704,19 +939,11 @@ pub unsafe extern "C" fn X509_LOOKUP_new(method: *mut X509LookupMethod) -> *mut 
 /// `ctx` must be NULL or a live `X509_LOOKUP`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_LOOKUP_free(ctx: *mut X509Lookup) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract; its method may be NULL.
-    unsafe {
-        let method = (*ctx).method;
-        if !method.is_null() {
-            if let Some(free_fn) = (*method).free {
-                free_fn(ctx);
-            }
-        }
-        CRYPTO_free(ctx.cast(), FILE.as_ptr(), LINE_FREE_LOOKUP);
-    }
+    // SAFETY: `ctx` is NULL or a live lookup; reclaiming it runs the method's `free` hook and
+    // releases the block at the authority's own site.
+    drop(unsafe {
+        OwnedCtx::<X509Lookup>::from_raw_at(ctx, SeamFile::new(FILE), LINE_FREE_LOOKUP)
+    });
 }
 
 /// `int X509_LOOKUP_init(X509_LOOKUP *ctx)` — `crypto/x509/x509_lu.c:57-65`.
@@ -1051,15 +1278,19 @@ unsafe extern "C" fn x509_object_cmp(a: *const c_void, b: *const c_void) -> c_in
 /// [`X509_OBJECT_free`].
 #[no_mangle]
 pub unsafe extern "C" fn X509_OBJECT_new() -> *mut X509Object {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ret = CRYPTO_zalloc(size_of::<X509Object>(), FILE.as_ptr(), LINE_ZALLOC_OBJECT)
-        .cast::<X509Object>();
-    if ret.is_null() {
+    // `OwnedCtx::zalloc_at` is the authority's own `OPENSSL_zalloc(sizeof(*ret))`; it answers NULL when
+    // the allocator does, else a fresh zeroed object.
+    let Some(ret) = OwnedCtx::<X509Object>::zalloc_at(
+        SeamFile::new(FILE),
+        LINE_ZALLOC_OBJECT,
+        SeamFile::new(FILE),
+        LINE_FREE_OBJECT,
+    ) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ret` is this call's own fresh allocation.
-    unsafe { (*ret).type_ = X509_LU_NONE };
-    ret
+    };
+    // SAFETY: `ret` is a fresh zeroed object.
+    unsafe { (*ret.as_ptr()).type_ = X509_LU_NONE };
+    ret.into_raw()
 }
 
 /// `static void x509_object_free_internal(X509_OBJECT *a)` — `crypto/x509/x509_lu.c:489-503`.
@@ -1092,11 +1323,9 @@ unsafe fn x509_object_free_internal(a: *mut X509Object) {
 /// `a` must be NULL or a live `X509_OBJECT`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_OBJECT_free(a: *mut X509Object) {
-    // SAFETY: `a` is NULL or live per the contract.
-    unsafe {
-        x509_object_free_internal(a);
-        CRYPTO_free(a.cast(), FILE.as_ptr(), LINE_FREE_OBJECT);
-    }
+    // SAFETY: `a` is NULL or a live object; reclaiming it releases the object the union names (via
+    // `x509_object_free_internal`) and the block at the authority's own site.
+    drop(unsafe { OwnedCtx::<X509Object>::from_raw_at(a, SeamFile::new(FILE), LINE_FREE_OBJECT) });
 }
 
 /// `int X509_OBJECT_up_ref_count(X509_OBJECT *a)` — `crypto/x509/x509_lu.c:447-458`.
@@ -1362,26 +1591,31 @@ pub unsafe extern "C" fn X509_OBJECT_retrieve_match(
 ///
 /// `obj` must be a live `X509_OBJECT`.
 unsafe fn x509_object_dup(obj: *const X509Object) -> *mut X509Object {
-    // SAFETY: neither constructor touches the stack's elements.
-    let ret = unsafe { X509_OBJECT_new() };
-    if ret.is_null() {
+    // SAFETY: the constructor never touches a stack's elements.
+    let ret_raw = unsafe { X509_OBJECT_new() };
+    // `ret` owns the fresh block: its `Drop` is the object's release (a no-op while the tag is
+    // `X509_LU_NONE`) and the block free, at the authority's own site.
+    // SAFETY: `ret_raw` is NULL or the fresh object `X509_OBJECT_new` allocated and no one else
+    // owns.
+    let Some(mut ret) = (unsafe {
+        OwnedCtx::<X509Object>::from_raw_at(ret_raw, SeamFile::new(FILE), LINE_FREE_OBJECT)
+    }) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `ret` is live; `obj` is live per the contract.
     unsafe {
-        (*ret).type_ = (*obj).type_;
-        (*ret).data = (*obj).data;
+        (*ret.as_ptr()).type_ = (*obj).type_;
+        (*ret.as_ptr()).data = (*obj).data;
     }
     // SAFETY: `ret` is live and names the same object as `obj`.
-    if unsafe { X509_OBJECT_up_ref_count(ret) } == 0 {
-        // SAFETY: `ret` is this call's own object; it names the same object as `obj`.
-        unsafe {
-            (*ret).type_ = X509_LU_NONE;
-            CRYPTO_free(ret.cast(), FILE.as_ptr(), LINE_FREE_OBJECT_DUP);
-        }
+    if unsafe { X509_OBJECT_up_ref_count(ret.as_ptr()) } == 0 {
+        // SAFETY: `ret` is this call's own object; it names the same object as `obj`. The authority
+        // retags it and releases at its own `:595` site on this arm.
+        unsafe { (*ret.as_ptr()).type_ = X509_LU_NONE };
+        ret.set_release_line(LINE_FREE_OBJECT_DUP);
         return ptr::null_mut();
     }
-    ret
+    ret.into_raw()
 }
 
 /// The `X509_OBJECT *(*)(const void *)` copy shape `OPENSSL_sk_deep_copy` takes, adapting
@@ -1447,50 +1681,46 @@ unsafe extern "C" fn x509_crl_free_void(p: *mut c_void) {
 /// release through [`X509_STORE_free`].
 #[no_mangle]
 pub unsafe extern "C" fn X509_STORE_new() -> *mut X509Store {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ret =
-        CRYPTO_zalloc(size_of::<X509Store>(), FILE.as_ptr(), LINE_ZALLOC_STORE).cast::<X509Store>();
-    if ret.is_null() {
+    // `RawStore` owns the fresh zeroed record; each early return drops it (the authority's `err:`
+    // partial release), and only success hands it to the caller.
+    let Some(ret) = RawStore::new() else {
         return ptr::null_mut();
-    }
+    };
 
     // `if ((ret->objs = sk_X509_OBJECT_new(x509_object_cmp)) == NULL)`
     // SAFETY: the constructor takes only the comparator, which is this file's own.
     let objs = OPENSSL_sk_new(Some(x509_object_cmp));
     // SAFETY: `ret` is this call's own fresh allocation.
-    unsafe { (*ret).objs = objs };
+    unsafe { (*ret.as_ptr()).objs = objs };
     if objs.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_LU_189) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        return unsafe { x509_store_new_err(ret) };
+        return ptr::null_mut();
     }
 
     // SAFETY: `ret` is this call's own allocation.
-    unsafe { (*ret).cache = 1 };
+    unsafe { (*ret.as_ptr()).cache = 1 };
 
     // `if ((ret->get_cert_methods = sk_X509_LOOKUP_new_null()) == NULL)`
     // SAFETY: the constructor takes no arguments.
     let methods = OPENSSL_sk_new_null();
     // SAFETY: `ret` is this call's own allocation.
-    unsafe { (*ret).get_cert_methods = methods };
+    unsafe { (*ret.as_ptr()).get_cert_methods = methods };
     if methods.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_LU_194) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        return unsafe { x509_store_new_err(ret) };
+        return ptr::null_mut();
     }
 
     // `if ((ret->param = X509_VERIFY_PARAM_new()) == NULL)`
     // SAFETY: the constructor takes no arguments.
     let param = X509_VERIFY_PARAM_new();
     // SAFETY: `ret` is this call's own allocation.
-    unsafe { (*ret).param = param };
+    unsafe { (*ret.as_ptr()).param = param };
     if param.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_LU_199) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        return unsafe { x509_store_new_err(ret) };
+        return ptr::null_mut();
     }
 
     // `if (!CRYPTO_new_ex_data(CRYPTO_EX_INDEX_X509_STORE, ret, &ret->ex_data))`
@@ -1498,64 +1728,41 @@ pub unsafe extern "C" fn X509_STORE_new() -> *mut X509Store {
     if unsafe {
         CRYPTO_new_ex_data(
             CRYPTO_EX_INDEX_X509_STORE,
-            ret.cast(),
-            ptr::addr_of_mut!((*ret).ex_data),
+            ret.as_ptr().cast(),
+            ptr::addr_of_mut!((*ret.as_ptr()).ex_data),
         )
     } == 0
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_LU_203) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        return unsafe { x509_store_new_err(ret) };
+        return ptr::null_mut();
     }
 
     // `ret->lock = CRYPTO_THREAD_lock_new();`
     // SAFETY: the constructor takes no arguments.
     let lock = CRYPTO_THREAD_lock_new();
     // SAFETY: `ret` is this call's own allocation.
-    unsafe { (*ret).lock = lock };
+    unsafe { (*ret.as_ptr()).lock = lock };
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_LU_209) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        return unsafe { x509_store_new_err(ret) };
+        return ptr::null_mut();
     }
 
     // `if (!CRYPTO_NEW_REF(&ret->references, 1)) goto err;` — the header's `HAVE_ATOMICS` arm is
     // `refcnt->val = n; return 1;`, so the test is the assignment and the branch is unreachable
     // rather than omitted, exactly as `X509_STORE_up_ref` transcribes its half.
     // SAFETY: `references` is a field of this call's own allocation.
-    unsafe { (*ret).references = 1 };
-    ret
-}
-
-/// `X509_STORE_new`'s `err:` label (`crypto/x509/x509_lu.c:217-223`) — the shared failure exit.
-///
-/// Releases the four owned members in the authority's order and the block last, then answers NULL.
-/// A member the constructor has not reached is still zero, and each release accepts NULL. The
-/// authority does **not** call `CRYPTO_free_ex_data` here even when `CRYPTO_new_ex_data` succeeded
-/// (only `X509_STORE_free` does), so neither does this.
-///
-/// # Safety
-///
-/// `ret` must be a live allocation from [`CRYPTO_zalloc`] that only this call still owns.
-unsafe fn x509_store_new_err(ret: *mut X509Store) -> *mut X509Store {
-    // SAFETY: `ret` is this call's own live allocation; each member is NULL or owned by it.
-    unsafe {
-        X509_VERIFY_PARAM_free((*ret).param);
-        OPENSSL_sk_free((*ret).objs);
-        OPENSSL_sk_free((*ret).get_cert_methods);
-        CRYPTO_THREAD_lock_free((*ret).lock);
-        CRYPTO_free(ret.cast(), FILE.as_ptr(), LINE_FREE_STORE_NEW);
-    }
-    ptr::null_mut()
+    unsafe { (*ret.as_ptr()).references.store(1, Ordering::Relaxed) };
+    ret.finish()
 }
 
 /// `void X509_STORE_free(X509_STORE *xs)` — `crypto/x509/x509_lu.c:226-254`.
 ///
-/// Decrements the store's reference count; when it reaches zero, shuts down and releases every
-/// lookup method, frees the object cache, the extension block, the verify parameters and the lock,
-/// and releases the block. NULL is a no-op.
+/// Decrements the store's reference count; the caller that claims the last reference installs
+/// the destroying sentinel and then shuts down and releases every lookup method, frees the object
+/// cache, the extension block, the verify parameters and the lock. A zero, negative or destroying
+/// count is a defined no-op. NULL is a no-op.
 ///
 /// # Safety
 ///
@@ -1566,52 +1773,22 @@ pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the header's `HAVE_ATOMICS` arm answers the new
-    // count. The field is a plain `c_int` here (as `X509_STORE_up_ref` transcribes the other half),
-    // so the decrement is a plain store. `REF_PRINT_COUNT` is a trace hook that expands to nothing
-    // without `REF_COUNT_DEBUG`, and `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
-    // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.wrapping_sub(1) };
-    // SAFETY: `xs` is live and writable.
-    unsafe { (*xs).references = i };
-    if i > 0 {
-        return;
+    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the shared gate moves a multi-reference
+    // release with the authority's release ordering and claims the last reference with the
+    // destroying sentinel. A zero/negative/destroying count is a defined no-op; see
+    // `runtime::refcount` for the §17 divergence from the authority's over-free UB.
+    // SAFETY: the C-ABI caller guarantees `xs` is live and owns the one reference this
+    // free releases (the caller's obligation); on `Last` this frame is the unique
+    // destructor runner.
+    match unsafe { down_ref(&(*xs).references) } {
+        DownRef::Last => {}
+        DownRef::Remaining | DownRef::Retired => return,
     }
 
-    // SAFETY: `xs` is live and this is the last reference; its lookup stack is live.
-    let sk = unsafe { (*xs).get_cert_methods };
-    // SAFETY: `sk` is live or NULL, both accepted.
-    let num = unsafe { OPENSSL_sk_num(sk) };
-    for i in 0..num {
-        // SAFETY: `sk` is live and `i` is in range.
-        let lu = unsafe { OPENSSL_sk_value(sk, i).cast::<X509Lookup>() };
-        // SAFETY: `lu` is a live lookup the store owns.
-        unsafe {
-            X509_LOOKUP_shutdown(lu);
-            X509_LOOKUP_free(lu);
-        }
-    }
-    // SAFETY: `sk` is the store's own lookup stack, now empty of live elements.
-    unsafe { OPENSSL_sk_free(sk) };
-    // SAFETY: `xs` is live; its object cache is live and owns each element, released through the
-    // `void (*)(void *)` thunk over `X509_OBJECT_free`.
-    unsafe { OPENSSL_sk_pop_free((*xs).objs, Some(x509_object_free_void)) };
-
-    // SAFETY: `xs` is live and `ex_data` is a field of it.
-    unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_X509_STORE,
-            xs.cast(),
-            ptr::addr_of_mut!((*xs).ex_data),
-        )
-    };
-    // SAFETY: `param` is NULL or the object the constructor allocated.
-    unsafe { X509_VERIFY_PARAM_free((*xs).param) };
-    // SAFETY: `lock` is NULL or the lock the constructor created.
-    unsafe { CRYPTO_THREAD_lock_free((*xs).lock) };
-    // `CRYPTO_FREE_REF(&xs->references)` is empty on this profile's arm of the header.
-    // SAFETY: `xs` is this call's own allocation, released last.
-    unsafe { CRYPTO_free(xs.cast(), FILE.as_ptr(), LINE_FREE_STORE) };
+    // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`); reclaiming `xs` runs
+    // `X509_STORE_free`'s own body (each lookup, the object cache, the extension block, the verify
+    // parameters and the lock) and releases the block at the authority's own site.
+    drop(unsafe { OwnedCtx::<X509Store>::from_raw_at(xs, SeamFile::new(FILE), LINE_FREE_STORE) });
 }
 
 /// `int X509_STORE_lock(X509_STORE *xs)` — `crypto/x509/x509_lu.c:42-45`.
@@ -1655,18 +1832,20 @@ pub unsafe extern "C" fn X509_STORE_unlock(xs: *mut X509Store) -> c_int {
 
 /// `int X509_STORE_up_ref(X509_STORE *xs)` — `crypto/x509/x509_lu.c:256-266`.
 ///
-/// Increments the store's reference count, answering 1 unless the count was zero.
+/// Increments the store's reference count, answering 1 unless the count is zero or the store is
+/// being destroyed (in which case it answers 0 without changing the count).
 ///
 /// # Safety
 ///
 /// `xs` must be a live `X509_STORE`.
 #[no_mangle]
 pub unsafe extern "C" fn X509_STORE_up_ref(xs: *mut X509Store) -> c_int {
-    // SAFETY: `xs` is live per the contract.
-    let i = unsafe { (*xs).references.wrapping_add(1) };
-    // SAFETY: `xs` is live and writable.
-    unsafe { (*xs).references = i };
-    c_int::from(i > 1)
+    // The shared gate uses the authority's relaxed increment for a positive count and
+    // refuses to resurrect a zero or destroying store.
+    // SAFETY: the C-ABI caller guarantees `xs` is live and holds the reference this call
+    // acts for (a caller obligation, not something this wrapper can check); this call
+    // acquires exactly one new reference for the caller.
+    unsafe { up_ref(&(*xs).references) }
 }
 
 /// `X509_LOOKUP *X509_STORE_add_lookup(X509_STORE *xs, X509_LOOKUP_METHOD *m)` —
@@ -2494,7 +2673,7 @@ pub unsafe extern "C" fn ossl_x509_store_ctx_get_by_subject(
                     name,
                     &raw mut stmp,
                     (*ctx).libctx,
-                    (*ctx).propq,
+                    (*ctx).propq(),
                 );
                 if j != 0 {
                     tmp = &raw mut stmp;
@@ -2714,3 +2893,218 @@ pub unsafe extern "C" fn X509_STORE_CTX_get0_store(ctx: *const X509StoreCtx) -> 
     // SAFETY: `ctx` is live per the contract.
     unsafe { (*ctx).store }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::runtime::refcount::REF_DESTROYING;
+    use core::sync::atomic::AtomicUsize;
+
+    /// Target store for [`store_reenter_free`]. `AtomicUsize` avoids threading a context
+    /// pointer through the process-global ex-data registry.
+    static REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// An application `CRYPTO_EX_free` callback that re-enters `X509_STORE_free` with the
+    /// same object. It is ignored for every other store, so the process-global index cannot
+    /// disturb unrelated tests.
+    unsafe extern "C" fn store_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == REENTER_TARGET.load(Ordering::Relaxed) {
+            REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live store this callback was invoked for, and the outer
+            // `X509_STORE_free` is still inside its destructor body, so its block is live.
+            unsafe { X509_STORE_free(obj.cast::<X509Store>()) };
+        }
+    }
+
+    struct ResetTarget;
+    impl Drop for ResetTarget {
+        fn drop(&mut self) {
+            REENTER_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    /// A re-entrant `X509_STORE_free` from the store's own ex-data free callback must be a
+    /// defined no-op: the last releaser has already installed `REF_DESTROYING`, so the
+    /// callback cannot start a second teardown of the same block.
+    #[test]
+    fn store_free_reentrancy_is_defined_noop() {
+        REENTER_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_X509_STORE,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(store_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        let _reset = ResetTarget;
+        REENTER_TARGET.store(store as usize, Ordering::Relaxed);
+
+        // SAFETY: `store` is live and `idx` is the index registered above.
+        let set = unsafe { X509_STORE_set_ex_data(store, idx, store.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the store's only reference; the callback re-enters it.
+        unsafe { X509_STORE_free(store) };
+
+        assert_eq!(REENTER_CALLS.load(Ordering::Relaxed), 1);
+    }
+
+    /// Observations made by [`lookup_reenter_store_free`]. The hook is installed only on the
+    /// lookup method this test builds, so no other test can reach it.
+    static LOOKUP_FREE_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_SAW_SENTINEL: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_SAW_SENTINEL_AFTER: AtomicUsize = AtomicUsize::new(0);
+    static LOOKUP_UP_REF_ANSWER: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+    /// An application `X509_LOOKUP_METHOD.free` hook. It receives the lookup the store is
+    /// releasing and re-enters `X509_STORE_free` with that lookup's own `store_ctx`, which is the
+    /// store whose destructor body is running.
+    unsafe extern "C" fn lookup_reenter_store_free(ctx: *mut X509Lookup) {
+        LOOKUP_FREE_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: `ctx` is the live lookup this teardown is releasing; its `store_ctx` is the
+        // store whose body is running and whose block has not been released yet.
+        let store = unsafe { (*ctx).store_ctx };
+        if store.is_null() {
+            return;
+        }
+        // SAFETY: `store` is live per the above; its atomic count is readable.
+        let before = unsafe { (*store).references.load(Ordering::Relaxed) };
+        LOOKUP_SAW_SENTINEL.store(usize::from(before == REF_DESTROYING), Ordering::Relaxed);
+        // A store whose last reference has been claimed must not be resurrected.
+        // SAFETY: `store` is live per the above.
+        let answer = unsafe { X509_STORE_up_ref(store) };
+        LOOKUP_UP_REF_ANSWER.store(answer as usize, Ordering::Relaxed);
+        LOOKUP_REENTER_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: `store` is live; the outer `X509_STORE_free` installed the sentinel before
+        // running the body, so this re-entry must return without a second teardown.
+        unsafe { X509_STORE_free(store) };
+        // SAFETY: the re-entrant call returned as a no-op; the outer body still owns the block.
+        let after = unsafe { (*store).references.load(Ordering::Relaxed) };
+        LOOKUP_SAW_SENTINEL_AFTER.store(usize::from(after == REF_DESTROYING), Ordering::Relaxed);
+    }
+
+    /// The lookup `free` hook is the second store callback family (after ex-data). It runs from
+    /// `X509_STORE_free`'s own body while the store's members are still live but its count has
+    /// already been claimed as `REF_DESTROYING`. The re-entrant `X509_STORE_free` must be a no-op
+    /// and the block must still be released exactly once by the outer `OwnedCtx`.
+    #[test]
+    fn store_free_from_lookup_free_hook_is_defined_noop() {
+        LOOKUP_FREE_CALLS.store(0, Ordering::Relaxed);
+        LOOKUP_REENTER_CALLS.store(0, Ordering::Relaxed);
+        LOOKUP_SAW_SENTINEL.store(0, Ordering::Relaxed);
+        LOOKUP_SAW_SENTINEL_AFTER.store(0, Ordering::Relaxed);
+        LOOKUP_UP_REF_ANSWER.store(usize::MAX, Ordering::Relaxed);
+
+        // A minimal method vtable with only the `free` hook: `X509_STORE_add_lookup` installs it,
+        // and `X509_LOOKUP_free` dispatches it during the store's teardown.
+        let mut method = X509LookupMethod {
+            name: ptr::null_mut(),
+            new_item: None,
+            free: Some(lookup_reenter_store_free),
+            init: None,
+            shutdown: None,
+            ctrl: None,
+            get_by_subject: None,
+            get_by_issuer_serial: None,
+            get_by_fingerprint: None,
+            get_by_alias: None,
+            get_by_subject_ex: None,
+            ctrl_ex: None,
+        };
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        // SAFETY: `store` is live and `method` outlives the free below; the lookup is owned by
+        // the store's stack from this point.
+        let lookup = unsafe { X509_STORE_add_lookup(store, &mut method) };
+        assert!(!lookup.is_null());
+
+        // SAFETY: `store` is live and this call retires its only reference. Its body releases the
+        // lookup, whose `free` hook re-enters this same function.
+        unsafe { X509_STORE_free(store) };
+
+        assert_eq!(
+            LOOKUP_FREE_CALLS.load(Ordering::Relaxed),
+            1,
+            "the lookup free hook must run exactly once"
+        );
+        assert_eq!(
+            LOOKUP_REENTER_CALLS.load(Ordering::Relaxed),
+            1,
+            "the hook must have issued exactly one re-entrant free"
+        );
+        assert_eq!(
+            LOOKUP_SAW_SENTINEL.load(Ordering::Relaxed),
+            1,
+            "the store must already carry REF_DESTROYING when the hook runs"
+        );
+        assert_eq!(
+            LOOKUP_UP_REF_ANSWER.load(Ordering::Relaxed),
+            0,
+            "a destroying reference count must not be resurrected"
+        );
+        assert_eq!(
+            LOOKUP_SAW_SENTINEL_AFTER.load(Ordering::Relaxed),
+            1,
+            "the re-entrant free must leave the sentinel in place (no second teardown)"
+        );
+    }
+
+    /// The authority gates `CRYPTO_REF_COUNT` with its atomic `CRYPTO_UP_REF`; a plain
+    /// read-modify-write is a data race and loses concurrent increments, which can release a
+    /// store while another thread still holds a reference. Every increment here must land.
+    #[test]
+    fn store_refcount_is_atomic_under_concurrent_up_ref() {
+        const THREADS: i32 = 8;
+        const PER_THREAD: i32 = 2_000;
+
+        // SAFETY: `X509_STORE_new` takes no arguments and returns a fresh store or NULL.
+        let store = unsafe { X509_STORE_new() };
+        assert!(!store.is_null());
+        let addr = store as usize;
+
+        std::thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(move || {
+                    let p = addr as *mut X509Store;
+                    for _ in 0..PER_THREAD {
+                        // SAFETY: `p` is the store this scope keeps alive for every worker.
+                        assert_eq!(unsafe { X509_STORE_up_ref(p) }, 1);
+                    }
+                });
+            }
+        });
+
+        // SAFETY: the store is live and every `up_ref` above succeeded.
+        let count = unsafe { (*store).references.load(Ordering::SeqCst) };
+        assert_eq!(count, 1 + THREADS * PER_THREAD);
+
+        // SAFETY: `store` is live and carries exactly `count` references, so the final call here
+        // retires it.
+        unsafe {
+            for _ in 0..count {
+                X509_STORE_free(store);
+            }
+        }
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Lookup => zero_state_sweep_x509_lookup, X509Object => zero_state_sweep_x509_object, X509Store => zero_state_sweep_x509_store);

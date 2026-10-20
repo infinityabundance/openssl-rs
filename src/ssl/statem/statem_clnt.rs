@@ -60,6 +60,9 @@ use crate::packet::{
 use crate::rand::rand_lib::RAND_bytes;
 use crate::runtime::err::err_reasons::SSL_R_CERTIFICATE_VERIFY_FAILED;
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::foreign::OwnedCtx;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
 };
@@ -131,6 +134,8 @@ const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
 const SSL_R_BAD_SIGNATURE: c_int = 148;
 /// `SSL_R_BAD_KEY_SHARE` — `sslerr.h`.
 const SSL_R_BAD_KEY_SHARE: c_int = 384;
+/// `SSL_R_SSL3_SESSION_ID_TOO_LONG` — `sslerr.h:300`.
+const SSL_R_SSL3_SESSION_ID_TOO_LONG: c_int = 300;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -166,6 +171,14 @@ const FINISHED_MAX_LENGTH: usize = 64;
 const ENCRYPTED_EXTENSIONS_MAX_LENGTH: usize = 20000;
 const KEY_UPDATE_MAX_LENGTH: usize = 1;
 const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership reclaimed from the hand-written releases in this file
+// ---------------------------------------------------------------------------------------------
+
+// The shared [`OwnedBuf`] owns a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer
+// it took back), so its single release is `Drop`'s `CRYPTO_free` at the authority's own
+// `(file, line)` and no call site writes a `CRYPTO_free` by hand.
 
 #[inline]
 fn is_tls13(s: *const Ssl) -> bool {
@@ -1158,6 +1171,13 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     if p + sid_len + 2 + 1 > b.len() {
         return 0;
     }
+    // The authority bounds the echoed id before using it (`statem_clnt.c:1519-1524`);
+    // `tmp_session_id` is `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes.
+    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
+        return 0;
+    }
     // The TLS1.3 ServerHello echoes the ClientHello session id (`statem_clnt.c:1568`).
     let sid = &b[p..p + sid_len];
     // SAFETY: `s` is live; `tmp_session_id` is a 32-byte array.
@@ -1283,16 +1303,15 @@ pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -
                 }
                 // SAFETY: `s` is live; `eb[3..3+plen]` holds `plen` readable bytes.
                 unsafe {
-                    use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                    CRYPTO_free((*s).s3_alpn_selected.cast(), core::ptr::null(), 0);
-                    (*s).s3_alpn_selected =
-                        CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
-                            .cast::<u8>();
-                    if (*s).s3_alpn_selected.is_null() {
-                        (*s).s3_alpn_selected_len = 0;
+                    use crate::runtime::mem::CRYPTO_memdup;
+                    let mut slot = (*s).s3_alpn_selected_slot();
+                    slot.clear(core::ptr::null(), 0);
+                    let dup = CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
+                        .cast::<u8>();
+                    if dup.is_null() {
                         return 0;
                     }
-                    (*s).s3_alpn_selected_len = plen;
+                    slot.store(dup, plen);
                 }
             }
             off += elen;
@@ -1344,21 +1363,21 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
     // available, so the empty (in-handshake) context is the only one the reduced driver reaches.
     if ctx_len != 0 {
         // Post-handshake auth context: recorded and handled by the PHA driver.
-        // SAFETY: `s` is live.
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
         unsafe {
-            crate::runtime::mem::CRYPTO_free((*s).pha_context.cast(), core::ptr::null(), 0);
-            (*s).pha_context = crate::runtime::mem::CRYPTO_memdup(
+            let mut slot = (*s).pha_context_slot();
+            slot.clear(core::ptr::null(), 0);
+            let dup = crate::runtime::mem::CRYPTO_memdup(
                 body.as_ptr().add(1).cast(),
                 ctx_len,
                 core::ptr::null(),
                 0,
             )
             .cast::<u8>();
-            if (*s).pha_context.is_null() {
-                (*s).pha_context_len = 0;
+            if dup.is_null() {
                 return 0;
             }
-            (*s).pha_context_len = ctx_len;
+            slot.store(dup, ctx_len);
         }
     }
     // SAFETY: `s` is live.
@@ -1652,9 +1671,7 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server: bool) -> c_int {
-    use crate::evp::digest::{
-        EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    };
+    use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     use crate::rsa::ctrl::{
@@ -1726,11 +1743,17 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     }
     pos += hash_len;
 
-    // SAFETY: no preconditions.
-    let mctx = EVP_MD_CTX_new();
-    if mctx.is_null() {
+    // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned `EVP_MD_CTX`
+    // block (or NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_MD_CTX_free` -- its single release.
+    let Some(mctx_owner) =
+        (unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) })
+    else {
         return 0;
-    }
+    };
+    // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
+    // handle's `Drop` at the end of the frame.
+    let mctx = mctx_owner.as_ptr();
     let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut ok = false;
@@ -1747,7 +1770,6 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
         {
             ok = true;
         }
-        EVP_MD_CTX_free(mctx);
     }
     if !ok {
         return 0;
@@ -1794,8 +1816,8 @@ pub(crate) unsafe fn tls13_process_server_finished(s: *mut Ssl, msg: &[u8]) -> c
     if unsafe { (*s).s3_tmp_cert_req } != 0 {
         // The request context is echoed in the Certificate; in-handshake it is empty, under PHA it
         // is the server's `pha_context` (`statem_clnt.c:3857-3868`).
-        // SAFETY: `s` is live.
-        let (ctx, ctx_len) = unsafe { ((*s).pha_context, (*s).pha_context_len) };
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+        let (ctx, ctx_len) = unsafe { (*s).pha_context() };
         // SAFETY: `ctx` names `ctx_len` readable bytes when non-NULL, else the slice is empty.
         let context: &[u8] = if ctx.is_null() {
             &[]
@@ -1863,19 +1885,26 @@ pub(crate) unsafe fn tls13_process_server_finished(s: *mut Ssl, msg: &[u8]) -> c
 /// # Safety
 /// `s` is live.
 unsafe fn tls13_client_create_session(s: *mut Ssl) -> c_int {
-    use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_free, SSL_SESSION_new};
+    use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_new};
     // SAFETY: `s` is live.
     unsafe {
         if !(*s).session.is_null() {
             return 1;
         }
-        let ss = SSL_SESSION_new();
-        if ss.is_null() {
+        // The fresh session is owned here: its single release is the handle's `Drop` running
+        // `SSL_SESSION_free`, so the RNG refusal releases it and success hands it to the field with
+        // `into_raw`, whose own release is then the only one.
+        // SAFETY: `SSL_SESSION_new` is the matching constructor: it answered the whole, aligned
+        // session block (or NULL, which yields `None`), live and owned solely by this handle, whose
+        // `Drop` runs `SSL_SESSION_free` -- its single release.
+        let Some(ss_owner) = OwnedCtx::<crate::ssl::ssl_lib::SslSession>::new(SSL_SESSION_new())
+        else {
             return 0;
-        }
+        };
+        let ss = ss_owner.as_ptr();
         let mut id = [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH];
         if crate::rand::rand_lib::RAND_bytes(id.as_mut_ptr(), id.len() as c_int) <= 0 {
-            SSL_SESSION_free(ss);
+            // The refusal releases the session it built: returning drops `ss_owner`.
             return 0;
         }
         (*ss).session_id_length = id.len();
@@ -1888,7 +1917,9 @@ unsafe fn tls13_client_create_session(s: *mut Ssl) -> c_int {
             (*(*s).pending_cipher).id as core::ffi::c_ulong
         };
         ssl_session_calculate_timeout(ss);
-        (*s).session = ss;
+        // Success hands the session to the field; the borrow ends and the field's release is the
+        // session's only one.
+        (*s).session = ss_owner.into_raw();
     }
     1
 }
@@ -1930,8 +1961,8 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
         return 0;
     }
     // `tls_construct_client_certificate` (`statem_clnt.c:3851-3910`): the stored context is echoed.
-    // SAFETY: `s` is live.
-    let (ctx, ctx_len) = unsafe { ((*s).pha_context, (*s).pha_context_len) };
+    // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+    let (ctx, ctx_len) = unsafe { (*s).pha_context() };
     // SAFETY: `ctx` names `ctx_len` readable bytes when non-NULL, else the slice is empty.
     let context: &[u8] = if ctx.is_null() {
         &[]
@@ -2054,6 +2085,15 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     let sid_len = b[p] as usize;
     p += 1;
     if p + sid_len + 2 + 1 > b.len() {
+        return 0;
+    }
+    // The authority bounds the server's session id before copying it into the
+    // `SSL_MAX_SSL_SESSION_ID_LENGTH`-byte `session_id` (`statem_clnt.c:1519-1524`); without
+    // this check a hostile ServerHello length (up to 255) overruns the field and the
+    // session block it lives in.
+    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
     let session_id = &b[p..p + sid_len];
@@ -2350,7 +2390,7 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     // SAFETY: `point` is `ptlen` readable bytes.
     let peer = unsafe {
         crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
@@ -2451,31 +2491,48 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
-    use crate::runtime::mem::CRYPTO_free;
+    use crate::evp::pkey::{
+        evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EvpPkey,
+    };
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
-    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
-    let pkey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };
-    if pkey.is_null() {
+    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; and
+    // `evp_pkey_keygen` is the matching constructor, answering the whole, aligned key block (or
+    // NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_PKEY_free` -- its single release.
+    let Some(pkey) = (unsafe {
+        OwnedCtx::<EvpPkey>::new(evp_pkey_keygen(
+            libctx,
+            c"X25519".as_ptr(),
+            propq,
+            params.as_mut_ptr(),
+        ))
+    }) else {
         return 0;
-    }
+    };
     let mut pub_ = core::ptr::null_mut::<u8>();
     // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
-    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey, &mut pub_) };
+    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey.as_ptr(), &mut pub_) };
     if publen == 0 || publen > 255 {
-        // SAFETY: `pkey` is live and this call owns it.
-        unsafe { EVP_PKEY_free(pkey) };
+        // The refusal releases the key it built: returning drops `pkey`. `pub_` stays as the
+        // authority leaves it (the failed `get1` does not hand one back).
         return 0;
     }
-    // SAFETY: `s` is live.
+    // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
+    // frame no longer writes a `CRYPTO_free` by hand.
+    // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
+    else {
+        return 0;
+    };
+    // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
     unsafe {
         if !(*s).pkey.is_null() {
             EVP_PKEY_free((*s).pkey.cast());
         }
-        (*s).pkey = pkey.cast();
+        (*s).pkey = pkey.into_raw().cast();
     }
     // Derive the pre-master secret and the key schedule (`ssl_derive`, `s3_lib.c:5474`).
     let mut pms = [0u8; 64];
@@ -2492,28 +2549,22 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
         )
     } == 0
     {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
     if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     // SAFETY: `s` is live.
     if unsafe { crate::ssl::t1_enc::tls12_derive_key_block(s) } == 0 {
-        // SAFETY: `pub_` is the block `get1` allocated.
-        unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
         return 0;
     }
     let mut body = [0u8; 256];
     body[0] = publen as u8;
     // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
-    unsafe { core::ptr::copy_nonoverlapping(pub_, body.as_mut_ptr().add(1), publen) };
-    // SAFETY: `pub_` is the block `get1` allocated.
-    unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
+    unsafe { core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(1), publen) };
+    // The `get1` block's single release is this drop, at the authority's own release point.
+    drop(pub_);
     // SAFETY: `s` is live; `body` is `1 + publen` initialised bytes.
     unsafe {
         write_handshake_message(
@@ -2839,7 +2890,7 @@ unsafe fn tls12_client_read_ccs(s: *mut Ssl) -> c_int {
 /// # Safety
 /// `s` is live; `msg` is the full NewSessionTicket message.
 unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
         return 0;
     }
@@ -2881,14 +2932,16 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
         }
         (*sess).time = crate::ssl::ssl_sess::time_now_secs();
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site; a duplicated session's member is
+        // unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticklen;
+        // `tp` is this call's fresh block of `ticklen` bytes; the member is empty after `clear`.
+        (*sess).ext_tick_slot().store(tp, ticklen);
         (*sess).ext_tick_lifetime_hint = lifetime as core::ffi::c_ulong;
         (*sess).ext_tick_age_add = 0;
         let mut digest = [0u8; 32];
@@ -2911,7 +2964,7 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// # Safety
 /// `s` is live and the TLS1.3 handshake has completed; `msg` is the full NewSessionTicket message.
 pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
         return 0;
     }
@@ -2960,14 +3013,16 @@ pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -
         let sess = dup;
         (*sess).time = crate::ssl::ssl_sess::time_now_secs();
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site; the TLS1.3 session is a fresh duplicate
+        // whose member is unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticklen;
+        // `tp` is this call's fresh block of `ticklen` bytes; the member is empty after `clear`.
+        (*sess).ext_tick_slot().store(tp, ticklen);
         // RFC 8446 §4.6.1: never cache for longer than 7 days (`statem_clnt.c:2837-2842`).
         let mut lh = lifetime;
         if lh > 604800 {
@@ -3226,4 +3281,330 @@ unsafe fn client_wait(s: *mut Ssl) -> c_int {
     }
     let _ = MSG_FLOW_ERROR_13;
     -1
+}
+
+// -------------------------------------------------------------------------------------------
+// Adversarial allocator-refusal tests (`stage/p25/adv-tests`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// Drive the TLS1.2 and TLS1.3 client ticket writers with their replacement allocation refused and
+// assert the recorded safety improvement: the member is left `(NULL, 0)` rather than holding the
+// just-freed pointer, so the later session destructor cannot release a dangling block.
+//
+// Run alone in its own process, under the gate, with the ignore-aware filter:
+//   OPENSSL_RS_ADV_PROBE=1 cargo test --lib \
+//     ssl::statem::statem_clnt::adv_probe -- --ignored --exact --test-threads=1 --nocapture
+// or, for every probe one process at a time, `scripts/adv-probe.sh`.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::ssl_sess::{SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The TLS1.2 body `lifetime(4) || ticket_len(2) || ticket`.
+    fn tls12_ticket_msg(ticket: &[u8]) -> Vec<u8> {
+        let body_len = 4 + 2 + ticket.len();
+        let mut msg = vec![
+            SSL3_MT_NEWSESSION_TICKET as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&3600u32.to_be_bytes());
+        msg.push((ticket.len() >> 8) as u8);
+        msg.push(ticket.len() as u8);
+        msg.extend_from_slice(ticket);
+        msg
+    }
+
+    /// The TLS1.3 body `lifetime(4) || age_add(4) || nonce_len(1)=0 || ticket_len(2) || ticket ||
+    /// ext_len(2)=0`.
+    fn tls13_ticket_msg(ticket: &[u8]) -> Vec<u8> {
+        let body_len = 4 + 4 + 1 + 2 + ticket.len() + 2;
+        let mut msg = vec![
+            SSL3_MT_NEWSESSION_TICKET as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&3600u32.to_be_bytes());
+        msg.extend_from_slice(&0u32.to_be_bytes());
+        msg.push(0); // nonce_len
+        msg.push((ticket.len() >> 8) as u8);
+        msg.push(ticket.len() as u8);
+        msg.extend_from_slice(ticket);
+        msg.extend_from_slice(&[0, 0]); // extensions
+        msg
+    }
+
+    /// Shared assertions: exactly one request refused, at the writer's own `(NULL, 0)` site and of
+    /// the ticket length; the incumbent released before it; no double release observed.
+    fn assert_refusal_transcript(incumbent: usize, ticklen: usize) {
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == ticklen),
+            "the refused request is the writer's own (NULL,0) request of `ticklen`"
+        );
+        assert!(
+            ev[..at]
+                .iter()
+                .any(|e| matches!(e, Ev::Free { p } if *p == incumbent)),
+            "the incumbent is released before the refused replacement"
+        );
+        assert!(!adv_alloc::double_free(), "no release is performed twice");
+    }
+
+    /// `tls12_process_new_session_ticket` refusal path. The session has a zero id, so the writer
+    /// uses it directly (no duplicate); an incumbent ticket is present and is released before the
+    /// refused replacement.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn tls12_process_refused_ticket_alloc_leaves_ext_tick_empty() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        let ticklen = 16usize;
+        let msg = tls12_ticket_msg(&[0xAB; 16]);
+
+        // SAFETY: the session and `Ssl` block are this frame's own allocations.
+        let (sess, s, incumbent) = unsafe {
+            let sess = SSL_SESSION_new();
+            assert!(!sess.is_null());
+            // session_id_length stays 0, so the writer uses `sess` directly.
+            let incumbent = CRYPTO_malloc(20, core::ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*sess).ext_tick_slot().store(incumbent, 20);
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).session = sess;
+            (sess, s, incumbent)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(ticklen);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls12_process_new_session_ticket(s, &msg) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation returns the authority's error"
+        );
+        // SAFETY: `sess` is live.
+        let (p, n) = unsafe { (*sess).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path leaves the member (NULL, 0)"
+        );
+        assert_refusal_transcript(incumbent as usize, ticklen);
+
+        // SAFETY: `sess` is live and owned here; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(sess);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(!adv_alloc::double_free());
+    }
+
+    /// `tls13_process_new_session_ticket` refusal path. TLS1.3 always replaces the session with a
+    /// duplicate, so the writer's member is the duplicate's; the refusal must still leave it empty.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn tls13_process_refused_ticket_alloc_leaves_ext_tick_empty() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        let ticklen = 16usize;
+        let msg = tls13_ticket_msg(&[0xCD; 16]);
+
+        // SAFETY: the session and `Ssl` block are this frame's own allocations.
+        let (sess0, s) = unsafe {
+            let sess0 = SSL_SESSION_new();
+            assert!(!sess0.is_null());
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).session = sess0;
+            (sess0, s)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(ticklen);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls13_process_new_session_ticket(s, &msg) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation returns the authority's error"
+        );
+        // SAFETY: `s` is live; the writer replaced its session with a fresh duplicate (sess0 was
+        // released inside the writer).
+        let dup = unsafe { (*s).session };
+        assert!(
+            !dup.is_null() && dup != sess0,
+            "TLS1.3 replaces the session with a duplicate"
+        );
+        // SAFETY: `dup` is live.
+        let (p, n) = unsafe { (*dup).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path leaves the member (NULL, 0)"
+        );
+        // The duplicate's member is empty, so no incumbent free precedes the refusal.
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == ticklen),
+            "the refused request is the writer's own (NULL,0) request of `ticklen`"
+        );
+
+        // SAFETY: `dup` is the session the writer owns; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(dup);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(!adv_alloc::double_free());
+    }
+
+    /// Negative control (§16): prove the *refusal* instrument fires. Arming a size must make the
+    /// next matching `(NULL, 0)` request answer NULL and be recorded, so a probe that asserts a
+    /// refusal cannot pass with a dead detector.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_refusal_instrument_fires() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        adv_alloc::reset();
+        adv_alloc::arm(37);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(37, core::ptr::null(), 0)
+        };
+        adv_alloc::disarm();
+
+        assert!(p.is_null(), "the armed refusal must answer NULL");
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(
+                    e,
+                    Ev::Malloc {
+                        n: 37,
+                        site: true,
+                        refused: true
+                    }
+                ))
+                .count(),
+            1,
+            "the refusal must be recorded exactly once: {ev:?}"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// ServerHello session-id bounds (§16 negative control for the B4-D1 write)
+// -------------------------------------------------------------------------------------------
+//
+// RFC 8446/RFC 5246 bound `legacy_session_id_echo`/`session_id` at 32 bytes. The authority rejects
+// a longer value before any use (`statem_clnt.c:1519-1524`, `SSL_R_SSL3_SESSION_ID_TOO_LONG`), so
+// a hostile ServerHello cannot reach the fixed `SslSession::session_id` array. These tests assert
+// the refusal happens before the session is created or mutated.
+#[cfg(test)]
+mod server_hello_bounds {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+
+    /// `type || body_len || version(2) || random(32) || sid_len(1) || sid || cipher(2) || 0`.
+    fn server_hello(sid: &[u8]) -> Vec<u8> {
+        let body_len = 2 + SSL3_RANDOM_SIZE + 1 + sid.len() + 2 + 1;
+        let mut msg = vec![
+            SSL3_MT_SERVER_HELLO as u8,
+            (body_len >> 16) as u8,
+            (body_len >> 8) as u8,
+            body_len as u8,
+        ];
+        msg.extend_from_slice(&[0x03, 0x03]);
+        msg.extend_from_slice(&[0u8; SSL3_RANDOM_SIZE]);
+        msg.push(sid.len() as u8);
+        msg.extend_from_slice(sid);
+        // `TLS_RSA_WITH_AES_128_CBC_SHA256` (0x003C): a table row, so the size check is the
+        // only refusal this input reaches.
+        msg.extend_from_slice(&[0x00, 0x3c]);
+        msg.push(0);
+        msg
+    }
+
+    #[test]
+    fn tls12_oversized_server_session_id_is_refused_without_partial_state() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[0xA5; 64]);
+        // SAFETY: the connection is this test's own zeroed allocation; the server id is rejected
+        // before a session is created, so nothing else owns state here.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            let r = tls12_process_server_hello(s, &msg);
+            assert_eq!(r, 0, "a 64-byte session id must be refused");
+            assert!(
+                (*s).session.is_null(),
+                "the refusal must not publish a partially built session"
+            );
+            assert_eq!(
+                (*s).statem_state,
+                MSG_FLOW_ERROR_13,
+                "the refusal poisons the connection"
+            );
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_oversized_server_session_id_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[0x5A; 64]);
+        // SAFETY: as above.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            let r = tls_process_server_hello(s, &msg);
+            assert_eq!(r, 0, "a 64-byte echoed session id must be refused");
+            assert!((*s).session.is_null(), "no session is created on refusal");
+            assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
 }

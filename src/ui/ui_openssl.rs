@@ -25,14 +25,35 @@
 //! a password through `PEM_def_callback`'s **`userdata`** arm or a callback, which is the arm
 //! that never touches the console; the arms are stated in the probe's own header.
 //!
+//! ## Process-global console state and the concurrency contract
+//!
+//! `tty_in`, `tty_out`, `is_a_tty`, the saved-signal table, `ps` and the terminal states are
+//! process-global, exactly as the authority declares them (`crypto/ui/ui_openssl.c:156-177`).
+//! The authority does not synchronise them across `UI` objects, so two threads driving the default
+//! console method at the same time would race on these cells; in C that is a data race, and this
+//! port may not reproduce it (§17). The external ABI contract carried by these `unsafe extern "C"`
+//! entry points is therefore that a process runs at most one console session at a time — the same
+//! serialisation the authority's unsynchronised globals already require. `UI_set_default_method`
+//! additionally carries the documented non-thread-safety (`doc/man3/UI_new.pod`: "not thread-safe
+//! and should not be called at the same time as other OpenSSL functions").
+//!
+//! ## The signal edge
+//!
+//! `recsig` is installed over every catchable signal 1..`NX509_SIG`-1 except `SIGUSR1`,
+//! `SIGUSR2` and `SIGKILL`, so it may run on any thread at any instruction. Its only effect is a
+//! relaxed store to `INTR_SIGNAL`, an `AtomicI32`, which is how Rust expresses the authority's
+//! `volatile sig_atomic_t`; no allocation, lock or non-atomic access happens there. A plain
+//! `static mut` would be a Rust data race even where C's `sig_atomic_t` promise holds.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::runtime::bio::sys::{
-    errno, fclose, feof, ferror, fflush, fgets, fileno, fopen, fputs, stderr, strcmp, EINVAL,
-    ENXIO, FILE,
+    errno, fclose, feof, ferror, fflush, fgets, fileno, fopen, fputs, stderr, stdin, strcmp,
+    EINVAL, ENXIO, FILE,
 };
 use crate::runtime::bio::sys::{memcpy, strchr};
 use crate::runtime::mem::OPENSSL_cleanse;
@@ -90,7 +111,14 @@ static mut IS_A_TTY: c_int = 0;
 static mut SAVSIG: [SigAction; NX509_SIG] = [ZERO_SIGACTION; NX509_SIG];
 
 /// `static volatile sig_atomic_t intr_signal` — `crypto/ui/ui_openssl.c:273`.
-static mut INTR_SIGNAL: c_int = 0;
+///
+/// `AtomicI32` is the Rust representation of `volatile sig_atomic_t`: the handler runs at an
+/// arbitrary instruction, so every access must be atomic even though the authority target makes
+/// the C store single-copy and non-tearing. Only `Ordering::Relaxed` is needed (the value is a
+/// signal number, not a synchronisation token), and the store compiles to one instruction on every
+/// target that has 32-bit atomics. The compile-time gate below refuses a target where that is not
+/// guaranteed.
+static INTR_SIGNAL: AtomicI32 = AtomicI32::new(0);
 
 /// `static int ps` — `crypto/ui/ui_openssl.c:278`, the count of installed signal handlers.
 static mut PS: c_int = 0;
@@ -102,7 +130,11 @@ static mut PS: c_int = 0;
 ///
 /// # Safety
 ///
-/// `ui` is live; `uis` is a live queue element whose `out_string` is NUL-terminated.
+/// Called by `UI_process` between `open_session` and `close_session`, with the process's one
+/// console session open (the concurrency contract in the module header): `ui` is live, and `uis`
+/// is a live queue element whose `out_string` is non-NULL and NUL-terminated (`UI_add_info_string`
+/// and `UI_add_error_string` reject a NULL prompt before the element enters the queue). `TTY_OUT`
+/// is this session's output stream.
 unsafe extern "C" fn write_string(_ui: *mut Ui, uis: *mut UiString) -> c_int {
     // SAFETY: `uis` is live per the caller's contract.
     match unsafe { UI_get_string_type(uis) } {
@@ -128,7 +160,11 @@ unsafe extern "C" fn write_string(_ui: *mut Ui, uis: *mut UiString) -> c_int {
 ///
 /// # Safety
 ///
-/// As [`write_string`], and the reader this drives reads from the session's input stream.
+/// As [`write_string`], and the reader this drives reads from the session's input stream. Type
+/// specific preconditions established by the queue constructors: a `UIT_BOOLEAN` element's
+/// `action_desc` is non-NULL (`UI_add_input_boolean`'s contract) and a `UIT_VERIFY` element's
+/// `test_buf` is non-NULL (`UI_add_verify_string`'s contract), so the `fputs` and `strcmp` below
+/// cannot receive NULL.
 unsafe extern "C" fn read_string(ui: *mut Ui, uis: *mut UiString) -> c_int {
     // SAFETY: `uis` is live per the caller's contract.
     match unsafe { UI_get_string_type(uis) } {
@@ -192,6 +228,10 @@ unsafe extern "C" fn read_string(ui: *mut Ui, uis: *mut UiString) -> c_int {
 /// Reads in four-byte chunks until one contains a newline. Answers `0` when the stream ends
 /// first, which is the `goto error` the caller takes.
 ///
+/// §5 divergence: the authority leaves the four-byte chunk on the stack, but this chunk is the
+/// tail of an over-long line that may be a pass phrase. The buffer is cleansed on both answers,
+/// which changes no observable behaviour.
+///
 /// # Safety
 ///
 /// `in` is a live `FILE *`.
@@ -199,17 +239,19 @@ unsafe fn read_till_nl(in_: *mut FILE) -> c_int {
     const SIZE: usize = 4;
     let mut buf = [0 as c_char; SIZE + 1];
 
-    loop {
+    let ret = loop {
         // SAFETY: `buf` is five bytes and `in_` is a live stream.
         if unsafe { fgets(buf.as_mut_ptr(), SIZE as c_int, in_) }.is_null() {
-            return 0;
+            break 0;
         }
         // SAFETY: `buf` is NUL-terminated by `fgets`.
         if !unsafe { strchr(buf.as_ptr(), b'\n' as c_int) }.is_null() {
-            break;
+            break 1;
         }
-    }
-    1
+    };
+    // SAFETY: `buf` is this frame's own five-byte array.
+    unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast::<c_void>(), buf.len()) };
+    ret
 }
 
 /// `static int read_string_inner(UI *ui, UI_STRING *uis, int echo, int strip_nl)` —
@@ -230,16 +272,15 @@ unsafe extern "C" fn read_string_inner(
     echo: c_int,
     strip_nl: c_int,
 ) -> c_int {
-    let mut ok: c_int;
+    let mut ok: c_int = 0;
     let mut result = [0 as c_char; BUFSIZ];
     let maxsize: c_int = (BUFSIZ - 1) as c_int;
     let echo_eol: c_int = c_int::from(echo == 0);
 
     // SAFETY: the static is this unit's own.
-    unsafe { INTR_SIGNAL = 0 };
-    ok = 0;
-    // SAFETY: the static is this unit's own.
     unsafe { PS = 0 };
+
+    INTR_SIGNAL.store(0, Ordering::Relaxed);
 
     // SAFETY: the static table is this unit's own.
     unsafe { pushsig() };
@@ -302,7 +343,8 @@ unsafe extern "C" fn read_string_inner(
 ///
 /// # Safety
 ///
-/// `ui`/`uis` are live; `result` is this call's own `BUFSIZ`-byte buffer.
+/// `ui` is live; `uis` is unused (the authority's `error:` label never reads it); `result` is
+/// this call's own `BUFSIZ`-byte buffer.
 unsafe fn read_string_inner_error(
     ui: *mut Ui,
     _uis: *mut UiString,
@@ -311,8 +353,9 @@ unsafe fn read_string_inner_error(
     echo_eol: c_int,
     result: &mut [c_char; BUFSIZ],
 ) -> c_int {
-    // SAFETY: the static is this unit's own.
-    if unsafe { INTR_SIGNAL } == SIGINT {
+    // A handler may have stored the signal number at any point; the relaxed load is the only
+    // synchronisation this value needs.
+    if INTR_SIGNAL.load(Ordering::Relaxed) == SIGINT {
         ok = -1;
     }
     if echo_eol != 0 {
@@ -342,9 +385,17 @@ unsafe fn read_string_inner_error(
 /// of "this is not a terminal" answers as a non-fatal `is_a_tty = 0`; only an errno outside that
 /// set raises `UI_R_UNKNOWN_TTYGET_ERRNO_VALUE` and refuses.
 ///
+/// **Authority-parity residual (B29-R1).** The unknown-errno arm returns `0` with the session lock
+/// still held and both streams open, exactly as `ui_openssl.c:371-481` does; `UI_process` then
+/// returns `-1` without reaching `close_console`. That is a lock/fd liveness leak on a path that
+/// requires an errno outside the six the authority admits, not a memory-safety defect, and it is
+/// conserved rather than repaired (§17).
+///
 /// # Safety
 ///
-/// `ui` is live and its `lock` was created by `UI_new_method`.
+/// `ui` is live and its `lock` was created by `UI_new_method`. Per the module's concurrency
+/// contract, no other console session is running in this process: the streams, `is_a_tty` and
+/// `TTY_ORIG`/`TTY_NEW` are process-global.
 unsafe extern "C" fn open_console(ui: *mut Ui) -> c_int {
     // SAFETY: `ui` is live and `lock` is its own.
     if unsafe { CRYPTO_THREAD_write_lock((*ui).lock) } == 0 {
@@ -522,11 +573,11 @@ unsafe fn popsig() {
 ///
 /// # Safety
 ///
-/// A signal handler; it writes one `static` this unit owns and async-signal-safety holds because
-/// the store is a plain aligned `int`.
+/// A signal handler; the only store is a relaxed `AtomicI32` write, which is async-signal-safe on
+/// every target that has 32-bit atomics (the gate below). No allocation, lock, `FILE` or
+/// non-atomic static is touched.
 unsafe extern "C" fn recsig(i: c_int) {
-    // SAFETY: the static is this unit's own.
-    unsafe { INTR_SIGNAL = i };
+    INTR_SIGNAL.store(i, Ordering::Relaxed);
 }
 
 /// `static UI_METHOD ui_openssl` — `crypto/ui/ui_openssl.c:698-706`.
@@ -559,7 +610,10 @@ static mut DEFAULT_UI_METH: *const UiMethod = ptr::addr_of!(UI_OPENSSL);
 ///
 /// # Safety
 ///
-/// Takes no arguments and touches no caller pointer.
+/// Takes no arguments and touches no caller pointer. The answer is the one process-global method
+/// object: mutating it (for example through `UI_method_set_reader`) while any thread is driving a
+/// `UI` over it, or concurrently with [`UI_get_default_method`], is a data race, so mutation is a
+/// caller obligation performed before publication.
 #[no_mangle]
 pub unsafe extern "C" fn UI_OpenSSL() -> *mut UiMethod {
     ptr::addr_of_mut!(UI_OPENSSL)
@@ -572,7 +626,10 @@ pub unsafe extern "C" fn UI_OpenSSL() -> *mut UiMethod {
 ///
 /// # Safety
 ///
-/// Takes no arguments; the answer is NULL or a `'static` method object.
+/// Takes no arguments; the answer is NULL or a `'static` method object. No thread may call
+/// [`UI_set_default_method`] concurrently: the authority documents that setter as "not thread-safe
+/// and should not be called at the same time as other OpenSSL functions" (`doc/man3/UI_new.pod`),
+/// and this read is a plain non-atomic load of the same cell.
 #[no_mangle]
 pub unsafe extern "C" fn UI_get_default_method() -> *const UiMethod {
     // SAFETY: the static is this unit's own; only `UI_set_default_method` writes it.
@@ -585,20 +642,21 @@ pub unsafe extern "C" fn UI_get_default_method() -> *const UiMethod {
 ///
 /// # Safety
 ///
-/// `meth` is a live method object that outlives every future `UI_new`.
+/// `meth` is a live method object that outlives every future `UI_new`. The store is deliberately
+/// unsynchronised, as the authority writes it; the documented contract is that this call is not
+/// made at the same time as any other OpenSSL call (`doc/man3/UI_new.pod`).
 #[no_mangle]
 pub unsafe extern "C" fn UI_set_default_method(meth: *const UiMethod) {
     // SAFETY: the static is this unit's own.
     unsafe { DEFAULT_UI_METH = meth };
 }
 
-// The two `<stdio.h>` declarations the console method needs and `crate::runtime::bio::sys` does
-// not carry: a C-variadic `fprintf`, and `stdin` (which `sys` exposes only for `stderr`).
+// The one `<stdio.h>` declaration the console method needs and `crate::runtime::bio::sys` does
+// not carry: a C-variadic `fprintf`. `stdin`/`stderr` come from `sys`, which already declares
+// both as `static mut` `FILE *` variables.
 extern "C" {
     /// `int fprintf(FILE *, const char *, ...)` — `<stdio.h>`, C-variadic.
     fn fprintf(f: *mut FILE, fmt: *const c_char, ...) -> c_int;
-    /// `FILE *stdin` — `<stdio.h>`, a variable of type `FILE *` on glibc.
-    static mut stdin: *mut FILE;
 }
 
 // `int tcgetattr(int, struct termios *)` and `int tcsetattr(int, int, const struct termios *)` —
@@ -683,6 +741,9 @@ const ZERO_SIGACTION: SigAction = SigAction {
 const _: () = {
     assert!(core::mem::size_of::<Termios>() == 60);
     assert!(core::mem::size_of::<SigAction>() == 152);
+    // A relaxed `AtomicI32` store is the signal handler's only operation and must be a single
+    // lock-free instruction, which requires a target with native 32-bit atomics.
+    assert!(cfg!(target_has_atomic = "32"));
 };
 
 /// `ERR_raise_data(ERR_LIB_UI, UI_R_UNKNOWN_TTYGET_ERRNO_VALUE, "errno=%d", errno)` —
@@ -744,6 +805,90 @@ mod tests {
         unsafe {
             assert_eq!((*ui).meth, meth);
             UI_free(ui);
+        }
+    }
+
+    /// The signal edge itself: `recsig` runs from a delivered signal and records the number in
+    /// `INTR_SIGNAL`, and a recorded `SIGINT` turns the pending answer into `-1` while the per-read
+    /// buffer is cleansed. One test, because `PS` and `INTR_SIGNAL` are process-global and the
+    /// suite runs in parallel.
+    #[test]
+    fn the_signal_edge_records_sigint_and_cleanses_the_read_buffer() {
+        // SAFETY: `UI_OpenSSL` returns the `'static` console method.
+        let meth = unsafe { UI_OpenSSL() }.cast_const();
+        // SAFETY: `meth` is the `'static` console method.
+        let ui = unsafe { UI_new_method(meth) };
+        assert!(!ui.is_null());
+
+        // Install `recsig` for `SIGUSR1` directly: `pushsig` deliberately skips it, so the test
+        // never disturbs the console signal table or the process's SIGINT handling.
+        let mut sa = ZERO_SIGACTION;
+        sa.sa_handler = Some(recsig);
+        let mut old = ZERO_SIGACTION;
+        // SAFETY: `SIGUSR1` is a valid signal; `sa` and `old` are live, layout-matched structs.
+        let installed = unsafe { sigaction(SIGUSR1, ptr::addr_of!(sa), ptr::addr_of_mut!(old)) };
+        assert_eq!(installed, 0, "installing the test handler must succeed");
+        struct Restore(SigAction);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                // SAFETY: `self.0` is the disposition `sigaction` returned for `SIGUSR1`.
+                unsafe { sigaction(SIGUSR1, ptr::addr_of!(self.0), ptr::null_mut()) };
+            }
+        }
+        let _restore = Restore(old);
+
+        INTR_SIGNAL.store(0, Ordering::Relaxed);
+        // SAFETY: the installed handler is `recsig`, whose only effect is an atomic store.
+        assert_eq!(unsafe { raise(SIGUSR1) }, 0);
+        assert_eq!(INTR_SIGNAL.load(Ordering::Relaxed), SIGUSR1);
+
+        // With `PS == 0` the teardown takes only the SIGINT mapping and the cleanse arms: no
+        // terminal, saved-signal entry or stream is touched, and `ui` is never dereferenced.
+        // SAFETY: the statics are this unit's own and `ui` is a live object.
+        unsafe {
+            PS = 0;
+            INTR_SIGNAL.store(SIGINT, Ordering::Relaxed);
+            let mut result = [b'x' as c_char; BUFSIZ];
+            let rc = read_string_inner_error(ui, ptr::null_mut(), 1, 0, 0, &mut result);
+            assert_eq!(rc, -1);
+            assert!(result.iter().all(|&b| b == 0));
+            INTR_SIGNAL.store(0, Ordering::Relaxed);
+            UI_free(ui);
+        }
+    }
+
+    extern "C" {
+        /// `int raise(int)` — `<signal.h>`; delivers the signal to the calling thread.
+        fn raise(sig: c_int) -> c_int;
+    }
+
+    /// `read_till_nl`'s answers survive the cleanse: EOF before a newline is `0`, and a newline in
+    /// the drained tail is `1`. The cleanse itself has no observable result by design.
+    #[test]
+    fn read_till_nl_reports_eof_and_newline_after_draining() {
+        extern "C" {
+            /// `FILE *tmpfile(void)` — `<stdio.h>`.
+            fn tmpfile() -> *mut FILE;
+            /// `void rewind(FILE *)` — `<stdio.h>`.
+            fn rewind(f: *mut FILE);
+        }
+
+        // SAFETY: `tmpfile` allocates and opens its own stream.
+        let f = unsafe { tmpfile() };
+        assert!(!f.is_null());
+        // SAFETY: `f` is live; the literal is NUL-terminated.
+        unsafe {
+            assert!(fputs(c"abcdef".as_ptr(), f) >= 0);
+            rewind(f);
+        }
+        // SAFETY: `f` is live for the call.
+        assert_eq!(unsafe { read_till_nl(f) }, 0);
+        // SAFETY: `f` is live; `rewind` clears the read-end indicator before the second write.
+        unsafe {
+            assert!(fputs(c"ab\ncd".as_ptr(), f) >= 0);
+            rewind(f);
+            assert_eq!(read_till_nl(f), 1);
+            fclose(f);
         }
     }
 }

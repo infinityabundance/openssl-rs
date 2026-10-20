@@ -34,6 +34,24 @@
 # `courts` is the venue that produces evidence: it builds the pinned authority and
 # re-runs every court from scratch.
 #
+# Modes
+# -----
+# A conversion branch changes `src/` while the committed forensic evidence still
+# describes the *previous* implementation, so the frozen-evidence gates (determinism,
+# prerequisite atlases, prototype/dispatch courts, symbol ownership, the regression
+# guard, and the whole `courts` venue) are necessarily stale until an integration
+# seal regenerates them. Two explicit modes keep that honest rather than suppressing
+# anything:
+#
+#   * conversion (every push): the cheap gates that catch a defect where it is
+#     introduced -- clippy, build, unit tests, forbidden/no dependencies.
+#   * seal (`main`, a pull request, or a manual dispatch): the full frozen-evidence
+#     gates and the `courts` venue, which must still reject every unexplained
+#     behavioural change.
+#
+# A seal ref runs *everything*; nothing is weakened, only scoped to where it can be
+# true. See docs/CI.md.
+#
 # See docs/CI.md.
 
 name: ci
@@ -81,6 +99,30 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+
+  adversarial:
+    # Negative-control probes (§16 / §18). The allocator-injection tests install the
+    # process-global `CRYPTO_set_mem_functions` hook and are `#[ignore]`d in the routine suite, so
+    # a green `cargo test --lib` never implies they ran. They are also one-way, process-global
+    # state, so each must run alone in its own process. This job sets OPENSSL_RS_ADV_PROBE=1 and
+    # runs `scripts/adv-probe.sh`, which invokes every probe with `--ignored --exact
+    # --test-threads=1`, verifies exactly one test executed, and fails hard on any non-zero exit.
+    #
+    # Cheap (one test-target build plus short probe processes), so it lives with the conversion
+    # gates and runs on every push and pull request.
+    name: adversarial probes (allocator refusal / negative controls)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The test target embeds authority vector files with `include_str!` (see the lint job), so
+      # the authority source tree must be present before `cargo test --lib` can compile.
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
+
+      - name: Run adversarial probes (one process per probe)
+        run: bash scripts/adv-probe.sh
 
   static:
     name: static gates (build, tests, determinism, no-regression)
@@ -161,6 +203,10 @@ jobs:
       # regenerating it must reproduce it. Build-product digests are normalised
       # and reported; everything else is compared exactly.
       - name: Evidence determinism
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/evidence_determinism.py
 
       # The phase-completion predicate, with its two sensitivity controls. The FRF
@@ -169,6 +215,10 @@ jobs:
       # stratum refuses it rather than making its requirement vanish (D524). Without this
       # step the predicate was not run in CI at all.
       - name: Phase completion predicate (and its sensitivity controls)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/phase_state.py --self-test
 
       # An export the ownership atlas assigns a stratum must appear in that stratum's
@@ -177,6 +227,10 @@ jobs:
       # an export being invisible to every ledger at once, and D97 records sixty-nine
       # and nineteen such exports in two strata that had already sealed as complete.
       - name: Symbol ownership
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/ownership_audit.py
 
       # Four dependency inversions have been found in Phase 6 alone, every one by hand
@@ -185,6 +239,10 @@ jobs:
       # to every atlas built from exports. This gate reads the four atlases that cover
       # it and refuses a dependency nobody owns.
       - name: Prerequisite coverage
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/prerequisite_gate.py
 
       # The other half of the same question, and the one D132 fell through. The gate above
@@ -196,6 +254,10 @@ jobs:
       # authority-internal function a complete or in-progress plan names must be
       # transcribed, built, referenced or named by an explicit record.
       - name: Plan reconciliation
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/plan_reconciliation.py
 
       # The prerequisite atlases are derived from the authority's source and build
@@ -203,6 +265,10 @@ jobs:
       # for internal consistency here, and the `courts` job re-derives them from the
       # authority and fails on any difference.
       - name: Prerequisite atlases (committed artefacts)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/gen_prerequisite_atlas.py --check
 
       # The atlas records every authority prototype and nothing compared it with the
@@ -210,6 +276,10 @@ jobs:
       # `-> c_int` while the authority declares `BIGNUM *` (D65). This compares
       # return class and arity for every implemented export.
       - name: Export prototypes
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/prototype_court.py
 
       # The provider dispatch contract is numbers and types rather than symbols --
@@ -219,6 +289,10 @@ jobs:
       # the highest-value missing one; D180 is where it landed, and its first run found
       # the class again. It compares both halves against the Clang atlas.
       - name: Provider dispatch plane
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/dispatch_court.py
 
       # A court declaration is written by `gen_frf_courts.py` from one table, so a
@@ -227,6 +301,10 @@ jobs:
       # `version_or_commit` moving together at a release instead of the ones
       # somebody remembered.
       - name: FRF court declarations match their table
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/gen_frf_courts.py --check
 
       # Determinism alone cannot catch a generator that depends on the host's
@@ -234,9 +312,17 @@ jobs:
       # This stubs them out of PATH and requires the evidence to reproduce
       # anyway. It is the gate that keeps D33's fix from being undone.
       - name: Evidence portability (no host binutils)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: python3 forensics/tools/check_evidence_portability.py
 
       - name: Resolve trusted baseline ref
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         id: baseline
         run: |
           set -eu
@@ -263,6 +349,10 @@ jobs:
       #   2. the proposed baseline in the working tree equals the observed
       #      evidence, so the committed baseline cannot go stale.
       - name: Regression guard
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         run: |
           python3 forensics/tools/regression_guard.py \
             --baseline-ref "${{ steps.baseline.outputs.ref }}" \
@@ -272,6 +362,10 @@ jobs:
   courts:
     name: every active stratum's courts, and the re-derived guard
     runs-on: ubuntu-latest
+    if: >-
+      github.ref == 'refs/heads/main'
+      || github.event_name == 'pull_request'
+      || github.event_name == 'workflow_dispatch'
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -357,6 +451,10 @@ jobs:
           }
 
       - name: Resolve trusted baseline ref
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
         id: baseline
         run: |
           set -eu

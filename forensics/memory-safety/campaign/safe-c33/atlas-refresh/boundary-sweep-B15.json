@@ -1,0 +1,328 @@
+{
+  "receipt": "boundary-sweep-B15",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "2eef78548",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/runtime/thread_events.rs",
+      "src/runtime/init.rs",
+      "src/engine/eng_ctrl.rs"
+    ],
+    "working_tree_blob": {
+      "src/runtime/thread_events.rs": "ad916b081e1185a06d27b7c7d96aad1100bd3558",
+      "src/runtime/init.rs": "1471a85fae264c386ed11a4b2ce8f9ec695ca2a2",
+      "src/engine/eng_ctrl.rs": "7be7f2ed64b23ef752f33f6ca007da498103589b"
+    }
+  },
+  "stop_status": "CLEAR after repair. STOP was invoked twice on confirmed memory-safety defects: B15-D1 (heap-use-after-free when a whole-thread stop is requested from a handler running under a per-context stop) and B15-D2 (NULL dereference / one-past-the-array read in ENGINE_ctrl for command number 0 on a valid terminated or empty cmd_defns list). Both were repaired and their negative controls now pass; the ASan control for B15-D1 passed after the repair. No unresolved STOP condition remains. No safe caller can cause UB through the audited interfaces under the stated contracts; hidden obligations are 0. Nothing is promoted to SAFETY_DISCHARGED.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/initthread.c (THREAD_EVENT_HANDLER, GLOBAL_TEVENT_REGISTER, manage_thread_local :145-176, init_thread_stop :376-407, init_thread_deregister :454-514, ossl_init_thread_start :409-452, OPENSSL_thread_stop :283-298, ossl_ctx_thread_stop :300-306), crypto/init.c (OPENSSL_init_crypto :499-700, OPENSSL_atexit :726-766, OPENSSL_cleanup :378-478), crypto/engine/eng_ctrl.c :27-318 and include/openssl/engine.h :184-218.",
+    "abi": "C ABI unchanged: no exported symbol or signature, #[repr(C)] layout, allocator-seam coordinate or unsafe lint attribute changed. init_thread_stop is private and gained a bool return; OPENSSL_atexit keeps its published signature and ownership coordinates.",
+    "external_contracts": [
+      "The per-thread handler list is reached through one CRYPTO_THREAD_LOCAL key; a head is a CRYPTO_zalloc block owned by the thread until a whole-thread stop, the pthread key destructor, or OPENSSL_cleanup releases it. Every node is a CRYPTO_malloc block linked under the global register's write lock.",
+      "The global register (skhands + lock) guards every cross-thread read/write of a thread's head slot. A stop or deregistration walks the list under that lock; the authority calls application handlers while the lock is held, and this crate keeps that order (its lock refuses same-thread re-acquisition instead of deadlocking).",
+      "A handler is application-controlled and may call any exported function. A whole-thread stop requested from inside a per-context stop cannot take the register lock; the head belongs to the enclosing walk and must not be released. One further node push during a locked walk is refused (documented D-TEVENT-REENTRANT-1).",
+      "OPENSSL_cleanup is terminal and is assumed single-threaded. Concurrent cleanup-vs-cleanup is made safe by the STOPPED swap; cleanup must not race any other library call (authority assumption, restated at the function).",
+      "OPENSSL_atexit nodes form an intrusive LIFO list published by a lock-free push; OPENSSL_cleanup snaps the list once, calls each handler, releases each node through the CRYPTO_* seam, and discards anything pushed during the walk (the authority's single pass).",
+      "ENGINE.cmd_defns is caller-owned, immutable for the engine's lifetime and terminated by the first entry with cmd_num == 0 or cmd_name == NULL; each name/description is NUL-terminated. For the two string-fetch commands p is a writable buffer of the corresponding *_LEN result plus one byte; for GET_CMD_FROM_NAME it is a NUL-terminated name.",
+      "ENGINE.ctrl is application-controlled and is called with no crate lock, no Rust reference and no owned buffer live across the call."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B15-TE-1",
+      "file": "src/runtime/thread_events.rs",
+      "mechanism": "thread-local head ownership: get/set/manage_thread_local, alloc/fetch/clear spellings, global-register push/remove",
+      "disposition": "CONTRACTED",
+      "contract": "A head is created zeroed, published to the thread's key, then pushed into the register under the register write lock; failure at either step clears the key and releases only the fresh block. The thread's own key is the only writer of its slot; cross-thread readers take the register lock. Removal matches the exact head pointer and unlinks it before release.",
+      "defects": [],
+      "residuals": [
+        "B15-R3"
+      ]
+    },
+    {
+      "id": "B15-TE-2",
+      "file": "src/runtime/thread_events.rs",
+      "mechanism": "global register lifetime: create_global_tevent_register, get_global_tevent_register, init_thread_deregister's index/all arms, ossl_cleanup_thread",
+      "disposition": "CONTRACTED",
+      "contract": "The register is created once by CRYPTO_THREAD_run_once; its failure leaves it NULL and every user fails closed. The index arm holds the write lock for the whole walk and unlinks/frees matching nodes; the all arm is the terminal cleanup path, clears the published pointer first, walks every list, frees every head and node, then releases the lock, stack and register exactly once. All-arm reentrancy from a handler is outside the cleanup contract and recorded as B15-R2.",
+      "defects": [],
+      "residuals": [
+        "B15-R2"
+      ]
+    },
+    {
+      "id": "B15-TE-3",
+      "file": "src/runtime/thread_events.rs",
+      "mechanism": "the stop walks: init_thread_stop, init_thread_destructor, OPENSSL_thread_stop, OPENSSL_thread_stop_ex/ossl_ctx_thread_stop",
+      "disposition": "CONTRACTED",
+      "contract": "The walk holds the register lock, calls each matching handler with its registered arg, unlinks and frees it, and leaves non-matching nodes intact. It reports whether an enclosing stop owns the head: only the same-thread lock failure (the crate's EDEADLK divergence) is a refusal, and a refusing caller must neither release the head nor clear the thread's slot. The pthread destructor and the contextual stop use fetch semantics; the contextual stop never releases the head. The whole-thread stop clears the slot and releases the head only after the walk ran.",
+      "defects": [
+        "B15-D1"
+      ],
+      "residuals": [
+        "B15-R4"
+      ]
+    },
+    {
+      "id": "B15-TE-4",
+      "file": "src/runtime/thread_events.rs",
+      "mechanism": "handler registration/publication and the callback reentrancy edge",
+      "disposition": "CONTRACTED",
+      "contract": "ossl_init_thread_start allocates and fully initialises the node before publishing; publication reads and rewrites the head only under the register write lock. A handler runs under that lock, so a nested registration or deregistration on the same thread is refused (0), never deadlocked. The handler's arg is passed through unchanged and is the application's to keep alive.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B15-TE-5",
+      "file": "src/runtime/thread_events.rs",
+      "mechanism": "destructor_key sentinel/key cell and the test-only rearm",
+      "disposition": "CONTRACTED",
+      "contract": "The key is written once by pthread_key_create under a run-once and published by the sentinel store; every accessor is guarded by the sentinel, which cleanup resets before returning. KeyCell exposes no Rust reference to its inner value; only the pthread APIs read/write through the stable address. rearm_for_test is cfg(test), leaks the previous key by design and clears the new key's slot.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B15-IN-1",
+      "file": "src/runtime/init.rs",
+      "mechanism": "OPENSSL_atexit node ownership and concurrent publication",
+      "disposition": "CONTRACTED",
+      "contract": "Each registration allocates one CRYPTO_malloc node at the authority coordinate, fills it completely, and publishes it with a compare-exchange loop; a node is unreachable until the successful exchange and its single release is OwnedInitStop::Drop on the cleanup walk. The push is a genuine lock-free LIFO push, so concurrent registrations are neither lost nor duplicated.",
+      "defects": [
+        "B15-D3"
+      ],
+      "residuals": []
+    },
+    {
+      "id": "B15-IN-2",
+      "file": "src/runtime/init.rs",
+      "mechanism": "cleanup drain: run_atexit_handlers",
+      "disposition": "CONTRACTED",
+      "contract": "The drain snapshots the list once, calls each handler, reads next before releasing the node, and then clears the published slot exactly as the authority does. A node registered during the walk is not run by that walk and is never run later (the library is terminal). No loop means a self-registering handler cannot extend or repeat the teardown.",
+      "defects": [
+        "B15-D4"
+      ],
+      "residuals": [
+        "B15-R1"
+      ]
+    },
+    {
+      "id": "B15-IN-3",
+      "file": "src/runtime/init.rs",
+      "mechanism": "initialisation ordering and the run-once bodies: base/config/async/engine-dynamic, option classification, re-entrancy key",
+      "disposition": "CONTRACTED",
+      "contract": "Each RUN_ONCE/RUN_ONCE_ALT pair uses addressable once storage, records its body's result, and reads the recorded result on every later call. The configuration re-entrancy slot is set and never restored, as the authority does. Refusals occur after atexit/string/legacy steps and before config, matching the authority's side-effect boundary. Unknown bits are recorded in OPTSDONE.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B15-IN-4",
+      "file": "src/runtime/init.rs",
+      "mechanism": "atexit registration, cleanup ordering and terminal state",
+      "disposition": "CONTRACTED",
+      "contract": "atexit(OPENSSL_cleanup) is registered once under std::sync::Once; a genuine failure is cached. OPENSSL_cleanup checks BASE_INITED, wins a single STOPPED swap, then tears down in the authority's order (thread stop, atexit handlers, config key, async, config modules, thread machinery, EVP, ERR). Repeated calls after the win are no-ops. Cleanup must not race any other library call.",
+      "defects": [],
+      "residuals": [
+        "B15-R2"
+      ]
+    },
+    {
+      "id": "B15-IN-5",
+      "file": "src/runtime/init.rs",
+      "mechanism": "runtime identity, OPENSSL_die and the fork hooks",
+      "disposition": "CONTRACTED",
+      "contract": "Identity accessors return pointers into static C strings and never NULL except OPENSSL_info's documented unavailable cases. OPENSSL_die accepts NULL or NUL-terminated strings, copies them into a fresh Vec, writes fd 2 directly and aborts unconditionally; the fork hooks are empty on this profile.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B15-ENG-1",
+      "file": "src/engine/eng_ctrl.rs",
+      "mechanism": "caller-owned ENGINE_CMD_DEFN list traversal (by name, by number, first/next/len/desc/flags)",
+      "disposition": "CONTRACTED",
+      "contract": "The list is immutable, NUL-terminated by cmd_num == 0 or cmd_name == NULL, and outlives the engine. Every traversal step dereferences only a non-terminator entry; the by-number search refuses a match on the terminator, so command number 0 cannot reach a NULL name or the entry after the array. String results are NUL-terminated and bounded by the caller-provided buffer.",
+      "defects": [
+        "B15-D2"
+      ],
+      "residuals": []
+    },
+    {
+      "id": "B15-ENG-2",
+      "file": "src/engine/eng_ctrl.rs",
+      "mechanism": "ENGINE ctrl callback dispatch and the manual-command flag",
+      "disposition": "CONTRACTED",
+      "contract": "ENGINE_ctrl reads e->ctrl and e->flags once, routes the eight meta commands to the table only when a callback exists and MANUAL_CMD_CTRL is clear, and otherwise calls the engine's own ctrl(e, cmd, i, p, f). The callback is application-controlled; no lock, Rust reference or owned buffer is held across it. NULL e is answered 0 before any dereference.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B15-ENG-3",
+      "file": "src/engine/eng_ctrl.rs",
+      "mechanism": "ENGINE_ctrl_cmd / ENGINE_ctrl_cmd_string argument conversion",
+      "disposition": "CONTRACTED",
+      "contract": "Name lookup uses the same terminated-list contract; a missing/zero command fails closed (or succeeds silently when cmd_optional). The string form checks executability and flags before touching arg, rejects input for NO_INPUT and missing input for the other flags, and parses NUMERIC with strtol requiring full consumption. arg is passed as an opaque pointer, never retained.",
+      "defects": [],
+      "residuals": []
+    }
+  ],
+  "defects": [
+    {
+      "id": "B15-D1",
+      "file": "src/runtime/thread_events.rs",
+      "lines_pre_fix": "752-791, 874-889",
+      "lines_post_fix": "757-796, 882-903",
+      "severity": "high",
+      "class": "heap-use-after-free of the thread-local list head across a reentrant stop",
+      "description": "ossl_ctx_thread_stop fetches the head without clearing the thread's slot and calls init_thread_stop, which holds the global register write lock across application handlers. A handler calling OPENSSL_thread_stop() cleared the slot, failed to take the lock (same-thread EDEADLK), then still ran init_thread_remove_handlers and CRYPTO_free(heads). The enclosing init_thread_stop resumed and wrote *hands (and walked nodes through the freed head), which ASan reported as a WRITE of size 8 in init_thread_stop at thread_events.rs:781 on the pre-fix candidate.",
+      "fix": "init_thread_stop now answers whether the caller may release the head: false only when this thread already holds the register lock. OPENSSL_thread_stop restores the slot and returns before remove/release/clean_local on that refusal; every other path is unchanged. ASan negative control: pre-fix heap-use-after-free; post-fix clean.",
+      "control": "runtime::thread_events::tests::a_handler_that_stops_the_thread_during_a_context_stop_is_refused"
+    },
+    {
+      "id": "B15-D2",
+      "file": "src/engine/eng_ctrl.rs",
+      "lines_pre_fix": "118-130",
+      "lines_post_fix": "118-140",
+      "severity": "high",
+      "class": "NULL dereference and one-past-the-array read from a C-valid hostile command number (authority-parity UB)",
+      "description": "int_ctrl_cmd_by_num stops on the terminator and compares its cmd_num (0) against the requested number. For an empty but valid cmd_defns list and ENGINE_ctrl(e, GET_FIRST_CMD_TYPE reached through GET_NAME_LEN, i = 0), the terminator matched; int_ctrl_helper then called strlen(cdp->cmd_name == NULL) (cmd 14/15) or read defns[idx+1] (cmd 12). The authority has the same fault; §17 forbids reproducing it. The pre-fix control died with SIGSEGV.",
+      "fix": "Reject a terminator match in int_ctrl_cmd_by_num and return -1, which reaches the existing ENGINE_R_INVALID_CMD_NUMBER arm. Valid command numbers are unchanged. Recorded divergence: command 0 now raises instead of crashing (and adds one error-queue entry on the ENGINE_cmd_is_executable(e, 0) path).",
+      "control": "engine::eng_ctrl::tests::a_zero_command_number_does_not_match_the_terminator"
+    },
+    {
+      "id": "B15-D3",
+      "file": "src/runtime/init.rs",
+      "lines_pre_fix": "1004-1009",
+      "lines_post_fix": "1004-1033",
+      "severity": "medium",
+      "class": "lost update on concurrent OPENSSL_atexit publication",
+      "description": "OPENSSL_atexit read STOP_HANDLERS and then stored a new head, so two concurrent registrations could both read the same head: one node was dropped (its handler never ran) and leaked. The authority's C code uses the same unsynchronised load/store (a data race there); this crate already uses AtomicPtr and must not reproduce the race.",
+      "fix": "Publish with a compare-exchange loop; the node's next is rewritten only while it is still uniquely owned. Pre-fix control observed 149/512 surviving registrations; post-fix 512/512.",
+      "control": "runtime::init::tests::concurrent_atexit_registrations_all_survive"
+    },
+    {
+      "id": "B15-D4",
+      "file": "src/runtime/init.rs",
+      "lines_pre_fix": "1015-1035",
+      "lines_post_fix": "1035-1060",
+      "severity": "low",
+      "class": "cleanup-loop divergence: a handler re-registering itself can hang OPENSSL_cleanup",
+      "description": "run_atexit_handlers looped until the list stayed empty, so a node registered by a handler during the walk was run by the same cleanup. A handler that re-registers itself each time made OPENSSL_cleanup loop forever. The authority walks once and then sets stop_handlers = NULL, so the node is never run (and is leaked).",
+      "fix": "One snapshot and one walk, then clear the slot, matching the authority. The pre-fix control observed the late handler run once; post-fix it does not run.",
+      "control": "runtime::init::tests::a_handler_registered_during_the_drain_is_not_run_by_it"
+    }
+  ],
+  "sweep": [
+    {
+      "concern": "thread-event list lifetime and cross-thread access",
+      "result": "Every read/write of a head slot outside the owning thread's TLS access is under the register's write lock. The three manage_thread_local spellings, push/remove, the index/all deregistration arms and the destructor were traced for partial-init and failure states; no pointer is published before it is complete, and every failure path releases only its own fresh block."
+    },
+    {
+      "concern": "callbacks under locks (reentrancy)",
+      "result": "init_thread_stop calls application handlers with the register write lock held, as the authority does. Nested registration/deregistration/context-stop is refused by the non-recursive lock and releases only the nested attempt's own allocation. The whole-thread nested stop was the one unsafe path (B15-D1) and is now a no-op."
+    },
+    {
+      "concern": "cleanup ordering and terminal state",
+      "result": "OPENSSL_cleanup's order matches the authority for the landed subset (thread stop, atexit drain, config key, async, config modules, thread machinery, EVP, ERR). Repeated cleanup is a no-op. The init-vs-cleanup race is outside the C contract and is now stated at the function."
+    },
+    {
+      "concern": "atexit list ownership",
+      "result": "Allocation, publication, traversal and release go through the CRYPTO_* seam at the authority's coordinates; handler calls happen before the node is reclaimed; no node is reachable after release. Publication is now a real lock-free push."
+    },
+    {
+      "concern": "engine ctrl table and callback contract",
+      "result": "Every command arm was compared with eng_ctrl.c:27-318. GET_FIRST/GET_NEXT/name/desc/len/flags/search semantics match for valid lists; the only divergence is the fail-closed command-0 match (B15-D2). The ctrl callback is invoked without a crate lock or reference live across it."
+    }
+  ],
+  "compatibility": {
+    "thread_events": "Authority-faithful for valid programs. The B15-D1 repair changes only the state the authority cannot reach without deadlocking: a nested whole-thread stop is refused and the slot is restored. Normal stops, context stops, registration refusal, LIFO order, filtering and the destructor path are unchanged (all module tests pass).",
+    "init": "The B15-D3 CAS preserves single-threaded LIFO order and the published values. The B15-D4 single pass matches the authority's observable teardown exactly (a node registered during the drain is not run); the terminal discard is the authority's own leak.",
+    "eng_ctrl": "The B15-D2 divergence is recorded: command number 0 now answers -1 with ENGINE_R_INVALID_CMD_NUMBER (and one extra error on the cmd_is_executable path) instead of dereferencing NULL or reading past the list. Every valid command number is unchanged.",
+    "authority_differential": "NOT_RUN for B15-D1/B15-D2/B15-D4; the existing library tests were run unchanged and the focused controls were observed on both candidates. The authority deadlocks on the B15-D1 sequence and crashes on the B15-D2 input, so a differential would be a hang/crash comparison rather than an output comparison."
+  },
+  "safety_checks": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS",
+      "focused": "cargo test --lib -- runtime::thread_events::tests runtime::init::tests engine::eng_ctrl::tests -- --test-threads=1: 22 passed, 0 failed"
+    },
+    "negative_controls_observed": [
+      "engine::eng_ctrl::tests::a_zero_command_number_does_not_match_the_terminator on the pre-fix candidate: process died with signal 11 (SIGSEGV); post-fix: passed.",
+      "runtime::thread_events::tests::a_handler_that_stops_the_thread_during_a_context_stop_is_refused on the pre-fix candidate under ASan: AddressSanitizer heap-use-after-free, WRITE of size 8 in init_thread_stop (thread_events.rs:781), freed by OPENSSL_thread_stop (thread_events.rs:885); post-fix under ASan: passed, no report.",
+      "runtime::init::tests::concurrent_atexit_registrations_all_survive on the pre-fix candidate: 149 of 512 handlers survived; post-fix: 512 of 512.",
+      "runtime::init::tests::a_handler_registered_during_the_drain_is_not_run_by_it on the pre-fix candidate: late handler ran (left 1, right 0); post-fix: passed."
+    ],
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh (openssl-rs-asan:1, nightly-2026-10-05, -Zsanitizer=address -Zbuild-std, CARGO_TARGET_DIR=/work/.asan-target)",
+      "scope": "the focused B15-D1 control only; one heavy build at a time, CARGO_BUILD_JOBS=4",
+      "post_fix": "1 passed, 0 failed; no sanitizer report"
+    },
+    "batch": {
+      "serial": "cargo test --lib -- --test-threads=1: 1635 passed, 0 failed, 27 ignored (239.63 s)",
+      "threaded": "cargo test --lib -- --test-threads=4: 1635 passed, 0 failed, 27 ignored (100.94 s)",
+      "ignored_delta": "0 newly ignored; 0 removed; four tests added",
+      "affected_probes": "none: none of the three audited files contains an OPENSSL_RS_ADV_PROBE arm"
+    }
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "stacked_borrows": "NOT_RUN",
+    "tree_borrows": "NOT_RUN",
+    "blocker": "the court's product toolchain is 1.98.1-x86_64-unknown-linux-gnu without the miri component; the ASan venue was used for the UAF control instead."
+  },
+  "loom_or_tsan": "NOT_RUN. No Loom or TSan model was invoked; the concurrent atexit control is a targeted threaded test, not a model check.",
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "No new abstraction or caller obligation. The init CAS adds one raw field write inside a new SAFETY-commented unsafe block, to a node that is uniquely owned until the exchange. The thread-stop repair removes a release (a narrowing) and the ctrl repair adds a check before an existing dereference.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 1,
+  "unsafe_operations_introduced_detail": "`(*node.0.as_ptr()).next = head;` in OPENSSL_atexit's compare-exchange loop, inside its own SAFETY comment.",
+  "test_only_unsafe_added": 3,
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Under the stated contracts, no safe caller can cause UB through these boundaries. OPENSSL_cleanup remains a safe C-ABI function, but the authority (and now the site) requires it not to race any other library call; only cleanup-vs-cleanup is made safe. That precondition is a C ABI contract, not a hidden Rust obligation.",
+  "escalations": [],
+  "residuals": [
+    {
+      "id": "B15-R1",
+      "file": "src/runtime/init.rs",
+      "lines": "1042-1060",
+      "severity": "low",
+      "disposition": "RETAINED - authority-faithful terminal discard",
+      "description": "A node registered during the atexit drain is not run and is never released (the authority sets stop_handlers = NULL after its walk). The library is terminal after cleanup, so the node is unreachable; this is a one-node leak in a callback that registers during teardown, preserved to match the authority and to prevent an unbounded cleanup loop."
+    },
+    {
+      "id": "B15-R2",
+      "file": "src/runtime/init.rs",
+      "lines": "1058-1130 (OPENSSL_cleanup), 548-561 (ossl_cleanup_thread)",
+      "severity": "low",
+      "disposition": "RETAINED - documented C-ABI precondition",
+      "description": "OPENSSL_cleanup must not run concurrently with any other library call, and must not be called from inside a thread-stop handler: the all-deregistration arm deliberately does not take the register lock (as upstream) and the teardown deletes keys and registries that other calls use. This is the authority's single-threaded-cleanup assumption, now stated at the function. The crate makes cleanup-vs-cleanup safe; the remaining race is outside the C contract."
+    },
+    {
+      "id": "B15-R3",
+      "file": "src/runtime/thread_events.rs",
+      "lines": "359-392, 426-470",
+      "severity": "low",
+      "disposition": "RETAINED - authority-faithful failure ordering",
+      "description": "When the register push fails, the fresh head is cleared and released, but the head remains unreachable for this thread until the next registration allocates another one (the authority has the same failure shape). No partial state is published. An allocation failure in ossl_init_thread_start leaves the thread's head in place; the node was never published."
+    },
+    {
+      "id": "B15-R4",
+      "file": "src/runtime/thread_events.rs",
+      "lines": "882-903",
+      "severity": "low",
+      "disposition": "RETAINED - refusal restores, release deferred",
+      "description": "On the documented EDEADLK refusal, OPENSSL_thread_stop restores the thread's slot and returns without removing or releasing the head, and without running CRYPTO_THREAD_clean_local. The enclosing walk owns the release. If the slot restore itself fails, the still-live head becomes unreachable and is freed by cleanup's all-deregistration arm; there is no use-after-free either way."
+    },
+    {
+      "id": "B15-R5",
+      "file": "src/engine/eng_ctrl.rs",
+      "lines": "118-140",
+      "severity": "low",
+      "disposition": "RETAINED - recorded §17 divergence",
+      "description": "For command number 0 on a terminated cmd_defns list the authority matches the terminator and then reads its NULL name or the next entry. This crate answers -1 (ENGINE_R_INVALID_CMD_NUMBER). The observable difference is the error queue on the ENGINE_cmd_is_executable(e, 0) path; the return value is 0 either way. Authority differential NOT_RUN."
+    }
+  ],
+  "graduation": "CONTRACTED for all thirteen boundaries. Every remaining unsafe operation has an explicit validity contract and SAFETY comment, every required precondition is established by its callers or by the C ABI contract, and no safe caller can cause UB through the audited interfaces under those contracts. Hidden obligations 0. Not SAFETY_DISCHARGED: full Miri (Stacked/Tree Borrows), Loom/TSan, authority differentials for the four divergences, independent review and SEAL are NOT_RUN. ASan covered the B15-D1 control only. No SAFE_COMPATIBLE claim.",
+  "next_ordinary_position": "src/x509/v3_info.rs (63), then src/ts/ts_req_utils.rs (63), src/evp/e_rc2.rs (63), src/apps/pkeyutl.rs (62), src/asn1/a_verify.rs (62), src/dsa/mod.rs (62), src/evp/evp_pbe.rs (62), src/ffc/params.rs (62). src/engine/eng_ctrl.rs was the last deferred boundary named by M29 and is audited here."
+}

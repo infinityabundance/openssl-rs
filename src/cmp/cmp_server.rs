@@ -34,9 +34,9 @@ use crate::cmp::cmp_util::{
 };
 use crate::cmp::cmp_vfy::ossl_cmp_msg_check_update;
 use crate::cmp::crmf_asn::CrmfMsg;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, ERR_peek_error_all, ERR_reason_error_string};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_genn::{GeneralName, GEN_DIRNAME};
@@ -143,6 +143,22 @@ pub(crate) struct OsslCmpSrvCtx {
     grant_implicit_confirm: c_int,
 }
 
+// SAFETY: a zeroed `OsslCmpSrvCtx` is the authority's own all-empty constructed state: `ctx` is
+// NULL (the only owned member) and every other field is zero or NULL. `destroy_body` is the
+// authority's `OSSL_CMP_SRV_CTX_free` member release -- the nested `OSSL_CMP_CTX`, which is NULL or
+// the reference this object owns. It never releases the enclosing block, which `OwnedCtx` does at
+// `OSSL_CMP_SRV_CTX_free`'s own coordinates.
+unsafe impl CtxDestroy for OsslCmpSrvCtx {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = 50;
+    const LINE_FREE: c_int = 45;
+
+    unsafe fn destroy_body(ptr: *mut OsslCmpSrvCtx) {
+        // SAFETY: `ptr` is a live object per the trait contract; `ctx` is NULL or owned by it.
+        unsafe { OSSL_CMP_CTX_free((*ptr).ctx) };
+    }
+}
+
 /// `ERR_raise(ERR_LIB_CMP, reason)` at an authority coordinate of this unit.
 ///
 /// # Safety
@@ -167,14 +183,9 @@ unsafe fn raise_cmp(line: c_int, func: &'static core::ffi::CStr, reason: c_int) 
 /// `srv_ctx` is NULL or a live `OSSL_CMP_SRV_CTX`.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_SRV_CTX_free(srv_ctx: *mut OsslCmpSrvCtx) {
-    if srv_ctx.is_null() {
-        return;
-    }
-    // SAFETY: `srv_ctx` is live; its `ctx` is NULL or owned by it.
-    unsafe {
-        OSSL_CMP_CTX_free((*srv_ctx).ctx);
-        CRYPTO_free(srv_ctx.cast(), FILE.as_ptr(), 45);
-    }
+    // SAFETY: `srv_ctx` is NULL or a live object handed out by `OSSL_CMP_SRV_CTX_new`'s
+    // `into_raw`; NULL is `None` and releases nothing.
+    drop(unsafe { OwnedCtx::<OsslCmpSrvCtx>::from_raw(srv_ctx) });
 }
 
 /// `OSSL_CMP_SRV_CTX *OSSL_CMP_SRV_CTX_new(OSSL_LIB_CTX *libctx, const char *propq)`
@@ -187,26 +198,29 @@ pub unsafe extern "C" fn OSSL_CMP_SRV_CTX_new(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut OsslCmpSrvCtx {
-    // SAFETY: `CRYPTO_zalloc` returns zeroed memory or NULL.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<OsslCmpSrvCtx>(), FILE.as_ptr(), 50)
-        .cast::<OsslCmpSrvCtx>();
-    if ctx.is_null() {
-        return ptr::null_mut();
-    }
+    // SAFETY: `CRYPTO_zalloc` returns a zeroed block or NULL; a zeroed `OsslCmpSrvCtx` is the
+    // authority's own constructed state.
+    let ctx = match RawCtx::<OsslCmpSrvCtx>::zalloc() {
+        Some(ctx) => ctx,
+        None => return ptr::null_mut(),
+    };
 
     // SAFETY: `ctx` is live and zeroed.
     unsafe {
-        (*ctx).ctx = OSSL_CMP_CTX_new(libctx, propq);
-        if (*ctx).ctx.is_null() {
-            // SAFETY: `ctx` is live.
-            OSSL_CMP_SRV_CTX_free(ctx);
+        let raw = ctx.as_ptr();
+        (*raw).ctx = OSSL_CMP_CTX_new(libctx, propq);
+        if (*raw).ctx.is_null() {
+            // `RawCtx`'s `Drop` releases the block alone at the authority's own free coordinate;
+            // the authority's `OSSL_CMP_SRV_CTX_free` would release the NULL `ctx` and then block.
             return ptr::null_mut();
         }
-        (*ctx).cert_req_id = OSSL_CMP_CERTREQID_INVALID;
-        (*ctx).polling = 0;
+        (*raw).cert_req_id = OSSL_CMP_CERTREQID_INVALID;
+        (*raw).polling = 0;
     }
     /* all other elements are initialized to 0 or NULL, respectively */
-    ctx
+    // SAFETY: the destructor-visible member (`ctx`) is live and owned, so the storage is a valid
+    // `OsslCmpSrvCtx`; the returned handle gives the block to the C caller.
+    unsafe { ctx.assume_init() }.into_raw()
 }
 
 /// `int OSSL_CMP_SRV_CTX_init(OSSL_CMP_SRV_CTX *srv_ctx, void *custom_ctx, ...)`
@@ -582,30 +596,93 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
     let mut key_out: *mut crate::evp::pkey::EvpPkey = ptr::null_mut();
     let mut chain_out: *mut OpenSslStack = ptr::null_mut();
     let mut ca_pubs: *mut OpenSslStack = ptr::null_mut();
+    // `si` and `msg` are shared with the authority's `err:` tail below, which every failure
+    // after the callback has run reaches (`cmp_server.c:299-307`). Every path that reaches the
+    // tail has assigned `si` (the `break 'reply` arms all follow an assignment).
     let si: *mut CmpPkisi;
+    let mut msg: *mut CmpMsg = ptr::null_mut();
 
     // SAFETY: `srv_ctx`'s ctx is live.
     let ctx = unsafe { (*srv_ctx).ctx };
-    if central_keygen == 0 {
-        // SAFETY: `ctx`/`req` are live.
-        let accept_raverified = unsafe { (*srv_ctx).accept_raverified };
-        // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-        if unsafe { crate::cmp::cmp_vfy::ossl_cmp_verify_popo(ctx, req, accept_raverified) } == 0 {
-            /* Proof of possession could not be verified */
-            // SAFETY: no preconditions.
-            let err = crate::runtime::err::ERR_peek_error();
-            // SAFETY: the error string is static or NULL.
-            let reason = crate::runtime::err::ERR_reason_error_string(err);
-            // SAFETY: `reason` is NULL or NUL-terminated.
-            si = unsafe {
-                crate::cmp::cmp_status::OSSL_CMP_STATUSINFO_new(
-                    OSSL_CMP_PKISTATUS_REJECTION,
-                    1 << OSSL_CMP_PKIFAILUREINFO_BAD_POP,
-                    reason,
-                )
-            };
-            if si.is_null() {
-                return ptr::null_mut();
+    'reply: {
+        if central_keygen == 0 {
+            // SAFETY: `ctx`/`req` are live.
+            let accept_raverified = unsafe { (*srv_ctx).accept_raverified };
+            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+            if unsafe { crate::cmp::cmp_vfy::ossl_cmp_verify_popo(ctx, req, accept_raverified) }
+                == 0
+            {
+                /* Proof of possession could not be verified */
+                // SAFETY: no preconditions.
+                let err = crate::runtime::err::ERR_peek_error();
+                // SAFETY: the error string is static or NULL.
+                let reason = crate::runtime::err::ERR_reason_error_string(err);
+                // SAFETY: `reason` is NULL or NUL-terminated.
+                si = unsafe {
+                    crate::cmp::cmp_status::OSSL_CMP_STATUSINFO_new(
+                        OSSL_CMP_PKISTATUS_REJECTION,
+                        1 << OSSL_CMP_PKIFAILUREINFO_BAD_POP,
+                        reason,
+                    )
+                };
+                if si.is_null() {
+                    // The authority's proof-of-possession arm returns before reaching `err:`
+                    // (`cmp_server.c:270-276`), so the context is not touched here.
+                    return ptr::null_mut();
+                }
+            } else {
+                // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
+                si = unsafe {
+                    process_cert_request_inner(
+                        srv_ctx,
+                        req,
+                        cert_req_id,
+                        crm,
+                        p10cr,
+                        &mut cert_out,
+                        &mut chain_out,
+                        &mut ca_pubs,
+                    )
+                };
+                if si.is_null() {
+                    // The authority's `goto err` releases whatever the callback filled in.
+                    break 'reply;
+                }
+                // SAFETY: `si` is live.
+                if unsafe { crate::cmp::cmp_status::ossl_cmp_pkisi_get_status(si) }
+                    == OSSL_CMP_PKISTATUS_WAITING
+                {
+                    // SAFETY: `srv_ctx` is live.
+                    unsafe { (*srv_ctx).polling = 1 };
+                }
+                // SAFETY: `req` is live.
+                let hdr = unsafe { OSSL_CMP_MSG_get0_header(req) };
+                // SAFETY: `ctx`/`hdr` are live.
+                let implicit =
+                    unsafe { crate::cmp::cmp_hdr::ossl_cmp_hdr_has_implicitConfirm(hdr) } != 0
+                        && unsafe { (*srv_ctx).grant_implicit_confirm } != 0
+                        && !cert_out.is_null();
+                // SAFETY: `ctx` is live.
+                if unsafe {
+                    crate::cmp::cmp_ctx::OSSL_CMP_CTX_set_option(
+                        ctx,
+                        OSSL_CMP_OPT_IMPLICIT_CONFIRM,
+                        c_int::from(implicit),
+                    )
+                } == 0
+                {
+                    // The authority's `goto err` releases `si`, the certificate and the stacks.
+                    break 'reply;
+                }
+                if central_keygen == 1
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    && unsafe { (*ctx).new_pkey_priv } != 0
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    && !unsafe { (*ctx).new_pkey }.is_null()
+                {
+                    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+                    key_out = unsafe { (*ctx).new_pkey };
+                }
             }
         } else {
             // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
@@ -622,32 +699,8 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
                 )
             };
             if si.is_null() {
-                return ptr::null_mut();
-            }
-            // SAFETY: `si` is live.
-            if unsafe { crate::cmp::cmp_status::ossl_cmp_pkisi_get_status(si) }
-                == OSSL_CMP_PKISTATUS_WAITING
-            {
-                // SAFETY: `srv_ctx` is live.
-                unsafe { (*srv_ctx).polling = 1 };
-            }
-            // SAFETY: `req` is live.
-            let hdr = unsafe { OSSL_CMP_MSG_get0_header(req) };
-            // SAFETY: `ctx`/`hdr` are live.
-            let implicit = unsafe { crate::cmp::cmp_hdr::ossl_cmp_hdr_has_implicitConfirm(hdr) }
-                != 0
-                && unsafe { (*srv_ctx).grant_implicit_confirm } != 0
-                && !cert_out.is_null();
-            // SAFETY: `ctx` is live.
-            if unsafe {
-                crate::cmp::cmp_ctx::OSSL_CMP_CTX_set_option(
-                    ctx,
-                    OSSL_CMP_OPT_IMPLICIT_CONFIRM,
-                    c_int::from(implicit),
-                )
-            } == 0
-            {
-                return ptr::null_mut();
+                // The authority's `goto err` releases whatever the callback filled in.
+                break 'reply;
             }
             if central_keygen == 1
                 // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
@@ -659,56 +712,31 @@ unsafe fn process_cert_request(srv_ctx: *mut OsslCmpSrvCtx, req: *const CmpMsg) 
                 key_out = unsafe { (*ctx).new_pkey };
             }
         }
-    } else {
-        // SAFETY: `srv_ctx`/`req` are live; the out-slots are writable.
-        si = unsafe {
-            process_cert_request_inner(
-                srv_ctx,
-                req,
+
+        // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+        let unprotected = unsafe { (*srv_ctx).send_unprotected_errors };
+        // SAFETY: `ctx`/`si` are live; the rest are NULL or live.
+        msg = unsafe {
+            ossl_cmp_certrep_new(
+                ctx,
+                bodytype,
                 cert_req_id,
-                crm,
-                p10cr,
-                &mut cert_out,
-                &mut chain_out,
-                &mut ca_pubs,
+                si,
+                cert_out,
+                key_out,
+                ptr::null(),
+                chain_out,
+                ca_pubs,
+                unprotected,
             )
         };
-        if si.is_null() {
-            return ptr::null_mut();
-        }
-        if central_keygen == 1
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            && unsafe { (*ctx).new_pkey_priv } != 0
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            && !unsafe { (*ctx).new_pkey }.is_null()
-        {
-            // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-            key_out = unsafe { (*ctx).new_pkey };
+        if msg.is_null() {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cmp(299, c"process_cert_request", 117) };
         }
     }
-
-    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-    let unprotected = unsafe { (*srv_ctx).send_unprotected_errors };
-    // SAFETY: `ctx`/`si` are live; the rest are NULL or live.
-    let msg = unsafe {
-        ossl_cmp_certrep_new(
-            ctx,
-            bodytype,
-            cert_req_id,
-            si,
-            cert_out,
-            key_out,
-            ptr::null(),
-            chain_out,
-            ca_pubs,
-            unprotected,
-        )
-    };
-    if msg.is_null() {
-        // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cmp(299, c"process_cert_request", 117) };
-    }
-    // SAFETY: `si` is this call's own; `cert_out` is owned here; the stacks are NULL or owned.
+    // The authority's `err:` tail: run for success and for every failure after the callback.
+    // SAFETY: `si` is NULL or this call's own; `cert_out` is owned here; the stacks are NULL or owned.
     unsafe {
         OSSL_CMP_PKISI_free(si);
         crate::x509::x_x509::X509_free(cert_out);
@@ -1516,3 +1544,7 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_server_perform(
     // SAFETY: `srv_ctx`/`req` are live.
     unsafe { OSSL_CMP_SRV_process_request(srv_ctx, req) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslCmpSrvCtx => zero_state_sweep_ossl_cmp_srv_ctx);

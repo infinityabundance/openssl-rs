@@ -255,6 +255,113 @@ unsafe fn qp_slots(data: *mut RcuThrData) -> *mut ThreadQp {
     unsafe { ptr::addr_of_mut!((*data).thread_qps).cast::<ThreadQp>() }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the file's heap blocks
+// ---------------------------------------------------------------------------------------------
+
+/// An owned fixed-size heap block allocated through the crate's allocator seam.
+///
+/// The rcu structures are single blocks, and only their *ownership* is this type: [`Self::zalloc`]
+/// / [`Self::calloc`] allocate one, [`Self::take`] adopts a block at its release point, `Drop` is
+/// its single plain release at the authority's own site, and [`Self::into_raw`] hands it to the
+/// holder that takes it over (the thread-local slot, an `rcu_lock_st` field, or a callback list).
+/// Nothing about ordering or synchronisation is modelled here.
+struct OwnedBlock<T> {
+    ptr: ptr::NonNull<T>,
+    line: c_int,
+}
+
+impl<T> OwnedBlock<T> {
+    /// `CRYPTO_zalloc(size_of::<T>(), FILE, alloc_line)`, or `None`; `line` is the authority's
+    /// release site for the block.
+    fn zalloc(alloc_line: c_int, line: c_int) -> Option<OwnedBlock<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `T`'s size.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, alloc_line)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, line })
+    }
+
+    /// `CRYPTO_calloc(count, size_of::<T>(), FILE, alloc_line)`, or `None`; `line` is the
+    /// authority's release site for the array.
+    fn calloc(count: usize, alloc_line: c_int, line: c_int) -> Option<OwnedBlock<T>> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(count, core::mem::size_of::<T>(), FILE, alloc_line)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, line })
+    }
+
+    /// Adopt a block whose holder is releasing it now, for release by `Drop` at `line`. `None`
+    /// for NULL.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block this unit allocated that no other owner will release; `line`
+    /// is the authority's release site for it. `Drop` performs its single plain `CRYPTO_free`.
+    unsafe fn take(ptr: *mut T, line: c_int) -> Option<OwnedBlock<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedBlock { ptr, line })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Attribute the block's single release to `line` (a failure arm whose site differs from the
+    /// construction-time nominal one).
+    fn release_at(&mut self, line: c_int) {
+        self.line = line;
+    }
+
+    /// Give up ownership of the block to the holder that takes it over.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T> Drop for OwnedBlock<T> {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            FILE,
+            self.line,
+        );
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; its single
+        // release is the authority's own plain `CRYPTO_free`, which accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, self.line) };
+    }
+}
+
+#[cfg(test)]
+mod release_family_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+
+    /// D1-style drift guard: this family's release is the plain `CRYPTO_free` at the
+    /// module `FILE` and the per-instance release line.
+    #[test]
+    fn release_is_plain_at_the_module_file_and_instance_line() {
+        release_probe::clear();
+        let block = OwnedBlock::<u8>::zalloc(21, 22).expect("one byte allocates");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert_eq!(call.file, FILE);
+        assert_eq!(call.line, 22);
+    }
+}
+
 /// `static struct rcu_qp *get_hold_current_qp(struct rcu_lock_st *lock)`.
 ///
 /// Read side acquisition of the current quiescent point: add one to the point that
@@ -312,9 +419,9 @@ unsafe extern "C" fn ossl_rcu_free_local_data(arg: *mut c_void) {
     let data = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx) };
     // SAFETY: as above.
     unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx, ptr::null_mut()) };
-    // SAFETY: `data` is this thread's `RcuThrData`, allocated in `ossl_rcu_read_lock` and
-    // released exactly once, here; `CRYPTO_free` accepts NULL.
-    unsafe { CRYPTO_free(data, FILE, L_THR_DATA_FREE) };
+    // SAFETY: `data` is NULL or this thread's `RcuThrData`, allocated in `ossl_rcu_read_lock`
+    // and released exactly once, here; the seam's `Drop` is that single release.
+    drop(unsafe { OwnedBlock::<RcuThrData>::take(data.cast(), L_THR_DATA_FREE) });
 }
 
 /// `int ossl_rcu_read_lock(CRYPTO_RCU_LOCK *lock)` — 1 on success, 0 when the hold was
@@ -344,38 +451,38 @@ pub(crate) unsafe fn ossl_rcu_read_lock(lock: *mut RcuLockSt) -> c_int {
         .cast::<RcuThrData>();
 
     if data.is_null() {
-        let fresh = CRYPTO_zalloc(core::mem::size_of::<RcuThrData>(), FILE, L_THR_DATA_NEW)
-            .cast::<RcuThrData>();
-        if fresh.is_null() {
+        let Some(mut fresh) = OwnedBlock::<RcuThrData>::zalloc(L_THR_DATA_NEW, L_THR_DATA_FREE_SET)
+        else {
             return 0;
-        }
+        };
         // The assignment is what the first version of this function omitted, and
         // `a_read_hold_counts_once_and_a_re_entrant_hold_counts_depth` is what found it: the
         // block was allocated and stored under the key and never bound to the local, so the
         // walk below ran against the NULL the lookup had answered. `data` here is the C's
         // `data` after all three of its arms rather than only the first.
-        data = fresh;
-        // SAFETY: `ctx` is live and `fresh` is this function's own allocation.
-        if unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx, fresh.cast()) }
-            == 0
+        data = fresh.as_ptr();
+        // SAFETY: `ctx` is live and `data` is this function's own allocation.
+        if unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx, data.cast()) } == 0
         {
-            // SAFETY: `fresh` came from `CRYPTO_zalloc` above and is not reachable from
-            // anywhere else, the `set` having failed.
-            unsafe { CRYPTO_free(fresh.cast(), FILE, L_THR_DATA_FREE_SET) };
+            // The block is released once, on the way out, at the authority's `:350` site.
             return 0;
         }
         // SAFETY: `ctx` is handed to the handler unchanged and the handler outlives the
         // lock only until the thread stops, which is the authority's contract too.
         if unsafe { ossl_init_thread_start(ptr::null(), ctx, Some(ossl_rcu_free_local_data)) } == 0
         {
-            // SAFETY: both are this function's own; the table slot is cleared *before* the
-            // free so that no destructor can see a dangling value.
+            // The authority frees the block (`:354`) and *then* clears the table slot so that no
+            // destructor can see a dangling value; the handle's release is that same site.
+            fresh.release_at(L_THR_DATA_FREE_START);
+            drop(fresh);
+            // SAFETY: the slot is cleared so that no destructor can see a dangling value.
             unsafe {
-                CRYPTO_free(fresh.cast(), FILE, L_THR_DATA_FREE_START);
-                CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx, ptr::null_mut());
-            }
+                CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, ctx, ptr::null_mut())
+            };
             return 0;
         }
+        // Ownership of the block transfers to the thread-local slot.
+        data = fresh.into_raw();
     }
 
     // SAFETY: `data` is non-NULL and is a live `RcuThrData` — either freshly allocated above
@@ -585,17 +692,11 @@ unsafe fn retire_qp(lock: *mut RcuLockSt, qp: *mut RcuQp) {
 /// # Safety
 /// `lock` must be live and not yet have a `qp_group`.
 unsafe fn allocate_new_qp_group(lock: *mut RcuLockSt, count: u32) -> *mut RcuQp {
-    let group = CRYPTO_calloc(
-        count as usize,
-        core::mem::size_of::<RcuQp>(),
-        FILE,
-        L_QP_GROUP_NEW,
-    )
-    .cast::<RcuQp>();
+    let group = OwnedBlock::<RcuQp>::calloc(count as usize, L_QP_GROUP_NEW, L_QP_GROUP_FREE);
     // SAFETY: `lock` is live per the contract; the count is set even when the allocation
     // failed, which is the authority's order and is harmless because the caller returns NULL.
     unsafe { (*lock).group_count = count };
-    group
+    group.map_or(ptr::null_mut(), OwnedBlock::into_raw)
 }
 
 /// `void ossl_rcu_write_lock(CRYPTO_RCU_LOCK *lock)`.
@@ -688,19 +789,23 @@ pub(crate) unsafe fn ossl_synchronize_rcu(lock: *mut RcuLockSt) {
     // authority, so a callback may allocate freely.
     while !cb_items.is_null() {
         let node = cb_items;
-        // SAFETY: `node` is a live node of the list taken aside above, and `node.func` was
-        // set by `ossl_rcu_call` to a non-NULL `extern "C"` callback.
+        // SAFETY: `node` is a live node of the list taken aside above, released exactly once,
+        // here.
+        let owned = unsafe { OwnedBlock::<RcuCbItem>::take(node, L_CB_ITEM_DRAIN) };
+        // SAFETY: `node` is live and `node.func` was set by `ossl_rcu_call` to a non-NULL
+        // `extern "C"` callback.
         unsafe {
             cb_items = (*node).next;
             ((*node).func)((*node).data);
-            CRYPTO_free(node.cast(), FILE, L_CB_ITEM_DRAIN);
         }
+        drop(owned);
     }
 }
 
 /// `CRYPTO_RCU_CB_ITEM *ossl_rcu_cb_item_new(void)` — a zeroed node, or NULL.
 pub(crate) fn ossl_rcu_cb_item_new() -> *mut RcuCbItem {
-    CRYPTO_zalloc(core::mem::size_of::<RcuCbItem>(), FILE, L_CB_ITEM_NEW).cast::<RcuCbItem>()
+    OwnedBlock::<RcuCbItem>::zalloc(L_CB_ITEM_NEW, L_CB_ITEM_FREE)
+        .map_or(ptr::null_mut(), OwnedBlock::into_raw)
 }
 
 /// `void ossl_rcu_cb_item_free(CRYPTO_RCU_CB_ITEM *item)`.
@@ -712,8 +817,9 @@ pub(crate) fn ossl_rcu_cb_item_new() -> *mut RcuCbItem {
 /// # Safety
 /// `item` must be NULL or a node from [`ossl_rcu_cb_item_new`] that has not been queued.
 pub(crate) unsafe fn ossl_rcu_cb_item_free(item: *mut RcuCbItem) {
-    // SAFETY: `item` is NULL or this function's to release, per the contract.
-    unsafe { CRYPTO_free(item.cast(), FILE, L_CB_ITEM_FREE) };
+    // SAFETY: `item` is NULL or this function's to release, per the contract; the seam's `Drop`
+    // is that single release.
+    drop(unsafe { OwnedBlock::<RcuCbItem>::take(item, L_CB_ITEM_FREE) });
 }
 
 /// `void ossl_rcu_call(CRYPTO_RCU_LOCK *lock, CRYPTO_RCU_CB_ITEM *item, rcu_cb_fn cb, void *data)`.
@@ -803,11 +909,10 @@ pub(crate) unsafe fn ossl_rcu_lock_new(num_writers: c_int, ctx: *mut c_void) -> 
         return ptr::null_mut();
     }
 
-    let lock =
-        CRYPTO_zalloc(core::mem::size_of::<RcuLockSt>(), FILE, L_LOCK_NEW).cast::<RcuLockSt>();
-    if lock.is_null() {
+    let Some(raw) = OwnedBlock::<RcuLockSt>::zalloc(L_LOCK_NEW, L_LOCK_FREE) else {
         return ptr::null_mut();
-    }
+    };
+    let lock = raw.as_ptr();
 
     // The authority's three `pthread_mutex_init` and two `pthread_cond_init` calls, in its
     // order, with its unwind. Each of the five can fail in C and none of them can fail here
@@ -833,9 +938,9 @@ pub(crate) unsafe fn ossl_rcu_lock_new(num_writers: c_int, ctx: *mut c_void) -> 
     }
 
     if made.contains(&ptr::null_mut()) || conds.contains(&ptr::null_mut()) {
-        // SAFETY: `lock` is this function's own allocation and the two arrays list exactly
+        // SAFETY: `raw` is this function's own allocation and the two arrays list exactly
         // the handles created for it, NULLs included.
-        return unsafe { rcu_lock_new_unwind(lock, &made, &conds) };
+        return unsafe { rcu_lock_new_unwind(raw, &made, &conds) };
     }
 
     // SAFETY: `lock` is this function's own allocation; `allocate_new_qp_group` writes the
@@ -843,25 +948,26 @@ pub(crate) unsafe fn ossl_rcu_lock_new(num_writers: c_int, ctx: *mut c_void) -> 
     let group = unsafe { allocate_new_qp_group(lock, count) };
     if group.is_null() {
         // SAFETY: as above.
-        return unsafe { rcu_lock_new_unwind(lock, &made, &conds) };
+        return unsafe { rcu_lock_new_unwind(raw, &made, &conds) };
     }
     // SAFETY: `lock` is live and this write is unaliased.
     unsafe { (*lock).qp_group = group };
 
-    lock
+    raw.into_raw()
 }
 
 /// `ossl_rcu_lock_new`'s `goto err` block.
 ///
-/// Takes the arrays of what was created rather than reading the struct's fields, because the
-/// authority's block destroys exactly the objects whose initialisation succeeded and the
-/// struct holds the same information in a different shape.
+/// Takes the block under construction and the arrays of what was created on it, rather than
+/// reading the struct's fields: the authority's block destroys exactly the objects whose
+/// initialisation succeeded. The `qp_group` field is NULL on both arms (it is only assigned after
+/// the group is successfully returned), so its release here is the authority's own `free(NULL)`.
 ///
 /// # Safety
-/// `lock` must be this function's own allocation, and the two arrays must list exactly the
-/// handles created for it.
+/// `raw` must be this function's own block under construction, and the two arrays must list
+/// exactly the handles created for it.
 unsafe fn rcu_lock_new_unwind(
-    lock: *mut RcuLockSt,
+    raw: OwnedBlock<RcuLockSt>,
     made: &[*mut CryptoMutex; 3],
     conds: &[*mut CryptoCondvar; 2],
 ) -> *mut RcuLockSt {
@@ -881,11 +987,9 @@ unsafe fn rcu_lock_new_unwind(
             unsafe { crate::runtime::thread::ossl_crypto_condvar_free(&mut slot) };
         }
     }
-    // SAFETY: the group is either NULL or this lock's own allocation.
-    unsafe { CRYPTO_free((*lock).qp_group.cast(), FILE, L_QP_GROUP_FREE) };
-    // SAFETY: `lock` is this function's own allocation and is not reachable from anywhere
-    // else once NULL is returned.
-    unsafe { CRYPTO_free(lock.cast(), FILE, L_LOCK_FREE) };
+    // SAFETY: the group is NULL or this lock's own allocation, released here.
+    drop(unsafe { OwnedBlock::<RcuQp>::take((*raw.as_ptr()).qp_group, L_QP_GROUP_FREE) });
+    // `raw` drops here: the block's single release at the authority's own site.
     ptr::null_mut()
 }
 
@@ -914,7 +1018,7 @@ pub(crate) unsafe fn ossl_rcu_lock_free(lock: *mut RcuLockSt) {
 
     // SAFETY: `qp_group` is this lock's own allocation, made in `ossl_rcu_lock_new` and not
     // reachable from anywhere else.
-    unsafe { CRYPTO_free((*lock).qp_group.cast(), FILE, L_QP_GROUP_FREE) };
+    drop(unsafe { OwnedBlock::<RcuQp>::take((*lock).qp_group, L_QP_GROUP_FREE) });
 
     // SAFETY: the five handles are this lock's own, and no other thread can be inside the
     // lock now that `ossl_synchronize_rcu` has returned.
@@ -932,7 +1036,7 @@ pub(crate) unsafe fn ossl_rcu_lock_free(lock: *mut RcuLockSt) {
     }
 
     // SAFETY: `lock` is this function's to release, per the contract.
-    unsafe { CRYPTO_free(lock.cast(), FILE, L_LOCK_FREE) };
+    drop(unsafe { OwnedBlock::<RcuLockSt>::take(lock, L_LOCK_FREE) });
 }
 
 #[cfg(test)]

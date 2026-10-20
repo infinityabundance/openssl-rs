@@ -33,7 +33,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -64,22 +64,27 @@ use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string,
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_OP_KEYEXCH` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KEYEXCH: c_int = 11;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/exchange.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/exchange.c");
 /// `evp_keyexch_new`'s `OPENSSL_zalloc(sizeof(EVP_KEYEXCH))` (line 34).
 const LINE_ZALLOC_KEYEXCH: c_int = 34;
 /// `EVP_KEYEXCH_free`'s `OPENSSL_free(exchange->type_name)` (line 170).
 const LINE_FREE_TYPE_NAME: c_int = 170;
 /// `EVP_KEYEXCH_free`'s `OPENSSL_free(exchange)` (line 173).
 const LINE_FREE_KEYEXCH: c_int = 173;
+/// `evp_keyexch_new`'s `OPENSSL_free(exchange)` when the up-ref fails (line 42).
+const LINE_FREE_KEYEXCH_UP_REF: c_int = 42;
 /// `EVP_PKEY_derive_SKEY`'s `key = OPENSSL_zalloc(keylen)` (line 605).
 const LINE_ZALLOC_DERIVE_SKEY: c_int = 605;
 /// `EVP_PKEY_derive_SKEY`'s `OPENSSL_free(key)` when the provider's derive fails (line 613).
@@ -89,6 +94,103 @@ const LINE_FREE_DERIVE_SKEY_ON_DERIVE: c_int = 613;
 const LINE_FREE_DERIVE_SKEY_ON_LENGTH: c_int = 618;
 /// `EVP_PKEY_derive_SKEY`'s `OPENSSL_clear_free(key, keylen)` (line 627): the secret's only copy.
 const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the fetched method object and of the derive buffer
+// ---------------------------------------------------------------------------------------------
+
+/// The `EVP_KEYEXCH_free` destructor body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the method's owned `type_name` and the provider reference it holds.
+// SAFETY: (a) holds: `destroy_body` is the authority's `EVP_KEYEXCH_free` body minus the block --
+// the method's owned `type_name` and the provider reference, each releaser NULL-tolerant, never the
+// enclosing block. (b) holds: `EvpKeyExch` is a `#[repr(C)]` record of raw pointers, `Option<fn>`s
+// and an `AtomicI32`, so an all-zero block is a valid `EvpKeyExch`, and `destroy_body` is sound on
+// it (`CRYPTO_free(NULL)` and `ossl_provider_free(NULL)`, which returns early).
+unsafe impl CtxDestroy for EvpKeyExch {
+    unsafe fn destroy_body(ptr: *mut EvpKeyExch) {
+        // SAFETY: `ptr` is a live record per the trait contract; `type_name` is NULL or this file's
+        // own `CRYPTO_malloc` block and `prov` holds the reference `evp_keyexch_new` took. The two
+        // releases are the authority's own order.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
+/// How `EVP_PKEY_derive_SKEY` releases its raw key buffer, matching the authority's own arm.
+enum KeyRelease {
+    /// `CRYPTO_free(key, FILE, line)` — the provider-failed and length-mismatch arms.
+    Plain { line: c_int },
+    /// `CRYPTO_clear_free(key, keylen, FILE, line)` — the success arm, after the secret's last use.
+    Cleansed { line: c_int },
+}
+
+/// `EVP_PKEY_derive_SKEY`'s raw key buffer, allocated by `CRYPTO_zalloc` at `:605` and owned until
+/// whichever of the function's three release arms runs.
+///
+/// The buffer is the derived secret's only copy outside the caller, so the release arm is carried
+/// explicitly: [`Self::release_plain`] for the two provider-failure tails the authority releases
+/// plainly, and [`Self::release_cleansed`] for the success arm, which the authority zeroes first.
+/// `Drop` performs the chosen arm.
+struct OwnedKey {
+    ptr: *mut u8,
+    len: usize,
+    release: KeyRelease,
+}
+
+impl OwnedKey {
+    /// `CRYPTO_zalloc(keylen, FILE, 605)`, or `None` when the allocator answers NULL.
+    fn new_zeroed(len: usize) -> Option<OwnedKey> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, FILE, LINE_ZALLOC_DERIVE_SKEY)
+        }
+        .cast::<u8>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedKey {
+            ptr: raw,
+            len,
+            release: KeyRelease::Plain {
+                line: LINE_FREE_DERIVE_SKEY_ON_DERIVE,
+            },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+
+    /// Consume the buffer, releasing it at the authority's provider-failure arm `line`.
+    fn release_plain(mut self, line: c_int) {
+        self.release = KeyRelease::Plain { line };
+    }
+
+    /// Consume the buffer, releasing it cleansed at the authority's success arm `line`.
+    fn release_cleansed(mut self, line: c_int) {
+        self.release = KeyRelease::Cleansed { line };
+    }
+}
+
+impl Drop for OwnedKey {
+    /// The buffer's single release, through the arm the authority's own path chose.
+    fn drop(&mut self) {
+        match self.release {
+            KeyRelease::Plain { line } => {
+                // SAFETY: `self.ptr` is this call's own block and has not been released.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE, line) };
+            }
+            KeyRelease::Cleansed { line } => {
+                // SAFETY: `self.ptr` is this call's own block of `self.len` bytes; the authority's
+                // own `OPENSSL_clear_free` zeroes it before releasing it.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, line) };
+            }
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the eleven function-pointer types.
@@ -240,11 +342,14 @@ unsafe extern "C" fn evp_keyexch_up_ref(data: *mut c_void) -> c_int {
 /// `prov` must be live.
 unsafe fn evp_keyexch_new(prov: *mut OsslProvider) -> *mut EvpKeyExch {
     // SAFETY: this allocates a fresh object and reads nothing.
-    let exchange = CRYPTO_zalloc(
-        core::mem::size_of::<EvpKeyExch>(),
-        FILE,
-        LINE_ZALLOC_KEYEXCH,
-    )
+    let exchange = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<EvpKeyExch>(),
+            FILE,
+            LINE_ZALLOC_KEYEXCH,
+        )
+    }
     .cast::<EvpKeyExch>();
     if exchange.is_null() {
         return ptr::null_mut();
@@ -252,7 +357,15 @@ unsafe fn evp_keyexch_new(prov: *mut OsslProvider) -> *mut EvpKeyExch {
     // SAFETY: `exchange` is this call's own object and `prov` is live.
     unsafe {
         (*exchange).refcnt = AtomicI32::new(1);
-        ossl_provider_up_ref(prov);
+        // The authority refuses on a failed up-ref and frees the fresh object without giving back
+        // a provider reference (`exchange.c:39-45`). `ossl_provider_up_ref` rolls the increment
+        // back only on its child-provider arm, so the block is released here without assigning
+        // `prov`; the non-child overflow arm returns 0 without rollback and retains its increment
+        // (practically unreachable i32 wrap, as in the authority's callers).
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            CRYPTO_free(exchange.cast::<c_void>(), FILE, LINE_FREE_KEYEXCH_UP_REF);
+            return ptr::null_mut();
+        }
         (*exchange).prov = prov;
     }
     exchange
@@ -385,19 +498,18 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
     if exchange.is_null() {
         return;
     }
-    // SAFETY: `exchange` is live per the contract.
-    let last = unsafe { (*exchange).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `exchange` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*exchange).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEYEXCH_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: `exchange` is live and this was the last reference.
-    let (type_name, prov) = unsafe { ((*exchange).type_name, (*exchange).prov) };
-    // SAFETY: `type_name` was allocated for this object.
-    unsafe { CRYPTO_free(type_name.cast(), FILE, LINE_FREE_TYPE_NAME) };
-    // SAFETY: `prov` is live and holds the reference `evp_keyexch_new` took.
-    unsafe { ossl_provider_free(prov) };
-    // SAFETY: `exchange` is this object's own allocation.
-    unsafe { CRYPTO_free(exchange.cast(), FILE, LINE_FREE_KEYEXCH) };
+    // SAFETY: `exchange` is live and this decrement was the last reference; the object's `Drop`
+    // releases its `type_name`, its provider reference and the block, at the authority's own sites.
+    drop(unsafe { OwnedCtx::from_raw_at(exchange, FILE_SEAM, LINE_FREE_KEYEXCH) });
 }
 
 /// `int EVP_KEYEXCH_up_ref(EVP_KEYEXCH *exchange)`.
@@ -406,9 +518,11 @@ pub unsafe extern "C" fn EVP_KEYEXCH_free(exchange: *mut EvpKeyExch) {
 /// `exchange` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYEXCH_up_ref(exchange: *mut EvpKeyExch) -> c_int {
-    // SAFETY: `exchange` is live per the contract.
-    unsafe { (*exchange).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `exchange` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*exchange).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_KEYEXCH_get0_provider(const EVP_KEYEXCH *exchange)`.
@@ -1193,8 +1307,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
 
         // SAFETY: `ctx` is live.
         let libctx = unsafe { (*ctx).libctx };
-        let key = CRYPTO_zalloc(keylen, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<u8>();
-        if key.is_null() {
+        let Some(key) = OwnedKey::new_zeroed(keylen) else {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EXCHANGE_607) };
             if mgmt != skeymgmt {
@@ -1202,14 +1315,14 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
             }
             return ptr::null_mut();
-        }
+        };
 
         let mut tmplen = keylen;
         // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `key` is this
         // call's own block of `keylen` bytes and the authority passes the length as `outlen`.
-        if unsafe { derive(algctx, key, ptr::addr_of_mut!(tmplen), tmplen) } == 0 {
-            // SAFETY: `key` is this call's own block.
-            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_DERIVE) };
+        if unsafe { derive(algctx, key.as_ptr(), ptr::addr_of_mut!(tmplen), tmplen) } == 0 {
+            // The authority's provider-failure arm releases the buffer plainly.
+            key.release_plain(LINE_FREE_DERIVE_SKEY_ON_DERIVE);
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1218,8 +1331,8 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
         }
 
         if keylen != tmplen {
-            // SAFETY: `key` is this call's own block and it holds part of a secret.
-            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_LENGTH) };
+            // The authority's length-mismatch arm releases the buffer plainly too.
+            key.release_plain(LINE_FREE_DERIVE_SKEY_ON_LENGTH);
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EXCHANGE_619) };
             if mgmt != skeymgmt {
@@ -1234,7 +1347,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
         import_params[0] = unsafe {
             OSSL_PARAM_construct_octet_string(
                 OSSL_SKEY_PARAM_RAW_BYTES,
-                key.cast::<c_void>(),
+                key.as_ptr().cast::<c_void>(),
                 keylen,
             )
         };
@@ -1252,15 +1365,7 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
             unsafe { EVP_SKEYMGMT_free(skeymgmt) };
         }
         /* Cleared before it is released: this buffer is the secret's only copy outside the caller. */
-        // SAFETY: `key` is this call's own block of `keylen` bytes and is not used again.
-        unsafe {
-            CRYPTO_clear_free(
-                key.cast::<c_void>(),
-                keylen,
-                FILE,
-                LINE_CLEAR_FREE_DERIVE_SKEY,
-            )
-        };
+        key.release_cleansed(LINE_CLEAR_FREE_DERIVE_SKEY);
         return ret;
     }
 
@@ -1390,3 +1495,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpKeyExch => zero_state_sweep_evp_key_exch);

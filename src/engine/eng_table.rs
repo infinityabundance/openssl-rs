@@ -43,6 +43,7 @@ use crate::engine::eng_init::{engine_unlocked_finish, engine_unlocked_init};
 use crate::engine::eng_lib::{
     engine_cleanup_add_first, global_engine_lock, Engine, EngineCleanupCb,
 };
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites::ENG_TABLE_135;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
@@ -51,19 +52,11 @@ use crate::runtime::lhash::{
     OPENSSL_LH_doall, OPENSSL_LH_doall_arg, OPENSSL_LH_free, OPENSSL_LH_insert, OPENSSL_LH_new,
     OPENSSL_LH_retrieve, OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_free,
     OPENSSL_sk_new_null, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock};
-
-/// `OPENSSL_FILE` for this unit, for the two `OPENSSL_malloc`/`OPENSSL_free` coordinates.
-const FILE: *const c_char = c"crypto/engine/eng_table.c".as_ptr();
-/// `OPENSSL_LINE` of the pile `OPENSSL_malloc` (`:106`).
-const LINE_PILE_NEW: c_int = 106;
-/// `OPENSSL_LINE` of the pile `OPENSSL_free` in the failure path (`:113`).
-const LINE_PILE_FREE: c_int = 113;
 
 /// `ENGINE_TABLE_FLAG_NOINIT` (`openssl/engine.h:64`) — `(unsigned int)0x0001`.
 const ENGINE_TABLE_FLAG_NOINIT: c_uint = 0x0001;
@@ -89,6 +82,39 @@ const _: () = {
     assert!(core::mem::offset_of!(EnginePile, funct) == 16);
     assert!(core::mem::offset_of!(EnginePile, uptodate) == 24);
 };
+
+/// `int_cleanup_cb_doall`'s member body (`eng_table.c:177-185`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the pile's own engine stack, then the cached default engine.
+///
+/// [`OwnedCtx`]: crate::runtime::bio::owned::OwnedCtx
+// SAFETY: (a) `destroy_body` is the authority's own `int_cleanup_cb_doall` body -- it releases
+// exactly the pile's own `sk` (a NULL-tolerant `sk_ENGINE_free`) and finishes the cached default
+// `funct` when set, and never releases the enclosing block, which `OwnedCtx`'s `Drop` releases
+// through `CRYPTO_free` at `:113`; (b) an all-zero `EnginePile` is a valid value (`sk`/`funct`
+// NULL, `nid`/`uptodate` zero), so the zeroed block `OwnedCtx::zalloc` would build is valid and
+// this body is sound on it; (c) whenever `funct` is non-NULL the caller holds the engine lock --
+// the body calls `engine_unlocked_finish`, which requires it. The only non-NULL-`funct` owners
+// are built by `int_cleanup_cb_doall` under `engine_table_cleanup`'s lock; the register-failure
+// owners always have `funct == NULL`.
+unsafe impl CtxDestroy for EnginePile {
+    /// `__FILE__` for the pile's `OPENSSL_malloc`/`OPENSSL_free` coordinates.
+    const FILE: *const c_char = c"crypto/engine/eng_table.c".as_ptr();
+    /// `OPENSSL_LINE` of the pile `OPENSSL_malloc` (`:106`).
+    const LINE_ALLOC: c_int = 106;
+    /// `OPENSSL_LINE` of the pile's normal `OPENSSL_free` (`int_cleanup_cb_doall`, `:184`).
+    const LINE_FREE: c_int = 184;
+
+    unsafe fn destroy_body(ptr: *mut EnginePile) {
+        // SAFETY: `ptr` is a live pile per the trait contract; `sk` is this pile's own stack
+        // (NULL-tolerant) and `funct` is NULL or the cached default engine.
+        unsafe {
+            OPENSSL_sk_free((*ptr).sk);
+            if !(*ptr).funct.is_null() {
+                engine_unlocked_finish((*ptr).funct, 0);
+            }
+        }
+    }
+}
 
 /// `struct st_engine_pile_doall` (`:35-38`) — the doall adapter's argument.
 #[repr(C)]
@@ -129,14 +155,18 @@ unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
 unsafe extern "C" fn engine_pile_cmp(a: *const c_void, b: *const c_void) -> c_int {
     let a = a.cast::<EnginePile>();
     let b = b.cast::<EnginePile>();
-    // SAFETY: the lhash calls the comparison with two stored pile pointers.
-    unsafe { (*a).nid - (*b).nid }
+    // SAFETY: the lhash calls the comparison with two stored pile pointers. Wrapping
+    // subtraction is the authority's two's-complement result without a debug-build
+    // overflow panic across the `extern "C"` edge (the C subtraction is UB there).
+    unsafe { (*a).nid.wrapping_sub((*b).nid) }
 }
 
 /// `static int int_table_check(ENGINE_TABLE **t, int create)` — `:65-77`.
 ///
 /// # Safety
-/// `t` must point to a live `ENGINE_TABLE *` slot.
+/// `t` must point to a live `ENGINE_TABLE *` slot, and the engine lock must be held:
+/// this access is non-atomic (the crate's table statics are `AtomicPtr`s, but this
+/// unit receives a `*mut *mut` view), so every access must be serialised by that lock.
 unsafe fn int_table_check(t: *mut *mut OpenSslLhash, create: bool) -> bool {
     // SAFETY: `t` is a live slot per the contract.
     if !unsafe { *t }.is_null() {
@@ -158,8 +188,17 @@ unsafe fn int_table_check(t: *mut *mut OpenSslLhash, create: bool) -> bool {
 ///     ENGINE *e, const int *nids, int num_nids, int setdefault)` — `:83-149`.
 ///
 /// # Safety
-/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be NULL or a live
-/// `ENGINE`; `nids` must point to `num_nids` integers; `cleanup` is a caller callback.
+/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be a live, non-NULL
+/// `ENGINE` (the crate's register/set-default wrappers always pass one, and the
+/// `setdefault` arm would dereference it; the authority's wrappers check for NULL
+/// before calling); `nids` must point to `num_nids` integers; `cleanup` is a caller
+/// callback that must remain valid until engine cleanup.
+///
+/// The registered entry is a **borrow**: `e` must remain alive until it is
+/// unregistered, either because the global engine list holds the structural reference
+/// (`ENGINE_add`) or because the caller keeps one. The authority assumes the same;
+/// [`crate::engine::eng_list`]'s removal path retires the borrow before dropping the
+/// list's reference.
 pub(crate) unsafe fn engine_table_register(
     table: *mut *mut OpenSslLhash,
     cleanup: Option<EngineCleanupCb>,
@@ -212,46 +251,57 @@ pub(crate) unsafe fn engine_table_register(
         let mut fnd = unsafe { OPENSSL_LH_retrieve(lh, ptr::addr_of!(tmplate).cast::<c_void>()) }
             .cast::<EnginePile>();
         if fnd.is_null() {
-            let raw =
-                CRYPTO_malloc(size_of::<EnginePile>(), FILE, LINE_PILE_NEW) as *mut EnginePile;
-            if raw.is_null() {
+            // The pile is the authority's own `OPENSSL_malloc(sizeof(*fnd))` at `:106`; its `sk`
+            // and `funct` members are the authority's `int_cleanup_cb_doall` body, run from
+            // [`OwnedCtx`]'s `Drop`, and the block release is at `:113`.
+            let Some(raw) = RawCtx::<EnginePile>::malloc() else {
                 // SAFETY: the engine lock is held by the caller.
                 unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
                 return ret;
-            }
+            };
             // SAFETY: `raw` is the fresh allocation; `tmplate` carries the nid.
             unsafe {
-                (*raw).uptodate = 1;
-                (*raw).nid = tmplate.nid;
-                (*raw).sk = OPENSSL_sk_new_null();
+                let p = raw.as_ptr();
+                (*p).uptodate = 1;
+                (*p).nid = tmplate.nid;
+                (*p).sk = OPENSSL_sk_new_null();
             }
-            // SAFETY: `raw` is live.
-            if unsafe { (*raw).sk.is_null() } {
-                // SAFETY: `raw` is not stored yet.
-                unsafe { CRYPTO_free(raw.cast::<c_void>(), FILE, LINE_PILE_FREE) };
+            // SAFETY: `raw.as_ptr()` is live.
+            if unsafe { (*raw.as_ptr()).sk.is_null() } {
+                // The pile's `sk` failed to allocate, so the pile is not yet a valid
+                // `EnginePile`; the raw handle's `Drop` releases the block alone at the
+                // authority's failure site (`OPENSSL_free(fnd)` at `:113`).
+                let mut raw = raw;
+                raw.set_release_line(113);
+                drop(raw);
                 // SAFETY: the engine lock is held by the caller.
                 unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
                 return ret;
             }
-            // SAFETY: `raw` is live.
-            unsafe {
-                (*raw).funct = ptr::null_mut();
-                OPENSSL_LH_insert(lh, raw.cast::<c_void>());
-            }
-            // SAFETY: the lhash is live and now holds `raw`.
+            // `sk` is set; `funct` is set to NULL now so every field this pile's destructor body
+            // reads is initialised before the owning handle can run it.
+            // SAFETY: `raw.as_ptr()` is live.
+            unsafe { (*raw.as_ptr()).funct = ptr::null_mut() };
+            // SAFETY: all four fields are written and `raw` is the only owner, so the storage is a
+            // valid `EnginePile` whose destructor body is sound.
+            let mut raw = unsafe { raw.assume_init() };
+            // SAFETY: `raw.as_ptr()` is live; the lhash stores the pile as its node.
+            unsafe { OPENSSL_LH_insert(lh, raw.as_ptr().cast::<c_void>()) };
+            // SAFETY: the lhash is live and holds the node `raw` inserted.
             let again = unsafe { OPENSSL_LH_retrieve(lh, ptr::addr_of!(tmplate).cast::<c_void>()) }
                 .cast::<EnginePile>();
-            if again != raw {
-                // SAFETY: `raw` was not the stored node.
-                unsafe {
-                    OPENSSL_sk_free((*raw).sk);
-                    CRYPTO_free(raw.cast::<c_void>(), FILE, LINE_PILE_FREE);
-                }
+            if again != raw.as_ptr() {
+                // The lhash kept a different node; the handle's `Drop` runs the authority's own
+                // `sk_ENGINE_free(fnd->sk)` + `OPENSSL_free(fnd)` at the failed-insert site
+                // `:113` (funct is still NULL).
+                raw.set_release_line(113);
+                drop(raw);
                 // SAFETY: the engine lock is held by the caller.
                 unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
                 return ret;
             }
-            fnd = raw;
+            // The lhash owns the pile now; `into_raw` disables the handle's `Drop`.
+            fnd = raw.into_raw();
         }
         // A registration should not add duplicate entries.
         // SAFETY: `fnd` is a live pile and `e` is the caller's engine.
@@ -259,6 +309,13 @@ pub(crate) unsafe fn engine_table_register(
             OPENSSL_sk_delete_ptr((*fnd).sk, e.cast::<c_void>());
         }
         // If `setdefault`, this ENGINE goes to the head of the list.
+        // The stack stores a **borrowed** `ENGINE *`; `engine_table_register` takes no
+        // reference for it (`eng_table.c:124-131`). The structural reference that keeps
+        // `e` alive is the one `engine_list_add` took when the engine was added to the
+        // global list (`ENGINE_add`). `engine_list_remove` retires this borrow through
+        // `engine_unregister_from_all_tables` before dropping that reference, so the entry
+        // cannot outlive its owner (a deliberate improvement over the authority, which does
+        // not unregister on removal).
         // SAFETY: `fnd` is live and `e` is the caller's engine.
         if unsafe { OPENSSL_sk_push((*fnd).sk, e.cast::<c_void>()) } == 0 {
             // SAFETY: the engine lock is held by the caller.
@@ -333,6 +390,23 @@ pub(crate) unsafe fn engine_table_unregister(table: *mut *mut OpenSslLhash, e: *
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
         return;
     }
+    // SAFETY: the engine lock is held by this frame.
+    unsafe { engine_table_unregister_locked(table, e) };
+    // SAFETY: the engine lock is held by the caller.
+    unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
+}
+
+/// The body of [`engine_table_unregister`] for a caller that already holds the engine lock.
+///
+/// `ENGINE_remove` reaches this form: it unregisters `e` from every table while holding the
+/// lock it took, before dropping the global list's structural reference. The authority's
+/// `engine_table_unregister` always acquires the lock itself (`:167-175`); the crate's lock
+/// refuses a recursive write acquisition, so the removal path cannot call the public form.
+///
+/// # Safety
+/// `table` must point to a live `ENGINE_TABLE *` slot; `e` must be a live `ENGINE`; the
+/// engine lock must be held by the caller.
+pub(crate) unsafe fn engine_table_unregister_locked(table: *mut *mut OpenSslLhash, e: *mut Engine) {
     // SAFETY: `table` is a live slot.
     if unsafe { int_table_check(table, false) } {
         // SAFETY: `table` holds a live lhash and `e` is the caller's engine.
@@ -340,24 +414,16 @@ pub(crate) unsafe fn engine_table_unregister(table: *mut *mut OpenSslLhash, e: *
             OPENSSL_LH_doall_arg(*table, Some(int_unregister_cb), e.cast::<c_void>());
         }
     }
-    // SAFETY: the engine lock is held by the caller.
-    unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
 }
 
 /// `static void int_cleanup_cb_doall(ENGINE_PILE *p)` — `:177-185`.
 unsafe extern "C" fn int_cleanup_cb_doall(p: *mut c_void) {
-    if p.is_null() {
-        return;
-    }
     let p = p.cast::<EnginePile>();
-    // SAFETY: `p` is a live pile from the lhash.
-    unsafe {
-        OPENSSL_sk_free((*p).sk);
-        if !(*p).funct.is_null() {
-            engine_unlocked_finish((*p).funct, 0);
-        }
-        CRYPTO_free(p.cast::<c_void>(), FILE, LINE_PILE_FREE);
-    }
+    // `p` is a pile the lhash owns; the handle's `Drop` runs the authority's own
+    // `int_cleanup_cb_doall` body (`sk_ENGINE_free` + `engine_unlocked_finish`) followed by the
+    // block release at `:113`. A NULL `p` reclaims nothing.
+    // SAFETY: `p` is NULL or a live pile this crate allocated and the lhash still owns.
+    drop(unsafe { OwnedCtx::<EnginePile>::from_raw(p) });
 }
 
 /// `void engine_table_cleanup(ENGINE_TABLE **table)` — `:187-197`.
@@ -397,20 +463,21 @@ pub(crate) unsafe fn ossl_engine_table_select(
     l: c_int,
 ) -> *mut Engine {
     let _ = (f, l);
-    // Load the config before checking whether engines are available.
+    // Load the config before taking the engine lock: configuration modules may register
+    // engines, and that path takes the same lock.
     OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
 
-    // SAFETY: `table` is a live slot.
-    if unsafe { *table }.is_null() {
-        return ptr::null_mut();
-    }
+    // The authority checks `*table == NULL` before locking. The slot is read here through
+    // a non-atomic `*mut` view, so that fast path would race a locked cleanup/register;
+    // it is deliberately not reproduced (AGENTS.md §17). A NULL table takes the same
+    // `select_end` refusal below, after acquiring the lock.
     // SAFETY: the lock is the engine lock, created by the run-once.
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
         return ptr::null_mut();
     }
     ERR_set_mark();
-    // Check again inside the lock, racing against cleanup.
-    // SAFETY: `table` is a live slot.
+    // Check the slot inside the lock, serialised against cleanup and registration.
+    // SAFETY: `table` is a live slot and the engine lock is held.
     if !unsafe { int_table_check(table, false) } {
         // SAFETY: the engine lock is held and `fnd` is NULL or a live pile.
         return unsafe { select_end(ptr::null_mut(), ptr::null_mut()) };
@@ -440,6 +507,14 @@ pub(crate) unsafe fn ossl_engine_table_select(
             return unsafe { select_end(fnd, ret) };
         }
     }
+    // The authority's own arm: `if (fnd->uptodate) { ret = fnd->funct; goto end; }`
+    // (`eng_table.c:240-243`). When the cached default is present but
+    // `engine_unlocked_init` answered 0, the cached pointer is returned **without** an
+    // acquired functional reference. That is an authority-level contract hazard the
+    // conversion inherits, not a new refusal: the crate's checked increment can also
+    // answer 0 at `i32::MAX`, which the authority's plain fetch-add cannot observe.
+    // Callers therefore receive an unowned engine on this arm in both implementations;
+    // it is recorded with the borrowed-table-entry hazard, not discharged here.
     // SAFETY: `fnd` is live.
     if unsafe { (*fnd).uptodate } != 0 {
         // SAFETY: `fnd` is live.
@@ -521,7 +596,10 @@ unsafe extern "C" fn int_dall(pile: *mut c_void, dall: *mut c_void) {
 /// `:308-316`.
 ///
 /// # Safety
-/// `table` must be NULL or a live `ENGINE_TABLE`; `cb` accepts each pile.
+/// `table` must be NULL or a live `ENGINE_TABLE`; `cb` accepts each pile. The caller
+/// must hold the engine lock (read or write) for the whole walk and must not mutate or
+/// free the table from `cb`: the walk dereferences every pile and hands its borrowed
+/// stack and engines to the callback (the crate's only caller holds the read lock).
 pub(crate) unsafe fn engine_table_doall(
     table: *mut OpenSslLhash,
     cb: Option<EngineTableDoallCb>,
@@ -539,3 +617,193 @@ pub(crate) unsafe fn engine_table_doall(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::test_support::lock_global_state;
+
+    static INIT_CALLS: AtomicU32 = AtomicU32::new(0);
+
+    unsafe extern "C" fn refusing_init(_e: *mut Engine) -> c_int {
+        INIT_CALLS.fetch_add(1, Ordering::SeqCst);
+        0
+    }
+
+    /// The authority returns the cached `fnd->funct` when `engine_unlocked_init` fails and
+    /// `uptodate` is set (`eng_table.c:240-243`). The crate's checked increment adds a
+    /// refusal at `i32::MAX` that the authority's plain fetch-add cannot observe; this test
+    /// pins the authority's answer on that arm: the cached pointer, with no acquired
+    /// functional reference.
+    #[test]
+    fn refused_init_returns_the_cached_default_without_a_reference() {
+        let _g = lock_global_state();
+        let nid: c_int = 0x4d7;
+        let mut table: *mut OpenSslLhash = ptr::null_mut();
+        // SAFETY: `table` is this test's own slot; the lhash, pile and engine are built
+        // and released exactly once here.
+        unsafe {
+            assert!(int_table_check(&mut table, true));
+            let raw = RawCtx::<EnginePile>::malloc();
+            assert!(raw.is_some(), "the pile block allocates");
+            let Some(raw) = raw else { return };
+            {
+                let p = raw.as_ptr();
+                (*p).uptodate = 1;
+                (*p).nid = nid;
+                (*p).sk = OPENSSL_sk_new_null();
+                assert!(!(*p).sk.is_null());
+                (*p).funct = ptr::null_mut();
+            }
+            let raw = raw.assume_init();
+            OPENSSL_LH_insert(table, raw.as_ptr().cast::<c_void>());
+
+            let tmplate = EnginePile {
+                nid,
+                sk: ptr::null_mut(),
+                funct: ptr::null_mut(),
+                uptodate: 1,
+            };
+            let fnd = OPENSSL_LH_retrieve(table, ptr::addr_of!(tmplate).cast::<c_void>())
+                .cast::<EnginePile>();
+            assert_eq!(fnd, raw.as_ptr());
+            let _ = raw.into_raw();
+
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            (*fnd).funct = e;
+            (*e).struct_ref.store(i32::MAX, Ordering::Relaxed);
+
+            let got = ossl_engine_table_select(&mut table, nid, c"eng_table-test".as_ptr(), 0);
+            assert_eq!(got, e, "the cached-default arm must match the authority");
+            assert_eq!(
+                (*e).struct_ref.load(Ordering::Relaxed),
+                i32::MAX,
+                "no structural reference was acquired"
+            );
+            assert_eq!((*e).funct_ref, 0, "no functional reference was acquired");
+
+            // Clear the borrowed cache before the pile's destructor runs: the cached
+            // pointer carries no functional reference for `engine_unlocked_finish` to drop.
+            (*e).struct_ref.store(1, Ordering::Relaxed);
+            (*fnd).funct = ptr::null_mut();
+            engine_table_cleanup(&mut table);
+            assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    /// The authority's other trigger for the same arm: the cached default's own `init`
+    /// hook answers 0 (`eng_table.c:233-243`). It likewise returns the cached pointer
+    /// without a functional reference.
+    #[test]
+    fn refused_init_hook_returns_the_cached_default_without_a_reference() {
+        let _g = lock_global_state();
+        let nid: c_int = 0x4d8;
+        let mut table: *mut OpenSslLhash = ptr::null_mut();
+        // SAFETY: `table` is this test's own slot; the lhash, pile and engine are built
+        // and released exactly once here.
+        unsafe {
+            assert!(int_table_check(&mut table, true));
+            let raw = RawCtx::<EnginePile>::malloc();
+            assert!(raw.is_some(), "the pile block allocates");
+            let Some(raw) = raw else { return };
+            {
+                let p = raw.as_ptr();
+                (*p).uptodate = 1;
+                (*p).nid = nid;
+                (*p).sk = OPENSSL_sk_new_null();
+                assert!(!(*p).sk.is_null());
+                (*p).funct = ptr::null_mut();
+            }
+            let raw = raw.assume_init();
+            OPENSSL_LH_insert(table, raw.as_ptr().cast::<c_void>());
+
+            let tmplate = EnginePile {
+                nid,
+                sk: ptr::null_mut(),
+                funct: ptr::null_mut(),
+                uptodate: 1,
+            };
+            let fnd = OPENSSL_LH_retrieve(table, ptr::addr_of!(tmplate).cast::<c_void>())
+                .cast::<EnginePile>();
+            assert_eq!(fnd, raw.as_ptr());
+            let _ = raw.into_raw();
+
+            let e = ENGINE_new();
+            assert!(!e.is_null());
+            (*e).init = Some(refusing_init);
+            (*fnd).funct = e;
+            INIT_CALLS.store(0, Ordering::SeqCst);
+
+            let got = ossl_engine_table_select(&mut table, nid, c"eng_table-test".as_ptr(), 0);
+            assert_eq!(got, e, "the cached-default arm must match the authority");
+            assert_eq!(INIT_CALLS.load(Ordering::SeqCst), 1, "the hook ran once");
+            assert_eq!((*e).funct_ref, 0, "no functional reference was acquired");
+            assert_eq!(
+                (*e).struct_ref.load(Ordering::Relaxed),
+                1,
+                "no structural reference was acquired"
+            );
+
+            (*fnd).funct = ptr::null_mut();
+            engine_table_cleanup(&mut table);
+            assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    /// Concurrency control for the slot-access repair: `ossl_engine_table_select`
+    /// must share the engine lock with a register/cleanup loop instead of reading the
+    /// slot unlocked. Run under ThreadSanitizer; the pre-repair fast path (the
+    /// authority's `*table == NULL` check before locking) reports a race here.
+    ///
+    /// This test deliberately does not take `lock_global_state`: serialising it would
+    /// remove the interleaving it exists to exercise. It owns its slot and touches no
+    /// other engine state beyond the engine lock, so it does not disturb its siblings.
+    #[test]
+    fn concurrent_select_and_cleanup_serialise_on_the_engine_lock() {
+        // SAFETY: the once storage and init are `eng_lib.rs`'s.
+        assert!(unsafe { crate::engine::eng_lib::run_engine_lock_init() });
+        // The heap block is the shared slot; every access goes through a table helper,
+        // which the engine lock serialises.
+        let slot = Box::into_raw(Box::new(ptr::null_mut::<OpenSslLhash>()));
+        let slot_addr = slot as usize;
+        let nid: c_int = 0x4d9;
+
+        let select = std::thread::spawn(move || {
+            let slot = slot_addr as *mut *mut OpenSslLhash;
+            for _ in 0..2_000 {
+                // SAFETY: the slot is the test's shared allocation and the helper takes
+                // the engine lock before touching it.
+                unsafe {
+                    let _ = ossl_engine_table_select(slot, nid, c"eng_table-race".as_ptr(), 0);
+                }
+            }
+        });
+        let mutate = std::thread::spawn(move || {
+            let slot = slot_addr as *mut *mut OpenSslLhash;
+            for _ in 0..2_000 {
+                // SAFETY: the slot is the test's, and both helpers serialise on the
+                // engine lock.
+                unsafe {
+                    assert!(CRYPTO_THREAD_write_lock(global_engine_lock()) != 0);
+                    assert!(int_table_check(slot, true));
+                    CRYPTO_THREAD_unlock(global_engine_lock());
+                    engine_table_cleanup(slot);
+                }
+            }
+        });
+        assert!(select.join().is_ok(), "the select thread does not panic");
+        assert!(mutate.join().is_ok(), "the mutate thread does not panic");
+        // SAFETY: both threads have joined and cleanup nulled the slot; this is its
+        // single release.
+        unsafe {
+            assert!((*slot).is_null());
+            drop(Box::from_raw(slot));
+        }
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EnginePile => zero_state_sweep_engine_pile);

@@ -93,7 +93,9 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::thread::CryptoRwlock;
 
@@ -893,6 +895,16 @@ pub extern "C" fn RSA_null_method() -> *const RsaMethod {
 // Slice C, first part — the RAND-free half of the padding functions (D285)
 // =============================================================================================
 //
+// **Negative and too-short lengths are refused here, unlike the authority.** The C bodies pass
+// an `int` length straight into `memcpy`/`memset`, so a negative `flen` (or the `flen < 2` X9.31
+// check, which reads a header and a trailer before copying) is undefined behaviour in the
+// authority. These entry points reject the length before touching a buffer; every non-negative
+// input keeps the authority's result and error reason. Where the authority's own length checks
+// refuse before any buffer is touched -- the two OAEP tests at `rsa_oaep.c:99` and `:104` -- they
+// run **first**, so a small block's negative-`flen` call still reports the authority's site and
+// reason rather than the refusal's. This is the deliberate divergence §17 requires: a C-valid
+// hostile argument must not reach the copies.
+//
 // Three of the eight padding *add* functions need `RAND_bytes_ex` for the bytes they insert
 // `rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
 // for implicit rejection. What lands here first is the half whose output is a **pure function of
@@ -936,6 +948,13 @@ pub unsafe extern "C" fn RSA_padding_add_none(
             raise_site(&err_sites::RSA_NONE_29);
             return 0;
         }
+        // `flen == tlen` and both are negative: the authority's `memcpy` would receive the
+        // negated length as `size_t`. Refuse it as the too-small case it would have been for any
+        // non-negative `tlen`.
+        if flen < 0 {
+            raise_site(&err_sites::RSA_NONE_29);
+            return 0;
+        }
         core::ptr::copy_nonoverlapping(from, to, flen as usize);
         1
     }
@@ -964,6 +983,12 @@ pub unsafe extern "C" fn RSA_padding_check_none(
             raise_site(&err_sites::RSA_NONE_42);
             return -1;
         }
+        // A non-negative `tlen` with a negative `flen` would make `tlen - flen` larger than the
+        // destination and hand the negated `flen` to `memcpy`. Refuse it at the too-large site.
+        if flen < 0 {
+            raise_site(&err_sites::RSA_NONE_42);
+            return -1;
+        }
         core::ptr::write_bytes(to, 0, (tlen - flen) as usize);
         core::ptr::copy_nonoverlapping(from, to.offset((tlen - flen) as isize), flen as usize);
         tlen
@@ -989,6 +1014,13 @@ pub unsafe extern "C" fn RSA_padding_add_X931(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // The authority subtracts before checking, so a negative length (or an `INT_MIN` bound)
+        // reaches a wrapped `j` and then a `memcpy` with a negated length. Refuse the inputs that
+        // cannot describe a block before doing the arithmetic.
+        if tlen < 0 || flen < 0 {
+            raise_site(&err_sites::RSA_X931_56);
+            return -1;
+        }
         let j = tlen - flen - 2;
 
         if j < 0 {
@@ -1039,7 +1071,10 @@ pub unsafe extern "C" fn RSA_padding_check_X931(
         let mut p = from;
         let mut i: c_int = 0;
 
-        if num != flen || (*p != 0x6a && *p != 0x6b) {
+        // The body reads `from[0]`, then the header and a trailer, and finally copies
+        // `flen - 2` bytes; a block shorter than two octets (or a negative length) cannot be
+        // walked. The authority reads and copies out of bounds for those inputs.
+        if flen < 2 || num != flen || (*p != 0x6a && *p != 0x6b) {
             raise_site(&err_sites::RSA_X931_87);
             return -1;
         }
@@ -1128,6 +1163,13 @@ pub unsafe extern "C" fn RSA_padding_add_PKCS1_type_1(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // A negative bound would make `tlen - RSA_PKCS1_PADDING_SIZE` itself wrap; a negative
+        // `flen` would pass the upper-bound test and be negated into the `memset`/`memcpy`
+        // lengths. The authority has both faults; this entry point refuses them.
+        if tlen < 0 || flen < 0 {
+            raise_site(&err_sites::RSA_PK1_38);
+            return 0;
+        }
         if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
             raise_site(&err_sites::RSA_PK1_38);
             return 0;
@@ -1253,6 +1295,11 @@ pub unsafe extern "C" fn PKCS1_MGF1(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // A negative seed length would be negated when passed to `EVP_DigestUpdate`; the
+        // authority does the same conversion. Refuse it before allocating.
+        if seedlen < 0 {
+            return -1;
+        }
         let c = EVP_MD_CTX_new();
         let mut md = [0u8; EVP_MAX_MD_SIZE];
         let mut cnt = [0u8; 4];
@@ -1318,7 +1365,8 @@ pub unsafe extern "C" fn PKCS1_MGF1(
 /// Like `crypto/rsa/rsa_meth.c` above, `rsa_oaep.c` is a source-tree file, so its `__FILE__`
 /// carries the `../../src/openssl-3.6.4/` prefix. The string is observable through
 /// `CRYPTO_set_mem_functions`, so the prefix is not cosmetic.
-const FILE_RSA_OAEP: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c".as_ptr();
+const FILE_RSA_OAEP_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c");
 
 /// `int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen, const unsigned char *from,
 /// int flen, int num, const unsigned char *param, int plen)` — `rsa_oaep.c:160-166`.
@@ -1410,13 +1458,11 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
-        // The authority writes `dblen = 0` and `db = NULL` here; neither initial value is ever
-        // read (`dblen` is assigned before the first `goto cleanup`, and `db` is assigned as the
-        // first act of the `'body` block), so Rust declares them where they are first written.
         let mut mlen: c_int = -1;
-        let mut good: u32 = 0;
-        let db: *mut c_uchar;
-        let mut em: *mut c_uchar = core::ptr::null_mut();
+        // The authority's `good = 0` initialiser is dead here: every exit of the `'body` block
+        // below reaches the body's `good = ...` assignment before `good` is first read, and the two
+        // allocation failures that could once have left it at `0` now return above.
+        let mut good: u32;
         let mut seed = [0u8; EVP_MAX_MD_SIZE];
 
         let mut md = md;
@@ -1432,7 +1478,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         // SAFETY: `md` is live (the default above when the caller passed NULL).
         let mdlen: c_int = EVP_MD_get_size(md);
 
-        if tlen <= 0 || flen <= 0 || mdlen <= 0 {
+        // A negative label length would be negated when passed to `EVP_Digest`; the authority
+        // does the same conversion. Every non-negative input keeps the authority's answer.
+        if tlen <= 0 || flen <= 0 || plen < 0 || mdlen <= 0 {
             return -1;
         }
         // `num` is the modulus length and `flen` the encoded message length: `flen <= num` for any
@@ -1444,21 +1492,34 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
 
         let dblen: c_int = num - mdlen - 1;
 
+        // `db` and `em` are this frame's two scratch blocks, allocated through the crate's
+        // allocator seam at the authority's own sizes and released by their handles' `Drop` -- the
+        // authority's cleansing `CRYPTO_clear_free` -- at the `cleanup:` site below.
+        // SAFETY: `dblen` is positive because `num >= 2 * mdlen + 2`.
+        let Some(db_owned) = OwnedBuf::new_cleansed_released(
+            dblen as usize,
+            FILE_RSA_OAEP_SEAM,
+            LINE,
+            SeamFile::NULL,
+            0,
+        ) else {
+            return -1;
+        };
+        // SAFETY: `num` is positive.
+        let Some(em_owned) = OwnedBuf::new_cleansed_released(
+            num as usize,
+            FILE_RSA_OAEP_SEAM,
+            LINE,
+            SeamFile::NULL,
+            0,
+        ) else {
+            return -1;
+        };
+        let db = db_owned.as_ptr();
+        // The copy below walks `em` as a cursor; it ends back at the block's start.
+        let mut em = em_owned.as_ptr();
+
         let completed = 'body: {
-            // SAFETY: `dblen` is positive because `num >= 2 * mdlen + 2`.
-            db = crate::runtime::mem::CRYPTO_malloc(dblen as usize, FILE_RSA_OAEP, LINE)
-                .cast::<c_uchar>();
-            if db.is_null() {
-                break 'body false;
-            }
-
-            // SAFETY: `num` is positive.
-            em = crate::runtime::mem::CRYPTO_malloc(num as usize, FILE_RSA_OAEP, LINE)
-                .cast::<c_uchar>();
-            if em.is_null() {
-                break 'body false;
-            }
-
             // Copy `from` (up to `flen` bytes) into the tail of `em` (`num` bytes): right-aligned,
             // zero-padded on the left. The source pointer is advanced under a mask so the same
             // addresses are touched whatever `flen` is, and `from` is never read before its start.
@@ -1617,20 +1678,9 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
         }
 
         // The authority's `cleanup:` label, reached both by falling through and by every
-        // `break 'body false` above.
+        // `break 'body false` above. `db` and `em` are released by their handles' `Drop` as this
+        // frame exits.
         crate::runtime::mem::cleanse(seed.as_mut_ptr(), EVP_MAX_MD_SIZE);
-        crate::runtime::mem::CRYPTO_clear_free(
-            db.cast::<c_void>(),
-            dblen as usize,
-            FILE_RSA_OAEP,
-            LINE,
-        );
-        crate::runtime::mem::CRYPTO_clear_free(
-            em.cast::<c_void>(),
-            num as usize,
-            FILE_RSA_OAEP,
-            LINE,
-        );
 
         crate::runtime::constant_time::constant_time_select_int(good, mlen, -1)
     }
@@ -1656,7 +1706,7 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
 /// `forensics/authorities/build/openssl-3.6.4-production/crypto/rsa/libcrypto-lib-rsa_pk1.o`
 /// carries the `../../src/openssl-3.6.4/` prefix. The string reaches an application through
 /// `CRYPTO_set_mem_functions`, so the prefix is part of the observable contract and not cosmetic.
-const FILE_RSA_PK1: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c".as_ptr();
+const FILE_RSA_PK1_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c");
 
 /// `int ossl_rsa_padding_add_PKCS1_type_2_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
 /// const unsigned char *from, int flen)` — `rsa_pk1.c:124-162`. Internal, and declared in
@@ -1686,6 +1736,12 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_type_2_ex(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // Checked before the subtraction so an `INT_MIN` bound cannot wrap it; a negative `tlen`
+        // is the authority's too-large arm in every case where its own subtraction is defined.
+        if tlen < 0 {
+            raise_site(&err_sites::RSA_PK1_132);
+            return 0;
+        }
         if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
             raise_site(&err_sites::RSA_PK1_132);
             return 0;
@@ -1802,11 +1858,21 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
             return -1;
         }
 
-        // `num >= RSA_PKCS1_PADDING_SIZE` above, so this is a non-zero request.
-        let mut em = CRYPTO_malloc(num as usize, FILE_RSA_PK1, LINE).cast::<c_uchar>();
-        if em.is_null() {
+        // `num >= RSA_PKCS1_PADDING_SIZE` above, so this is a non-zero request. `em` is this
+        // frame's scratch block, released by its handle's `Drop` -- the authority's cleansing
+        // `CRYPTO_clear_free` -- at the `cleanup:` site below.
+        // SAFETY: `num` is positive.
+        let Some(em_owned) = OwnedBuf::new_cleansed_released(
+            num as usize,
+            FILE_RSA_PK1_SEAM,
+            LINE,
+            SeamFile::NULL,
+            0,
+        ) else {
             return -1;
-        }
+        };
+        // The copy below walks `em` as a cursor; it ends back at the block's start.
+        let mut em = em_owned.as_ptr();
 
         // Copy `from` (up to `flen` bytes) into the tail of `em` (`num` bytes): right-aligned,
         // zero-padded on the left, with the source pointer advanced under a mask so that the same
@@ -1898,12 +1964,7 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
             i += 1;
         }
 
-        crate::runtime::mem::CRYPTO_clear_free(
-            em.cast::<c_void>(),
-            num as usize,
-            FILE_RSA_PK1,
-            LINE,
-        );
+        // `em` is released by its handle's `Drop` as this frame exits.
         // The authority's `#ifndef FIPS_MODULE` arm: raise, then *flag* the record rather than
         // remove it when the plaintext was in fact good. A transcription that guarded the raise on
         // `!good` would get exactly the case the flag exists for wrong.
@@ -1967,7 +2028,7 @@ unsafe fn ossl_rsa_prf(
     'body: {
         // SAFETY: as above.
         unsafe {
-            if tlen.wrapping_mul(8) != bitlen as c_int {
+            if llen < 0 || tlen.wrapping_mul(8) != bitlen as c_int {
                 raise_site(&err_sites::RSA_PK1_294);
                 break 'body;
             }
@@ -2114,10 +2175,9 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
 
     // SAFETY: the caller's contract.
     unsafe {
-        // The authority initialises `synthetic` to NULL and immediately overwrites it; that
-        // initialiser is dead and is dropped, exactly as this file's type-2 check drops its own
-        // `em`/`mlen` initialisers. `len_candidate` and `j` are likewise declared where the
-        // authority first assigns them rather than at the top of the block.
+        // `synthetic` is this frame's scratch block, released by its handle's `Drop` -- the
+        // authority's plain `CRYPTO_free` -- at the `err:` site below. `len_candidate` and `j` are
+        // declared where the authority first assigns them rather than at the top of the block.
         let mut synthetic_length: c_int;
         let mut len_candidate: u16;
         let mut candidate_lengths = [0u8; MAX_LEN_GEN_TRIES * 2];
@@ -2129,11 +2189,12 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
             return -1;
         }
 
-        let synthetic = CRYPTO_malloc(flen as usize, FILE_RSA_PK1, LINE).cast::<c_uchar>();
-        if synthetic.is_null() {
+        // SAFETY: `flen > 0`, checked above.
+        let Some(synthetic_owned) = OwnedBuf::new(flen as usize, FILE_RSA_PK1_SEAM, LINE) else {
             raise_site(&err_sites::RSA_PK1_426);
             return -1;
-        }
+        };
+        let synthetic = synthetic_owned.as_ptr();
 
         // The authority's `sizeof(candidate_lengths)` and `MAX_LEN_GEN_TRIES *
         // sizeof(len_candidate) * 8` are written as those quantities: the buffers above are the
@@ -2254,11 +2315,11 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
         }
 
         // The authority's `err:` label. `ret < 0` is the publicly-invalid case, and this is the
-        // only raise on the way out.
+        // only raise on the way out. `synthetic` is released by its handle's `Drop` as this frame
+        // exits.
         if ret < 0 {
             raise_site(&err_sites::RSA_PK1_520);
         }
-        crate::runtime::mem::CRYPTO_free(synthetic.cast::<c_void>(), FILE_RSA_PK1, LINE);
         ret
     }
 }
@@ -2439,10 +2500,16 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
-        let emlen: c_int = tlen - 1;
-        let mut dbmask: *mut c_uchar = core::ptr::null_mut();
+        // The authority computes `emlen = tlen - 1` and both length bounds in `int`, and passes
+        // `plen`/`flen` straight into `EVP_Digest`/`memset`/`memcpy`. A negative length would be
+        // negated into a `size_t` and a `tlen` of `INT_MIN` would overflow `tlen - 1`, so those
+        // are refused rather than reproduced. The two authority length checks are evaluated
+        // **first**, in `i64` so a non-positive `tlen` cannot wrap: the authority reaches both
+        // sites before touching either buffer, and `RT-RSA` observes their coordinates and
+        // reasons (`rsa_oaep.c:99` and `:104`). Refusing a negative length ahead of them would
+        // preempt that safe refusal with the wrong reason.
+        let emlen_w: i64 = tlen as i64 - 1;
         let mut seedmask = [0u8; EVP_MAX_MD_SIZE];
-        let mut dbmask_len: c_int = 0;
 
         let mut md = md;
         if md.is_null() {
@@ -2460,15 +2527,26 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
             raise_site(&err_sites::RSA_OAEP_93);
             return 0;
         }
+        let mdlen_w: i64 = mdlen as i64;
 
         // step 2b: check KLen > nLen - 2 HLen - 2
-        if flen > emlen - 2 * mdlen - 1 {
+        if flen as i64 > emlen_w - 2 * mdlen_w - 1 {
             raise_site(&err_sites::RSA_OAEP_99);
             return 0;
         }
 
-        if emlen < 2 * mdlen + 1 {
+        if emlen_w < 2 * mdlen_w + 1 {
             raise_site(&err_sites::RSA_OAEP_104);
+            return 0;
+        }
+
+        // Both authority checks passed, so `emlen_w >= 2*mdlen + 1 >= 3` and `tlen` is
+        // positive: the narrowing below is in range and `tlen - 1` cannot overflow. A negative
+        // `flen` or `plen` would now reach `memset`/`memcpy`/`EVP_Digest` as a huge `size_t` --
+        // the authority's undefined behaviour -- so refuse it before either buffer is touched.
+        let emlen: c_int = emlen_w as c_int;
+        if flen < 0 || plen < 0 {
+            raise_site(&err_sites::RSA_OAEP_99);
             return 0;
         }
 
@@ -2508,11 +2586,21 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
                 break 'body false;
             }
 
-            dbmask_len = emlen - mdlen;
-            dbmask = CRYPTO_malloc(dbmask_len as usize, FILE_RSA_OAEP, LINE).cast::<c_uchar>();
-            if dbmask.is_null() {
+            // `dbmask` is this frame's scratch block, allocated through the crate's allocator seam
+            // at `dbmask_len` and released by its handle's `Drop` -- the authority's cleansing
+            // `CRYPTO_clear_free` -- when this block exits.
+            let dbmask_len = emlen - mdlen;
+            // SAFETY: `dbmask_len > 0` because `emlen >= 2 * mdlen + 1` was checked above.
+            let Some(dbmask_buf) = OwnedBuf::new_cleansed_released(
+                dbmask_len as usize,
+                FILE_RSA_OAEP_SEAM,
+                LINE,
+                SeamFile::NULL,
+                0,
+            ) else {
                 break 'body false;
-            }
+            };
+            let dbmask = dbmask_buf.as_ptr();
 
             // step 3e: dbMask = MGF(mgfSeed, nLen - HLen - 1)
             if PKCS1_MGF1(dbmask, dbmask_len as c_long, seed, mdlen as c_long, mgf1md) < 0 {
@@ -2546,15 +2634,9 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
         };
 
         // The authority's `err:` label, reached by falling through and by every `goto err` in the
-        // block above. `dbmask_len` is 0 when the first `goto err` is taken, so the release is
-        // `(NULL, 0)` there -- the authority's own argument, transcribed rather than folded.
+        // block above. `dbmask` is released by its handle's `Drop` when the block exits -- a NULL
+        // block when the first `goto err` is taken, the authority's own no-op `free(NULL)`.
         cleanse(seedmask.as_mut_ptr(), EVP_MAX_MD_SIZE);
-        crate::runtime::mem::CRYPTO_clear_free(
-            dbmask.cast::<c_void>(),
-            dbmask_len as usize,
-            FILE_RSA_OAEP,
-            LINE,
-        );
         if completed {
             1
         } else {
@@ -3326,6 +3408,7 @@ mod tests {
         ossl_rsa_padding_add_PKCS1_PSS_mgf1, RSA_padding_add_PKCS1_PSS,
         RSA_padding_add_PKCS1_PSS_mgf1,
     };
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
 
     /// **`RSA_METHOD`, field for field.** The numbers are `courts/layout/measure-rsa-ctx.c`'s: 120
     /// bytes with `name` 0, the four crypt entry points at 8/16/24/32, the two mod-exp members at
@@ -3665,8 +3748,14 @@ mod tests {
     /// digest the *first* one fires for every non-negative message length: `emlen < 2*mdlen + 1`
     /// means the largest accepted `flen` is `emlen - 2*mdlen - 1 <= -1`. The
     /// `RSA_R_KEY_SIZE_TOO_SMALL` site is therefore reachable only through the `flen < 0` the
-    /// authority never checks for, and this arm is what says so rather than leaving the site
-    /// unexercised.
+    /// authority never rejects before its second check, and this arm is what says so rather than
+    /// leaving the site unexercised.
+    ///
+    /// **The queued site is part of the observation.** `RT-RSA` prints
+    /// `rsa.oaep_add_small_key.err.0`, so the second arm asserts the line and reason the authority
+    /// raises (`rsa_oaep.c:104`, `RSA_R_KEY_SIZE_TOO_SMALL`) and not merely the `0` answer. A
+    /// negative-length guard placed ahead of the two checks would answer 0 from `:99` with
+    /// `RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE` instead, which is what the court caught.
     #[test]
     fn the_oaep_padding_refuses_the_two_lengths_it_names() {
         let md = crate::evp::legacy_sha::EVP_sha1();
@@ -3675,7 +3764,8 @@ mod tests {
         // SAFETY: `em` is 128 writable octets and every refusal below is decided before `MSG` is
         // read, so the length arguments do not have to be real message lengths.
         unsafe {
-            /* `flen (87) > emlen (127) - 2*mdlen (40) - 1 (86)`. */
+            /* `flen (87) > emlen (127) - 2*mdlen (40) - 1 (86)`, refused at `rsa_oaep.c:99`. */
+            ERR_clear_error();
             assert_eq!(
                 RSA_padding_add_PKCS1_OAEP_mgf1(
                     em.as_mut_ptr(),
@@ -3689,7 +3779,14 @@ mod tests {
                 ),
                 0
             );
-            /* `emlen (40) < 2*mdlen + 1 (41)`, reached only with `flen == -1`. */
+            assert_eq!(
+                ERR_get_error(),
+                (4 << 23) | 110,
+                "RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE at rsa_oaep.c:99"
+            );
+            /* `emlen (40) < 2*mdlen + 1 (41)`, reached only with `flen == -1`, refused at
+             * `rsa_oaep.c:104` -- the second check must run before any negative-length guard. */
+            ERR_clear_error();
             assert_eq!(
                 RSA_padding_add_PKCS1_OAEP_mgf1(
                     em.as_mut_ptr(),
@@ -3702,6 +3799,11 @@ mod tests {
                     md,
                 ),
                 0
+            );
+            assert_eq!(
+                ERR_get_error(),
+                (4 << 23) | 120,
+                "RSA_R_KEY_SIZE_TOO_SMALL at rsa_oaep.c:104"
             );
             /* The largest length the 128-octet modulus takes is 86, and it must be accepted. */
             assert_eq!(
@@ -4212,6 +4314,104 @@ mod tests {
                 0
             );
             BN_free(e);
+        }
+    }
+
+    /// **Negative and sub-minimum lengths are refused before any copy.** The authority's C
+    /// bodies pass the `int` straight to `memcpy`/`memset`, so these arguments are undefined
+    /// behaviour there; each entry point must answer its documented failure without touching the
+    /// buffers. `INT_MIN` is included because the authority's `tlen - 11`/`tlen - flen - 2`
+    /// arithmetic wraps for it.
+    #[test]
+    fn the_padding_entry_points_refuse_lengths_that_cannot_describe_a_block() {
+        let from = [0xa5u8; 16];
+        let mut to = [0u8; 16];
+        let mut mask = [0u8; 8];
+
+        // SAFETY: every pointer refers to a live local of the length named in the call; the
+        // lengths are the malicious ones under test, so the guards must answer before any read
+        // or write. `c_int::MIN` is the wrapping-arithmetic case.
+        unsafe {
+            assert_eq!(
+                RSA_padding_add_none(to.as_mut_ptr(), -1, from.as_ptr(), -1),
+                0
+            );
+            assert_eq!(
+                RSA_padding_check_none(to.as_mut_ptr(), 8, from.as_ptr(), -1, 8),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_X931(to.as_mut_ptr(), 8, from.as_ptr(), -1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_X931(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_X931(to.as_mut_ptr(), 8, from.as_ptr(), 1, 1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_X931(to.as_mut_ptr(), 8, from.as_ptr(), -1, -1),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_1(to.as_mut_ptr(), 16, from.as_ptr(), -1),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_1(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(to.as_mut_ptr(), c_int::MIN, from.as_ptr(), 0),
+                0
+            );
+            assert_eq!(
+                PKCS1_MGF1(
+                    mask.as_mut_ptr(),
+                    mask.len() as c_long,
+                    from.as_ptr(),
+                    -1,
+                    crate::evp::legacy_sha::EVP_sha256(),
+                ),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    -1,
+                    core::ptr::null(),
+                    0,
+                ),
+                0
+            );
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    8,
+                    from.as_ptr(),
+                    -1,
+                ),
+                0
+            );
+            assert_eq!(
+                RSA_padding_check_PKCS1_OAEP(
+                    to.as_mut_ptr(),
+                    16,
+                    from.as_ptr(),
+                    16,
+                    16,
+                    from.as_ptr(),
+                    -1,
+                ),
+                -1
+            );
         }
     }
 }

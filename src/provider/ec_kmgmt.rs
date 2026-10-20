@@ -112,12 +112,12 @@ use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_ppBasis, NID_X9_62_tpBasis, NID_sm2,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::selftest::OsslCallback;
 
 // ---------------------------------------------------------------------------------------------
@@ -197,12 +197,18 @@ const P_DHKEM_IKM: *const c_char = c"dhkem-ikm".as_ptr();
 /// The unit's own `__FILE__`. `ec_kmgmt.c` is a plain `.c`, so it carries the source-tree prefix.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
     1
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a key buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `ossl_param_is_empty` — `include/internal/common.h`. The same three-line reader the other
 /// provider units carry.
@@ -464,13 +470,13 @@ unsafe extern "C" fn ec_has(keydata: *const c_void, selection: c_int) -> c_int {
     // SAFETY: `ec` is non-NULL past the guard.
     unsafe {
         if (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0 {
-            ok &= c_int::from(!EC_KEY_get0_public_key(ec).is_null());
+            ok = c_int::from(ok != 0 && !EC_KEY_get0_public_key(ec).is_null());
         }
         if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
-            ok &= c_int::from(!EC_KEY_get0_private_key(ec).is_null());
+            ok = c_int::from(ok != 0 && !EC_KEY_get0_private_key(ec).is_null());
         }
         if (selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0 {
-            ok &= c_int::from(!EC_KEY_get0_group(ec).is_null());
+            ok = c_int::from(ok != 0 && !EC_KEY_get0_group(ec).is_null());
         }
     }
     ok
@@ -505,8 +511,9 @@ unsafe extern "C" fn ec_match(
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0 {
-            ok &= c_int::from(
-                !group_a.is_null()
+            ok = c_int::from(
+                ok != 0
+                    && !group_a.is_null()
                     && !group_b.is_null()
                     && EC_GROUP_cmp(group_a, group_b, ctx) == 0,
             );
@@ -519,7 +526,7 @@ unsafe extern "C" fn ec_match(
                 let pb = EC_KEY_get0_public_key(ec2);
 
                 if !pa.is_null() && !pb.is_null() {
-                    ok &= c_int::from(EC_POINT_cmp(group_b, pa, pb, ctx) == 0);
+                    ok = c_int::from(ok != 0 && EC_POINT_cmp(group_b, pa, pb, ctx) == 0);
                     key_checked = 1;
                 }
             }
@@ -528,11 +535,11 @@ unsafe extern "C" fn ec_match(
                 let pb = EC_KEY_get0_private_key(ec2);
 
                 if !pa.is_null() && !pb.is_null() {
-                    ok &= c_int::from(BN_cmp(pa, pb) == 0);
+                    ok = c_int::from(ok != 0 && BN_cmp(pa, pb) == 0);
                     key_checked = 1;
                 }
             }
-            ok &= key_checked;
+            ok = c_int::from(ok != 0 && key_checked != 0);
         }
         BN_CTX_free(ctx);
     }
@@ -586,7 +593,7 @@ unsafe fn common_import(
 
     // SAFETY: `ec` is live and `params` is the caller's array.
     unsafe {
-        ok &= ossl_ec_group_fromdata(ec, params);
+        ok = c_int::from(ok != 0 && ossl_ec_group_fromdata(ec, params) != 0);
 
         if common_check_sm2(ec, sm2_wanted) == 0 {
             return 0;
@@ -595,10 +602,10 @@ unsafe fn common_import(
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
             let include_private = c_int::from((selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0);
 
-            ok &= ossl_ec_key_fromdata(ec, params, include_private);
+            ok = c_int::from(ok != 0 && ossl_ec_key_fromdata(ec, params, include_private) != 0);
         }
         if (selection & OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS) != 0 {
-            ok &= ossl_ec_key_otherparams_fromdata(ec, params);
+            ok = c_int::from(ok != 0 && ossl_ec_key_otherparams_fromdata(ec, params) != 0);
         }
     }
     ok
@@ -678,25 +685,36 @@ unsafe extern "C" fn ec_export(
                 return ok;
             }
             BN_CTX_start(bnctx);
-            ok &= ossl_ec_group_todata(
-                EC_KEY_get0_group(ec),
-                tmpl,
-                ptr::null_mut(),
-                ossl_ec_key_get_libctx(ec),
-                ossl_ec_key_get0_propq(ec),
-                bnctx,
-                &mut genbuf,
+            ok = c_int::from(
+                ok != 0
+                    && ossl_ec_group_todata(
+                        EC_KEY_get0_group(ec),
+                        tmpl,
+                        ptr::null_mut(),
+                        ossl_ec_key_get_libctx(ec),
+                        ossl_ec_key_get0_propq(ec),
+                        bnctx,
+                        &mut genbuf,
+                    ) != 0,
             );
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
             let include_private = c_int::from((selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0);
 
-            ok &= key_to_params(ec, tmpl, ptr::null_mut(), include_private, &mut pub_key);
+            ok = c_int::from(
+                ok != 0
+                    && key_to_params(ec, tmpl, ptr::null_mut(), include_private, &mut pub_key) != 0,
+            );
         }
         if (selection & OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS) != 0 {
-            ok &= otherparams_to_params(ec, tmpl, ptr::null_mut());
+            ok = c_int::from(ok != 0 && otherparams_to_params(ec, tmpl, ptr::null_mut()) != 0);
         }
+
+        // The two scratch blocks the to-params helpers wrote into; each handle releases its own
+        // block at the authority's own site on either the refusal or the success path below.
+        let pub_key = OwnedBuf::adopt_plain(pub_key.cast::<c_uchar>(), FILE_SEAM, 503);
+        let genbuf = OwnedBuf::adopt_plain(genbuf.cast::<c_uchar>(), FILE_SEAM, 504);
 
         let params = if ok == 0 {
             ptr::null_mut()
@@ -706,8 +724,8 @@ unsafe extern "C" fn ec_export(
         if ok == 0 || params.is_null() {
             ok = 0;
             OSSL_PARAM_BLD_free(tmpl);
-            CRYPTO_free(pub_key.cast(), FILE, 503);
-            CRYPTO_free(genbuf.cast(), FILE, 504);
+            drop(pub_key);
+            drop(genbuf);
             BN_CTX_end(bnctx);
             BN_CTX_free(bnctx);
             return ok;
@@ -719,8 +737,8 @@ unsafe extern "C" fn ec_export(
         };
         OSSL_PARAM_free(params);
         OSSL_PARAM_BLD_free(tmpl);
-        CRYPTO_free(pub_key.cast(), FILE, 503);
-        CRYPTO_free(genbuf.cast(), FILE, 504);
+        drop(pub_key);
+        drop(genbuf);
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
@@ -1145,8 +1163,18 @@ unsafe fn common_get_params(key: *mut c_void, params: *mut OsslParam, sm2: c_int
                 && otherparams_to_params(eck, ptr::null_mut(), params) != 0,
         );
 
-        CRYPTO_free(genbuf.cast(), FILE, 745);
-        CRYPTO_free(pub_key.cast(), FILE, 746);
+        // The two scratch blocks the to-params helpers wrote into; each handle releases its own
+        // block at the authority's own site.
+        drop(OwnedBuf::adopt_plain(
+            genbuf.cast::<c_uchar>(),
+            FILE_SEAM,
+            745,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            pub_key.cast::<c_uchar>(),
+            FILE_SEAM,
+            746,
+        ));
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
@@ -1322,23 +1350,23 @@ unsafe extern "C" fn sm2_validate(
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0 {
-            ok &= EC_GROUP_check(EC_KEY_get0_group(eck), ctx);
+            ok = c_int::from(ok != 0 && EC_GROUP_check(EC_KEY_get0_group(eck), ctx) != 0);
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0 {
             if checktype == OSSL_KEYMGMT_VALIDATE_QUICK_CHECK {
-                ok &= ossl_ec_key_public_check_quick(eck, ctx);
+                ok = c_int::from(ok != 0 && ossl_ec_key_public_check_quick(eck, ctx) != 0);
             } else {
-                ok &= ossl_ec_key_public_check(eck, ctx);
+                ok = c_int::from(ok != 0 && ossl_ec_key_public_check(eck, ctx) != 0);
             }
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
-            ok &= ossl_sm2_key_private_check(eck);
+            ok = c_int::from(ok != 0 && ossl_sm2_key_private_check(eck) != 0);
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) == OSSL_KEYMGMT_SELECT_KEYPAIR {
-            ok &= ossl_ec_key_pairwise_check(eck, ctx);
+            ok = c_int::from(ok != 0 && ossl_ec_key_pairwise_check(eck, ctx) != 0);
         }
 
         BN_CTX_free(ctx);
@@ -1377,32 +1405,33 @@ unsafe extern "C" fn ec_validate(
             let flags = EC_KEY_get_flags(eck);
 
             if (flags & EC_FLAG_CHECK_NAMED_GROUP) != 0 {
-                ok &= c_int::from(
-                    EC_GROUP_check_named_curve(
-                        EC_KEY_get0_group(eck),
-                        c_int::from((flags & EC_FLAG_CHECK_NAMED_GROUP_NIST) != 0),
-                        ctx,
-                    ) > 0,
+                ok = c_int::from(
+                    ok != 0
+                        && EC_GROUP_check_named_curve(
+                            EC_KEY_get0_group(eck),
+                            c_int::from((flags & EC_FLAG_CHECK_NAMED_GROUP_NIST) != 0),
+                            ctx,
+                        ) > 0,
                 );
             } else {
-                ok &= EC_GROUP_check(EC_KEY_get0_group(eck), ctx);
+                ok = c_int::from(ok != 0 && EC_GROUP_check(EC_KEY_get0_group(eck), ctx) != 0);
             }
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0 {
             if checktype == OSSL_KEYMGMT_VALIDATE_QUICK_CHECK {
-                ok &= ossl_ec_key_public_check_quick(eck, ctx);
+                ok = c_int::from(ok != 0 && ossl_ec_key_public_check_quick(eck, ctx) != 0);
             } else {
-                ok &= ossl_ec_key_public_check(eck, ctx);
+                ok = c_int::from(ok != 0 && ossl_ec_key_public_check(eck, ctx) != 0);
             }
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
-            ok &= ossl_ec_key_private_check(eck);
+            ok = c_int::from(ok != 0 && ossl_ec_key_private_check(eck) != 0);
         }
 
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) == OSSL_KEYMGMT_SELECT_KEYPAIR {
-            ok &= ossl_ec_key_pairwise_check(eck, ctx);
+            ok = c_int::from(ok != 0 && ossl_ec_key_pairwise_check(eck, ctx) != 0);
         }
 
         BN_CTX_free(ctx);
@@ -1464,7 +1493,11 @@ unsafe extern "C" fn ec_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<EcGenCtx>(), FILE, 982).cast::<EcGenCtx>();
+    let gctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EcGenCtx>(), FILE, 982)
+    }
+    .cast::<EcGenCtx>();
     if !gctx.is_null() {
         // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
         unsafe {
@@ -1503,7 +1536,14 @@ unsafe extern "C" fn sm2_gen_init(
             if !(*gctx).group_name.is_null() {
                 return gctx.cast();
             }
-            (*gctx).group_name = CRYPTO_strdup(c"sm2".as_ptr(), FILE, 1005);
+            // The helper's fresh block is handed to the field through a handle; a refusal leaves
+            // the field NULL, exactly as the authority's failed `OPENSSL_strdup` does.
+            (*gctx).group_name = OwnedBuf::adopt_plain(
+                CRYPTO_strdup(c"sm2".as_ptr(), FILE, 1005).cast::<c_uchar>(),
+                FILE_SEAM,
+                1005,
+            )
+            .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<c_char>());
             if !(*gctx).group_name.is_null() {
                 return gctx.cast();
             }
@@ -1575,24 +1615,41 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
             return 0;
         }
 
-        // COPY_UTF8_PARAM, five times.
-        for (key, field) in [
-            (P_GROUP_NAME, &raw mut (*gctx).group_name),
-            (P_EC_FIELD_TYPE, &raw mut (*gctx).field_type),
-            (P_EC_ENCODING, &raw mut (*gctx).encoding),
-            (P_EC_POINT_CONVERSION_FORMAT, &raw mut (*gctx).pt_format),
-            (P_EC_GROUP_CHECK_TYPE, &raw mut (*gctx).group_check),
+        // COPY_UTF8_PARAM, five times. The seam coordinate is the macro invocation
+        // line, which is the line `__LINE__` expands to inside the authority's macro.
+        for (key, field, line) in [
+            (P_GROUP_NAME, &raw mut (*gctx).group_name, 1091),
+            (P_EC_FIELD_TYPE, &raw mut (*gctx).field_type, 1092),
+            (P_EC_ENCODING, &raw mut (*gctx).encoding, 1093),
+            (
+                P_EC_POINT_CONVERSION_FORMAT,
+                &raw mut (*gctx).pt_format,
+                1094,
+            ),
+            (P_EC_GROUP_CHECK_TYPE, &raw mut (*gctx).group_check, 1095),
         ] {
             p = OSSL_PARAM_locate_const(params, key);
             if !p.is_null() {
                 if (*p).data_type != OSSL_PARAM_UTF8_STRING {
                     return 0;
                 }
-                CRYPTO_free((*field).cast(), FILE, 1090);
-                *field = CRYPTO_strdup((*p).data.cast(), FILE, 1090);
-                if (*field).is_null() {
+                // The old string releases through its handle at the authority's own plain free;
+                // the replacement is the helper's fresh block, handed to the field through a second
+                // handle, and a refusal leaves the field NULL.
+                drop(OwnedBuf::adopt_plain(
+                    (*field).cast::<c_uchar>(),
+                    FILE_SEAM,
+                    line,
+                ));
+                let Some(buf) = OwnedBuf::adopt_plain(
+                    CRYPTO_strdup((*p).data.cast(), FILE, line).cast::<c_uchar>(),
+                    FILE_SEAM,
+                    line,
+                ) else {
+                    *field = ptr::null_mut();
                     return 0;
-                }
+                };
+                *field = buf.into_raw().cast::<c_char>();
             }
         }
 
@@ -1615,18 +1672,26 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
             }
         }
 
-        // COPY_OCTET_PARAM, three times.
-        for (key, field, len) in [
-            (P_EC_SEED, &raw mut (*gctx).seed, &raw mut (*gctx).seed_len),
+        // COPY_OCTET_PARAM, three times. As for COPY_UTF8_PARAM, the coordinate is the
+        // macro invocation line (1103, 1104 and 1107 in the authority).
+        for (key, field, len, line) in [
+            (
+                P_EC_SEED,
+                &raw mut (*gctx).seed,
+                &raw mut (*gctx).seed_len,
+                1103,
+            ),
             (
                 P_EC_GENERATOR,
                 &raw mut (*gctx).gen,
                 &raw mut (*gctx).gen_len,
+                1104,
             ),
             (
                 P_DHKEM_IKM,
                 &raw mut (*gctx).dhkem_ikm,
                 &raw mut (*gctx).dhkem_ikmlen,
+                1107,
             ),
         ] {
             p = OSSL_PARAM_locate_const(params, key);
@@ -1634,12 +1699,24 @@ unsafe fn ec_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c_
                 if (*p).data_type != OSSL_PARAM_OCTET_STRING {
                     return 0;
                 }
-                CRYPTO_free((*field).cast(), FILE, 1063);
+                // The old octet block releases through its handle at the authority's own plain
+                // free; the replacement is the helper's fresh block, handed to the field through a
+                // second handle, and a refusal leaves the field NULL.
+                drop(OwnedBuf::adopt_plain(
+                    (*field).cast::<c_uchar>(),
+                    FILE_SEAM,
+                    line,
+                ));
                 *len = (*p).data_size;
-                *field = CRYPTO_memdup((*p).data, (*p).data_size, FILE, 1065).cast::<u8>();
-                if (*field).is_null() {
+                let Some(buf) = OwnedBuf::adopt_plain(
+                    CRYPTO_memdup((*p).data, (*p).data_size, FILE, line).cast::<c_uchar>(),
+                    FILE_SEAM,
+                    line,
+                ) else {
+                    *field = ptr::null_mut();
                     return 0;
-                }
+                };
+                *field = buf.into_raw().cast::<u8>();
             }
         }
     }
@@ -2017,19 +2094,52 @@ unsafe extern "C" fn ec_gen_cleanup(genctx: *mut c_void) {
 
     // SAFETY: `gctx` is the caller's context, allocated by `ec_gen_init`.
     unsafe {
-        CRYPTO_clear_free((*gctx).dhkem_ikm.cast(), (*gctx).dhkem_ikmlen, FILE, 1373);
+        // Each owned field's handle releases its own block at the authority's own site -- the
+        // `dhkem_ikm` cleanses, the rest are plain -- and the context block itself stays on the raw
+        // seam (its release is part of this destructor body). The authority's own cleanup omits the
+        // `group_check` field, so this transcription does too.
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).dhkem_ikm.cast::<c_uchar>(),
+            (*gctx).dhkem_ikmlen,
+            FILE_SEAM,
+            1373,
+        ));
         EC_GROUP_free((*gctx).gen_group);
         crate::bn::bignum::BN_free((*gctx).p);
         crate::bn::bignum::BN_free((*gctx).a);
         crate::bn::bignum::BN_free((*gctx).b);
         crate::bn::bignum::BN_free((*gctx).order);
         crate::bn::bignum::BN_free((*gctx).cofactor);
-        CRYPTO_free((*gctx).group_name.cast(), FILE, 1380);
-        CRYPTO_free((*gctx).field_type.cast(), FILE, 1381);
-        CRYPTO_free((*gctx).pt_format.cast(), FILE, 1382);
-        CRYPTO_free((*gctx).encoding.cast(), FILE, 1383);
-        CRYPTO_free((*gctx).seed.cast(), FILE, 1384);
-        CRYPTO_free((*gctx).gen.cast(), FILE, 1385);
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).group_name.cast::<c_uchar>(),
+            FILE_SEAM,
+            1380,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).field_type.cast::<c_uchar>(),
+            FILE_SEAM,
+            1381,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).pt_format.cast::<c_uchar>(),
+            FILE_SEAM,
+            1382,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).encoding.cast::<c_uchar>(),
+            FILE_SEAM,
+            1383,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).seed.cast::<c_uchar>(),
+            FILE_SEAM,
+            1384,
+        ));
+        drop(OwnedBuf::adopt_plain(
+            (*gctx).gen.cast::<c_uchar>(),
+            FILE_SEAM,
+            1385,
+        ));
         CRYPTO_free(gctx.cast(), FILE, 1386);
     }
 }

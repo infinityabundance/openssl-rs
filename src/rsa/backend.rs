@@ -80,6 +80,7 @@ use crate::rsa::asn1::{
 };
 use crate::rsa::gen::ossl_rsa_multiprime_derive;
 use crate::rsa::mp::ossl_rsa_multip_calc_product;
+use crate::rsa::mp::ossl_rsa_multip_info_free;
 use crate::rsa::mp_names::{
     ossl_rsa_mp_coeff_names, ossl_rsa_mp_exp_names, ossl_rsa_mp_factor_names,
 };
@@ -467,7 +468,11 @@ unsafe fn fromdata_err(
     unsafe {
         BN_free(n);
         BN_free(e);
-        BN_free(d);
+        // The authority's `err:` label uses `BN_free(d)` even though `d` is the private
+        // exponent. This releases it through `BN_clear_free` instead: the value never reached
+        // the key on this arm, so the authority leaves it in freed storage. A deliberate
+        // safety improvement, not observable through the API.
+        BN_clear_free(d);
         BN_clear_free(p);
         BN_clear_free(q);
         OPENSSL_sk_pop_free(factors, Some(bn_clear_free_thunk));
@@ -859,6 +864,55 @@ unsafe fn rsa_bn_dup_check(out: *mut *mut BigNum, f: *const BigNum) -> c_int {
     1
 }
 
+/// An owned `RSA_PRIME_INFO` record allocated by [`ossl_rsa_dup`] before it is installed in
+/// `dupkey->prime_infos`.
+///
+/// The authority allocates the record in `rsa_backend.c` and, once pushed, releases it through
+/// the stack's `ossl_rsa_multip_info_free` destructor (whose block release is attributed to
+/// `rsa_mp.c`). The owner keeps the allocation at `rsa_backend.c`'s own coordinate while the
+/// record still belongs to this frame; `into_raw` is the install that transfers it to the stack.
+struct OwnedPrimeInfo {
+    ptr: *mut RsaPrimeInfo,
+}
+
+impl OwnedPrimeInfo {
+    /// The authority's `OPENSSL_zalloc(sizeof(*duppinfo))` at `rsa_backend.c`'s coordinate.
+    fn zalloc() -> Option<OwnedPrimeInfo> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `size_of::<RsaPrimeInfo>()` bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE)
+        }
+        .cast::<RsaPrimeInfo>();
+        (!raw.is_null()).then_some(OwnedPrimeInfo { ptr: raw })
+    }
+
+    /// The record's stable address, for the `BIGNUM` duplication and the stack push.
+    fn as_ptr(&self) -> *mut RsaPrimeInfo {
+        self.ptr
+    }
+
+    /// Install the record: the enclosing `RSA`'s `prime_infos` stack becomes its owner.
+    fn into_raw(self) -> *mut RsaPrimeInfo {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPrimeInfo {
+    /// The authority's `ossl_rsa_multip_info_free`: each member is NULL or owned here, and the
+    /// block is released at that destructor's own `rsa_mp.c` coordinate. This path is the
+    /// pre-install window, in which the zeroed record's members are all NULL.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the record `zalloc` allocated and has not been installed; its
+        // members are NULL or owned by this handle, which is exactly `ossl_rsa_multip_info_free`'s
+        // contract, and this is the record's single release.
+        unsafe { ossl_rsa_multip_info_free(self.ptr) };
+    }
+}
+
 /// `RSA *ossl_rsa_dup(const RSA *rsa, int selection)` — `rsa_backend.c:467-560`. Internal.
 ///
 /// The copier `EVP_PKEY_dup` reaches through the keymgmt, and the four things a reader has to get
@@ -873,16 +927,20 @@ unsafe fn rsa_bn_dup_check(out: *mut *mut BigNum, f: *const BigNum) -> c_int {
 ///   public-only selection — the comment on the third says so: "we always copy the PSS parameters
 ///   regardless of selection".
 /// * **`rsa->pss` is duplicated through `RSA_PSS_PARAMS_dup` and its `maskHash` is decoded
-///   again.** The authority tests `maskGenAlgorithm != NULL && maskHash == NULL` after the dup,
-///   because `RSA_PSS_PARAMS_dup` copies the ASN.1 template's four pointers and the template does
-///   not know about `maskHash` — it is the free hook's field, not an item column.
+///   again.** The authority's condition is `rsa->pss->maskGenAlgorithm != NULL &&
+///   dupkey->pss->maskGenAlgorithm == NULL`, but the item dup copies `maskGenAlgorithm` along
+///   with the other three template pointers, so the second half is false after a successful dup
+///   and the duplicate's `maskHash` stays NULL (later read as the SHA1 default by
+///   `ossl_x509_algor_get_md(NULL)`). That consequence is preserved rather than corrected; the
+///   only change is that a NULL `dupkey->pss` on that arm is reported as a failure instead of
+///   being dereferenced.
 ///
 /// **The `err:` label releases the half-built object**, which is the pattern the whole function
 /// depends on: `RSA_free` tolerates every partially populated field, and `ex_data` is duplicated
 /// *last* so that a failure before it leaves the copy's `ex_data` zeroed.
 ///
-/// `#[allow(dead_code)]`'s reason: **the provider keymgmt's `dup` method is its reader**; the
-/// `EVP_PKEY`-level path that would reach it is 8.8's.
+/// `#[allow(dead_code)]`'s reason: **the provider keymgmt's `dup` method is its reader**;
+/// the `EVP_PKEY`-level path that would reach it is 8.8's.
 ///
 /// # Safety
 /// `rsa` is a live object; on success the answer is a new object the caller owns.
@@ -949,13 +1007,16 @@ pub(crate) unsafe fn ossl_rsa_dup(rsa: *const Rsa, selection: c_int) -> *mut Rsa
                 }
                 let mut i: c_int = 0;
                 while i < pnum {
-                    let duppinfo = CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE)
-                        .cast::<RsaPrimeInfo>();
-                    if duppinfo.is_null() {
+                    let Some(duppinfo_owner) = OwnedPrimeInfo::zalloc() else {
                         break 'build false;
-                    }
+                    };
+                    let duppinfo = duppinfo_owner.as_ptr();
                     /* push first so cleanup in error case works */
                     OPENSSL_sk_push((*dupkey).prime_infos, duppinfo.cast());
+                    // The push installs the record: `prime_infos` owns it from here on, so every
+                    // later failure releases it through `ossl_rsa_multip_info_free` inside
+                    // `RSA_free`, exactly as the authority's already-pushed record is released.
+                    let _ = duppinfo_owner.into_raw();
 
                     let pinfo = OPENSSL_sk_value((*rsa).prime_infos, i).cast::<RsaPrimeInfo>();
                     if rsa_bn_dup_check(&mut (*duppinfo).r, (*pinfo).r) == 0 {
@@ -976,18 +1037,22 @@ pub(crate) unsafe fn ossl_rsa_dup(rsa: *const Rsa, selection: c_int) -> *mut Rsa
 
             if !(*rsa).pss.is_null() {
                 (*dupkey).pss = RSA_PSS_PARAMS_dup((*rsa).pss);
-                if !(*(*rsa).pss).mask_gen_algorithm.is_null() && (*dupkey).pss.is_null() {
-                    // `RSA_PSS_PARAMS_dup` answered NULL, so `(*dupkey).pss` is NULL and the
-                    // authority's next line would dereference it; the authority's own test is
-                    // `dupkey->pss->maskGenAlgorithm == NULL`, which is inside `if (!dupkey->pss)`
-                    // in no version of this file -- it is reached only when the dup succeeded.
-                    break 'build false;
-                }
-                if !(*dupkey).pss.is_null() && !(*(*dupkey).pss).mask_gen_algorithm.is_null() {
-                    (*(*dupkey).pss).mask_hash =
-                        ossl_x509_algor_mgf1_decode((*(*dupkey).pss).mask_gen_algorithm);
-                    if (*(*dupkey).pss).mask_hash.is_null() {
+                // The authority reads `dupkey->pss->maskGenAlgorithm` without first checking
+                // `dupkey->pss`; a NULL dup would be a NULL dereference there
+                // (`rsa_backend.c:543-544`). That arm is reported as a failure instead.
+                if !(*(*rsa).pss).mask_gen_algorithm.is_null() {
+                    if (*dupkey).pss.is_null() {
                         break 'build false;
+                    }
+                    // The authority's condition, literally. `RSA_PSS_PARAMS_dup` copies
+                    // `maskGenAlgorithm`, so after a successful dup this is false and
+                    // `maskHash` stays NULL; see this function's own documentation.
+                    if (*(*dupkey).pss).mask_gen_algorithm.is_null() {
+                        (*(*dupkey).pss).mask_hash =
+                            ossl_x509_algor_mgf1_decode((*(*rsa).pss).mask_gen_algorithm);
+                        if (*(*dupkey).pss).mask_hash.is_null() {
+                            break 'build false;
+                        }
                     }
                 }
             }
@@ -1597,6 +1662,47 @@ mod tests {
                 crate::runtime::obj::NID_sha1
             );
             assert_eq!(pss.trailer_field, 1);
+        }
+    }
+
+    /// The authority's `ossl_rsa_dup` tests `dupkey->pss->maskGenAlgorithm == NULL`, which a
+    /// successful `RSA_PSS_PARAMS_dup` makes false, so the duplicate's `maskHash` stays NULL.
+    /// `ossl_rsa_pss_get_param_unverified` then resolves it through
+    /// `ossl_x509_algor_get_md(NULL)`, i.e. SHA1. This pins the authority's consequence rather
+    /// than "fixing" it, and fails if the decode is ever reinstated.
+    #[test]
+    fn a_duplicated_pss_restriction_keeps_the_authoritys_null_mask_hash() {
+        use crate::asn1::layout::V_ASN1_NULL;
+        use crate::asn1::x_algor::{X509_ALGOR_new, X509_ALGOR_set0};
+        use crate::rsa::asn1::RSA_PSS_PARAMS_new;
+        use crate::runtime::obj::{NID_mgf1, OBJ_nid2obj};
+
+        let rsa = OwnedRsa::new();
+        // SAFETY: every object below is live and owned by this test or by the key.
+        unsafe {
+            let pss = RSA_PSS_PARAMS_new();
+            assert!(!pss.is_null());
+            let mgf = X509_ALGOR_new();
+            assert!(!mgf.is_null());
+            assert_eq!(
+                X509_ALGOR_set0(mgf, OBJ_nid2obj(NID_mgf1), V_ASN1_NULL, ptr::null_mut()),
+                1
+            );
+            (*pss).mask_gen_algorithm = mgf;
+            assert_eq!(ossl_rsa_set0_pss_params(rsa.0, pss), 1);
+
+            let dup = ossl_rsa_dup(
+                rsa.0,
+                OSSL_KEYMGMT_SELECT_KEYPAIR | OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
+            );
+            assert!(!dup.is_null());
+            assert!(!(*dup).pss.is_null());
+            assert!(!(*(*dup).pss).mask_gen_algorithm.is_null());
+            assert!(
+                (*(*dup).pss).mask_hash.is_null(),
+                "the authority's dup-side maskGenAlgorithm test is false after a successful dup"
+            );
+            RSA_free(dup);
         }
     }
 }

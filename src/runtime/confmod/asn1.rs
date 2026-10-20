@@ -91,6 +91,41 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/asn1/asn_moid.c".as
 /// `lntmp = OPENSSL_malloc((p - ln) + 1)` in `do_create`.
 const L_LNTMP: c_int = 90;
 
+/// The `lntmp` copy `do_create` makes for a `long_name, oid` entry.
+///
+/// Its only allocation is the authority's `OPENSSL_malloc((p - ln) + 1)` at `asn_moid.c:90` and
+/// its single release is the unconditional `OPENSSL_free(owned)` after `OBJ_create`. The two other
+/// entry shapes leave the slot NULL, which is the authority's own no-op.
+struct LntmpBuf {
+    ptr: core::ptr::NonNull<c_char>,
+}
+
+impl LntmpBuf {
+    /// `OPENSSL_malloc(len)` at the authority's own site, or `None` when it is refused.
+    fn malloc(len: usize) -> Option<LntmpBuf> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE, L_LNTMP)
+        }
+        .cast::<c_char>();
+        // `CRYPTO_malloc` answers NULL or a fresh writable block of exactly `len` bytes.
+        core::ptr::NonNull::new(raw).map(|ptr| LntmpBuf { ptr })
+    }
+
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for LntmpBuf {
+    /// The authority's `OPENSSL_free(owned)` at `asn_moid.c:90`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; this is its single
+        // release, at the authority's own coordinate.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE, L_LNTMP) };
+    }
+}
+
 /// The last comma in `value`, or NULL — `strrchr(value, ',')`.
 ///
 /// # Safety
@@ -126,78 +161,92 @@ unsafe fn do_create(value: *const c_char, name: *const c_char) -> bool {
     let last_comma = unsafe { last_comma_of(value) };
 
     // The long name and the OID, plus the buffer to release afterwards if one was allocated.
-    let (ln, ostr, owned): (*const c_char, *const c_char, *mut c_char) = if last_comma.is_null() {
-        // No comma at all: the long name is the entry's name and the whole value is the OID.
-        (name, value, ptr::null_mut())
-    } else if last_comma == value {
-        // A *leading* comma: the long name is still the entry's name, and the OID is what
-        // follows. An empty remainder is deliberately not tested for here; it reaches
-        // `OBJ_txt2obj` through `OBJ_create`, which refuses it.
-        // SAFETY: `last_comma` points inside `value`.
-        (name, unsafe { last_comma.add(1) }, ptr::null_mut())
-    } else {
-        // `long_name, oid`. The OID half is trimmed from its front only.
-        // SAFETY: `last_comma` points inside `value`.
-        let mut ostr = unsafe { last_comma.add(1) };
-        // SAFETY: `ostr` is within `value` and NUL-terminated.
-        if unsafe { *ostr } == 0 {
-            return false;
-        }
-        // SAFETY: as above.
-        while unsafe { ossl_isspace(*ostr as c_int) } {
-            // SAFETY: `ostr` has not reached the terminator, because `ossl_isspace(0)` is false
-            // and the loop would have stopped.
-            ostr = unsafe { ostr.add(1) };
-        }
-        let mut ln = value;
-        // SAFETY: as above.
-        while unsafe { ossl_isspace(*ln as c_int) } {
-            // SAFETY: as for `ostr`: the byte read is not the terminator.
-            ln = unsafe { ln.add(1) };
-        }
-        // The trailing walk, with the authority's floor: `p` starts one before the comma and
-        // steps back over whitespace, refusing rather than running past `ln`.
-        // SAFETY: the branch is taken only when `last_comma != value`, so `last_comma` is at
-        // least `value + 1` and `last_comma - 1` is inside the allocation.
-        let mut p = unsafe { last_comma.sub(1) };
-        loop {
-            // SAFETY: `p` is at or after `ln`, both inside `value`.
-            if !unsafe { ossl_isspace(*p as c_int) } {
-                break;
-            }
-            if p == ln {
+    let (ln, ostr, owned): (*const c_char, *const c_char, Option<LntmpBuf>) =
+        if last_comma.is_null() {
+            // No comma at all: the long name is the entry's name and the whole value is the OID.
+            (name, value, None)
+        } else if last_comma == value {
+            // A *leading* comma: the long name is still the entry's name, and the OID is what
+            // follows. An empty remainder is deliberately not tested for here; it reaches
+            // `OBJ_txt2obj` through `OBJ_create`, which refuses it.
+            // SAFETY: `last_comma` points inside `value`.
+            (name, unsafe { last_comma.add(1) }, None)
+        } else {
+            // `long_name, oid`. The OID half is trimmed from its front only.
+            // SAFETY: `last_comma` points inside `value`.
+            let mut ostr = unsafe { last_comma.add(1) };
+            // SAFETY: `ostr` is within `value` and NUL-terminated.
+            if unsafe { *ostr } == 0 {
                 return false;
             }
-            // SAFETY: `p != ln`, and `ln >= value`, so `p - 1 >= value` — inside the
-            // allocation, which the `p == ln` test above is what guarantees.
-            p = unsafe { p.sub(1) };
-        }
-        // SAFETY: the loop broke on a byte that is not whitespace, so `p` is inside the
-        // allocation and the byte after it is too — or it is the terminator, which is also a
-        // byte of the allocation.
-        p = unsafe { p.add(1) };
+            // SAFETY: as above.
+            while unsafe { ossl_isspace(*ostr as c_int) } {
+                // SAFETY: `ostr` has not reached the terminator, because `ossl_isspace(0)` is false
+                // and the loop would have stopped.
+                ostr = unsafe { ostr.add(1) };
+            }
+            let mut ln = value;
+            // SAFETY: as above.
+            while unsafe { ossl_isspace(*ln as c_int) } {
+                // SAFETY: as for `ostr`: the byte read is not the terminator.
+                ln = unsafe { ln.add(1) };
+            }
+            // The floor below is `p == ln`, so it can only fire while `ln` lies *before* the
+            // comma. A long-name half that is entirely whitespace leaves `ln` on the comma
+            // itself, and the authority's walk then reads before `value` (UB in the C: the
+            // guard it relies on is unreachable in exactly this case). That prefix has no long
+            // name at all, so refuse it here instead of reproducing the out-of-bounds read.
+            if ln == last_comma {
+                return false;
+            }
+            // The trailing walk, with the authority's floor: `p` starts one before the comma and
+            // steps back over whitespace, refusing rather than running past `ln`.
+            // SAFETY: the branch is taken only when `last_comma != value`, so `last_comma` is at
+            // least `value + 1` and `last_comma - 1` is inside the allocation.
+            let mut p = unsafe { last_comma.sub(1) };
+            loop {
+                // SAFETY: `p` is at or after `ln`, both inside `value`.
+                if !unsafe { ossl_isspace(*p as c_int) } {
+                    break;
+                }
+                if p == ln {
+                    return false;
+                }
+                // SAFETY: `p != ln`, and `ln >= value`, so `p - 1 >= value` — inside the
+                // allocation, which the `p == ln` test above is what guarantees.
+                p = unsafe { p.sub(1) };
+            }
+            // SAFETY: the loop broke on a byte that is not whitespace, so `p` is inside the
+            // allocation and the byte after it is too — or it is the terminator, which is also a
+            // byte of the allocation.
+            p = unsafe { p.add(1) };
 
-        // `lntmp = OPENSSL_malloc((p - ln) + 1)`, then the copy and the terminator.
-        // SAFETY: `p >= ln` and both are inside `value`.
-        let len = unsafe { p.offset_from(ln) } as usize;
-        let lntmp = CRYPTO_malloc(len + 1, FILE, L_LNTMP).cast::<c_char>();
-        if lntmp.is_null() {
-            return false;
-        }
-        // SAFETY: `lntmp` has room for `len` bytes and a terminator, and `ln` has at least that
-        // many readable bytes — the span was measured inside `value`.
-        unsafe {
-            ptr::copy_nonoverlapping(ln, lntmp, len);
-            *lntmp.add(len) = 0;
-        }
-        (lntmp, ostr, lntmp)
-    };
+            // `lntmp = OPENSSL_malloc((p - ln) + 1)`, then the copy and the terminator.
+            // SAFETY: `p >= ln` and both are inside `value`.
+            let len = unsafe { p.offset_from(ln) } as usize;
+            // The authority's `(p - ln) + 1` in fallible form; an overflow is a refusal, not a panic.
+            let alloc_len = match len.checked_add(1) {
+                Some(n) => n,
+                None => return false,
+            };
+            let Some(lntmp) = LntmpBuf::malloc(alloc_len) else {
+                return false;
+            };
+            // SAFETY: `lntmp` has room for `len` bytes and a terminator, and `ln` has at least that
+            // many readable bytes -- the span was measured inside `value`.
+            unsafe {
+                ptr::copy_nonoverlapping(ln, lntmp.as_ptr(), len);
+                *lntmp.as_ptr().add(len) = 0;
+            }
+            (lntmp.as_ptr(), ostr, Some(lntmp))
+        };
 
     // SAFETY: `ostr`, `name` and `ln` are NUL-terminated. `OBJ_create` copies every one of them
-    // before returning, which is what makes the `CRYPTO_free` on the next line correct.
+    // before returning, which is what makes the owner's release on the next line correct.
     let nid = unsafe { OBJ_create(ostr, name, ln) };
-    // SAFETY: `owned` is NULL or this function's own allocation; `CRYPTO_free` accepts NULL.
-    unsafe { CRYPTO_free(owned.cast(), FILE, L_LNTMP) };
+    // The owner's `Drop` is the authority's unconditional `OPENSSL_free(owned)`, a NULL no-op for
+    // the two shapes that allocated nothing.
+    drop(owned);
 
     nid != NID_undef
 }
@@ -274,4 +323,20 @@ pub extern "C" fn ASN1_add_oid_module() {
         // means the registry could not allocate, which the next `CONF_modules_load` reports as
         // an unknown module name — the same place the authority reports it.
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A `long name, oid` value whose long-name half is entirely whitespace has no
+    /// long name. The authority's backward walk reads before the value in this case
+    /// (its `p == ln` floor is unreachable when `ln` is the comma itself); this
+    /// implementation refuses instead, which is the authority's observed result on
+    /// its builds whenever the byte before the value is not whitespace.
+    #[test]
+    fn all_whitespace_long_name_is_refused() {
+        // SAFETY: both arguments are static NUL-terminated strings.
+        assert!(!unsafe { do_create(c"  ,1.2.3.4".as_ptr(), c"x".as_ptr()) });
+    }
 }

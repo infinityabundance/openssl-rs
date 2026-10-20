@@ -27,7 +27,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar};
+use core::ffi::{c_int, c_uchar};
 use core::ptr;
 
 use crate::bn::bignum::{BN_bin2bn, BN_bn2binpad, BN_num_bits, BigNum};
@@ -35,11 +35,12 @@ use crate::bn::ctx::BnCtx;
 use crate::ec::lib::{EC_POINT_clear_free, EC_POINT_new};
 use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcPoint, PointConversionForm};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The translation unit the four allocation pairs below are attributed to, with the admitted
 /// build record's `../../src/openssl-3.6.4/` prefix `ec_deprecated.c`'s compiled `__FILE__` carries.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_deprecated.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_deprecated.c");
 
 /// `int`'s maximum, the bound the authority puts on the encoding `BN_bin2bn` accepts. Written as
 /// `i32::MAX` rather than an `INT_MAX` constant because the authority's build defines it to
@@ -82,16 +83,20 @@ pub unsafe extern "C" fn EC_POINT_point2bn(
         let buf_len = EC_POINT_point2buf(group, point, form, &mut buf, ctx);
 
         if buf_len == 0 || buf_len > INT_MAX {
+            // The authority returns here without releasing `buf`; keeping the block unowned
+            // reproduces that path rather than repairing a leak the conversion was not asked
+            // to change.
             return ptr::null_mut();
         }
 
-        // `ret = BN_bin2bn(buf, (int)buf_len, ret)`, line 34.
-        let ret = BN_bin2bn(buf, buf_len as c_int, ret);
+        // SAFETY: `buf_len` is non-zero and in range, so `EC_POINT_point2buf` produced a live
+        // octet block this frame owns and no other owner will release.
+        let buf = OwnedBuf::adopt_plain(buf, FILE_SEAM, 36);
+        let buf_ptr = buf.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
-        // `OPENSSL_free(buf)`, line 36.
-        CRYPTO_free(buf.cast(), FILE, 36);
-
-        ret
+        // `ret = BN_bin2bn(buf, (int)buf_len, ret)`, line 34. `buf`'s `Drop` performs the
+        // authority's `OPENSSL_free(buf)` at line 36.
+        BN_bin2bn(buf_ptr, buf_len as c_int, ret)
     }
 }
 
@@ -119,42 +124,43 @@ pub unsafe extern "C" fn EC_POINT_bn2point(
             buf_len = 1;
         }
 
-        // `buf = OPENSSL_malloc(buf_len)`, line 50.
-        let buf = CRYPTO_malloc(buf_len as usize, FILE, 50).cast::<c_uchar>();
-        if buf.is_null() {
+        // `buf = OPENSSL_malloc(buf_len)`, line 50. The handle releases it at line 54 on the
+        // serialisation failure path below.
+        let Some(mut buf) =
+            OwnedBuf::new_plain_released(buf_len as usize, FILE_SEAM, 50, FILE_SEAM, 54)
+        else {
+            return ptr::null_mut();
+        };
+
+        if BN_bn2binpad(bn, buf.as_ptr(), buf_len) < 0 {
             return ptr::null_mut();
         }
 
-        if BN_bn2binpad(bn, buf, buf_len) < 0 {
-            // `OPENSSL_free(buf)`, line 54.
-            CRYPTO_free(buf.cast(), FILE, 54);
-            return ptr::null_mut();
-        }
+        // The next release site is the `EC_POINT_new` failure arm at line 60.
+        buf.set_release_line(60);
 
         let ret: *mut EcPoint;
         if point.is_null() {
             ret = EC_POINT_new(group);
             if ret.is_null() {
-                // `OPENSSL_free(buf)`, line 60.
-                CRYPTO_free(buf.cast(), FILE, 60);
                 return ptr::null_mut();
             }
         } else {
             ret = point;
         }
 
-        if EC_POINT_oct2point(group, ret, buf, buf_len as usize, ctx) == 0 {
+        // The next release site is the `EC_POINT_oct2point` failure arm at line 69.
+        buf.set_release_line(69);
+        if EC_POINT_oct2point(group, ret, buf.as_ptr(), buf_len as usize, ctx) == 0 {
             if ret != point {
                 // SAFETY: `ret` is this frame's own allocation, never the caller's point.
                 EC_POINT_clear_free(ret);
             }
-            // `OPENSSL_free(buf)`, line 69.
-            CRYPTO_free(buf.cast(), FILE, 69);
             return ptr::null_mut();
         }
 
-        // `OPENSSL_free(buf)`, line 73.
-        CRYPTO_free(buf.cast(), FILE, 73);
+        // The success path releases the block at the authority's own line 73.
+        buf.set_release_line(73);
         ret
     }
 }

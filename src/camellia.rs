@@ -534,7 +534,10 @@ pub unsafe extern "C" fn Camellia_set_key(
 /// — `crypto/camellia/cmll_misc.c:31-35`.
 ///
 /// # Safety
-/// `in`/`out` sixteen bytes; `key` live.
+/// `in`/`out` sixteen bytes; `key` a live schedule produced by [`Camellia_set_key`]
+/// (`grand_rounds` is 3 or 4 and the table is initialised). A merely allocated, never
+/// initialised `CamelliaKey` is a valid value but not a valid schedule, and would make
+/// the round loop index outside `rd_key`.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_encrypt(in_: *const u8, out: *mut u8, key: *const CamelliaKey) {
     // SAFETY: the caller's contract.
@@ -560,7 +563,8 @@ pub unsafe extern "C" fn Camellia_decrypt(in_: *const u8, out: *mut u8, key: *co
 /// const CAMELLIA_KEY *key, const int enc)` — `crypto/camellia/cmll_ecb.c:19-26`.
 ///
 /// # Safety
-/// `in`/`out` sixteen bytes; `key` live.
+/// `in`/`out` sixteen bytes; `key` a schedule produced by [`Camellia_set_key`], as
+/// [`Camellia_encrypt`] requires.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_ecb_encrypt(
     in_: *const u8,
@@ -601,7 +605,8 @@ const _: Block128F = camellia_block_encrypt;
 /// `void Camellia_cbc_encrypt(...)` — `crypto/camellia/cmll_cbc.c:19-30`.
 ///
 /// # Safety
-/// `in`/`out` `len` bytes; `key` live; `ivec` sixteen bytes.
+/// `in`/`out` `len` bytes; `key` a schedule produced by [`Camellia_set_key`]; `ivec`
+/// sixteen bytes.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_cbc_encrypt(
     in_: *const u8,
@@ -638,7 +643,8 @@ pub unsafe extern "C" fn Camellia_cbc_encrypt(
 /// `void Camellia_cfb128_encrypt(...)` — `crypto/camellia/cmll_cfb.c:25-32`.
 ///
 /// # Safety
-/// `in`/`out` `length` bytes; `key` live; `ivec` sixteen bytes; `num` readable/writable.
+/// `in`/`out` `length` bytes; `key` a schedule produced by [`Camellia_set_key`]; `ivec`
+/// sixteen bytes; `num` readable/writable.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_cfb128_encrypt(
     in_: *const u8,
@@ -726,7 +732,8 @@ pub unsafe extern "C" fn Camellia_cfb8_encrypt(
 /// `void Camellia_ofb128_encrypt(...)` — `crypto/camellia/cmll_ofb.c:24-30`.
 ///
 /// # Safety
-/// `in`/`out` `length` bytes; `key` live; `ivec` sixteen bytes; `num` readable/writable.
+/// `in`/`out` `length` bytes; `key` a schedule produced by [`Camellia_set_key`]; `ivec`
+/// sixteen bytes; `num` readable/writable.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_ofb128_encrypt(
     in_: *const u8,
@@ -753,8 +760,8 @@ pub unsafe extern "C" fn Camellia_ofb128_encrypt(
 /// `void Camellia_ctr128_encrypt(...)` — `crypto/camellia/cmll_ctr.c:19-29`.
 ///
 /// # Safety
-/// `in`/`out` `length` bytes; `key` live; `ivec`/`ecount_buf` sixteen bytes each; `num`
-/// readable/writable.
+/// `in`/`out` `length` bytes; `key` a schedule produced by [`Camellia_set_key`];
+/// `ivec`/`ecount_buf` sixteen bytes each; `num` readable/writable.
 #[no_mangle]
 pub unsafe extern "C" fn Camellia_ctr128_encrypt(
     in_: *const u8,

@@ -9,9 +9,34 @@
 //! The structures are opaque to a consumer, so their field order is this crate's own rather than
 //! the authority's; `#[repr(C)]` is kept because the pointers cross the FFI boundary.
 //!
+//! ## Ownership: the object blocks own themselves
+//!
+//! Every object this unit allocates for itself -- [`Cert`] (`cert_new`/`cert_free`), the `SSL_CTX`
+//! (`SSL_CTX_new`/`SSL_CTX_free`), the `SSL` (`SSL_new`/`SSL_free`) and the `danetls_record`
+//! (`dane_tlsa_add`/`tlsa_free`) -- is an [`OwnedCtx`] whose `Drop` runs the authority's own free
+//! body ([`CtxDestroy::destroy_body`]) followed by the block release. Each block stays a
+//! `CRYPTO_zalloc`/`CRYPTO_malloc` at the authority's own size, file and line, so a
+//! caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+//! as it observes the authority's; only the *ownership* is the handle, and it is expressed above the
+//! seam. The constructors' refusal ladders and the `*_free` functions therefore no longer walk a
+//! release by hand, and the block's stable address is still what the ABI hands out and what the
+//! enclosing object stores. The two frame byte buffers that are not members of a `#[repr(C)]`
+//! object -- `SSL_add1_host`'s `get1_ip_asc` string and `SSL_add_expected_rpk`'s `i2d_PUBKEY` copy
+//! -- are [`OwnedBuf`]s.
+//!
+//! **The `#[repr(C)]` member buffers and the ABI out-pointers stay raw and are the documented
+//! boundary.** The `Cert`/`SSL_CTX`/`SSL`/`DaneCtx`/`danetls_record` fields that hold a
+//! `CRYPTO_*` block (alpn/cert-type/hostname/supportedgroups/psk blocks, the SRP login/info
+//! strings, `dane`'s `mdevp`/`mdord` arrays and the record's `data`) are members of a struct that
+//! crosses the FFI boundary, so their releases stay the object's own; and
+//! `SSL_client_hello_get1_extensions_present`'s `present` array is handed to the caller, so the
+//! caller's `OPENSSL_free` releases it. `tlsa_free` keeps the stack's `void (*)(void *)` signature
+//! because it is the `OPENSSL_sk_pop_free` freefunc.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
+use core::mem::MaybeUninit;
 use core::ptr;
 use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
@@ -54,10 +79,14 @@ use crate::runtime::ex_data::{
     CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
 use crate::runtime::mem::{
-    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc_array, CRYPTO_strdup,
-    CRYPTO_zalloc,
+    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc, CRYPTO_realloc_array,
+    CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
+use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
     OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -118,6 +147,7 @@ use crate::x509::x_x509::{d2i_X509, X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit, used on allocation and `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/ssl_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_lib.c");
 
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
@@ -513,6 +543,172 @@ const MSG_FLOW_UNINITED: c_int = 0;
 const SSL_ST_READ_HEADER: c_int = 0xF0;
 
 // -------------------------------------------------------------------------------------------
+// Ownership of the file's own object blocks and frame byte buffers
+// -------------------------------------------------------------------------------------------
+
+/// The authority's `*_free` body for one of the file's `#[repr(C)]` objects, without the block's
+/// own release, which [`OwnedCtx`]'s `Drop` performs.
+///
+/// This is an `unsafe trait`: a wrong `destroy_body` -- one that releases the enclosing block, or
+/// fails to release an owned member exactly once -- would invalidate every [`OwnedCtx`] built over
+/// `Self`.
+///
+/// # Safety
+///
+/// An implementer must guarantee, for a live block this file allocated:
+/// * `destroy_body(ptr)` runs the authority's `*_free` member body **exactly once** for that object;
+/// * it frees **exactly** the members the object owns -- every releaser is the authority's own and
+///   accepts the not-yet-set (NULL) state -- and **never** releases the enclosing block, which
+///   [`OwnedCtx`]'s `Drop` releases; and
+/// * it reads only members the constructor has initialised before the value becomes a live object.
+///
+/// This contract carries **no** zero-validity claim: the trait does not assert that an all-zero
+/// block is a valid `Self`. A constructor establishes validity itself and takes the one validated
+/// transition with [`RawCtx::assume_init`].
+unsafe trait CtxDestroy: Sized {
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live object this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned object block (`Cert`, `SSL_CTX`, `SSL`, `danetls_record`).
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the exported ABI
+/// hands it out and takes it back, and it is a member of another object), but its *ownership* is
+/// this type: a constructor allocates it with [`RawCtx::zalloc`] and validates it with
+/// [`RawCtx::assume_init`] through the crate's allocator seam at the authority's own
+/// `(file, alloc_line)`, and `Drop` releases it at the authority's own `(file, line)`. It stays a
+/// `CRYPTO_zalloc`/`CRYPTO_malloc` at the authority's own size rather than a Rust `Box`, so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly
+/// as it observes the authority's.
+struct OwnedCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<T>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> OwnedCtx<T> {
+    /// The stable address the exported ABI and the enclosing objects hold.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's out-pointer or to its enclosing object.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous [`Self::into_raw`] handed to the C caller or an enclosing object,
+    /// for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T, file: *const c_char, line: c_int) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr, file, line })
+    }
+
+    /// Release the block without the destructor body, at `line` -- the authority's own bare
+    /// `CRYPTO_free` for the refusal that runs *before* the object is a live object, so it does not
+    /// reach the object's destructor. The destructor body is skipped deliberately; this is the
+    /// one place the owner is not the destructor, and it is the authority's own partial teardown.
+    fn release_block(self, line: c_int) {
+        let ptr = self.ptr.as_ptr().cast::<c_void>();
+        let file = self.file;
+        core::mem::forget(self);
+        // SAFETY: `ptr` is the block the constructor allocated and this is its single release; the
+        // authority's refusal writes its own bare `CRYPTO_free` and never reaches the destructor.
+        unsafe { CRYPTO_free(ptr, file, line) };
+    }
+}
+
+impl<T: CtxDestroy> Drop for OwnedCtx<T> {
+    /// The object destructor: the authority's `*_free` body ([`CtxDestroy::destroy_body`]) followed
+    /// by the block release, through the same allocator seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the constructor validated with `RawCtx::assume_init` (or
+        // `from_raw` reclaimed) and this is its single release; `Drop` runs once, and
+        // `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+        }
+    }
+}
+
+/// Allocated storage for one of the file's `#[repr(C)]` objects that is **not yet** a valid `T`.
+///
+/// [`OwnedCtx`]'s `Drop` runs `T::destroy_body`, which reads the members the destructor needs; that
+/// is only sound once the storage holds a fully initialised, valid `T`. A constructor that has only
+/// raw storage must therefore hold a [`RawCtx`] until it has written those members: [`RawCtx`] owns
+/// the block, never forms a reference to `T` (it holds `NonNull<MaybeUninit<T>>`), and its `Drop`
+/// releases the **block alone** -- it never runs `T::destroy_body`.
+///
+/// The window closes with [`RawCtx::assume_init`], the one validated transition to [`OwnedCtx`].
+struct RawCtx<T: CtxDestroy> {
+    ptr: ptr::NonNull<MaybeUninit<T>>,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl<T: CtxDestroy> RawCtx<T> {
+    /// Allocate a fresh, **zeroed** block of `T`'s size through the installed allocator, or `None`
+    /// when it answers NULL. `alloc_line` is the authority's allocation site and `line` its release
+    /// site. The bytes are zero but the block is a `RawCtx`: zeroing is not, by itself, a valid `T`
+    /// for every object, so the caller still validates it with [`RawCtx::assume_init`].
+    fn zalloc(file: SeamFile, alloc_line: c_int, line: c_int) -> Option<RawCtx<T>> {
+        let file = file.as_ptr();
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
+        }
+        .cast::<MaybeUninit<T>>();
+        ptr::NonNull::new(raw).map(|ptr| RawCtx { ptr, file, line })
+    }
+
+    /// The stable address the caller initialises `T`'s fields through.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr().cast::<T>()
+    }
+
+    /// The validated transition: the storage now holds a fully initialised, valid `T`.
+    ///
+    /// # Safety
+    /// The storage holds a valid, fully initialised `T` -- every field [`CtxDestroy::destroy_body`]
+    /// reads has been written, so the block is a valid `T` and its members satisfy the destructor's
+    /// invariants -- and no other owner will release it: the returned handle's `Drop` is the
+    /// block's single release.
+    unsafe fn assume_init(self) -> OwnedCtx<T> {
+        let ptr = self.ptr.cast::<T>();
+        let (file, line) = (self.file, self.line);
+        core::mem::forget(self);
+        OwnedCtx { ptr, file, line }
+    }
+}
+
+impl<T: CtxDestroy> Drop for RawCtx<T> {
+    /// Releases the **block alone**: `T` is not (yet) a valid value, so its destructor body must not
+    /// run. Same allocator, size, file and `line` as [`OwnedCtx`]'s block release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
+        // single release, and the authority's own bare `CRYPTO_free` is the whole release.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line) };
+    }
+}
+
+// An owned frame byte buffer: the authority's own `CRYPTO_*` block whose release is the shared
+// [`OwnedBuf`], so its single release is `Drop` and no call site writes a `CRYPTO_free` by hand.
+//
+// The block stays at the authority's own size and file, so a caller-installed
+// `CRYPTO_set_mem_functions` hook observes the allocation and its release exactly as it observes
+// the authority's.
+
+// -------------------------------------------------------------------------------------------
 // Method table (pulled forward from 14.2 for the one constructor the court needs)
 // -------------------------------------------------------------------------------------------
 
@@ -556,10 +752,17 @@ pub struct CertKey {
     pub privatekey: *mut c_void,
     /// `STACK_OF(X509) *chain` — the extra chain certificates (`ssl_set_cert_and_key`).
     pub chain: *mut OpenSslStack,
-    /// `unsigned char *serverinfo` — the serverinfo block (`SSL_CTX_use_serverinfo_ex`).
-    pub serverinfo: *mut u8,
-    /// `size_t serverinfo_length`.
-    pub serverinfo_length: usize,
+    /// `unsigned char *serverinfo` — the serverinfo block (`SSL_CTX_use_serverinfo_ex`), an
+    /// object-owned `(ptr, len)` **member buffer**. Its invariant is stated once by
+    /// [`MemberBufSlot`] and mediated by [`CertKey::serverinfo`]/[`CertKey::serverinfo_slot`];
+    /// see `MEMBER-BUFFER-MODEL.md`. It stays `*mut u8` at this exact offset so the `#[repr(C)]`
+    /// layout is the authority's, and it is **private**: `ssl_rsa.rs`'s
+    /// `SSL_CTX_use_serverinfo_ex` regrows the block **in place** through
+    /// [`MemberBufSlot::realloc`] (the `CRYPTO_realloc` operation added to the model), so every
+    /// read, write and release now goes through the handle/reader.
+    serverinfo: *mut u8,
+    /// `size_t serverinfo_length` — the length companion of `serverinfo`.
+    serverinfo_length: usize,
     /// `OSSL_COMP_CERT *comp_cert[TLSEXT_comp_cert_limit]` — the pre-compressed forms
     /// (`ssl_cert_comp.c`).
     pub comp_cert: [*mut crate::ssl::ssl_cert_comp::OsslCompCert; TLSEXT_COMP_CERT_LIMIT],
@@ -595,8 +798,13 @@ pub struct Cert {
     /// The certificate callback's argument.
     #[allow(dead_code)] // as `cert_cb`
     pub cert_cb_arg: *mut c_void,
-    /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`).
-    pub psk_identity_hint: *mut c_char,
+    /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`), an
+    /// object-owned C-string **member buffer**. Its ownership invariant is stated once by
+    /// [`MemberCStrSlot`] and mediated by [`Cert::psk_identity_hint`]/
+    /// [`Cert::psk_identity_hint_slot`]; see `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is **private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    psk_identity_hint: *mut c_char,
     /// `EVP_PKEY *dh_tmp` — the explicit temporary DH key (`SSL_[CTX_]set0_tmp_dh_pkey`).
     #[allow(dead_code)] // stored for the tmp-DH setter; read by the DH key-exchange path
     pub dh_tmp: *mut c_void,
@@ -612,25 +820,88 @@ pub struct Cert {
     pub custext: Vec<CustomExtMethod>,
 }
 
-/// A context's or a connection's certificate container, freshly allocated and empty.
+impl Cert {
+    /// The object-owned PSK identity hint (NULL when unset) — the authoritative read of the
+    /// `psk_identity_hint` member buffer. Reads cannot free or alias, but funnelling them here keeps
+    /// the field's writers enumerable (see [`MemberCStrSlot`]).
+    pub(crate) fn psk_identity_hint(&self) -> *const c_char {
+        self.psk_identity_hint
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this container's `psk_identity_hint`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Cert` whose `psk_identity_hint` currently obeys the member-buffer
+    /// invariant (NULL, or a single NUL-terminated `CRYPTO_strdup` block this object owns). Every
+    /// live `Cert` satisfies this because the block is zeroed at construction and the member is
+    /// only ever mutated through [`MemberCStrSlot`] or released by this module's `CtxDestroy`
+    /// body.
+    pub(crate) unsafe fn psk_identity_hint_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity_hint` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity_hint) }
+    }
+}
+
+impl CertKey {
+    /// The object-owned serverinfo blob `(ptr, len)` (NULL/0 when unset) — the authoritative read
+    /// of the `serverinfo`/`serverinfo_length` member buffer (see [`MemberBufSlot`]).
+    pub(crate) fn serverinfo(&self) -> (*const u8, usize) {
+        (self.serverinfo, self.serverinfo_length)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this slot's `serverinfo` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `CertKey` whose `serverinfo` pair currently obeys the blob member-buffer
+    /// invariant: `(NULL, 0)`, or a single owned block of exactly `serverinfo_length` bytes this
+    /// object owns. Every live `CertKey` satisfies this because the pair is zeroed at construction
+    /// and only ever mutated through [`MemberBufSlot`] or released by this module's
+    /// [`cert_pkey_clear`].
+    pub(crate) unsafe fn serverinfo_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `serverinfo` pair obeys the invariant per the contract.
+        unsafe { MemberBufSlot::of(&mut self.serverinfo, &mut self.serverinfo_length) }
+    }
+}
+
+/// A context's or a connection's certificate container, freshly allocated and initialised empty.
+///
+/// The block is an [`OwnedCtx`] whose `Drop` runs [`CtxDestroy::destroy_body`] (the authority's
+/// `cert_free` body) and then the block release; the caller takes ownership with
+/// [`OwnedCtx::into_raw`], and [`cert_free`] reclaims it. `Drop` is the only release.
 ///
 /// # Safety
-/// The returned pointer is a live, zeroed `Cert` with the authority's security-level default
-/// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2); the caller owns it.
-unsafe fn cert_new() -> *mut Cert {
-    // SAFETY: `CRYPTO_zalloc` returns either NULL or a zeroed block of the requested size.
-    let c = CRYPTO_zalloc(core::mem::size_of::<Cert>(), FILE, 0).cast::<Cert>();
-    if !c.is_null() {
-        // SAFETY: `c` is a fresh zeroed allocation.
-        unsafe {
-            (*c).sec_level = 2;
-            (*c).sec_cb = Some(ssl_security_default_callback);
-            (*c).ssl_pkey_num = SSL_PKEY_NUM;
-            (*c).key_index = SSL_PKEY_RSA;
-            (*c).references = AtomicI32::new(1);
-        }
+/// The returned handle is a live `Cert` with the authority's security-level default
+/// (`ssl_cert.c:84`'s `OPENSSL_TLS_SECURITY_LEVEL` = 2).
+unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
+    // The container block, allocated through the crate's allocator seam (authority size) as a
+    // `RawCtx`: its bytes are the allocator's zeros, and zeroed bytes are not a valid `Cert`, so the
+    // block is not yet an [`OwnedCtx`] whose `Drop` may run `destroy_body`. `Drop` is its single
+    // release and `into_raw` hands it to the enclosing object.
+    let raw = RawCtx::<Cert>::zalloc(FILE_SEAM, 0, 0)?;
+    let c = raw.as_ptr();
+    // SAFETY: `c` is a fresh, zeroed block. Its bytes are the allocator's zeros, and zeroed bytes
+    // are not a valid `Cert`: every other field is a raw pointer or an integer (whose zero is the
+    // authority's own empty state) or an `Option<fn>` (`None`), but `custext` is a `Vec`, whose
+    // zeroed bytes -- a NULL buffer pointer -- are not a valid `Vec`. Write a valid empty `Vec`
+    // first, then the scalar fields, so the block is a valid `Cert` before `assume_init` hands it to
+    // an owner whose `Drop` may drop `custext` in place. `cert_new`'s only refusal is
+    // `RawCtx::zalloc`'s NULL, which runs before the block exists, and every write below is
+    // infallible, so no path that can reach `destroy_body` leaves `custext` uninitialised.
+    unsafe {
+        ptr::write(ptr::addr_of_mut!((*c).custext), Vec::new());
+        (*c).sec_level = 2;
+        (*c).sec_cb = Some(ssl_security_default_callback);
+        (*c).ssl_pkey_num = SSL_PKEY_NUM;
+        (*c).key_index = SSL_PKEY_RSA;
+        (*c).references = AtomicI32::new(1);
     }
-    c
+    // SAFETY: every field of `Cert` is now written -- `custext` is a valid empty `Vec` and the rest
+    // are the authority's own non-zero defaults over a zero-valid remainder (`destroy_body` accepts
+    // every other field's zero) -- so the block is a valid `Cert`, and `raw` gave up the block, which
+    // is now the returned owner's.
+    Some(unsafe { raw.assume_init() })
 }
 
 /// The active `CERT_PKEY` a certificate container holds (`c->key`, stored here as an index).
@@ -657,9 +928,9 @@ unsafe fn cert_pkey_clear(cpk: *mut CertKey) {
         (*cpk).privatekey = ptr::null_mut();
         OSSL_STACK_OF_X509_free((*cpk).chain);
         (*cpk).chain = ptr::null_mut();
-        CRYPTO_free((*cpk).serverinfo.cast(), FILE, 0);
-        (*cpk).serverinfo = ptr::null_mut();
-        (*cpk).serverinfo_length = 0;
+        // SAFETY: `cpk` is live and its `serverinfo` pair obeys the member-buffer invariant, so the
+        // handle releases the object's own single block (with its length companion) at this site.
+        (*cpk).serverinfo_slot().clear(FILE, 0);
         for j in 0..TLSEXT_COMP_CERT_LIMIT {
             crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_free((*cpk).comp_cert[j]);
             (*cpk).comp_cert[j] = ptr::null_mut();
@@ -673,23 +944,35 @@ unsafe fn cert_pkey_clear(cpk: *mut CertKey) {
 /// # Safety
 /// `c` must be NULL or a live `Cert` previously returned by [`cert_new`].
 unsafe fn cert_free(c: *mut Cert) {
-    if !c.is_null() {
-        // SAFETY: `c` is a live `Cert` per the caller's contract; a NULL `psk_identity_hint` is
-        // `CRYPTO_free`'s own no-op.
+    // SAFETY: `c` is NULL or a live container; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block release.
+    unsafe { drop(OwnedCtx::<Cert>::from_raw(c, FILE, 0)) };
+}
+
+/// The authority's `cert_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+// SAFETY: `destroy_body` is the authority's `cert_free` body minus the block release: it releases
+// the owned `pkeys`, `custext`, `psk_identity_hint` and `dh_tmp` exactly once, frees exactly those
+// members and never the enclosing block, and reads only members `cert_new` initialised.
+unsafe impl CtxDestroy for Cert {
+    /// # Safety
+    /// `ptr` is a live container this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Cert) {
+        // SAFETY: `ptr` is live per the contract; a NULL `psk_identity_hint` is `CRYPTO_free`'s own
+        // no-op. `custext` is the valid empty `Vec` `cert_new` wrote (never a zeroed block) and
+        // `SSL_CTX_add_*_custom_ext` may have grown; dropping it in place releases the record buffer
+        // (the records hold only borrowed callback pointers and raw args the caller owns, exactly as
+        // the authority's `custom_exts_free` releases only the array when the old-style wrapper is
+        // absent).
         unsafe {
             for i in 0..SSL_PKEY_NUM {
-                cert_pkey_clear(ptr::addr_of_mut!((*c).pkeys[i]));
+                cert_pkey_clear(ptr::addr_of_mut!((*ptr).pkeys[i]));
             }
-            // SAFETY: `c` is live; `custext` is the `Vec` `cert_new` zero-initialised and
-            // `SSL_CTX_add_*_custom_ext` may have grown. Dropping it in place releases the
-            // record buffer (the records hold only borrowed callback pointers and raw args the
-            // caller owns, exactly as the authority's `custom_exts_free` releases only the
-            // array when the old-style wrapper is absent).
-            ptr::drop_in_place(ptr::addr_of_mut!((*c).custext));
-            CRYPTO_free((*c).psk_identity_hint.cast(), FILE, 0);
+            ptr::drop_in_place(ptr::addr_of_mut!((*ptr).custext));
+            // SAFETY: `ptr` is live and its `psk_identity_hint` obeys the member-buffer invariant,
+            // so this handle releases the object's own single block at the authority's own site.
+            (*ptr).psk_identity_hint_slot().clear(FILE_SEAM, 0);
             // SAFETY: `dh_tmp` is NULL or the key the tmp-DH setter installed.
-            EVP_PKEY_free((*c).dh_tmp.cast());
-            CRYPTO_free(c.cast(), FILE, 0);
+            EVP_PKEY_free((*ptr).dh_tmp.cast());
         }
     }
 }
@@ -697,14 +980,41 @@ unsafe fn cert_free(c: *mut Cert) {
 /// Copy the security-attribute half of a certificate container (the authority's `ssl_cert_dup`
 /// copies `sec_level`/`sec_cb`/`sec_ex`/`cert_flags`; the leaf key is 14.7's).
 ///
+/// Both up-refs are checked before the destination is touched. A refusal leaves `to` unchanged
+/// and releases the reference the earlier arm already took, which is the caller-visible half of
+/// the authority's `err:` cleanup for the pair. Answers 1 on success, 0 on refusal.
+///
 /// # Safety
 /// `to` must be a live `Cert`; `from` must be NULL or a live `Cert`.
-unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
+unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) -> c_int {
     if from.is_null() {
-        return;
+        return 1;
     }
     // SAFETY: both pointers are live per the caller's contract.
     let (f, t) = unsafe { (&*from, &mut *to) };
+    let fslot = &f.pkeys[f.key_index];
+
+    // Take both references first, so a refusal cannot leave the destination holding an
+    // unowned pointer or a half-updated half-copy.
+    let took_x509 = !fslot.x509.is_null();
+    if took_x509 {
+        // SAFETY: `fslot.x509` is a live certificate; the copy owns the new reference.
+        if unsafe { X509_up_ref(fslot.x509) } == 0 {
+            return 0;
+        }
+    }
+    if !fslot.privatekey.is_null() {
+        // SAFETY: `fslot.privatekey` is a live key; the copy owns the new reference.
+        if unsafe { crate::evp::pkey::EVP_PKEY_up_ref(fslot.privatekey.cast()) } == 0 {
+            if took_x509 {
+                // SAFETY: this frame took that reference above and the destination never saw
+                // it, so this is its one release (the authority's `err:` rollback).
+                unsafe { X509_free(fslot.x509) };
+            }
+            return 0;
+        }
+    }
+
     t.sec_level = f.sec_level;
     t.sec_cb = f.sec_cb;
     t.sec_ex = f.sec_ex;
@@ -713,24 +1023,22 @@ unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
     // The active leaf pair is **up-reffed** into the copy, so the copy owns its own references
     // and `cert_free` can release them (the authority's `ssl_cert_dup` reference-counts every
     // slot; this reduced copy handles the active one).
-    let fslot = &f.pkeys[f.key_index];
     let tslot = &mut t.pkeys[f.key_index];
-    if !fslot.x509.is_null() {
-        // SAFETY: `fslot.x509` is a live certificate.
-        unsafe { X509_up_ref(fslot.x509) };
+    if took_x509 {
         tslot.x509 = fslot.x509;
     }
     if !fslot.privatekey.is_null() {
-        // SAFETY: `fslot.privatekey` is a live key.
-        unsafe { crate::evp::pkey::EVP_PKEY_up_ref(fslot.privatekey.cast()) };
         tslot.privatekey = fslot.privatekey;
     }
+    1
 }
 
 /// `CERT *ssl_cert_dup(CERT *cert)` — `ssl/ssl_cert.c:95-236`.
 ///
 /// The authority's per-slot duplication in full: every `pkeys[]` entry up-refs its
-/// certificate, private key, chain, serverinfo block and compressed forms, and the container's
+/// certificate, private key, chain, serverinfo block and compressed forms (each up-ref's
+/// result is checked, and a refusal returns NULL through the owner's `Drop`, which runs the
+/// authority's `ssl_cert_free` failure path), and the container's
 /// `dh_tmp`, flag word, certificate callback, security attributes, custom-extension table and PSK
 /// identity hint are copied. The fields this crate's `Cert` does not model — the authority's
 /// `conf_sigalgs`/`client_sigalgs`/`ctype`, `verify_store`/`chain_store` and `dh_tmp_auto` — are
@@ -743,19 +1051,22 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
     if cert.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `cert_new` returns a live zeroed container or NULL.
-    let ret = unsafe { cert_new() };
-    if ret.is_null() {
+    // The duplicated container, owned here; `Drop` releases what it built on any refusal and
+    // `into_raw` hands it out on success. `ret` is its stable address, and the authority's refusals
+    // reach `cert_free`, which is `OwnedCtx`'s `Drop`.
+    // SAFETY: `cert_new` allocates a fresh zeroed container and has no other precondition.
+    let Some(ret_owner) = (unsafe { cert_new() }) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `cert` and `ret` are live; every write is to the fresh container `ret`.
+    };
+    let ret = ret_owner.as_ptr();
+    // SAFETY: `cert` and `ret` are live; every write is to the fresh container `ret`. Each refusal
+    // returns and lets `ret_owner`'s `Drop` free what the ladder built.
     unsafe {
         (*ret).ssl_pkey_num = (*cert).ssl_pkey_num;
         (*ret).key_index = (*cert).key_index;
 
         if !(*cert).dh_tmp.is_null() {
             if EVP_PKEY_up_ref((*cert).dh_tmp.cast()) == 0 {
-                cert_free(ret);
                 return ptr::null_mut();
             }
             (*ret).dh_tmp = (*cert).dh_tmp;
@@ -766,33 +1077,44 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
             let cpk = &(*cert).pkeys[i];
             let rpk = &mut (*ret).pkeys[i];
             if !cpk.x509.is_null() {
-                X509_up_ref(cpk.x509);
+                // Every authority arm checks the up-ref and jumps to `err` on refusal
+                // (`ssl_cert.c:133-137`); a refused increment must not leave the duplicate
+                // holding an unowned pointer.
+                if X509_up_ref(cpk.x509) == 0 {
+                    return ptr::null_mut();
+                }
                 rpk.x509 = cpk.x509;
             }
             if !cpk.privatekey.is_null() {
-                EVP_PKEY_up_ref(cpk.privatekey.cast());
+                // `ssl_cert.c:139-143`.
+                if EVP_PKEY_up_ref(cpk.privatekey.cast()) == 0 {
+                    return ptr::null_mut();
+                }
                 rpk.privatekey = cpk.privatekey;
             }
             if !cpk.chain.is_null() {
                 rpk.chain = X509_chain_up_ref(cpk.chain);
                 if rpk.chain.is_null() {
-                    cert_free(ret);
                     return ptr::null_mut();
                 }
             }
-            if !cpk.serverinfo.is_null() {
-                rpk.serverinfo =
-                    CRYPTO_memdup(cpk.serverinfo.cast(), cpk.serverinfo_length, FILE, 154)
-                        .cast::<u8>();
-                if rpk.serverinfo.is_null() {
-                    cert_free(ret);
+            let (sp, sl) = cpk.serverinfo();
+            if !sp.is_null() {
+                let dup = CRYPTO_memdup(sp.cast(), sl, FILE, 154).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                rpk.serverinfo_length = cpk.serverinfo_length;
+                // SAFETY: `rpk` is a fresh slot whose `serverinfo` member is empty; `dup` is this
+                // call's fresh exclusive block of `sl` bytes.
+                rpk.serverinfo_slot().store(dup, sl);
             }
             for j in 0..TLSEXT_COMP_CERT_LIMIT {
                 if !cpk.comp_cert[j].is_null() {
-                    crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]);
+                    // `ssl_cert.c:159-166`: the authority's guard-off `comp_cert[]` loop
+                    // checks `OSSL_COMP_CERT_up_ref` too.
+                    if crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]) == 0 {
+                        return ptr::null_mut();
+                    }
                     rpk.comp_cert[j] = cpk.comp_cert[j];
                 }
             }
@@ -806,18 +1128,20 @@ unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
         (*ret).sec_ex = (*cert).sec_ex;
 
         if custom_exts_copy(&mut (*ret).custext, &(*cert).custext) == 0 {
-            cert_free(ret);
             return ptr::null_mut();
         }
-        if !(*cert).psk_identity_hint.is_null() {
-            (*ret).psk_identity_hint = CRYPTO_strdup((*cert).psk_identity_hint, FILE, 225);
-            if (*ret).psk_identity_hint.is_null() {
-                cert_free(ret);
+        let hint = (*cert).psk_identity_hint();
+        if !hint.is_null() {
+            // SAFETY: `hint` is NUL-terminated; the seam answers a fresh block this call owns.
+            let Some(dup) = OwnedCStr::dup(hint, FILE_SEAM, 225) else {
                 return ptr::null_mut();
-            }
+            };
+            // SAFETY: `ret` is a fresh container whose `psk_identity_hint` member is empty.
+            let empty = (*ret).psk_identity_hint_slot().assume_empty();
+            empty.store(dup);
         }
     }
-    ret
+    ret_owner.into_raw()
 }
 
 /// `static int dup_ca_names(STACK_OF(X509_NAME) **dst, STACK_OF(X509_NAME) *src)` —
@@ -980,8 +1304,13 @@ pub struct SslCtx {
     pub method: *const SslMethod,
     /// `OSSL_LIB_CTX *libctx` — the library context, stored verbatim.
     pub libctx: *mut c_void,
-    /// `char *propq` — the property query, owned.
-    pub propq: *mut c_char,
+    /// `char *propq` — the property query, an object-owned C-string **member buffer** ([`MemberCStrSlot`]
+    /// and `MEMBER-BUFFER-MODEL.md`). Every write and release is mediated by [`SslCtx::propq_slot`] and
+    /// every read by [`SslCtx::propq`]; it stays `*mut c_char` at this exact offset so the `#[repr(C)]`
+    /// layout is the authority's, and it is **private** now that every fetch site across
+    /// `src/ssl/statem`, `t1_enc.rs`, `tls13_enc.rs`, `t1_trce.rs`, `tls_srp.rs` and `ssl_rsa.rs` reads
+    /// through the reader.
+    propq: *mut c_char,
     /// `int min_proto_version`.
     pub min_proto_version: c_int,
     /// `int max_proto_version`.
@@ -1135,24 +1464,33 @@ pub struct SslCtx {
     pub ct_validation_callback_arg: *mut c_void,
     /// `CTLOG_STORE *ctlog_store` — allocated by `SSL_CTX_new_ex` (`ssl_lib.c:4067`).
     pub ctlog_store: *mut CtlogStore,
-    /// `unsigned char *client_cert_type` (the `SSL_set1_client_cert_type` list).
-    pub client_cert_type: *mut u8,
-    /// `size_t client_cert_type_len`.
-    pub client_cert_type_len: usize,
-    /// `unsigned char *server_cert_type`.
-    pub server_cert_type: *mut u8,
-    /// `size_t server_cert_type_len`.
-    pub server_cert_type_len: usize,
+    /// `unsigned char *client_cert_type` (the `SSL_set1_client_cert_type` list) — an object-owned
+    /// `(ptr, len)` **member buffer** ([`MemberBufSlot`]); mediated by
+    /// [`SslCtx::client_cert_type`]/[`SslCtx::client_cert_type_slot`]; **private**.
+    client_cert_type: *mut u8,
+    /// `size_t client_cert_type_len` — the length companion of `client_cert_type`.
+    client_cert_type_len: usize,
+    /// `unsigned char *server_cert_type` — an object-owned `(ptr, len)` **member buffer**
+    /// ([`MemberBufSlot`]); mediated by [`SslCtx::server_cert_type`]/
+    /// [`SslCtx::server_cert_type_slot`]; **private**.
+    server_cert_type: *mut u8,
+    /// `size_t server_cert_type_len` — the length companion of `server_cert_type`.
+    server_cert_type_len: usize,
     /// `size_t block_padding` (`SSL_CTX_set_block_padding_ex`).
     pub block_padding: usize,
     /// `size_t hs_padding`.
     pub hs_padding: usize,
-    /// `unsigned char *ext.alpn` — the client ALPN offer list, owned.
-    pub ext_alpn: *mut u8,
-    /// `unsigned int ext.alpn_len`.
-    pub ext_alpn_len: c_uint,
-    /// `uint16_t *ext.supportedgroups` — the context's supported group list, owned.
-    pub supportedgroups: *mut u16,
+    /// `unsigned char *ext.alpn` — the client ALPN offer list, an object-owned `(ptr, len)`
+    /// **member buffer** whose length companion is a `c_uint` ([`MemberBufSlot`]); mediated by
+    /// [`SslCtx::ext_alpn`]/[`SslCtx::ext_alpn_slot`]; **private**.
+    ext_alpn: *mut u8,
+    /// `unsigned int ext.alpn_len` — the length companion of `ext_alpn`.
+    ext_alpn_len: c_uint,
+    /// `uint16_t *ext.supportedgroups` — the context's supported group list. Its writer
+    /// (`t1_lib::tls1_set_groups`) receives the raw `*mut *mut u16`/`*mut usize` pair and its
+    /// length is an *element count* (not a byte extent), so it is **not** a `MemberBufSlot`; it stays
+    /// `pub(crate)` and its release is enumerated (see the batch report).
+    pub(crate) supportedgroups: *mut u16,
     /// `size_t ext.supportedgroups_len`.
     pub supportedgroups_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — the context-wide MFL (`SSL_CTX_set_tlsext_max_fragment_length`).
@@ -1219,6 +1557,75 @@ pub struct SslCtx {
     pub info_callback: Option<InfoCb>,
     /// `struct { TSAN_QUALIFIER int sess_*; } stats` — the `SSL_CTX_sess_*` counters.
     pub stats: SessionStats,
+}
+
+impl SslCtx {
+    /// The object-owned property query (NULL when unset) — the authoritative read of the `propq`
+    /// member buffer (see [`MemberCStrSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this context's `propq`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `SslCtx` whose `propq` currently obeys the member-buffer invariant (NULL,
+    /// or a single NUL-terminated `CRYPTO_strdup` block this object owns).
+    pub(crate) unsafe fn propq_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `propq` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.propq) }
+    }
+
+    /// The object-owned ALPN offer blob `(ptr, len)` (NULL/0 when unset) — the authoritative read
+    /// of the `ext_alpn`/`ext_alpn_len` member buffer.
+    pub(crate) fn ext_alpn(&self) -> (*const u8, c_uint) {
+        (self.ext_alpn, self.ext_alpn_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this context's `ext_alpn` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `SslCtx` whose `ext_alpn` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn ext_alpn_slot(&mut self) -> MemberBufSlot<'_, c_uint> {
+        // SAFETY: `self` is live and its `ext_alpn` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ext_alpn, &mut self.ext_alpn_len) }
+    }
+
+    /// The object-owned client-cert-type blob `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `client_cert_type`/`client_cert_type_len` member buffer.
+    pub(crate) fn client_cert_type(&self) -> (*const u8, usize) {
+        (self.client_cert_type, self.client_cert_type_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this context's `client_cert_type` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `SslCtx` whose `client_cert_type` pair obeys the blob member-buffer
+    /// invariant.
+    pub(crate) unsafe fn client_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `client_cert_type` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.client_cert_type, &mut self.client_cert_type_len) }
+    }
+
+    /// The object-owned server-cert-type blob `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `server_cert_type`/`server_cert_type_len` member buffer.
+    pub(crate) fn server_cert_type(&self) -> (*const u8, usize) {
+        (self.server_cert_type, self.server_cert_type_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this context's `server_cert_type` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `SslCtx` whose `server_cert_type` pair obeys the blob member-buffer
+    /// invariant.
+    pub(crate) unsafe fn server_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `server_cert_type` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.server_cert_type, &mut self.server_cert_type_len) }
+    }
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -1380,10 +1787,13 @@ pub struct Ssl {
     /// `int post_handshake_auth` — the connection's `SSL_PHA_*` state (14.5b).
     pub post_handshake_auth: c_int,
     /// `unsigned char *pha_context` — the request context echoed from a TLS1.3 CertificateRequest
-    /// (`tls_construct_certificate_request`, `statem_srvr.c:3028-3048`). Owned; freed by `SSL_free`.
-    pub pha_context: *mut u8,
-    /// `size_t pha_context_len`.
-    pub pha_context_len: usize,
+    /// (`tls_construct_certificate_request`, `statem_srvr.c:3028-3048`). An object-owned `(ptr, len)`
+    /// **member buffer** ([`MemberBufSlot`]) mediated by [`Ssl::pha_context`]/
+    /// [`Ssl::pha_context_slot`]; its writers live in `statem_clnt.rs`/`statem_srvr.rs` and now go
+    /// through the handle, so it is **private**.
+    pha_context: *mut u8,
+    /// `size_t pha_context_len` — the length companion of `pha_context`.
+    pha_context_len: usize,
     /// `EVP_MD_CTX *pha_dgst` — the handshake digest through the client Finished, saved for PHA
     /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
     pub pha_dgst: *mut c_void,
@@ -1516,36 +1926,59 @@ pub struct Ssl {
     pub ts_msg_write: u64,
     /// `OSSL_TIME ts_msg_read` — nanoseconds; 0 means "not available".
     pub ts_msg_read: u64,
-    /// `unsigned char *ext.alpn` — this connection's ALPN offer, owned.
-    pub ext_alpn: *mut u8,
-    /// `unsigned int ext.alpn_len`.
-    pub ext_alpn_len: c_uint,
-    /// `unsigned char *ext.npn` — the negotiated NPN protocol, owned.
-    pub ext_npn: *mut u8,
-    /// `size_t ext.npn_len`.
-    pub ext_npn_len: usize,
-    /// `char *ext.hostname` — the SNI name, owned (set by 14.5's `SSL_set_tlsext_host_name`).
-    pub ext_hostname: *mut c_char,
-    /// `unsigned char *s3.alpn_selected` — the negotiated ALPN protocol, owned (14.5).
-    pub s3_alpn_selected: *mut u8,
-    /// `size_t s3.alpn_selected_len`.
-    pub s3_alpn_selected_len: usize,
-    /// `unsigned char *s3.alpn_proposed` — the client's offered protocol list, owned (server side).
-    pub s3_alpn_proposed: *mut u8,
-    /// `size_t s3.alpn_proposed_len`.
-    pub s3_alpn_proposed_len: usize,
-    /// `uint16_t *ext.supportedgroups` — the connection's supported group list, owned.
-    pub supportedgroups: *mut u16,
+    /// `unsigned char *ext.alpn` — this connection's ALPN offer, an object-owned `(ptr, len)`
+    /// **member buffer** whose length companion is a `c_uint` ([`MemberBufSlot`]); mediated by
+    /// [`Ssl::ext_alpn`]/[`Ssl::ext_alpn_slot`]; **private**.
+    ext_alpn: *mut u8,
+    /// `unsigned int ext.alpn_len` — the length companion of `ext_alpn`.
+    ext_alpn_len: c_uint,
+    /// `unsigned char *ext.npn` — the negotiated NPN protocol, an object-owned `(ptr, len)` **member
+    /// buffer** ([`MemberBufSlot`]); mediated by [`Ssl::ext_npn`]/[`Ssl::ext_npn_slot`]; **private**
+    /// (never written in this slice, so the pair stays `(NULL, 0)`).
+    ext_npn: *mut u8,
+    /// `size_t ext.npn_len` — the length companion of `ext_npn`.
+    ext_npn_len: usize,
+    /// `char *ext.hostname` — the SNI name, an object-owned C-string **member buffer**
+    /// ([`MemberCStrSlot`]) mediated by [`Ssl::ext_hostname`]/[`Ssl::ext_hostname_slot`]; written by
+    /// `s3_lib.rs`'s `ssl3_ctrl_set_tlsext_host_name` and the client-hello parser, both now through
+    /// the handle, so it is **private**.
+    ext_hostname: *mut c_char,
+    /// `unsigned char *s3.alpn_selected` — the negotiated ALPN protocol, an object-owned `(ptr, len)`
+    /// **member buffer** ([`MemberBufSlot`]) mediated by [`Ssl::s3_alpn_selected`]/
+    /// [`Ssl::s3_alpn_selected_slot`]; written by the handshake (`statem_clnt.rs`/`statem_srvr.rs`),
+    /// which now goes through the handle, so it is **private**.
+    s3_alpn_selected: *mut u8,
+    /// `size_t s3.alpn_selected_len` — the length companion of `s3_alpn_selected`.
+    s3_alpn_selected_len: usize,
+    /// `unsigned char *s3.alpn_proposed` — the client's offered protocol list (server side), an
+    /// object-owned `(ptr, len)` **member buffer** ([`MemberBufSlot`]) mediated by
+    /// [`Ssl::s3_alpn_proposed`]/[`Ssl::s3_alpn_proposed_slot`]; written by `statem_srvr.rs`, which
+    /// now goes through the handle, so it is **private**.
+    s3_alpn_proposed: *mut u8,
+    /// `size_t s3.alpn_proposed_len` — the length companion of `s3_alpn_proposed`.
+    s3_alpn_proposed_len: usize,
+    /// `uint16_t *ext.supportedgroups` — the connection's supported group list. **Retained raw
+    /// boundary, not a [`MemberBufSlot`]:** its length is an *element count*, not the allocation's
+    /// byte extent (`tls1_set_groups`/`SSL_new` use `len * size_of::<u16>()`), and its writer
+    /// `t1_lib::tls1_set_groups` takes the raw `*mut *mut u16`/`*mut usize` pair. It therefore does
+    /// not satisfy the blob invariant (`len` == byte extent); it stays `pub(crate)` and its three
+    /// accesses (the `tls1_set_groups` regrow, `tls1_get_supported_groups`'s slice, and the `SSL_new`
+    /// copy) plus the two destructor frees are enumerated in the batch report.
+    pub(crate) supportedgroups: *mut u16,
     /// `size_t ext.supportedgroups_len`.
-    pub supportedgroups_len: usize,
-    /// `unsigned char *client_cert_type`.
-    pub client_cert_type: *mut u8,
-    /// `size_t client_cert_type_len`.
-    pub client_cert_type_len: usize,
-    /// `unsigned char *server_cert_type`.
-    pub server_cert_type: *mut u8,
-    /// `size_t server_cert_type_len`.
-    pub server_cert_type_len: usize,
+    pub(crate) supportedgroups_len: usize,
+    /// `unsigned char *client_cert_type` — an object-owned `(ptr, len)` **member buffer**
+    /// ([`MemberBufSlot`]); mediated by [`Ssl::client_cert_type`]/[`Ssl::client_cert_type_slot`];
+    /// **private**.
+    client_cert_type: *mut u8,
+    /// `size_t client_cert_type_len` — the length companion of `client_cert_type`.
+    client_cert_type_len: usize,
+    /// `unsigned char *server_cert_type` — an object-owned `(ptr, len)` **member buffer**
+    /// ([`MemberBufSlot`]); mediated by [`Ssl::server_cert_type`]/[`Ssl::server_cert_type_slot`];
+    /// **private**.
+    server_cert_type: *mut u8,
+    /// `size_t server_cert_type_len` — the length companion of `server_cert_type`.
+    server_cert_type_len: usize,
     /// `uint8_t ext.client_cert_type` — the negotiated client cert type (14.5).
     pub ext_client_cert_type: u8,
     /// `uint8_t ext.server_cert_type` — the negotiated server cert type (14.5).
@@ -1749,6 +2182,137 @@ pub struct Ssl {
     pub rec_body_len: usize,
 }
 
+impl Ssl {
+    /// The object-owned ALPN offer blob `(ptr, len)` (NULL/0 when unset) — the authoritative read
+    /// of the `ext_alpn`/`ext_alpn_len` member buffer.
+    pub(crate) fn ext_alpn(&self) -> (*const u8, c_uint) {
+        (self.ext_alpn, self.ext_alpn_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `ext_alpn` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `ext_alpn` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn ext_alpn_slot(&mut self) -> MemberBufSlot<'_, c_uint> {
+        // SAFETY: `self` is live and its `ext_alpn` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ext_alpn, &mut self.ext_alpn_len) }
+    }
+
+    /// The object-owned NPN blob `(ptr, len)` (NULL/0 when unset) — the authoritative read of the
+    /// `ext_npn`/`ext_npn_len` member buffer.
+    pub(crate) fn ext_npn(&self) -> (*const u8, usize) {
+        (self.ext_npn, self.ext_npn_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `ext_npn` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `ext_npn` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn ext_npn_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ext_npn` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ext_npn, &mut self.ext_npn_len) }
+    }
+
+    /// The object-owned client-cert-type blob `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `client_cert_type`/`client_cert_type_len` member buffer.
+    pub(crate) fn client_cert_type(&self) -> (*const u8, usize) {
+        (self.client_cert_type, self.client_cert_type_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `client_cert_type` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `client_cert_type` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn client_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `client_cert_type` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.client_cert_type, &mut self.client_cert_type_len) }
+    }
+
+    /// The object-owned server-cert-type blob `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `server_cert_type`/`server_cert_type_len` member buffer.
+    pub(crate) fn server_cert_type(&self) -> (*const u8, usize) {
+        (self.server_cert_type, self.server_cert_type_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `server_cert_type` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `server_cert_type` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn server_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `server_cert_type` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.server_cert_type, &mut self.server_cert_type_len) }
+    }
+
+    /// The object-owned SNI name (NULL when unset) — the authoritative read of the `ext_hostname`
+    /// member buffer.
+    pub(crate) fn ext_hostname(&self) -> *const c_char {
+        self.ext_hostname
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this connection's `ext_hostname`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `ext_hostname` obeys the member-buffer invariant (NULL, or a
+    /// single NUL-terminated `CRYPTO_strdup` block this object owns).
+    pub(crate) unsafe fn ext_hostname_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `ext_hostname` obeys the invariant.
+        unsafe { MemberCStrSlot::of(&mut self.ext_hostname) }
+    }
+
+    /// The object-owned negotiated-ALPN blob `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `s3_alpn_selected`/`s3_alpn_selected_len` member buffer.
+    pub(crate) fn s3_alpn_selected(&self) -> (*const u8, usize) {
+        (self.s3_alpn_selected, self.s3_alpn_selected_len)
+    }
+
+    /// The object-owned offered-ALPN blob `(ptr, len)` (NULL/0 when unset) — the authoritative read
+    /// of the `s3_alpn_proposed`/`s3_alpn_proposed_len` member buffer.
+    pub(crate) fn s3_alpn_proposed(&self) -> (*const u8, usize) {
+        (self.s3_alpn_proposed, self.s3_alpn_proposed_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `s3_alpn_selected` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `s3_alpn_selected` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn s3_alpn_selected_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `s3_alpn_selected` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.s3_alpn_selected, &mut self.s3_alpn_selected_len) }
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `s3_alpn_proposed` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `s3_alpn_proposed` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn s3_alpn_proposed_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `s3_alpn_proposed` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.s3_alpn_proposed, &mut self.s3_alpn_proposed_len) }
+    }
+
+    /// The object-owned PHA request context `(ptr, len)` (NULL/0 when unset) — the authoritative
+    /// read of the `pha_context`/`pha_context_len` member buffer.
+    pub(crate) fn pha_context(&self) -> (*const u8, usize) {
+        (self.pha_context, self.pha_context_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this connection's `pha_context` pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `pha_context` pair obeys the blob member-buffer invariant.
+    pub(crate) unsafe fn pha_context_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `pha_context` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.pha_context, &mut self.pha_context_len) }
+    }
+}
+
 // -------------------------------------------------------------------------------------------
 // Callback type aliases (their arities are the authority's; Slice 1 stores and returns them)
 // -------------------------------------------------------------------------------------------
@@ -1906,10 +2470,17 @@ pub struct SslSession {
     pub sid_ctx_length: usize,
     /// `unsigned char sid_ctx[SSL_MAX_SID_CTX_LENGTH]`.
     pub sid_ctx: [u8; SSL_MAX_SID_CTX_LENGTH],
-    /// `char *psk_identity_hint`.
-    pub psk_identity_hint: *mut c_char,
-    /// `char *psk_identity`.
-    pub psk_identity: *mut c_char,
+    /// `char *psk_identity_hint` — an object-owned C-string **member buffer**. Its ownership
+    /// invariant is stated once by [`MemberCStrSlot`] and mediated by
+    /// [`SslSession::psk_identity_hint`]/[`SslSession::psk_identity_hint_slot`]; see
+    /// `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at this exact offset so the `#[repr(C)]`
+    /// layout is the authority's, and it is **private** because every read, write and release now
+    /// goes through this module's handle/reader.
+    psk_identity_hint: *mut c_char,
+    /// `char *psk_identity` — an object-owned C-string **member buffer**, as `psk_identity_hint`
+    /// (read through [`SslSession::psk_identity`], mutated through
+    /// [`SslSession::psk_identity_slot`]); **private** for the same reason.
+    psk_identity: *mut c_char,
     /// `int not_resumable`.
     pub not_resumable: c_int,
     /// `EVP_PKEY *peer_rpk`.
@@ -1936,30 +2507,41 @@ pub struct SslSession {
     pub kex_group: c_uint,
     /// `CRYPTO_EX_DATA ex_data`.
     pub ex_data: CryptoExData,
-    /// `char *ext.hostname`.
-    pub ext_hostname: *mut c_char,
-    /// `unsigned char *ext.tick`.
-    pub ext_tick: *mut u8,
-    /// `size_t ext.ticklen`.
-    pub ext_ticklen: usize,
+    /// `char *ext.hostname` — an object-owned C-string **member buffer**. Its ownership invariant
+    /// is stated once by [`MemberCStrSlot`] and mediated by [`SslSession::ext_hostname`]/
+    /// [`SslSession::ext_hostname_slot`]; see `MEMBER-BUFFER-MODEL.md`. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is **private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    ext_hostname: *mut c_char,
+    /// `unsigned char *ext.tick` — an object-owned **blob** member buffer, paired with
+    /// `ext_ticklen`. Its `(ptr, len)` invariant is stated once by [`MemberBufSlot`] and mediated by
+    /// [`SslSession::ext_tick`]/[`SslSession::ext_tick_slot`]; see `MEMBER-BUFFER-MODEL.md`. Private
+    /// for the same reason as `ext_hostname`.
+    ext_tick: *mut u8,
+    /// `size_t ext.ticklen` — the length companion of `ext_tick`.
+    ext_ticklen: usize,
     /// `unsigned long ext.tick_lifetime_hint`.
     pub ext_tick_lifetime_hint: c_ulong,
     /// `uint32_t ext.tick_age_add`.
     pub ext_tick_age_add: u32,
     /// `uint32_t ext.max_early_data`.
     pub ext_max_early_data: u32,
-    /// `unsigned char *ext.alpn_selected`.
-    pub ext_alpn_selected: *mut u8,
-    /// `size_t ext.alpn_selected_len`.
-    pub ext_alpn_selected_len: usize,
+    /// `unsigned char *ext.alpn_selected` — an object-owned **blob** member buffer, paired with
+    /// `ext_alpn_selected_len` (see [`MemberBufSlot`] and `MEMBER-BUFFER-MODEL.md`).
+    ext_alpn_selected: *mut u8,
+    /// `size_t ext.alpn_selected_len` — the length companion of `ext_alpn_selected`.
+    ext_alpn_selected_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — `SSL_SESSION_get_max_fragment_length` reads it.
     pub max_fragment_len_mode: u8,
-    /// `char *srp_username`.
-    pub srp_username: *mut c_char,
-    /// `unsigned char *ticket_appdata`.
-    pub ticket_appdata: *mut u8,
-    /// `size_t ticket_appdata_len`.
-    pub ticket_appdata_len: usize,
+    /// `char *srp_username` — an object-owned C-string **member buffer**, as `psk_identity_hint`
+    /// (read through [`SslSession::srp_username`], mutated through
+    /// [`SslSession::srp_username_slot`]); **private** for the same reason.
+    srp_username: *mut c_char,
+    /// `unsigned char *ticket_appdata` — an object-owned **blob** member buffer, paired with
+    /// `ticket_appdata_len` (see [`MemberBufSlot`] and `MEMBER-BUFFER-MODEL.md`).
+    ticket_appdata: *mut u8,
+    /// `size_t ticket_appdata_len` — the length companion of `ticket_appdata`.
+    ticket_appdata_len: usize,
     /// `uint32_t flags`.
     pub flags: u32,
     /// `SSL_CTX *owner` — the cache context the session is linked into.
@@ -1970,6 +2552,273 @@ pub struct SslSession {
     pub next: *mut SslSession,
     /// `CRYPTO_REF_COUNT references`.
     pub references: AtomicI32,
+}
+
+impl SslSession {
+    /// The object-owned SNI hostname (NULL when unset) — the authoritative read of the
+    /// `ext_hostname` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`MemberCStrSlot`]).
+    pub(crate) fn ext_hostname(&self) -> *const c_char {
+        self.ext_hostname
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `ext_hostname`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `ext_hostname` currently obeys the member-buffer invariant
+    /// (NULL, or a single NUL-terminated `CRYPTO_strdup` block this object owns). Every live
+    /// `SslSession` satisfies this because the block is zeroed at construction and the member is
+    /// only ever mutated through [`MemberCStrSlot`] or released by `ssl_sess.rs`'s `CtxDestroy`
+    /// body.
+    pub(crate) unsafe fn ext_hostname_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `ext_hostname` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.ext_hostname) }
+    }
+
+    /// The object-owned PSK identity hint (NULL when unset) — the authoritative read of the
+    /// `psk_identity_hint` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn psk_identity_hint(&self) -> *const c_char {
+        self.psk_identity_hint
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `psk_identity_hint`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `psk_identity_hint` currently obeys the member-buffer
+    /// invariant (NULL, or a single NUL-terminated `CRYPTO_strdup`/`CRYPTO_strndup` block this
+    /// object owns). Every live `SslSession` satisfies this because the block is zeroed at
+    /// construction and the member is only ever mutated through [`MemberCStrSlot`] or released by
+    /// `ssl_sess.rs`'s `CtxDestroy` body.
+    pub(crate) unsafe fn psk_identity_hint_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity_hint` obeys the invariant per the contract.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity_hint) }
+    }
+
+    /// The object-owned PSK identity (NULL when unset) — the authoritative read of the
+    /// `psk_identity` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn psk_identity(&self) -> *const c_char {
+        self.psk_identity
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `psk_identity`.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::psk_identity_hint_slot`], for `psk_identity`.
+    pub(crate) unsafe fn psk_identity_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `psk_identity` obeys the invariant.
+        unsafe { MemberCStrSlot::of(&mut self.psk_identity) }
+    }
+
+    /// The object-owned SRP username (NULL when unset) — the authoritative read of the
+    /// `srp_username` member buffer (see [`SslSession::ext_hostname`]).
+    pub(crate) fn srp_username(&self) -> *const c_char {
+        self.srp_username
+    }
+
+    /// Derive the [`MemberCStrSlot`] handle over this session's `srp_username`.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::psk_identity_hint_slot`], for `srp_username`.
+    pub(crate) unsafe fn srp_username_slot(&mut self) -> MemberCStrSlot<'_> {
+        // SAFETY: `self` is live and its `srp_username` obeys the invariant.
+        unsafe { MemberCStrSlot::of(&mut self.srp_username) }
+    }
+
+    /// The object-owned session ticket blob `(ptr, len)` — `(NULL, 0)` when unset — the
+    /// authoritative read of the `ext_tick`/`ext_ticklen` member buffer.
+    pub(crate) fn ext_tick(&self) -> (*const u8, usize) {
+        (self.ext_tick, self.ext_ticklen)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ext_tick`/`ext_ticklen`.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live session whose `ext_tick` pair currently obeys the blob member-buffer
+    /// invariant (`(NULL, 0)`, or a single owned block of exactly `ext_ticklen` bytes). Every live
+    /// `SslSession` satisfies this because the pair is zeroed at construction and is only ever
+    /// mutated through [`MemberBufSlot`] or released by `ssl_sess.rs`'s `CtxDestroy` body.
+    pub(crate) unsafe fn ext_tick_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ext_tick` pair obeys the invariant per the contract.
+        unsafe { MemberBufSlot::of(&mut self.ext_tick, &mut self.ext_ticklen) }
+    }
+
+    /// The object-owned negotiated ALPN protocol blob `(ptr, len)` — the authoritative read of the
+    /// `ext_alpn_selected`/`ext_alpn_selected_len` member buffer.
+    pub(crate) fn ext_alpn_selected(&self) -> (*const u8, usize) {
+        (self.ext_alpn_selected, self.ext_alpn_selected_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ext_alpn_selected` pair.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::ext_tick_slot`], for the `ext_alpn_selected` pair.
+    pub(crate) unsafe fn ext_alpn_selected_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ext_alpn_selected` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ext_alpn_selected, &mut self.ext_alpn_selected_len) }
+    }
+
+    /// The object-owned session ticket application data blob `(ptr, len)` — the authoritative read
+    /// of the `ticket_appdata`/`ticket_appdata_len` member buffer.
+    pub(crate) fn ticket_appdata(&self) -> (*const u8, usize) {
+        (self.ticket_appdata, self.ticket_appdata_len)
+    }
+
+    /// Derive the [`MemberBufSlot`] handle over this session's `ticket_appdata` pair.
+    ///
+    /// # Safety
+    ///
+    /// As [`SslSession::ext_tick_slot`], for the `ticket_appdata` pair.
+    pub(crate) unsafe fn ticket_appdata_slot(&mut self) -> MemberBufSlot<'_> {
+        // SAFETY: `self` is live and its `ticket_appdata` pair obeys the invariant.
+        unsafe { MemberBufSlot::of(&mut self.ticket_appdata, &mut self.ticket_appdata_len) }
+    }
+}
+
+/// The object-owned C-string member handle shared by `SSL_SESSION`, `SslCtx`, `Ssl` and `Cert`.
+///
+/// A type alias for the one shared [`crate::runtime::member_slot::CStrSlot`]: the
+/// member-buffer invariant, the clear/store token protocol and the audited release are
+/// stated once there. [`MemberCStrSlot::of`] is the shared `unsafe fn of(&mut *mut c_char)` and
+/// stays unsafe because it takes a bare member reference rather than an enclosing type whose
+/// field privacy could establish the invariant.
+pub(crate) type MemberCStrSlot<'a> = crate::runtime::member_slot::CStrSlot<'a>;
+
+/// A validated handle over an object-owned `(ptr, len)` **blob** member buffer of `SSL_SESSION`
+/// (`ext_tick`/`ext_ticklen`, `ext_alpn_selected`/`ext_alpn_selected_len`,
+/// `ticket_appdata`/`ticket_appdata_len`).
+///
+/// ## Blob member-buffer invariant (stated once)
+/// The `(ptr, len)` pair is always either `(NULL, 0)` or a single owned block produced by the
+/// crate's allocator seam (`CRYPTO_memdup`/`CRYPTO_malloc`/adopted from the ASN.1 item layer)
+/// whose allocation is **at least** `len` bytes and writable for `len`, and which the enclosing
+/// `SSL_SESSION` owns. That object is the block's *only* owner: the block is released **exactly
+/// once**, by `ssl_sess.rs`'s `CtxDestroy` body or by the next
+/// [`MemberBufSlot::clear`]/[`MemberBufSlot::store`] that replaces it. Nothing else frees or
+/// aliases it, and `len` is the live logical length (0 when the pointer is NULL).
+///
+/// **Why the allocation need not be exactly `len`.** A release (`CRYPTO_free`) needs only the base
+/// pointer; the allocator knows the real extent. A regrow (`CRYPTO_realloc`) also needs only a
+/// pointer that came from this allocator. Neither operation reads or frees beyond the logical
+/// length, so a larger allocation is sound. The ASN.1 adoption sites do exactly this: an
+/// `ASN1_STRING`'s `data` block is allocated with a trailing NUL (`len + 1`, `asn1/string.rs` and
+/// `asn1/d2i.rs`), and its ownership is transferred here with `len` as the logical length.
+///
+/// ## Why the fields stay raw
+/// The `#[repr(C)]` layout is the authority's, so the two fields must remain `*mut u8`/`usize` at
+/// their exact offsets. This handle is a transient **borrow** over the pair, the only sanctioned
+/// way to move the member's ownership in and out of it. It is the `(ptr, len)` analogue of the
+/// C-string [`MemberCStrSlot`] (see `MEMBER-BUFFER-MODEL.md`).
+///
+/// `unsafe` appears only at the two proof boundaries: constructing the handle (which asserts the
+/// pair currently obeys the invariant) and `store` (which accepts an externally-allocated block).
+/// `clear` is safe because a handle built by [`MemberBufSlot::of`] guarantees the incumbent is the
+/// object's own single block.
+pub(crate) struct MemberBufSlot<'a, N = usize> {
+    /// Borrow of the object's pointer member; its value obeys the invariant for `'a`.
+    ptr: &'a mut *mut u8,
+    /// Borrow of the object's length companion; its value obeys the invariant for `'a`.
+    len: &'a mut N,
+}
+
+impl<'a, N: Copy + Default + PartialEq> MemberBufSlot<'a, N> {
+    /// Derive the handle from an object's `(ptr, len)` member pair.
+    ///
+    /// # Safety
+    ///
+    /// `ptr`/`len` are the two member fields of a live object and currently obey the blob
+    /// member-buffer invariant: `*ptr` is NULL with `*len` equal to zero, or a single owned block
+    /// of **at least** `*len` bytes, writable for `*len`.
+    pub(crate) unsafe fn of(ptr: &'a mut *mut u8, len: &'a mut N) -> MemberBufSlot<'a, N> {
+        MemberBufSlot { ptr, len }
+    }
+
+    /// Release the incumbent (if any) through the authority's own `CRYPTO_free` site, leaving the
+    /// member `(NULL, 0)`. NULL is a no-op for `CRYPTO_free`, so the release is total.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.ptr, ptr::null_mut());
+        *self.len = N::default();
+        // SAFETY: by the invariant the incumbent is NULL or the object's own single block, so this
+        // is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe { CRYPTO_free(old.cast(), file, line) };
+    }
+
+    /// Store a freshly-allocated block of `len` bytes into the (now empty) member, transferring
+    /// ownership of it to the enclosing object.
+    ///
+    /// # Safety
+    ///
+    /// `new` is NULL or a live block this caller owns exclusively whose allocation is **at least**
+    /// `len` bytes and writable for `len` (produced by the crate's allocator seam, or adopted from
+    /// a block whose ownership this caller gives up) and no other owner will release it; the field
+    /// is currently unset (`(NULL, 0)`). Exactness is not required: `clear`/destruction release
+    /// only the base pointer, and `realloc` operates on the allocator's own block.
+    pub(crate) unsafe fn store(&mut self, new: *mut u8, len: N) {
+        debug_assert!(
+            (*self.ptr).is_null() && *self.len == N::default(),
+            "blob member slot must be empty before store"
+        );
+        *self.ptr = new;
+        *self.len = len;
+    }
+}
+
+/// The in-place **regrow** operation on a `(ptr, len)` blob whose length is a byte extent
+/// (`N = usize`) — the `CRYPTO_realloc` shape the clear/store pair cannot express.
+impl<'a> MemberBufSlot<'a> {
+    /// Regrow the incumbent block **in place** through the authority's own `CRYPTO_realloc` site,
+    /// reproducing `realloc`'s failure semantics exactly: on success the member becomes
+    /// `(new, new_len)` and the (possibly moved) block is returned for the caller to fill; on
+    /// failure (NULL) the old block is **kept** and the member is left unchanged, so the object
+    /// still owns — and will still release — it. This is the operation `SSL_CTX_use_serverinfo_ex`
+    /// (`ssl_rsa.c:839`) needs: the block must move in place, and a refused regrow must keep the
+    /// old allocation (not free it), which `clear`+`store` cannot reproduce.
+    ///
+    /// The authority publishes the pointer one statement before the length (after its `memcpy`);
+    /// this publishes both together. No allocator event or observer lies between them, so the
+    /// transcript and the observable final state are identical.
+    ///
+    /// **Why this returns a raw pointer rather than a borrow tied to the slot.**
+    /// `CRYPTO_realloc` leaves the grown bytes uninitialised, so a `&mut [u8]` over
+    /// `new_len` would assert initialisation the operation does not establish (a
+    /// `&mut [MaybeUninit<u8>]` would be expressible, but the consumer is the
+    /// authority's `memcpy` from a C pointer, and the slot borrow cannot keep the
+    /// enclosing C object alive across that ABI boundary). The caller therefore owns
+    /// the returned pointer and must initialise the first `new_len` bytes before any
+    /// read, exactly as the safety contract states.
+    ///
+    /// # Safety
+    ///
+    /// `new_len > 0`. `self` was built by [`MemberBufSlot::of`], so the pair currently obeys the
+    /// blob member-buffer invariant: the incumbent is NULL or the object's own single block of
+    /// **at least** its current length, live for a `realloc`. The caller owns the returned pointer
+    /// and must initialise the first `new_len` bytes before any of them are read.
+    pub(crate) unsafe fn realloc(
+        &mut self,
+        new_len: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> *mut u8 {
+        debug_assert!(
+            new_len > 0,
+            "blob realloc to zero is not an in-place regrow"
+        );
+        let old = *self.ptr;
+        // SAFETY: by the invariant `old` is NULL or the object's own single block, live for its
+        // current length; `CRYPTO_realloc` returns NULL on failure (keeping the old block) and
+        // consumes the old block on success.
+        let new = unsafe { CRYPTO_realloc(old.cast(), new_len, file, line) }.cast::<u8>();
+        if !new.is_null() {
+            *self.ptr = new;
+            *self.len = new_len;
+        }
+        new
+    }
 }
 
 /// `struct timeval` — the two-`long` layout `SSL_get_event_timeout` writes on this platform.
@@ -2007,16 +2856,6 @@ pub(crate) unsafe fn raise_statem(reason: c_int, file: *const core::ffi::c_char,
     // SAFETY: `file` is a static NUL-terminated string supplied by the caller and `reason` is a
     // `statem*.c` reason constant; `raise_with` writes the thread-local error queue only.
     unsafe { raise_with(ERR_LIB_SSL, reason, file, line) };
-}
-
-/// `CRYPTO_UP_REF(&refs, &i)` — the relaxed fetch-add the authority's header defines.
-fn up_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_add(1, Ordering::Relaxed) + 1
-}
-
-/// `CRYPTO_DOWN_REF(&refs, &i)` — the release fetch-sub the authority's header defines.
-fn down_ref(refs: &AtomicI32) -> c_int {
-    refs.fetch_sub(1, Ordering::Release) - 1
 }
 
 /// `SSL_CONNECTION_IS_DTLS(sc)` — `ssl_local.h:257`, read from the method's enc-flag.
@@ -2100,26 +2939,36 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
         }
         let _ = crate::runtime::dso_shared::openssl_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS);
 
-        // SAFETY: a zeroed block of this size is a valid initial `SslCtx` image.
-        let ret = CRYPTO_zalloc(core::mem::size_of::<SslCtx>(), FILE, 4014).cast::<SslCtx>();
-        if ret.is_null() {
+        // The context block, allocated through the crate's allocator seam (authority size) as a
+        // `RawCtx`, then validated because `SslCtx` is zero-valid. `Drop` is its single release on
+        // every refusal below and `into_raw` hands it out on success. `ret` is the block's stable
+        // address, and every refusal reaches `SSL_CTX_free`, which is `OwnedCtx`'s `Drop`.
+        let Some(raw) = RawCtx::<SslCtx>::zalloc(FILE_SEAM, 4014, 4467) else {
             return ptr::null_mut();
-        }
+        };
+        // SAFETY: every field of `SslCtx` is a raw pointer, integer, atomic, fixed array or
+        // `Option<fn>` -- and each embedded record (`CryptoExData`, `DaneCtx`, `SrpCtx`,
+        // `SessionStats`) the same -- so an all-zero block is a valid `SslCtx`. It is therefore
+        // validated now, before the fallible member allocations below, whose authority refusal paths
+        // release through `Drop`, exactly as the authority's own partial `SSL_CTX_free` does.
+        let ret_owner = unsafe { raw.assume_init() };
+        let ret = ret_owner.as_ptr();
         // SAFETY: `ret` is a fresh zeroed allocation; every write below is to it.
         unsafe {
             (*ret).references = AtomicI32::new(1);
             (*ret).lock = CRYPTO_THREAD_lock_new();
             if (*ret).lock.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             (*ret).libctx = libctx;
             if !propq.is_null() {
-                (*ret).propq = CRYPTO_strdup(propq, FILE, 4040);
-                if (*ret).propq.is_null() {
-                    SSL_CTX_free(ret);
+                // SAFETY: `propq` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(propq, FILE_SEAM, 4040) else {
                     return ptr::null_mut();
-                }
+                };
+                // SAFETY: `ret` is a fresh context whose `propq` member is empty.
+                let empty = (*ret).propq_slot().assume_empty();
+                empty.store(dup);
             }
             (*ret).method = meth;
             (*ret).mode = SSL_MODE_AUTO_RETRY;
@@ -2132,36 +2981,32 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
 
             (*ret).param = X509_VERIFY_PARAM_new();
             if (*ret).param.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             (*ret).cert_store = X509_STORE_new();
             if (*ret).cert_store.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
-            (*ret).cert = cert_new();
-            if (*ret).cert.is_null() {
-                SSL_CTX_free(ret);
+            // The container block `cert_new` hands over; the context owns it and `cert_free`
+            // reclaims it. A NULL answer refuses from this frame, whose `Drop` releases the context.
+            let Some(cert_owner) = cert_new() else {
                 return ptr::null_mut();
-            }
+            };
+            (*ret).cert = cert_owner.into_raw();
             // `ssl_lib.c:4174`: the authority initialises the SRP credential block at construction
             // (`ssl_ctx_srp_ctx_init_intern`), which zeroes it and sets `strength = SRP_MINIMAL_N`.
             crate::ssl::tls_srp::ssl_ctx_srp_ctx_init_intern(ret);
             // `ssl_lib.c:4056`: allocate the internal session cache at construction.
             (*ret).sessions = OPENSSL_sk_new_null();
             if (*ret).sessions.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             // `ssl_lib.c:4067` allocates the CT log store for every context.
             (*ret).ctlog_store = CTLOG_STORE_new_ex(libctx, propq);
             if (*ret).ctlog_store.is_null() {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ret.cast(), &mut (*ret).ex_data) == 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
 
@@ -2183,7 +3028,6 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 crate::ssl::ssl_ciph::OSSL_default_ciphersuites(),
             ) == 0
             {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             let sk = crate::ssl::ssl_ciph::ssl_create_cipher_list(
@@ -2195,16 +3039,14 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 (*ret).cert,
             );
             if sk.is_null() || crate::runtime::stack::OPENSSL_sk_num(sk) <= 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
             // `ssl_lib.c:4280`: apply the configuration's `system_default` command set.
             if crate::ssl::ssl_mcnf::ssl_ctx_system_config(ret) == 0 {
-                SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
         }
-        ret
+        ret_owner.into_raw()
     })
 }
 
@@ -2215,13 +3057,10 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_up_ref(ctx: *mut SslCtx) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: the caller guarantees `ctx` is live.
-        let i = up_ref(unsafe { &(*ctx).references });
-        if i <= 0 {
-            0
-        } else {
-            c_int::from(i > 1)
-        }
+        // SAFETY: the C-ABI caller guarantees `ctx` is live and holds the reference this
+        // call acts for (a caller obligation, not something this wrapper can check); this
+        // call acquires exactly one new reference for the caller.
+        unsafe { up_ref(&(*ctx).references) }
     })
 }
 
@@ -2244,36 +3083,77 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
         if ctx.is_null() {
             return;
         }
-        // SAFETY: the caller guarantees `ctx` is live.
-        let i = down_ref(unsafe { &(*ctx).references });
-        if i > 0 {
-            return;
+        // SAFETY: the C-ABI caller guarantees `ctx` is live and owns the one reference this
+        // free releases (the caller's obligation); on `Last` this frame is the unique
+        // destructor runner.
+        match unsafe { down_ref(&(*ctx).references) } {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // SAFETY: the count reached zero, so this is the last reference and `ctx` is owned here.
+        // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `ctx` is
+        // owned here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's
+        // own `SSL_CTX_free` body followed by the block release.
+        unsafe { drop(OwnedCtx::<SslCtx>::from_raw(ctx, FILE, 4467)) };
+    })
+}
+
+/// The authority's `SSL_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+// SAFETY: `destroy_body` is the authority's `SSL_CTX_free` body minus the block release: it frees
+// exactly the members the context owns, never the enclosing block, and reads only members
+// `SSL_CTX_new_ex` initialised (every one NULL-safe on a partial context).
+unsafe impl CtxDestroy for SslCtx {
+    /// # Safety
+    /// `ctx` is a live context whose reference count has reached zero and which this file owns.
+    unsafe fn destroy_body(ctx: *mut SslCtx) {
+        // SAFETY: `ctx` is live per the contract; every member is NULL or owned, exactly as the
+        // authority's `SSL_CTX_free` walks it. The `#[repr(C)]` member buffers
+        // (`client_cert_type`/`server_cert_type`/`ext_alpn`/`propq`) are released through their
+        // [`MemberBufSlot`]/[`MemberCStrSlot`] handles; `supportedgroups` (an element-counted,
+        // externally-written list) stays a raw release, as in the authority.
         unsafe {
+            // The session cache is flushed **first**, so that `remove_session_cb` runs while
+            // every member it may reach is still live. The authority flushes before `ex_data`
+            // (`ssl_lib.c`'s `SSL_CTX_free`, ticket #212) and before the cache container is
+            // released; it also frees `param`/`dane` first, which we deliberately do not copy:
+            // a callback reaching either through the public getters would observe freed memory
+            // in the authority. Flushing first is the stricter order and is not observable to a
+            // callback that only uses the surviving members (compatibility note: this is a
+            // deviation from the authority's literal order, recorded in the receipt).
+            if !(*ctx).sessions.is_null() {
+                crate::ssl::ssl_sess::SSL_CTX_flush_sessions_ex(ctx, 0);
+            }
+
+            X509_VERIFY_PARAM_free((*ctx).param);
+            dane_ctx_final(&mut (*ctx).dane);
+
+            // The authority frees `ex_data` only after the flush: `remove_session_cb` may read
+            // it, and an `ex_data` free callback may touch the cache. The container release is
+            // last, and only entries a callback re-added during the flush remain in it.
+            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
+            ssl_ctx_session_cache_free(ctx);
+
+            X509_STORE_free((*ctx).cert_store);
             OPENSSL_sk_free((*ctx).cipher_list);
             OPENSSL_sk_free((*ctx).cipher_list_by_id);
             OPENSSL_sk_free((*ctx).tls13_ciphersuites);
-            OPENSSL_sk_free((*ctx).srtp_profiles);
-            ssl_ctx_session_cache_free(ctx);
-            crate::ssl::tls_srp::ssl_ctx_srp_ctx_free_intern(ctx);
+            cert_free((*ctx).cert);
             OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
-            X509_VERIFY_PARAM_free((*ctx).param);
-            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
-            X509_STORE_free((*ctx).cert_store);
-            cert_free((*ctx).cert);
-            dane_ctx_final(&mut (*ctx).dane);
+            OPENSSL_sk_free((*ctx).srtp_profiles);
+            crate::ssl::tls_srp::ssl_ctx_srp_ctx_free_intern(ctx);
+            // `SSL_CTX_set_client_cert_engine` takes a structural engine reference with
+            // `ENGINE_init` (`ssl/tls_depr.c:84`); the authority releases it here via
+            // `tls_engine_finish` (`ssl_lib.c:4409`). `ENGINE_finish` is NULL-safe.
+            crate::engine::eng_init::ENGINE_finish((*ctx).client_cert_engine);
             CTLOG_STORE_free((*ctx).ctlog_store);
-            CRYPTO_free((*ctx).client_cert_type.cast(), FILE, 0);
-            CRYPTO_free((*ctx).server_cert_type.cast(), FILE, 0);
-            CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 0);
+            (*ctx).client_cert_type_slot().clear(FILE, 0);
+            (*ctx).server_cert_type_slot().clear(FILE, 0);
+            (*ctx).ext_alpn_slot().clear(FILE, 0);
             CRYPTO_free((*ctx).supportedgroups.cast(), FILE, 0);
             CRYPTO_THREAD_lock_free((*ctx).lock);
-            CRYPTO_free((*ctx).propq.cast(), FILE, 4458);
-            CRYPTO_free(ctx.cast(), FILE, 4467);
+            (*ctx).propq_slot().clear(FILE_SEAM, 4458);
         }
-    })
+    }
 }
 
 /// `SSL *SSL_new(SSL_CTX *ctx)` — `ssl/ssl_lib.c:690-701`.
@@ -2296,18 +3176,28 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
         }
         // SAFETY: `ctx` is non-NULL and live; its method was checked above.
         let method = unsafe { (*ctx).method };
-        // SAFETY: a zeroed block of this size is a valid initial `Ssl` image.
-        let s = CRYPTO_zalloc(core::mem::size_of::<Ssl>(), FILE, 731).cast::<Ssl>();
-        if s.is_null() {
+        // The connection block, allocated through the crate's allocator seam (authority size) as a
+        // `RawCtx`, then validated because `Ssl` is zero-valid; `Drop` is its single release and
+        // `into_raw` hands it out on success. `s` is the block's stable address. The authority's two
+        // early refusals below tear down only the lock and the block (`ssl_lib.c:731`), so they
+        // release the block without the destructor body; every later refusal reaches `SSL_free`,
+        // which is `OwnedCtx`'s `Drop`.
+        let Some(raw) = RawCtx::<Ssl>::zalloc(FILE_SEAM, 731, 1442) else {
             return ptr::null_mut();
-        }
+        };
+        // SAFETY: every field of `Ssl` is a raw pointer, integer, atomic, fixed array or
+        // `Option<fn>` -- and each embedded record (`CryptoExData`, `SslDane`, `SrpCtx`,
+        // `QuicTlsCallbacks`) the same -- so an all-zero block is a valid `Ssl`.
+        let s_owner = unsafe { raw.assume_init() };
+        let s = s_owner.as_ptr();
         // SAFETY: `s` is a fresh zeroed allocation; every write below is to it.
         unsafe {
             (*s).references = AtomicI32::new(1);
             (*s).lock = CRYPTO_THREAD_lock_new();
             if (*s).lock.is_null() || SSL_CTX_up_ref(ctx) == 0 {
+                // The authority's partial refusal releases the lock and the block only.
                 CRYPTO_THREAD_lock_free((*s).lock);
-                CRYPTO_free(s.cast(), FILE, 731);
+                s_owner.release_block(731);
                 return ptr::null_mut();
             }
             (*s).ctx = ctx;
@@ -2351,15 +3241,21 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             if (*method).dtls {
                 (*s).d1 = dtls1_new_state((*s).server != 0);
                 if (*s).d1.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
             }
 
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
+                // The authority allocates the DTLS state only after `ossl_ssl_init`'s
+                // `CRYPTO_new_ex_data` succeeds (`ossl_ssl_connection_new_int` calls
+                // `dtls1_new` afterwards), so its refusal path has no `d1` to release.
+                // This port allocates `d1` earlier in the constructor; release that one
+                // member here rather than leaking it through the bare-block teardown.
+                dtls1_free(s);
                 SSL_CTX_free(ctx);
                 CRYPTO_THREAD_lock_free((*s).lock);
-                CRYPTO_free(s.cast(), FILE, 731);
+                // The authority's partial refusal releases the lock and the block only.
+                s_owner.release_block(731);
                 return ptr::null_mut();
             }
 
@@ -2399,14 +3295,12 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
 
             (*s).param = X509_VERIFY_PARAM_new();
             if (*s).param.is_null() {
-                SSL_free(s);
                 return ptr::null_mut();
             }
             X509_VERIFY_PARAM_inherit((*s).param, (*ctx).param);
 
             (*s).cert = ssl_cert_dup((*ctx).cert);
             if (*s).cert.is_null() {
-                SSL_free(s);
                 return ptr::null_mut();
             }
 
@@ -2415,7 +3309,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             // does not run the method's `ssl_init`, so the copy is made here for the one field that
             // an observable reader (`SSL_SRP_CTX_init`, the `SSL_get_srp_*` accessors) reaches.
             if crate::ssl::tls_srp::ssl_srp_ctx_init_intern(s) == 0 {
-                SSL_free(s);
                 return ptr::null_mut();
             }
 
@@ -2428,7 +3321,6 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             // SNI callback has switched the connection over, and `session_ctx` must keep it alive
             // until `SSL_free` (`ssl_lib.c:1485`).
             if SSL_CTX_up_ref(ctx) == 0 {
-                SSL_free(s);
                 return ptr::null_mut();
             }
             (*s).session_ctx = ctx;
@@ -2437,64 +3329,52 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             (*s).ct_validation_callback_arg = (*ctx).ct_validation_callback_arg;
             (*s).block_padding = (*ctx).block_padding;
             (*s).hs_padding = (*ctx).hs_padding;
-            if !(*ctx).client_cert_type.is_null() {
-                (*s).client_cert_type = CRYPTO_memdup(
-                    (*ctx).client_cert_type.cast(),
-                    (*ctx).client_cert_type_len,
-                    FILE,
-                    938,
-                )
-                .cast::<u8>();
-                if (*s).client_cert_type.is_null() {
-                    SSL_free(s);
+            let (ct, ctl) = (*ctx).client_cert_type();
+            if !ct.is_null() {
+                let dup = CRYPTO_memdup(ct.cast(), ctl, FILE, 938).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                (*s).client_cert_type_len = (*ctx).client_cert_type_len;
+                // SAFETY: `s` is a fresh connection whose `client_cert_type` member is empty; `dup`
+                // is this call's fresh exclusive block of `ctl` bytes.
+                (*s).client_cert_type_slot().store(dup, ctl);
             }
-            if !(*ctx).server_cert_type.is_null() {
-                (*s).server_cert_type = CRYPTO_memdup(
-                    (*ctx).server_cert_type.cast(),
-                    (*ctx).server_cert_type_len,
-                    FILE,
-                    945,
-                )
-                .cast::<u8>();
-                if (*s).server_cert_type.is_null() {
-                    SSL_free(s);
+            let (st, stl) = (*ctx).server_cert_type();
+            if !st.is_null() {
+                let dup = CRYPTO_memdup(st.cast(), stl, FILE, 945).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                (*s).server_cert_type_len = (*ctx).server_cert_type_len;
+                // SAFETY: as above, for `server_cert_type`.
+                (*s).server_cert_type_slot().store(dup, stl);
             }
-            if !(*ctx).ext_alpn.is_null() {
-                (*s).ext_alpn = CRYPTO_memdup(
-                    (*ctx).ext_alpn.cast(),
-                    (*ctx).ext_alpn_len as usize,
-                    FILE,
-                    892,
-                )
-                .cast::<u8>();
-                if (*s).ext_alpn.is_null() {
-                    SSL_free(s);
+            let (ap, apl) = (*ctx).ext_alpn();
+            if !ap.is_null() {
+                let dup = CRYPTO_memdup(ap.cast(), apl as usize, FILE, 892).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                (*s).ext_alpn_len = (*ctx).ext_alpn_len;
+                // SAFETY: as above, for `ext_alpn`.
+                (*s).ext_alpn_slot().store(dup, apl);
             }
             if !(*ctx).supportedgroups.is_null() {
-                (*s).supportedgroups = CRYPTO_memdup(
-                    (*ctx).supportedgroups.cast(),
-                    (*ctx).supportedgroups_len * core::mem::size_of::<u16>(),
-                    FILE,
-                    893,
-                )
-                .cast::<u16>();
+                // The allocation size is `len * size_of::<u16>()`; an unrepresentable
+                // product refuses the way a failed allocation does instead of wrapping.
+                let Some(sg_bytes) = (*ctx)
+                    .supportedgroups_len
+                    .checked_mul(core::mem::size_of::<u16>())
+                else {
+                    return ptr::null_mut();
+                };
+                (*s).supportedgroups =
+                    CRYPTO_memdup((*ctx).supportedgroups.cast(), sg_bytes, FILE, 893).cast::<u16>();
                 if (*s).supportedgroups.is_null() {
-                    SSL_free(s);
                     return ptr::null_mut();
                 }
                 (*s).supportedgroups_len = (*ctx).supportedgroups_len;
             }
         }
-        s
+        s_owner.into_raw()
     })
 }
 
@@ -2564,7 +3444,9 @@ pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
     }
     // SAFETY: both pointers are live per the caller's contract.
     unsafe {
-        cert_copy_security((*t).cert, (*f).cert);
+        if cert_copy_security((*t).cert, (*f).cert) == 0 {
+            return 0;
+        }
         let len = (*f).sid_ctx_length;
         if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
             return 0;
@@ -2580,13 +3462,10 @@ pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_up_ref(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: the caller guarantees `s` is live.
-        let i = up_ref(unsafe { &(*s).references });
-        if i <= 0 {
-            0
-        } else {
-            c_int::from(i > 1)
-        }
+        // SAFETY: the C-ABI caller guarantees `s` is live and holds the reference this call
+        // acts for (a caller obligation, not something this wrapper can check); this call
+        // acquires exactly one new reference for the caller.
+        unsafe { up_ref(&(*s).references) }
     })
 }
 
@@ -2600,12 +3479,37 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
         if s.is_null() {
             return;
         }
-        // SAFETY: the caller guarantees `s` is live.
-        let i = down_ref(unsafe { &(*s).references });
-        if i > 0 {
-            return;
+        // SAFETY: the C-ABI caller guarantees `s` is live and owns the one reference this
+        // free releases (the caller's obligation); on `Last` this frame is the unique
+        // destructor runner.
+        match unsafe { down_ref(&(*s).references) } {
+            DownRef::Last => {}
+            DownRef::Remaining | DownRef::Retired => return,
         }
-        // SAFETY: the count reached zero, so this is the last reference and `s` is owned here.
+        // SAFETY: this call claimed the last reference (`1 -> REF_DESTROYING`), so `s` is owned
+        // here; `from_raw` reclaims it (NULL is a no-op) and `Drop` runs the authority's own
+        // `SSL_free` body followed by the block release.
+        unsafe { drop(OwnedCtx::<Ssl>::from_raw(s, FILE, 1442)) };
+    })
+}
+
+/// The authority's `SSL_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+// SAFETY: `destroy_body` is the authority's `SSL_free` body minus the block release: it frees
+// exactly the members the connection owns, never the enclosing block, and reads only members
+// `SSL_new` initialised (every one NULL-safe on a partial connection).
+unsafe impl CtxDestroy for Ssl {
+    /// # Safety
+    /// `s` is a live connection whose reference count has reached zero and which this file owns.
+    unsafe fn destroy_body(s: *mut Ssl) {
+        // SAFETY: `s` is live per the contract; every member is NULL or owned, exactly as the
+        // authority's `SSL_free` walks it. The `#[repr(C)]` member buffers (`client_cert_type`/
+        // `server_cert_type`/`ext_alpn`/`ext_npn`/`ext_hostname`/`s3_alpn_selected`/
+        // `s3_alpn_proposed`/`pha_context`) are released through their [`MemberBufSlot`]/
+        // [`MemberCStrSlot`] handles; `supportedgroups` (an element-counted, externally-written
+        // list) stays a raw release, as in the authority. `session_ticket` is a raw release too:
+        // it is the single `TLS_SESSION_TICKET_EXT` record with its data inline (`data = self + 1`),
+        // not a `(ptr, len)` member-buffer pair, and the authority releases it with `OPENSSL_free`
+        // in `tls1_free` (`ssl/t1_lib.c:122`), exactly as the call below does.
         unsafe {
             OPENSSL_sk_free((*s).cipher_list);
             OPENSSL_sk_free((*s).cipher_list_by_id);
@@ -2615,6 +3519,11 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             OPENSSL_sk_pop_free((*s).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).client_ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).peer_ca_names, Some(x509_name_free_void));
+            // The authority calls `ssl_clear_bad_session` before releasing the connection's
+            // session reference (`ssl_lib.c:1473-1476`), so a completed session leaves the
+            // context cache with its `owner` cleared instead of being retained after the
+            // connection is gone.
+            crate::ssl::ssl_sess::ssl_clear_bad_session(s);
             SSL_SESSION_free((*s).session);
             crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
@@ -2635,16 +3544,19 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).peer_chain);
             crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).verified_chain.cast());
             X509_VERIFY_PARAM_free((*s).param);
+            // `ossl_ssl_connection_free` calls `dane_final(&s->dane)` (`ssl_lib.c:1462`): the
+            // per-connection TLSA records, candidate chain and matched certificate are owned.
+            dane_final(ptr::addr_of_mut!((*s).dane));
             cert_free((*s).cert);
-            CRYPTO_free((*s).client_cert_type.cast(), FILE, 0);
-            CRYPTO_free((*s).server_cert_type.cast(), FILE, 0);
-            CRYPTO_free((*s).ext_alpn.cast(), FILE, 0);
-            CRYPTO_free((*s).ext_npn.cast(), FILE, 0);
-            CRYPTO_free((*s).ext_hostname.cast(), FILE, 0);
-            CRYPTO_free((*s).s3_alpn_selected.cast(), FILE, 0);
-            CRYPTO_free((*s).s3_alpn_proposed.cast(), FILE, 0);
+            (*s).client_cert_type_slot().clear(FILE, 0);
+            (*s).server_cert_type_slot().clear(FILE, 0);
+            (*s).ext_alpn_slot().clear(FILE, 0);
+            (*s).ext_npn_slot().clear(FILE, 0);
+            (*s).ext_hostname_slot().clear(FILE_SEAM, 0);
+            (*s).s3_alpn_selected_slot().clear(FILE, 0);
+            (*s).s3_alpn_proposed_slot().clear(FILE, 0);
             CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
-            CRYPTO_free((*s).pha_context.cast(), FILE, 0);
+            (*s).pha_context_slot().clear(FILE, 0);
             crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
             SSL_CTX_free((*s).ctx);
@@ -2655,9 +3567,8 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             // `SSL_CTX_up_ref`s `SSL_new` performed (`ssl_lib.c:705`, `ssl_lib.c:828`).
             SSL_CTX_free((*s).session_ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
-            CRYPTO_free(s.cast(), FILE, 1442);
         }
-    })
+    }
 }
 
 /// `SSL_CTX *SSL_get_SSL_CTX(const SSL *ssl)` — `ssl/ssl_lib.c:5487-5490`.
@@ -3967,10 +4878,10 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
         }
         SSL_CTRL_SET_TLS_EXT_SRP_USERNAME => {
             c.srp_ctx.srp_mask |= SSL_KSRP;
-            // SAFETY: `c` is live; `login` is NULL or an owned string.
-            unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
-            c.srp_ctx.login = ptr::null_mut();
             if parg.is_null() {
+                // SAFETY: `c` is live; `login` is NULL or an owned string.
+                unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+                c.srp_ctx.login = ptr::null_mut();
                 return 1;
             }
             // SAFETY: `parg` is a NUL-terminated string for this command.
@@ -3978,12 +4889,25 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
                 .to_bytes()
                 .len();
             if !(1..=255).contains(&len) {
+                // The authority releases the incumbent before validating, so keep that end state.
+                // SAFETY: `c` is live; `login` is NULL or an owned string.
+                unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+                c.srp_ctx.login = ptr::null_mut();
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(SSL_R_INVALID_SRP_USERNAME, 4525) };
                 return 0;
             }
+            // Duplicate *before* releasing the incumbent: `parg` may be the pointer
+            // `SSL_get_srp_username(s)` returned, i.e. the very field about to be released.
+            // The authority frees first and then reads `parg`, a use-after-free for that caller;
+            // duplicate-first is the recorded safety repair (B17-D1). The allocator site is
+            // unchanged, and every failure path still releases the incumbent exactly as the
+            // authority does.
             // SAFETY: `parg` is NUL-terminated; `CRYPTO_strdup` copies it.
             let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4528) };
+            // SAFETY: `c` is live; `login` is NULL or an owned string.
+            unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+            c.srp_ctx.login = ptr::null_mut();
             if dup.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4529) };
@@ -3995,10 +4919,17 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
         SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD => {
             c.srp_ctx.give_client_pwd_callback =
                 Some(crate::ssl::tls_srp::srp_password_from_info_cb);
-            // SAFETY: `c` is live; `info` is NULL or an owned string.
-            unsafe { CRYPTO_free(c.srp_ctx.info.cast(), FILE, 0) };
+            // Duplicate *before* releasing the incumbent: `parg` may be the pointer
+            // `SSL_get_srp_userinfo(s)` returned, i.e. the very field about to be released. The
+            // authority frees first and then reads `parg`; duplicate-first is the recorded safety
+            // repair (B17-D2). The allocator site is unchanged.
             // SAFETY: `parg` is a NUL-terminated string for this command.
             let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4537) };
+            // SAFETY: `c` is live; `info` is NULL or an owned string. Clearing before the NULL
+            // test also removes the authority's failure-path dangling member: a refused duplicate
+            // leaves the field NULL, never a released pointer.
+            unsafe { CRYPTO_free(c.srp_ctx.info.cast(), FILE, 0) };
+            c.srp_ctx.info = ptr::null_mut();
             if dup.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4538) };
@@ -6974,6 +7905,33 @@ pub unsafe extern "C" fn SSL_set_trust(s: *mut Ssl, trust: c_int) -> c_int {
     })
 }
 
+/// Whether `host` is one of the strings owned by `param->hosts`.
+///
+/// # Safety
+/// `param` must be live; `host` must be NULL or a live NUL-terminated string.
+unsafe fn host_is_param_owned(param: *const X509VerifyParam, host: *const c_char) -> bool {
+    // SAFETY: `param` is live per the contract.
+    let st = unsafe { (*param).hosts };
+    if st.is_null() || host.is_null() {
+        return false;
+    }
+    // SAFETY: `st` is the live hosts stack whose elements are C-string pointers.
+    let n = unsafe { OPENSSL_sk_num(st) };
+    let mut i = 0;
+    while i < n {
+        // SAFETY: `i < n` and the slot is a string pointer the stack owns.
+        if unsafe { OPENSSL_sk_value(st, i) }
+            .cast::<c_char>()
+            .cast_const()
+            == host
+        {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+
 /// `int SSL_set1_host(SSL *s, const char *host)` — `ssl/ssl_lib.c:1138-1154`.
 ///
 /// # Safety
@@ -6983,6 +7941,34 @@ pub unsafe extern "C" fn SSL_set1_host(s: *mut Ssl, host: *const c_char) -> c_in
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         let param = unsafe { (*s).param };
+        // The authority clears the parameter before it reads `host`. When `host` is one of the
+        // names the parameter itself owns -- the pointer `X509_VERIFY_PARAM_get0_host` returns --
+        // that order is a use-after-free. Duplicate such an input first so the clear cannot
+        // invalidate it (B17-D3). A non-aliasing input keeps the authority's exact order and
+        // allocator events.
+        // SAFETY: `param` and `host` are per the caller's contract.
+        let owned_host = if unsafe { host_is_param_owned(param, host) } {
+            // SAFETY: `host` is NUL-terminated and was just shown to be a live parameter string.
+            let copy = unsafe { OwnedCStr::dup(host, FILE_SEAM, 1145) };
+            match copy {
+                Some(copy) => Some(copy),
+                None => {
+                    // A refused pre-copy still leaves the parameter cleared, the authority's
+                    // state before it would attempt the duplicate.
+                    // SAFETY: `param` is live; both arguments are the authority's clear.
+                    unsafe {
+                        X509_VERIFY_PARAM_set1_host(param, ptr::null(), 0);
+                        X509_VERIFY_PARAM_set1_ip(param, ptr::null(), 0);
+                    }
+                    return 0;
+                }
+            }
+        } else {
+            None
+        };
+        // The private copy lives to the end of this call; `host` is only used to duplicate the
+        // parameter's own string, so reading it before any clear is the whole repair.
+        let host = owned_host.as_ref().map_or(host, |copy| copy.as_ptr());
         // Clear hostname(s) and any IP in every case, exactly as the authority does.
         // SAFETY: `param` is live; the NULL arguments are the authority's clear
         // (`X509_VERIFY_PARAM_set1_host(param, NULL, 0)`).
@@ -6993,7 +7979,8 @@ pub unsafe extern "C" fn SSL_set1_host(s: *mut Ssl, host: *const c_char) -> c_in
         if host.is_null() {
             return 1;
         }
-        // SAFETY: `param` and `host` are per the caller's contract.
+        // SAFETY: `param` is live and `host` is either the caller's own string or the private
+        // copy made above, so neither clear released it.
         unsafe {
             let as_ip = X509_VERIFY_PARAM_set1_ip_asc(param, host);
             let as_host = X509_VERIFY_PARAM_set1_host(param, host, 0);
@@ -7020,9 +8007,13 @@ pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_in
                 unsafe { ASN1_STRING_free(ip) };
                 // SAFETY: `param` is live.
                 let old_ip = unsafe { X509_VERIFY_PARAM_get1_ip_asc(param) };
-                if !old_ip.is_null() {
-                    // SAFETY: `old_ip` is the allocation `get1_ip_asc` returned.
-                    unsafe { CRYPTO_free(old_ip.cast(), FILE, 1175) };
+                // The string `get1_ip_asc` hands over is owned here on the crate's allocator seam
+                // (authority size and file); `Drop` is its single release, at the authority's own
+                // refusal line.
+                // SAFETY: `old_ip` is the live string `X509_VERIFY_PARAM_get1_ip_asc` just handed
+                // over (or NULL), which this frame owns and has not released.
+                let old_ip = unsafe { OwnedBuf::adopt_plain(old_ip.cast::<u8>(), FILE_SEAM, 1175) };
+                if old_ip.is_some() {
                     // SAFETY: a constant site.
                     unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };
                     return 0;
@@ -7098,7 +8089,7 @@ pub unsafe extern "C" fn SSL_CTX_load_verify_file(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
-        unsafe { X509_STORE_load_file_ex((*ctx).cert_store, cafile, (*ctx).libctx, (*ctx).propq) }
+        unsafe { X509_STORE_load_file_ex((*ctx).cert_store, cafile, (*ctx).libctx, (*ctx).propq()) }
     })
 }
 
@@ -7125,7 +8116,9 @@ pub unsafe extern "C" fn SSL_CTX_load_verify_store(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
-        unsafe { X509_STORE_load_store_ex((*ctx).cert_store, castore, (*ctx).libctx, (*ctx).propq) }
+        unsafe {
+            X509_STORE_load_store_ex((*ctx).cert_store, castore, (*ctx).libctx, (*ctx).propq())
+        }
     })
 }
 
@@ -7137,7 +8130,7 @@ pub unsafe extern "C" fn SSL_CTX_load_verify_store(
 pub unsafe extern "C" fn SSL_CTX_set_default_verify_paths(ctx: *mut SslCtx) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
-        unsafe { X509_STORE_set_default_paths_ex((*ctx).cert_store, (*ctx).libctx, (*ctx).propq) }
+        unsafe { X509_STORE_set_default_paths_ex((*ctx).cert_store, (*ctx).libctx, (*ctx).propq()) }
     })
 }
 
@@ -7571,12 +8564,8 @@ pub unsafe extern "C" fn SSL_CTX_set_alpn_protos(
 ) -> c_int {
     guard_ffi(1, || {
         if protos_len == 0 || protos.is_null() {
-            // SAFETY: `ctx` is live; a NULL `ext_alpn` is `CRYPTO_free`'s own no-op.
-            unsafe {
-                CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 3726);
-                (*ctx).ext_alpn = ptr::null_mut();
-                (*ctx).ext_alpn_len = 0;
-            }
+            // SAFETY: `ctx` is live and its `ext_alpn` pair obeys the member-buffer invariant.
+            unsafe { (*ctx).ext_alpn_slot().clear(FILE, 3726) };
             return 0;
         }
         // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
@@ -7589,11 +8578,14 @@ pub unsafe extern "C" fn SSL_CTX_set_alpn_protos(
         if alpn.is_null() {
             return 1;
         }
-        // SAFETY: `ctx` is live.
+        // SAFETY: `ctx` is live and its `ext_alpn` pair obeys the member-buffer invariant; `alpn`
+        // is this call's fresh exclusive block. The authority allocates (3735) before it frees the
+        // incumbent (3738), so the `clear` follows the `memdup`, preserving the allocator-event
+        // order and the NULL/len semantics.
         unsafe {
-            CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 3738);
-            (*ctx).ext_alpn = alpn;
-            (*ctx).ext_alpn_len = protos_len;
+            let mut slot = (*ctx).ext_alpn_slot();
+            slot.clear(FILE, 3738);
+            slot.store(alpn, protos_len);
         }
         0
     })
@@ -7613,12 +8605,8 @@ pub unsafe extern "C" fn SSL_set_alpn_protos(
 ) -> c_int {
     guard_ffi(1, || {
         if protos_len == 0 || protos.is_null() {
-            // SAFETY: `ssl` is live; a NULL `ext_alpn` is `CRYPTO_free`'s own no-op.
-            unsafe {
-                CRYPTO_free((*ssl).ext_alpn.cast(), FILE, 3760);
-                (*ssl).ext_alpn = ptr::null_mut();
-                (*ssl).ext_alpn_len = 0;
-            }
+            // SAFETY: `ssl` is live and its `ext_alpn` pair obeys the member-buffer invariant.
+            unsafe { (*ssl).ext_alpn_slot().clear(FILE, 3760) };
             return 0;
         }
         // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
@@ -7631,11 +8619,13 @@ pub unsafe extern "C" fn SSL_set_alpn_protos(
         if alpn.is_null() {
             return 1;
         }
-        // SAFETY: `ssl` is live.
+        // SAFETY: `ssl` is live and its `ext_alpn` pair obeys the member-buffer invariant; `alpn`
+        // is this call's fresh exclusive block. As for `SSL_CTX_set_alpn_protos`, the authority
+        // allocates before it frees the incumbent, so `clear` follows the `memdup`.
         unsafe {
-            CRYPTO_free((*ssl).ext_alpn.cast(), FILE, 3772);
-            (*ssl).ext_alpn = alpn;
-            (*ssl).ext_alpn_len = protos_len;
+            let mut slot = (*ssl).ext_alpn_slot();
+            slot.clear(FILE, 3772);
+            slot.store(alpn, protos_len);
         }
         0
     })
@@ -7654,8 +8644,7 @@ pub unsafe extern "C" fn SSL_get0_alpn_selected(
 ) {
     guard_ffi((), || {
         // SAFETY: `ssl`, `data` and `len` are per the caller's contract.
-        let (selected, selected_len) =
-            unsafe { ((*ssl).s3_alpn_selected, (*ssl).s3_alpn_selected_len) };
+        let (selected, selected_len) = unsafe { (*ssl).s3_alpn_selected() };
         // SAFETY: `data` is writable per the contract.
         unsafe { *data = selected };
         // SAFETY: `len` is writable per the contract.
@@ -7723,7 +8712,7 @@ pub unsafe extern "C" fn SSL_get0_next_proto_negotiated(
 ) {
     guard_ffi((), || {
         // SAFETY: `s` is live per the caller's contract.
-        let (npn, npn_len) = unsafe { ((*s).ext_npn, (*s).ext_npn_len) };
+        let (npn, npn_len) = unsafe { (*s).ext_npn() };
         // SAFETY: `data` is writable per the contract.
         unsafe { *data = npn };
         // SAFETY: `len` is writable per the contract.
@@ -7844,14 +8833,14 @@ pub unsafe extern "C" fn SSL_get_servername(s: *const Ssl, type_: c_int) -> *con
         }
         // Client side, before the handshake: a set SNI name wins; otherwise a TLSv1.2 session's
         // hostname would win, but no session exists in this slice.
-        if sc.ext_hostname.is_null() && !sc.session.is_null() {
+        if sc.ext_hostname().is_null() && !sc.session.is_null() {
             // SAFETY: `session` is live per the non-NULL check; its version is readable.
             let session = unsafe { &*sc.session };
             if session.ssl_version != TLS1_3_VERSION {
-                return session.ext_hostname;
+                return session.ext_hostname();
             }
         }
-        sc.ext_hostname
+        sc.ext_hostname()
     })
 }
 
@@ -8031,14 +9020,9 @@ unsafe fn validate_cert_type(val: *const u8, len: usize) -> bool {
 /// `set_cert_type` — `ssl/ssl_lib.c:8272-8289`: validate, replace, and take a copy.
 ///
 /// # Safety
-/// `cert_type`/`cert_type_len` must be the live fields of one object; `val` NULL or readable for
-/// `len` bytes.
-unsafe fn set_cert_type(
-    cert_type: *mut *mut u8,
-    cert_type_len: *mut usize,
-    val: *const u8,
-    len: usize,
-) -> c_int {
+/// `slot` must be the live `(ptr, len)` member pair of one object (built by that object's
+/// `*_cert_type_slot`); `val` NULL or readable for `len` bytes.
+unsafe fn set_cert_type(slot: &mut MemberBufSlot<'_, usize>, val: *const u8, len: usize) -> c_int {
     // SAFETY: per the caller's contract.
     if !unsafe { validate_cert_type(val, len) } {
         return 0;
@@ -8051,11 +9035,14 @@ unsafe fn set_cert_type(
             return 0;
         }
     }
-    // SAFETY: `cert_type`/`cert_type_len` are live per the caller's contract.
-    unsafe {
-        CRYPTO_free((*cert_type).cast(), FILE, 8285);
-        *cert_type = tmp;
-        *cert_type_len = len;
+    // The authority allocates (8282) before it frees the incumbent (8285); `clear` follows the
+    // duplicate and leaves `(NULL, 0)`. A NULL `tmp` (a NULL/zero-length `val`, the only form
+    // `validate_cert_type` accepts without a block) leaves the member cleared exactly as the
+    // authority's unconditional `*cert_type = NULL; *cert_type_len = len` does for `len == 0`.
+    slot.clear(FILE, 8285);
+    if !tmp.is_null() {
+        // SAFETY: `tmp` is this call's fresh exclusive block of `len` bytes.
+        unsafe { slot.store(tmp, len) };
     }
     1
 }
@@ -8074,12 +9061,8 @@ pub unsafe extern "C" fn SSL_set1_client_cert_type(
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
-            set_cert_type(
-                ptr::addr_of_mut!((*s).client_cert_type),
-                ptr::addr_of_mut!((*s).client_cert_type_len),
-                val,
-                len,
-            )
+            let mut slot = (*s).client_cert_type_slot();
+            set_cert_type(&mut slot, val, len)
         }
     })
 }
@@ -8098,12 +9081,8 @@ pub unsafe extern "C" fn SSL_set1_server_cert_type(
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
-            set_cert_type(
-                ptr::addr_of_mut!((*s).server_cert_type),
-                ptr::addr_of_mut!((*s).server_cert_type_len),
-                val,
-                len,
-            )
+            let mut slot = (*s).server_cert_type_slot();
+            set_cert_type(&mut slot, val, len)
         }
     })
 }
@@ -8122,12 +9101,8 @@ pub unsafe extern "C" fn SSL_CTX_set1_client_cert_type(
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract.
         unsafe {
-            set_cert_type(
-                ptr::addr_of_mut!((*ctx).client_cert_type),
-                ptr::addr_of_mut!((*ctx).client_cert_type_len),
-                val,
-                len,
-            )
+            let mut slot = (*ctx).client_cert_type_slot();
+            set_cert_type(&mut slot, val, len)
         }
     })
 }
@@ -8146,12 +9121,8 @@ pub unsafe extern "C" fn SSL_CTX_set1_server_cert_type(
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract.
         unsafe {
-            set_cert_type(
-                ptr::addr_of_mut!((*ctx).server_cert_type),
-                ptr::addr_of_mut!((*ctx).server_cert_type_len),
-                val,
-                len,
-            )
+            let mut slot = (*ctx).server_cert_type_slot();
+            set_cert_type(&mut slot, val, len)
         }
     })
 }
@@ -8171,10 +9142,11 @@ pub unsafe extern "C" fn SSL_get0_client_cert_type(
         if t.is_null() || len.is_null() {
             return 0;
         }
-        // SAFETY: `s`, `t` and `len` are per the caller's contract.
+        // SAFETY: `s` is live; `t`/`len` are writable per the caller's contract.
         unsafe {
-            *t = (*s).client_cert_type;
-            *len = (*s).client_cert_type_len;
+            let (ty, ty_len) = (*s).client_cert_type();
+            *t = ty.cast_mut();
+            *len = ty_len;
         }
         1
     })
@@ -8195,10 +9167,11 @@ pub unsafe extern "C" fn SSL_get0_server_cert_type(
         if t.is_null() || len.is_null() {
             return 0;
         }
-        // SAFETY: `s`, `t` and `len` are per the caller's contract.
+        // SAFETY: `s` is live; `t`/`len` are writable per the caller's contract.
         unsafe {
-            *t = (*s).server_cert_type;
-            *len = (*s).server_cert_type_len;
+            let (ty, ty_len) = (*s).server_cert_type();
+            *t = ty.cast_mut();
+            *len = ty_len;
         }
         1
     })
@@ -8219,10 +9192,11 @@ pub unsafe extern "C" fn SSL_CTX_get0_client_cert_type(
         if t.is_null() || len.is_null() {
             return 0;
         }
-        // SAFETY: `ctx`, `t` and `len` are per the caller's contract.
+        // SAFETY: `ctx` is live; `t`/`len` are writable per the caller's contract.
         unsafe {
-            *t = (*ctx).client_cert_type;
-            *len = (*ctx).client_cert_type_len;
+            let (ty, ty_len) = (*ctx).client_cert_type();
+            *t = ty.cast_mut();
+            *len = ty_len;
         }
         1
     })
@@ -8243,10 +9217,11 @@ pub unsafe extern "C" fn SSL_CTX_get0_server_cert_type(
         if t.is_null() || len.is_null() {
             return 0;
         }
-        // SAFETY: `ctx`, `t` and `len` are per the caller's contract.
+        // SAFETY: `ctx` is live; `t`/`len` are writable per the caller's contract.
         unsafe {
-            *t = (*ctx).server_cert_type;
-            *len = (*ctx).server_cert_type_len;
+            let (ty, ty_len) = (*ctx).server_cert_type();
+            *t = ty.cast_mut();
+            *len = ty_len;
         }
         1
     })
@@ -9180,17 +10155,22 @@ pub unsafe extern "C" fn SSL_CTX_use_psk_identity_hint(
                 return 0;
             }
         }
-        // SAFETY: `ctx` and its `cert` are live.
+        // SAFETY: `ctx` and its `cert` are live; `cert`'s `psk_identity_hint` obeys the
+        // member-buffer invariant.
         unsafe {
             let cert = (*ctx).cert;
-            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5795);
-            if identity_hint.is_null() {
-                (*cert).psk_identity_hint = ptr::null_mut();
-            } else {
-                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5797);
-                if (*cert).psk_identity_hint.is_null() {
+            let mut slot = (*cert).psk_identity_hint_slot();
+            // Release the incumbent at the authority's own site, then allocate-and-store the
+            // replacement. A NULL `identity_hint` leaves the member cleared and a refused
+            // `CRYPTO_strdup` leaves it NULL (the authority's own failure path). The token is
+            // the only way to store into the now-empty field.
+            let empty = slot.clear(FILE_SEAM, 5795);
+            if !identity_hint.is_null() {
+                // SAFETY: `identity_hint` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(identity_hint, FILE_SEAM, 5797) else {
                     return 0;
-                }
+                };
+                empty.store(dup);
             }
         }
         1
@@ -9215,17 +10195,19 @@ pub unsafe extern "C" fn SSL_use_psk_identity_hint(
                 return 0;
             }
         }
-        // SAFETY: `s` and its `cert` are live.
+        // SAFETY: `s` and its `cert` are live; `cert`'s `psk_identity_hint` obeys the
+        // member-buffer invariant.
         unsafe {
             let cert = (*s).cert;
-            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5816);
-            if identity_hint.is_null() {
-                (*cert).psk_identity_hint = ptr::null_mut();
-            } else {
-                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5818);
-                if (*cert).psk_identity_hint.is_null() {
+            let mut slot = (*cert).psk_identity_hint_slot();
+            // As `SSL_CTX_use_psk_identity_hint`: release the incumbent, then allocate-and-store.
+            let empty = slot.clear(FILE_SEAM, 5816);
+            if !identity_hint.is_null() {
+                // SAFETY: `identity_hint` is NUL-terminated; the seam answers a fresh block.
+                let Some(dup) = OwnedCStr::dup(identity_hint, FILE_SEAM, 5818) else {
                     return 0;
-                }
+                };
+                empty.store(dup);
             }
         }
         1
@@ -9246,7 +10228,7 @@ pub unsafe extern "C" fn SSL_get_psk_identity_hint(s: *const Ssl) -> *const c_ch
             ptr::null()
         } else {
             // SAFETY: `session` is live per the check above.
-            unsafe { (*session).psk_identity_hint }
+            unsafe { (*session).psk_identity_hint() }
         }
     })
 }
@@ -9265,7 +10247,7 @@ pub unsafe extern "C" fn SSL_get_psk_identity(s: *const Ssl) -> *const c_char {
             ptr::null()
         } else {
             // SAFETY: `session` is live per the check above.
-            unsafe { (*session).psk_identity }
+            unsafe { (*session).psk_identity() }
         }
     })
 }
@@ -9543,7 +10525,11 @@ pub unsafe extern "C" fn SSL_client_hello_get1_extensions_present(
         }
         // `OPENSSL_malloc_array(num, sizeof(*present))` (`ssl_lib.c:6874`), exercised through the
         // same allocator `OPENSSL_free` releases.
-        let present = CRYPTO_calloc(num, core::mem::size_of::<c_int>(), FILE, 6874).cast::<c_int>();
+        let present = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(num, core::mem::size_of::<c_int>(), FILE, 6874)
+        }
+        .cast::<c_int>();
         if present.is_null() {
             return 0;
         }
@@ -10310,7 +11296,7 @@ pub unsafe extern "C" fn SSL_CTX_set_default_verify_file(ctx: *mut SslCtx) -> c_
                 X509_FILETYPE_DEFAULT as c_long,
                 ptr::null_mut(),
                 (*ctx).libctx,
-                (*ctx).propq,
+                (*ctx).propq(),
             )
         };
         // SAFETY: thread-local error queue only.
@@ -10345,7 +11331,7 @@ pub unsafe extern "C" fn SSL_CTX_set_default_verify_store(ctx: *mut SslCtx) -> c
                 0,
                 ptr::null_mut(),
                 (*ctx).libctx,
-                (*ctx).propq,
+                (*ctx).propq(),
             )
         };
         // SAFETY: thread-local error queue only.
@@ -10379,7 +11365,9 @@ pub unsafe extern "C" fn SSL_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_in
             if (*t).method != (*f).method {
                 (*t).method = (*f).method;
             }
-            cert_copy_security((*t).cert, (*f).cert);
+            if cert_copy_security((*t).cert, (*f).cert) == 0 {
+                return 0;
+            }
             let len = (*f).sid_ctx_length;
             if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
                 return 0;
@@ -10450,9 +11438,16 @@ unsafe fn dane_ctx_enable(dctx: *mut DaneCtx) -> c_int {
     let mdmax = DANETLS_MATCHING_LAST;
     let n = mdmax as usize + 1;
     // SAFETY: two fresh `CRYPTO_calloc` blocks of `n` pointer-sized slots / `n` bytes.
-    let mdevp =
-        CRYPTO_calloc(n, core::mem::size_of::<*const EvpMd>(), FILE, 123).cast::<*const EvpMd>();
-    let mdord = CRYPTO_calloc(n, 1, FILE, 124).cast::<u8>();
+    let mdevp = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(n, core::mem::size_of::<*const EvpMd>(), FILE, 123)
+    }
+    .cast::<*const EvpMd>();
+    let mdord = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(n, 1, FILE, 124)
+    }
+    .cast::<u8>();
     if mdord.is_null() || mdevp.is_null() {
         // SAFETY: each pointer is NULL or an owned `CRYPTO_calloc` block.
         unsafe {
@@ -10503,18 +11498,32 @@ unsafe fn dane_ctx_final(dctx: *mut DaneCtx) {
 
 /// `static void tlsa_free(danetls_record *t)` — `ssl/ssl_lib.c:159-166`.
 ///
+/// `t` is the stack's `OPENSSL_sk_pop_free` freefunc, so it keeps the stack's `void (*)(void *)`
+/// signature; its body reclaims the record as an [`OwnedCtx`] whose `Drop` runs the authority's own
+/// `tlsa_free` body then the block release.
+///
 /// # Safety
 /// `t` must be NULL or an owned `danetls_record`.
 unsafe extern "C" fn tlsa_free(t: *mut c_void) {
-    let t = t.cast::<DanetlsRecord>();
-    if t.is_null() {
-        return;
-    }
-    // SAFETY: `t` is a live owned record per the caller's contract.
-    unsafe {
-        CRYPTO_free((*t).data.cast(), FILE, 163);
-        EVP_PKEY_free((*t).spki);
-        CRYPTO_free(t.cast(), FILE, 165);
+    // SAFETY: `t` is NULL or a live record owned by the stack being released; `from_raw` reclaims it
+    // (NULL is a no-op) and `Drop` runs [`CtxDestroy::destroy_body`] then the block release.
+    unsafe { drop(OwnedCtx::<DanetlsRecord>::from_raw(t.cast(), FILE, 165)) };
+}
+
+/// The authority's `tlsa_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+// SAFETY: `destroy_body` is the authority's `tlsa_free` body minus the block release: it frees the
+// owned `data` and `spki` exactly once (each accepts NULL), never the enclosing block, and reads
+// only members `dane_tlsa_add` initialised.
+unsafe impl CtxDestroy for DanetlsRecord {
+    /// # Safety
+    /// `t` is a live record this file allocated and has not released.
+    unsafe fn destroy_body(t: *mut DanetlsRecord) {
+        // SAFETY: `t` is live per the contract; its `data` is NULL or an owned block and `spki` is
+        // NULL or an owned key.
+        unsafe {
+            CRYPTO_free((*t).data.cast(), FILE, 163);
+            EVP_PKEY_free((*t).spki);
+        }
     }
 }
 
@@ -10721,11 +11730,19 @@ unsafe fn dane_tlsa_add(
         unsafe { raise_ssl(SSL_R_DANE_TLSA_NULL_DATA, 312) };
         return 0;
     }
-    // SAFETY: a fresh zeroed `danetls_record`.
-    let t = CRYPTO_zalloc(core::mem::size_of::<DanetlsRecord>(), FILE, 316).cast::<DanetlsRecord>();
-    if t.is_null() {
+    // The record block, allocated through the crate's allocator seam (authority size) as a `RawCtx`,
+    // then validated because `DanetlsRecord` is zero-valid. `Drop` is its single release on every
+    // refusal below and `into_raw` hands it to the stack on success. `t` is the block's stable
+    // address, and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s `Drop`. The record's
+    // `data` member buffer stays the object's own release, as in the authority.
+    let Some(raw) = RawCtx::<DanetlsRecord>::zalloc(FILE_SEAM, 316, 165) else {
         return -1;
-    }
+    };
+    // SAFETY: every field of `DanetlsRecord` is a `u8` discriminant, a raw pointer or a `usize` --
+    // all zero-valid -- so an all-zero block is a valid `DanetlsRecord`; the field writes below then
+    // refine it and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s `Drop`.
+    let t_owner = unsafe { raw.assume_init() };
+    let t = t_owner.as_ptr();
     // SAFETY: `t` is a fresh record; `data` is readable for `dlen` bytes.
     unsafe {
         (*t).usage = usage;
@@ -10735,8 +11752,7 @@ unsafe fn dane_tlsa_add(
     }
     // SAFETY: `t->data` was just assigned.
     if unsafe { (*t).data }.is_null() {
-        // SAFETY: `t` is an owned record.
-        unsafe { tlsa_free(t.cast()) };
+        // The refusal releases the record and its block: returning drops `t_owner`.
         return -1;
     }
     // SAFETY: `t->data` has `dlen` bytes; `data` is readable for `dlen`.
@@ -10757,19 +11773,16 @@ unsafe fn dane_tlsa_add(
                 if decoded.is_null() || p < data || dlen != p as usize - data as usize {
                     // SAFETY: `cert` is NULL or an owned certificate.
                     unsafe { X509_free(cert) };
-                    // SAFETY: `t` is an owned record.
-                    unsafe { tlsa_free(t.cast()) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 341) };
                     return 0;
                 }
                 // SAFETY: `cert` is a live certificate.
                 if unsafe { X509_get0_pubkey(cert) }.is_null() {
-                    // SAFETY: `cert` is an owned certificate; `t` an owned record.
-                    unsafe {
-                        X509_free(cert);
-                        tlsa_free(t.cast());
-                    }
+                    // SAFETY: `cert` is an owned certificate.
+                    unsafe { X509_free(cert) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 347) };
                     return 0;
@@ -10788,11 +11801,9 @@ unsafe fn dane_tlsa_add(
                     if !pushed {
                         // SAFETY: thread-local error state.
                         unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 376) };
-                        // SAFETY: `cert` an owned certificate; `t` an owned record.
-                        unsafe {
-                            X509_free(cert);
-                            tlsa_free(t.cast());
-                        }
+                        // SAFETY: `cert` an owned certificate.
+                        unsafe { X509_free(cert) };
+                        // The refusal also releases the record: returning drops `t_owner`.
                         return -1;
                     }
                 }
@@ -10803,8 +11814,7 @@ unsafe fn dane_tlsa_add(
                 if decoded.is_null() || p < data || dlen != p as usize - data as usize {
                     // SAFETY: `pkey` is NULL or an owned key.
                     unsafe { EVP_PKEY_free(pkey) };
-                    // SAFETY: `t` is an owned record.
-                    unsafe { tlsa_free(t.cast()) };
+                    // The refusal also releases the record: returning drops `t_owner`.
                     // SAFETY: thread-local error state.
                     unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_PUBLIC_KEY, 387) };
                     return 0;
@@ -10852,16 +11862,17 @@ unsafe fn dane_tlsa_add(
             break;
         }
     }
-    // SAFETY: `dane->trecs` is live; `t` is an owned record whose ownership moves into the stack.
+    // SAFETY: `dane->trecs` is live; `t` is the record whose ownership moves into the stack.
     if unsafe { OPENSSL_sk_insert((*dane).trecs, t.cast(), i) } == 0 {
-        // SAFETY: `t` is an owned record.
-        unsafe { tlsa_free(t.cast()) };
+        // The refusal releases the record: returning drops `t_owner`.
         // SAFETY: thread-local error state.
         unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 437) };
         return -1;
     }
     // SAFETY: `dane` is live.
     unsafe { (*dane).umask |= danetls_usage_bit(usage as u32) };
+    // The record's ownership moved into `dane->trecs`.
+    t_owner.into_raw();
     1
 }
 
@@ -10956,7 +11967,7 @@ pub unsafe extern "C" fn SSL_dane_enable(s: *mut Ssl, basedomain: *const c_char)
                 raise_ssl(SSL_R_DANE_ALREADY_ENABLED, 1244);
                 return 0;
             }
-            if (*s).ext_hostname.is_null() && ssl_set_tlsext_host_name(s, basedomain) == 0 {
+            if (*s).ext_hostname().is_null() && ssl_set_tlsext_host_name(s, basedomain) == 0 {
                 raise_ssl(SSL_R_ERROR_SETTING_TLSA_BASE_DOMAIN, 1255);
                 return -1;
             }
@@ -11187,15 +12198,17 @@ pub unsafe extern "C" fn SSL_add_expected_rpk(s: *mut Ssl, rpk: *mut EvpPkey) ->
             if ret <= 0 {
                 return 0;
             }
+            // The DER copy `i2d_PUBKEY` hands over is owned here on the crate's allocator seam
+            // (authority size and file); `Drop` is its single release.
+            let data = OwnedBuf::adopt_plain_nullable(data.cast::<u8>(), FILE_SEAM, 8206);
             let ok = SSL_dane_tlsa_add(
                 s,
                 DANETLS_USAGE_DANE_EE,
                 DANETLS_SELECTOR_SPKI,
                 DANETLS_MATCHING_FULL,
-                data,
+                data.as_ptr(),
                 ret as usize,
             ) > 0;
-            CRYPTO_free(data.cast(), FILE, 8206);
             c_int::from(ok)
         }
     })
@@ -11214,44 +12227,52 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
         // SAFETY: `s` is live per the caller's contract; every pointer this body uses is derived
         // from it or from the fresh `SSL_new` it allocates.
         unsafe {
-            // If we are not quiescent, just up_ref.
+            // If we are not quiescent, just up_ref. The guarded increment refuses a
+            // connection that is already retiring instead of resurrecting it. The reference
+            // acted for is the C-ABI caller's outstanding `SSL *` reference passed in as
+            // `s`; the caller keeps that reference and must still `SSL_free` it, and it is
+            // not released during this call.
             if SSL_in_init(s) == 0 || SSL_in_before(s) == 0 {
-                up_ref(&(*s).references);
+                // SAFETY: `s` is live per the caller's contract and its count is published
+                // and positive. `SSL_dup` acts for the caller's reference above and acquires
+                // exactly one additional reference, which the caller owns as the returned
+                // handle.
+                if up_ref(&(*s).references) == 0 {
+                    return ptr::null_mut();
+                }
                 return s;
             }
 
-            let ret = SSL_new((*s).ctx);
-            if ret.is_null() {
+            // The duplicate block, owned here; `Drop` is its single release on every refusal below
+            // and `into_raw` hands it out on success. `ret` is its stable address, and every refusal
+            // reaches `SSL_free`, which is `OwnedCtx`'s `Drop`.
+            let Some(ret_owner) = OwnedCtx::<Ssl>::from_raw(SSL_new((*s).ctx), FILE, 1442) else {
                 return ptr::null_mut();
-            }
+            };
+            let ret = ret_owner.as_ptr();
 
             if !(*s).session.is_null() {
                 if SSL_copy_session_id(ret, s) == 0 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             } else {
                 if SSL_set_ssl_method(ret, (*s).method) == 0 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
                 if !(*s).cert.is_null() {
                     cert_free((*ret).cert);
                     (*ret).cert = ssl_cert_dup((*s).cert);
                     if (*ret).cert.is_null() {
-                        SSL_free(ret);
                         return ptr::null_mut();
                     }
                 }
                 if SSL_set_session_id_context(ret, (*s).sid_ctx.as_ptr(), (*s).sid_ctx_length) == 0
                 {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
 
             if ssl_dane_dup(ret, s) == 0 {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
             (*ret).version = (*s).version;
@@ -11274,7 +12295,6 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             SSL_set_info_callback(ret, SSL_get_info_callback(s));
 
             if CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_SSL, &mut (*ret).ex_data, &(*s).ex_data) == 0 {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
 
@@ -11295,14 +12315,12 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             if !(*s).cipher_list.is_null() {
                 (*ret).cipher_list = OPENSSL_sk_dup((*s).cipher_list);
                 if (*ret).cipher_list.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
             if !(*s).cipher_list_by_id.is_null() {
                 (*ret).cipher_list_by_id = OPENSSL_sk_dup((*s).cipher_list_by_id);
                 if (*ret).cipher_list_by_id.is_null() {
-                    SSL_free(ret);
                     return ptr::null_mut();
                 }
             }
@@ -11310,46 +12328,39 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             if dup_ca_names(&mut (*ret).ca_names, (*s).ca_names) == 0
                 || dup_ca_names(&mut (*ret).client_ca_names, (*s).client_ca_names) == 0
             {
-                SSL_free(ret);
                 return ptr::null_mut();
             }
 
-            if !(*s).server_cert_type.is_null() {
-                CRYPTO_free((*ret).server_cert_type.cast(), FILE, 5237);
-                (*ret).server_cert_type = CRYPTO_memdup(
-                    (*s).server_cert_type.cast(),
-                    (*s).server_cert_type_len,
-                    FILE,
-                    5238,
-                )
-                .cast::<u8>();
-                if (*ret).server_cert_type.is_null() {
-                    SSL_free(ret);
+            let (sp, spl) = (*s).server_cert_type();
+            if !sp.is_null() {
+                // SAFETY: `ret` is live and its `server_cert_type` pair obeys the invariant; the
+                // authority frees the incumbent (5237) before it duplicates (5238).
+                (*ret).server_cert_type_slot().clear(FILE, 5237);
+                let dup = CRYPTO_memdup(sp.cast(), spl, FILE, 5238).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                (*ret).server_cert_type_len = (*s).server_cert_type_len;
+                // SAFETY: `ret`'s member is empty; `dup` is this call's fresh block of `spl` bytes.
+                (*ret).server_cert_type_slot().store(dup, spl);
             }
-            if !(*s).client_cert_type.is_null() {
-                CRYPTO_free((*ret).client_cert_type.cast(), FILE, 5246);
-                (*ret).client_cert_type = CRYPTO_memdup(
-                    (*s).client_cert_type.cast(),
-                    (*s).client_cert_type_len,
-                    FILE,
-                    5247,
-                )
-                .cast::<u8>();
-                if (*ret).client_cert_type.is_null() {
-                    SSL_free(ret);
+            let (cp, cpl) = (*s).client_cert_type();
+            if !cp.is_null() {
+                // SAFETY: `ret` is live and its `client_cert_type` pair obeys the invariant; the
+                // authority frees the incumbent (5246) before it duplicates (5247).
+                (*ret).client_cert_type_slot().clear(FILE, 5246);
+                let dup = CRYPTO_memdup(cp.cast(), cpl, FILE, 5247).cast::<u8>();
+                if dup.is_null() {
                     return ptr::null_mut();
                 }
-                (*ret).client_cert_type_len = (*s).client_cert_type_len;
+                // SAFETY: `ret`'s member is empty; `dup` is this call's fresh block of `cpl` bytes.
+                (*ret).client_cert_type_slot().store(dup, cpl);
             }
 
             (*ret).ct_validation_callback = (*s).ct_validation_callback;
             (*ret).ct_validation_callback_arg = (*s).ct_validation_callback_arg;
             (*ret).ext_status_type = (*s).ext_status_type;
 
-            ret
+            ret_owner.into_raw()
         }
     })
 }
@@ -11598,4 +12609,1253 @@ pub unsafe extern "C" fn SSL_get1_supported_ciphers(s: *mut Ssl) -> *mut OpenSsl
             sk
         }
     })
+}
+
+// -------------------------------------------------------------------------------------------
+// Adversarial member-buffer tests (`stage/p25/adv-tests`)
+// -------------------------------------------------------------------------------------------
+//
+// These are deterministic and need no installed allocator: they drive the validated handles over a
+// real `SslSession`'s member buffers and assert the member-buffer invariant (§2.6) directly. The
+// allocator-transcript half of the same defect class (the exact free/refused-alloc sequence) is
+// asserted by the probe tests in `statem_srvr.rs`/`statem_clnt.rs`, which install the seam.
+#[cfg(test)]
+mod adv_member_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
+    use crate::ssl::ssl_sess::{SSL_SESSION_dup, SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The member-buffer predicate the refusal test asserts: an empty blob member is `(NULL, 0)`.
+    fn member_is_empty(p: *const u8, len: usize) -> bool {
+        p.is_null() && len == 0
+    }
+
+    fn new_session() -> *mut SslSession {
+        // SAFETY: `SSL_SESSION_new` has no precondition.
+        let s = unsafe { SSL_SESSION_new() };
+        assert!(!s.is_null(), "SSL_SESSION_new must answer a zeroed session");
+        s
+    }
+
+    /// Store / replace / clear / zero-length on a `(ptr, len)` blob member, and the same on a
+    /// second blob member (`ext_alpn_selected`) to show the handle is not `ext_tick`-specific.
+    #[test]
+    fn blob_slot_store_replace_clear_and_zero_length() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here; each block is this frame's own allocation.
+        unsafe {
+            let b1 = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!b1.is_null());
+            (*s).ext_tick_slot().store(b1, 8);
+            assert_eq!((*s).ext_tick(), (b1 as *const u8, 8));
+
+            // Replace: clear releases the incumbent and leaves the member empty; store then owns.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+            assert!(member_is_empty((*s).ext_tick().0, (*s).ext_tick().1));
+            let b2 = CRYPTO_malloc(4, ptr::null(), 0).cast::<u8>();
+            assert!(!b2.is_null());
+            (*s).ext_tick_slot().store(b2, 4);
+            assert_eq!((*s).ext_tick(), (b2 as *const u8, 4));
+
+            // A zero-length store is the same empty member as a clear.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+            (*s).ext_tick_slot().store(ptr::null_mut(), 0);
+            assert!(member_is_empty((*s).ext_tick().0, (*s).ext_tick().1));
+
+            // The same handle over a second blob member.
+            let a1 = CRYPTO_malloc(3, ptr::null(), 0).cast::<u8>();
+            assert!(!a1.is_null());
+            (*s).ext_alpn_selected_slot().store(a1, 3);
+            assert_eq!((*s).ext_alpn_selected(), (a1 as *const u8, 3));
+            (*s).ext_alpn_selected_slot().clear(ptr::null(), 0);
+            assert!(member_is_empty(
+                (*s).ext_alpn_selected().0,
+                (*s).ext_alpn_selected().1
+            ));
+
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Store / replace / NULL input on a C-string member (`ext_hostname`).
+    #[test]
+    fn cstr_slot_store_replace_and_null_input() {
+        let s = new_session();
+        // SAFETY: `s` is live; each string is this frame's own `CRYPTO_strdup` block.
+        unsafe {
+            let a = OwnedCStr::dup(c"alpha".as_ptr(), SeamFile::NULL, 0)
+                .expect("a short strdup must succeed");
+            let a_raw = a.as_ptr();
+            let empty = (*s).ext_hostname_slot().assume_empty();
+            empty.store(a);
+            assert_eq!((*s).ext_hostname(), a_raw as *const c_char);
+
+            let b = OwnedCStr::dup(c"beta".as_ptr(), SeamFile::NULL, 0)
+                .expect("a short strdup must succeed");
+            let mut slot = (*s).ext_hostname_slot();
+            let empty = slot.clear(SeamFile::NULL, 0);
+            empty.store(b);
+            assert!(!(*s).ext_hostname().is_null());
+
+            // A NULL input leaves the member NULL (the authority's empty state).
+            let mut slot = (*s).ext_hostname_slot();
+            let _empty = slot.clear(SeamFile::NULL, 0);
+            assert!((*s).ext_hostname().is_null());
+
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// The refused-allocation regression, at the handle level: after the incumbent is released and
+    /// the replacement allocation is refused, the member must be `(NULL, 0)` -- never the
+    /// just-freed pointer (the pre-conversion defect). Destruction then touches only NULL.
+    #[test]
+    fn refusal_after_release_leaves_the_member_empty() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here.
+        unsafe {
+            let incumbent = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*s).ext_tick_slot().store(incumbent, 16);
+
+            // The writer's shape: release the incumbent, then the replacement `CRYPTO_malloc` is
+            // refused (answers NULL), so nothing is stored.
+            (*s).ext_tick_slot().clear(ptr::null(), 0);
+
+            assert!(
+                member_is_empty((*s).ext_tick().0, (*s).ext_tick().1),
+                "a refused replacement must leave the member (NULL, 0), not the freed pointer"
+            );
+
+            // The destructor's clear is a NULL no-op; the block is not released twice.
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Ownership transfer: `SSL_SESSION_dup` gives the duplicate its own member block, so each
+    /// session releases exactly its own -- no shared block, no double release.
+    #[test]
+    fn session_dup_owns_a_distinct_member_block() {
+        let s = new_session();
+        // SAFETY: `s` is live and owned here; `dup` is the reference this test owns.
+        unsafe {
+            let incumbent = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*s).ext_tick_slot().store(incumbent, 16);
+
+            let dup = SSL_SESSION_dup(s);
+            assert!(!dup.is_null(), "SSL_SESSION_dup must answer a session");
+            let (dp, dl) = (*dup).ext_tick();
+            assert_eq!(dl, 16, "the duplicate must carry the same length");
+            assert!(
+                !dp.is_null() && dp != incumbent,
+                "the duplicate must own a distinct block, not alias the source's"
+            );
+
+            SSL_SESSION_free(dup);
+            SSL_SESSION_free(s);
+        }
+    }
+
+    /// Negative control (§16): prove the `member_is_empty` predicate the refusal test asserts is
+    /// live for the defect class -- a released block whose pointer (and length) is left in the
+    /// member. A correct release passes it; the defect state fails it.
+    #[test]
+    fn canary_predicate_detects_a_dangling_member() {
+        // `CRYPTO_malloc` is a safe function; `released` is a fresh block, released once below and
+        // never dereferenced again.
+        let released = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        }
+        .cast::<u8>();
+        assert!(!released.is_null());
+        // SAFETY: `released` is the live block from the previous line; this is its single release.
+        unsafe { CRYPTO_free(released.cast(), ptr::null(), 0) };
+
+        // The correct released state passes the predicate.
+        assert!(member_is_empty(ptr::null(), 0));
+        // The defect state (released but not nulled, length not zeroed) must fail it.
+        assert!(
+            !member_is_empty(released as *const u8, 16),
+            "the predicate must reject a released-but-not-nulled member"
+        );
+    }
+
+    /// A zeroed `CertKey`, the shape the authority's `ssl_cert_new` allocates. Every field is a raw
+    /// pointer or an integer (its `comp_cert` array is raw pointers), whose zero is the authority's
+    /// empty state, so the zeroed block is a valid empty `CertKey`.
+    fn new_certkey() -> *mut CertKey {
+        // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
+        // zeroed bytes are a valid empty `CertKey` per the type's all-zero-valid fields.
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0)
+        }
+        .cast::<CertKey>();
+        assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
+        p
+    }
+
+    /// `MemberBufSlot::realloc` on `CertKey.serverinfo`: successful growth publishes the new block
+    /// and length together and preserves the incumbent's bytes. `realloc` may keep or move the
+    /// block; the assertion is that the reader and the returned block agree, which holds either way.
+    #[test]
+    fn serverinfo_realloc_growth_updates_member_and_preserves_contents() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 8usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(0xA0 | i as u8);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            let new_len = 4096usize;
+            let grew = (*cpk).serverinfo_slot().realloc(new_len, ptr::null(), 0);
+            assert!(!grew.is_null(), "growth must succeed");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(n, new_len, "the length companion must be the new length");
+            assert_eq!(p, grew, "the reader and the returned block must agree");
+            for i in 0..old_len {
+                assert_eq!(
+                    *grew.add(i),
+                    0xA0 | i as u8,
+                    "realloc must preserve the incumbent bytes"
+                );
+            }
+
+            (*cpk).serverinfo_slot().clear(ptr::null(), 0);
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Subsequent destruction after a regrow: the authority's slot teardown (`cert_pkey_clear`)
+    /// releases the grown block and leaves the member empty (no second release of the old block).
+    #[test]
+    fn serverinfo_realloc_growth_then_destruction_releases_once() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; all its other members are NULL, so
+        // `cert_pkey_clear` accepts it.
+        unsafe {
+            let old = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            (*cpk).serverinfo_slot().store(old, 8);
+            let grew = (*cpk).serverinfo_slot().realloc(128, ptr::null(), 0);
+            assert!(!grew.is_null(), "growth must succeed");
+
+            cert_pkey_clear(cpk);
+            let (p, n) = (*cpk).serverinfo();
+            assert!(
+                p.is_null() && n == 0,
+                "destruction must leave the member (NULL, 0)"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Regrow from an empty member: `realloc(NULL, n)` behaves as a fresh allocation, so the member
+    /// becomes `(new, n)` and later destruction releases it. This is the first-install arm of
+    /// `SSL_CTX_use_serverinfo_ex`, where the slot has no incumbent.
+    #[test]
+    fn serverinfo_realloc_from_empty_allocates_and_destruction_releases_once() {
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey` whose empty member obeys the invariant.
+        unsafe {
+            let (p0, n0) = (*cpk).serverinfo();
+            assert!(
+                p0.is_null() && n0 == 0,
+                "a fresh CertKey's member must be empty"
+            );
+
+            let grew = (*cpk).serverinfo_slot().realloc(96, ptr::null(), 0);
+            assert!(!grew.is_null(), "regrow from empty must allocate");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(n, 96, "the length companion must be the new length");
+            assert_eq!(p, grew, "the reader and the returned block must agree");
+
+            cert_pkey_clear(cpk);
+            let (p2, n2) = (*cpk).serverinfo();
+            assert!(
+                p2.is_null() && n2 == 0,
+                "destruction must leave the member empty"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the growth test's predicate is live. A stale length (the
+    /// pre-growth value) must be rejected by `(reader == returned block && length == new length)`.
+    #[test]
+    fn canary_realloc_member_predicate_detects_stale_length() {
+        let old = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(8, ptr::null(), 0)
+        }
+        .cast::<u8>();
+        assert!(!old.is_null());
+        // SAFETY: `old` is a fresh 8-byte block this frame owns.
+        let grew = unsafe { CRYPTO_realloc(old.cast(), 64, ptr::null(), 0) }.cast::<u8>();
+        assert!(!grew.is_null(), "the canary regrow must succeed");
+        let bound = grew;
+        let new_len = 64usize;
+        let stale_len = 8usize;
+        // The exact predicate `serverinfo_realloc_growth_*` asserts.
+        let predicate = |block: *const u8, len: usize| block == grew && len == new_len;
+        assert!(
+            predicate(bound, new_len),
+            "the predicate must accept the new state"
+        );
+        assert!(
+            !predicate(bound, stale_len),
+            "the predicate must reject a stale length"
+        );
+        // SAFETY: `grew` is the live block from the realloc above.
+        unsafe { CRYPTO_free(grew.cast(), ptr::null(), 0) };
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// Adversarial `CertKey.serverinfo` realloc probes (`stage/p25/adv-harden`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// These need the process-global allocator hook to force `CRYPTO_realloc` to fail and to observe a
+// reentrant read of the member during the call, so they are `#[ignore]`d and run one process per
+// probe under `OPENSSL_RS_ADV_PROBE=1` (see `scripts/adv-probe.sh`).
+#[cfg(test)]
+mod adv_realloc_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc, CRYPTO_zalloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    fn new_certkey() -> *mut CertKey {
+        // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
+        // zeroed bytes are a valid empty `CertKey` per its all-zero-valid fields.
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0)
+        }
+        .cast::<CertKey>();
+        assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
+        p
+    }
+
+    /// Failed growth: `CRYPTO_realloc` answers NULL, so the handle must keep the old block and
+    /// length unchanged, and later destruction must release that block exactly once.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn serverinfo_realloc_refused_keeps_old_owner() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 32usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(i as u8);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(4096, true);
+            let grew = (*cpk).serverinfo_slot().realloc(4096, ptr::null(), 0);
+            adv_alloc::disarm_realloc();
+
+            assert!(grew.is_null(), "a refused regrow must answer NULL");
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(
+                (p, n),
+                (old as *const u8, old_len),
+                "a refused regrow must keep the old block and length unchanged"
+            );
+
+            let ev = adv_alloc::events();
+            assert_eq!(
+                ev.iter()
+                    .filter(|e| matches!(
+                        e,
+                        Ev::Realloc {
+                            n: 4096,
+                            refused: true
+                        }
+                    ))
+                    .count(),
+                1,
+                "exactly one realloc request is refused: {ev:?}"
+            );
+
+            // Subsequent destruction releases the preserved block once (no double release).
+            cert_pkey_clear(cpk);
+            let (p2, n2) = (*cpk).serverinfo();
+            assert!(
+                p2.is_null() && n2 == 0,
+                "destruction must leave the member empty"
+            );
+            assert!(
+                !adv_alloc::double_free(),
+                "the preserved block is released only once"
+            );
+
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Reentrancy: the fake allocator reenters and reads the member pair *during* the
+    /// `CRYPTO_realloc` call. The handle must not have published the replacement yet, so the
+    /// observer sees the old block and length; after the call the member names the new block.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn serverinfo_realloc_reentrancy_reads_member() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let cpk = new_certkey();
+        // SAFETY: `cpk` is a live zeroed `CertKey`; every block below is this frame's own.
+        unsafe {
+            let old_len = 16usize;
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null());
+            for i in 0..old_len {
+                old.add(i).write(0x5A);
+            }
+            (*cpk).serverinfo_slot().store(old, old_len);
+
+            let mut slot = (*cpk).serverinfo_slot();
+            // Derive the watched field addresses from the live handle's own borrows.
+            let ptr_field: *mut *mut u8 = &mut *slot.ptr;
+            let len_field: *mut usize = &mut *slot.len;
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(128, false);
+            adv_alloc::arm_reenter(ptr_field, len_field);
+            let grew = slot.realloc(128, ptr::null(), 0);
+            adv_alloc::disarm_realloc();
+
+            assert!(!grew.is_null(), "the growth must succeed");
+            assert_eq!(
+                adv_alloc::reenter_observed(),
+                Some((old as usize, old_len)),
+                "during realloc the member must still name the old block and length"
+            );
+            let (p, n) = (*cpk).serverinfo();
+            assert_eq!(
+                (p, n),
+                (grew as *const u8, 128usize),
+                "after realloc the member must name the new block"
+            );
+            assert!(!adv_alloc::double_free());
+
+            slot.clear(ptr::null(), 0);
+            CRYPTO_free(cpk.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the realloc-refusal instrument fires and leaves the
+    /// incumbent untouched, so `serverinfo_realloc_refused_keeps_old_owner` is meaningful.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_realloc_refusal_instrument_fires() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: `b` is a fresh block this frame owns.
+        unsafe {
+            let b = CRYPTO_malloc(24, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            b.write(0x11);
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(24, true);
+            let r = CRYPTO_realloc(b.cast(), 24, ptr::null(), 0).cast::<u8>();
+            adv_alloc::disarm_realloc();
+
+            assert!(r.is_null(), "the armed realloc refusal must answer NULL");
+            assert_eq!(
+                *b, 0x11,
+                "a refused regrow must leave the old block untouched"
+            );
+            let ev = adv_alloc::events();
+            assert!(
+                ev.iter().any(|e| matches!(
+                    e,
+                    Ev::Realloc {
+                        n: 24,
+                        refused: true
+                    }
+                )),
+                "the refusal must be recorded: {ev:?}"
+            );
+
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (§16): prove the reenter observer fires and reads the pair it was armed
+    /// with, so `serverinfo_realloc_reentrancy_reads_member` is meaningful.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_reenter_observer_fires() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // SAFETY: `b` is a fresh block this frame owns; the watched pair is this frame's.
+        unsafe {
+            let b = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            let mut watched_ptr = b;
+            let mut watched_len = 8usize;
+
+            adv_alloc::reset();
+            adv_alloc::arm_realloc(8, false);
+            adv_alloc::arm_reenter(
+                core::ptr::addr_of_mut!(watched_ptr),
+                core::ptr::addr_of_mut!(watched_len),
+            );
+            let r = CRYPTO_realloc(b.cast(), 8, ptr::null(), 0).cast::<u8>();
+            adv_alloc::disarm_realloc();
+
+            assert!(!r.is_null(), "the canary regrow must succeed");
+            assert_eq!(
+                adv_alloc::reenter_observed(),
+                Some((b as usize, 8)),
+                "the reenter observer must capture the armed member pair"
+            );
+
+            CRYPTO_free(r.cast(), ptr::null(), 0);
+        }
+    }
+}
+
+/// Re-entrancy controls for the two reference-counted SSL object classes.
+///
+/// `SSL_free`/`SSL_CTX_free` invoke application ex-data callbacks after the last
+/// reference has been released. Each test registers a callback for its own class that
+/// re-enters the same `*_free`; the destroying sentinel must turn the re-entry into a
+/// defined no-op rather than a second teardown.
+#[cfg(test)]
+mod alias_ownership_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_sess::{SSL_SESSION_new, SSL_get1_session};
+
+    fn ctx_refs(ctx: *const SslCtx) -> i32 {
+        // SAFETY: `ctx` is a live context in every caller.
+        unsafe { (*ctx).references.load(Ordering::Relaxed) }
+    }
+
+    fn session_refs(session: *const SslSession) -> i32 {
+        // SAFETY: `session` is a live session in every caller.
+        unsafe { (*session).references.load(Ordering::Relaxed) }
+    }
+
+    /// `SSL_set_session` takes its own reference; freeing the caller's reference and then the
+    /// connection must retire the session exactly once. An independent `SSL_get1_session`
+    /// reference is the only way the session may outlive `SSL_free`.
+    #[test]
+    fn set_session_and_ssl_free_release_the_session_once() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: both pointers are live; `SSL_set_session` up-refs `session`.
+        assert_eq!(unsafe { SSL_set_session(ssl, session) }, 1);
+        assert_eq!(session_refs(session), 2);
+
+        // Release the caller's original reference. The connection still owns one.
+        // SAFETY: the caller's reference is live and unreleased.
+        unsafe { SSL_SESSION_free(session) };
+        assert_eq!(session_refs(session), 1);
+
+        // SAFETY: `ssl` is live and its session is non-NULL.
+        let held = unsafe { SSL_get1_session(ssl) };
+        assert_eq!(held, session);
+        assert_eq!(session_refs(session), 2);
+
+        // SAFETY: this retires the connection, releasing only its own session reference.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(session_refs(held), 1);
+
+        // SAFETY: `held` is the last reference; this retires the session once.
+        unsafe { SSL_SESSION_free(held) };
+        // SAFETY: the connection's two context references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    /// A fresh connection holds exactly two context references (`ctx` and `session_ctx`), and
+    /// `SSL_free` releases both exactly once.
+    #[test]
+    fn ssl_free_releases_the_two_context_references_once() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        assert_eq!(ctx_refs(ctx), 1);
+        // SAFETY: `ctx` is live; `SSL_new` up-refs it once for `ctx` and once for `session_ctx`.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        assert_eq!(ctx_refs(ctx), 3);
+
+        // SAFETY: this retires the connection, which owns the two context references.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(ctx_refs(ctx), 1);
+
+        // SAFETY: the connection's references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+
+    /// `SSL_set_SSL_CTX` moves the `ctx` reference but leaves `session_ctx` on the original
+    /// context, so `SSL_free` must release two *different* contexts exactly once each.
+    #[test]
+    fn ssl_set_ssl_ctx_keeps_the_two_context_references_distinct() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let base = unsafe { SSL_CTX_new(TLS_method()) };
+        // SAFETY: process-lifetime method table; the constructor returns an owned object.
+        let alt = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!base.is_null() && !alt.is_null());
+        // SAFETY: `base` is live.
+        let ssl = unsafe { SSL_new(base) };
+        assert!(!ssl.is_null());
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (3, 1));
+
+        // SAFETY: both contexts are live; the call up-refs `alt` and releases `base`.
+        assert_eq!(unsafe { SSL_set_SSL_CTX(ssl, alt) }, alt);
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (2, 2));
+
+        // SAFETY: this releases `ctx` (alt) and `session_ctx` (base), one reference each.
+        unsafe { SSL_free(ssl) };
+        assert_eq!((ctx_refs(base), ctx_refs(alt)), (1, 1));
+
+        // SAFETY: each context still has the caller's reference.
+        unsafe { SSL_CTX_free(base) };
+        // SAFETY: `alt` still has the caller's reference.
+        unsafe { SSL_CTX_free(alt) };
+    }
+
+    /// The chain accessors return the connection's borrowed owners; identity is asserted and the
+    /// owners are released exactly once by `SSL_free`/`SSL_SESSION_free`, never by the accessor.
+    #[test]
+    fn peer_and_verified_chain_accessors_return_borrowed_owners() {
+        // SAFETY: process-lifetime method table; constructors return owned objects.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: both calls allocate fresh empty stacks owned by this frame.
+        let chain = OPENSSL_sk_new_null();
+        let verified = OPENSSL_sk_new_null();
+        assert!(!chain.is_null() && !verified.is_null());
+
+        // SAFETY: `ssl` is live and the stacks are now its owned members.
+        unsafe {
+            (*ssl).peer_chain = chain;
+            (*ssl).verified_chain = verified.cast();
+        }
+        // SAFETY: both pointers are live.
+        assert_eq!(unsafe { SSL_get_peer_cert_chain(ssl) }, chain.cast());
+        // SAFETY: `ssl` is live and owns `verified`.
+        assert_eq!(unsafe { SSL_get0_verified_chain(ssl) }, verified.cast());
+
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null());
+        // SAFETY: `session` is live and `ssl` is live; the call up-refs the session.
+        assert_eq!(unsafe { SSL_set_session(ssl, session) }, 1);
+        // A session with no chain keeps the reduced-path fallback to the connection's chain.
+        // SAFETY: both pointers are live.
+        assert_eq!(unsafe { SSL_get_peer_cert_chain(ssl) }, chain.cast());
+
+        // SAFETY: a fresh empty stack owned by this frame.
+        let session_chain = OPENSSL_sk_new_null();
+        assert!(!session_chain.is_null());
+        // SAFETY: `session` is live and owned by the connection (one reference) plus this frame.
+        unsafe { (*session).peer_chain = session_chain };
+        // SAFETY: both pointers are live; the session's chain takes precedence.
+        let peer_chain = unsafe { SSL_get_peer_cert_chain(ssl) };
+        assert_eq!(peer_chain, session_chain.cast());
+        // SAFETY: `ssl` is live and owns `verified`.
+        assert_eq!(unsafe { SSL_get0_verified_chain(ssl) }, verified.cast());
+
+        // SAFETY: the caller's session reference is live and unreleased.
+        unsafe { SSL_SESSION_free(session) };
+        // SAFETY: `SSL_free` releases the connection's session reference and both connection
+        // chains exactly once; the borrowed accessor results are never freed here.
+        unsafe { SSL_free(ssl) };
+        // SAFETY: the connection's context references are gone; this releases the caller's.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+}
+
+#[cfg(test)]
+mod refcount_reentrancy_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::ssl::methods::TLS_method;
+    use core::sync::atomic::AtomicUsize;
+
+    static CTX_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static CTX_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static SSL_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static SSL_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn ctx_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == CTX_TARGET.load(Ordering::Relaxed) {
+            CTX_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live context this callback was invoked for, and the outer
+            // `SSL_CTX_free` is still inside its destructor body.
+            unsafe { SSL_CTX_free(obj.cast::<SslCtx>()) };
+        }
+    }
+
+    unsafe extern "C" fn ssl_reenter_free(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        if obj as usize == SSL_TARGET.load(Ordering::Relaxed) {
+            SSL_CALLS.fetch_add(1, Ordering::Relaxed);
+            // SAFETY: `obj` is the live connection this callback was invoked for, and the
+            // outer `SSL_free` is still inside its destructor body.
+            unsafe { SSL_free(obj.cast::<Ssl>()) };
+        }
+    }
+
+    struct ResetTargets;
+    impl Drop for ResetTargets {
+        fn drop(&mut self) {
+            CTX_TARGET.store(0, Ordering::Relaxed);
+            SSL_TARGET.store(0, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn ctx_free_reentrancy_is_defined_noop() {
+        CTX_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_SSL_CTX,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(ctx_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: the method is a process-lifetime static and `SSL_CTX_new` takes ownership
+        // of nothing else.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new(TLS_method()) must succeed");
+        let _reset = ResetTargets;
+        CTX_TARGET.store(ctx as usize, Ordering::Relaxed);
+
+        // SAFETY: `ctx` is live and `idx` is the index registered above.
+        let set = unsafe { SSL_CTX_set_ex_data(ctx, idx, ctx.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the context's only reference; the callback re-enters it.
+        unsafe { SSL_CTX_free(ctx) };
+
+        assert_eq!(CTX_CALLS.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn ssl_free_reentrancy_is_defined_noop() {
+        SSL_CALLS.store(0, Ordering::Relaxed);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_SSL,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(ssl_reenter_free),
+        );
+        assert!(idx > 0);
+
+        // SAFETY: the method is a process-lifetime static and both constructors take no
+        // borrowed arguments beyond a live context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new(TLS_method()) must succeed");
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null(), "SSL_new on a fresh context must succeed");
+        let _reset = ResetTargets;
+        SSL_TARGET.store(ssl as usize, Ordering::Relaxed);
+
+        // SAFETY: `ssl` is live and `idx` is the index registered above.
+        let set = unsafe { SSL_set_ex_data(ssl, idx, ssl.cast()) };
+        assert_eq!(set, 1);
+        // SAFETY: this call retires the connection's only reference; the callback re-enters it.
+        unsafe { SSL_free(ssl) };
+        assert_eq!(SSL_CALLS.load(Ordering::Relaxed), 1);
+
+        // SAFETY: the connection released its two context references; this releases ours.
+        unsafe { SSL_CTX_free(ctx) };
+    }
+}
+
+/// Failure injection for the `ssl_cert_dup` up-ref ladder.
+///
+/// The source counts are set to `i32::MAX` directly: the fields are this crate's own
+/// (`pub(crate)`), and `i32::MAX` is the one value the shared protocol refuses without
+/// changing the count, so it is the only way to make a checked `*_up_ref` answer 0 on a
+/// live object. These are protocol-level tests, not conforming-C-caller evidence.
+#[cfg(test)]
+mod cert_dup_refusal_tests {
+    use super::*;
+    use crate::evp::pkey::EVP_PKEY_new;
+    use crate::ssl::ssl_cert_comp::{OsslCompCert, TLSEXT_COMP_CERT_NONE};
+    use crate::x509::x_x509::X509_new;
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    #[test]
+    fn refused_x509_up_ref_returns_null_and_keeps_the_source_count() {
+        // SAFETY: the test builds and releases the two objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            assert_eq!((*x).references.load(Ordering::Relaxed), 1);
+            (*x).references.store(i32::MAX, Ordering::Relaxed);
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused X509_up_ref must refuse the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the source count is unchanged"
+            );
+
+            // Restore the count so the source container's own release reclaims `x` exactly once.
+            (*x).references.store(1, Ordering::Relaxed);
+            drop(cert_owner);
+        }
+    }
+
+    #[test]
+    fn refused_comp_cert_up_ref_releases_the_partial_duplicate() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+
+            let mut record = Box::new(OsslCompCert {
+                references: AtomicI32::new(i32::MAX),
+                data: ptr::null_mut(),
+                len: 0,
+                orig_len: 0,
+                alg: TLSEXT_COMP_CERT_NONE,
+            });
+            let record_ptr: *mut OsslCompCert = &mut *record;
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+            (*cert).pkeys[0].comp_cert[0] = record_ptr;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "the refused compressed-form reference refuses the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released by the duplicate's Drop"
+            );
+            assert_eq!(
+                (*record_ptr).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the refused increment left the source count unchanged"
+            );
+
+            // The source container must not release the test-owned record; detach it first.
+            (*cert).pkeys[0].comp_cert[0] = ptr::null_mut();
+            drop(cert_owner);
+            drop(record);
+        }
+    }
+
+    /// `cert_copy_security`'s X509 arm: a refused `X509_up_ref` leaves the destination
+    /// untouched and takes no reference.
+    #[test]
+    fn refused_cert_copy_security_x509_up_ref_returns_zero() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            (*x).references.store(i32::MAX, Ordering::Relaxed);
+
+            let src_owner = cert_new();
+            assert!(src_owner.is_some(), "the source container allocates");
+            let Some(src_owner) = src_owner else { return };
+            let src = src_owner.as_ptr();
+            (*src).pkeys[0].x509 = x;
+            (*src).sec_level = 7;
+
+            let dst_owner = cert_new();
+            assert!(dst_owner.is_some(), "the destination container allocates");
+            let Some(dst_owner) = dst_owner else { return };
+            let dst = dst_owner.as_ptr();
+
+            assert_eq!(cert_copy_security(dst, src), 0);
+            assert!(
+                (*dst).pkeys[0].x509.is_null(),
+                "no unowned pointer is stored"
+            );
+            assert_eq!(
+                (*dst).sec_level,
+                2,
+                "the destination is untouched on refusal"
+            );
+            assert_eq!((*x).references.load(Ordering::Relaxed), i32::MAX);
+
+            // Restore the count so the source container's own release reclaims `x` once.
+            (*x).references.store(1, Ordering::Relaxed);
+            drop(src_owner);
+            drop(dst_owner);
+        }
+    }
+
+    /// `cert_copy_security`'s private-key arm: after the X509 reference was taken, a refused
+    /// `EVP_PKEY_up_ref` must release it and leave both destination slots empty.
+    #[test]
+    fn refused_cert_copy_security_pkey_up_ref_rolls_back_the_x509_reference() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            let pkey = EVP_PKEY_new();
+            assert!(!x.is_null() && !pkey.is_null());
+            (*pkey).references.store(i32::MAX, Ordering::Relaxed);
+
+            let src_owner = cert_new();
+            assert!(src_owner.is_some(), "the source container allocates");
+            let Some(src_owner) = src_owner else { return };
+            let src = src_owner.as_ptr();
+            (*src).pkeys[0].x509 = x;
+            (*src).pkeys[0].privatekey = pkey.cast();
+
+            let dst_owner = cert_new();
+            assert!(dst_owner.is_some(), "the destination container allocates");
+            let Some(dst_owner) = dst_owner else { return };
+            let dst = dst_owner.as_ptr();
+
+            assert_eq!(cert_copy_security(dst, src), 0);
+            assert!((*dst).pkeys[0].x509.is_null());
+            assert!((*dst).pkeys[0].privatekey.is_null());
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released"
+            );
+            assert_eq!((*pkey).references.load(Ordering::Relaxed), i32::MAX);
+
+            // Restore the count so the source container's own release reclaims the key once.
+            (*pkey).references.store(1, Ordering::Relaxed);
+            drop(src_owner);
+            drop(dst_owner);
+        }
+    }
+
+    /// A chain up-ref refusal: `X509_chain_up_ref` duplicates the stack and up-refs every
+    /// element. The second element refuses, so the helper must release the first element's
+    /// reference and the duplicate stack; `ssl_cert_dup` then returns NULL through the partial
+    /// container's `Drop`. The source stack is untouched and owns both elements.
+    #[test]
+    fn refused_chain_up_ref_returns_null_and_rolls_back_the_partial_stack() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let first = X509_new();
+            let refusing = X509_new();
+            assert!(!first.is_null() && !refusing.is_null());
+            let chain = OPENSSL_sk_new_null();
+            assert!(!chain.is_null(), "the source chain allocates");
+            assert_eq!(OPENSSL_sk_push(chain, first.cast()), 1);
+            // `sk_push` answers the resulting element count, not a boolean.
+            assert_eq!(OPENSSL_sk_push(chain, refusing.cast()), 2);
+            (*refusing).references.store(i32::MAX, Ordering::Relaxed);
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].chain = chain;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused chain up-ref must refuse the duplicate"
+            );
+            assert_eq!(
+                (*first).references.load(Ordering::Relaxed),
+                1,
+                "the already-taken element reference was rolled back"
+            );
+            assert_eq!(
+                (*refusing).references.load(Ordering::Relaxed),
+                i32::MAX,
+                "the refused increment left the source count unchanged"
+            );
+
+            // Restore the count so the source container's own release reclaims both elements
+            // exactly once.
+            (*refusing).references.store(1, Ordering::Relaxed);
+            drop(cert_owner);
+        }
+    }
+
+    /// A serverinfo duplication refusal. `CRYPTO_memdup` refuses `siz >= i32::MAX` before
+    /// allocating, which is the forced-allocation arm reachable without a custom allocator. The
+    /// length is injected after a real small block is installed; no operation reads the block at
+    /// this injected length, and the source's `Drop` releases the block by pointer alone.
+    #[test]
+    fn refused_serverinfo_dup_returns_null_and_releases_the_partial_duplicate() {
+        // SAFETY: the test builds and releases the objects it exclusively owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+
+            let cert_owner = cert_new();
+            assert!(cert_owner.is_some(), "the container allocates");
+            let Some(cert_owner) = cert_owner else { return };
+            let cert = cert_owner.as_ptr();
+            (*cert).pkeys[0].x509 = x;
+            let block = (*cert).pkeys[0].serverinfo_slot().realloc(8, FILE, 0);
+            assert!(!block.is_null(), "the source serverinfo block allocates");
+            (*cert).pkeys[0].serverinfo_length = i32::MAX as usize;
+
+            assert!(
+                ssl_cert_dup(cert).is_null(),
+                "a refused serverinfo allocation must refuse the duplicate"
+            );
+            assert_eq!(
+                (*x).references.load(Ordering::Relaxed),
+                1,
+                "the X509 reference taken before the refusal was released by the duplicate's Drop"
+            );
+
+            drop(cert_owner);
+        }
+    }
+}
+
+/// Controls for the B17 setter-alias repairs: each setter is handed the pointer its matching
+/// getter returned, which is the exact input the pre-repair code invalidated before reading.
+#[cfg(test)]
+mod setter_alias_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::tls_srp::{SSL_get_srp_userinfo, SSL_get_srp_username};
+    use crate::x509::x509_vpm::{X509_VERIFY_PARAM_get0_host, X509_VERIFY_PARAM_set1_host};
+    use core::ffi::CStr;
+
+    fn new_connection() -> (*mut SslCtx, *mut Ssl) {
+        // SAFETY: process-lifetime method table; the constructors return owned objects this
+        // test releases.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        (ctx, ssl)
+    }
+
+    /// `SSL_get_srp_username` falls back to the connection's context field; passing that pointer
+    /// back to the ctx setter must not read the freed block. Pre-repair this is the B17-D1
+    /// heap-use-after-free. The connection is created before the context field is set, so its own
+    /// login is NULL and the getter returns the context's pointer.
+    #[test]
+    fn srp_username_accepts_the_getter_pointer() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and `ctx` are live; the string is a static literal for this call.
+        unsafe {
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_USERNAME,
+                    0,
+                    c"user".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            let held = SSL_get_srp_username(ssl);
+            assert!(!held.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_USERNAME,
+                    0,
+                    held.cast::<c_void>(),
+                ),
+                1
+            );
+            let again = SSL_get_srp_username(ssl);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"user");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `SSL_get_srp_userinfo` falls back to the connection's context field; the password ctrl
+    /// must duplicate before it releases the field. Pre-repair this is the B17-D2
+    /// heap-use-after-free. The connection is created before the context field is set, so the
+    /// getter returns the context's pointer.
+    #[test]
+    fn srp_userinfo_accepts_the_getter_pointer() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and `ctx` are live; the string is a static literal for this call.
+        unsafe {
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD,
+                    0,
+                    c"secret".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            let held = SSL_get_srp_userinfo(ssl);
+            assert!(!held.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD,
+                    0,
+                    held.cast::<c_void>(),
+                ),
+                1
+            );
+            let again = SSL_get_srp_userinfo(ssl);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"secret");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `SSL_set1_param(s, SSL_get0_param(s))` and the ctx form inherit a parameter from itself.
+    /// The pre-repair `X509_VERIFY_PARAM_inherit` released the shared policies/hosts before it
+    /// copied them, which is a use-after-free (B17-D6). The self-copy is now a no-op and the
+    /// parameter keeps the values it already held.
+    #[test]
+    fn set1_param_accepts_the_same_parameter() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl`/`ctx` and both parameters are live; each string is a static literal.
+        unsafe {
+            let param = SSL_get0_param(ssl);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(param, c"example.com".as_ptr(), 0),
+                1
+            );
+            assert_eq!(SSL_set1_param(ssl, param), 1);
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(CStr::from_ptr(held), c"example.com");
+
+            let cparam = SSL_CTX_get0_param(ctx);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(cparam, c"ctx.example".as_ptr(), 0),
+                1
+            );
+            assert_eq!(SSL_CTX_set1_param(ctx, cparam), 1);
+            let cheld = X509_VERIFY_PARAM_get0_host(cparam, 0);
+            assert!(!cheld.is_null());
+            assert_eq!(CStr::from_ptr(cheld), c"ctx.example");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `X509_VERIFY_PARAM_get0_host(SSL_get0_param(s), 0)` returns a name the parameter owns;
+    /// `SSL_set1_host` clears that stack before reading its argument. Pre-repair this is the
+    /// B17-D3 heap-use-after-free.
+    #[test]
+    fn set1_host_accepts_the_parameter_owned_name() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` is live and each pointer is one this call or the parameter owns.
+        unsafe {
+            assert_eq!(SSL_set1_host(ssl, c"example.com".as_ptr()), 1);
+            let param = SSL_get0_param(ssl);
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(SSL_set1_host(ssl, held), 1);
+            let again = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"example.com");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The direct parameter setter has the same alias edge: the source name can be one the
+    /// parameter's host stack owns. Pre-repair this is the B17-D7 heap-use-after-free.
+    #[test]
+    fn param_set1_host_accepts_its_own_name() {
+        let (ctx, ssl) = new_connection();
+        // SAFETY: `ssl` and its parameter are live; each pointer is one this call or the
+        // parameter owns.
+        unsafe {
+            let param = SSL_get0_param(ssl);
+            assert_eq!(
+                X509_VERIFY_PARAM_set1_host(param, c"direct.example".as_ptr(), 0),
+                1
+            );
+            let held = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!held.is_null());
+            assert_eq!(X509_VERIFY_PARAM_set1_host(param, held, 0), 1);
+            let again = X509_VERIFY_PARAM_get0_host(param, 0);
+            assert!(!again.is_null());
+            assert_eq!(CStr::from_ptr(again), c"direct.example");
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
 }

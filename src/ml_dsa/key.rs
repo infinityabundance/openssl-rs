@@ -31,7 +31,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 use std::ffi::CStr;
 
@@ -45,6 +45,7 @@ use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc_array, CRYPTO_memcmp, CRYPTO_memdup,
     CRYPTO_zalloc, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_free, CRYPTO_secure_malloc};
 
 use super::encoders::{ossl_ml_dsa_pk_encode, ossl_ml_dsa_sk_encode};
@@ -67,7 +68,9 @@ use super::{
 const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
 
 /// The unit's own `__FILE__`, for the allocator's debug arguments.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c".as_ptr();
+const FILE_C: &CStr = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 /// `ossl_ml_dsa_set_prekey`'s `OPENSSL_secure_malloc(sk_len)`, `ml_dsa_key.c:52`.
 const LINE_SET_PREKEY_SK: c_int = 52;
@@ -130,6 +133,227 @@ const LINE_GENKEY_SEED_FREE: c_int = 486;
 const LINE_GENKEY_CLEAR_SK: c_int = 505;
 /// `keygen_internal`'s `OPENSSL_clear_free(out->seed, ML_DSA_SEED_BYTES)`, `ml_dsa_key.c:467`.
 const LINE_KEYGEN_CLEAR_SEED: c_int = 467;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a key buffer
+// ---------------------------------------------------------------------------------------------
+
+/// An owned key buffer allocated through the crate's allocator seam.
+///
+/// The block stays the allocation the authority itself makes -- a `CRYPTO_malloc_array` for a
+/// `Poly` scratch block, or `CRYPTO_secure_malloc` for the private encoding and the seed -- at the
+/// authority's exact size and `file`/`line`, because a Rust `Box`/`Vec` would hide both the
+/// allocation and its release from a caller-installed `CRYPTO_set_mem_functions` hook. Only its
+/// *ownership* is this type: the `new_*` constructors allocate it, [`Self::adopt`] and its two
+/// siblings take up a block the crate allocated inside a helper or reclaimed from a key field,
+/// `Drop` is its single release, and [`Self::into_raw`] hands the block to a `#[repr(C)]`
+/// `MlDsaKey` field whose address the exported ABI exposes. The key block itself, whose release is
+/// a compound destructor body, and the `s1`/`t1` vectors, whose allocation lives in `poly.rs`, stay
+/// on the raw seam.
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+/// How the authority releases a key buffer.
+enum BufRelease {
+    /// The authority's plain `CRYPTO_free(ptr, file, line)` (`pub_encoding`).
+    Plain { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the `polys` scratch of
+    /// `public_from_private`/`pairwise_check`).
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+    /// The authority's `CRYPTO_secure_free(ptr, file, line)` (the seed on a refused RNG).
+    Secure { file: *const c_char, line: c_int },
+    /// The authority's cleansing `CRYPTO_secure_clear_free(ptr, num, file, line)` (`priv_encoding`
+    /// and the seed).
+    SecureCleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+impl OwnedBuf {
+    /// `OPENSSL_malloc_array(count, size, file, line)`, or `None` when the allocator answers NULL.
+    fn new_array(count: usize, size: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(count, size, file, line)
+        }
+        .cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// `OPENSSL_malloc_array(count, size, file, line)` for a block the authority frees through its
+    /// cleansing `OPENSSL_clear_free(ptr, count * size)`, or `None` when the allocator answers NULL.
+    fn new_array_cleansed(
+        count: usize,
+        size: usize,
+        file: SeamFile,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(count, size, file, line)
+        }
+        .cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        // `CRYPTO_malloc_array` succeeded, so `count * size` did not overflow.
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Cleansed {
+                num: count * size,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// `CRYPTO_secure_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    fn new_secure(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::Secure { file, line },
+        })
+    }
+
+    /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its cleansing
+    /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
+    fn new_secure_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: BufRelease::SecureCleansed {
+                num: len,
+                file,
+                line,
+            },
+        })
+    }
+
+    /// Take up a plain block the crate allocated inside a helper (an `OPENSSL_memdup`) or reclaimed
+    /// from the public encoding, for release by `Drop` at the authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live plain block the crate allocated that no one else owns, and `file`
+    /// is NULL or a NUL-terminated C string.
+    unsafe fn adopt(ptr: *mut c_uchar, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Plain { file, line },
+        })
+    }
+
+    /// Take up a block reclaimed from a key field, for release by `Drop` through the authority's
+    /// cleansing `OPENSSL_clear_free(ptr, num)`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated that no one else owns and that is readable
+    /// for `num` bytes, and `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::Cleansed { num, file, line },
+        })
+    }
+
+    /// Take up a secure block reclaimed from a key field, for release by `Drop` through the
+    /// authority's cleansing `CRYPTO_secure_clear_free(ptr, num, ...)`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live secure block the crate allocated that no one else owns and that is
+    /// readable for `num` bytes, and `file` is NULL or a NUL-terminated C string.
+    unsafe fn adopt_secure_cleansed(
+        ptr: *mut c_uchar,
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: BufRelease::SecureCleansed { num, file, line },
+        })
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the key field it is stored in.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::Plain { file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released; the
+                // authority's own `CRYPTO_free` accepts NULL.
+                unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_clear_free` cleanses then releases it and accepts NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+            BufRelease::Secure { file, line } => {
+                // SAFETY: as the plain arm; `CRYPTO_secure_free` accepts NULL.
+                unsafe { CRYPTO_secure_free(self.ptr.cast::<c_void>(), file, line) };
+            }
+            BufRelease::SecureCleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the block this handle owns and has not released, readable
+                // for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and accepts
+                // NULL.
+                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
 
 /// `memcmp(a, b, n)` — the authority's own call, not a crate symbol.
 ///
@@ -235,24 +459,31 @@ pub(crate) unsafe fn ossl_ml_dsa_set_prekey(
         }
 
         let mut ret = 0;
+        // The handles own the blocks this arm allocates: a refusal below drops them at the
+        // authority's own `err:` site (its two cleansing secure frees), and a success hands each
+        // block to its key field through `into_raw`.
+        let mut priv_owned: Option<OwnedBuf> = None;
+        let mut seed_owned: Option<OwnedBuf> = None;
         // The C's `goto end` on either allocation failure.
         'end: {
             if !sk.is_null() {
-                (*key).priv_encoding =
-                    CRYPTO_secure_malloc(sk_len, FILE, LINE_SET_PREKEY_SK).cast::<u8>();
-                if (*key).priv_encoding.is_null() {
+                let Some(buf) =
+                    OwnedBuf::new_secure_cleansed(sk_len, FILE_SEAM, LINE_SET_PREKEY_SK)
+                else {
                     break 'end;
-                }
-                ptr::copy_nonoverlapping(sk, (*key).priv_encoding, sk_len);
+                };
+                ptr::copy_nonoverlapping(sk, buf.as_ptr(), sk_len);
+                priv_owned = Some(buf);
             }
 
             if !seed.is_null() {
-                (*key).seed =
-                    CRYPTO_secure_malloc(seed_len, FILE, LINE_SET_PREKEY_SEED).cast::<u8>();
-                if (*key).seed.is_null() {
+                let Some(buf) =
+                    OwnedBuf::new_secure_cleansed(seed_len, FILE_SEAM, LINE_SET_PREKEY_SEED)
+                else {
                     break 'end;
-                }
-                ptr::copy_nonoverlapping(seed, (*key).seed, seed_len);
+                };
+                ptr::copy_nonoverlapping(seed, buf.as_ptr(), seed_len);
+                seed_owned = Some(buf);
             }
 
             (*key).prov_flags |= flags_set;
@@ -261,20 +492,15 @@ pub(crate) unsafe fn ossl_ml_dsa_set_prekey(
         }
 
         if ret == 0 {
-            CRYPTO_secure_clear_free(
-                (*key).priv_encoding.cast(),
-                sk_len,
-                FILE,
-                LINE_SET_PREKEY_CLEAR_SK,
-            );
-            CRYPTO_secure_clear_free(
-                (*key).seed.cast(),
-                seed_len,
-                FILE,
-                LINE_SET_PREKEY_CLEAR_SEED,
-            );
-            (*key).priv_encoding = ptr::null_mut();
-            (*key).seed = ptr::null_mut();
+            // The C's `err:`-site release: each handle's `Drop` runs the authority's own cleansing
+            // `CRYPTO_secure_clear_free`, and a block that was never allocated releases nothing.
+            return ret;
+        }
+        if let Some(buf) = priv_owned {
+            (*key).priv_encoding = buf.into_raw();
+        }
+        if let Some(buf) = seed_owned {
+            (*key).seed = buf.into_raw();
         }
         ret
     }
@@ -295,8 +521,11 @@ pub(crate) unsafe fn ossl_ml_dsa_key_new(
     }
 
     // SAFETY: `CRYPTO_zalloc` answers NULL on failure, which is checked.
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<MlDsaKey>(), FILE, LINE_KEY_NEW).cast::<MlDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<MlDsaKey>(), FILE, LINE_KEY_NEW)
+    }
+    .cast::<MlDsaKey>();
     if !ret.is_null() {
         // SAFETY: `ret` is a fresh, zeroed allocation; every field is written below.
         unsafe {
@@ -399,20 +628,27 @@ pub(crate) unsafe fn ossl_ml_dsa_key_reset(key: *mut MlDsaKey) {
         // The |t1| vector is public and allocated separately.
         (*key).t1.free(FILE, LINE_RESET_T1_FREE);
         OPENSSL_cleanse((*key).k.as_mut_ptr().cast(), ML_DSA_K_BYTES);
-        CRYPTO_free((*key).pub_encoding.cast(), FILE, LINE_RESET_PUB);
+        // Each handle's `Drop` runs the authority's own release at the authority's own site: the
+        // plain free for the public encoding and the cleansing secure free for the private encoding
+        // and the seed. A NULL field releases nothing.
+        // SAFETY: `pub_encoding` is a live plain block this key owns.
+        drop(OwnedBuf::adopt((*key).pub_encoding, FILE, LINE_RESET_PUB));
         (*key).pub_encoding = ptr::null_mut();
-        if !(*key).priv_encoding.is_null() {
-            CRYPTO_secure_clear_free(
-                (*key).priv_encoding.cast(),
-                (*(*key).params).sk_len,
-                FILE,
-                LINE_RESET_PRV,
-            );
-        }
+        // SAFETY: `priv_encoding` is a live secure block this key owns, readable for `sk_len` bytes.
+        drop(OwnedBuf::adopt_secure_cleansed(
+            (*key).priv_encoding,
+            (*(*key).params).sk_len,
+            FILE,
+            LINE_RESET_PRV,
+        ));
         (*key).priv_encoding = ptr::null_mut();
-        if !(*key).seed.is_null() {
-            CRYPTO_secure_clear_free((*key).seed.cast(), ML_DSA_SEED_BYTES, FILE, LINE_RESET_SEED);
-        }
+        // SAFETY: `seed` is a live secure block this key owns.
+        drop(OwnedBuf::adopt_secure_cleansed(
+            (*key).seed,
+            ML_DSA_SEED_BYTES,
+            FILE,
+            LINE_RESET_SEED,
+        ));
         (*key).seed = ptr::null_mut();
     }
 }
@@ -467,16 +703,26 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                         }
                         vector_copy(&mut (*ret).t1, &(*src).t1);
                     }
-                    (*ret).pub_encoding = CRYPTO_memdup(
-                        (*src).pub_encoding.cast(),
-                        (*(*src).params).pk_len,
+                    // `CRYPTO_memdup` answers NULL or a plain `pk_len`-byte block the crate
+                    // allocated; the handle adopts it so the refusal arm releases it at the
+                    // authority's own site.
+                    // SAFETY: `src.pub_encoding` is a live `pk_len`-byte block.
+                    match OwnedBuf::adopt(
+                        CRYPTO_memdup(
+                            (*src).pub_encoding.cast(),
+                            (*(*src).params).pk_len,
+                            FILE,
+                            LINE_DUP_PUB,
+                        )
+                        .cast::<c_uchar>(),
                         FILE,
                         LINE_DUP_PUB,
-                    )
-                    .cast::<u8>();
-                    if (*ret).pub_encoding.is_null() {
-                        ok = 0;
-                        break 'err;
+                    ) {
+                        Some(buf) => (*ret).pub_encoding = buf.into_raw(),
+                        None => {
+                            ok = 0;
+                            break 'err;
+                        }
                     }
                 }
                 if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
@@ -495,27 +741,44 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                             vector_copy(&mut (*ret).s2, &(*src).s2);
                             vector_copy(&mut (*ret).t0, &(*src).t0);
                         }
-                        (*ret).priv_encoding =
-                            CRYPTO_secure_malloc((*(*src).params).sk_len, FILE, LINE_DUP_PRV)
-                                .cast::<u8>();
-                        if (*ret).priv_encoding.is_null() {
-                            ok = 0;
-                            break 'err;
-                        }
-                        ptr::copy_nonoverlapping(
-                            (*src).priv_encoding,
-                            (*ret).priv_encoding,
+                        match OwnedBuf::new_secure_cleansed(
                             (*(*src).params).sk_len,
-                        );
+                            FILE_SEAM,
+                            LINE_DUP_PRV,
+                        ) {
+                            Some(buf) => {
+                                ptr::copy_nonoverlapping(
+                                    (*src).priv_encoding,
+                                    buf.as_ptr(),
+                                    (*(*src).params).sk_len,
+                                );
+                                (*ret).priv_encoding = buf.into_raw();
+                            }
+                            None => {
+                                ok = 0;
+                                break 'err;
+                            }
+                        }
                     }
                     if !(*src).seed.is_null() {
-                        (*ret).seed = CRYPTO_secure_malloc(ML_DSA_SEED_BYTES, FILE, LINE_DUP_SEED)
-                            .cast::<u8>();
-                        if (*ret).seed.is_null() {
-                            ok = 0;
-                            break 'err;
+                        match OwnedBuf::new_secure_cleansed(
+                            ML_DSA_SEED_BYTES,
+                            FILE_SEAM,
+                            LINE_DUP_SEED,
+                        ) {
+                            Some(buf) => {
+                                ptr::copy_nonoverlapping(
+                                    (*src).seed,
+                                    buf.as_ptr(),
+                                    ML_DSA_SEED_BYTES,
+                                );
+                                (*ret).seed = buf.into_raw();
+                            }
+                            None => {
+                                ok = 0;
+                                break 'err;
+                            }
                         }
-                        ptr::copy_nonoverlapping((*src).seed, (*ret).seed, ML_DSA_SEED_BYTES);
                     }
                 }
             }
@@ -629,18 +892,19 @@ unsafe fn public_from_private(
         let k = (*params).k as u32;
         let l = (*params).l as u32;
 
-        let polys = CRYPTO_malloc_array(
+        // `polys` is this frame's scratch block; the handle owns it, so its `Drop` runs the
+        // authority's own plain `CRYPTO_free` at the authority's own site.
+        let Some(polys) = OwnedBuf::new_array(
             (k + l + k * l) as usize,
             core::mem::size_of::<Poly>(),
-            FILE,
+            FILE_SEAM,
             LINE_PFP_ALLOC_POLYS,
-        )
-        .cast::<Poly>();
-        if polys.is_null() {
+        ) else {
             return 0;
-        }
+        };
+        let polys_ptr = polys.as_ptr().cast::<Poly>();
 
-        let mut t = Vector::init(polys, k as usize);
+        let mut t = Vector::init(polys_ptr, k as usize);
         let mut s1_ntt = Vector::init(t.poly.add(k as usize), l as usize);
         let mut a_ntt = matrix_init(s1_ntt.poly.add(l as usize), k as usize, l as usize);
 
@@ -685,10 +949,9 @@ unsafe fn public_from_private(
         // matrix is not wiped: per FIPS 204 section 3.6.3 the matrix A is easily computed from the
         // public key and does not require any special protections.
         OPENSSL_cleanse(
-            polys.cast(),
+            polys.as_ptr().cast(),
             (k + l) as usize * core::mem::size_of::<Poly>(),
         );
-        CRYPTO_free(polys.cast(), FILE, LINE_PFP_FREE_POLYS);
         ret
     }
 }
@@ -744,16 +1007,17 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
         }
         let k = (*(*key).params).k as u32;
 
-        let polys = CRYPTO_malloc_array(
+        // `polys` is this frame's scratch block; the handle owns it, so its `Drop` runs the
+        // authority's own cleansing `CRYPTO_clear_free` at the authority's own site.
+        let Some(polys) = OwnedBuf::new_array_cleansed(
             (2 * k) as usize,
             core::mem::size_of::<Poly>(),
-            FILE,
+            FILE_SEAM,
             LINE_PWC_ALLOC_POLYS,
-        )
-        .cast::<Poly>();
-        if polys.is_null() {
+        ) else {
             return 0;
-        }
+        };
+        let polys_ptr = polys.as_ptr().cast::<Poly>();
         let md_ctx = EVP_MD_CTX_new();
 
         let mut ret = 0;
@@ -763,8 +1027,8 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
                 break 'err;
             }
 
-            let mut t1 = Vector::init(polys, k as usize);
-            let mut t0 = Vector::init(polys.add(k as usize), k as usize);
+            let mut t1 = Vector::init(polys_ptr, k as usize);
+            let mut t0 = Vector::init(polys_ptr.add(k as usize), k as usize);
             if public_from_private(key, md_ctx, &mut t1, &mut t0) == 0 {
                 break 'err;
             }
@@ -773,12 +1037,6 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
                 (vector_equal(&t1, &(*key).t1) != 0 && vector_equal(&t0, &(*key).t0) != 0) as c_int;
         }
         EVP_MD_CTX_free(md_ctx);
-        CRYPTO_clear_free(
-            polys.cast(),
-            (2 * k) as usize * core::mem::size_of::<Poly>(),
-            FILE,
-            LINE_PWC_FREE_POLYS,
-        );
         ret
     }
 }
@@ -858,12 +1116,21 @@ unsafe fn keygen_internal(out: *mut MlDsaKey) -> c_int {
         }
 
         if !(*out).seed.is_null() && ((*out).prov_flags & ML_DSA_KEY_RETAIN_SEED) == 0 {
-            CRYPTO_clear_free(
-                (*out).seed.cast(),
+            // The seed was allocated by `new_secure` (`OPENSSL_secure_malloc`), so its matching
+            // release is the secure-heap cleansing free. The authority calls
+            // `OPENSSL_clear_free` here, which routes to the plain `free`; that is an invalid free
+            // once the secure heap is initialised (AGENTS.md section 17: do not reproduce UB).
+            // With no secure heap the block is a plain fallback and
+            // `CRYPTO_secure_clear_free` cleanses and releases it through the same seam and
+            // coordinates, so allocator-hook observability is unchanged on that path.
+            // SAFETY: `seed` is a live secure block this key owns, readable for
+            // `ML_DSA_SEED_BYTES`; the handle's `Drop` runs `CRYPTO_secure_clear_free`.
+            drop(OwnedBuf::adopt_secure_cleansed(
+                (*out).seed,
                 ML_DSA_SEED_BYTES,
                 FILE,
                 LINE_KEYGEN_CLEAR_SEED,
-            );
+            ));
             (*out).seed = ptr::null_mut();
         }
         EVP_MD_CTX_free(md_ctx);
@@ -889,42 +1156,45 @@ pub(crate) unsafe fn ossl_ml_dsa_generate_key(out: *mut MlDsaKey) -> c_int {
         let seed_len = ML_DSA_SEED_BYTES;
 
         if (*out).seed.is_null() {
-            (*out).seed = CRYPTO_secure_malloc(seed_len, FILE, LINE_GENKEY_SEED).cast::<u8>();
-            if (*out).seed.is_null() {
+            // The handle owns the seed until it is handed to `out->seed`; a refused RNG drops it
+            // through the authority's own `CRYPTO_secure_free` at the authority's own site.
+            let Some(seed) = OwnedBuf::new_secure(seed_len, FILE_SEAM, LINE_GENKEY_SEED) else {
+                return 0;
+            };
+            if RAND_priv_bytes_ex((*out).libctx, seed.as_ptr(), seed_len, 0) <= 0 {
                 return 0;
             }
-            if RAND_priv_bytes_ex((*out).libctx, (*out).seed, seed_len, 0) <= 0 {
-                CRYPTO_secure_free((*out).seed.cast(), FILE, LINE_GENKEY_SEED_FREE);
-                (*out).seed = ptr::null_mut();
-                return 0;
-            }
+            (*out).seed = seed.into_raw();
         }
 
-        // We're generating from a seed, drop private prekey encoding.
-        let sk = (*out).priv_encoding;
+        // `sk` is the private prekey being dropped; the handle adopts it so the authority's
+        // cleansing `CRYPTO_secure_clear_free` is its single release at the `err:` site below.
+        // SAFETY: `out->priv_encoding` is a live secure block this key owns, readable for
+        // `sk_len` bytes.
+        let sk = OwnedBuf::adopt_secure_cleansed(
+            (*out).priv_encoding,
+            (*(*out).params).sk_len,
+            FILE,
+            LINE_GENKEY_CLEAR_SK,
+        );
         (*out).priv_encoding = ptr::null_mut();
-        if sk.is_null() {
-            keygen_internal(out)
-        } else {
-            let mut ret = keygen_internal(out);
-            if ret != 0 && libc_memcmp((*out).priv_encoding, sk, (*(*out).params).sk_len) != 0 {
-                ret = 0;
-                ossl_ml_dsa_key_reset(out);
-                raise_with_alg(
-                    &err_sites::ML_DSA_KEY_501,
-                    "explicit ",
-                    (*(*out).params).alg,
-                    " private key does not match seed",
-                );
-            }
-            CRYPTO_secure_clear_free(
-                sk.cast(),
-                (*(*out).params).sk_len,
-                FILE,
-                LINE_GENKEY_CLEAR_SK,
+        let Some(sk) = sk else {
+            return keygen_internal(out);
+        };
+        let mut ret = keygen_internal(out);
+        if ret != 0 && libc_memcmp((*out).priv_encoding, sk.as_ptr(), (*(*out).params).sk_len) != 0
+        {
+            ret = 0;
+            ossl_ml_dsa_key_reset(out);
+            raise_with_alg(
+                &err_sites::ML_DSA_KEY_501,
+                "explicit ",
+                (*(*out).params).alg,
+                " private key does not match seed",
             );
-            ret
         }
+        // `sk` releases here, through the authority's own cleansing secure free.
+        ret
     }
 }
 

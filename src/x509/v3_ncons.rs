@@ -81,11 +81,13 @@ use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::X509V3_R_INVALID_SYNTAX;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+use crate::runtime::mem::CRYPTO_strndup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_commonName, NID_delegated_name_constraints, NID_holder_name_constraints,
     NID_id_on_SmtpUTF8Mailbox, NID_name_constraints, NID_pkcs9_emailAddress, OBJ_cmp, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
@@ -555,17 +557,26 @@ unsafe fn print_nc_ipadd(bp: *mut Bio, ip: *mut Asn1String) -> c_int {
     let ip1 = unsafe { ossl_ipaddr_to_asc((*ip).data, len1) };
     // SAFETY: `ip` is live and `data + len1` has `len2` readable bytes.
     let ip2 = unsafe { ossl_ipaddr_to_asc((*ip).data.add(len1 as usize), len2) };
+    // The two blocks are the helper's own; each handle is its single release.
+    // SAFETY: `ip1` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
+    let ip1 =
+        unsafe { OwnedBuf::adopt_plain_nullable(ip1.cast(), SeamFile::new(FILE), LINE_FREE_IP1) };
+    // SAFETY: `ip2` is NULL or the block `ossl_ipaddr_to_asc` allocated and no one else owns.
+    let ip2 =
+        unsafe { OwnedBuf::adopt_plain_nullable(ip2.cast(), SeamFile::new(FILE), LINE_FREE_IP2) };
     // SAFETY: `bp` is live; `ip1`/`ip2` are NULL or NUL-terminated.
-    let ret = c_int::from(
-        !ip1.is_null()
-            && !ip2.is_null()
-            && unsafe { BIO_printf(bp, c"IP:%s/%s".as_ptr(), ip1, ip2) } > 0,
-    );
-    // SAFETY: `ip1` is NULL or this call's own `ossl_ipaddr_to_asc` allocation.
-    unsafe { CRYPTO_free(ip1.cast(), FILE.as_ptr(), LINE_FREE_IP1) };
-    // SAFETY: `ip2` is NULL or this call's own `ossl_ipaddr_to_asc` allocation.
-    unsafe { CRYPTO_free(ip2.cast(), FILE.as_ptr(), LINE_FREE_IP2) };
-    ret
+    c_int::from(
+        !ip1.as_ptr().is_null()
+            && !ip2.as_ptr().is_null()
+            && unsafe {
+                BIO_printf(
+                    bp,
+                    c"IP:%s/%s".as_ptr(),
+                    ip1.as_ptr().cast::<c_char>(),
+                    ip2.as_ptr().cast::<c_char>(),
+                )
+            } > 0,
+    )
 }
 
 /// `static int i2r_NAME_CONSTRAINTS(const X509V3_EXT_METHOD *method, void *a, BIO *bp, int ind)`
@@ -908,11 +919,17 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
     if baseptr.is_null() {
         return X509_V_ERR_OUT_OF_MEM;
     }
+    // The copy is the seam's own; the handle is its single release as this frame returns.
+    // SAFETY: `baseptr` is a live block `CRYPTO_strndup` allocated and no one else owns.
+    let baseptr_owned = unsafe {
+        OwnedBuf::adopt_plain_nullable(baseptr.cast(), SeamFile::new(FILE), LINE_FREE_BASEPTR)
+    };
+    let baseptr = baseptr_owned.as_ptr().cast::<c_char>();
     let mut ulabel = [0 as c_char; 256];
     let size = ulabel.len();
-    // `ret` in the authority starts at X509_V_OK and is overwritten on every non-final path; the
-    // labelled block below carries exactly those assignments, then the single `end:` free runs.
-    let ret = 'end: {
+    // The authority's labelled block carries exactly these assignments; `baseptr_owned`'s handle
+    // releases the copy as this frame returns.
+    'end: {
         // SAFETY: `emltype` is live per the contract.
         if unsafe { (*emltype).type_ } != V_ASN1_UTF8STRING {
             break 'end X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
@@ -962,10 +979,7 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
             break 'end X509_V_ERR_PERMITTED_VIOLATION;
         }
         X509_V_OK
-    };
-    // SAFETY: `baseptr` is NULL or this call's own `CRYPTO_strndup` allocation.
-    unsafe { CRYPTO_free(baseptr.cast(), FILE.as_ptr(), LINE_FREE_BASEPTR) };
-    ret
+    }
 }
 
 /// `static int nc_email(ASN1_IA5STRING *eml, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:732-775`.
@@ -1054,7 +1068,7 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     // SAFETY: `base` is live per the contract.
     let baseptr = unsafe { (*base).data.cast::<c_char>() };
     // SAFETY: `uri` is live and has `length` readable bytes; the file/line are this unit's.
-    let uri_copy = unsafe {
+    let uri_copy_raw = unsafe {
         CRYPTO_strndup(
             (*uri).data.cast::<c_char>(),
             (*uri).length as usize,
@@ -1062,15 +1076,21 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
             LINE_STRNDUP_URI,
         )
     };
-    if uri_copy.is_null() {
+    if uri_copy_raw.is_null() {
         return X509_V_ERR_UNSPECIFIED;
     }
+    // The copy is the seam's own; the handle is its single release, at the authority's own line
+    // for the path that reaches it.
+    // SAFETY: `uri_copy_raw` is a live block `CRYPTO_strndup` allocated and no one else owns.
+    let mut uri_copy = unsafe {
+        OwnedBuf::adopt_plain_nullable(uri_copy_raw.cast(), SeamFile::new(FILE), LINE_FREE_URI_COPY)
+    };
     let mut scheme: *mut c_char = ptr::null_mut();
     let mut host: *mut c_char = ptr::null_mut();
     // SAFETY: `uri_copy` is NUL-terminated; `scheme`/`host` are this call's own writable slots.
     let parsed = unsafe {
         OSSL_parse_url(
-            uri_copy,
+            uri_copy.as_ptr().cast::<c_char>(),
             &raw mut scheme,
             ptr::null_mut(),
             &raw mut host,
@@ -1082,40 +1102,43 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
         )
     };
     if parsed == 0 {
-        // SAFETY: `uri_copy` is this call's own allocation.
-        unsafe { CRYPTO_free(uri_copy.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY_PARSE) };
+        uri_copy.set_release_line(LINE_FREE_URI_COPY_PARSE);
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
+    // `OSSL_parse_url` allocated these only on this success path; the authority frees neither on
+    // the parse failure above. Each handle is its single release.
+    // SAFETY: `scheme` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
+    let mut scheme = unsafe {
+        OwnedBuf::adopt_plain_nullable(scheme.cast(), SeamFile::new(FILE), LINE_FREE_SCHEME_MISSING)
+    };
+    // SAFETY: `host` is NULL or a block `OSSL_parse_url` allocated and no one else owns.
+    let host =
+        unsafe { OwnedBuf::adopt_plain_nullable(host.cast(), SeamFile::new(FILE), LINE_FREE_HOST) };
+    let hostptr = host.as_ptr().cast::<c_char>();
     // Make sure the scheme is there.
+    let scheme_ptr = scheme.as_ptr().cast::<c_char>();
     // SAFETY: `scheme` is NULL or NUL-terminated by `OSSL_parse_url`.
-    if scheme.is_null() || unsafe { *scheme } == 0 {
+    if scheme_ptr.is_null() || unsafe { *scheme_ptr } == 0 {
         // `ERR_raise_data(ERR_LIB_X509V3, X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
         //  "x509: missing scheme in URI: %s\n", uri_copy)`.
         let mut msg = b"x509: missing scheme in URI: ".to_vec();
         // SAFETY: `uri_copy` is NUL-terminated per `CRYPTO_strndup`.
-        unsafe { push_cstr(&mut msg, uri_copy) };
+        unsafe { push_cstr(&mut msg, uri_copy.as_ptr().cast::<c_char>()) };
         msg.push(b'\n');
         msg.push(0);
         // SAFETY: `msg` is NUL-terminated; the site is a compiled-in constant.
         unsafe { raise_site_data(&V3_NCONS_796, msg.as_ptr().cast()) };
-        // SAFETY: `scheme`/`uri_copy`/`host` are this call's own allocations.
-        unsafe {
-            CRYPTO_free(scheme.cast(), FILE.as_ptr(), LINE_FREE_SCHEME_MISSING);
-            CRYPTO_free(uri_copy.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY_MISSING);
-            CRYPTO_free(host.cast(), FILE.as_ptr(), LINE_FREE_HOST);
-        }
+        // Dropping the three handles releases them at the authority's lines for this arm:
+        // `scheme` at 798 (its default), `uri_copy` at 799, `host` at 830.
+        uri_copy.set_release_line(LINE_FREE_URI_COPY_MISSING);
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
-    // We don't need these anymore.
-    // SAFETY: `scheme`/`uri_copy` are this call's own allocations.
-    unsafe {
-        CRYPTO_free(scheme.cast(), FILE.as_ptr(), LINE_FREE_SCHEME);
-        CRYPTO_free(uri_copy.cast(), FILE.as_ptr(), LINE_FREE_URI_COPY);
-    }
-    // SAFETY: `host` is NUL-terminated by `OSSL_parse_url`.
-    let hostlen = unsafe { strlen(host) } as c_int;
-    // `ret` is assigned on every path; the single `end:` free below releases `host`.
-    let ret = 'end: {
+    // We don't need these anymore; re-point their releases at the authority's success lines.
+    scheme.set_release_line(LINE_FREE_SCHEME);
+    // SAFETY: `hostptr` is NUL-terminated by `OSSL_parse_url`.
+    let hostlen = unsafe { strlen(hostptr) } as c_int;
+    // The `host`/`scheme`/`uri_copy` handles release their blocks as this frame returns.
+    'end: {
         // SAFETY: `base` is live per the contract.
         let base_len = unsafe { (*base).length };
         // SAFETY: `baseptr` has `base_len` readable bytes (or `base_len == 0`).
@@ -1126,7 +1149,7 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
                 // pointer is within `host`; `baseptr` has `base_len` readable bytes.
                 let suffix_match = unsafe {
                     ia5ncasecmp(
-                        host.add((hostlen - base_len) as usize),
+                        hostptr.add((hostlen - base_len) as usize),
                         baseptr,
                         base_len as usize,
                     )
@@ -1137,17 +1160,14 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
             }
             break 'end X509_V_ERR_PERMITTED_VIOLATION;
         }
-        // SAFETY: `host` has `hostlen` readable bytes; `baseptr` has `base_len` readable bytes.
+        // SAFETY: `hostptr` has `hostlen` readable bytes; `baseptr` has `base_len` readable bytes.
         let hostname_mismatch =
-            base_len != hostlen || unsafe { ia5ncasecmp(host, baseptr, hostlen as usize) } != 0;
+            base_len != hostlen || unsafe { ia5ncasecmp(hostptr, baseptr, hostlen as usize) } != 0;
         if hostname_mismatch {
             break 'end X509_V_ERR_PERMITTED_VIOLATION;
         }
         X509_V_OK
-    };
-    // SAFETY: `host` is this call's own allocation.
-    unsafe { CRYPTO_free(host.cast(), FILE.as_ptr(), LINE_FREE_HOST) };
-    ret
+    }
 }
 
 /// `static int nc_ip(ASN1_OCTET_STRING *ip, ASN1_OCTET_STRING *base)` — `crypto/x509/v3_ncons.c:834-862`.
@@ -1282,6 +1302,17 @@ unsafe fn cn2dnsid(cn: *mut Asn1String, dnsid: *mut *mut c_uchar, idlen: *mut us
     if utf8_length < 0 {
         return X509_V_ERR_OUT_OF_MEM;
     }
+    // The UTF-8 copy is the helper's own; the handle is its single release, at the authority's own
+    // line for the path that reaches it.
+    // SAFETY: `utf8_value` is a live block `ASN1_STRING_to_UTF8` allocated and no one else owns.
+    let mut utf8 = unsafe {
+        OwnedBuf::adopt_plain_nullable(
+            utf8_value.cast(),
+            SeamFile::new(FILE),
+            LINE_FREE_UTF8_EMBEDDED,
+        )
+    };
+    let utf8_value = utf8.as_ptr();
     // Remove a trailing NUL run.
     // SAFETY: `utf8_value` has `utf8_length` readable bytes.
     while utf8_length > 0 && unsafe { *utf8_value.add((utf8_length - 1) as usize) } == 0 {
@@ -1290,8 +1321,6 @@ unsafe fn cn2dnsid(cn: *mut Asn1String, dnsid: *mut *mut c_uchar, idlen: *mut us
     // Reject embedded NULs.
     // SAFETY: `utf8_value` has `utf8_length` readable bytes.
     if unsafe { !memchr(utf8_value.cast(), 0, utf8_length as usize).is_null() } {
-        // SAFETY: `utf8_value` is this call's own allocation.
-        unsafe { CRYPTO_free(utf8_value.cast(), FILE.as_ptr(), LINE_FREE_UTF8_EMBEDDED) };
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
     let mut i = 0;
@@ -1325,15 +1354,16 @@ unsafe fn cn2dnsid(cn: *mut Asn1String, dnsid: *mut *mut c_uchar, idlen: *mut us
         i += 1;
     }
     if isdnsname != 0 {
-        // SAFETY: `dnsid`/`idlen` are writable per the contract; `utf8_value` transfers to caller.
+        // SAFETY: `dnsid`/`idlen` are writable per the contract; the handle gives the block up to
+        // the caller.
         unsafe {
-            *dnsid = utf8_value;
+            *dnsid = utf8.into_raw();
             *idlen = utf8_length as usize;
         }
         return X509_V_OK;
     }
-    // SAFETY: `utf8_value` is this call's own allocation.
-    unsafe { CRYPTO_free(utf8_value.cast(), FILE.as_ptr(), LINE_FREE_UTF8_NOTDNS) };
+    // The authority releases the copy at its own line 430 on this arm.
+    utf8.set_release_line(LINE_FREE_UTF8_NOTDNS);
     X509_V_OK
 }
 
@@ -1462,17 +1492,21 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check_CN(
         if r != X509_V_OK {
             return r;
         }
-        // Only process attributes that look like hostnames; `idval` is NULL when `idlen` is 0.
+        // `cn2dnsid` gave the block up to this call; the handle is its single release. It is NULL
+        // when `idlen` is 0, whose release is the authority's no-op `free(NULL)`.
+        // SAFETY: `idval` is NULL or the block `cn2dnsid` allocated and no one else owns.
+        let idval = unsafe {
+            OwnedBuf::adopt_plain_nullable(idval.cast(), SeamFile::new(FILE), LINE_FREE_IDVAL)
+        };
+        // Only process attributes that look like hostnames.
         if idlen != 0 {
             // SAFETY: `gntmp.d.ia5` names the live `stmp` local, whose fields are writable.
             unsafe {
                 (*gntmp.d.ia5).length = idlen as c_int;
-                (*gntmp.d.ia5).data = idval;
+                (*gntmp.d.ia5).data = idval.as_ptr();
             }
             // SAFETY: `gntmp` is live and its `dNSName` arm points at `stmp`; `nc` is live.
             let r = unsafe { nc_match(&raw mut gntmp, nc) };
-            // SAFETY: `idval` is this call's own `cn2dnsid` allocation.
-            unsafe { CRYPTO_free(idval.cast(), FILE.as_ptr(), LINE_FREE_IDVAL) };
             if r != X509_V_OK {
                 return r;
             }

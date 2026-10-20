@@ -296,6 +296,13 @@ pub unsafe extern "C" fn PKCS12_unpack_p7encdata(
             return ptr::null_mut();
         }
         let content = (*enc).enc_data;
+        if content.is_null() {
+            // A live `PKCS7` whose encrypted arm has no content object would be dereferenced
+            // below; the authority has no test and would fault, which §17 does not reproduce.
+            // Refuse with the same decode-error coordinate as the missing-arm test above.
+            raise_site(&err_sites::PKCS12_ADD_162);
+            return ptr::null_mut();
+        }
         PKCS12_item_decrypt_d2i_ex(
             (*content).algorithm,
             PKCS12_SAFEBAGS_it(),
@@ -304,7 +311,7 @@ pub unsafe extern "C" fn PKCS12_unpack_p7encdata(
             (*content).enc_data,
             1,
             (*p7).ctx.libctx,
-            (*p7).ctx.propq,
+            (*p7).ctx.propq(),
         )
         .cast::<OpenSslStack>()
     }

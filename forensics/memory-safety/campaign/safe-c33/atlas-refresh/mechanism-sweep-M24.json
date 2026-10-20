@@ -1,0 +1,162 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "8bad5f292",
+  "worktree": "dirty (src/property/strings.rs, src/asn1/a_mbstr.rs, src/evp/e_des3.rs, src/ct/ct_log.rs, src/cms/cms_rsa.rs, src/asn1/utl.rs, src/evp/e_camellia.rs, src/asn1/text.rs; PERFILE-INDEX.md and this receipt untracked)",
+  "scope": "Eight ordinary files from the M23-named batch: src/property/strings.rs (85 production sites), src/asn1/a_mbstr.rs (85), src/evp/e_des3.rs (84), src/ct/ct_log.rs (83), src/cms/cms_rsa.rs (82), src/asn1/utl.rs (81), src/evp/e_camellia.rs (80) and src/asn1/text.rs (79). No audited file was a newly discovered boundary; all callback surfaces reuse the established B/M contracts.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/property/strings.rs",
+    "src/asn1/a_mbstr.rs",
+    "src/evp/e_des3.rs",
+    "src/ct/ct_log.rs",
+    "src/cms/cms_rsa.rs",
+    "src/asn1/utl.rs",
+    "src/evp/e_camellia.rs",
+    "src/asn1/text.rs"
+  ],
+  "files_not_run": [
+    "src/provider/mac_legacy_kmgmt.rs (86) - retained BOUNDARY.",
+    "src/engine/eng_lib.rs (84) - retained BOUNDARY.",
+    "src/x509/x509_trust.rs (84) - retained BOUNDARY.",
+    "src/provider/slh_dsa_kmgmt.rs (83) - retained BOUNDARY.",
+    "src/provider/ecx_kem.rs (83) - retained BOUNDARY.",
+    "src/ec/backend.rs (82) - retained BOUNDARY.",
+    "src/runtime/stack.rs (80) - retained BOUNDARY.",
+    "The five M22-retained boundaries: src/async/async.rs, src/evp/keymgmt_lib.rs, src/provider/decode_der2key.rs, src/engine/eng_table.rs, src/store/store_meth.rs."
+  ],
+  "defects": [
+    {
+      "id": "M24-D1",
+      "file": "src/evp/e_des3.rs",
+      "pre_fix_lines": [599, 603, 604, 606],
+      "post_fix_lines": [599, 604, 610, 611],
+      "severity": "high (undefined behaviour)",
+      "class": "out-of-bounds raw pointer in des_ede3_unwrap's in-place arm (AGENTS.md sections 2 and 17)",
+      "description": "The authority's in-place branch performs `in -= 8` and adds the block back at each later use (`e_des3.c:335`). The transcription reproduced it with `in_.sub(8)`. Rust requires every intermediate raw-pointer offset to stay within the allocation; the authority's C is likewise pointer arithmetic before the object. The subsequent `add(8)` cancelled the subtraction, so the addresses were correct while the intermediate pointer was not.",
+      "fix": "Compute the two later sources directly: in-place `(in_, in_.add(inl - 16))`, otherwise `(in_.add(8), in_.add(inl - 8))`. Both are exactly the addresses the authority reaches, with no out-of-bounds intermediate. Control: evp::e_des3::tests::in_place_unwrap_round_trips wraps and then unwraps a 32-byte value in place and requires the plaintext back.",
+      "divergence": "None observable: the dereferenced addresses are identical. The authority's intermediate pointer UB is not reproduced."
+    },
+    {
+      "id": "M24-D2",
+      "file": "src/ct/ct_log.rs",
+      "pre_fix_lines": [681, 685, 690],
+      "post_fix_lines": [687, 694, 699],
+      "severity": "high (out-of-bounds read)",
+      "class": "caller-supplied length passed to memcmp against a fixed-size field (AGENTS.md sections 1 and 17)",
+      "description": "CTLOG_STORE_get0_log_by_id compared `log->log_id` (CT_V1_HASHLEN = 32 bytes) using the caller's `log_id_len` with no upper bound. A caller passing more than 32 read past the field, in the authority (ct_log.c:330, in 3.5.9 and 3.6.4) and in the transcription.",
+      "fix": "Return NULL unless `log_id_len == CT_V1_HASHLEN`, then compare exactly 32 bytes. Control: ct::ct_log::tests::an_over_long_log_id_is_refused_without_reading_past_the_field exercises 32, 33 and 0 with a 32-byte id array.",
+      "divergence": "For a length other than 32 the authority's C reads out of bounds; this crate answers NULL (no log). A v1 log ID is always 32 bytes, so conforming callers observe no change."
+    },
+    {
+      "id": "M24-D3",
+      "file": "src/cms/cms_rsa.rs",
+      "pre_fix_lines": [136, 137, 138],
+      "post_fix_lines": [136, 140],
+      "severity": "medium (defensive, provider contract violation)",
+      "class": "provider-reported return_size trusted as the readable extent of a fixed stack buffer (AGENTS.md sections 21.1 and 21.4)",
+      "description": "rsa_cms_sign hands a 128-byte stack buffer to EVP_PKEY_CTX_get_params and then passes `params[0].return_size` to d2i_X509_ALGOR. A provider that reports more than it was given makes the decoder read past the buffer. The authority trusts the report identically.",
+      "fix": "Bound the report with `aid_len == 0 || aid_len > aid.len()` and refuse, the same 0 outcome as the other get_params failures. A conforming provider is unaffected.",
+      "divergence": "A non-conforming provider is refused instead of causing an out-of-bounds read. This is a defensive bound; no conforming input changes."
+    },
+    {
+      "id": "M24-D4",
+      "file": "src/asn1/text.rs",
+      "pre_fix_lines": [496, 500, 505, 677, 679, 682],
+      "post_fix_lines": [496, 500, 505, 515, 687, 690, 695, 703],
+      "severity": "medium (defensive, extreme input)",
+      "class": "unchecked signed sums used as a growth test and allocation extent (AGENTS.md section 3)",
+      "description": "a2i_ASN1_INTEGER and a2i_ASN1_STRING use `num + i` to decide whether to grow and `num + i * 2` as the new allocation size, both in int. A multi-gigabyte textual value can overflow the sum; a wrapped non-positive test can skip growth while the write loop still addresses `num + jj`, and a wrapped extent is not a valid allocation size. The authority has the same signed overflow.",
+      "fix": "Compute `new_num = num.checked_add(i)` and `new_slen = new_num.checked_add(i)`; either overflow answers 0, the readers' existing failure outcome. The non-overflowing path is unchanged. No test function exists; the affected functions have no unit-test entry point without a multi-gigabyte BIO.",
+      "divergence": "For a value whose sizes exceed INT_MAX this crate refuses rather than wrapping. No representable test buffer reaches the sum."
+    },
+    {
+      "id": "M24-D5",
+      "file": "src/property/strings.rs",
+      "pre_fix_lines": [567],
+      "post_fix_lines": [567],
+      "severity": "low (defensive)",
+      "class": "signed underflow in the reverse-lookup index (AGENTS.md section 3)",
+      "description": "ossl_property_str computed `idx - 1` on a caller-supplied c_int. For INT_MIN, debug builds panic and the authority's C signed subtraction is undefined. Index 0 must still ask sk_value for -1, which returns NULL.",
+      "fix": "`idx.wrapping_sub(1)`; every index above INT_MIN is unchanged, index 0 still yields -1, and INT_MIN is a defined out-of-range lookup.",
+      "divergence": "Only the INT_MIN argument differs, where the authority's C is undefined; it is not a property index any caller can obtain."
+    }
+  ],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": "None. No production allocation coordinate, repr(C) layout, exported symbol/signature or lint attribute changed. Unsafe operations introduced/removed/relocated: 0/1/0. The two new tests are test-only and never release the stack-constructed Ctlog/CtlogStore.",
+  "contracts_reused": [
+    "RC-1 raise_site/guard_ffi",
+    "OB-1 OwnedBuf/OwnedBlock",
+    "OB-2 OwnedStr",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy with zero-state sweep",
+    "OB-4 member-buffer slots",
+    "ASN1_STRING ownership convention",
+    "EVP_CIPHER legacy init/do_cipher/ctrl callback contract",
+    "CMS/X509_ALGOR ownership transitions"
+  ],
+  "compatibility": {
+    "authority": "forensics/authorities/src/openssl-3.6.4 (checked against 3.5.9 and 3.6.4 for ct_log)",
+    "checked": [
+      "property_string.c new_property_string/ossl_property_string (including --*pidx)",
+      "a_mbstr.c traverse_string/type_str/out_utf8/ASN1_mbstring_ncopy",
+      "e_des3.c des_ede3_unwrap/des_ede3_wrap/des_ede3_wrap_cipher",
+      "ct_log.c CTLOG_STORE_get0_log_by_id",
+      "cms_rsa.c rsa_cms_sign",
+      "tasn_utl.c asn1_do_lock case 0",
+      "e_camellia.c callbacks",
+      "f_int.c/f_string.c a2i_ASN1_INTEGER/a2i_ASN1_STRING"
+    ],
+    "divergences": "M24-D2 (over-long log ID refused instead of read out of bounds) and M24-D4 (overflow refused instead of wrapped) are the two recorded section 17 divergences. M24-D1 is address-identical."
+  },
+  "safety_checks": {
+    "focused_controls": [
+      "evp::e_des3::tests::in_place_unwrap_round_trips (new)",
+      "ct::ct_log::tests::an_over_long_log_id_is_refused_without_reading_past_the_field (new)",
+      "ct::ct_log::zero_state_sweep_ctlog/ctlog_store/ctlog_store_load_ctx",
+      "property::strings tests (3)",
+      "evp::e_camellia accessor test",
+      "asn1::utl adv_probe (ignored, allocator hook)"
+    ]
+  },
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1625 passed / 0 failed / 27 ignored (230.23 s)",
+    "lib_tests_threads_4": "1625 passed / 0 failed / 27 ignored (87.75 s)"
+  },
+  "not_run": [
+    "Miri (Stacked Borrows/Tree Borrows) on the new in-place unwrap control.",
+    "ASan/Loom/TSan.",
+    "Authority differentials for the two section 17 divergences.",
+    "Independent review.",
+    "SEAL."
+  ],
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; every record remains a file-level obligation check.",
+  "next_batch": {
+    "files": [
+      "src/runtime/bio/bf_lbuf.rs (78)",
+      "src/provider/seed_src.rs (78)",
+      "src/asn1/x_algor.rs (77)",
+      "src/x509/x509_set.rs (77)",
+      "src/provider/ec_kem.rs (77)",
+      "src/runtime/str.rs (77)",
+      "src/provider/mlx_kmgmt.rs (75)",
+      "src/provider/ml_dsa_codecs.rs (75)"
+    ],
+    "triage": "The four provider files are callback-adjacent; if one is a genuinely new boundary, record it NOT_RUN and substitute src/provider/core_dispatch.rs (75) then src/provider/exchange.rs (74).",
+    "skipped": [
+      "src/ec/smpl2.rs (75, already swept)",
+      "src/mac/hmac.rs (75, already swept)",
+      "src/provider/mac_legacy_kmgmt.rs",
+      "src/engine/eng_lib.rs",
+      "src/x509/x509_trust.rs",
+      "src/provider/slh_dsa_kmgmt.rs",
+      "src/provider/ecx_kem.rs",
+      "src/ec/backend.rs",
+      "src/runtime/stack.rs",
+      "the five M22-retained boundaries",
+      "the M1 cluster (x509_vfy, pk7_doit, v3_utl, cms_sd, params/mod, pvkfmt, store_lib, bio_enc, x_pubkey, v3_asid, asn_mime, rsa/pmeth)"
+    ]
+  }
+}

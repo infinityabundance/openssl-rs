@@ -7,15 +7,17 @@
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_long, c_uchar};
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::{ASN1_INTEGER_dup, ASN1_OBJECT_free};
 use crate::asn1::string::{ASN1_INTEGER_free, ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_dup, X509_ALGOR_free};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{BIO_free_all, Bio};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::stack::OpenSslStack;
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
@@ -70,15 +72,35 @@ pub(crate) struct TsVerifyCtx {
     pub(crate) tsa_name: *mut GeneralName,
 }
 
+// SAFETY: (a) `destroy_body` is the authority's `TS_VERIFY_CTX_free` member body
+// (`TS_VERIFY_CTX_cleanup`), releasing exactly this context's own store/certs/policy/algorithm/
+// imprint/data/nonce/name members once (each releaser accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `TsVerifyCtx` is a `#[repr(C)]` record of
+// integers and raw pointers, so an all-zero block is a valid `TsVerifyCtx` the body is sound on.
+unsafe impl CtxDestroy for TsVerifyCtx {
+    const FILE: *const c_char = FILE.as_ptr();
+    const LINE_ALLOC: c_int = 17;
+    const LINE_FREE: c_int = 34;
+
+    /// `TS_VERIFY_CTX_free`'s body minus the block release [`OwnedCtx`]'s `Drop` performs: the four
+    /// member releases and the re-initialisation of `TS_VERIFY_CTX_cleanup` (`:115-135`).
+    unsafe fn destroy_body(ptr: *mut TsVerifyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `cleanup` releases exactly the
+        // members the authority's `TS_VERIFY_CTX_free` releases and re-zeroes the block.
+        unsafe { TS_VERIFY_CTX_cleanup(ptr) };
+    }
+}
+
 /// `TS_VERIFY_CTX *TS_VERIFY_CTX_new(void)` — `ts_verify_ctx.c:15-20`.
 ///
 /// # Safety
 /// The returned pointer must be released with [`TS_VERIFY_CTX_free`].
 #[no_mangle]
 pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_new() -> *mut TsVerifyCtx {
-    // SAFETY: `OPENSSL_zalloc` on a positive size; the two arguments are the authority's
-    // `OPENSSL_FILE`/`OPENSSL_LINE`.
-    CRYPTO_zalloc(core::mem::size_of::<TsVerifyCtx>(), FILE.as_ptr(), 17).cast()
+    // A zeroed `TsVerifyCtx` (all-NULL members, zero scalars) is the authority's own constructed
+    // state, so `OwnedCtx::zalloc` may validate it; `into_raw` hands the C caller the stable pointer
+    // `TS_VERIFY_CTX_free` later reclaims.
+    OwnedCtx::<TsVerifyCtx>::zalloc().map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
 /// `void TS_VERIFY_CTX_init(TS_VERIFY_CTX *ctx)` — `ts_verify_ctx.c:22-26`.
@@ -102,13 +124,11 @@ pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_init(ctx: *mut TsVerifyCtx) {
 /// `ctx` is NULL or a value [`TS_VERIFY_CTX_new`] returned.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_free(ctx: *mut TsVerifyCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live.
-    unsafe { TS_VERIFY_CTX_cleanup(ctx) };
-    // SAFETY: `ctx` is an `OPENSSL_zalloc` allocation; this is `OPENSSL_free(ctx)` at `:34`.
-    unsafe { CRYPTO_free(ctx.cast(), FILE.as_ptr(), 34) };
+    // `ctx` is NULL or a value [`TS_VERIFY_CTX_new`] returned; `from_raw` reclaims it and its `Drop`
+    // runs the authority's own `*_free` body (`TS_VERIFY_CTX_cleanup`) followed by the block release
+    // at `:34`.
+    // SAFETY: `ctx` is NULL or a live block this module allocated and has not released.
+    drop(unsafe { OwnedCtx::<TsVerifyCtx>::from_raw(ctx) });
 }
 
 /// `int TS_VERIFY_CTX_add_flags(TS_VERIFY_CTX *ctx, int f)` — `ts_verify_ctx.c:37-41`.
@@ -245,9 +265,15 @@ pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_set_imprint(
     hexstr: *mut c_uchar,
     len: c_long,
 ) -> *mut c_uchar {
-    // SAFETY: `ctx` is live.
+    // SAFETY: `ctx` is live and `(*ctx).imprint` is NULL or the block a previous setter or
+    // `TS_REQ_to_TS_VERIFY_CTX` stored, so `from_raw` reclaims this context's own imprint and its
+    // `Drop` is the authority's `OPENSSL_free(ctx->imprint)` at `:99`.
     unsafe {
-        CRYPTO_free((*ctx).imprint.cast(), FILE.as_ptr(), 99);
+        drop(OwnedBlock::<c_uchar>::from_raw(
+            (*ctx).imprint,
+            FILE.as_ptr(),
+            99,
+        ));
         (*ctx).imprint = hexstr;
         (*ctx).imprint_len = len as u32;
         (*ctx).imprint
@@ -265,9 +291,15 @@ pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_set0_imprint(
     hexstr: *mut c_uchar,
     len: c_long,
 ) -> c_int {
-    // SAFETY: `ctx` is live.
+    // SAFETY: `ctx` is live and `(*ctx).imprint` is NULL or the block a previous setter or
+    // `TS_REQ_to_TS_VERIFY_CTX` stored, so `from_raw` reclaims this context's own imprint and its
+    // `Drop` is the authority's `OPENSSL_free(ctx->imprint)` at `:110`.
     unsafe {
-        CRYPTO_free((*ctx).imprint.cast(), FILE.as_ptr(), 110);
+        drop(OwnedBlock::<c_uchar>::from_raw(
+            (*ctx).imprint,
+            FILE.as_ptr(),
+            110,
+        ));
         (*ctx).imprint = hexstr;
         (*ctx).imprint_len = len as u32;
     }
@@ -289,7 +321,13 @@ pub(crate) unsafe extern "C" fn TS_VERIFY_CTX_cleanup(ctx: *mut TsVerifyCtx) {
         OSSL_STACK_OF_X509_free((*ctx).certs);
         ASN1_OBJECT_free((*ctx).policy);
         X509_ALGOR_free((*ctx).md_alg);
-        CRYPTO_free((*ctx).imprint.cast(), FILE.as_ptr(), 126);
+        // `(*ctx).imprint` is NULL or this context's own block; reclaiming it makes its `Drop` the
+        // authority's `OPENSSL_free(ctx->imprint)` at `:126`.
+        drop(OwnedBlock::<c_uchar>::from_raw(
+            (*ctx).imprint,
+            FILE.as_ptr(),
+            126,
+        ));
         BIO_free_all((*ctx).data);
         ASN1_INTEGER_free((*ctx).nonce);
         GENERAL_NAME_free((*ctx).tsa_name);
@@ -362,16 +400,27 @@ pub(crate) unsafe extern "C" fn TS_REQ_to_TS_VERIFY_CTX(
         // SAFETY: the err: arm releases the context per the authority.
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     }
-    // SAFETY: `len` is positive.
-    let buf: *mut c_uchar = CRYPTO_malloc(len as usize, FILE.as_ptr(), 168).cast();
-    if buf.is_null() {
+    // The authority passes `ASN1_STRING_get0_data(msg)` straight to `memcpy`. A string whose
+    // `length` is positive but whose `data` is NULL is reachable from the public API through
+    // `ASN1_STRING_set0`, so that call would read through NULL. Refuse it instead of
+    // reproducing the fault: the same error arm the `len <= 0` test takes.
+    // SAFETY: `msg` is live.
+    let msg_data = unsafe { ASN1_STRING_get0_data(msg) };
+    if msg_data.is_null() {
         // SAFETY: the err: arm releases the context per the authority.
         return unsafe { ts_req_to_ctx_err(ctx, ret) };
     }
-    // SAFETY: `buf` holds `len` bytes and `msg` holds `len` bytes.
+    // `len` is positive, so this is the authority's own `OPENSSL_malloc(hashed_msg->length)`.
+    let Some(buf) = OwnedBlock::<c_uchar>::malloc(len as usize, SeamFile::new(FILE), 168) else {
+        // SAFETY: the err: arm releases the context per the authority.
+        return unsafe { ts_req_to_ctx_err(ctx, ret) };
+    };
+    // SAFETY: `buf` holds `len` bytes and `msg_data` holds `len` bytes (checked above).
     unsafe {
-        ptr::copy_nonoverlapping(ASN1_STRING_get0_data(msg), buf, len as usize);
-        (*ret).imprint = buf;
+        ptr::copy_nonoverlapping(msg_data, buf.as_ptr(), len as usize);
+        // The context now owns the block; `into_raw` stores it as the C-layout member
+        // `TS_VERIFY_CTX_cleanup` releases at `:126`.
+        (*ret).imprint = buf.into_raw();
     }
 
     // SAFETY: `req` is live.
@@ -406,4 +455,41 @@ unsafe fn ts_req_to_ctx_err(ctx: *mut TsVerifyCtx, ret: *mut TsVerifyCtx) -> *mu
         unsafe { TS_VERIFY_CTX_free(ret) };
     }
     ptr::null_mut()
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(TsVerifyCtx => zero_state_sweep_ts_verify_ctx);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::ASN1_STRING_set0;
+    use crate::ts::ts_asn1::{TS_REQ_free, TS_REQ_new};
+    use crate::ts::ts_req_utils::{TS_MSG_IMPRINT_get_msg, TS_REQ_get_msg_imprint};
+
+    /// A positive `length` with a NULL `data` pointer is constructible through the exported
+    /// `ASN1_STRING_set0`; the authority's `memcpy` would read through NULL. The conversion
+    /// refuses it on the request's own error arm instead.
+    #[test]
+    fn req_to_ctx_refuses_positive_length_with_null_data() {
+        // SAFETY: every pointer below is a live object this test owns and releases once.
+        unsafe {
+            let req = TS_REQ_new();
+            assert!(!req.is_null());
+            let imprint = TS_REQ_get_msg_imprint(req);
+            assert!(!imprint.is_null());
+            let msg = TS_MSG_IMPRINT_get_msg(imprint);
+            assert!(!msg.is_null());
+
+            // A length the conversion accepts, but no backing bytes.
+            ASN1_STRING_set0(msg, ptr::null_mut(), 5);
+
+            assert!(
+                TS_REQ_to_TS_VERIFY_CTX(req, ptr::null_mut()).is_null(),
+                "a NULL imprint data pointer must be refused"
+            );
+            TS_REQ_free(req);
+        }
+    }
 }

@@ -42,7 +42,7 @@
 //!     X509_REQ_INFO req_info;     /* signed certificate request data, embedded    */
 //!     X509_ALGOR sig_alg;         /* signature algorithm, embedded                */
 //!     ASN1_BIT_STRING *signature;
-//!     CRYPTO_REF_COUNT references;/* struct { _Atomic int val; } -- modelled c_int */
+//!     CRYPTO_REF_COUNT references;/* struct { _Atomic int val; } -- modelled AtomicI32 */
 //!     CRYPTO_RWLOCK *lock;
 //!     ASN1_OCTET_STRING *distinguishing_id;
 //!     OSSL_LIB_CTX *libctx;
@@ -51,7 +51,8 @@
 //! ```
 //!
 //! `CRYPTO_REF_COUNT` is `struct { _Atomic int val; }` (`include/internal/refcount.h:35-37`), so
-//! its field is `c_int`, exactly as [`crate::x509::x_crl::X509Crl`]'s is. `sig_alg` is embedded
+//! its field is [`AtomicI32`] (four bytes, four-byte aligned, exactly as `c_int`), exactly as
+//! [`crate::x509::x_crl::X509Crl`]'s is. `sig_alg` is embedded
 //! **by value**, as it is in `X509_CRL_INFO`, so it contributes 16 bytes at 56 rather than a
 //! pointer. The sizes and every offset below were read from a measurement program compiled against
 //! the pinned authority's own internal headers (`courts/layout`'s include set): `X509_REQ_INFO` is
@@ -79,6 +80,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
+use core::sync::atomic::AtomicI32;
 
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::i2d::ASN1_item_i2d;
@@ -90,8 +92,10 @@ use crate::evp::digest::EvpMd;
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::err_reasons::X509_R_WRONG_TYPE;
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
 use crate::runtime::obj::{Asn1Object, NID_ext_req, NID_ms_ext_req, NID_undef, OBJ_obj2nid};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack,
 };
@@ -159,19 +163,28 @@ pub struct X509Req {
     pub(crate) sig_alg: X509Algor,
     /// `ASN1_BIT_STRING *signature` -- the signature over `req_info`.
     pub(crate) signature: *mut Asn1String,
-    /// `CRYPTO_REF_COUNT references` -- `struct { _Atomic int val; }`, so `c_int`.
-    pub(crate) references: c_int,
+    /// `CRYPTO_REF_COUNT references` -- the authority's atomic `int`; [`AtomicI32`] keeps
+    /// the four-byte field at offset 80 while the item layer moves it atomically.
+    pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` -- guards the reference count (type opaque here).
     pub(crate) lock: *mut c_void,
     /// `ASN1_OCTET_STRING *distinguishing_id` -- the authentication stamp, optional.
     pub(crate) distinguishing_id: *mut Asn1String,
     /// `OSSL_LIB_CTX *libctx` -- the object's library context (type opaque here).
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` -- the object's property query, owned.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` -- the object's property query, an object-owned C-string **member buffer**.
+    /// Its ownership invariant is stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/
+    /// [`X509Req::propq`]; see the `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this
+    /// exact offset so the `#[repr(C)]` layout is the authority's, and it is **module-private**
+    /// because every read, write and release now goes through this module's handle/reader.
+    propq: *mut c_char,
 }
 
 const _: () = {
+    // `AtomicI32` must remain the authority's four-byte `int` so that `ref_offset = 80`
+    // addresses the same bytes for the ASN.1 item layer.
+    assert!(core::mem::size_of::<AtomicI32>() == core::mem::size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(core::mem::size_of::<X509Req>() == 120);
     assert!(core::mem::offset_of!(X509Req, req_info) == 0);
     assert!(core::mem::offset_of!(X509Req, sig_alg) == 56);
@@ -182,6 +195,39 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Req, libctx) == 104);
     assert!(core::mem::offset_of!(X509Req, propq) == 112);
 };
+
+impl X509Req {
+    /// The object-owned property-query string (NULL when unset) -- the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `X509_REQ::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. `X509_REQ::propq` is private, the item layer zeroes the
+/// object at construction, and the member is written only through this handle, so [`Self::of`]
+/// is **safe**. The struct is defined here; its lifecycle (`ossl_x509_req_set0_libctx`,
+/// `req_cb`) lives in `x_req.rs` and uses this handle.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    pub(crate) fn of(x: &'a mut X509Req) -> PropqSlot<'a> {
+        // SAFETY: `x` is live; `propq` is private to this module, constructed NULL by
+        // the item layer and written only by this handle, so the invariant holds and
+        // the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut x.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+}
 
 /// `long X509_REQ_get_version(const X509_REQ *req)` -- `crypto/x509/x509_req.c:306-309`.
 ///
@@ -303,6 +349,10 @@ const LINE_FREE_EXT: c_int = 199;
 /// `crypto/x509/x509_req.c:38`.
 const LINE_MALLOC_VERSION: c_int = 38;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
 /// The authority's `err:` tail of [`X509_to_X509_REQ`]: free the request and answer NULL.
 ///
 /// # Safety
@@ -333,7 +383,7 @@ pub unsafe extern "C" fn X509_to_X509_REQ(
     md: *const EvpMd,
 ) -> *mut X509Req {
     // SAFETY: `x` is live per the contract and its two context fields are read from it.
-    let ret = unsafe { X509_REQ_new_ex((*x).libctx, (*x).propq) };
+    let ret = unsafe { X509_REQ_new_ex((*x).libctx, (*x).propq()) };
     if ret.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&X509_REQ_31) };
@@ -343,15 +393,18 @@ pub unsafe extern "C" fn X509_to_X509_REQ(
     /* `ri->version->length = 1; ri->version->data = OPENSSL_malloc(1); ... = 0;` — the version is
      * written as a one-byte zero rather than through `ASN1_INTEGER_set`, which is the authority's
      * own shape. */
-    // SAFETY: `ret` is live and its `version` is the fresh item's own integer.
+    // `version_data` owns the fresh one-byte block; a failed allocation is the authority's own
+    // free-and-NULL tail, and the block's ownership moves into the request's integer once written.
+    let Some(version_data) = OwnedBuf::new(1, SeamFile::new(FILE), LINE_MALLOC_VERSION) else {
+        // SAFETY: `ret` is this call's own request.
+        return unsafe { to_req_err(ret) };
+    };
+    // SAFETY: `version_data` owns one byte and `ret` is live, its `version` the fresh item's own
+    // integer.
     unsafe {
         (*(*ret).req_info.version).length = 1;
-        (*(*ret).req_info.version).data =
-            CRYPTO_malloc(1, FILE.as_ptr(), LINE_MALLOC_VERSION).cast::<c_uchar>();
-        if (*(*ret).req_info.version).data.is_null() {
-            return to_req_err(ret);
-        }
-        *(*(*ret).req_info.version).data = 0;
+        *version_data.as_ptr() = 0;
+        (*(*ret).req_info.version).data = version_data.into_raw();
     }
 
     // SAFETY: `ret` and `x` are live.
@@ -641,12 +694,14 @@ unsafe fn add_extensions_nid_tail(
     if extlen <= 0 {
         return 0;
     }
+    // `ext` is the block the item layer allocated above; the handle owns it and its `Drop` is the
+    // authority's own single `OPENSSL_free` on every exit below.
+    // SAFETY: `ext` is NULL or a block `ASN1_item_i2d` allocated that no one else owns.
+    let ext = unsafe { OwnedBuf::adopt_plain_nullable(ext, SeamFile::new(FILE), LINE_FREE_EXT) };
     if !mod_exts.is_null() {
         // SAFETY: `req` is live per the contract; `loc` is a live attribute index.
         let att = unsafe { X509at_delete_attr((*req).req_info.attributes, loc) };
         if att.is_null() {
-            // SAFETY: `ext` was allocated by the item layer above.
-            unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
             return 0;
         }
         // SAFETY: `att` is a live attribute this call owns.
@@ -654,10 +709,7 @@ unsafe fn add_extensions_nid_tail(
     }
     // SAFETY: `req` is live per the contract; the remaining arguments are the caller's contract,
     // and `ext`/`extlen` are the encoding built above.
-    let rv = unsafe { X509_REQ_add1_attr_by_NID(req, nid, V_ASN1_SEQUENCE, ext, extlen) };
-    // SAFETY: `ext` was allocated by the item layer above.
-    unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
-    rv
+    unsafe { X509_REQ_add1_attr_by_NID(req, nid, V_ASN1_SEQUENCE, ext.as_ptr(), extlen) }
 }
 
 /// `int X509_REQ_add_extensions_nid(X509_REQ *req, const STACK_OF(X509_EXTENSION) *exts, int nid)`
@@ -1022,6 +1074,7 @@ pub unsafe extern "C" fn i2d_re_X509_REQ_tbs(req: *mut X509Req, pp: *mut *mut c_
 mod tests {
     use super::*;
     use crate::asn1::string::ASN1_BIT_STRING_new;
+    use crate::runtime::mem::CRYPTO_free;
     use crate::x509::x_exten::{d2i_X509_EXTENSIONS, i2d_X509_EXTENSIONS};
     use crate::x509::x_req::{X509_REQ_free, X509_REQ_new};
 

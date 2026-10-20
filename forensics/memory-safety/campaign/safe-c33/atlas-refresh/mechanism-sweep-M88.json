@@ -1,0 +1,99 @@
+{
+  "receipt": "mechanism-sweep-M88",
+  "branch": "integrate/safe-c33",
+  "source_head": "c37442691",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH. Eight files audited; one low-severity compatibility defect repaired with a focused regression test, one documentation correction, no memory-safety defect, no ABI/layout regression, no new unsafe operation and no new hidden obligation. No affected C probe transcript changes (see gates_observed.affected_probe).",
+  "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the X509_CRL/X509_REVOKED accessor and mutator layer; the nine X509_STORE load/default-path drivers; the 27 extension accessors over X509/X509_CRL/X509_REVOKED and the static delete_ext helper; the X509_LOOKUP_METHOD constructor/destructor and vtable; X509_NAME_oneline and its BUF_MEM ownership; X509_REQ_to_X509; the three X509_REQ setters; and the Netscape SPKI convenience surface.",
+  "files": [
+    "src/x509/x509cset.rs",
+    "src/x509/x509_d2.rs",
+    "src/x509/x509_ext.rs",
+    "src/x509/x509_meth.rs",
+    "src/x509/x509_obj.rs",
+    "src/x509/x509_r2x.rs",
+    "src/x509/x509rset.rs",
+    "src/x509/x509spki.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M88-D1",
+      "file": "src/x509/x509cset.rs",
+      "line": 131,
+      "severity": "low",
+      "class": "compatibility",
+      "detail": "X509_CRL_set1_nextUpdate rejected a NULL `tm` with 0 (`if x.is_null() || tm.is_null()`). The exact authority tag openssl-3.6.4/crypto/x509/x509cset.c:50-55 refuses only a NULL `x`; a NULL `tm` reaches ossl_x509_set1_time, which frees the previous time, writes NULL, marks enc.modified and answers 1. The old code left the previous nextUpdate in place and answered 0, so X509_CRL_diff (src/x509/x509_vfy.rs:1416) raised X509_VFY_2463 where the authority succeeds. Repaired by removing the extra NULL test and widening the declared contract to `tm` NULL-or-live; a focused regression test now pins the clear-and-answer-1 behaviour and the sibling setters' NULL rejection. The line number is the pre-edit locus; the function now begins at line 134."
+    }
+  ],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "test_only_unsafe_operations": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [
+    "src/x509/x509cset.rs:126-132: X509_CRL_set1_nextUpdate's doc now states that, unlike _set1_lastUpdate and X509_REVOKED_set_revocationDate, the authority rejects only a NULL object and routes a NULL time to ossl_x509_set1_time's clear case; the # Safety contract widened from non-NULL `tm` to NULL-or-live.",
+    "src/x509/x509_obj.rs:30-31: the module note named only X509_OBJ_75 and X509_OBJ_175; the second NAME_TOO_LONG coordinate actually used by the printer is X509_OBJ_116, and the note now names all three generated sites."
+  ],
+  "boundary_control": [
+    "No negative control was added: the batch found no memory-safety defect. The repaired branch is a compatibility relation, and its control is a differential read of the exact authority tag (openssl-3.6.4/crypto/x509/x509cset.c) plus a focused unit test (`x509::x509cset::tests::next_update_clears_on_null_like_the_authority`) that observes the clear, the 1 answer, and the sibling setters' retained 0 answer.",
+    "RT-STORE (`courts/phase10/rt_store_probe.c:1643`) calls X509_CRL_set1_nextUpdate with a non-NULL tm, so its transcript is unchanged by the corrected NULL path; it was therefore not re-run and is recorded as NOT_RUN for this sweep rather than claimed as a pass."
+  ],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean, before and after the documentation-only x509_obj.rs edit",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean (18.37 s incremental)",
+    "focused": "cargo test --lib next_update_clears -- --test-threads=4: 1 passed / 0 failed / 0 ignored (1731 filtered)",
+    "full_lib_serial": "1701 passed / 0 failed / 31 ignored (1732 total), 209.38 s, --test-threads=1",
+    "full_lib_threads4": "1701 passed / 0 failed / 31 ignored (1732 total), 91.67 s, --test-threads=4",
+    "affected_probe": "NOT_RUN: no affected C probe transcript. RT-STORE's set1_nextUpdate arm uses a non-NULL tm and is unchanged by the corrected NULL path; the new unit test and the openssl-3.6.4 source differential cover the repaired branch. Miri/ASan/Loom/TSan and dudect/ctgrind were not run; no owner, extent, aliasing, concurrency or constant-time mechanism changed."
+  },
+  "retained_obligations": [
+    "src/x509/x509cset.rs: every getter borrows a field of a live CRL/REVOKED. X509_CRL_set_version allocates the version integer only when absent and leaves a failed set unmodified; X509_CRL_set_issuer_name relies on X509_NAME_set's NULL-rejection and duplicate-or-identity contract; _set1_lastUpdate and X509_REVOKED_set_revocationDate reject NULL time per the authority, while _set1_nextUpdate accepts NULL and clears; X509_CRL_sort relies on the revoked stack's already-installed comparator (the authority sets it at item construction) and renumbers only live elements; X509_REVOKED_set_serialNumber relies on ASN1_STRING_copy's NULL rejection and identity shortcut.",
+    "src/x509/x509_d2.rs: ctx is a live X509_STORE; file/path/uri are NULL-or-NUL-terminated; libctx is NULL-or-live and propq NULL-or-NUL-terminated; the three method constructors answer static tables' addresses; a failed add_lookup answers 0 and the ctrl commands' own answers are ignored or tested exactly as the macros do.",
+    "src/x509/x509_ext.rs: each carrier is live so its extension field is a writable slot; X509v3_* accepts NULL-or-live stacks; the static delete_ext removes through X509v3_delete_ext and, whenever the slot is non-NULL and now empty, releases it with OPENSSL_sk_pop_free and writes NULL, matching x509_ext.c's unconditional empty-list arm; X509V3_get_d2i/add1_i2d receive NULL-or-writable crit/idx and the nid method's expected value type; the free_x509_extension thunk accepts NULL or a crate-allocated extension.",
+    "src/x509/x509_meth.rs: CRYPTO_zalloc's block is zeroed and therefore a valid method from its first byte; RawMethod releases only the block on the constructor's error path, OwnedMethod releases name then block on free; from_raw requires a block this file allocated through the seam that no other owner will release and a name that is NULL or this file's strdup block; each vtable setter stores the application callback without invoking it and each getter borrows it.",
+    "src/x509/x509_obj.rs: a is NULL-or-live; buf is either NULL (the printer allocates and transfers the grown data block) or writable for len bytes; entries, entry objects and values are live for a live name; the BUF_MEM handle transfers only the data block at the two result sites and runs the full destructor on every error path; the three raise coordinates are BUF_LIB at 175 and NAME_TOO_LONG at 75 and 116.",
+    "src/x509/x509_r2x.rs: r is a live X509_REQ and pkey a live MD5-capable private key; every failed construction arm frees the half-built certificate exactly once; the request's attributes never become the certificate's extensions (the authority's commented-out assignment is not done); OPENSSL_sk_num(NULL) is -1, matching the authority's attribute test.",
+    "src/x509/x509rset.rs: x is NULL-or-live and name/pkey are NULL-or-live; the version setter raises ERR_LIB_X509/ERR_R_PASSED_INVALID_ARGUMENT at the authority's coordinate for a NULL request or a non-v1 version and otherwise delegates to ASN1_INTEGER_set on the request's own version pointer; the name/key setters mark the cached encoding stale before delegating to X509_NAME_set/X509_PUBKEY_set.",
+    "src/x509/x509spki.rs: x/spki are live or NULL; str is NUL-terminated and readable for len bytes when len > 0; both base64 scratch blocks are OwnedBuf-owned at the authority's file seam and released on every exit; the encoder allocates the exact 4*ceil(n/3)+1 extent, the documented §17 correction of the authority's under-sized 2*n block; d2i/i2d follow the ASN.1 cursor contract."
+  ],
+  "deferred": [],
+  "residuals": [
+    "M88-R1 (info, authority behaviour preserved): NETSCAPE_SPKI_b64_encode allocates the encoder's exact output extent instead of the authority's 2*der_len, which under-sizes for der_len = 1, 2 and 4. This is the documented §17 correction already recorded in x509spki.rs; the returned string's observable content is unchanged and no memory-safety obligation is introduced."
+  ],
+  "unrelated_residuals": [],
+  "secret_bearing_buffers": "No secret-bearing buffer or cleansing claim changed. These units handle public certificate, CRL, request, extension and lookup-method data; the base64, BUF_MEM and method-name blocks are public buffers released through their owners. No CRYPTO_clear_free arm exists or was removed here.",
+  "shared_boundary_files": [
+    "src/asn1/prim.rs, src/asn1/string.rs (ASN1_INTEGER_set/get, ASN1_STRING_copy/dup, ASN1_TIME_free)",
+    "src/runtime/buffer.rs (BUF_MEM_new/grow/free)",
+    "src/runtime/stack.rs (OPENSSL_sk_num/value/sort/pop_free/delete and the -1 NULL answer)",
+    "src/runtime/mem.rs (CRYPTO_zalloc/strdup/free and the allocator seam)",
+    "src/runtime/owned_buf.rs (OwnedBuf allocation, drop and raw transfer)",
+    "src/runtime/err.rs, src/runtime/err_sites.rs (raise_site and the generated coordinates)",
+    "src/x509/x509_set.rs (ossl_x509_set1_time's identity/duplicate/clear contract)",
+    "src/x509/x_name.rs, src/x509/x_pubkey.rs (X509_NAME_set and X509_PUBKEY_set slot contracts)",
+    "src/x509/x_crl.rs, src/x509/x_x509.rs (X509/X509_CRL/X509_REVOKED layouts and item destructors)",
+    "src/x509/x509_v3.rs, src/x509/v3_lib.rs (X509v3_* list primitives and X509V3_get_d2i/add1_i2d)",
+    "src/x509/x509_lu.rs (X509_LOOKUP_METHOD layout and callback typedefs)"
+  ],
+  "next_queue": {
+    "next_file": "src/x509/x509_trust.rs",
+    "then": [
+      "src/x509/x509_trust.rs",
+      "src/x509/x509type.rs",
+      "src/x509/x_attrib.rs",
+      "src/x509/x_exten.rs",
+      "src/x509/x_req.rs",
+      "src/x509/x_x509a.rs"
+    ]
+  },
+  "queue_after": {
+    "remaining": 6,
+    "audited": 757
+  }
+}

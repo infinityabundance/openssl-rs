@@ -1,0 +1,103 @@
+{
+ "receipt": "mechanism-sweep-M84",
+ "branch": "integrate/safe-c33",
+ "source_head": "a0beae8b1",
+ "worktree": true,
+ "date": "2026-10-20",
+ "verification_level": "FAST plus BATCH plus the targeted allocator-hook negative control and the phase-11 X.509 court suite (including RT-X509-REQ, RT-X509-ACERT and RT-X509-V3). Eight files audited, one genuine soundness defect found and repaired (M84-D1: X509_ocspid_print did not test its DER allocation for NULL), no ABI/layout regression, no new hidden obligation.",
+ "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the request, certificate and OCSP printers; the allowed-attributes and authority-attribute ASN.1 item groups; the auditIdentity row; and the basic-constraints and basic-attribute-constraints item groups plus their v2i/i2v callbacks.",
+ "files": [
+  "src/x509/t_req.rs",
+  "src/x509/t_x509.rs",
+  "src/x509/v3_aaa.rs",
+  "src/x509/v3_akeya.rs",
+  "src/x509/v3_audit_id.rs",
+  "src/x509/v3_authattid.rs",
+  "src/x509/v3_battcons.rs",
+  "src/x509/v3_bcons.rs"
+ ],
+ "files_not_run": [],
+ "defects": [
+  {
+   "id": "M84-D1",
+   "file": "src/x509/t_x509.rs",
+   "line": 626,
+   "severity": "high",
+   "class": "missing allocation-failure check feeding a NULL buffer to EVP_Digest (undefined behaviour from a compliant C caller; authority returns 0)",
+   "authority": "crypto/x509/t_x509.c:224: if ((der = dertmp = OPENSSL_malloc(derlen)) == NULL) goto err;",
+   "description": "X509_ocspid_print replaced the authority's checked OPENSSL_malloc with OwnedDerBuf::malloc but did not test the None answer. With a failed allocation, dptr/dertmp stayed NULL, i2d_X509_NAME(subj, &NULL) returned the required length without writing, and EVP_Digest(NULL, derlen, ...) read a NULL buffer. This was both a soundness defect (OOM-reachable NULL dereference) and a compatibility divergence from the authority's 0 answer.",
+   "repair": "Take the err: tail (ocspid_err) when the owner is absent: `if der.is_none() { return ocspid_err(der, md); }`. The CRYPTO_malloc coordinate (:224) and the success/err free coordinates (:238/:264) are unchanged; no unsafe operation was added or removed.",
+   "status": "repaired"
+  }
+ ],
+ "unsafe_operations_introduced": [],
+ "unsafe_operations_removed": [],
+ "unsafe_operations_relocated": [],
+ "test_only_unsafe_operations": [
+  "src/x509/t_x509.rs alloc_probe: hook_malloc/hook_realloc/hook_free are three `unsafe extern \"C\"` functions used only by the env-gated negative control. Each call is sourced by its hook's contract (malloc/realloc have no preconditions; free receives NULL or a block from hook_malloc). The module is #[cfg(test)] and absent from the release configuration."
+ ],
+ "hidden_obligations": [],
+ "new_unsafe_assumptions": [],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [],
+ "excluded_symbol_changes": [],
+ "documentation_corrections": [],
+ "boundary_control": [
+  "The targeted control installs the CRYPTO_set_mem_functions seam with a one-shot hook that answers NULL only for the block requested at file `crypto/x509/t_x509.c`, line 224, then calls X509_ocspid_print on a blank certificate. It asserted the seam accepted the hooks (installed == 1), the call answered 0, and the hook actually fired; the failure-state allocation was allowed through to avoid recursion."
+ ],
+ "not_discharged": [
+  "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+  "Miri/ASan/Loom/TSan were not run: no owner, extent, aliasing or concurrency mechanism changed. The repaired path is allocation-failure-only and is exercised by the targeted allocator control.",
+  "No dudect/ctgrind claim is made.",
+  "FRF and the SEAL-level forensic regeneration were not run."
+ ],
+ "retained_obligations": [
+  "src/x509/t_req.rs: bp is a live BIO and x a live X509_REQ; every extension-stack element is a live X509_EXTENSION; the stack returned by X509_REQ_get_extensions is this call's to free, and the authority-faithful print-failure leak is recorded as M84-R1.",
+  "src/x509/t_x509.rs: bp/out is a live BIO and x is a live X509 (or NULL where the contract says so); OwnedDerBuf owns exactly the CRYPTO_malloc block it allocated and releases it once at the site named by self.line; OwnedStr::adopt receives only the block X509_VERIFY_PARAM_get1_ip_asc returned; every stack element is a live object of its tag.",
+  "src/x509/v3_aaa.rs: method/out are the caller's; the choice selector selects the live union arm; aai->attributes is a live SET OF choice stack and aai->holderDomain is its live mandatory GENERAL_NAME.",
+  "src/x509/v3_authattid.rs: aids is a live STACK_OF(OSSL_ISSUER_SERIAL); iss->issuer is a live GENERAL_NAMES and iss->issuerUID a live bit string; method/out are the caller's.",
+  "src/x509/v3_bcons.rs and src/x509/v3_battcons.rs: values is a live STACK_OF(CONF_VALUE) whose elements carry NUL-terminated names; the v2i-created item is owned by this call until returned or freed on every failure arm.",
+  "src/x509/v3_akeya.rs, src/x509/v3_audit_id.rs and the item groups in the other audited v3 files: a is NULL or a value built by the named item layer; d2i's slot/cursor/len and i2d's value/cursor satisfy the shared ASN.1 item contract.",
+  "src/x509/v3_audit_id.rs: the two const-fn transmutes are the authority's own row casts between ABI-compatible pointer-parameter function types; no ownership crosses the table and both callees ignore method/ctx."
+ ],
+ "shared_boundary_files": [
+  "src/asn1/items.rs (item descriptors/template tables)",
+  "src/runtime/stack.rs (OPENSSL_sk_* NULL/range discipline and pop_free)",
+  "src/runtime/owned_str.rs (OB-2 OwnedStr::adopt)",
+  "src/runtime/mem.rs (CRYPTO_malloc/CRYPTO_free seam)",
+  "src/x509/v3_lib.rs (X509V3_EXT_METHOD callback types)",
+  "src/x509/v3_ac_tgt.rs (OSSL_ISSUER_SERIAL embedded serial)"
+ ],
+ "secret_bearing_buffers": "No new secret-bearing buffer or cleansing claim changed. The audited printers handle public certificate/request data; X509_ocspid_print hashes public names and public keys. The DER scratch block is public and is plainly freed at the authority coordinates.",
+ "residuals": [
+  "M84-R1 (low, authority parity): X509_REQ_print_ex returns without releasing the X509_REQ_get_extensions stack when a printer fails; t_req.c's err: label does not free it either. Liveness only, never UB, left faithful.",
+  "M84-R2 (info, test-only): the allocator-hook control is process-global and must run alone (env X509_OCSPID_ALLOC_PROBE=1), following the existing sparse-array probe convention."
+ ],
+ "unrelated_residuals": [],
+ "deferred": [],
+ "gates_observed": {
+  "fmt": "cargo fmt --all -- --check clean",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "targeted_alloc_control": "1 passed / 0 failed; seam installed, the :224 request answered NULL and X509_ocspid_print answered 0",
+  "full_lib_serial": "1700 passed / 0 failed / 31 ignored (1731 total), 221.98 s, --test-threads=1",
+  "full_lib_threads4": "1700 passed / 0 failed / 31 ignored (1731 total), 84.68 s, --test-threads=4",
+  "phase11_x509": "artifacts/phase11/COURTS.json all_pass=True over 9 courts; RT-X509-REQ pass (76 observations), RT-X509-ACERT pass (178), RT-X509-V3 pass (240), RT-X509-REF 1007, RT-X509-STORE 525, RT-X509 52"
+ },
+ "queue_after": {
+  "remaining": 38,
+  "audited": 725
+ },
+ "next_queue": {
+  "next_file": "src/x509/v3_bitst.rs",
+  "then": [
+   "src/x509/v3_bitst.rs",
+   "src/x509/v3_enum.rs",
+   "src/x509/v3_extku.rs",
+   "src/x509/v3_group_ac.rs",
+   "src/x509/v3_ia5.rs",
+   "src/x509/v3_ind_iss.rs",
+   "src/x509/v3_int.rs",
+   "src/x509/v3_iobo.rs"
+  ]
+ }
+}

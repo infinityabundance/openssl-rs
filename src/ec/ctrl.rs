@@ -76,6 +76,23 @@ const FILE_CTRL: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c"
 /// `__LINE__` of that release, `ec_ctrl.c:234`. Inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE_FREE_LABEL: c_int = 234;
 
+/// Release the caller's UKM buffer on the one edge where the authority takes custody.
+///
+/// `EVP_PKEY_CTX_set0_ecdh_kdf_ukm`'s body is `if (ret <= 0) return ret; OPENSSL_free(ukm);`
+/// (`ec_ctrl.c:231-236`), so ownership passes **only** when the strict setter answered `1`.
+/// Every refusal (`-2` from the gate or the setter, and any other value) leaves the buffer with
+/// the caller, which is why this is a separate, explicitly-called operation rather than an
+/// owner that a failure could drop.
+///
+/// # Safety
+/// `ukm` is NULL or the caller's fresh, exclusively owned allocator block of `len` bytes (the
+/// authority widens a negative `len` to `size_t` and passes the same extent to the setter). This
+/// is that block's single release, and the caller must not free it afterwards.
+unsafe fn release_caller_ukm_on_success(ukm: *mut c_uchar) {
+    // SAFETY: per this helper's contract; `CRYPTO_free` accepts NULL.
+    unsafe { CRYPTO_free(ukm.cast::<c_void>(), FILE_CTRL, LINE_FREE_LABEL) };
+}
+
 /// `static ossl_inline int evp_pkey_ctx_getset_ecdh_param_checks(const EVP_PKEY_CTX *ctx)` —
 /// `ec_ctrl.c:23-37`.
 ///
@@ -264,7 +281,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_ecdh_kdf_outlen(
 /// success arm is a **range test against `INT_MAX`** rather than the provider's own domain.
 ///
 /// # Safety
-/// `ctx` NULL or live; `plen` NULL or a live `int` the callee writes.
+/// `ctx` NULL or live; `plen` is a live, writable `int` whenever the context can reach the `1`
+/// arm, because that arm writes it. A NULL slot is therefore admissible only with a context the
+/// gate refuses (NULL or not a derivation context), where it is never touched.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_outlen(
     ctx: *mut EvpPkeyCtx,
@@ -294,7 +313,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_outlen(
             -2
         }
         1 if len <= c_int::MAX as usize => {
-            // SAFETY: `plen` is NULL or a live `int` that this call writes.
+            // SAFETY: `plen` is a live, writable `int` on this arm per the contract (the gate has
+            // already answered `1`, so `ctx` is a derivation context and the slot is required).
             unsafe { *plen = len as c_int };
             1
         }
@@ -350,8 +370,11 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set0_ecdh_kdf_ukm(
             unsafe { raise_site(&err_sites::EC_CTRL_231) };
         }
         1 => {
-            // SAFETY: `ukm` is the caller's allocation, which this call owns on this path.
-            unsafe { CRYPTO_free(ukm.cast::<c_void>(), FILE_CTRL, LINE_FREE_LABEL) };
+            // Custody transfers on this one edge only; the helper is the authority's own
+            // `OPENSSL_free(ukm)` and no other return path reaches it.
+            // SAFETY: `ukm` is the caller's fresh exclusive block of `len` bytes per the
+            // function's contract, and this call is its single release.
+            unsafe { release_caller_ukm_on_success(ukm) };
         }
         _ => {}
     }
@@ -369,7 +392,8 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set0_ecdh_kdf_ukm(
 /// caller's slot may be left NULL when the method has no UKM.
 ///
 /// # Safety
-/// `ctx` NULL or live; `pukm` NULL or a live slot the callee writes a borrowed pointer into.
+/// `ctx` NULL or live; `pukm` is NULL (the method then reports only the length) or a live slot the
+/// callee writes a borrowed pointer into.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get0_ecdh_kdf_ukm(
     ctx: *mut EvpPkeyCtx,
@@ -495,7 +519,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_set_ecdh_kdf_md(
 /// `src/dh/ctrl.rs` records the same coordinate for `EVP_PKEY_CTX_get_dh_kdf_md`).
 ///
 /// # Safety
-/// `ctx` NULL or live; `pmd` NULL or a live slot the callee writes.
+/// `ctx` NULL or live; `pmd` is a live, writable slot whenever the context can reach the fixer's
+/// GET arm, because that arm writes the resolved method through it. A NULL slot is admissible
+/// only with a context the ctrl door refuses, where nothing is written.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_ecdh_kdf_md(
     ctx: *mut EvpPkeyCtx,

@@ -229,16 +229,22 @@ fn store_keeping_sign(dst: Option<&mut BigNum>, value: Vec<Limb>) -> bool {
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `b` must each be null
-/// or live.
+/// `r` must be null or a live `BIGNUM`; `a` and `b` must each be null or live. `r`
+/// may alias `a`, `b`, or both (the authority allows it); the operands are copied
+/// before the output is borrowed, so the result is computed from the originals.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_add(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // The inputs are copied before the output is borrowed, so an `r` that
+        // aliases either operand is read first and written last.
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
-        c_int::from(store_keeping_sign(dst, poly_xor(&ad, &bd)))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store_keeping_sign(unsafe { as_mut(r) }, poly_xor(&ad, &bd)))
     })
 }
 
@@ -323,8 +329,9 @@ pub unsafe extern "C" fn BN_GF2m_arr2poly(p: *const c_int, a: *mut BigNum) -> c_
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` must be null or live; `p`
-/// must be a `0`-terminated exponent array whose first entry is the degree.
+/// `r` must be null or a live `BIGNUM`; `a` must be null or live; `p` must be a
+/// `0`-terminated exponent array whose first entry is the degree. `r` may alias `a`;
+/// `a` is copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_arr(
     r: *mut BigNum,
@@ -332,8 +339,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_arr(
     p: *const c_int,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut(r), as_ref(a)) };
+        // The input is copied before the output is borrowed, so `r == a` is defined.
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
         if p.is_null() {
             return 0;
@@ -342,12 +350,17 @@ pub unsafe extern "C" fn BN_GF2m_mod_arr(
         // its first entry is inside it.
         let arr_first = unsafe { *p };
         if arr_first == 0 {
-            return c_int::from(store_keeping_sign(dst, Vec::new()));
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            return c_int::from(store_keeping_sign(unsafe { as_mut(r) }, Vec::new()));
         }
         // SAFETY: as above; the array is terminated, so the scan below stops inside
         // it on every input the caller is allowed to pass.
         let arr = unsafe { exponent_slice(p) };
-        c_int::from(store_keeping_sign(dst, poly_rem(&ad, &arr)))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store_keeping_sign(
+            unsafe { as_mut(r) },
+            poly_rem(&ad, &arr),
+        ))
     })
 }
 
@@ -378,8 +391,8 @@ unsafe fn exponent_slice(p: *const c_int) -> Vec<c_int> {
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
-/// or live.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live. `r`
+/// may alias `a`; `a` is copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod(r: *mut BigNum, a: *const BigNum, p: *const BigNum) -> c_int {
     guard_ffi(0, || {
@@ -425,8 +438,9 @@ unsafe fn to_array(p: *const BigNum, fixed_max: usize) -> Result<Vec<c_int>, ()>
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `b` must each be null
-/// or live; `p` must be a `0`-terminated exponent array; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a` and `b` must each be null or live; `p`
+/// must be a `0`-terminated exponent array; `ctx` is unused. `r` may alias `a`, `b`,
+/// or both; the operands are copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_mul_arr(
     r: *mut BigNum,
@@ -440,16 +454,24 @@ pub unsafe extern "C" fn BN_GF2m_mod_mul_arr(
         return unsafe { BN_GF2m_mod_sqr_arr(r, a, p, _ctx) };
     }
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // The inputs are copied before the output is borrowed, so `r` may alias
+        // either operand (or both).
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
         if p.is_null() {
             return 0;
         }
         // SAFETY: the caller guarantees a `0`-terminated array.
         let arr = unsafe { exponent_slice(p) };
-        c_int::from(store_keeping_sign(dst, poly_rem(&clmul(&ad, &bd), &arr)))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store_keeping_sign(
+            unsafe { as_mut(r) },
+            poly_rem(&clmul(&ad, &bd), &arr),
+        ))
     })
 }
 
@@ -458,8 +480,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_mul_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a`, `b` and `p` must each be
-/// null or live; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a`, `b` and `p` must each be null or live;
+/// `ctx` is unused. `r` may alias `a` or `b`; the operands are copied before `r` is
+/// borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_mul(
     r: *mut BigNum,
@@ -487,7 +510,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_mul(
 ///
 /// # Safety
 ///
-/// As `BN_GF2m_mod_mul_arr`, without `b`.
+/// As `BN_GF2m_mod_mul_arr`, without `b`. `r` may alias `a`; the operand is copied
+/// before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_sqr_arr(
     r: *mut BigNum,
@@ -496,15 +520,20 @@ pub unsafe extern "C" fn BN_GF2m_mod_sqr_arr(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x) = unsafe { (as_mut(r), as_ref(a)) };
+        // The input is copied before the output is borrowed, so `r == a` is defined.
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
         if p.is_null() {
             return 0;
         }
         // SAFETY: the caller guarantees a `0`-terminated array.
         let arr = unsafe { exponent_slice(p) };
-        c_int::from(store_keeping_sign(dst, poly_rem(&clmul(&ad, &ad), &arr)))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store_keeping_sign(
+            unsafe { as_mut(r) },
+            poly_rem(&clmul(&ad, &ad), &arr),
+        ))
     })
 }
 
@@ -512,8 +541,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_sqr_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
-/// or live; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live; `ctx`
+/// is unused. `r` may alias `a`; the operand is copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_sqr(
     r: *mut BigNum,
@@ -541,8 +570,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_sqr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `b` must each be null
-/// or live; `p` must be a `0`-terminated exponent array; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a` and `b` must each be null or live; `p`
+/// must be a `0`-terminated exponent array; `ctx` is unused. `r` may alias `a` or
+/// `b`; both operands are copied before `r` is borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_exp_arr(
     r: *mut BigNum,
@@ -552,16 +582,24 @@ pub unsafe extern "C" fn BN_GF2m_mod_exp_arr(
     _ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(b)) };
+        // The inputs are copied before the output is borrowed, so `r` may alias
+        // either operand.
+        // SAFETY: `a` is null-or-live per this function's `# Safety` section.
+        let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
+        // SAFETY: `b` is null-or-live per this function's `# Safety` section.
+        let y = unsafe { as_ref(b) };
         let (bd, _) = parts(y);
         if p.is_null() {
             return 0;
         }
         // SAFETY: the caller guarantees a `0`-terminated array.
         let arr = unsafe { exponent_slice(p) };
-        c_int::from(store_keeping_sign(dst, poly_pow(&ad, &bd, &arr)))
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        c_int::from(store_keeping_sign(
+            unsafe { as_mut(r) },
+            poly_pow(&ad, &bd, &arr),
+        ))
     })
 }
 
@@ -570,8 +608,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_exp_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a`, `b` and `p` must each be
-/// null or live; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `a`, `b` and `p` must each be null or live;
+/// `ctx` is unused. `r` may alias `a` or `b`; the operands are copied before `r` is
+/// borrowed.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_exp(
     r: *mut BigNum,
@@ -606,8 +645,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_exp(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
-/// or live.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live. `r`
+/// may alias `a`; the operand is copied before `r` is borrowed.
 unsafe fn mod_inv_vartime(r: *mut BigNum, a: *const BigNum, p: *const BigNum) -> c_int {
     // SAFETY: `p` is null or live per this function's `# Safety` section.
     let arr = match unsafe { to_array(p, 0) } {
@@ -636,9 +675,10 @@ unsafe fn mod_inv_vartime(r: *mut BigNum, a: *const BigNum, p: *const BigNum) ->
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
-/// or live; `ctx` must be null or a live, uniquely-owned `BN_CTX` — the authority's own
-/// `BN_CTX_start`/`BN_CTX_get` need it, so a null context fails the draw.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live; `ctx`
+/// must be null or a live `BN_CTX` — the authority's own `BN_CTX_start`/`BN_CTX_get`
+/// need it, so a null context fails the draw. `r` may alias `a`; every read of `a`
+/// completes before `r` is first written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_inv(
     r: *mut BigNum,
@@ -715,9 +755,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_inv(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `xx` must be null or live; `p`
-/// must be a `0`-terminated exponent array; `ctx` must be null or a live `BN_CTX`,
-/// which the blinding inside `BN_GF2m_mod_inv` draws from.
+/// `r` must be null or a live `BIGNUM`; `xx` must be null or live; `p` must be a
+/// `0`-terminated exponent array; `ctx` must be null or a live `BN_CTX`, which the
+/// blinding inside `BN_GF2m_mod_inv` draws from. `r` may alias `xx`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_inv_arr(
     r: *mut BigNum,
@@ -764,9 +804,9 @@ unsafe fn array_to_bignum(p: *const c_int) -> Option<*mut BigNum> {
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `y`, `x` and `p` must each be
-/// null or live; `ctx` must be null or a live `BN_CTX`, which the blinding inside
-/// `BN_GF2m_mod_inv` draws from.
+/// `r` must be null or a live `BIGNUM`; `y`, `x` and `p` must each be null or live;
+/// `ctx` must be null or a live `BN_CTX`, which the blinding inside `BN_GF2m_mod_inv`
+/// draws from. `r` may alias `y` or `x`; both are read before `r` is written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_div(
     r: *mut BigNum,
@@ -797,8 +837,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_div(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `yy` and `xx` must each be
-/// null or live; `p` must be a `-1`-terminated exponent array; `ctx` is unused.
+/// `r` must be null or a live `BIGNUM`; `yy` and `xx` must each be null or live; `p`
+/// must be a `-1`-terminated exponent array; `ctx` is unused. `r` may alias `yy` or
+/// `xx`; both are read before `r` is written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_div_arr(
     r: *mut BigNum,
@@ -831,9 +872,9 @@ pub unsafe extern "C" fn BN_GF2m_mod_div_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` must be null or live; `p`
-/// must be a `0`-terminated exponent array whose first entry is the degree; `ctx` must be
-/// null or a live, uniquely-owned `BN_CTX`.
+/// `r` must be null or a live `BIGNUM`; `a` must be null or live; `p` must be a
+/// `0`-terminated exponent array whose first entry is the degree; `ctx` must be null
+/// or a live `BN_CTX`. `r` may alias `a`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_sqrt_arr(
     r: *mut BigNum,
@@ -884,8 +925,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_sqrt_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null or
-/// live; `ctx` must be null or a live, uniquely-owned `BN_CTX`.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live; `ctx`
+/// must be null or a live `BN_CTX`. `r` may alias `a`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_sqrt(
     r: *mut BigNum,
@@ -918,9 +959,10 @@ pub unsafe extern "C" fn BN_GF2m_mod_sqrt(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a_` must be null or live; `p`
-/// must be a `0`-terminated exponent array whose first entry is the degree; `ctx` must be
-/// null or a live, uniquely-owned `BN_CTX` (and live when `m` is even, which draws).
+/// `r` must be null or a live `BIGNUM`; `a_` must be null or live; `p` must be a
+/// `0`-terminated exponent array whose first entry is the degree; `ctx` must be null
+/// or a live `BN_CTX` (and live when `m` is even, which draws). `r` may alias `a_`;
+/// `a_` is read into a context object before `r` is written.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_solve_quad_arr(
     r: *mut BigNum,
@@ -1088,8 +1130,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_solve_quad_arr(
 ///
 /// # Safety
 ///
-/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null or
-/// live; `ctx` must be null or a live, uniquely-owned `BN_CTX`.
+/// `r` must be null or a live `BIGNUM`; `a` and `p` must each be null or live; `ctx`
+/// must be null or a live `BN_CTX`. `r` may alias `a`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_solve_quad(
     r: *mut BigNum,
@@ -1149,12 +1191,15 @@ mod tests {
     /// A `BIGNUM` from a hex string.
     fn hex(s: &str) -> *mut BigNum {
         let c = crate::bn::bignum::dup_cstring(s);
+        // SAFETY: `dup_cstring` produced this block through the crate's allocator seam and this
+        // frame is its only owner; the handle's `Drop` is its single release (a NULL answer is
+        // the empty state).
+        let c_owned = unsafe { crate::runtime::bio::owned::OwnedBlock::take(c.cast()) };
         let mut p: *mut BigNum = core::ptr::null_mut();
-        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live.
-        unsafe {
-            assert!(BN_hex2bn(&mut p, c) > 0);
-            crate::runtime::mem::CRYPTO_free(c.cast(), core::ptr::null(), 0);
-        }
+        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live for the duration of
+        // the call; the block itself is owned by `c_owned` and released when it drops.
+        unsafe { assert!(BN_hex2bn(&mut p, c) > 0) };
+        drop(c_owned);
         p
     }
 
@@ -1410,5 +1455,183 @@ mod tests {
             // SAFETY: every pointer is live.
             assert_eq!(unsafe { BN_ucmp(prod, one) }, 0, "a * a^-1 == 1");
         }
+    }
+
+    /// Copy an object so an aliased-output case does not destroy the input used by
+    /// the distinct-output reference computation.
+    fn copy_of(src: *const BigNum) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let dst = unsafe { BN_new() };
+        // SAFETY: `dst` is live and `src` is live for the duration of the call.
+        assert!(!unsafe { BN_copy(dst, src) }.is_null());
+        dst
+    }
+
+    /// Every entry point that writes `r` while reading a `BIGNUM` input must accept
+    /// `r` aliasing any input. Each aliased call is compared with the same
+    /// computation written to a distinct object. This is the M18-D1 regression
+    /// control: forming `as_mut(r)` and `as_ref(a)`/`as_ref(b)` in one tuple made
+    /// the aliased calls undefined behaviour.
+    #[test]
+    fn aliased_outputs_match_the_distinct_form() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        let p163 = field(&F163);
+        let a = word(3);
+        let b = word(5);
+
+        // BN_GF2m_add: r == a and r == b, then r == a == b.
+        // SAFETY: `BN_new` takes no pointers.
+        let expected = unsafe { BN_new() };
+        // SAFETY: every pointer is live.
+        assert_eq!(unsafe { BN_GF2m_add(expected, a, b) }, 1);
+        // r == a.
+        let alias_a = copy_of(a);
+        // SAFETY: every pointer is live; the first operand is also the output.
+        assert_eq!(unsafe { BN_GF2m_add(alias_a, alias_a, b) }, 1);
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_a, expected) },
+            0,
+            "BN_GF2m_add r == a"
+        );
+        // r == b.
+        let alias_b = copy_of(b);
+        // SAFETY: every pointer is live; the second operand is also the output.
+        assert_eq!(unsafe { BN_GF2m_add(alias_b, a, alias_b) }, 1);
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_b, expected) },
+            0,
+            "BN_GF2m_add r == b"
+        );
+        let both = copy_of(a);
+        // SAFETY: `both` is live and is all three arguments.
+        assert_eq!(unsafe { BN_GF2m_add(both, both, both) }, 1);
+        // SAFETY: `both` is live.
+        assert_eq!(unsafe { BN_is_zero(both) }, 1, "a + a == 0");
+
+        // BN_GF2m_mod_arr: r == a.
+        let reduced = reduce(a, F163.as_ptr());
+        let alias = copy_of(a);
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(unsafe { BN_GF2m_mod_arr(alias, alias, F163.as_ptr()) }, 1);
+        // SAFETY: both are live.
+        assert_eq!(unsafe { BN_ucmp(alias, reduced) }, 0, "mod_arr alias");
+
+        // BN_GF2m_mod_mul_arr: r == a, r == b, and the a == b square path with
+        // r == a.
+        // SAFETY: `BN_new` takes no pointers.
+        let product = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(
+            // SAFETY: every pointer is live and `F163` is `0`-terminated.
+            unsafe { BN_GF2m_mod_mul_arr(product, a, b, F163.as_ptr(), ctx) },
+            1
+        );
+        for alias_first in [true, false] {
+            let x = if alias_first { copy_of(a) } else { copy_of(b) };
+            // SAFETY: every pointer is live and `F163` is `0`-terminated; the
+            // copied operand is also the output.
+            assert_eq!(
+                // SAFETY: every pointer is live and `F163` is `0`-terminated.
+                unsafe {
+                    if alias_first {
+                        BN_GF2m_mod_mul_arr(x, x, b, F163.as_ptr(), ctx)
+                    } else {
+                        BN_GF2m_mod_mul_arr(x, a, x, F163.as_ptr(), ctx)
+                    }
+                },
+                1
+            );
+            // SAFETY: both are live.
+            assert_eq!(unsafe { BN_ucmp(x, product) }, 0, "mod_mul_arr alias");
+        }
+        // SAFETY: `BN_new` takes no pointers.
+        let square = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(
+            // SAFETY: every pointer is live and `F163` is `0`-terminated.
+            unsafe { BN_GF2m_mod_sqr_arr(square, a, F163.as_ptr(), ctx) },
+            1
+        );
+        let alias_square = copy_of(a);
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(
+            // SAFETY: every pointer is live and `F163` is `0`-terminated.
+            unsafe {
+                BN_GF2m_mod_mul_arr(alias_square, alias_square, alias_square, F163.as_ptr(), ctx)
+            },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_square, square) },
+            0,
+            "a == b square alias"
+        );
+
+        // BN_GF2m_mod_sqr_arr: r == a.
+        let alias_square = copy_of(a);
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(
+            // SAFETY: every pointer is live and `F163` is `0`-terminated.
+            unsafe { BN_GF2m_mod_sqr_arr(alias_square, alias_square, F163.as_ptr(), ctx) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_square, square) },
+            0,
+            "mod_sqr_arr alias"
+        );
+
+        // BN_GF2m_mod_exp_arr: r == a and r == b.
+        // SAFETY: `BN_new` takes no pointers.
+        let power = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `F163` is `0`-terminated.
+        assert_eq!(
+            // SAFETY: every pointer is live and `F163` is `0`-terminated.
+            unsafe { BN_GF2m_mod_exp_arr(power, a, b, F163.as_ptr(), ctx) },
+            1
+        );
+        for alias_first in [true, false] {
+            let x = if alias_first { copy_of(a) } else { copy_of(b) };
+            // SAFETY: every pointer is live and `F163` is `0`-terminated; the
+            // copied operand is also the output.
+            assert_eq!(
+                // SAFETY: every pointer is live and `F163` is `0`-terminated.
+                unsafe {
+                    if alias_first {
+                        BN_GF2m_mod_exp_arr(x, x, b, F163.as_ptr(), ctx)
+                    } else {
+                        BN_GF2m_mod_exp_arr(x, a, x, F163.as_ptr(), ctx)
+                    }
+                },
+                1
+            );
+            // SAFETY: both are live.
+            assert_eq!(unsafe { BN_ucmp(x, power) }, 0, "mod_exp_arr alias");
+        }
+
+        // BN_GF2m_mod_inv: r == a. The wrapper reads `a` before writing `r`, including
+        // through the blinding product.
+        // SAFETY: `BN_new` takes no pointers.
+        let inverse = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `ctx` is a live `BN_CTX`.
+        assert_eq!(unsafe { BN_GF2m_mod_inv(inverse, a, p163, ctx) }, 1);
+        let alias_inverse = copy_of(a);
+        // SAFETY: every pointer is live and `ctx` is a live `BN_CTX`.
+        assert_eq!(
+            // SAFETY: every pointer is live and `ctx` is a live `BN_CTX`.
+            unsafe { BN_GF2m_mod_inv(alias_inverse, alias_inverse, p163, ctx) },
+            1
+        );
+        assert_eq!(
+            // SAFETY: both are live.
+            unsafe { BN_ucmp(alias_inverse, inverse) },
+            0,
+            "mod_inv alias"
+        );
     }
 }

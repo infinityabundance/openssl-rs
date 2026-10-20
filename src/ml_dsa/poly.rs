@@ -27,8 +27,8 @@ use core::ffi::{c_char, c_int};
 use core::ptr;
 
 use crate::evp::digest::{EvpMd, EvpMdCtx};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc_array, CRYPTO_memcmp};
+use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc_array};
 
 use super::key_compress::{
     ossl_ml_dsa_key_compress_high_bits, ossl_ml_dsa_key_compress_low_bits,
@@ -60,6 +60,56 @@ pub(crate) struct Vector {
     pub(crate) poly: *mut Poly,
     /// `size_t num_poly` — `k` or `l`.
     pub(crate) num_poly: usize,
+}
+
+/// The `(poly, num_poly)` member of a [`Vector`] — the `(ptr, len)` blob variant of
+/// `MEMBER-BUFFER-MODEL.md` §2.6.
+///
+/// The pair is either `(NULL, 0)` or a single owned block of exactly `num_poly` `Poly`s produced
+/// by the matching allocator seam. Borrowing both fields together means a release cannot move one
+/// without the other, and the only release paths leave the empty state.
+struct VectorBuf<'a> {
+    poly: &'a mut *mut Poly,
+    num_poly: &'a mut usize,
+}
+
+impl<'a> VectorBuf<'a> {
+    /// Derive the handle over a vector's member.
+    ///
+    /// # Safety
+    /// `vector` is live and its pair currently obeys the member invariant: `(NULL, 0)`, or a
+    /// single block of exactly `num_poly` `Poly`s produced by the crate's allocator seam and owned
+    /// by the vector.
+    unsafe fn of(vector: &'a mut Vector) -> VectorBuf<'a> {
+        VectorBuf {
+            poly: &mut vector.poly,
+            num_poly: &mut vector.num_poly,
+        }
+    }
+
+    /// Release the incumbent at the authority's own `file`/`line` and leave `(NULL, 0)`.
+    ///
+    /// Given a handle from [`Self::of`], the incumbent is by definition the member's own single
+    /// block, so the release is sound. `CRYPTO_free` accepts NULL.
+    fn clear_plain(&mut self, file: *const c_char, line: c_int) {
+        // SAFETY: the invariant says `*self.poly` is NULL or this member's owned block.
+        unsafe { CRYPTO_free((*self.poly).cast(), file, line) };
+        *self.poly = ptr::null_mut();
+        *self.num_poly = 0;
+    }
+
+    /// `OPENSSL_secure_clear_free(poly, rank * sizeof(POLY))`, leaving `(NULL, 0)`.
+    fn clear_secure(&mut self, rank: usize, file: *const c_char, line: c_int) {
+        // `secure_alloc` allocated this block with a checked element-count product, so the same
+        // product cannot overflow for a member satisfying `of`'s contract; the fallback keeps the
+        // release sound on the impossible path.
+        let num = rank.checked_mul(core::mem::size_of::<Poly>()).unwrap_or(0);
+        // SAFETY: `*self.poly` is NULL or the member's owned secure block, `num` is its byte
+        // extent, and `CRYPTO_secure_clear_free` accepts NULL.
+        unsafe { CRYPTO_secure_clear_free((*self.poly).cast(), num, file, line) };
+        *self.poly = ptr::null_mut();
+        *self.num_poly = 0;
+    }
 }
 
 /// `struct matrix_st` — `ml_dsa_matrix.h:11-14`, a `k` by `l` matrix.
@@ -202,18 +252,26 @@ impl Vector {
     /// Returns 1 on success and 0 on allocation failure, as the C does.
     ///
     /// # Safety
-    /// `file` must be a NUL-terminated C string.
+    /// `file` must be a NUL-terminated C string, and `self` must not already own a block (the
+    /// authority's `vector_alloc` precondition); an incumbent would be leaked exactly as in the C.
     pub(crate) unsafe fn alloc(
         &mut self,
         num_polys: usize,
         file: *const c_char,
         line: c_int,
     ) -> c_int {
-        // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked.
-        let p = CRYPTO_malloc(num_polys * core::mem::size_of::<Poly>(), file, line).cast::<Poly>();
+        // `OPENSSL_malloc_array` is `CRYPTO_malloc_array`: it checks the element-count product,
+        // raises the authority's integer-overflow error and answers NULL on refusal.
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line)
+        }
+        .cast::<Poly>();
         if p.is_null() {
             return 0;
         }
+        // The pair is published together; no allocation event or observer runs between the two
+        // stores, so the member invariant holds from the next observation.
         self.poly = p;
         self.num_poly = num_polys;
         1
@@ -222,20 +280,26 @@ impl Vector {
     /// `vector_secure_alloc(v, num_polys)` — `ml_dsa_vector.h:42-49`, `OPENSSL_secure_malloc_array`.
     ///
     /// # Safety
-    /// `file` must be a NUL-terminated C string.
+    /// `file` must be a NUL-terminated C string, and `self` must not already own a block (the
+    /// authority's `vector_secure_alloc` precondition); an incumbent would be leaked exactly as in
+    /// the C.
     pub(crate) unsafe fn secure_alloc(
         &mut self,
         num_polys: usize,
         file: *const c_char,
         line: c_int,
     ) -> c_int {
-        // SAFETY: `CRYPTO_secure_malloc` answers NULL on failure, which is checked.
-        let p =
-            unsafe { CRYPTO_secure_malloc(num_polys * core::mem::size_of::<Poly>(), file, line) }
-                .cast::<Poly>();
+        // `OPENSSL_secure_malloc_array`: the element-count product is checked and an overflow is
+        // reported as the authority's secure-allocation failure.
+        // SAFETY: `CRYPTO_secure_malloc_array` reads no caller pointer.
+        let p = unsafe {
+            CRYPTO_secure_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line)
+        }
+        .cast::<Poly>();
         if p.is_null() {
             return 0;
         }
+        // As in `alloc`: the pair is published together and the member invariant is restored.
         self.poly = p;
         self.num_poly = num_polys;
         1
@@ -247,10 +311,9 @@ impl Vector {
     /// `file` must be a NUL-terminated C string, and the block must have come from
     /// [`Vector::alloc`].
     pub(crate) unsafe fn free(&mut self, file: *const c_char, line: c_int) {
-        // SAFETY: the contract says the block came from `CRYPTO_malloc`.
-        unsafe { CRYPTO_free(self.poly.cast(), file, line) };
-        self.poly = ptr::null_mut();
-        self.num_poly = 0;
+        // SAFETY: the contract says the block came from `Vector::alloc`, so the pair obeys the
+        // member invariant; the handle releases it at the authority's own site and empties it.
+        unsafe { VectorBuf::of(self) }.clear_plain(file, line);
     }
 
     /// `vector_secure_free(v, rank)` — `ml_dsa_vector.h:58-63`, `OPENSSL_secure_clear_free`.
@@ -259,17 +322,9 @@ impl Vector {
     /// `file` must be a NUL-terminated C string, and the block must have come from
     /// [`Vector::secure_alloc`].
     pub(crate) unsafe fn secure_free(&mut self, rank: usize, file: *const c_char, line: c_int) {
-        // SAFETY: the contract says the block came from `CRYPTO_secure_malloc`.
-        unsafe {
-            CRYPTO_secure_clear_free(
-                self.poly.cast(),
-                rank * core::mem::size_of::<Poly>(),
-                file,
-                line,
-            )
-        };
-        self.poly = ptr::null_mut();
-        self.num_poly = 0;
+        // SAFETY: the contract says the block came from `Vector::secure_alloc`, so the pair obeys
+        // the member invariant; the handle cleanses and releases it, then empties it.
+        unsafe { VectorBuf::of(self) }.clear_secure(rank, file, line);
     }
 
     /// `vector_zero(va)` — `ml_dsa_vector.h:66-70`.
@@ -305,7 +360,11 @@ impl Vector {
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials, and they must not alias.
 pub(crate) unsafe fn vector_copy(dst: &mut Vector, src: &Vector) {
-    debug_assert_eq!(dst.num_poly, src.num_poly);
+    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then
+    // writes `src->num_poly` elements into `dst`. A shape mismatch is a caller
+    // error here, so refuse in release too rather than reproduce the write
+    // beyond `dst`'s extent (§17).
+    assert_eq!(dst.num_poly, src.num_poly);
     // SAFETY: the contract says both name `num_poly` polynomials and do not alias.
     unsafe {
         ptr::copy_nonoverlapping(src.poly, dst.poly, src.num_poly);

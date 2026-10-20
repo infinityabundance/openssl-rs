@@ -123,7 +123,7 @@ use std::sync::Mutex;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
-use crate::runtime::mem::{cleanse, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 // --- Linux syscall surface -------------------------------------------------
 //
@@ -145,11 +145,6 @@ extern "C" {
     fn mlock(addr: *mut c_void, len: usize) -> c_int;
     fn madvise(addr: *mut c_void, len: usize, advice: c_int) -> c_int;
     fn getpagesize() -> c_int;
-    /// The plain C allocator, used for the non-secure-pointer release path. The
-    /// authority routes that to `CRYPTO_free`, which in the default profile is
-    /// `free`; `CRYPTO_free` is not defined by this crate yet, so the equivalent
-    /// libc call is made directly (same observable behaviour).
-    fn free(ptr: *mut c_void);
 }
 
 const PROT_NONE: c_int = 0;
@@ -547,7 +542,10 @@ pub unsafe extern "C" fn CRYPTO_secure_malloc(
             },
         });
         match outcome {
-            SecureAlloc::Uninitialized => CRYPTO_malloc(num, file, line),
+            SecureAlloc::Uninitialized => unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_malloc(num, file, line)
+            },
             SecureAlloc::Ok(p) => p,
             SecureAlloc::Failed => {
                 // SAFETY: S5.
@@ -590,7 +588,10 @@ pub unsafe extern "C" fn CRYPTO_secure_zalloc(
             },
         });
         match outcome {
-            SecureAlloc::Uninitialized => CRYPTO_zalloc(num, file, line),
+            SecureAlloc::Uninitialized => unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(num, file, line)
+            },
             SecureAlloc::Ok(p) => p,
             SecureAlloc::Failed => {
                 // SAFETY: S5.
@@ -661,16 +662,19 @@ pub unsafe extern "C" fn CRYPTO_secure_calloc(
 /// allocation owned by the caller, and must not be used again afterwards. Because
 /// this call is idempotent on NULL, all four combinations below are valid.
 #[no_mangle]
-pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, _file: *const c_char, _line: c_int) {
+pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, file: *const c_char, line: c_int) {
     guard_ffi((), || {
         if ptr.is_null() {
             return;
         }
         let owned_by_heap = with_heap(|slot| slot.as_mut().is_some_and(|h| h.free(ptr.cast())));
         if !owned_by_heap {
-            // SAFETY: S4 — a non-secure pointer the caller owns; released once.
+            // SAFETY: S4 — a non-secure pointer the caller owns; released once. The release
+            // is the seam's own `CRYPTO_free` with the caller's `file`/`line`, exactly as the
+            // authority routes it, so a caller-installed `CRYPTO_set_mem_functions` hook
+            // observes it (a bare libc `free` would not).
             unsafe {
-                free(ptr);
+                CRYPTO_free(ptr, file, line);
             }
         }
     })
@@ -690,8 +694,8 @@ pub unsafe extern "C" fn CRYPTO_secure_free(ptr: *mut c_void, _file: *const c_ch
 pub unsafe extern "C" fn CRYPTO_secure_clear_free(
     ptr: *mut c_void,
     num: usize,
-    _file: *const c_char,
-    _line: c_int,
+    file: *const c_char,
+    line: c_int,
 ) {
     guard_ffi((), || {
         if ptr.is_null() {
@@ -699,11 +703,13 @@ pub unsafe extern "C" fn CRYPTO_secure_clear_free(
         }
         let owned_by_heap = with_heap(|slot| slot.as_mut().is_some_and(|h| h.free(ptr.cast())));
         if !owned_by_heap {
-            // SAFETY: S4 — plain allocation, readable for `num` bytes, released
-            // once.
+            // SAFETY: S4 — plain allocation, readable for `num` bytes, released once. The
+            // release is the seam's own `CRYPTO_free` with the caller's `file`/`line`, as the
+            // authority routes it, so a caller-installed `CRYPTO_set_mem_functions` hook
+            // observes it.
             unsafe {
                 cleanse(ptr.cast::<u8>(), num);
-                free(ptr);
+                CRYPTO_free(ptr, file, line);
             }
         }
     })
@@ -751,7 +757,7 @@ pub extern "C" fn CRYPTO_secure_used() -> usize {
 /// observed directly, without relying on a subsequent allocation returning the
 /// same chunk.
 #[cfg(test)]
-fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
+pub(crate) fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
     with_heap(|slot| match slot {
         Some(h)
             if offset
@@ -768,7 +774,7 @@ fn test_arena_bytes(offset: usize, len: usize) -> Vec<u8> {
 
 /// Arena-relative offset of `ptr`, if it is inside the arena (test-only).
 #[cfg(test)]
-fn test_offset_of(ptr: *const c_void) -> Option<usize> {
+pub(crate) fn test_offset_of(ptr: *const c_void) -> Option<usize> {
     with_heap(|slot| match slot {
         Some(h) if h.contains(ptr) => Some(ptr as usize - h.arena),
         _ => None,
@@ -858,7 +864,10 @@ mod tests {
     }
 
     fn plain_malloc(num: usize) -> *mut c_void {
-        crate::runtime::mem::CRYPTO_malloc(num, file(), 1)
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(num, file(), 1)
+        }
     }
 
     fn plain_clear_free(p: *mut c_void, num: usize) {
@@ -1242,12 +1251,18 @@ mod tests {
         reset();
         init_ok(1 << 20, 16);
 
-        let n = crate::runtime::mem::CRYPTO_malloc(32, file(), 1);
+        let n = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(32, file(), 1)
+        };
         assert!(!n.is_null());
         // SAFETY: `n` is a live 32-byte plain allocation owned by this test.
         unsafe { CRYPTO_secure_free(n, file(), 1) };
 
-        let m = crate::runtime::mem::CRYPTO_malloc(32, file(), 1);
+        let m = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(32, file(), 1)
+        };
         assert!(!m.is_null());
         // SAFETY: `m` is a live 32-byte plain allocation; cleanse reads 16 bytes.
         unsafe {

@@ -33,6 +33,12 @@
 //! process-lifetime constant storage and is never released; the cache leaks exactly one
 //! `BIGNUM` per constant, which is what `.rodata` costs in C.
 //!
+//! **Ownership classification (final classification batch):** no interior `CRYPTO_*`
+//! allocation or free site; the constants are Rust-owned [`Box`] representations built by
+//! [`new_static_data`] and cached for the process lifetime, so an installed
+//! `CRYPTO_set_mem_functions` hook does not observe them (the hook-invisibility consequence
+//! recorded for `bn/ctx.rs`).
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::sync::atomic::{AtomicPtr, Ordering};

@@ -44,13 +44,20 @@ use crate::rand::rand_lib::ossl_rand_get0_seed_noncreating;
 use crate::rand::unix::{ossl_pool_acquire_entropy, ossl_pool_add_nonce_data};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_clear_free;
 
 /// `crypto/rand/prov_seed.c`, as the authority's compiler spelled it.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c");
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of `ossl_rand_get_user_nonce`'s scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `size_t ossl_rand_get_entropy(OSSL_LIB_CTX *ctx, unsigned char **pout, int entropy, size_t
 /// min_len, size_t max_len)` — `prov_seed.c:18-41`. Polls the platform pool.
@@ -213,21 +220,33 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         return unsafe { ossl_rand_get_nonce(ctx, pout, min_len, max_len, salt, salt_len) };
     }
 
-    // `CRYPTO_malloc` is a safe function in this crate and dereferences nothing the caller owns.
-    let buf = CRYPTO_malloc(min_len, FILE, LINE).cast::<c_uchar>();
-    if buf.is_null() {
-        return 0;
-    }
+    // The authority allocates with `OPENSSL_malloc` and plainly `OPENSSL_free`s the buffer when
+    // `EVP_RAND_generate` fails. That failure can follow a partial write of nonce material, so
+    // this owner releases through the cleansing seam at the same allocation/release coordinates
+    // (a deliberate improvement over the authority's plain free, not observable through the API).
+    let buf = match OwnedBuf::new_cleansed_released(min_len, FILE_SEAM, LINE, FILE_SEAM, LINE) {
+        Some(buf) => buf,
+        None => return 0,
+    };
 
     // SAFETY: `rng` is live and `buf` is this frame's allocation of `min_len` bytes.
-    if unsafe { EVP_RAND_generate(rng, buf, min_len, 0, 0, salt.cast::<c_uchar>(), salt_len) } == 0
+    if unsafe {
+        EVP_RAND_generate(
+            rng,
+            buf.as_ptr(),
+            min_len,
+            0,
+            0,
+            salt.cast::<c_uchar>(),
+            salt_len,
+        )
+    } == 0
     {
-        // SAFETY: `buf` is this frame's own allocation.
-        unsafe { CRYPTO_free(buf.cast(), FILE, LINE) };
+        // The authority's success-only `OPENSSL_free` is now `buf`'s cleansing `Drop`.
         return 0;
     }
     // SAFETY: `pout` is writable per the contract; ownership of `buf` moves to the caller.
-    unsafe { *pout = buf };
+    unsafe { *pout = buf.into_raw() };
     min_len
 }
 

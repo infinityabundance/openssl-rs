@@ -36,6 +36,42 @@ use crate::runtime::mem::CRYPTO_free;
 /// `OPENSSL_FILE` at `PEM_ASN1_read_bio`'s `OPENSSL_free(data)` (`pem_oth.c:34`).
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_oth.c".as_ptr();
 
+/// The block [`PEM_bytes_read_bio`] hands this reader on its success return.
+///
+/// The authority releases it with the plain `OPENSSL_free(data)` at `pem_oth.c:34`, after `d2i`
+/// and before the result is returned. This handle owns the block between those two edges, so its
+/// `Drop` is the block's single release at that coordinate; NULL is the empty state, exactly as
+/// the authority's `OPENSSL_free(NULL)` no-op.
+struct DataBuf {
+    ptr: ptr::NonNull<c_uchar>,
+}
+
+impl DataBuf {
+    /// Adopt the reader's `pdata` block, or `None` for its NULL answer.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block `PEM_bytes_read_bio` produced for this frame that this frame
+    /// exclusively owns and no other owner will release; `Drop`'s `CRYPTO_free` is its single
+    /// release.
+    unsafe fn adopt(ptr: *mut c_uchar) -> Option<DataBuf> {
+        ptr::NonNull::new(ptr).map(|ptr| DataBuf { ptr })
+    }
+
+    /// The block's address, over which `d2i` advances a cursor.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for DataBuf {
+    /// The authority's own `OPENSSL_free(data)` (`pem_oth.c:34`).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took in and has not handed out; `Drop` runs
+        // once, so this is its single release at the authority's own coordinate.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_READ_BIO_FREE) };
+    }
+}
+
 /// `void *PEM_ASN1_read_bio(d2i_of_void *d2i, const char *name, BIO *bp, void **x,
 /// pem_password_cb *cb, void *u)` — `crypto/pem/pem_oth.c:20-36`.
 ///
@@ -55,14 +91,23 @@ pub unsafe extern "C" fn PEM_ASN1_read_bio(
     cb: Option<PemPasswordCb>,
     u: *mut c_void,
 ) -> *mut c_void {
-    let mut data: *mut c_uchar = ptr::null_mut();
+    let mut data_raw: *mut c_uchar = ptr::null_mut();
     let mut len: c_long = 0;
 
     // SAFETY: `bp` is live and the two out-parameters are this frame's own.
-    if unsafe { PEM_bytes_read_bio(&mut data, &mut len, ptr::null_mut(), name, bp, cb, u) } == 0 {
+    if unsafe { PEM_bytes_read_bio(&mut data_raw, &mut len, ptr::null_mut(), name, bp, cb, u) } == 0
+    {
         return ptr::null_mut();
     }
-    let mut p: *const c_uchar = data;
+    // The success edge: the reader has handed this frame the block and will not release it, so
+    // the handle owns it until the authority's own `OPENSSL_free(data)` below.
+    // SAFETY: `data_raw` is NULL or the block the reader just allocated for this call,
+    // exclusively owned here.
+    let data = unsafe { DataBuf::adopt(data_raw) };
+    let mut p: *const c_uchar = match &data {
+        Some(buf) => buf.as_ptr().cast_const(),
+        None => ptr::null(),
+    };
     // SAFETY: `x` is the caller's destination, `p` is readable for `len` bytes, and `d2i` is the
     // caller's decoder.
     let ret = unsafe { d2i(x, &mut p, len) };
@@ -70,8 +115,9 @@ pub unsafe extern "C" fn PEM_ASN1_read_bio(
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&err_sites::PEM_OTH_33) };
     }
-    // SAFETY: `data` is the buffer `PEM_bytes_read_bio` allocated for this call.
-    unsafe { CRYPTO_free(data.cast::<c_void>(), FILE, LINE_READ_BIO_FREE) };
+    // The authority's own `OPENSSL_free(data)` (`pem_oth.c:34`), after `d2i` and before the
+    // result is returned; the handle's `Drop` is the block's single release.
+    drop(data);
     ret
 }
 

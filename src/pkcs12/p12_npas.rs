@@ -378,7 +378,7 @@ unsafe fn newpass_p12(p12: *mut Pkcs12, oldpass: *const c_char, newpass: *const 
                 if bags.is_null() {
                     break 'body;
                 }
-                if newpass_bags(bags, oldpass, newpass, (*p7).ctx.libctx, (*p7).ctx.propq) == 0 {
+                if newpass_bags(bags, oldpass, newpass, (*p7).ctx.libctx, (*p7).ctx.propq()) == 0 {
                     break 'body;
                 }
                 // Repack the bag in the same form under the new password.
@@ -394,7 +394,7 @@ unsafe fn newpass_p12(p12: *mut Pkcs12, oldpass: *const c_char, newpass: *const 
                         pbe_iter,
                         bags,
                         (*p7).ctx.libctx,
-                        (*p7).ctx.propq,
+                        (*p7).ctx.propq(),
                     )
                 };
                 if p7new.is_null() || OPENSSL_sk_push(newsafes, p7new.cast()) == 0 {

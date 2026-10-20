@@ -1,0 +1,250 @@
+{
+  "receipt": "boundary-sweep-B23",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "9079a19a4",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/packet.rs",
+      "src/provider/slh_dsa_sig.rs",
+      "src/provider/sm2_sig.rs"
+    ],
+    "working_tree_blob": {
+      "src/packet.rs": "936f16db4cbb5c4853503c9e1de9fc9f4c913781",
+      "src/provider/slh_dsa_sig.rs": "8ccbdaaff735b2524b3f7fe7de2085e056dffa8b",
+      "src/provider/sm2_sig.rs": "be62123378f5da259f8bad70bd6b315e1501069d"
+    }
+  },
+  "stop_status": "CLEAR after repair. The shared failed-initialisation class is closed crate-wide: every WPACKET_init_* entry point now writes `subs` on every return path, so cleanup after a refusal is defined. One pre-existing memory-safety defect (B23-D2, an out-of-bounds pointer formed by put_value after its final write) was found by the Miri run and repaired. No ABI, #[repr(C)] layout, exported symbol/signature, allocator seam or unsafe lint attribute changed; no hidden obligation remains.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/packet.c: wpacket_intern_init_len at :103-127, WPACKET_init_static_len at :129-144, WPACKET_init_der at :146-158, WPACKET_init_len at :160-172, WPACKET_init at :174-177, WPACKET_init_null at :179-187, WPACKET_init_null_der at :189-197, put_value at :211-227, WPACKET_cleanup at :527-536. The authority tree is not present in this checkout, so no local byte diff or sha256 was taken (NOT_RUN).",
+    "abi": "No export, signature, #[repr(C)] layout or unsafe lint attribute changed. Wpacket/WpacketSub field order and widths are untouched; the CRYPTO_zalloc/CRYPTO_free seam coordinates (FILE_PACKET, LINE) are untouched. The only production additions are writes to an internal `subs` field, a guarded cursor decrement in a private fn, and `#[cfg(test)]` fault injection.",
+    "external_contracts": [
+      "A WPACKET_init_* caller supplies a live `pkt` and, for the buffer-backed forms, a buffer writable for `len` bytes that outlives the packet. The authority rejects a NULL buffer or zero length before touching the packet.",
+      "After any WPACKET_init_* return, `subs` is written: an owned node on success, NULL on refusal. WPACKET_cleanup may therefore be called unconditionally after an init refusal, which is what the provider call sites do.",
+      "Only `subs` is guaranteed written when the argument guard refuses. No other field may be read after that refusal; the allocation-failure arm writes every field.",
+      "WPACKET_cleanup reads only `subs`; it is idempotent because it leaves `subs` NULL."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B23-WPKT-1",
+      "file": "src/packet.rs",
+      "mechanism": "failed-initialisation state of wpacket_intern_init_len and every public WPACKET_init_* entry point, consumed by WPACKET_cleanup",
+      "disposition": "SAFETY_DISCHARGED",
+      "contract": "wpacket_intern_init_len writes curr=0, written=0 and subs=NULL before the WPACKET_SUB allocation, mirroring the authority's direct `pkt->subs = OPENSSL_zalloc(...)` assignment (which leaves NULL on failure). It installs the node on success and leaves NULL on every failure. Each argument-refusal guard in WPACKET_init_static_len, WPACKET_init_der and WPACKET_init_len also writes subs=NULL before returning 0, so every init entry point writes subs on every path. WPACKET_cleanup requires subs to be NULL or the head of a chain this unit owns, reads nothing else, and leaves subs NULL. The task packet reserves nothing and does not expose a secret.",
+      "defects": [
+        "B23-D1"
+      ],
+      "residuals": [
+        "B23-R1",
+        "B23-R2"
+      ]
+    },
+    {
+      "id": "B23-WPKT-2",
+      "file": "src/packet.rs",
+      "mechanism": "put_value backward cursor walk",
+      "disposition": "SAFETY_DISCHARGED",
+      "contract": "put_value is a private safe fn reached only from WPACKET_put_bytes__ and wpacket_intern_close, both of which pass a span established writable for `len` bytes (the reserved sub-packet length field or a WPACKET_allocate_bytes span). NULL `data` is the sizing pass and the authority's success. The walk stops after the final (first) byte, so no pointer one before the span is ever formed; the byte sequence written is unchanged.",
+      "defects": [
+        "B23-D2"
+      ],
+      "residuals": []
+    }
+  ],
+  "caller_closure": [
+    {
+      "file": "src/provider/ecdsa_sig.rs",
+      "caller": "ecdsa_setup_md (WPACKET_init_der:293)",
+      "disposition": "SAFE",
+      "evidence": "MaybeUninit packet, init refusal short-circuits the writer chain, WPACKET_cleanup runs unconditionally; the root fix writes subs=NULL on refusal."
+    },
+    {
+      "file": "src/provider/dsa_sig.rs",
+      "caller": "dsa_setup_md (WPACKET_init_der:304)",
+      "disposition": "SAFE",
+      "evidence": "Same shape as ecdsa_setup_md; cleanup after refusal is now an empty-chain no-op."
+    },
+    {
+      "file": "src/provider/eddsa_sig.rs",
+      "caller": "eddsa_setup_md (WPACKET_init_der:351)",
+      "disposition": "SAFE",
+      "evidence": "Same shape, including the unknown-key-type arm that frees the key and cleans the packet after a possible init refusal."
+    },
+    {
+      "file": "src/provider/ml_dsa_sig.rs",
+      "caller": "set_alg_id_buffer (WPACKET_init_der:316)",
+      "disposition": "SAFE",
+      "evidence": "Same shape; init refusal leaves subs=NULL and cleanup is defined."
+    },
+    {
+      "file": "src/provider/ml_kem_kmgmt.rs",
+      "caller": "ML-KEM set_ctx_params KEMRI KDF AlgorithmIdentifier (WPACKET_init_der:1357)",
+      "disposition": "SAFE",
+      "evidence": "`ret &= writer-chain` evaluates the writers even when init returned 0, exactly as the authority does; with subs NULL the first start_sub_packet/close guard refuses and no writer dereferences an uninitialised field. The allocation-failure arm has curr/written/buf/staticbuf/maxsize/endfirst initialised before the intern allocation."
+    },
+    {
+      "file": "src/provider/kdf.rs",
+      "caller": "der_encode_sharedinfo (WPACKET_init_der:2068 / WPACKET_init_null_der:2070)",
+      "disposition": "SAFE",
+      "evidence": "x942_encode_otherinfo calls it twice; both refusal paths reach WPACKET_cleanup, which now sees subs=NULL. The second pass re-initialises over a packet already cleaned."
+    },
+    {
+      "file": "src/provider/kdf.rs",
+      "caller": "hkdf_expand label builder (WPACKET_init_static_len:4908)",
+      "disposition": "SAFE",
+      "evidence": "The `||` chain short-circuits every writer when init refuses, then cleans up; subs is NULL."
+    },
+    {
+      "file": "src/provider/slh_dsa_sig.rs",
+      "caller": "slh_dsa_set_alg_id_buffer (WPACKET_init_der:398)",
+      "disposition": "SAFE (local workaround reverted)",
+      "evidence": "The M70-D1 `core::mem::zeroed::<Wpacket>()` workaround was replaced by MaybeUninit now that the shared owner establishes the failure state. The existing API-level control still passes."
+    },
+    {
+      "file": "src/provider/sm2_sig.rs",
+      "caller": "sm2sig_digest_signverify_init (WPACKET_init_der:401)",
+      "disposition": "SAFE (local workaround reverted)",
+      "evidence": "Same revert as SLH-DSA; no local zeroing remains."
+    },
+    {
+      "file": "src/provider/rsa_sig.rs",
+      "caller": "rsa_generate_signature_aid (WPACKET_init_der:673)",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "Returns NULL and raises without touching the packet when init refuses; no cleanup on an uninitialised packet. Never read subs after refusal."
+    },
+    {
+      "file": "src/provider/encode_key2any.rs",
+      "caller": "RSA-PSS params two-pass builder (WPACKET_init_null_der:1700, WPACKET_init_der:1711)",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "The packet is already the all-zero Wpacket image and cleanup runs on the second-pass init refusal. Root fix preserves this."
+    },
+    {
+      "file": "src/packet.rs",
+      "caller": "wpacket_intern_init_len callers: WPACKET_init_static_len, WPACKET_init_der, WPACKET_init_len, WPACKET_init (delegates), WPACKET_init_null, WPACKET_init_null_der",
+      "disposition": "SAFE (root)",
+      "evidence": "Every path writes curr/written/subs before returning; the lenbytes!=0 allocation-failure arm already adopted and released the node and NULLed subs, and now does so after the pre-clear."
+    },
+    {
+      "file": "src/asn1_dsa.rs, src/dsa/sign.rs, src/der_writer.rs, src/ml_dsa/encoders.rs, src/punycode.rs, src/slh_dsa/{dsa,fors,wots}.rs, src/ssl/statem/{statem_clnt,statem_srvr}.rs",
+      "caller": "remaining WPACKET_init_static_len / init_len / init_null callers",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "Each builds the packet with `core::mem::zeroed::<Wpacket>()` (or delegates to a caller that does), and each returns on init refusal without reading the packet, or cleans up an image whose subs is already NULL. The new failure-state write is therefore additive and cannot regress them."
+    },
+    {
+      "file": "src/provider/der_ec_sig.rs, der_ecx_key.rs, der_rsa_key.rs, der_rsa_sig.rs, der_sm2_sig.rs",
+      "caller": "unit tests calling WPACKET_init_der",
+      "disposition": "SAFE (test-only)",
+      "evidence": "Each asserts init == 1 before using or cleaning the packet, so the success path wrote every field."
+    }
+  ],
+  "defects": [
+    {
+      "id": "B23-D1",
+      "file": "src/packet.rs",
+      "severity": "medium",
+      "kind": "uninitialised_read_invalid_free_on_failed_init",
+      "status": "fixed",
+      "description": "wpacket_intern_init_len wrote curr and written, then allocated the first WPACKET_SUB with `let Some(subs) = ... else { return 0 }`. On allocation failure it returned without ever writing pkt->subs, so a caller that cleaned up unconditionally read an uninitialised pointer and could free it. The authority writes `pkt->subs = OPENSSL_zalloc(...)` directly and therefore leaves NULL on the same failure. The class covered ecdsa_sig, dsa_sig, eddsa_sig, ml_dsa_sig, ml_kem_kmgmt, kdf (:2114-2150 and :4905-4923), and was worked around locally in slh_dsa_sig/sm2_sig by zeroing the packet (M70-D1).",
+      "fix": "src/packet.rs: `(*pkt).subs = core::ptr::null_mut()` before the OwnedSub::zalloc call, and the same write in the argument-refusal guards of WPACKET_init_static_len, WPACKET_init_der and WPACKET_init_len. The safety docs now state the cleanable failure state at every init entry point and at WPACKET_cleanup. The SLH-DSA and SM2 zeroing workarounds were reverted to the common MaybeUninit shape."
+    },
+    {
+      "id": "B23-D2",
+      "file": "src/packet.rs",
+      "severity": "medium",
+      "kind": "out_of_bounds_pointer_arithmetic",
+      "status": "fixed",
+      "description": "put_value walked the cursor down after every write, including after the final (first) byte, forming `data - 1` one before the span. Miri (both Stacked and Tree Borrows) reported `in-bounds pointer arithmetic failed: attempting to offset pointer by -1 bytes ... at the beginning of the allocation` on the existing BUF_MEM round-trip test. The authority's `data--` has the same C UB; the Rust translation must not reproduce it.",
+      "fix": "The decrement is guarded by `if len > 0`, so the last write leaves the cursor at the first byte and no out-of-span pointer is formed. The bytes written are unchanged. This was discovered by the B23 Miri run, not introduced by the failed-init repair."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean (final blob)",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (final blob)",
+      "focused_tests": "cargo test --lib packet::tests -- --test-threads=4: 5 passed / 0 failed (1698 filtered), including the two new controls",
+      "structural_guards": "No CRYPTO_* coordinate, #[repr(C)] layout, export, signature, or unsafe lint attribute changed; the failpoint is #[cfg(test)] and thread-local; every new unsafe expression in the controls carries a SAFETY comment."
+    },
+    "controls_observed": [
+      "a_failed_sub_alloc_leaves_a_fully_initialised_cleanable_packet forces the next WPACKET_SUB allocation to fail through a #[cfg(test)] thread-local hook, starts from MaybeUninit::<Wpacket>, asserts init returns 0, reads every field (buf, staticbuf, maxsize, endfirst, curr, written, subs), asserts subs is NULL, then calls WPACKET_cleanup. Under Miri an uninitialised field is an error; under the normal harness a regression to an uninitialised read is exercised.",
+      "a_failed_sub_alloc_overwrites_a_poisoned_subs_field pre-fills the whole packet with 0xAA, forces the same failure, and asserts subs is NULL before cleanup. This is the deterministic negative control: if the root fix regresses and the failure path leaves subs untouched, the assertion fires with 'failed init left `subs` untouched (poisoned with 0xAA); cleanup would free it' before any garbage pointer is released.",
+      "The existing provider::slh_dsa_sig::tests::a_refused_der_init_leaves_a_cleanable_packet now exercises the argument-refusal arm at the call site; it passes.",
+      "Miri exposed B23-D2 in the existing a_buf_mem_backed_packet_round_trips_its_bytes test before the fix; the same test passes after the guarded decrement, which is the observed before/after witness."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4 on the final blob: 1676 passed, 0 failed, 27 ignored (1703 total, 93.17 s). An earlier invocation of the same suite on the same blob failed 17 runtime::secure tests (secure-heap init returning 0); a rerun passed. The failures are in the unrelated process-global secure heap and no packet/provider code is reachable from them (recorded as B23-R3).",
+      "serial": "cargo test --lib -- --test-threads=1 on the final blob: 1676 passed, 0 failed, 27 ignored (1703 total, 257.56 s).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: clean on the final blob",
+      "probes": "bash scripts/adv-probe.sh: all 26 probes passed on the final blob (one process per allocator-injection probe).",
+      "venue": "docker/openssl-rs-court.sh (8 GiB cgroup), CARGO_BUILD_JOBS=4; host available memory checked before builds (51 GiB)."
+    }
+  },
+  "miri": {
+    "status": "PASS",
+    "toolchain": "nightly-2026-10-01-x86_64-unknown-linux-gnu, cargo-miri 0.1.0 (21b707e3f 2026-09-30); the miri component was installed into the court toolchain for this batch.",
+    "stacked_borrows": "cargo +nightly-2026-10-01 miri test --lib packet::tests -- --test-threads=1 with -Zmiri-disable-isolation: 5 passed / 0 failed. The first run (before B23-D2 was repaired) failed at src/packet.rs:606 with an out-of-bounds pointer decrement; the rerun after the repair passes.",
+    "tree_borrows": "same command with -Zmiri-tree-borrows: 5 passed / 0 failed.",
+    "scope": "The packet unit's tests only (init/cleanup, put_value, sub-packet reserve, null packet). This is not full-library Miri; no claim is made for the provider call sites, which are exercised by the native suite and the 26 probes."
+  },
+  "asan": {
+    "status": "NOT_RUN",
+    "reason": "The repaired paths change a failed-init field write and a cursor-decrement guard; no allocation size, ownership or access extent changed. The uninitialised-read/out-of-bounds classes are Miri's, and both Miri models were run. The ASan court was not rebuilt for this batch."
+  },
+  "loom_or_tsan": "NOT_RUN. The production change adds no lock, atomic or shared ownership transition; the failpoint is a thread-local Cell behind #[cfg(test)].",
+  "invalidated_evidence": {
+    "closed": "The M70-D1 class finding and its queue entry are closed by the shared-owner repair. The local SLH-DSA/SM2 zeroing repairs are superseded and removed.",
+    "invalidated": "All prior evidence bound to src/packet.rs is invalidated by the B23-D2 put_value repair and the failed-init write: any Miri or native result for packet.rs before blob 936f16db4 no longer describes the candidate. M70-D1's evidence for slh_dsa_sig.rs and sm2_sig.rs is invalidated (the workaround and its source identity changed); the files need their own resumed per-file evidence. The M70 claim that zeroing was the repair no longer describes the code. Evidence for the six provider callers is bound to its own source identities but their safety argument now rests on this shared contract, so the failure-path portion is refreshed here.",
+    "not_invalidated": "The CRYPTO_* allocator seam and its coordinates, every #[repr(C)] layout, and every exported symbol/signature are unchanged, so the allocator, ABI and symbol receipts survive. The functional success paths of the six provider callers are unchanged (the new write executes only where the authority already had NULL), and their vector/functional evidence is untouched. The 26 allocator-injection probes pass on the final blob."
+  },
+  "hidden_obligations": [],
+  "hidden_obligations_note": "0. The one remaining failure-state restriction is explicit: after an argument-guard refusal only `subs` is written, so no other field may be read; no current caller does, and the allocation-failure arm (the only reachable refusal at the provider sites given their non-NULL, non-zero buffers) initialises every field. WPACKET_cleanup reads only subs.",
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "None in production. The failed-init write removes an assumption; the put_value guard removes an out-of-bounds formation. The two control tests add test-only unsafe expressions under SAFETY comments and a #[cfg(test)] safe failpoint that does not exist in a release build.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "No unsafe expression was deleted. B23-D1 adds three field writes inside existing unsafe blocks; the length guard in put_value narrows an operation rather than removing it.",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 2,
+  "test_only_unsafe_note": "Two control tests in src/packet.rs::tests; the fault-injection hook itself is safe and #[cfg(test)]-only.",
+  "boundary_size": "3 files, +165/-36 (packet.rs +153/-9 including two controls and the failpoint; slh_dsa_sig.rs and sm2_sig.rs are comment/workaround substitutions). No allocation size, #[repr(C)] layout, exported symbol or signature changed.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Every WPACKET entry point is an unsafe fn / unsafe extern \"C\" with a stated contract; put_value is private and its only callers establish the writable span. No safe wrapper was added, and the failpoint cannot exist in a release build.",
+  "residuals": [
+    {
+      "id": "B23-R1",
+      "file": "src/packet.rs",
+      "severity": "low",
+      "disposition": "RECORDED caller obligation - documented",
+      "description": "After an argument-guard refusal (NULL buffer or zero length), only `subs` is guaranteed written. A caller must not read buf/staticbuf/maxsize/endfirst/curr/written after that refusal; only WPACKET_cleanup is defined. No in-crate caller takes that path: every provider site passes a non-NULL buffer of non-zero length, so its refusal is the allocation-failure arm, which writes every field."
+    },
+    {
+      "id": "B23-R2",
+      "file": "src/packet.rs",
+      "severity": "low",
+      "disposition": "RECORDED unsafe-interface contract",
+      "description": "The init functions remain unsafe: `pkt` liveness and the buffer's writable extent/lifetime are caller obligations. The new failure-state guarantee is an implementer guarantee, not a removal of those obligations."
+    },
+    {
+      "id": "B23-R3",
+      "file": "src/runtime/secure.rs",
+      "severity": "low",
+      "disposition": "RECORDED unrelated pre-existing test-ordering flake",
+      "description": "One threaded full-suite run on the final blob failed 17 secure-heap tests (CRYPTO_secure_malloc_init returned 0 after a reset that could not tear down a heap with live allocations); the immediate rerun of the identical suite passed 1676/0/27. No packet or provider-signature code is reachable from those tests. It is a process-global test-fixture ordering issue and needs its own investigation; it was not modified in this batch."
+    },
+    {
+      "id": "B23-R4",
+      "file": "src/packet.rs",
+      "severity": "low",
+      "disposition": "RECORDED scope limit",
+      "description": "SAFETY_DISCHARGED applies to the two named mechanism scopes (failed-init state and put_value), not to the whole of packet.rs and not to any consumer family. No consumer becomes SAFE_COMPATIBLE from this receipt."
+    },
+    {
+      "id": "B23-R5",
+      "file": "src/packet.rs",
+      "severity": "low",
+      "disposition": "NOT_RUN authority differential",
+      "description": "The pinned openssl-3.6.4 tree is not present in this checkout, so no byte-level authority diff or executable differential was run. The transcript claims rely on the authority source line references above."
+    }
+  ],
+  "escalations": []
+}

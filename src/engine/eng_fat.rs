@@ -49,17 +49,24 @@ use core::ffi::{c_char, c_int, c_uint, c_void};
 
 use crate::engine::eng_lib::Engine;
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
+use crate::engine::eng_table::engine_table_unregister_locked;
 use crate::engine::tb_asnmth::{
-    ENGINE_register_pkey_asn1_meths, ENGINE_set_default_pkey_asn1_meths,
+    pkey_asn1_meth_table_slot, ENGINE_register_pkey_asn1_meths, ENGINE_set_default_pkey_asn1_meths,
 };
-use crate::engine::tb_cipher::{ENGINE_register_ciphers, ENGINE_set_default_ciphers};
-use crate::engine::tb_dh::{ENGINE_register_DH, ENGINE_set_default_DH};
-use crate::engine::tb_digest::{ENGINE_register_digests, ENGINE_set_default_digests};
-use crate::engine::tb_dsa::{ENGINE_register_DSA, ENGINE_set_default_DSA};
-use crate::engine::tb_eckey::{ENGINE_register_EC, ENGINE_set_default_EC};
-use crate::engine::tb_pkmeth::{ENGINE_register_pkey_meths, ENGINE_set_default_pkey_meths};
-use crate::engine::tb_rand::{ENGINE_register_RAND, ENGINE_set_default_RAND};
-use crate::engine::tb_rsa::{ENGINE_register_RSA, ENGINE_set_default_RSA};
+use crate::engine::tb_cipher::{
+    cipher_table_slot, ENGINE_register_ciphers, ENGINE_set_default_ciphers,
+};
+use crate::engine::tb_dh::{dh_table_slot, ENGINE_register_DH, ENGINE_set_default_DH};
+use crate::engine::tb_digest::{
+    digest_table_slot, ENGINE_register_digests, ENGINE_set_default_digests,
+};
+use crate::engine::tb_dsa::{dsa_table_slot, ENGINE_register_DSA, ENGINE_set_default_DSA};
+use crate::engine::tb_eckey::{ec_table_slot, ENGINE_register_EC, ENGINE_set_default_EC};
+use crate::engine::tb_pkmeth::{
+    pkey_meth_table_slot, ENGINE_register_pkey_meths, ENGINE_set_default_pkey_meths,
+};
+use crate::engine::tb_rand::{rand_table_slot, ENGINE_register_RAND, ENGINE_set_default_RAND};
+use crate::engine::tb_rsa::{rsa_table_slot, ENGINE_register_RSA, ENGINE_set_default_RSA};
 use crate::runtime::bio::sys::strncmp;
 use crate::runtime::conf::modparse::CONF_parse_list;
 use crate::runtime::err::err_sites::ENG_FAT_86;
@@ -91,7 +98,7 @@ const ENGINE_FLAGS_NO_REGISTER_ALL: c_int = 0x0008;
 /// `int ENGINE_set_default(ENGINE *e, unsigned int flags)` — `crypto/engine/eng_fat.c:17-46`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`]; the authority's arm bodies dereference it.
+/// `e` must be a non-NULL pointer to a live [`Engine`]; the authority's arm bodies dereference it.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default(e: *mut Engine, flags: c_uint) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -203,7 +210,8 @@ unsafe fn push_cstr_or_null(buf: &mut Vec<u8>, p: *const c_char) {
 /// with the authority's `"str=%s"` operand and answers 0 rather than setting anything.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`]; `def_list` must be NULL or NUL-terminated.
+/// `e` must be a non-NULL pointer to a live [`Engine`]; `def_list` must be NULL or
+/// NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_string(
     e: *mut Engine,
@@ -235,10 +243,42 @@ pub unsafe extern "C" fn ENGINE_set_default_string(
     unsafe { ENGINE_set_default(e, flags) }
 }
 
+/// Unregister `e` from every operation table this crate maintains.
+///
+/// The pinned authority does **not** do this: `ENGINE_remove`/`engine_list_remove`
+/// (`crypto/engine/eng_list.c:119-147`, `:361-376`) drop the global list's structural
+/// reference without calling any `engine_table_unregister`, and `engine_table_register`
+/// (`crypto/engine/eng_table.c:83-149`) stores a borrowed `ENGINE *` without taking a
+/// reference. An engine removed from the list can therefore leave a dangling `sk`/`funct`
+/// table entry that `ossl_engine_table_select` / `engine_unlocked_init` dereferences. Every
+/// table entry borrows the list's structural reference, so this function retires those
+/// entries at the only point where that reference is dropped. This is a deliberate
+/// memory-safety improvement over the authority (AGENTS.md §17), not a behaviour
+/// reproduced from it: an existing functional reference still keeps the engine alive, but
+/// the removed engine is no longer selectable from any table.
+///
+/// # Safety
+/// The engine lock must be held and `e` must be a live `ENGINE`.
+pub(crate) unsafe fn engine_unregister_from_all_tables(e: *mut Engine) {
+    // SAFETY: the engine lock is held by the caller, each slot is this crate's static, and
+    // `e` is live per the contract.
+    unsafe {
+        engine_table_unregister_locked(cipher_table_slot(), e);
+        engine_table_unregister_locked(digest_table_slot(), e);
+        engine_table_unregister_locked(rsa_table_slot(), e);
+        engine_table_unregister_locked(dsa_table_slot(), e);
+        engine_table_unregister_locked(dh_table_slot(), e);
+        engine_table_unregister_locked(ec_table_slot(), e);
+        engine_table_unregister_locked(rand_table_slot(), e);
+        engine_table_unregister_locked(pkey_meth_table_slot(), e);
+        engine_table_unregister_locked(pkey_asn1_meth_table_slot(), e);
+    }
+}
+
 /// `int ENGINE_register_complete(ENGINE *e)` — `:93-111`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_complete(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine; each register arm is the matching 13.2 table.
@@ -279,4 +319,139 @@ pub unsafe extern "C" fn ENGINE_register_all_complete() -> c_int {
         e = unsafe { ENGINE_get_next(e) };
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_init::ENGINE_finish;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::engine::eng_list::{ENGINE_add, ENGINE_remove};
+    use crate::engine::tb_asnmth::ENGINE_get_pkey_asn1_meth_engine;
+    use crate::engine::tb_cipher::ENGINE_get_cipher_engine;
+    use crate::engine::tb_dh::ENGINE_get_default_DH;
+    use crate::engine::tb_digest::ENGINE_get_digest_engine;
+    use crate::engine::tb_dsa::ENGINE_get_default_DSA;
+    use crate::engine::tb_eckey::ENGINE_get_default_EC;
+    use crate::engine::tb_pkmeth::ENGINE_get_pkey_meth_engine;
+    use crate::engine::tb_rand::ENGINE_get_default_RAND;
+    use crate::engine::tb_rsa::ENGINE_get_default_RSA;
+    use crate::test_support::lock_global_state;
+    use core::ptr;
+
+    /// One nid for every multi-nid table; the value only needs to be stable.
+    static NID: c_int = 0x4d9;
+    /// A non-NULL stand-in for the five legacy method slots. Registration only tests for
+    /// NULL and no table operation dereferences the method object.
+    static METHOD_SENTINEL: u8 = 0;
+
+    unsafe extern "C" fn cipher_nids(
+        _e: *mut Engine,
+        _ret: *mut *const c_void,
+        nids: *mut *const c_int,
+        _nid: c_int,
+    ) -> c_int {
+        if !nids.is_null() {
+            // SAFETY: `nids` is the caller's writable slot.
+            unsafe { *nids = ptr::addr_of!(NID) };
+        }
+        1
+    }
+
+    unsafe extern "C" fn pkey_nids(
+        _e: *mut Engine,
+        _ret: *mut *mut c_void,
+        nids: *mut *const c_int,
+        _nid: c_int,
+    ) -> c_int {
+        if !nids.is_null() {
+            // SAFETY: `nids` is the caller's writable slot.
+            unsafe { *nids = ptr::addr_of!(NID) };
+        }
+        1
+    }
+
+    /// `ENGINE_remove` drops the global list's structural reference. The operation tables
+    /// store **borrowed** `ENGINE *` values, so `engine_list_remove` must unregister the
+    /// engine from all of them first; otherwise every select below dereferences the freed
+    /// engine (or returns the stale pointer). The authority does not do this (see
+    /// [`engine_unregister_from_all_tables`]); this test pins the crate's deliberate
+    /// safety improvement and the correct NULL fallback for all nine tables.
+    #[test]
+    fn remove_unregisters_every_operation_table() {
+        let _g = lock_global_state();
+        // SAFETY: the test owns `e`; `ENGINE_add` leaves the caller's reference in place, and
+        // the final `ENGINE_free` is the one release of that reference.
+        unsafe {
+            let e = ENGINE_new();
+            assert!(!e.is_null(), "ENGINE_new allocates");
+            (*e).id = c"rt-remove-unreg".as_ptr();
+            (*e).name = c"rt-remove-unreg".as_ptr();
+            let sentinel = ptr::addr_of!(METHOD_SENTINEL).cast::<c_void>();
+            (*e).rsa_meth = sentinel;
+            (*e).dsa_meth = sentinel;
+            (*e).dh_meth = sentinel;
+            (*e).ec_meth = sentinel;
+            (*e).rand_meth = sentinel;
+            (*e).ciphers = Some(cipher_nids);
+            (*e).digests = Some(cipher_nids);
+            (*e).pkey_meths = Some(pkey_nids);
+            (*e).pkey_asn1_meths = Some(pkey_nids);
+
+            assert_eq!(ENGINE_add(e), 1, "the engine is published");
+            assert_eq!(ENGINE_set_default(e, ENGINE_METHOD_ALL), 1);
+            // `set_default` cached one functional reference per table; those references are
+            // released by `ENGINE_remove`'s unregistration below, not by `ENGINE_finish`.
+            let cached_refs = (*e).funct_ref;
+            assert_eq!(cached_refs, 9, "nine cached defaults hold nine references");
+            // Every table selects the registered engine before removal. Each select returns
+            // an owned functional reference, which the caller finishes here.
+            let selected = [
+                ENGINE_get_cipher_engine(NID),
+                ENGINE_get_digest_engine(NID),
+                ENGINE_get_default_RSA(),
+                ENGINE_get_default_DSA(),
+                ENGINE_get_default_DH(),
+                ENGINE_get_default_EC(),
+                ENGINE_get_default_RAND(),
+                ENGINE_get_pkey_meth_engine(NID),
+                ENGINE_get_pkey_asn1_meth_engine(NID),
+            ];
+            assert_eq!(
+                (*e).funct_ref,
+                cached_refs + 9,
+                "the nine selects acquired nine functional references"
+            );
+            for got in selected {
+                assert_eq!(got, e);
+                assert_eq!(ENGINE_finish(got), 1);
+            }
+            assert_eq!(
+                (*e).funct_ref,
+                cached_refs,
+                "the finish loop released exactly the nine selected references"
+            );
+
+            // Removal retires the list's reference; the caller's reference keeps `e` live,
+            // so the fallback assertions below are the observable, not a freed read.
+            assert_eq!(ENGINE_remove(e), 1);
+            assert_eq!((*e).funct_ref, 0, "every cached default was finished");
+            assert_eq!(
+                (*e).struct_ref.load(core::sync::atomic::Ordering::Relaxed),
+                1
+            );
+
+            assert!(ENGINE_get_cipher_engine(NID).is_null());
+            assert!(ENGINE_get_digest_engine(NID).is_null());
+            assert!(ENGINE_get_default_RSA().is_null());
+            assert!(ENGINE_get_default_DSA().is_null());
+            assert!(ENGINE_get_default_DH().is_null());
+            assert!(ENGINE_get_default_EC().is_null());
+            assert!(ENGINE_get_default_RAND().is_null());
+            assert!(ENGINE_get_pkey_meth_engine(NID).is_null());
+            assert!(ENGINE_get_pkey_asn1_meth_engine(NID).is_null());
+
+            assert_eq!(ENGINE_free(e), 1, "the caller's reference is the last");
+        }
+    }
 }

@@ -208,7 +208,7 @@ unsafe fn parse_pk12(
                 pkey,
                 ocerts,
                 (*p7).ctx.libctx,
-                (*p7).ctx.propq,
+                (*p7).ctx.propq(),
             )
         };
         if ok == 0 {

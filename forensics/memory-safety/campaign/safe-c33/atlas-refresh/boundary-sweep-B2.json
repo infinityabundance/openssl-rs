@@ -1,0 +1,347 @@
+{
+  "receipt": "boundary-sweep-B2",
+  "date": "2026-10-18",
+  "candidate": {
+    "base_head": "60c852eb0",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/runtime/bio/bss_dgram_pair.rs",
+      "src/runtime/bio/bss_conn.rs",
+      "src/runtime/bio/bss_dgram.rs"
+    ],
+    "working_tree_blob": {
+      "src/runtime/bio/bss_dgram_pair.rs": "a9e7d54c33a54c6ec865c43e00bd2ec760bee942",
+      "src/runtime/bio/bss_conn.rs": "64234baaf9f539137d7ae5cd5e757f21d6fd7248",
+      "src/runtime/bio/bss_dgram.rs": "7b924057768af011ed9729e85e8111cfb09a3dd4"
+    }
+  },
+  "stop_status": "NONE",
+  "authority": {
+    "source": "openssl-3.6.4",
+    "abi": "C ABI unchanged; no export, signature, #[repr(C)] layout, method-table slot or CRYPTO_* seam coordinate changed",
+    "external_contracts": [
+      "A BIO callback (including the connect BIO's info callback and a free callback installed on an inner datagram BIO) must not free or otherwise invalidate the BIO or its method data while a dispatch operation is in progress. Reused from boundary sweep B1.",
+      "A BIO_MSG array passed to BIO_sendmmsg/BIO_recvmmsg contains num_msg records spaced stride bytes apart; each data pointer is readable/writable for data_len bytes and each non-NULL peer/local pointer is a live BIO_ADDR. The methods do not validate this layout.",
+      "Caller-supplied out-parameters (msgs_processed, int*, BIO**, BIO_ADDR*, timeval*, BIO_POLL_DESCRIPTOR*) are writable and non-NULL wherever the authority writes them unconditionally.",
+      "BIO_CTRL_DGRAM_SET0_LOCAL_ADDR transfers ownership of the BIO_ADDR exactly once; the caller must not pass the incumbent pointer, and must not free the transferred value.",
+      "BIO_C_GET_CONNECT returns pointers borrowed from the connect context; they remain valid only until the next SET_CONNECT, RESET or BIO_free.",
+      "A datagram BIO is not internally synchronised and must not be freed, reset or re-controlled concurrently with an in-flight read/write. A datagram pair synchronises only its ring buffers; ctrl mutations (mtu, caps, local_addr, buffer size) are not serialised against data operations (authority parity)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B2-DP-1",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "context lifecycle: dgram_pair_init, dgram_mem_init, dgram_pair_free, CtxDestroy for BioDgramPairSt through OwnedCtx",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "dgram_pair_free leaves bio.ptr dangling after dropping the context (authority parity); a second destroy is therefore caller UB, and the core's single-destroy reference gate is the enforcing contract.",
+        "The context is zalloc'd and only published to bio.ptr after the lock allocation succeeds; the zero-state sweep executes destroy_body on an all-zero block."
+      ]
+    },
+    {
+      "id": "B2-DP-2",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "RingBuf allocation/resize/release over CRYPTO_malloc/realloc/free",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "head_tail/push_pop rely on the internal invariant idx[i] <= len and count <= len; the authority's ossl_assert checks are not reproduced.",
+        "ring resize trusts the preconditions checked by its callers (growth only, or empty for shrink); the moved tail offset is nbytes - len, valid only on growth."
+      ]
+    },
+    {
+      "id": "B2-DP-3",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "pairing/unpairing: BIO_C_MAKE_BIO_PAIR, BIO_C_DESTROY_BIO_PAIR, peer pointers and local_addr ownership",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Pairing does not reject bio1 == bio2 (authority parity). Reads on such a self-pair fail because the two-lock helper's second write_lock reports the same-thread re-acquisition as 0; they do not deadlock.",
+        "Only the half being freed releases its own local_addr; the peer's address is released by the peer's own free, so freeing one half also unpairs the other.",
+        "The port nulls local_addr after BIO_ADDR_free (the authority does not), which removes the authority's destroy-pair-then-free double-release; this is a deliberate safety improvement."
+      ]
+    },
+    {
+      "id": "B2-DP-4",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "shared read/write locks, role-ordered two-lock acquisition, pending and write-guarantee locking",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The authority's role-distinctness asserts are omitted; the port's CRYPTO_THREAD_write_lock returns 0 for a same-thread write re-acquisition, so the reachable self-pair case fails cleanly instead of deadlocking.",
+        "mtu, cap, local_addr and req_buf_len are mutated by ctrl without taking the ring lock (authority parity); concurrent ctrl with data operations is an external precondition."
+      ]
+    },
+    {
+      "id": "B2-DP-5",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "datagram framing read/write, truncation and rollback, ring-growth arithmetic",
+      "disposition": "CONTRACTED",
+      "defects": [
+        {
+          "id": "B2-D1",
+          "file": "src/runtime/bio/bss_dgram_pair.rs",
+          "line_pre_fix": 1257,
+          "severity": "low (panic/lock-leak via caller-supplied size; contract-violating length)",
+          "class": "unchecked length sum used as the ring-growth allocation target",
+          "detail": "dgram_pair_write_inner computed req_buf_len + sz unchecked. This crate builds with overflow-checks = true, so a hostile BIO_MSG.data_len that overflows panics while the caller holds the pair write lock; guard_ffi converts the panic to an error but leaves the lock held. Without overflow checks the target wraps and can leave the growth loop spinning.",
+          "repair": "checked_add; an unrepresentable target is treated as 'no space', so the existing rollback path runs and the lock is released.",
+          "control": "authority differential (the C authority has the same unchecked addition) plus source review; no runtime pre-fix canary was executed."
+        }
+      ],
+      "residuals": [
+        "sz/data_len remains a caller-trusted length; the valid-buffer precondition is not validated (authority parity).",
+        "dgram_pair_ctrl_pending omits the authority's l == sizeof(hdr) assertion; on an impossible partial-header state it returns a header-derived length instead of 0 (no out-of-bounds access).",
+        "A failed header or body write restores idx[0]/count but not a grown req_buf_len; capacity changes are not part of the observable datagram state."
+      ]
+    },
+    {
+      "id": "B2-DP-6",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "strided BIO_MSG batches, address slots and message-result publication",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "msg_at forms i * stride unchecked; the caller's array contract (num_msg records stride bytes apart) is the precondition, and num_msg is clamped to 64 before use."
+      ]
+    },
+    {
+      "id": "B2-DP-7",
+      "file": "src/runtime/bio/bss_dgram_pair.rs",
+      "mechanism": "BIO_s_dgram_pair, BIO_s_dgram_mem, BIO_new_bio_dgram_pair exports and method tables",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_new_bio_dgram_pair tolerates a NULL pbio1/pbio2 by leaking that half (the authority writes unconditionally); output slots are caller-writable."
+      ]
+    },
+    {
+      "id": "B2-CN-1",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "BioConnect lifecycle, owned hostname/service strings, owned address chain, inner datagram BIO",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "conn_free releases the context only when a.shutdown != 0 (authority parity); a caller that clears shutdown leaks the context and leaves ptr live.",
+        "The inner datagram BIO is released before the context, so a free callback installed on it runs while the connect context is still valid; re-entry into BIO_free is absorbed by the core reference gate."
+      ]
+    },
+    {
+      "id": "B2-CN-2",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "socket descriptor ownership and the connect state machine (CREATE_SOCKET, CONNECT, BLOCKED_CONNECT, close)",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Descriptor close/shutdown follows b.shutdown and the OK state; concurrent use of the BIO while freeing is an external precondition (authority parity)."
+      ]
+    },
+    {
+      "id": "B2-CN-3",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "inner BIO delegation (read/write/ctrl/mmsg), create_dgram_bio, BIO_CTRL_DUP",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_CTRL_RESET does not clear dgram_bio (authority parity); a datagram connect BIO reset and reconnected may replace the inner BIO and leak the old one.",
+        "BIO_C_GET_DGRAM_BIO returns the inner BIO borrowed; the application must not free it while the connect BIO owns it."
+      ]
+    },
+    {
+      "id": "B2-CN-4",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "info-callback reentrancy edge in conn_state",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The callback is invoked with raw b/c pointers and no Rust reference or lock is held across it; the B1 BIO-callback non-invalidation contract is the external precondition. A callback that frees the BIO makes the subsequent context use a use-after-free (authority parity)."
+      ]
+    },
+    {
+      "id": "B2-CN-5",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "ctrl ownership and out-parameters: SET_CONNECT, GET_CONNECT, GET_PEER/DETECT_PEER_ADDR, GET_DGRAM_BIO, GET/SET_CALLBACK, DUP",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "GET_CONNECT/GET_CALLBACK return borrowed internal pointers; callers must not use them after the next mutation or free.",
+        "GET_PEER/DETECT_PEER_ADDR pass num to memcpy as a size; a negative num becomes a huge size_t (authority parity, upstream FIXME). Output pointers are dereferenced where the authority requires non-NULL."
+      ]
+    },
+    {
+      "id": "B2-CN-6",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "conn_sendmmsg/conn_recvmmsg delegation to the inner datagram BIO",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "msgs_processed is dereferenced unconditionally by the method; the public BIO_sendmmsg/BIO_recvmmsg wrapper guarantees non-NULL, and the array contract is delegated unchanged."
+      ]
+    },
+    {
+      "id": "B2-CN-7",
+      "file": "src/runtime/bio/bss_conn.rs",
+      "mechanism": "BIO_s_connect and BIO_new_connect exports",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_new_connect(NULL) succeeds with no name, because SET_CONNECT leaves ret = 1 for a NULL pointer (authority parity)."
+      ]
+    },
+    {
+      "id": "B2-DG-1",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "BioDgramData lifecycle: dgram_new, dgram_free, dgram_clear, empty CtxDestroy",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "dgram_free leaves bio.ptr dangling after OwnedCtx releases the block (authority parity).",
+        "dgram_clear closes the descriptor only when both shutdown and init are set, and resets init/flags without touching connected/peer (authority parity)."
+      ]
+    },
+    {
+      "id": "B2-DG-2",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "descriptor ownership: BIO_new_dgram, BIO_C_SET_FD/GET_FD, reset",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_new_dgram ignores the BIO_int_ctrl(SET_FD) result, so an invalid descriptor still yields an initialised BIO (authority parity).",
+        "BIO_C_SET_FD dereferences ptr as int* unconditionally; the control's pointer contract is the external precondition."
+      ]
+    },
+    {
+      "id": "B2-DG-3",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "embedded peer/local BIO_ADDR storage and address ctrl copies",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_CTRL_DGRAM_CONNECT/SET_PEER/SET_CONNECTED/GET_PEER/DETECT_PEER_ADDR read or write caller-owned BIO_ADDR/sockaddr memory; the pointer and length are caller obligations.",
+        "GET_PEER/DETECT_PEER_ADDR pass a negative num to memcpy as a huge size_t (authority parity, upstream FIXME)."
+      ]
+    },
+    {
+      "id": "B2-DG-4",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "receive-timeout bracket and setsockopt/getsockopt controls",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "SET_NEXT_TIMEOUT and SET/GET_RECV/SEND_TIMEOUT dereference caller timeval pointers unconditionally; timer arithmetic intentionally wraps/saturates as the authority does."
+      ]
+    },
+    {
+      "id": "B2-DG-5",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "read/write/puts, retry flags, unconnected-peer capture",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "outl/inl are c_int lengths passed to libc; the public BIO_read/BIO_write wrappers reject non-positive values, while the raw method contract trusts its caller.",
+        "A successful unconnected read records the sender through the SET_PEER ctrl; the BIO has no internal lock (authority parity)."
+      ]
+    },
+    {
+      "id": "B2-DG-6",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "message translation and ancillary data: translate_msg, extract_local, pack_local, Batch, msg_at",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "BIO_MSG data/peer/local pointers and lengths are caller-owned; the kernel-written cmsg length is trusted when reading ancillary payloads.",
+        "msg_at forms i * stride unchecked under the caller's array contract; num_msg is clamped to 64.",
+        "num_processed is dereferenced unconditionally by the method; the public mmsg wrapper guarantees non-NULL. BIO_CMSG_ALLOC_LEN is pinned by unit tests against cmsg_space."
+      ]
+    },
+    {
+      "id": "B2-DG-7",
+      "file": "src/runtime/bio/bss_dgram.rs",
+      "mechanism": "BIO_s_datagram and BIO_new_dgram exports",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The descriptor is caller-owned unless close_flag is non-zero; the close ownership transfers to the BIO exactly once."
+      ]
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (incremental check/test build of the touched target)",
+      "focused_tests": [
+        "runtime::bio: 71 passed / 0 failed (includes the three zero-state destructor sweeps)"
+      ]
+    },
+    "batch": {
+      "source_identity": "src/runtime/bio/bss_dgram_pair.rs blob a9e7d54c33a54c6ec865c43e00bd2ec760bee942",
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1581 passed / 0 failed / 26 ignored (301.05s)",
+      "threaded4": "1581 passed / 0 failed / 26 ignored (87.18s)",
+      "probes": "No affected adversarial probe is defined for these three files; the non-affected suite is NOT_RUN at this level."
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B2-1",
+        "class": "ownership/destructor instrument liveness",
+        "control": "runtime::bio::owned::adv_partial_init_tests::canary_destroy_instrument_is_live and the five release_model mutant tests (mutant_double_block_release, mutant_destroy_body_from_raw, mutant_into_raw_release, mutant_from_raw_without_transfer) pass, so the instrument fires for the defect classes it claims."
+      },
+      {
+        "id": "NC-B2-2",
+        "class": "self-pair lock re-acquisition",
+        "control": "Investigated but NOT retained: BIO_C_MAKE_BIO_PAIR(b, b) is accepted; CRYPTO_THREAD_write_lock reports same-thread re-acquisition as 0 (runtime/thread.rs rwlock_recursive_write_is_reported_not_deadlocked), so the second acquisition fails and BIO_read returns -1 rather than deadlocking. No repair was needed."
+      }
+    ],
+    "not_run": [
+      {
+        "id": "NR-B2-1",
+        "control": "ASan exercise of pair/connect/datagram free paths and the B2-D1 panic path",
+        "gate": "BOUNDARY/SEAL in the ASan venue; requires a targeted harness and a nightly sanitizer build (-Zsanitizer=address -Zbuild-std). No pre-built harness covers these methods."
+      },
+      {
+        "id": "NR-B2-2",
+        "control": "Miri aliasing/initialisation over the ring, peer and address paths",
+        "gate": "BOUNDARY/SEAL; no Miri component is installed in the court and the crate executes libc externs (as recorded in B1)."
+      },
+      {
+        "id": "NR-B2-3",
+        "control": "Loom/TSan model of the pair's two-lock order",
+        "gate": "SEAL; the locks are the C-facing CRYPTO_RWLOCK implementation, and no Rust Loom harness exists."
+      },
+      {
+        "id": "NR-B2-4",
+        "control": "Executable authority differential (allocator/transcript replay)",
+        "gate": "BOUNDARY/SEAL; this batch used source-level differential inspection of openssl-3.6.4, not a runtime differential court."
+      },
+      {
+        "id": "NR-B2-5",
+        "control": "Pre-fix runtime canary for B2-D1 (overflow panic/lock leak)",
+        "gate": "BOUNDARY; requires a temporary revert and a crafted full-ring state. The repair is a checked_add with an existing rollback path."
+      }
+    ]
+  },
+  "unsafe_accounting": {
+    "eliminated": [],
+    "relocated": [],
+    "hidden": 0,
+    "new_obligations": [],
+    "behavior_delta": "On an unrepresentable ring-growth target, the pair now treats the write as out of space and rolls back; the authority has the same unchecked addition (and this crate's overflow-checks profile would panic). This is a deliberate divergence on a contract-violating length only.",
+    "safe_caller_ub": "none known: every entry point in the three files is unsafe extern C or a private helper reached from one; no safe Rust interface exposes these raw operations."
+  },
+  "residuals_total": 37,
+  "dispositions": {
+    "src/runtime/bio/bss_dgram_pair.rs": "CONTRACTED",
+    "src/runtime/bio/bss_conn.rs": "CONTRACTED",
+    "src/runtime/bio/bss_dgram.rs": "CONTRACTED",
+    "safety_discharged": [],
+    "safe_compatible": []
+  },
+  "next": {
+    "queue": [
+      "src/rsa/object.rs (boundary rank 68)"
+    ],
+    "note": "B2 closes the three deferred BIO boundary files (pair rank 65, conn rank 66, datagram rank 59). Remaining deferred families are the SSL session ownership batch (ssl_sess rank 61), the TLS state-machine batch (statem_clnt rank 50), and the explicitly deferred ml_dsa/encoders.rs, ssl/ssl_lib.rs and ssl/statem/statem_srvr.rs. No fourth file was started."
+  }
+}

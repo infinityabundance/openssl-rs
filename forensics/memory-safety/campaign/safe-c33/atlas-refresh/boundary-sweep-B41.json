@@ -1,0 +1,191 @@
+{
+  "receipt": "boundary-sweep-B41",
+  "date": "2026-10-20",
+  "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+  "subphase": "Batch 1 of the alloc-ownership decomposition: post-quantum key material (ml_dsa, ml_kem)",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "ca1b20dd7",
+    "base_subject": "Merge stage/p25/bio-conn: connect-BIO fd double-close fix (B40)",
+    "source_commit": "66942afbc",
+    "committed": true,
+    "changed_files": 3,
+    "diffstat": "src/ml_dsa/key.rs +11/-6; src/ml_dsa/tests.rs +110/-4; scripts/adv-probe.sh +1",
+    "scope": "src/ml_dsa/key.rs, src/ml_dsa/poly.rs, src/ml_kem/key.rs -- 29 allocation/release sites"
+  },
+  "stop_status": "NO_STOP_DEFECT REMAINING IN THE REVIEWED SCOPE. One genuine allocator-mismatch defect was found and repaired; the independent non-author reviewer reproduced it as a native SIGABRT on the reverted code and ACCEPTed the fix. RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN: 1328 sites remain in later batches.",
+  "obligation_recovered": "RUNTIME_ALLOC_OWNERSHIP is UNSAFE_OPEN because it is the foundational allocator/ownership boundary that 31 families rest on. Every allocation/release site must preserve the seam's exact size/file/line, use the matching release path (plain / cleansed / secure-cleansed), keep extents checked, and never run a destructor on invalid state. Allocator-hook observability is observable behaviour.",
+  "population": {
+    "source": "atlas-refresh/site-worklist.json (unstatused inventory)",
+    "sites_total": 1357,
+    "files_total": 276,
+    "sites_in_safe33_closure": 1071,
+    "alloc": 700,
+    "release": 657,
+    "note": "The ~281 'B-ALLOC-SEAM' figure is an attribution total; attribution.json stores only per-file counts, so it cannot be re-derived line by line. The worklist is the reproducible population."
+  },
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change. No #[repr(C)], exported symbol, extern \"C\" signature or seam constant changed.",
+    "external_contracts": [
+      "ml_dsa_key.c:59,483 allocate the seed with OPENSSL_secure_malloc.",
+      "ml_dsa_key.c:70,173,486 release it securely.",
+      "ml_dsa_key.c:467 releases the same seed with OPENSSL_clear_free -- a plain free of an arena pointer. This is UB in the authority and is deliberately not reproduced (AGENTS.md section 17)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B41-ALLOC-1",
+      "file": "src/ml_dsa/key.rs:1128 (keygen_internal seed erase arm)",
+      "operation": "release of the ML-DSA keygen seed",
+      "before": "The seed was adopted with adopt_cleansed and released through CRYPTO_clear_free, i.e. plain free(), although it came from CRYPTO_secure_malloc. Once the secure heap is initialised this releases an arena pointer to the system allocator.",
+      "after": "adopt_secure_cleansed, releasing through CRYPTO_secure_clear_free. With no secure heap that path performs the same cleanse and the same CRYPTO_free with the same size and coordinates, so allocator-hook observability is unchanged.",
+      "mechanism": "ELIMINATED: the release mechanism is now derived from the constructor rather than re-asserted by hand at the erase arm.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, mutation control fired)"
+    }
+  ],
+  "divergence": {
+    "class": "UB in the C authority is not reproduced (AGENTS.md section 17)",
+    "authority_behaviour": "ml_dsa_key.c:467 frees a secure-arena seed with OPENSSL_clear_free.",
+    "our_behaviour": "The erase arm releases through the secure cleansed path.",
+    "compatibility_consequence": "With no secure heap, the seam call and its coordinates are identical. With a secure heap, the authority's behaviour is undefined, so there is no defined behaviour to preserve.",
+    "status": "ACCEPTED DIVERGENCE, recorded here and in code"
+  },
+  "reviewer": {
+    "independent": true,
+    "verdict": "ACCEPT",
+    "strongest_reason": "The authority's only plain release of a secure seed is ml_dsa_key.c:467; the fix routes exactly that arm to CRYPTO_secure_clear_free, whose no-heap branch is provably identical (same cleanse length, same CRYPTO_free seam and coordinates), and the negative control reproduces 'free(): invalid pointer'/SIGABRT on the reverted code while the fixed probe leaves CRYPTO_secure_used()==0.",
+    "signed_scope": "src/ml_dsa/key.rs:1128 seed erase only; ml_dsa keygen/prekey/reset seed lifecycle verified. No new unsafe, no ABI or seam change, no hidden obligation.",
+    "additional_sweep": "The reviewer traced every CRYPTO_secure_* allocation site in src and found no other mismatched alloc/release pair. Exhaustive absence over the whole crate is not claimed."
+  },
+  "batch1_disposition": {
+    "sites_reviewed": 29,
+    "files": [
+      "src/ml_dsa/key.rs",
+      "src/ml_dsa/poly.rs",
+      "src/ml_kem/key.rs"
+    ],
+    "result": "28 sites already correct (checked extents, matching release arms, no destructor on a partially built duplicate); 1 defect repaired."
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "exit 0 (author and reviewer)"
+    },
+    {
+      "id": "FAST-ROUTINE-TEST",
+      "instrument": "cargo test --lib ml_dsa::tests::keygen_without_retain_seed_erases_the_seed_field",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed"
+    },
+    {
+      "id": "PROBE-ISOLATED",
+      "instrument": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact --test-threads=1 ml_dsa::tests::keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed"
+    },
+    {
+      "id": "NEGATIVE-CONTROL-MUTATION",
+      "instrument": "revert adopt_secure_cleansed -> adopt_cleansed at key.rs:1128, rebuild, run the probe",
+      "result": "PASS (control fires)",
+      "observed": "free(): invalid pointer; signal 6 SIGABRT; EXIT=101. Restored; git status clean; HEAD unchanged."
+    },
+    {
+      "id": "PROBE-NON-VACUITY",
+      "instrument": "inspection of the probe body",
+      "result": "PASS",
+      "observed": "Inits the secure heap (1 MiB, 16), allocates the 32-byte seed itself, asserts CRYPTO_secure_allocated(seed)==1, installs it, so seed != NULL skips the RNG arm and keygen_internal must take the erase arm. Post-conditions assert seed == NULL and CRYPTO_secure_used() == 0."
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "exit 0"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1711 passed; 0 failed; 37 ignored, 95.84 s"
+    }
+  ],
+  "not_run": [
+    {
+      "check": "Miri on this path",
+      "reason": "NOT_RUN as a soundness verdict: aborts before the test body with 'pthread_once' unimplemented via EVP_MD_fetch (src/runtime/thread.rs:606). Instrument limitation, not a counterexample."
+    },
+    {
+      "check": "ASan / TSan",
+      "reason": "NOT_RUN: the pre-fix failure was observed natively (SIGABRT) and the instrument wrapper is absent in the venue."
+    },
+    {
+      "check": "authority differential of the secure-heap-initialised case",
+      "reason": "NOT_RUN: the authority's own behaviour at this site is undefined, so no defined differential exists."
+    },
+    {
+      "check": "remaining 1328 sites (batches 2..N)",
+      "reason": "NOT_RUN: decomposed and queued; see decomposition below."
+    }
+  ],
+  "decomposition": {
+    "remaining_sites": 1328,
+    "batches": [
+      {"id": "B2", "cluster": "PQ codecs (ml_dsa encoders/sign, provider ml_dsa/ml_kem codecs and kmgmt, ml_common_codecs)", "sites": 23},
+      {"id": "B3", "cluster": "Argon2 secret memory (provider/kdf.rs >=10000)", "sites": 34},
+      {"id": "B4", "cluster": "password KDFs (pbkdf1/2, scrypt, pkcs12, pvk)", "sites": 24},
+      {"id": "B5", "cluster": "remaining provider/kdf.rs (2 sub-batches)", "sites": 56},
+      {"id": "B6", "cluster": "provider/cipher.rs", "sites": 39},
+      {"id": "B7", "cluster": "provider/{cipher_gcm,mod}.rs", "sites": 31},
+      {"id": "B8", "cluster": "ssl/ssl_lib.rs", "sites": 39},
+      {"id": "B9", "cluster": "remaining ssl/ sess/statem/conf (2 sub-batches)", "sites": 42},
+      {"id": "B10", "cluster": "hpke/ + params/", "sites": 40},
+      {"id": "B11", "cluster": "ec/{mult,lib}.rs", "sites": 34},
+      {"id": "B12", "cluster": "remaining ec/ (14 files)", "sites": 34},
+      {"id": "B13", "cluster": "sm2/, dh/, dsa/", "sites": 33},
+      {"id": "B14", "cluster": "rand/ + provider/{rand,seed_src}.rs", "sites": 37},
+      {"id": "B15", "cluster": "evp pkey_ctx/p_legacy/cipher_ctx + provider/exchange.rs (2)", "sites": 42},
+      {"id": "B16", "cluster": "remaining evp/ 23 files (2)", "sites": 74},
+      {"id": "B17", "cluster": "runtime owned_buf/owned_str/buffer/str", "sites": 26},
+      {"id": "B18", "cluster": "runtime/bio/ 13 files (2)", "sites": 60},
+      {"id": "B19", "cluster": "runtime thread*/sparse_array/rcu/init", "sites": 31},
+      {"id": "B20", "cluster": "remaining runtime/ conf/err", "sites": 26},
+      {"id": "B21", "cluster": "cms/", "sites": 21},
+      {"id": "B22", "cluster": "ct/ + ts/", "sites": 39},
+      {"id": "B23", "cluster": "asn1/", "sites": 36},
+      {"id": "B24", "cluster": "x509 v3_utl/x509_vpm/x_pubkey/x_name", "sites": 39},
+      {"id": "B25", "cluster": "remaining x509/ 33 files (2)", "sites": 82},
+      {"id": "B26", "cluster": "remaining provider/ 35 files (4)", "sites": 165},
+      {"id": "B27", "cluster": "ui/property/context/apps/dso/engine/pem/store/passphrase/http/async/slh_dsa/rsa (4)", "sites": 164},
+      {"id": "B28", "cluster": "residual tail 26 files (2)", "sites": 57}
+    ]
+  },
+  "obligations": {
+    "discharged_at_scope": [
+      "ML-DSA keygen seed release now matches its secure constructor (B41-ALLOC-1)"
+    ],
+    "retained": [
+      "1328 alloc/release sites remain in later batches",
+      "the other secure-allocation sites were inspected but not court-challenged",
+      "Miri aliasing evidence for this path is NOT_RUN",
+      "the Miri pthread_once gap is an infrastructure item, not a safety result"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BATCH_INDEPENDENTLY_CHECKED",
+    "independently_checked": true,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "Batch 1 of RUNTIME_ALLOC_OWNERSHIP is independently checked. The mechanism remains UNSAFE_OPEN until its remaining 1328 sites are dispositioned."
+  },
+  "non_claims": [
+    "Not a RUNTIME_ALLOC_OWNERSHIP discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "The reviewer's secure-allocation sweep is a targeted grep, not an exhaustive proof over the crate.",
+    "No claim that the authority behaves safely at ml_dsa_key.c:467; the opposite is recorded."
+  ]
+}

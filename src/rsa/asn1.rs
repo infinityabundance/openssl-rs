@@ -51,6 +51,16 @@
 //! DER printed in full (it is a public constant, not a secret), `d2i_`'d back and compared, and both
 //! `RSA_PSS_PARAMS_dup` and the OAEP templates are driven the same way.
 //!
+//! ## Ownership classification (final classification batch)
+//!
+//! **No allocator-seam interior site.** The production half is item templates and the
+//! generated `i2d`/`d2i`/`dup`/`free` wrappers; every object it handles is owned by the
+//! ASN.1 item machinery or the caller, and nothing here allocates or releases through
+//! `CRYPTO_*` on its own. The only raw releases in this module were the tests' `i2d`
+//! buffers, which are caller-owned blocks by the `i2d` contract; those tests now adopt
+//! them with [`crate::asn1::owned::OwnedBlock`] (the same pattern as `dh/asn1.rs`), so
+//! the file remains no-seam without an untracked free.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_long, c_uchar, c_ulong, c_void};
@@ -725,12 +735,12 @@ pub unsafe extern "C" fn i2d_RSA_OAEP_PARAMS(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asn1::owned::OwnedBlock;
     use crate::bn::arith::BN_cmp;
     use crate::bn::bignum::{BN_new, BN_set_word};
     use crate::rsa::object::{
         RSA_get0_factors, RSA_get0_key, RSA_set0_crt_params, RSA_set0_factors, RSA_set0_key,
     };
-    use crate::runtime::mem::CRYPTO_free;
 
     /// A structurally valid two-prime key: `n = 61 * 53`, `e = 17`, `d = 2753`, with the CRT
     /// parameters. The templates do not validate the numbers, so this rounds trips every field
@@ -784,7 +794,9 @@ mod tests {
             assert!(bd.is_null(), "the public template has no private exponent");
 
             RSA_free(back);
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // SAFETY: `der` is the block `i2d_RSAPublicKey` allocated and this test owns; the
+            // owner's `Drop` is its single release at the authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0));
             RSA_free(k);
         }
     }
@@ -827,7 +839,9 @@ mod tests {
             assert_eq!(BN_cmp((*prd).q, (*k).q), 0);
             RSA_free(prd);
 
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // SAFETY: `der` is the block `i2d_RSAPrivateKey` allocated and this test owns; the
+            // owner's `Drop` is its single release at the authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0));
             RSA_free(k);
         }
     }
@@ -911,8 +925,11 @@ mod tests {
             let n3 = i2d_RSA_PSS_PARAMS(dup, ptr::null_mut());
             assert_eq!(n3, n);
 
-            CRYPTO_free(der.cast(), ptr::null(), 0);
-            CRYPTO_free(der2.cast(), ptr::null(), 0);
+            // SAFETY: `der` and `der2` are the blocks the two `i2d_RSA_PSS_PARAMS` calls
+            // allocated and this test owns; each owner's `Drop` is its single release at the
+            // authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(der, ptr::null(), 0));
+            drop(OwnedBlock::<c_uchar>::from_raw(der2, ptr::null(), 0));
             RSA_PSS_PARAMS_free(dup);
             RSA_PSS_PARAMS_free(back);
             RSA_PSS_PARAMS_free(pss);
@@ -928,7 +945,9 @@ mod tests {
             let oback = d2i_RSA_OAEP_PARAMS(ptr::null_mut(), &mut op, c_long::from(n4));
             assert!(!oback.is_null());
             assert_eq!(op, oder.add(2));
-            CRYPTO_free(oder.cast(), ptr::null(), 0);
+            // SAFETY: `oder` is the block `i2d_RSA_OAEP_PARAMS` allocated and this test owns;
+            // the owner's `Drop` is its single release at the authority's (NULL, 0) site.
+            drop(OwnedBlock::<c_uchar>::from_raw(oder, ptr::null(), 0));
             RSA_OAEP_PARAMS_free(oback);
             RSA_OAEP_PARAMS_free(oaep);
         }

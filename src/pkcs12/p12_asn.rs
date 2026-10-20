@@ -44,8 +44,9 @@ use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
 use crate::asn1::p8_pkey::PKCS8_PRIV_KEY_INFO_it;
 use crate::asn1::x_sig::{X509Sig, X509_SIG_it};
+use crate::pkcs7::pk7_asn1::PropqSlot;
 use crate::pkcs7::{PKCS7_it, Pkcs7};
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_certBag, NID_crlBag, NID_keyBag, NID_pkcs8ShroudedKeyBag, NID_safeContentsBag,
     NID_sdsiCertificate, NID_secretBag, NID_x509Certificate, NID_x509Crl,
@@ -634,7 +635,7 @@ const _: () = {
 
 /// The authority's `__FILE__` for this unit, used by the memory functions whose file/line are the
 /// call's rather than a raised coordinate.
-const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_asn.c";
+const FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/pkcs12/p12_asn.c";
 
 /// `PKCS12_seq_tt` — `ASN1_SEQUENCE(PKCS12)` at `crypto/pkcs12/p12_asn.c:19-23`: `version`, the
 /// `authsafes` `PKCS7` and the optional `mac`. The order is the template's, not the struct's
@@ -702,8 +703,10 @@ pub unsafe extern "C" fn PKCS12_free(p12: *mut Pkcs12) {
     // SAFETY: `p12` is live; `authsafes` is either null or this object's own `PKCS7`.
     unsafe {
         if !(*p12).authsafes.is_null() {
-            CRYPTO_free((*(*p12).authsafes).ctx.propq.cast(), FILE.as_ptr(), 35);
-            (*(*p12).authsafes).ctx.propq = ptr::null_mut();
+            // The nested `authsafes` object owns its `ctx.propq` block; release it through the
+            // member-buffer handle at the authority's own site (`p12_asn.c:35`), exactly as
+            // `PKCS7_free` does. A NULL incumbent makes this a no-op.
+            PropqSlot::of(&mut (*(*p12).authsafes).ctx).clear(SeamFile::new(FILE), 35);
         }
         ASN1_item_free(p12.cast(), PKCS12_it());
     }

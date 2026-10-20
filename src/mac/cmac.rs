@@ -72,6 +72,95 @@ const LINE_FREE_CTX_ON_NEW: c_int = 62;
 /// `CMAC_CTX_free`'s `OPENSSL_free(ctx)` (line 90).
 const LINE_FREE_CTX: c_int = 90;
 
+/// The `CMAC_CTX` block while `CMAC_CTX_new` is constructing it.
+///
+/// The authority allocates at `:58` and, if `EVP_CIPHER_CTX_new` is refused, releases the block
+/// alone at `:62`; the bytes are not a valid `CmacCtx` before the fields are written, so this
+/// stage never runs the context destructor.
+struct CmacRawCtx {
+    ptr: core::ptr::NonNull<CmacCtx>,
+}
+
+impl CmacRawCtx {
+    /// `CMAC_CTX_new`'s `OPENSSL_malloc(sizeof(*ctx))` at `:58`, or `None` when refused.
+    fn malloc() -> Option<CmacRawCtx> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<CmacCtx>(), FILE, LINE_MALLOC_CTX)
+        }
+        .cast::<CmacCtx>();
+        // `CRYPTO_malloc` answers NULL or a fresh writable block of exactly `size_of::<CmacCtx>()`
+        // bytes; the bytes are not yet a valid context, which is what this staged type records.
+        core::ptr::NonNull::new(raw).map(|ptr| CmacRawCtx { ptr })
+    }
+
+    fn as_ptr(&self) -> *mut CmacCtx {
+        self.ptr.as_ptr()
+    }
+}
+
+impl Drop for CmacRawCtx {
+    /// The authority's failed-`EVP_CIPHER_CTX_new` release at `:62`: the block alone, no cleanup.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
+        // single release, at the authority's own coordinate.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE,
+                LINE_FREE_CTX_ON_NEW,
+            )
+        };
+    }
+}
+
+/// An owned, fully initialised `CMAC_CTX` handed to and taken back from the C caller.
+struct CmacCtxOwner {
+    ptr: core::ptr::NonNull<CmacCtx>,
+}
+
+impl CmacCtxOwner {
+    /// The validated transition: the staged storage now holds a fully initialised context.
+    ///
+    /// # Safety
+    /// `raw`'s storage holds a valid, fully initialised `CmacCtx` -- `cctx` is a live context and
+    /// `nlast_block` is set -- and no other owner will release it.
+    unsafe fn assume_init(raw: CmacRawCtx) -> CmacCtxOwner {
+        let ptr = raw.ptr;
+        core::mem::forget(raw);
+        CmacCtxOwner { ptr }
+    }
+
+    /// Reclaim a context a previous `into_raw` handed to the C caller, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live context from this crate's allocator that `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut CmacCtx) -> Option<CmacCtxOwner> {
+        core::ptr::NonNull::new(ptr).map(|ptr| CmacCtxOwner { ptr })
+    }
+
+    fn into_raw(self) -> *mut CmacCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for CmacCtxOwner {
+    /// `CMAC_CTX_free`'s body: the cleansing cleanup, the cipher-context release, and the block
+    /// release at `:90`, in the authority's own order.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the live context this handle owns and has not released; `cctx` is
+        // the context the constructor stored, so the three releases are the authority's own and
+        // each happens exactly once.
+        unsafe {
+            CMAC_CTX_cleanup(self.ptr.as_ptr());
+            EVP_CIPHER_CTX_free((*self.ptr.as_ptr()).cctx);
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE_CTX);
+        }
+    }
+}
+
 /// `struct CMAC_CTX_st` — `crypto/cmac/cmac.c:25`.
 ///
 /// `pub` for the reason every internal type in an exported signature is: the nine exports take a
@@ -129,19 +218,19 @@ unsafe fn make_kn(k1: *mut c_uchar, l: *const c_uchar, bl: c_int) {
 /// `CMAC_CTX *CMAC_CTX_new(void)` — `crypto/cmac/cmac.c:54`.
 #[no_mangle]
 pub extern "C" fn CMAC_CTX_new() -> *mut CmacCtx {
-    let ctx =
-        CRYPTO_malloc(core::mem::size_of::<CmacCtx>(), FILE, LINE_MALLOC_CTX).cast::<CmacCtx>();
-    if ctx.is_null() {
+    // `CmacRawCtx::malloc` is the authority's `OPENSSL_malloc(sizeof(*ctx))` at `:58`; its `Drop`
+    // is the failed-`EVP_CIPHER_CTX_new` release at `:62`.
+    let Some(raw) = CmacRawCtx::malloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ctx = raw.as_ptr();
     // SAFETY: `ctx` is a fresh block this call owns and `CmacCtx`'s four arrays are plain bytes;
     // the authority leaves them as `OPENSSL_malloc` found them and this writes them.
     unsafe { ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<CmacCtx>()) };
     // SAFETY: `ctx` is this call's own block.
     let cctx = EVP_CIPHER_CTX_new();
     if cctx.is_null() {
-        // SAFETY: `ctx` came from this crate's allocator and holds nothing yet.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_NEW) };
+        // `raw`'s `Drop` is the authority's release at `:62`.
         return ptr::null_mut();
     }
     // SAFETY: `ctx` is this call's own block.
@@ -149,7 +238,9 @@ pub extern "C" fn CMAC_CTX_new() -> *mut CmacCtx {
         (*ctx).cctx = cctx;
         (*ctx).nlast_block = -1;
     }
-    ctx
+    // SAFETY: `cctx` and `nlast_block` are written, so the block is a fully initialised context;
+    // the raw pointer transfers ownership to the caller.
+    unsafe { CmacCtxOwner::assume_init(raw) }.into_raw()
 }
 
 /// `void CMAC_CTX_cleanup(CMAC_CTX *ctx)` — `crypto/cmac/cmac.c:69`.
@@ -190,15 +281,9 @@ pub unsafe extern "C" fn CMAC_CTX_get0_cipher_ctx(ctx: *mut CmacCtx) -> *mut Evp
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn CMAC_CTX_free(ctx: *mut CmacCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { CMAC_CTX_cleanup(ctx) };
-    // SAFETY: `ctx` is live and `cctx` is the context this crate owns.
-    unsafe { EVP_CIPHER_CTX_free((*ctx).cctx) };
-    // SAFETY: `ctx` came from this crate's allocator and has been released of everything it held.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
+    // SAFETY: `ctx` is NULL or a live context this crate allocated and has not released;
+    // `from_raw` reclaims it and the owner's `Drop` is `CMAC_CTX_free`'s three releases in order.
+    drop(unsafe { CmacCtxOwner::from_raw(ctx) });
 }
 
 /// `int CMAC_CTX_copy(CMAC_CTX *out, const CMAC_CTX *in)` — `crypto/cmac/cmac.c:93`.
@@ -211,8 +296,17 @@ pub unsafe extern "C" fn CMAC_CTX_free(ctx: *mut CmacCtx) {
 ///
 /// # Safety
 /// `out` and `in` must be live contexts.
+///
+/// `out == in` is **refused** (answers 0 without touching `out`). The authority passes the two
+/// contexts to `EVP_CIPHER_CTX_copy`, which resets `out->cctx` (clearing `cipher`) before it
+/// dereferences `in->cipher`; with `out == in` that is a NULL dereference, so the authority has no
+/// defined success to preserve. The crate eliminates the UB by refusal (AGENTS.md §17; recorded in
+/// the safe-c33 campaign).
 #[no_mangle]
 pub unsafe extern "C" fn CMAC_CTX_copy(out: *mut CmacCtx, in_: *const CmacCtx) -> c_int {
+    if ptr::eq(out.cast_const(), in_) {
+        return 0;
+    }
     // SAFETY: `in_` is live per the contract.
     if unsafe { (*in_).nlast_block } == -1 {
         return 0;
@@ -688,6 +782,21 @@ mod tests {
             CMAC_CTX_free(dst);
             CMAC_CTX_free(src);
             CMAC_CTX_free(ptr::null_mut());
+        }
+    }
+
+    /// A self-copy is refused before the source is read: the nested `EVP_CIPHER_CTX_copy` would
+    /// otherwise reset the shared cipher context and dereference its cleared `cipher`.
+    #[test]
+    fn copy_refuses_the_identity_and_leaves_the_source_alone() {
+        let ctx = CMAC_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is this test's live context.
+        unsafe {
+            (*ctx).nlast_block = 3;
+            assert_eq!(CMAC_CTX_copy(ctx, ctx), 0, "self-copy is refused");
+            assert_eq!((*ctx).nlast_block, 3, "the source was not touched");
+            CMAC_CTX_free(ctx);
         }
     }
 }

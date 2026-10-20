@@ -55,15 +55,17 @@
 //! builds; it is transcribed because it is what makes `ossl_ffc_params_copy` of a static
 //! prime cheap, and because a caller that hands in a `BN_with_flags` view reaches it.
 
-use core::ffi::{c_char, c_int, c_uint};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::bn::arith::BN_cmp;
 use crate::bn::bignum::{BN_clear_free, BN_dup, BN_free, BN_get_flags, BigNum};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memdup;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::FfcParams;
 use crate::ffc::{FFC_PARAM_FLAG_VALIDATE_PQG, FFC_UNVERIFIABLE_GINDEX};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
 ///
@@ -73,6 +75,8 @@ use crate::ffc::{FFC_PARAM_FLAG_VALIDATE_PQG, FFC_UNVERIFIABLE_GINDEX};
 /// `ossl_ffc_params_copy` both hand it to the allocator, so it is observable through
 /// `CRYPTO_set_mem_functions` once a DH caller reaches them.
 const FILE_FFC_PARAMS: *const c_char = c"../../src/openssl-3.6.4/crypto/ffc/ffc_params.c".as_ptr();
+const FILE_FFC_PARAMS_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/ffc/ffc_params.c");
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
@@ -81,6 +85,25 @@ const LINE: c_int = 0;
 /// `.rodata`, and the one `ffc_bn_cpy` tests. Defined once in [`crate::bn::bignum`],
 /// beside the code that now tests it in `BN_free`, rather than copied here.
 const BN_FLG_STATIC_DATA: c_int = crate::bn::bignum::BN_FLG_STATIC_DATA;
+
+/// `CRYPTO_memdup(src, len, FILE_FFC_PARAMS, LINE)` as a plainly released owner, or `None` when
+/// the allocator answers NULL (including for a NULL or oversized source, exactly as the callee
+/// reports).
+///
+/// The release is plain and not the cleansing form, because `OPENSSL_PEDANTIC_ZEROIZATION` is not
+/// defined on this profile (the reading [`ossl_ffc_params_cleanup`] records).
+///
+/// # Safety
+///
+/// `src` is readable for `len` bytes.
+unsafe fn memdup(src: *const u8, len: usize) -> Option<OwnedBuf> {
+    // SAFETY: the caller's contract -- `src` is readable for `len` bytes.
+    let raw = unsafe { CRYPTO_memdup(src.cast::<c_void>(), len, FILE_FFC_PARAMS, LINE) }
+        .cast::<c_uchar>();
+    // SAFETY: `raw` is NULL or a live block the crate's `CRYPTO_*` seam allocated in full for
+    // this duplicate and no other owner will release it.
+    unsafe { OwnedBuf::adopt_plain(raw, FILE_FFC_PARAMS_SEAM, LINE) }
+}
 
 /// `void ossl_ffc_params_init(FFC_PARAMS *params)` — `crypto/ffc/ffc_params.c:20-26`.
 ///
@@ -131,7 +154,15 @@ pub(crate) unsafe fn ossl_ffc_params_cleanup(params: *mut FfcParams) {
         BN_free((*params).q);
         BN_free((*params).g);
         BN_free((*params).j);
-        CRYPTO_free((*params).seed.cast(), FILE_FFC_PARAMS, LINE);
+        // `seed` is NULL or the object's own `CRYPTO_memdup` block; this call owns it and
+        // `OwnedBuf`'s `Drop` performs its single release.
+        // SAFETY: `seed` is a live block this unit allocated through the crate's `CRYPTO_*` seam
+        // or NULL, and no other owner will release it.
+        drop(OwnedBuf::adopt_plain(
+            (*params).seed.cast::<c_uchar>(),
+            FILE_FFC_PARAMS_SEAM,
+            LINE,
+        ));
         ossl_ffc_params_init(params);
     }
 }
@@ -206,11 +237,16 @@ pub(crate) unsafe fn ossl_ffc_params_get0_pqg(
 /// `void ossl_ffc_params_set0_j(FFC_PARAMS *d, BIGNUM *j)` — `crypto/ffc/ffc_params.c:73-80`.
 ///
 /// The cofactor, which is optionally output for ASN.1. Unlike the `pqg` triple this **always
-/// releases** the old value and always leaves a NULL slot for a NULL argument — the
-/// authority's body sets `d->j = NULL` first and only then stores, so
-/// `ossl_ffc_params_set0_j(d, d->j)` is a use-after-free rather than a no-op. That asymmetry
-/// with [`ossl_ffc_params_set0_pqg`] is the authority's, and `crypto/dh/dh_asn1.c:115` is a
-/// caller that passes a fresh value.
+/// releases** the old value and always leaves a NULL slot for a NULL argument. The authority's
+/// body releases first and only then stores, so `ossl_ffc_params_set0_j(d, d->j)` is a
+/// use-after-free rather than a no-op. The input is an ownership transfer, which makes that call
+/// self-contradictory as well: `d` already owns `j`, so there is no second ownership to take.
+///
+/// **Recorded divergence (B17-D4, §17 UB elimination).** Passing the slot's own value is a no-op
+/// here: the single owner is retained and nothing is released. A NULL argument still clears the
+/// slot and a distinct value still releases the incumbent first, so every supported call keeps
+/// the authority's behaviour and allocator sequence. `crypto/dh/dh_asn1.c:115` is the reached
+/// caller and passes a fresh value.
 ///
 /// # Safety
 ///
@@ -220,6 +256,12 @@ pub(crate) unsafe fn ossl_ffc_params_get0_pqg(
 pub(crate) unsafe fn ossl_ffc_params_set0_j(d: *mut FfcParams, j: *mut BigNum) {
     // SAFETY: `d` is live and `j` is NULL or live per this function's `# Safety` section.
     unsafe {
+        // Self-assignment would release the value and store the released pointer. That input is
+        // also an ownership transfer of a pointer the slot already owns, so keeping the single
+        // owner is the only sound reading; the authority's use-after-free is not reproduced.
+        if j == (*d).j {
+            return;
+        }
         BN_free((*d).j);
         (*d).j = ptr::null_mut();
         if !j.is_null() {
@@ -253,11 +295,21 @@ pub(crate) unsafe fn ossl_ffc_params_set_seed(
             if ptr::eq((*params).seed, seed) {
                 return 1;
             }
-            CRYPTO_free((*params).seed.cast(), FILE_FFC_PARAMS, LINE);
+            // `seed` is the object's own `CRYPTO_memdup` block; this call owns it and `OwnedBuf`'s
+            // `Drop` performs its single release.
+            // SAFETY: `seed` is a live block this unit allocated through the crate's `CRYPTO_*`
+            // seam and no other owner will release it.
+            drop(OwnedBuf::adopt_plain(
+                (*params).seed.cast::<c_uchar>(),
+                FILE_FFC_PARAMS_SEAM,
+                LINE,
+            ));
         }
 
         if !seed.is_null() && seedlen > 0 {
-            (*params).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE_FFC_PARAMS, LINE).cast();
+            // `seed` is readable for `seedlen` bytes per this function's `# Safety`.
+            let dup = memdup(seed, seedlen);
+            (*params).seed = dup.map_or(ptr::null_mut(), |dup| dup.into_raw().cast::<u8>());
             if (*params).seed.is_null() {
                 return 0;
             }
@@ -519,11 +571,20 @@ pub(crate) unsafe fn ossl_ffc_params_copy(dst: *mut FfcParams, src: *const FfcPa
 
         (*dst).mdname = (*src).mdname;
         (*dst).mdprops = (*src).mdprops;
-        CRYPTO_free((*dst).seed.cast(), FILE_FFC_PARAMS, LINE);
+        // `seed` is `dst`'s own `CRYPTO_memdup` block; this call owns it and `OwnedBuf`'s `Drop`
+        // performs its single release.
+        // SAFETY: `seed` is a live block this unit allocated through the crate's `CRYPTO_*` seam
+        // and no other owner will release it.
+        drop(OwnedBuf::adopt_plain(
+            (*dst).seed.cast::<c_uchar>(),
+            FILE_FFC_PARAMS_SEAM,
+            LINE,
+        ));
         (*dst).seedlen = (*src).seedlen;
         if !(*src).seed.is_null() {
-            (*dst).seed =
-                CRYPTO_memdup((*src).seed.cast(), (*src).seedlen, FILE_FFC_PARAMS, LINE).cast();
+            // `src`'s `seed` is readable for `src`'s `seedlen` bytes because `src` owns it.
+            let dup = memdup((*src).seed, (*src).seedlen);
+            (*dst).seed = dup.map_or(ptr::null_mut(), |dup| dup.into_raw().cast::<u8>());
             if (*dst).seed.is_null() {
                 ossl_ffc_params_cleanup(dst);
                 return 0;
@@ -942,9 +1003,9 @@ mod tests {
         }
     }
 
-    /// `set0_j` is **not** `set0_pqg`: a NULL argument clears the slot rather than leaving it,
-    /// and passing the slot's own value is a use-after-free in the authority. The first half
-    /// is asserted here; the second is why no test passes `d->j`.
+    /// `set0_j` is **not** `set0_pqg`: a NULL argument clears the slot rather than leaving it.
+    /// Passing the slot's own value is the authority's use-after-free; this port keeps the single
+    /// owner and treats that call as a no-op (B17-D4), which the next test exercises.
     #[test]
     fn set0_j_always_releases_and_a_null_clears() {
         let mut p = Params::new();
@@ -964,6 +1025,25 @@ mod tests {
 
             ossl_ffc_params_set0_j(raw, ptr::null_mut());
             assert!((*raw).j.is_null());
+        }
+    }
+
+    /// Passing the slot's own value must neither release it nor replace it. Pre-repair this is
+    /// the B17-D4 heap-use-after-free (the authority's `BN_free` then store of the same pointer).
+    #[test]
+    fn set0_j_self_assignment_is_a_no_op() {
+        let mut p = Params::new();
+        let raw = p.as_mut();
+        // SAFETY: `raw` is live; `a` is transferred to it exactly once and released by `Params`.
+        unsafe {
+            let a = BN_new();
+            assert!(BN_set_word(a, 11) != 0);
+            ossl_ffc_params_set0_j(raw, a);
+            assert_eq!((*raw).j, a);
+
+            ossl_ffc_params_set0_j(raw, (*raw).j);
+            assert_eq!((*raw).j, a);
+            assert_eq!(BN_cmp((*raw).j, a), 0);
         }
     }
 

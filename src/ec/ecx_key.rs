@@ -35,12 +35,15 @@ use core::sync::atomic::{fence, AtomicI32, Ordering};
 
 use crate::ec::curve25519::ossl_x25519;
 use crate::ec::curve448::ossl_x448;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_zalloc};
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c");
 
 /// `X25519_KEYLEN` — `include/crypto/ecx.h:26`.
 pub(crate) const X25519_KEYLEN: usize = 32;
@@ -86,6 +89,38 @@ pub struct EcxKey {
     pub(crate) references: AtomicI32,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the ECX_KEY object
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is `ossl_ecx_key_free` minus the block -- the `propq`
+// duplicate and the secure private scalar (cleansed by `CRYPTO_secure_clear_free`), each
+// NULL-tolerant, never the enclosing block. (b) holds: `EcxKey` is a `#[repr(C)]` record of raw
+// pointers, integers, a byte array and an atomic, so an all-zero block is a valid `EcxKey`, and
+// `destroy_body` is sound on it (`CRYPTO_free(NULL)` and `CRYPTO_secure_clear_free(NULL, 0, ...)`).
+unsafe impl CtxDestroy for EcxKey {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 23;
+    const LINE_FREE: c_int = 83;
+
+    unsafe fn destroy_body(ptr: *mut EcxKey) {
+        // SAFETY: `ptr` is a live `ECX_KEY` per the trait contract; `propq` is NULL or this unit's
+        // own `CRYPTO_strdup` block and `privkey` NULL or a `CRYPTO_secure_zalloc` block.
+        unsafe {
+            // `OPENSSL_free(key->propq)`, line 77.
+            CRYPTO_free((*ptr).propq.cast(), FILE, 77);
+            // `OPENSSL_PEDANTIC_ZEROIZATION` is undefined, so the pubkey cleanse is not compiled.
+            // `OPENSSL_secure_clear_free(key->privkey, key->keylen)`, line 81.
+            CRYPTO_secure_clear_free((*ptr).privkey.cast(), (*ptr).keylen, FILE, 81);
+        }
+    }
+}
+
+// The object's two states are the canonical [`OwnedCtx`] (a fully built key, `Drop` runs
+// `ossl_ecx_key_free`'s body) and [`RawCtx`] (the block while `ossl_ecx_key_new` fills it, released
+// block-alone at the `:60` error arm). Both stay `CRYPTO_zalloc` blocks at the authority's size, so
+// a caller-installed `CRYPTO_set_mem_functions` hook observes every allocation and release.
+
 /// `ECX_KEY *ossl_ecx_key_new(OSSL_LIB_CTX *libctx, ECX_KEY_TYPE type, int haspubkey,
 /// const char *propq)` — `crypto/ec/ecx_key.c:20`.
 ///
@@ -98,16 +133,17 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
     haspubkey: c_int,
     propq: *const c_char,
 ) -> *mut EcxKey {
-    // SAFETY: `OPENSSL_zalloc(sizeof(*ret))`, line 23.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 23).cast::<EcxKey>();
-    if ret.is_null() {
+    let Some(mut raw) = RawCtx::<EcxKey>::zalloc_at(FILE_SEAM, 23, FILE_SEAM, 60) else {
         return ptr::null_mut();
-    }
+    };
+    let ret = raw.as_ptr();
 
-    // SAFETY: `ret` is this call's own object.
+    // SAFETY: `ret` is this call's own freshly zeroed block; each field write leaves a valid value.
     unsafe {
         (*ret).libctx = libctx;
-        (*ret).haspubkey = haspubkey as c_uint;
+        // `ret->haspubkey = haspubkey` assigns to a one-bit field, so the C conversion keeps only
+        // the low bit; the storage-unit model applies the same mask.
+        (*ret).haspubkey = (haspubkey as c_uint) & 1;
         (*ret).keylen = match type_ {
             ECX_KEY_TYPE_X25519 => X25519_KEYLEN,
             ECX_KEY_TYPE_X448 => X448_KEYLEN,
@@ -121,19 +157,27 @@ pub unsafe extern "C" fn ossl_ecx_key_new(
 
         // `CRYPTO_NEW_REF(&ret->references, 1)` — an atomic store of 1 on this profile.
         (*ret).references = AtomicI32::new(1);
-
-        if !propq.is_null() {
-            // `OPENSSL_strdup(propq)`, line 50.
-            (*ret).propq = CRYPTO_strdup(propq, FILE, 50);
-            if (*ret).propq.is_null() {
-                CRYPTO_free((*ret).propq.cast(), FILE, 57);
-                // `CRYPTO_FREE_REF` is empty on this profile.
-                CRYPTO_free(ret.cast(), FILE, 60);
-                return ptr::null_mut();
-            }
-        }
     }
-    ret
+
+    if !propq.is_null() {
+        // `OPENSSL_strdup(propq)`, line 50.
+        // SAFETY: `propq` is a NUL-terminated string per the contract, and this crate's
+        // `CRYPTO_strdup` dereferences nothing else the caller owns.
+        let propq_dup = unsafe { CRYPTO_strdup(propq, FILE, 50) };
+        if propq_dup.is_null() {
+            // `CRYPTO_FREE_REF` is empty on this profile, so `raw`'s `Drop` is the authority's
+            // whole error-arm release (the NULL `propq` free at `:57` is unobservable).
+            return ptr::null_mut();
+        }
+        // SAFETY: `ret` is this frame's own live object.
+        unsafe { (*ret).propq = propq_dup };
+    }
+
+    // The constructed key is released by `ossl_ecx_key_free` at `:83`.
+    raw.set_release_line(83);
+    // SAFETY: every field `destroy_body` reads is now written, so the block is a valid `ECX_KEY`,
+    // and `raw` holds its only ownership; `into_raw` hands it to the C caller.
+    unsafe { raw.assume_init().into_raw() }
 }
 
 /// `void ossl_ecx_key_free(ECX_KEY *key)` — `crypto/ec/ecx_key.c:64`.
@@ -158,17 +202,9 @@ pub unsafe extern "C" fn ossl_ecx_key_free(key: *mut EcxKey) {
     }
     // `REF_ASSERT_ISNT(i < 0)` and `REF_PRINT_COUNT` are empty under `NDEBUG`.
 
-    // SAFETY: `key` is live and this is the last reference.
-    unsafe {
-        // `OPENSSL_free(key->propq)`, line 77.
-        CRYPTO_free((*key).propq.cast(), FILE, 77);
-        // `OPENSSL_PEDANTIC_ZEROIZATION` is undefined, so the pubkey cleanse is not compiled.
-        // `OPENSSL_secure_clear_free(key->privkey, key->keylen)`, line 81.
-        CRYPTO_secure_clear_free((*key).privkey.cast(), (*key).keylen, FILE, 81);
-        // `CRYPTO_FREE_REF(&key->references)` is empty on this profile.
-        // `OPENSSL_free(key)`, line 83.
-        CRYPTO_free(key.cast(), FILE, 83);
-    }
+    // SAFETY: `key` is live, this is its last reference, and `OwnedCtx`'s `Drop` runs the
+    // authority's own member release (`:77`, `:81`) followed by the block release (`:83`).
+    let _owner = unsafe { OwnedCtx::<EcxKey>::from_raw_at(key, FILE_SEAM, 83) };
 }
 
 /// `void ossl_ecx_key_set0_libctx(ECX_KEY *key, OSSL_LIB_CTX *libctx)` —
@@ -273,3 +309,7 @@ pub unsafe extern "C" fn ossl_ecx_compute_key(
     }
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcxKey => zero_state_sweep_ecx_key);

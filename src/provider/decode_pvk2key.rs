@@ -46,9 +46,9 @@ use crate::provider::endecoder_common::ossl_prov_get_keymgmt_export;
 use crate::rsa::object::{ossl_rsa_set0_libctx, RSA_free};
 use crate::rsa::Rsa;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::{BIO_free, Bio};
 use crate::runtime::err::{peek_last_lib, peek_last_reason, ERR_clear_last_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::selftest::OsslCallback;
 
 unsafe extern "C" {
@@ -117,25 +117,41 @@ pub(crate) struct Pvk2keyCtx {
     selection: c_int,
 }
 
+// SAFETY: (a) the context owns no members — `provctx` and `desc` are borrowed by the framework — so
+// `destroy_body` is empty and never releases the enclosing block, which `OwnedCtx` releases; (b)
+// an all-zero `Pvk2keyCtx` is valid: nullable raw pointers, a zeroed character array and zero
+// scalars, exactly the state the authority's `memset` leaves. The authority allocates with
+// `OPENSSL_malloc`, so `newctx` still zeroes and writes every field before `assume_init`.
+unsafe impl CtxDestroy for Pvk2keyCtx {
+    const FILE: *const c_char = ptr::null();
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    unsafe fn destroy_body(_ptr: *mut Pvk2keyCtx) {}
+}
+
 /// `static struct pvk2key_ctx_st *pvk2key_newctx(void *provctx,
 /// const struct keytype_desc_st *desc)` — `decode_pvk2key.c:74-84`.
 ///
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe fn pvk2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut Pvk2keyCtx {
-    // SAFETY: `CRYPTO_malloc` answers a block of the struct's size or NULL.
-    let ctx =
-        CRYPTO_malloc(core::mem::size_of::<Pvk2keyCtx>(), ptr::null(), 0).cast::<Pvk2keyCtx>();
-    if ctx.is_null() {
+    // `RawCtx::malloc` is the authority's `OPENSSL_malloc(sizeof(*ctx))`; the block is not a
+    // valid context until the authority's `memset` and the two field writes below, so it stays
+    // a `RawCtx` until then.
+    let Some(ctx) = RawCtx::<Pvk2keyCtx>::malloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ctx` is this call's fresh allocation; zero it as the authority's zalloc does.
+    };
+    // SAFETY: `ctx.as_ptr()` is the fresh uninitialised block this call owns; zero it exactly as
+    // the authority does, write every field, then `assume_init` is the one validated transition
+    // to the owner.
     unsafe {
-        ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<Pvk2keyCtx>());
-        (*ctx).provctx = provctx;
-        (*ctx).desc = desc;
+        let raw = ctx.as_ptr();
+        ptr::write_bytes(raw.cast::<u8>(), 0, core::mem::size_of::<Pvk2keyCtx>());
+        (*raw).provctx = provctx;
+        (*raw).desc = desc;
+        ctx.assume_init().into_raw()
     }
-    ctx
 }
 
 /// `static void pvk2key_freectx(void *vctx)` — `decode_pvk2key.c:86-91`.
@@ -143,8 +159,9 @@ unsafe fn pvk2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn pvk2key_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is this call's own allocation.
-    unsafe { CRYPTO_free(vctx, ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the block `pvk2key_newctx` handed out and has not been released;
+    // `from_raw` maps NULL to `None`, and `Drop` is the block's single release.
+    unsafe { drop(OwnedCtx::<Pvk2keyCtx>::from_raw(vctx.cast::<Pvk2keyCtx>())) };
 }
 
 /// `pvk2key_set_ctx_params_list[]` — the generated settable list, one `properties` string.
@@ -531,3 +548,7 @@ implement_ms!(
     Some(rsa_adjust),
     rsa_free_void
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Pvk2keyCtx => zero_state_sweep_pvk2key_ctx);

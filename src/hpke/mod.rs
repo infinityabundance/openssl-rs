@@ -50,8 +50,26 @@
 //! rows are Phase 8's and are `implemented`, so that fetch resolves. Nothing in this module is
 //! now withheld; the one remaining substitution is the `WPACKET` concatenation recorded above.
 //!
+//! ## Ownership: the context block and the scratch buffers are owned; the members are the ABI
+//!
+//! The `OSSL_HPKE_CTX` block is an owned [`OwnedCtx`]: `OSSL_HPKE_CTX_new` allocates it through the
+//! crate's allocator seam (a `CRYPTO_zalloc` at `size_of::<OsslHpkeCtx>()`, so a caller-installed
+//! `CRYPTO_set_mem_functions` hook observes it), `Drop` is its single release, and the constructor's
+//! refusal paths release what they built by dropping the owner.
+//!
+//! The `#[repr(C)]` **member buffers** are not converted and stay raw, on purpose: `shared_secret`,
+//! `key`, `nonce`, `exportersec`, `psk`, `pskid`, `ikme`, `authpub` and `propq` are fields of the
+//! context the exported ABI hands out and reads back, so the context is the only place that can own
+//! them and their sizes are the layout. Their releases are the authority's own, in the destructor's
+//! body; the two `set1_*` error paths that free a member they just replaced, the exporter's, and
+//! the `c_memdup`/`c_strdup` helpers (whose fresh block a caller takes over into a member) are
+//! likewise explicit boundaries, each marked where it stands. The two labelled-string scratch
+//! buffers (`hpke_labeled_extract`/`_expand`) and `set1_authpub`'s imported key are owned
+//! [`OwnedBuf`]s, since they are frames' locals and not fields.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
@@ -86,9 +104,11 @@ use crate::params::{
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::rand::rand_uniform::ossl_rand_uniform_uint32;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 // ---------------------------------------------------------------------------------------------
 // The constants — `include/openssl/hpke.h`, `include/internal/hpke_util.h` and `core_names.h`.
@@ -196,7 +216,10 @@ const SECRET_LABEL: &[u8] = b"secret";
 /// `crypto/hpke/hpke.c` and `crypto/hpke/hpke_util.c` — the two coordinates the crate's
 /// allocations are attributed to. The raises carry their own sites.
 const FILE_HPKE: *const c_char = c"../../src/openssl-3.6.4/crypto/hpke/hpke.c".as_ptr();
+const FILE_HPKE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/hpke/hpke.c");
 const FILE_HPKE_UTIL: *const c_char = c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c".as_ptr();
+const FILE_HPKE_UTIL_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c");
 
 // ---------------------------------------------------------------------------------------------
 // The information tables — `hpke_util.c:63`, `:88`, `:104`.
@@ -500,11 +523,14 @@ fn aead_info_find_id(aeadid: u16) -> Option<&'static HpkeAeadInfo> {
 /// `ERR_R_INTERNAL_ERROR` of its own.
 ///
 /// # Safety
-/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
-fn kem_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKemInfo> {
+/// `ctx` is NULL or a live library context valid for `ossl_rand_uniform_uint32`'s
+/// [`RAND_bytes_ex`] call. The pointer is forwarded to that callee; this helper performs no
+/// dereference of its own.
+unsafe fn kem_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKemInfo> {
     let sz = KEM_TAB.len() as u32;
     let mut err: c_int = 0;
-    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    // SAFETY: `ctx` is NULL or live per this function's contract; `err` is a live local and is
+    // only written.
     let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
     if err == 1 {
         None
@@ -519,11 +545,14 @@ fn kem_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKemInfo> {
 /// As `kem_info_find_random`, over `KDF_TAB`.
 ///
 /// # Safety
-/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
-fn kdf_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKdfInfo> {
+/// `ctx` is NULL or a live library context valid for `ossl_rand_uniform_uint32`'s
+/// [`RAND_bytes_ex`] call. The pointer is forwarded to that callee; this helper performs no
+/// dereference of its own.
+unsafe fn kdf_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKdfInfo> {
     let sz = KDF_TAB.len() as u32;
     let mut err: c_int = 0;
-    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    // SAFETY: `ctx` is NULL or live per this function's contract; `err` is a live local and is
+    // only written.
     let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
     if err == 1 {
         None
@@ -540,11 +569,14 @@ fn kdf_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKdfInfo> {
 /// row can never be drawn.
 ///
 /// # Safety
-/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
-fn aead_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeAeadInfo> {
+/// `ctx` is NULL or a live library context valid for `ossl_rand_uniform_uint32`'s
+/// [`RAND_bytes_ex`] call. The pointer is forwarded to that callee; this helper performs no
+/// dereference of its own.
+unsafe fn aead_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeAeadInfo> {
     let sz = (AEAD_TAB.len() - 1) as u32;
     let mut err: c_int = 0;
-    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    // SAFETY: `ctx` is NULL or live per this function's contract; `err` is a live local and is
+    // only written.
     let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
     if err == 1 {
         None
@@ -682,6 +714,16 @@ unsafe fn hpke_kdf_expand(
     }
 }
 
+/// The exact allocation bound for a labelled concatenation, or `None` when the sum is not
+/// representable in `usize`.
+///
+/// The authority forms the same sum in `size_t`. An overflowing sum wraps there and leads to a
+/// short allocation followed by the concatenation copies, which is undefined behaviour; on overflow
+/// the callers here answer with the authority's own failure result (0) instead.
+fn checked_labeled_len(parts: &[usize]) -> Option<usize> {
+    parts.iter().try_fold(0usize, |acc, &n| acc.checked_add(n))
+}
+
 /// `int ossl_hpke_labeled_extract(...)` — `hpke_util.c:295`.
 ///
 /// `labeled_ikm = concat("HPKE-v1", protocol_label, suiteid, label, ikm)`, exactly sized. The
@@ -705,36 +747,52 @@ pub(crate) unsafe fn hpke_labeled_extract(
     ikm: *const c_uchar,
     ikmlen: usize,
 ) -> c_int {
-    let labeled_ikmlen =
-        LABEL_HPKEV1.len() + protocol_label.len() + suiteidlen + label.len() + ikmlen;
-    let labeled_ikm = CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>();
-    if labeled_ikm.is_null() {
+    let Some(labeled_ikmlen) = checked_labeled_len(&[
+        LABEL_HPKEV1.len(),
+        protocol_label.len(),
+        suiteidlen,
+        label.len(),
+        ikmlen,
+    ]) else {
         return 0;
-    }
+    };
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `labeled_ikmlen`-byte block
+    // it answers has that provenance; this frame owns it and no other owner releases it. The
+    // buffer is owned until this call returns; `Drop` is its release.
+    let Some(labeled_ikm) = (unsafe {
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        OwnedBuf::adopt_plain(
+            CRYPTO_malloc(labeled_ikmlen, FILE_HPKE_UTIL, 316).cast::<c_uchar>(),
+            FILE_HPKE_UTIL_SEAM,
+            338,
+        )
+    }) else {
+        return 0;
+    };
 
     // SAFETY: the destination was sized as the exact sum below and each copy is of its own length.
     unsafe {
         let mut off = 0usize;
         ptr::copy_nonoverlapping(
             LABEL_HPKEV1.as_ptr(),
-            labeled_ikm.add(off),
+            labeled_ikm.as_ptr().add(off),
             LABEL_HPKEV1.len(),
         );
         off += LABEL_HPKEV1.len();
         ptr::copy_nonoverlapping(
             protocol_label.as_ptr(),
-            labeled_ikm.add(off),
+            labeled_ikm.as_ptr().add(off),
             protocol_label.len(),
         );
         off += protocol_label.len();
         if suiteidlen > 0 {
-            ptr::copy_nonoverlapping(suiteid, labeled_ikm.add(off), suiteidlen);
+            ptr::copy_nonoverlapping(suiteid, labeled_ikm.as_ptr().add(off), suiteidlen);
         }
         off += suiteidlen;
-        ptr::copy_nonoverlapping(label.as_ptr(), labeled_ikm.add(off), label.len());
+        ptr::copy_nonoverlapping(label.as_ptr(), labeled_ikm.as_ptr().add(off), label.len());
         off += label.len();
         if ikmlen > 0 {
-            ptr::copy_nonoverlapping(ikm, labeled_ikm.add(off), ikmlen);
+            ptr::copy_nonoverlapping(ikm, labeled_ikm.as_ptr().add(off), ikmlen);
         }
     }
 
@@ -746,15 +804,12 @@ pub(crate) unsafe fn hpke_labeled_extract(
             prklen,
             salt,
             saltlen,
-            labeled_ikm,
+            labeled_ikm.as_ptr(),
             labeled_ikmlen,
         )
     };
-    // SAFETY: the buffer is this call's own and just used.
-    unsafe {
-        cleanse_ptr(labeled_ikm, labeled_ikmlen);
-        CRYPTO_free(labeled_ikm.cast::<c_void>(), FILE_HPKE_UTIL, 338);
-    }
+    // SAFETY: the buffer is this call's own and just used; the cleanse runs before its `Drop`.
+    unsafe { cleanse_ptr(labeled_ikm.as_ptr(), labeled_ikmlen) };
     ret
 }
 
@@ -789,18 +844,30 @@ pub(crate) unsafe fn hpke_labeled_expand(
     infolen: usize,
 ) -> c_int {
     // `maxoutlen` — the allocation bound, larger than the label string by `okmlen + prklen`.
-    let labeled_infolen = 2
-        + okmlen
-        + prklen
-        + LABEL_HPKEV1.len()
-        + protocol_label.len()
-        + suiteidlen
-        + label.len()
-        + infolen;
-    let labeled_info = CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>();
-    if labeled_info.is_null() {
+    let Some(labeled_infolen) = checked_labeled_len(&[
+        2,
+        okmlen,
+        prklen,
+        LABEL_HPKEV1.len(),
+        protocol_label.len(),
+        suiteidlen,
+        label.len(),
+        infolen,
+    ]) else {
         return 0;
-    }
+    };
+    // SAFETY: `CRYPTO_malloc` is this crate's allocator seam, so the `labeled_infolen`-byte block
+    // it answers has that provenance; this frame owns it and no other owner releases it.
+    let Some(labeled_info) = (unsafe {
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        OwnedBuf::adopt_plain(
+            CRYPTO_malloc(labeled_infolen, FILE_HPKE_UTIL, 366).cast::<c_uchar>(),
+            FILE_HPKE_UTIL_SEAM,
+            388,
+        )
+    }) else {
+        return 0;
+    };
 
     // `WPACKET_get_total_written`'s result: the bytes actually written, which is what the KDF's
     // `info` argument must be sized to.
@@ -809,39 +876,46 @@ pub(crate) unsafe fn hpke_labeled_expand(
     unsafe {
         let mut off = 0usize;
         // `WPACKET_put_bytes_u16(&pkt, okmlen)` — big-endian, two octets.
-        *labeled_info.add(off) = ((okmlen >> 8) & 0xff) as c_uchar;
-        *labeled_info.add(off + 1) = (okmlen & 0xff) as c_uchar;
+        *labeled_info.as_ptr().add(off) = ((okmlen >> 8) & 0xff) as c_uchar;
+        *labeled_info.as_ptr().add(off + 1) = (okmlen & 0xff) as c_uchar;
         off += 2;
         ptr::copy_nonoverlapping(
             LABEL_HPKEV1.as_ptr(),
-            labeled_info.add(off),
+            labeled_info.as_ptr().add(off),
             LABEL_HPKEV1.len(),
         );
         off += LABEL_HPKEV1.len();
         ptr::copy_nonoverlapping(
             protocol_label.as_ptr(),
-            labeled_info.add(off),
+            labeled_info.as_ptr().add(off),
             protocol_label.len(),
         );
         off += protocol_label.len();
         if suiteidlen > 0 {
-            ptr::copy_nonoverlapping(suiteid, labeled_info.add(off), suiteidlen);
+            ptr::copy_nonoverlapping(suiteid, labeled_info.as_ptr().add(off), suiteidlen);
         }
         off += suiteidlen;
-        ptr::copy_nonoverlapping(label.as_ptr(), labeled_info.add(off), label.len());
+        ptr::copy_nonoverlapping(label.as_ptr(), labeled_info.as_ptr().add(off), label.len());
         off += label.len();
         if infolen > 0 {
-            ptr::copy_nonoverlapping(info, labeled_info.add(off), infolen);
+            ptr::copy_nonoverlapping(info, labeled_info.as_ptr().add(off), infolen);
         }
         off += infolen;
         written = off;
     }
 
     // SAFETY: `kctx` is live and `labeled_info` holds `written` written bytes.
-    let ret = unsafe { hpke_kdf_expand(kctx, okm, okmlen, prk, prklen, labeled_info, written) };
-    // SAFETY: the buffer is this call's own and just used.
-    unsafe { CRYPTO_free(labeled_info.cast::<c_void>(), FILE_HPKE_UTIL, 388) };
-    ret
+    unsafe {
+        hpke_kdf_expand(
+            kctx,
+            okm,
+            okmlen,
+            prk,
+            prklen,
+            labeled_info.as_ptr(),
+            written,
+        )
+    }
 }
 
 /// The crate's `cleanse` for a buffer that may be zero bytes long, which the crate's own
@@ -852,6 +926,54 @@ pub(crate) unsafe fn hpke_labeled_expand(
 unsafe fn cleanse_ptr(p: *mut c_uchar, len: usize) {
     // SAFETY: `p` is writable for `len` per the contract.
     unsafe { crate::runtime::mem::cleanse(p, len) };
+}
+
+/// A secret-bearing scratch buffer that cleanses itself when the frame ends.
+///
+/// The authority reaches its `err:` label on success as well as failure and cleanses both key
+/// schedule buffers there (`hpke.c:800-801`). A `Drop` guard gives the same guarantee for every exit
+/// from this frame — early returns included — without repeating the cleanse at each one.
+struct CleansedScratch<const N: usize>([c_uchar; N]);
+
+impl<const N: usize> CleansedScratch<N> {
+    fn new() -> Self {
+        Self([0; N])
+    }
+
+    fn as_ptr(&self) -> *const c_uchar {
+        self.0.as_ptr()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut c_uchar {
+        self.0.as_mut_ptr()
+    }
+
+    /// Zero the whole buffer through the crate's volatile cleanse.
+    fn cleanse(&mut self) {
+        // SAFETY: `self.0` is this guard's own array of exactly `N` bytes, writable for its whole
+        // extent for as long as the guard is live.
+        unsafe { cleanse_ptr(self.0.as_mut_ptr(), N) }
+    }
+}
+
+impl<const N: usize> core::ops::Deref for CleansedScratch<N> {
+    type Target = [c_uchar; N];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<const N: usize> core::ops::DerefMut for CleansedScratch<N> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<const N: usize> Drop for CleansedScratch<N> {
+    fn drop(&mut self) {
+        self.cleanse();
+    }
 }
 
 /// `EVP_KDF_CTX *ossl_kdf_ctx_create(const char *kdfname, const char *mdname,
@@ -1101,6 +1223,102 @@ pub struct OsslHpkeCtx {
     pub(crate) ikme: *mut c_uchar,
     /// `size_t ikmelen`.
     pub(crate) ikmelen: usize,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a context block and of a frame's scratch buffer
+// ---------------------------------------------------------------------------------------------
+
+/// Cleanse the part of a KEM output block beyond the length the provider reported.
+///
+/// The authority's KEM providers and this crate's mirrors of them write exactly `Nsecret` and then
+/// set `*secretlen = Nsecret` (`ecx_kem.c.in:595`, `ec_kem.c.in:656`; the size query already
+/// returns `Nsecret` at `:565`/`:629`). On that path the tail is untouched `CRYPTO_malloc` storage,
+/// not secret material. The cleanse remains as a frame-local defence for a provider that writes a
+/// longer secret and reports less: the destructor only knows `shared_secretlen`, so an unreported
+/// tail would otherwise survive. No persistent field is needed; the pre-shrink extent is the
+/// `lsslen`/`alloc_len` local the caller already holds.
+///
+/// # Safety
+/// `p` is writable for `alloc_len` bytes and `written <= alloc_len`.
+unsafe fn cleanse_kem_tail(p: *mut c_uchar, written: usize, alloc_len: usize) {
+    if written < alloc_len {
+        // SAFETY: `written < alloc_len` and `p` is writable for `alloc_len`, so the remaining
+        // extent is in bounds and writable.
+        unsafe { cleanse_ptr(p.add(written), alloc_len - written) };
+    }
+}
+
+/// The body of `OSSL_HPKE_CTX_free` (`hpke.c:862-879`) **without** the block's own release, which
+/// [`OwnedCtx`]'s `Drop` performs.
+///
+/// Every member release stays the authority's own call at its own `__LINE__`: the fetched cipher,
+/// the property query, the exporter secret, the psk id and psk, the AEAD key and nonce, the KEM
+/// shared secret, the deterministic-keygen IKM, the authentication key pair and the imported
+/// public key -- eleven members, each released exactly once. Each is NULL until the setup that fills
+/// it succeeds, so running the whole body over an abandoned half-built context is the authority's
+/// own `goto err` plus a frame of NULL no-ops (`CRYPTO_free(NULL, ...)` returns before the allocator
+/// is reached).
+///
+/// The KEM shared secret is cleansed over `shared_secretlen`, the length the KEM reported. Any
+/// tail a provider wrote beyond that length is cleansed at the shrink point by
+/// [`cleanse_kem_tail`], before the context records the reported length.
+///
+/// # Safety
+/// `ctx` is a live context this crate allocated and has not released.
+unsafe fn destroy_ctx_body(ctx: *mut OsslHpkeCtx) {
+    // SAFETY: `ctx` is live per the contract and every member is NULL or this crate's own block.
+    unsafe {
+        EVP_CIPHER_free((*ctx).aead_ciph);
+        CRYPTO_free((*ctx).propq.cast::<c_void>(), FILE_HPKE, 867);
+        CRYPTO_clear_free(
+            (*ctx).exportersec.cast::<c_void>(),
+            (*ctx).exporterseclen,
+            FILE_HPKE,
+            868,
+        );
+        CRYPTO_free((*ctx).pskid.cast::<c_void>(), FILE_HPKE, 869);
+        CRYPTO_clear_free((*ctx).psk.cast::<c_void>(), (*ctx).psklen, FILE_HPKE, 870);
+        CRYPTO_clear_free((*ctx).key.cast::<c_void>(), (*ctx).keylen, FILE_HPKE, 871);
+        CRYPTO_clear_free(
+            (*ctx).nonce.cast::<c_void>(),
+            (*ctx).noncelen,
+            FILE_HPKE,
+            872,
+        );
+        CRYPTO_clear_free(
+            (*ctx).shared_secret.cast::<c_void>(),
+            (*ctx).shared_secretlen,
+            FILE_HPKE,
+            873,
+        );
+        CRYPTO_clear_free((*ctx).ikme.cast::<c_void>(), (*ctx).ikmelen, FILE_HPKE, 874);
+        EVP_PKEY_free((*ctx).authpriv);
+        CRYPTO_free((*ctx).authpub.cast::<c_void>(), FILE_HPKE, 876);
+    }
+}
+
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_HPKE_CTX_free` member body
+// ([`destroy_ctx_body`]), releasing exactly the eleven members -- `aead_ciph`, `propq`,
+// `exportersec`, `pskid`, `psk`, `key`, `nonce`, `shared_secret`, `ikme`, `authpriv`, `authpub` --
+// once each (each releaser accepts the unset NULL) and never the enclosing block, which `OwnedCtx`
+// releases; the context's `shared_secretlen` is the KEM-reported length, not a tracking
+// companion; (b)
+// `OsslHpkeCtx` is a `#[repr(C)]` record of raw pointers, integers, `Option<&'static _>` (whose
+// zeroed bytes are `None`) and `OsslHpkeSuite`, so an all-zero block is valid and the body is sound
+// on it -- that is the authority's own `OPENSSL_zalloc` state. The block's *members* stay raw:
+// `shared_secret`, `key`, `nonce`, `exportersec`, `psk`, `pskid`, `ikme`, `authpub` and `propq` are
+// `#[repr(C)]` fields handed out to, and read by, the ABI, so the context is the only place that
+// can own them.
+unsafe impl CtxDestroy for OsslHpkeCtx {
+    const FILE: *const c_char = FILE_HPKE;
+    const LINE_ALLOC: c_int = 831;
+    const LINE_FREE: c_int = 878;
+
+    unsafe fn destroy_body(ptr: *mut OsslHpkeCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { destroy_ctx_body(ptr) }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1484,17 +1702,20 @@ unsafe fn hpke_random_suite(
     _propq: *const c_char,
     suite: *mut OsslHpkeSuite,
 ) -> c_int {
-    let Some(kem_info) = kem_info_find_random(libctx) else {
+    // SAFETY: `libctx` is NULL or live per this function's contract.
+    let Some(kem_info) = (unsafe { kem_info_find_random(libctx) }) else {
         return 0;
     };
     // SAFETY: `suite` is writable per the contract.
     unsafe { (*suite).kem_id = kem_info.kem_id };
-    let Some(kdf_info) = kdf_info_find_random(libctx) else {
+    // SAFETY: `libctx` is NULL or live per this function's contract.
+    let Some(kdf_info) = (unsafe { kdf_info_find_random(libctx) }) else {
         return 0;
     };
     // SAFETY: `suite` is writable per the contract.
     unsafe { (*suite).kdf_id = kdf_info.kdf_id };
-    let Some(aead_info) = aead_info_find_random(libctx) else {
+    // SAFETY: `libctx` is NULL or live per this function's contract.
+    let Some(aead_info) = (unsafe { aead_info_find_random(libctx) }) else {
         return 0;
     };
     // SAFETY: `suite` is writable per the contract.
@@ -1510,6 +1731,10 @@ unsafe fn hpke_random_suite(
 /// so the authority's own `cipherlen == NULL || enclen == NULL` refusal (`hpke.c:402`, raising at
 /// `:403`) is **unreachable** and is not driven; the suite failure raises the lookup's own reason
 /// **and then** `ERR_R_PASSED_INVALID_ARGUMENT` at `:407`, which the transcription preserves.
+///
+/// `clearlen + taglen` is checked: the authority's `size_t` sum wraps, and returning the wrapped
+/// small value would understate the buffer an encrypt would write. On overflow this answers
+/// `None`, which the exported size helpers turn into their failure value 0.
 fn hpke_expansion(suite: OsslHpkeSuite, clearlen: usize) -> Option<(usize, usize)> {
     let (kem_info, _kdf_info, aead_info) = match hpke_suite_check(suite) {
         Some(v) => v,
@@ -1519,7 +1744,7 @@ fn hpke_expansion(suite: OsslHpkeSuite, clearlen: usize) -> Option<(usize, usize
             return None;
         }
     };
-    Some((kem_info.nenc, clearlen + aead_info.taglen))
+    Some((kem_info.nenc, clearlen.checked_add(aead_info.taglen)?))
 }
 
 /// `static size_t hpke_seqnonce2buf(OSSL_HPKE_CTX *ctx, unsigned char *buf, size_t blen)` —
@@ -1694,8 +1919,14 @@ unsafe fn hpke_encap(
             unsafe { raise_site(&err_sites::HPKE_521) };
             break 'body;
         }
+        // `shared_secret` is a `#[repr(C)]` member buffer the ABI reads back, so it stays a raw
+        // seam allocation rather than an owned handle; `destroy_ctx_body` is its release.
         // SAFETY: `lsslen` was filled by the size query.
-        let ss = CRYPTO_malloc(lsslen, FILE_HPKE, 524).cast::<c_uchar>();
+        let ss = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(lsslen, FILE_HPKE, 524)
+        }
+        .cast::<c_uchar>();
         if ss.is_null() {
             break 'body;
         }
@@ -1704,26 +1935,42 @@ unsafe fn hpke_encap(
             (*ctx).shared_secret = ss;
             (*ctx).shared_secretlen = lsslen;
         }
-        // SAFETY: `pctx` is live; `ss` is writable for `lsslen` and `enc` for `*enclen`.
-        if unsafe {
-            EVP_PKEY_encapsulate(
-                pctx,
-                enc,
-                enclen,
-                (*ctx).shared_secret,
-                &mut (*ctx).shared_secretlen,
-            )
-        } != 1
-        {
-            // SAFETY: `ctx` is live and `shared_secret` is this call's own.
+        // The provider's reported length is a frame local so the allocation extent (`lsslen`) is
+        // still at hand after the call. The shipped providers write exactly `Nsecret` and report it
+        // (`ecx_kem.c.in:595`, `ec_kem.c.in:656`), so `written == lsslen` and the tail below is
+        // untouched `CRYPTO_malloc` storage.
+        let mut written = lsslen;
+        // SAFETY: `pctx` is live; `ss` is writable for `lsslen` and `written` is a live local.
+        let rv =
+            unsafe { EVP_PKEY_encapsulate(pctx, enc, enclen, (*ctx).shared_secret, &mut written) };
+        // A provider must not report more than the capacity it was given: publishing a larger
+        // `shared_secretlen` would make the key schedule read past the block.
+        if rv != 1 || written > lsslen {
+            // The authority plainly frees here (`hpke.c:532`), but this is a failure path of a
+            // secret-bearing buffer: cleanse the whole allocation (the size query's `lsslen`)
+            // before release. Deliberate safety improvement over the authority, which the
+            // destructor's own `OPENSSL_clear_free` (`:873`) already implies.
+            // SAFETY: `ctx` is live and `shared_secret` is this call's own block of `lsslen` bytes.
             unsafe {
                 (*ctx).shared_secretlen = 0;
-                CRYPTO_free((*ctx).shared_secret.cast::<c_void>(), FILE_HPKE, 532);
+                CRYPTO_clear_free(
+                    (*ctx).shared_secret.cast::<c_void>(),
+                    lsslen,
+                    FILE_HPKE,
+                    532,
+                );
                 (*ctx).shared_secret = ptr::null_mut();
             }
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::HPKE_534) };
             break 'body;
+        }
+        // A provider that reports less than it wrote would leave an unreported secret tail that
+        // the destructor cannot see; cleanse it here, while the allocation extent is still local.
+        // SAFETY: `shared_secret` is this call's block of `lsslen` bytes and `written <= lsslen`.
+        unsafe {
+            cleanse_kem_tail((*ctx).shared_secret, written, lsslen);
+            (*ctx).shared_secretlen = written;
         }
         erv = 1;
     }
@@ -1748,6 +1995,9 @@ unsafe fn hpke_decap(
     let mut erv = 0;
     let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
     let mut lsslen: usize = 0;
+    // The allocated extent, retained separately because `EVP_PKEY_decapsulate` may rewrite
+    // `lsslen`. `0` is the no-allocation state the failure release tolerates.
+    let mut alloc_len: usize = 0;
     let mut spub: *mut EvpPkey = ptr::null_mut();
 
     if ctx.is_null() || enc.is_null() || enclen == 0 || priv_.is_null() {
@@ -1838,14 +2088,21 @@ unsafe fn hpke_decap(
             unsafe { raise_site(&err_sites::HPKE_617) };
             break 'body;
         }
+        // `shared_secret` is a `#[repr(C)]` member buffer the ABI reads back; it stays a raw seam
+        // allocation, released by `destroy_ctx_body` (`hpke_decap`'s own refusal frees it in place).
         // SAFETY: `lsslen` was filled by the size query.
-        let ss = CRYPTO_malloc(lsslen, FILE_HPKE, 620).cast::<c_uchar>();
+        alloc_len = lsslen;
+        let ss = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(lsslen, FILE_HPKE, 620)
+        }
+        .cast::<c_uchar>();
         if ss.is_null() {
             break 'body;
         }
         // SAFETY: `ctx` is live.
         unsafe { (*ctx).shared_secret = ss };
-        // SAFETY: `pctx` is live; `ss` is writable for `lsslen`.
+        // SAFETY: `pctx` is live; `ss` is writable for `lsslen`, which is the in/out length.
         if unsafe { EVP_PKEY_decapsulate(pctx, (*ctx).shared_secret, &mut lsslen, enc, enclen) }
             != 1
         {
@@ -1853,8 +2110,22 @@ unsafe fn hpke_decap(
             unsafe { raise_site(&err_sites::HPKE_626) };
             break 'body;
         }
-        // SAFETY: `ctx` is live.
-        unsafe { (*ctx).shared_secretlen = lsslen };
+        // The provider must not report more than the capacity it was given; publishing it would
+        // make the key schedule read past the block. `alloc_len` is the size query's extent.
+        if lsslen > alloc_len {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::HPKE_626) };
+            break 'body;
+        }
+        // The shipped providers report exactly `Nsecret` (`ecx_kem.c.in:656`, `ec_kem.c.in:656`),
+        // so the tail is untouched malloc storage; cleanse any unreported tail defensively while
+        // the pre-shrink extent `alloc_len` is still local. The destructor only sees the reported
+        // `shared_secretlen`.
+        // SAFETY: `shared_secret` is this call's block of `alloc_len` bytes and `lsslen <= alloc_len`.
+        unsafe {
+            cleanse_kem_tail((*ctx).shared_secret, lsslen, alloc_len);
+            (*ctx).shared_secretlen = lsslen;
+        }
         erv = 1;
     }
     // SAFETY: both are NULL or this call's own.
@@ -1863,9 +2134,18 @@ unsafe fn hpke_decap(
         EVP_PKEY_free(spub);
     }
     if erv == 0 {
-        // SAFETY: `ctx` is live and `shared_secret` is NULL or this call's own block.
+        // The authority plainly frees here (`hpke.c:636`), leaving a partially written KEM output
+        // in released memory; cleanse the allocated extent instead. Deliberate safety improvement
+        // over the authority, consistent with the destructor's `OPENSSL_clear_free` (`:873`).
+        // SAFETY: `ctx` is live and `shared_secret` is NULL or this call's own block of
+        // `alloc_len` bytes.
         unsafe {
-            CRYPTO_free((*ctx).shared_secret.cast::<c_void>(), FILE_HPKE, 636);
+            CRYPTO_clear_free(
+                (*ctx).shared_secret.cast::<c_void>(),
+                alloc_len,
+                FILE_HPKE,
+                636,
+            );
             (*ctx).shared_secret = ptr::null_mut();
             (*ctx).shared_secretlen = 0;
         }
@@ -1884,8 +2164,8 @@ unsafe fn hpke_decap(
 /// `ctx` NULL or live; `info` readable for `infolen` unless 0.
 unsafe fn hpke_do_middle(ctx: *mut OsslHpkeCtx, info: *const c_uchar, infolen: usize) -> c_int {
     let mut erv = 0;
-    let mut ks_context = [0 as c_uchar; OSSL_HPKE_MAXSIZE];
-    let mut secret = [0 as c_uchar; OSSL_HPKE_MAXSIZE];
+    let mut ks_context = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
+    let mut secret = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
     let mut suitebuf = [0 as c_uchar; 6];
 
     if ctx.is_null() {
@@ -2044,6 +2324,7 @@ unsafe fn hpke_do_middle(ctx: *mut OsslHpkeCtx, info: *const c_uchar, infolen: u
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).noncelen = aead_info.nn };
             // SAFETY: `ctx` is live and `noncelen` is now the AEAD's nonce length.
+            // `nonce` is a `#[repr(C)]` member buffer the ABI reads back; it stays raw.
             let nonce = unsafe { CRYPTO_malloc((*ctx).noncelen, FILE_HPKE, 758) }.cast::<c_uchar>();
             if nonce.is_null() {
                 break 'body;
@@ -2074,6 +2355,7 @@ unsafe fn hpke_do_middle(ctx: *mut OsslHpkeCtx, info: *const c_uchar, infolen: u
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).keylen = aead_info.nk };
             // SAFETY: `ctx` is live and `keylen` is now the AEAD's key length.
+            // `key` is a `#[repr(C)]` member buffer the ABI reads back; it stays raw.
             let key = unsafe { CRYPTO_malloc((*ctx).keylen, FILE_HPKE, 771) }.cast::<c_uchar>();
             if key.is_null() {
                 break 'body;
@@ -2105,6 +2387,7 @@ unsafe fn hpke_do_middle(ctx: *mut OsslHpkeCtx, info: *const c_uchar, infolen: u
         // SAFETY: `ctx` is live.
         unsafe { (*ctx).exporterseclen = kdf_info.nh };
         // SAFETY: `ctx` is live and `exporterseclen` is the KDF's hash length.
+        // `exportersec` is a `#[repr(C)]` member buffer the ABI reads back; it stays raw.
         let es = unsafe { CRYPTO_malloc((*ctx).exporterseclen, FILE_HPKE, 785) }.cast::<c_uchar>();
         if es.is_null() {
             break 'body;
@@ -2175,11 +2458,14 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
         unsafe { raise_site(&err_sites::HPKE_828) };
         return ptr::null_mut();
     }
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<OsslHpkeCtx>(), FILE_HPKE, 831).cast::<OsslHpkeCtx>();
-    if ctx.is_null() {
+    // SAFETY: the block is allocated through the crate's allocator seam and owned until handed to
+    // the caller below; on either refusal `ctx_owner`'s `Drop` is the authority's `goto err`.
+    let Some(ctx_owner) =
+        OwnedCtx::<OsslHpkeCtx>::zalloc_at(FILE_HPKE_SEAM, 831, FILE_HPKE_SEAM, 858)
+    else {
         return ptr::null_mut();
-    }
+    };
+    let ctx = ctx_owner.as_ptr();
     // SAFETY: `ctx` is a fresh zeroed block this call owns.
     unsafe {
         (*ctx).libctx = libctx;
@@ -2196,13 +2482,8 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
         // SAFETY: `ctx` is live.
         unsafe { (*ctx).propq = dup };
         if dup.is_null() {
-            // The authority's `goto err` frees the cipher, the (NULL) propq and the context.
-            // SAFETY: `ctx` is this call's own block and holds no other allocation yet.
-            unsafe {
-                EVP_CIPHER_free((*ctx).aead_ciph);
-                CRYPTO_free((*ctx).propq.cast::<c_void>(), FILE_HPKE, 857);
-                CRYPTO_free(ctx.cast::<c_void>(), FILE_HPKE, 858);
-            }
+            // The authority's `goto err` frees the cipher, the (NULL) propq and the context;
+            // `ctx_owner`'s `Drop` is that release.
             return ptr::null_mut();
         }
     }
@@ -2214,18 +2495,13 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
         if ciph.is_null() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::HPKE_843) };
-            // SAFETY: `ctx` is this call's own block and holds only `propq`.
-            unsafe {
-                EVP_CIPHER_free((*ctx).aead_ciph);
-                CRYPTO_free((*ctx).propq.cast::<c_void>(), FILE_HPKE, 857);
-                CRYPTO_free(ctx.cast::<c_void>(), FILE_HPKE, 858);
-            }
+            // `ctx_owner`'s `Drop` releases the (NULL) fetched cipher, `propq` and the block.
             return ptr::null_mut();
         }
         // SAFETY: `ctx` is live.
         unsafe { (*ctx).aead_ciph = ciph };
     }
-    ctx
+    ctx_owner.into_raw()
 }
 
 /// `void OSSL_HPKE_CTX_free(OSSL_HPKE_CTX *ctx)` — `hpke.c:862`.
@@ -2234,39 +2510,57 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_new(
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_HPKE_CTX_free(ctx: *mut OsslHpkeCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract and every pointer is NULL or this crate's own.
+    // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
     unsafe {
-        EVP_CIPHER_free((*ctx).aead_ciph);
-        CRYPTO_free((*ctx).propq.cast::<c_void>(), FILE_HPKE, 867);
-        CRYPTO_clear_free(
-            (*ctx).exportersec.cast::<c_void>(),
-            (*ctx).exporterseclen,
-            FILE_HPKE,
-            868,
-        );
-        CRYPTO_free((*ctx).pskid.cast::<c_void>(), FILE_HPKE, 869);
-        CRYPTO_clear_free((*ctx).psk.cast::<c_void>(), (*ctx).psklen, FILE_HPKE, 870);
-        CRYPTO_clear_free((*ctx).key.cast::<c_void>(), (*ctx).keylen, FILE_HPKE, 871);
-        CRYPTO_clear_free(
-            (*ctx).nonce.cast::<c_void>(),
-            (*ctx).noncelen,
-            FILE_HPKE,
-            872,
-        );
-        CRYPTO_clear_free(
-            (*ctx).shared_secret.cast::<c_void>(),
-            (*ctx).shared_secretlen,
-            FILE_HPKE,
-            873,
-        );
-        CRYPTO_clear_free((*ctx).ikme.cast::<c_void>(), (*ctx).ikmelen, FILE_HPKE, 874);
-        EVP_PKEY_free((*ctx).authpriv);
-        CRYPTO_free((*ctx).authpub.cast::<c_void>(), FILE_HPKE, 876);
-        CRYPTO_free(ctx.cast::<c_void>(), FILE_HPKE, 878);
+        drop(OwnedCtx::<OsslHpkeCtx>::from_raw_at(
+            ctx,
+            FILE_HPKE_SEAM,
+            878,
+        ))
+    };
+}
+
+/// Commit a replacement `psk`/`pskid` pair, or leave the previous pair untouched.
+///
+/// Both replacement blocks are built before this function runs, so a NULL in either slot is the
+/// allocation-failure arm: the fresh block (if any) is released and the previous pair remains
+/// installed and untouched. The authority instead frees the previous pair first (`hpke.c:912-917`)
+/// and only then allocates, so a failed `OPENSSL_memdup` loses the old `psk` and leaves `psklen`
+/// stale. Building the replacements first is a deliberate safety improvement that makes replacement
+/// failure-atomic without changing the success state.
+///
+/// # Safety
+/// `ctx` is live. `new_psk` is NULL or the fresh block this call owns for `new_psklen` bytes;
+/// `new_pskid` is NULL or the fresh NUL-terminated block this call owns.
+unsafe fn replace_psk_pair(
+    ctx: *mut OsslHpkeCtx,
+    new_psk: *mut c_uchar,
+    new_psklen: usize,
+    new_pskid: *mut c_char,
+) -> c_int {
+    if new_psk.is_null() || new_pskid.is_null() {
+        // Release whichever half of the fresh pair was built; the callers no longer own it.
+        // SAFETY: each is NULL or this call's own block.
+        unsafe {
+            if !new_psk.is_null() {
+                CRYPTO_clear_free(new_psk.cast::<c_void>(), new_psklen, FILE_HPKE, 920);
+            }
+            if !new_pskid.is_null() {
+                CRYPTO_free(new_pskid.cast::<c_void>(), FILE_HPKE, 918);
+            }
+        }
+        return 0;
     }
+    // Commit: release the previous pair at the authority's own lines, then publish the new pair.
+    // SAFETY: `ctx` is live and both previous members are NULL or this context's own blocks.
+    unsafe {
+        CRYPTO_clear_free((*ctx).psk.cast::<c_void>(), (*ctx).psklen, FILE_HPKE, 912);
+        CRYPTO_free((*ctx).pskid.cast::<c_void>(), FILE_HPKE, 917);
+        (*ctx).psk = new_psk;
+        (*ctx).psklen = new_psklen;
+        (*ctx).pskid = new_pskid;
+    }
+    1
 }
 
 /// `int OSSL_HPKE_CTX_set1_psk(OSSL_HPKE_CTX *ctx, const char *pskid,
@@ -2274,7 +2568,9 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_free(ctx: *mut OsslHpkeCtx) {
 ///
 /// Six validations in the authority's order: NULL arguments, a psk longer than the maximum, a psk
 /// shorter than the minimum, a pskid past the maximum, an empty pskid, and a mode that is not a
-/// PSK mode. Only then is the previous psk released and the new one taken.
+/// PSK mode. The replacement pair is then built **before** the previous pair is released, so an
+/// allocation failure preserves the previous state (a deliberate improvement over the authority,
+/// which frees first; see [`replace_psk_pair`]).
 ///
 /// # Safety
 /// `ctx` NULL or live; `pskid` NULL or NUL-terminated; `psk` NULL or readable for `psklen`.
@@ -2319,34 +2615,38 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_psk(
         unsafe { raise_site(&err_sites::HPKE_908) };
         return 0;
     }
-    // Free previous values if any.
-    // SAFETY: `ctx` is live and `psk` is NULL or this crate's own block.
-    unsafe { CRYPTO_clear_free((*ctx).psk.cast::<c_void>(), (*ctx).psklen, FILE_HPKE, 912) };
+    // Free previous values if any. Both replacements are built first: the previous pair survives
+    // a failed allocation, so the key schedule never observes a partial replacement.
     // SAFETY: `psk` is readable for `psklen` per the contract.
     let dup = unsafe { c_memdup(psk, psklen) };
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).psk = dup };
     if dup.is_null() {
         return 0;
     }
-    // SAFETY: `ctx` is live.
-    unsafe {
-        (*ctx).psklen = psklen;
-        CRYPTO_free((*ctx).pskid.cast::<c_void>(), FILE_HPKE, 917);
-    }
     // SAFETY: `pskid` is NUL-terminated.
     let id = unsafe { c_strdup(pskid) };
-    if id.is_null() {
-        // SAFETY: `ctx` is live and `psk` is this call's own block.
-        unsafe {
-            CRYPTO_clear_free((*ctx).psk.cast::<c_void>(), (*ctx).psklen, FILE_HPKE, 920);
-            (*ctx).psk = ptr::null_mut();
-            (*ctx).psklen = 0;
-        }
+    // SAFETY: `ctx` is live; `dup`/`id` are this call's fresh blocks (or NULL) and are consumed by
+    // the commit helper.
+    unsafe { replace_psk_pair(ctx, dup, psklen, id) }
+}
+
+/// Commit a replacement `ikme`, or leave the previous one untouched when `new_ikme` is NULL.
+///
+/// As [`replace_psk_pair`], the fresh block is built before the previous one is released, so a
+/// failed `OPENSSL_memdup` (the authority's `hpke.c:943-947`) preserves the old IKM and its length
+/// instead of losing both.
+///
+/// # Safety
+/// `ctx` is live. `new_ikme` is NULL or the fresh block this call owns for `new_ikmelen` bytes.
+unsafe fn replace_ikm(ctx: *mut OsslHpkeCtx, new_ikme: *mut c_uchar, new_ikmelen: usize) -> c_int {
+    if new_ikme.is_null() {
         return 0;
     }
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).pskid = id };
+    // SAFETY: `ctx` is live and the previous `ikme` is NULL or this context's own block.
+    unsafe {
+        CRYPTO_clear_free((*ctx).ikme.cast::<c_void>(), (*ctx).ikmelen, FILE_HPKE, 943);
+        (*ctx).ikme = new_ikme;
+        (*ctx).ikmelen = new_ikmelen;
+    }
     1
 }
 
@@ -2355,7 +2655,8 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_psk(
 ///
 /// The sender's deterministic-keygen IKM, so a receiver role is refused. The NULL pair raises
 /// `PASSED_NULL_PARAMETER` and the empty/oversize ikme raises `PASSED_INVALID_ARGUMENT` — two
-/// different reasons for two different classes of bad input.
+/// different reasons for two different classes of bad input. As with `set1_psk`, the replacement is
+/// built before the previous IKM is released, so allocation failure preserves the old value.
 ///
 /// # Safety
 /// `ctx` NULL or live; `ikme` NULL or readable for `ikmelen`.
@@ -2381,18 +2682,12 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_ikme(
         unsafe { raise_site(&err_sites::HPKE_940) };
         return 0;
     }
-    // SAFETY: `ctx` is live and `ikme` is NULL or this crate's own block.
-    unsafe { CRYPTO_clear_free((*ctx).ikme.cast::<c_void>(), (*ctx).ikmelen, FILE_HPKE, 943) };
+    // Build the replacement first so a failed allocation leaves the previous IKM intact.
     // SAFETY: `ikme` is readable for `ikmelen` per the contract.
     let dup = unsafe { c_memdup(ikme, ikmelen) };
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).ikme = dup };
-    if dup.is_null() {
-        return 0;
-    }
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).ikmelen = ikmelen };
-    1
+    // SAFETY: `ctx` is live; `dup` is this call's fresh block (or NULL) and is consumed by the
+    // commit helper.
+    unsafe { replace_ikm(ctx, dup, ikmelen) }
 }
 
 /// `int OSSL_HPKE_CTX_set1_authpriv(OSSL_HPKE_CTX *ctx, EVP_PKEY *priv)` — `hpke.c:951`.
@@ -2501,24 +2796,30 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_authpub(
             unsafe { raise_site(&err_sites::HPKE_1011) };
             break 'body;
         }
-        // SAFETY: `lpub` is a fresh 512-byte block.
-        let lpub = CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>();
-        if lpub.is_null() {
+        // SAFETY: `lpub` is the fresh `OSSL_HPKE_MAXSIZE`-byte `CRYPTO_malloc` block from this
+        // crate's allocator seam; this frame owns it until handed to `authpub` or released by its
+        // `Drop` as this block is left.
+        let Some(lpub) = (unsafe {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            OwnedBuf::adopt_plain(
+                CRYPTO_malloc(OSSL_HPKE_MAXSIZE, FILE_HPKE, 1018).cast::<c_uchar>(),
+                FILE_HPKE_SEAM,
+                1025,
+            )
+        }) else {
             break 'body;
-        }
+        };
         // SAFETY: `pubp` is live; `lpub` writable for 512 bytes.
         if unsafe {
             EVP_PKEY_get_octet_string_param(
                 pubp,
                 OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
-                lpub,
+                lpub.as_ptr(),
                 OSSL_HPKE_MAXSIZE,
                 &mut lpublen,
             )
         } != 1
         {
-            // SAFETY: `lpub` is this call's own block.
-            unsafe { CRYPTO_free(lpub.cast::<c_void>(), FILE_HPKE, 1025) };
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::HPKE_1026) };
             break 'body;
@@ -2526,9 +2827,9 @@ pub unsafe extern "C" fn OSSL_HPKE_CTX_set1_authpub(
         // Free up old value.
         // SAFETY: `ctx` is live and `authpub` is NULL or this crate's own block.
         unsafe { CRYPTO_free((*ctx).authpub.cast::<c_void>(), FILE_HPKE, 1030) };
-        // SAFETY: `ctx` is live.
+        // SAFETY: `ctx` is live; `authpub` takes over the block from `lpub`.
         unsafe {
-            (*ctx).authpub = lpub;
+            (*ctx).authpub = lpub.into_raw();
             (*ctx).authpublen = lpublen;
         }
         erv = 1;
@@ -2852,6 +3153,17 @@ pub unsafe extern "C" fn OSSL_HPKE_open(
 /// `int OSSL_HPKE_export(OSSL_HPKE_CTX *ctx, unsigned char *secret, size_t secretlen,
 ///     const unsigned char *label, size_t labellen)` — `hpke.c:1248`.
 ///
+/// `secretlen` is bounded before the labelled buffer is built. The authority has no explicit
+/// upper check: it computes `labeled_infolen = 2 + okmlen + ...` in `size_t` (`hpke_util.c:364`),
+/// truncates `okmlen` to 16 bits in the prefix (`:372`), and lets HKDF-Expand refuse
+/// `ceil(L/Nh) > 255` (`hkdf.c.in:761`). This implementation refuses `L > 255*Nh` (at most 16320,
+/// below `u16::MAX`) with the authority's result: `labeled_expand` fails and `:1300` raises
+/// `ERR_R_INTERNAL_ERROR` before answering 0. **Divergence:** for a length whose authority-side
+/// labelled allocation fails, the authority's error stack additionally carries
+/// `ERR_R_MALLOC_FAILURE` from `OPENSSL_malloc` (`hpke_util.c:366`), while this check raises only
+/// the `:1300` site; the return value is 0 in both. This is deliberate: it also avoids the
+/// authority's wrapping sum and short allocation for lengths near `SIZE_MAX`.
+///
 /// # Safety
 /// `ctx` NULL or live; `secret` writable for `secretlen`; `label` readable for `labellen` unless 0.
 #[no_mangle]
@@ -2904,6 +3216,20 @@ pub unsafe extern "C" fn OSSL_HPKE_export(
     if kctx.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::HPKE_1282) };
+        return 0;
+    }
+    // `secretlen` is caller-controlled and can be arbitrarily large. The authority's HKDF-Expand
+    // refuses a length whose `ceil(L/Nh)` exceeds 255 (`providers/.../hkdf.c.in:761`), and its
+    // `WPACKET_put_bytes_u16` writes only the low 16 bits of `secretlen` into the label. `255 * Nh`
+    // is at most 16320 (SHA-512), already below `u16::MAX`, so every accepted length also has a
+    // faithful 16-bit prefix. Reject the rest here, with the authority's result: `labeled_expand`
+    // fails and `:1300` raises `ERR_R_INTERNAL_ERROR` before answering 0.
+    let max_export = kdf_info.nh.saturating_mul(255);
+    if secretlen > max_export {
+        // SAFETY: `kctx` is this call's own context.
+        unsafe { EVP_KDF_CTX_free(kctx) };
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1300) };
         return 0;
     }
     // Full suiteid as per RFC9180 sec 5.3.
@@ -3232,10 +3558,17 @@ pub extern "C" fn OSSL_HPKE_get_recommended_ikmelen(suite: OsslHpkeSuite) -> usi
 
 /// `OPENSSL_memdup(p, len)` — a copy of `len` bytes, or NULL.
 ///
+/// The result is handed to the caller and taken over into a context member (`psk`, `ikme`), so the
+/// allocation stays raw on the seam: the member is the owner and `destroy_ctx_body` its release.
+///
 /// # Safety
 /// `p` must be readable for `len` bytes.
 unsafe fn c_memdup(p: *const c_uchar, len: usize) -> *mut c_uchar {
-    let out = CRYPTO_malloc(len, FILE_HPKE_UTIL, 483).cast::<c_uchar>();
+    let out = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(len, FILE_HPKE_UTIL, 483)
+    }
+    .cast::<c_uchar>();
     if out.is_null() {
         return ptr::null_mut();
     }
@@ -3246,12 +3579,25 @@ unsafe fn c_memdup(p: *const c_uchar, len: usize) -> *mut c_uchar {
 
 /// `OPENSSL_strdup(s)` — a copy of the NUL-terminated string including its terminator, or NULL.
 ///
+/// As [`c_memdup`], the result is handed to the caller and taken over into a context member
+/// (`propq`, `pskid`), so the allocation stays raw; the member is the owner.
+///
 /// # Safety
 /// `s` must be NUL-terminated.
 unsafe fn c_strdup(s: *const c_char) -> *mut c_char {
     // SAFETY: `s` is NUL-terminated per the contract.
     let len = unsafe { c_strnlen(s, usize::MAX) };
-    let out = CRYPTO_malloc(len + 1, FILE_HPKE, 836).cast::<c_char>();
+    // `OPENSSL_strdup`'s `strlen(s) + 1` in `size_t` wraps when the scan reports `usize::MAX`; a
+    // wrapped zero-size allocation followed by the copy below would be a heap overflow. The
+    // authority's failure value for that allocation is NULL.
+    let Some(alloc_len) = len.checked_add(1) else {
+        return ptr::null_mut();
+    };
+    let out = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(alloc_len, FILE_HPKE, 836)
+    }
+    .cast::<c_char>();
     if out.is_null() {
         return ptr::null_mut();
     }
@@ -3399,4 +3745,276 @@ mod tests {
             assert_eq!(OSSL_HPKE_CTX_set_seq(ptr::null_mut(), 0), 0);
         }
     }
+
+    /// The labelled concatenation bounds are checked, so a caller-controlled length cannot wrap
+    /// the allocation sum and make the copies run past a short block (D019/D021/D022).
+    #[test]
+    fn labelled_length_sums_are_checked() {
+        assert_eq!(checked_labeled_len(&[0, 0]), Some(0));
+        assert_eq!(checked_labeled_len(&[2, 10, 20]), Some(32));
+        assert_eq!(checked_labeled_len(&[usize::MAX, 1]), None);
+        assert_eq!(checked_labeled_len(&[usize::MAX - 1, 1, 1]), None);
+    }
+
+    /// The size helper answers its failure value 0 when `clearlen + taglen` is not representable,
+    /// instead of returning the authority's wrapped (and dangerously small) `size_t` sum.
+    #[test]
+    fn ciphertext_size_overflow_is_refused() {
+        let x25519 = suite(
+            OSSL_HPKE_KEM_ID_X25519,
+            OSSL_HPKE_KDF_ID_HKDF_SHA256,
+            OSSL_HPKE_AEAD_ID_AES_GCM_128,
+        );
+        assert_eq!(OSSL_HPKE_get_ciphertext_size(x25519, usize::MAX), 0);
+        assert_eq!(OSSL_HPKE_get_ciphertext_size(x25519, usize::MAX - 15), 0);
+        // The largest non-overflowing input keeps the authority's value.
+        assert_eq!(
+            OSSL_HPKE_get_ciphertext_size(x25519, usize::MAX - 16),
+            usize::MAX
+        );
+    }
+
+    /// The scratch guard used by `hpke_do_middle` zeroes its whole buffer; `Drop` is a one-line
+    /// call to this method, so every exit from the key schedule (success and failure) cleanses.
+    #[test]
+    fn secret_scratch_cleanse_zeroes_the_whole_buffer() {
+        let mut scratch = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
+        assert_eq!(scratch.len(), OSSL_HPKE_MAXSIZE);
+        for b in scratch.iter_mut() {
+            *b = 0xA5;
+        }
+        scratch.cleanse();
+        assert!(scratch.iter().all(|&b| b == 0));
+    }
+
+    /// The shared-secret cleanse extent is the allocation the KEM was given, and the reported
+    /// prefix is preserved. For the shipped providers `written == alloc_len` (they write exactly
+    /// `Nsecret` and report it), so the helper is a no-op; a provider that writes more than it
+    /// reports cannot leave a tail the destructor would miss (D049/D051).
+    #[test]
+    fn kem_tail_cleanse_covers_the_unreported_extent() {
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(64, FILE_HPKE, 524)
+        }
+        .cast::<c_uchar>();
+        assert!(!p.is_null());
+        // SAFETY: `p` is this test frame's own 64-byte block; the helper writes only within it and
+        // the single release below is its only release.
+        unsafe {
+            ptr::write_bytes(p, 0x5A, 64);
+            cleanse_kem_tail(p, 32, 64);
+            for i in 0..32 {
+                assert_eq!(
+                    *p.add(i),
+                    0x5A,
+                    "the reported prefix is not secret-tail storage"
+                );
+            }
+            for i in 32..64 {
+                assert_eq!(*p.add(i), 0, "byte {i} of the unreported tail survived");
+            }
+            // The no-shrink arm leaves the whole block untouched.
+            ptr::write_bytes(p, 0xA5, 64);
+            cleanse_kem_tail(p, 64, 64);
+            for i in 0..64 {
+                assert_eq!(*p.add(i), 0xA5);
+            }
+            CRYPTO_free(p.cast::<c_void>(), FILE_HPKE, 0);
+        }
+    }
+
+    /// The context block is opaque in the ABI, but a caller-installed `CRYPTO_zalloc` hook
+    /// observes the allocation request, so the size is part of the authority contract (§6). This
+    /// is the pre-conversion layout; no tracking field may grow it.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn ctx_allocation_size_is_the_authority_layout() {
+        assert_eq!(core::mem::size_of::<OsslHpkeCtx>(), 208);
+    }
+
+    /// The destructor's all-zero-block obligation: every member is NULL and the whole body is a
+    /// sequence of no-ops. This is the state `OwnedCtx::zalloc` validates with no caller assertion.
+    #[test]
+    fn all_zero_ctx_is_valid_for_the_destructor() {
+        // SAFETY: as in the previous test, the zeroed record is a valid `OsslHpkeCtx`.
+        let mut ctx: OsslHpkeCtx = unsafe { core::mem::MaybeUninit::zeroed().assume_init() };
+        // SAFETY: `ctx` is live and all-zero, the state the body is written against.
+        unsafe { destroy_ctx_body(&mut ctx) };
+    }
+
+    /// Build an export-only context with an installed exporter secret, so `OSSL_HPKE_export`
+    /// reaches the key-schedule path without a KEM or AEAD provider object.
+    fn export_only_ctx(libctx: *mut c_void) -> *mut OsslHpkeCtx {
+        let s = suite(
+            OSSL_HPKE_KEM_ID_X25519,
+            OSSL_HPKE_KDF_ID_HKDF_SHA256,
+            OSSL_HPKE_AEAD_ID_EXPORTONLY,
+        );
+        // SAFETY: `libctx` is the caller's live context; the remaining pointers are the NULL the
+        // function documents.
+        let ctx = unsafe {
+            OSSL_HPKE_CTX_new(
+                OSSL_HPKE_MODE_BASE,
+                s,
+                OSSL_HPKE_ROLE_SENDER,
+                libctx,
+                ptr::null(),
+            )
+        };
+        assert!(!ctx.is_null());
+        let es = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(SHA256_DIGEST_LENGTH, FILE_HPKE, 785)
+        }
+        .cast::<c_uchar>();
+        assert!(!es.is_null());
+        // SAFETY: `ctx` is live and `es` is this test's own block; the destructor releases it.
+        unsafe {
+            ptr::write_bytes(es, 0x42, SHA256_DIGEST_LENGTH);
+            (*ctx).exportersec = es;
+            (*ctx).exporterseclen = SHA256_DIGEST_LENGTH;
+        }
+        ctx
+    }
+
+    /// `OSSL_HPKE_export`'s caller-controlled `secretlen`: 0 is the authority's argument refusal,
+    /// the HKDF-Expand bound `255*Nh` is accepted exactly, and the next byte is refused with 0
+    /// (the `HPKE_1300` arm). Lengths past the 16-bit label field and `usize::MAX` are refused by
+    /// the same check. The rejected arms must not write through `secret`.
+    #[test]
+    fn export_refuses_secretlen_beyond_the_kdf_bound() {
+        use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new};
+
+        let libctx = OSSL_LIB_CTX_new();
+        assert!(!libctx.is_null());
+        let ctx = export_only_ctx(libctx);
+        let max_export = 255 * SHA256_DIGEST_LENGTH;
+        // A one-byte canary: the rejection arms return before any write, which this test proves by
+        // completing without touching the rest of the address space.
+        let mut canary = [0xA5u8; 1];
+        // SAFETY: `ctx` is live; the short `canary` is only used for arms that write nothing.
+        unsafe {
+            assert_eq!(
+                OSSL_HPKE_export(ctx, canary.as_mut_ptr(), 0, ptr::null(), 0),
+                0
+            );
+            assert_eq!(
+                OSSL_HPKE_export(ctx, canary.as_mut_ptr(), max_export + 1, ptr::null(), 0),
+                0
+            );
+            // Past the 16-bit label-length field as well: the same validation arm, so the
+            // truncation in the authority's `WPACKET_put_bytes_u16` is unreachable here.
+            assert_eq!(
+                OSSL_HPKE_export(
+                    ctx,
+                    canary.as_mut_ptr(),
+                    u16::MAX as usize + 1,
+                    ptr::null(),
+                    0
+                ),
+                0
+            );
+            assert_eq!(
+                OSSL_HPKE_export(ctx, canary.as_mut_ptr(), usize::MAX, ptr::null(), 0),
+                0
+            );
+            assert_eq!(canary[0], 0xA5, "the rejected arms wrote through `secret`");
+
+            // The bound is `255 * Nh` = 8160 for HKDF-SHA256; that length must still derive.
+            let mut out = vec![0u8; max_export];
+            assert_eq!(
+                OSSL_HPKE_export(ctx, out.as_mut_ptr(), max_export, ptr::null(), 0),
+                1
+            );
+            OSSL_HPKE_CTX_free(ctx);
+        }
+        // SAFETY: `libctx` is this test's own fresh context, released after its last user.
+        unsafe { OSSL_LIB_CTX_free(libctx) };
+    }
+
+    /// The previous `psk`/`pskid` pair survives a failed replacement, so the key schedule never
+    /// sees a NULL `psk` with a stale `psklen`. The two arms are the two allocation sites: the psk
+    /// copy and the pskid copy.
+    #[test]
+    fn set1_psk_replacement_failure_preserves_previous_pair() {
+        let s = suite(
+            OSSL_HPKE_KEM_ID_X25519,
+            OSSL_HPKE_KDF_ID_HKDF_SHA256,
+            OSSL_HPKE_AEAD_ID_EXPORTONLY,
+        );
+        // SAFETY: the pointers are the NULL the function documents; export-only fetches no cipher.
+        let ctx = unsafe {
+            OSSL_HPKE_CTX_new(
+                OSSL_HPKE_MODE_PSK,
+                s,
+                OSSL_HPKE_ROLE_SENDER,
+                ptr::null_mut(),
+                ptr::null(),
+            )
+        };
+        assert!(!ctx.is_null());
+        let psk = [0x11u8; 32];
+        // SAFETY: `ctx` is live; `psk` and the `pskid` literal are readable for their lengths.
+        unsafe {
+            assert_eq!(
+                OSSL_HPKE_CTX_set1_psk(ctx, c"first".as_ptr(), psk.as_ptr(), psk.len()),
+                1
+            );
+            let old = ((*ctx).psk, (*ctx).psklen, (*ctx).pskid);
+            assert!(!old.0.is_null() && !old.2.is_null());
+
+            // The psk copy failed: nothing was built, so the old pair stands.
+            assert_eq!(
+                replace_psk_pair(ctx, ptr::null_mut(), 32, ptr::null_mut()),
+                0
+            );
+            assert_eq!(((*ctx).psk, (*ctx).psklen, (*ctx).pskid), old);
+
+            // The pskid copy failed after the psk copy succeeded: the fresh psk is released and
+            // the old pair still stands.
+            let fresh = CRYPTO_malloc(32, FILE_HPKE, 913).cast::<c_uchar>();
+            assert!(!fresh.is_null());
+            ptr::write_bytes(fresh, 0x22, 32);
+            assert_eq!(replace_psk_pair(ctx, fresh, 32, ptr::null_mut()), 0);
+            assert_eq!(((*ctx).psk, (*ctx).psklen, (*ctx).pskid), old);
+
+            OSSL_HPKE_CTX_free(ctx);
+        }
+    }
+
+    /// The previous `ikme` and its length survive a failed replacement.
+    #[test]
+    fn set1_ikme_replacement_failure_preserves_previous_ikm() {
+        let s = suite(
+            OSSL_HPKE_KEM_ID_X25519,
+            OSSL_HPKE_KDF_ID_HKDF_SHA256,
+            OSSL_HPKE_AEAD_ID_EXPORTONLY,
+        );
+        // SAFETY: the pointers are the NULL the function documents; export-only fetches no cipher.
+        let ctx = unsafe {
+            OSSL_HPKE_CTX_new(
+                OSSL_HPKE_MODE_BASE,
+                s,
+                OSSL_HPKE_ROLE_SENDER,
+                ptr::null_mut(),
+                ptr::null(),
+            )
+        };
+        assert!(!ctx.is_null());
+        let ikm = [0x33u8; 32];
+        // SAFETY: `ctx` is live and `ikm` is readable for its length.
+        unsafe {
+            assert_eq!(OSSL_HPKE_CTX_set1_ikme(ctx, ikm.as_ptr(), ikm.len()), 1);
+            let old = ((*ctx).ikme, (*ctx).ikmelen);
+            assert!(!old.0.is_null());
+            assert_eq!(replace_ikm(ctx, ptr::null_mut(), 32), 0);
+            assert_eq!(((*ctx).ikme, (*ctx).ikmelen), old);
+            OSSL_HPKE_CTX_free(ctx);
+        }
+    }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslHpkeCtx => zero_state_sweep_ossl_hpke_ctx);

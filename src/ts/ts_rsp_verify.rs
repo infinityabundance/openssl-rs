@@ -23,6 +23,7 @@ use crate::asn1::a_type::ASN1_TYPE_get;
 use crate::asn1::bitstr::ASN1_BIT_STRING_get_bit;
 use crate::asn1::layout::Asn1String;
 use crate::asn1::layout::V_ASN1_NULL;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::{ASN1_INTEGER_cmp, ASN1_INTEGER_get};
 use crate::asn1::string::{
     ossl_sk_ASN1_UTF8STRING2text, ASN1_STRING_get0_data, ASN1_STRING_length,
@@ -45,7 +46,7 @@ use crate::pkcs7::pk7_smime::PKCS7_get0_signers;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free_all, BIO_read, Bio};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
     NID_subject_alt_name, OBJ_cmp, OBJ_obj2txt,
@@ -634,8 +635,11 @@ unsafe fn int_ts_RESP_verify_token(
     unsafe {
         X509_free(signer);
         X509_ALGOR_free(md_alg);
-        CRYPTO_free(imprint.cast(), FILE.as_ptr(), 346);
     }
+    // `imprint` is the block `ts_compute_imprint` handed over on success; the handle's `Drop` is
+    // the authority's own `OPENSSL_free(imprint)` at `:346`.
+    // SAFETY: `imprint` is NULL or this frame's own block from `ts_compute_imprint`.
+    drop(unsafe { OwnedBlock::<c_uchar>::from_raw(imprint, FILE.as_ptr(), 346) });
     ret
 }
 
@@ -707,7 +711,7 @@ unsafe fn ts_check_status_info(response: *mut TsResp) -> c_int {
     // live C string, so the `%s` arguments are both valid.
     let mut msg = [0 as c_char; 1024];
     // SAFETY: `BIO_snprintf` writes a NUL-terminated message; the `%s` arguments are live C
-    // strings, and `raise_ts_data`/`CRYPTO_free` are the authority's own paths.
+    // strings, and `raise_ts_data` is the authority's own path.
     unsafe {
         BIO_snprintf(
             msg.as_mut_ptr(),
@@ -728,8 +732,12 @@ unsafe fn ts_check_status_info(response: *mut TsResp) -> c_int {
             TS_R_NO_TIME_STAMP_TOKEN,
             msg.as_ptr(),
         );
-        CRYPTO_free(embedded_status_text.cast(), FILE.as_ptr(), 394);
     }
+    // `embedded_status_text` is the block `ts_get_status_text` returned; the handle's `Drop` is
+    // the authority's own `OPENSSL_free(embedded_status_text)` at `:394` (a no-op for the NULL
+    // the block is when `info->text` is empty).
+    // SAFETY: `embedded_status_text` is NULL or this frame's own block.
+    drop(unsafe { OwnedBlock::<c_char>::from_raw(embedded_status_text, FILE.as_ptr(), 394) });
 
     0
 }
@@ -794,7 +802,7 @@ unsafe fn ts_compute_imprint(
     // SAFETY: the out-pointer is writable.
     if unsafe { *md_alg }.is_null() {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
 
     // SAFETY: `name` is writable for its length and `md_alg_resp` is live.
@@ -821,7 +829,7 @@ unsafe fn ts_compute_imprint(
         // SAFETY: the mark operations are this thread's error queue.
         ERR_clear_last_mark();
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
     // SAFETY: the mark operations are this thread's error queue.
     ERR_pop_to_mark();
@@ -830,18 +838,16 @@ unsafe fn ts_compute_imprint(
     let length = unsafe { EVP_MD_get_size(md) };
     if length <= 0 {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
-    // SAFETY: the out-pointer is writable.
-    unsafe { *imprint_len = length as c_uint };
-    // SAFETY: the allocation is `OPENSSL_malloc(*imprint_len)` at `:453`.
-    let fresh = CRYPTO_malloc(length as usize, FILE.as_ptr(), 453).cast::<c_uchar>();
-    // SAFETY: the out-pointer is writable.
-    unsafe { *imprint = fresh };
-    if fresh.is_null() {
+    // The imprint block is the authority's own `OPENSSL_malloc(*imprint_len)` at `:453`; the handle
+    // owns it until it is handed out at the success tail, so every error path below is a `Drop`.
+    // SAFETY: `length` is a strictly positive digest size and `FILE`/`453` are the authority's site.
+    let Some(fresh) = OwnedBlock::<c_uchar>::malloc(length as usize, SeamFile::new(FILE), 453)
+    else {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
-    }
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
+    };
 
     // SAFETY: no preconditions.
     md_ctx = EVP_MD_CTX_new();
@@ -851,12 +857,12 @@ unsafe fn ts_compute_imprint(
             raise_ts(FILE, 458, c"ts_compute_imprint", ERR_R_EVP_LIB);
         }
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
     // SAFETY: `md_ctx` and `md` are live.
     if unsafe { EVP_DigestInit(md_ctx, md) } == 0 {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
     // SAFETY: `md` is owned here.
     unsafe { EVP_MD_free(md) };
@@ -870,28 +876,38 @@ unsafe fn ts_compute_imprint(
         // SAFETY: `md_ctx` is live and `buffer` holds `n` readable bytes.
         if unsafe { EVP_DigestUpdate(md_ctx, buffer.as_ptr().cast(), n as usize) } == 0 {
             // SAFETY: the err arm releases the owners of every pointer per its contract.
-            return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+            return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
         }
     }
-    // SAFETY: `md_ctx` is live and the out-pointer is writable.
-    if unsafe { EVP_DigestFinal(md_ctx, *imprint, ptr::null_mut()) } == 0 {
+    // SAFETY: `md_ctx` is live and `fresh` is writable for the digest size.
+    if unsafe { EVP_DigestFinal(md_ctx, fresh.as_ptr(), ptr::null_mut()) } == 0 {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
-        return unsafe { ts_compute_imprint_err(md_alg, imprint, imprint_len, md, md_ctx) };
+        return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     }
     // SAFETY: `md_ctx` is owned here.
     unsafe { EVP_MD_CTX_free(md_ctx) };
+
+    // Success: hand the block and its length to the caller's out-parameters. `into_raw` disables
+    // the handle's `Drop`, so ownership passes to the caller (`int_ts_RESP_verify_token`), which
+    // adopts it for the authority's own `OPENSSL_free` at `:346`.
+    // SAFETY: both out-pointers are writable per the contract.
+    unsafe {
+        *imprint = fresh.into_raw();
+        *imprint_len = length as c_uint;
+    }
 
     1
 }
 
 /// The `err:` arm of [`ts_compute_imprint`] — `ts_rsp_verify.c:474-482`.
 ///
+/// The imprint block is owned by the caller's [`OwnedBlock`] handle and released by its `Drop`;
+/// this arm only releases the digest context, the digest and the duplicated algorithm.
+///
 /// # Safety
-/// `md_ctx` is NULL or live; `md` is NULL or live; the out-pointers are writable.
+/// `md_ctx` is NULL or live; `md` is NULL or live; `*md_alg` is NULL or the dup this frame owns.
 unsafe fn ts_compute_imprint_err(
     md_alg: *mut *mut X509Algor,
-    imprint: *mut *mut c_uchar,
-    imprint_len: *mut c_uint,
     md: *mut EvpMd,
     md_ctx: *mut EvpMdCtx,
 ) -> c_int {
@@ -901,9 +917,6 @@ unsafe fn ts_compute_imprint_err(
         EVP_MD_free(md);
         X509_ALGOR_free(*md_alg);
         *md_alg = ptr::null_mut();
-        CRYPTO_free((*imprint).cast(), FILE.as_ptr(), 479);
-        *imprint_len = 0;
-        *imprint = ptr::null_mut();
     }
     0
 }

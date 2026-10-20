@@ -1,0 +1,337 @@
+{
+  "receipt": "boundary-sweep-B4",
+  "date": "2026-10-18",
+  "candidate": {
+    "base_head": "05457b479",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ssl/ssl_sess.rs",
+      "src/ssl/statem/statem_clnt.rs"
+    ],
+    "working_tree_blob": {
+      "src/ssl/ssl_sess.rs": "84ffa4649155fc0d63bf7ed6d9e1d918b990cce7",
+      "src/ssl/statem/statem_clnt.rs": "65776490a2baca240f261bbf012c05feedb94e93"
+    }
+  },
+  "stop_status": "REPAIRED - one high-severity memory-safety defect (unbounded TLS1.2 ServerHello session-id copied into the 32-byte SslSession field) and three lower-severity defects were found and fixed. No further memory-safety defect was found in either file. FAST and BATCH pass, and the four affected adversarial probes pass. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.5.9 (forensics/authorities/src/openssl-3.5.9), cross-checked against the installed 3.6.4 headers",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout, CRYPTO_* seam coordinate or lint attribute changed. The edits are two parsed-length checks, one pointer-copy semantic change and one insertion-refusal arm.",
+    "external_contracts": [
+      "A C caller passes live object pointers to every exported SSL/SSL_SESSION entry point; a stale or double-released pointer is outside the C contract. Reference counts turn a destructor-time reentrant release into a defined no-op (REF_DESTROYING), not an arbitrary stale-pointer detector.",
+      "SSL_SESSION_new/dup hand out one owned reference; SSL_SESSION_free releases exactly the caller's reference. SSL_get_session is borrowed until the next session mutation or connection free; SSL_get1_session adds a reference.",
+      "A cache entry holds one reference. SSL_CTX_add_session takes its own reference; SSL_CTX_remove_session/flush release the cache entry's reference and invoke remove_session_cb before the release. A remove_session_cb invoked by eviction runs under the context write lock (authority parity) and must not re-enter the cache.",
+      "new_session_cb receives an extra reference and owns it when it returns nonzero; returning 0 makes SSL_update_cache release it.",
+      "An application callback (generate_session_id, new_session_cb, remove_session_cb, msg_callback, verify callback, ticket/secret callbacks) must not free or invalidate the SSL/SSL_CTX/SSL_SESSION it receives; callback pointers and arguments are stored verbatim and are application-owned.",
+      "Handshake input is a length-delimited byte slice; every field read is checked against the slice bounds. The reduced client reader delivers exactly one message per call, so msg.len() == 4 + declared body length.",
+      "A session-id source passed to SSL_SESSION_set1_id/-set1_id_context need only be readable for the given length; it may point into the destination array (memmove semantics)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B4-SL-1",
+      "file": "src/ssl/ssl_sess.rs",
+      "mechanism": "session block ownership: SSL_SESSION_new, ssl_session_dup_intern, SSL_SESSION_dup/_up_ref/_free, CtxDestroy::destroy_body, member releases and cleansing",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The exported constructors/free/up_ref are unsafe extern C and require a live or owned pointer; an arbitrary stale pointer is not detected.",
+        "A destructor-time reentrant free is a defined no-op; any other reentrant use observes partially torn-down state (authority ordering).",
+        "Every duplicate refusal returns through OwnedCtx's Drop, which runs the authority's SSL_SESSION_free body on the partially built block; this is sound because the all-zero state is valid and each member is either NULL or owned.",
+        "destroy_body cleanses master_key (512 bytes) and session_id (32 bytes) over the full fields, matching the authority's sizeof cleanse."
+      ]
+    },
+    {
+      "id": "B4-SL-2",
+      "file": "src/ssl/ssl_sess.rs",
+      "mechanism": "internal session cache: cache_find/cache_delete_ptr, SSL_CTX_add_session/remove_session/flush_sessions_ex, ssl_ctx_session_cache_free, owner back-pointer",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B4-D4"
+      ],
+      "residuals": [
+        "The cache is an OpenSslStack searched linearly; eviction and flush process insertion order, not calc_timeout order (recorded divergence).",
+        "SSL_CTX_free releases the cache without invoking remove_session_cb, while the authority flushes (and invokes it). Wiring it requires reordering SslCtx::destroy_body in ssl_lib so a callback cannot reach freed cipher/X509 stores; that file is outside this batch.",
+        "remove_session_cb during eviction in SSL_CTX_add_session runs under the context write lock (authority parity); it must not re-enter add/remove/flush.",
+        "owner is cleared on remove/flush/context free. A session linked into two contexts can have owner replaced by the other add, and one context's free clears it; no UB results, the timeout/time setters merely take the unlocked path.",
+        "The push-refusal arm now takes back the cache reference and reports 0; eviction has already run before the push (this crate evicts before insertion), leaving a consistent but smaller cache.",
+        "ssl_ctx_session_cache_free runs without the context lock under the last-reference teardown contract."
+      ]
+    },
+    {
+      "id": "B4-SL-3",
+      "file": "src/ssl/ssl_sess.rs",
+      "mechanism": "handshake session selection: ssl_generate_session_id (application callback), ssl_get_new_session, lookup_sess_in_cache, ssl_get_prev_session, ssl_update_cache/new_session_cb",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "ssl_generate_session_id invokes the application generate_session_id callback with the raw session buffer and no lock held; the callback must respect *id_len and must not free the SSL or its session.",
+        "lookup_sess_in_cache builds a zeroed scratch SslSession as the comparison key; all fields (raw pointers, arrays, AtomicI32, CryptoExData) are all-zero-valid and the value has no Drop.",
+        "new_session_cb owns the extra reference when it returns nonzero; returning 0 makes the wrapper release it.",
+        "The TLS1.2 ticket path is the reduced stateful form (session id = SHA256(ticket)); this divergence is recorded in the module header."
+      ]
+    },
+    {
+      "id": "B4-SL-4",
+      "file": "src/ssl/ssl_sess.rs",
+      "mechanism": "accessors and member-buffer setters: set1_id/id_context/hostname/alpn/ticket_appdata, ticket/ticket_appdata getters, ex_data, SSL_get/set_session",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B4-D3"
+      ],
+      "residuals": [
+        "The (ptr,len) member pairs remain raw #[repr(C)] fields; their validity is an internal invariant enforced by MemberCStrSlot/MemberBufSlot, not by the type.",
+        "set1_id and set1_id_context publish the length before the copy (authority ordering); an exact self-pointer skips the copy.",
+        "MemberBufSlot::store's emptiness precondition is a debug_assert; release builds rely on every caller clearing first.",
+        "The get0 ticket/alpn/appdata getters write both out-parameters unconditionally (authority parity); the caller supplies writable slots.",
+        "ex_data setters/getters require a live session; the index bounds are enforced by the ex_data layer."
+      ]
+    },
+    {
+      "id": "B4-SL-5",
+      "file": "src/ssl/ssl_sess.rs",
+      "mechanism": "ticket/PSK members and callback setters: SSL_set_session_ticket_ext, session secret/ticket callbacks, SSL_CTX_* callback setters, PEM session codec",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "SSL_set_session_ticket_ext frees the incumbent before parsing; a negative ext_len is refused (UB elimination, recorded) and leaves the member NULL. Passing the incumbent as ext_data would be a use-after-free (authority parity; no public getter exposes it).",
+        "Session secret/ticket callback setters store raw function pointers and arguments verbatim; the application owns the argument and must not free the SSL.",
+        "TlsSessionTicketExt::length is u16 (the authority header's type), so an ext_len above 65535 truncates the stored length while all bytes are copied (authority parity).",
+        "The PEM entry points forward to the PEM layer under the caller's BIO/FILE and password-callback contract."
+      ]
+    },
+    {
+      "id": "B4-SC-1",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "client transition surface: read/write transitions, max_message_size, state predicates",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Every transition entry is unsafe and requires a live connection; an unknown state calls ossl_statem_fatal.",
+        "The DTLS arms are unreachable in this profile (module header)."
+      ]
+    },
+    {
+      "id": "B4-SC-2",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "ClientHello construction: ssl_cipher_list_to_bytes, tls_construct_client_hello, write_client_hello, extension callbacks",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "write_client_hello builds into a 4096-byte stack WPACKET; WPACKET refuses an overflow, so an unusually large ClientHello fails to send (reduced boundary; the authority uses a dynamic buffer).",
+        "A preloaded session id is clamped to 32 bytes when echoed.",
+        "tls_construct_extensions can invoke application callbacks (SNI/ALPN and related); no lock is held across them and they must not free the SSL."
+      ]
+    },
+    {
+      "id": "B4-SC-3",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "ServerHello parsing and resumption selection: tls_process_server_hello (TLS1.3), tls12_process_server_hello (TLS1.2), session creation/echo",
+      "disposition": "CONTRACTED",
+      "defects": [
+        "B4-D1",
+        "B4-D2"
+      ],
+      "residuals": [
+        "The parsed slice must be the full handshake message; every field is bounds-checked against it.",
+        "A resumed TLS1.2 session copies exactly 48 master-key bytes into the 48-byte connection secret.",
+        "The new bound rejects sid_len > 32 in both versions with the authority's illegal_parameter/SSL_R_SSL3_SESSION_ID_TOO_LONG before any session or echo is touched."
+      ]
+    },
+    {
+      "id": "B4-SC-4",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "certificate flight parsing and chain ownership: tls13_process_peer_certificate, tls12_process_peer_certificate, ssl_x509err2alert, chain verification callback",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "peer_cert/peer_chain/verified_chain are replaced only after the whole new chain parses; every refusal frees the partial stack.",
+        "X509_up_ref's return is ignored when publishing the leaf; a refusal would leave only the chain's reference (unreachable for a live X509 at normal refcounts).",
+        "ssl_verify_cert_chain invokes the application verification callback with no lock held; it must not free the SSL or the chain.",
+        "DER blobs are parsed directly from the message slice with d2i; there is no fixed-size certificate buffer on the client (the B3 server-side stack buffers have no client analogue)."
+      ]
+    },
+    {
+      "id": "B4-SC-5",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "key exchange and signatures: tls12_process_server_key_exchange, tls12_construct_client_key_exchange, tls_process_cert_verify, tls12_process/construct_cert_verify",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "The reduced path completes X25519 only; other groups are refused after signature verification.",
+        "The pre-master buffers are 64 bytes and EVP_PKEY_derive honours the supplied capacity; the supported groups produce at most 56 bytes.",
+        "The fixed bodies are sized with explicit checks (255-byte encoded public key, 1024-byte signature) before the copy.",
+        "tls_process_cert_verify relies on the reader's exact-length contract; a caller passing a declared body shorter than four bytes with a longer slice would panic rather than corrupt memory."
+      ]
+    },
+    {
+      "id": "B4-SC-6",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "NewSessionTicket ownership: tls12_process_new_session_ticket, tls13_process_new_session_ticket, duplicate-before-replace, cache update",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Both versions duplicate the session before replacing it; a duplicate refusal leaves the incumbent on the connection.",
+        "Ticket bytes are copied into a fresh CRYPTO_malloc block of ticklen after the member is cleared.",
+        "A PSK-derivation failure after the duplicate leaves a valid but incomplete duplicate on the connection; the driver poisons the connection.",
+        "Client reads are capped at 16384 bytes, so a larger TLS1.3 ticket is refused (recorded reduced boundary)."
+      ]
+    },
+    {
+      "id": "B4-SC-7",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "client drivers and record reader: tls12_client_drive, tls13_client_drive, tls12_client_read_ccs, client_read, client_wait, msg_callback",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "A parse failure poisons the connection through ossl_statem_fatal; there is no rollback to a pre-message state (authority parity).",
+        "msg_callback is invoked with a stack-local buffer and no lock held; it must not retain the buffer or free the SSL.",
+        "A terminal read (error or received shutdown) is not converted back into a wait."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B4-D1",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "pre_fix_line": 2145,
+      "severity": "high",
+      "class": "heap/struct buffer overflow (unbounded wire length into a fixed field)",
+      "description": "tls12_process_server_hello took the ServerHello session_id length from one wire byte (0..=255), published it as (*sess).session_id_length, and copied that many bytes into SslSession::session_id, which is [u8; SSL_MAX_SSL_SESSION_ID_LENGTH] = 32. A hostile ServerHello with sid_len 33..255 overran the field inside the heap-allocated session block, corrupting the adjacent sid_ctx_length/sid_ctx and member pointers; the inflated length also made session_cmp and later consumers read past the array. The authority rejects this at statem_clnt.c:1519-1524 with SSL_AD_ILLEGAL_PARAMETER and SSL_R_SSL3_SESSION_ID_TOO_LONG before using the id.",
+      "fix": "Reject sid_len > SSL_MAX_SSL_SESSION_ID_LENGTH immediately after the message bounds check, raising the authority's illegal_parameter/SSL_R_SSL3_SESSION_ID_TOO_LONG, so no session is created or mutated.",
+      "regression": "ssl::statem::statem_clnt::server_hello_bounds::tls12_oversized_server_session_id_is_refused_without_partial_state (64-byte id; asserts refusal, NULL session, poisoned state)"
+    },
+    {
+      "id": "B4-D2",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "pre_fix_line": 1167,
+      "severity": "low",
+      "class": "missing authority bound / wrong failure semantics (safe only by short-circuit)",
+      "description": "tls_process_server_hello (TLS1.3) had no explicit session-id bound. It did not overflow because the echo was compared against tmp_session_id_len (at most 32) first, but an oversized id was rejected by a plain return 0 and the driver then raised a generic internal error instead of the authority's illegal_parameter/SSL_R_SSL3_SESSION_ID_TOO_LONG.",
+      "fix": "Add the same authority bound before the echo comparison, in the common position the authority uses.",
+      "regression": "ssl::statem::statem_clnt::server_hello_bounds::tls13_oversized_server_session_id_is_refused"
+    },
+    {
+      "id": "B4-D3",
+      "file": "src/ssl/ssl_sess.rs",
+      "pre_fix_line": 1339,
+      "severity": "low",
+      "class": "undefined behaviour on partially overlapping source (copy_nonoverlapping)",
+      "description": "SSL_SESSION_set1_id and SSL_SESSION_set1_id_context skip the copy only when the source is exactly the destination array's start, then use copy_nonoverlapping. Their stated contract requires only that the source be readable for the length, which a pointer one or more bytes into the same array satisfies; that partial overlap is UB for copy_nonoverlapping (and for the authority's memcpy).",
+      "fix": "Use ptr::copy (memmove) in both setters, preserving the authority's in-place result while eliminating the overlap UB (AGENTS §17).",
+      "regression": "ssl::ssl_sess::session_id_alias_tests::partially_overlapping_session_id_and_context_sources_are_copied_safely"
+    },
+    {
+      "id": "B4-D4",
+      "file": "src/ssl/ssl_sess.rs",
+      "pre_fix_line": 700,
+      "severity": "low",
+      "class": "allocation-failure ownership defect (leaked cache reference, false success)",
+      "description": "SSL_CTX_add_session ignored OPENSSL_sk_push's result. When the stack allocation/insertion was refused, the reference taken for the cache at entry was leaked, c->owner was set, and the function returned 1 although the session was never cached. The authority's OOM arm (ssl_sess.c:756-765) takes the extra reference back and returns 0.",
+      "fix": "Check the push (including a NULL stack from OPENSSL_sk_new_null); on refusal release the cache reference with SSL_SESSION_free and return 0, setting owner only on success. The caller's own reference is untouched.",
+      "regression": "source/authority differential; the refusal cannot be driven through the crate allocator seam (the stack uses Vec::try_reserve), so no dynamic control exists"
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "compile": "PASS (test-profile build of the touched target)",
+      "focused_tests": [
+        "ssl::ssl_sess: 6 passed / 0 failed / 1 ignored (lifetime, alias ownership, zero-state sweep, the new overlap control)",
+        "ssl::statem::statem_clnt::server_hello_bounds: 2 passed / 0 failed"
+      ]
+    },
+    "batch": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1586 passed / 0 failed / 26 ignored (287.31 s, --test-threads=1)",
+      "threaded4": "1586 passed / 0 failed / 26 ignored (95.05 s, --test-threads=4)",
+      "probes": [
+        "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner PASS",
+        "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_reentrancy_reads_member PASS",
+        "ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing PASS",
+        "ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue PASS",
+        "the full scripts/adv-probe.sh suite is NOT_RUN; only the affected SSL member-buffer/session/cleansing set was run"
+      ]
+    },
+    "asan": {
+      "venue": "docker/openssl-rs-asan.sh (available); liveness established in B3 by forensics/tools/asan_canary.c (heap-use-after-free, exit 1)",
+      "focused": "NOT_RUN for this batch: the pre-fix binary was not rebuilt, and the post-fix inputs are rejected before any write, so an ASan run would add no discriminating evidence.",
+      "limits": "The defect class is a write past a field inside a heap block; ASan would instrument it, but no pre-fix run was made (NOT_RUN)."
+    },
+    "negative_controls": [
+      {
+        "id": "NC-B4-1",
+        "class": "unbounded wire length into a fixed field",
+        "control": "The new TLS1.2 test drives a 64-byte ServerHello session id through tls12_process_server_hello. Pre-fix, that input set session_id_length = 64 and copied 64 bytes into the 32-byte field, overwriting the following sid_ctx_length/sid_ctx; the test asserts the refusal happens before a session exists, so the old write has no target."
+      },
+      {
+        "id": "NC-B4-2",
+        "class": "overlapping memcpy source",
+        "control": "The new overlap control passes session_id+1 and sid_ctx+1 as sources and asserts the deterministic memmove result. Pre-fix, copy_nonoverlapping on those inputs is UB; Miri (NOT_RUN in this court) is the instrument that would flag it."
+      },
+      {
+        "id": "NC-B4-3",
+        "class": "session member-buffer instruments remain live",
+        "control": "The pre-existing self-alias and cleansed-free canaries both PASS after the change, so the probes that assert allocation ordering and cleansing are not passing with dead instruments."
+      }
+    ],
+    "not_run": [
+      {
+        "id": "NR-B4-1",
+        "control": "Miri over the two copy/member paths",
+        "gate": "BOUNDARY/SEAL; no Miri component is installed in the court."
+      },
+      {
+        "id": "NR-B4-2",
+        "control": "Loom/threaded handshake or session-cache interleavings",
+        "gate": "BOUNDARY/SEAL; no concurrent handshake model exists for the reduced synchronous driver."
+      },
+      {
+        "id": "NR-B4-3",
+        "control": "Pre-fix binary under ASan",
+        "gate": "BOUNDARY; the base binary was not rebuilt."
+      },
+      {
+        "id": "NR-B4-4",
+        "control": "Authority differential for a 64-byte ServerHello session id",
+        "gate": "BOUNDARY; the source-level authority check at statem_clnt.c:1519-1524 is the reference, and no paired authority run was made."
+      },
+      {
+        "id": "NR-B4-5",
+        "control": "SSL_CTX_free remove_session_cb parity",
+        "gate": "BOUNDARY; requires reordering SslCtx::destroy_body in ssl_lib (outside this batch) before callbacks can be invoked safely at teardown."
+      },
+      {
+        "id": "NR-B4-6",
+        "control": "Independent reviewer not the author; full dependency-closure audit; SEAL forensic regeneration",
+        "gate": "BOUNDARY/SEAL; this receipt is authored by the conversion subagent."
+      }
+    ]
+  },
+  "unsafe_accounting": {
+    "eliminated": [
+      "The partial-overlap UB class in SSL_SESSION_set1_id and SSL_SESSION_set1_id_context (copy_nonoverlapping -> memmove).",
+      "The unbounded ServerHello session-id write in the TLS1.2 client (now refused before the session is touched)."
+    ],
+    "relocated": [],
+    "hidden": 0,
+    "new_obligations": [],
+    "behavior_delta": "A ServerHello session id longer than 32 bytes now raises illegal_parameter/SSL_R_SSL3_SESSION_ID_TOO_LONG in both TLS1.2 and TLS1.3 (previously TLS1.2 overflowed and TLS1.3 failed with a generic internal error). SSL_CTX_add_session returns 0 and releases the cache reference when the stack push is refused (previously returned 1 and leaked the reference). The two id setters use memmove for a partially overlapping source. No export, signature, layout or allocator coordinate changed.",
+    "safe_caller_ub": "none known: every exported entry in both files is unsafe extern C with a stated contract or a private helper reached from one; the safe interior helpers (member slots, refcount accessors, read-only getters) do not accept raw pointers. The two new fatal sites and the take-back free act on caller-live pointers under existing contracts."
+  },
+  "residuals_total": 46,
+  "dispositions": {
+    "src/ssl/ssl_sess.rs": "CONTRACTED",
+    "src/ssl/statem/statem_clnt.rs": "CONTRACTED",
+    "safety_discharged": [],
+    "safe_compatible": []
+  },
+  "next": {
+    "queue": [
+      "src/rsa/object.rs (rank 68)",
+      "src/ml_dsa/encoders.rs",
+      "ssl_lib SSL_CTX_free ordering for remove_session_cb parity (follow-up from B4-SL-2)"
+    ],
+    "note": "B4 covers exactly the two files deferred by B3 and starts no third file. Both are CONTRACTED, not SAFETY_DISCHARGED: the ctx-free callback divergence, the reduced 16384-byte client read, Miri/Loom, the pre-fix ASan control, the broad authority differential and independent review remain pending. Hidden obligations: 0."
+  }
+}

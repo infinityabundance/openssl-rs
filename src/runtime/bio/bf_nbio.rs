@@ -41,9 +41,9 @@ use core::ptr;
 
 use crate::ffi::guard_ffi;
 use crate::rand::rand_lib::RAND_priv_bytes;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::{
     Bio, BioInfoCb, BioMethod, BIO_CTRL_DUP, BIO_C_DO_STATE_MACHINE, BIO_FLAGS_READ, BIO_FLAGS_RWS,
     BIO_FLAGS_SHOULD_RETRY, BIO_FLAGS_WRITE, BIO_TYPE_NBIO_TEST,
@@ -57,6 +57,18 @@ use super::{
 struct NbioTest {
     lrn: c_int,
     lwn: c_int,
+}
+
+/// The authority's `nbiof_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs.
+///
+/// `bf_nbio.c`'s `nbiof_free` frees the context without reading it, so the destructor body is
+/// empty and the whole of the ownership is the handle's `Drop`.
+// SAFETY: (a) `nbiof_free` reads and releases nothing, so `destroy_body` is the empty authority
+// body and never the enclosing block, which `OwnedCtx` releases; (b) `NbioTest` is a `#[repr(C)]`
+// record of two `int`s, so an all-zero block is a valid `NbioTest` the empty body is trivially
+// sound on.
+unsafe impl CtxDestroy for NbioTest {
+    unsafe fn destroy_body(_ptr: *mut NbioTest) {}
 }
 
 /// The authority's method name, `bf_nbio.c:41`.
@@ -130,11 +142,11 @@ unsafe fn set_retry_write(b: *mut Bio) {
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn nbiof_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns a fresh zeroed allocation of the requested size, or NULL.
-    let nt = CRYPTO_zalloc(core::mem::size_of::<NbioTest>(), ptr::null(), 0).cast::<NbioTest>();
-    if nt.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns a fresh zeroed allocation of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<NbioTest>::zalloc() else {
         return 0;
-    }
+    };
+    let nt = ctx.as_ptr();
     // SAFETY: `nt` is a fresh zeroed allocation; `bi` is live.
     unsafe {
         (*nt).lrn = -1;
@@ -142,6 +154,8 @@ unsafe extern "C" fn nbiof_new(bi: *mut Bio) -> c_int {
         (*bi).ptr = nt.cast();
         (*bi).init = 1;
     }
+    // The context is now the BIO's; `nbiof_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -153,9 +167,10 @@ unsafe extern "C" fn nbiof_free(a: *mut Bio) -> c_int {
     if a.is_null() {
         return 0;
     }
-    // SAFETY: `a` is live and holds a `NbioTest`.
+    // SAFETY: `a` is live and holds a `NbioTest`; `from_raw` maps a NULL context to `None`, and
+    // `Drop` is the block's single release.
     unsafe {
-        CRYPTO_free((*a).ptr.cast(), ptr::null(), 0);
+        drop(OwnedCtx::<NbioTest>::from_raw(ctx(a)));
         (*a).ptr = ptr::null_mut();
         (*a).init = 0;
         (*a).flags = 0;
@@ -328,3 +343,7 @@ unsafe extern "C" fn nbiof_puts(bp: *mut Bio, str_: *const c_char) -> c_int {
     // SAFETY: `next` is live; `str_` is NUL-terminated.
     unsafe { super::BIO_puts(next, str_) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(NbioTest => zero_state_sweep_nbio_test);

@@ -40,7 +40,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -62,7 +64,9 @@ use crate::provider::{
     ossl_provider_ctx, ossl_provider_free, ossl_provider_libctx, ossl_provider_up_ref, OsslProvider,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`. The fourth operation the walk visits.
 const OSSL_OP_KDF: c_int = 4;
@@ -73,6 +77,7 @@ pub(crate) const OSSL_KDF_PARAM_KEY: *const c_char = c"key".as_ptr();
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c");
 /// `evp_kdf_new`'s `OPENSSL_zalloc(sizeof(*kdf))` (line 50), in `kdf_meth.c`.
 const LINE_ZALLOC_KDF: c_int = 50;
 /// `evp_kdf_free`'s `OPENSSL_free(kdf->type_name)`, in `kdf_meth.c`.
@@ -96,6 +101,10 @@ const LINE_ZALLOC_DERIVE_SKEY: c_int = 245;
 const LINE_FREE_DERIVE_SKEY_ON_FAIL: c_int = 250;
 /// `EVP_KDF_derive_SKEY`'s `OPENSSL_clear_free(key, keylen)` on the success path (line 262).
 const LINE_FREE_DERIVE_SKEY: c_int = 262;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `OSSL_KDF_PARAM_SIZE` — `include/openssl/core_names.h`.
 const OSSL_KDF_PARAM_SIZE: *const c_char = c"size".as_ptr();
@@ -285,7 +294,11 @@ unsafe extern "C" fn evp_kdf_free(vkdf: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn evp_kdf_new() -> *mut EvpKdf {
-    let kdf = CRYPTO_zalloc(core::mem::size_of::<EvpKdf>(), FILE, LINE_ZALLOC_KDF).cast::<EvpKdf>();
+    let kdf = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpKdf>(), FILE, LINE_ZALLOC_KDF)
+    }
+    .cast::<EvpKdf>();
     if kdf.is_null() {
         return ptr::null_mut();
     }
@@ -456,9 +469,11 @@ pub unsafe extern "C" fn EVP_KDF_fetch(
 /// `kdf` must be a live `EvpKdf`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KDF_up_ref(kdf: *mut EvpKdf) -> c_int {
-    // SAFETY: `kdf` is live per the contract.
-    unsafe { (*kdf).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `kdf` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*kdf).refcnt) }
 }
 
 /// `void EVP_KDF_free(EVP_KDF *kdf)`.
@@ -472,10 +487,14 @@ pub unsafe extern "C" fn EVP_KDF_free(kdf: *mut EvpKdf) {
     if kdf.is_null() {
         return;
     }
-    // SAFETY: `kdf` is live per the contract.
-    let last = unsafe { (*kdf).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `kdf` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*kdf).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KDF_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
     unsafe {
@@ -771,8 +790,11 @@ pub unsafe extern "C" fn EVP_KDF_CTX_new(kdf: *mut EvpKdf) -> *mut EvpKdfCtx {
     if kdf.is_null() {
         return ptr::null_mut();
     }
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpKdfCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<EvpKdfCtx>();
     if ctx.is_null() {
         // The authority raises here too: its `ERR_raise` is the first statement of the `if`, and
         // `ctx == NULL` enters that `if`. Only the `freectx` call is guarded away, because the
@@ -884,11 +906,19 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
     if unsafe { (*meth).dupctx }.is_none() {
         return ptr::null_mut();
     }
-    let dst = CRYPTO_malloc(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_MALLOC_CTX_DUP)
-        .cast::<EvpKdfCtx>();
-    if dst.is_null() {
+    // The duplicate is this frame's block, allocated through the crate's allocator seam at the
+    // authority's own size/`file`/`line`; `Drop` releases it on the failure tails and `into_raw`
+    // hands it to the caller on success.
+    let Some(dst_buf) = OwnedBuf::new_plain_released(
+        core::mem::size_of::<EvpKdfCtx>(),
+        FILE_SEAM,
+        LINE_MALLOC_CTX_DUP,
+        FILE_SEAM,
+        LINE_FREE_CTX_ON_DUP,
+    ) else {
         return ptr::null_mut();
-    }
+    };
+    let dst = dst_buf.as_ptr().cast::<EvpKdfCtx>();
     // SAFETY: `dst` is a fresh block of exactly the source's size and `src` is a live object.
     unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
 
@@ -896,8 +926,8 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
     if unsafe { EVP_KDF_up_ref((*dst).meth) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::KDF_LIB_69) };
-        // SAFETY: `dst` is this call's own block and nothing else holds it.
-        unsafe { CRYPTO_free(dst.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_DUP) };
+        // The authority releases the duplicate at its own site, `:70`.
+        drop(dst_buf);
         return ptr::null_mut();
     }
 
@@ -909,8 +939,9 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
         Some(f) => unsafe { f((*src).algctx) },
         None => {
             // SAFETY: `dst` is this call's own context and the reference taken above is given
-            // back here.
-            unsafe { EVP_KDF_CTX_free(dst) };
+            // back here; the context's own releaser takes the block over -- `into_raw` gives it up
+            // without a second release.
+            unsafe { EVP_KDF_CTX_free(dst_buf.into_raw().cast::<EvpKdfCtx>()) };
             return ptr::null_mut();
         }
     };
@@ -920,10 +951,10 @@ pub unsafe extern "C" fn EVP_KDF_CTX_dup(src: *const EvpKdfCtx) -> *mut EvpKdfCt
         // SAFETY: `dst` is this call's own context, and the reference taken above is given back
         // here. `freectx` is called with the NULL the failed duplicate left, which is the state the
         // authority releases from too.
-        unsafe { EVP_KDF_CTX_free(dst) };
+        unsafe { EVP_KDF_CTX_free(dst_buf.into_raw().cast::<EvpKdfCtx>()) };
         return ptr::null_mut();
     }
-    dst
+    dst_buf.into_raw().cast::<EvpKdfCtx>()
 }
 
 /// `const EVP_KDF *EVP_KDF_CTX_kdf(EVP_KDF_CTX *ctx)`.
@@ -1177,6 +1208,25 @@ pub unsafe extern "C" fn EVP_KDF_CTX_set_SKEY(
     unsafe { f((*ctx).algctx, params.as_ptr()) }
 }
 
+/// Adopt the raw-path derived-key block on the provider's failure arm.
+///
+/// The block is the one [`OwnedBuf::new_zeroed_cleansed_at`] allocated above, so `keylen` is
+/// exactly its extent. The authority's own failure arm is a plain `OPENSSL_free(key)`
+/// (`kdf_lib.c:250`); reproducing that can leave key bytes in released storage, and release
+/// and cleansing are separate obligations (§5). The cleansing release is used instead, at the
+/// authority's failure-site coordinate; the change is unobservable in any OpenSSL result and is
+/// recorded as a deliberate §17 safety divergence.
+///
+/// # Safety
+///
+/// `raw` is NULL or the whole `keylen`-byte block this frame allocated and has not released.
+unsafe fn adopt_derived_key_on_failure(raw: *mut c_uchar, keylen: usize) -> Option<OwnedBuf> {
+    // SAFETY: the caller's contract makes `raw` a whole block of `keylen` bytes from the plain
+    // `CRYPTO_*` seam whose single release this call takes over; `keylen` is its allocation
+    // length, so the cleansing write stays inside the block.
+    unsafe { OwnedBuf::adopt_cleansed(raw, keylen, FILE_SEAM, LINE_FREE_DERIVE_SKEY_ON_FAIL) }
+}
+
 /// `EVP_SKEY *EVP_KDF_derive_SKEY(EVP_KDF_CTX *ctx, EVP_SKEYMGMT *mgmt, const char *key_type,
 /// const char *propquery, size_t keylen, const OSSL_PARAM params[])`.
 ///
@@ -1264,20 +1314,34 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
 
         // SAFETY: `ctx` is live, so its `algctx` is the implementation's context.
         let algctx = unsafe { (*ctx).algctx };
-        let key = CRYPTO_zalloc(keylen, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<c_uchar>();
-        if key.is_null() {
+        // The derived key is this frame's block, allocated through the crate's allocator seam at
+        // the authority's own size/`file`/`line`; `Drop` releases it on every path below, with the
+        // release re-pointed to the authority's own site.
+        let Some(key) = OwnedBuf::new_zeroed_cleansed_at(
+            keylen,
+            FILE_SEAM,
+            LINE_ZALLOC_DERIVE_SKEY,
+            LINE_FREE_DERIVE_SKEY,
+        ) else {
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
             }
             return ptr::null_mut();
-        }
+        };
+        let kp = key.as_ptr();
 
-        // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `key` is this
+        // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `kp` is this
         // call's own block of `keylen` bytes and `params` is the caller's.
-        if unsafe { derive(algctx, key, keylen, params) } == 0 {
-            // SAFETY: `key` is this call's own block and it holds a partial secret.
-            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_FAIL) };
+        if unsafe { derive(algctx, kp, keylen, params) } == 0 {
+            // The authority's failure arm frees the block first, then the destination method's
+            // reference. Its plain `CRYPTO_free` would leave possible key bytes behind, so the
+            // block is adopted with the cleansing release over its known allocation length.
+            let raw = key.into_raw();
+            // SAFETY: `raw` is the whole `keylen`-byte block this frame allocated through the
+            // seam and has not released; `into_raw` transferred it here, and this failure path
+            // is its single release.
+            drop(unsafe { adopt_derived_key_on_failure(raw, keylen) });
             if mgmt != skeymgmt {
                 // SAFETY: `skeymgmt` is live and this is this call's own reference.
                 unsafe { EVP_SKEYMGMT_free(skeymgmt) };
@@ -1289,7 +1353,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         import_params[0] = unsafe {
             OSSL_PARAM_construct_octet_string(
                 OSSL_SKEY_PARAM_RAW_BYTES,
-                key.cast::<c_void>(),
+                kp.cast::<c_void>(),
                 keylen,
             )
         };
@@ -1312,9 +1376,9 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
         }
 
         // The secret is cleared before it is released: this buffer is its only copy outside the
-        // caller's hands.
-        // SAFETY: `key` is this call's own block of `keylen` bytes and is not used again.
-        unsafe { CRYPTO_clear_free(key.cast::<c_void>(), keylen, FILE, LINE_FREE_DERIVE_SKEY) };
+        // caller's hands. The authority's cleansing release is at `:262`; the constructor fixed
+        // the cleansing length to the allocation length.
+        drop(key);
         return ret;
     }
 
@@ -1369,6 +1433,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
     use crate::params::{OSSL_PARAM_locate, OSSL_PARAM_set_size_t};
@@ -1660,6 +1725,29 @@ mod tests {
             assert!(EVP_KDF_CTX_gettable_params(ptr::addr_of_mut!(ctx)).is_null());
             assert!(EVP_KDF_CTX_settable_params(ptr::addr_of_mut!(ctx)).is_null());
         }
+    }
+
+    /// The raw path's failure arm must cleanse, not plainly free: a canary distinguishes the
+    /// cleansing release (and its exact length) from a plain release of the same block.
+    #[test]
+    fn the_derived_key_failure_release_is_cleansing() {
+        const KEYLEN: usize = 32;
+        let raw = OwnedBuf::new(KEYLEN, FILE_SEAM, LINE_ZALLOC_DERIVE_SKEY)
+            .expect("the test block must allocate")
+            .into_raw();
+        // SAFETY: `raw` is a live `KEYLEN`-byte block owned by this frame; it stands in for the
+        // derived-key buffer and is filled before adoption.
+        unsafe { ptr::write_bytes(raw, 0xA5, KEYLEN) };
+        // SAFETY: `raw` is the whole `KEYLEN`-byte block allocated above and not released.
+        let owned = unsafe { adopt_derived_key_on_failure(raw, KEYLEN) }
+            .expect("a non-NULL block is adopted");
+        assert_eq!(
+            owned.cleansed_num_for_test(),
+            Some(KEYLEN),
+            "the failure arm must carry the cleansing release over the allocation length"
+        );
+        // `Drop` performs the cleansing release over the same `KEYLEN` bytes.
+        drop(owned);
     }
 
     /// The reference count, which is the only ownership rule this class has.

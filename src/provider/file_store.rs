@@ -67,6 +67,7 @@ use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::{ossl_prov_ctx_get0_libctx, ProvCtx};
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys;
 use crate::runtime::bio::{
@@ -78,6 +79,8 @@ use crate::runtime::err::{
     ERR_clear_last_mark, ERR_peek_last_error, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strncasecmp};
 use crate::selftest::OsslCallback;
 use crate::x509::x509_cmp::X509_NAME_hash_ex;
@@ -211,24 +214,47 @@ struct FileCtxSt {
     fatal_error: c_int,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the context block and the helper buffers
+// ---------------------------------------------------------------------------------------------
+
+// The shared [`OwnedBuf`] owns a helper-allocated buffer the authority releases with a plain
+// `CRYPTO_free(ptr, NULL, 0)` (the `i2d_X509_NAME`/`X509_NAME_oneline` printer output and the
+// `file_name_to_uri` name buffer). The block stays a `CRYPTO_*`-seam block released at (NULL, 0),
+// so a caller-installed `CRYPTO_set_mem_functions` hook observes it.
+
+// SAFETY: (a) holds: `destroy_body` is `free_file_ctx` minus the block -- it releases exactly the
+// context's own URI and (for a stream context) decoder chain and strings, each NULL-tolerant, and
+// never the enclosing block. (b) holds: an all-zero context is valid with every release a no-op --
+// what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for FileCtxSt {
+    const FILE: *const c_char = ptr::null();
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    /// `free_file_ctx`'s body, without the block release: the URI and, for a stream context, the
+    /// decoder chain and its two strings.
+    unsafe fn destroy_body(ptr: *mut FileCtxSt) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            CRYPTO_free((*ptr).uri.cast::<c_void>(), ptr::null(), 0);
+            if (*ptr).type_ != IS_DIR {
+                OSSL_DECODER_CTX_free((*ptr).file.decoderctx);
+                CRYPTO_free((*ptr).file.propq.cast::<c_void>(), ptr::null(), 0);
+                CRYPTO_free((*ptr).file.input_type.cast::<c_void>(), ptr::null(), 0);
+            }
+        }
+    }
+}
+
 /// `static void free_file_ctx(struct file_ctx_st *ctx)` — `file_store.c:114-126`.
 ///
 /// # Safety
 /// `ctx` must be NULL or a context this unit allocated, and must not be used again.
 unsafe fn free_file_ctx(ctx: *mut FileCtxSt) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the guard above and owns these allocations.
-    unsafe {
-        CRYPTO_free((*ctx).uri.cast::<c_void>(), ptr::null(), 0);
-        if (*ctx).type_ != IS_DIR {
-            OSSL_DECODER_CTX_free((*ctx).file.decoderctx);
-            CRYPTO_free((*ctx).file.propq.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free((*ctx).file.input_type.cast::<c_void>(), ptr::null(), 0);
-        }
-        CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `ctx` is NULL or a live block a previous `new_file_ctx` gave up through `into_raw` and
+    // `Drop` has not released.
+    drop(unsafe { OwnedCtx::<FileCtxSt>::from_raw(ctx) });
 }
 
 /// `static struct file_ctx_st *new_file_ctx(int type, const char *uri, void *provctx)` —
@@ -238,27 +264,29 @@ unsafe fn free_file_ctx(ctx: *mut FileCtxSt) {
 /// `uri` must be NULL or NUL-terminated.
 unsafe fn new_file_ctx(type_: c_int, uri: *const c_char, provctx: *mut c_void) -> *mut FileCtxSt {
     // SAFETY: the constructor asks only for a zeroed block of the object's size.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<FileCtxSt>(), ptr::null(), 0).cast::<FileCtxSt>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is this call's fresh allocation; `uri` is NULL or NUL-terminated.
-        let uri_ok = uri.is_null() || {
-            // SAFETY: `uri` is NULL or NUL-terminated per the contract.
-            let copy = unsafe { CRYPTO_strdup(uri, ptr::null(), 0) };
-            // SAFETY: `ctx` is this call's fresh, uniquely-owned allocation.
-            unsafe { (*ctx).uri = copy };
-            !copy.is_null()
-        };
-        if uri_ok {
-            // SAFETY: `ctx` is live.
-            unsafe {
-                (*ctx).type_ = type_;
-                (*ctx).provctx = provctx;
-            }
-            return ctx;
+    let Some(ctx) = OwnedCtx::<FileCtxSt>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let ctx_ptr = ctx.as_ptr();
+    // SAFETY: `ctx_ptr` is this call's fresh allocation; `uri` is NULL or NUL-terminated.
+    let uri_ok = uri.is_null() || {
+        // SAFETY: `uri` is NULL or NUL-terminated per the contract.
+        let copy = unsafe { CRYPTO_strdup(uri, ptr::null(), 0) };
+        // SAFETY: `ctx_ptr` is this call's fresh, uniquely-owned allocation.
+        unsafe { (*ctx_ptr).uri = copy };
+        !copy.is_null()
+    };
+    if uri_ok {
+        // SAFETY: `ctx_ptr` is live.
+        unsafe {
+            (*ctx_ptr).type_ = type_;
+            (*ctx_ptr).provctx = provctx;
         }
+        return ctx.into_raw();
     }
-    // SAFETY: `ctx` is NULL or this call's allocation, live or partly initialised.
-    unsafe { free_file_ctx(ctx) };
+    // SAFETY: `ctx` is this call's own allocation, live or partly initialised; `Drop` runs the
+    // authority's own destructor body and the block's single release.
+    drop(ctx);
     ptr::null_mut()
 }
 
@@ -606,7 +634,11 @@ unsafe extern "C" fn file_set_ctx_params(
         if !p.propq.is_null() {
             // SAFETY: `ctx` is live and owns `propq`.
             unsafe {
-                CRYPTO_free((*ctx).file.propq.cast::<c_void>(), ptr::null(), 0);
+                drop(OwnedBuf::adopt_plain(
+                    (*ctx).file.propq.cast::<u8>(),
+                    SeamFile::NULL,
+                    0,
+                ));
                 (*ctx).file.propq = ptr::null_mut();
                 // SAFETY: `p.propq` is a live descriptor; `propq` is this row's out-slot.
                 if OSSL_PARAM_get_utf8_string(p.propq, &mut (*ctx).file.propq, 0) == 0 {
@@ -617,7 +649,11 @@ unsafe extern "C" fn file_set_ctx_params(
         if !p.type_.is_null() {
             // SAFETY: `ctx` is live and owns `input_type`.
             unsafe {
-                CRYPTO_free((*ctx).file.input_type.cast::<c_void>(), ptr::null(), 0);
+                drop(OwnedBuf::adopt_plain(
+                    (*ctx).file.input_type.cast::<u8>(),
+                    SeamFile::NULL,
+                    0,
+                ));
                 (*ctx).file.input_type = ptr::null_mut();
                 // SAFETY: `p.type_` is a live descriptor; `input_type` is this row's out-slot.
                 if OSSL_PARAM_get_utf8_string(p.type_, &mut (*ctx).file.input_type, 0) == 0 {
@@ -675,8 +711,8 @@ unsafe extern "C" fn file_set_ctx_params(
             };
             // SAFETY: the site is a compile-time constant; `msg` is NUL-terminated.
             unsafe { raise_site_data(&err_sites::PROV_FILE_STORE_426, msg.as_ptr()) };
-            // SAFETY: `str_` was allocated by the printer above.
-            unsafe { CRYPTO_free(str_.cast::<c_void>(), ptr::null(), 0) };
+            // SAFETY: `str_` was allocated by the printer above; `Drop` is its single release.
+            unsafe { drop(OwnedBuf::adopt_plain(str_.cast::<u8>(), SeamFile::NULL, 0)) };
             // SAFETY: `x509_name` is live and this call owns it.
             unsafe { X509_NAME_free(x509_name) };
             return 0;
@@ -982,7 +1018,7 @@ unsafe fn file_load_file(
 /// # Safety
 /// `ctx` must be a live context with a non-NULL `uri`; `name` must be non-NULL and
 /// NUL-terminated.
-unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> *mut c_char {
+unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> Option<OwnedBuf> {
     // SAFETY: `ctx.uri` is NUL-terminated per the contract.
     let pathsep: *const c_char = if unsafe { ossl_ends_with_dirsep((*ctx).uri) } != 0 {
         c"".as_ptr()
@@ -992,19 +1028,24 @@ unsafe fn file_name_to_uri(ctx: *mut FileCtxSt, name: *const c_char) -> *mut c_c
     // SAFETY: every argument is NUL-terminated.
     let calculated_length =
         unsafe { sys::strlen((*ctx).uri) + sys::strlen(pathsep) + sys::strlen(name) + 1 };
-    // SAFETY: the allocation asks for a zeroed block of the computed size.
-    let data = CRYPTO_zalloc(calculated_length, ptr::null(), 0).cast::<c_char>();
-    if data.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `data` is a live buffer of `calculated_length` bytes; the three sources are
+    // SAFETY: the allocation asks for a zeroed block of the computed size, and this frame is its
+    // first and only owner.
+    let data = unsafe {
+        OwnedBuf::adopt_plain(
+            CRYPTO_zalloc(calculated_length, ptr::null(), 0).cast(),
+            SeamFile::NULL,
+            0,
+        )
+    }?;
+    let raw = data.as_ptr().cast::<c_char>();
+    // SAFETY: `raw` is a live buffer of `calculated_length` bytes; the three sources are
     // NUL-terminated, so `OPENSSL_strlcat` writes within it.
     unsafe {
-        OPENSSL_strlcat(data, (*ctx).uri, calculated_length);
-        OPENSSL_strlcat(data, pathsep, calculated_length);
-        OPENSSL_strlcat(data, name, calculated_length);
+        OPENSSL_strlcat(raw, (*ctx).uri, calculated_length);
+        OPENSSL_strlcat(raw, pathsep, calculated_length);
+        OPENSSL_strlcat(raw, name, calculated_length);
     }
-    data
+    Some(data)
 }
 
 /// `static int file_name_check(struct file_ctx_st *ctx, const char *name)` —
@@ -1097,7 +1138,7 @@ unsafe fn file_load_dir_entry(
         unsafe { OSSL_PARAM_construct_utf8_string(OSSL_OBJECT_PARAM_DATA, ptr::null_mut(), 0) },
         OSSL_PARAM_construct_end(),
     ];
-    let mut newname: *mut c_char = ptr::null_mut();
+    let mut newname: Option<OwnedBuf> = None;
 
     loop {
         // SAFETY: `ctx` is live.
@@ -1121,7 +1162,7 @@ unsafe fn file_load_dir_entry(
         {
             // SAFETY: `ctx` is live and `last_entry` is NUL-terminated.
             newname = unsafe { file_name_to_uri(ctx, (*ctx).dir.last_entry) };
-            if newname.is_null() {
+            if newname.is_none() {
                 return 0;
             }
         }
@@ -1138,21 +1179,29 @@ unsafe fn file_load_dir_entry(
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).dir.end_reached = 1 };
         }
-        if !newname.is_null() {
+        if newname.is_some() {
             break;
         }
     }
 
-    object[1].data = newname.cast::<c_void>();
-    // SAFETY: `newname` is NUL-terminated.
-    object[1].data_size = unsafe { sys::strlen(newname) };
+    object[1].data = newname
+        .as_ref()
+        .map_or(ptr::null_mut(), |b| b.as_ptr().cast::<c_void>());
+    // SAFETY: `newname` is a NUL-terminated URI.
+    object[1].data_size = unsafe {
+        sys::strlen(
+            newname
+                .as_ref()
+                .map_or(ptr::null(), |b| b.as_ptr().cast::<c_char>()),
+        )
+    };
     let ok = match object_cb {
         // SAFETY: `object` is a terminator-ended array live across the call.
         Some(cb) => unsafe { cb(object.as_ptr(), object_cbarg) },
         None => 0,
     };
-    // SAFETY: `newname` was allocated above and this call owns it.
-    unsafe { CRYPTO_free(newname.cast::<c_void>(), ptr::null(), 0) };
+    // The `newname` block is released here, at the authority's own site.
+    drop(newname);
     ok
 }
 
@@ -1457,3 +1506,7 @@ mod tests {
         unsafe { crate::store::store_meth::OSSL_STORE_LOADER_free(loader) };
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(FileCtxSt => zero_state_sweep_file_ctx_st);

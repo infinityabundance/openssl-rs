@@ -118,7 +118,8 @@ use crate::runtime::err::{
     peek_last_reason, raise_site, raise_site_data, raise_site_dynamic, ERR_clear_last_mark,
     ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::rcu::{
     ossl_rcu_assign_uptr, ossl_rcu_lock_free, ossl_rcu_lock_new, ossl_rcu_read_lock,
     ossl_rcu_read_unlock, ossl_rcu_uptr_deref, ossl_rcu_write_lock, ossl_rcu_write_unlock,
@@ -133,12 +134,14 @@ use crate::runtime::stack::{
 use crate::runtime::thread::CRYPTO_THREAD_run_once;
 
 use crate::context::{OSSL_LIB_CTX_get_conf_diagnostics, OSSL_LIB_CTX_set_conf_diagnostics};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/conf/conf_mod.c`, for the coordinates of every allocation this module makes.
 ///
 /// The authority's own string, which `OPENSSL_FILE` expands to — including the `../../` prefix,
 /// because the object file was compiled from inside the build tree.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/conf/conf_mod.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/conf/conf_mod.c");
 
 // The authority's allocation coordinates, one per call site. `OPENSSL_zalloc`,
 // `OPENSSL_malloc` and `OPENSSL_strdup` are macros over `CRYPTO_*` that fill in
@@ -161,6 +164,10 @@ const L_MODULE_FREE: c_int = 566;
 /// `OPENSSL_free(imod->name)`, `OPENSSL_free(imod->value)`, `OPENSSL_free(imod)` in
 /// `module_finish` and in `module_init`'s `memerr` arm.
 const L_IMODULE_FREE: c_int = 616;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap block
+// ---------------------------------------------------------------------------------------------
 
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`.
 ///
@@ -371,8 +378,18 @@ unsafe fn module_free(md: *mut ConfModule) {
     // take. `DSO_free` accepts NULL and both frees do.
     unsafe {
         DSO_free((*md).dso);
-        CRYPTO_free((*md).name.cast(), FILE, L_MODULE_FREE);
-        CRYPTO_free(md.cast(), FILE, L_MODULE_FREE);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*md).name.cast(),
+            FILE_SEAM,
+            L_MODULE_FREE,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            md.cast(),
+            FILE_SEAM,
+            L_MODULE_FREE,
+        ));
     }
 }
 
@@ -403,9 +420,24 @@ unsafe fn module_finish(imod: *mut ConfImodule) {
             finish(imod);
         }
         (*pmod).links -= 1;
-        CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-        CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-        CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*imod).name.cast(),
+            FILE_SEAM,
+            L_IMODULE_FREE,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*imod).value.cast(),
+            FILE_SEAM,
+            L_IMODULE_FREE,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            imod.cast(),
+            FILE_SEAM,
+            L_IMODULE_FREE,
+        ));
     }
 }
 
@@ -466,46 +498,48 @@ unsafe fn conf_diagnostics(cnf: *const Conf) -> c_int {
 /// `"openssl_conf=%s"` — the message `CONF_modules_load` raises when the named section is
 /// missing.
 ///
+/// The caller owns the storage. A process-global `static mut` buffer would be a data race:
+/// `CONF_modules_load` may run concurrently on different `CONF` objects, and the registry's
+/// RCU discipline is what makes that legal. `raise_site_data` copies the bytes before it
+/// returns, so stack storage is sufficient.
+///
 /// # Safety
 /// `vsection` must be NUL-terminated.
-unsafe fn openssl_conf_message(vsection: *const c_char) -> *const c_char {
-    // A `static` rather than a thread-local or an allocation. The authority's `ERR_vset_error`
-    // allocates; this does not, which is a divergence in *storage* only, because the raise
-    // copies the bytes before returning and no caller holds the pointer afterwards. It also
-    // makes the function non-reentrant, which is why the buffer is written immediately before
-    // the single call that consumes it.
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length, and the format string is a
-    // static NUL-terminated one whose single conversion is `%s`.
+unsafe fn openssl_conf_message(
+    vsection: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
+    // SAFETY: `buf` is exactly the declared length, and the format string is a static
+    // NUL-terminated one whose single conversion is `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"openssl_conf=%s".as_ptr(),
             vsection,
         )
     };
-    // SAFETY: the pointer is to the static written immediately above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s"` — the message `module_run` raises for an unknown module.
 ///
 /// # Safety
 /// `name` must be NUL-terminated.
-unsafe fn module_name_message(name: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn module_name_message(
+    name: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `openssl_conf_message`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s".as_ptr(),
             name,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s, value=%s retcode=%-8d"` — the message `module_run` raises when a module's
@@ -522,13 +556,13 @@ unsafe fn module_init_message(
     name: *const c_char,
     value: *const c_char,
     ret: c_int,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
 ) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length, and the format string is a
-    // static NUL-terminated one with two `%s` and one `%-8d`, matching the three arguments.
+    // SAFETY: `buf` is exactly the declared length, and the format string is a static
+    // NUL-terminated one with two `%s` and one `%-8d`, matching the three arguments.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s, value=%s retcode=%-8d".as_ptr(),
             name,
@@ -536,28 +570,29 @@ unsafe fn module_init_message(
             ret,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"module=%s, path=%s"` — the message `module_load_dso` raises.
 ///
 /// # Safety
 /// `name` and `path` must be NUL-terminated.
-unsafe fn dso_message(name: *const c_char, path: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn dso_message(
+    name: *const c_char,
+    path: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `module_init_message`, with two `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"module=%s, path=%s".as_ptr(),
             name,
             path,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `int CONF_modules_load(const CONF *cnf, const char *appname, unsigned long flags)`.
@@ -623,8 +658,9 @@ pub unsafe extern "C" fn CONF_modules_load(
             if (flags & CONF_MFLAGS_SILENT) == 0 {
                 // SAFETY: this thread's own queue, and a compile-time-constant site.
                 unsafe {
+                    let mut buf = [0; ERR_MAX_DATA_SIZE];
                     ERR_clear_last_mark();
-                    raise_site_data(&CONF_MOD_163, openssl_conf_message(vsection));
+                    raise_site_data(&CONF_MOD_163, openssl_conf_message(vsection, &mut buf));
                 }
             } else {
                 // SAFETY: as above.
@@ -698,7 +734,10 @@ unsafe fn module_run(
         if (flags & CONF_MFLAGS_SILENT) == 0 {
             // SAFETY: a compile-time-constant site, this thread's own queue, and the message is
             // formatted with the authority's own formatter.
-            unsafe { raise_site_data(&CONF_MOD_276, module_name_message(name)) };
+            unsafe {
+                let mut buf = [0; ERR_MAX_DATA_SIZE];
+                raise_site_data(&CONF_MOD_276, module_name_message(name, &mut buf));
+            }
         }
         return -1;
     }
@@ -709,7 +748,13 @@ unsafe fn module_run(
     if ret <= 0 && (flags & CONF_MFLAGS_SILENT) == 0 {
         // SAFETY: a compile-time-constant site, this thread's own queue, and the message is
         // formatted with the authority's own formatter.
-        unsafe { raise_site_data(&CONF_MOD_286, module_init_message(name, value, ret)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(
+                &CONF_MOD_286,
+                module_init_message(name, value, ret, &mut buf),
+            );
+        }
     }
 
     ret
@@ -744,8 +789,9 @@ unsafe fn module_load_dso(
         // SAFETY: a compile-time-constant site, the reason is the variable the authority's
         // `errcode` is, and the message is formatted with the authority's own formatter.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             raise_site_dynamic(&CONF_MOD_331, CONF_R_ERROR_LOADING_DSO);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     }
@@ -755,9 +801,10 @@ unsafe fn module_load_dso(
     let Some(ifunc) = ifunc else {
         // SAFETY: `dso` was created here and is reachable from nowhere else.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             DSO_free(dso);
             raise_site_dynamic(&CONF_MOD_331, CONF_R_MISSING_INIT_FUNCTION);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     };
@@ -783,9 +830,10 @@ unsafe fn module_load_dso(
         // the reference `DSO_load` created here.
         // SAFETY: `dso` was created above and is reachable from nowhere else.
         unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
             DSO_free(dso);
             raise_site_dynamic(&CONF_MOD_331, CONF_R_ERROR_LOADING_DSO);
-            raise_site_data(&CONF_MOD_331, dso_message(name, path));
+            raise_site_data(&CONF_MOD_331, dso_message(name, path, &mut buf));
         }
         return ptr::null_mut();
     }
@@ -835,9 +883,11 @@ unsafe fn module_add(
         return ptr::null_mut();
     }
 
-    let tmod =
-        CRYPTO_zalloc(core::mem::size_of::<ConfModule>(), FILE, L_MODULE_NEW).cast::<ConfModule>();
-    if tmod.is_null() {
+    // The entry block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership passes to the registry only on a successful push.
+    let Some(tmod_buf) =
+        OwnedBuf::new_zeroed(core::mem::size_of::<ConfModule>(), FILE_SEAM, L_MODULE_NEW)
+    else {
         // SAFETY: the local list is this thread's own and is discarded here; the write lock is
         // held by this thread.
         unsafe {
@@ -845,7 +895,8 @@ unsafe fn module_add(
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
-    }
+    };
+    let tmod = tmod_buf.as_ptr().cast::<ConfModule>();
 
     // SAFETY: `tmod` is a fresh zeroed block, so every write below is unaliased; `name` is
     // NUL-terminated per the contract, and `CRYPTO_strdup` is what the authority's
@@ -861,7 +912,7 @@ unsafe fn module_add(
         // SAFETY: as above; the entry and the local list are this thread's own.
         unsafe {
             ossl_rcu_write_unlock(lock);
-            CRYPTO_free(tmod.cast(), FILE, L_MODULE_FREE_ERR);
+            drop(tmod_buf);
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
@@ -872,8 +923,13 @@ unsafe fn module_add(
         // SAFETY: as above; the name was allocated above and is released here.
         unsafe {
             ossl_rcu_write_unlock(lock);
-            CRYPTO_free((*tmod).name.cast(), FILE, L_MODULE_FREE_ERR);
-            CRYPTO_free(tmod.cast(), FILE, L_MODULE_FREE_ERR);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*tmod).name.cast(),
+                FILE_SEAM,
+                L_MODULE_FREE_ERR,
+            ));
+            drop(tmod_buf);
             OPENSSL_sk_free(new_modules);
         }
         return ptr::null_mut();
@@ -889,7 +945,8 @@ unsafe fn module_add(
         // reader can still be walking it — which the synchronize above established.
         OPENSSL_sk_free(old_modules);
     }
-    tmod
+    // Ownership moves to the registry.
+    tmod_buf.into_raw().cast::<ConfModule>()
 }
 
 /// `strncmp(a, b, n)` — the C library's, written out because this crate has no wrapper for it.
@@ -1008,11 +1065,16 @@ unsafe fn module_init(
 ) -> c_int {
     let mut ret: c_int = 1;
 
-    let imod = CRYPTO_malloc(core::mem::size_of::<ConfImodule>(), FILE, L_IMODULE_NEW)
-        .cast::<ConfImodule>();
-    if imod.is_null() {
+    // The record block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership passes to the registry only on a successful publish.
+    let Some(imod_buf) = OwnedBuf::new(
+        core::mem::size_of::<ConfImodule>(),
+        FILE_SEAM,
+        L_IMODULE_NEW,
+    ) else {
         return -1;
-    }
+    };
+    let imod = imod_buf.as_ptr().cast::<ConfImodule>();
 
     // SAFETY: `imod` is a fresh block, so every write below is unaliased. The two duplicates are
     // the authority's `OPENSSL_strdup` expansions at `:445` and `:446`. `CONF_IMODULE` has no
@@ -1031,9 +1093,19 @@ unsafe fn module_init(
         // SAFETY: the contract's `memerr` arm: release the record and answer -1. `imod` has not
         // been published anywhere.
         unsafe {
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).name.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).value.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1050,9 +1122,19 @@ unsafe fn module_init(
                 if let Some(finish) = (*pmod).finish {
                     finish(imod);
                 }
-                CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-                CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-                CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt_plain_nullable(
+                    (*imod).name.cast(),
+                    FILE_SEAM,
+                    L_IMODULE_FREE,
+                ));
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                drop(OwnedBuf::adopt_plain_nullable(
+                    (*imod).value.cast(),
+                    FILE_SEAM,
+                    L_IMODULE_FREE,
+                ));
+                drop(imod_buf);
             }
             return -1;
         }
@@ -1069,14 +1151,27 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).name.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).value.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            drop(imod_buf);
         }
         return -1;
     }
     let lock = module_list_lock();
     if lock.is_null() {
+        // The authority returns here with the record -- and both its strings -- still allocated;
+        // `into_raw` gives up the handle so the block is left as the authority leaves it.
+        let _ = imod_buf.into_raw();
         return -1;
     }
     // SAFETY: `lock` is the live lock.
@@ -1102,9 +1197,19 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).name.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).value.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1121,9 +1226,19 @@ unsafe fn module_init(
                     finish(imod);
                 }
             }
-            CRYPTO_free((*imod).name.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free((*imod).value.cast(), FILE, L_IMODULE_FREE);
-            CRYPTO_free(imod.cast(), FILE, L_IMODULE_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).name.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*imod).value.cast(),
+                FILE_SEAM,
+                L_IMODULE_FREE,
+            ));
+            drop(imod_buf);
         }
         return -1;
     }
@@ -1137,6 +1252,8 @@ unsafe fn module_init(
         ossl_synchronize_rcu(lock);
         OPENSSL_sk_free(old_modules);
     }
+    // Ownership moves to the registry.
+    let _ = imod_buf.into_raw();
     ret
 }
 
@@ -1202,8 +1319,15 @@ pub extern "C" fn CONF_modules_unload(all: c_int) {
         unsafe { ossl_rcu_write_lock(lock) };
 
         let old_modules = supported_modules();
-        // SAFETY: a NULL handle answers NULL, which the test below turns into an early return; a
-        // non-NULL one is the published list.
+        // The authority's `sk_dup(NULL)` answers NULL and it unlocks and returns; this
+        // crate's `OPENSSL_sk_dup` deliberately answers an empty stack for NULL, so the
+        // parity test is explicit here.
+        if old_modules.is_null() {
+            // SAFETY: the write lock is held by this thread.
+            unsafe { ossl_rcu_write_unlock(lock) };
+            return;
+        }
+        // SAFETY: `old_modules` is the published, non-NULL list.
         let new_modules = unsafe { OPENSSL_sk_dup(old_modules) };
         if new_modules.is_null() {
             // SAFETY: the write lock is held by this thread.
@@ -1499,7 +1623,7 @@ pub unsafe extern "C" fn CONF_modules_load_file_ex(
         // The authority frees the filename only when it allocated it.
         if filename.is_null() {
             // SAFETY: `owned` is NULL or this call's own allocation.
-            unsafe { CRYPTO_free(owned.cast(), FILE, 0) };
+            unsafe { drop(OwnedBuf::adopt_plain_nullable(owned.cast(), FILE_SEAM, 0)) };
         }
         // SAFETY: `conf` is NULL or this call's own configuration; `NCONF_free` accepts NULL.
         unsafe { NCONF_free(conf) };

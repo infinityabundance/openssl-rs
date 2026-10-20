@@ -1,0 +1,137 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "branch": "integrate/safe-c33",
+  "source_head": "80a359d33",
+  "date": "2026-10-19",
+  "scope": "The next eight files in stable remaining order: the ARIA compiled branch and the ASN.1 item-list/pack/string-table/UTF-8/key-reader cluster. Contract checks against OpenSSL 3.6.4; no source change.",
+  "verification_level": "FAST+BATCH",
+  "worktree": "docs/queue only: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 37 and this receipt; untracked .asan-target/ and .ob4work/ were already present",
+  "reconciliation": {
+    "source_rs_files": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "canonical_audited_before_batch": 301,
+    "canonical_unaudited_before_batch": 462,
+    "canonical_audited_after_batch": 309,
+    "canonical_unaudited_after_batch": 454,
+    "mechanism_sweep_files_union": 241,
+    "m1_index_section_files": 12,
+    "full_per_file_records": 9,
+    "boundary_sweep_files": 48,
+    "mechanism_boundary_overlap": 9,
+    "method": "AUDITED-FILES.txt is the sorted union of each mechanism sweep's structured .files array (M2-M33, 241 unique), the twelve M1 files named in PERFILE-INDEX.md section 3a, the nine structured per-file records in perfile-index.json, and each boundary sweep's structured .boundaries[].file (48 unique, 9 also named by a mechanism sweep). PARTIAL-FILES.txt is attribution.json .files[].path where status == PARTIAL (761). REMAINING-AUDIT.txt is comm -23 of the two.",
+    "difference_from_301": "M32 left 301 audited / 462 unaudited. This batch moves the eight files it named as next; no skipped boundary was removed from the remaining queue."
+  },
+  "files": [
+    "src/aria.rs",
+    "src/asn1/asn1_item_list.rs",
+    "src/asn1/asn_mstbl.rs",
+    "src/asn1/asn_pack.rs",
+    "src/asn1/a_strnid.rs",
+    "src/asn1/a_utf8.rs",
+    "src/asn1/d2i_param.rs",
+    "src/asn1/d2i_pu.rs"
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/aria.rs",
+      "mechanisms": ["ARIA_u128 repr(C) union views", "Key_RC/S1/S2/X1/X2 tables", "round-key pointer arithmetic", "ossl_aria_encrypt/set_encrypt_key/set_decrypt_key"],
+      "disposition": "no_defect",
+      "note": "KEY_RC and the four word tables equal the crypto/aria/aria.c initialisers; the sb1..sb4 expansion is bound by aria::tests. bits validation is hoisted before (bits + 256) / 32, avoiding the authority's signed-overflow UB with no valid-input change. GSRK and the rotated DIFF_BYTE reproduce the macros."
+    },
+    {
+      "file": "src/asn1/asn1_item_list.rs",
+      "mechanisms": ["generated asn1_item_list[] order", "ASN1_ITEM_lookup", "ASN1_ITEM_get bound"],
+      "disposition": "no_defect",
+      "note": "147 accessors in byte-identical order to asn1_item_list.h; i >= len returns NULL. A null name stays the authority's precondition."
+    },
+    {
+      "file": "src/asn1/asn_mstbl.rs",
+      "mechanisms": ["CONF section iteration", "X509V3_parse_list ownership", "sk_CONF_VALUE_pop_free callback", "strtoul refusals"],
+      "disposition": "no_defect",
+      "note": "All four field shapes, their refusals, the cnf-shaped versus name-shaped error record and the add call site match asn_mstbl.c:57-117."
+    },
+    {
+      "file": "src/asn1/asn_pack.rs",
+      "mechanisms": ["ASN1_STRING in/out ownership slot", "ASN1_STRING_set0", "encode/decode scratch"],
+      "disposition": "no_defect",
+      "note": "Three oct cases, the <= 0 encode test with assignment-before-test, empty-data refusal and shared err: release match asn_pack.c."
+    },
+    {
+      "file": "src/asn1/a_strnid.rs",
+      "mechanisms": ["tbl_standard NID order", "runtime stable stack", "OwnedRow zalloc/free ownership", "mask intersection"],
+      "disposition": "no_defect",
+      "note": "28 rows and all bounds/masks/flags match tbl_standard.h; sort-then-find, standard fallback and owned-row copy match a_strnid.c. Cleanup clears the atomic stack pointer before pop_free, as the authority does. table_cmp's null guard is unreachable for valid stack contents."
+    },
+    {
+      "file": "src/asn1/a_utf8.rs",
+      "mechanisms": ["UTF8_getc refusal codes and length gating", "UTF8_putc sizing convention and surrogate-before-length order"],
+      "disposition": "no_defect",
+      "note": "All four refusal codes, surrogate and non-minimal checks, null-str width query, and the observable -2-before--1 order match a_utf8.c; val is written only on success."
+    },
+    {
+      "file": "src/asn1/d2i_param.rs",
+      "mechanisms": ["EVP_PKEY slot ownership", "ameth->param_decode callback dispatch", "BUF_MEM read lifetime"],
+      "disposition": "no_defect",
+      "note": "Refusals, callback dispatch, err identity test and buffer release on both paths match d2i_param.c; the long-to-int callback narrowing is deliberate parity."
+    },
+    {
+      "file": "src/asn1/d2i_pu.rs",
+      "mechanisms": ["type-switched RSA/DSA/EC public-key readers", "downgraded-copy ownership", "err_out identity test"],
+      "disposition": "no_defect",
+      "note": "Downgrade, set-type test, assignment-before-null-test in the RSA arm, DSA/EC member write-back and copy release match d2i_pu.c; a caller-supplied key is not freed when *a == ret."
+    }
+  ],
+  "contracts_reused": [
+    "OB-1-style CRYPTO_zalloc/CRYPTO_free single-release ownership (a_strnid OwnedRow), at the authority's coordinates",
+    "OB-4 member-buffer slot ownership (d2i_param/d2i_pu EVP_PKEY pkey union, asn_pack ASN1_STRING data)",
+    "typed-stack comparator/callback contract (a_strnid table_cmp, asn_mstbl sk_CONF_VALUE_pop_free)",
+    "B1-B17 callback reentrancy contract: raw pointers only, no Rust borrow held across param_decode or a free callback",
+    "RC-1 refcount boundary: no refcount transition in this batch (not applicable)",
+    "AGENTS.md section 3 checked extent arithmetic at ASN.1 length/cursor sites (none changed)"
+  ],
+  "defects": [],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "retained_obligations": [
+    "src/asn1/asn_mstbl.rs: the ERR_raise_data operand is formatted into a 256-byte stack buffer through BIO_snprintf, so a field/name/value longer than the buffer is truncated in the error record. This is the crate's established raise_site_data pattern; a diagnostics-length divergence, not UB.",
+    "src/asn1/asn1_item_list.rs: ASN1_ITEM_lookup passes the caller's name to strcmp with no null guard, exactly as the authority. A null name is an explicit precondition, not a silent null answer.",
+    "src/asn1/a_strnid.rs: GLOBAL_MASK and STABLE follow the authority's unsynchronised process-global contract; the atomic representation only removes static-mut aliasing, it does not add a lock the authority lacks.",
+    "src/asn1/d2i_param.rs: long length -> int param_decode argument narrowing is reproduced because the method table fixes the callback type.",
+    "src/aria.rs: validation before (bits + 256) / 32 is a documented divergence that removes reachable signed-overflow UB; invalid bit lengths still return -2 before any schedule write."
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy": "PASS (--all-targets -- -D warnings)",
+    "focused": "PASS: aria:: 6/6 (1,669 filtered)",
+    "library_serial": "1648 passed / 0 failed / 27 ignored (222.92 s, --test-threads=1)",
+    "library_parallel": "1648 passed / 0 failed / 27 ignored (99.12 s, --test-threads=4)",
+    "removed_or_newly_ignored_tests": 0,
+    "probes": "NOT_RUN (no file-specific adversarial probe exists for these eight units)"
+  },
+  "not_run": [
+    "Miri under Stacked Borrows and Tree Borrows",
+    "ASan/TSan/Loom",
+    "authority differential replay for these eight units",
+    "independent adversarial review",
+    "SEAL"
+  ],
+  "next_queue": [
+    "src/apps/asn1parse.rs",
+    "src/apps/ciphers.rs",
+    "src/apps/cms.rs",
+    "src/apps/configutl.rs",
+    "src/apps/crl.rs",
+    "src/apps/dgst.rs",
+    "src/apps/dhparam.rs",
+    "src/apps/dsa.rs"
+  ],
+  "next_queue_note": "The literal first eight lines of REMAINING-AUDIT.txt are the src/apps/* CLI front-ends; this queue keeps the stable order but prefers library modules. src/apps/* remain queued and are deferred, not excluded."
+}

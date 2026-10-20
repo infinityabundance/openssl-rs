@@ -47,6 +47,7 @@ use crate::runtime::err::{err_sites, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 
 use super::hash::shake_xof;
@@ -62,7 +63,9 @@ use super::{
 };
 
 /// The unit's own `__FILE__`, for the allocator's debug arguments.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c".as_ptr();
+const FILE_C: &CStr = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 /// `ossl_ml_dsa_pk_encode`'s `OPENSSL_malloc(enc_len)`, `ml_dsa_encoders.c:629`.
 const LINE_PK_ENCODE_ENC: c_int = 629;
@@ -85,6 +88,105 @@ const LINE_SK_ENCODE_CLEAR_ENC: c_int = 750;
 const LINE_SK_DECODE_CLEAR_SEED: c_int = 773;
 /// `ossl_ml_dsa_sk_decode`'s `OPENSSL_secure_malloc(in_len)`, `ml_dsa_encoders.c:809`.
 const LINE_SK_DECODE_PRV: c_int = 809;
+
+/// An owned encoder block on this unit's allocator seam.
+///
+/// The public encoding is an `OPENSSL_malloc` block and the secret one an `OPENSSL_secure_malloc`
+/// block, each released at its own `__LINE__`; this handle carries both the allocation and release
+/// coordinates and the release kind, so a caller-installed `CRYPTO_set_mem_functions`/
+/// `CRYPTO_secure_malloc` observer sees each exactly as it sees the authority's. `Drop` is the
+/// block's single release; `into_raw` is how the encoding is transferred into the key, and the
+/// secret variant's release is the authority's `OPENSSL_secure_clear_free` (cleansing preserved).
+///
+/// This is OB-1's model: each constructor fixes the extent and the release kind, `Drop` is the
+/// block's single release and `into_raw` transfers it. The secure arm is verified separately: if
+/// no secure heap is initialised `CRYPTO_secure_malloc` falls back to the plain seam, so `Drop`
+/// calls `CRYPTO_secure_clear_free` on a non-secure block; that entry point recognises the
+/// provenance, cleanses `len` bytes and releases it through `CRYPTO_free` — the fallback is
+/// cleansed, not skipped.
+struct OwnedBuf {
+    ptr: ptr::NonNull<u8>,
+    len: usize,
+    file: *const c_char,
+    line: c_int,
+    secure: bool,
+}
+
+impl OwnedBuf {
+    /// `OPENSSL_malloc(len)` at `file`/`line`, released by `Drop` at `release_line`.
+    fn malloc(len: usize, file: SeamFile, line: c_int, release_line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, line)
+        }
+        .cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBuf {
+            ptr,
+            len,
+            file,
+            line: release_line,
+            secure: false,
+        })
+    }
+
+    /// `OPENSSL_secure_malloc(len)` at `file`/`line`, released by `Drop` with
+    /// `OPENSSL_secure_clear_free` at `release_line`.
+    ///
+    /// If no secure heap is initialised the secure allocator falls back to the plain seam; the
+    /// release still cleanses: `CRYPTO_secure_clear_free` recognises the non-secure provenance,
+    /// cleanses these `len` bytes, then releases them through the plain seam.
+    fn secure_malloc(
+        len: usize,
+        file: SeamFile,
+        line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
+        // SAFETY: `CRYPTO_secure_malloc` answers NULL or a fresh, writable block of `len` bytes.
+        let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<u8>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedBuf {
+            ptr,
+            len,
+            file,
+            line: release_line,
+            secure: true,
+        })
+    }
+
+    /// The block's stable address, for the packet builder's writes.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// Hand the block to the key's owning member, so `Drop` no longer releases it.
+    fn into_raw(self) -> *mut u8 {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; `Drop` runs
+        // once, so this is its single release, through the authority's own release seam and line.
+        unsafe {
+            if self.secure {
+                CRYPTO_secure_clear_free(
+                    self.ptr.as_ptr().cast::<c_void>(),
+                    self.len,
+                    self.file,
+                    self.line,
+                );
+            } else {
+                CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), self.file, self.line);
+            }
+        }
+    }
+}
 
 /// `POLY_COEFF_NUM_BYTES(bits)` — `ml_dsa_encoders.c:19`, `bits * (256 / 8)`.
 const fn poly_coeff_num_bytes(bits: usize) -> usize {
@@ -220,7 +322,17 @@ unsafe fn raise_with_alg(
 ) {
     // SAFETY: `alg` is NUL-terminated per the contract.
     let bytes = unsafe { CStr::from_ptr(alg) }.to_bytes();
-    let mut msg = Vec::with_capacity(prefix.len() + bytes.len() + suffix.len() + 1);
+    // The three pieces are bounded static text, so this cannot overflow; checking the allocation
+    // extent keeps it a defined refusal even if a future caller passes longer text (AGENTS §3).
+    let Some(capacity) = prefix
+        .len()
+        .checked_add(bytes.len())
+        .and_then(|n| n.checked_add(suffix.len()))
+        .and_then(|n| n.checked_add(1))
+    else {
+        return;
+    };
+    let mut msg = Vec::with_capacity(capacity);
     msg.extend_from_slice(prefix.as_bytes());
     msg.extend_from_slice(bytes);
     msg.extend_from_slice(suffix.as_bytes());
@@ -877,7 +989,10 @@ unsafe fn poly_decode_signed_two_to_power_17(p: *mut Poly, pkt: *mut Packet) -> 
 /// `ossl_ml_dsa_pk_encode(key)` — `ml_dsa_encoders.c:622-652`. FIPS 204 Algorithm 22, `pkEncode()`.
 ///
 /// # Safety
-/// `key` must be live with an allocated `t1` and a populated `rho`.
+/// `key` must be live with an allocated `t1` and a populated `rho`, and
+/// `key->pub_encoding` must be NULL or a live plain-seam allocation owned by the key (the state
+/// the key constructors establish). On success the member is released and replaced with a fresh
+/// owned block; on failure it is untouched.
 pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
     let mut ret = 0;
     let mut written: usize = 0;
@@ -887,16 +1002,23 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
     let t1_len = unsafe { (*key).t1.num_poly };
     // SAFETY: `key` is live, so its `params` field names the key's static parameter set.
     let enc_len = unsafe { (*(*key).params).pk_len };
-    // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked below.
-    let enc = CRYPTO_malloc(enc_len, FILE, LINE_PK_ENCODE_ENC).cast::<u8>();
+    // `OPENSSL_malloc(enc_len)` at `:629`, released by `Drop` at `:650` when the encoding does not
+    // land (the authority's error-path `OPENSSL_free(enc)`); on success `into_raw` transfers it into
+    // `key->pub_encoding`.
+    let Some(enc_owned) = OwnedBuf::malloc(
+        enc_len,
+        FILE_SEAM,
+        LINE_PK_ENCODE_ENC,
+        LINE_PK_ENCODE_FREE_ENC,
+    ) else {
+        return 0;
+    };
+    let enc = enc_owned.as_ptr();
+    let mut enc_owned = Some(enc_owned);
     // SAFETY: `Wpacket` is a builder of integers and pointers; the value is initialised by the
     // `WPACKET_init_static_len` below before it is read, and `WPACKET_finish` on an all-zero
     // packet is the authority's NULL-`subs` early return.
     let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
-
-    if enc.is_null() {
-        return 0;
-    }
 
     'err: {
         // SAFETY: `pkt` is a live local, `enc` is `enc_len` writable bytes and `key->rho` is the
@@ -930,23 +1052,28 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
                 LINE_PK_ENCODE_FREE_PUB,
             )
         };
-        // SAFETY: `key` is live and `enc` is transferred into it.
-        unsafe { (*key).pub_encoding = enc };
+        // Transfer the owned block into the key; `take` stops its `Drop` from releasing it.
+        // SAFETY: `key` is live and the block is this call's own.
+        unsafe {
+            (*key).pub_encoding = enc_owned.take().map_or(ptr::null_mut(), OwnedBuf::into_raw)
+        };
         ret = 1;
     }
     // SAFETY: `pkt` was initialised above.
     unsafe { WPACKET_finish(&mut pkt) };
-    if ret == 0 {
-        // SAFETY: `enc` came from `CRYPTO_malloc` and was not stored into `key`.
-        unsafe { CRYPTO_free(enc.cast::<c_void>(), FILE, LINE_PK_ENCODE_FREE_ENC) };
-    }
+    // `enc_owned` is still `Some` only when the encoding did not land; its `Drop` is the authority's
+    // error-path `OPENSSL_free(enc)` at `:650`.
+    drop(enc_owned);
     ret
 }
 
 /// `ossl_ml_dsa_pk_decode(key, in, in_len)` — `ml_dsa_encoders.c:664-697`. FIPS 204 `pkDecode()`.
 ///
 /// # Safety
-/// `key` must be live and, on success, `in_` readable for `in_len` bytes.
+/// `key` must be live and in its fresh state: `key->priv_encoding` and `key->pub_encoding` NULL
+/// (a non-NULL member makes the call refuse without touching `in_`). `in_` must be readable for
+/// `in_len` bytes. On success `key->pub_encoding` is a fresh plain-seam block owned by the key; on
+/// failure it remains NULL and the partly decoded public members stay owned by the key.
 pub(crate) unsafe fn ossl_ml_dsa_pk_decode(
     key: *mut MlDsaKey,
     in_: *const u8,
@@ -1025,7 +1152,10 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_decode(
 /// `ossl_ml_dsa_sk_encode(key)` — `ml_dsa_encoders.c:707-752`. FIPS 204 Algorithm 24, `skEncode()`.
 ///
 /// # Safety
-/// `key` must be live with allocated `s1`/`s2`/`t0` and a populated `rho`/`K`/`tr`.
+/// `key` must be live with allocated `s1`/`s2`/`t0` and a populated `rho`/`K`/`tr`, and
+/// `key->priv_encoding` must be NULL or a live secure-seam block of `params->sk_len` bytes owned
+/// by the key. On success that member is cleansed and released and replaced with a fresh owned
+/// block; on failure it is untouched and the scratch block is cleansed before release.
 pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
     let mut ret = 0;
     let mut written: usize = 0;
@@ -1037,14 +1167,20 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
     let enc_len = unsafe { (*params).sk_len };
     // SAFETY: `key` is live with an allocated `t0` vector per the contract.
     let mut t0 = unsafe { (*key).t0.poly };
-    // SAFETY: `CRYPTO_secure_malloc` answers NULL on failure, which is checked below.
-    let enc = unsafe { CRYPTO_secure_malloc(enc_len, FILE, LINE_SK_ENCODE_ENC) }.cast::<u8>();
+    // `OPENSSL_secure_malloc(enc_len)` at `:716`, released by `Drop` (secure clear) at `:750` when
+    // the encoding does not land; on success `into_raw` transfers it into `key->priv_encoding`.
+    let Some(enc_owned) = OwnedBuf::secure_malloc(
+        enc_len,
+        FILE_SEAM,
+        LINE_SK_ENCODE_ENC,
+        LINE_SK_ENCODE_CLEAR_ENC,
+    ) else {
+        return 0;
+    };
+    let enc = enc_owned.as_ptr();
+    let mut enc_owned = Some(enc_owned);
     // SAFETY: `Wpacket` is initialised by the `WPACKET_init_static_len` below before it is read.
     let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
-
-    if enc.is_null() {
-        return 0;
-    }
 
     /* eta is the range of private key coefficients (-eta...eta). */
     // SAFETY: `params` points at a static parameter set.
@@ -1111,30 +1247,31 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
                 LINE_SK_ENCODE_CLEAR_PRV,
             )
         };
-        // SAFETY: `key` is live and `enc` is transferred into it.
-        unsafe { (*key).priv_encoding = enc };
+        // Transfer the owned block into the key; `take` stops its `Drop` from releasing it.
+        // SAFETY: `key` is live and the block is this call's own.
+        unsafe {
+            (*key).priv_encoding = enc_owned.take().map_or(ptr::null_mut(), OwnedBuf::into_raw)
+        };
         ret = 1;
     }
     // SAFETY: `pkt` was initialised above.
     unsafe { WPACKET_finish(&mut pkt) };
-    if ret == 0 {
-        // SAFETY: `enc` came from `CRYPTO_secure_malloc` and was not stored into `key`.
-        unsafe {
-            CRYPTO_secure_clear_free(
-                enc.cast::<c_void>(),
-                enc_len,
-                FILE,
-                LINE_SK_ENCODE_CLEAR_ENC,
-            )
-        };
-    }
+    // `enc_owned` is still `Some` only when the encoding did not land; its `Drop` is the authority's
+    // error-path `OPENSSL_secure_clear_free(enc, enc_len)` at `:750`.
+    drop(enc_owned);
     ret
 }
 
 /// `ossl_ml_dsa_sk_decode(key, in, in_len)` — `ml_dsa_encoders.c:764-830`. FIPS 204 `skDecode()`.
 ///
 /// # Safety
-/// `key` must be live and `in_` readable for `in_len` bytes.
+/// `key` must be live. `key->seed` must be NULL or a live secure-seam block of
+/// `ML_DSA_SEED_BYTES` bytes owned by the key; it is cleansed and released, then set NULL,
+/// before any refusal. `key->pub_encoding` must be NULL, and `key->priv_encoding` must be NULL or
+/// exactly `in_` (the explicit-key load path, where the key already owns that secure block); a
+/// non-NULL `priv_encoding` other than `in_` refuses. `in_` must be readable for `in_len` bytes;
+/// on a public-hash mismatch the key is reset, which releases `in_` when it is the key's own
+/// `priv_encoding`, so that buffer must not be used afterwards.
 pub(crate) unsafe fn ossl_ml_dsa_sk_decode(
     key: *mut MlDsaKey,
     in_: *const u8,
@@ -1285,11 +1422,19 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_decode(
 /// running index after each of the `k` polynomials.
 ///
 /// # Safety
-/// `pkt` must be a live packet and `hint` must name `num_poly` polynomials.
+/// `pkt` must be a live packet and `hint` must name `k = hint.num_poly >= 1` allocated
+/// polynomials. At most `omega` of their coefficients may be non-zero: that is FIPS 204's hint
+/// weight bound, established for signing by `vector_make_hint` and the `vector_count_ones` check
+/// in `ml_dsa_sign`. A violation is refused here rather than writing past the `omega + k`-byte
+/// allocation (the authority's write would be out of bounds; AGENTS §17).
 unsafe fn hint_bits_encode(hint: *const Vector, pkt: *mut Wpacket, omega: u32) -> c_int {
     // SAFETY: `hint` is live per the contract.
     let k = unsafe { (*hint).num_poly };
-    let total = omega as usize + k;
+    // `omega + k` is the packet's byte extent; the authority's parameters are small, but the
+    // extent is still checked rather than relying on that (AGENTS §3).
+    let Some(total) = (omega as usize).checked_add(k) else {
+        return 0;
+    };
     let mut data: *mut u8 = ptr::null_mut();
 
     // SAFETY: `pkt` is live and `data` is a live local.
@@ -1306,7 +1451,13 @@ unsafe fn hint_bits_encode(hint: *const Vector, pkt: *mut Wpacket, omega: u32) -
         for j in 0..ML_DSA_NUM_POLY_COEFFICIENTS {
             // SAFETY: `p` names the current polynomial and `j` indexes its 256 coefficients.
             if unsafe { (*p).coeff[j] } != 0 {
-                // SAFETY: `coeff_index` stays below `total` for a hint with at most `omega` ones.
+                // FIPS 204 permits at most `omega` set coefficients. Refuse the next one rather
+                // than writing it: without this bound a hint with more ones would run past the
+                // `omega + k`-byte allocation.
+                if coeff_index >= omega as usize {
+                    return 0;
+                }
+                // SAFETY: `coeff_index < omega <= total`, so this write names a byte of `data`.
                 unsafe { *data.add(coeff_index) = j as u8 };
                 coeff_index += 1;
             }
@@ -1324,11 +1475,19 @@ unsafe fn hint_bits_encode(hint: *const Vector, pkt: *mut Wpacket, omega: u32) -
 /// FIPS 204 Algorithm 21, `HintBitUnpack()`. Returns 0 if `pkt` is too small or malformed.
 ///
 /// # Safety
-/// `pkt` must be a live cursor and `hint` must name `num_poly` allocated polynomials.
+/// `pkt` must be a live cursor and `hint` must name `k = hint.num_poly >= 1` allocated
+/// polynomials (the parameter sets' `k`). A zero-length vector has no limit bytes to unpackage
+/// and is refused.
 unsafe fn hint_bits_decode(hint: *mut Vector, pkt: *mut Packet, omega: u32) -> c_int {
     let mut coeff_index: usize = 0;
     // SAFETY: `hint` is live per the contract.
     let k = unsafe { (*hint).num_poly };
+    // The authority's `do { ... } while (++p < end)` runs one iteration even for `k == 0`, which
+    // would read the zero-length limit span and write through a possibly-NULL `poly`; refuse it
+    // instead of reproducing that out-of-bounds access (AGENTS §17).
+    if k == 0 {
+        return 0;
+    }
 
     // SAFETY: `pkt` is a live cursor.
     let Some(in_) = (unsafe { (*pkt).get_bytes(omega as usize) }) else {
@@ -1392,8 +1551,9 @@ unsafe fn hint_bits_decode(hint: *mut Vector, pkt: *mut Packet, omega: u32) -> c
 /// FIPS 204 Algorithm 26, `sigEncode()`.
 ///
 /// # Safety
-/// `sig` must be live with a populated `z` and `hint`, `params` must name a static set and `out`
-/// must be writable for `params->sig_len` bytes.
+/// `sig` must be live with a populated `z` and a `hint` of `params->k` polynomials carrying at
+/// most `params->omega` non-zero coefficients, `params` must name a static set and `out` must be
+/// writable for `params->sig_len` bytes. [`hint_bits_encode`] refuses a hint over the weight bound.
 pub(crate) unsafe fn ossl_ml_dsa_sig_encode(
     sig: *const MlDsaSig,
     params: *const MlDsaParams,
@@ -1573,4 +1733,52 @@ pub(crate) unsafe fn ossl_ml_dsa_w1_encode(
     // SAFETY: `pkt` was initialised above.
     unsafe { WPACKET_finish(&mut pkt) };
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Negative control for the hint-weight bound: one polynomial, `omega = 1`, four set
+    /// coefficients and a two-byte packet. Before the guard, the third and fourth writes ran past
+    /// the `omega + k` allocation; the encoder must instead refuse the over-weight hint.
+    #[test]
+    fn hint_encode_refuses_a_hint_over_the_weight_bound() {
+        let mut poly = Poly {
+            coeff: [0u32; ML_DSA_NUM_POLY_COEFFICIENTS],
+        };
+        poly.coeff[0] = 1;
+        poly.coeff[1] = 1;
+        poly.coeff[2] = 1;
+        poly.coeff[3] = 1;
+        let hint = Vector::init(&mut poly, 1);
+        let mut buf = [0u8; 2];
+        // SAFETY: `buf` is a live two-byte local and `pkt` is a live local.
+        let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
+        // SAFETY: `pkt` is a live local and `buf` is writable for its length.
+        let encoded = unsafe {
+            WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0) != 0
+                && hint_bits_encode(&hint, &mut pkt, 1) != 0
+        };
+        assert!(
+            !encoded,
+            "a hint with more than omega set coefficients must be refused"
+        );
+        // SAFETY: `pkt` was initialised above.
+        unsafe { WPACKET_finish(&mut pkt) };
+    }
+
+    /// Negative control for the zero-polynomial arm: with no limit bytes the authority's loop
+    /// reads past the packet and adds a possibly-NULL polynomial pointer. The decoder refuses.
+    #[test]
+    fn hint_decode_refuses_an_empty_vector() {
+        let mut hint = Vector::init(ptr::null_mut(), 0);
+        let buf = [0u8; 1];
+        // SAFETY: `buf` is a live one-byte local.
+        let Some(mut pkt) = (unsafe { Packet::buf_init(buf.as_ptr(), buf.len()) }) else {
+            unreachable!("a one-byte packet initialises")
+        };
+        // SAFETY: `pkt` is a live cursor and `hint` is a live (empty) vector.
+        assert_eq!(unsafe { hint_bits_decode(&mut hint, &mut pkt, 1) }, 0);
+    }
 }

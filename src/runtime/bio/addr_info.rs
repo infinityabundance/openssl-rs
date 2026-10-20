@@ -48,10 +48,12 @@ use crate::runtime::err::err_sites::{
 };
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::addr::{make_from_sockaddr, BIO_ADDR_new, BIO_ADDR_rawmake, BioAddr};
 use super::bss_sock::BIO_sock_init;
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `BIO_LOOKUP_CLIENT`.
 pub const BIO_LOOKUP_CLIENT: c_int = 0;
@@ -89,19 +91,81 @@ pub struct BioAddrInfo {
     next: *mut BioAddrInfo,
 }
 
-/// Allocate a zeroed node, or NULL.
-fn alloc_node() -> *mut BioAddrInfo {
-    let raw = CRYPTO_malloc(
-        core::mem::size_of::<BioAddrInfo>(),
-        ALLOC_FILE.as_ptr(),
-        ALLOC_LINE,
-    );
-    let p = raw.cast::<BioAddrInfo>();
-    if !p.is_null() {
-        // SAFETY: `p` is a fresh block of `size_of::<BioAddrInfo>()` bytes.
-        unsafe { sys::memset(p.cast::<c_void>(), 0, core::mem::size_of::<BioAddrInfo>()) };
+/// An owned `BioAddrInfo` node: the authority's own `CRYPTO_malloc`/`memset` block whose single
+/// release is `Drop`, so a node is never freed by hand at a call site.
+///
+/// The node owns its `addr` member too (the authority releases the address before the node in
+/// `BIO_ADDRINFO_free`), so `Drop` is the exact per-node cleanup. Ownership transfers to the
+/// chain (and then to the C caller) with [`Self::into_raw`]; [`Self::take`] reclaims a node at
+/// `BIO_ADDRINFO_free`.
+struct OwnedNode {
+    ptr: ptr::NonNull<BioAddrInfo>,
+}
+
+impl OwnedNode {
+    /// Allocate and zero a fresh node, or `None` when the allocator answers NULL -- the
+    /// authority's `alloc_node`.
+    fn new() -> Option<OwnedNode> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<BioAddrInfo>(),
+                ALLOC_FILE.as_ptr(),
+                ALLOC_LINE,
+            )
+        }
+        .cast::<BioAddrInfo>();
+        let ptr = ptr::NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh writable block of `size_of::<BioAddrInfo>()` bytes this
+        // handle owns; the all-zero image is a valid node (three integers, a `usize` and two
+        // nullable raw pointers), exactly the state the authority's own `memset` leaves.
+        unsafe {
+            sys::memset(
+                ptr.as_ptr().cast::<c_void>(),
+                0,
+                core::mem::size_of::<BioAddrInfo>(),
+            )
+        };
+        Some(OwnedNode { ptr })
     }
-    p
+
+    /// The node's address, for the fields this module fills before linking it.
+    fn as_ptr(&self) -> *mut BioAddrInfo {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the node to the chain that links it, or to the C caller.
+    fn into_raw(self) -> *mut BioAddrInfo {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Adopt a live node for release by `Drop`, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live node this module allocated and has not released; ownership of
+    /// the node and of its `addr` member transfers to the handle, whose `Drop` is their single
+    /// release.
+    unsafe fn take(ptr: *mut BioAddrInfo) -> Option<OwnedNode> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedNode { ptr })
+    }
+}
+
+impl Drop for OwnedNode {
+    fn drop(&mut self) {
+        // SAFETY: `p` is a live node this handle owns and has not released; `addr` is NULL or
+        // the live `BIO_ADDR` the node owns. The release order is the authority's: the address
+        // first, then the node block, both at the allocation's own seam coordinates.
+        unsafe {
+            let p = self.ptr.as_ptr();
+            let addr = (*p).addr;
+            if !addr.is_null() {
+                super::addr::BIO_ADDR_free(addr);
+            }
+            CRYPTO_free(p.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
+        }
+    }
 }
 
 /// `const BIO_ADDRINFO *BIO_ADDRINFO_next(const BIO_ADDRINFO *bai)`
@@ -205,16 +269,11 @@ pub unsafe extern "C" fn BIO_ADDRINFO_free(bai: *mut BioAddrInfo) {
     guard_ffi((), || {
         let mut cur = bai;
         while !cur.is_null() {
-            // SAFETY: `cur` is a live node allocated by `alloc_node`.
+            // SAFETY: `cur` is a live node allocated by `OwnedNode::new`.
             let next = unsafe { (*cur).next };
-            // SAFETY: `cur` is a live node allocated by `alloc_node`.
-            let addr = unsafe { (*cur).addr };
-            if !addr.is_null() {
-                // SAFETY: `addr` is owned by this node.
-                unsafe { super::addr::BIO_ADDR_free(addr) };
-            }
-            // SAFETY: `cur` came from `CRYPTO_malloc` and is not used again.
-            unsafe { CRYPTO_free(cur.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE) };
+            // SAFETY: `cur` is a live node this module allocated and has not released;
+            // `Drop` frees its address and the node block, in the authority's order.
+            drop(unsafe { OwnedNode::take(cur) });
             cur = next;
         }
     })
@@ -236,35 +295,46 @@ unsafe fn addrinfo_wrap(
     port: u16,
     bai: *mut *mut BioAddrInfo,
 ) -> c_int {
-    let node = alloc_node();
-    if node.is_null() {
+    let Some(node) = OwnedNode::new() else {
+        // SAFETY: `bai` is writable per the contract; the authority's own
+        // `if ((*bai = OPENSSL_zalloc(...)) == NULL) return 0;` writes NULL here.
+        unsafe { *bai = ptr::null_mut() };
         return 0;
-    }
-    // SAFETY: `node` is freshly allocated and zeroed; `bai` is writable.
+    };
+    let node_ptr = node.as_ptr();
+    // SAFETY: `node_ptr` is freshly allocated and zeroed; `bai` is writable.
     unsafe {
-        (*node).family = family;
-        (*node).socktype = socktype;
+        (*node_ptr).family = family;
+        (*node_ptr).socktype = socktype;
         if socktype == sys::SOCK_STREAM {
-            (*node).protocol = sys::IPPROTO_TCP;
+            (*node_ptr).protocol = sys::IPPROTO_TCP;
         }
         if socktype == sys::SOCK_DGRAM {
-            (*node).protocol = sys::IPPROTO_UDP;
+            (*node_ptr).protocol = sys::IPPROTO_UDP;
         }
         if family == sys::AF_UNIX {
-            (*node).protocol = 0;
+            (*node_ptr).protocol = 0;
         }
         let addr = BIO_ADDR_new();
         if !addr.is_null() {
-            BIO_ADDR_rawmake(addr, family, where_, wherelen, port);
-            (*node).addr = addr;
+            // The authority refuses a family/`where` combination `BIO_ADDR_rawmake`
+            // rejects (notably an `AF_UNIX` path that leaves no room for its NUL);
+            // taking the block unconditionally would return success with an
+            // `AF_UNSPEC` address instead.
+            if BIO_ADDR_rawmake(addr, family, where_, wherelen, port) != 0 {
+                (*node_ptr).addr = addr;
+            } else {
+                super::addr::BIO_ADDR_free(addr);
+            }
         }
-        (*node).next = ptr::null_mut();
-        if (*node).addr.is_null() {
-            BIO_ADDRINFO_free(node);
+        (*node_ptr).next = ptr::null_mut();
+        if (*node_ptr).addr.is_null() {
+            // The handle's `Drop` releases the address (if any) and then the node, exactly
+            // the authority's `BIO_ADDRINFO_free(node)` cleanup.
             *bai = ptr::null_mut();
             return 0;
         }
-        *bai = node;
+        *bai = node.into_raw();
     }
     1
 }
@@ -412,23 +482,23 @@ pub unsafe extern "C" fn BIO_lookup_ex(
             // SAFETY: `cur` is a node of glibc's list, which is live until
             // `freeaddrinfo` below.
             let ai = unsafe { &*cur };
-            let node = alloc_node();
-            if node.is_null() {
+            let Some(node) = OwnedNode::new() else {
                 break;
-            }
+            };
+            let node_ptr = node.as_ptr();
             let addr = BIO_ADDR_new();
-            // SAFETY: `node` and `addr` are freshly allocated.
+            // SAFETY: `node_ptr` and `addr` are freshly allocated.
             unsafe {
-                (*node).family = ai.ai_family;
-                (*node).socktype = ai.ai_socktype;
-                (*node).protocol = ai.ai_protocol;
-                (*node).addrlen = ai.ai_addrlen as usize;
-                (*node).next = ptr::null_mut();
+                (*node_ptr).family = ai.ai_family;
+                (*node_ptr).socktype = ai.ai_socktype;
+                (*node_ptr).protocol = ai.ai_protocol;
+                (*node_ptr).addrlen = ai.ai_addrlen as usize;
+                (*node_ptr).next = ptr::null_mut();
                 if !addr.is_null() && !ai.ai_addr.is_null() {
                     // `BIO_ADDR_make` handles the families the resolver returns and
                     // clears the rest, which is exactly the authority's cast.
                     if make_from_sockaddr(addr, ai.ai_addr) == 1 {
-                        (*node).addr = addr;
+                        (*node_ptr).addr = addr;
                     } else {
                         super::addr::BIO_ADDR_free(addr);
                     }
@@ -436,13 +506,16 @@ pub unsafe extern "C" fn BIO_lookup_ex(
                     super::addr::BIO_ADDR_free(addr);
                 }
             }
+            // Ownership transfers into the chain; the chain is released by
+            // `BIO_ADDRINFO_free`, which adopts each node.
+            let node_ptr = node.into_raw();
             if tail.is_null() {
-                head = node;
+                head = node_ptr;
             } else {
                 // SAFETY: `tail` is the last node linked so far.
-                unsafe { (*tail).next = node };
+                unsafe { (*tail).next = node_ptr };
             }
-            tail = node;
+            tail = node_ptr;
             cur = ai.ai_next;
         }
 
@@ -617,13 +690,19 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `host` is writable per the caller's contract.
                 unsafe { *host = ptr::null_mut() };
             } else {
-                // SAFETY: `h` is readable for `hl` bytes and `host` is writable.
-                let copied = unsafe { CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
-                if copied.is_null() {
+                // SAFETY: `h` is readable for `hl` bytes and the duplicate is this call's
+                // own seam block until it is handed to the out-parameter.
+                let Some(copied) = (unsafe {
+                    OwnedStr::adopt(
+                        CRYPTO_strndup(h, hl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                        SeamFile::new(ALLOC_FILE),
+                        ALLOC_LINE,
+                    )
+                }) else {
                     return 0;
-                }
+                };
                 // SAFETY: `host` is writable.
-                unsafe { *host = copied };
+                unsafe { *host = copied.into_raw() };
             }
         }
 
@@ -635,32 +714,42 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 // SAFETY: `service` is writable per the caller's contract.
                 unsafe { *service = ptr::null_mut() };
             } else {
-                // SAFETY: `p` is readable for `pl` bytes and `service` is writable.
-                let copied = unsafe { CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE) };
-                if copied.is_null() {
-                    // The host half, if it was allocated, is released again; the
+                // SAFETY: `p` is readable for `pl` bytes and the duplicate is this call's
+                // own seam block until it is handed to the out-parameter.
+                let Some(copied) = (unsafe {
+                    OwnedStr::adopt(
+                        CRYPTO_strndup(p, pl, ALLOC_FILE.as_ptr(), ALLOC_LINE),
+                        SeamFile::new(ALLOC_FILE),
+                        ALLOC_LINE,
+                    )
+                }) else {
+                    // The host half, if this call wrote it, is released again; the
                     // out-parameter is left NULL so the caller cannot double-free.
-                    if !host.is_null() {
-                        // SAFETY: `*host` is either NULL or our allocation.
+                    //
+                    // The `h != NULL` guard is the authority's own (`bio_addr.c`
+                    // frees `*host` only when `h != NULL && host != NULL`): with `h ==
+                    // NULL` the host branch never ran, so `*host` is the caller's
+                    // value and is left untouched.
+                    if !h.is_null() && !host.is_null() {
+                        // SAFETY: `*host` is writable and was written by the host
+                        // branch above, so it is NULL or this call's allocation.
                         let existing = unsafe { *host };
-                        if !existing.is_null() {
-                            // SAFETY: `existing` came from `CRYPTO_strndup` above.
-                            unsafe {
-                                CRYPTO_free(
-                                    existing.cast::<c_void>(),
-                                    ALLOC_FILE.as_ptr(),
-                                    ALLOC_LINE,
-                                )
-                            };
+                        // SAFETY: `existing` is NULL or the block `CRYPTO_strndup` produced
+                        // above, which this call owns and no one else will release.
+                        let owner = unsafe {
+                            OwnedStr::adopt(existing, SeamFile::new(ALLOC_FILE), ALLOC_LINE)
+                        };
+                        if let Some(owner) = owner {
+                            drop(owner);
                             // SAFETY: `host` is writable per the caller's contract;
                             // clearing it prevents the caller double-freeing.
                             unsafe { *host = ptr::null_mut() };
                         }
                     }
                     return 0;
-                }
+                };
                 // SAFETY: `service` is writable.
-                unsafe { *service = copied };
+                unsafe { *service = copied.into_raw() };
             }
         }
 
@@ -746,6 +835,55 @@ mod tests {
         assert_eq!(parse(c"[::1]x", BIO_PARSE_PRIO_HOST), (0, None, None));
         // A colon in the service half names no service.
         assert_eq!(parse(c"host:a:b", BIO_PARSE_PRIO_HOST), (0, None, None));
+    }
+
+    #[test]
+    fn a_unix_path_that_cannot_be_terminated_is_refused() {
+        // `BIO_ADDR_rawmake` requires `wherelen + 1 <= sizeof(sun_path)`; 107 bytes is the
+        // last path length with room for the NUL, and 108 is the first that has none.
+        let mut last_fit_bytes = vec![b'a'; 107];
+        last_fit_bytes.push(0);
+        let mut too_long_bytes = vec![b'a'; 108];
+        too_long_bytes.push(0);
+        let Ok(last_fit) = CStr::from_bytes_with_nul(&last_fit_bytes) else {
+            return;
+        };
+        let Ok(too_long) = CStr::from_bytes_with_nul(&too_long_bytes) else {
+            return;
+        };
+
+        let mut res: *mut BioAddrInfo = ptr::null_mut();
+        // SAFETY: both paths are NUL-terminated, `res` is writable, and the remaining
+        // arguments are the AF_UNIX lookup the authority supports.
+        let ok = unsafe {
+            BIO_lookup(
+                last_fit.as_ptr(),
+                ptr::null(),
+                BIO_LOOKUP_CLIENT,
+                sys::AF_UNIX,
+                sys::SOCK_STREAM,
+                &mut res,
+            )
+        };
+        assert_eq!(ok, 1);
+        assert!(!res.is_null());
+        // SAFETY: `res` is the chain this call just built and has not released.
+        unsafe { BIO_ADDRINFO_free(res) };
+
+        let mut res: *mut BioAddrInfo = ptr::null_mut();
+        // SAFETY: as above; the authority refuses this path and writes NULL to `res`.
+        let refused = unsafe {
+            BIO_lookup(
+                too_long.as_ptr(),
+                ptr::null(),
+                BIO_LOOKUP_CLIENT,
+                sys::AF_UNIX,
+                sys::SOCK_STREAM,
+                &mut res,
+            )
+        };
+        assert_eq!(refused, 0);
+        assert!(res.is_null());
     }
 
     #[test]

@@ -42,7 +42,7 @@
 // The three shared bodies expand with the authority's argument counts.
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::mem::size_of;
 use core::ptr;
 
@@ -84,6 +84,8 @@ use crate::provider::der_ml_dsa_key::ossl_DER_w_algorithmIdentifier_ML_DSA;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `ML_DSA_MESSAGE_ENCODE_RAW` — `ml_dsa_sig.c.in:32`.
 const ML_DSA_MESSAGE_ENCODE_RAW: c_int = 0;
@@ -110,6 +112,8 @@ const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr(
 /// The unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c");
 /// `ml_dsa_sig.c:78`, the `OPENSSL_free(ctx->sig)` in `ml_dsa_freectx`.
 const LINE_FREE_SIG: c_int = 78;
 /// `ml_dsa_sig.c:79`, the `OPENSSL_free(ctx)` in `ml_dsa_freectx`.
@@ -178,11 +182,22 @@ unsafe extern "C" fn ml_dsa_freectx(vctx: *mut c_void) {
     // SAFETY: `ctx` is the caller's context.
     unsafe {
         EVP_MD_CTX_free((*ctx).md_ctx);
+        // The whole array is cleansed, not `test_entropy_len` bytes: a failed or
+        // wrong-length `set_ctx_params` resets the length to 0 after writing entropy into
+        // the buffer, so the length alone would leave the earlier bytes (and any partial
+        // write) uncleansed. Deliberate secret-residue improvement over
+        // `ml_dsa_sig.c:78`; the buffer contents are not observable through the API.
         OPENSSL_cleanse(
             (*ctx).test_entropy.as_mut_ptr().cast(),
-            (*ctx).test_entropy_len,
+            (*ctx).test_entropy.len(),
         );
-        CRYPTO_free((*ctx).sig.cast(), FILE, LINE_FREE_SIG);
+        // SAFETY: `sig` is a live block this unit allocated through the crate's `CRYPTO_*` seam
+        // (or NULL), and no other owner will release it.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).sig.cast::<c_uchar>(),
+            FILE_SEAM,
+            LINE_FREE_SIG,
+        ));
         CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX);
     }
 }
@@ -202,8 +217,11 @@ unsafe fn ml_dsa_newctx(
     }
 
     // SAFETY: `CRYPTO_zalloc` answers a zeroed block or NULL.
-    let ctx =
-        CRYPTO_zalloc(size_of::<ProvMlDsaCtx>(), FILE, LINE_ZALLOC_CTX).cast::<ProvMlDsaCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<ProvMlDsaCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<ProvMlDsaCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }
@@ -248,21 +266,36 @@ unsafe extern "C" fn ml_dsa_dupctx(vctx: *mut c_void) -> *mut c_void {
     // SAFETY: `dstctx` is a fresh copy of `srcctx`; the two owned pointers are replaced below.
     unsafe {
         if !(*srcctx).sig.is_null() {
-            (*dstctx).sig = CRYPTO_memdup(
-                (*srcctx).sig.cast(),
-                (*srcctx).siglen,
-                FILE,
-                LINE_MEMDUP_SIG,
-            )
-            .cast::<u8>();
-            if (*dstctx).sig.is_null() {
-                /*
-                 * Can't call `ml_dsa_freectx()` here, as it would free `md_ctx`, which has not
-                 * been duplicated yet.
-                 */
+            // `CRYPTO_memdup` answers NULL or a plain copy of the source signature the crate
+            // allocated and no one else owns; the handle adopts it so a refusal below releases it at
+            // the authority's own site.
+            // SAFETY: `(*srcctx).sig` is live for `(*srcctx).siglen` bytes.
+            // SAFETY: `CRYPTO_memdup` answers NULL or a live block the crate's `CRYPTO_*` seam
+            // allocated in full and no other owner will release it.
+            let Some(sig) = OwnedBuf::adopt_plain(
+                CRYPTO_memdup(
+                    (*srcctx).sig.cast(),
+                    (*srcctx).siglen,
+                    FILE,
+                    LINE_MEMDUP_SIG,
+                )
+                .cast::<c_uchar>(),
+                FILE_SEAM,
+                LINE_FREE_SIG,
+            ) else {
+                // The authority frees the context copy alone here (it cannot call `freectx`
+                // before `md_ctx` is duplicated). That copy may carry the caller's secret
+                // `test_entropy`, so cleanse it before the release; the authority leaves it
+                // uncleansed (AGENTS.md section 5). Release events are unchanged.
+                OPENSSL_cleanse(
+                    (*dstctx).test_entropy.as_mut_ptr().cast(),
+                    (*dstctx).test_entropy.len(),
+                );
+                (*dstctx).sig = ptr::null_mut();
                 CRYPTO_free(dstctx.cast(), FILE, LINE_FREE_DSTCTX);
                 return ptr::null_mut();
-            }
+            };
+            (*dstctx).sig = sig.into_raw().cast::<u8>();
         }
 
         if !(*srcctx).md_ctx.is_null() {
@@ -923,6 +956,14 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
         if !p.ent.is_null() {
             let mut vp: *mut c_void = (*pctx).test_entropy.as_mut_ptr().cast();
             (*pctx).test_entropy_len = 0;
+            // Clear the previous value before the copy so neither a refused copy nor a
+            // wrong-length copy can leave earlier entropy bytes in the array. Deliberate
+            // secret-residue improvement over `ml_dsa_sig.c:415-427`; no observable output
+            // changes (the length is zero on both refusal paths).
+            OPENSSL_cleanse(
+                (*pctx).test_entropy.as_mut_ptr().cast(),
+                (*pctx).test_entropy.len(),
+            );
             if OSSL_PARAM_get_octet_string(
                 p.ent,
                 &mut vp,
@@ -934,6 +975,10 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
             }
             if (*pctx).test_entropy_len != (*pctx).test_entropy.len() {
                 (*pctx).test_entropy_len = 0;
+                OPENSSL_cleanse(
+                    (*pctx).test_entropy.as_mut_ptr().cast(),
+                    (*pctx).test_entropy.len(),
+                );
                 raise_site(&err_sites::PROV_ML_DSA_SIG_622);
                 return 0;
             }
@@ -952,7 +997,13 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
         }
 
         if !p.sig.is_null() && (*pctx).operation == EVP_PKEY_OP_VERIFYMSG {
-            CRYPTO_free((*pctx).sig.cast(), FILE, LINE_FREE_SET_SIG);
+            // SAFETY: `sig` is a live block this unit allocated through the crate's `CRYPTO_*`
+            // seam (or NULL), and no other owner will release it.
+            drop(OwnedBuf::adopt_plain(
+                (*pctx).sig.cast::<c_uchar>(),
+                FILE_SEAM,
+                LINE_FREE_SET_SIG,
+            ));
             (*pctx).sig = ptr::null_mut();
             (*pctx).siglen = 0;
             if OSSL_PARAM_get_octet_string(
@@ -1209,3 +1260,56 @@ make_ml_dsa_signature_functions!(
 /// `ML_DSA_MESSAGE_ENCODE_RAW` is the value `set_ctx_params` writes for a raw message; named here
 /// so a reader sees both encodings the unit carries.
 const _: c_int = ML_DSA_MESSAGE_ENCODE_RAW;
+
+/// Negative control for the `ml_dsa_dupctx` signature-refusal path.
+///
+/// When the signature copy is refused, the authority frees the context duplicate alone
+/// (`OPENSSL_free(dstctx)`, not `freectx`, because `md_ctx` has not been duplicated yet).
+/// That duplicate carries a copy of the caller's secret `test_entropy`; before this repair
+/// it stayed in the released block. The probe refuses the two-byte signature allocation
+/// and checks the `test_entropy` member before the context is released.
+///
+/// Process-global allocator hook, so the test is ignored in the routine suite and runs
+/// alone in its own process.
+#[cfg(test)]
+mod adv_probe {
+    use super::*;
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_signature_copy_cleanses_the_dupctx_entropy() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let mut sig = [0u8; 2];
+        // SAFETY: every field is a raw pointer, an integer or a fixed array; the zero value is a
+        // valid source context for `ml_dsa_dupctx`, whose `md_ctx` is NULL so no digest context is
+        // duplicated.
+        let mut src = unsafe { core::mem::zeroed::<ProvMlDsaCtx>() };
+        src.test_entropy = [0x5au8; ML_DSA_ENTROPY_LEN];
+        src.test_entropy_len = ML_DSA_ENTROPY_LEN;
+        src.sig = sig.as_mut_ptr();
+        src.siglen = sig.len();
+
+        adv_alloc::reset();
+        // The signature copy is the first request of this size; the context memdup is larger.
+        adv_alloc::arm_any(sig.len());
+        // SAFETY: the next forwarded release is the context duplicate (the refusal above does not
+        // release anything); its `test_entropy` member is live for the whole block.
+        unsafe {
+            adv_alloc::arm_cleansed_free_range(
+                core::mem::offset_of!(ProvMlDsaCtx, test_entropy),
+                ML_DSA_ENTROPY_LEN,
+            )
+        };
+        // SAFETY: `src` is this frame's live context; `ml_dsa_dupctx` owns the duplicate and frees
+        // it on the refused-signature arm.
+        let dup = unsafe { ml_dsa_dupctx((&mut src as *mut ProvMlDsaCtx).cast()) };
+        adv_alloc::disarm_any();
+        assert!(dup.is_null(), "a refused signature copy must refuse dupctx");
+        adv_alloc::assert_not_cleansed();
+        adv_alloc::assert_no_double_free();
+    }
+}

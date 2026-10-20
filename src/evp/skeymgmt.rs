@@ -66,7 +66,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -80,6 +82,7 @@ use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{
     ossl_provider_ctx, ossl_provider_free, ossl_provider_name, ossl_provider_up_ref, OsslProvider,
 };
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
@@ -217,6 +220,32 @@ pub struct EvpSkeyMgmt {
     pub(crate) free: Option<SkeymgmtFreeFn>,
 }
 
+/// The authority's `EVP_SKEYMGMT_free` body minus the block release [`OwnedCtx`]'s `Drop` performs:
+/// the type name and the provider reference, in that order (`:169`, `:170`).
+// SAFETY: (a) `destroy_body` is the authority's `EVP_SKEYMGMT_free` member body, releasing exactly
+// this method's type name and provider reference once (each releaser accepts the unset NULL) and
+// never the enclosing block, which `OwnedCtx` releases; (b) `EvpSkeyMgmt` is a `#[repr(C)]` record
+// of raw pointers, an integer, an `AtomicI32` and `Option<fn>` dispatch slots, so an all-zero block
+// is a valid `EvpSkeyMgmt` the body is sound on.
+unsafe impl CtxDestroy for EvpSkeyMgmt {
+    const FILE: *const c_char = FILE_METH;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_SKEYMGMT;
+    const LINE_FREE: c_int = LINE_FREE_SKEYMGMT;
+
+    unsafe fn destroy_body(ptr: *mut EvpSkeyMgmt) {
+        // SAFETY: `ptr` is a live keymgmt per the trait contract; `type_name` is NULL or this file's
+        // own `CRYPTO_strdup` block and `prov` is NULL or an owned provider reference.
+        unsafe {
+            CRYPTO_free(
+                (*ptr).type_name.cast::<c_void>(),
+                FILE_METH,
+                LINE_FREE_TYPE_NAME,
+            );
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 /// `struct evp_skey_st` — `EVP_SKEY`, from `include/crypto/evp.h`.
 ///
 /// **Four fields and two references**, and it is the only object in this stratum that holds a lock
@@ -237,6 +266,88 @@ pub struct EvpSkey {
     pub(crate) keydata: *mut c_void,
     /// `EVP_SKEYMGMT *skeymgmt` — the method, and **this object owns a reference to it**.
     pub(crate) skeymgmt: *mut EvpSkeyMgmt,
+}
+
+/// The `crypto/evp/s_lib.c` key-block seam.
+///
+/// `EvpSkey` is allocated at `:39`. The constructor's error arms release the **bare block** at `:60`
+/// — they must not run the key's destructor body, because the key is only half built and
+/// `evp_skeymgmt_freedata` dereferences `skeymgmt`, which is not set yet — while `EVP_SKEY_free`
+/// runs the destructor body and releases at `:225`. The release line and whether the destructor runs
+/// are therefore properties of the handle, not of the type, so this seam carries both.
+struct OwnedSkey {
+    ptr: ptr::NonNull<EvpSkey>,
+    release_line: c_int,
+    destruct: bool,
+}
+
+impl OwnedSkey {
+    /// `OPENSSL_zalloc(sizeof(*skey))` at `s_lib.c:39`, in the constructor window: `Drop` releases
+    /// the bare block at the error arm's `:60`.
+    fn zalloc() -> Option<OwnedSkey> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EvpSkey>(), FILE_LIB, LINE_ZALLOC_SKEY)
+        }
+        .cast::<EvpSkey>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedSkey {
+            ptr,
+            release_line: LINE_FREE_SKEY_ON_ALLOC,
+            destruct: false,
+        })
+    }
+
+    /// The key's stable address, for the fields the constructor sets.
+    fn as_ptr(&self) -> *mut EvpSkey {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the finished key to the C caller's pointer.
+    fn into_raw(self) -> *mut EvpSkey {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the finished key `into_raw` gave the C caller, for release by `Drop`, which runs the
+    /// authority's destructor body and the block release at `EVP_SKEY_free`'s `:225`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live, fully built key a previous `into_raw` gave up and `Drop` has not
+    /// released.
+    unsafe fn reclaim(ptr: *mut EvpSkey) -> Option<OwnedSkey> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedSkey {
+            ptr,
+            release_line: LINE_FREE_SKEY,
+            destruct: true,
+        })
+    }
+}
+
+impl Drop for OwnedSkey {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated (or `reclaim` took) and `Drop` runs
+        // once; the destructor body runs only for a fully built key, and this is its single release.
+        unsafe {
+            if self.destruct {
+                let p = self.ptr.as_ptr();
+                // The authority's `EVP_SKEY_free` order: the key data, then the method, then the
+                // lock, then the block. The key-data test is the authority's own: a key whose
+                // import/generate failed before producing data still reaches this destructor, and
+                // the provider's mandatory `free` must not be called with a NULL it never saw.
+                if !(*p).keydata.is_null() {
+                    evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata);
+                }
+                EVP_SKEYMGMT_free((*p).skeymgmt);
+                CRYPTO_THREAD_lock_free((*p).lock);
+            }
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE_LIB,
+                self.release_line,
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -275,18 +386,15 @@ unsafe extern "C" fn evp_skeymgmt_free(vkeymgmt: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn skeymgmt_new() -> *mut EvpSkeyMgmt {
-    let skeymgmt = CRYPTO_zalloc(
-        core::mem::size_of::<EvpSkeyMgmt>(),
-        FILE_METH,
-        LINE_ZALLOC_SKEYMGMT,
-    )
-    .cast::<EvpSkeyMgmt>();
-    if skeymgmt.is_null() {
+    // A zeroed `EvpSkeyMgmt` (all-NULL pointers, zero scalars) is the authority's own
+    // `OPENSSL_zalloc` state, so `OwnedCtx::zalloc` may validate it.
+    let Some(skeymgmt) = OwnedCtx::<EvpSkeyMgmt>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `skeymgmt` is a fresh zeroed block this call owns.
-    unsafe { (*skeymgmt).refcnt = AtomicI32::new(1) };
-    skeymgmt
+    };
+    let p = skeymgmt.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns.
+    unsafe { (*p).refcnt = AtomicI32::new(1) };
+    skeymgmt.into_raw()
 }
 
 /// `static void *skeymgmt_from_algorithm(int name_id, const OSSL_ALGORITHM *algodef,
@@ -446,9 +554,11 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_fetch(
 /// `keymgmt` must be a live `EvpSkeyMgmt`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_SKEYMGMT_up_ref(keymgmt: *mut EvpSkeyMgmt) -> c_int {
-    // SAFETY: `keymgmt` is live per the contract.
-    unsafe { (*keymgmt).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `keymgmt` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*keymgmt).refcnt) }
 }
 
 /// `void EVP_SKEYMGMT_free(EVP_SKEYMGMT *keymgmt)`.
@@ -462,21 +572,18 @@ pub unsafe extern "C" fn EVP_SKEYMGMT_free(keymgmt: *mut EvpSkeyMgmt) {
     if keymgmt.is_null() {
         return;
     }
-    // SAFETY: `keymgmt` is live per the contract.
-    let last = unsafe { (*keymgmt).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `keymgmt` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*keymgmt).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_SKEYMGMT_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
-    unsafe {
-        CRYPTO_free(
-            (*keymgmt).type_name.cast::<c_void>(),
-            FILE_METH,
-            LINE_FREE_TYPE_NAME,
-        );
-        ossl_provider_free((*keymgmt).prov);
-        CRYPTO_free(keymgmt.cast::<c_void>(), FILE_METH, LINE_FREE_SKEYMGMT);
-    }
+    // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
+    // `Drop` runs the name and provider releases (`:169`) then the block release at `:172`.
+    unsafe { drop(OwnedCtx::<EvpSkeyMgmt>::from_raw(keymgmt)) };
 }
 
 /// `const OSSL_PROVIDER *EVP_SKEYMGMT_get0_provider(const EVP_SKEYMGMT *keymgmt)`.
@@ -821,11 +928,10 @@ pub(crate) unsafe fn evp_skey_alloc(skeymgmt: *mut EvpSkeyMgmt) -> *mut EvpSkey 
         return ptr::null_mut();
     }
 
-    let skey = CRYPTO_zalloc(core::mem::size_of::<EvpSkey>(), FILE_LIB, LINE_ZALLOC_SKEY)
-        .cast::<EvpSkey>();
-    if skey.is_null() {
+    let Some(skey_owned) = OwnedSkey::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let skey = skey_owned.as_ptr();
 
     // SAFETY: `skey` is a fresh zeroed block this call owns.
     unsafe { (*skey).references = AtomicI32::new(1) };
@@ -834,8 +940,7 @@ pub(crate) unsafe fn evp_skey_alloc(skeymgmt: *mut EvpSkeyMgmt) -> *mut EvpSkey 
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::S_LIB_47) };
-        // SAFETY: `skey` is this call's own block and no lock was taken.
-        unsafe { CRYPTO_free(skey.cast::<c_void>(), FILE_LIB, LINE_FREE_SKEY_ON_ALLOC) };
+        // `skey_owned`'s `Drop` is the error arm's bare `OPENSSL_free(skey)` at `s_lib.c:60`.
         return ptr::null_mut();
     }
     // SAFETY: `skey` is live and `lock` is the lock just allocated for it.
@@ -845,15 +950,15 @@ pub(crate) unsafe fn evp_skey_alloc(skeymgmt: *mut EvpSkeyMgmt) -> *mut EvpSkey 
     if (unsafe { EVP_SKEYMGMT_up_ref(skeymgmt) }) != 0 {
         // SAFETY: `skey` is live and `skeymgmt` is live.
         unsafe { (*skey).skeymgmt = skeymgmt };
-        return skey;
+        // The key is fully built: `into_raw` hands it to the caller, whose `EVP_SKEY_free` reclaims
+        // it so its `Drop` runs the destructor body and the release at `:225`.
+        return skey_owned.into_raw();
     }
 
     // The `else goto err` arm, which is dead because the up-ref answers the constant 1.
     // SAFETY: `skey` is this call's own block and its lock is this call's own.
-    unsafe {
-        CRYPTO_THREAD_lock_free((*skey).lock);
-        CRYPTO_free(skey.cast::<c_void>(), FILE_LIB, LINE_FREE_SKEY_ON_ALLOC);
-    }
+    unsafe { CRYPTO_THREAD_lock_free((*skey).lock) };
+    // `skey_owned`'s `Drop` is the error arm's bare `OPENSSL_free(skey)` at `s_lib.c:60`.
     ptr::null_mut()
 }
 
@@ -1110,13 +1215,12 @@ pub unsafe extern "C" fn EVP_SKEY_import_raw_key(
 /// `skey` must be a live `EvpSkey`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_SKEY_up_ref(skey: *mut EvpSkey) -> c_int {
-    // SAFETY: `skey` is live per the contract.
-    let previous = unsafe { (*skey).references.fetch_add(1, Ordering::AcqRel) };
-    if previous + 1 > 1 {
-        1
-    } else {
-        0
-    }
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it (the §17 divergence recorded in
+    // `runtime::refcount`; the authority would wrap zero to one and report failure).
+    // SAFETY: `skey` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*skey).references) }
 }
 
 /// `void EVP_SKEY_free(EVP_SKEY *skey)`.
@@ -1133,19 +1237,19 @@ pub unsafe extern "C" fn EVP_SKEY_free(skey: *mut EvpSkey) {
     if skey.is_null() {
         return;
     }
-    // SAFETY: `skey` is live per the contract.
-    let new = unsafe { (*skey).references.fetch_sub(1, Ordering::AcqRel) } - 1;
-    if new > 0 {
-        return;
+    // SAFETY: `skey` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*skey).references) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The destructor calls the provider's `free(keydata)` callback; a re-entrant
+        // `EVP_SKEY_free` from it observes the destroying sentinel and stops.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: the count reached zero, so this is the last reference and every field is this call's
-    // to release.
-    unsafe {
-        evp_skeymgmt_freedata((*skey).skeymgmt, (*skey).keydata);
-        EVP_SKEYMGMT_free((*skey).skeymgmt);
-        CRYPTO_THREAD_lock_free((*skey).lock);
-        CRYPTO_free(skey.cast::<c_void>(), FILE_LIB, LINE_FREE_SKEY);
-    }
+    // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
+    // `Drop` runs the authority's own destructor body (key data, method, lock) then the block
+    // release at `s_lib.c:225`.
+    unsafe { drop(OwnedSkey::reclaim(skey)) };
 }
 
 /// `const char *EVP_SKEY_get0_key_id(const EVP_SKEY *skey)`.
@@ -1392,6 +1496,67 @@ pub unsafe extern "C" fn EVP_SKEY_to_provider(
 mod tests {
     use super::*;
     use core::ffi::CStr;
+    use core::sync::atomic::AtomicUsize;
+
+    static SKEY_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static SKEY_REENTERS: AtomicUsize = AtomicUsize::new(0);
+    static SKEY_KEY_FREES: AtomicUsize = AtomicUsize::new(0);
+
+    /// Counts key-destructor calls; the fixture's key data is never dereferenced.
+    unsafe extern "C" fn counting_key_free(_keydata: *mut c_void) {
+        SKEY_KEY_FREES.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// The method's `free(keydata)` hook is provider-controlled. Re-entering `EVP_SKEY_free`
+    /// from it must observe the destroying sentinel, not tear the key down twice.
+    unsafe extern "C" fn reentrant_key_free(_keydata: *mut c_void) {
+        let key = SKEY_TARGET.load(Ordering::SeqCst) as *mut EvpSkey;
+        if !key.is_null() {
+            SKEY_REENTERS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: the target is the key whose destructor body is running; its block is
+            // still allocated here.
+            unsafe { EVP_SKEY_free(key) }
+        }
+    }
+
+    #[test]
+    fn free_reentry_from_the_provider_key_destructor_is_a_noop() {
+        // SAFETY: the method is a live stack object and `evp_skey_alloc` takes its own
+        // reference; the returned key owns the only key-data reference.
+        unsafe {
+            let mut mgmt = a_hand_built_skeymgmt();
+            mgmt.free = Some(reentrant_key_free);
+            let key = evp_skey_alloc(&mut mgmt);
+            assert!(!key.is_null());
+            // The authority calls the key destructor only for a non-NULL key data value; the
+            // re-entrancy arm under test is the one that runs then.
+            (*key).keydata = core::ptr::NonNull::<c_void>::dangling().as_ptr();
+            SKEY_TARGET.store(key as usize, Ordering::SeqCst);
+            SKEY_REENTERS.store(0, Ordering::SeqCst);
+            EVP_SKEY_free(key);
+            SKEY_TARGET.store(0, Ordering::SeqCst);
+            assert_eq!(SKEY_REENTERS.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    /// A key whose import/generate failed before producing any key data is released without asking
+    /// the provider to free NULL: the authority guards `skey->keydata != NULL` and so must this
+    /// destructor, because the provider's `free` is a callback it does not control.
+    #[test]
+    fn a_failed_key_without_data_does_not_call_the_provider_destructor() {
+        // SAFETY: the method is a live stack object and `evp_skey_alloc` takes its own
+        // reference; the key's `keydata` stays NULL.
+        unsafe {
+            let mut mgmt = a_hand_built_skeymgmt();
+            mgmt.free = Some(counting_key_free);
+            let key = evp_skey_alloc(&mut mgmt);
+            assert!(!key.is_null());
+            assert!((*key).keydata.is_null());
+            SKEY_KEY_FREES.store(0, Ordering::SeqCst);
+            EVP_SKEY_free(key);
+            assert_eq!(SKEY_KEY_FREES.load(Ordering::SeqCst), 0);
+        }
+    }
 
     /// A method built by hand, so the arms of this file that are not about fetching can be read
     /// without a provider.
@@ -1512,11 +1677,12 @@ mod tests {
         unsafe {
             assert_eq!(EVP_SKEY_up_ref(sp), 1);
             assert_eq!(skey.references.load(Ordering::Acquire), 2);
-            /* A count of zero is not brought back to life: `CRYPTO_UP_REF` would make it 1 and the
-             * authority's answer is `new > 1`. */
+            /* A count of zero is not brought back to life. The authority's `CRYPTO_UP_REF`
+             * would make it 1 and answer `new > 1` (0); this crate's shared checked protocol
+             * refuses without changing the count, which is the recorded §17 divergence. */
             skey.references.store(0, Ordering::Release);
             assert_eq!(EVP_SKEY_up_ref(sp), 0);
-            assert_eq!(skey.references.load(Ordering::Acquire), 1);
+            assert_eq!(skey.references.load(Ordering::Acquire), 0);
         }
     }
 
@@ -1649,3 +1815,7 @@ mod tests {
         assert!(unsafe { evp_skey_alloc(ptr::null_mut()) }.is_null());
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpSkeyMgmt => zero_state_sweep_evp_skey_mgmt);

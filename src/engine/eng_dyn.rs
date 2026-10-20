@@ -75,6 +75,7 @@ use crate::engine::eng_lib::{
 };
 use crate::engine::eng_list::{engine_add_dynamic_id, engine_remove_dynamic_id, ENGINE_add};
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites::{
     ENG_DYN_166, ENG_DYN_213, ENG_DYN_295, ENG_DYN_301, ENG_DYN_330, ENG_DYN_339, ENG_DYN_347,
     ENG_DYN_356, ENG_DYN_364, ENG_DYN_429, ENG_DYN_440, ENG_DYN_465, ENG_DYN_498, ENG_DYN_514,
@@ -82,6 +83,8 @@ use crate::runtime::err::err_sites::{
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData, CRYPTO_EX_INDEX_ENGINE};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_get_mem_functions, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -96,6 +99,7 @@ extern "C" {
 /// `OPENSSL_FILE` for the allocations and frees this unit makes, so a caller's
 /// `CRYPTO_set_mem_functions` sees the authority's own coordinate.
 const FILE: *const c_char = c"crypto/engine/eng_dyn.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/engine/eng_dyn.c");
 
 /// `dynamic_set_data_ctx`'s `OPENSSL_zalloc(sizeof(*c))` (`:159`).
 const LINE_SET_CTX_ZALLOC: c_int = 159;
@@ -296,6 +300,88 @@ static DYNAMIC_CMD_DEFNS: SyncCmdDefns = SyncCmdDefns([
 /// `global_engine_lock`; the value is a plain index, so the accesses are `Relaxed`.
 static DYNAMIC_EX_DATA_IDX: AtomicI32 = AtomicI32::new(-1);
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the per-engine context and the strings it holds
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is `dynamic_data_ctx_free_func` minus the block -- the DSO, the
+// two owned names and the `dirs` stack, each releaser NULL-tolerant, never the enclosing block.
+// (b) holds: `DynamicDataCtx` is a `#[repr(C)]` record of raw pointers, integers and
+// `Option<fn>`s, so an all-zero block is a valid value, and `destroy_body` is sound on it
+// (`DSO_free(NULL)`, two nullable `OwnedStr::adopt` and `OPENSSL_sk_pop_free(NULL)`).
+unsafe impl CtxDestroy for DynamicDataCtx {
+    /// `dynamic_data_ctx_free_func`'s body (`:137-147`): the DSO, the two owned names and the
+    /// `dirs` stack.
+    unsafe fn destroy_body(ptr: *mut DynamicDataCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; the names are NULL or this
+        // file's own `CRYPTO_strdup` blocks and `dirs` is the stack `dynamic_set_data_ctx` built.
+        unsafe {
+            DSO_free((*ptr).dynamic_dso);
+            drop(OwnedStr::adopt(
+                (*ptr).DYNAMIC_LIBNAME,
+                FILE_SEAM,
+                LINE_FREE_LIBNAME,
+            ));
+            drop(OwnedStr::adopt(
+                (*ptr).engine_id,
+                FILE_SEAM,
+                LINE_FREE_ENGINE_ID,
+            ));
+            OPENSSL_sk_pop_free((*ptr).dirs, Some(int_free_str));
+        }
+    }
+}
+
+/// An owned [`DynamicDataCtx`] block still under construction.
+///
+/// [`dynamic_set_data_ctx`] allocates the context and builds it one member at a time; on its
+/// `end:` arms the release is the `dirs` stack it holds and the block alone (`:190-194`), so the
+/// free hook's destructor over strings that may not be set must not run. [`Self::finish`] hands
+/// the block to the ENGINE's `ex_data` on success.
+struct RawDataCtx {
+    ptr: ptr::NonNull<DynamicDataCtx>,
+}
+
+impl RawDataCtx {
+    /// `CRYPTO_zalloc(sizeof(*c), FILE, 159)`, or `None` when it answers NULL.
+    fn new() -> Option<RawDataCtx> {
+        // A zeroed context is a valid one: every member is a plain pointer or scalar and
+        // `dynamic_set_data_ctx` sets each before it is read.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<DynamicDataCtx>(), FILE, LINE_SET_CTX_ZALLOC)
+        }
+        .cast::<DynamicDataCtx>();
+        ptr::NonNull::new(raw).map(|ptr| RawDataCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut DynamicDataCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the ENGINE's `ex_data`.
+    fn finish(self) -> *mut DynamicDataCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawDataCtx {
+    /// The authority's `dynamic_set_data_ctx` `end:` release (`:190-194`): the `dirs` stack the
+    /// half-built context holds, then the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; `dirs` is
+        // the stack `OPENSSL_sk_new_null` answered (NULL-safe) and the block's single release is
+        // the authority's own plain `CRYPTO_free`.
+        unsafe {
+            OPENSSL_sk_free((*self.ptr.as_ptr()).dirs);
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE_CTX_END);
+        }
+    }
+}
+
 /// `static void int_free_str(char *s)` — `crypto/engine/eng_dyn.c:123-126`.
 ///
 /// The stack element destructor: `sk_OPENSSL_STRING_pop_free(ctx->dirs, int_free_str)`.
@@ -303,8 +389,9 @@ static DYNAMIC_EX_DATA_IDX: AtomicI32 = AtomicI32::new(-1);
 /// # Safety
 /// `s` must be NULL or one of this module's `CRYPTO_strdup` results.
 unsafe extern "C" fn int_free_str(s: *mut c_void) {
-    // SAFETY: `s` is NULL or a `CRYPTO_strdup` answer, per the caller's contract.
-    unsafe { CRYPTO_free(s, FILE, LINE_INT_FREE_STR) };
+    // SAFETY: `s` is NULL or one of this module's `CRYPTO_strdup` answers, per the caller's
+    // contract; the seam's `Drop` performs its single plain release at the authority's own site.
+    drop(unsafe { OwnedStr::adopt(s.cast::<c_char>(), FILE_SEAM, LINE_INT_FREE_STR) });
 }
 
 /// `static void dynamic_data_ctx_free_func(...)` — `crypto/engine/eng_dyn.c:137-149`.
@@ -319,38 +406,16 @@ unsafe extern "C" fn dynamic_data_ctx_free_func(
     _argl: c_long,
     _argp: *mut c_void,
 ) {
-    if ptr.is_null() {
-        return;
-    }
-    let ctx = ptr.cast::<DynamicDataCtx>();
-    // SAFETY: `ptr` is a ctx this module allocated and stored, so every field is live.
-    unsafe {
-        DSO_free((*ctx).dynamic_dso);
-        CRYPTO_free(
-            (*ctx).DYNAMIC_LIBNAME.cast::<c_void>(),
-            FILE,
-            LINE_FREE_LIBNAME,
-        );
-        CRYPTO_free((*ctx).engine_id.cast::<c_void>(), FILE, LINE_FREE_ENGINE_ID);
-        OPENSSL_sk_pop_free((*ctx).dirs, Some(int_free_str));
-        CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX);
-    }
-}
-
-/// The authority's `end:` tail of `dynamic_set_data_ctx` (`:190-194`): free the half-built
-/// context (if still owned) and answer `ret`.
-///
-/// # Safety
-/// `c` must be NULL or a context this module allocated whose `dirs` field is live.
-unsafe fn set_data_ctx_end(c: *mut DynamicDataCtx, ret: c_int) -> c_int {
-    if !c.is_null() {
-        // SAFETY: `c` is a live context whose `dirs` is the stack `sk_new_null` answered
-        // (NULL-safe).
-        unsafe { OPENSSL_sk_free((*c).dirs) };
-        // SAFETY: `c` is this function's own allocation.
-        unsafe { CRYPTO_free(c.cast::<c_void>(), FILE, LINE_FREE_CTX_END) };
-    }
-    ret
+    // SAFETY: `ptr` is NULL or a context this module allocated and stored in the ENGINE's
+    // `ex_data`, released exactly once, here; `Drop` runs the authority's own free body and its
+    // single block release.
+    drop(unsafe {
+        OwnedCtx::<DynamicDataCtx>::from_raw_at(
+            ptr.cast::<DynamicDataCtx>(),
+            FILE_SEAM,
+            LINE_FREE_CTX,
+        )
+    });
 }
 
 /// `static int dynamic_set_data_ctx(ENGINE *e, dynamic_data_ctx **ctx)` — `:157-195`.
@@ -359,39 +424,38 @@ unsafe fn set_data_ctx_end(c: *mut DynamicDataCtx, ret: c_int) -> c_int {
 /// `e` must be a live `ENGINE` and `ctx` a writable slot.
 unsafe fn dynamic_set_data_ctx(e: *mut Engine, ctx: *mut *mut DynamicDataCtx) -> c_int {
     // SAFETY: `size_of` matches the type, and a zeroed context is a valid one.
-    let mut c = CRYPTO_zalloc(size_of::<DynamicDataCtx>(), FILE, LINE_SET_CTX_ZALLOC)
-        .cast::<DynamicDataCtx>();
-    let mut ret = 0;
-    if c.is_null() {
+    let Some(c) = RawDataCtx::new() else {
         return 0;
-    }
-    // SAFETY: `c` is a fresh zeroed context.
+    };
+    let p = c.as_ptr();
+    // SAFETY: `p` is a fresh zeroed context.
     unsafe {
-        (*c).dirs = OPENSSL_sk_new_null();
-        if (*c).dirs.is_null() {
+        (*p).dirs = OPENSSL_sk_new_null();
+        if (*p).dirs.is_null() {
             // `ERR_raise(ERR_LIB_ENGINE, ERR_R_CRYPTO_LIB)` (`:166`), then `goto end`.
             raise_site(&ENG_DYN_166);
-            return set_data_ctx_end(c, ret);
+            return 0;
         }
-        (*c).DYNAMIC_F1 = c"v_check".as_ptr();
-        (*c).DYNAMIC_F2 = c"bind_engine".as_ptr();
-        (*c).dir_load = 1;
+        (*p).DYNAMIC_F1 = c"v_check".as_ptr();
+        (*p).DYNAMIC_F2 = c"bind_engine".as_ptr();
+        (*p).dir_load = 1;
     }
     // SAFETY: the lock is the registry's global one.
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
-        // SAFETY: `c` is a live context this function owns (the lock was never taken).
-        return unsafe { set_data_ctx_end(c, ret) };
+        // The lock was never taken, so the `end:` release is the half-built context alone.
+        return 0;
     }
     let idx = DYNAMIC_EX_DATA_IDX.load(Ordering::Relaxed);
     // SAFETY: `e` is live and `idx` is a registered engine index.
     let existing = unsafe { ENGINE_get_ex_data(e, idx) }.cast::<DynamicDataCtx>();
     if existing.is_null() {
-        // SAFETY: `e` is live and `c` is this function's allocation.
-        ret = unsafe { crate::engine::eng_lib::ENGINE_set_ex_data(e, idx, c.cast::<c_void>()) };
+        // SAFETY: `e` is live and `p` is this function's allocation.
+        let ret = unsafe { crate::engine::eng_lib::ENGINE_set_ex_data(e, idx, p.cast::<c_void>()) };
         if ret != 0 {
-            // SAFETY: `ctx` is writable per the caller's contract.
-            unsafe { *ctx = c };
-            c = ptr::null_mut();
+            // SAFETY: `ctx` is writable per the caller's contract; the ENGINE's `ex_data` now
+            // owns the block.
+            unsafe { *ctx = p };
+            let _ = c.finish();
         }
     } else {
         // SAFETY: `ctx` is writable per the caller's contract.
@@ -399,15 +463,17 @@ unsafe fn dynamic_set_data_ctx(e: *mut Engine, ctx: *mut *mut DynamicDataCtx) ->
     }
     // SAFETY: the lock is held by this thread.
     unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
-    ret = 1;
-    // SAFETY: `c` is NULL or a live context this function still owns.
-    unsafe { set_data_ctx_end(c, ret) }
+    // The authority's unconditional `ret = 1` after the lock: a `c` still owned here (the
+    // `ex_data` set failed, or an existing context was found) is released on the way out.
+    1
 }
 
 /// `static dynamic_data_ctx *dynamic_get_data_ctx(ENGINE *e)` — `:201-236`.
 ///
 /// # Safety
-/// `e` must be a live `ENGINE`.
+/// `e` must be a live `ENGINE` that the caller does not concurrently destroy or
+/// control: the `ex_data` read before `dynamic_set_data_ctx` takes the lock, so a
+/// concurrent `CRYPTO_set_ex_data`/`CRYPTO_free_ex_data` on the same ENGINE would race.
 unsafe fn dynamic_get_data_ctx(e: *mut Engine) -> *mut DynamicDataCtx {
     if DYNAMIC_EX_DATA_IDX.load(Ordering::Relaxed) < 0 {
         // `ENGINE_get_ex_new_index(0, NULL, NULL, NULL, dynamic_data_ctx_free_func)` is the
@@ -514,7 +580,11 @@ unsafe extern "C" fn dynamic_finish(_e: *mut Engine) -> c_int {
 /// `static int dynamic_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))` — `:289-366`.
 ///
 /// # Safety
-/// Called through the ENGINE control surface with the authority's argument contract.
+/// Called through the ENGINE control surface with the authority's argument contract:
+/// `e` is a live `ENGINE` the caller does not concurrently destroy, control or load
+/// (the authority does not serialise per-ENGINE control, and this port preserves that;
+/// the context's fields are unsynchronised), and a non-NULL `p` for a string command is
+/// NUL-terminated.
 unsafe extern "C" fn dynamic_ctrl(
     e: *mut Engine,
     cmd: c_int,
@@ -546,20 +616,29 @@ unsafe extern "C" fn dynamic_ctrl(
                 if !p.is_null() && unsafe { strlen(p.cast::<c_char>()) } < 1 {
                     p = ptr::null_mut();
                 }
-                // SAFETY: `ctx` is live and owns `DYNAMIC_LIBNAME`.
-                unsafe {
-                    CRYPTO_free(
-                        (*ctx).DYNAMIC_LIBNAME.cast::<c_void>(),
-                        FILE,
-                        LINE_FREE_SO_PATH,
-                    );
-                    (*ctx).DYNAMIC_LIBNAME = if p.is_null() {
-                        ptr::null_mut()
-                    } else {
-                        CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_SO_PATH)
-                    };
-                    c_int::from(!(*ctx).DYNAMIC_LIBNAME.is_null())
-                }
+                // SAFETY: `ctx` is live and `DYNAMIC_LIBNAME` is NULL or its own `CRYPTO_strdup`
+                // block; the seam performs the authority's own plain release.
+                drop(unsafe {
+                    OwnedStr::adopt((*ctx).DYNAMIC_LIBNAME, FILE_SEAM, LINE_FREE_SO_PATH)
+                });
+                // The new value is this call's own fresh block or NULL.
+                let fresh: Option<OwnedStr> = if p.is_null() {
+                    None
+                } else {
+                    // SAFETY: `p` is NUL-terminated (the test above); `CRYPTO_strdup` answers a
+                    // fresh block or NULL.
+                    unsafe {
+                        OwnedStr::adopt(
+                            CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_SO_PATH),
+                            FILE_SEAM,
+                            LINE_FREE_SO_PATH,
+                        )
+                    }
+                };
+                let raw = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw);
+                // SAFETY: `ctx` is live.
+                unsafe { (*ctx).DYNAMIC_LIBNAME = raw };
+                c_int::from(!raw.is_null())
             }
             DYNAMIC_CMD_NO_VCHECK => {
                 // SAFETY: `ctx` is live.
@@ -573,16 +652,27 @@ unsafe extern "C" fn dynamic_ctrl(
                 if !p.is_null() && unsafe { strlen(p.cast::<c_char>()) } < 1 {
                     p = ptr::null_mut();
                 }
-                // SAFETY: `ctx` is live and owns `engine_id`.
-                unsafe {
-                    CRYPTO_free((*ctx).engine_id.cast::<c_void>(), FILE, LINE_FREE_ID);
-                    (*ctx).engine_id = if p.is_null() {
-                        ptr::null_mut()
-                    } else {
-                        CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_ID)
-                    };
-                    c_int::from(!(*ctx).engine_id.is_null())
-                }
+                // SAFETY: `ctx` is live and `engine_id` is NULL or its own `CRYPTO_strdup`
+                // block; the seam performs the authority's own plain release.
+                drop(unsafe { OwnedStr::adopt((*ctx).engine_id, FILE_SEAM, LINE_FREE_ID) });
+                // The new value is this call's own fresh block or NULL.
+                let fresh: Option<OwnedStr> = if p.is_null() {
+                    None
+                } else {
+                    // SAFETY: `p` is NUL-terminated (the test above); `CRYPTO_strdup` answers a
+                    // fresh block or NULL.
+                    unsafe {
+                        OwnedStr::adopt(
+                            CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_ID),
+                            FILE_SEAM,
+                            LINE_FREE_ID,
+                        )
+                    }
+                };
+                let raw = fresh.map_or(ptr::null_mut(), OwnedStr::into_raw);
+                // SAFETY: `ctx` is live.
+                unsafe { (*ctx).engine_id = raw };
+                c_int::from(!raw.is_null())
             }
             DYNAMIC_CMD_LIST_ADD => {
                 if !(0..=2).contains(&i) {
@@ -617,18 +707,26 @@ unsafe extern "C" fn dynamic_ctrl(
                     return 0;
                 }
                 // SAFETY: `p` is NUL-terminated per the branch above.
-                let tmp_str = unsafe { CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_DIR) };
-                if tmp_str.is_null() {
+                let Some(tmp) = (unsafe {
+                    OwnedStr::adopt(
+                        CRYPTO_strdup(p.cast::<c_char>(), FILE, LINE_STRDUP_DIR),
+                        FILE_SEAM,
+                        LINE_STRDUP_DIR,
+                    )
+                }) else {
                     return 0;
-                }
+                };
                 // SAFETY: `ctx` is live, so `dirs` is the stack `dynamic_set_data_ctx` built.
-                if unsafe { OPENSSL_sk_push((*ctx).dirs, tmp_str.cast::<c_void>()) } == 0 {
-                    // SAFETY: `tmp_str` is this branch's allocation and was not stored.
-                    unsafe { CRYPTO_free(tmp_str.cast::<c_void>(), FILE, LINE_STRDUP_DIR) };
+                if unsafe { OPENSSL_sk_push((*ctx).dirs, tmp.as_ptr().cast::<c_void>()) } == 0 {
+                    // The authority frees the string at `:351` and then raises; the handle's
+                    // release is that same site.
+                    drop(tmp);
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&ENG_DYN_356) };
                     return 0;
                 }
+                // Ownership of the string transfers to the `dirs` stack.
+                let _ = tmp.into_raw();
                 1
             }
             _ => {
@@ -680,12 +778,12 @@ unsafe fn int_load(ctx: *mut DynamicDataCtx) -> c_int {
         // SAFETY: `merge` is a fresh NUL-terminated string.
         let loaded = unsafe { DSO_load(dso, merge, ptr::null_mut(), 0) };
         if !loaded.is_null() {
-            // SAFETY: `merge` is this iteration's allocation.
-            unsafe { CRYPTO_free(merge.cast::<c_void>(), FILE, LINE_FREE_MERGE_FOUND) };
+            // SAFETY: `merge` is this iteration's allocation, released here exactly once.
+            drop(unsafe { OwnedStr::adopt(merge, FILE_SEAM, LINE_FREE_MERGE_FOUND) });
             return 1;
         }
-        // SAFETY: `merge` is this iteration's allocation.
-        unsafe { CRYPTO_free(merge.cast::<c_void>(), FILE, LINE_FREE_MERGE_MISS) };
+        // SAFETY: as above, on the not-found path.
+        drop(unsafe { OwnedStr::adopt(merge, FILE_SEAM, LINE_FREE_MERGE_MISS) });
     }
     0
 }
@@ -708,7 +806,11 @@ unsafe fn using_libcrypto_11(ctx: *mut DynamicDataCtx) -> c_int {
 /// `static int dynamic_load(ENGINE *e, dynamic_data_ctx *ctx)` — `:412-522`.
 ///
 /// # Safety
-/// `e` and `ctx` must be live; the context must be uninitialised (the caller checks).
+/// `e` and `ctx` must be live; `ctx` must be the context stored in `e`'s `ex_data` and
+/// must be uninitialised (the caller checks); the caller must have the same exclusive
+/// use of `e` as [`dynamic_ctrl`]. The loaded library's `v_check` and `bind_engine` are
+/// application code: they run without the engine lock, may re-enter the crate, and must
+/// not retain the `dynamic_fns` pointer past the call.
 unsafe fn dynamic_load(e: *mut Engine, ctx: *mut DynamicDataCtx) -> c_int {
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).dynamic_dso.is_null() } {
@@ -913,4 +1015,21 @@ const _: () = {
         core::mem::size_of::<Option<EngineGenIntFuncPtr>>()
             == core::mem::size_of::<*const c_void>()
     );
+    // `dynamic_fns` is handed to the loaded library, so its C layout is part of the
+    // ABI: a pointer to `static_state`, then the three allocator slots in order.
+    assert!(core::mem::size_of::<DynamicFns>() == 4 * core::mem::size_of::<*const c_void>());
+    assert!(core::mem::offset_of!(DynamicFns, static_state) == 0);
+    assert!(core::mem::offset_of!(DynamicFns, mem_fns) == core::mem::size_of::<*const c_void>());
+    assert!(core::mem::size_of::<DynamicMemFns>() == 3 * core::mem::size_of::<*const c_void>());
+    assert!(core::mem::offset_of!(DynamicMemFns, malloc_fn) == 0);
+    assert!(
+        core::mem::offset_of!(DynamicMemFns, realloc_fn) == core::mem::size_of::<*const c_void>()
+    );
+    assert!(
+        core::mem::offset_of!(DynamicMemFns, free_fn) == 2 * core::mem::size_of::<*const c_void>()
+    );
 };
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(DynamicDataCtx => zero_state_sweep_dynamic_data_ctx);

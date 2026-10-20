@@ -100,13 +100,13 @@ use crate::ffc::params::{
     ossl_ffc_params_set0_pqg,
 };
 use crate::ffc::FfcParams;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
     CRYPTO_EX_INDEX_DH,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
 
 use super::key::DH_get_default_method;
@@ -227,12 +227,13 @@ pub(crate) unsafe fn ossl_dh_new_ex(libctx: *mut c_void) -> *mut Dh {
 ///
 /// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
 unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
-    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`, and `CRYPTO_zalloc` is
-    // a *safe* function in this crate (D113), so this call needs no guard.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<Dh>(), FILE_DH_LIB, LINE).cast::<Dh>();
-    if ret.is_null() {
+    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`. The window between the
+    // allocation and the point where the block is a valid `Dh` is a `RawCtx`: its `Drop` releases
+    // the block alone, so a refusal before validation never runs a destructor.
+    let Some(raw) = RawCtx::<Dh>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let ret = raw.as_ptr();
 
     // SAFETY: `CRYPTO_THREAD_lock_new` reads no caller pointer.
     let lock = CRYPTO_THREAD_lock_new();
@@ -241,8 +242,8 @@ unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     if lock.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DH_LIB_83) };
-        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
-        unsafe { CRYPTO_free(ret.cast(), FILE_DH_LIB, LINE) };
+        // `raw` drops here, releasing the block alone -- exactly the authority's bare
+        // `CRYPTO_free(ret, FILE, LINE)` before an object exists.
         return ptr::null_mut();
     }
 
@@ -305,12 +306,64 @@ unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     };
 
     if !built {
-        // SAFETY: `ret` is this call's own object and the authority's `err:` label releases it
-        // through `DH_free` on exactly these paths.
-        unsafe { DH_free(ret) };
+        // SAFETY: every field `Dh`'s destructor reads is written. The block is zeroed, and
+        // `references`, `meth`, `lock`, `libctx` and `engine` are set before the label; `params`,
+        // `ex_data` and the two key slots are either the authority's zero state (which its own
+        // `DH_free` accepts) or the values its failure point left. Consuming `raw` as an
+        // `OwnedCtx` runs the destructor body and then releases the block -- exactly the
+        // authority's `DH_free(ret)` at its `err:` label.
+        unsafe { drop(raw.assume_init()) };
         return ptr::null_mut();
     }
-    ret
+    raw.into_raw()
+}
+
+// SAFETY: (a) `destroy_body` is the member-release half of `DH_free` -- the method's `finish`,
+// the ex-data, the lock, the embedded FFC parameters and the two key `BIGNUM`s -- run exactly once
+// and never the enclosing block, which `OwnedCtx`'s `Drop` releases. Every releaser accepts the
+// NULL/zero state a refused constructor leaves. (b) an all-zero `Dh` is the state
+// `OPENSSL_zalloc` produces, and the authority's own `DH_free` accepts it.
+unsafe impl CtxDestroy for Dh {
+    const FILE: *const c_char = FILE_DH_LIB;
+    const LINE_ALLOC: c_int = LINE;
+    const LINE_FREE: c_int = LINE;
+
+    unsafe fn destroy_body(ptr: *mut Dh) {
+        // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
+        // SAFETY: `ptr` is live per the trait contract.
+        let meth = unsafe { (*ptr).meth };
+        if !meth.is_null() {
+            // SAFETY: `meth` is the object's own table, alive until this statement.
+            if let Some(finish) = unsafe { (*meth).finish } {
+                // SAFETY: `finish` is that table's own destructor for this object.
+                unsafe { finish(ptr) };
+            }
+        }
+
+        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every
+        // state this crate can reach. See the module documentation.
+
+        // SAFETY: `ptr` is live and `ex_data` is a field of it.
+        unsafe {
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_DH,
+                ptr.cast(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            )
+        };
+        // SAFETY: `ptr` is live and `lock` is the lock the constructor created.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+
+        // SAFETY: `params` is the object's own embedded parameters, whose four `BIGNUM`s and seed
+        // are each NULL or owned by it.
+        unsafe { ossl_ffc_params_cleanup(ptr::addr_of_mut!((*ptr).params)) };
+        // SAFETY: both keys are NULL or the object's own `BIGNUM`s, and both are secret material,
+        // so the clearing form the authority spells is used.
+        unsafe {
+            BN_clear_free((*ptr).pub_key);
+            BN_clear_free((*ptr).priv_key);
+        }
+    }
 }
 
 /// `void DH_free(DH *r)` — `dh_lib.c:136-165`.
@@ -329,55 +382,23 @@ pub unsafe extern "C" fn DH_free(r: *mut Dh) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&r->references, &i)`: a release fetch-sub, then the header's conditional
-    // acquire fence when the count reaches zero.
-    // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
+    // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
+    // the destroying sentinel, so a re-entrant `DH_free` from the method's `finish` hook or an
+    // ex-data callback is a defined no-op instead of a second teardown.
+    // SAFETY: `r` is live per the contract and this frame owns the reference it releases;
+    // on `Last` it is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*r).references) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    if i > 0 {
-        return;
-    }
-
-    // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
-    // SAFETY: `r` is live and this is the last reference.
-    let meth = unsafe { (*r).meth };
-    if !meth.is_null() {
-        // SAFETY: `meth` is the object's own table, alive until this statement.
-        if let Some(finish) = unsafe { (*meth).finish } {
-            // SAFETY: `finish` is that table's own destructor for this object.
-            unsafe { finish(r) };
-        }
-    }
-
-    // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
-    // this crate can reach. See the module documentation.
-
-    // SAFETY: `r` is live and `ex_data` is a field of it.
-    unsafe {
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_DH,
-            r.cast(),
-            ptr::addr_of_mut!((*r).ex_data),
-        )
-    };
-    // SAFETY: `r` is live and `lock` is the lock the constructor created.
-    unsafe { CRYPTO_THREAD_lock_free((*r).lock) };
 
     // `CRYPTO_FREE_REF(&r->references)` is empty on this profile's arm of the header.
 
-    // SAFETY: `params` is the object's own embedded parameters, whose four `BIGNUM`s and seed are
-    // each NULL or owned by it; this is the last reference.
-    unsafe { ossl_ffc_params_cleanup(ptr::addr_of_mut!((*r).params)) };
-    // SAFETY: both keys are NULL or the object's own `BIGNUM`s, and both are secret material, so
-    // the clearing form the authority spells is used.
-    unsafe {
-        BN_clear_free((*r).pub_key);
-        BN_clear_free((*r).priv_key);
-    }
-    // SAFETY: `r` is this object's own allocation, released last.
-    unsafe { CRYPTO_free(r.cast(), FILE_DH_LIB, LINE) };
+    // SAFETY: `r` is the last reference and a live block this crate allocated; `from_raw`
+    // reclaims it and `Drop` runs `destroy_body` (the authority's member releases) followed by
+    // the block release, in the authority's order.
+    unsafe { drop(OwnedCtx::<Dh>::from_raw(r)) };
 }
 
 /// `int DH_up_ref(DH *r)` — `dh_lib.c:167-177`.
@@ -391,14 +412,11 @@ pub unsafe extern "C" fn DH_free(r: *mut Dh) {
 /// `r` is a live object.
 #[no_mangle]
 pub unsafe extern "C" fn DH_up_ref(r: *mut Dh) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add, and the relaxedness is deliberate.
-    // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
+    // SAFETY: `r` is live per the contract; this call acts for the caller's existing
+    // reference and acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*r).references) }
 }
 
 /// `void ossl_dh_set0_libctx(DH *d, OSSL_LIB_CTX *libctx)` — `dh_lib.c:179-182`. Internal.
@@ -778,3 +796,247 @@ pub(crate) unsafe fn ossl_dh_get0_nid(dh: *const Dh) -> c_int {
     // SAFETY: `dh` is live per the contract.
     unsafe { (*dh).params.nid }
 }
+
+/// Allocator-refusal boundary court for [`ossl_dh_new_ex`] (§16 negative controls).
+///
+/// The arm is size-only, because the constructor allocates at
+/// `(FILE_DH_LIB, LINE)` rather than at the `(NULL, 0)` coordinate the SSL ticket probes use.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use core::sync::atomic::AtomicUsize;
+
+    use super::*;
+    use crate::dh::key::DH_set_default_method;
+    use crate::ssl::adv_alloc::{self, Ev};
+
+    /// The partially built object `init` was handed, and the one `finish` then saw. Stored as
+    /// addresses so the probe can compare them with the release the allocator hook recorded
+    /// without reading the freed block.
+    static INIT_CTX: AtomicUsize = AtomicUsize::new(0);
+    static FINISH_CTX: AtomicUsize = AtomicUsize::new(0);
+    /// How many times the method table's `finish` ran. The failure path must run it exactly once.
+    static FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// `int (*init)(DH *)` that refuses after the constructor has allocated and populated the
+    /// object. It records the object it was handed and answers 0, reaching `dh_new_intern`'s
+    /// `err:` label rather than the pre-validation refusal arms.
+    unsafe extern "C" fn fail_init(dh: *mut Dh) -> c_int {
+        INIT_CTX.store(dh as usize, Ordering::SeqCst);
+        0
+    }
+
+    /// `int (*finish)(DH *)` that records the object the destructor body was handed and succeeds.
+    unsafe extern "C" fn finish_counter(dh: *mut Dh) -> c_int {
+        FINISH_CTX.store(dh as usize, Ordering::SeqCst);
+        FINISH_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dh_new_refused_alloc_returns_null_without_free() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dh>();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(size);
+        // SAFETY: `ossl_dh_new_ex(NULL)` takes no live pointer beyond the NULL library context.
+        let dh = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        adv_alloc::disarm_any();
+
+        assert!(
+            dh.is_null(),
+            "a refused Dh block must make the constructor answer NULL"
+        );
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: true, .. } if *n == size))
+                .count(),
+            1,
+            "exactly the Dh-sized request is refused"
+        );
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            0,
+            "the refused request must never be forwarded"
+        );
+        assert!(
+            !ev.iter().any(|e| matches!(e, Ev::Free { .. })),
+            "a refusal before the block exists must not release anything"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The harness must not perturb the success path: an unarmed constructor still produces a
+        // live object, and its single release is observed exactly once.
+        adv_alloc::reset();
+        // SAFETY: reads no caller pointer beyond the NULL library context.
+        let live = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        assert!(
+            !live.is_null(),
+            "an unarmed Dh allocation must succeed under the hook"
+        );
+        assert!(
+            adv_alloc::events()
+                .iter()
+                .any(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size)),
+            "the success path must be recorded as a forwarded allocation"
+        );
+        // SAFETY: `live` is this probe's own object and holds one reference.
+        unsafe { DH_free(live) };
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// Later-initialisation failure court: the context allocation succeeds, then the method's
+    /// `init` refuses, so `dh_new_intern` must run the method's `finish` and release the same
+    /// partially built block exactly once.
+    ///
+    /// The allocation-refusal arm is `dh_new_refused_alloc_returns_null_without_free`. The
+    /// lock-null arm is reachable only by refusing the 56-byte lock allocation through the CRYPTO
+    /// hook on the measured target; this probe does not inject that refusal, and
+    /// `CRYPTO_new_ex_data` failure is likewise not injectable. Neither is claimed here.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dh_method_init_failure_runs_partial_cleanup() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dh>();
+        INIT_CTX.store(0, Ordering::SeqCst);
+        FINISH_CTX.store(0, Ordering::SeqCst);
+        FINISH_CALLS.store(0, Ordering::SeqCst);
+
+        // A hand-built, fully initialised table: every unused slot is NULL/None and `flags` is the
+        // authority's zero. It lives on this frame and is uninstalled before this test returns.
+        let method = DhMethod {
+            name: ptr::null_mut(),
+            generate_key: None,
+            compute_key: None,
+            bn_mod_exp: None,
+            init: Some(fail_init),
+            finish: Some(finish_counter),
+            flags: 0,
+            app_data: ptr::null_mut(),
+            generate_params: None,
+        };
+
+        // SAFETY: the getter takes no pointers.
+        let saved = DH_get_default_method();
+        // SAFETY: `method` is a live table with the authority's layout, every member initialised,
+        // and it outlives the install/restore window below.
+        unsafe { DH_set_default_method(&method) };
+
+        adv_alloc::reset();
+        // SAFETY: `ossl_dh_new_ex(NULL)` reads no caller pointer beyond the NULL library context
+        // and the default table installed immediately above.
+        let dh = unsafe { ossl_dh_new_ex(ptr::null_mut()) };
+        // Restore the process-global default immediately, before any assertion can fail.
+        // SAFETY: `saved` is the live table the getter answered before the install above.
+        unsafe { DH_set_default_method(saved) };
+
+        assert!(
+            dh.is_null(),
+            "a refused method init must make the constructor answer NULL"
+        );
+        // SAFETY: the getter takes no pointers.
+        assert!(
+            core::ptr::eq(DH_get_default_method(), saved),
+            "the default method must be restored before assertions"
+        );
+        assert_eq!(
+            FINISH_CALLS.load(Ordering::SeqCst),
+            1,
+            "the method's finish must run exactly once on the partially built object"
+        );
+
+        let init_ctx = INIT_CTX.load(Ordering::SeqCst);
+        assert_ne!(init_ctx, 0, "init must be handed the allocated object");
+        assert_eq!(
+            FINISH_CTX.load(Ordering::SeqCst),
+            init_ctx,
+            "finish must run on the same object init refused"
+        );
+
+        let ev = adv_alloc::events();
+        // The method's `init` failure also raises an error site, whose debug strings allocate at the
+        // `(NULL, 0)` coordinate. Those are error-queue bookkeeping, not context blocks, so the
+        // assertion is scoped to the context's own size and to the identity of the context release.
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            1,
+            "the failed constructor must forward exactly one Dh-sized allocation"
+        );
+        let freed: Vec<usize> = ev
+            .iter()
+            .filter_map(|e| match e {
+                Ev::Free { p } => Some(*p),
+                _ => None,
+            })
+            .collect();
+        // On the measured target the context's lock is an authority-sized block released through
+        // the CRYPTO seam too, so the partial cleanup emits two releases, exactly as the authority
+        // does. Other targets retain the invisible Box lock and emit one.
+        let expected_releases = if cfg!(all(
+            target_os = "linux",
+            target_arch = "x86_64",
+            target_pointer_width = "64"
+        )) {
+            2
+        } else {
+            1
+        };
+        assert_eq!(
+            freed.len(),
+            expected_releases,
+            "the partial cleanup must release the context block and every seam-visible member"
+        );
+        assert_eq!(
+            freed.iter().filter(|p| **p == init_ctx).count(),
+            1,
+            "the partially built Dh block must be released exactly once"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The restoration must leave a fully functional default path, not merely a stored pointer.
+        adv_alloc::reset();
+        // SAFETY: `DH_new` takes no arguments and reads the restored default table.
+        let live = unsafe { DH_new() };
+        assert!(
+            !live.is_null(),
+            "the restored default method must still construct a Dh"
+        );
+        assert_eq!(
+            adv_alloc::events()
+                .iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            1,
+            "the restored success path must allocate the Dh block once"
+        );
+        // SAFETY: `live` is this probe's own object and holds one reference.
+        unsafe { DH_free(live) };
+        assert_eq!(
+            adv_alloc::events()
+                .iter()
+                .filter(|e| matches!(e, Ev::Free { .. }))
+                .count(),
+            expected_releases,
+            "the success path must release the Dh block and every seam-visible member"
+        );
+        adv_alloc::assert_no_double_free();
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Dh => zero_state_sweep_dh);

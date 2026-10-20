@@ -54,7 +54,11 @@ unsafe extern "C" fn i2s_NO_REV_AVAIL(
     _method: *const X509V3ExtMethod,
     _val: *mut c_void,
 ) -> *mut c_char {
-    // SAFETY: `s` is a compile-time constant NUL-terminated string.
+    // SAFETY: `c"NULL"` is a compile-time constant NUL-terminated string.
+    //
+    // The returned block belongs to the caller: the extension machinery owns the returned
+    // `char *` and releases it through the allocator seam. There is no local release, so the
+    // transfer edge is this raw return rather than an owner that would free a returned block.
     unsafe { CRYPTO_strdup(c"NULL".as_ptr(), FILE.as_ptr(), LINE_STRDUP) }
 }
 

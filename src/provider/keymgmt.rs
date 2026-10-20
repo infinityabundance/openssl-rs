@@ -155,17 +155,21 @@ use crate::provider::slh_dsa_kmgmt::{
     SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS,
     SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS,
 };
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 
 /// The generated unit's own `__FILE__`, for `OPENSSL_zalloc`'s allocation attribution.
-const FILE_KDF_LEGACY_KMGMT: *const core::ffi::c_char =
-    c"providers/implementations/keymgmt/kdf_legacy_kmgmt.c".as_ptr();
+const FILE_KDF_LEGACY_KMGMT_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/keymgmt/kdf_legacy_kmgmt.c");
 
 /// `struct kdf_data_st` — `providers/implementations/include/prov/kdfexchange.h:14-17`. A legacy KDF
 /// key-manager handle is nothing but the library context it was created in and a reference count;
@@ -201,21 +205,25 @@ pub unsafe extern "C" fn ossl_kdf_data_new(provctx: *mut c_void) -> *mut KdfData
             return ptr::null_mut();
         }
 
-        let kdfdata = CRYPTO_zalloc(core::mem::size_of::<KdfData>(), FILE_KDF_LEGACY_KMGMT, 0)
-            .cast::<KdfData>();
-        if kdfdata.is_null() {
+        let Some(kdfdata) = OwnedCtx::<KdfData>::zalloc_at(
+            FILE_KDF_LEGACY_KMGMT_SEAM,
+            0,
+            FILE_KDF_LEGACY_KMGMT_SEAM,
+            61,
+        ) else {
             return ptr::null_mut();
-        }
+        };
+        let kdfdata_ptr = kdfdata.as_ptr();
 
         // `if (!CRYPTO_NEW_REF(&kdfdata->refcnt, 1))` — the header's fallback arm on this profile is
         // `refcnt->val = n; return 1;`, so the failure branch (and its `OPENSSL_free`) is
         // unreachable rather than omitted. `NEW_REF` cannot fail for an inline atomic.
-        // SAFETY: `refcnt` is a field of this call's own allocation.
-        (*kdfdata).refcnt.store(1, Ordering::Relaxed);
+        // SAFETY: `kdfdata_ptr` is a field of this call's own allocation.
+        (*kdfdata_ptr).refcnt.store(1, Ordering::Relaxed);
         // SAFETY: as above; `provctx` is the caller's.
-        (*kdfdata).libctx = prov_libctx_of(provctx);
+        (*kdfdata_ptr).libctx = prov_libctx_of(provctx);
 
-        kdfdata
+        kdfdata.into_raw()
     }
 }
 
@@ -240,8 +248,9 @@ pub unsafe extern "C" fn ossl_kdf_data_free(kdfdata: *mut KdfData) {
     }
 
     // `CRYPTO_FREE_REF(&kdfdata->refcnt)` is empty on this profile's arm of the header.
-    // SAFETY: this is the last reference to the handle.
-    unsafe { CRYPTO_free(kdfdata.cast(), FILE_KDF_LEGACY_KMGMT, 61) };
+    // SAFETY: this is the last reference to the handle; `from_raw` reclaims the block for its
+    // single release by `Drop`.
+    drop(unsafe { OwnedCtx::<KdfData>::from_raw_at(kdfdata, FILE_KDF_LEGACY_KMGMT_SEAM, 61) });
 }
 
 /// `int ossl_kdf_data_up_ref(KDF_DATA *kdfdata)` — `kdf_legacy_kmgmt.c:64-80`. The one guard the
@@ -368,6 +377,7 @@ const OSSL_GEN_PARAM_ITERATION: *const c_char = c"iteration".as_ptr();
 
 /// `FILE_DH_KMGMT` — the generated unit's own `__FILE__`.
 const FILE_DH_KMGMT: *const c_char = c"providers/implementations/keymgmt/dh_kmgmt.c".as_ptr();
+const FILE_DH_KMGMT_SEAM: SeamFile = SeamFile::new(c"providers/implementations/keymgmt/dh_kmgmt.c");
 
 /// `struct dh_gen_ctx` — `dh_kmgmt.c:56-80`. The parameter-generation context, zero-allocated and
 /// filled by `dh_gen_init_base` and the two `*_gen_set_params`; it is opaque in the authority
@@ -413,6 +423,80 @@ struct DhGenCtx {
     cbarg: *mut c_void,
     /// `int dh_type` — `DH_FLAG_TYPE_DH` or `DH_FLAG_TYPE_DHX`.
     dh_type: c_int,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the key-manager handles and the parameter-generation context
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `ossl_kdf_data_free` body (`kdf_legacy_kmgmt.c:49-62`), without the block
+/// release [`OwnedCtx`]'s `Drop` performs: a `KDF_DATA` owns no member -- its `libctx` is borrowed.
+// SAFETY: (a) holds: `destroy_body` is `ossl_kdf_data_free` minus the block -- a `KDF_DATA` owns no
+// member (its `libctx` is borrowed) -- and never the enclosing block. (b) holds: an all-zero record
+// is valid with every release a no-op -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for KdfData {
+    unsafe fn destroy_body(_ptr: *mut KdfData) {}
+}
+
+/// The authority's `dh_gen_cleanup` body (`dh_kmgmt.c:818-828`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the two owned names and the cleansed FIPS186-4 seed.
+// SAFETY: (a) holds: `destroy_body` is `dh_gen_cleanup` minus the block -- it releases exactly the
+// context's two owned names and its cleansed seed (each NULL/zero tolerant) and never the enclosing
+// block. (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for DhGenCtx {
+    unsafe fn destroy_body(ptr: *mut DhGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `mdname`/`mdprops` are NULL or
+        // this file's `CRYPTO_strdup` blocks and `seed` is NULL or a `CRYPTO_memdup` block.
+        unsafe {
+            CRYPTO_free((*ptr).mdname.cast(), FILE_DH_KMGMT, 825);
+            CRYPTO_free((*ptr).mdprops.cast(), FILE_DH_KMGMT, 826);
+            CRYPTO_clear_free((*ptr).seed.cast(), (*ptr).seedlen, FILE_DH_KMGMT, 827);
+        }
+    }
+}
+
+/// An owned `DhGenCtx` block still under construction.
+///
+/// `dh_gen_init_base` allocates the context and fills its members one at a time; until it is
+/// published its release is the block alone -- the authority's own `OPENSSL_free(gctx)` at its
+/// `err:` tail (`:485`) -- so the destructor ([`CtxDestroy::destroy_body`]) over members that may
+/// not be set must not run. [`Self::finish`] hands the block to the dispatch contract on success.
+struct RawDhGenCtx {
+    ptr: ptr::NonNull<DhGenCtx>,
+}
+
+impl RawDhGenCtx {
+    /// `CRYPTO_zalloc(sizeof(*gctx), FILE, 463)`, or `None` when it answers NULL.
+    fn new() -> Option<RawDhGenCtx> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463)
+        }
+        .cast::<DhGenCtx>();
+        ptr::NonNull::new(raw).map(|ptr| RawDhGenCtx { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut DhGenCtx {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the dispatch contract.
+    fn finish(self) -> *mut DhGenCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawDhGenCtx {
+    /// The authority's `dh_gen_init_base` error-path release (`:485`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the `err:` tail.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE_DH_KMGMT, 485) };
+    }
 }
 
 /// `static int dh_gen_type_name2id_w_default(const char *name, int type)` — `dh_kmgmt.c:82-99`.
@@ -980,35 +1064,35 @@ unsafe fn dh_gen_init_base(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx =
-        CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463).cast::<DhGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
+    let gctx = RawDhGenCtx::new();
+    if let Some(g) = &gctx {
+        // SAFETY: `g` is this call's own allocation; `provctx` is the caller's.
         unsafe {
-            (*gctx).selection = selection;
-            (*gctx).libctx = prov_libctx_of(provctx);
-            (*gctx).pbits = 2048;
-            (*gctx).qbits = 224;
-            (*gctx).mdname = ptr::null_mut();
-            (*gctx).gen_type = if type_ == DH_FLAG_TYPE_DHX {
+            (*g.as_ptr()).selection = selection;
+            (*g.as_ptr()).libctx = prov_libctx_of(provctx);
+            (*g.as_ptr()).pbits = 2048;
+            (*g.as_ptr()).qbits = 224;
+            (*g.as_ptr()).mdname = ptr::null_mut();
+            (*g.as_ptr()).gen_type = if type_ == DH_FLAG_TYPE_DHX {
                 DH_PARAMGEN_TYPE_FIPS_186_2
             } else {
                 DH_PARAMGEN_TYPE_GENERATOR
             };
-            (*gctx).gindex = -1;
-            (*gctx).hindex = 0;
-            (*gctx).pcounter = -1;
-            (*gctx).generator = DH_GENERATOR_2;
-            (*gctx).dh_type = type_;
+            (*g.as_ptr()).gindex = -1;
+            (*g.as_ptr()).hindex = 0;
+            (*g.as_ptr()).pcounter = -1;
+            (*g.as_ptr()).generator = DH_GENERATOR_2;
+            (*g.as_ptr()).dh_type = type_;
         }
     }
-    // SAFETY: `gctx` is NULL or this call's own context; `params` is the caller's array.
-    if unsafe { dh_gen_set_params(gctx.cast(), params) } == 0 {
-        // SAFETY: `gctx` is this call's own allocation, not yet published.
-        unsafe { CRYPTO_free(gctx.cast(), FILE_DH_KMGMT, 485) };
+    let gctx_ptr = gctx.as_ref().map_or(ptr::null_mut(), RawDhGenCtx::as_ptr);
+    // SAFETY: `gctx_ptr` is NULL or this call's own context; `params` is the caller's array.
+    if unsafe { dh_gen_set_params(gctx_ptr.cast(), params) } == 0 {
+        // The authority's `err:` tail: the block alone, not yet published, released by `gctx`'s
+        // `Drop` (a `None` for a refused allocation, the authority's own `free(NULL)`).
         return ptr::null_mut();
     }
-    gctx.cast()
+    gctx.map_or(ptr::null_mut(), RawDhGenCtx::finish).cast()
 }
 
 /// `static void *dh_gen_init(void *provctx, int selection, const OSSL_PARAM params[])` —
@@ -1061,16 +1145,33 @@ unsafe extern "C" fn dh_gen_set_template(genctx: *mut c_void, templ: *mut c_void
 /// # Safety
 /// `gctx` is live; `seed` is NULL or readable for `seedlen` bytes.
 unsafe fn dh_set_gen_seed(gctx: *mut DhGenCtx, seed: *mut u8, seedlen: usize) -> c_int {
-    // SAFETY: `gctx` is live per the contract, and its own `seed`/`seedlen` are released here.
+    // The field's previous seed is released through the cleansed owner at the authority's own site;
+    // then the new block is allocated and handed to the field.
+    // SAFETY: `gctx` is live per the contract; its own `seed`/`seedlen` are the field this call
+    // replaces, and `seed` is readable for `seedlen` bytes.
     unsafe {
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE_DH_KMGMT, 517);
+        // SAFETY: the field was allocated by `CRYPTO_memdup(seed, seedlen)` in this unit, so
+        // `seedlen` is both its allocation length and the cleansing length.
+        drop(OwnedBuf::adopt_cleansed(
+            (*gctx).seed,
+            (*gctx).seedlen,
+            FILE_DH_KMGMT_SEAM,
+            517,
+        ));
         (*gctx).seed = ptr::null_mut();
         (*gctx).seedlen = 0;
         if !seed.is_null() && seedlen > 0 {
-            (*gctx).seed = CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast();
-            if (*gctx).seed.is_null() {
+            // SAFETY: `CRYPTO_memdup` answers NULL or a `seedlen`-byte block, so `seedlen` is both
+            // its allocation length and the cleansing length; no other owner will release it.
+            let Some(dup) = OwnedBuf::adopt_cleansed(
+                CRYPTO_memdup(seed.cast(), seedlen, FILE_DH_KMGMT, 521).cast::<u8>(),
+                seedlen,
+                FILE_DH_KMGMT_SEAM,
+                521,
+            ) else {
                 return 0;
-            }
+            };
+            (*gctx).seed = dup.into_raw();
             (*gctx).seedlen = seedlen;
         }
     }
@@ -1119,11 +1220,18 @@ unsafe fn dh_gen_common_set_params(genctx: *mut c_void, params: *const OsslParam
                 return 0;
             }
             let group = ossl_ffc_name_to_dh_named_group((*p).data.cast::<c_char>());
-            if group.is_null() || ossl_ffc_named_group_get_uid(group) == NID_undef {
+            if group.is_null() {
                 raise_site(&err_sites::PROV_DH_KMGMT_558);
                 return 0;
             }
+            // The authority assigns the UID before testing it, so a rejected group leaves
+            // `NID_undef` in the context rather than the previously selected group. Keep that
+            // observable failure-path state.
             (*gctx).group_nid = ossl_ffc_named_group_get_uid(group);
+            if (*gctx).group_nid == NID_undef {
+                raise_site(&err_sites::PROV_DH_KMGMT_558);
+                return 0;
+            }
         }
         p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_FFC_PBITS);
         if !p.is_null() && OSSL_PARAM_get_size_t(p, ptr::addr_of_mut!((*gctx).pbits)) == 0 {
@@ -1228,8 +1336,16 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdname.cast(), FILE_DH_KMGMT, 635);
-            (*gctx).mdname = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636);
+            // The field's previous name is released through its owner at the authority's own site,
+            // then the new duplicate is installed (NULL, as the authority leaves it, on a strdup
+            // refusal).
+            drop(OwnedStr::adopt((*gctx).mdname, FILE_DH_KMGMT_SEAM, 635));
+            (*gctx).mdname = OwnedStr::adopt(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 636),
+                FILE_DH_KMGMT_SEAM,
+                636,
+            )
+            .map_or(ptr::null_mut(), OwnedStr::into_raw);
             if (*gctx).mdname.is_null() {
                 return 0;
             }
@@ -1239,8 +1355,13 @@ unsafe fn dhx_gen_set_params(genctx: *mut c_void, params: *const OsslParam) -> c
             if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).mdprops.cast(), FILE_DH_KMGMT, 644);
-            (*gctx).mdprops = CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645);
+            drop(OwnedStr::adopt((*gctx).mdprops, FILE_DH_KMGMT_SEAM, 644));
+            (*gctx).mdprops = OwnedStr::adopt(
+                CRYPTO_strdup((*p).data.cast::<c_char>(), FILE_DH_KMGMT, 645),
+                FILE_DH_KMGMT_SEAM,
+                645,
+            )
+            .map_or(ptr::null_mut(), OwnedStr::into_raw);
             if (*gctx).mdprops.is_null() {
                 return 0;
             }
@@ -1507,17 +1628,11 @@ unsafe fn dh_gen_end(dh: *mut Dh, gencb: *mut BnGencb, ret: c_int) -> *mut c_voi
 unsafe extern "C" fn dh_gen_cleanup(genctx: *mut c_void) {
     let gctx = genctx.cast::<DhGenCtx>();
 
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base`.
-    unsafe {
-        CRYPTO_free((*gctx).mdname.cast(), FILE_DH_KMGMT, 825);
-        CRYPTO_free((*gctx).mdprops.cast(), FILE_DH_KMGMT, 826);
-        CRYPTO_clear_free((*gctx).seed.cast(), (*gctx).seedlen, FILE_DH_KMGMT, 827);
-        CRYPTO_free(gctx.cast(), FILE_DH_KMGMT, 828);
-    }
+    // `from_raw` reclaims the context for its `Drop`, which runs the authority's own
+    // `dh_gen_cleanup` body (the two names and the cleansed seed) and its block release; a NULL
+    // answers `None` (no release).
+    // SAFETY: `gctx` is the caller's context, allocated by `dh_gen_init_base` and not released.
+    drop(unsafe { OwnedCtx::<DhGenCtx>::from_raw_at(gctx, FILE_DH_KMGMT_SEAM, 828) });
 }
 
 /// `static void *dh_load(const void *reference, size_t reference_sz)` — `dh_kmgmt.c:831-843`.
@@ -2079,3 +2194,7 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 41] = [
         algorithm_description: ptr::null(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(KdfData => zero_state_sweep_kdf_data, DhGenCtx => zero_state_sweep_dh_gen_ctx);

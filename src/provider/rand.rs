@@ -98,7 +98,8 @@ use crate::provider::util::{
     OSSL_ALG_PARAM_CIPHER, OSSL_ALG_PARAM_DIGEST, OSSL_ALG_PARAM_ENGINE, OSSL_ALG_PARAM_PROPERTIES,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
 };
@@ -123,6 +124,7 @@ use crate::provider::seeding::{
 };
 use crate::provider::util::ossl_prov_macctx_load;
 use crate::runtime::bio::sys::time;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::openssl_get_fork_id;
 
 // =============================================================================================
@@ -139,6 +141,7 @@ const FILE_DRBG: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c".as_ptr();
 /// `providers/implementations/rands/drbg_ctr.c` (generated from `drbg_ctr.c.in`).
 const FILE_DRBG_CTR: *const c_char = c"providers/implementations/rands/drbg_ctr.c".as_ptr();
+const FILE_DRBG_CTR_SEAM: SeamFile = SeamFile::new(c"providers/implementations/rands/drbg_ctr.c");
 /// `providers/implementations/rands/drbg_hash.c` (generated from `drbg_hash.c.in`).
 const FILE_DRBG_HASH: *const c_char = c"providers/implementations/rands/drbg_hash.c".as_ptr();
 /// `providers/implementations/rands/drbg_hmac.c` (generated from `drbg_hmac.c.in`).
@@ -200,6 +203,159 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
     unsafe { raise_site(site) };
     0
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a unit's context block
+// ---------------------------------------------------------------------------------------------
+
+/// A DRBG unit's context block: the `__FILE__` its own `CRYPTO_*` calls name, the allocator seam
+/// its block is created on, the authority's `*_free` body *minus* the block release, and that
+/// release itself.
+///
+/// `destroy_body` is the authority's `*_free` body without the block release -- the nonce global's
+/// lock, `PROV_DRBG`'s lock, CTR's three cipher contexts and two fetched ciphers, HASH's digest
+/// context and `PROV_DIGEST`, HMAC's MAC context and `PROV_DIGEST` -- `zalloc` is the block's own
+/// allocation and `release` its single release. `FILE` is the `__FILE__` both record. Implementing
+/// the trait on each `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor from `Drop`
+/// without a `CRYPTO_free` written at any call site.
+///
+/// # Safety
+///
+/// An implementer takes on every half of the contract, because the safe [`OwnedCtx::new`] calls
+/// `zalloc` and its `Drop` runs `destroy_body` then `release` through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns (the nonce global's
+///   lock, `PROV_DRBG`'s lock, CTR's cipher contexts and fetched ciphers, HASH's digest context and
+///   `PROV_DIGEST`, HMAC's MAC context and `PROV_DIGEST`), every releaser the authority's own and
+///   accepting the not-yet-set NULL/zero state, and it **never** releases the enclosing block, which
+///   `release` frees;
+/// * (b) **zero-validity** -- `zalloc` answers a fresh, zeroed block of `Self`'s size through the
+///   unit's own allocator seam, and an all-zero block of `Self` is a valid `Self` for which
+///   `destroy_body` and every operation the owner performs are sound. This is the obligation the
+///   safe [`OwnedCtx::new`] leans on: it validates the `zalloc` block with no caller assertion; and
+/// * `release(ptr)` releases **exactly** the block `zalloc` returned, at `size_of::<Self>()`, through
+///   the same allocator seam `zalloc` created it on.
+///
+/// Breaking these lets safe Rust double-release, release the enclosing block, or run `destroy_body`
+/// on a value that is not a valid `Self`.
+unsafe trait DrbgCtx: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+
+    /// A fresh, zeroed block of `Self`'s size, through this unit's allocator seam, or NULL.
+    fn zalloc() -> *mut Self;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+
+    /// The block's single release, through the same allocator seam `zalloc` created it on.
+    ///
+    /// # Safety
+    /// `ptr` is a live block `zalloc` returned that has not been released.
+    unsafe fn release(ptr: *mut Self);
+}
+
+/// An owned DRBG context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the dispatch hands
+/// it out as `*mut c_void` and takes it back in `*_free`), but its *ownership* is this type: `new`
+/// allocates it through the unit's allocator seam and `Drop` is its single release. The block stays
+/// a `CRYPTO_zalloc`/`CRYPTO_secure_zalloc` at `size_of::<T>()` and is released with the
+/// authority's own `CRYPTO_free`/`CRYPTO_secure_clear_free` ([`DrbgCtx::release`]) -- not a Rust
+/// `Box` -- on purpose: a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation,
+/// its size and its release exactly as it observes the authority's, which a Rust global allocation
+/// would hide.
+struct OwnedCtx<T: DrbgCtx> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: DrbgCtx> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the unit's allocator seam, or `None`
+    /// when it answers NULL.
+    fn new() -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(T::zalloc()).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the dispatch hands out and `*_free` takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: DrbgCtx> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_free` body ([`DrbgCtx::destroy_body`]) followed
+    /// by the block's own release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new`/`from_raw` produced and this is its single release;
+        // `Drop` runs once, and `destroy_body` is the authority's own `*_free` body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            T::release(self.ptr.as_ptr());
+        }
+    }
+}
+
+/// An owned block whose single release is the authority's [`DrbgCtx::release`] *without* the
+/// context destructor.
+///
+/// This is the release a unit's constructor performs on a block it abandons before the context is
+/// built: `ossl_prov_drbg_nonce_ctx_new`'s failed `CRYPTO_THREAD_lock_new` writes a bare
+/// `OPENSSL_free`, so the context destructor must not run. The block stays a `CRYPTO_zalloc` at
+/// `size_of::<T>()` on the seam. A block that builds successfully is handed back out through
+/// [`Self::into_raw`] and is released, later, by the row's `*_free` (an [`OwnedCtx`]).
+struct OwnedRaw<T: DrbgCtx> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: DrbgCtx> OwnedRaw<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the unit's allocator seam, or `None`
+    /// when it answers NULL.
+    fn new() -> Option<OwnedRaw<T>> {
+        ptr::NonNull::new(T::zalloc()).map(|ptr| OwnedRaw { ptr })
+    }
+
+    /// The block's address, for the fields the constructor fills.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller: the context was built.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: DrbgCtx> Drop for OwnedRaw<T> {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; its single
+        // release is the authority's own.
+        unsafe { T::release(self.ptr.as_ptr()) };
+    }
+}
+
+// The CTR `set_ctx_params` "ECB" copy, owned by `OwnedBuf`: the authority `CRYPTO_strndup`s
+// it, overwrites it in place and releases it before returning.
 
 // =============================================================================================
 // `struct prov_drbg_st` — `prov/drbg.h:59-165`
@@ -317,6 +473,36 @@ pub(crate) struct ProvDrbg {
     pub cleanup_nonce_fn: *mut c_void,
 }
 
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbg {
+    const FILE: *const c_char = FILE_DRBG;
+
+    fn zalloc() -> *mut ProvDrbg {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<ProvDrbg>()` bytes, which is exactly this layout.
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), Self::FILE, LINE)
+        }
+        .cast::<ProvDrbg>()
+    }
+
+    unsafe fn destroy_body(ptr: *mut ProvDrbg) {
+        // SAFETY: `ptr` is a live context per the trait contract; `CRYPTO_THREAD_lock_free`
+        // accepts NULL, which is the lock's state until `ossl_drbg_enable_locking` makes one.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+    }
+
+    unsafe fn release(ptr: *mut ProvDrbg) {
+        // SAFETY: `ptr` is a live block per the trait contract; its single release is the
+        // authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(ptr.cast(), Self::FILE, LINE) };
+    }
+}
+
 /// `PROV_DRBG_NONCE_GLOBAL` — `drbg.c:259-262`, the nonce counter's own global, kept out of the
 /// `OSSL_LIB_CTX` to avoid the recursion `ossl_prov_drbg_nonce_ctx_new`'s comment describes.
 pub(crate) struct ProvDrbgNonceGlobal {
@@ -324,6 +510,40 @@ pub(crate) struct ProvDrbgNonceGlobal {
     pub rand_nonce_lock: *mut CryptoRwlock,
     /// `int rand_nonce_count`.
     pub rand_nonce_count: c_int,
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgNonceGlobal {
+    const FILE: *const c_char = FILE_DRBG;
+
+    fn zalloc() -> *mut ProvDrbgNonceGlobal {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<ProvDrbgNonceGlobal>()` bytes, which is exactly this layout.
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ProvDrbgNonceGlobal>(),
+                Self::FILE,
+                LINE,
+            )
+        }
+        .cast::<ProvDrbgNonceGlobal>()
+    }
+
+    unsafe fn destroy_body(ptr: *mut ProvDrbgNonceGlobal) {
+        // SAFETY: `ptr` is a live context per the trait contract; `CRYPTO_THREAD_lock_free`
+        // accepts NULL.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).rand_nonce_lock) };
+    }
+
+    unsafe fn release(ptr: *mut ProvDrbgNonceGlobal) {
+        // SAFETY: `ptr` is a live block per the trait contract; its single release is the
+        // authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(ptr.cast(), Self::FILE, LINE) };
+    }
 }
 
 // =============================================================================================
@@ -600,19 +820,19 @@ unsafe fn cleanup_entropy(drbg: *mut ProvDrbg, out: *mut c_uchar, outlen: usize)
 /// # Safety
 /// The `OSSL_LIB_CTX` callback contract; `libctx` is unused.
 pub(crate) unsafe fn ossl_prov_drbg_nonce_ctx_new(_libctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the allocation is this frame's and is released on the failure path.
+    // SAFETY: nothing beyond the allocator seam is touched.
     unsafe {
-        let dngbl = CRYPTO_zalloc(core::mem::size_of::<ProvDrbgNonceGlobal>(), FILE_DRBG, LINE)
-            .cast::<ProvDrbgNonceGlobal>();
-        if dngbl.is_null() {
+        // The half-built block is abandoned with the authority's bare `OPENSSL_free` when the lock
+        // cannot be made, so `OwnedRaw` -- the release without the context destructor -- is its
+        // owner until the lock is in place.
+        let Some(dngbl) = OwnedRaw::<ProvDrbgNonceGlobal>::new() else {
+            return ptr::null_mut();
+        };
+        (*dngbl.as_ptr()).rand_nonce_lock = CRYPTO_THREAD_lock_new();
+        if (*dngbl.as_ptr()).rand_nonce_lock.is_null() {
             return ptr::null_mut();
         }
-        (*dngbl).rand_nonce_lock = CRYPTO_THREAD_lock_new();
-        if (*dngbl).rand_nonce_lock.is_null() {
-            CRYPTO_free(dngbl.cast(), FILE_DRBG, LINE);
-            return ptr::null_mut();
-        }
-        dngbl.cast()
+        dngbl.into_raw().cast()
     }
 }
 
@@ -621,15 +841,10 @@ pub(crate) unsafe fn ossl_prov_drbg_nonce_ctx_new(_libctx: *mut c_void) -> *mut 
 /// # Safety
 /// `vdngbl` is NULL or what `ossl_prov_drbg_nonce_ctx_new` returned.
 pub(crate) unsafe fn ossl_prov_drbg_nonce_ctx_free(vdngbl: *mut c_void) {
-    // SAFETY: `vdngbl` is per the contract; both frees accept NULL.
-    unsafe {
-        if vdngbl.is_null() {
-            return;
-        }
-        let dngbl = vdngbl.cast::<ProvDrbgNonceGlobal>();
-        CRYPTO_THREAD_lock_free((*dngbl).rand_nonce_lock);
-        CRYPTO_free(vdngbl, FILE_DRBG, LINE);
-    }
+    // SAFETY: `vdngbl` is NULL or a live context `ossl_prov_drbg_nonce_ctx_new` allocated;
+    // `from_raw` reclaims it and `Drop` runs the authority's own free body (its lock) and its
+    // single block release.
+    unsafe { drop(OwnedCtx::<ProvDrbgNonceGlobal>::from_raw(vdngbl.cast())) };
 }
 
 /// `static size_t prov_drbg_get_nonce(PROV_DRBG *drbg, unsigned char **pout, size_t min_len,
@@ -1244,11 +1459,12 @@ pub(crate) unsafe fn ossl_rand_drbg_new(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let drbg =
-            CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), FILE_DRBG, LINE).cast::<ProvDrbg>();
-        if drbg.is_null() {
+        // The context block, allocated through the crate's allocator seam and owned by `owner`
+        // until it is handed out -- or given to `dfree` on an error path.
+        let Some(owner) = OwnedCtx::<ProvDrbg>::new() else {
             return ptr::null_mut();
-        }
+        };
+        let drbg = owner.as_ptr();
 
         (*drbg).provctx = provctx;
         (*drbg).instantiate = instantiate;
@@ -1291,24 +1507,24 @@ pub(crate) unsafe fn ossl_rand_drbg_new(
         (*drbg).reseed_time_interval = TIME_INTERVAL;
 
         if dnew(drbg) == 0 {
-            dfree(drbg.cast());
+            dfree(owner.into_raw().cast());
             return ptr::null_mut();
         }
 
         if !parent.is_null() {
             let mut p_str: c_uint = 0;
             if get_parent_strength(drbg, &mut p_str) == 0 {
-                dfree(drbg.cast());
+                dfree(owner.into_raw().cast());
                 return ptr::null_mut();
             }
             if (*drbg).strength > p_str {
                 raise_site(&err_sites::PROV_DRBG_854);
-                dfree(drbg.cast());
+                dfree(owner.into_raw().cast());
                 return ptr::null_mut();
             }
         }
         // #ifdef TSAN_REQUIRES_LOCKING: ossl_drbg_enable_locking(drbg).
-        drbg
+        owner.into_raw()
     }
 }
 
@@ -1337,14 +1553,9 @@ fn non_null(p: *const OsslDispatch) -> Option<*const OsslDispatch> {
 /// `drbg` is NULL or a live `ProvDrbg`, and its `data` has already been released by its
 /// algorithm-specific `dfree`.
 pub(crate) unsafe fn ossl_rand_drbg_free(drbg: *mut ProvDrbg) {
-    // SAFETY: `drbg` is per the contract; both frees accept NULL.
-    unsafe {
-        if drbg.is_null() {
-            return;
-        }
-        CRYPTO_THREAD_lock_free((*drbg).lock);
-        CRYPTO_free(drbg.cast(), FILE_DRBG, LINE);
-    }
+    // SAFETY: `drbg` is NULL or a live `ProvDrbg`; `from_raw` reclaims it and `Drop` runs the
+    // authority's own free body (its lock) and its single block release.
+    unsafe { drop(OwnedCtx::<ProvDrbg>::from_raw(drbg)) };
 }
 
 /// `int ossl_drbg_get_ctx_params(PROV_DRBG *drbg, const struct drbg_get_ctx_params_st *p)`
@@ -1660,6 +1871,46 @@ pub(crate) struct ProvDrbgCtr {
     pub bltmp_pos: usize,
     /// `unsigned char KX[48]`.
     pub kx: [c_uchar; 48],
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgCtr {
+    const FILE: *const c_char = FILE_DRBG_CTR;
+
+    fn zalloc() -> *mut ProvDrbgCtr {
+        // SAFETY: `Self::FILE` is a `'static` NUL-terminated C string.
+        unsafe {
+            CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgCtr>(), Self::FILE, LINE)
+                .cast::<ProvDrbgCtr>()
+        }
+    }
+
+    unsafe fn destroy_body(ptr: *mut ProvDrbgCtr) {
+        // SAFETY: `ptr` is a live context per the trait contract; each `*_free` accepts NULL.
+        unsafe {
+            EVP_CIPHER_CTX_free((*ptr).ctx_ecb);
+            EVP_CIPHER_CTX_free((*ptr).ctx_ctr);
+            EVP_CIPHER_CTX_free((*ptr).ctx_df);
+            EVP_CIPHER_free((*ptr).cipher_ecb);
+            EVP_CIPHER_free((*ptr).cipher_ctr);
+        }
+    }
+
+    unsafe fn release(ptr: *mut ProvDrbgCtr) {
+        // SAFETY: `ptr` is a live secure block per the trait contract; its single release is the
+        // authority's own `CRYPTO_secure_clear_free` at `size_of::<ProvDrbgCtr>()`.
+        unsafe {
+            CRYPTO_secure_clear_free(
+                ptr.cast(),
+                core::mem::size_of::<ProvDrbgCtr>(),
+                Self::FILE,
+                LINE,
+            )
+        };
+    }
 }
 
 /// `static void inc_128(PROV_DRBG_CTR *ctr)` — `drbg_ctr.c:72-83`.
@@ -2550,13 +2801,11 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
 unsafe extern "C" fn drbg_ctr_new(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
-        let ctr = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgCtr>(), FILE_DRBG_CTR, LINE)
-            .cast::<ProvDrbgCtr>();
-        if ctr.is_null() {
+        let Some(ctr) = OwnedCtx::<ProvDrbgCtr>::new() else {
             return 0;
-        }
-        (*ctr).use_df = 1;
-        (*drbg).data = ctr.cast();
+        };
+        (*ctr.as_ptr()).use_df = 1;
+        (*drbg).data = ctr.into_raw().cast();
         // OSSL_FIPS_IND_INIT(drbg) is a no-op when FIPS_MODULE is undefined.
         drbg_ctr_init_lengths(drbg)
     }
@@ -2598,20 +2847,12 @@ unsafe extern "C" fn drbg_ctr_free(vdrbg: *mut c_void) {
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
         if !drbg.is_null() {
-            let ctr = (*drbg).data.cast::<ProvDrbgCtr>();
-            if !ctr.is_null() {
-                EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
-                EVP_CIPHER_CTX_free((*ctr).ctx_ctr);
-                EVP_CIPHER_CTX_free((*ctr).ctx_df);
-                EVP_CIPHER_free((*ctr).cipher_ecb);
-                EVP_CIPHER_free((*ctr).cipher_ctr);
-                CRYPTO_secure_clear_free(
-                    ctr.cast(),
-                    core::mem::size_of::<ProvDrbgCtr>(),
-                    FILE_DRBG_CTR,
-                    LINE,
-                );
-            }
+            // The CTR block is owned by the context's `data`; `from_raw` reclaims it and `Drop`
+            // runs the authority's own free body (three cipher contexts and two fetched ciphers)
+            // and its single secure release.
+            drop(OwnedCtx::<ProvDrbgCtr>::from_raw(
+                (*drbg).data.cast::<ProvDrbgCtr>(),
+            ));
         }
         ossl_rand_drbg_free(drbg);
     }
@@ -2895,13 +3136,17 @@ unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCt
                 raise_site(&err_sites::PROV_DRBG_CTR_1105);
                 return 0;
             }
-            let ecb = CRYPTO_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR, LINE);
-            if ecb.is_null() {
+            // The "ECB" copy is this unit's own scratch, held by `ecb` and released in scope by
+            // `Drop` with the authority's own `CRYPTO_strndup`/`CRYPTO_free` pair.
+            let Some(ecb) =
+                OwnedBuf::new_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR_SEAM, LINE)
+            else {
                 return 0;
-            }
+            };
+            let ecb_ptr = ecb.as_ptr().cast::<c_char>();
             ptr::copy_nonoverlapping(
                 c"ECB".as_ptr(),
-                ecb.add((*(*p).cipher).data_size - ecb_str_len),
+                ecb_ptr.add((*(*p).cipher).data_size - ecb_str_len),
                 4,
             );
             EVP_CIPHER_free((*ctr).cipher_ecb);
@@ -2910,8 +3155,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCt
             (*ctr).cipher_ecb = ptr::null_mut();
             // Fetch from our own provider first; the fetch falls back on its own.
             (*ctr).cipher_ctr = EVP_CIPHER_fetch(libctx, base, propquery);
-            (*ctr).cipher_ecb = EVP_CIPHER_fetch(libctx, ecb, propquery);
-            CRYPTO_free(ecb.cast(), FILE_DRBG_CTR, LINE);
+            (*ctr).cipher_ecb = EVP_CIPHER_fetch(libctx, ecb_ptr, propquery);
             if (*ctr).cipher_ctr.is_null() || (*ctr).cipher_ecb.is_null() {
                 raise_site(&err_sites::PROV_DRBG_CTR_1124);
                 return 0;
@@ -3062,6 +3306,44 @@ pub(crate) struct ProvDrbgHash {
     pub c: [c_uchar; HASH_PRNG_MAX_SEEDLEN],
     /// `unsigned char vtmp[HASH_PRNG_MAX_SEEDLEN]` — always at least the maximum digest length.
     pub vtmp: [c_uchar; HASH_PRNG_MAX_SEEDLEN],
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgHash {
+    const FILE: *const c_char = FILE_DRBG_HASH;
+
+    fn zalloc() -> *mut ProvDrbgHash {
+        // SAFETY: `Self::FILE` is a `'static` NUL-terminated C string.
+        unsafe {
+            CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHash>(), Self::FILE, LINE)
+                .cast::<ProvDrbgHash>()
+        }
+    }
+
+    unsafe fn destroy_body(ptr: *mut ProvDrbgHash) {
+        // SAFETY: `ptr` is a live context per the trait contract; each `*_free`/reset accepts the
+        // members it names.
+        unsafe {
+            EVP_MD_CTX_free((*ptr).ctx);
+            ossl_prov_digest_reset(&mut (*ptr).digest);
+        }
+    }
+
+    unsafe fn release(ptr: *mut ProvDrbgHash) {
+        // SAFETY: `ptr` is a live secure block per the trait contract; its single release is the
+        // authority's own `CRYPTO_secure_clear_free` at `size_of::<ProvDrbgHash>()`.
+        unsafe {
+            CRYPTO_secure_clear_free(
+                ptr.cast(),
+                core::mem::size_of::<ProvDrbgHash>(),
+                Self::FILE,
+                LINE,
+            )
+        };
+    }
 }
 
 /// `static int hash_df(PROV_DRBG *drbg, unsigned char *out, const unsigned char inbyte, const
@@ -3603,13 +3885,11 @@ unsafe extern "C" fn drbg_hash_verify_zeroization(vdrbg: *mut c_void) -> c_int {
 unsafe extern "C" fn drbg_hash_new(ctx: *mut ProvDrbg) -> c_int {
     // SAFETY: `ctx` is live per the contract.
     unsafe {
-        let hash = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHash>(), FILE_DRBG_HASH, LINE)
-            .cast::<ProvDrbgHash>();
-        if hash.is_null() {
+        let Some(hash) = OwnedCtx::<ProvDrbgHash>::new() else {
             return 0;
-        }
+        };
         // OSSL_FIPS_IND_INIT(ctx) is a no-op when FIPS_MODULE is undefined.
-        (*ctx).data = hash.cast();
+        (*ctx).data = hash.into_raw().cast();
         (*ctx).seedlen = HASH_PRNG_MAX_SEEDLEN;
         (*ctx).max_entropylen = DRBG_MAX_LENGTH;
         (*ctx).max_noncelen = DRBG_MAX_LENGTH;
@@ -3657,17 +3937,12 @@ unsafe extern "C" fn drbg_hash_free(vdrbg: *mut c_void) {
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
         if !drbg.is_null() {
-            let hash = (*drbg).data.cast::<ProvDrbgHash>();
-            if !hash.is_null() {
-                EVP_MD_CTX_free((*hash).ctx);
-                ossl_prov_digest_reset(&mut (*hash).digest);
-                CRYPTO_secure_clear_free(
-                    hash.cast(),
-                    core::mem::size_of::<ProvDrbgHash>(),
-                    FILE_DRBG_HASH,
-                    LINE,
-                );
-            }
+            // The HASH block is owned by the context's `data`; `from_raw` reclaims it and `Drop`
+            // runs the authority's own free body (digest context and `PROV_DIGEST`) and its single
+            // secure release.
+            drop(OwnedCtx::<ProvDrbgHash>::from_raw(
+                (*drbg).data.cast::<ProvDrbgHash>(),
+            ));
         }
         ossl_rand_drbg_free(drbg);
     }
@@ -4124,6 +4399,44 @@ pub(crate) struct ProvDrbgHmac {
     pub v: [c_uchar; EVP_MAX_MD_SIZE],
 }
 
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block (`release`
+// frees it). (b) holds: `zalloc` answers a fresh zeroed block, an all-zero context is valid, and
+// `release` is that block's single release through the seam `zalloc` used -- what `OwnedCtx::new` leans on.
+unsafe impl DrbgCtx for ProvDrbgHmac {
+    const FILE: *const c_char = FILE_DRBG_HMAC;
+
+    fn zalloc() -> *mut ProvDrbgHmac {
+        // SAFETY: `Self::FILE` is a `'static` NUL-terminated C string.
+        unsafe {
+            CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHmac>(), Self::FILE, LINE)
+                .cast::<ProvDrbgHmac>()
+        }
+    }
+
+    unsafe fn destroy_body(ptr: *mut ProvDrbgHmac) {
+        // SAFETY: `ptr` is a live context per the trait contract; each `*_free`/reset accepts the
+        // members it names.
+        unsafe {
+            EVP_MAC_CTX_free((*ptr).ctx);
+            ossl_prov_digest_reset(&mut (*ptr).digest);
+        }
+    }
+
+    unsafe fn release(ptr: *mut ProvDrbgHmac) {
+        // SAFETY: `ptr` is a live secure block per the trait contract; its single release is the
+        // authority's own `CRYPTO_secure_clear_free` at `size_of::<ProvDrbgHmac>()`.
+        unsafe {
+            CRYPTO_secure_clear_free(
+                ptr.cast(),
+                core::mem::size_of::<ProvDrbgHmac>(),
+                Self::FILE,
+                LINE,
+            )
+        };
+    }
+}
+
 /// `static int do_hmac(PROV_DRBG_HMAC *hmac, unsigned char inbyte, const unsigned char *in1,
 /// size_t in1len, const unsigned char *in2, size_t in2len, const unsigned char *in3, size_t
 /// in3len)` — `drbg_hmac.c:62-83`. Note `hmac->blocklen` is the MAC's *output* length here.
@@ -4539,13 +4852,11 @@ unsafe extern "C" fn drbg_hmac_verify_zeroization(vdrbg: *mut c_void) -> c_int {
 unsafe extern "C" fn drbg_hmac_new(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
-        let hmac = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHmac>(), FILE_DRBG_HMAC, LINE)
-            .cast::<ProvDrbgHmac>();
-        if hmac.is_null() {
+        let Some(hmac) = OwnedCtx::<ProvDrbgHmac>::new() else {
             return 0;
-        }
+        };
         // OSSL_FIPS_IND_INIT(drbg) is a no-op when FIPS_MODULE is undefined.
-        (*drbg).data = hmac.cast();
+        (*drbg).data = hmac.into_raw().cast();
         // See SP800-57 Part1 Rev4 5.6.1 Table 3.
         (*drbg).max_entropylen = DRBG_MAX_LENGTH;
         (*drbg).max_noncelen = DRBG_MAX_LENGTH;
@@ -4593,17 +4904,12 @@ unsafe extern "C" fn drbg_hmac_free(vdrbg: *mut c_void) {
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
         if !drbg.is_null() {
-            let hmac = (*drbg).data.cast::<ProvDrbgHmac>();
-            if !hmac.is_null() {
-                EVP_MAC_CTX_free((*hmac).ctx);
-                ossl_prov_digest_reset(&mut (*hmac).digest);
-                CRYPTO_secure_clear_free(
-                    hmac.cast(),
-                    core::mem::size_of::<ProvDrbgHmac>(),
-                    FILE_DRBG_HMAC,
-                    LINE,
-                );
-            }
+            // The HMAC block is owned by the context's `data`; `from_raw` reclaims it and `Drop`
+            // runs the authority's own free body (MAC context and `PROV_DIGEST`) and its single
+            // secure release.
+            drop(OwnedCtx::<ProvDrbgHmac>::from_raw(
+                (*drbg).data.cast::<ProvDrbgHmac>(),
+            ));
         }
         ossl_rand_drbg_free(drbg);
     }

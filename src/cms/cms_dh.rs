@@ -47,13 +47,15 @@ use crate::evp::pkey_ctx::{
     EVP_PKEY_CTX_get0_libctx, EVP_PKEY_CTX_get0_peerkey, EVP_PKEY_CTX_get0_pkey,
     EVP_PKEY_CTX_get0_propq, EvpPkeyCtx, EVP_PKEY_DH_KDF_X9_42,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memdup;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::obj::{
     NID_dhpublicnumber, NID_id_smime_alg_ESDH, NID_undef, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{ossl_asn1_string_set_bits_left, CmsRecipientInfo};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CIPHER_CTX` wrapping mode `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:529`.
 const EVP_CIPH_WRAP_MODE: c_int = 0x10002;
@@ -77,7 +79,6 @@ unsafe fn dh_cms_set_peerkey(
     let mut rv = 0;
     let mut pkpeer: *mut EvpPkey = ptr::null_mut();
     let mut bnpub: *mut BigNum = ptr::null_mut();
-    let mut buf: *mut c_uchar = ptr::null_mut();
     let mut plen;
 
     // SAFETY: `alg` is live; the three slots are this frame's.
@@ -128,24 +129,25 @@ unsafe fn dh_cms_set_peerkey(
         unsafe { ASN1_STRING_free(public_key) };
         return rv;
     }
+    // The padding scratch is this frame's block, allocated through the crate's allocator seam; its
+    // release is the authority's plain `CRYPTO_free`, run by `Drop`.
     // SAFETY: `plen >= 0` per the key size.
-    buf = CRYPTO_malloc(plen as usize, c"cms_dh.c".as_ptr(), 60).cast::<c_uchar>();
-    if buf.is_null() {
+    let Some(buf) = OwnedBuf::new(plen as usize, SeamFile::new(c"cms_dh.c"), 60) else {
         // SAFETY: the arguments are live scalars.
         unsafe {
             ASN1_STRING_free(public_key);
             BN_free(bnpub);
         }
         return rv;
-    }
+    };
     // SAFETY: `bnpub` is live; `buf` is `plen` bytes.
-    if unsafe { BN_bn2binpad(bnpub, buf, plen) } < 0 {
-        // SAFETY: each pointer is NULL or owned here.
+    if unsafe { BN_bn2binpad(bnpub, buf.as_ptr(), plen) } < 0 {
+        // SAFETY: `public_key`/`bnpub` are owned here; `buf` releases its own block on drop.
         unsafe {
             ASN1_STRING_free(public_key);
             BN_free(bnpub);
-            CRYPTO_free(buf.cast(), c"cms_dh.c".as_ptr(), 61);
         }
+        drop(buf);
         return rv;
     }
 
@@ -155,20 +157,22 @@ unsafe fn dh_cms_set_peerkey(
         // SAFETY: `pkpeer`/`pk` are live.
         && unsafe { EVP_PKEY_copy_parameters(pkpeer, pk) } != 0
         // SAFETY: `pkpeer` is live; `buf` is `plen` bytes.
-        && unsafe { EVP_PKEY_set1_encoded_public_key(pkpeer, buf, plen as usize) } > 0;
+        && unsafe { EVP_PKEY_set1_encoded_public_key(pkpeer, buf.as_ptr(), plen as usize) } > 0;
     if ok {
         // SAFETY: `pctx`/`pkpeer` are live.
         if unsafe { EVP_PKEY_derive_set_peer(pctx, pkpeer) } > 0 {
             rv = 1;
         }
     }
-    // SAFETY: each is NULL or owned.
+    // SAFETY: `public_key`/`bnpub` are NULL or owned.
     unsafe {
         ASN1_STRING_free(public_key);
         BN_free(bnpub);
-        CRYPTO_free(buf.cast(), c"cms_dh.c".as_ptr(), 76);
-        EVP_PKEY_free(pkpeer);
     }
+    // `buf` releases its own block at the authority's tail site on drop.
+    drop(buf);
+    // SAFETY: `pkpeer` is NULL or owned.
+    unsafe { EVP_PKEY_free(pkpeer) };
     rv
 }
 
@@ -181,7 +185,7 @@ unsafe fn dh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientInf
     let mut alg: *mut X509Algor = ptr::null_mut();
     let mut kekalg: *mut X509Algor = ptr::null_mut();
     let mut ukm: *mut Asn1String = ptr::null_mut();
-    let mut dukm: *mut c_uchar = ptr::null_mut();
+    let mut dukm: Option<OwnedBuf> = None;
     let mut dukmlen = 0;
     let keylen;
     let mut plen = 0;
@@ -290,22 +294,34 @@ unsafe fn dh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientInf
                         if !ukm.is_null() {
                             // SAFETY: `ukm` is live.
                             dukmlen = unsafe { ASN1_STRING_length(ukm) };
-                            // SAFETY: `ukm` is live.
-                            dukm = unsafe {
-                                CRYPTO_memdup(
-                                    ASN1_STRING_get0_data(ukm).cast(),
-                                    dukmlen as usize,
-                                    c"cms_dh.c".as_ptr(),
-                                    150,
+                            // The duplicated UKM is the helper's own `CRYPTO_malloc` block; it is
+                            // adopted so the failure paths below release what they built.
+                            // SAFETY: `ukm` is live; the copy is NULL or a block no one else owns.
+                            dukm = Some(unsafe {
+                                OwnedBuf::adopt_plain_nullable(
+                                    CRYPTO_memdup(
+                                        ASN1_STRING_get0_data(ukm).cast(),
+                                        dukmlen as usize,
+                                        c"cms_dh.c".as_ptr(),
+                                        150,
+                                    )
+                                    .cast::<c_uchar>(),
+                                    SeamFile::new(c"cms_dh.c"),
+                                    163,
                                 )
-                                .cast::<c_uchar>()
-                            };
-                            dukm_ok = !dukm.is_null();
+                            });
+                            dukm_ok = dukm.as_ref().is_some_and(|b| !b.as_ptr().is_null());
                         }
                         if dukm_ok {
-                            // SAFETY: `pctx` is live.
-                            if unsafe { EVP_PKEY_CTX_set0_dh_kdf_ukm(pctx, dukm, dukmlen) } > 0 {
-                                dukm = ptr::null_mut();
+                            let dukm_raw = dukm.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+                            // SAFETY: `pctx` is live; `dukm` is `dukmlen` writable bytes.
+                            if unsafe { EVP_PKEY_CTX_set0_dh_kdf_ukm(pctx, dukm_raw, dukmlen) } > 0
+                            {
+                                // Ownership of the block moves into `pctx`; give up the handle
+                                // without running its release.
+                                if let Some(block) = dukm.take() {
+                                    let _ = block.into_raw();
+                                }
                                 rv = 1;
                             }
                         }
@@ -314,12 +330,14 @@ unsafe fn dh_cms_set_shared_info(pctx: *mut EvpPkeyCtx, ri: *mut CmsRecipientInf
             }
         }
     }
-    // SAFETY: each is NULL or owned.
+    // SAFETY: `kekalg`/`kekcipher` are NULL or owned.
     unsafe {
         X509_ALGOR_free(kekalg);
         EVP_CIPHER_free(kekcipher);
-        CRYPTO_free(dukm.cast(), c"cms_dh.c".as_ptr(), 163);
     }
+    // `dukm` still holds the block only when it was not moved into `pctx`; its release is the
+    // authority's plain `CRYPTO_free`, run by `Drop` (a no-op once ownership moved on).
+    drop(dukm);
     rv
 }
 
@@ -396,8 +414,8 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
     let mut pubkey: *mut Asn1String = ptr::null_mut();
     let mut wrap_str: *mut Asn1String = ptr::null_mut();
     let mut ukm: *mut Asn1String = ptr::null_mut();
-    let mut penc: *mut c_uchar = ptr::null_mut();
-    let mut dukm: *mut c_uchar = ptr::null_mut();
+    let mut penc: Option<OwnedBuf> = None;
+    let mut dukm: Option<OwnedBuf> = None;
     let mut penclen;
     let mut dukmlen = 0;
     let mut rv = 0;
@@ -450,19 +468,25 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             }
 
             // Set the key.
-            // SAFETY: `pubk` is live; `penc` is this frame's slot.
-            penclen = unsafe { ASN1_item_i2d(pubk.cast(), &mut penc, ASN1_INTEGER_it()) };
+            let mut penc_raw: *mut c_uchar = ptr::null_mut();
+            // SAFETY: `pubk` is live; `penc_raw` is this frame's slot.
+            penclen = unsafe { ASN1_item_i2d(pubk.cast(), &mut penc_raw, ASN1_INTEGER_it()) };
+            // The encoded key is the helper's own `CRYPTO_malloc` block; `penc` adopts it so the
+            // failure path below releases what it built at the authority's own site.
+            // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
+            let penc_owned = unsafe {
+                OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_dh.c"), 330)
+            };
             // SAFETY: `pubk` is owned here.
             unsafe { ASN1_STRING_free(pubk) };
             if penclen <= 0 {
+                penc = Some(penc_owned);
                 break 'body;
             }
-            // SAFETY: `pubkey`/`penc` are live; ownership transfers.
-            unsafe { ASN1_STRING_set0(pubkey, penc.cast(), penclen) };
+            // SAFETY: `pubkey` is live; ownership of the block transfers to the `ASN1_STRING`.
+            unsafe { ASN1_STRING_set0(pubkey, penc_owned.into_raw().cast(), penclen) };
             // SAFETY: `pubkey` is live.
             unsafe { ossl_asn1_string_set_bits_left(pubkey, 0) };
-
-            penc = ptr::null_mut();
             // SAFETY: `talg` is live.
             unsafe {
                 X509_ALGOR_set0(
@@ -562,42 +586,58 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
         if !ukm.is_null() {
             // SAFETY: `ukm` is live.
             dukmlen = unsafe { ASN1_STRING_length(ukm) };
-            // SAFETY: `ukm` is live.
-            dukm = unsafe {
-                CRYPTO_memdup(
-                    ASN1_STRING_get0_data(ukm).cast(),
-                    dukmlen as usize,
-                    c"cms_dh.c".as_ptr(),
-                    302,
+            // The duplicated UKM is the helper's own `CRYPTO_malloc` block; it is adopted so the
+            // failure paths below release what they built.
+            // SAFETY: `ukm` is live; the copy is NULL or a block no one else owns.
+            dukm = Some(unsafe {
+                OwnedBuf::adopt_plain_nullable(
+                    CRYPTO_memdup(
+                        ASN1_STRING_get0_data(ukm).cast(),
+                        dukmlen as usize,
+                        c"cms_dh.c".as_ptr(),
+                        302,
+                    )
+                    .cast::<c_uchar>(),
+                    SeamFile::new(c"cms_dh.c"),
+                    332,
                 )
-                .cast::<c_uchar>()
-            };
-            if dukm.is_null() {
+            });
+            if dukm.as_ref().is_some_and(|b| b.as_ptr().is_null()) {
                 break 'body;
             }
         }
 
-        // SAFETY: `pctx` is live.
-        if unsafe { EVP_PKEY_CTX_set0_dh_kdf_ukm(pctx, dukm, dukmlen) } <= 0 {
+        let dukm_raw = dukm.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+        // SAFETY: `pctx` is live; `dukm` is `dukmlen` writable bytes.
+        if unsafe { EVP_PKEY_CTX_set0_dh_kdf_ukm(pctx, dukm_raw, dukmlen) } <= 0 {
             break 'body;
         }
-        dukm = ptr::null_mut();
+        // Ownership of the block moves into `pctx`; give up the handle without running its release.
+        if let Some(block) = dukm.take() {
+            let _ = block.into_raw();
+        }
 
         // Wrap encoding of wrap AlgorithmIdentifier into parameter of another AlgorithmIdentifier.
-        penc = ptr::null_mut();
-        // SAFETY: `wrap_alg` is live; `penc` is this frame's slot.
-        penclen = unsafe { i2d_X509_ALGOR(wrap_alg, &mut penc) };
+        let mut penc_raw: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `wrap_alg` is live; `penc_raw` is this frame's slot.
+        penclen = unsafe { i2d_X509_ALGOR(wrap_alg, &mut penc_raw) };
+        // The encoded identifier is the helper's own `CRYPTO_malloc` block; `penc` adopts it so the
+        // failure paths below release what they built at the authority's own site.
+        // SAFETY: `penc_raw` is NULL or a live block the helper allocated and no one else owns.
+        let penc_owned =
+            unsafe { OwnedBuf::adopt_plain_nullable(penc_raw, SeamFile::new(c"cms_dh.c"), 330) };
         if penclen <= 0 {
+            penc = Some(penc_owned);
             break 'body;
         }
         // SAFETY: the allocator answers a fresh string.
         wrap_str = ASN1_STRING_new();
         if wrap_str.is_null() {
+            penc = Some(penc_owned);
             break 'body;
         }
-        // SAFETY: `wrap_str`/`penc` are live; ownership transfers.
-        unsafe { ASN1_STRING_set0(wrap_str, penc.cast(), penclen) };
-        penc = ptr::null_mut();
+        // SAFETY: `wrap_str` is live; ownership of the block transfers to the `ASN1_STRING`.
+        unsafe { ASN1_STRING_set0(wrap_str, penc_owned.into_raw().cast(), penclen) };
         // SAFETY: `talg`/`wrap_str` are live.
         rv = unsafe {
             X509_ALGOR_set0(
@@ -612,12 +652,14 @@ unsafe fn dh_cms_encrypt(ri: *mut CmsRecipientInfo) -> c_int {
             unsafe { ASN1_STRING_free(wrap_str) };
         }
     }
-    // SAFETY: each is NULL or owned.
-    unsafe {
-        CRYPTO_free(penc.cast(), c"cms_dh.c".as_ptr(), 330);
-        X509_ALGOR_free(wrap_alg);
-        CRYPTO_free(dukm.cast(), c"cms_dh.c".as_ptr(), 332);
-    }
+    // `penc` still holds its block only when it was not moved into an `ASN1_STRING`; its release
+    // is the authority's plain `CRYPTO_free`, run by `Drop` (a no-op once ownership moved on).
+    drop(penc);
+    // SAFETY: `wrap_alg` is NULL or owned.
+    unsafe { X509_ALGOR_free(wrap_alg) };
+    // `dukm` still holds its block only when it was not moved into `pctx`; its release is the
+    // authority's plain `CRYPTO_free`, run by `Drop` (a no-op once ownership moved on).
+    drop(dukm);
     rv
 }
 

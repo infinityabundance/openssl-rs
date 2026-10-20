@@ -27,6 +27,7 @@ use core::ffi::{c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::layout::{Asn1Item, I2dOfVoid};
+use crate::asn1::owned::OwnedBlock;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::bss_mem::BIO_s_mem;
@@ -35,7 +36,7 @@ use crate::runtime::bio::sys::FILE;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_NOCLOSE};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for the encode-to-a-stream path.
 pub(crate) const FILE_NAME: &core::ffi::CStr = c"crypto/asn1/a_i2d_fp.c";
@@ -121,19 +122,16 @@ pub unsafe extern "C" fn ASN1_i2d_bio(i2d: I2dOfVoid, out: *mut Bio, x: *const c
         if n <= 0 {
             return 0;
         }
-        let b = CRYPTO_malloc(n as usize, FILE_NAME.as_ptr(), LINE) as *mut c_uchar;
-        if b.is_null() {
+        // SAFETY: `n` is positive, so it is a valid byte count for the block.
+        let Some(b) = OwnedBlock::<u8>::malloc(n as usize, SeamFile::new(FILE_NAME), LINE) else {
             return 0;
-        }
-        let mut p = b;
+        };
+        let mut p = b.as_ptr();
         // SAFETY: `p` has room for the length the sizing pass reported.
         unsafe { i2d(x, &mut p) };
 
         // SAFETY: `out` is the caller's live BIO and `b` is readable for `n` bytes.
-        let ret = unsafe { write_all(out, b, n) };
-        // SAFETY: `b` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE_NAME.as_ptr(), LINE) };
-        ret
+        unsafe { write_all(out, b.as_ptr(), n) }
     })
 }
 
@@ -184,11 +182,13 @@ pub unsafe extern "C" fn ASN1_item_i2d_bio(
             unsafe { raise_site(&err_sites::A_I2D_FP_92) };
             return 0;
         }
-        // SAFETY: `out` is the caller's live BIO and `b` is readable for `n` bytes.
-        let ret = unsafe { write_all(out, b, n) };
-        // SAFETY: `b` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE_NAME.as_ptr(), LINE) };
-        ret
+        // SAFETY: `b` is non-NULL (guard above) and is the block `ASN1_item_i2d` allocated for this
+        // call through the crate's allocator seam; the handle's `Drop` is its single release.
+        let Some(buf) = (unsafe { OwnedBlock::<u8>::from_raw(b, FILE_NAME.as_ptr(), LINE) }) else {
+            return 0;
+        };
+        // SAFETY: `out` is the caller's live BIO and `buf` is readable for `n` bytes.
+        unsafe { write_all(out, buf.as_ptr(), n) }
     })
 }
 

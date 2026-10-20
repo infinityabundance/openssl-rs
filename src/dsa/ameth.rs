@@ -57,10 +57,11 @@ use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_dsa, NID_dsaWithSHA, NID_dsaWithSHA1, NID_dsaWithSHA1_2, NID_dsa_2, NID_sha256, OBJ_nid2obj,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::t_x509::X509_signature_dump;
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param};
 
@@ -73,7 +74,7 @@ const EVP_PKEY_DSA3: c_int = NID_dsaWithSHA1;
 /// `EVP_PKEY_DSA4` — `include/openssl/evp.h:69`, `NID_dsaWithSHA1_2`.
 const EVP_PKEY_DSA4: c_int = NID_dsaWithSHA1_2;
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c");
 
 /// `static int dsa_pub_decode(EVP_PKEY *pkey, const X509_PUBKEY *pubkey)` —
 /// `crypto/dsa/dsa_ameth.c:29-84`.
@@ -187,7 +188,6 @@ unsafe extern "C" fn dsa_pub_decode(pkey: *mut EvpPkey, pubkey: *const X509Pubke
 /// # Safety
 /// `pk` and `pkey` are live.
 unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -> c_int {
-    let mut penc: *mut c_uchar = ptr::null_mut();
     let mut str_: *mut Asn1String = ptr::null_mut();
 
     // SAFETY: `pkey` is live.
@@ -207,8 +207,6 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::DSA_AMETH_103) };
             // goto err
-            // SAFETY: `penc` is NULL.
-            unsafe { CRYPTO_free(penc.cast(), FILE, 139) };
             return 0;
         }
         // SAFETY: `dsa` and `str_` are live.
@@ -218,11 +216,8 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::DSA_AMETH_108) };
             // goto err
-            // SAFETY: `penc` is NULL and `str_` is live.
-            unsafe {
-                CRYPTO_free(penc.cast(), FILE, 139);
-                ASN1_STRING_free(str_);
-            }
+            // SAFETY: `str_` is live.
+            unsafe { ASN1_STRING_free(str_) };
             return 0;
         }
         V_ASN1_SEQUENCE
@@ -237,28 +232,26 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSA_AMETH_118) };
         // goto err
-        // SAFETY: `penc` is NULL and `str_` is live.
-        unsafe {
-            CRYPTO_free(penc.cast(), FILE, 139);
-            ASN1_STRING_free(str_);
-        }
+        // SAFETY: `str_` is live.
+        unsafe { ASN1_STRING_free(str_) };
         return 0;
     }
 
-    // SAFETY: `pubint` is live and `penc` is a live out-parameter.
-    let penclen = unsafe { ASN1_item_i2d(pubint.cast(), &mut penc, ASN1_INTEGER_it()) };
+    let mut penc_raw: *mut c_uchar = ptr::null_mut();
+    // SAFETY: `pubint` is live and `penc_raw` is a live out-parameter.
+    let penclen = unsafe { ASN1_item_i2d(pubint.cast(), &mut penc_raw, ASN1_INTEGER_it()) };
     // SAFETY: `pubint` is live.
     unsafe { ASN1_STRING_free(pubint) };
+    // SAFETY: `penc_raw` is NULL or the block `ASN1_item_i2d` allocated through the crate's seam;
+    // this frame owns it and no other owner releases it.
+    let penc = unsafe { OwnedBuf::adopt_plain(penc_raw, FILE_SEAM, 139) };
 
     if penclen <= 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSA_AMETH_126) };
         // goto err
-        // SAFETY: `penc` is NULL and `str_` is live.
-        unsafe {
-            CRYPTO_free(penc.cast(), FILE, 139);
-            ASN1_STRING_free(str_);
-        }
+        // SAFETY: `str_` is live.
+        unsafe { ASN1_STRING_free(str_) };
         return 0;
     }
 
@@ -266,24 +259,21 @@ unsafe extern "C" fn dsa_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
     let aobj = OBJ_nid2obj(EVP_PKEY_DSA);
     if aobj.is_null() {
         // goto err
-        // SAFETY: `penc` is NULL and `str_` is live.
-        unsafe {
-            CRYPTO_free(penc.cast(), FILE, 139);
-            ASN1_STRING_free(str_);
-        }
+        // SAFETY: `str_` is live.
+        unsafe { ASN1_STRING_free(str_) };
         return 0;
     }
 
+    let penc_ptr = penc.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     // SAFETY: `pk` is live and `str_`/`penc` are the objects the setter takes ownership of.
-    if unsafe { X509_PUBKEY_set0_param(pk, aobj, ptype, str_.cast(), penc, penclen) } != 0 {
+    if unsafe { X509_PUBKEY_set0_param(pk, aobj, ptype, str_.cast(), penc_ptr, penclen) } != 0 {
+        // Ownership of the DER block moves to the setter.
+        let _ = penc.map(OwnedBuf::into_raw);
         return 1;
     }
 
-    // SAFETY: both are live.
-    unsafe {
-        CRYPTO_free(penc.cast(), FILE, 139);
-        ASN1_STRING_free(str_);
-    }
+    // SAFETY: `str_` is live; `penc`'s `Drop` performs the authority's own plain release.
+    unsafe { ASN1_STRING_free(str_) };
     0
 }
 
@@ -317,8 +307,6 @@ unsafe extern "C" fn dsa_priv_encode(
     p8: *mut crate::asn1::p8_pkey::Pkcs8PrivKeyInfo,
     pkey: *const EvpPkey,
 ) -> c_int {
-    let mut dp: *mut c_uchar = ptr::null_mut();
-
     // SAFETY: `pkey` is live.
     let dsa = unsafe { (*pkey).pkey.cast::<Dsa>() };
 
@@ -370,11 +358,16 @@ unsafe extern "C" fn dsa_priv_encode(
         return 0;
     }
 
-    // SAFETY: `prkey` is live and `dp` is a live out-parameter.
-    let dplen = unsafe { ASN1_item_i2d(prkey.cast(), &mut dp, ASN1_INTEGER_it()) };
+    let mut dp_raw: *mut c_uchar = ptr::null_mut();
+    // SAFETY: `prkey` is live and `dp_raw` is a live out-parameter.
+    let dplen = unsafe { ASN1_item_i2d(prkey.cast(), &mut dp_raw, ASN1_INTEGER_it()) };
 
     // SAFETY: `prkey` is live.
     unsafe { ASN1_STRING_clear_free(prkey) };
+
+    // SAFETY: `dp_raw` is NULL or the block `ASN1_item_i2d` allocated through the crate's seam,
+    // holding the DER private key; this frame owns it and no other owner releases it.
+    let dp = unsafe { OwnedBuf::adopt_cleansed(dp_raw, dplen.max(0) as usize, FILE_SEAM, 207) };
 
     if dplen <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -385,6 +378,7 @@ unsafe extern "C" fn dsa_priv_encode(
         return 0;
     }
 
+    let dp_ptr = dp.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
     // SAFETY: `p8` is live, the OID is a constant, and `params`/`dp` are the objects the setter
     // takes ownership of.
     if unsafe {
@@ -394,18 +388,19 @@ unsafe extern "C" fn dsa_priv_encode(
             0,
             V_ASN1_SEQUENCE,
             params.cast(),
-            dp,
+            dp_ptr,
             dplen,
         )
     } == 0
     {
-        // SAFETY: `dp` is the buffer `dplen` long.
-        unsafe { crate::runtime::mem::CRYPTO_clear_free(dp.cast(), dplen as usize, FILE, 207) };
+        // `dp`'s `Drop` performs the authority's own cleansing release at `:207`.
         // goto err
         // SAFETY: `params` is live.
         unsafe { ASN1_STRING_free(params) };
         return 0;
     }
+    // Ownership of the DER private key moves to the setter.
+    let _ = dp.map(OwnedBuf::into_raw);
     1
 }
 

@@ -45,9 +45,10 @@
 //!   record layer's `ssl3_read_bytes`/`ssl3_write_bytes` protection path, are what would build and
 //!   parse the messages. The reduced driver does not call them, so a fresh connection's peer BIO
 //!   never receives a ClientHello. The handlers are named in `src/ssl/mod.rs` as the remaining work.
-//! * **`ossl_statem_send_fatal` does not send an alert.** The authority calls `ssl3_send_alert`
-//!   when `rlayer.wrlmethod != NULL`; this crate does not model the record-write method, so the
-//!   alert is skipped and only the `MSG_FLOW_ERROR` transition is performed.
+//! * **`ossl_statem_send_fatal` sends the alert through the reduced record writer.** The
+//!   authority calls `ssl3_send_alert` when `rlayer.wrlmethod != NULL`; this crate conditions on
+//!   a non-NULL write BIO instead and writes the two alert bytes through `ssl3_write_bytes`, so
+//!   the `MSG_FLOW_ERROR` transition and the observable alert payload agree with the authority.
 //! * **Only the fresh state is reachable.** With the message layer unlanded the flow never leaves
 //!   `MSG_FLOW_READING` for a connection whose peer BIO is empty; the `FINISHED`, `OK` and
 //!   post-handshake states are unreachable, exactly as the authority's are for that connection.

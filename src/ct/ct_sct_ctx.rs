@@ -22,12 +22,16 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_authority_key_identifier, NID_ct_precert_poison, NID_ct_precert_scts,
 };
@@ -87,6 +91,30 @@ const _: () = {
     assert!(core::mem::offset_of!(SctCtx, propq) == 88);
 };
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `SCT_CTX` record, its `propq` string and its `DER` scratch blocks
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `SCT_CTX_free` body minus the block -- the
+// key reference, the two key hashes, the certificate and pre-certificate DER buffers and the
+// duplicated `propq`, each NULL-tolerant, never the enclosing block. (b) holds: an all-zero
+// `SCT_CTX` has every member NULL, so the body is the authority's own all-empty teardown -- what the
+// safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for SctCtx {
+    unsafe fn destroy_body(ptr: *mut SctCtx) {
+        // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or a block this
+        // file owns.
+        unsafe {
+            EVP_PKEY_free((*ptr).pkey);
+            CRYPTO_free((*ptr).pkeyhash.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).ihash.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).certder.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).preder.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).propq.cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
 /// `SCT_CTX *SCT_CTX_new(OSSL_LIB_CTX *libctx, const char *propq)` —
 /// `crypto/ct/ct_sct_ctx.c:23-40`.
 ///
@@ -94,24 +122,25 @@ const _: () = {
 ///
 /// `libctx` is NULL or a live library context; `propq` is NULL or NUL-terminated.
 pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *mut SctCtx {
-    let sctx = CRYPTO_zalloc(core::mem::size_of::<SctCtx>(), ptr::null(), 0).cast::<SctCtx>();
-    if sctx.is_null() {
+    let Some(sctx) = OwnedCtx::<SctCtx>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `sctx` is a fresh zeroed allocation; `libctx` is a pointer value.
-    unsafe { (*sctx).libctx = libctx };
+    };
+    // SAFETY: `sctx.as_ptr()` is a fresh zeroed record; `libctx` is a pointer value.
+    unsafe { (*sctx.as_ptr()).libctx = libctx };
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
-        let propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
-        if propq_copy.is_null() {
-            // SAFETY: `sctx` is the allocation this call owns.
-            unsafe { CRYPTO_free(sctx.cast::<c_void>(), ptr::null(), 0) };
+        let propq_copy =
+            unsafe { OwnedStr::adopt(CRYPTO_strdup(propq, ptr::null(), 0), SeamFile::NULL, 0) };
+        // The authority frees the block alone when the duplicate fails; the handle's `Drop` is that
+        // same release over the still-NULL members (its free body's own all-empty free).
+        let Some(propq_copy) = propq_copy else {
             return ptr::null_mut();
-        }
-        // SAFETY: `sctx` is live; `propq_copy` is the copy this call owns.
-        unsafe { (*sctx).propq = propq_copy };
+        };
+        // Ownership of the duplicate passes to `sctx`.
+        // SAFETY: `sctx` is live.
+        unsafe { (*sctx.as_ptr()).propq = propq_copy.into_raw() };
     }
-    sctx
+    sctx.into_raw()
 }
 
 /// `void SCT_CTX_free(SCT_CTX *sctx)` — `crypto/ct/ct_sct_ctx.c:42-53`.
@@ -120,19 +149,9 @@ pub(crate) unsafe fn SCT_CTX_new(libctx: *mut c_void, propq: *const c_char) -> *
 ///
 /// `sctx` is NULL or a live `SCT_CTX` this crate owns and that is not used afterwards.
 pub(crate) unsafe fn SCT_CTX_free(sctx: *mut SctCtx) {
-    if sctx.is_null() {
-        return;
-    }
-    // SAFETY: `sctx` is live per the contract; each field is NULL or owned.
-    unsafe {
-        EVP_PKEY_free((*sctx).pkey);
-        CRYPTO_free((*sctx).pkeyhash.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sctx).ihash.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sctx).certder.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sctx).preder.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sctx).propq.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(sctx.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `sctx` is NULL or a live `SCT_CTX` this crate owns and that is not used afterwards;
+    // `from_raw` reclaims it and `Drop` runs the authority's own free body and block release.
+    drop(unsafe { OwnedCtx::<SctCtx>::from_raw_at(sctx, SeamFile::NULL, 0) });
 }
 
 /// `static int ct_x509_get_ext(X509 *cert, int nid, int *is_duplicated)` —
@@ -237,8 +256,11 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
     cert: *mut X509,
     presigner: *mut X509,
 ) -> c_int {
-    let mut certder: *mut c_uchar = ptr::null_mut();
-    let mut preder: *mut c_uchar = ptr::null_mut();
+    // The two `DER` blocks this call encodes and, on success, installs into `sctx`; on any `break`
+    // they still hold the block the authority's `err:` tail releases, so `Drop` is that release.
+    let mut certder_owner: Option<OwnedBuf> = None;
+    let mut preder_owner: Option<OwnedBuf> = None;
+    // The duplicate whose extensions are fixed up; `X509_free` is its single release.
     let mut pretmp: *mut X509 = ptr::null_mut();
     let mut certderlen: c_int = 0;
     let mut prederlen: c_int = 0;
@@ -261,8 +283,12 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             if !presigner.is_null() {
                 break 'blk;
             }
-            // SAFETY: `cert` is live; `certder` is an out-slot.
-            certderlen = unsafe { i2d_X509(cert, &mut certder) };
+            let mut der: *mut c_uchar = ptr::null_mut();
+            // SAFETY: `cert` is live; `der` is an out-slot.
+            certderlen = unsafe { i2d_X509(cert, &mut der) };
+            // The encoder's block is owned from here; `Drop` is the authority's `err:` release.
+            // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
+            certder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
             if certderlen < 0 {
                 break 'blk;
             }
@@ -294,34 +320,57 @@ pub(crate) unsafe fn SCT_CTX_set1_cert(
             if unsafe { ct_x509_cert_fixup(pretmp, presigner) } == 0 {
                 break 'blk;
             }
-            // SAFETY: `pretmp` is live; `preder` is an out-slot.
-            prederlen = unsafe { i2d_re_X509_tbs(pretmp, &mut preder) };
+            let mut der: *mut c_uchar = ptr::null_mut();
+            // SAFETY: `pretmp` is live; `der` is an out-slot.
+            prederlen = unsafe { i2d_re_X509_tbs(pretmp, &mut der) };
+            // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
+            preder_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
             if prederlen <= 0 {
                 break 'blk;
             }
         }
 
-        // SAFETY: `pretmp` is NULL or the copy this call owns.
+        // SAFETY: `pretmp` is NULL or the copy this call owns; `X509_free` accepts NULL.
         unsafe { X509_free(pretmp) };
+        pretmp = ptr::null_mut();
 
-        // SAFETY: `sctx` is live; its old buffers are NULL or owned.
+        // The authority's success path releases `sctx`'s old buffers and installs this call's
+        // blocks, whose ownership passes to `sctx`.
+        // SAFETY: `sctx` is live; its old buffers are NULL or owned blocks; the two owners hold the
+        // blocks this call allocated.
         unsafe {
-            CRYPTO_free((*sctx).certder.cast::<c_void>(), ptr::null(), 0);
-            (*sctx).certder = certder;
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*sctx).certder,
+                SeamFile::NULL,
+                0,
+            ));
+            (*sctx).certder = certder_owner
+                .take()
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw);
             (*sctx).certderlen = certderlen as usize;
 
-            CRYPTO_free((*sctx).preder.cast::<c_void>(), ptr::null(), 0);
-            (*sctx).preder = preder;
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*sctx).preder,
+                SeamFile::NULL,
+                0,
+            ));
+            (*sctx).preder = preder_owner
+                .take()
+                .map_or(ptr::null_mut(), OwnedBuf::into_raw);
             (*sctx).prederlen = prederlen as usize;
         }
         ret = 1;
     }
 
     if ret == 0 {
-        // SAFETY: each is NULL or an allocation this call still owns.
+        // The authority's `err:` release order: the certificate `DER`, the pre-certificate `DER`,
+        // then the duplicate. The owners were taken on success, so only the failed arms drop here.
+        // SAFETY: each owner is NULL-or-this-call's-block; `pretmp` is NULL or this call's copy.
         unsafe {
-            CRYPTO_free(certder.cast::<c_void>(), ptr::null(), 0);
-            CRYPTO_free(preder.cast::<c_void>(), ptr::null(), 0);
+            drop(certder_owner.take());
+            drop(preder_owner.take());
             X509_free(pretmp);
         }
     }
@@ -349,7 +398,9 @@ unsafe fn ct_public_key_hash(
 ) -> c_int {
     let mut ret: c_int = 0;
     let mut md: *mut c_uchar = ptr::null_mut();
-    let mut der: *mut c_uchar = ptr::null_mut();
+    // The encoder's `DER` block, owned from the moment `i2d_X509_PUBKEY` answers it; `Drop` is the
+    // authority's own error-tail release.
+    let mut der_owner: Option<OwnedBuf> = None;
     let mut md_len: c_uint = 0;
 
     // SAFETY: `sctx` is live per the contract.
@@ -375,8 +426,11 @@ unsafe fn ct_public_key_hash(
         }
 
         // Calculate the key hash.
+        let mut der: *mut c_uchar = ptr::null_mut();
         // SAFETY: `pkey` is live per the contract; `der` is an out-slot.
         let der_len = unsafe { i2d_X509_PUBKEY(pkey, &mut der) };
+        // SAFETY: `der` is NULL or a live block this crate allocated that no one else owns.
+        der_owner = Some(unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) });
         if der_len <= 0 {
             break 'blk;
         }
@@ -409,12 +463,14 @@ unsafe fn ct_public_key_hash(
     }
 
     // SAFETY: `sha256` is NULL or the fetched digest this call owns; `md` is NULL or the block the
-    // authority's single error path releases; `der` is NULL or the encoder's block.
+    // authority's single error path releases.
     unsafe {
         EVP_MD_free(sha256);
         CRYPTO_free(md.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0);
     }
+    // `der_owner`'s `Drop` is the authority's own `OPENSSL_free(der)`, after `md` as the authority
+    // orders; it is empty on the paths that never reached the encoder.
+    drop(der_owner);
     ret
 }
 
@@ -505,3 +561,7 @@ pub(crate) unsafe fn SCT_CTX_set_time(sctx: *mut SctCtx, time_in_ms: u64) {
     // SAFETY: `sctx` is live per the contract.
     unsafe { (*sctx).epoch_time_in_ms = time_in_ms };
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SctCtx => zero_state_sweep_sct_ctx);

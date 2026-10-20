@@ -89,7 +89,10 @@ impl Values {
         };
         // Seven value blocks, tags 1..=7.
         for t in 1u8..=7 {
-            let p = CRYPTO_malloc(8, c"probe".as_ptr(), 1);
+            let p = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_malloc(8, c"probe".as_ptr(), 1)
+            };
             assert!(!p.is_null());
             // SAFETY: `p` is a fresh 8-byte block.
             unsafe { (p as *mut u8).write(t) };

@@ -1,0 +1,145 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "d8b4d82ca",
+  "worktree": "dirty: src/runtime/str.rs (M25-D1 fix plus control) and this receipt",
+  "scope": "Eight ordinary files from the M24-named batch: src/runtime/bio/bf_lbuf.rs (78), src/provider/seed_src.rs (78), src/asn1/x_algor.rs (77), src/x509/x509_set.rs (77), src/provider/ec_kem.rs (77), src/runtime/str.rs (77), src/provider/mlx_kmgmt.rs (75) and src/provider/ml_dsa_codecs.rs (75). No audited file was a newly discovered callback boundary; all callback surfaces reuse the established B/M contracts.",
+  "verification_level": "FAST+BATCH",
+  "files": [
+    "src/runtime/bio/bf_lbuf.rs",
+    "src/provider/seed_src.rs",
+    "src/asn1/x_algor.rs",
+    "src/x509/x509_set.rs",
+    "src/provider/ec_kem.rs",
+    "src/runtime/str.rs",
+    "src/provider/mlx_kmgmt.rs",
+    "src/provider/ml_dsa_codecs.rs"
+  ],
+  "files_not_run": [],
+  "dispositions": [
+    {
+      "file": "src/runtime/bio/bf_lbuf.rs",
+      "mechanisms": "OB-3 OwnedCtx/RawCtx and unsafe CtxDestroy for BioLineBufferCtx, OB-1 OwnedBlock for obuf, BIO_callback/BIO_ctrl reentry on next_bio, line-buffer segment arithmetic",
+      "result": "No defect. linebuffer_new/free and the SET_BUFF_SIZE/DUP/FLUSH controls match the 3.5.9 authority, including the BIO_int_ctrl pointer convention; no out-of-bounds intermediate pointer."
+    },
+    {
+      "file": "src/provider/seed_src.rs",
+      "mechanisms": "OB-3 OwnedCtx/CtxDestroy for ProvSeedSrc and ProvTestRng, OB-1 OwnedBuf for entropy/nonce member slots, CRYPTO_secure_clear_free seed handoff, RAND_POOL detach, lock callbacks",
+      "result": "No defect. Set-params replacement frees the old member before installing the replacement exactly as 3.6.4; get_seed detach/clear_seed pair and test_rng get_seed borrow remain the authority's."
+    },
+    {
+      "file": "src/asn1/x_algor.rs",
+      "mechanisms": "ASN1 item ownership (ASN1_item_new/free/dup/d2i/i2d), X509_ALGOR_set0 OID/parameter adoption, X509_ALGOR_copy free-then-duplicate failure shape, MGF1 pack/unpack ownership",
+      "result": "No defect. X509_ALGOR_set0's allocation-before-adoption failure path and the from_nid/md_to_mgf1 cleanup tails match the authority; ownership of stmp is transferred exactly once."
+    },
+    {
+      "file": "src/x509/x509_set.rs",
+      "mechanisms": "X509 embedded-field ownership (version/serial/issuer/subject/validity/key), ASN1_STRING_dup replace protocol, RC-1 up_ref, X509_SIG_INFO callbacks and cached siginf",
+      "result": "No defect. ossl_x509_set1_time reproduces the authority's identity arm without setting modified; every setter preserves the modified-bit and failure ordering."
+    },
+    {
+      "file": "src/provider/ec_kem.rs",
+      "mechanisms": "OB-3 OwnedCtx/CtxDestroy with CRYPTO_clear_free of ikm, OwnedSecret member replacement, EC_KEY up_ref/free, KEM encapsulate/decapsulate callbacks, fixed-size DHKEM stack buffers, secret cleanse",
+      "result": "No defect. set_ctx_params' empty-param guard and old-seed release, derivekey cleanse paths and dhkem encap/decap length checks match 3.6.4; key releases are single-owner."
+    },
+    {
+      "file": "src/runtime/str.rs",
+      "mechanisms": "C string bounds (strnlen/strlcpy/strlcat), raw pointer scans, OwnedBuf allocation in hexstr2buf/buf2hexstr, guard_ffi wrappers",
+      "result": "M25-D1 fixed (high, one-byte out-of-bounds write plus a length-report divergence)."
+    },
+    {
+      "file": "src/provider/mlx_kmgmt.rs",
+      "mechanisms": "OB-1 OwnedBuf propq adoption, secure-heap export buffers with cleansing release, CRYPTO_memdup/CRYPTO_strdup key duplication, load_slot offset arithmetic, export callback (EVP_PKEY_export/param_cb)",
+      "result": "No defect. mlx_kem_key_new/free, dup failure tails, gen propq transfer and export's err tail match the 3.6.4 generated authority; no double-free on the aliased post-memdup propq."
+    },
+    {
+      "file": "src/provider/ml_dsa_codecs.rs",
+      "mechanisms": "PKCS#8/SPKI offset walk over caller DER, OwnedBuf slot tables and output buffers, ossl_ml_dsa_set_prekey seed/priv adoption, CRYPTO_memcmp prefix check",
+      "result": "No defect. Length checks precede every pointer advance; seed/priv/pub offset comparisons and the ret/key/slots cleanup tail match 3.6.4."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M25-D1",
+      "file": "src/runtime/str.rs",
+      "pre_fix_lines": [
+        448,
+        462
+      ],
+      "post_fix_lines": [
+        454,
+        458,
+        462
+      ],
+      "severity": "high (one-byte out-of-bounds write; compatibility divergence)",
+      "class": "missing authority clamp in buf2hexstr_sep (AGENTS.md sections 3 and 17)",
+      "description": "The authority computes len = buflen * 3 when a separator is requested and then applies `if (len == 0) ++len;` before publishing *strlength and checking str_n. The transcription omitted that clamp. For OPENSSL_buf2hexstr_ex with sep != 0 and buflen == 0, the crate reported required length 0, accepted a zero-byte destination (str_n == 0), and then wrote the terminating NUL through `str`, one byte beyond the caller's declared extent. The authority accepts the same call only with str_n >= 1.",
+      "fix": "Restore the authority's clamp after the overflow bound check and before *strlength: `let len = if len == 0 { 1 } else { len };`. Control: runtime::str::tests::buf2hexstr_ex_empty_with_separator_requires_one_byte checks the measuring length (1), that a zero-byte destination is refused without writing the sentinel byte, and that one byte succeeds.",
+      "divergence": "None for conforming callers: the authority's reported length and refusal threshold are restored. The conversion's under-report and one-byte overrun are not reproduced."
+    }
+  ],
+  "contracts_reused": [
+    "RC-1 raise_site/guard_ffi and refcount up_ref protocol",
+    "OB-1 OwnedBuf/OwnedBlock allocation, adoption and release modes",
+    "OB-2 OwnedStr adoption",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy with zero-state sweep",
+    "OB-4 member-buffer slot replacement protocol",
+    "ASN1 item / ASN1_STRING ownership convention",
+    "BIO control/read/write callback contract",
+    "provider keymgmt import/export callback contract",
+    "secret-parameter cleanse at the authority's failure tails"
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "safety_checks": {
+    "unsafe_operations_introduced": 0,
+    "unsafe_operations_removed": 0,
+    "unsafe_operations_relocated": 0,
+    "allocator_seam": "unchanged; the M25-D1 fix adds no allocation and no CRYPTO_* coordinate",
+    "repr_c_and_exports": "unchanged",
+    "lint_attributes": "unchanged (unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks, missing_safety_doc all retained)",
+    "control": "runtime::str::tests::buf2hexstr_ex_empty_with_separator_requires_one_byte (test-only)"
+  },
+  "compatibility": "No production compatibility delta. M25-D1 restores the authority's empty-with-separator result: required length 1, str_n == 0 refused, str_n >= 1 writes a single NUL.",
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_tests_serial": "1626 passed / 0 failed / 27 ignored (222.53 s)",
+    "lib_tests_threads_4": "1626 passed / 0 failed / 27 ignored (89.13 s)",
+    "focused": "runtime::str::tests 8 passed / 0 failed (includes the new M25-D1 control)"
+  },
+  "not_run": [
+    "No affected downstream probe exists for the changed path: the hostility corpus calls OPENSSL_buf2hexstr (non-empty input) and the coverage probe only resolves OPENSSL_buf2hexstr_ex as an export; neither exercises the empty separator form. No probe was re-run.",
+    "Miri (Stacked and Tree Borrows) on the new control and str.rs pointer scans - BOUNDARY gate for the changed pointer/bounds boundary.",
+    "ASan confirmation of the pre-fix one-byte overrun - BOUNDARY negative-control gate; the committed control asserts the refused call leaves the sentinel byte untouched rather than executing UB.",
+    "Independent adversarial reviewer and evidence adjudicator (the author is not the independent authority).",
+    "SEAL: dependency-closure replay, full probe suite, forensic regeneration."
+  ],
+  "graduation": "No file is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; every record remains a file-level obligation check. M25-D1's BOUNDARY checks are PENDING/NOT_RUN.",
+  "next_batch": {
+    "files": [
+      "src/provider/core_dispatch.rs (75)",
+      "src/provider/exchange.rs (74)",
+      "src/slh_dsa/wots.rs (74)",
+      "src/runtime/bio/addr.rs (74)",
+      "src/runtime/bio/addr_info.rs (74)",
+      "src/evp/evp_pkey.rs (74)",
+      "src/x509/v3_genn.rs (73)",
+      "src/x509/v3_akid.rs (73)"
+    ],
+    "triage": "core_dispatch and exchange are the M24-named substitutions. If either proves a genuinely new callback/provider boundary it is NOT_RUN and the next ranked ordinary file is src/dsa/pmeth.rs (73), then src/dh/ctrl.rs (73).",
+    "skipped": [
+      "src/provider/ml_kem_codecs.rs (80) - provider codec boundary, deferred NOT_RUN.",
+      "src/provider/file_store_any2obj.rs (79) - loader boundary, deferred NOT_RUN.",
+      "src/ui/ui_openssl.rs (84) - UI callback boundary, deferred NOT_RUN.",
+      "src/provider/mac_legacy_kmgmt.rs (86), src/engine/eng_lib.rs (84), src/x509/x509_trust.rs (84)",
+      "src/provider/slh_dsa_kmgmt.rs (83), src/provider/ecx_kem.rs (83), src/ec/backend.rs (82)",
+      "src/runtime/stack.rs (80, BOUNDARY_COVERED), src/runtime/lhash.rs (71, BOUNDARY_COVERED)",
+      "src/provider/legacyprov.rs (73) - provider dispatch boundary, deferred NOT_RUN.",
+      "src/ec/smpl2.rs (75) and src/mac/hmac.rs (75) - already covered",
+      "the five M22-retained boundaries (async/async, evp/keymgmt_lib, provider/decode_der2key, engine/eng_table, store/store_meth)",
+      "the M1 cluster (x509_vfy, pk7_doit, v3_utl, cms_sd, params/mod, pvkfmt, store_lib, bio_enc, x_pubkey, v3_asid, asn_mime, rsa/pmeth)"
+    ]
+  }
+}

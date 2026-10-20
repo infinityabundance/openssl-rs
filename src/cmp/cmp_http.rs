@@ -138,7 +138,9 @@ unsafe fn pop_headers(headers: *mut OpenSslStack) {
 /// — `cmp_http.c:33-107`.
 ///
 /// # Safety
-/// `ctx` is NULL or a live `OSSL_CMP_CTX`; `req` NULL or a live `OSSL_CMP_MSG`.
+/// `ctx` is NULL or a live `OSSL_CMP_CTX`; `req` is NULL or a live `OSSL_CMP_MSG`
+/// whose `body` member is non-NULL (the authority reads `req->body->type` for
+/// `keep_alive` without a guard, and so does this transcription).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_MSG_http_perform(
     ctx: *mut OsslCmpCtx,

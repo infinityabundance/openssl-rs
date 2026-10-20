@@ -1,0 +1,96 @@
+{
+  "receipt": "mechanism-sweep-M80",
+  "branch": "integrate/safe-c33",
+  "source_head": "24242f88d",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the three affected SSL member-buffer adversarial probes; one documentation-only correction. No code defect, no UB, no ABI regression and no hidden obligation. src/ssl/record/rec_layer_s3.rs was deferred as a BIO/callback boundary and is NOT_RUN.",
+  "scope": "Per-file contract audit of the eight head entries of REMAINING-AUDIT.txt. Seven were audited: the method-table constructors, the three QUIC reduced units, the non-QUIC SSL_poll readout, the s3_lib ticket/group/renegotiation surface, and the SSL_SESSION DER codec. The eighth, the record layer, is a BIO write/read callback and flush-resumption boundary and was deferred as instructed; src/ssl/ssl_cert_comp.rs was substituted from the next queue position so the batch still covered eight files.",
+  "files": [
+    "src/ssl/methods.rs",
+    "src/ssl/quic/quic_impl.rs",
+    "src/ssl/quic/quic_method.rs",
+    "src/ssl/quic/quic_tls_api.rs",
+    "src/ssl/rio/poll_immediate.rs",
+    "src/ssl/s3_lib.rs",
+    "src/ssl/ssl_asn1.rs",
+    "src/ssl/ssl_cert_comp.rs"
+  ],
+  "files_not_run": [
+    "src/ssl/record/rec_layer_s3.rs"
+  ],
+  "defects": [
+    {
+      "id": "M80-D1",
+      "file": "src/ssl/ssl_cert_comp.rs",
+      "lines_pre_fix": "15-17",
+      "line_post_fix": "15-18",
+      "severity": "low",
+      "class": "measured-divergence record inaccuracy (documentation only; not UB and not an ABI change)",
+      "description": "The module header stated that SSL_CTX_set1_cert_comp_preference/SSL_set1_cert_comp_preference accept the empty list (len == 0 or algs == NULL) and return 1. The admitted 3.6.4-production build defines OPENSSL_NO_COMP_ALG, and the authority's exports are `#else return 0;` for every input (ssl_cert_comp.c:362-382); the transcription has the same unconditional 0 (ssl_cert_comp.rs:455-460, 474-478). Only the helper ssl_set_cert_comp_pref, which is compiled out and unreachable, has the empty-list/1 arm.",
+      "fix": "The header bullet now records the unconditional 0 and identifies the helper's empty-list arm as transcribed but unreachable in this build. No code, signature, layout, allocation coordinate or exported symbol changed.",
+      "witness": "Authority source differential by inspection (forensics/authorities/src/openssl-3.6.4/ssl/ssl_cert_comp.c:362-382 and the OPENSSL_NO_COMP_ALG definition in include/openssl/configuration.h.in:80); the candidate's export bodies already return 0."
+    }
+  ],
+  "unrelated_residuals": [],
+  "deferred": [
+    "src/ssl/record/rec_layer_s3.rs: the write path calls BIO_write/BIO_ctrl(FLUSH) on the connection's BIO and the read path consumes a BIO callback result; it is a callback/state-machine boundary and was deferred rather than audited in this pass."
+  ],
+  "not_discharged": [
+    "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "The QUIC units are reduced: SSL_inject_net_dgram's QUIC arm, SSL_set_quic_tls_cbs' ossl_quic_tls_new/configure success arm and the two set_* success arms depend on the Phase 15 QUIC object, which this crate does not build; this receipt does not discharge them.",
+    "The SSL_poll readout is audited only for the non-QUIC arms; the QUIC blocking path is unreachable because no QUIC object exists.",
+    "No new cryptographic or timing evidence is claimed for the DER session codec or the method tables."
+  ],
+  "retained_obligations": [
+    "src/ssl/methods.rs: each constructor returns the address of a process-lifetime immutable static; the returned pointer is never freed and may be read by any thread.",
+    "src/ssl/quic/quic_impl.rs: s is NULL or live; SSL_is_quic accepts NULL; the QUIC arm is unreachable.",
+    "src/ssl/quic/quic_method.rs: the three returned statics are process-lifetime and never written.",
+    "src/ssl/quic/quic_tls_api.rs: qtdis is a NUL-function_id-terminated dispatch array; s is NULL or live; the stored callbacks are never invoked in this build because qtls stays NULL.",
+    "src/ssl/rio/poll_immediate.rs: items is readable for num_items records stepped by stride, timeout is NULL or live, p_result_count is NULL or writable; the export has no guard_ffi, but no panic is reachable for a contract-satisfying call (the only arithmetic is i * stride inside the caller-guaranteed readable extent).",
+    "src/ssl/s3_lib.rs: s is NULL or live; parg is NULL or NUL-terminated; the SNI control duplicates parg before releasing the incumbent (D563 ordering).",
+    "src/ssl/ssl_asn1.rs: input is NULL or live; pp is NULL or writable; decoded strings are the item's own blocks; a negative length or ASN1_STRING_FLAG_EMBED is refused before ownership transfer; the template item is the module's static.",
+    "src/ssl/ssl_cert_comp.rs: cc is NULL or a live OsslCompCert; comp_data is NULL or an owned block; the record and its data are released exactly once; the exports are refusal arms under OPENSSL_NO_COMP_ALG."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [
+    "SSL_poll accepts an unguarded extern \"C\" export. No panic is reachable under the stated contract, so this is recorded as an observation rather than repaired; if the campaign later requires a guard_ffi on every export, this is a mechanical change with no observable effect on valid calls.",
+    "SSL_set_quic_tls_cbs on a complete table answers 0 where the authority answers 1 after building qtls; this is the module's recorded Phase 15 reduction, not a new divergence.",
+    "ssl_cert_comp's non-refusal helpers remain transcribed dead code under OPENSSL_NO_COMP_ALG; their contracts (CRYPTO_memdup NULL/len rule, alg in 0..3 bounded by ossl_comp_has_alg, TLSEXT_COMP_CERT_LIMIT = 4) were checked and hold."
+  ],
+  "next_queue": {
+    "file": "src/ssl/record/rec_layer_s3.rs",
+    "then": [
+      "src/ssl/ssl_init.rs",
+      "src/ssl/ssl_mcnf.rs",
+      "src/ssl/ssl_rsa_legacy.rs",
+      "src/ssl/ssl_stat.rs",
+      "src/ssl/ssl_txt.rs",
+      "src/ssl/statem/extensions_cust.rs",
+      "src/ssl/statem/extensions_srvr.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "src/ssl/ssl_cert_comp.rs: the measured-divergence bullet now states that the preference exports return 0 unconditionally and that the empty-list/1 arm belongs to the unreachable helper."
+  ],
+  "shared_boundary_files": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "secret_bearing_buffers": "The SSL_SESSION master key, PSK identities/hints, session ticket, ALPN selection and ticket appdata are secret or sensitive. This batch changed neither their allocation nor their release: i2d_SSL_SESSION borrows the session's own buffers into stack-local ASN1 strings, and d2i_SSL_SESSION_ex duplicates or adopts the decoded blocks into the session's member slots, whose release remains the session owner's. The peer RPK DER block that i2d_PUBKEY produces is adopted by OwnedBuf and released once. No new cleansing claim is made and no constant-time property is asserted.",
+  "boundary_control": [],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean (before and after the documentation-only correction)",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "focused_ssl": "65 passed / 0 failed / 15 ignored (ssl:: filter, --test-threads=4)",
+    "adv_probe_sni": "ssl::s3_lib::adv_probe::self_aliasing_sni_control_copies_before_clearing passed (one process, --ignored, --exact)",
+    "adv_probe_session": "ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing passed (one process, --ignored, --exact)",
+    "adv_probe_serverinfo": "ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc passed (one process, --ignored, --exact)",
+    "full_lib_threads4": "1694 passed / 0 failed / 27 ignored (91.62 s; run on the audited code before the comment-only correction)",
+    "full_lib_serial": "1694 passed / 0 failed / 27 ignored (259.37 s; run on the audited code before the comment-only correction)"
+  }
+}
