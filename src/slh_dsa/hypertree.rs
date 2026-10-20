@@ -30,7 +30,10 @@ use super::{SlhDsaHashCtx, SLH_MAX_N};
 /// `slh_hypertree.c:32-96`.
 ///
 /// # Safety
-/// `ctx` is live; `msg` is readable for `n`; `sig_wpkt` is the signature builder.
+/// `ctx` is live with its key/params set; `msg`, `sk_seed` and `pk_seed` are readable for `n`
+/// bytes. `sig_wpkt` is an initialised packet builder over a buffer that does not move for the
+/// duration of the call (the `psig` cursor taken below is reused after the XMSS signer writes), and
+/// `tree_id`/`leaf_id` are within the parameter set's ranges.
 pub(crate) unsafe fn ossl_slh_ht_sign(
     ctx: *mut SlhDsaHashCtx,
     msg: *const u8,
@@ -134,7 +137,9 @@ pub(crate) unsafe fn ossl_slh_ht_sign(
 /// `slh_hypertree.c:112-144`.
 ///
 /// # Safety
-/// `ctx` is live; `sig_pkt` is a live cursor into the caller's signature buffer.
+/// `ctx` is live with its key/params set; `msg`, `pk_seed` and `pk_root` are readable for `n`
+/// bytes. `sig_pkt` is a live cursor into the caller's signature buffer, and `tree_id`/`leaf_id`
+/// are within the parameter set's ranges.
 pub(crate) unsafe fn ossl_slh_ht_verify(
     ctx: *mut SlhDsaHashCtx,
     msg: *const u8,
