@@ -699,3 +699,10 @@ src/ssl/ssl_txt.rs
 src/ssl/statem/extensions_cust.rs
 src/ssl/statem/extensions_srvr.rs
 src/ssl/statem/statem_lib.rs
+src/ssl/statem/statem.rs
+src/ssl/t1_enc.rs
+src/ssl/t1_lib.rs
+src/ssl/tls_depr.rs
+src/ts/mod.rs
+src/ts/ts_lib.rs
+src/ts/ts_req_print.rs

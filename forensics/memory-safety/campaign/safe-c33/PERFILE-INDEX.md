@@ -7385,3 +7385,95 @@ unsafe operations introduced/removed/relocated: **0/0/0**.
 `src/ssl/statem/statem.rs`, `src/ssl/t1_enc.rs`, `src/ssl/t1_lib.rs`,
 `src/ssl/tls_depr.rs`, `src/store/store_meth.rs`, `src/ts/mod.rs`,
 `src/ts/ts_lib.rs`, `src/ts/ts_req_print.rs`.
+
+## M82 (mechanism) — per-file contract sweep (handshake state machine, TLS1.2 key schedule/record protection, sigalg/MFL surface, deprecated engine/DH setters, TS print helpers)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M82.json`](atlas-refresh/mechanism-sweep-M82.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`3bc0edda7`. Three files changed (two latent-bound repairs, one stale safety
+note); no ownership model, `#[repr(C)]` layout, exported symbol or allocation
+coordinate changed, and no signature changed.
+
+**Files audited (7, one deferred).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ssl/statem/statem.rs` | NULL/live reader contract, `MSG_FLOW_*` transitions, `in_handshake` pairing, `send_fatal` alert write when `wbio` is installed, fresh-connection driver, early-data/finish-init predicates, `statem_flush` `rwstate` restore | no ownership defect; module note claiming the alert is never sent contradicted the body and was corrected (`M82-D1`) |
+| `src/ssl/t1_enc.rs` | `P_hash`/`tls12_prf` extent arithmetic (`HASH_MAX`, 255-byte seed), master-secret/key-block derivation, write/read key installation, Finished MAC, per-record GCM seal/open, AAD/nonce construction | latent length coupling repaired: `cipher_key_len` could exceed the fixed 32-byte key arrays while `derive_key_block` accepts up to 60 (`M82-D2`) |
+| `src/ssl/t1_lib.rs` | MFL setters/reader, sigalg readers, `SSL_check_chain` refusal arms, `SSL_get1_builtin_sigalgs` ownership transfer, client-disabled masks, group list get/set, `*grpext` release | two caller obligations were stated only in body comments, now in the `# Safety` contracts (`M82-D3`, `M82-D4`); allocator-capacity divergence recorded (`M82-R1`) |
+| `src/ssl/tls_depr.rs` | `ENGINE_init`/`ENGINE_finish` transfer, `ENGINE_get_ssl_client_cert_function` refusal, borrowed `client_cert_engine` store, two control-cast callback setters | no defect; matches `tls_depr.c` (including raising `ERR_R_ENGINE_LIB` and not finishing a previous engine) |
+| `src/ts/mod.rs` | `ERR_raise`/`ERR_raise_data` coordinate constructors, error-site lifetime | no defect; compile-time constants and a live local only |
+| `src/ts/ts_lib.rs` | `ASN1_INTEGER_to_BN`/`BN_bn2hex` cleanup, NUL-terminated hex block, extension-stack walk, OID/algorithm printers, `TS_MSG_IMPRINT` dump | no defect; the `BN_bn2hex` block has exactly one owner/release and `BN_free` follows the authority's order |
+| `src/ts/ts_req_print.rs` | NULL request refusal, accessor + member reads, nested printer composition | no defect; matches `ts_req_print.c:18-51` line for line |
+
+**Deferred.** `src/store/store_meth.rs` is a genuine store-loader/callback
+dispatch boundary (STORE method-store callbacks, `CtxDestroy`, provider
+up-ref/free, lock/unlock callbacks). It is **NOT_RUN**, retained in
+`REMAINING-AUDIT.txt`; prior sweeps already excluded it as a retained boundary.
+
+**Defects.** `M82-D1` (statem.rs module note, low) — a safety-relevant
+misdocumentation: the header said `ossl_statem_send_fatal` does not send an
+alert while the body sends it through `ssl3_write_bytes` whenever `wbio` is
+non-NULL. Corrected to the implemented behaviour. `M82-D2` (t1_enc.rs:344/382,
+low) — `tls12_install_write`/`tls12_install_read` copied `cipher_key_len` bytes
+into the fixed `[u8; 32]` key arrays with no upper bound; `cipher_key_len` is a
+`pub` field set by either schedule, so a value above 32 would overflow the
+array. Both now refuse `key_len > enc_key.len()`/`dec_key.len()` before the
+copy (and before the `2 * key_len` arithmetic), preserving every valid path.
+`M82-D3` (t1_lib.rs:730, low) — `tls1_get_supported_groups` returns
+`&'static [u16]` borrowed from the connection's `supportedgroups` list; the
+caller-chosen lifetime obligation was only a body comment and is now stated in
+`# Safety`. `M82-D4` (t1_lib.rs:769, low) — `tls1_set_groups` frees the
+caller's previous `*grpext`; the ownership precondition is now stated in
+`# Safety` (NULL or an initialised, exclusively-owned `CRYPTO_*` block).
+
+**New unsafe assumptions (hidden must be 0).** Zero new; the two `t1_lib`
+obligations above were made explicit rather than added. No unsafe operation was
+introduced, removed or relocated. Unsafe-operation count unchanged.
+
+**Contracts reused.** The live-`Ssl`/live-`SslCtx` contracts; OB-1 `OwnedBuf`
+(`SSL_get1_builtin_sigalgs` transfer to the C caller, `tls1_set_groups`
+regrowth); the established element-counted `supportedgroups` raw boundary
+(documented on `Ssl` with all read/write/free sites enumerated); `raise_*`
+error-site lifetime contract; `guard_ffi`; B19 BIGNUM release/cleansing; the
+authority `tls_depr.c` borrowed-engine contract.
+
+**Secret-bearing buffers.** `t1_enc.rs` keeps the TLS1.2 master secret, key
+block and write/read keys in `Ssl` (owned by `ssl_lib`'s `SSL_free`) and uses
+PRF scratch (`a`/`buf`/`h`) that is not explicitly cleansed; this is a retained
+cross-file hygiene observation (`M82-R2`), not a new unsafe assumption and not
+repaired in this batch because the owning destructor is `ssl_lib.rs`. No
+constant-time property is claimed.
+
+**Residuals.** `M82-R1`: `SSL_get1_builtin_sigalgs` allocates the final string
+in one exact-size block at the authority's line 2298, while the authority starts
+at `SIGLEN_BUF_INCREMENT` (100) and reallocs; the returned bytes and free
+contract agree, allocator hooks see a different size. `M82-R2`: as above.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `ssl::statem` **4
+passed / 0 failed / 5 ignored**; the broad `ts::` filter **1548 passed / 0
+failed / 4 ignored**; full library **1697 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (93.60 s) and serially (78.90 s). Five affected SSL
+member-buffer/member-slot probes each ran alone and passed: serverinfo refusal,
+serverinfo reentrancy, realloc-refusal canary, reenter-observer canary, and
+self-aliasing serverinfo.
+
+**NOT_RUN.** `src/store/store_meth.rs` (loader/callback boundary, deferred);
+Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency mechanism
+changed); dudect/ctgrind (no constant-time claim); full Phase-25 forensic
+regeneration; FRF/SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0** (two were made explicit). New
+unsafe assumptions: **0**; unsafe operations introduced/removed/relocated:
+**0/0/0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **55**, `AUDITED-FILES.txt` **708**.
+**Next ordinary position.** `src/ui/ui_openssl.rs` (with
+`src/store/store_meth.rs` still pinned as a retained loader/callback boundary).
+**Next eight from the file head.** `src/store/store_meth.rs`,
+`src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`, `src/x509/by_store.rs`,
+`src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`, `src/x509/pcy_node.rs`,
+`src/x509/t_acert.rs`.
