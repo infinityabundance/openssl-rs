@@ -7022,3 +7022,79 @@ ordinary position.** `src/selftest/indicator.rs`. **Next eight.**
 `src/selftest/indicator.rs`, `src/selftest/mod.rs`, `src/slh_dsa/adrs.rs`,
 `src/slh_dsa/fors.rs`, `src/slh_dsa/hash_ctx.rs`, `src/slh_dsa/hash.rs`,
 `src/slh_dsa/hypertree.rs`, `src/slh_dsa/mod.rs`.
+
+## M78 (mechanism) — per-file contract sweep (indicator, self-test, SLH-DSA addresses/FORS/hash/hypertree/key layouts)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M78.json`](atlas-refresh/mechanism-sweep-M78.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`d55070629`. Three repairs, none ABI-visible: one latent compressed-address
+extent (M78-D1), one hidden safe-fn raw-pointer obligation (M78-D2), and two
+incomplete hypertree Safety contracts (M78-D3). No `#[repr(C)]` layout, exported
+symbol, signature or allocator coordinate changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/selftest/indicator.rs` | `OwnedCtx`/`CtxDestroy` slot holder, all-zero validity, NULL out-pointer, per-context callback storage, `guard_ffi` | no defect |
+| `src/selftest/mod.rs` | `RawCtx` staged `OsslSelfTest` construction and `assume_init`, `OwnedCtx` callback holder, params array aliasing its own fields, callback re-entrancy, `onend` reset order | no defect |
+| `src/slh_dsa/adrs.rs` | 32/22-byte address extents, every accessor's write span, compressed `type_and_clear`, method-table aliases | **M78-D1** medium: compressed clear was 22 bytes instead of the authority's 12 |
+| `src/slh_dsa/fors.rs` | `base_2b` bit extraction, secret leaf/tree recursion, signature cursor reads, WPACKET allocation/finish, error tail | **M78-D2** low: safe `fors_err` hid a raw-pointer precondition; now typed references |
+| `src/slh_dsa/hash_ctx.rs` | zalloc/drop provenance, partial construction release, `md_big_ctx == md_ctx` identity on free/dup, clear-free of scratch | no defect |
+| `src/slh_dsa/hash.rs` | SHAKE XOF and SHA-2 digest/HMAC primitives, context scratch offsets, secret local cleansing, method table | no defect |
+| `src/slh_dsa/hypertree.rs` | layer/leaf arithmetic, borrowed `Packet` over the signature buffer, in-place root replay, cleanse on every exit | **M78-D3** low: Safety contracts completed (pointer spans, non-moving builder) |
+| `src/slh_dsa/mod.rs` | `#[repr(C)]` `SlhDsaHashCtx`/`SlhDsaKey` field order, borrowed key pointer, `priv_`/`pub_` interior accessors | no defect; layouts match the 3.6.4 headers |
+
+**Defects repaired.** `adrs.rs` derived the compressed type-clear from the
+compressed offsets, yielding 22 instead of the authority's 12; current 32-byte
+buffers masked it, so it was a latent extent bug and an authority divergence,
+now pinned by `the_compressed_address_clear_stays_inside_its_blob`. `fors.rs`'s
+`fors_err` took a raw `*mut Wpacket` in a safe signature and used an unchecked
+`k * n`; it now takes `&mut Wpacket` and `&mut [u8; SLH_MAX_ROOTS]` and clamps
+against the slice (inert for every parameter set). `hypertree.rs`'s two Safety
+contracts now name every readable span and the static-builder precondition that
+keeps `psig` valid across the XMSS write.
+
+**Contracts reused.** OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy` (holders are
+all-zero-valid and release only members they own); the audited
+`lib_ctx_get_data` context contract; `WPACKET_init_static_len`/`WPACKET_finish`
+and `Packet::buf_init`; RC-1; the SLH-DSA `#[repr(C)]` layouts. No shared
+owner, contract or precondition was edited, so prior evidence remains valid.
+
+**Secret-bearing buffers.** FORS `out` is cleansed on every return and `sk`
+for `n` bytes; `lnode`/`rnode` and `roots` in full. Hash PRFmsg `out`, HMAC
+`mac` (keyed by SK_PRF) and H_MSG `seed` are cleansed in full; SHA-2
+intermediates in `hctx.scratch` are cleared with the context block by
+`CRYPTO_clear_free`. Hypertree `root`/`node` are cleansed on every exit. The
+`SlhDsaKey.priv_` secret half is cleansed by the already-audited key release
+(`sizeof(priv_) >> 1` covers every `n`), and full-length on reset/fromdata.
+Self-test/indicator hold no secret contents.
+
+**Gates observed (final worktree).** FAST fmt and clippy clean; focused
+`selftest` **8/8** and `slh_dsa::tests` **5/5**; BATCH full library **1694
+passed / 0 failed / 27 ignored** serially (217.92 s) and with
+`--test-threads=4` (92.62 s). Exact-candidate courts on the rebuilt Phase 2
+archive: Phase 2 **11/11**, Phase 6 **11/11** including **RT-SELFTEST 71
+observations**, Phase 8 **RT-SIGNATURE 472** and **RT-KEYMGMT 608** observations
+pass. Regenerating the stale Phase 8 artifact (committed 2026-09-28) surfaced
+**two unrelated residuals**, RT-CIPHER `defltwrap.pad21` and RT-RSA
+`oaep_add_small_key.err.0` / `obj_upref.zero_ref_after`; they lie in RSA/cipher
+code last changed by M14/M60/M72 and are recorded as pre-existing, outside this
+batch. All other 14 RT/CT courts pass; the four documented CT arms stay
+PENDING.
+
+**NOT_RUN.** ASan (no reachable extent existed at HEAD; the new control
+observes the extent directly); Miri (unavailable on the pinned 1.98.1
+toolchain); Loom/TSan (no concurrency change); dependency-graph regeneration
+(no shared contract edited); dudect/ctgrind (no constant-time claim); FRF/SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations after the repairs: **0**; new unsafe
+assumptions: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **87**, `AUDITED-FILES.txt` **676**. **Next
+ordinary position.** `src/slh_dsa/params.rs`. **Next eight.**
+`src/slh_dsa/params.rs`, `src/slh_dsa/xmss.rs`, `src/sm2/crypt.rs`,
+`src/sm2/sign.rs`, `src/sm3/legacy_sm3.rs`, `src/sm4.rs`,
+`src/ssl/d1_lib.rs`, `src/ssl/d1_srtp.rs`.

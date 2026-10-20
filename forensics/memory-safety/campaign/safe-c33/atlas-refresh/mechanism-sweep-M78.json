@@ -1,0 +1,161 @@
+{
+  "receipt": "mechanism-sweep-M78",
+  "branch": "integrate/safe-c33",
+  "source_head": "d55070629",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the affected Phase 2/6/8 courts on a rebuilt exact candidate; no hidden obligation remains; one latent compressed-address extent defect repaired, one safe-fn raw-pointer obligation eliminated by typed arguments, and two hypertree Safety contracts completed. Focused tests, full library suite serially and with four threads, clippy, fmt and the affected differential courts. ASan, Miri, Loom and FRF/SEAL NOT_RUN.",
+  "scope": "Per-file contract audit of the eight head entries of REMAINING-AUDIT.txt: the indicator callback slot and its holder, the self-test object/callback pair, and the SLH-DSA address blob, FORS signer/verifier, hash context, hash primitives, hypertree and shared key/context layouts. None was deferred or skipped. The Phase 8 artifact in the tree predates the merged RSA/cipher batches; regenerating it surfaced two unrelated residuals (RT-CIPHER, RT-RSA), recorded below as pre-existing and outside this batch.",
+  "files": [
+    "src/selftest/indicator.rs",
+    "src/selftest/mod.rs",
+    "src/slh_dsa/adrs.rs",
+    "src/slh_dsa/fors.rs",
+    "src/slh_dsa/hash_ctx.rs",
+    "src/slh_dsa/hash.rs",
+    "src/slh_dsa/hypertree.rs",
+    "src/slh_dsa/mod.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M78-D1",
+      "file": "src/slh_dsa/adrs.rs",
+      "lines_pre_fix": "78, 204-214",
+      "line_post_fix": 81,
+      "severity": "medium",
+      "class": "transcribed extent derivation (latent out-of-bounds write; authority divergence)",
+      "description": "SLH_ADRSC_SIZE_TYPECLEAR was derived as SLH_ADRS_SIZE - (SLH_ADRSC_OFF_TYPE + SLH_ADRSC_SIZE_TYPE) = 32 - 10 = 22, so slh_adrsc_set_type_and_clear cleared 22 bytes from offset 10. The authority defines SLH_ADRSC_SIZE_TYPECLEAR as SLH_ADRS_SIZE_TYPECLEAR (slh_adrs.c:35), i.e. 32 - (16 + 4) = 12, the distance from offset 10 to the end of the 22-byte compressed blob. Current callers always pass a 32-byte SlhAdrs, so the extra ten bytes landed in unused tail storage and no reachable OOB occurred; any 22-byte backing buffer, or a compressed address embedded before live data, would have been overwritten.",
+      "fix": "Define the compressed constant from SLH_ADRS_SIZE_TYPECLEAR exactly as slh_adrs.c:35 does. No call site or ABI changes. Added slh_dsa::tests::the_compressed_address_clear_stays_inside_its_blob, a positive control that fills the backing array with 0xAA and asserts bytes 10..22 are cleared while 22..32 are untouched; it fails on the pre-fix constant.",
+      "witness": "Authority comparison: forensics/authorities/src/openssl-3.6.4/crypto/slh_dsa/slh_adrs.c:23,35,122-126. The new unit test observes the exact distance and was run in the final BATCH."
+    },
+    {
+      "id": "M78-D2",
+      "file": "src/slh_dsa/fors.rs",
+      "lines_pre_fix": "475-496",
+      "line_post_fix": 475,
+      "severity": "low",
+      "class": "hidden obligation: safe fn with a caller-validity-dependent raw pointer",
+      "description": "fors_err was a safe fn taking `wroot_pkt: *mut Wpacket` and calling WPACKET_finish on it. Its safety depended on the caller passing a live, initialised builder, which the safe signature did not express, so a safe caller in the module could have caused UB. The cleanse length was also an unchecked k*n. This is the exact hidden-obligation class the standing standard forbids.",
+      "fix": "Take `wroot_pkt: &mut Wpacket` and `roots: &mut [u8; SLH_MAX_ROOTS]` instead, deriving liveness from the references, and clamp the cleanse length with saturating_mul/min (inert for every parameter set, where k <= SLH_MAX_K and n <= SLH_MAX_N). The duplicated raw WPACKET_finish/cleanse tail in ossl_slh_fors_pk_from_sig now calls the same safe helper. No unsafe op is introduced and no caller changes.",
+      "witness": "The helper's only unsafe operations (WPACKET_finish and OPENSSL_cleanse) now have their preconditions established by typed arguments; the crate's Wpacket fields are private and its constructors are unsafe, so a reachable &mut Wpacket is an initialised builder or the zeroed value for which WPACKET_finish returns 0 (packet.rs:800-806)."
+    },
+    {
+      "id": "M78-D3",
+      "file": "src/slh_dsa/hypertree.rs",
+      "lines_pre_fix": "32-33, 136-137",
+      "line_post_fix": "32-36, 139-142",
+      "severity": "low",
+      "class": "unsafe contract incompleteness (documentation only)",
+      "description": "The Safety contracts named ctx and the packet but omitted the readable extents of msg/sk_seed/pk_seed/pk_root and, for ht_sign, the requirement that the signature packet's buffer not move across the XMSS write: psig is taken before the signer runs and reused afterwards. The current caller uses WPACKET_init_static_len over the caller's buffer, so the precondition holds, but it was hidden rather than stated.",
+      "fix": "State the pointer extents and the non-moving-builder precondition in both Safety contracts. No code, layout or signature change.",
+      "witness": "dsa.rs:143 initialises sig_wpkt with WPACKET_init_static_len over the caller's sig buffer; packet.rs:419-434 shows that form does not grow."
+    }
+  ],
+  "unrelated_residuals": [
+    {
+      "court": "RT-CIPHER",
+      "observation": "defltwrap.pad21",
+      "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
+      "candidate": "0",
+      "assessment": "Not caused by this batch: no cipher, provider/cipher, modes or SEED source was touched. The committed Phase 8 artifact is from 2026-09-28, before the merged cipher batches (M60 and later)."
+    },
+    {
+      "court": "RT-RSA",
+      "observation": "rsa.oaep_add_small_key.err.0",
+      "authority": "33554552:.../rsa_oaep.c:104:ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+      "candidate": "33554542:.../rsa_oaep.c:99:ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+      "assessment": "Not caused by this batch: the reported site is in src/rsa/mod.rs, last changed by M14/M72, and the committed artifact predates those merges."
+    },
+    {
+      "court": "RT-RSA",
+      "observation": "rsa.obj_upref.zero_ref_after",
+      "authority": "1",
+      "candidate": "0",
+      "assessment": "Not caused by this batch: RSA_up_ref's zero-refcount behaviour belongs to the merged refcount/OB-3 boundary batches and no src/rsa or runtime/refcount file was touched here. Flagged for the orchestrator as a stale-artifact finding."
+    }
+  ],
+  "deferred": [
+    "ASan: no reachable out-of-bounds extent existed at HEAD (every address buffer is 32 bytes); the new extent control observes the fix directly. A sanitizer run remains a BOUNDARY check.",
+    "Miri: unavailable on the pinned 1.98.1 toolchain; the SLH-DSA raw-array/table boundary is the best candidate for a future BOUNDARY run.",
+    "Loom/TSan: no shared concurrency mechanism changed.",
+    "Dependency-graph regeneration: no shared contract, owner or precondition was edited. lib_ctx_get_data (context/mod.rs), OwnedCtx/CtxDestroy (runtime/bio/owned.rs) and WPACKET (packet.rs) are reused unmodified.",
+    "dudect/ctgrind: no constant-time claim is made for SLH-DSA; secret-dependent hashing was not modified.",
+    "FRF and SEAL."
+  ],
+  "not_discharged": [
+    "All eight files are audited, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "The SLH-DSA consumer family remains blocked on the unaudited siblings params.rs, xmss.rs and the provider units in its dependency closure.",
+    "The Phase 8 court artifact now records two unrelated residuals from earlier merged batches; they are not discharged by this receipt."
+  ],
+  "retained_obligations": [
+    "slh_dsa/adrs.rs: every accessor requires the address blob to be writable for its own form's size (32 uncompressed, 22 compressed); the methods are reached only through the key's method table.",
+    "slh_dsa/fors.rs: slh_base_2b requires (out_len * b + 7) / 8 readable bytes; the tree walk requires the hash/ADRS method tables and every span the arguments name; the secret out/sk/lnode/rnode arrays are cleansed on every return path.",
+    "slh_dsa/hash.rs: each primitive requires a live hash context whose key/params and EVP contexts were established by slh_dsa_key_hash_init; secret mac/out/seed locals are cleansed on every return path; hctx.scratch is cleansed by the context's clear-free.",
+    "slh_dsa/hypertree.rs: ht_sign requires a non-moving signature builder (now explicit); both functions require msg/pk_seed (and pk_root for verify) readable for n and tree_id/leaf_id within range.",
+    "slh_dsa/hash_ctx.rs: .free accepts NULL or a live (possibly partially constructed) context; md_big_ctx may alias md_ctx and is released exactly once; the whole block is clear-freed including scratch.",
+    "slh_dsa/mod.rs: SlhDsaKey.priv_ is 4*SLH_DSA_MAX_N bytes and the accessors require a live key with non-NULL params for the n-offset forms; pub_ is an alias into priv_.",
+    "selftest/mod.rs and selftest/indicator.rs: the exported callback setters require a NULL or live OSSL_LIB_CTX; the stored callback and cbarg are borrowed, never owned, and must outlive their use; the self-test object's params array aliases its own string fields."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [
+    "The compressed ADRS clear fix is a deliberate authority-faithful extent correction; no observable behaviour changes for the crate's 32-byte SlhAdrs buffers.",
+    "The SLH-DSA signing code has no constant-time claim; secret-dependent hashing and tree walks were not changed and were not measured."
+  ],
+  "next_queue": {
+    "file": "src/slh_dsa/params.rs",
+    "then": [
+      "src/slh_dsa/xmss.rs",
+      "src/sm2/crypt.rs",
+      "src/sm2/sign.rs",
+      "src/sm3/legacy_sm3.rs",
+      "src/sm4.rs",
+      "src/ssl/d1_lib.rs",
+      "src/ssl/d1_srtp.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "adrs.rs now records that the compressed type-clear extent is the authority's uncompressed formula and why the compressed-offset derivation is wrong.",
+    "hypertree.rs now states the full pointer extents and the non-moving signature-builder precondition.",
+    "fors.rs's error helper is now a safe function over references rather than a safe-looking raw-pointer function."
+  ],
+  "shared_boundary_files": [
+    "src/runtime/bio/owned.rs: CtxDestroy/OwnedCtx/RawCtx reused unmodified; the indicator and self-test holders are all-zero-valid and their destroy bodies release no member.",
+    "src/context/mod.rs: lib_ctx_get_data/OSSL_LIB_CTX_get_data reused unmodified; both callback slots continue to take the audited context contract.",
+    "src/packet.rs: WPACKET_finish/WPACKET_init_static_len/Packet::buf_init reused unmodified; fors_err now derives the packet precondition from &mut Wpacket."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [
+    "src/slh_dsa/fors.rs: the duplicate raw WPACKET_finish/OPENSSL_cleanse tail was replaced by the safe fors_err helper; the two unsafe operations are unchanged in count but now live behind typed preconditions."
+  ],
+  "secret_bearing_buffers": [
+    "fors.rs: the PRF-generated leaf `sk` is cleansed for n bytes in slh_fors_node; `lnode`/`rnode` are cleansed in full; the secret `out` is cleansed on all three early returns and the success tail of ossl_slh_fors_sign; `roots` is cleansed through fors_err on every exit.",
+    "hash.rs: the SHAKE PRFmsg randomizer `out` and the SHA-2 HMAC `mac` (keyed by SK_PRF) are cleansed in full on every return; the SHA-2 H_MSG `seed` (r || pk_seed || digest) is cleansed in full; SHA-2 intermediates in hctx.scratch are cleared when the hash context is freed.",
+    "hash_ctx.rs: the whole SlhDsaHashCtx block, including scratch, is released by CRYPTO_clear_free after md_ctx/md_big_ctx (identity-disambiguated) and hmac_ctx are freed.",
+    "hypertree.rs: `root` and `node` are cleansed in full on every exit, matching slh_hypertree.c:94,142.",
+    "mod.rs: SlhDsaKey.priv_ holds the secret SK_SEED/SK_PRF halves; the already-audited key release in key.rs cleanses sizeof(priv_) >> 1 (64 bytes, covering every n's secret half), and reset/fromdata cleanse the full 128 bytes.",
+    "selftest/indicator: no secret contents; only borrowed callback pointers and cb_arg."
+  ],
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "slh_dsa::tests::the_compressed_address_clear_stays_inside_its_blob",
+    "reason": "The ADRS extent repair is directly observable: the control fills a 32-byte address with 0xAA and asserts the compressed clear covers offsets 10..22 only. It fails against the pre-fix 22-byte clear and passes against the authority extent. The fors helper's typed arguments make the old failure mode inexpressible, so no separate canary is needed."
+  },
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "focused_selftest": "8 passed / 0 failed",
+    "focused_slh_dsa": "5 passed / 0 failed",
+    "full_lib_serial": "1694 passed / 0 failed / 27 ignored (217.92 s)",
+    "full_lib_threads4": "1694 passed / 0 failed / 27 ignored (92.62 s)",
+    "phase2": "11/11 ABI courts pass on the rebuilt archive",
+    "phase6": "11/11 RT courts pass; RT-SELFTEST 71 observations",
+    "phase8_affected": "RT-SIGNATURE 472 observations pass; RT-KEYMGMT 608 observations pass",
+    "phase8_unrelated": "RT-CIPHER 1 residual and RT-RSA 2 residuals fail; all other 14 RT/CT courts pass; 4 CT courts remain PENDING as recorded"
+  }
+}
