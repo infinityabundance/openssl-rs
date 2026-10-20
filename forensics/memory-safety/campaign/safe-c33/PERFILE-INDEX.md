@@ -20,9 +20,10 @@ post-census delta — exactly as it appeared in the former cumulative
 have full group records; the mechanism-contract sweeps M1–M89 and the boundary
 sweeps name the rest in their structured `files`/`boundaries` arrays. The nine
 post-census files absent from the pinned 868 census are classified in
-`atlas-refresh/post-census-delta.json`: **6 test-only** and **3 `PARTIAL`**
-production helpers. Combined partition: **92 `ZERO_UNSAFE` + 15
-`BOUNDARY_COVERED` + 764 `PARTIAL` + 6 test-only = 877**, 0 unaccounted. The
+`atlas-refresh/post-census-delta.json`: **6 test-only** and **3
+`BOUNDARY_COVERED`** production helpers. Combined partition: **92
+`ZERO_UNSAFE` + 18 `BOUNDARY_COVERED` + 761 `PARTIAL` + 6 test-only = 877**, 0
+unaccounted. The
 761 denominator is the `PARTIAL` population in `ATTRIBUTION.md`; it is not a
 count of files that have graduated. The nine full records cover 6,252
 production unsafe sites in 2,949 groups. The sweeps are obligation checks over
@@ -8342,20 +8343,24 @@ pins the positive dump answer.
 | Current `src/**/*.rs` | **877** |
 | Census files (pinned `c09eef8b`) | **868** |
 | `ZERO_UNSAFE` | **92** |
-| `BOUNDARY_COVERED` | **15** |
+| `BOUNDARY_COVERED` (census) | **15** |
+| `BOUNDARY_COVERED` (current tree, delta +3) | **18** |
 | `PARTIAL` | **761** |
 | Audited `PARTIAL` | **761** |
 | Remaining | **0** |
-| `AUDITED-FILES.txt` lines | **763** |
+| `AUDITED-FILES.txt` lines | **766** |
 | Post-census files absent from the 868 census | **9** |
 
 Every `PARTIAL-FILES.txt` entry now appears in `AUDITED-FILES.txt` (set
-difference empty). The list has 763 unique lines because `src/bn/recp.rs`
-(B12) and `src/runtime/thread.rs` (B11) are `BOUNDARY_COVERED` files that also
-received boundary receipts; excluding those two, the PARTIAL-to-AUDITED sets are
-identical. All 92 `ZERO_UNSAFE` files have `production_sites = 0` and
-`attributed_sites = 0`; all 15 `BOUNDARY_COVERED` files have
-`attributed_sites == production_sites` and `unattributed_sites = 0`.
+difference empty). The list has 766 unique lines because five `BOUNDARY_COVERED`
+files also received boundary receipts: `src/bn/recp.rs` (B12),
+`src/runtime/thread.rs` (B11), and the three post-census helpers
+`src/runtime/foreign.rs`, `src/runtime/mem_coords.rs` and
+`src/runtime/member_slot.rs`. Excluding those five, the PARTIAL-to-AUDITED sets
+are identical. All 92 `ZERO_UNSAFE` files have `production_sites = 0` and
+`attributed_sites = 0`; all 15 census `BOUNDARY_COVERED` files (and, by receipt,
+the 3 post-census helpers) have `attributed_sites == production_sites` and
+`unattributed_sites = 0`.
 
 **Unaccounted relative to the census (not the queue).** Nine files exist at
 HEAD but not in the pinned 868-file census commit. All nine now have a
@@ -8363,11 +8368,12 @@ classification row in `atlas-refresh/post-census-delta.json`: six are
 `cfg(test)`-only models/probes (`runtime/bio/owned_ctx_model.rs`,
 `runtime/bio/zero_state.rs`, `runtime/member_slot_model.rs`,
 `runtime/owned_buf_model.rs`, `runtime/owned_str_model.rs`,
-`runtime/release_probe.rs`) and three are `PARTIAL` production helpers at
-established shared boundaries (`runtime/foreign.rs` 19 production sites,
-`runtime/member_slot.rs` 4, `runtime/mem_coords.rs` 1). Combined partition:
-**92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6 test-only =
-877**, unaccounted **0**. This is a classification delta, not a re-pin: the
+`runtime/release_probe.rs`) and three are `BOUNDARY_COVERED` production helpers
+at established shared boundaries (`runtime/foreign.rs` 19 production sites,
+`runtime/member_slot.rs` 4, `runtime/mem_coords.rs` 1), each site covered by
+the cited receipt. Combined partition: **92 `ZERO_UNSAFE` + 18
+`BOUNDARY_COVERED` + 761 `PARTIAL` + 6 test-only = 877**, unaccounted **0**.
+This is a classification delta, not a re-pin: the
 per-file audit records stay bound to `c09eef8b`, and a full census regeneration
 remains a SEAL obligation. No claim of full campaign closure is made.
 
@@ -8393,7 +8399,7 @@ FRF and SEAL.
 The **761-file per-file audit queue is complete**. `REMAINING-AUDIT.txt` is
 empty and `AUDITED-FILES.txt` covers all 761 `PARTIAL` files. The nine
 post-census files now have classification rows (`atlas-refresh/post-census-delta.json`:
-6 test-only, 3 `PARTIAL` production helpers), so the 877-file tree has 0
+6 test-only, 3 `BOUNDARY_COVERED` production helpers), so the 877-file tree has 0
 unaccounted files. This does not complete the campaign: before any consumer
 family can be called `SAFE_COMPATIBLE` it still needs a full census
 regeneration/re-binding at a SEAL point, SEAL dependency-closure evidence,
@@ -8403,7 +8409,8 @@ pure-ftpd and redis, plus the 25 L4-only families).
 
 ## CENSUS DELTA — 877-file reconciliation (2026-10-20)
 
-**Source identity:** `integrate/safe-c33` at `1ae550590` (M89 merge). The
+**Source identity:** `integrate/safe-c33` at `98aa601cd` (B31 bookkeeping; `git
+diff 1ae550590..98aa601cd` shows no `src/` change). The
 pinned census remains `c09eef8b` (868 files, `src/` hash
 `dadc34c4…`); this section is a classification delta, not a re-pin.
 
@@ -8422,17 +8429,19 @@ production.
 | `src/runtime/owned_buf_model.rs` | TEST_ONLY | 0 | 12 | `cfg(test)` `#[path]`; OB-1 model (subphase 85) |
 | `src/runtime/owned_str_model.rs` | TEST_ONLY | 0 | 7 | `cfg(test)` `#[path]`; OB-2 model (subphase 86) |
 | `src/runtime/release_probe.rs` | TEST_ONLY | 0 | 0 | `cfg(test)`; release-arm probes (subphases 85/87) |
-| `src/runtime/foreign.rs` | PARTIAL | 19 | 0 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md`, `OWNER-DUPLICATES.md` §5, subphase 89 |
-| `src/runtime/member_slot.rs` | PARTIAL | 4 | 22 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md`, subphase 89 |
-| `src/runtime/mem_coords.rs` | PARTIAL | 1 | 1 | `B-ALLOC-SEAM`; subphase 70 |
+| `src/runtime/foreign.rs` | BOUNDARY_COVERED | 19 | 0 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md` §1/§4/§5, `OWNER-DUPLICATES.md` §5/§9.1, subphases 47/89 |
+| `src/runtime/member_slot.rs` | BOUNDARY_COVERED | 4 | 22 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md` §7, subphase 89 (Miri 7/7) |
+| `src/runtime/mem_coords.rs` | BOUNDARY_COVERED | 1 | 1 | `B-ALLOC-SEAM`; `SeamFile` receipt, subphase 70 |
 
-**Partition.** 92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6
+**Partition.** 92 `ZERO_UNSAFE` + 18 `BOUNDARY_COVERED` + 761 `PARTIAL` + 6
 test-only = **877**; unaccounted **0**. The six test-only files are not
-production audit surface. The three production helpers remain `PARTIAL` because
-the seven-entry census boundary registry has no predicate for an `unsafe trait`
-declaration, `OwnedCtx::new`, or the OB-4 member-slot proof boundaries; their
-sites carry explicit `# Safety` contracts in the cited receipts, but that is
-contract coverage, not per-site discharge.
+production audit surface. The three production helpers are `BOUNDARY_COVERED`:
+every production site is covered by the cited shared-boundary receipt, even
+though the pinned seven-entry census registry has no predicate for an `unsafe
+trait` declaration, `OwnedCtx::new`, or the OB-4 member-slot proof boundaries.
+The per-site mapping is in `atlas-refresh/post-census-delta.json`. This is
+classification by receipt, not per-site discharge and not `SAFETY_DISCHARGED`;
+a full census regeneration must encode these boundaries explicitly.
 
 **Evidence.** Read-only scanner run inside the court container
 (`docker/openssl-rs-court.sh exec python3`); no Rust source changed. Machine
