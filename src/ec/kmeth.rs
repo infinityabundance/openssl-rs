@@ -82,7 +82,11 @@ impl OwnedEcKey {
     fn zalloc() -> Option<OwnedEcKey> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<EcKey>()` bytes, which is exactly `EC_KEY`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EcKey>(), FILE, 83).cast::<EcKey>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EcKey>(), FILE, 83)
+        }
+        .cast::<EcKey>();
         ptr::NonNull::new(raw).map(|ptr| OwnedEcKey { ptr })
     }
 
@@ -125,8 +129,11 @@ impl OwnedEcKeyMethod {
     fn zalloc() -> Option<OwnedEcKeyMethod> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<EcKeyMethod>()` bytes, which is exactly `EC_KEY_METHOD`'s layout.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<EcKeyMethod>(), FILE, 178).cast::<EcKeyMethod>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EcKeyMethod>(), FILE, 178)
+        }
+        .cast::<EcKeyMethod>();
         ptr::NonNull::new(raw).map(|ptr| OwnedEcKeyMethod { ptr })
     }
 

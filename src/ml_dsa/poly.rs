@@ -262,8 +262,11 @@ impl Vector {
     ) -> c_int {
         // `OPENSSL_malloc_array` is `CRYPTO_malloc_array`: it checks the element-count product,
         // raises the authority's integer-overflow error and answers NULL on refusal.
-        let p =
-            CRYPTO_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line).cast::<Poly>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line)
+        }
+        .cast::<Poly>();
         if p.is_null() {
             return 0;
         }

@@ -185,7 +185,8 @@ fn miri_tcb_allocator_slot_reports_the_installed_shim() {
     // default branch answers NULL for zero. That distinguishes the slot's contents
     // from the libc default by behaviour, which is robust where comparing function
     // addresses across coercion sites is not (Miri does not make those stable).
-    let zero = CRYPTO_malloc(0, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let zero = unsafe { CRYPTO_malloc(0, ptr::null(), 0) };
     assert!(
         !zero.is_null(),
         "the installed branch handles a zero-length request"
@@ -205,7 +206,8 @@ fn miri_tcb_allocator_slot_reports_the_installed_shim() {
 #[test]
 fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     install();
-    let p = CRYPTO_malloc(64, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let p = unsafe { CRYPTO_malloc(64, ptr::null(), 0) };
     assert!(!p.is_null());
     // SAFETY: 64 bytes were requested.
     unsafe { ptr::write_bytes(p.cast::<u8>(), 0xAB, 64) };
@@ -214,7 +216,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     // SAFETY: `p` came from this allocator.
     unsafe { CRYPTO_free(p, ptr::null(), 0) };
 
-    let z = CRYPTO_zalloc(16, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let z = unsafe { CRYPTO_zalloc(16, ptr::null(), 0) };
     assert!(!z.is_null());
     for i in 0..16 {
         // SAFETY: `z` is live for 16 zeroed bytes.
@@ -223,7 +226,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     // SAFETY: `z` came from this allocator.
     unsafe { CRYPTO_free(z, ptr::null(), 0) };
 
-    let c = CRYPTO_calloc(4, 8, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let c = unsafe { CRYPTO_calloc(4, 8, ptr::null(), 0) };
     assert!(!c.is_null());
     // SAFETY: `c` is live for 32 zeroed bytes.
     unsafe { assert_eq!(c.cast::<u8>().read(), 0) };
@@ -234,7 +238,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
 #[test]
 fn miri_tcb_realloc_preserves_and_clear_realloc_shrinks_in_place() {
     install();
-    let p = CRYPTO_malloc(32, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let p = unsafe { CRYPTO_malloc(32, ptr::null(), 0) };
     assert!(!p.is_null());
     // SAFETY: 32 bytes were requested.
     unsafe { ptr::write_bytes(p.cast::<u8>(), 0x5A, 32) };
@@ -307,8 +312,10 @@ fn miri_tcb_buffer_gateway_grows_and_releases() {
 #[test]
 fn miri_tcb_stack_lifetimes_and_pop_free() {
     install();
-    let a = CRYPTO_malloc(8, ptr::null(), 0);
-    let b = CRYPTO_malloc(8, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let a = unsafe { CRYPTO_malloc(8, ptr::null(), 0) };
+    // SAFETY: as above.
+    let b = unsafe { CRYPTO_malloc(8, ptr::null(), 0) };
     assert!(!a.is_null() && !b.is_null());
     let sk = crate::runtime::stack::OPENSSL_sk_new_null();
     assert!(!sk.is_null());

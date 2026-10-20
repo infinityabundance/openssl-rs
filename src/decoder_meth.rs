@@ -226,8 +226,11 @@ pub struct OsslDecoder {
 /// No preconditions; the answer is NULL or a uniquely-owned object.
 pub(crate) unsafe fn ossl_decoder_new() -> *mut OsslDecoder {
     // SAFETY: the constructor only asks for a zeroed block of the object's size.
-    let decoder =
-        CRYPTO_zalloc(core::mem::size_of::<OsslDecoder>(), ptr::null(), 0).cast::<OsslDecoder>();
+    let decoder = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<OsslDecoder>(), ptr::null(), 0)
+    }
+    .cast::<OsslDecoder>();
     if decoder.is_null() {
         return ptr::null_mut();
     }

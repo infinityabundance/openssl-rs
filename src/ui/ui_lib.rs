@@ -1208,7 +1208,11 @@ pub unsafe extern "C" fn UI_construct_prompt(
     len += c":".to_bytes().len() as c_int;
 
     // SAFETY: `CRYPTO_malloc` validates its own allocation.
-    let prompt = CRYPTO_malloc((len + 1) as usize, FILE, LINE_CONSTRUCT_PROMPT).cast::<c_char>();
+    let prompt = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc((len + 1) as usize, FILE, LINE_CONSTRUCT_PROMPT)
+    }
+    .cast::<c_char>();
     if prompt.is_null() {
         return ptr::null_mut();
     }

@@ -344,11 +344,14 @@ pub unsafe extern "C" fn ossl_d2i_X509_PUBKEY_INTERNAL(
     propq: *const c_char,
 ) -> *mut X509Pubkey {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut xpub = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_INTERNAL,
-    )
+    let mut xpub = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_INTERNAL,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if xpub.is_null() {
@@ -491,11 +494,14 @@ unsafe extern "C" fn x509_pubkey_ex_new_ex(
     propq: *const c_char,
 ) -> c_int {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut ret = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_NEW_EX,
-    )
+    let mut ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_NEW_EX,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if ret.is_null() {
@@ -895,11 +901,14 @@ pub unsafe extern "C" fn i2d_X509_PUBKEY_bio(bp: *mut Bio, xpk: *const X509Pubke
 #[no_mangle]
 pub unsafe extern "C" fn X509_PUBKEY_dup(a: *const X509Pubkey) -> *mut X509Pubkey {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut pubkey = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_DUP,
-    )
+    let mut pubkey = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_DUP,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if pubkey.is_null() {
@@ -1257,11 +1266,14 @@ unsafe fn d2i_PUBKEY_int(
 
     if !libctx.is_null() || !propq.is_null() || force_legacy != 0 {
         // SAFETY: the allocator takes the file/line for its mdbg record only.
-        xpk2 = CRYPTO_zalloc(
-            core::mem::size_of::<X509Pubkey>(),
-            FILE.as_ptr(),
-            LINE_ZALLOC_D2I_INT,
-        )
+        xpk2 = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<X509Pubkey>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_D2I_INT,
+            )
+        }
         .cast::<X509Pubkey>();
         if xpk2.is_null() {
             return ptr::null_mut();

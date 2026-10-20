@@ -1,0 +1,164 @@
+{
+  "receipt": "boundary-sweep-B34",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "f78df27a8",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/runtime/mem.rs",
+      "src/runtime/err.rs",
+      "src/runtime/err_state.rs",
+      "src/runtime/miri_tcb.rs",
+      "src/async/arch/async_posix.rs"
+    ],
+    "call_site_files": "152 files carry the B34 allocator-call SAFETY blocks; 155 files are changed in total",
+    "working_tree_blob": {
+      "src/runtime/mem.rs": "aa87baed4cf4b916cf077c66ee0c8a72a94384ca",
+      "src/runtime/err.rs": "6de7b075baca37953ba198d0cb1f6c4aac97ba33",
+      "src/runtime/err_state.rs": "8a6d05d7c24053e645f60a580059d10b836fd82d",
+      "src/runtime/miri_tcb.rs": "397823234aa20f3ddb288d2473dde59df2ac4988",
+      "src/async/arch/async_posix.rs": "353dac96387fcdd3ff362f7726f8c4af9bdb65f6"
+    },
+    "committed": false
+  },
+  "stop_status": "NO_STOP_DEFECT. NEO-ERR-6 (safe-interface soundness) and NEO-ERR-7 (allocator-hook reentrancy) are repaired in code; NEO-ERR-3/4 are contract-only for provenance/extent with one cheap authority-compatible check added. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE; the full ERR mechanism remains CONTRACTED and the consumer scope remains ESTABLISHED.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "C ABI unchanged. The four entry points keep the exported names CRYPTO_malloc/CRYPTO_zalloc/CRYPTO_calloc/CRYPTO_malloc_array, the same parameters, return types and extern \"C\" calling convention; only their Rust-callability changed (safe -> unsafe). No #[repr(C)] layout, allocator-seam size/file/line coordinate, or exported symbol changed.",
+    "external_contracts": [
+      "CRYPTO_malloc/zalloc/calloc/malloc_array `file` is NULL or a NUL-terminated C string valid for the call; the allocation-failure/overflow path and the installed allocator hook may read it.",
+      "CRYPTO_realloc/clear_realloc/realloc_array/clear_realloc_array/free/clear_free/memdup/strdup/strndup/aligned_alloc/_array carry the same `file` clause in addition to their existing pointer/extent contracts.",
+      "OSSL_ERR_STATE_save/save_to_mark clear (and therefore release) the destination; every MALLOCED slot in the destination must be an exclusively owned seam block from a state produced by OSSL_ERR_STATE_new (or satisfy the slot contract).",
+      "OSSL_ERR_STATE_restore trusts err_data_size as the source extent, requires err_file/err_func to be NULL or NUL-terminated until return, requires no concurrent mutation, and now treats an out-of-range top/bottom as an empty state.",
+      "A hook installed by CRYPTO_set_mem_functions may re-enter ERR on the same thread; the nested access is refused (None) instead of aliasing the outer &mut. The external installer contract from B33 is retained as defence in depth."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B34-ERR-6",
+      "file": "src/runtime/mem.rs:228-281, 447-482, 487-590, 900-1010",
+      "operation": "CRYPTO_malloc-family `file` argument on the safe-interface boundary",
+      "before": "CRYPTO_malloc, CRYPTO_zalloc, CRYPTO_calloc and CRYPTO_malloc_array were safe extern \"C\" fns. A safe Rust caller could pass an arbitrary *const c_char; the failure/overflow path read it via c_strlen -> UB.",
+      "after": "All four are `pub unsafe extern \"C\" fn` with a # Safety contract requiring NULL or a NUL-terminated string valid for the call. The internal helpers malloc_request/alloc/dealloc/clear_dealloc/report_alloc_err/raise_integer_overflow are unsafe fns with the same clause. Every other allocator entry point's existing # Safety gained the `file` clause. 247 in-crate call sites across 152 files now carry a SAFETY-commented block. Each passes NULL, a static coordinate (C literal, module constant, or type-associated constant), or an enclosing helper parameter; 24 forward a private helper parameter and are recorded in R-ERR-10.",
+      "mechanism": "ELIMINATED for safe Rust callers: the unsafe read is no longer reachable through a safe fn. The precondition is now a caller obligation at every call site, and the C ABI remains byte-identical.",
+      "hidden": 0,
+      "state": "FIXED (not independently checked)"
+    },
+    {
+      "id": "B34-ERR-7",
+      "file": "src/runtime/err.rs:721-780, 850-900",
+      "operation": "with_state &mut reentrancy",
+      "before": "with_state held &mut ErrState across allocation/release. An installed allocator hook that re-entered ERR on the same thread formed a second &mut: UB. The rule lived only in prose/external contract.",
+      "after": "A thread-local Cell<bool> (STATE_IN_USE) is acquired before the state is touched (and before load_crypto_strings). A nested with_state returns None without touching the state; the nested raise is dropped and the outer call completes. StateAccessGuard's Drop resets the flag on every exit path, including an unwinding closure. The module note and with_state docs were updated; the B33 external contract at CRYPTO_set_mem_functions is retained.",
+      "mechanism": "ELIMINATED (second &mut is inexpressible; the reentrant call fails closed with the existing no-state outcome).",
+      "hidden": 0,
+      "state": "FIXED (not independently checked)"
+    },
+    {
+      "id": "B34-ERR-3",
+      "file": "src/runtime/err_state.rs:87-210",
+      "operation": "OSSL_ERR_STATE_save / save_to_mark destination ownership/provenance",
+      "before": "B33 documented the destination contract but left it as prose only.",
+      "after": "The # Safety blocks keep the full destination provenance/exclusive-ownership/no-concurrent-mutation contract. No runtime validation was added: no provenance marker exists in the public #[repr(C)] ERR_STATE layout, and adding one would change the ABI. Kept contract-only and recorded as retained.",
+      "mechanism": "RELOCATED to an external contract (no ABI-compatible runtime check).",
+      "hidden": 0,
+      "state": "CONTRACT_ONLY (retained)"
+    },
+    {
+      "id": "B34-ERR-4",
+      "file": "src/runtime/err_state.rs:212-300",
+      "operation": "OSSL_ERR_STATE_restore source extent/termination/stability",
+      "before": "B33 stated the per-slot extent, NUL-termination and no-concurrent-mutation contract but trusted top/bottom unconditionally.",
+      "after": "The contract is retained and one cheap authority-compatible validation was added: top/bottom outside 0..ERR_STATE_SLOTS is treated as an empty state, so a hostile C state cannot index out of bounds or make the ring walk non-terminating. err_data_size remains trusted as the extent (a bounded copy would change authority behaviour and no provenance metadata exists).",
+      "mechanism": "RELOCATED (extent) + cheap local validation (ring indices).",
+      "hidden": 0,
+      "state": "CONTRACT_ONLY (validation added; retained)"
+    }
+  ],
+  "defects": [
+    {
+      "id": "NEO-ERR-3",
+      "severity": "CONTRACT_GAP",
+      "reachable": "external C ABI",
+      "disposition": "CONTRACT_ONLY (retained; no ABI-compatible runtime provenance check)"
+    },
+    {
+      "id": "NEO-ERR-4",
+      "severity": "CONTRACT_GAP",
+      "reachable": "external C ABI",
+      "disposition": "CONTRACT_ONLY + out-of-range ring-index validation (retained)"
+    },
+    {
+      "id": "NEO-ERR-6",
+      "severity": "CROSS_MECHANISM_SAFE_INTERFACE_GAP",
+      "reachable": "safe Rust callers of the allocator seam",
+      "disposition": "FIXED (four entry points are unsafe fns; C ABI unchanged; 247 call sites updated)"
+    },
+    {
+      "id": "NEO-ERR-7",
+      "severity": "REENTRANCY_EXTERNAL_CONTRACT",
+      "reachable": "application-installed allocator hook",
+      "disposition": "FIXED (thread-local reentrancy guard; nested access returns None)"
+    }
+  ],
+  "controls": {
+    "FAST": {
+      "fmt": "PASS (cargo fmt --all -- --check)",
+      "check": "PASS (cargo check --lib and cargo check --all-targets; lib/test/example targets all build)",
+      "focused": "PASS (14 passed / 0 failed, runtime::err::; 5 passed / 0 failed, runtime::err_state::; --test-threads=4)"
+    },
+    "BATCH": {
+      "clippy": "PASS (cargo clippy --all-targets -- -D warnings)",
+      "serial": "1707 passed / 0 failed / 31 ignored (239.83 s, --test-threads=1)",
+      "threaded": "1707 passed / 0 failed / 31 ignored (94.12 s, --test-threads=4)"
+    },
+    "MIRI": {
+      "stacked_borrows": "PASS 14/14 (runtime::err::, -Zmiri-disable-isolation -Zmiri-ignore-leaks)",
+      "tree_borrows": "PASS 19/19 (runtime::err, -Zmiri-tree-borrows -Zmiri-disable-isolation -Zmiri-ignore-leaks)",
+      "coverage_limit": "Miri models the static-link fallback TLS state; it does not model dlsym-resolved authority state, the C variadic adapter, or a real allocator hook.",
+      "note": "The miri-only module src/runtime/miri_tcb.rs was updated for the unsafe entry points; seven E0133 call sites were fixed there before the Miri run."
+    },
+    "ASAN": {
+      "result": "PASS 19/19 (-Zsanitizer=address -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0, detect_leaks=0, OPENSSL_RS_COURT_DATA=32 TiB, --test-threads=1)",
+      "environment_note": "cgu=1 and cgu=8 OOM LLVM at 8 GiB and 12 GiB under ASan; cgu=256 compiles. The final run was executed at the mandated 8 GiB court cap.",
+      "binary_sha256": "not recorded in B34"
+    },
+    "TSAN": {
+      "result": "PASS 19/19 (-Zsanitizer=thread -Zbuild-std -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0, --test-threads=4, OPENSSL_RS_COURT_DATA=64 TiB)",
+      "environment_note": "The disposable court container needed `rustup component add rust-src --toolchain nightly-2026-10-01` for -Zbuild-std; that is container state, not a repository change. The final run was executed at the mandated 8 GiB court cap.",
+      "binary_sha256": "not recorded in B34"
+    },
+    "GUARD": {
+      "unit": "PASS a_reentrant_state_access_is_refused_and_the_guard_resets: nested with_state -> None, outer -> Some, subsequent access -> Some",
+      "out_of_range_restore": "PASS restore_rejects_an_out_of_range_ring_instead_of_walking_forever"
+    }
+  },
+  "unsafe_accounting": {
+    "new_unsafe_fn_declarations": 10,
+    "new_unsafe_blocks_at_call_sites": 247,
+    "removed_unsafe_ops": 0,
+    "relocated_unsafe_ops": 0,
+    "boundary_size_delta": "The allocator seam's Rust surface is now 4 unsafe entry points plus 7 unsafe internal helpers; every in-crate caller establishes NULL-or-NUL-termination in a SAFETY-commented block. with_state gains one thread-local guard (no new unsafe op; the existing &mut formation is now reached at most once per thread). restore gains one bounds check. No unsafe operation was removed: the unsafe read still exists at the C boundary and in the allocator hook, but it is no longer reachable from safe Rust.",
+    "boundary_ids": ["B34-ERR-6", "B34-ERR-7", "B34-ERR-3", "B34-ERR-4"]
+  },
+  "residuals_total": 10,
+  "dispositions": {
+    "consumer_c2_scope": "ESTABLISHED_PENDING_INDEPENDENT_CHECK",
+    "full_err_mechanism": "CONTRACTED",
+    "discharged": false,
+    "independently_checked": false,
+    "discharge_blockers": ["NEO-ERR-3", "NEO-ERR-4", "independent review of B34 repairs"],
+    "review_pending_repairs": ["NEO-ERR-1", "NEO-ERR-2", "NEO-ERR-5", "NEO-ERR-6", "NEO-ERR-7"],
+    "safe_compatible_count_after": 0,
+    "safe_compatible_total": 33
+  },
+  "not_run": [
+    "differential/functional ERR court against the authority at this candidate",
+    "Miri over the C variadic adapter (Miri cannot execute it)",
+    "allocator-hook reentrancy through a real C CRYPTO_set_mem_functions hook (the guard is tested directly; the C harness is deferred)",
+    "independent review of NEO-ERR-1..7 and of the 24 private helper `file` parameters",
+    "Loom/Kani and full-library Miri (no harness / out of scope)",
+    "clang/compiler-rt ASan for the C probe (image lacks the archives; GCC ASan was the B33 control and was not rerun)"
+  ],
+  "next": "Independent reviewer at the committed B34 candidate: confirm the exported allocator symbols/signatures are byte-identical, audit all 247 call sites (especially the 24 helper forwards), reproduce Miri SB/TB, ASan, TSan and the BATCH gates, re-run the guard and out-of-range-restore tests, then adjudicate NEO-ERR-3/4 (accept the external contracts or require an ABI-compatible provenance marker/bounded copy). Consumer SAFE_COMPATIBLE remains 0/33."
+}

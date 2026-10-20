@@ -71,7 +71,11 @@ impl OwnedClearBuf {
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<OwnedClearBuf> {
-        let ptr = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, alloc_line)
+        }
+        .cast::<c_uchar>();
         if ptr.is_null() {
             return None;
         }

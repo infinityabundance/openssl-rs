@@ -475,7 +475,11 @@ unsafe extern "C" fn buffer_ctrl(
             // SAFETY: `c` is a live context.
             if num > unsafe { (*c).ibuf_size } as c_long {
                 // SAFETY: `num > 0` bytes are requested and fit in `c_int`.
-                let p1 = CRYPTO_malloc(num as usize, ptr::null(), 0).cast::<c_char>();
+                let p1 = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    CRYPTO_malloc(num as usize, ptr::null(), 0)
+                }
+                .cast::<c_char>();
                 if p1.is_null() {
                     return 0;
                 }
@@ -521,13 +525,21 @@ unsafe extern "C" fn buffer_ctrl(
                 if num <= 0 {
                     return 0;
                 }
-                p1 = CRYPTO_malloc(num as usize, ptr::null(), 0).cast();
+                p1 = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    CRYPTO_malloc(num as usize, ptr::null(), 0)
+                }
+                .cast();
                 if p1.is_null() {
                     return 0;
                 }
             }
             if obs > DEFAULT_BUFFER_SIZE && obs != ctx_obuf_size {
-                p2 = CRYPTO_malloc(num as usize, ptr::null(), 0).cast();
+                p2 = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    CRYPTO_malloc(num as usize, ptr::null(), 0)
+                }
+                .cast();
                 if p2.is_null() {
                     // SAFETY: `p1` was just allocated here when it differs from
                     // the context's own buffer.

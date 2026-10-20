@@ -284,7 +284,10 @@ pub unsafe extern "C" fn ossl_pw_set_passphrase(
         // SAFETY: `passphrase` is readable for `passphrase_len` bytes per the contract.
         unsafe { CRYPTO_memdup(passphrase.cast(), passphrase_len, ptr::null(), 0) }
     } else {
-        CRYPTO_malloc(1, ptr::null(), 0)
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(1, ptr::null(), 0)
+        }
     };
     // SAFETY: `data` is live and the union member is the one `type_` selects.
     unsafe {
@@ -553,7 +556,11 @@ unsafe fn do_ui_passphrase(
 
     // SAFETY: `CRYPTO_zalloc` takes a size and answers NULL or a zeroed block; `buf_size`
     // is the checked `pass_size + 1` computed above.
-    let ipass: *mut c_char = CRYPTO_zalloc(buf_size, ptr::null(), 0).cast();
+    let ipass: *mut c_char = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(buf_size, ptr::null(), 0)
+    }
+    .cast();
     if ipass.is_null() {
         // `scratch`'s `Drop` releases the prompt and the `UI` on this failure tail.
         return 0;
@@ -581,7 +588,11 @@ unsafe fn do_ui_passphrase(
 
     if verify != 0 {
         // SAFETY: as for `ipass`.
-        let vpass: *mut c_char = CRYPTO_zalloc(buf_size, ptr::null(), 0).cast();
+        let vpass: *mut c_char = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(buf_size, ptr::null(), 0)
+        }
+        .cast();
         if vpass.is_null() {
             // `scratch`'s `Drop` releases the input buffer, the prompt and the `UI`.
             return 0;

@@ -80,8 +80,11 @@ struct OwnedRow {
 impl OwnedRow {
     /// `CRYPTO_zalloc(sizeof(*rv), FILE, line)`, or `None` when the allocator answers NULL.
     fn zalloc() -> Option<OwnedRow> {
-        let ptr = CRYPTO_zalloc(core::mem::size_of::<Asn1StringTable>(), FILE.as_ptr(), LINE)
-            .cast::<Asn1StringTable>();
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<Asn1StringTable>(), FILE.as_ptr(), LINE)
+        }
+        .cast::<Asn1StringTable>();
         if ptr.is_null() {
             None
         } else {

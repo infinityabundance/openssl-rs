@@ -319,7 +319,11 @@ unsafe extern "C" fn evp_mac_free(vmac: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn evp_mac_new() -> *mut EvpMac {
-    let mac = CRYPTO_zalloc(core::mem::size_of::<EvpMac>(), FILE, LINE_ZALLOC_MAC).cast::<EvpMac>();
+    let mac = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpMac>(), FILE, LINE_ZALLOC_MAC)
+    }
+    .cast::<EvpMac>();
     if mac.is_null() {
         return ptr::null_mut();
     }
@@ -829,8 +833,11 @@ pub unsafe extern "C" fn EVP_MAC_do_all_provided(
 /// `mac` must be a live `EvpMac` this call may take a reference to.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MAC_CTX_new(mac: *mut EvpMac) -> *mut EvpMacCtx {
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMacCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<EvpMacCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }

@@ -1516,11 +1516,14 @@ unsafe fn ml_kem_gen_init(
         return ptr::null_mut();
     }
     // SAFETY: `CRYPTO_zalloc` answers NULL on failure, which is checked.
-    let gctx = CRYPTO_zalloc(
-        core::mem::size_of::<ProvMlKemGenCtx>(),
-        FILE,
-        LINE_GEN_ZALLOC,
-    )
+    let gctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<ProvMlKemGenCtx>(),
+            FILE,
+            LINE_GEN_ZALLOC,
+        )
+    }
     .cast::<ProvMlKemGenCtx>();
     if gctx.is_null() {
         return ptr::null_mut();

@@ -228,8 +228,11 @@ impl GenCtxBlock {
     /// allocation and release lines, or `None` when the seam answers NULL.
     fn zalloc(alloc_line: c_int, release_line: c_int) -> Option<GenCtxBlock> {
         // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of the struct's size.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<RsaGenCtx>(), FILE, alloc_line).cast::<RsaGenCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<RsaGenCtx>(), FILE, alloc_line)
+        }
+        .cast::<RsaGenCtx>();
         ptr::NonNull::new(raw).map(|ptr| GenCtxBlock { ptr, release_line })
     }
 

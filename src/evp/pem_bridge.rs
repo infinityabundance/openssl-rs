@@ -203,7 +203,10 @@ pub(crate) unsafe fn pem_malloc(
         // SAFETY: the secure allocator validates its own argument.
         unsafe { CRYPTO_secure_malloc(num, file, line) }
     } else {
-        CRYPTO_malloc(num, file, line)
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(num, file, line)
+        }
     }
 }
 

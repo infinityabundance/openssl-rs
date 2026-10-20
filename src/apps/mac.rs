@@ -95,7 +95,11 @@ enum BufRelease {
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
     fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, line)
+        }
+        .cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -138,7 +142,11 @@ fn app_params_new_from_opts(opts: &[String], paramdefs: *const OsslParam) -> *mu
         return ptr::null_mut();
     };
     // SAFETY: a non-zero size and a static file/line label.
-    let params = CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489).cast::<OsslParam>();
+    let params = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489)
+    }
+    .cast::<OsslParam>();
     if params.is_null() {
         return ptr::null_mut();
     }

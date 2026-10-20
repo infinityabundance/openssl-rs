@@ -319,7 +319,11 @@ unsafe extern "C" fn dlfcn_name_converter(dso: *mut Dso, filename: *const c_char
             rsize += 3; // the length of "lib"
         }
     }
-    let translated = CRYPTO_malloc(rsize, FILE, LINE_MALLOC_TRANSLATED).cast::<c_char>();
+    let translated = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(rsize, FILE, LINE_MALLOC_TRANSLATED)
+    }
+    .cast::<c_char>();
     if translated.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSO_DLFCN_260) };

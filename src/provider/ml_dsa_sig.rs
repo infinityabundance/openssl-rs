@@ -217,8 +217,11 @@ unsafe fn ml_dsa_newctx(
     }
 
     // SAFETY: `CRYPTO_zalloc` answers a zeroed block or NULL.
-    let ctx =
-        CRYPTO_zalloc(size_of::<ProvMlDsaCtx>(), FILE, LINE_ZALLOC_CTX).cast::<ProvMlDsaCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<ProvMlDsaCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<ProvMlDsaCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }

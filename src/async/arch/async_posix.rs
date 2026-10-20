@@ -107,7 +107,10 @@ const _: () = {
 /// `num` must be a live `size_t`.
 pub(crate) unsafe extern "C" fn async_stack_alloc(num: *mut usize) -> *mut c_void {
     // SAFETY: `num` is live per the contract.
-    CRYPTO_zalloc(unsafe { *num }, FILE, LINE_ALLOC)
+    unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(*num, FILE, LINE_ALLOC)
+    }
 }
 
 /// `static void async_stack_free(void *addr)` — `async_posix.c:87-90`.
@@ -273,7 +276,10 @@ impl OwnedFibre {
         let size = unsafe { openssl_rs_ucontext_size() };
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size` bytes, exactly the `ucontext_t` layout the shim names.
-        let raw = CRYPTO_zalloc(size, FILE, LINE_ALLOC);
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size, FILE, LINE_ALLOC)
+        };
         if raw.is_null() {
             None
         } else {

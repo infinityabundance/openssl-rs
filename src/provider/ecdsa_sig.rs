@@ -191,7 +191,11 @@ unsafe extern "C" fn ecdsa_newctx(provctx: *mut c_void, propq: *const c_char) ->
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdsaCtx>(), FILE, 138).cast::<ProvEcdsaCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdsaCtx>(), FILE, 138)
+    }
+    .cast::<ProvEcdsaCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }

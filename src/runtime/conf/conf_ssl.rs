@@ -156,12 +156,15 @@ impl OwnedStore {
     /// `CRYPTO_calloc(count, sizeof(SslConfName), FILE, 80)` — a **zeroed** array, which is what
     /// makes a partially-built store safe to hand to [`Self::take`].
     fn new_empty(count: usize) -> Option<OwnedStore> {
-        let raw = CRYPTO_calloc(
-            count,
-            core::mem::size_of::<SslConfName>(),
-            FILE,
-            L_INIT_NAMES,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(
+                count,
+                core::mem::size_of::<SslConfName>(),
+                FILE,
+                L_INIT_NAMES,
+            )
+        }
         .cast::<SslConfName>();
         if raw.is_null() {
             return None;
@@ -436,12 +439,15 @@ unsafe extern "C" fn ssl_module_init(md: *mut ConfImodule, cnf: *const Conf) -> 
             return ssl_module_init_failed(md);
         }
         // SAFETY: as `names` above: a fresh zeroed array of `cmd_count` entries.
-        let cmd_arr = CRYPTO_calloc(
-            cmd_count as usize,
-            core::mem::size_of::<SslConfCmd>(),
-            FILE,
-            L_INIT_CMDS,
-        )
+        let cmd_arr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(
+                cmd_count as usize,
+                core::mem::size_of::<SslConfCmd>(),
+                FILE,
+                L_INIT_CMDS,
+            )
+        }
         .cast::<SslConfCmd>();
         if cmd_arr.is_null() {
             return ssl_module_init_failed(md);
@@ -636,8 +642,11 @@ mod tests {
         // SAFETY: the source is a static NUL-terminated literal and the file/line
         // pair is the "internal allocation" marker the crate uses on these paths.
         let name = unsafe { CRYPTO_strdup(c"SECLEVEL".as_ptr(), core::ptr::null(), 0) };
-        let cmds = CRYPTO_calloc(2, core::mem::size_of::<SslConfCmd>(), core::ptr::null(), 0)
-            .cast::<SslConfCmd>();
+        let cmds = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(2, core::mem::size_of::<SslConfCmd>(), core::ptr::null(), 0)
+        }
+        .cast::<SslConfCmd>();
         assert!(!name.is_null() && !cmds.is_null());
         // SAFETY: `cmds` has room for two entries; both strings are fresh.
         unsafe {
@@ -646,8 +655,11 @@ mod tests {
             (*cmds.add(1)).cmd = CRYPTO_strdup(c"level".as_ptr(), core::ptr::null(), 0);
             (*cmds.add(1)).arg = core::ptr::null_mut();
         }
-        let names = CRYPTO_calloc(1, core::mem::size_of::<SslConfName>(), core::ptr::null(), 0)
-            .cast::<SslConfName>();
+        let names = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(1, core::mem::size_of::<SslConfName>(), core::ptr::null(), 0)
+        }
+        .cast::<SslConfName>();
         assert!(!names.is_null());
         // SAFETY: `names` has room for one entry.
         unsafe {

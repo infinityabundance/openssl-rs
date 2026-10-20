@@ -188,8 +188,11 @@ unsafe fn sm2sig_set_mdname(psm2ctx: *mut ProvSm2SigCtx, mdname: *const c_char) 
 /// The signature `newctx` dispatch contract; `propq` is NULL or NUL-terminated.
 unsafe extern "C" fn sm2sig_newctx(provctx: *mut c_void, propq: *const c_char) -> *mut c_void {
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvSm2SigCtx>(), FILE, 127).cast::<ProvSm2SigCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvSm2SigCtx>(), FILE, 127)
+    }
+    .cast::<ProvSm2SigCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }

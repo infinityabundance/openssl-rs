@@ -653,8 +653,11 @@ unsafe extern "C" fn dh_newctx(provctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    let pdhctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 95).cast::<ProvDhCtx>();
+    let pdhctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 95)
+    }
+    .cast::<ProvDhCtx>();
     if pdhctx.is_null() {
         return ptr::null_mut();
     }
@@ -931,8 +934,11 @@ unsafe extern "C" fn dh_dupctx(vpdhctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
 
-    let dstctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 303).cast::<ProvDhCtx>();
+    let dstctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvDhCtx>(), FILE_DH_EXCH, 303)
+    }
+    .cast::<ProvDhCtx>();
     if dstctx.is_null() {
         return ptr::null_mut();
     }

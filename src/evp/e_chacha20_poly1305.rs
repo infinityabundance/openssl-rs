@@ -157,7 +157,11 @@ struct OwnedAeadBlock {
 impl OwnedAeadBlock {
     /// `CRYPTO_zalloc(len, FILE, line)`, or `None` when the allocator answers NULL.
     fn zalloc(len: usize) -> Option<OwnedAeadBlock> {
-        let ptr = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<EvpChachaAeadCtx>();
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, FILE.as_ptr(), LINE)
+        }
+        .cast::<EvpChachaAeadCtx>();
         if ptr.is_null() {
             None
         } else {

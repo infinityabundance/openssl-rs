@@ -350,7 +350,11 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
         let nlen = unsafe { strlen(objtmp.as_ptr()) + 3 + strlen((*vtmp).name) } + 1;
         // SAFETY: `nlen` is the exact byte count the authority allocates at `:84`; the allocator
         // answers NULL or a fresh block, which is handed to `vtmp->name` below.
-        let ntmp = CRYPTO_malloc(nlen, FILE.as_ptr(), LINE_MALLOC).cast::<c_char>();
+        let ntmp = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(nlen, FILE.as_ptr(), LINE_MALLOC)
+        }
+        .cast::<c_char>();
         if ntmp.is_null() {
             return i2v_ainfo_err(ret, tret);
         }

@@ -142,7 +142,11 @@ struct OwnedKey {
 impl OwnedKey {
     /// `CRYPTO_zalloc(keylen, FILE, 605)`, or `None` when the allocator answers NULL.
     fn new_zeroed(len: usize) -> Option<OwnedKey> {
-        let raw = CRYPTO_zalloc(len, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<u8>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, FILE, LINE_ZALLOC_DERIVE_SKEY)
+        }
+        .cast::<u8>();
         if raw.is_null() {
             return None;
         }
@@ -338,11 +342,14 @@ unsafe extern "C" fn evp_keyexch_up_ref(data: *mut c_void) -> c_int {
 /// `prov` must be live.
 unsafe fn evp_keyexch_new(prov: *mut OsslProvider) -> *mut EvpKeyExch {
     // SAFETY: this allocates a fresh object and reads nothing.
-    let exchange = CRYPTO_zalloc(
-        core::mem::size_of::<EvpKeyExch>(),
-        FILE,
-        LINE_ZALLOC_KEYEXCH,
-    )
+    let exchange = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<EvpKeyExch>(),
+            FILE,
+            LINE_ZALLOC_KEYEXCH,
+        )
+    }
     .cast::<EvpKeyExch>();
     if exchange.is_null() {
         return ptr::null_mut();

@@ -1737,8 +1737,11 @@ pub(crate) unsafe fn ossl_rsa_set0_all_params(
                 /* "Using ossl_rsa_multip_info_new() is wasteful, so allocate directly": a zeroed
                  * record, so `pp` and `m` start NULL and `ossl_rsa_multip_calc_product` fills `pp`
                  * later. `CRYPTO_zalloc` is safe in this crate. */
-                let pinfo = CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE_RSA_LIB, LINE)
-                    .cast::<RsaPrimeInfo>();
+                let pinfo = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE_RSA_LIB, LINE)
+                }
+                .cast::<RsaPrimeInfo>();
                 if pinfo.is_null() {
                     break 'build false;
                 }

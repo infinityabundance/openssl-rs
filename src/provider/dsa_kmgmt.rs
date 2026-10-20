@@ -809,7 +809,11 @@ unsafe extern "C" fn dsa_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let mut gctx = CRYPTO_zalloc(core::mem::size_of::<DsaGenCtx>(), FILE, 416).cast::<DsaGenCtx>();
+    let mut gctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<DsaGenCtx>(), FILE, 416)
+    }
+    .cast::<DsaGenCtx>();
     if !gctx.is_null() {
         // SAFETY: `gctx` is this call's own allocation.
         unsafe {

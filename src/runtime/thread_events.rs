@@ -278,11 +278,14 @@ static TEVENT_REGISTER_RUNONCE: AtomicI32 = AtomicI32::new(0);
 /// both whatever the order, which is why the two `sk`/`lock` frees are unconditional there.
 extern "C" fn create_global_tevent_register() {
     // `CRYPTO_zalloc` is a SAFE function in this crate (D113), so this is unguarded.
-    let gtr = CRYPTO_zalloc(
-        core::mem::size_of::<GlobalTeventRegister>(),
-        FILE,
-        lines::L_GTR_NEW,
-    )
+    let gtr = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<GlobalTeventRegister>(),
+            FILE,
+            lines::L_GTR_NEW,
+        )
+    }
     .cast::<GlobalTeventRegister>();
     if gtr.is_null() {
         return;
@@ -362,11 +365,14 @@ fn manage_thread_local(ctx: *mut c_void, alloc: bool, keep: bool) -> *mut *mut T
     if alloc {
         if hands.is_null() {
             // SAFETY: a fresh zeroed block of exactly this type.
-            hands = CRYPTO_zalloc(
-                core::mem::size_of::<*mut ThreadEventHandler>(),
-                FILE,
-                lines::L_HANDS_ALLOC,
-            )
+            hands = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(
+                    core::mem::size_of::<*mut ThreadEventHandler>(),
+                    FILE,
+                    lines::L_HANDS_ALLOC,
+                )
+            }
             .cast::<*mut ThreadEventHandler>();
             if hands.is_null() {
                 return ptr::null_mut();
@@ -590,11 +596,14 @@ pub(crate) unsafe fn ossl_init_thread_start(
     }
 
     // SAFETY: a fresh block of exactly this type.
-    let hand = CRYPTO_malloc(
-        core::mem::size_of::<ThreadEventHandler>(),
-        FILE,
-        lines::L_HAND_NEW,
-    )
+    let hand = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(
+            core::mem::size_of::<ThreadEventHandler>(),
+            FILE,
+            lines::L_HAND_NEW,
+        )
+    }
     .cast::<ThreadEventHandler>();
     if hand.is_null() {
         return 0;

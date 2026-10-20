@@ -148,11 +148,14 @@ impl OwnedDef {
     /// `CRYPTO_zalloc(sizeof(ParamBldDef), FILE, LINE_ZALLOC_DEF)`, or `None` when the allocator
     /// answers NULL.
     fn zalloc() -> Option<OwnedDef> {
-        let raw = CRYPTO_zalloc(
-            core::mem::size_of::<ParamBldDef>(),
-            FILE.as_ptr(),
-            LINE_ZALLOC_DEF,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ParamBldDef>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_DEF,
+            )
+        }
         .cast::<ParamBldDef>();
         if raw.is_null() {
             return None;
@@ -295,11 +298,14 @@ unsafe fn param_push_num(
 #[no_mangle]
 pub extern "C" fn OSSL_PARAM_BLD_new() -> *mut OSSL_PARAM_BLD {
     crate::ffi::guard_ffi(ptr::null_mut(), || {
-        let r = CRYPTO_zalloc(
-            core::mem::size_of::<OSSL_PARAM_BLD>(),
-            FILE.as_ptr(),
-            LINE_ZALLOC_BUILDER,
-        )
+        let r = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<OSSL_PARAM_BLD>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_BUILDER,
+            )
+        }
         .cast::<OSSL_PARAM_BLD>();
         if !r.is_null() {
             // The authority allocates the stack header with `sk_..._new_null()`; the Rust body is
@@ -1284,7 +1290,10 @@ pub unsafe extern "C" fn OSSL_PARAM_BLD_to_param(bld: *mut OSSL_PARAM_BLD) -> *m
             }
             secure_block = s.cast();
         }
-        let params = CRYPTO_malloc(total, FILE.as_ptr(), LINE_MALLOC_PARAMS);
+        let params = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(total, FILE.as_ptr(), LINE_MALLOC_PARAMS)
+        };
         if params.is_null() {
             // SAFETY: `secure_block` is NULL or the secure block just allocated.
             unsafe {

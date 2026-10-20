@@ -161,8 +161,11 @@ pub(crate) unsafe fn ossl_slh_dsa_key_new(
         return ptr::null_mut();
     }
 
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_NEW).cast::<SlhDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_NEW)
+    }
+    .cast::<SlhDsaKey>();
     if ret.is_null() {
         return ret;
     }
@@ -228,8 +231,11 @@ pub(crate) unsafe fn ossl_slh_dsa_key_dup(
     if src.is_null() {
         return ptr::null_mut();
     }
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_DUP).cast::<SlhDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_DUP)
+    }
+    .cast::<SlhDsaKey>();
     if ret.is_null() {
         return ret;
     }

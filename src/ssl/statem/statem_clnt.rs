@@ -3508,7 +3508,10 @@ mod adv_probe {
 
         adv_alloc::reset();
         adv_alloc::arm(37);
-        let p = CRYPTO_malloc(37, core::ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(37, core::ptr::null(), 0)
+        };
         adv_alloc::disarm();
 
         assert!(p.is_null(), "the armed refusal must answer NULL");
