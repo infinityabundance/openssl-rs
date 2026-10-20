@@ -28,6 +28,8 @@
 
 use core::ffi::{c_int, c_uchar};
 
+use crate::runtime::mem::OPENSSL_cleanse;
+
 /// `SM4_BLOCK_SIZE` — `include/crypto/sm4.h:30`.
 pub(crate) const SM4_BLOCK_SIZE: usize = 16;
 
@@ -282,6 +284,14 @@ pub(crate) unsafe fn ossl_sm4_set_key(key: *const c_uchar, ks: *mut Sm4Key) -> c
             i += 4;
         }
     }
+
+    // The four schedule words are `SECRET_DATA`: they are the key schedule this call hands to
+    // the caller and they stay on the stack after the return. The authority (and this file's
+    // AES/ARIA siblings) leave them there; cleansing this frame's copy is a deliberate §5.1
+    // improvement with no observable behaviour change. The caller's `ks` is a separate copy and
+    // is cleansed by the provider context's whole-block release.
+    // SAFETY: `k` is this frame's live local array.
+    unsafe { OPENSSL_cleanse(k.as_mut_ptr().cast(), core::mem::size_of_val(&k)) };
 
     1
 }
