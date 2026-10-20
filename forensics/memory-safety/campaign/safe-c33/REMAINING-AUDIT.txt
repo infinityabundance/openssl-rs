@@ -1,5 +1,3 @@
-src/evp/method_store.rs
-src/provider/init.rs
 src/provider/ml_kem_kmgmt.rs
 src/provider/mlx_kem.rs
 src/provider/rsa_enc.rs
