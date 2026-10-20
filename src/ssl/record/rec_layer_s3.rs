@@ -38,8 +38,8 @@ use crate::runtime::bio::{
     BIO_ctrl, BIO_CTRL_FLUSH, BIO_FLAGS_IN_EOF, BIO_FLAGS_READ, BIO_FLAGS_WRITE,
 };
 use crate::runtime::err::err_reasons::{
-    SSL_R_INVALID_ALERT, SSL_R_NO_RENEGOTIATION, SSL_R_TOO_MANY_WARN_ALERTS,
-    SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
+    SSL_R_INVALID_ALERT, SSL_R_NO_RENEGOTIATION, SSL_R_PACKET_LENGTH_TOO_LONG,
+    SSL_R_TOO_MANY_WARN_ALERTS, SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
 };
 use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
 use crate::ssl::ssl_ciph_table::SSL_OP_IGNORE_UNEXPECTED_EOF;
@@ -81,6 +81,8 @@ const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
 const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
 /// `SSL_AD_ILLEGAL_PARAMETER` (`SSL3_AD_ILLEGAL_PARAMETER`) — `ssl3.h:266`.
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL_AD_RECORD_OVERFLOW` (`TLS1_AD_RECORD_OVERFLOW`) — `ssl3.h:261`.
+const SSL_AD_RECORD_OVERFLOW: c_int = 22;
 /// `SSL_AD_DECODE_ERROR` (`TLS1_AD_DECODE_ERROR`) — `tls1.h:61`.
 const SSL_AD_DECODE_ERROR: c_int = 50;
 /// `SSL_AD_USER_CANCELLED` (`TLS1_AD_USER_CANCELLED`) — `tls1.h:68`.
@@ -118,10 +120,18 @@ const ERR_LIB_SSL: c_int = 20;
 /// comment names. Each fragment is one five-byte `type || version || length` header plus its body
 /// (`ssl3_write_one_record`).
 ///
+/// A zero-length request writes no record at all: the authority reaches its `tot == len` arm
+/// (`rec_layer_s3.c:356-358`) and returns success with `*written = 0`, so no five-byte header is
+/// emitted for it. This also keeps a legal `SSL_write(s, NULL, 0)` from passing a NULL source to
+/// the record encoders.
+///
 /// # Safety
 /// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
-/// for `len` bytes.
+/// for `len` bytes (`buf` is never dereferenced when `len == 0`).
 pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
+    if len == 0 {
+        return 1;
+    }
     let mut off = 0usize;
     loop {
         let remaining = len - off;
@@ -187,8 +197,15 @@ unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
 ///
 /// # Safety
 /// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
-/// for `len` bytes.
+/// for `len` bytes and `len` must not exceed [`SSL3_RT_MAX_PLAIN_LENGTH`].
 unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
+    // The record encoders size their output from `len`; both the encoded scratch block and the
+    // two-byte record-length field are bounded by the plaintext fragment limit. The only caller
+    // ([`ssl3_write_bytes`]) fragments at this length, so this is a defensive refusal, not a
+    // reachable path.
+    if len > SSL3_RT_MAX_PLAIN_LENGTH {
+        return -1;
+    }
     // SAFETY: `s` is live per the caller's contract.
     let (version, hand_state, renegotiate, hrr) = unsafe {
         (
@@ -342,8 +359,9 @@ enum AlertOutcome {
 unsafe fn ssl3_read_bytes_alert(s: *mut Ssl, buf: *const u8, len: c_int) -> AlertOutcome {
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
-        if len < 2 {
-            // `rec_layer_s3.c:869-874`: a short or over-long alert packet is an invalid alert.
+        if len != 2 {
+            // `rec_layer_s3.c:868-874`: `PACKET_remaining(&alert) != 0` after the level and the
+            // description, so any packet other than exactly two bytes is an invalid alert.
             ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_INVALID_ALERT);
             return AlertOutcome::Fatal;
         }
@@ -517,10 +535,15 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
 
     // SAFETY: `s` is live per the caller's contract.
     if len > unsafe { (*s).rec_body.len() } {
-        // Over-long record: the authority treats it as fatal (`SSL3_RT_MAX_ENCRYPTED_LENGTH`).
-        // Reset the accumulator so a retry does not re-hit this arm.
-        // SAFETY: `s` is live.
-        unsafe { (*s).rec_hdr_len = 0 };
+        // `rec_layer_s3.c:669-672`: a length that does not fit the record buffer is a fatal
+        // record overflow. The header bytes have already been consumed, so a silent -1 would
+        // desynchronise the stream on the peer's body bytes; poison instead. Reset the
+        // accumulator so a retry cannot re-enter the arm.
+        // SAFETY: `s` is live; this is the authority's `RLAYERfatal`.
+        unsafe {
+            (*s).rec_hdr_len = 0;
+            ossl_statem_fatal(s, SSL_AD_RECORD_OVERFLOW, SSL_R_PACKET_LENGTH_TOO_LONG);
+        }
         return -1;
     }
     // Accumulate the body, resuming after a short read.
@@ -663,7 +686,15 @@ pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap
             match rt {
                 22 => break,    // SSL3_RT_HANDSHAKE
                 20 => continue, // SSL3_RT_CHANGE_CIPHER_SPEC
-                _ => return -1,
+                _ => {
+                    // The record was fully consumed from the BIO and discarded. Clear the
+                    // buffered-message state before reporting the wait: leaving `rd_msg_len`
+                    // pointing at this non-handshake record would let the next call parse its
+                    // body as a handshake header (a record type confusion).
+                    (*s).rd_msg_len = 0;
+                    (*s).rd_msg_off = 0;
+                    return -1;
+                }
             }
         }
 
@@ -779,5 +810,129 @@ pub unsafe extern "C" fn SSL_rstate_string(s: *const Ssl) -> *const c_char {
         SSL_ST_READ_HEADER => c"RH".as_ptr(),
         SSL_ST_READ_BODY => c"RB".as_ptr(),
         _ => c"unknown".as_ptr(),
+    }
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{BIO_ctrl_pending, BIO_free, BIO_new, BIO_write};
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::adv_alloc::zeroed_ssl;
+    use crate::ssl::statem::statem::ossl_statem_in_error;
+
+    /// Build a frame-owned zeroed connection over a fresh memory BIO carrying `bytes`. The
+    /// caller releases the BIO and the block.
+    ///
+    /// # Safety
+    /// The returned pointers are exclusively owned by the caller; `bytes` is only read here.
+    unsafe fn connection_with_read_bytes(
+        bytes: &[u8],
+    ) -> (*mut Ssl, *mut crate::runtime::bio::Bio) {
+        // SAFETY: `zeroed_ssl` answers NULL or a live zeroed connection this frame owns.
+        let s = unsafe { zeroed_ssl() };
+        assert!(!s.is_null(), "the zeroed connection block must allocate");
+        // SAFETY: no preconditions.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must allocate");
+        // SAFETY: `bio` is live; `bytes` is readable for its length; `s` is live.
+        unsafe {
+            if !bytes.is_empty() {
+                assert_eq!(
+                    BIO_write(bio, bytes.as_ptr().cast(), bytes.len() as c_int),
+                    bytes.len() as c_int,
+                    "the fixture record must be queued in full"
+                );
+            }
+            (*s).rbio = bio;
+            (*s).version = TLS1_2_VERSION;
+        }
+        (s, bio)
+    }
+
+    /// The authority requires an alert packet to be exactly two bytes
+    /// (`PACKET_remaining(&alert) != 0`). A three-byte warning/close_notify must be an invalid
+    /// alert, not a graceful shutdown.
+    #[test]
+    fn an_over_long_alert_is_invalid_not_close_notify() {
+        // `SSL3_RT_ALERT` (21), TLS1.2 record version, length 3, `warning || close_notify || 0`.
+        let record = [21u8, 0x03, 0x03, 0x00, 0x03, 0x01, 0x00, 0x00];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record);
+            let mut rt = 0u8;
+            let mut buf = [0u8; 16];
+            let n = ssl3_read_bytes(s, &mut rt, buf.as_mut_ptr(), buf.len());
+            assert_eq!(n, -1, "a non-two-byte alert is fatal");
+            assert_ne!(ossl_statem_in_error(s), 0, "the connection is poisoned");
+            assert_eq!(
+                (*s).shutdown & SSL_RECEIVED_SHUTDOWN,
+                0,
+                "not a clean shutdown"
+            );
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A non-handshake record read by the reduced TLS1.3 message reader is consumed and
+    /// discarded. Its body must not be reparsed as a handshake message on the next call.
+    #[test]
+    fn a_discarded_non_handshake_record_is_not_reparsed_as_handshake() {
+        // Application data whose body would satisfy the handshake framing (`22 || 0 || 0 || 1`),
+        // followed by a real handshake record with the indistinguishable prefix and a different
+        // final byte.
+        let app_data = [23u8, 0x03, 0x03, 0x00, 0x05, 22, 0x00, 0x00, 0x01, 0xAA];
+        let handshake = [22u8, 0x03, 0x03, 0x00, 0x05, 22, 0x00, 0x00, 0x01, 0xBB];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&app_data);
+            assert_eq!(
+                BIO_write(bio, handshake.as_ptr().cast(), handshake.len() as c_int),
+                handshake.len() as c_int
+            );
+            let mut out = [0u8; 16];
+            let first = tls13_next_handshake_message(s, out.as_mut_ptr(), out.len());
+            assert!(
+                first <= 0,
+                "application data is not part of the handshake flight"
+            );
+            let second = tls13_next_handshake_message(s, out.as_mut_ptr(), out.len());
+            assert_eq!(second, 5, "the next handshake record is delivered");
+            assert_eq!(
+                out[4], 0xBB,
+                "the discarded application-data body was not reparsed as handshake"
+            );
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// `SSL_write(s, NULL, 0)` is a legal empty write. The authority's `tot == len` arm writes no
+    /// record; it must not pass the NULL source to the TLS1.3 encoder either.
+    #[test]
+    fn a_zero_length_write_emits_no_record_and_never_dereferences_null() {
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let s = zeroed_ssl();
+            assert!(!s.is_null(), "the zeroed connection block must allocate");
+            let bio = BIO_new(BIO_s_mem());
+            assert!(!bio.is_null(), "the memory BIO must allocate");
+            (*s).version = TLS1_3_VERSION;
+            (*s).enc_active = 1;
+            // Reach the TLS1.3 encoder body once the zero-length guard is absent: a valid IV
+            // length is required before it copies the (NULL) plaintext.
+            (*s).cipher_iv_len = 12;
+            (*s).cipher_tag_len = 16;
+            (*s).wbio = bio;
+            let r = ssl3_write_bytes(s, 23, ptr::null(), 0);
+            assert_eq!(r, 1, "the authority's empty-write arm succeeds");
+            assert_eq!(BIO_ctrl_pending(bio), 0, "no record bytes are queued");
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
     }
 }

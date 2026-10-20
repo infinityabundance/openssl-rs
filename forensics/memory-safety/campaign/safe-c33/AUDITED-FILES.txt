@@ -690,3 +690,4 @@ src/ssl/rio/poll_immediate.rs
 src/ssl/s3_lib.rs
 src/ssl/ssl_asn1.rs
 src/ssl/ssl_cert_comp.rs
+src/ssl/record/rec_layer_s3.rs
