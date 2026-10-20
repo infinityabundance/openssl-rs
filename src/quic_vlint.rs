@@ -162,7 +162,9 @@ pub(crate) unsafe fn ossl_quic_vlint_decode_unchecked(buf: *const c_uchar) -> U6
 ///
 /// # Safety
 ///
-/// `buf` is readable for `buf_len` bytes; `v` is NULL or writable.
+/// `buf` is readable for `buf_len` bytes; `v` is non-NULL and writable. The authority
+/// dereferences `v` without a NULL test, so NULL is **not** an accepted argument here even
+/// though `buf_len < 1` returns before the write.
 #[allow(dead_code)] // transcribed whole; the DER path reads none of the QUIC decode side (D342)
 pub(crate) unsafe fn ossl_quic_vlint_decode(
     buf: *const c_uchar,
@@ -181,8 +183,8 @@ pub(crate) unsafe fn ossl_quic_vlint_decode(
     // SAFETY: `buf_len >= dec_len`, so `decode_unchecked`'s contract holds.
     let x = unsafe { ossl_quic_vlint_decode_unchecked(buf) };
 
-    // SAFETY: `v` is writable or NULL per the contract; the authority dereferences it without a
-    // NULL test, so the caller's contract is the guard.
+    // SAFETY: `v` is non-NULL and writable per the contract; the authority dereferences it
+    // without a NULL test, so the caller's contract is the only guard.
     unsafe { *v = x };
     dec_len as c_int
 }
