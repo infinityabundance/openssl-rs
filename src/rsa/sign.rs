@@ -389,10 +389,15 @@ unsafe fn encode_pkcs1(type_: c_int, m: *const c_uchar, m_len: usize) -> Option<
         let dig_info_len = di_prefix_len + m_len;
         // SAFETY: `dig_info_len > 0` because `di_prefix_len >= 1`.
         let dig_info = OwnedBuf::new_cleansed(dig_info_len, FILE_SIGN_SEAM, LINE)?;
-        // SAFETY: `dig_info` is writable for `dig_info_len` bytes, `di_prefix` is readable for
-        // `di_prefix_len` and `m` for `m_len`.
+        // SAFETY: `dig_info` is writable for `dig_info_len`, `di_prefix` is readable for
+        // `di_prefix_len`, and `m` is readable for `m_len` when `m_len > 0`. The empty message is
+        // skipped rather than handed to `copy_nonoverlapping`, whose pointers must be non-null
+        // even for a zero count; the authority's own `memcpy` is never reached with a live source
+        // for an empty message either.
         core::ptr::copy_nonoverlapping(di_prefix, dig_info.as_ptr(), di_prefix_len);
-        core::ptr::copy_nonoverlapping(m, dig_info.as_ptr().add(di_prefix_len), m_len);
+        if m_len != 0 {
+            core::ptr::copy_nonoverlapping(m, dig_info.as_ptr().add(di_prefix_len), m_len);
+        }
         Some((dig_info, dig_info_len))
     }
 }
@@ -852,9 +857,13 @@ pub unsafe extern "C" fn RSA_verify_ASN1_OCTET_STRING(
             }
 
             // SAFETY: `sig` is a live decoded string whose `data` is readable for `length` bytes.
+            // The empty comparison is short-circuited: `from_raw_parts` requires a non-null
+            // pointer even for a zero length, and a caller that signs an empty message may pass
+            // `m == NULL` with `m_len == 0`, which the authority's `memcmp(.., 0)` accepts.
             if (*sig).length as c_uint != m_len
-                || core::slice::from_raw_parts(m, m_len as usize)
-                    != core::slice::from_raw_parts((*sig).data, m_len as usize)
+                || (m_len != 0
+                    && core::slice::from_raw_parts(m, m_len as usize)
+                        != core::slice::from_raw_parts((*sig).data, m_len as usize))
             {
                 raise_site(&err_sites::RSA_SAOS_86);
             } else {
@@ -974,6 +983,19 @@ mod tests {
         assert_eq!(encoded[0], ASN1_SEQUENCE);
         assert_eq!(encoded[19..], m[..]);
         // `out` drops here, the callee's own cleansing `OPENSSL_clear_free`.
+
+        // An empty message may arrive as a NULL pointer with a zero length, the shape
+        // `RSA_sign(..., NULL, 0, ...)` uses. The prefix is still copied and no source access is
+        // performed; the answer is the prefix alone.
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: `m_len == 0`, so there are no readable bytes to establish.
+        let out = unsafe { encode_pkcs1(NID_sha256, core::ptr::null(), 0) };
+        assert!(out.is_some(), "an empty message still encodes");
+        let Some((out, out_len)) = out else { return };
+        assert_eq!(out_len, 19);
+        // SAFETY: `out` is the callee's own allocation of `out_len` bytes.
+        let encoded = unsafe { core::slice::from_raw_parts(out.as_ptr(), out_len) };
+        assert_eq!(encoded[0], ASN1_SEQUENCE);
         crate::runtime::err::ERR_clear_error();
     }
 }
