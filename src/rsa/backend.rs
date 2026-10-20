@@ -468,7 +468,11 @@ unsafe fn fromdata_err(
     unsafe {
         BN_free(n);
         BN_free(e);
-        BN_free(d);
+        // The authority's `err:` label uses `BN_free(d)` even though `d` is the private
+        // exponent. This releases it through `BN_clear_free` instead: the value never reached
+        // the key on this arm, so the authority leaves it in freed storage. A deliberate
+        // safety improvement, not observable through the API.
+        BN_clear_free(d);
         BN_clear_free(p);
         BN_clear_free(q);
         OPENSSL_sk_pop_free(factors, Some(bn_clear_free_thunk));
@@ -920,9 +924,13 @@ impl Drop for OwnedPrimeInfo {
 ///   public-only selection — the comment on the third says so: "we always copy the PSS parameters
 ///   regardless of selection".
 /// * **`rsa->pss` is duplicated through `RSA_PSS_PARAMS_dup` and its `maskHash` is decoded
-///   again.** The authority tests `maskGenAlgorithm != NULL && maskHash == NULL` after the dup,
-///   because `RSA_PSS_PARAMS_dup` copies the ASN.1 template's four pointers and the template does
-///   not know about `maskHash` — it is the free hook's field, not an item column.
+///   again.** The authority's condition is `rsa->pss->maskGenAlgorithm != NULL &&
+///   dupkey->pss->maskGenAlgorithm == NULL`, but the item dup copies `maskGenAlgorithm` along
+///   with the other three template pointers, so the second half is false after a successful dup
+///   and the duplicate's `maskHash` stays NULL (later read as the SHA1 default by
+///   `ossl_x509_algor_get_md(NULL)`). That consequence is preserved rather than corrected; the
+///   only change is that a NULL `dupkey->pss` on that arm is reported as a failure instead of
+///   being dereferenced.
 ///
 /// **The `err:` label releases the half-built object**, which is the pattern the whole function
 /// depends on: `RSA_free` tolerates every partially populated field, and `ex_data` is duplicated
@@ -1026,18 +1034,22 @@ pub(crate) unsafe fn ossl_rsa_dup(rsa: *const Rsa, selection: c_int) -> *mut Rsa
 
             if !(*rsa).pss.is_null() {
                 (*dupkey).pss = RSA_PSS_PARAMS_dup((*rsa).pss);
-                if !(*(*rsa).pss).mask_gen_algorithm.is_null() && (*dupkey).pss.is_null() {
-                    // `RSA_PSS_PARAMS_dup` answered NULL, so `(*dupkey).pss` is NULL and the
-                    // authority's next line would dereference it; the authority's own test is
-                    // `dupkey->pss->maskGenAlgorithm == NULL`, which is inside `if (!dupkey->pss)`
-                    // in no version of this file -- it is reached only when the dup succeeded.
-                    break 'build false;
-                }
-                if !(*dupkey).pss.is_null() && !(*(*dupkey).pss).mask_gen_algorithm.is_null() {
-                    (*(*dupkey).pss).mask_hash =
-                        ossl_x509_algor_mgf1_decode((*(*dupkey).pss).mask_gen_algorithm);
-                    if (*(*dupkey).pss).mask_hash.is_null() {
+                // The authority reads `dupkey->pss->maskGenAlgorithm` without first checking
+                // `dupkey->pss`; a NULL dup would be a NULL dereference there
+                // (`rsa_backend.c:543-544`). That arm is reported as a failure instead.
+                if !(*(*rsa).pss).mask_gen_algorithm.is_null() {
+                    if (*dupkey).pss.is_null() {
                         break 'build false;
+                    }
+                    // The authority's condition, literally. `RSA_PSS_PARAMS_dup` copies
+                    // `maskGenAlgorithm`, so after a successful dup this is false and
+                    // `maskHash` stays NULL; see this function's own documentation.
+                    if (*(*dupkey).pss).mask_gen_algorithm.is_null() {
+                        (*(*dupkey).pss).mask_hash =
+                            ossl_x509_algor_mgf1_decode((*(*rsa).pss).mask_gen_algorithm);
+                        if (*(*dupkey).pss).mask_hash.is_null() {
+                            break 'build false;
+                        }
                     }
                 }
             }
@@ -1647,6 +1659,47 @@ mod tests {
                 crate::runtime::obj::NID_sha1
             );
             assert_eq!(pss.trailer_field, 1);
+        }
+    }
+
+    /// The authority's `ossl_rsa_dup` tests `dupkey->pss->maskGenAlgorithm == NULL`, which a
+    /// successful `RSA_PSS_PARAMS_dup` makes false, so the duplicate's `maskHash` stays NULL.
+    /// `ossl_rsa_pss_get_param_unverified` then resolves it through
+    /// `ossl_x509_algor_get_md(NULL)`, i.e. SHA1. This pins the authority's consequence rather
+    /// than "fixing" it, and fails if the decode is ever reinstated.
+    #[test]
+    fn a_duplicated_pss_restriction_keeps_the_authoritys_null_mask_hash() {
+        use crate::asn1::layout::V_ASN1_NULL;
+        use crate::asn1::x_algor::{X509_ALGOR_new, X509_ALGOR_set0};
+        use crate::rsa::asn1::RSA_PSS_PARAMS_new;
+        use crate::runtime::obj::{NID_mgf1, OBJ_nid2obj};
+
+        let rsa = OwnedRsa::new();
+        // SAFETY: every object below is live and owned by this test or by the key.
+        unsafe {
+            let pss = RSA_PSS_PARAMS_new();
+            assert!(!pss.is_null());
+            let mgf = X509_ALGOR_new();
+            assert!(!mgf.is_null());
+            assert_eq!(
+                X509_ALGOR_set0(mgf, OBJ_nid2obj(NID_mgf1), V_ASN1_NULL, ptr::null_mut()),
+                1
+            );
+            (*pss).mask_gen_algorithm = mgf;
+            assert_eq!(ossl_rsa_set0_pss_params(rsa.0, pss), 1);
+
+            let dup = ossl_rsa_dup(
+                rsa.0,
+                OSSL_KEYMGMT_SELECT_KEYPAIR | OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
+            );
+            assert!(!dup.is_null());
+            assert!(!(*dup).pss.is_null());
+            assert!(!(*(*dup).pss).mask_gen_algorithm.is_null());
+            assert!(
+                (*(*dup).pss).mask_hash.is_null(),
+                "the authority's dup-side maskGenAlgorithm test is false after a successful dup"
+            );
+            RSA_free(dup);
         }
     }
 }

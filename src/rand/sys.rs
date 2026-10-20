@@ -475,11 +475,13 @@ pub(crate) fn uname(buf: &mut Utsname) -> c_int {
 
 /// `int atoi(const char *)`.
 ///
-/// Safe because the only precondition is that `s` is NUL-terminated, and a `*const c_char` that
-/// reaches a transcription of C is a C string by construction -- the same reading
-/// `crate::runtime::str::OPENSSL_strlen` takes. A non-NUL-terminated pointer is a caller error in
-/// both languages and is not something this wrapper can check.
-pub(crate) fn atoi(s: *const c_char) -> c_int {
+/// The only precondition is that `s` is NUL-terminated, but a safe caller could
+/// otherwise hand in an arbitrary raw pointer, so the wrapper keeps the C
+/// function's obligation rather than hiding it.
+///
+/// # Safety
+/// `s` is a NUL-terminated C string readable for the duration of the call.
+pub(crate) unsafe fn atoi(s: *const c_char) -> c_int {
     // SAFETY: the caller's contract, stated above: `s` is a NUL-terminated C string.
     unsafe { atoi_raw(s) }
 }
@@ -631,7 +633,8 @@ mod tests {
         assert_eq!(sysname, *b"Linux");
         // `rand_unix.c:459-461` parses the major and minor out of `release` with `atoi` and
         // `strchr`. Both are exercised the way the call site uses them.
-        let major = atoi(un.release.as_ptr());
+        // SAFETY: `un.release` is a NUL-terminated array of 65 bytes.
+        let major = unsafe { atoi(un.release.as_ptr()) };
         assert!(major >= 2, "a Linux kernel major above 2, got {major}");
         // SAFETY: `un.release` is a NUL-terminated array of 65 bytes.
         let dot = unsafe { strchr(un.release.as_ptr(), b'.' as c_int) };
@@ -646,11 +649,14 @@ mod tests {
     /// non-digit. `rand_unix.c` depends on both.
     #[test]
     fn atoi_is_the_c_atoi() {
-        assert_eq!(atoi(c"4.8".as_ptr()), 4);
-        assert_eq!(atoi(c"12x".as_ptr()), 12);
-        assert_eq!(atoi(c"  7".as_ptr()), 7);
-        assert_eq!(atoi(c"".as_ptr()), 0);
-        assert_eq!(atoi(c"not-a-number".as_ptr()), 0);
+        // SAFETY: every argument is a NUL-terminated string literal.
+        unsafe {
+            assert_eq!(atoi(c"4.8".as_ptr()), 4);
+            assert_eq!(atoi(c"12x".as_ptr()), 12);
+            assert_eq!(atoi(c"  7".as_ptr()), 7);
+            assert_eq!(atoi(c"".as_ptr()), 0);
+            assert_eq!(atoi(c"not-a-number".as_ptr()), 0);
+        }
     }
 
     /// `getpid` is this process's, and `clock_gettime(CLOCK_REALTIME)` answers a plausible wall

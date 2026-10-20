@@ -1,0 +1,196 @@
+{
+  "receipt": "mechanism-sweep-M71",
+  "branch": "integrate/safe-c33",
+  "source_head": "b1c8f89a3",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; STOP invoked on one unsafe safe-Rust API (rand::sys::atoi) and repaired, with the focused and full library suites and the adversarial probes run afterwards. No production unsafe expression was added.",
+  "scope": "Per-file contract audit of the RAND entropy pool, provider seeding up-call, uniform/range draw, and Linux platform seam; the RC2 and RC4 block/stream ciphers; the RSA ASN.1 templates and the RSA backend bridge. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred.",
+  "files": [
+    "src/rand/pool.rs",
+    "src/rand/prov_seed.rs",
+    "src/rand/rand_uniform.rs",
+    "src/rand/sys.rs",
+    "src/rc2.rs",
+    "src/rc4.rs",
+    "src/rsa/asn1.rs",
+    "src/rsa/backend.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M71-D1",
+      "file": "src/rsa/backend.rs",
+      "lines_pre_fix": "1027-1043",
+      "line_post_fix": 1027,
+      "severity": "medium",
+      "class": "compatibility divergence",
+      "description": "The authority's ossl_rsa_dup tests `dupkey->pss->maskGenAlgorithm == NULL` (rsa_backend.c:543-544). RSA_PSS_PARAMS_dup deep-copies maskGenAlgorithm, so that half is false after a successful dup and the authority leaves the duplicate's maskHash NULL, which ossl_rsa_pss_get_param_unverified later reads through ossl_x509_algor_get_md(NULL) as SHA1. The transcription instead decoded dupkey->pss->maskGenAlgorithm and could refuse a key the authority accepts. It now implements the authority's literal condition, guarded so a NULL dupkey->pss is reported as a failure rather than dereferenced (the authority's NULL dereference is not reproduced). A new test pins the authority's NULL-maskHash consequence."
+    },
+    {
+      "id": "M71-D2",
+      "file": "src/rand/sys.rs",
+      "lines_pre_fix": "476-485",
+      "line_post_fix": 476,
+      "severity": "medium",
+      "class": "unsafe safe-Rust API",
+      "description": "`pub(crate) fn atoi(s: *const c_char)` dereferenced a caller-supplied raw pointer from safe Rust, so a crate-internal safe caller could cause UB. It is now `pub(crate) unsafe fn atoi` with a `# Safety` contract requiring a NUL-terminated readable C string. Call sites in src/rand/unix.rs (2), src/rsa/pmeth.rs (1 direct), src/dh/pmeth.rs (1 direct) and the module's tests now carry SAFETY-noted unsafe blocks; the calls already inside existing unsafe blocks were unchanged. STOP invoked for this class."
+    },
+    {
+      "id": "M71-D3",
+      "file": "src/rand/pool.rs",
+      "lines_pre_fix": "467",
+      "line_post_fix": 467,
+      "severity": "low",
+      "class": "unsafe-contract understatement",
+      "description": "rand_pool_grow was a safe fn taking *mut RandPool and forming &mut *pool, hiding a liveness/uniqueness obligation from its callers. It is now `unsafe fn` with the contract `pool` is live and this call holds its only reference. The three internal call sites carry SAFETY notes. No expression or layout changed."
+    },
+    {
+      "id": "M71-D4",
+      "file": "src/rand/prov_seed.rs",
+      "lines_pre_fix": "223-242",
+      "line_post_fix": 223,
+      "severity": "low",
+      "class": "secret residue on a failure path",
+      "description": "ossl_rand_get_user_nonce allocated the nonce buffer with OPENSSL_malloc-equivalent and plainly freed it when EVP_RAND_generate failed, although that call may already have written nonce material. The owner is now OwnedBuf::new_cleansed_released at the authority's same allocation and release coordinates; the success path still transfers ownership with into_raw. Deliberate improvement over the authority's plain OPENSSL_free, not observable through the API."
+    },
+    {
+      "id": "M71-D5",
+      "file": "src/rc2.rs",
+      "lines_pre_fix": "152-181",
+      "line_post_fix": 152,
+      "severity": "low",
+      "class": "secret residue in a temporary",
+      "description": "The authority expands the RC2 key in key->data itself. This transcription used a stack [u8; 128] holding the caller's key bytes and the expanded schedule, and left it on the stack after return. The temporary is now cleansed (runtime::mem::cleanse) before it goes out of scope. Rc2Key remains caller-owned and is cleansed by its owner."
+    },
+    {
+      "id": "M71-D6",
+      "file": "src/rand/pool.rs",
+      "lines_pre_fix": "310-311, 707-716",
+      "line_post_fix": 310,
+      "severity": "low",
+      "class": "unsafe-contract understatement",
+      "description": "ossl_rand_pool_attach's documentation said attached buffers are never modified, but ossl_rand_pool_adin_mix_in XORs into pool->buffer for attached pools too. The attach note now says only that attached buffers are never freed, and adin_mix_in's # Safety requires the pool buffer (including an attached one) to be writable for pool.len bytes. No behaviour changes."
+    },
+    {
+      "id": "M71-D7",
+      "file": "src/rsa/backend.rs",
+      "lines_pre_fix": "456-480",
+      "line_post_fix": 456,
+      "severity": "low",
+      "class": "secret residue on an error path",
+      "description": "fromdata_err, the authority's err: label, released d (the private exponent) with BN_free, matching rsa_backend.c's own label. On every arm that reaches it d never entered the key, so the value was left in freed storage. It is now BN_clear_free(d); n and e stay plainly freed because they are public. Deliberate improvement over the authority, not observable through the API."
+    }
+  ],
+  "documentation_corrections": [
+    "src/rc2.rs RC2_set_key's contract now says a zero length underflows the expansion's last-byte index, which is what both implementations do, instead of claiming data[-1] is read.",
+    "src/rand/pool.rs's attach note no longer claims attached buffers are never modified, and adin_mix_in's contract names the writable buffer requirement.",
+    "src/rsa/backend.rs's ossl_rsa_dup note now states the authority's literal condition and the maskHash consequence instead of a condition the authority does not test."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    "The RAND_POOL accessors and mutators take raw pointers and require a live pool; expressed in each unsafe fn's # Safety.",
+    "ossl_rand_pool_attach stores a caller buffer cast from *const to *mut; the caller must keep it alive and, if adin_mix_in is used, writable.",
+    "Rc2Key and Rc4Key schedules are caller-owned; the EVP cipher layer is responsible for cleansing them.",
+    "rand_uniform's per-draw entropy word is an uncleansed stack scalar, as in the authority.",
+    "The ASN.1 item callbacks receive borrowed raw pointers; the item machinery owns the lifetime.",
+    "ossl_rsa_fromdata/todata and the PSS 30 readers borrow the OSSL_PARAM descriptors and the RSA the caller supplies.",
+    "The provider dispatch and OSSL_PARAM descriptor contracts remain the callers' obligations."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf (new_cleansed_released, into_raw, Drop release)",
+    "CRYPTO_* and secure-heap allocator seam at the authority's exact size/file/line",
+    "B19 BIGNUM cleansing (CBIGNUM_it, BN_clear_free on private components)",
+    "ASN.1 item template/callback ownership contract",
+    "D351's rule that the authority's text, including its faults, is preserved unless it is undefined behaviour",
+    "RC-1 reference counting for the RSA key and the borrowed EVP_MD contexts"
+  ],
+  "secret_bearing_buffers": [
+    "src/rand/pool.rs RandPool.buffer: entropy. Cleansed and released by OwnedBuf::Drop (secure or plain clear-free) on ossl_rand_pool_free and rand_pool_grow; cleansed by ossl_rand_pool_reattach; handed to the caller by detach, whose cleanup functions cleanse. Attached buffers are neither freed nor cleansed (caller obligation).",
+    "src/rand/prov_seed.rs ossl_rand_get_user_nonce buffer: cleansed on the EVP_RAND_generate failure arm by OwnedBuf::new_cleansed_released (M71-D4) and handed to the caller on success; cleanup_user_nonce releases it through CRYPTO_clear_free.",
+    "src/rand/prov_seed.rs entropy and nonce pool buffers: handed out by detach and cleansed by ossl_rand_cleanup_entropy (secure clear-free) or ossl_rand_cleanup_nonce (clear-free).",
+    "src/rc2.rs RC2_set_key stack expansion: cleansed before scope exit (M71-D5). Rc2Key schedule is caller-owned.",
+    "src/rc4.rs Rc4Key schedule: written in place, no copy in this unit; caller-owned.",
+    "src/rsa/asn1.rs RSAPrivateKey d/p/q/dmp1/dmq1/iqmp and RSA_PRIME_INFO r/d/t use CBIGNUM_it, so the B19 BIGNUM destructor cleanses them. Test-only DER buffers are public-template or small test keys and are released by OwnedBlock.",
+    "src/rsa/backend.rs d (private exponent) is BN_clear_free'd on the pre-install error arm (M71-D7); duplicated private BNs are released through RSA_free's BN_clear_free fields; OwnedPrimeInfo releases through ossl_rsa_multip_info_free.",
+    "src/rand/rand_uniform.rs per-draw u32 entropy word: stack scalar, not cleansed (authority parity); no heap secret."
+  ],
+  "gates": {
+    "fast_fmt": "PASS: cargo fmt --all -- --check (court container)",
+    "fast_check": "PASS: cargo check --lib",
+    "fast_focused_tests": "PASS: rand::pool 10/0; rand::rand_uniform 5/0; rand::sys 12/0; rand::prov_seed 0 tests; rc2 2/0; rc4 4/0; rsa::asn1 6/0; rsa::backend 5/0 (including the new control); rsa::pmeth 1/0; dh::pmeth 2/0 (all --test-threads=4)",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+    "full_lib_threaded": "PASS: 1677 passed / 0 failed / 27 ignored in 95.81 s with --test-threads=4",
+    "full_lib_serial": "PASS: 1677 passed / 0 failed / 27 ignored in 252.66 s with --test-threads=1",
+    "adv_probes": "PASS: scripts/adv-probe.sh, all 26 probes",
+    "structural_guards": "No #[repr(C)] layout, exported symbol, signature, unsafe lint attribute, allocation size or FILE value changed. No production unsafe expression was added."
+  },
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "rsa::backend::tests::a_duplicated_pss_restriction_keeps_the_authoritys_null_mask_hash",
+    "reason": "The M71-D1 repair restores the authority's condition, whose consequence is a NULL maskHash on the duplicate. The control builds a PSS-restricted key with an MGF1 identifier and asserts the duplicate retains maskGenAlgorithm while maskHash stays NULL; a regression to decoding dupkey->pss->maskGenAlgorithm fails the control (the decode refuses the NULL MGF1 parameter)."
+  },
+  "next_queue": {
+    "file": "src/rsa/check.rs",
+    "then": [
+      "src/rsa/mp_names.rs",
+      "src/rsa/mp.rs",
+      "src/rsa/prn.rs",
+      "src/rsa/pss.rs",
+      "src/rsa/schemes.rs",
+      "src/rsa/sign.rs",
+      "src/rsa/sp800.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "authority executable differential for the RAND, RC2/RC4 and RSA ASN.1/backend rows",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY (pinned build tree absent from this checkout; the pinned source was read directly)"
+    },
+    {
+      "gate": "ASan over the RAND pooling and RSA backend paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri over the pool growth/alias paths and the RSA ASN.1 item wrappers",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "allocator-failure injection for the repaired prov_seed failure arm and the grow path",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement for RC4/RC2 and RSA PSS handling",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "The eight files are audited, not SAFETY_DISCHARGED.",
+    "ossl_rsa_dup preserves the authority's maskHash consequence; later PSS reads of a duplicated key therefore use SHA1 for the MGF1 digest, as the authority does.",
+    "RAND_POOL's attached-buffer path writes through a const-cast buffer; the contract now states the writability requirement rather than reproducing the authority's unchecked write.",
+    "rand_uniform's entropy word is not cleansed; no constant-time claim is made.",
+    "RC2/Rc4 schedules are caller-owned and are not cleansed by these units."
+  ],
+  "not_discharged": true
+}
