@@ -62,6 +62,7 @@ probes=(
   "store::store_lib::adv_probe::canary_published_null_loader_store_faults_on_close_and_load"
   "store::store_lib::adv_probe::canary_double_release_is_detected"
   "runtime::bio::bss_conn::tests::retry_advance_invalidates_the_closed_descriptor"
+  "ml_dsa::tests::keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap"
 )
 
 failures=0

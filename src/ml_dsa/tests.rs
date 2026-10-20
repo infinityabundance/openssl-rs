@@ -15,7 +15,7 @@ use super::encoders::{ossl_ml_dsa_pk_decode, ossl_ml_dsa_pk_encode};
 use super::key::{
     ossl_ml_dsa_generate_key, ossl_ml_dsa_key_free, ossl_ml_dsa_key_get_priv,
     ossl_ml_dsa_key_get_pub, ossl_ml_dsa_key_get_pub_len, ossl_ml_dsa_key_get_sig_len,
-    ossl_ml_dsa_key_new, ossl_ml_dsa_key_pairwise_check,
+    ossl_ml_dsa_key_new, ossl_ml_dsa_key_pairwise_check, ossl_ml_dsa_set_prekey,
 };
 use super::key_compress::{
     ossl_ml_dsa_key_compress_decompose, ossl_ml_dsa_key_compress_high_bits,
@@ -24,6 +24,7 @@ use super::key_compress::{
 use super::ntt::{ossl_ml_dsa_poly_ntt, ossl_ml_dsa_poly_ntt_inverse};
 use super::poly::Poly;
 use super::sign::{ossl_ml_dsa_sign, ossl_ml_dsa_verify};
+use super::ML_DSA_KEY_RETAIN_SEED;
 use super::{
     mod_sub, reduce_once, EVP_PKEY_ML_DSA_44, EVP_PKEY_ML_DSA_65, EVP_PKEY_ML_DSA_87,
     ML_DSA_44_PUB_LEN, ML_DSA_D_BITS, ML_DSA_GAMMA2_Q_MINUS1_DIV32, ML_DSA_GAMMA2_Q_MINUS1_DIV88,
@@ -139,6 +140,114 @@ fn a_generated_key_passes_its_pairwise_check() {
             ossl_ml_dsa_key_free(key);
         }
     }
+}
+
+/// A key generated with `retain_seed` cleared releases its seed at `keygen_internal`'s erase arm
+/// and leaves the field NULL. Without a secure heap the seed is a plain-allocator fallback, so this
+/// exercises the release without initialising process-global state.
+#[test]
+fn keygen_without_retain_seed_erases_the_seed_field() {
+    let _g = crate::test_support::lock_global_state();
+    // This test reads the process-global secure-heap state through the fallback path.
+    let _ = crate::runtime::secure::CRYPTO_secure_malloc_done();
+    // SAFETY: the key is created by `ossl_ml_dsa_key_new` and freed below; the flag update and
+    // generation calls are under the key's own contracts.
+    unsafe {
+        let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), EVP_PKEY_ML_DSA_44);
+        assert!(!key.is_null(), "key_new");
+        assert_eq!(
+            ossl_ml_dsa_set_prekey(
+                key,
+                0,
+                ML_DSA_KEY_RETAIN_SEED,
+                core::ptr::null(),
+                0,
+                core::ptr::null(),
+                0,
+            ),
+            1,
+            "clearing retain_seed must be accepted on an empty prekey"
+        );
+        assert_eq!((*key).prov_flags & ML_DSA_KEY_RETAIN_SEED, 0);
+        assert_eq!(ossl_ml_dsa_generate_key(key), 1, "generate_key");
+        assert!(
+            (*key).seed.is_null(),
+            "the erase arm must release the seed and clear the field"
+        );
+        ossl_ml_dsa_key_free(key);
+    }
+}
+
+/// Negative control for the secure seed release: with the secure heap live, the seed is an arena
+/// chunk. Releasing it through the plain cleansing free (the pre-fix path) aborts or leaves the
+/// secure accounting non-zero; the matching secure release returns it and leaves `used == 0`.
+///
+/// The probe supplies its own secure seed, so `ossl_ml_dsa_generate_key` skips the RNG (whose
+/// process-global state would otherwise persist in the heap), and every secure allocation made by
+/// the probe is released before the final assertion.
+///
+/// Process-global and fatal on the pre-fix code, so it is ignored in the routine suite and runs
+/// alone in its own process.
+#[ignore = "initialises the process-global secure heap; run alone"]
+#[test]
+fn keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap() {
+    assert_eq!(
+        std::env::var("OPENSSL_RS_ADV_PROBE").as_deref(),
+        Ok("1"),
+        "OPENSSL_RS_ADV_PROBE=1 is required; run this probe by itself"
+    );
+    let _g = crate::test_support::lock_global_state();
+    let _ = crate::runtime::secure::CRYPTO_secure_malloc_done();
+    let init = crate::runtime::secure::CRYPTO_secure_malloc_init(1 << 20, 16);
+    assert!(init == 1 || init == 2, "secure heap init returned {init}");
+    assert_eq!(crate::runtime::secure::CRYPTO_secure_used(), 0);
+    // SAFETY: as in `keygen_without_retain_seed_erases_the_seed_field`. The probe supplies the
+    // seed block itself so `generate_key` takes the no-RNG arm; it transfers that block into the
+    // key and the keygen erase arm releases it.
+    unsafe {
+        let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), EVP_PKEY_ML_DSA_44);
+        assert!(!key.is_null(), "key_new");
+        assert_eq!(
+            ossl_ml_dsa_set_prekey(
+                key,
+                0,
+                ML_DSA_KEY_RETAIN_SEED,
+                core::ptr::null(),
+                0,
+                core::ptr::null(),
+                0,
+            ),
+            1
+        );
+        let seed = crate::runtime::secure::CRYPTO_secure_malloc(
+            super::ML_DSA_SEED_BYTES,
+            core::ptr::null(),
+            0,
+        )
+        .cast::<u8>();
+        assert!(
+            !seed.is_null(),
+            "the probe seed must come from the secure heap"
+        );
+        assert_eq!(
+            crate::runtime::secure::CRYPTO_secure_allocated(seed.cast()),
+            1,
+            "the probe seed must live in the arena"
+        );
+        (*key).seed = seed;
+        assert_eq!(ossl_ml_dsa_generate_key(key), 1, "generate_key");
+        assert!(
+            (*key).seed.is_null(),
+            "the erase arm must release the secure seed and clear the field"
+        );
+        ossl_ml_dsa_key_free(key);
+    }
+    assert_eq!(
+        crate::runtime::secure::CRYPTO_secure_used(),
+        0,
+        "every secure block, including the seed, must leave the secure accounting"
+    );
+    assert_eq!(crate::runtime::secure::CRYPTO_secure_malloc_done(), 1);
 }
 
 /// A signature over a message verifies, and a single flipped signature bit does not.
