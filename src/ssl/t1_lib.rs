@@ -47,7 +47,7 @@
 
 #![allow(non_upper_case_globals)] // the constants are the authority's own C macro spellings
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
@@ -718,6 +718,40 @@ pub(crate) const DEFAULT_GROUPS: [u16; 7] = [
     OSSL_TLS_GROUP_ID_ffdhe2048,
     OSSL_TLS_GROUP_ID_ffdhe3072,
 ];
+
+/// The provider key-management algorithm and provider-internal curve name for a TLS1.2 ECDHE
+/// group, or `None` when this reduction has no ECDHE implementation for it.
+///
+/// `tls1_group_id_lookup` (`t1_lib.c:722-732`) answers the same pair from `TLS_GROUP_INFO`; the
+/// admitted provider's rows are `capabilities.c:50-93` (`X25519`/`X448` for the X25519 family,
+/// `EC` with the curve's provider name for the NIST curves). Only groups whose key agreement the
+/// crate already implements are listed: the key exchange reuses `EVP_PKEY_derive`, not new curve
+/// arithmetic.
+pub(crate) fn tls1_group_id2kex(group_id: u16) -> Option<(&'static CStr, &'static CStr)> {
+    match group_id {
+        OSSL_TLS_GROUP_ID_x25519 => Some((c"X25519", c"X25519")),
+        OSSL_TLS_GROUP_ID_x448 => Some((c"X448", c"X448")),
+        OSSL_TLS_GROUP_ID_secp256r1 => Some((c"EC", c"prime256v1")),
+        OSSL_TLS_GROUP_ID_secp384r1 => Some((c"EC", c"secp384r1")),
+        OSSL_TLS_GROUP_ID_secp521r1 => Some((c"EC", c"secp521r1")),
+        _ => None,
+    }
+}
+
+/// `tls_use_ticket` (`t1_lib.c:2921-2926`), reduced to the `SSL_OP_NO_TICKET` arm.
+///
+/// The authority also consults the certificate security callback (`SSL_SECOP_TICKET`); this
+/// reduction has no default callback (`ssl_security` answers 0 with none installed), so calling
+/// it would disable tickets for every connection. The option arm is the observable behaviour a
+/// consumer sets with `SSL_OP_NO_TICKET` (`s_client -no_ticket` is a client-side option and does
+/// not reach this path).
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls_use_ticket(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the contract.
+    unsafe { (*s).options & crate::ssl::ssl_ciph_table::SSL_OP_NO_TICKET == 0 }
+}
 
 /// `void tls1_get_supported_groups(SSL_CONNECTION *s, const uint16_t **pgroups,`
 /// `size_t *pgroupslen)` — `t1_lib.c:784-816`, reduced to the built-in default list or the

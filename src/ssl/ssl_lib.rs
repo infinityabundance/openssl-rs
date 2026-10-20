@@ -4825,7 +4825,19 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             })
         }
         SSL_CTRL_SET_TMP_ECDH => {
-            // `s3_lib.c:4449-4462` -> `ssl_set_tmp_ecdh_groups` (`tls_depr.c:167-190`).
+            // The pinned authority is built `no-deprecated`, so `s3_lib.c`'s
+            // `case SSL_CTRL_SET_TMP_ECDH` is compiled out and the control does not touch the
+            // context's group list (`ssl.h:1423-1428` guards the consumer macro on
+            // `OPENSSL_NO_DEPRECATED_3_0` too). Consumers such as monit still reach this control
+            // through a pre-3.0 header and expect success.
+            //
+            // Divergence, recorded: the authority's compiled-out control answers 0 (the switch's
+            // default), while this arm answers the documented success value 1. Keeping 1 is the
+            // compatibility choice; the observable group list is what matters here and it must
+            // stay untouched. The former `tls1_set_groups(&nid, 1)` replaced the default list
+            // with a single curve, which made a TLS1.2 server select a group its ECDHE path could
+            // not complete and return alert 40. The argument is still validated so a NULL or
+            // group-less `EC_KEY` keeps the authority's documented failure values.
             if parg.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 4451) };
@@ -4844,15 +4856,7 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             if nid == NID_undef {
                 return 0;
             }
-            // SAFETY: `nid` is this frame's int; `c`'s fields are writable.
-            c_long::from(unsafe {
-                crate::ssl::t1_lib::tls1_set_groups(
-                    &mut c.supportedgroups,
-                    &mut c.supportedgroups_len,
-                    &nid,
-                    1,
-                )
-            })
+            1
         }
         SSL_CTRL_SET_TMP_DH => {
             // `s3_lib.c:4423-4439`.
