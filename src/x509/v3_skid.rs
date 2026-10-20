@@ -84,7 +84,8 @@ pub unsafe extern "C" fn i2s_ASN1_OCTET_STRING(
 ///
 /// # Safety
 ///
-/// `str` is NULL or NUL-terminated.
+/// `str` is a non-NULL NUL-terminated string: `OPENSSL_hexstr2buf` reads it with `strlen`
+/// and does not accept NULL.
 #[no_mangle]
 pub unsafe extern "C" fn s2i_ASN1_OCTET_STRING(
     method: *mut c_void,
@@ -99,7 +100,7 @@ pub unsafe extern "C" fn s2i_ASN1_OCTET_STRING(
         return ptr::null_mut();
     }
     let mut length: c_long = 0;
-    // SAFETY: `str_` is NULL or NUL-terminated per the contract; `length` is writable.
+    // SAFETY: `str_` is non-NULL and NUL-terminated per the contract; `length` is writable.
     let data = unsafe { OPENSSL_hexstr2buf(str_, &raw mut length) };
     if data.is_null() {
         // SAFETY: `oct` is a live string this call owns.
@@ -200,13 +201,14 @@ pub(crate) unsafe fn ossl_x509_pubkey_hash(pubkey: *mut X509Pubkey) -> *mut Asn1
 ///
 /// # Safety
 ///
-/// `str` is NULL or NUL-terminated; `ctx` is NULL or a live `X509V3_CTX`.
+/// `str` is a non-NULL NUL-terminated string (both prefix tests use `strcmp`); `ctx` is NULL or
+/// a live `X509V3_CTX`.
 unsafe extern "C" fn s2i_skey_id(
     method: *const X509V3ExtMethod,
     ctx: *mut c_void,
     str_: *const c_char,
 ) -> *mut c_void {
-    // SAFETY: `str_` is NULL or NUL-terminated per the contract; both literals are static.
+    // SAFETY: `str_` is non-NULL and NUL-terminated per the contract; both literals are static.
     if unsafe { strcmp(str_, c"none".as_ptr()) } == 0 {
         return ASN1_OCTET_STRING_new().cast::<c_void>(); /* dummy */
     }
@@ -258,8 +260,8 @@ const fn as_i2s(
 
 /// `const X509V3_EXT_METHOD ossl_v3_skey_id` — `crypto/x509/v3_skid.c:18-25`.
 ///
-/// The `s2i` slot is `None`, not the authority's `s2i_skey_id`, because that callback is withheld
-/// (see the module doc); every other slot is the authority's.
+/// Every slot is the authority's: `s2i` is the `s2i_skey_id` callback above, and the remaining
+/// slots are `ASN1_OCTET_STRING_it` and `i2s_ASN1_OCTET_STRING`.
 pub static ossl_v3_skey_id: X509V3ExtMethod = X509V3ExtMethod {
     ext_nid: NID_subject_key_identifier,
     ext_flags: 0,

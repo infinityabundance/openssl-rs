@@ -8111,3 +8111,84 @@ functions); they are otherwise link/reference-covered only. `v3_ist`,
 **Next eight from the file head.** `src/x509/v3_sda.rs`, `src/x509/v3_single_use.rs`,
 `src/x509/v3_skid.rs`, `src/x509/v3_soa_id.rs`, `src/x509/v3_tlsf.rs`,
 `src/x509/v3_usernotice.rs`, `src/x509/v3_utf8.rs`, `src/x509/x509aset.rs`.
+
+## M87 (mechanism) — per-file contract sweep (subject directory attributes, the two ASN1_NULL rows, subject-key-identifier helpers, TLS feature, user notice, UTF8 pair, X509_ACERT setters)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M87.json`](atlas-refresh/mechanism-sweep-M87.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`61f061111`. Three documentation-only edits in `v3_skid.rs`: two over-permissive
+`# Safety` contracts were narrowed to the non-NULL `strlen`/`strcmp`
+precondition the body actually has, and one stale row note was corrected; there
+is no behavioural change. No `#[repr(C)]` layout, exported symbol/signature,
+allocator coordinate, excluded symbol or lint attribute changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/v3_sda.rs` | the `OSSL_ATTRIBUTES_SYNTAX` template/item and its exported five-name group; `i2r_ATTRIBUTES_SYNTAX`'s NULL/empty arms, per-attribute object/nid/indent prints, value loop and `<No Values>` arm; both `MULTILINE` rows | no defect; matches `v3_sda.c:15-88` |
+| `src/x509/v3_single_use.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_single_use.c:17-53` |
+| `src/x509/v3_skid.rs` | `i2s`/`s2i_ASN1_OCTET_STRING`, `ossl_x509_pubkey_hash`'s fetch/digest/free arms, `s2i_skey_id`'s `none`/non-`hash`/TEST/no-context/pubkey arms, the i2s cast and the row | no code defect; matches `v3_skid.c:18-108`; two `# Safety` contracts declared NULL acceptable where `strlen`/`strcmp` dereference it — corrected; stale `s2i`-slot note corrected |
+| `src/x509/v3_soa_id.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_soa_id.c:17-53` |
+| `src/x509/v3_tlsf.rs` | the file-local integer template, the `TLS_FEATURE` allocator pair, the `pop_free` thunk, `i2v_TLS_FEATURE`'s table/`add_value_int` arms, `v2i_TLS_FEATURE`'s name/number parse and every invalid/new/set/push free, the row | no defect; matches `v3_tlsf.c:26-137`; the three locally declared raise sites match the authority |
+| `src/x509/v3_usernotice.rs` | the item group; `NoticeBuf` adoption and its two release coordinates; `print_notice`'s noticeref/organization/numbers/`(null)`/explicit-text arms; `i2r_USER_NOTICE_SYNTAX`; the row | no defect; matches `v3_usernotice.c:14-96`, including the authority's `num == NULL && BIO_puts(...)` else-arm |
+| `src/x509/v3_utf8.rs` | `i2s_ASN1_UTF8STRING`'s NULL/empty refusal, `checked_add`, `OwnedBlock` copy and transfer; `s2i_ASN1_UTF8STRING`'s NULL/allocation/set failure frees; the one-row `EXT_UTF8STRING` table and its two casts | no defect; matches `v3_utf8.c:24-65` |
+| `src/x509/x509aset.rs` | `replace_gentime`/`replace_dirName` and every partial-build free; the three `OSSL_*` setters; the three `set0_holder_*` transfers; `X509_ACERT_set_version`, `set1_issuerName`, `set1_serialNumber`, `set1_notBefore`/`notAfter`; the seven locally declared raise sites | no defect; matches `x509aset.c:15-177` |
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated. Every unsafe operation already carries its contract: the
+shared `ASN1_ITEM` slot/cursor contract for every exported item group; the
+`OpenSslStack` NULL/range/`pop_free` discipline; the B1/B2/B6–B29
+extension-callback contracts for every `i2v`/`v2i`/`i2r`/`r2i`/`i2s`/`s2i` slot;
+the established v3-table ABI-compatible callback-cast contract; the OB-1 block
+transfer for `CRYPTO_strdup` and `OwnedBlock` returns; the `NoticeBuf` single
+plain release at the authority's own coordinates; and the `CRYPTO_*` allocator
+seam. Hidden obligations: **0**.
+
+**Contracts reused.** OB-1/`OwnedBlock` for `v3_utf8`'s `i2s` return and OB-1/OB-2
+for the `CRYPTO_strdup` `i2s` returns; the `ASN1_ITEM` template/item and
+exported `new`/`free`/`d2i`/`i2d` contract; the `OPENSSL_sk_*` NULL/range and
+`pop_free` destructor discipline; the B1/B2/B6–B29 callback contracts; the
+v3-table callback-cast contract; `X509V3_add_value(_int)`,
+`X509V3_conf_add_error_name_value` and `i2s_ASN1_INTEGER`'s failure and
+ownership semantics; the `OPENSSL_buf2hexstr`/`OPENSSL_hexstr2buf` and
+`CRYPTO_strdup` seam contracts; the `raise_site`/`ErrSite` coordinates (five
+`v3_tlsf`/`v3_utf8`/`v3_skid` generated plus seven local `x509aset`); and the
+`CRYPTO_*` allocator seam.
+
+**Residuals.** `M87-R1` (info, authority behaviour preserved):
+`s2i_ASN1_OCTET_STRING` assigns `length as c_int`, so a hex input over `INT_MAX`
+bytes would truncate; the authority assigns the same `long` to its `int` field,
+and ASN.1 keeps lengths non-negative and bounded, so the arm is unreachable in
+practice. `M87-R2` (info, authority behaviour preserved): `i2s_ASN1_OCTET_STRING`
+passes a negative `length` through to `OPENSSL_buf2hexstr` exactly as the
+authority does; a live parsed `ASN1_OCTET_STRING` has a non-negative length.
+Neither is a newly introduced memory-safety obligation.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `x509::v3` tests
+**20 passed / 0 failed** (1711 filtered) and `x509::x_` tests **14 passed / 0
+failed** (1717 filtered); full library **1700 passed / 0 failed / 31 ignored**
+(1731 total) serially (241.42 s) and with `--test-threads=4` (93.63 s), in the
+court with `CARGO_BUILD_JOBS=4`; affected probe **RT-STORE 1038 observations,
+0 residuals**, both exits 0 (candidate binary `14e62df0…a38a`, candidate
+`libcrypto.so.3` `c82bf520…cfc4b`). No unexplained test removal and no newly
+ignored test.
+
+**NOT_RUN.** Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency
+mechanism changed); dudect/ctgrind (no constant-time claim); the other phase-10
+courts (not affected); the phase-11 X.509 suite (not re-run; its last
+candidate-bound pass is reused); full Phase-25 forensic regeneration; FRF and
+SEAL. `v3_single_use`, `v3_soa_id` and the two `v3_sda` rows are reviewed against
+the authority but have no RT-STORE arm by name (their rows are unexported and
+the probe does not name them); they are otherwise link/reference-covered only.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **14**, `AUDITED-FILES.txt` **749**.
+**Next ordinary position.** `src/x509/x509cset.rs`.
+**Next eight from the file head.** `src/x509/x509cset.rs`, `src/x509/x509_d2.rs`,
+`src/x509/x509_ext.rs`, `src/x509/x509_meth.rs`, `src/x509/x509_obj.rs`,
+`src/x509/x509_r2x.rs`, `src/x509/x509rset.rs`, `src/x509/x509spki.rs`.
