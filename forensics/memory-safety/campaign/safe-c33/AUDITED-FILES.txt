@@ -739,3 +739,11 @@ src/x509/v3_pcons.rs
 src/x509/v3_pku.rs
 src/x509/v3_pmaps.rs
 src/x509/v3_rolespec.rs
+src/x509/v3_sda.rs
+src/x509/v3_single_use.rs
+src/x509/v3_skid.rs
+src/x509/v3_soa_id.rs
+src/x509/v3_tlsf.rs
+src/x509/v3_usernotice.rs
+src/x509/v3_utf8.rs
+src/x509/x509aset.rs
