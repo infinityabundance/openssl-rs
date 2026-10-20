@@ -1040,20 +1040,28 @@ unsafe fn lookup_sess_in_cache(s: *mut Ssl, sess_id: &[u8]) -> *mut SslSession {
 ///
 /// # Safety
 /// `s` must be a live connection; `session_id`/`ticket` are readable slices.
-pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_int {
+pub(crate) unsafe fn ssl_get_prev_session(
+    s: *mut Ssl,
+    session_id: &[u8],
+    ticket_ext_present: bool,
+) -> c_int {
     // SAFETY: `s` is live per the contract.
     unsafe {
-        // `tls_get_ticket_from_client` clears the flag first (`t1_lib.c:3000`).
+        // `tls_get_ticket_from_client` clears the flag first (`t1_lib.c:3000`) and only re-arms
+        // it when the client offered `session_ticket` and tickets are enabled
+        // (`t1_lib.c:2996-3010`).
         (*s).ext_ticket_expected = 0;
+        let ticket_expected =
+            c_int::from(ticket_ext_present && crate::ssl::t1_lib::tls_use_ticket(s));
         if session_id.is_empty() {
             // No session looked up: the server will issue a fresh ticket and session.
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         let ctx = (*s).session_ctx;
         let mut ret = lookup_sess_in_cache(s, session_id);
         if ret.is_null() {
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         // Version consistency (`ssl_sess.c:641`).
@@ -1084,7 +1092,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             }
         }
         if ret.is_null() {
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         if (*s).verify_mode & SSL_VERIFY_PEER != 0 && (*s).sid_ctx_length == 0 {
@@ -1096,7 +1104,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             (*ctx).stats.sess_timeout.fetch_add(1, Ordering::Relaxed);
             SSL_CTX_remove_session(ctx, ret);
             SSL_SESSION_free(ret);
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         // The explicit offered/embedded id match (`ssl_sess.c:717-723`).
@@ -1108,7 +1116,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             a != session_id
         } {
             SSL_SESSION_free(ret);
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         (*ctx).stats.sess_hit.fetch_add(1, Ordering::Relaxed);
