@@ -912,11 +912,14 @@ impl OwnedInitStop {
     fn new(handler: extern "C" fn(), next: *mut OpenSslInitStop) -> Option<OwnedInitStop> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<OpenSslInitStop>()` bytes at the authority's own (file, line).
-        let raw = crate::runtime::mem::CRYPTO_malloc(
-            core::mem::size_of::<OpenSslInitStop>(),
-            FILE_INIT,
-            L_ATEXIT_NEWHAND,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(
+                core::mem::size_of::<OpenSslInitStop>(),
+                FILE_INIT,
+                L_ATEXIT_NEWHAND,
+            )
+        }
         .cast::<OpenSslInitStop>();
         let ptr = core::ptr::NonNull::new(raw)?;
         let dst = ptr.as_ptr();

@@ -121,8 +121,11 @@ impl OwnedCtx {
     /// `CRYPTO_malloc(size_of::<Msblob2keyCtx>(), NULL, 0)` zeroed as the authority's
     /// `OPENSSL_zalloc` would, or `None` when the allocator answers NULL.
     fn new(provctx: *mut c_void, desc: *const KeytypeDesc) -> Option<OwnedCtx> {
-        let raw = CRYPTO_malloc(core::mem::size_of::<Msblob2keyCtx>(), ptr::null(), 0)
-            .cast::<Msblob2keyCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<Msblob2keyCtx>(), ptr::null(), 0)
+        }
+        .cast::<Msblob2keyCtx>();
         let ptr = ptr::NonNull::new(raw)?;
         // SAFETY: `ptr` is a fresh, exclusively owned block of exactly `Msblob2keyCtx`'s size and
         // alignment; zeroing it makes every field (two raw pointers and an `int`) a valid value.

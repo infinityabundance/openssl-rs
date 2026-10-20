@@ -723,7 +723,11 @@ pub unsafe extern "C" fn EVP_OpenInit(
 
     /* `CRYPTO_malloc` is one of the crate's safe entry points: it validates its own argument and
      * answers NULL rather than reading anything of the caller's. */
-    key = CRYPTO_malloc(keylen, FILE_OPEN, LINE_OPEN_MALLOC).cast::<c_uchar>();
+    key = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(keylen, FILE_OPEN, LINE_OPEN_MALLOC)
+    }
+    .cast::<c_uchar>();
     if key.is_null() {
         // SAFETY: `pctx` is live.
         unsafe { EVP_PKEY_CTX_free(pctx) };

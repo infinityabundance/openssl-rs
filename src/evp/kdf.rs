@@ -294,7 +294,11 @@ unsafe extern "C" fn evp_kdf_free(vkdf: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn evp_kdf_new() -> *mut EvpKdf {
-    let kdf = CRYPTO_zalloc(core::mem::size_of::<EvpKdf>(), FILE, LINE_ZALLOC_KDF).cast::<EvpKdf>();
+    let kdf = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpKdf>(), FILE, LINE_ZALLOC_KDF)
+    }
+    .cast::<EvpKdf>();
     if kdf.is_null() {
         return ptr::null_mut();
     }
@@ -786,8 +790,11 @@ pub unsafe extern "C" fn EVP_KDF_CTX_new(kdf: *mut EvpKdf) -> *mut EvpKdfCtx {
     if kdf.is_null() {
         return ptr::null_mut();
     }
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpKdfCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpKdfCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<EvpKdfCtx>();
     if ctx.is_null() {
         // The authority raises here too: its `ERR_raise` is the first statement of the `if`, and
         // `ctx == NULL` enters that `if`. Only the `freectx` call is guarded away, because the

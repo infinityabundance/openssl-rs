@@ -118,7 +118,11 @@ impl Drop for OwnedData {
 #[no_mangle]
 pub extern "C" fn BUF_MEM_new() -> *mut BufMem {
     guard_ffi(ptr::null_mut(), || {
-        CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast()
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0)
+        }
+        .cast()
     })
 }
 

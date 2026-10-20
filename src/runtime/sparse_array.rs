@@ -164,7 +164,11 @@ impl OwnedNode {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of `size_of::<Node>()` bytes, which is exactly `Node`'s layout. On exhaustion it
         // reports the allocation error and answers NULL, which the `?` below forwards.
-        let raw = CRYPTO_zalloc(size_of::<Node>(), FILE, L_SA_ALLOC_NODE).cast::<Node>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<Node>(), FILE, L_SA_ALLOC_NODE)
+        }
+        .cast::<Node>();
         let owned = NonNull::new(raw)?;
         // SAFETY: `owned` is a fresh, uniquely-owned block of `Node`'s size, so writing the
         // value into it in place is initialisation of an uninitialised `Node`.
@@ -460,7 +464,11 @@ impl OpenSslSa {
 /// and exhaustion answers NULL (the authority's `OPENSSL_zalloc` answer) rather than aborting.
 #[allow(dead_code)] // unreachable until 6.10a-ii's `_ex` tables are built from it
 pub(crate) fn ossl_sa_new() -> *mut OpenSslSa {
-    let raw = CRYPTO_zalloc(size_of::<OpenSslSa>(), FILE, L_SA_NEW).cast::<OpenSslSa>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<OpenSslSa>(), FILE, L_SA_NEW)
+    }
+    .cast::<OpenSslSa>();
     if raw.is_null() {
         return raw;
     }

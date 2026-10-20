@@ -328,7 +328,11 @@ impl<T> OwnedCtx<T> {
     fn new() -> Option<OwnedCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, LINE).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, LINE)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
     }
 
@@ -338,7 +342,11 @@ impl<T> OwnedCtx<T> {
     /// # Safety
     /// `src` is a live `T`.
     unsafe fn dup(src: *const T) -> Option<OwnedCtx<T>> {
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), FILE, LINE).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<T>(), FILE, LINE)
+        }
+        .cast::<T>();
         let owner = OwnedCtx {
             ptr: ptr::NonNull::new(raw)?,
         };

@@ -213,7 +213,11 @@ impl RawCtx {
     fn zalloc() -> Option<RawCtx> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<BioOkCtx>()` bytes.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<BioOkCtx>(), FILE, 136).cast::<BioOkCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<BioOkCtx>(), FILE, 136)
+        }
+        .cast::<BioOkCtx>();
         if raw.is_null() {
             None
         } else {

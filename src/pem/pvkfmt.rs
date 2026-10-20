@@ -1026,7 +1026,11 @@ unsafe fn do_i2b(out: *mut *mut c_uchar, pk: *const EvpPkey, ispub: c_int) -> c_
         // SAFETY: `outlen` bytes as a raw allocation. This block is handed out through the
         // caller's `out` cursor, so its release is the caller's, not this frame's: it stays a raw
         // allocation on the seam (a documented boundary, like `i2b_PVK`'s `start`).
-        p = CRYPTO_malloc(outlen as usize, ptr::null(), 0).cast::<c_uchar>();
+        p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(outlen as usize, ptr::null(), 0)
+        }
+        .cast::<c_uchar>();
         if p.is_null() {
             return -1;
         }

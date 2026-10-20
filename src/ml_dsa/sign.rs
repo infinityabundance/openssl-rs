@@ -127,7 +127,11 @@ impl OwnedBuf {
     fn new(len: usize, line_alloc: c_int, line_free: c_int, release: Release) -> Option<OwnedBuf> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, exclusively owned block of
         // `len` bytes.
-        let raw = CRYPTO_malloc(len, FILE, line_alloc).cast::<u8>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE, line_alloc)
+        }
+        .cast::<u8>();
         if raw.is_null() {
             None
         } else {

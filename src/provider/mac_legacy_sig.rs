@@ -121,8 +121,11 @@ impl OwnedCtx {
     fn zalloc(alloc_line: c_int, propq_line: c_int, block_line: c_int) -> Option<OwnedCtx> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of `size_of::<ProvMacCtx>()` bytes, which is exactly the context's layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<ProvMacCtx>(), FILE, alloc_line)
-            .cast::<ProvMacCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<ProvMacCtx>(), FILE, alloc_line)
+        }
+        .cast::<ProvMacCtx>();
         NonNull::new(raw).map(|ptr| OwnedCtx {
             ptr,
             propq_line,

@@ -80,8 +80,11 @@ impl OwnedSig {
     fn new() -> Option<OwnedSig> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<DsaSig>()` bytes, which is exactly `DSA_SIG`'s layout.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<DsaSig>(), FILE_DSA_SIGN, LINE).cast::<DsaSig>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<DsaSig>(), FILE_DSA_SIGN, LINE)
+        }
+        .cast::<DsaSig>();
         NonNull::new(raw).map(|ptr| OwnedSig { ptr })
     }
 

@@ -880,8 +880,11 @@ impl OwnedPrimeInfo {
     fn zalloc() -> Option<OwnedPrimeInfo> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of exactly `size_of::<RsaPrimeInfo>()` bytes.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE).cast::<RsaPrimeInfo>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<RsaPrimeInfo>(), FILE, LINE)
+        }
+        .cast::<RsaPrimeInfo>();
         (!raw.is_null()).then_some(OwnedPrimeInfo { ptr: raw })
     }
 

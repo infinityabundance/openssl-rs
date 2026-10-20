@@ -453,8 +453,11 @@ impl OwnedPbeCtl {
     fn zalloc() -> Option<OwnedPbeCtl> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of exactly `size_of::<EvpPbeCtl>()` bytes.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpPbeCtl>(), FILE, LINE_ZALLOC_CTL)
-            .cast::<EvpPbeCtl>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EvpPbeCtl>(), FILE, LINE_ZALLOC_CTL)
+        }
+        .cast::<EvpPbeCtl>();
         if raw.is_null() {
             None
         } else {

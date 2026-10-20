@@ -662,8 +662,11 @@ impl<T: CtxDestroy> RawCtx<T> {
     fn zalloc(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<RawCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<MaybeUninit<T>>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
+        }
+        .cast::<MaybeUninit<T>>();
         ptr::NonNull::new(raw).map(|ptr| RawCtx { ptr, file, line })
     }
 
@@ -10521,7 +10524,11 @@ pub unsafe extern "C" fn SSL_client_hello_get1_extensions_present(
         }
         // `OPENSSL_malloc_array(num, sizeof(*present))` (`ssl_lib.c:6874`), exercised through the
         // same allocator `OPENSSL_free` releases.
-        let present = CRYPTO_calloc(num, core::mem::size_of::<c_int>(), FILE, 6874).cast::<c_int>();
+        let present = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(num, core::mem::size_of::<c_int>(), FILE, 6874)
+        }
+        .cast::<c_int>();
         if present.is_null() {
             return 0;
         }
@@ -11430,9 +11437,16 @@ unsafe fn dane_ctx_enable(dctx: *mut DaneCtx) -> c_int {
     let mdmax = DANETLS_MATCHING_LAST;
     let n = mdmax as usize + 1;
     // SAFETY: two fresh `CRYPTO_calloc` blocks of `n` pointer-sized slots / `n` bytes.
-    let mdevp =
-        CRYPTO_calloc(n, core::mem::size_of::<*const EvpMd>(), FILE, 123).cast::<*const EvpMd>();
-    let mdord = CRYPTO_calloc(n, 1, FILE, 124).cast::<u8>();
+    let mdevp = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(n, core::mem::size_of::<*const EvpMd>(), FILE, 123)
+    }
+    .cast::<*const EvpMd>();
+    let mdord = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(n, 1, FILE, 124)
+    }
+    .cast::<u8>();
     if mdord.is_null() || mdevp.is_null() {
         // SAFETY: each pointer is NULL or an owned `CRYPTO_calloc` block.
         unsafe {
@@ -12751,7 +12765,11 @@ mod adv_member_tests {
     fn canary_predicate_detects_a_dangling_member() {
         // `CRYPTO_malloc` is a safe function; `released` is a fresh block, released once below and
         // never dereferenced again.
-        let released = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+        let released = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        }
+        .cast::<u8>();
         assert!(!released.is_null());
         // SAFETY: `released` is the live block from the previous line; this is its single release.
         unsafe { CRYPTO_free(released.cast(), ptr::null(), 0) };
@@ -12771,7 +12789,11 @@ mod adv_member_tests {
     fn new_certkey() -> *mut CertKey {
         // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
         // zeroed bytes are a valid empty `CertKey` per the type's all-zero-valid fields.
-        let p = CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0).cast::<CertKey>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0)
+        }
+        .cast::<CertKey>();
         assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
         p
     }
@@ -12871,7 +12893,11 @@ mod adv_member_tests {
     /// pre-growth value) must be rejected by `(reader == returned block && length == new length)`.
     #[test]
     fn canary_realloc_member_predicate_detects_stale_length() {
-        let old = CRYPTO_malloc(8, ptr::null(), 0).cast::<u8>();
+        let old = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(8, ptr::null(), 0)
+        }
+        .cast::<u8>();
         assert!(!old.is_null());
         // SAFETY: `old` is a fresh 8-byte block this frame owns.
         let grew = unsafe { CRYPTO_realloc(old.cast(), 64, ptr::null(), 0) }.cast::<u8>();
@@ -12912,7 +12938,11 @@ mod adv_realloc_probe {
     fn new_certkey() -> *mut CertKey {
         // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of the requested size; the
         // zeroed bytes are a valid empty `CertKey` per its all-zero-valid fields.
-        let p = CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0).cast::<CertKey>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<CertKey>(), ptr::null(), 0)
+        }
+        .cast::<CertKey>();
         assert!(!p.is_null(), "a zeroed CertKey block must be allocatable");
         p
     }

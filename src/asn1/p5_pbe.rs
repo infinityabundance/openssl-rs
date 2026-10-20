@@ -77,7 +77,11 @@ impl SaltBuf {
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<SaltBuf> {
-        let raw = CRYPTO_malloc(len, file, alloc_line).cast::<c_uchar>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, alloc_line)
+        }
+        .cast::<c_uchar>();
         if raw.is_null() {
             None
         } else {

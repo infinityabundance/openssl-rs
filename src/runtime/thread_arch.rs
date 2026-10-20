@@ -198,11 +198,14 @@ impl OwnedThreadHandle {
     fn zalloc() -> Option<OwnedThreadHandle> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<c_ulong>()` bytes, which is exactly the `pthread_t` slot's layout.
-        let raw = CRYPTO_zalloc(
-            core::mem::size_of::<c_ulong>(),
-            FILE_POSIX,
-            LINE_POSIX_ZALLOC,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<c_ulong>(),
+                FILE_POSIX,
+                LINE_POSIX_ZALLOC,
+            )
+        }
         .cast::<c_ulong>();
         ptr::NonNull::new(raw).map(|ptr| OwnedThreadHandle { ptr })
     }

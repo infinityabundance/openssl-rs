@@ -127,11 +127,14 @@ impl OwnedData {
     fn zalloc() -> Option<OwnedData> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, exclusively owned, zeroed
         // block of exactly this type's size.
-        let raw = CRYPTO_zalloc(
-            core::mem::size_of::<PropertyStringData>(),
-            FILE,
-            LINE_ZALLOC_DATA,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<PropertyStringData>(),
+                FILE,
+                LINE_ZALLOC_DATA,
+            )
+        }
         .cast::<PropertyStringData>();
         if raw.is_null() {
             None
@@ -188,7 +191,11 @@ impl OwnedString {
         // `sizeof(*ps) + l`. A length that overflows the size computation cannot describe a live
         // allocation, so it takes the allocator-failure arm (`None`) rather than wrapping.
         let size = core::mem::size_of::<PropertyString>().checked_add(l)?;
-        let raw = CRYPTO_malloc(size, FILE, LINE_MALLOC_PS).cast::<PropertyString>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size, FILE, LINE_MALLOC_PS)
+        }
+        .cast::<PropertyString>();
         if raw.is_null() {
             None
         } else {

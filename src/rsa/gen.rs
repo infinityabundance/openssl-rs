@@ -112,7 +112,11 @@ const LINE: c_int = 0;
 /// separately, so the seam performs the authority's own overflow check) at its `file`/`line`;
 /// `Drop` is the block's single `OPENSSL_free` at those same coordinates.
 fn calloc(num: usize, size: usize) -> Option<OwnedBuf> {
-    let raw = CRYPTO_calloc(num, size, FILE_RSA_GEN, LINE).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_calloc(num, size, FILE_RSA_GEN, LINE)
+    }
+    .cast::<c_uchar>();
     // SAFETY: `raw` is NULL or a live zeroed block the crate's `CRYPTO_*` seam allocated in full
     // and no other owner will release it.
     unsafe { OwnedBuf::adopt_plain(raw, FILE_RSA_GEN_SEAM, LINE) }

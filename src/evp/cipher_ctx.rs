@@ -1138,7 +1138,10 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_copy(
     let (in_data, ctx_size) = unsafe { ((*in_).cipher_data, (*cipher).ctx_size) };
     if !in_data.is_null() && ctx_size != 0 {
         // SAFETY: this allocates a fresh block of `ctx_size` bytes.
-        let fresh = CRYPTO_malloc(ctx_size as usize, FILE_ENC, LINE_MALLOC_COPY);
+        let fresh = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(ctx_size as usize, FILE_ENC, LINE_MALLOC_COPY)
+        };
         if fresh.is_null() {
             // SAFETY: `out` is live.
             unsafe { (*out).cipher = ptr::null() };
@@ -2246,7 +2249,11 @@ unsafe fn evp_cipher_init_legacy_internal(
         let ctx_size = unsafe { (*cipher).ctx_size };
         if ctx_size != 0 {
             // SAFETY: this allocates a fresh block of `ctx_size` bytes.
-            let data = CRYPTO_zalloc(ctx_size as usize, FILE_ENC, 786).cast::<c_void>();
+            let data = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(ctx_size as usize, FILE_ENC, 786)
+            }
+            .cast::<c_void>();
             if data.is_null() {
                 // SAFETY: `ctx` is live.
                 unsafe { (*ctx).cipher = ptr::null() };

@@ -392,8 +392,11 @@ impl RawMethod {
     fn new() -> Option<RawMethod> {
         // `CRYPTO_zalloc` answers NULL or a fresh zeroed block of `size_of::<DsaMethod>()` bytes,
         // which is exactly `DSA_METHOD`'s layout and a valid instance for this all-pointer type.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<DsaMethod>(), FILE_DSA_METH, LINE)
-            .cast::<DsaMethod>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<DsaMethod>(), FILE_DSA_METH, LINE)
+        }
+        .cast::<DsaMethod>();
         NonNull::new(raw).map(|ptr| RawMethod { ptr })
     }
 
@@ -403,8 +406,11 @@ impl RawMethod {
     /// The block is uninitialised: the caller must write all of `size_of::<DsaMethod>()` bytes
     /// before the block is read or handed to a C caller. `Drop` releases the block alone.
     fn new_uninit() -> Option<RawMethod> {
-        let raw = CRYPTO_malloc(core::mem::size_of::<DsaMethod>(), FILE_DSA_METH, LINE)
-            .cast::<DsaMethod>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<DsaMethod>(), FILE_DSA_METH, LINE)
+        }
+        .cast::<DsaMethod>();
         NonNull::new(raw).map(|ptr| RawMethod { ptr })
     }
 

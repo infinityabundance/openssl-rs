@@ -995,11 +995,14 @@ unsafe fn PEM_ASN1_write_bio_internal(
         // Allocate enough space for one extra cipher block. The block holds the plaintext DER; the
         // epilogue's handle performs the authority's own `OPENSSL_clear_free` of it.
         // SAFETY: `CRYPTO_malloc` validates its own allocation.
-        data = CRYPTO_malloc(
-            dsize as usize + EVP_MAX_BLOCK_LENGTH,
-            FILE,
-            LINE_ASN1_WRITE_ALLOC,
-        )
+        data = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                dsize as usize + EVP_MAX_BLOCK_LENGTH,
+                FILE,
+                LINE_ASN1_WRITE_ALLOC,
+            )
+        }
         .cast::<c_uchar>();
         if data.is_null() {
             break 'body;

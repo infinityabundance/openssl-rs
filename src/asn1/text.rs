@@ -79,7 +79,11 @@ impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for the fixed render buffer, or `None` when the allocator
     /// answers NULL.
     fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<u8>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, line)
+        }
+        .cast::<u8>();
         if raw.is_null() {
             return None;
         }

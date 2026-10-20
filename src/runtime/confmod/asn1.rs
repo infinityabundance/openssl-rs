@@ -103,7 +103,11 @@ struct LntmpBuf {
 impl LntmpBuf {
     /// `OPENSSL_malloc(len)` at the authority's own site, or `None` when it is refused.
     fn malloc(len: usize) -> Option<LntmpBuf> {
-        let raw = CRYPTO_malloc(len, FILE, L_LNTMP).cast::<c_char>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE, L_LNTMP)
+        }
+        .cast::<c_char>();
         // `CRYPTO_malloc` answers NULL or a fresh writable block of exactly `len` bytes.
         core::ptr::NonNull::new(raw).map(|ptr| LntmpBuf { ptr })
     }

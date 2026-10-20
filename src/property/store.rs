@@ -465,11 +465,14 @@ unsafe extern "C" fn impl_free_thunk(implementation: *mut c_void) {
 /// `ctx` must be NULL or a live `OSSL_LIB_CTX`.
 pub(crate) unsafe fn ossl_method_store_new(ctx: *mut c_void) -> *mut OsslMethodStore {
     // SAFETY: `ctx` is stored, not read.
-    let res = CRYPTO_zalloc(
-        core::mem::size_of::<OsslMethodStore>(),
-        FILE,
-        LINE_ZALLOC_STORE,
-    )
+    let res = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<OsslMethodStore>(),
+            FILE,
+            LINE_ZALLOC_STORE,
+        )
+    }
     .cast::<OsslMethodStore>();
     if res.is_null() {
         return res;
@@ -670,11 +673,14 @@ pub(crate) unsafe fn ossl_method_store_add(
     }
 
     // SAFETY: `Implementation` is this module's own `#[repr(C)]` type.
-    let impl_ = CRYPTO_malloc(
-        core::mem::size_of::<Implementation>(),
-        FILE,
-        LINE_MALLOC_IMPL,
-    )
+    let impl_ = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(
+            core::mem::size_of::<Implementation>(),
+            FILE,
+            LINE_MALLOC_IMPL,
+        )
+    }
     .cast::<Implementation>();
     if impl_.is_null() {
         return 0;
@@ -738,8 +744,11 @@ pub(crate) unsafe fn ossl_method_store_add(
     if alg.is_null() {
         // `CRYPTO_zalloc` is a SAFE function in this crate (D113), so the allocation needs no
         // block even though this function is `unsafe`.
-        alg = CRYPTO_zalloc(core::mem::size_of::<Algorithm>(), FILE, LINE_ZALLOC_ALG)
-            .cast::<Algorithm>();
+        alg = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<Algorithm>(), FILE, LINE_ZALLOC_ALG)
+        }
+        .cast::<Algorithm>();
         if alg.is_null() {
             // SAFETY: `store` is locked by this thread.
             unsafe {

@@ -51,7 +51,11 @@ impl<T> OwnedBlock<T> {
     /// request is byte-for-byte the authority's own size.
     pub(crate) fn malloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
         let size = count.checked_mul(core::mem::size_of::<T>())?;
-        let raw = CRYPTO_malloc(size, file, line).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size, file, line)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, file, line })
     }
 
@@ -63,7 +67,11 @@ impl<T> OwnedBlock<T> {
     /// allocator for a wrapped size.
     pub(crate) fn zalloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
         let size = count.checked_mul(core::mem::size_of::<T>())?;
-        let raw = CRYPTO_zalloc(size, file, line).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size, file, line)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, file, line })
     }
 

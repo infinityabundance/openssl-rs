@@ -469,8 +469,11 @@ struct RawDhGenCtx {
 impl RawDhGenCtx {
     /// `CRYPTO_zalloc(sizeof(*gctx), FILE, 463)`, or `None` when it answers NULL.
     fn new() -> Option<RawDhGenCtx> {
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463).cast::<DhGenCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<DhGenCtx>(), FILE_DH_KMGMT, 463)
+        }
+        .cast::<DhGenCtx>();
         ptr::NonNull::new(raw).map(|ptr| RawDhGenCtx { ptr })
     }
 

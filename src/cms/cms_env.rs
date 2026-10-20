@@ -2930,7 +2930,11 @@ mod tests {
 
     fn key_block(len: usize) -> *mut c_uchar {
         // A test allocation; the recipient under test takes ownership or it is freed below.
-        CRYPTO_malloc(len, c"cms_env.rs".as_ptr(), 0).cast::<c_uchar>()
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, c"cms_env.rs".as_ptr(), 0)
+        }
+        .cast::<c_uchar>()
     }
 
     /// A deterministic, initialised block of `len` bytes.

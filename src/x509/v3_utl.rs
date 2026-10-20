@@ -464,7 +464,11 @@ unsafe fn bignum_to_string(bn: *const BigNum) -> *mut c_char {
         tmp.set_release_line(150);
         return ptr::null_mut();
     };
-    let ret = CRYPTO_malloc(len, FILE.as_ptr(), 148).cast::<c_char>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(len, FILE.as_ptr(), 148)
+    }
+    .cast::<c_char>();
     if ret.is_null() {
         // The authority frees `tmp` at its own line 150 on this refusal.
         tmp.set_release_line(150);

@@ -516,7 +516,10 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
         // SAFETY: `ret` is live and owned here.
         unsafe { (*ret).length = 0 };
         // SAFETY: `CRYPTO_malloc` answers null or `length` writable bytes.
-        let fresh = CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
+        let fresh = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE)
+        } as *mut u8;
         if fresh.is_null() {
             // The authority raises with `i` still holding the loop counter, which
             // is `length` at this point. That is the authority's own behaviour and
@@ -678,7 +681,10 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
         let slot = unsafe { *pp };
         let (p, allocated) = if slot.is_null() {
             // SAFETY: `CRYPTO_malloc` answers null or `objsize` writable bytes.
-            let fresh = CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
+            let fresh = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE)
+            } as *mut u8;
             if fresh.is_null() {
                 return 0;
             }
@@ -1437,7 +1443,10 @@ pub unsafe extern "C" fn d2i_ASN1_UINTEGER(
         // here exactly as it fails there.
         let want = (len as c_int).wrapping_add(1);
         // SAFETY: `want` is the requested size, possibly unsatisfiable.
-        let s = CRYPTO_malloc(want as usize, INT_FILE.as_ptr(), LINE) as *mut u8;
+        let s = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(want as usize, INT_FILE.as_ptr(), LINE)
+        } as *mut u8;
         if s.is_null() {
             // `i` is still 0, so this arm raises nothing — the caller learns of it
             // from the null return alone.
