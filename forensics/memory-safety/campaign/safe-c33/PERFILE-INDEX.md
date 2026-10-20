@@ -5903,3 +5903,135 @@ again), `src/provider/init.rs`, `src/provider/kem_util.rs`,
 `src/provider/keymgmt.rs`, `src/provider/legacyprov.rs`,
 `src/provider/mac_legacy_sig.rs`, `src/provider/ml_common_codecs.rs`,
 `src/provider/ml_dsa_sig.rs`.
+
+## M68 — per-file contract sweep (provider KDF/DH keymgmt, legacy provider, legacy MAC, ML common/ML-DSA/ML-KEM codecs and ML-KEM KEM)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M68.json`](atlas-refresh/mechanism-sweep-M68.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`f6357d2ef`. Three files carry worktree repairs (four findings): a failure-path
+state difference in `dh_gen_common_set_params`, allocator release coordinates and
+secret residue in the ML-KEM codecs, and secret residue in the ML-DSA signature
+context. Behaviour on success, layout, symbols, exported signatures and every
+allocation coordinate are unchanged; the changes are failure-path state, release
+coordinates and cleansing. Authority sources were read from
+`forensics/authorities/src/openssl-3.6.4/` for every unit compared. The eight
+records are file-level obligation checks, not `SAFETY_DISCHARGED` results.
+`src/evp/method_store.rs` and `src/provider/init.rs` were inspected and deferred
+as trust boundaries (see below); the two next ordinary queue entries were taken
+in their place so the batch still covers eight files.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/kem_util.rs` | the one-entry `DHKEM` mode table, NULL/`NUL`-terminated `name` contract, `OPENSSL_strcasecmp` comparison, sentinel-as-loop-stop vs stored terminator | no defect |
+| `src/provider/keymgmt.rs` | `KdfData` refcount/Drop, `DhGenCtx` field-order/all-zero validity, `RawDhGenCtx` pre-publication block-only release, seed replacement (`adopt_cleansed` → `CRYPTO_memdup`), `mdname`/`mdprops` replacement, `dh_gen` callback/`gencb` lifetime and `dh_gen_end`, `dh_load` reference detach, `dh_export` builder/parameter release | 1 low-severity failure-path divergence repaired (M68-D1) |
+| `src/provider/legacyprov.rs` | local `OwnedCtx<T>` allocation/copy/copyctx/cleansing release for the mandatory POD digest contexts, MDC2 `pad_type` setter, provider table walk/query/teardown, libctx child ownership | no defect |
+| `src/provider/mac_legacy_sig.rs` | `ProvMacCtx` ownership split (propq plain, macctx/key refs), `newctx`/`dupctx` partial-init and error paths, dispatch-context NULL preconditions, settable/fetch lifetimes | no defect |
+| `src/provider/ml_common_codecs.rs` | six-format preference selection, case-insensitive prefix matching, zero-sorts-last total order, terminator slot, `OwnedBlock` calloc/free, four big-endian helpers, `Sync` tables | no defect |
+| `src/provider/ml_dsa_sig.rs` | `ProvMlDsaCtx` field order/dup ownership, `sig`/`md_ctx`/`test_entropy` release and cleansing, `set_alg_id_buffer` `WPACKET` discipline, three randomness modes, `mu`/`rand_tmp` cleansing on every return, generated decoder duplicate-key refusal, dispatch tables | 1 low-severity secret-residue finding repaired (M68-D4) |
+| `src/provider/ml_kem_codecs.rs` | SPKI prefix check and PKCS#8 format/bounds walk, `CRYPTO_secure_malloc` DK ownership, `i2d` buffer sizing/encoding, key-to-text seed/DK handling, allocator release coordinates | 2 low-severity findings repaired (M68-D2, M68-D3) |
+| `src/provider/ml_kem_kem.rs` | `RawCtx`→`OwnedCtx` construction and zero-state sweep, borrowed key, entropy buffer lifetime (one-shot, `ctext == NULL` exception), encapsulate/decapsulate length and NULL-pointer arms | no defect |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M68-D1 | `src/provider/keymgmt.rs:1220-1224` | low | failure-path compatibility divergence | `dh_gen_common_set_params` tested the named group's UID before storing it, so a rejected group left the previous `group_nid`; the authority assigns `NID_undef` first. The assignment now precedes the test, so an ignored set-params failure feeds `dh_gen` the authority's value. |
+| M68-D2 | `src/provider/ml_kem_codecs.rs:758, 871, 1004, 1025` | low | allocator-seam release coordinate | the four `OwnedBuf`s recorded the allocation line as their release line; the authority frees at `ml_kem_codecs.c:427` (pub failure), `:554` (prv failure), `:616` (pubenc) and `:617` (prvenc). `new_plain_released`/`new_cleansed_released` now carry both pairs; allocation coordinates and sizes are unchanged. |
+| M68-D3 | `src/provider/ml_kem_codecs.rs:560, 871-... , 1004-...` | low | secret residue on failure/teardown | the `key_to_text` stack copy of the private seed was never cleared, and the private-key DER buffers (`prvenc`, and the `i2d_prvkey` output on failure) were released plainly, leaving seed/DK bytes in freed or reused storage. The seed is now cleansed at function exit and both private DER buffers use a cleansing release; on success the caller still takes the block exactly as the authority hands it over. |
+| M68-D4 | `src/provider/ml_dsa_sig.rs:183-196, 940-975` | low | secret residue on failure paths | `freectx` cleansed only `test_entropy_len` bytes, and a refused or wrong-length `test-entropy` set resets that length to 0 after writing into the buffer, leaving earlier entropy bytes. `freectx` now cleanses the whole array and each `set-entropy` attempt clears the array before the copy and on every refusal. Deliberate deviation from `ml_dsa_sig.c:79/420-427`; not observable through the API. |
+
+No memory-safety defect (UB, invalid free, aliasing conflict, uninitialised
+read, or safe caller reachable through a safe interface) was found. The D3/D4
+repairs are deliberate safety improvements over the authority's own residue; they
+change no successful-path output, error code or allocation.
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. Introduced: 0. No `unsafe fn`,
+`#[repr(C)]` layout, exported symbol or signature changed; no `SAFETY` comment was
+weakened. Every remaining unsafe operation in the eight files has an explicit
+contract at its declaration or at the enclosing block: C dispatch contexts are
+non-NULL and live; borrowed keys are owned by `EVP_PKEY`/`ML_KEM_KEY`; `DhGenCtx`
+and `ProvMlDsaCtx`/`ProvMlKemCtx` match the authority's field order and all-zero
+validity; `WPACKET` is live; the PKCS#8 walk stays inside `len`; `data`/`msg` are
+readable for their lengths. Hidden obligations: 0. Retained documented
+invariants: (1) `ml_dsa_sig`'s `set_alg_id_buffer` passes a fixed 256-byte
+`aid_buf` to `WPACKET_init_der`, so the init's NULL/zero refusal cannot occur and
+`WPACKET_cleanup` always sees an initialised packet (the same shape the already
+audited DSA/SLH-DSA signature units carry); (2) `ProvMlKemCtx::entropy` is NULL or
+`entropy_buf`; (3) the ML-KEM/ML-DSA format tables are internally consistent with
+`p8_bytes`, which is the bound the encoding walk relies on.
+
+**Secret-bearing storage.** `ml_dsa_sig`: `test_entropy` is `SECRET_DATA` /
+`CLEANSING_REQUIRED` — cleansed over the full array in `freectx` and before every
+replacement attempt (success, refusal and wrong length); `rand_tmp` is cleansed on
+every path where it, not `test_entropy`, supplied the value; `mu` is cleansed on
+every return; the key is a borrow and the context's `context_string`, `sig` and
+`aid_buf` are public. `ml_kem_codecs`: `encoded_dk` is allocated with
+`CRYPTO_secure_malloc` and owned by the key, whose destructor secure-clears it; the
+decoded seed is copied into key-owned storage; the `i2d_prvkey` output and
+`key_to_text`'s `prvenc` are `SECRET_DATA` and now use cleansing releases on every
+path where the unit still owns them (success hands the former to the caller, as
+the authority does), and the to-text stack seed is cleansed. `ml_kem_kem`:
+`entropy_buf` is cleansed after each encapsulation and in `destroy_body`; the
+`ctext == NULL` size-query path deliberately retains it for the next call, which
+is the authority's one-shot semantics and is documented in the unit.
+`keymgmt`: the FIPS 186-4 seed uses `OwnedBuf::adopt_cleansed` on replacement and
+release; `mdname`/`mdprops` are public. `legacyprov`: the digest contexts carry
+chaining state and are released with `CRYPTO_clear_free`; `mac_legacy_sig` owns
+only a public property query and a key reference. No constant-time claim is made.
+
+**Contracts reused.** `OB-1` `OwnedBuf` (`new_plain_released`, `new_cleansed`,
+`new_cleansed_released`, `adopt_plain`, `adopt_cleansed`, `into_raw`) for seed,
+signature, DER and entropy buffers; `OB-2` `OwnedStr` for provider names and paths;
+`OB-3` `OwnedCtx`/`RawCtx`/`CtxDestroy` and the block-vs-member split for
+`KdfData`, `DhGenCtx`, `ProvMlKemCtx` and the legacy digest contexts; `OB-4`
+member-buffer slots for `seed`/`mdname`/`mdprops`/`sig`; `RC-1` refcount ownership
+for `KdfData`, `MacKey` and `EVP_MD_CTX` duplicates; `B19` BIGNUM/key cleansing
+through the primitive key destructors; the per-path allocator-coordinate contract
+established by M61/M62; the `WPACKET` DER write/finish/cleanup contract; the
+`OSSL_PARAM` key-terminated array and descriptor contracts; and the C ABI
+dispatch contracts for every `extern "C"` entry point. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`provider::ml_*` **10 passed / 0 failed** (including both ML-KEM codec tests and
+the ML-KEM KEM zero-state sweep), `provider::keymgmt` **2 / 0** (both zero-state
+sweeps), `provider::legacyprov` **1 / 0**; `provider::mac_legacy_sig` and
+`provider::kem_util` have no unit tests and are covered by the full suite. An
+initial `provider::` sweep showed two `ec_kem` failures; both pass when rerun in
+isolation, the known global-state isolation issue, not a regression. BATCH:
+`cargo clippy --all-targets -- -D warnings` clean; full library **1672 passed /
+0 failed / 27 ignored** (1699 total) with `--test-threads=1` in 262.92 s and with
+`--test-threads=4` in 90.63 s. Counts are identical to M67: no unexplained removal
+and no newly ignored test.
+
+**NOT_RUN.** `src/evp/method_store.rs` and `src/provider/init.rs` are deferred
+boundary work: method_store is the `OSSL_METHOD_CONSTRUCT_METHOD` registry /
+temporary-store dispatch host (caller-supplied function table, global method
+store, refcount balance across `construct`/`put`/`destruct`), and init invokes a
+provider-supplied `OSSL_provider_init` callback and walks a provider-supplied,
+unbounded dispatch table (reentrancy, partial initialisation and teardown
+obligations). Affected adversarial probes: none observes these units' release
+coordinates or post-free contents, and no allocator-hook differential exists, so
+the probes are `NOT_RUN` rather than `PASS`. Miri/Stacked+Tree Borrows/ASan/Loom,
+authority differential courts for ML-DSA/ML-KEM encodings and DH generation,
+constant-time measurement, dependency-graph regeneration and the FRF suite/SEAL
+are `NOT_RUN` at their scheduled levels.
+
+**Residual.** (1) `src/evp/method_store.rs` and `src/provider/init.rs` remain the
+deferred registry/initialisation boundaries at the head of the queue. (2) The
+ML-KEM `ctext == NULL` size-query path retains one-shot `ikmE` entropy for the
+next call, deliberately matching the authority. (3) A private-key DER block handed
+to a caller by `ossl_ml_kem_i2d_prvkey` is caller-owned and freed plainly by the
+authority's contract; the unit cleanses only the blocks it still owns. (4) The
+legacy provider keeps a child library context alive across teardown, the
+documented default/base-provider shape rather than `legacyprov.c`'s own
+`OSSL_LIB_CTX_free`.
+
+**Queue.** `REMAINING-AUDIT.txt` 177 -> **169**; `AUDITED-FILES.txt` 586 ->
+**594**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/provider/init.rs` (provider-init boundary — defer again),
+`src/provider/ml_kem_kmgmt.rs`, `src/provider/mlx_kem.rs`,
+`src/provider/rsa_enc.rs`, `src/provider/rsa_kem.rs`,
+`src/provider/securitycheck_default.rs`, `src/provider/securitycheck.rs`.

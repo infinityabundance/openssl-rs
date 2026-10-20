@@ -1,13 +1,5 @@
 src/evp/method_store.rs
 src/provider/init.rs
-src/provider/kem_util.rs
-src/provider/keymgmt.rs
-src/provider/legacyprov.rs
-src/provider/mac_legacy_sig.rs
-src/provider/ml_common_codecs.rs
-src/provider/ml_dsa_sig.rs
-src/provider/ml_kem_codecs.rs
-src/provider/ml_kem_kem.rs
 src/provider/ml_kem_kmgmt.rs
 src/provider/mlx_kem.rs
 src/provider/rsa_enc.rs
