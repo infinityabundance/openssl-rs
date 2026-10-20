@@ -8540,3 +8540,53 @@ remains `CONTRACTED`. NEO-ERR-3/4 are retained obligations; NEO-ERR-1/2/5/6/7
 await independent review. Consumer `SAFE_COMPATIBLE` stays **0/33**.
 Machine-readable receipt:
 [`atlas-refresh/boundary-sweep-B34.json`](atlas-refresh/boundary-sweep-B34.json).
+
+## Boundary sweep B38 — `asn1::text::OwnedBuf` typed seam coordinate — 2026-10-20
+
+**Source identity:** `integrate/safe-c33` at `cbd29f620` (B37 ERR discharge
+merge) plus this sweep's uncommitted working-tree change; `src/asn1/text.rs`
+blob `7aded01f861d…`. **STOP:** none. This closes the B37-recorded
+cross-mechanism residual at the type level; no mechanism is promoted to
+`SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| boundary | file | disposition | mechanism |
+|---|---|---|---|
+| `B38-ERR-6b` | `src/asn1/text.rs:73-181` | `FIXED` | `OwnedBuf` now stores `SeamFile`, not `*const c_char`; both safe constructors (`new`, `empty`) take `SeamFile`, and `Drop`/`clear_realloc`/`realloc` derive the raw coordinate with `file.as_ptr()` only at the allocator call |
+| `B38-ERR-6c` | `src/asn1/text.rs:441, 639` | `FIXED` | the two call sites now pass `SeamFile::new(<static CStr>)`. No call site needs a dynamic coordinate, so no `unsafe fn ..._dynamic` route was added |
+
+**Constructor disposition and call sites.** `OwnedBuf::empty(file: *const
+c_char, line)` was the only sibling constructor with the disclosed raw shape;
+`OwnedBuf::new` already took `SeamFile` after B36. The same-shaped allocator
+owners checked by B36 — `asn1::p5_pbe::SaltBuf::new`,
+`asn1::p5_pbev2::SaltBuf::new`, `apps::mac::OwnedBuf::new` and the remaining
+B36-converted helpers — already take `SeamFile`; no further constructor changed.
+**Call-site count: 2**, both in `src/asn1/text.rs`, both static
+(`crypto/asn1/f_int.c`, `crypto/asn1/f_string.c`). `SeamFile::from_static_ptr`
+was not introduced for a dynamic pointer.
+
+**Compile-time lock.** `src/asn1/text.rs` now carries, in the style of
+`src/asn1/owned.rs`,
+`const _: fn(SeamFile, c_int) -> OwnedBuf = OwnedBuf::empty;` and
+`const _: fn(usize, SeamFile, c_int) -> Option<OwnedBuf> = OwnedBuf::new;`.
+A regression to `*const c_char` fails to compile; `clippy --all-targets`
+compiled the test target. A focused test
+`asn1::text::tests::empty_starts_at_a_typed_static_coordinate` constructs at a
+static `SeamFile` and asserts the block starts NULL (its `Drop` is the
+authority's `free(NULL)`).
+
+**Evidence.** FAST: fmt clean; focused `asn1::text` **1/1**. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1708 passed / 0 failed / 31 ignored**
+serially (68.80 s) and with `--test-threads=4` (110.78 s); the structural diff
+filter reports 0 added `#[no_mangle]` / `#[repr(C)]` / exported `extern "C"`
+signatures, and the allocator seam's size/file/line values are unchanged.
+**NOT_RUN:** Miri, ASan and TSan — the change is a type/field move with no new
+aliasing or allocation path (the same pointer reaches the same `CRYPTO_*` call),
+so the task's stated trigger is absent; authority differential, independent
+review and SEAL closure remain at BOUNDARY/SEAL.
+
+**Lifecycle.** The B37 retained cross-mechanism obligation for
+`asn1::text::OwnedBuf::empty` is **closed** at the type level (author evidence,
+not independently checked). Consumer C2 ERR scope remains `ESTABLISHED`; full
+ERR mechanism remains `CONTRACTED`; NEO-ERR-3/4 remain retained obligations.
+Consumer `SAFE_COMPATIBLE` stays **0/33**. Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B38.json`](atlas-refresh/boundary-sweep-B38.json).
