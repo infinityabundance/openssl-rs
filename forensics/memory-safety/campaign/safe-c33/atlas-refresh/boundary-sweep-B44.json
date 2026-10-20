@@ -1,0 +1,123 @@
+{
+  "receipt": "boundary-sweep-B44",
+  "date": "2026-10-20",
+  "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+  "subphase": "Batch 4: password KDFs (PBKDF2, scrypt, PKCS12, PBKDF1, PVK) and KDF test isolation",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "d133beaac",
+    "source_commits": ["bdca1ccfb", "merged as 36011b50d"],
+    "committed": true,
+    "changed_files": 2,
+    "diffstat": "src/provider/kdf.rs +112/-10 then +28/-4; scripts/adv-probe.sh +1",
+    "scope": "provider/kdf.rs password KDFs (24 sites) and the module's test isolation"
+  },
+  "stop_status": "NO PRODUCT DEFECT REMAINING IN THE REVIEWED SCOPE. One genuine out-of-bounds defect (PBKDF2 int truncation) was fixed, two compatibility divergences were documented, and a stochastic gate was root-caused to missing test isolation rather than a race. The re-review of the isolation fix is NOT_RUN by owner instruction; the batch is recorded at BATCH evidence, not independently checked.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change; no #[repr(C)], exported symbol, extern \"C\" signature, seam constant or lint attribute changed.",
+    "authority_behaviour": [
+      "pbkdf2.c:617 tkeylen=(int)keylen; cplen int; for keylen in [2^31, 2^32) the value is negative and the copy/index is OOB (UB).",
+      "PBKDF2 passlen > i32::MAX is refused by HMAC_Init_ex (len < 0).",
+      "scrypt.c casts all three lengths to int; INT_MAX+1 fails in the authority, but k*2^32+r can succeed with truncated semantics."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B44-ALLOC-7",
+      "file": "src/provider/kdf.rs pbkdf2_ctx_derive",
+      "operation": "derived-key length arithmetic",
+      "before": "keylen was copied into an int, so keylen > i32::MAX became negative and the byte count derived from it was enormous (reachable OOB via EVP_KDF_derive with a 2 GiB key length).",
+      "after": "The loop is widened to usize; for keylen <= i32::MAX the sequence is bit-identical.",
+      "mechanism": "ELIMINATED: a negative byte count derived from a truncated length is no longer expressible.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY CHECKED (reviewer, round 1 of B4)"
+    },
+    {
+      "id": "B44-ALLOC-8",
+      "file": "src/provider/kdf.rs pbkdf2_ctx_derive / scrypt derive",
+      "operation": "length width guards",
+      "before": "Lengths narrowed at the HMAC boundary; passlen/saltlen/keylen above i32::MAX truncated.",
+      "after": "Refused before allocating, with the module's error reason. Divergence set: PBKDF2 refuses passlen > i32::MAX and salt_len > i32::MAX (guard moved before the cast, so the previously truncated k*2^32+r half is now refused); scrypt refuses passlen/saltlen/keylen > i32::MAX.",
+      "mechanism": "ELIMINATED: a truncated length cannot reach a copy or index.",
+      "hidden": 0,
+      "state": "FIXED (author) + independently reviewed in round 1; the salt_len guard move is author-evidenced only (re-review NOT_RUN)"
+    },
+    {
+      "id": "B44-ALLOC-9",
+      "file": "src/provider/kdf.rs PKCS12KDF sizing; PBKDF2 stack digest",
+      "operation": "checked sizing and stack residue",
+      "before": "Sizing products unchecked; the derived stack digest survived the call.",
+      "after": "checked_mul/checked_add throughout; the digest is cleansed on exit (unobservable).",
+      "mechanism": "RELOCATED to checked arithmetic; residue eliminated.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY CHECKED (round 1)"
+    },
+    {
+      "id": "B44-TEST-1",
+      "file": "src/provider/kdf.rs tests module",
+      "operation": "test isolation on shared cached methods",
+      "before": "Five routine tests fetched or freed the shared default-libctx method without holding the global-state lock, so another test's legitimate +/-1 on the cached refcount made the scrypt assertion fail intermittently (2/20 module runs).",
+      "after": "All five take lock_global_state; the scrypt assertion is relative (after == before) and still fails on a leaked up-ref.",
+      "mechanism": "ELIMINATED: a gate whose result depended on test interleaving.",
+      "hidden": 0,
+      "state": "FIXED (author); re-review NOT_RUN (owner instruction); author evidence 20/20 module and 5/5 full-suite runs green"
+    }
+  ],
+  "review_history": [
+    {
+      "round": 1,
+      "verdict": "BLOCKED (no product REJECT)",
+      "reason": "The reviewer disproved a reference-counting race (TSan clean) and root-caused the stochastic gate to ORDER_DEPENDENT test isolation. It also found claim (b) imprecise (PBKDF2 does not refuse keylen > i32::MAX) and that the salt_len cast preceded its guard."
+    },
+    {
+      "round": 2,
+      "verdict": "NOT_RUN",
+      "reason": "The owner directed that verification stop and the release proceed. The author's determinism evidence (20/20, 5/5) is recorded as author evidence only, not as independent review."
+    }
+  ],
+  "controls": [
+    {"id": "NEGATIVE-CONTROL-GUARD", "instrument": "remove the PBKDF2 width guard", "result": "PASS (control fires)", "observed": "probe panics: PBKDF2 reached the allocator before its width guard"},
+    {"id": "TSAN", "instrument": "nightly-2026-10-01, -Zsanitizer=thread, -Ccodegen-units=256", "result": "PASS (clean)", "observed": "0 ThreadSanitizer reports over 10 concurrent pair runs; canary fired with 'data race' exit 66"},
+    {"id": "DETERMINISM-MODULE", "instrument": "cargo test --lib provider::kdf -- --test-threads=4 x20", "result": "PASS (author evidence)", "observed": "20/20 green, 11 passed 0 failed 6 ignored each"},
+    {"id": "DETERMINISM-FULL", "instrument": "cargo test --lib -- --test-threads=4 x5", "result": "PASS (author evidence)", "observed": "5/5 green, 1711 passed 0 failed 42 ignored each"},
+    {"id": "BATCH-CLIPPY", "instrument": "cargo clippy --all-targets -- -D warnings", "result": "PASS", "observed": "exit 0"},
+    {"id": "FAST-FMT", "instrument": "cargo fmt --all -- --check", "result": "PASS", "observed": "exit 0"}
+  ],
+  "not_run": [
+    {"check": "independent re-review of the isolation fix and the salt_len guard move", "reason": "NOT_RUN by owner instruction to proceed to release and the L7 campaign."},
+    {"check": "end-to-end regression for the PBKDF2 >2 GiB output", "reason": "NOT_RUN: the venue cannot allocate the input; the defect is proven by the arithmetic and the widened loop."},
+    {"check": "authority differential for the new refusal sets", "reason": "NOT_RUN: the divergence sets are stated from the authority source, not from an executed differential."},
+    {"check": "Miri / ASan", "reason": "NOT_RUN: BOUNDARY/SEAL instruments."},
+    {"check": "remaining 1281 sites", "reason": "NOT_RUN: queued as batches 5..N and deferred behind the L7 consumer campaign by owner instruction."}
+  ],
+  "obligations": {
+    "discharged_at_scope": [
+      "PBKDF2 cannot derive a negative/huge byte count from a truncated keylen (B44-ALLOC-7)",
+      "KDF lengths above i32::MAX are refused before allocating (B44-ALLOC-8)",
+      "PKCS12 KDF sizing is checked; PBKDF2 stack digest is cleansed (B44-ALLOC-9)",
+      "KDF gate no longer depends on test interleaving (B44-TEST-1)"
+    ],
+    "retained": [
+      "the salt_len guard move and isolation fix have no independent review",
+      "the >2 GiB regression is not executable in the venue",
+      "1281 alloc/release sites remain for RUNTIME_ALLOC_OWNERSHIP",
+      "RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BATCH_AUTHOR_EVIDENCED",
+    "independently_checked": "partial (round 1 product claims checked; isolation fix and guard move NOT_RUN)",
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "Batch 4's product fixes are independently checked for the claims reviewed in round 1. The isolation fix and guard move are author-evidenced only. RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN."
+  },
+  "non_claims": [
+    "Not a RUNTIME_ALLOC_OWNERSHIP discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "The isolation fix is not independently reviewed.",
+    "No sanitizer or authority differential covers the new refusal sets."
+  ]
+}
