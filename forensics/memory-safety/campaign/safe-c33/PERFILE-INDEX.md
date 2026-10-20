@@ -6693,3 +6693,94 @@ ordinary position.** `src/runtime/bio/bss_log.rs`. **Next eight.**
 `src/runtime/bio/bss_sock.rs`, `src/runtime/bio/comp.rs`,
 `src/runtime/bio/core_bio.rs`, `src/runtime/bio/dump.rs`,
 `src/runtime/bio/legacy_host.rs`, `src/runtime/bio/owned.rs`.
+
+## M74 (mechanism) — per-file contract sweep (syslog/null/socket BIOs, COMP context, core BIO, dump, legacy host helpers and the BIO owned seam)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M74.json`](atlas-refresh/mechanism-sweep-M74.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`09214fed6` (M73 merge). Four findings were repaired: one callback-state fault
+in `COMP_CTX_new`'s refused-`init` arm, two socket compatibility defects in the
+retry classifier and the NULL-output read arm, and one offset-formatting defect
+in `BIO_dump`. Three focused tests were added (one per repaired file). Layouts,
+exported symbols, signatures, allocation sizes and `FILE` values are unchanged;
+the shared `owned.rs` seam was audited but not modified, so OB-1/OB-3 evidence
+bound to it remains valid.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/runtime/bio/bss_log.rs` | method table, `slg_new`/`slg_free`, prefix mapping and strip, NUL-terminated `OwnedStr` copy, `slg_ctrl` SET, `slg_puts` length | no defect |
+| `src/runtime/bio/bss_null.rs` | compiled-in method, read/write/puts/gets, the `1`/`0` control split, `strlen` guard | no defect |
+| `src/runtime/bio/bss_sock.rs` | descriptor helpers, retry classifier, `sock_new`/`sock_free`, `BssSockData` `CtxDestroy`, read/write flags, every control arm, puts | 2 medium-severity compatibility repairs (M74-D2, M74-D3) |
+| `src/runtime/bio/comp.rs` | three NULL factories, six NULL `COMP_METHOD` factories, `CompMethod`/`CompCtx` layouts, `CtxDestroy`, `COMP_CTX_new`/free, compress/expand totals | 1 high-severity callback-state repair (M74-D1) |
+| `src/runtime/bio/core_bio.rs` | `OsslCoreBio` layout and `CtxDestroy`, `core_bio_new` `RawCtx` window, refcount up/down, both constructors' ownership split, eleven forwards | no defect |
+| `src/runtime/bio/dump.rs` | `BIO_dump_indent_cb` row/scratch arithmetic, callback abort, `write_bio`/`write_fp`, `BIO_hex_string`, offset formatting | 1 medium-severity output-contract repair (M74-D4) |
+| `src/runtime/bio/legacy_host.rs` | `BIO_lookup` wrappers, AF/length checks, `ERR_add_error_data` growth, NULL tolerance, libc `gethostbyname` | no defect |
+| `src/runtime/bio/owned.rs` | `CtxDestroy` unsafe trait, `OwnedCtx`/`RawCtx` states, `assume_init`, `OwnedBlock::take`, drop probes and controls | no defect; shared mechanism untouched |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M74-D1 | `src/runtime/bio/comp.rs:271-301` | high | method callback run on a partially initialised context | `COMP_CTX_new` allocated an `OwnedCtx` and ran `meth->init`; when `init` returned 0 the handle dropped, so `destroy_body` ran `meth->finish`. The authority's failure arm is a bare `OPENSSL_free(ctx)`, never `COMP_CTX_free`, so `finish` is never called for a refused `init`; a conforming method may rely on `init` having built the state `finish` releases. The constructor now allocates a `RawCtx`, writes `meth`, and only calls `assume_init` after `init` succeeds; the refusal drops the block alone. |
+| M74-D2 | `src/runtime/bio/bss_sock.rs:193-207` | medium | wrong retry classification of `0` and the other negatives | The port classified only `-1` through `errno` and answered `((i << 24) >> 31) & 1` for negatives, but the authority's `BIO_sock_should_retry` consults `errno` for **both `0` and `-1`** and answers 0 for every other value. A zero-length read/write therefore consults a possibly stale retryable `errno` in the authority, and `-2`/`-5` are never retryable; the port had the opposite answer. The body now matches the authority exactly. |
+| M74-D3 | `src/runtime/bio/bss_sock.rs:283-318` | medium | NULL-output read arm consumed/peeked and zero-length read skipped EOF | For a NULL `out`, the authority's `sock_read` answers 0 without reading the socket and without clearing retry flags; the port peeked one byte and reported it, and it returned early for `outl == 0`, skipping the authority's `IN_EOF` flag. The arm now only reads when `out` is non-NULL, clears the retry flags at the authority's point, and lets a zero-length read reach the syscall. |
+| M74-D4 | `src/runtime/bio/dump.rs:86-94,318-334` | medium | row offsets above 64 KiB truncated to four hex digits | `BIO_snprintf(..., "%04x - ", i * dump_width)` is a **minimum** width; the port wrote a fixed four-digit field, so rows at offsets `>= 0x10000` printed wrapped offsets (e.g. `0000` for `10000`). The formatter now emits at least four digits and however many the value needs, bounded by the same scratch checks. |
+
+All four preserve the authority's conforming behaviour. M74-D1 removes a
+callback invocation the authority never makes; M74-D2/D3/D4 restore exact
+authority observables.
+
+**Unsafe accounting.** Eliminated: the unconditional safe-validation claim on
+`COMP_CTX_new`'s failure path (the false premise that a zeroed, `meth`-set block
+was ready for `destroy_body` *before* `init` succeeded). Relocated: the
+allocation/initialisation split now uses the existing `RawCtx`/`assume_init`
+contract, exactly as `bf_lbuf` does. New production unsafe operation: one call
+to the existing `RawCtx::assume_init` at `comp.rs:299`, after every field is
+initialised and `init` succeeded; it is locally discharged. Removed: none.
+Hidden: **0**. Contracts reused: OB-1 `OwnedBlock`, OB-3
+`OwnedCtx`/`RawCtx`/`CtxDestroy` (including the zero-state sweep), OB-4 member
+slots, the B1/B2/B6-B22 BIO control/read/write/callback contracts, RC-1
+`guard_ffi`/`raise_site`, and the `CRYPTO_*` allocator seam.
+
+**Gates observed (final worktree).** FAST `cargo fmt --all -- --check` clean;
+focused `cargo test --lib -- --test-threads=4` for `comp_api_tests` **4 passed /
+0 failed**, `bio::dump::tests` **1 passed / 0 failed**, `bio::bss_sock::tests`
+**1 passed / 0 failed**. BATCH `cargo clippy --all-targets -- -D warnings`
+clean; full library **1687 passed / 0 failed / 27 ignored** serially (242.66 s)
+and with `--test-threads=4` (106.30 s). Focused differential: a fresh
+`cargo build --lib` staticlib and the pinned authority were driven by the same C
+probe; all **15 observations matched** (6 retry classifications, 5 dump
+observations including `has10000=1`, 2 socket-read observations, and the
+refused-`init` `finish` count). The candidate was the current worktree, not the
+stale `artifacts/phase2` shell.
+
+**Evidence reused / invalidated.** `owned.rs` is unchanged, so OB-1/OB-3
+evidence and every dependent BIO receipt remain bound to their existing source.
+The comp repair uses the already-discharged `RawCtx`/`assume_init` transition;
+it does not change `OwnedCtx`'s `Drop`, `CtxDestroy`'s obligations, any layout,
+or any allocator coordinate. The `bss_sock` and `dump` changes are inside their
+own translation units. No shared mechanism's evidence is invalidated.
+
+**NOT_RUN.** ASan (the comp change moves an existing release between two
+already-audited owners and adds no new extent or pointer arithmetic; the socket
+and dump changes are scalar/format logic); Miri/Loom (no aliasing or
+concurrency change); allocator-failure injection specifically on the
+`RawCtx::zalloc` refusal arm of `COMP_CTX_new`; dependency-graph regeneration;
+the Phase 4 court harnesses (`RT-BIO`, `RT-BIO-SOCK`, `RT-BIO-COMP`) and Phase 2
+ABI courts, for which the distribution shell would need a rebuild from the final
+source; FRF and SEAL; constant-time (no secret-dependent flow claim).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. M74-D1 is a callback-state fault reachable through a
+conforming method and was repaired before the BATCH run; the BATCH evidence is
+the local gate, not a promotion.
+
+**Queue.** `REMAINING-AUDIT.txt` **119**, `AUDITED-FILES.txt` **644**. **Next
+ordinary position.** `src/runtime/bio/print_engine.rs`. **Next eight.**
+`src/runtime/bio/print_engine.rs`, `src/runtime/bio/print.rs`,
+`src/runtime/bio/retry.rs`, `src/runtime/bio/sys.rs`,
+`src/runtime/buffer.rs`, `src/runtime/conf/init_settings.rs`,
+`src/runtime/confmod/asn1.rs`, `src/runtime/conf/modparse.rs`.
