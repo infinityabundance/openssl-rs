@@ -3,8 +3,9 @@
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-20",
   "branch": "integrate/safe-c33",
-  "source_head": "1ae5505908e09fca470294d5a75cd124fadcb1de",
-  "source_head_subject": "Merge stage/p25/m89: per-file audit queue complete",
+  "source_head": "98aa601cd594ca70f7be669d656b6a179be6a9f3",
+  "source_head_subject": "Merge stage/p25/b30: census refresh and campaign status",
+  "source_head_note": "Rebound at the B31 bookkeeping batch; git diff 1ae550590..98aa601cd shows no src/ change. The pinned census remains c09eef8b.",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -19,15 +20,16 @@
     "post_census_delta": {
       "count": 9,
       "TEST_ONLY": 6,
-      "PARTIAL": 3,
+      "BOUNDARY_COVERED": 3,
+      "PARTIAL": 0,
       "ZERO_UNSAFE": 0,
-      "BOUNDARY_COVERED": 0,
-      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json"
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json",
+      "note": "The three production helpers are BOUNDARY_COVERED by the cited shared-boundary receipts (FreeOnDrop/OwnedCtx, OB-4 CStrSlot, SeamFile/B-ALLOC-SEAM). This is classification by receipt, not a census-registry predicate and not SAFETY_DISCHARGED."
     },
     "combined_partition": {
       "ZERO_UNSAFE": 92,
-      "BOUNDARY_COVERED": 15,
-      "PARTIAL": 764,
+      "BOUNDARY_COVERED": 18,
+      "PARTIAL": 761,
       "TEST_ONLY": 6,
       "total": 877
     },
@@ -83,46 +85,52 @@
       },
       {
         "path": "src/runtime/foreign.rs",
-        "status": "PARTIAL",
+        "status": "BOUNDARY_COVERED",
         "production_sites": 19,
+        "covered_sites": 19,
         "test_only_operations": 0,
         "boundaries": ["B-DESTRUCTOR", "B-OWNER-ADOPT"],
         "boundary_receipts": [
-          "DESTRUCTOR-CONTRACTS.md (FreeOnDrop)",
-          "OWNER-DUPLICATES.md section 5 (shared OwnedCtx)",
+          "DESTRUCTOR-CONTRACTS.md section 1 (FreeOnDrop trait contract)",
+          "DESTRUCTOR-CONTRACTS.md section 4 (FreeOnDrop impls, EST 7)",
+          "DESTRUCTOR-CONTRACTS.md section 5 (impl<T: FreeOnDrop> Drop for OwnedCtx)",
+          "OWNER-DUPLICATES.md section 5 (shared OwnedCtx) and section 9.1 (adoption contract)",
+          "PROGRESS.md subphase 47 (STOP-2: new made unsafe fn with full contract)",
           "PROGRESS.md subphase 89 (six statem copies moved to runtime::foreign)",
           "atlas-refresh/mechanism-sweep-M89.json"
         ],
         "source_commit": "107d0d503",
-        "note": "5 of 19 sites are mechanically B-DESTRUCTOR; the unsafe-trait declaration, its method declaration and OwnedCtx::new are at the same shared-owner boundary but have no census registry predicate. Retained PARTIAL, not discharged."
+        "note": "All 19 sites are covered. 5 unsafe FreeOnDrop impls are mechanically B-DESTRUCTOR; the trait/method declarations, the five impl bodies, the generic Drop body and unsafe fn OwnedCtx::new are the same shared boundary and are covered by the cited receipts. The census registry has no predicate for them; a full regeneration must encode this boundary."
       },
       {
         "path": "src/runtime/mem_coords.rs",
-        "status": "PARTIAL",
+        "status": "BOUNDARY_COVERED",
         "production_sites": 1,
+        "covered_sites": 1,
         "test_only_operations": 1,
         "boundaries": ["B-ALLOC-SEAM"],
         "boundary_receipts": [
-          "PROGRESS.md subphase 70 (static lifetime for allocator file coordinates)",
+          "PROGRESS.md subphase 70 (static lifetime for allocator file coordinates; adversarial review PASS)",
           "OWNER-DUPLICATES.md (OwnedBuf/OwnedStr coordinate)",
           "atlas-refresh/mechanism-sweep-M89.json"
         ],
         "source_commit": "4307d47fc",
-        "note": "The single production site is the contracted unsafe fn from_static_ptr; the line-exact B-ALLOC-SEAM worklist predates this file. Retained PARTIAL, not discharged."
+        "note": "The single production site is the contracted unsafe const fn from_static_ptr, covered by the SeamFile/B-ALLOC-SEAM receipt. The pinned line-exact worklist predates this file; a full regeneration must add it."
       },
       {
         "path": "src/runtime/member_slot.rs",
-        "status": "PARTIAL",
+        "status": "BOUNDARY_COVERED",
         "production_sites": 4,
+        "covered_sites": 4,
         "test_only_operations": 22,
         "boundaries": ["OB-4 member-buffer boundary"],
         "boundary_receipts": [
-          "MEMBER-BUFFER-MODEL.md (CStrSlot)",
-          "PROGRESS.md subphase 89 (OB-4b member-slot unification + OwnedCStr)",
+          "MEMBER-BUFFER-MODEL.md section 7 (CStrSlot invariant, clear/store token, of/assume_empty/store_raw contracts)",
+          "PROGRESS.md subphase 89 (OB-4b member-slot unification + OwnedCStr; Miri 7/7 Stacked and Tree Borrows)",
           "atlas-refresh/mechanism-sweep-M89.json"
         ],
         "source_commit": "107d0d503",
-        "note": "All 4 production sites are the slot proof boundaries (of, clear, assume_empty, store_raw). The seven-entry census boundary registry has no OB-4 predicate. Retained PARTIAL, not discharged."
+        "note": "All 4 production sites are the slot proof boundaries (of, clear, assume_empty, store_raw) and are covered by the OB-4 receipt. The census registry has no OB-4 predicate; a full regeneration must encode this boundary."
       }
     ]
   },
@@ -131,8 +139,8 @@
     "audited": 761,
     "remaining": 0,
     "remaining_list": "forensics/memory-safety/campaign/safe-c33/REMAINING-AUDIT.txt (empty)",
-    "audited_files_lines": 763,
-    "audited_files_note": "761 PARTIAL files plus src/bn/recp.rs and src/runtime/thread.rs, which are BOUNDARY_COVERED files that also received boundary receipts",
+    "audited_files_lines": 766,
+    "audited_files_note": "761 PARTIAL files plus five BOUNDARY_COVERED files that also received boundary receipts: src/bn/recp.rs (B12), src/runtime/thread.rs (B11), and the three post-census helpers src/runtime/foreign.rs, src/runtime/mem_coords.rs and src/runtime/member_slot.rs",
     "completion_is_not_discharge": true
   },
   "mechanism_discharges": [
@@ -262,11 +270,13 @@
       ]
     },
     "this_batch": {
+      "batch": "B31 bookkeeping (post-census boundary-coverage reclassification)",
       "rust_source_changed": false,
       "cargo_fmt": "NOT_RUN - docs/JSON only, no Rust source changed",
       "cargo_clippy": "NOT_RUN - docs/JSON only, no Rust source changed",
       "full_library_suite": "NOT_RUN - docs/JSON only; the M89 result above is reused as prior evidence",
-      "json_validation": "python3 -m json.tool on post-census-delta.json and CAMPAIGN-STATUS.json"
+      "json_validation": "python3 -m json.tool on post-census-delta.json and CAMPAIGN-STATUS.json",
+      "partition_recomputed": "92 ZERO_UNSAFE + 18 BOUNDARY_COVERED + 761 PARTIAL + 6 TEST_ONLY = 877; 761/761 PARTIAL audited; 0 remaining"
     }
   },
   "consumers": {
@@ -289,16 +299,16 @@
   "remaining_obligations": [
     "Independent review and adjudication of the per-file and boundary receipts; no record claims INDEPENDENTLY_CHECKED.",
     "SEAL dependency-closure evidence for any consumer family.",
-    "Census-bound evidence refresh: the pinned census is c09eef8b (868 files); the nine post-census files are classified by a delta at 1ae550590, not by a full regeneration. A full regeneration is deferred to a SEAL point.",
+    "Census-bound evidence refresh: the pinned census is c09eef8b (868 files); the nine post-census files are classified by a delta rebound at 98aa601cd (no src/ change since 1ae550590), not by a full regeneration. A full regeneration, including explicit predicates for the OB-4 and FreeOnDrop/unsafe-trait boundaries, is deferred to a SEAL point.",
     "Generator persistence: ATTRIBUTION.md is generated by unsafe_attribution.py; the post-census delta section is supplementary and would be overwritten by a full regeneration. Fold the delta into the generator, or re-apply it, before the next SEAL regeneration.",
     "Downstream consumer courts: deepen and replay L7 evidence for the eight L7 families and raise the 25 L4-only families to meaningful L7 evidence.",
-    "Boundary-registry coverage gaps: OB-4 member-slot sites and unsafe-trait declarations have no per-site census predicate, so foreign.rs and member_slot.rs remain PARTIAL.",
+    "Census-registry encoding gap (not an audit gap): the pinned seven-predicate registry has no per-site predicate for the OB-4 member-slot boundary or the FreeOnDrop/unsafe-trait/OwnedCtx::new boundary. The delta classifies foreign.rs, member_slot.rs and mem_coords.rs BOUNDARY_COVERED by receipt; a full census regeneration must encode these boundaries explicitly at the SEAL gate.",
     "Phase-25 full forensic regeneration, FRF fuzzing, ASan/Miri/Loom/TSan at the applicable BOUNDARY/SEAL gates, and dudect/ctgrind for any constant-time claim."
   ],
   "non_claims": [
     "No consumer family is SAFE_COMPATIBLE; consumers remain 0/33.",
     "No file-level DISCHARGED claim is made; the 761/761 per-file audit is audit completion, not discharge.",
     "The four mechanism discharges and three scoped boundary discharges do not sum into any consumer-level graduation.",
-    "The nine-file delta is classification, not a re-pin of the census and not a new safety claim."
+    "The nine-file delta is classification (6 TEST_ONLY + 3 BOUNDARY_COVERED by shared-boundary receipt), not a re-pin of the census and not a new safety claim."
   ]
 }

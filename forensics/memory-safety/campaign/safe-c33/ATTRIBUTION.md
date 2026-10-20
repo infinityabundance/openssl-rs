@@ -16,7 +16,7 @@ Source: `forensics/memory-safety/campaign/safe-c33/atlas-refresh/unsafe-census.j
 | files BOUNDARY_COVERED | 15 |
 | files PARTIAL | 761 |
 | post-census files classified (delta) | 9 |
-| current source files at HEAD `1ae550590` | 877 |
+| current source files at HEAD `98aa601cd` | 877 |
 | **unaccounted files at current HEAD** | **0** |
 | **unattributed files** | **761** |
 | worklist rows | 1,357 |
@@ -27,9 +27,9 @@ Boundary counts are exclusive: the first matching predicate in the fixed precede
 
 The census counts remain bound to `c09eef8b`. The nine post-census files are
 classified separately in `atlas-refresh/post-census-delta.json`: 6 test-only
-models/probes and 3 `PARTIAL` production helpers. The combined current-tree
-partition is 92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6
-test-only = 877 files, 0 unaccounted.
+models/probes and 3 `BOUNDARY_COVERED` production helpers. The combined
+current-tree partition is 92 `ZERO_UNSAFE` + 18 `BOUNDARY_COVERED` + 761
+`PARTIAL` + 6 test-only = 877 files, 0 unaccounted.
 
 ## Sites by boundary
 
@@ -170,9 +170,11 @@ Predicate: `kind in {EXTERN_C_FN_DEF, NONALLOC_FFI_CALL}`
 ## Post-census delta (877-file reconciliation, 2026-10-20)
 
 The census above is pinned to `c09eef8b` (868 files). Nine `src/**/*.rs` files
-exist at HEAD `1ae550590` that did not exist in that commit. They are classified
+exist at HEAD `98aa601cd` that did not exist in that commit. They are classified
 in `atlas-refresh/post-census-delta.json`, produced with the same
 `unsafe_census.py` scanner and `unsafe_attribution.py` boundary predicates.
+The delta is classification by shared-boundary receipt where the pinned census
+registry has no lexical predicate; it is not a re-pin and not `SAFETY_DISCHARGED`.
 
 | file | class | production sites | boundary / receipt |
 |---|---|---:|---|
@@ -182,20 +184,25 @@ in `atlas-refresh/post-census-delta.json`, produced with the same
 | `src/runtime/owned_buf_model.rs` | TEST_ONLY | 0 (12) | `cfg(test)` `#[path]`; OB-1 model |
 | `src/runtime/owned_str_model.rs` | TEST_ONLY | 0 (7) | `cfg(test)` `#[path]`; OB-2 model |
 | `src/runtime/release_probe.rs` | TEST_ONLY | 0 (0) | `cfg(test)`; release-arm probes |
-| `src/runtime/foreign.rs` | PARTIAL | 19 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md`, `OWNER-DUPLICATES.md` section 5, subphase 89 |
-| `src/runtime/mem_coords.rs` | PARTIAL | 1 | `B-ALLOC-SEAM`; subphase 70 |
-| `src/runtime/member_slot.rs` | PARTIAL | 4 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md`, subphase 89 |
+| `src/runtime/foreign.rs` | BOUNDARY_COVERED | 19 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md` sections 1/4/5, `OWNER-DUPLICATES.md` section 5 and section 9.1, `PROGRESS.md` subphases 47/89 |
+| `src/runtime/mem_coords.rs` | BOUNDARY_COVERED | 1 | `B-ALLOC-SEAM`; `SeamFile` receipt, `PROGRESS.md` subphase 70 |
+| `src/runtime/member_slot.rs` | BOUNDARY_COVERED | 4 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md` section 7, `PROGRESS.md` subphase 89 |
 
-Combined partition at HEAD `1ae550590`: **92** `ZERO_UNSAFE` + **15**
-`BOUNDARY_COVERED` + **764** `PARTIAL` + **6** test-only = **877**; unaccounted
+Combined partition at HEAD `98aa601cd`: **92** `ZERO_UNSAFE` + **18**
+`BOUNDARY_COVERED` + **761** `PARTIAL` + **6** test-only = **877**; unaccounted
 **0**.
 
 The six test-only files are `cfg(test)`-only models/probes and are not
-production audit surface. The three production helpers remain `PARTIAL`, not
-`BOUNDARY_COVERED`: the census boundary registry has no predicate for an
-`unsafe trait` declaration, for `OwnedCtx::new`, or for the OB-4 member-slot
-proof boundaries. Their sites carry explicit `# Safety` contracts in the shared
-boundary receipts, but this table is classification, not a per-site discharge.
+production audit surface. The three production helpers are `BOUNDARY_COVERED`:
+every production site is covered by a declared shared-boundary receipt, even
+though the pinned census boundary registry has no lexical predicate for an
+`unsafe trait` declaration, `OwnedCtx::new`, or the OB-4 member-slot proof
+boundaries. The per-site mapping (trait and method declarations, the five
+`FreeOnDrop` impl bodies, the generic `Drop`, `OwnedCtx::new`, `of`, `clear`,
+`assume_empty`, `store_raw`, and `from_static_ptr`) is recorded in
+`atlas-refresh/post-census-delta.json`. The receipts state the validity
+contracts; this table is still classification, not a per-site discharge, and a
+full census regeneration must encode these boundaries explicitly.
 
 This delta does not re-pin the census and does not invalidate the 761 per-file
 audit records bound to `c09eef8b`.

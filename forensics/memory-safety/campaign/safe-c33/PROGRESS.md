@@ -32,16 +32,16 @@ generator is measurement-only and claims no discharge.
   `UI-1`/`UI-2`/`UI-3` (`atlas-refresh/boundary-sweep-B29.json`; `UI-4` remains
   `CONTRACTED`).
 - **Per-file audit:** **761/761 `PARTIAL` files audited, 0 remaining**
-  (`REMAINING-AUDIT.txt` is empty; `AUDITED-FILES.txt` has 763 lines = 761
-  `PARTIAL` plus two `BOUNDARY_COVERED` files that also received boundary
+  (`REMAINING-AUDIT.txt` is empty; `AUDITED-FILES.txt` has 766 lines = 761
+  `PARTIAL` plus five `BOUNDARY_COVERED` files that also received boundary
   receipts). Audit completion is not discharge.
 - **Census reconciliation:** the pinned census is **868** files at `c09eef8b`
   (92 `ZERO_UNSAFE`, 15 `BOUNDARY_COVERED`, 761 `PARTIAL`); the current tree is
   **877**. The nine post-census files are classified in
   `atlas-refresh/post-census-delta.json`: **6 test-only** models/probes and
-  **3 production helpers** at existing shared boundaries. Combined partition:
-  **92 + 15 + 764 + 6 = 877**, **0 unaccounted**. The delta does not re-pin the
-  census and does not invalidate the audit records.
+  **3 `BOUNDARY_COVERED` production helpers** at existing shared boundaries.
+  Combined partition: **92 + 18 + 761 + 6 = 877**, **0 unaccounted**. The delta
+  does not re-pin the census and does not invalidate the audit records.
 - **Tests and courts:** library **1702 passed / 0 failed / 31 ignored** (the
   ignored set is probes run separately by design). Phase 8 is **18/18 pass**
   with two accepted and witnessed divergences: `RT-CIPHER` `defltwrap.pad21`
@@ -49,7 +49,7 @@ generator is measurement-only and claims no discharge.
 - **Remaining:** independent review/adjudication, SEAL dependency closure,
   census-bound evidence refresh (full regeneration at a seal point) and the
   downstream consumer courts.
-- Whole tree at HEAD `1ae550590`: **877** `src/**/*.rs`. The call-site and seam
+- Whole tree at HEAD `98aa601cd`: **877** `src/**/*.rs`. The call-site and seam
   figures below are bound to the atlas measurement candidate `e48a1b519`
   (868 files) and are not re-derived by this bookkeeping batch.
 - Disjoint call-site classes: **700** production allocation calls in **240**
@@ -1499,7 +1499,7 @@ session can resume from Git + the receipt without reconstructing reasoning.
 ## Canonical next action — Safe-33 continuation
 
 **Branch:** `integrate/safe-c33`
-**Last observed HEAD:** `1ae550590` (M89; the 761-file per-file audit queue is complete).
+**Last observed HEAD:** `98aa601cd` (B30 merge plus the B31 bookkeeping batch; the 761-file per-file audit queue is complete).
 **Objective:** Advance memory safety for the 33 existing downstream consumers while preserving OpenSSL 3.6.4 compatibility.
 
 ### Resume procedure
@@ -1561,8 +1561,8 @@ file-level discharge. The next workstream is, in order:
 3. **Census-bound evidence refresh** at a SEAL point: full regeneration of the
    pinned `c09eef8b` census and re-binding of the audit records to the new
    candidate. The nine post-census files are already classified by
-   `atlas-refresh/post-census-delta.json` (6 test-only, 3 `PARTIAL` production
-   helpers), so the current tree has 0 unaccounted files.
+   `atlas-refresh/post-census-delta.json` (6 test-only, 3 `BOUNDARY_COVERED`
+   production helpers), so the current tree has 0 unaccounted files.
 4. **SEAL dependency closure**, and only then any `SAFE_COMPATIBLE` promotion.
 
 The file-level conversion queue remains empty; do not invent new conversion
