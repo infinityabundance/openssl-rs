@@ -1,11 +1,3 @@
-src/runtime/conf/sap.rs
-src/runtime/dir.rs
-src/runtime/dso_shared.rs
-src/runtime/err_state.rs
-src/runtime/ex_data.rs
-src/runtime/getenv.rs
-src/runtime/owned_buf.rs
-src/runtime/rcu.rs
 src/runtime/rdtsc.rs
 src/runtime/sparse_array.rs
 src/runtime/thread_arch.rs
