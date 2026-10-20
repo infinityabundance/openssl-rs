@@ -7318,3 +7318,70 @@ unsafe operations **7**. No consumer family becomes `SAFE_COMPATIBLE`.
 `src/ssl/ssl_stat.rs`, `src/ssl/ssl_txt.rs`,
 `src/ssl/statem/extensions_cust.rs`, `src/ssl/statem/extensions_srvr.rs`,
 `src/ssl/statem/statem_lib.rs`.
+
+## M81 (mechanism) — per-file contract sweep (SSL initialiser, ssl_conf driver, legacy RSA loaders, state/alert strings, session printers, custom extensions, TLS1.3 ServerHello extensions, version helpers)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M81.json`](atlas-refresh/mechanism-sweep-M81.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`4bc6c4813`. No source change: no code, `#[repr(C)]` layout, exported symbol,
+signature or allocation coordinate changed.
+
+**Files audited (8, none deferred).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ssl/ssl_init.rs` | `OPENSSL_init_ssl` option folding, `OPENSSL_init_crypto` delegation, `SSL_BASE: Once` base step, `SSL_COMP_get_compression_methods` global-registry call, caller `settings` contract | no defect; reuses the process-init contract and introduces no ownership boundary of its own (audited, not deferred) |
+| `src/ssl/ssl_mcnf.rs` | `ssl_do_config` refusal ladder, `SSL_CONF_CTX` ownership and single release, default-libctx save/restore on every arm, `(*s).ctx`/`(*s).method` reachability, command-loop counts | no defect; `finish_do_config` restores even when the switch never ran (NULL is a no-op) |
+| `src/ssl/ssl_rsa_legacy.rs` | `RSA_up_ref` → `EVP_PKEY_assign` transfer-on-success, every refusal releases exactly once, `_ASN1` decode/free, `_file` BIO ownership, password-callback forwarding | no defect; assignment failure keeps ownership with the caller as `EVP_PKEY_assign` documents |
+| `src/ssl/ssl_stat.rs` | NULL/live connection contract, `hand_state`/`statem_state` read, full four- and long-string tables, packed alert decode | no defect; all answers are process-lifetime statics |
+| `src/ssl/ssl_txt.rs` | session-printer transcript order, NULL session/BIO refusal, member-buffer readers (`psk_identity`, `ext_tick`), fixed-array length indexing, `_fp` BIO ownership | no defect; a corrupted length panics under `guard_ffi` rather than reading out of bounds |
+| `src/ssl/statem/extensions_cust.rs` | `CustomExtMethod` record (erased callback pointers, `Copy` table copy), `custom_ext_find`, refusal ladder order, `ctx->cert->custext` reachability, old-style wrapper divergence, no callback invocation | no defect; `ctx->cert` is non-NULL for every context this crate constructs |
+| `src/ssl/statem/extensions_srvr.rs` | ServerHello extension ordering, `WPACKET` sub-packet balances, X25519 keygen/encode/free paths, `s->pkey` transfer, HRR/KEM reductions | no defect; the ephemeral key is freed on every failure and owned by `SSL_free` on success |
+| `src/ssl/statem/statem_lib.rs` | `ssl_version_cmp`, TLS/DTLS version tables, `ssl_method_error` (security/options/SUITEB), `ssl_get_min_max_version` hole walk and out-pointer writes | no defect; a live `Ssl` carries non-NULL `method` and `cert` |
+
+**Init/callback-boundary decision.** `ssl_init.rs` was **not** deferred: its only
+unsafe operations are the process-global compression registry call and the
+delegation to `OPENSSL_init_crypto`, both covered by the existing runtime-init
+contract, with no new owner or state transition. `extensions_srvr.rs` invokes no
+application callback (it generates and stores a provider key), so it is not a
+callback edge; the custom-extension callbacks in `extensions_cust.rs` are stored
+but never invoked in this slice.
+
+**Defects.** None. No repair was made.
+
+**Contracts reused.** Process-init/RUN_ONCE contract (`ssl_init`); RC-1 refcount
+and `EVP_PKEY_assign` transfer-on-success (legacy RSA loaders); OB-1/OB-4 and the
+`Ssl::pkey` owned slot (`SSL_free` releases it once); OB-4 member-buffer readers
+for the session printers; the established `SSL_CTX->cert` non-NULL construction
+invariant; `guard_ffi`; `#[repr(C)]` layouts unchanged.
+
+**Secret-bearing buffers.** The legacy loaders move private keys without copying
+or changing their release path; the session printers print the master key/PSK as
+the authority does; the key-share constructor moves an ephemeral X25519 key into
+the connection's owned slot. No allocation, release coordinate or cleansing
+claim changed, and no constant-time property is asserted.
+
+**Gates observed (final worktree).** fmt and clippy clean; focused `ssl` filter
+**95 passed / 0 failed / 15 ignored** (one first-run isolation flake in
+`ssl_free_reentrancy_is_defined_noop`, which passed alone and on rerun). Five
+affected SSL member-buffer/member-slot adversarial probes each ran alone and
+passed: serverinfo refusal, serverinfo reentrancy, realloc refuse canary,
+reenter-observer canary, self-aliasing serverinfo. Full library **1697 passed /
+0 failed / 27 ignored** with `--test-threads=4` (98.63 s) and serially (261.36 s).
+
+**NOT_RUN.** Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency
+mechanism changed); dudect/ctgrind (no constant-time claim); custom-extension
+add/parse invocation courts (no pass is walked); TLS1.3 HRR/KEM key-share arms
+and `ssl_derive` (unbuilt reductions); full Phase-25 forensic regeneration;
+FRF/SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**; new unsafe assumptions: **0**;
+unsafe operations introduced/removed/relocated: **0/0/0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **62**, `AUDITED-FILES.txt` **701**.
+**Next ordinary position.** `src/ssl/statem/statem.rs`. **Next eight.**
+`src/ssl/statem/statem.rs`, `src/ssl/t1_enc.rs`, `src/ssl/t1_lib.rs`,
+`src/ssl/tls_depr.rs`, `src/store/store_meth.rs`, `src/ts/mod.rs`,
+`src/ts/ts_lib.rs`, `src/ts/ts_req_print.rs`.

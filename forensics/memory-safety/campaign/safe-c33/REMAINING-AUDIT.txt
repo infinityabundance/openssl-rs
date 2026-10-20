@@ -1,11 +1,3 @@
-src/ssl/ssl_init.rs
-src/ssl/ssl_mcnf.rs
-src/ssl/ssl_rsa_legacy.rs
-src/ssl/ssl_stat.rs
-src/ssl/ssl_txt.rs
-src/ssl/statem/extensions_cust.rs
-src/ssl/statem/extensions_srvr.rs
-src/ssl/statem/statem_lib.rs
 src/ssl/statem/statem.rs
 src/ssl/t1_enc.rs
 src/ssl/t1_lib.rs
