@@ -15,15 +15,19 @@ post-census delta — exactly as it appeared in the former cumulative
 > `INDEPENDENTLY_CHECKED` result. A file graduates only through the AGENTS.md §7
 > dependency-closure and independent-evidence gates.
 
-**Campaign progress: 9 of 761 PARTIAL files have full group records; the
-mechanism-contract sweeps M1–M31 name 225 files in their structured `files`
-arrays, and their union with the nine full records is 268 files. That leaves
-600 of the 868 census files unaudited (`PARTIAL`); 92 files are `ZERO_UNSAFE`
-and 15 are `BOUNDARY_COVERED`.** The 761 denominator is the `PARTIAL` file
-population in `ATTRIBUTION.md`; it is not a count of files that have graduated.
-The nine full records cover 6,252 production unsafe sites in 2,949 groups. The
-sweeps are obligation checks over the known owner/slot/member-buffer mechanisms,
-not the full `D###` enumeration.
+**Campaign progress: the 761-file PARTIAL audit queue is complete — 761/761
+`PARTIAL` files audited, `REMAINING-AUDIT.txt` empty, 0 remaining.** Nine files
+have full group records; the mechanism-contract sweeps M1–M89 and the boundary
+sweeps name the rest in their structured `files`/`boundaries` arrays. The nine
+post-census files absent from the pinned 868 census are classified in
+`atlas-refresh/post-census-delta.json`: **6 test-only** and **3 `PARTIAL`**
+production helpers. Combined partition: **92 `ZERO_UNSAFE` + 15
+`BOUNDARY_COVERED` + 764 `PARTIAL` + 6 test-only = 877**, 0 unaccounted. The
+761 denominator is the `PARTIAL` population in `ATTRIBUTION.md`; it is not a
+count of files that have graduated. The nine full records cover 6,252
+production unsafe sites in 2,949 groups. The sweeps are obligation checks over
+the known owner/slot/member-buffer mechanisms, not the full `D###` enumeration.
+Audit completion is not discharge.
 
 **Reconciliation note (2026-10-19).** A free-text `src/...rs` extraction over
 this file and every `atlas-refresh/*.json` returns 869 paths because
@@ -8354,14 +8358,18 @@ identical. All 92 `ZERO_UNSAFE` files have `production_sites = 0` and
 `attributed_sites == production_sites` and `unattributed_sites = 0`.
 
 **Unaccounted relative to the census (not the queue).** Nine files exist at
-HEAD but not in the pinned 868-file census commit: six are `cfg(test)`-only
-models/probes (`runtime/bio/owned_ctx_model.rs`, `runtime/bio/zero_state.rs`,
-`runtime/member_slot_model.rs`, `runtime/owned_buf_model.rs`,
-`runtime/owned_str_model.rs`, `runtime/release_probe.rs`) and three are
-production helpers at established shared boundaries (`runtime/foreign.rs`,
-`runtime/member_slot.rs`, `runtime/mem_coords.rs`). They are unclassified **with
-respect to the census** and require a census refresh plus attribution at the
-next BATCH/SEAL gate. No claim of full campaign closure is made.
+HEAD but not in the pinned 868-file census commit. All nine now have a
+classification row in `atlas-refresh/post-census-delta.json`: six are
+`cfg(test)`-only models/probes (`runtime/bio/owned_ctx_model.rs`,
+`runtime/bio/zero_state.rs`, `runtime/member_slot_model.rs`,
+`runtime/owned_buf_model.rs`, `runtime/owned_str_model.rs`,
+`runtime/release_probe.rs`) and three are `PARTIAL` production helpers at
+established shared boundaries (`runtime/foreign.rs` 19 production sites,
+`runtime/member_slot.rs` 4, `runtime/mem_coords.rs` 1). Combined partition:
+**92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6 test-only =
+877**, unaccounted **0**. This is a classification delta, not a re-pin: the
+per-file audit records stay bound to `c09eef8b`, and a full census regeneration
+remains a SEAL obligation. No claim of full campaign closure is made.
 
 **Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
 `cargo clippy --all-targets -- -D warnings` clean; focused
@@ -8383,9 +8391,54 @@ FRF and SEAL.
 `SAFE_COMPATIBLE`. Hidden obligations: **0**.
 
 The **761-file per-file audit queue is complete**. `REMAINING-AUDIT.txt` is
-empty and `AUDITED-FILES.txt` covers all 761 `PARTIAL` files. This does not
-complete the campaign: before any consumer family can be called
-`SAFE_COMPATIBLE` it still needs the refreshed census/attribution for the nine
-post-census files, SEAL dependency-closure evidence, independent review of these
-receipts, and the downstream consumer courts (deepened L7 evidence for curl,
-nginx, OpenSSH, HAProxy, Redis and the remaining build/link families).
+empty and `AUDITED-FILES.txt` covers all 761 `PARTIAL` files. The nine
+post-census files now have classification rows (`atlas-refresh/post-census-delta.json`:
+6 test-only, 3 `PARTIAL` production helpers), so the 877-file tree has 0
+unaccounted files. This does not complete the campaign: before any consumer
+family can be called `SAFE_COMPATIBLE` it still needs a full census
+regeneration/re-binding at a SEAL point, SEAL dependency-closure evidence,
+independent review of these receipts, and the downstream consumer courts
+(deepened L7 evidence for curl, haproxy, isync, monit, nginx, openssh,
+pure-ftpd and redis, plus the 25 L4-only families).
+
+## CENSUS DELTA — 877-file reconciliation (2026-10-20)
+
+**Source identity:** `integrate/safe-c33` at `1ae550590` (M89 merge). The
+pinned census remains `c09eef8b` (868 files, `src/` hash
+`dadc34c4…`); this section is a classification delta, not a re-pin.
+
+**Method.** The nine files present at HEAD but absent from `c09eef8b` were
+scanned with the campaign's own `unsafe_census.py` scanner and
+`unsafe_attribution.py` boundary predicates, importing both unmodified. The
+scanner's stated `#[path]` limitation was resolved explicitly for the three
+`cfg(test)` `#[path]` models, which it would otherwise have counted as
+production.
+
+| file | status | production sites | test-only operations | boundary / receipt |
+|---|---|---:|---:|---|
+| `src/runtime/bio/owned_ctx_model.rs` | TEST_ONLY | 0 | 7 | `cfg(test)` `#[path]`; OB-3 model (subphase 87) |
+| `src/runtime/bio/zero_state.rs` | TEST_ONLY | 0 | 2 | `cfg(test)`; OB-3 zero-state sweep (subphase 87) |
+| `src/runtime/member_slot_model.rs` | TEST_ONLY | 0 | 8 | `cfg(test)`; OB-4b model (subphase 89) |
+| `src/runtime/owned_buf_model.rs` | TEST_ONLY | 0 | 12 | `cfg(test)` `#[path]`; OB-1 model (subphase 85) |
+| `src/runtime/owned_str_model.rs` | TEST_ONLY | 0 | 7 | `cfg(test)` `#[path]`; OB-2 model (subphase 86) |
+| `src/runtime/release_probe.rs` | TEST_ONLY | 0 | 0 | `cfg(test)`; release-arm probes (subphases 85/87) |
+| `src/runtime/foreign.rs` | PARTIAL | 19 | 0 | `B-DESTRUCTOR` / `B-OWNER-ADOPT`; `DESTRUCTOR-CONTRACTS.md`, `OWNER-DUPLICATES.md` §5, subphase 89 |
+| `src/runtime/member_slot.rs` | PARTIAL | 4 | 22 | OB-4 member-buffer boundary; `MEMBER-BUFFER-MODEL.md`, subphase 89 |
+| `src/runtime/mem_coords.rs` | PARTIAL | 1 | 1 | `B-ALLOC-SEAM`; subphase 70 |
+
+**Partition.** 92 `ZERO_UNSAFE` + 15 `BOUNDARY_COVERED` + 764 `PARTIAL` + 6
+test-only = **877**; unaccounted **0**. The six test-only files are not
+production audit surface. The three production helpers remain `PARTIAL` because
+the seven-entry census boundary registry has no predicate for an `unsafe trait`
+declaration, `OwnedCtx::new`, or the OB-4 member-slot proof boundaries; their
+sites carry explicit `# Safety` contracts in the cited receipts, but that is
+contract coverage, not per-site discharge.
+
+**Evidence.** Read-only scanner run inside the court container
+(`docker/openssl-rs-court.sh exec python3`); no Rust source changed. Machine
+artifact: `atlas-refresh/post-census-delta.json`; campaign summary:
+`CAMPAIGN-STATUS.json`.
+
+**Not claimed.** No `SAFETY_DISCHARGED`, no file-level discharge, no
+`SAFE_COMPATIBLE`. A full census regeneration and re-binding of the 761 audit
+records remains a SEAL obligation.
