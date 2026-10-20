@@ -99,6 +99,10 @@ static ANY_SIZE: AtomicUsize = AtomicUsize::new(0);
 /// non-NULL release.
 static CLEANSED_ARMED: AtomicBool = AtomicBool::new(false);
 static CLEANSED_LEN: AtomicUsize = AtomicUsize::new(0);
+/// Byte offset into the released block where the cleansed-free check starts. Zero for the
+/// whole-block form; a positive value lets a probe inspect a secret member inside a larger
+/// structure whose leading bytes are legitimately non-zero (a pointer, an allocator header).
+static CLEANSED_OFFSET: AtomicUsize = AtomicUsize::new(0);
 
 /// One-shot realloc interception: refuse (or merely observe) the next `CRYPTO_realloc` of
 /// `REALLOC_SIZE` bytes. A refused request answers NULL without forwarding, so the incumbent block
@@ -307,11 +311,13 @@ unsafe extern "C" fn hook_free(p: *mut c_void, _file: *const c_char, _line: c_in
     let cleansed_armed = CLEANSED_ARMED.swap(false, Ordering::SeqCst);
     if !already {
         if cleansed_armed {
+            let offset = CLEANSED_OFFSET.load(Ordering::SeqCst);
             let len = CLEANSED_LEN.load(Ordering::SeqCst);
-            // SAFETY: the test armed this check with the length of the block it is about to
-            // release; `p` is that live block and its first `len` bytes are readable until the
-            // `free` below. Reading them here, before forwarding, is the whole probe.
-            let all_zero = unsafe { core::slice::from_raw_parts(p.cast::<u8>(), len) }
+            // SAFETY: the test armed this check with the offset and length of the range it is
+            // about to release; `p` is that live block and its first `offset + len` bytes are
+            // readable until the `free` below. Reading them here, before forwarding, is the whole
+            // probe.
+            let all_zero = unsafe { core::slice::from_raw_parts(p.cast::<u8>().add(offset), len) }
                 .iter()
                 .all(|&b| b == 0);
             with_state(|s| {
@@ -432,6 +438,22 @@ pub(crate) fn disarm_any() {
 /// The next non-NULL `CRYPTO_free` observed by the installed hook must release a block with at
 /// least `len` readable bytes. The hook reads those bytes before forwarding the release.
 pub(crate) unsafe fn arm_cleansed_free(len: usize) {
+    // SAFETY: forwarded to the range form with the whole-block offset.
+    unsafe { arm_cleansed_free_range(0, len) }
+}
+
+/// Arm a one-shot cleansed-free check of the `len` bytes starting at `offset` in the next
+/// forwarded non-NULL release.
+///
+/// This is for a secret member embedded in a larger structure: the bytes before `offset` may be a
+/// non-zero pointer or an allocator header and are not part of the obligation being checked.
+///
+/// # Safety
+///
+/// The next non-NULL `CRYPTO_free` observed by the installed hook must release a block with at
+/// least `offset + len` readable bytes. The hook reads that range before forwarding the release.
+pub(crate) unsafe fn arm_cleansed_free_range(offset: usize, len: usize) {
+    CLEANSED_OFFSET.store(offset, Ordering::SeqCst);
     CLEANSED_LEN.store(len, Ordering::SeqCst);
     with_state(|s| {
         s.cleansed_observed = false;
@@ -550,20 +572,21 @@ pub(crate) fn assert_no_double_free() {
 }
 
 /// Panic unless the armed cleansed-free check ran on a forwarded release and observed an all-zero
-/// prefix of the armed length.
-///
-/// The name states the defect being excluded: a block that was **not** cleansed before release.
-/// Both failure modes are hard failures, so a check that never ran cannot pass silently.
+/// range of the armed length. The name states the defect being excluded: a block that was **not**
+/// cleansed before release. Both failure modes are hard failures, so a check that never ran cannot
+/// pass silently.
 pub(crate) fn assert_not_cleansed() {
     let (observed, violation) = with_state(|s| (s.cleansed_observed, s.cleansed_violation));
     assert!(
         observed,
         "allocator probe: the armed cleansed-free check did not run on a forwarded release"
     );
+    let offset = CLEANSED_OFFSET.load(Ordering::SeqCst);
+    let len = CLEANSED_LEN.load(Ordering::SeqCst);
     assert!(
         !violation,
-        "allocator probe: the released block's first {} bytes were not all zero",
-        CLEANSED_LEN.load(Ordering::SeqCst)
+        "allocator probe: the released block's bytes [{offset}, {}) were not all zero",
+        offset + len
     );
 }
 

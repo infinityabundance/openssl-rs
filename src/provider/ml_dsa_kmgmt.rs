@@ -896,6 +896,15 @@ unsafe fn ml_dsa_gen_init(
             // The authority's failure path releases the block **alone** -- `OPENSSL_free(gctx)`, not
             // its `propq` member -- so the validated owner's destructor body must not run: the block
             // is given up and released at the authority's own site.
+            //
+            // A partially successful `set_params` may already have copied the keygen seed into
+            // `entropy` before the property-query allocation failed, so cleanse it first. The
+            // authority leaves it uncleansed; this failure-path cleansing is invisible through the
+            // API (AGENTS.md section 5). Release events are unchanged.
+            OPENSSL_cleanse(
+                (*gctx.as_ptr()).entropy.as_mut_ptr().cast(),
+                (*gctx.as_ptr()).entropy.len(),
+            );
             let p = gctx.into_raw();
             CRYPTO_free(p.cast(), FILE, LINE_GEN_FREE_GCTX);
             return ptr::null_mut();
@@ -1196,3 +1205,72 @@ make_ml_dsa_keymgmt_functions!(
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(MlDsaGenCtx => zero_state_sweep_ml_dsa_gen_ctx);
+
+/// Negative control for the `ml_dsa_gen_init` failure-path cleansing.
+///
+/// `ml_dsa_gen_set_params` copies the keygen seed first and then duplicates the
+/// property query. When that second allocation is refused, the authority frees the
+/// generation context **alone**; before this repair the freshly written secret seed
+/// stayed in the released block. The probe arms a refusal for the two-byte property
+/// string and a cleansed-free check over the `entropy` member before calling the
+/// initialiser, so the pre-fix code fails the check and the fixed code passes it.
+///
+/// Process-global allocator hook, so the test is ignored in the routine suite and
+/// runs alone in its own process.
+#[cfg(test)]
+mod adv_probe {
+    use super::*;
+    use crate::params::OSSL_PARAM_construct_utf8_string;
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_propq_allocation_cleanses_the_gen_entropy() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let mut seed = [0x5au8; ML_DSA_ENTROPY_LEN];
+        let mut propq = *b"x\0";
+        // SAFETY: `seed` is 32 readable bytes, `propq` is a NUL-terminated one-character string,
+        // and the two descriptors are a key-terminated array.
+        let params = unsafe {
+            [
+                OSSL_PARAM_construct_octet_string(
+                    c"seed".as_ptr(),
+                    seed.as_mut_ptr().cast(),
+                    seed.len(),
+                ),
+                OSSL_PARAM_construct_utf8_string(
+                    c"properties".as_ptr(),
+                    propq.as_mut_ptr().cast(),
+                    1,
+                ),
+                END,
+            ]
+        };
+
+        adv_alloc::reset();
+        // `OSSL_PARAM_get_utf8_string` allocates `data_size + 1` = 2 bytes for this duplicate.
+        adv_alloc::arm_any(2);
+        // SAFETY: the next forwarded release is the generation context (the refusal above does not
+        // release anything); its `entropy` member and the following `entropy_len` are live for the
+        // whole block, so `offset + 32` is readable.
+        unsafe {
+            adv_alloc::arm_cleansed_free_range(
+                core::mem::offset_of!(MlDsaGenCtx, entropy),
+                ML_DSA_ENTROPY_LEN,
+            )
+        };
+        // SAFETY: `params` is this frame's key-terminated array; `ml_dsa_gen_init` owns the block it
+        // allocates and frees it on the refusal path.
+        let gctx = unsafe { ml_dsa_gen_init(core::ptr::null_mut(), 0, params.as_ptr()) };
+        adv_alloc::disarm_any();
+        assert!(
+            gctx.is_null(),
+            "a refused property-query allocation must refuse gen_init"
+        );
+        adv_alloc::assert_not_cleansed();
+        adv_alloc::assert_no_double_free();
+    }
+}

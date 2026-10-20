@@ -1,0 +1,178 @@
+{
+  "receipt": "boundary-sweep-B42",
+  "date": "2026-10-20",
+  "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+  "subphase": "Batch 2: post-quantum codecs -- failure-path secret residue",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "484d226f0",
+    "base_subject": "Merge stage/p25/alloc-b1: secure-seed release fix, alloc batch 1 (B41)",
+    "source_commit": "dcf16bae0",
+    "committed": true,
+    "changed_files": 4,
+    "diffstat": "src/provider/ml_dsa_kmgmt.rs +78; src/provider/ml_dsa_sig.rs +61; src/ssl/adv_alloc.rs +33/-10; scripts/adv-probe.sh +2",
+    "scope": "ml_dsa/{encoders,sign}.rs, provider/{ml_dsa_sig,ml_dsa_kmgmt,ml_kem_codecs,ml_kem_kmgmt,ml_common_codecs}.rs -- 23 allocation/release sites"
+  },
+  "stop_status": "NO_STOP_DEFECT REMAINING IN THE REVIEWED SCOPE. Two genuine secret-residue defects were found and repaired; the independent non-author reviewer proved reachability, location and length of each, and both negative controls fired at the stated byte offsets. RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change; no #[repr(C)], exported symbol, extern \"C\" signature or seam constant changed. The new instrumentation lives under #[cfg(test)] and is absent from a release build.",
+    "external_contracts": [
+      "OSSL_PARAM_get_utf8_string allocates data_size + 1 and can fail (params/mod.rs:2276-2296).",
+      "A context that has copied the keygen seed into entropy must not be released with the seed intact."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B42-ALLOC-2",
+      "file": "src/provider/ml_dsa_kmgmt.rs:895-909 (ml_dsa_gen_init -> set_params failure)",
+      "operation": "release of a partially initialised provider context",
+      "before": "set_params copies the 32-byte keygen seed into entropy first (kmgmt.rs:1019-1027) and duplicates propq afterwards (:1038). If the propq allocation is refused, set_params returns 0 and the context was freed with the seed intact.",
+      "after": "OPENSSL_cleanse(entropy, entropy.len()) runs before the release; the length is ML_DSA_ENTROPY_LEN = 32, the whole inline array, not a prefix.",
+      "mechanism": "ELIMINATED: a released context can no longer carry the keygen seed.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, mutation control fired at bytes [16,48))"
+    },
+    {
+      "id": "B42-ALLOC-3",
+      "file": "src/provider/ml_dsa_sig.rs:285-295 (ml_dsa_dupctx, refused signature copy)",
+      "operation": "release of a context duplicate",
+      "before": "The whole ProvMlDsaCtx is memdup'd at :253-261 (copies test_entropy), then sig is memdup'd at :275-284. When the signature copy is refused the duplicate was freed with test_entropy intact.",
+      "after": "test_entropy is cleansed before the free. The aliased md_ctx is only shallow-copied and is NOT freed in this branch, so the cleanse touches no shared block; sig was refused and is nulled first.",
+      "mechanism": "ELIMINATED: a refused duplicate cannot leave a second copy of the secret in freed storage.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, mutation control fired at bytes [280,312))"
+    }
+  ],
+  "reviewer": {
+    "independent": true,
+    "verdict": "ACCEPT",
+    "strongest_reason": "Both paths are demonstrably reachable with exact authority allocation mechanics, each cleanse covers the full 32-byte secret at the correct offset, and both negative controls fire with the stated byte ranges while all gates pass with no ABI or seam change.",
+    "signed_scope": "The two failure-path residue repairs only, at BATCH evidence. For RUNTIME_ALLOC_OWNERSHIP these two obligations are discharged; BOUNDARY/SEAL evidence remains NOT_RUN.",
+    "adjacent_finding_retained": "ml_dsa_sig.rs:536 and :606 return on RAND_priv_bytes_ex failure leaving the stack rand_tmp possibly partially secret. Not a released heap block; pre-existing and retained, not repaired in this batch."
+  },
+  "batch2_disposition": {
+    "sites_reviewed": 23,
+    "pairing_result": "All 23 release mechanisms match their constructors (plain/cleansed/secure-cleansed). No cross-release found.",
+    "extent_result": "All extents are fixed parameter lengths or checked. ml_dsa/sign.rs scratch arithmetic is unchecked but every operand derives from static parameter tables (k,l <= 8); recorded as retained, not reachable on the admitted target.",
+    "partial_init_result": "ml_dsa_dupctx frees the context copy alone on signature refusal (never freectx, which would touch the aliased md_ctx); ml_dsa_gen_init frees the block alone on set_params failure; d2i/sk_decode failures leave a fully-owned key. No destructor runs on an invalid object.",
+    "defects": 2
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "exit 0"
+    },
+    {
+      "id": "PROBE-GEN",
+      "instrument": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact --test-threads=1 provider::ml_dsa_kmgmt::adv_probe::refused_propq_allocation_cleanses_the_gen_entropy",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed"
+    },
+    {
+      "id": "PROBE-DUP",
+      "instrument": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact --test-threads=1 provider::ml_dsa_sig::adv_probe::refused_signature_copy_cleanses_the_dupctx_entropy",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed"
+    },
+    {
+      "id": "NEGATIVE-CONTROL-GEN",
+      "instrument": "remove OPENSSL_cleanse in gen_init, rebuild, run probe",
+      "result": "PASS (control fires)",
+      "observed": "FAILED exit 101: released block's bytes [16, 48) were not all zero"
+    },
+    {
+      "id": "NEGATIVE-CONTROL-DUP",
+      "instrument": "remove OPENSSL_cleanse in dupctx, rebuild, run probe",
+      "result": "PASS (control fires)",
+      "observed": "FAILED exit 101: released block's bytes [280, 312) were not all zero"
+    },
+    {
+      "id": "REGRESSION-WHOLE-BLOCK",
+      "instrument": "existing cleaned-free probes",
+      "result": "PASS",
+      "observed": "ssl::adv_alloc::adv_probe::cleansed_free_instrument_detects_residue ok; pkcs12::p12_key::adv_probe::unipass_drop_cleanses_before_release ok"
+    },
+    {
+      "id": "FOCUSED-MODULES",
+      "instrument": "cargo test --lib ml_dsa / ml_kem",
+      "result": "PASS",
+      "observed": "ml_dsa 15 passed, 3 ignored; ml_kem 8 passed"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "exit 0"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1711 passed; 0 failed; 39 ignored, 103.48 s"
+    },
+    {
+      "id": "BATCH-TESTS-SERIAL",
+      "instrument": "cargo test --lib",
+      "result": "PASS",
+      "observed": "1711 passed; 0 failed; 39 ignored, 65.63 s"
+    },
+    {
+      "id": "SAME-CLASS-SEARCH",
+      "instrument": "enumerate every release branch in the four changed files",
+      "result": "PASS",
+      "observed": "sig:201 freectx cleanses (190-193); sig:295 and kmgmt:909 fixed. Keygen failure paths release through ossl_ml_dsa_key_free/reset, which uses secure_free/cleanse. No remaining un-cleansed secret-block release in the batch."
+    }
+  ],
+  "not_run": [
+    {
+      "check": "release-profile build proving adv_alloc omission",
+      "reason": "NOT_RUN: static proof given instead -- the module is declared under #[cfg(test)] at src/ssl/mod.rs:639-640 and every caller is a #[cfg(test)] adv_probe."
+    },
+    {
+      "check": "full scripts/adv-probe.sh suite",
+      "reason": "NOT_RUN at this level; scheduled for the next BATCH checkpoint."
+    },
+    {
+      "check": "Miri / ASan on the dupctx aliasing",
+      "reason": "NOT_RUN: BOUNDARY/SEAL instrument, outside this batch's level."
+    },
+    {
+      "check": "authority differential / compatibility court for the two failure paths",
+      "reason": "NOT_RUN: compatibility argued from unchanged return values and allocator events; only the contents of freed blocks change."
+    },
+    {
+      "check": "caller/dependency-closure BOUNDARY audit",
+      "reason": "NOT_RUN: required before mechanism discharge."
+    }
+  ],
+  "obligations": {
+    "discharged_at_scope": [
+      "gen_init failure cannot release the keygen seed (B42-ALLOC-2)",
+      "dupctx signature refusal cannot release a second copy of test_entropy (B42-ALLOC-3)"
+    ],
+    "retained": [
+      "ml_dsa_sig.rs:536,:606 stack rand_tmp may be partially secret on RAND failure -- pre-existing, not a released heap block",
+      "ml_dsa/sign.rs scratch arithmetic unchecked but bounded by static parameters",
+      "1328-23 = 1305 sites remain in later batches",
+      "BOUNDARY/SEAL evidence for the alloc mechanism remains NOT_RUN"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BATCH_INDEPENDENTLY_CHECKED",
+    "independently_checked": true,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "Batch 2 is independently checked. RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN until the remaining batches are dispositioned and BOUNDARY evidence exists."
+  },
+  "non_claims": [
+    "Not a RUNTIME_ALLOC_OWNERSHIP discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "The same-class search covers the batch's files, not the whole crate.",
+    "No Miri, ASan, or authority differential was run for these two failure paths."
+  ]
+}
