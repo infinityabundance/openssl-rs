@@ -159,8 +159,8 @@ struct OwnedBuf {
 enum BufRelease {
     /// The authority's plain `CRYPTO_free(ptr, file, line)` (`pub_encoding`).
     Plain { file: *const c_char, line: c_int },
-    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the seed on a refused
-    /// retain, and the `polys` scratch of `public_from_private`/`pairwise_check`).
+    /// The authority's cleansing `CRYPTO_clear_free(ptr, num, file, line)` (the `polys` scratch of
+    /// `public_from_private`/`pairwise_check`).
     Cleansed {
         num: usize,
         file: *const c_char,
@@ -1116,9 +1116,16 @@ unsafe fn keygen_internal(out: *mut MlDsaKey) -> c_int {
         }
 
         if !(*out).seed.is_null() && ((*out).prov_flags & ML_DSA_KEY_RETAIN_SEED) == 0 {
-            // SAFETY: `seed` is a live block this key owns, readable for `ML_DSA_SEED_BYTES`; the
-            // handle's `Drop` runs the authority's own cleansing `CRYPTO_clear_free`.
-            drop(OwnedBuf::adopt_cleansed(
+            // The seed was allocated by `new_secure` (`OPENSSL_secure_malloc`), so its matching
+            // release is the secure-heap cleansing free. The authority calls
+            // `OPENSSL_clear_free` here, which routes to the plain `free`; that is an invalid free
+            // once the secure heap is initialised (AGENTS.md section 17: do not reproduce UB).
+            // With no secure heap the block is a plain fallback and
+            // `CRYPTO_secure_clear_free` cleanses and releases it through the same seam and
+            // coordinates, so allocator-hook observability is unchanged on that path.
+            // SAFETY: `seed` is a live secure block this key owns, readable for
+            // `ML_DSA_SEED_BYTES`; the handle's `Drop` runs `CRYPTO_secure_clear_free`.
+            drop(OwnedBuf::adopt_secure_cleansed(
                 (*out).seed,
                 ML_DSA_SEED_BYTES,
                 FILE,
