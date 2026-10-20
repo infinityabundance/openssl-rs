@@ -55,8 +55,8 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::{BIO_puts, Bio};
 use crate::runtime::obj::{
     Asn1Object, NID_associatedName, NID_dITRedirect, NID_documentAuthor, NID_manager, NID_member,
-    NID_owner, NID_roleOccupant, NID_secretary, NID_seeAlso, NID_undef, OBJ_nid2ln, OBJ_nid2obj,
-    OBJ_obj2nid, OBJ_obj2txt,
+    NID_owner, NID_roleOccupant, NID_secretary, NID_seeAlso, OBJ_nid2ln, OBJ_nid2obj, OBJ_obj2nid,
+    OBJ_obj2txt,
 };
 use crate::runtime::stack::{OPENSSL_sk_push, OpenSslStack};
 use crate::x509::v3_utl::ossl_bio_print_hex;
@@ -260,11 +260,11 @@ unsafe extern "C" fn print_oid(out: *mut Bio, oid: *const Asn1Object) -> c_int {
 
 /// The OIDs whose `V_ASN1_SEQUENCE` value is a distinguished name — `crypto/x509/x_attrib.c:154-167`.
 ///
-/// `NID_undef` is included: an unrecognised OID's sequence is attempted as a DN and falls back to
-/// the DER dump only when the decode fails.
+/// `NID_undef` (an unrecognised OID) is deliberately **not** listed: the authority's inner
+/// `switch` has `case NID_undef: break;`, which leaves the inner switch for the
+/// `ASN1_parse_dump` return after it. Only the nine named attribute types take the DN decode.
 fn is_dn_oid(obj_nid: c_int) -> bool {
-    obj_nid == NID_undef
-        || obj_nid == NID_member
+    obj_nid == NID_member
         || obj_nid == NID_roleOccupant
         || obj_nid == NID_seeAlso
         || obj_nid == NID_manager
@@ -466,11 +466,13 @@ pub unsafe extern "C" fn ossl_print_attribute_value(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::asn1::layout::V_ASN1_INTEGER;
+    use crate::asn1::layout::{V_ASN1_INTEGER, V_ASN1_SEQUENCE};
     use crate::asn1::owned::OwnedBlock;
     use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
-    use crate::asn1::string::ASN1_INTEGER_new;
-    use crate::runtime::obj::{NID_commonName, OBJ_obj2nid};
+    use crate::asn1::string::{ASN1_INTEGER_new, ASN1_OCTET_STRING_new, ASN1_STRING_set};
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{BIO_free, BIO_new, BIO_read};
+    use crate::runtime::obj::{NID_commonName, NID_undef, OBJ_obj2nid};
     use crate::runtime::stack::OPENSSL_sk_value;
 
     /// `X509_ATTRIBUTE_create` builds a two-field value, the item round-trips it, and `_dup`
@@ -516,6 +518,46 @@ mod tests {
             // allocator seam; this frame owns it exclusively and this is its single release, at
             // the (NULL, 0) coordinate the pre-conversion call used.
             drop(OwnedBlock::<c_uchar>::from_raw(out, ptr::null(), 0));
+        }
+    }
+
+    /// An unrecognised OID (`NID_undef`) with a SEQUENCE value takes the authority's DER-dump
+    /// arm, not the distinguished-name decode. The authority's inner `switch` reads
+    /// `case NID_undef: break;` and then falls to `ASN1_parse_dump`; treating `NID_undef` as a DN
+    /// OID would print a blank name (or the could-not-decode line) and answer 0 for a two-byte
+    /// empty SEQUENCE, where the authority dumps it and answers positive.
+    #[test]
+    fn undefined_oid_sequence_is_dumped_not_decoded_as_a_name() {
+        let av = ASN1_TYPE_new();
+        assert!(!av.is_null());
+        let seq = ASN1_OCTET_STRING_new();
+        assert!(!seq.is_null());
+        // An empty SEQUENCE is a valid (empty) X509_NAME encoding, so the defect is visible:
+        // the wrong arm decodes it and prints nothing, the authority's arm dumps the bytes.
+        let empty_sequence = [0x30u8, 0x00];
+        // SAFETY: `seq` is live and `empty_sequence` is readable for two bytes.
+        let set_ok = unsafe { ASN1_STRING_set(seq, empty_sequence.as_ptr().cast(), 2) };
+        assert_eq!(set_ok, 1);
+        // SAFETY: `av` is live and adopts `seq`; the selector names the string it holds.
+        unsafe { ASN1_TYPE_set(av, V_ASN1_SEQUENCE as c_int, seq.cast()) };
+
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null());
+        // SAFETY: `av` is live and its selector matches the arm `NID_undef` selects; `bio` is
+        // live.
+        let ret = unsafe { ossl_print_attribute_value(bio, NID_undef, av, 0) };
+        assert!(ret > 0, "the DER dump arm answers positive");
+
+        let mut printed = [0u8; 64];
+        // SAFETY: `bio` is live and `printed` is this frame's writable buffer.
+        let n = unsafe { BIO_read(bio, printed.as_mut_ptr().cast(), printed.len() as c_int) };
+        assert!(n > 0, "the DER dump arm writes the parsed encoding");
+
+        // SAFETY: both objects are this test's own; `av` owns the adopted string.
+        unsafe {
+            BIO_free(bio);
+            ASN1_TYPE_free(av);
         }
     }
 }
