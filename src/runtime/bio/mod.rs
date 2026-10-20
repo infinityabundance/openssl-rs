@@ -53,6 +53,7 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_BIO,
 };
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 pub mod addr;
 pub mod addr_info;
@@ -930,6 +931,16 @@ impl Bio {
 // Creation and destruction
 // ---------------------------------------------------------------------------
 
+/// `__FILE__` for the BIO block's `CRYPTO_*` calls, matching the authority's
+/// `crypto/bio/bio_lib.c` coordinate (the path the pinned 3.6.4 build records).
+const BIO_LIB_FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/bio/bio_lib.c";
+/// `OPENSSL_zalloc(sizeof(*bio))` — `bio_lib.c:83`.
+const BIO_LIB_ALLOC_LINE: c_int = 83;
+/// The `err:` label's `OPENSSL_free(bio)` — `bio_lib.c:110`.
+const BIO_LIB_ERR_FREE_LINE: c_int = 110;
+/// `BIO_free`'s `OPENSSL_free(a)` — `bio_lib.c:147`.
+const BIO_LIB_FREE_LINE: c_int = 147;
+
 /// `BIO *BIO_new_ex(OSSL_LIB_CTX *libctx, const BIO_METHOD *method)`
 ///
 /// Allocates a BIO, installs `method`, sets the reference count to 1 and
@@ -949,38 +960,74 @@ pub unsafe extern "C" fn BIO_new_ex(libctx: *mut c_void, method: *const BioMetho
         if method.is_null() {
             return ptr::null_mut();
         }
-        let mut bio = Box::new(Bio {
-            method,
-            libctx,
-            callback_ex: None,
-            callback: None,
-            cb_arg: ptr::null_mut(),
-            init: 0,
-            shutdown: 1,
-            flags: 0,
-            retry_reason: 0,
-            num: 0,
-            ptr: ptr::null_mut(),
-            next_bio: ptr::null_mut(),
-            prev_bio: ptr::null_mut(),
-            references: AtomicI32::new(1),
-            num_read: 0,
-            num_write: 0,
-            ex_data: CryptoExData {
-                ctx: ptr::null_mut(),
-                sk: ptr::null_mut(),
-            },
-        });
+        // SAFETY: `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable
+        // block of exactly `size_of::<Bio>()` bytes; the `file` coordinate is a
+        // static C string valid for the call. The authority allocates the BIO
+        // itself with `OPENSSL_zalloc`, so the block must come from the
+        // `CRYPTO_*` seam rather than the Rust global allocator: a caller that
+        // installed `CRYPTO_set_mem_functions` observes this allocation, its
+        // size and its release at the authority's own coordinates. `Bio` is
+        // opaque, so the layout is ours, but the seam is not. `size_of::<Bio>()`
+        // is the same 128 bytes as the authority's `sizeof(*bio)` on the
+        // supported 64-bit target.
+        let bio = unsafe {
+            CRYPTO_zalloc(
+                core::mem::size_of::<Bio>(),
+                BIO_LIB_FILE.as_ptr(),
+                BIO_LIB_ALLOC_LINE,
+            )
+        }
+        .cast::<Bio>();
+        if bio.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `bio` is a fresh, zeroed block of exactly `size_of::<Bio>()`
+        // bytes from the crate's allocator seam. `ptr::write` initialises the
+        // whole value before any reference to it is formed. `Bio` has no Rust
+        // destructor (its teardown is the method `destroy` + `ex_data` path in
+        // `BIO_free`), so every exit below releases the block with `CRYPTO_free`.
+        unsafe {
+            ptr::write(
+                bio,
+                Bio {
+                    method,
+                    libctx,
+                    callback_ex: None,
+                    callback: None,
+                    cb_arg: ptr::null_mut(),
+                    init: 0,
+                    shutdown: 1,
+                    flags: 0,
+                    retry_reason: 0,
+                    num: 0,
+                    ptr: ptr::null_mut(),
+                    next_bio: ptr::null_mut(),
+                    prev_bio: ptr::null_mut(),
+                    references: AtomicI32::new(1),
+                    num_read: 0,
+                    num_write: 0,
+                    ex_data: CryptoExData {
+                        ctx: ptr::null_mut(),
+                        sk: ptr::null_mut(),
+                    },
+                },
+            );
+        }
         // SAFETY: `bio` is a live object; `CRYPTO_new_ex_data` only stores through
         // the `ex_data` pointer it is given and may invoke registered callbacks.
         let ex_ok = unsafe {
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_BIO,
-                core::ptr::from_mut(&mut *bio).cast::<c_void>(),
-                &mut bio.ex_data,
+                bio.cast::<c_void>(),
+                core::ptr::addr_of_mut!((*bio).ex_data),
             )
         };
         if ex_ok == 0 {
+            // The authority's `err` label frees the block without an `ex_data`
+            // teardown on this path.
+            // SAFETY: `bio` is this call's own block and no reference to it is
+            // retained; `CRYPTO_free` is its single release.
+            unsafe { CRYPTO_free(bio.cast(), BIO_LIB_FILE.as_ptr(), BIO_LIB_ERR_FREE_LINE) };
             return ptr::null_mut();
         }
         // SAFETY: the method pointer is live, so `create` (if any) is callable
@@ -989,12 +1036,13 @@ pub unsafe extern "C" fn BIO_new_ex(libctx: *mut c_void, method: *const BioMetho
             Some(m) => match m.create {
                 // SAFETY: `bio` is a live, initialised BIO; the method contract
                 // is that `create` may read and write it but not free it.
-                Some(create) => unsafe { create(&mut *bio) },
+                Some(create) => unsafe { create(bio) },
                 // A method with no `create` is initialised by the core; the
                 // authority sets `init = 1` here, which is what makes
                 // `BIO_read` on such a BIO skip the `BIO_R_UNINITIALIZED` path.
                 None => {
-                    bio.init = 1;
+                    // SAFETY: `bio` is live and uniquely owned by this call.
+                    unsafe { (*bio).init = 1 };
                     1
                 }
             },
@@ -1006,17 +1054,23 @@ pub unsafe extern "C" fn BIO_new_ex(libctx: *mut c_void, method: *const BioMetho
             // SAFETY: the site is a compile-time constant.
             unsafe { crate::runtime::err::raise_site(&crate::runtime::err::err_sites::BIO_LIB_99) };
             // SAFETY: `bio` was initialised by `CRYPTO_new_ex_data` above and is
-            // about to be released, so its slots must be torn down.
+            // about to be released, so its slots must be torn down. Partial
+            // method state belongs to the method's own `create` failure path;
+            // the core never runs `destroy` on it (the authority does not
+            // either).
             unsafe {
                 CRYPTO_free_ex_data(
                     CRYPTO_EX_INDEX_BIO,
-                    core::ptr::from_mut(&mut *bio).cast::<c_void>(),
-                    &mut bio.ex_data,
+                    bio.cast::<c_void>(),
+                    core::ptr::addr_of_mut!((*bio).ex_data),
                 );
             }
+            // SAFETY: `bio` is this call's own block and no reference to it is
+            // retained; `CRYPTO_free` is its single release.
+            unsafe { CRYPTO_free(bio.cast(), BIO_LIB_FILE.as_ptr(), BIO_LIB_ERR_FREE_LINE) };
             return ptr::null_mut();
         }
-        Box::into_raw(bio)
+        bio
     })
 }
 
@@ -1084,23 +1138,28 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
         if bio.is_null() {
             return 0;
         }
-        // SAFETY: `bio` is non-NULL and live for the caller's reference.
-        let b = unsafe { &mut *bio };
         // The shared gate claims the last reference with the destroying sentinel. The
         // method's `destroy`, the BIO free callback and `CRYPTO_free_ex_data` can all
         // re-enter `BIO_free`; the sentinel makes that a defined no-op instead of a second
         // teardown of the same block.
+        //
+        // No `&mut Bio` is held across those calls: both callbacks are
+        // application-controlled reentrancy edges, and a re-entrant access through
+        // the same raw pointer would invalidate a long-lived exclusive borrow
+        // (AGENTS.md §21.3). Each field is re-read through `bio` instead.
         // SAFETY: `bio` is live and this frame owns the caller's one reference, which it
         // releases here; on `Last` it is the unique destructor runner and must not use the
         // object after the teardown below.
-        match unsafe { crate::runtime::refcount::down_ref(&b.references) } {
+        match unsafe { crate::runtime::refcount::down_ref(&(*bio).references) } {
             crate::runtime::refcount::DownRef::Last => {}
             crate::runtime::refcount::DownRef::Remaining => return 1,
             // A zero/negative/destroying count: the authority's `fetch_sub` arm also answers
             // 1 without releasing anything.
             crate::runtime::refcount::DownRef::Retired => return 1,
         }
-        if b.callback_ex.is_some() || b.callback.is_some() {
+        // SAFETY: `bio` is live; the callback slots are read through the raw
+        // pointer, before the callback can re-enter.
+        if unsafe { (*bio).callback_ex.is_some() || (*bio).callback.is_some() } {
             // SAFETY: the callback was installed by the caller for this BIO class
             // and is invoked with the documented argument shape.
             let ret = unsafe {
@@ -1113,11 +1172,11 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
         // SAFETY: `method` is either NULL or a live table; `destroy` is called on
         // a still-allocated BIO, per the method contract. The authority destroys
         // the method data *before* tearing down `ex_data`.
-        if let Some(m) = unsafe { b.method.as_ref() } {
+        if let Some(m) = unsafe { (*bio).method.as_ref() } {
             if let Some(destroy) = m.destroy {
                 // SAFETY: as above; the method may clear `ptr` but must not free
                 // the BIO itself.
-                unsafe { destroy(b) };
+                unsafe { destroy(bio) };
             }
         }
         // SAFETY: the object is being destroyed exactly once, so tearing down its
@@ -1125,13 +1184,15 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
         unsafe {
             CRYPTO_free_ex_data(
                 CRYPTO_EX_INDEX_BIO,
-                core::ptr::from_mut(b).cast::<c_void>(),
-                &mut b.ex_data,
+                bio.cast::<c_void>(),
+                core::ptr::addr_of_mut!((*bio).ex_data),
             );
         }
         // SAFETY: the reference count reached zero, so the caller's pointer is
-        // the only one and reclaiming it is correct.
-        drop(unsafe { Box::from_raw(bio) });
+        // the only one. The block came from `CRYPTO_zalloc` in `BIO_new_ex`
+        // (`Bio` has no Rust destructor), so its single release is `CRYPTO_free`
+        // at the authority's `bio_lib.c:147` coordinate.
+        unsafe { CRYPTO_free(bio.cast(), BIO_LIB_FILE.as_ptr(), BIO_LIB_FREE_LINE) };
         1
     })
 }
@@ -1158,9 +1219,12 @@ pub unsafe extern "C" fn BIO_vfree(bio: *mut Bio) {
 ///
 /// # Safety
 /// `bio` must be NULL or the head of a live BIO chain on which the caller owns a
-/// reference per element it expects to free. A NULL or invalid link, or a
-/// shared element whose count is above one, causes the walk to leave the
-/// remainder untouched rather than dereference anything invalid.
+/// reference per element it expects to free. Every non-NULL `next_bio` link the
+/// walk follows must be a live BIO: the walk reads the link before it can test
+/// anything, so a dangling (non-NULL) link is caller UB, not something this
+/// function can detect. NULL ends the walk. An element whose count is above one
+/// is shared, so the walk releases that element and stops without touching the
+/// remainder.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free_all(bio: *mut Bio) {
     guard_ffi((), || {
@@ -1935,14 +1999,41 @@ pub use method::{
 pub use print::BIO_indent;
 pub use retry::{BIO_dgram_non_fatal_error, BIO_fd_non_fatal_error, BIO_fd_should_retry};
 
-/// Free-callback veto semantics.
+/// BIO constructor/destructor ownership controls.
 #[cfg(test)]
 mod free_veto_tests {
     use super::*;
     use crate::runtime::refcount::REF_DESTROYING;
     use core::sync::atomic::Ordering;
 
+    const VETO_NAME: &[u8] = b"veto test\0";
+    const FAIL_NAME: &[u8] = b"fail-create test\0";
+    const REENTRANT_NAME: &[u8] = b"reentrant destroy test\0";
+
     static VETO_CALLS: AtomicI32 = AtomicI32::new(0);
+    static FAIL_CREATE_CALLS: AtomicI32 = AtomicI32::new(0);
+    static FAIL_DESTROY_CALLS: AtomicI32 = AtomicI32::new(0);
+    static REENTRANT_DESTROY_CALLS: AtomicI32 = AtomicI32::new(0);
+    static REENTRANT_FREE_RET: AtomicI32 = AtomicI32::new(-1);
+
+    /// A method with no `create` and no `destroy`, so the test can install a free
+    /// callback on the freshly constructed BIO itself.
+    static VETO_METHOD: BioMethod = BioMethod {
+        type_: 0,
+        name: VETO_NAME.as_ptr().cast(),
+        bwrite: None,
+        bwrite_old: None,
+        bread: None,
+        bread_old: None,
+        bputs: None,
+        bgets: None,
+        ctrl: None,
+        create: None,
+        destroy: None,
+        callback_ctrl: None,
+        sendmmsg: None,
+        recvmmsg: None,
+    };
 
     unsafe extern "C" fn veto_free(
         _bio: *mut Bio,
@@ -1958,38 +2049,80 @@ mod free_veto_tests {
         0
     }
 
+    /// A method whose `create` fails. `BIO_new_ex` must release the block and the
+    /// `ex_data` it registered, and must **not** run `destroy` on the partial
+    /// object (AGENTS.md §2).
+    unsafe extern "C" fn fail_create(_bio: *mut Bio) -> c_int {
+        FAIL_CREATE_CALLS.fetch_add(1, Ordering::SeqCst);
+        0
+    }
+
+    unsafe extern "C" fn fail_destroy(_bio: *mut Bio) -> c_int {
+        FAIL_DESTROY_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    static FAIL_METHOD: BioMethod = BioMethod {
+        type_: 0,
+        name: FAIL_NAME.as_ptr().cast(),
+        bwrite: None,
+        bwrite_old: None,
+        bread: None,
+        bread_old: None,
+        bputs: None,
+        bgets: None,
+        ctrl: None,
+        create: Some(fail_create),
+        destroy: Some(fail_destroy),
+        callback_ctrl: None,
+        sendmmsg: None,
+        recvmmsg: None,
+    };
+
+    /// Re-enters `BIO_free` from the method's `destroy` (an application-controlled
+    /// teardown edge). The destroying sentinel must make that a defined no-op.
+    unsafe extern "C" fn reentrant_destroy(b: *mut Bio) -> c_int {
+        REENTRANT_DESTROY_CALLS.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: `b` is the live BIO whose `destroy` the core is running, and
+        // re-entering `BIO_free` is exactly the double-release control.
+        let ret = unsafe { BIO_free(b) };
+        REENTRANT_FREE_RET.store(ret, Ordering::SeqCst);
+        1
+    }
+
+    static REENTRANT_METHOD: BioMethod = BioMethod {
+        type_: 0,
+        name: REENTRANT_NAME.as_ptr().cast(),
+        bwrite: None,
+        bwrite_old: None,
+        bread: None,
+        bread_old: None,
+        bputs: None,
+        bgets: None,
+        ctrl: None,
+        create: None,
+        destroy: Some(reentrant_destroy),
+        callback_ctrl: None,
+        sendmmsg: None,
+        recvmmsg: None,
+    };
+
     /// `BIO_free` decrements before the callback (`bio_lib.c:126-138`), so a `<= 0`
     /// veto returns 0 with the caller's reference already consumed. A retry sees the
     /// retired count and is a defined no-op; it must not run the callback or free twice.
     #[test]
     fn veto_consumes_the_reference_and_a_retry_is_a_noop() {
         VETO_CALLS.store(0, Ordering::SeqCst);
-        // The test builds the block it will reclaim; a veto never frees it.
-        let bio = Box::into_raw(Box::new(Bio {
-            method: ptr::null(),
-            libctx: ptr::null_mut(),
-            callback_ex: None,
-            callback: Some(veto_free),
-            cb_arg: ptr::null_mut(),
-            init: 1,
-            shutdown: 1,
-            flags: 0,
-            retry_reason: 0,
-            num: 0,
-            ptr: ptr::null_mut(),
-            next_bio: ptr::null_mut(),
-            prev_bio: ptr::null_mut(),
-            references: AtomicI32::new(1),
-            num_read: 0,
-            num_write: 0,
-            ex_data: CryptoExData {
-                ctx: ptr::null_mut(),
-                sk: ptr::null_mut(),
-            },
-        }));
+        // SAFETY: `VETO_METHOD` is a static table and `BIO_new` allocates the BIO
+        // through the constructor path under test.
+        let bio = unsafe { BIO_new(&VETO_METHOD) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and uniquely owned by this test; the callback slot
+        // is part of the public BIO surface.
+        unsafe { (*bio).callback = Some(veto_free) };
 
-        // SAFETY: `bio` is the live block allocated above and carries the caller's one
-        // reference; the veto leaves it allocated, so the test can reclaim it below.
+        // SAFETY: `bio` carries the caller's one reference; the veto leaves it
+        // allocated, so the test can reclaim it below.
         unsafe {
             assert_eq!(BIO_free(bio), 0, "the veto reports failure");
             assert_eq!(VETO_CALLS.load(Ordering::SeqCst), 1);
@@ -2004,9 +2137,139 @@ mod free_veto_tests {
                 1,
                 "the veto callback does not run a second time"
             );
-            // The veto leaked the block in both implementations; this test owns its only
-            // allocation and reclaims it without another `BIO_free`.
-            drop(Box::from_raw(bio));
+            // The veto leaked the block in both implementations; this test owns its
+            // only allocation and reclaims it through the same seam `BIO_free` uses.
+            CRYPTO_free(bio.cast(), ptr::null(), 0);
         }
+    }
+
+    /// A failed `create` releases the block and the `ex_data`, and the core never
+    /// exposes a partially constructed BIO to `destroy` or to the caller.
+    #[test]
+    fn a_failed_create_runs_no_destructor_and_returns_null() {
+        FAIL_CREATE_CALLS.store(0, Ordering::SeqCst);
+        FAIL_DESTROY_CALLS.store(0, Ordering::SeqCst);
+        // SAFETY: `FAIL_METHOD` is a static table; `BIO_new` allocates and runs
+        // `create`, which is the path under test.
+        let bio = unsafe { BIO_new(&FAIL_METHOD) };
+        assert!(bio.is_null(), "a failed create yields no BIO");
+        assert_eq!(FAIL_CREATE_CALLS.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            FAIL_DESTROY_CALLS.load(Ordering::SeqCst),
+            0,
+            "the half-built BIO is never run through the full destructor"
+        );
+        // Free-after-failed-init control: the caller has no object to release.
+        // SAFETY: `BIO_free` accepts NULL.
+        assert_eq!(unsafe { BIO_free(ptr::null_mut()) }, 0);
+    }
+
+    /// Double-release control: re-entering `BIO_free` from `destroy` observes the
+    /// destroying sentinel, so the destructor body runs once.
+    #[test]
+    fn a_reentrant_free_during_destroy_is_retired() {
+        REENTRANT_DESTROY_CALLS.store(0, Ordering::SeqCst);
+        REENTRANT_FREE_RET.store(-1, Ordering::SeqCst);
+        // SAFETY: `REENTRANT_METHOD` is a static table and `BIO_new` allocates.
+        let bio = unsafe { BIO_new(&REENTRANT_METHOD) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and this test owns its single reference; the
+        // destroy callback re-enters but does not retain the pointer.
+        assert_eq!(unsafe { BIO_free(bio) }, 1);
+        assert_eq!(REENTRANT_DESTROY_CALLS.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            REENTRANT_FREE_RET.load(Ordering::SeqCst),
+            1,
+            "the re-entrant release is Retired: it must not tear down twice"
+        );
+    }
+}
+
+/// Allocator-refusal controls for the BIO block and the memory BIO's context.
+///
+/// These use the crate's established process-global injector (`crate::ssl::adv_alloc`),
+/// so each is `#[ignore]`d in the routine suite and runs alone in its own process via
+/// `scripts/adv-probe.sh`.
+#[cfg(test)]
+mod ownership_adv_probe {
+    use super::*;
+    use crate::runtime::bio::bss_mem::BioBufMem;
+    use crate::runtime::buffer::BufMem;
+    use crate::ssl::adv_alloc;
+
+    /// The BIO block itself is allocated through `CRYPTO_zalloc`; a refusal must
+    /// answer NULL without running a destructor or releasing anything twice.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_bio_block_alloc_returns_null() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(core::mem::size_of::<Bio>());
+        // SAFETY: `BIO_s_mem` answers a static table and `BIO_new` tolerates an
+        // allocator refusal; the probe holds the global lock and runs alone.
+        let bio = unsafe { BIO_new(bss_mem::BIO_s_mem()) };
+        adv_alloc::disarm_any();
+        assert!(bio.is_null(), "a refused BIO block must yield NULL");
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// A refused `BioBufMem` leaves `mem_init` with nothing to release of its own;
+    /// `BIO_new_ex` must release the BIO block and its `ex_data` exactly once and
+    /// must not run the method's `destroy`.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_mem_context_alloc_releases_the_partial_bio() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(core::mem::size_of::<BioBufMem>());
+        // SAFETY: as in `refused_bio_block_alloc_returns_null`.
+        let bio = unsafe { BIO_new(bss_mem::BIO_s_mem()) };
+        adv_alloc::disarm_any();
+        assert!(bio.is_null(), "a refused method context must yield NULL");
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// A refused `BUF_MEM` header takes `mem_init`'s second failure tail: the
+    /// owned context is dropped with `readp` still NULL (it must release the block
+    /// alone) and the BIO block follows once.
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_buf_mem_alloc_releases_the_partial_bio() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(core::mem::size_of::<BufMem>());
+        // SAFETY: as in `refused_bio_block_alloc_returns_null`.
+        let bio = unsafe { BIO_new(bss_mem::BIO_s_mem()) };
+        adv_alloc::disarm_any();
+        assert!(bio.is_null(), "a refused BUF_MEM must yield NULL");
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// Positive control for the same instrument: a memory BIO's create/free cycle
+    /// releases every block once (no double release on the read-cursor/header pair).
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn mem_bio_create_and_free_releases_each_block_once() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        adv_alloc::reset();
+        // SAFETY: `BIO_s_mem` is a static table and this probe runs alone with the
+        // global lock held.
+        let bio = unsafe { BIO_new(bss_mem::BIO_s_mem()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` carries this probe's single reference.
+        assert_eq!(unsafe { BIO_free(bio) }, 1);
+        adv_alloc::assert_no_double_free();
     }
 }
