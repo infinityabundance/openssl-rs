@@ -462,35 +462,32 @@ pub(crate) unsafe fn ossl_slh_fors_pk_from_sig(
         )
     };
     /* The authority's `err:` label. */
-    // SAFETY: `wroot_pkt` is live and at most `k * n` bytes of `roots` were written.
-    unsafe {
-        if WPACKET_finish(wroot_pkt) == 0 {
-            ret = 0;
-        }
-        OPENSSL_cleanse(roots.as_mut_ptr().cast(), (k as usize) * (n as usize));
-    }
-    ret
+    fors_err(wroot_pkt, &mut roots, k, n, ret)
 }
 
 /// The authority's `err:` label of `ossl_slh_fors_pk_from_sig` — `slh_fors.c:292-297`.
 ///
-/// A safe function: its two arguments are this frame's own cursor and its own array, so the
-/// interior `WPACKET_finish`/cleanse are the only unsafe operations and they are encapsulated
-/// here rather than at seven call sites.
+/// A safe function: both arguments are derived from this frame's own owner (the packet builder
+/// reference and the frame's `roots` array), so no caller-supplied raw pointer is dereferenced
+/// here. The authority's cleanse length `k * n` is clamped to the array the frame actually owns;
+/// for every parameter set this crate builds `k <= SLH_MAX_K` and `n <= SLH_MAX_N`, so the clamp
+/// is inert.
 fn fors_err(
-    wroot_pkt: *mut Wpacket,
+    wroot_pkt: &mut Wpacket,
     roots: &mut [u8; SLH_MAX_ROOTS],
     k: u32,
     n: u32,
     ret: c_int,
 ) -> c_int {
     let mut ret = ret;
-    // SAFETY: `wroot_pkt` is this frame's live cursor; the cleanse is inside `roots`.
+    let cleanse_len = (k as usize).saturating_mul(n as usize).min(roots.len());
+    // SAFETY: `wroot_pkt` is the live builder its `&mut` borrow is derived from, and
+    // `cleanse_len` is bounded by `roots.len()`.
     unsafe {
         if WPACKET_finish(wroot_pkt) == 0 {
             ret = 0;
         }
-        OPENSSL_cleanse(roots.as_mut_ptr().cast(), (k as usize) * (n as usize));
+        OPENSSL_cleanse(roots.as_mut_ptr().cast(), cleanse_len);
     }
     ret
 }
