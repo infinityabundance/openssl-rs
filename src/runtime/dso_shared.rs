@@ -54,7 +54,11 @@ const ABSENT: u8 = 3;
 /// The cache exists so the lookup runs once. `RESOLVING` is a re-entrancy guard: `dlsym` is
 /// allowed to run code (an IFUNC resolver, for instance), and that code must not recurse into
 /// an unbounded lookup. A caller that arrives while another is resolving sees the guard and
-/// falls back to the local implementation, which is safe because a static link has one copy.
+/// falls back to the local implementation. That is memory-safe in every link shape (a static
+/// link has one copy; in a DSO the local copy is this object's own live implementation). The
+/// residual is functional, not unsound: a first call that races a resolution may reach this
+/// DSO's own `ERR_STATE`/`ssl_conf` store instead of libcrypto's. The lookup is performed
+/// once, so only that first-call window is affected.
 struct LazySymbol {
     state: AtomicU8,
     value: AtomicPtr<c_void>,

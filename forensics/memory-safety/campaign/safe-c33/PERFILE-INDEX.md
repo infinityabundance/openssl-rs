@@ -6878,3 +6878,71 @@ ordinary position.** `src/runtime/conf/sap.rs`. **Next eight.**
 `src/runtime/conf/sap.rs`, `src/runtime/dir.rs`, `src/runtime/dso_shared.rs`,
 `src/runtime/err_state.rs`, `src/runtime/ex_data.rs`, `src/runtime/getenv.rs`,
 `src/runtime/owned_buf.rs`, `src/runtime/rcu.rs`.
+
+## M76 (mechanism) — per-file contract sweep (legacy config loader, directory walk, cross-DSO resolver, ERR_STATE owner, ex_data registry, secure getenv, OB-1 block owner, RCU)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M76.json`](atlas-refresh/mechanism-sweep-M76.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`342f73ce6`. **No memory-safety defect was found.** Four documentation-only
+corrections make pre-existing exclusivity/residual conditions explicit; no
+layout, exported symbol, signature or allocator coordinate changed.
+`owned_buf.rs` (the OB-1 owner) and `rcu.rs` were audited without modification,
+so OB-1 evidence and the RCU source identity are unchanged.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/runtime/conf/sap.rs` | `stack_settings`, libc `strdup`/`free` pairing, the `AtomicI32` once, the three settings reads before the load, `ossl_config_int`/`ossl_no_config_int`, the deprecated `OPENSSL_config` entry | no defect; the entry's callees are panic-free (`OPENSSL_init_crypto` is itself `guard_ffi`-wrapped) |
+| `src/runtime/dir.rs` | `OpenSslDirCtx` malloc/free pairing and `entry_name` interior buffer, `OPENSSL_strlcpy` bound, `errno` transitions, both `guard_ffi` entries, the two path predicates | no defect; `OPENSSL_DIR_end` leaving `*ctx` stale is the authority's behaviour and is excluded by contract |
+| `src/runtime/dso_shared.rs` | `dlsym` declaration, the five prototype transmutes, `LazySymbol` atomics and its re-entrancy guard, both DSO fallbacks | no defect; first-call race fallback recorded as a functional residual |
+| `src/runtime/err_state.rs` | `OwnedErrState` allocation/release, `copy_of` + `zeroed` ownership transfer, `clear_all` with `deall`, the ring arithmetic of `save_to_mark`, restore's duplicate-not-share data copy | no defect; the `es`/thread-state aliasing exclusion is now stated |
+| `src/runtime/ex_data.rs` | registry `Mutex` and snapshot-before-callback, slot-stack growth/set/value, callback invocation without the lock, the free/dup/alloc arms, invalid-class and sentinel handling | no defect; all registered priorities are 0, so the authority's equal-priority `qsort` order is the only unmodelled freedom |
+| `src/runtime/getenv.rs` | `secure_getenv` delegation and the library-owned returned pointer | no defect |
+| `src/runtime/owned_buf.rs` | the four release arms, all allocating/adopting constructors, `num <= extent` for the cleansing arms, `set_clear`/`set_release_line`, `Drop`, the release-model tests | no defect; unmodified, so OB-1 evidence is preserved |
+| `src/runtime/rcu.rs` | `OwnedBlock`, `qp_group` calloc/free, `get_hold_current_qp` retry, read-lock depth, `update_qp`/`retire_qp` ordering, `ossl_synchronize_rcu` waits and callback drain, lock-new unwind and lock-free | no defect; a zeroed `RcuCbItem` is not read before `ossl_rcu_call` writes its function pointer |
+
+**Defects.** None. Four documentation corrections were made: the three
+`OSSL_ERR_STATE_*` safety contracts now exclude the calling thread's own state
+(the authority's C tolerates that aliasing; two live `&mut` would be Rust UB),
+and `dso_shared`'s `LazySymbol` comment now states that the re-entrancy fallback
+is memory-safe in every link shape but is a first-call functional residual.
+
+**Unsafe accounting.** Eliminated: none (no defect). Relocated: none. New
+unsafe operation: none. Contracts reused: RC-1 `guard_ffi`; OB-1 `OwnedBuf`
+unchanged; OB-2 `OwnedStr` (ERR slot buffers, libc/`CRYPTO` duplication); the
+`CRYPTO_*` allocator seam and `SeamFile`; the authority's libc
+`malloc`/`strdup`/`free` pairing (`dir`, `sap`); the B1/B2/B6-B22 callback
+contracts (`ex_data` hooks, RCU callbacks); B19 cleansing (unchanged release
+arms). Hidden obligations: **0**.
+
+**Gates observed (final worktree).** FAST `cargo fmt --all -- --check` clean and
+`cargo clippy --all-targets -- -D warnings` clean. Focused
+`cargo test --lib -- --test-threads=4` over the eight module prefixes:
+**57 passed / 0 failed**, including owned_buf's release-model mutants and all
+nine RCU tests. BATCH full library **1692 passed / 0 failed / 27 ignored**
+serially (65.69 s) and with `--test-threads=4` (98.54 s).
+
+**Evidence reused / invalidated.** The four edits are comments only and do not
+change generated code, so no compatibility court was rebuilt and no unit-test
+behaviour changed. `owned_buf.rs` and `rcu.rs` were not modified, so OB-1's
+discharged evidence and the RCU mechanism's source identity remain valid. No
+shared contract (`guard_ffi`, `OwnedStr`, `OwnedBlock`, `OwnedCtx`,
+`CtxDestroy`, the member-buffer slots) was edited.
+
+**NOT_RUN.** ASan (no repaired path, no new extent); Miri (unavailable on the
+pinned 1.98.1 stable toolchain); Loom/TSan (rcu.rs audited but unmodified);
+dependency-graph regeneration (no shared contract edited); Phase 2/4/6 courts and
+FRF/SEAL (comments only — deferred to the next semantic change); constant-time
+(no secret-dependent control-flow claim).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`.
+
+**Queue.** `REMAINING-AUDIT.txt` **103**, `AUDITED-FILES.txt` **660**. **Next
+ordinary position.** `src/runtime/rdtsc.rs`. **Next eight.**
+`src/runtime/rdtsc.rs`, `src/runtime/sparse_array.rs`,
+`src/runtime/thread_arch.rs`, `src/runtime/threads_common.rs`,
+`src/runtime/time.rs`, `src/runtime/trace.rs`, `src/runtime/uid.rs`,
+`src/seed.rs`.
