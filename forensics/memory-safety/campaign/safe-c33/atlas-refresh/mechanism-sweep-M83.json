@@ -1,0 +1,97 @@
+{
+ "receipt": "mechanism-sweep-M83",
+ "branch": "integrate/safe-c33",
+ "source_head": "f98d42f06",
+ "worktree": true,
+ "date": "2026-10-20",
+ "verification_level": "FAST plus BATCH plus the affected X.509 policy differential, RT-STORE and phase-11 X.509 courts (including RT-X509-ACERT and RT-X509-REQ). Seven files audited, one deferred (ui_openssl.rs, a retained console callback/signal boundary), no source edit, no UB, no ABI regression and no hidden obligation.",
+ "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the UI_METHOD legacy-callback wrapper, the X509_LOOKUP_store method, the policy-data constructor/destructor, the policy-tree accessors, the policy-node operations, and the attribute-certificate and CRL printers. src/ui/ui_openssl.rs was deferred NOT_RUN because it is a genuine console callback/signal I/O boundary.",
+ "files": [
+  "src/ui/ui_util.rs",
+  "src/x509/by_store.rs",
+  "src/x509/pcy_data.rs",
+  "src/x509/pcy_lib.rs",
+  "src/x509/pcy_node.rs",
+  "src/x509/t_acert.rs",
+  "src/x509/t_crl.rs"
+ ],
+ "files_not_run": [
+  "src/ui/ui_openssl.rs"
+ ],
+ "defects": [],
+ "unsafe_operations_introduced": [],
+ "unsafe_operations_removed": [],
+ "unsafe_operations_relocated": [],
+ "hidden_obligations": [],
+ "new_unsafe_assumptions": [],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [],
+ "excluded_symbol_changes": [],
+ "documentation_corrections": [],
+ "not_discharged": [
+  "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+  "src/ui/ui_openssl.rs was not audited (deferred console callback/signal boundary).",
+  "No Miri/ASan/Loom run was made: no owner, extent, aliasing or concurrency mechanism changed. No dudect/ctgrind claim is made.",
+  "FRF and the SEAL-level forensic regeneration were not run."
+ ],
+ "retained_obligations": [
+  "src/ui/ui_util.rs: ui_read requires ui's method to be the wrapper built by UI_UTIL_wrap_read_pem_callback with its ex-data attached at the RUN_ONCE index; the userdata and callback remain caller-owned for the method's lifetime.",
+  "src/x509/by_store.rs: ctx is a live X509_LOOKUP whose method data is this method's own stack; a BorrowedStore's uri/propq are borrowed for the call and never released; the lookup's store is live and unlocked.",
+  "src/x509/pcy_lib.rs: tree.levels/tree.nlevel describe the live OwnedLevels block and no other borrow of that block is live for tree_levels' slice; level_ptr's tree is NULL or live.",
+  "src/x509/pcy_node.rs: the graph links a live datum to every node before it is observed; parent_mut's parent edge is NULL or live and not otherwise borrowed, and the graph keeps one Node per node (Node is Copy).",
+  "src/x509/pcy_data.rs: ossl_policy_data_free receives only a pointer ossl_policy_data_new returned and not yet freed.",
+  "src/x509/t_acert.rs and src/x509/t_crl.rs: bp/out is a live BIO and x is a live ACERT/CRL; every attribute/extension stack element is a live object of its tagged type."
+ ],
+ "residuals": [
+  "M83-R1: ossl_policy_data_new allocates the 32-byte X509_POLICY_DATA with Box, so a caller-installed CRYPTO_set_mem_functions hook does not observe that block; the graph's own 24-byte node and 64-byte tree/levels blocks match in count and size, and ms_x509_policy_court.py adjudicates the divergence against measured container/ASN1-object controls (unadjudicated=0). Compatibility-only; recorded, not restructured.",
+  "M83-R2: the crate's X509_free still withholds ossl_policy_cache_free, so the per-cert policy cache's blocks are released by the authority and leaked by the crate. This is the freeze's recorded authoring gap, measured by the policy differential's cleanup window; not a new unsafe assumption and not repaired in this batch.",
+  "M83-R3: ui_read dereferences the method's ex-data without a NULL test, exactly as ui_util.c does; the wrapper always attaches non-NULL data, so the untested read is authority parity rather than a hidden precondition."
+ ],
+ "unrelated_residuals": [],
+ "next_queue": {
+  "file": "src/ui/ui_openssl.rs",
+  "pinned_retained_boundary": "src/ui/ui_openssl.rs",
+  "then": [
+   "src/x509/t_req.rs",
+   "src/x509/t_x509.rs",
+   "src/x509/v3_aaa.rs",
+   "src/x509/v3_akeya.rs",
+   "src/x509/v3_audit_id.rs",
+   "src/x509/v3_authattid.rs",
+   "src/x509/v3_battcons.rs"
+  ]
+ },
+ "deferred": [
+  {
+   "file": "src/ui/ui_openssl.rs",
+   "reason": "console callback/signal I/O boundary (libc termios/sigaction, process signal table, static mut TTY_IN/TTY_OUT, blocking /dev/tty reads); retained in REMAINING-AUDIT.txt."
+  }
+ ],
+ "shared_boundary_files": [
+  "src/x509/pcy_tree.rs (OwnedTree/OwnedLevels owner and tree_levels callers)",
+  "src/x509/pcy_cache.rs (ossl_policy_data_new caller)",
+  "src/runtime/bio/owned.rs (OwnedCtx/CtxDestroy)",
+  "src/runtime/member_slot.rs (CStrSlot/EmptyCStrSlot)"
+ ],
+ "secret_bearing_buffers": "No new secret-bearing buffer or cleansing claim changed. ui_util keeps the pem_password_cb_data callback pointer and rwflag (not a passphrase) and frees it plainly, as the authority's OPENSSL_free; UI_UTIL_read_pw_string cleanses its local BUFSIZ buffer on every path. The policy/ACERT/CRL units hold public certificate data only.",
+ "boundary_control": [
+  "The policy differential's one-shot 24-byte allocation refusal proves ossl_policy_level_add_node propagates NULL and the check answers INTERNAL with a NULL tree on both sides.",
+  "The differential's bare OPENSSL_sk_* and OBJ_txt2obj controls measure the container/object invisibility that adjudicates M83-R1 rather than treating it as a graph divergence."
+ ],
+ "gates_observed": {
+  "fmt": "cargo fmt --all -- --check clean",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "focused_ui_util": "3 passed / 0 failed / 0 ignored (--test-threads=4)",
+  "focused_by_store": "1 passed / 0 failed / 0 ignored (--test-threads=4)",
+  "full_lib_serial": "1697 passed / 0 failed / 31 ignored (1728 total), 250.23 s, --test-threads=1",
+  "full_lib_threads4": "1697 passed / 0 failed / 31 ignored (1728 total), 112.94 s, --test-threads=4",
+  "policy_differential": "behavioural_match=True, unadjudicated=0, graph block census match=True, failure answer match=True, refcounts match=True, controls stacks/objects invisible=True; forensics/memory-safety/x509-policy-differential.json refreshed, all_pass=True",
+  "rt_store": "pass, 1038 observations; artifacts/phase10/COURTS.json all_pass=True over 6 courts",
+  "phase11_x509": "all_pass=True over 9 courts; RT-X509-ACERT pass (178 observations), RT-X509-REQ pass (76 observations)",
+  "rt_pem_key": "pass in artifacts/phase8/COURTS.json (18/18), reused not re-run"
+ },
+ "queue_after": {
+  "remaining": 47,
+  "audited": 716
+ }
+}
