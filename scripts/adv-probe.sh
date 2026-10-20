@@ -27,6 +27,10 @@ export OPENSSL_RS_ADV_PROBE=1
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 
 probes=(
+  "runtime::bio::ownership_adv_probe::refused_bio_block_alloc_returns_null"
+  "runtime::bio::ownership_adv_probe::refused_mem_context_alloc_releases_the_partial_bio"
+  "runtime::bio::ownership_adv_probe::refused_buf_mem_alloc_releases_the_partial_bio"
+  "runtime::bio::ownership_adv_probe::mem_bio_create_and_free_releases_each_block_once"
   "ssl::statem::statem_clnt::adv_probe::tls12_process_refused_ticket_alloc_leaves_ext_tick_empty"
   "ssl::statem::statem_clnt::adv_probe::tls13_process_refused_ticket_alloc_leaves_ext_tick_empty"
   "ssl::statem::statem_clnt::adv_probe::canary_refusal_instrument_fires"

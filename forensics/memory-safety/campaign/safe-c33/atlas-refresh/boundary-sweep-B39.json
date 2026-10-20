@@ -1,0 +1,183 @@
+{
+  "receipt": "boundary-sweep-B39",
+  "date": "2026-10-20",
+  "mechanism": "BIO",
+  "subphase": "C3 redis closure: memory-BIO constructor/destructor boundary",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "1ea4eac71",
+    "base_subject": "Merge stage/p25/c3: redis consumer closure receipt",
+    "source_commit": "13d61a0a1",
+    "committed": true,
+    "changed_files": 2,
+    "diffstat": "src/runtime/bio/mod.rs: 340 insertions(+), 73 deletions(-); scripts/adv-probe.sh: 4 insertions(+); this receipt is a documentation-only follow-up",
+    "scope": "BIO_new_ex allocation/failure paths, BIO_free release/reentrancy, BIO_free_all chain walk, BIO_new_mem_buf and the memory-BIO method (BIO_s_mem/BIO_s_secmem)"
+  },
+  "stop_status": "NO_STOP_DEFECT REMAINING IN THE REVIEWED SCOPE. Three genuine defects were found and repaired by the author. The independent non-author reviewer ACCEPTed the change after reproducing every control and demonstrating a firing mutation negative control. The mechanism is now INDEPENDENTLY_CHECKED AT BOUNDARY SCOPE ONLY; it is NOT mechanism SAFETY_DISCHARGED and BIO remains CONTRACTED in the consumer closure.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change. No exported symbol, extern \"C\" signature or #[repr(C)] layout changed.",
+    "external_contracts": [
+      "bio_lib.c:83 OPENSSL_zalloc(sizeof(*bio)) -- the BIO block must come from the CRYPTO allocator seam so CRYPTO_set_mem_functions observes it.",
+      "bio_lib.c:99,110 new_ex_data failure frees the block only; create failure frees ex_data and the block and must NOT run the method destroy.",
+      "bio_lib.c:126-147 the last reference is consumed before BIO_CB_FREE; a veto leaves the object leaked, not restored.",
+      "bio_lib.c:845-859 BIO_free_all reads refcount and next_bio before releasing, and stops after an element whose pre-free count exceeds one.",
+      "bss_mem.c:95-165 memory BIO: buf and readp are separate blocks, b->ptr is published only after both are established, shutdown==0/init==0 deliberately leak buf (authority parity)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B39-BIO-1",
+      "file": "src/runtime/bio/mod.rs BIO_new_ex (~:952) and BIO_free (~:1134)",
+      "operation": "BIO block allocation and release",
+      "before": "Allocated with Box::new and released with Box::from_raw. The block bypassed CRYPTO_set_mem_functions entirely: an installed allocator hook never saw the allocation, a refused allocation was not observable, and the seam accounting was silently wrong.",
+      "after": "CRYPTO_zalloc(size_of::<Bio>()) with ptr::write initialisation, released by CRYPTO_free at the authority's site. No reference is formed before initialisation.",
+      "mechanism": "ELIMINATED: a BIO block that the allocator seam cannot see is no longer constructible.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, with mutation control)"
+    },
+    {
+      "id": "B39-BIO-2",
+      "file": "src/runtime/bio/mod.rs BIO_free (~:1086 old)",
+      "operation": "exclusive borrow across application-controlled callbacks",
+      "before": "A &mut Bio was live across BIO_CB_FREE and the method destroy. Both are C function pointers a caller can set; a re-entrant BIO_free through the same pointer would have had two exclusive borrows of one object.",
+      "after": "The last-reference sentinel is claimed first; every field is re-read through the raw pointer; no &mut outlives either callback.",
+      "mechanism": "ELIMINATED: two exclusive borrows of one Bio across a callback are no longer expressible.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, Miri SB and TB)"
+    },
+    {
+      "id": "B39-BIO-3",
+      "file": "src/runtime/bio/mod.rs BIO_free_all # Safety (~:1220)",
+      "operation": "safety documentation of the chain walk",
+      "before": "The # Safety claimed a dangling non-NULL link was handled; it is caller UB because the walk reads the link before it can test it. The doc also did not state that a free callback must not release the remaining chain.",
+      "after": "The contract states every non-NULL link must be live and that a free callback/destroy must not release or unlink the tail.",
+      "mechanism": "RELOCATED to an explicit ABI contract (an arbitrary-chain precondition is not representable in safe Rust).",
+      "hidden": 0,
+      "state": "FIXED (author) + ACCEPTED (reviewer)"
+    }
+  ],
+  "reviewer": {
+    "independent": true,
+    "author": "conversion subagent",
+    "reviewer": "separate adversarial subagent (did not write the change)",
+    "verdict": "ACCEPT",
+    "strongest_reason": "The mutation negative control proves the refusal probe actually detects the pre-fix Box allocation, the only Bio producer now uses CRYPTO_zalloc, and Miri under Stacked and Tree Borrows found no aliasing violation in the callback/reentrancy path.",
+    "signed_scope": "BIO block constructor/destructor ownership only -- INDEPENDENTLY_CHECKED at boundary scope, not mechanism SAFETY_DISCHARGED.",
+    "layout_note": "size_of::<Bio>() == 128 matches the field set of bio_local.h:98 with deprecated callback present; a no-deprecated pinned authority would be 120. The probe arms size_of::<Bio>() so the request equals the Rust layout regardless; the compiled-authority comparison is NOT_RUN."
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "exit 0 (author and reviewer)"
+    },
+    {
+      "id": "FAST-FOCUSED",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib bio -- --test-threads=4",
+      "result": "PASS",
+      "observed": "104 passed; 0 failed; 5 ignored"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "exit 0; 0 new warnings"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1710 passed; 0 failed; 35 ignored"
+    },
+    {
+      "id": "PROBES-ISOLATED",
+      "instrument": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact --test-threads=1 <each of 4>",
+      "result": "PASS",
+      "observed": "runtime::bio::ownership_adv_probe::{refused_bio_block_alloc_returns_null, refused_mem_context_alloc_releases_the_partial_bio, refused_buf_mem_alloc_releases_the_partial_bio, mem_bio_create_and_free_releases_each_block_once} -- 1 passed each, own process"
+    },
+    {
+      "id": "NEGATIVE-CONTROL-MUTATION",
+      "instrument": "re-introduce Box::into_raw(Box::new(zeroed Bio)) on the BIO_new_ex path in the reviewer's worktree",
+      "result": "PASS (control fires)",
+      "observed": "refused_bio_block_alloc_returns_null FAILED, exit 101, panicked at mod.rs:2209 'a refused BIO block must yield NULL'; file restored, git status clean, HEAD unchanged"
+    },
+    {
+      "id": "MIRI-SB-TB",
+      "instrument": "cargo +nightly-2026-10-01 miri test (Stacked Borrows and Tree Borrows)",
+      "result": "PASS",
+      "observed": "four refuse/free probes pass under SB; a_reentrant_free_during_destroy_is_retired passes under SB and TB. A 45-byte retained error-stack allocation is reported by Miri on refusal runs (pre-existing, not introduced here); exit 0 with -Zmiri-ignore-leaks."
+    },
+    {
+      "id": "CALLER-CLOSURE",
+      "instrument": "rg \"Box::(new|from_raw|into_raw)\" src | rg -i bio; rg \"BIO_new\\b|BIO_free\\b\" src/ssl | wc -l",
+      "result": "PASS (bounded)",
+      "observed": "0 remaining Box-based BIO paths; 73 SSL BIO call sites sized; two spot-checked (SSL_set_bio, SSL_set0_rbio) with no use-after-free across a callback. The full 73-site audit is NOT_RUN."
+    }
+  ],
+  "not_run": [
+    {
+      "check": "ASan / TSan",
+      "reason": "NOT_RUN: Miri was practical for this narrow path and was used instead. ASan remains required before mechanism discharge."
+    },
+    {
+      "check": "serial full suite (cargo test --lib)",
+      "reason": "NOT_RUN at this level: only the --test-threads=4 execution was performed. Required at the next BATCH checkpoint."
+    },
+    {
+      "check": "full adversarial probe suite",
+      "reason": "NOT_RUN: the four new probes were run in isolation; the remaining probe suite is scheduled for the next BATCH checkpoint."
+    },
+    {
+      "check": "authority differential for seam (file,line) strings",
+      "reason": "NOT_RUN: the refusal instrument records a site boolean, not the recorded coordinate. Required before mechanism discharge."
+    },
+    {
+      "check": "compiled-authority sizeof(*bio)",
+      "reason": "NOT_RUN: the field enumeration matches, the compiled authority binary was not measured."
+    },
+    {
+      "check": "Loom",
+      "reason": "NOT_RUN: the refcount protocol is already independently modelled by RC-1; this change does not alter it."
+    },
+    {
+      "check": "readp-allocation failure tail in mem_init",
+      "reason": "NOT_RUN: unreachable with the one-shot size-only injector because BUF_MEM_new and readp share both size and (NULL,0) site. Code matches bss_mem.c; not dynamically exercised."
+    }
+  ],
+  "obligations": {
+    "discharged_at_boundary_scope": [
+      "BIO block allocation and release now observable by CRYPTO_set_mem_functions (B39-BIO-1)",
+      "no exclusive borrow across BIO_CB_FREE or method destroy (B39-BIO-2)",
+      "BIO_free_all chain precondition stated instead of falsely claimed (B39-BIO-3)"
+    ],
+    "closed": [
+      "reviewer-retained: BIO_free did not state that the method table must outlive the object -- now stated in its # Safety",
+      "reviewer-retained: BIO_free_all did not state that a free callback must not free the tail -- now stated in its # Safety"
+    ],
+    "retained": [
+      "73 SSL BIO call sites are not individually audited",
+      "seam (file,line) strings not differentially compared against the pinned authority binary",
+      "compiled-authority sizeof(*bio) not measured",
+      "mem_init readp-failure tail not dynamically exercised",
+      "BIO mechanism has no independent ASan, serial-suite or full-probe evidence yet"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BOUNDARY_INDEPENDENTLY_CHECKED",
+    "independently_checked": true,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "The memory-BIO constructor/destructor boundary is independently checked at the scope the reviewer signed. BIO remains CONTRACTED: mechanism discharge requires the retained obligations above, including ASan, the 73-site caller audit and the seam-coordinate differential."
+  },
+  "non_claims": [
+    "Not a BIO mechanism discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "Not evidence for non-memory BIO methods (file, fd, socket, filter) beyond the shared BIO_new/BIO_free path.",
+    "The redis closure remains BLOCKED: BIO is now boundary-checked but still CONTRACTED, and RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN.",
+    "No claim about Windows reserved-name build warnings (src/{dsa,rsa,ec,dh}/prn.rs); those are unaffected by this change."
+  ]
+}
