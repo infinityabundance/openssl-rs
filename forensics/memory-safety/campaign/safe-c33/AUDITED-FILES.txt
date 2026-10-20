@@ -658,3 +658,11 @@ src/runtime/ex_data.rs
 src/runtime/getenv.rs
 src/runtime/owned_buf.rs
 src/runtime/rcu.rs
+src/runtime/rdtsc.rs
+src/runtime/sparse_array.rs
+src/runtime/thread_arch.rs
+src/runtime/threads_common.rs
+src/runtime/time.rs
+src/runtime/trace.rs
+src/runtime/uid.rs
+src/seed.rs

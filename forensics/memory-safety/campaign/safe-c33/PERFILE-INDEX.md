@@ -6946,3 +6946,79 @@ ordinary position.** `src/runtime/rdtsc.rs`. **Next eight.**
 `src/runtime/thread_arch.rs`, `src/runtime/threads_common.rs`,
 `src/runtime/time.rs`, `src/runtime/trace.rs`, `src/runtime/uid.rs`,
 `src/seed.rs`.
+
+## M77 (mechanism) — per-file contract sweep (rdtsc, sparse array, native thread object, threads_common, civil time, trace, uid, SEED)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M77.json`](atlas-refresh/mechanism-sweep-M77.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`3acceb300`. **No memory-safety defect was found.** Two low-severity repairs:
+`OSSL_trace_string` no longer clamps a safe authority arm, and SEED's local
+key/block copies are cleansed. No `#[repr(C)]` layout, exported symbol,
+signature or allocator coordinate changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/runtime/rdtsc.rs` | `_rdtsc` intrinsic and its single `SAFETY:` contract, the low-32-bits return contract, the non-`x86_64` documented divergence | no defect |
+| `src/runtime/sparse_array.rs` | `OwnedNode` zalloc/write/drop, `Node` shape invariant, growth order and allocation-failure atomicity, `leaf_slot` descent, snapshot-before-callback in both walks, `free`/`free_leaves` release split | no defect; failure ordering and `top`/`nelem` bookkeeping match `sparse_array.c:179-216` |
+| `src/runtime/thread_arch.rs` | `CtxDestroy` body, `OwnedThreadHandle` provenance/release, 56-byte `pthread_attr_t`, spawn failure path, thunk publish order, concurrent-join state word, cleanable guard | no defect; `CryptoThread` stays a valid all-zero `CtxDestroy` value |
+| `src/runtime/threads_common.rs` | `MkeyBuf` calloc/adopt/into_raw/Drop, `KeyCell` `Sync` claim, run-once plus `master_key_init`, key destructor and `clean_local`, sparse-table get/set/removal | no defect; matches `threads_common.c`'s two release coordinates and its `master_key_init` guard |
+| `src/runtime/time.rs` | `gmtime_r` delegation, Fliegel–Van Flandern wrapping arithmetic, `Tm` glibc layout, optional `pday`/`psec`, null and year-range failure arms | no defect |
+| `src/runtime/trace.rs` | static name table and `Sync`, range/lookup bounds, profile stubs, `OSSL_trace_string` length/mask/print arms | 1 low-severity compatibility repair (M77-D1) |
+| `src/runtime/uid.rs` | `getauxval(AT_SECURE)` declaration and contract, `OPENSSL_isservice` profile arm | no defect |
+| `src/seed.rs` | `char2word`/`word2char` bounds, key-update and `E_SEED` round transcription, four mode wrappers, key-schedule ownership, local secret copies | 1 low-severity secret-residue repair (M77-D2) |
+
+**Defects.**
+
+| ID | Site | Severity | Class | Disposition |
+|---|---|---|---|---|
+| M77-D1 | `src/runtime/trace.rs:256-265` | low | authority-faithful over-clamp of a safe arm | The candidate clamped `len` to 80 for every `size > 80`, including `full != 0 && text != 0`. The authority's UB is confined to `text == 0` (its 81-byte local); with `text != 0` it prints the full `size` bytes from the caller's buffer, which is safe. The clamp now applies only to `text == 0`, so that arm matches `trace.c:544-560`; a unit test pins both arms. |
+| M77-D2 | `src/seed.rs:176-179, 221-225, 270-273` | low | secret residue in stack temporaries | `SEED_set_key`'s `x` holds the raw key words and `SEED_encrypt`/`SEED_decrypt`'s `x`/`out` hold the caller's block and the last round output. The authority leaves all of them on the stack. Each is now `OPENSSL_cleanse`d on the function's single return path. The key schedule itself is caller-owned and `src/evp/cipher_ctx.rs:400` already cleanses `cipher_data`. |
+
+**Unsafe accounting.** Eliminated: none (no memory-safety defect). Relocated:
+none. New unsafe operation: three `OPENSSL_cleanse` calls on stack arrays, each
+inside an existing `unsafe` block with a `SAFETY:` comment; no new assumption.
+Contracts reused: RC-1 `guard_ffi`; OB-3 `OwnedCtx`/`CtxDestroy`
+(`thread_arch`); OB-4 member/array ownership (`threads_common`, `sparse_array`);
+the `CRYPTO_*` seam coordinates (unchanged); B1/B2/B6-B22 callback contracts
+(the two sparse-array walks snapshot before calling back); B19 cleansing
+(SEED's new local cleanses follow its discipline). Hidden obligations: **0**.
+
+**Secret-bearing buffers.** `seed.rs`'s raw-key and block-derived locals are
+cleansed on every exit; the `SeedKeySchedule` is caller-owned and cleansed by
+the EVP cipher context. `trace.rs`, `uid.rs`, `rdtsc.rs`, `time.rs` hold public
+metadata only. `threads_common` stores caller data pointers (RCU reader state),
+which it deliberately does not own or release; `sparse_array` values belong to
+the caller.
+
+**Gates observed (final worktree).** FAST `cargo fmt --all -- --check` clean and
+`cargo clippy --all-targets -- -D warnings` clean. Focused
+`cargo test --lib -- --test-threads=4` over `runtime::` **378 passed / 0 failed**,
+plus `trace::` **5/5** and `seed::`/`e_seed::` **2/2**. BATCH full library
+**1693 passed / 0 failed / 27 ignored** serially (324.70 s) and with
+`--test-threads=4` (93.68 s); the extra pass over the 1692 baseline is the new
+trace test. Phase 3 courts re-run: all 11 pass, including **RT-RUNTIME-EXT 94
+observations** (its cases stay within the unchanged arms).
+
+**Evidence reused / invalidated.** `sparse_array.rs` and `threads_common.rs` are
+shared concurrency mechanisms and were audited **without modification**, so
+their source identity and the existing OB-4/callback evidence remain valid. No
+shared owner, contract or precondition was edited. Phase 3 was rebuilt because
+`trace.rs` changed; phases 2/4-25 were not.
+
+**NOT_RUN.** ASan (no UB repair and no new extent); Miri (unavailable on the
+pinned 1.98.1 stable toolchain); Loom/TSan (`thread_arch`/`threads_common`
+audited unmodified); dependency-graph regeneration (no shared contract edited);
+FRF/SEAL; constant-time (SEED's change is storage cleansing, not a
+constant-time claim); phases 2/4-25 courts (no affected surface).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`.
+
+**Queue.** `REMAINING-AUDIT.txt` **95**, `AUDITED-FILES.txt` **668**. **Next
+ordinary position.** `src/selftest/indicator.rs`. **Next eight.**
+`src/selftest/indicator.rs`, `src/selftest/mod.rs`, `src/slh_dsa/adrs.rs`,
+`src/slh_dsa/fors.rs`, `src/slh_dsa/hash_ctx.rs`, `src/slh_dsa/hash.rs`,
+`src/slh_dsa/hypertree.rs`, `src/slh_dsa/mod.rs`.

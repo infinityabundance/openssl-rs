@@ -20,15 +20,28 @@
 //! block function, so the mode arithmetic is [`crate::modes`]'s and only the block call is this
 //! module's.
 //!
+//! ## Secret material
+//!
+//! `SEED_set_key`'s output is the key schedule, which the EVP cipher context owns;
+//! `src/evp/cipher_ctx.rs` cleanses `cipher_data` before releasing it, so the
+//! schedule itself is covered by the cipher layer. The word arrays inside these
+//! functions are a second, local representation: `SEED_set_key`'s `x` holds the
+//! raw key words, and `SEED_encrypt`/`SEED_decrypt`'s `x` and `out` hold the
+//! caller's block and the last `E_SEED` output. The authority leaves all three
+//! on the stack; they are cleansed here on the single return path of each
+//! function, because stack residue is a secret-bearing copy too.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_void};
+use core::mem::size_of_val;
 
 use crate::cipher_tables::{SEED_KC, SEED_SS};
 use crate::modes::{
     Block128F, CRYPTO_cbc128_decrypt, CRYPTO_cbc128_encrypt, CRYPTO_cfb128_encrypt,
     CRYPTO_ofb128_encrypt,
 };
+use crate::runtime::mem::OPENSSL_cleanse;
 
 /// `SEED_BLOCK_SIZE` — `include/openssl/seed.h:55`.
 pub const SEED_BLOCK_SIZE: usize = 16;
@@ -159,6 +172,11 @@ pub unsafe extern "C" fn SEED_set_key(rawkey: *const u8, ks: *mut SeedKeySchedul
             d[i * 2 + 3] = g_func(t1);
             i += 2;
         }
+
+        // SECRET_DATA: `x` is a copy of the caller's raw key words. The
+        // authority leaves it on the stack; cleanse the copy on the only path out.
+        // SAFETY: `x` is a live local array.
+        OPENSSL_cleanse(x.as_mut_ptr().cast(), size_of_val(&x));
     }
 }
 
@@ -199,6 +217,12 @@ pub unsafe extern "C" fn SEED_encrypt(s: *const u8, d: *mut u8, ks: *const SeedK
         word2char(x[3], d.add(4));
         word2char(x[0], d.add(8));
         word2char(x[1], d.add(12));
+
+        // SECRET_DATA: the block words and the last round output are derived
+        // from the caller's plaintext; cleanse the local copies.
+        // SAFETY: `x` and `out` are live local arrays.
+        OPENSSL_cleanse(x.as_mut_ptr().cast(), size_of_val(&x));
+        OPENSSL_cleanse(out.as_mut_ptr().cast(), size_of_val(&out));
     }
 }
 
@@ -242,6 +266,11 @@ pub unsafe extern "C" fn SEED_decrypt(s: *const u8, d: *mut u8, ks: *const SeedK
         word2char(x[3], d.add(4));
         word2char(x[0], d.add(8));
         word2char(x[1], d.add(12));
+
+        // SECRET_DATA: as in `SEED_encrypt`.
+        // SAFETY: `x` and `out` are live local arrays.
+        OPENSSL_cleanse(x.as_mut_ptr().cast(), size_of_val(&x));
+        OPENSSL_cleanse(out.as_mut_ptr().cast(), size_of_val(&out));
     }
 }
 
