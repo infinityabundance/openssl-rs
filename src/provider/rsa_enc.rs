@@ -360,14 +360,20 @@ unsafe extern "C" fn rsa_encrypt(
             let rsasize = RSA_size((*prsactx).rsa);
 
             // The scratch is this frame's own block; the handle releases it through the crate's
-            // allocator seam on every path out of the arm.
-            let Some(tbuf) = OwnedBuf::new(rsasize as usize, FILE_SEAM, 197) else {
+            // allocator seam on every path out of the arm. It holds the padded plaintext, so the
+            // release cleanses it (a deliberate improvement over the authority's plain
+            // `OPENSSL_free`); the allocation and each early release stay at the authority's own
+            // coordinates (`rsa_enc.c.in:197`, `:202`, `:215`, `:220`).
+            let Some(mut tbuf) =
+                OwnedBuf::new_cleansed_released(rsasize as usize, FILE_SEAM, 197, FILE_SEAM, 220)
+            else {
                 return 0;
             };
             if (*prsactx).oaep_md.is_null() {
                 (*prsactx).oaep_md =
                     EVP_MD_fetch((*prsactx).libctx, c"SHA-1".as_ptr(), ptr::null());
                 if (*prsactx).oaep_md.is_null() {
+                    tbuf.set_release_line(202);
                     raise_site(&err_sites::PROV_RSA_ENC_201);
                     return 0;
                 }
@@ -385,6 +391,7 @@ unsafe extern "C" fn rsa_encrypt(
             );
 
             if ret == 0 {
+                tbuf.set_release_line(215);
                 return 0;
             }
             ret = RSA_public_encrypt(rsasize, tbuf.as_ptr(), out, (*prsactx).rsa, RSA_NO_PADDING);
@@ -460,8 +467,13 @@ unsafe extern "C" fn rsa_decrypt(
             || (*prsactx).pad_mode == RSA_PKCS1_WITH_TLS_PADDING
         {
             // The scratch is this frame's own block; the handle releases it through the crate's
-            // allocator seam on every path out of the arm.
-            let Some(tbuf) = OwnedBuf::new(len, FILE_SEAM, 272) else {
+            // allocator seam on every path out of the arm. It holds the decrypted ciphertext
+            // before unpadding, so the release cleanses it (a deliberate improvement over the
+            // authority's plain `OPENSSL_free`); allocation and each early release stay at the
+            // authority's coordinates (`rsa_enc.c.in:272`, `:281`, `:289`, `:304`, `:311`).
+            let Some(mut tbuf) =
+                OwnedBuf::new_cleansed_released(len, FILE_SEAM, 272, FILE_SEAM, 311)
+            else {
                 return 0;
             };
             ret = RSA_private_decrypt(
@@ -476,6 +488,7 @@ unsafe extern "C" fn rsa_decrypt(
              * error occurred (non-constant time)
              */
             if ret != len as c_int {
+                tbuf.set_release_line(281);
                 raise_site(&err_sites::PROV_RSA_ENC_280);
                 return 0;
             }
@@ -484,6 +497,7 @@ unsafe extern "C" fn rsa_decrypt(
                     (*prsactx).oaep_md =
                         EVP_MD_fetch((*prsactx).libctx, c"SHA-1".as_ptr(), ptr::null());
                     if (*prsactx).oaep_md.is_null() {
+                        tbuf.set_release_line(289);
                         raise_site(&err_sites::PROV_RSA_ENC_288);
                         return 0;
                     }
@@ -502,6 +516,7 @@ unsafe extern "C" fn rsa_decrypt(
             } else {
                 /* RSA_PKCS1_WITH_TLS_PADDING */
                 if (*prsactx).client_version == 0 {
+                    tbuf.set_release_line(304);
                     raise_site(&err_sites::PROV_RSA_ENC_301);
                     return 0;
                 }

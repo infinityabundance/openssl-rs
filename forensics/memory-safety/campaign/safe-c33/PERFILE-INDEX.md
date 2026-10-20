@@ -6124,3 +6124,93 @@ eight.** `src/provider/ml_kem_kmgmt.rs`, `src/provider/mlx_kem.rs`,
 `src/provider/rsa_enc.rs`, `src/provider/rsa_kem.rs`,
 `src/provider/securitycheck_default.rs`, `src/provider/securitycheck.rs`,
 `src/provider/seeding.rs`, `src/provider/skeymgmt.rs`.
+
+## M69 (mechanism) — per-file contract sweep (ML-KEM keymgmt, MLX KEM, RSA cipher/RSASVE, security checks, seeding and symmetric-key management)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M69.json`](atlas-refresh/mechanism-sweep-M69.json).
+Numbering note: the preceding section is the boundary sweep B22, which this file
+headed `M69`; this entry keeps the orchestrator-assigned mechanism receipt name.
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`2d24ba8f5`. Three files carry worktree repairs (three findings): one failure-path
+allocation guard in `mlx_kem_decapsulate`, cleansing plus release-coordinate
+separation for the two RSA OAEP/TLS scratch buffers, and release-coordinate
+separation for the ML-KEM keymgmt scratch buffers. Layouts, symbols, exported
+signatures, allocation sizes and `FILE` values are unchanged; the only release
+change beyond the line metadata is `CRYPTO_clear_free` instead of `CRYPTO_free`
+for two internally owned scratch blocks. The eight records are file-level
+obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/ml_kem_kmgmt.rs` | `ProvMlKemGenCtx` seed/seedbuf ownership, `ml_kem_pairwise_test` scratch and cleanses, export public/seed/private/DK provenance and secure-heap release, generated decoder walks and repeated-key sites, `check_seed`/`check_prvenc`, `load`/`load_err` detached-DK ownership, gen/gen_set_params/gen_cleanup | 1 low-severity allocator-coordinate class repaired (M69-D3) |
+| `src/provider/mlx_kem.rs` | `ProvMlxKemCtx` borrowed key, `newctx` field-by-field init, ML-KEM plus ECDHE encapsulate/decapsulate ladders, shared-secret cleanse arms, size-query returns, dispatch table | 1 low-severity failure-path allocation divergence repaired (M69-D1) |
+| `src/provider/rsa_enc.rs` | `ProvRsaCtx` key/md/label refcounts, OAEP encrypt/decrypt scratch, TLS padding ladder, constant-time selection, get/set decoders, dup/free partial-init arms | 1 low-severity secret-residue plus coordinate class repaired (M69-D2) |
+| `src/provider/rsa_kem.rs` | `ProvRsaCtx` zalloc/dup/free, RSASVE generate/recover, degenerate-ciphertext guard, BN_CTX temporaries, operation-name map | no defect |
+| `src/provider/securitycheck_default.rs` | seven-row RSA digest map, NULL `EVP_MD` contract, approved-NID fall-through | no defect |
+| `src/provider/securitycheck.rs` | protect/allow classification and PSS refusal, RSA/EC/DSA/DH size checks | no defect |
+| `src/provider/seeding.rs` | eight dispatch ids, `set_func` identity refusal, user-before-plain precedence, forwarding up-calls | no defect |
+| `src/provider/skeymgmt.rs` | `ProvSkey` zalloc/member cleanse, generic import/export, AES length/type subclass, dispatch rows | no defect |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M69-D1 | `src/provider/mlx_kem.rs:514-518` | low | failure-path allocation divergence | the ECDH peer key was allocated before testing the just-created `EVP_PKEY_CTX`; the authority guards the context first, so an allocator failure now skips the peer allocation exactly as the authority does. |
+| M69-D2 | `src/provider/rsa_enc.rs:362-395, 462-519` | low | secret residue plus allocator-seam coordinate | both OAEP/TLS scratch buffers recorded the allocation line as the release line and were freed plainly while holding padded plaintext / decrypted EM. They now use `new_cleansed_released` at the authority's allocation and early/late release coordinates and are cleansed before release (a deliberate improvement over the authority's `OPENSSL_free`, not observable through the API). |
+| M69-D3 | `src/provider/ml_kem_kmgmt.rs:154-177, 269-280, 501-553, 922-927, 1166-1195, 1432-1440` | low | allocator-seam release coordinate | eight scratch handles recorded their allocation site as their release site (pairwise ctext, export public/seed/private/DK, `check_prvenc`, replacement `propq`), and `ml_kem_load` shared `LINE_LOAD_CLEAR=535` between the success and error arms although 535 is not a free site. Separate allocation/release pairs now name 115/158, 269/339, 283/337, 289/338, 294/338, 377/383, 558/565, 734/735 and 839. |
+
+No memory-safety defect (UB, invalid free, aliasing conflict, uninitialised read,
+or safe caller reachable through a safe interface) was found. The D2/D3 repairs
+are allocator-coordinate and secret-residue improvements; D1 is a failure-path
+compatibility repair.
+
+**Secret-bearing buffers.** RSA OAEP encrypt/decrypt scratch is now cleansed on
+every arm; the RSA key itself is released through `RSA_free` and B19's BIGNUM
+cleansing. ML-KEM pairwise `secret`/`out`/`entropy` and the stack seed are
+cleansed on every exit, the pairwise ciphertext and `check_prvenc` scratch are
+clear-freed, export seed/private/DK copies are secure-clear-freed, the
+`OSSL_PARAM` copies are cleansed before `OSSL_PARAM_free`, and the detached
+`encoded_dk` is secure-clear-freed on both load arms. `ProvSkey.data` is
+clear-freed on the destructor and on the rejected-import paths. MLX's combined
+shared secret is cleansed on failure after the length checks; its size-query
+returns are deliberately cleanse-free, matching the authority. `seeding` and the
+two security-check units store no secrets.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: **0**. No unsafe
+operation was added or removed; the new calls are safe constructors and setters.
+Contracts reused: OB-1 `OwnedBuf`, OB-3 `OwnedCtx`/`CtxDestroy`, OB-4 member
+slots, RC-1 refcounts, B19 BIGNUM cleansing, the provider `OSSL_CALLBACK`
+lifetime contract and the `CRYPTO_*` seam.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; focused
+`provider::mlx_kem` 1/0, `provider::skeymgmt` 1/0, `provider::securitycheck` 3/0,
+`provider::rsa_kem` 1/0, `runtime::owned_buf` 30/0, `runtime::bio::owned` 19/0.
+The `provider::` subset reported 174 passed / 1 failed once
+(`provider::ec_kem::tests::the_dhkem_round_trip_agrees_in_crate`); rerun alone it
+passes, so it is the known test-isolation issue, not a regression. BATCH
+`cargo clippy --all-targets -- -D warnings` clean; full library **1673 passed /
+0 failed / 27 ignored** serial in 201.74 s and threaded in 93.39 s, in the court
+with `CARGO_BUILD_JOBS=4`.
+
+**NOT_RUN.** Miri/Stacked+Tree Borrows and ASan (no ownership mechanism changed;
+the repaired class is allocator metadata and residue); allocator-hook
+differential observing the corrected `file`/`line` events; authority
+differential for RSA OAEP/TLS, RSASVE and ML-KEM export/load; constant-time
+measurement (no secret-dependent control flow changed, no claim made);
+dependency-graph regeneration; FRF suite and SEAL.
+
+**Residuals.** (1) The eight files are audited, not `SAFETY_DISCHARGED`. (2)
+Provider-up-call statics assume the core serialises initialisation. (3)
+`ProvMlxKemCtx.key` and `ProvRsaCtx.rsa` lifetimes are EVP caller obligations.
+(4) The RSA padding ladders use the authority's constant-time helpers but no new
+timing evidence was produced.
+
+**Queue.** `REMAINING-AUDIT.txt` 167 -> **159**; `AUDITED-FILES.txt` 596 ->
+**604**. **Next ordinary position.** `src/provider/slh_dsa_kmgmt.rs`. **Next
+eight.** `src/provider/slh_dsa_kmgmt.rs`, `src/provider/slh_dsa_sig.rs`,
+`src/provider/sm2_enc.rs`, `src/provider/sm2_sig.rs`,
+`src/provider/stores.rs`, `src/provider/util.rs`, `src/punycode.rs`,
+`src/quic_vlint.rs`.
