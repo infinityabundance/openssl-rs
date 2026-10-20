@@ -7254,3 +7254,67 @@ queued). **Next eight.** `src/ssl/record/rec_layer_s3.rs`,
 `src/ssl/ssl_init.rs`, `src/ssl/ssl_mcnf.rs`, `src/ssl/ssl_rsa_legacy.rs`,
 `src/ssl/ssl_stat.rs`, `src/ssl/ssl_txt.rs`,
 `src/ssl/statem/extensions_cust.rs`, `src/ssl/statem/extensions_srvr.rs`.
+
+## BOUNDARY SWEEP B25 — TLS record read/write layer (`ssl/record/rec_layer_s3.rs`)
+
+Receipt: [`atlas-refresh/boundary-sweep-B25.json`](atlas-refresh/boundary-sweep-B25.json).
+Candidate: `integrate/safe-c33` at `a19eae0f7`; working-tree blob
+`src/ssl/record/rec_layer_s3.rs` `bcb2a7376` (pre-fix `5f5cdcbb5`). One file,
++166/-11.
+
+**Result.** The deferred BIO read/write and flush-resumption boundary is audited.
+Four defects were repaired: the zero-length write path (UB-class under an
+active write key and divergent from the authority's `tot == len` arm), a
+record-type confusion in the TLS1.3 handshake buffer, acceptance of
+over-long alerts, and a silent record-overflow desync. The BIO callback
+reentrancy and short-write resumption obligations are explicit residuals;
+no production unsafe expression was added or removed.
+
+**Boundaries.**
+
+| ID | Mechanism | Disposition |
+|---|---|---|
+| B25-RL-1 | record write: fragmentation, encode/header, BIO transport + flush | `CONTRACTED` (B25-R1/R2) |
+| B25-RL-2 | record read accumulator/resumption, over-long arm, EOF/retry classification | `CONTRACTED` (B25-R3/R4/R5) |
+| B25-RL-3 | TLS1.3 handshake-message buffering and non-handshake skip | `CONTRACTED` (B25-R1/R4/R5); type confusion closed |
+| B25-RL-4 | received-alert decode and fatal-data raise | `SAFETY_DISCHARGED` |
+| B25-RL-5 | record-state accessors, buffer-length setters, rstate strings | `SAFETY_DISCHARGED` |
+
+**Defects.**
+
+| ID | Location | Severity | Class | Repair |
+|---|---|---|---|---|
+| B25-D1 | `rec_layer_s3.rs:124` pre-fix (`ssl3_write_bytes`) | high | UB from a zero-length source pointer; authority divergence | `SSL_write(s, NULL, 0)` wrote a five-byte record and, with a TLS1.3/TLS1.2 key active, passed NULL/0 to `copy_nonoverlapping` in the encoder. `len == 0` now returns success without writing (authority `tot == len`, `rec_layer_s3.c:356-358`). |
+| B25-D2 | `rec_layer_s3.rs:666` pre-fix (`tls13_next_handshake_message`) | medium | record-type confusion | A discarded non-handshake record left `rd_msg_len/off` describing its body, so the next call parsed application data as a handshake header. Both fields are cleared before the `-1` return. |
+| B25-D3 | `rec_layer_s3.rs:345` pre-fix (`ssl3_read_bytes_alert`) | medium | malformed-input acceptance | `len < 2` accepted a three-or-more-byte alert; e.g. `warning || close_notify || extra` became a clean shutdown. Now `len != 2`, matching the authority's exact-two-byte `PACKET_remaining` check (`rec_layer_s3.c:868-874`). |
+| B25-D4 | `rec_layer_s3.rs:520` pre-fix (`ssl3_read_one_record`) | medium | stream desync on a malformed record | A declared length above the 17000-byte record buffer returned `-1` with no fatal/error after consuming the header. Now `ossl_statem_fatal(SSL_AD_RECORD_OVERFLOW, SSL_R_PACKET_LENGTH_TOO_LONG)`, matching `tls_common.c:669-672`. |
+| B25-D5 | `rec_layer_s3.rs:191` pre-fix (`ssl3_write_one_record`) | low | latent extent precondition | The documented `<= SSL3_RT_MAX_PLAIN_LENGTH` bound was unstated in `# Safety` and unchecked; a future caller above it could overflow the 17000-byte encoder scratch in the TLS1.2 path. The bound is now stated and refused defensively. |
+
+**Caller closure (9 entries in the receipt).** `ssl_write_internal`,
+`ssl_read_internal` (full-size `rx_buf`), `ssl3_shutdown` (2048-byte discard,
+residual B25-R3), `ssl3_send_alert`, `ossl_statem_send_fatal`, the TLS1.2 client
+and server handshake readers, the TLS1.3 server/client drivers and
+`write_handshake_message`. Every buffer extent is established at the call site;
+all are unsafe fns / `unsafe extern "C"`.
+
+**Evidence.** Focused 3/3 controls; each control was observed to fail against a
+temporary reverse mutation (`0` vs `-1`; `0xAA` vs `0xBB`; `-1` vs `1`) before
+the final blob was restored. Miri stacked and tree borrows pass the three
+controls (`-Zmiri-ignore-leaks` because the global ERR queue intentionally
+retains the alert error). BATCH: full library **1697 passed / 0 failed / 27
+ignored** threaded (83.38 s) and serially (365.96 s); all 26 adversarial probes
+pass; fmt and clippy clean. ASan not rebuilt; Loom/TSan not applicable.
+Reused: B1/B2 BIO contracts, B3/B4/B17 TLS contracts, B23 WPACKET state (not
+reached from these arms), OB/RC ownership unchanged.
+
+**Classification.** Mechanism-scoped. No safe-Rust caller can cause UB through a
+safe interface; hidden obligations **0**; new unsafe assumptions **0**;
+production unsafe operations introduced/removed/relocated **0/0/0**; test-only
+unsafe operations **7**. No consumer family becomes `SAFE_COMPATIBLE`.
+
+**Queue.** `REMAINING-AUDIT.txt` **70**, `AUDITED-FILES.txt` **693**.
+**Next ordinary position.** `src/ssl/ssl_init.rs`. **Next eight.**
+`src/ssl/ssl_init.rs`, `src/ssl/ssl_mcnf.rs`, `src/ssl/ssl_rsa_legacy.rs`,
+`src/ssl/ssl_stat.rs`, `src/ssl/ssl_txt.rs`,
+`src/ssl/statem/extensions_cust.rs`, `src/ssl/statem/extensions_srvr.rs`,
+`src/ssl/statem/statem_lib.rs`.
