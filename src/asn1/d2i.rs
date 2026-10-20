@@ -93,6 +93,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_push, OpenSslStack,
@@ -1033,7 +1034,7 @@ unsafe fn add_error_data(parts: &[*const c_char]) {
         return;
     };
     // SAFETY: the buffer is `size` = `total + 1` bytes, and `size` did not wrap.
-    let Some(buf) = OwnedBlock::<u8>::malloc(size, FILE.as_ptr(), LINE) else {
+    let Some(buf) = OwnedBlock::<u8>::malloc(size, SeamFile::new(FILE), LINE) else {
         return;
     };
     // The block's stable address, for the raw copies and the append below.

@@ -46,6 +46,7 @@ use crate::pkcs7::pk7_smime::PKCS7_get0_signers;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free_all, BIO_read, Bio};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
     NID_subject_alt_name, OBJ_cmp, OBJ_obj2txt,
@@ -842,7 +843,8 @@ unsafe fn ts_compute_imprint(
     // The imprint block is the authority's own `OPENSSL_malloc(*imprint_len)` at `:453`; the handle
     // owns it until it is handed out at the success tail, so every error path below is a `Drop`.
     // SAFETY: `length` is a strictly positive digest size and `FILE`/`453` are the authority's site.
-    let Some(fresh) = OwnedBlock::<c_uchar>::malloc(length as usize, FILE.as_ptr(), 453) else {
+    let Some(fresh) = OwnedBlock::<c_uchar>::malloc(length as usize, SeamFile::new(FILE), 453)
+    else {
         // SAFETY: the err arm releases the owners of every pointer per its contract.
         return unsafe { ts_compute_imprint_err(md_alg, md, md_ctx) };
     };

@@ -36,6 +36,7 @@ use crate::runtime::err::{err_sites, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_free, CRYPTO_secure_malloc};
 
 use super::arith::{
@@ -44,7 +45,7 @@ use super::arith::{
 };
 use super::{
     ctext_bytes, ossl_ml_kem_decoded_key, ossl_ml_kem_have_dkenc, ossl_ml_kem_have_prvkey,
-    ossl_ml_kem_have_pubkey, ossl_ml_kem_have_seed, MlKemKey, MlKemVinfo, Scalar, FILE,
+    ossl_ml_kem_have_pubkey, ossl_ml_kem_have_seed, MlKemKey, MlKemVinfo, Scalar, FILE, FILE_SEAM,
     ML_KEM_KEY_PROV_FLAGS_DEFAULT, ML_KEM_KEY_RETAIN_SEED, ML_KEM_PKHASH_BYTES,
     ML_KEM_RANDOM_BYTES, ML_KEM_SEED_BYTES, ML_KEM_SHARED_SECRET_BYTES, VINFO_MAP,
 };
@@ -126,7 +127,8 @@ enum BufRelease {
 
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, line)
@@ -142,7 +144,8 @@ impl OwnedBuf {
     }
 
     /// `CRYPTO_secure_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_secure(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_secure(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
@@ -156,7 +159,8 @@ impl OwnedBuf {
 
     /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its cleansing
     /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_secure_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
@@ -884,7 +888,7 @@ pub(crate) unsafe fn ossl_ml_kem_key_dup(key: *const MlKemKey, selection: c_int)
                 );
                 ok = add_storage(
                     t,
-                    OwnedBuf::new_secure((*vinfo).prvalloc, FILE, LINE_DUP_SECURE),
+                    OwnedBuf::new_secure((*vinfo).prvalloc, FILE_SEAM, LINE_DUP_SECURE),
                     1,
                     1,
                     ret,
@@ -1017,7 +1021,8 @@ pub(crate) unsafe fn ossl_ml_kem_set_seed(
         }
 
         if (*key).seedbuf.is_null() {
-            let Some(seedbuf) = OwnedBuf::new_secure_cleansed(seedlen, FILE, LINE_SET_SEED) else {
+            let Some(seedbuf) = OwnedBuf::new_secure_cleansed(seedlen, FILE_SEAM, LINE_SET_SEED)
+            else {
                 return ptr::null_mut();
             };
             (*key).seedbuf = seedbuf.into_raw();
@@ -1059,7 +1064,7 @@ pub(crate) unsafe fn ossl_ml_kem_parse_public_key(
         }
 
         if add_storage(
-            OwnedBuf::new((*vinfo).puballoc, FILE, LINE_PARSE_PUB),
+            OwnedBuf::new((*vinfo).puballoc, FILE_SEAM, LINE_PARSE_PUB),
             None,
             0,
             0,
@@ -1108,8 +1113,8 @@ pub(crate) unsafe fn ossl_ml_kem_parse_private_key(
         ossl_ml_kem_key_reset(key);
 
         if add_storage(
-            OwnedBuf::new((*vinfo).puballoc, FILE, LINE_PARSE_PRV),
-            OwnedBuf::new_secure((*vinfo).prvalloc, FILE, LINE_PARSE_PRV_SECURE),
+            OwnedBuf::new((*vinfo).puballoc, FILE_SEAM, LINE_PARSE_PRV),
+            OwnedBuf::new_secure((*vinfo).prvalloc, FILE_SEAM, LINE_PARSE_PRV_SECURE),
             1,
             0,
             key,
@@ -1178,8 +1183,8 @@ pub(crate) unsafe fn ossl_ml_kem_genkey(
         }
 
         if add_storage(
-            OwnedBuf::new((*vinfo).puballoc, FILE, LINE_GENKEY_PUB),
-            OwnedBuf::new_secure((*vinfo).prvalloc, FILE, LINE_GENKEY_PRV),
+            OwnedBuf::new((*vinfo).puballoc, FILE_SEAM, LINE_GENKEY_PUB),
+            OwnedBuf::new_secure((*vinfo).prvalloc, FILE_SEAM, LINE_GENKEY_PRV),
             1,
             0,
             key,

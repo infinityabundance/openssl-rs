@@ -36,6 +36,7 @@ use crate::runtime::bio::sys::FILE;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_NOCLOSE};
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for the encode-to-a-stream path.
 pub(crate) const FILE_NAME: &core::ffi::CStr = c"crypto/asn1/a_i2d_fp.c";
@@ -122,7 +123,7 @@ pub unsafe extern "C" fn ASN1_i2d_bio(i2d: I2dOfVoid, out: *mut Bio, x: *const c
             return 0;
         }
         // SAFETY: `n` is positive, so it is a valid byte count for the block.
-        let Some(b) = OwnedBlock::<u8>::malloc(n as usize, FILE_NAME.as_ptr(), LINE) else {
+        let Some(b) = OwnedBlock::<u8>::malloc(n as usize, SeamFile::new(FILE_NAME), LINE) else {
             return 0;
         };
         let mut p = b.as_ptr();

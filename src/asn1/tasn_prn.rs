@@ -77,6 +77,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2ln, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::str::OPENSSL_strnlen;
@@ -697,7 +698,7 @@ unsafe fn prepend_radix(tmp: *mut c_char) -> *mut c_char {
     // SAFETY: a strictly positive size is requested and the file/line are statics.
     // The prefix buffer is the authority's own `OPENSSL_malloc(out_len)`; the handle's
     // `Drop` is its `OPENSSL_free` at the same site.
-    let Some(ret) = OwnedBlock::<c_char>::malloc(out_len, FILE.as_ptr(), LINE) else {
+    let Some(ret) = OwnedBlock::<c_char>::malloc(out_len, SeamFile::new(FILE), LINE) else {
         // `tmp`'s handle drops here, running the authority's own `OPENSSL_free(tmp)`
         // at the `err:`-equivalent path below.
         return core::ptr::null_mut();

@@ -659,7 +659,8 @@ impl<T: CtxDestroy> RawCtx<T> {
     /// when it answers NULL. `alloc_line` is the authority's allocation site and `line` its release
     /// site. The bytes are zero but the block is a `RawCtx`: zeroing is not, by itself, a valid `T`
     /// for every object, so the caller still validates it with [`RawCtx::assume_init`].
-    fn zalloc(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<RawCtx<T>> {
+    fn zalloc(file: SeamFile, alloc_line: c_int, line: c_int) -> Option<RawCtx<T>> {
+        let file = file.as_ptr();
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
         let raw = unsafe {
@@ -878,7 +879,7 @@ unsafe fn cert_new() -> Option<OwnedCtx<Cert>> {
     // `RawCtx`: its bytes are the allocator's zeros, and zeroed bytes are not a valid `Cert`, so the
     // block is not yet an [`OwnedCtx`] whose `Drop` may run `destroy_body`. `Drop` is its single
     // release and `into_raw` hands it to the enclosing object.
-    let raw = RawCtx::<Cert>::zalloc(FILE, 0, 0)?;
+    let raw = RawCtx::<Cert>::zalloc(FILE_SEAM, 0, 0)?;
     let c = raw.as_ptr();
     // SAFETY: `c` is a fresh, zeroed block. Its bytes are the allocator's zeros, and zeroed bytes
     // are not a valid `Cert`: every other field is a raw pointer or an integer (whose zero is the
@@ -2942,7 +2943,7 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
         // `RawCtx`, then validated because `SslCtx` is zero-valid. `Drop` is its single release on
         // every refusal below and `into_raw` hands it out on success. `ret` is the block's stable
         // address, and every refusal reaches `SSL_CTX_free`, which is `OwnedCtx`'s `Drop`.
-        let Some(raw) = RawCtx::<SslCtx>::zalloc(FILE, 4014, 4467) else {
+        let Some(raw) = RawCtx::<SslCtx>::zalloc(FILE_SEAM, 4014, 4467) else {
             return ptr::null_mut();
         };
         // SAFETY: every field of `SslCtx` is a raw pointer, integer, atomic, fixed array or
@@ -3181,7 +3182,7 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
         // early refusals below tear down only the lock and the block (`ssl_lib.c:731`), so they
         // release the block without the destructor body; every later refusal reaches `SSL_free`,
         // which is `OwnedCtx`'s `Drop`.
-        let Some(raw) = RawCtx::<Ssl>::zalloc(FILE, 731, 1442) else {
+        let Some(raw) = RawCtx::<Ssl>::zalloc(FILE_SEAM, 731, 1442) else {
             return ptr::null_mut();
         };
         // SAFETY: every field of `Ssl` is a raw pointer, integer, atomic, fixed array or
@@ -11734,7 +11735,7 @@ unsafe fn dane_tlsa_add(
     // refusal below and `into_raw` hands it to the stack on success. `t` is the block's stable
     // address, and every refusal reaches `tlsa_free`, which is `OwnedCtx`'s `Drop`. The record's
     // `data` member buffer stays the object's own release, as in the authority.
-    let Some(raw) = RawCtx::<DanetlsRecord>::zalloc(FILE, 316, 165) else {
+    let Some(raw) = RawCtx::<DanetlsRecord>::zalloc(FILE_SEAM, 316, 165) else {
         return -1;
     };
     // SAFETY: every field of `DanetlsRecord` is a `u8` discriminant, a raw pointer or a `usize` --

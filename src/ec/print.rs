@@ -46,6 +46,7 @@ use crate::runtime::str::OPENSSL_hexstr2buf_ex;
 /// reports it. `ec_print.c` is a source-tree file, so its compiled `__FILE__` carries the admitted
 /// build record's `../../src/openssl-3.6.4/` prefix — the spelling `src/packet.rs` and
 /// `src/dh/ctrl.rs` use.
+#[cfg(test)]
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_print.c".as_ptr();
 const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_print.c");
 
@@ -67,10 +68,11 @@ impl OwnedClearBuf {
     /// `file`/`release_line` (`OPENSSL_clear_free`), or `None` when the allocator answers NULL.
     fn new(
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         alloc_line: c_int,
         release_line: c_int,
     ) -> Option<OwnedClearBuf> {
+        let file = file.as_ptr();
         let ptr = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, alloc_line)
@@ -237,7 +239,7 @@ pub unsafe extern "C" fn EC_POINT_hex2point(
         // SAFETY: `hex` is NUL-terminated per the caller's contract.
         let len = strlen(hex) / 2;
         // `OPENSSL_malloc(len)`, line 63; the err tail's `OPENSSL_clear_free`, line 72.
-        let Some(mut oct_buf) = OwnedClearBuf::new(len, FILE, 63, 72) else {
+        let Some(mut oct_buf) = OwnedClearBuf::new(len, FILE_SEAM, 63, 72) else {
             // goto err: no block was allocated, so the authority's clear-free is a NULL release.
             return hex2point_tail(ok, None, pt, point);
         };

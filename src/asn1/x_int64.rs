@@ -42,6 +42,7 @@ use crate::asn1::prim::{ossl_c2i_uint64_int, ossl_i2c_uint64_int};
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 
 /// A zero value encodes as an absent field.
 const INTXX_FLAG_ZERO_DEFAULT: c_long = 1 << 0;
@@ -60,7 +61,7 @@ const ABS_INT32_MIN: u64 = i32::MAX as u64 + 1;
 unsafe extern "C" fn uint64_new(pval: *mut *mut c_void, _it: *const Asn1Item) -> c_int {
     // A zeroed eight-byte block is the value the framework stores in the slot; the allocation is
     // the authority's own `CRYPTO_zalloc` at its exact size/`file`/`line`.
-    let Some(v) = OwnedBlock::<u64>::zalloc(1, FILE.as_ptr(), LINE) else {
+    let Some(v) = OwnedBlock::<u64>::zalloc(1, SeamFile::new(FILE), LINE) else {
         // SAFETY: `pval` is a live slot.
         unsafe { *pval = core::ptr::null_mut() };
         return 0;
@@ -220,7 +221,7 @@ unsafe extern "C" fn uint64_print(
 unsafe extern "C" fn uint32_new(pval: *mut *mut c_void, _it: *const Asn1Item) -> c_int {
     // A zeroed four-byte block is the value the framework stores in the slot; the allocation is
     // the authority's own `CRYPTO_zalloc` at its exact size/`file`/`line`.
-    let Some(v) = OwnedBlock::<u32>::zalloc(1, FILE.as_ptr(), LINE) else {
+    let Some(v) = OwnedBlock::<u32>::zalloc(1, SeamFile::new(FILE), LINE) else {
         // SAFETY: `pval` is a live slot.
         unsafe { *pval = core::ptr::null_mut() };
         return 0;
