@@ -687,7 +687,14 @@ def _wl_openssh(ctx: dict) -> dict:
 
 
 def _wl_redis(ctx: dict) -> dict:
-    """A TLS redis: authority s_client completes a verified handshake and gets +PONG to PING."""
+    """A TLS redis: a verified handshake plus two independent encrypted paths.
+
+    The PING path exercises a single command over TLS; the SET/GET path exercises two further
+    record-layer round trips and asserts the returned value, so a broken record layer or a broken
+    key space is distinguishable from a broken handshake. A client trusting only the unrelated CA
+    must be rejected, so an unverifiable server certificate is a recorded failure rather than a
+    silent pass.
+    """
     ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
     pki = _gen_pki(ap, d)
     dbdir = d / "db"
@@ -704,12 +711,21 @@ def _wl_redis(ctx: dict) -> dict:
         hs = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-brief"], stdin_text="", timeout=25)
         ping = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"], stdin_text="PING\r\n",
                          timeout=25)
+        kv = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
+                       stdin_text="SET phase24:probe phase24-value\r\nGET phase24:probe\r\n",
+                       timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
     finally:
         _stop(srv)
         of.close()
         ef.close()
     runtime_ok = "Verification: OK" in hs["stderr"] and "Protocol version: TLSv1.3" in hs["stderr"]
-    functional_ok = runtime_ok and "+PONG" in ping["stdout"]
+    ping_ok = "+PONG" in ping["stdout"]
+    kv_ok = "+OK" in kv["stdout"] and "phase24-value" in kv["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and ping_ok and kv_ok and neg_rejected
     return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
             "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
                                                          "runtime-failure"),
@@ -717,16 +733,26 @@ def _wl_redis(ctx: dict) -> dict:
                                                       "runtime-failure"),
             "reason": None if functional_ok else
             ("the TLS 1.3 handshake did not verify" if not runtime_ok else
-             "the encrypted PING did not return +PONG"),
+             "the encrypted PING did not return +PONG" if not ping_ok else
+             "the SET/GET round trip did not return the stored value" if not kv_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
             "transcript": _transcript(("authority s_client -brief", hs),
                                       ("authority s_client PING", ping),
+                                      ("authority s_client SET/GET", kv),
+                                      ("authority s_client unrelated-ca (must fail)", neg),
                                       ("redis-server", {"exit_code": 0,
                                                         "stdout": _read(d / "redis.err")})),
-            "workload": "redis: TLS handshake + encrypted PING/+PONG", "local_only": True}
+            "workload": ("redis: TLS handshake + encrypted PING/+PONG + SET/GET round trip + "
+                         "unrelated-CA reject"), "local_only": True}
 
 
 def _wl_monit(ctx: dict) -> dict:
-    """A TLS monit: its httpsd is verified by authority s_client and answers an HTTP request."""
+    """A TLS monit: verified TLS 1.3 and TLS 1.2 paths, each answering an HTTP request.
+
+    TLS 1.2 and TLS 1.3 are separate handshake/record paths in the server's libssl, so both being
+    exercised makes a version-specific regression visible. A client trusting only the unrelated CA
+    must be rejected, so an unverifiable certificate is a recorded failure.
+    """
     ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
     pki = _gen_pki(ap, d)
     # monit refuses a PEM or control file that is group/other readable: it validates the file mode
@@ -758,13 +784,25 @@ set httpd port {port} and
         hs = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-brief"], stdin_text="", timeout=25)
         get = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
                         stdin_text="GET / HTTP/1.0\r\nConnection: close\r\n\r\n", timeout=25)
+        hs12 = _s_client(ap, port, pki["ca_crt"], ["-tls1_2", "-brief"], stdin_text="",
+                         timeout=25)
+        get12 = _s_client(ap, port, pki["ca_crt"], ["-tls1_2", "-quiet"],
+                          stdin_text="GET / HTTP/1.0\r\nConnection: close\r\n\r\n", timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
     finally:
         _stop(srv)
         _kill_comm("monit")
         of.close()
         ef.close()
     runtime_ok = "Verification: OK" in hs["stderr"] and "Protocol version: TLSv1.3" in hs["stderr"]
-    functional_ok = runtime_ok and "HTTP/" in get["stdout"]
+    get_ok = "HTTP/" in get["stdout"]
+    tls12_ok = ("Verification: OK" in hs12["stderr"]
+                and "Protocol version: TLSv1.2" in hs12["stderr"]
+                and "HTTP/" in get12["stdout"])
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and get_ok and tls12_ok and neg_rejected
     return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
             "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
                                                          "runtime-failure"),
@@ -772,10 +810,16 @@ set httpd port {port} and
                                                       "runtime-failure"),
             "reason": None if functional_ok else
             ("the TLS 1.3 handshake did not verify" if not runtime_ok else
-             "the TLS httpd did not answer an HTTP request"),
+             "the TLS httpd did not answer an HTTP request" if not get_ok else
+             "the TLS 1.2 handshake or HTTP response failed" if not tls12_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
             "transcript": _transcript(("monit -t", check), ("authority s_client -brief", hs),
-                                      ("authority s_client GET", get)),
-            "workload": "monit: TLS httpd handshake + HTTP response", "local_only": True}
+                                      ("authority s_client GET", get),
+                                      ("authority s_client -brief tls1_2", hs12),
+                                      ("authority s_client GET tls1_2", get12),
+                                      ("authority s_client unrelated-ca (must fail)", neg)),
+            "workload": ("monit: TLS httpd handshake + HTTP response over TLS 1.3 and TLS 1.2 + "
+                         "unrelated-CA reject"), "local_only": True}
 
 
 def _ftps_account(ctx: dict) -> tuple[str, str]:
@@ -801,6 +845,10 @@ def _wl_pureftpd(ctx: dict) -> dict:
     its own disposable container, whose credentials the authority's own `openssl s_client -starttls
     ftp` uses. The session completes a real authenticated explicit-TLS login and a `PWD` round trip
     on loopback (no public network), so the family reaches the functional level the authority can.
+
+    The second harness repeats the login over TLS 1.2 (a different handshake/record path from the
+    default TLS 1.3 session) and a client trusting only the unrelated CA must be rejected, so a
+    version-specific or certificate-chain defect is not masked by the single successful session.
     """
     ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
     pki = _gen_pki(ap, d)
@@ -819,14 +867,28 @@ def _wl_pureftpd(ctx: dict) -> dict:
                              "-ign_eof"],
                         timeout=25,
                         stdin_text=f"USER {user}\r\nPASS {passwd}\r\nPWD\r\nQUIT\r\n")
+        session12 = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-starttls", "ftp",
+                               "-CAfile", str(pki["ca_crt"]), "-servername", "127.0.0.1",
+                               "-tls1_2", "-ign_eof"],
+                          timeout=25,
+                          stdin_text=f"USER {user}\r\nPASS {passwd}\r\nPWD\r\nQUIT\r\n")
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-starttls", "ftp",
+                         "-CAfile", str(pki["other_crt"]), "-servername", "127.0.0.1",
+                         "-verify_return_error", "-brief", "-ign_eof"],
+                    timeout=25, stdin_text="")
     finally:
         _stop(proc)
         _kill_comm("pure-ftpd")
         of.close()
         ef.close()
     replies = (session["stdout"] or "") + (session["stderr"] or "")
+    replies12 = (session12["stdout"] or "") + (session12["stderr"] or "")
     runtime_ok = "230" in replies or "331" in replies
-    functional_ok = runtime_ok and "230" in replies and "257" in replies
+    login_ok = runtime_ok and "230" in replies and "257" in replies
+    tls12_ok = "230" in replies12 and "257" in replies12 and "TLSv1.2" in replies12
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = login_ok and tls12_ok and neg_rejected
     return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
             "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
                                                          "runtime-failure"),
@@ -834,11 +896,16 @@ def _wl_pureftpd(ctx: dict) -> dict:
                                                       "runtime-failure"),
             "reason": None if functional_ok else
             ("the authenticated FTPS login did not complete" if not runtime_ok else
-             "the FTPS session did not answer PWD"),
+             "the FTPS session did not answer PWD" if not login_ok else
+             "the FTPS login over TLS 1.2 did not complete" if not tls12_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
             "transcript": _transcript(("authority s_client -starttls ftp (USER/PASS/PWD/QUIT)",
                                        session),
+                                      ("authority s_client -starttls ftp tls1_2", session12),
+                                      ("authority s_client unrelated-ca (must fail)", neg),
                                       ("pure-ftpd", {"exit_code": 0, "stdout": _read(d / "ftpd.err")})),
-            "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+            "workload": ("pure-ftpd: authenticated FTPS login + PWD over explicit TLS 1.3 and "
+                         "TLS 1.2 + unrelated-CA reject"),
             "local_only": True}
 
 
@@ -963,8 +1030,69 @@ def _imap_serve_one(tls, stop: threading.Event) -> None:
             f.write(f"{tag} OK {cmd} completed\r\n".encode())
 
 
-def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threading.Event) -> None:
-    """Accept IMAPS connections on loopback and serve the fixture mailbox until `stop`."""
+def _imap_plain_readline(conn) -> bytes:
+    """Read one CRLF-terminated line from the plaintext socket without over-reading into TLS."""
+    buf = bytearray()
+    while True:
+        try:
+            ch = conn.recv(1)
+        except OSError:
+            return bytes(buf)
+        if not ch:
+            return bytes(buf)
+        buf += ch
+        if ch == b"\n":
+            return bytes(buf)
+
+
+def _imap_serve_starttls(conn, sctx, stop: threading.Event) -> None:
+    """Serve the plaintext greeting/CAPABILITY/STARTTLS exchange, then hand off to the TLS peer.
+
+    A STARTTLS IMAP session is a different client path in mbsync from implicit IMAPS: the client
+    reads the plaintext capability list, issues STARTTLS and upgrades the same connection. The
+    plaintext reads are byte-at-a-time so no part of the following TLS ClientHello is consumed, and
+    the same socket is wrapped in place so the handshake continues on that stream.
+    """
+    wrapped = False
+    try:
+        conn.sendall(b"* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS STARTTLS] phase24 isync "
+                     b"fixture ready\r\n")
+        while not stop.is_set():
+            raw = _imap_plain_readline(conn)
+            if not raw:
+                break
+            line = raw.decode("utf-8", "ignore").rstrip("\r\n")
+            if not line:
+                continue
+            parts = line.split(" ", 2)
+            if len(parts) < 2:
+                continue
+            tag, cmd = parts[0], parts[1].upper()
+            if cmd == "CAPABILITY":
+                conn.sendall(b"* CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS STARTTLS\r\n")
+                conn.sendall(f"{tag} OK CAPABILITY completed\r\n".encode())
+            elif cmd == "STARTTLS":
+                conn.sendall(f"{tag} OK Begin TLS negotiation now\r\n".encode())
+                tls = sctx.wrap_socket(conn, server_side=True)
+                wrapped = True
+                try:
+                    _imap_serve_one(tls, stop)
+                finally:
+                    tls.close()
+                break
+            else:
+                conn.sendall(f"{tag} BAD CAPABILITY or STARTTLS expected\r\n".encode())
+    finally:
+        if not wrapped:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threading.Event,
+                  starttls: bool = False) -> None:
+    """Accept IMAPS (or STARTTLS-upgraded IMAP) on loopback and serve the fixture until `stop`."""
     try:
         sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         sctx.load_cert_chain(str(cert_pem))
@@ -991,17 +1119,51 @@ def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threa
             break
         tls = None
         try:
-            tls = sctx.wrap_socket(conn, server_side=True)
-            _imap_serve_one(tls, stop)
+            if starttls:
+                _imap_serve_starttls(conn, sctx, stop)
+            else:
+                tls = sctx.wrap_socket(conn, server_side=True)
+                _imap_serve_one(tls, stop)
         except Exception:  # noqa: BLE001
             pass
         finally:
             try:
                 if tls is not None:
                     tls.close()
+                elif starttls:
+                    conn.close()
             except Exception:  # noqa: BLE001
                 pass
     srv.close()
+
+
+def _write_mbsync_conf(path: Path, port: int, cacert: Path, maildir: Path,
+                       tlstype: str) -> None:
+    """Write one mbsync channel over `port`, verifying against `cacert` and syncing `maildir`."""
+    path.write_text(
+        "IMAPAccount phase24\n"
+        "Host 127.0.0.1\n"
+        f"Port {port}\n"
+        "User runtime\n"
+        "Pass runtime\n"
+        f"TLSType {tlstype}\n"
+        f"CertificateFile {cacert}\n"
+        "\n"
+        "IMAPStore remote\n"
+        "Account phase24\n"
+        "\n"
+        "MaildirStore local\n"
+        f"Path {maildir}/\n"
+        f"Inbox {maildir}/INBOX\n"
+        "SubFolders Verbatim\n"
+        "\n"
+        "Channel phase24\n"
+        "Far :remote:\n"
+        "Near :local:\n"
+        "Patterns *\n"
+        "Create Both\n"
+        "Expunge Both\n"
+        "SyncState *\n", encoding="utf-8")
 
 
 def _wl_isync(ctx: dict) -> dict:
@@ -1011,6 +1173,11 @@ def _wl_isync(ctx: dict) -> dict:
     courtroom's own Python over TLS with the authority-generated certificate, on loopback only. The
     subject `mbsync` connects with IMAPS, authenticates, fetches the message and writes it to a local
     Maildir, so the family reaches the functional level the authority can.
+
+    The second harness drives the STARTTLS upgrade path (a different client code path from implicit
+    IMAPS) into a second Maildir, and a config trusting only the unrelated CA must abort the fetch
+    with a non-zero exit and no delivered message. A certificate-verification or upgrade-path
+    defect is therefore visible independently of the single successful IMAPS fetch.
     """
     ap, port, d, root = ctx["authority_prefix"], ctx["port"], ctx["workdir"], ctx["root"]
     pki = _gen_pki(ap, d)
@@ -1042,22 +1209,47 @@ def _wl_isync(ctx: dict) -> dict:
         "Create Both\n"
         "Expunge Both\n"
         "SyncState *\n", encoding="utf-8")
+    stport = _free_port()
+    negdir, stmdir = d / "maildir-neg", d / "maildir-starttls"
+    for target in (negdir, stmdir):
+        for sub in ("cur", "new", "tmp"):
+            (target / sub).mkdir(parents=True, exist_ok=True)
+    negconf, stconf = d / "mbsyncrc-neg", d / "mbsyncrc-starttls"
+    _write_mbsync_conf(negconf, port, pki["other_crt"], negdir, "IMAPS")
+    _write_mbsync_conf(stconf, stport, pki["ca_crt"], stmdir, "STARTTLS")
     ready, stop = threading.Event(), threading.Event()
     thr = threading.Thread(target=_imaps_server, args=(pki["srv_pem"], port, ready, stop),
                            daemon=True)
     thr.start()
     ready.wait(timeout=10)
+    ready2, stop2 = threading.Event(), threading.Event()
+    thr2 = threading.Thread(target=_imaps_server,
+                            args=(pki["srv_pem"], stport, ready2, stop2, True), daemon=True)
+    thr2.start()
+    ready2.wait(timeout=10)
     try:
-        if not _wait_tcp("127.0.0.1", port, timeout=10):
+        if (not _wait_tcp("127.0.0.1", port, timeout=10)
+                or not _wait_tcp("127.0.0.1", stport, timeout=10)):
             return _wl_fail([], "the local IMAP peer did not listen", "runtime-failure", d)
         sync = _run_captured([str(ctx["program"]), "-c", str(conf), "phase24"], cwd=d,
                              env=ctx["env"], timeout=60)
+        negsync = _run_captured([str(ctx["program"]), "-c", str(negconf), "phase24"], cwd=d,
+                                env=ctx["env"], timeout=60)
+        stsync = _run_captured([str(ctx["program"]), "-c", str(stconf), "phase24"], cwd=d,
+                               env=ctx["env"], timeout=60)
     finally:
         stop.set()
+        stop2.set()
         thr.join(timeout=5)
+        thr2.join(timeout=5)
         _kill_comm("mbsync")
     msgs = [p for p in maildir.rglob("*") if p.is_file() and p.parent.name in ("new", "cur")]
-    functional_ok = sync["exit_code"] == 0 and bool(msgs)
+    negmsgs = [p for p in negdir.rglob("*") if p.is_file() and p.parent.name in ("new", "cur")]
+    stmsgs = [p for p in stmdir.rglob("*") if p.is_file() and p.parent.name in ("new", "cur")]
+    sync_ok = sync["exit_code"] == 0 and bool(msgs)
+    neg_rejected = negsync["exit_code"] != 0 and not negmsgs
+    starttls_ok = stsync["exit_code"] == 0 and bool(stmsgs)
+    functional_ok = sync_ok and neg_rejected and starttls_ok
     runtime_ok = sync["exit_code"] == 0 or bool(msgs)
     return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
             "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
@@ -1065,9 +1257,15 @@ def _wl_isync(ctx: dict) -> dict:
             "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
                                                       "runtime-failure"),
             "reason": None if functional_ok else
-            ("the local IMAP-over-TLS sync did not complete"),
-            "transcript": _transcript(("mbsync -c mbsyncrc phase24", sync)),
-            "workload": "isync: mbsync IMAPS fetch from a local IMAP peer into a Maildir",
+            ("the local IMAP-over-TLS sync did not complete" if not runtime_ok else
+             "the IMAPS sync did not deliver the fixture message" if not sync_ok else
+             "the unrelated CA did not abort the IMAPS fetch" if not neg_rejected else
+             "the STARTTLS sync did not deliver the fixture message"),
+            "transcript": _transcript(("mbsync -c mbsyncrc phase24", sync),
+                                      ("mbsync unrelated-ca (must abort)", negsync),
+                                      ("mbsync -c mbsyncrc-starttls phase24", stsync)),
+            "workload": ("isync: mbsync IMAPS fetch + STARTTLS fetch from a local IMAP peer + "
+                         "unrelated-CA abort"),
             "local_only": True}
 
 
