@@ -1493,7 +1493,11 @@ unsafe extern "C" fn ec_gen_init(
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<EcGenCtx>(), FILE, 982).cast::<EcGenCtx>();
+    let gctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EcGenCtx>(), FILE, 982)
+    }
+    .cast::<EcGenCtx>();
     if !gctx.is_null() {
         // SAFETY: `gctx` is this call's own allocation; `provctx` is the caller's.
         unsafe {

@@ -82,7 +82,11 @@ impl RawDupKey {
     fn zalloc() -> Option<RawDupKey> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<EcxKey>()` bytes, exactly `ECX_KEY`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 106).cast::<EcxKey>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EcxKey>(), FILE, 106)
+        }
+        .cast::<EcxKey>();
         NonNull::new(raw).map(|ptr| RawDupKey { ptr })
     }
 
@@ -719,7 +723,11 @@ mod adv_probe {
         // reaches the duplicate's allocation and nothing else.
         // `CRYPTO_zalloc` is a safe function: it answers a fresh zeroed block of exactly `size`
         // bytes; the field writes below are plain data into this frame's block.
-        let key = CRYPTO_zalloc(size, ptr::null(), 0).cast::<EcxKey>();
+        let key = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size, ptr::null(), 0)
+        }
+        .cast::<EcxKey>();
         assert!(!key.is_null(), "the inert key must allocate");
         // SAFETY: `key` is this probe's fresh block.
         unsafe {

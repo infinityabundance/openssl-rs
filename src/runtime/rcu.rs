@@ -277,14 +277,22 @@ impl<T> OwnedBlock<T> {
     fn zalloc(alloc_line: c_int, line: c_int) -> Option<OwnedBlock<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of exactly `T`'s size.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, alloc_line).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, alloc_line)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, line })
     }
 
     /// `CRYPTO_calloc(count, size_of::<T>(), FILE, alloc_line)`, or `None`; `line` is the
     /// authority's release site for the array.
     fn calloc(count: usize, alloc_line: c_int, line: c_int) -> Option<OwnedBlock<T>> {
-        let raw = CRYPTO_calloc(count, core::mem::size_of::<T>(), FILE, alloc_line).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(count, core::mem::size_of::<T>(), FILE, alloc_line)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBlock { ptr, line })
     }
 

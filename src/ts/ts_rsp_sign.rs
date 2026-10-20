@@ -357,8 +357,11 @@ pub(crate) unsafe extern "C" fn TS_RESP_CTX_new_ex(
     propq: *const core::ffi::c_char,
 ) -> *mut TsRespCtx {
     // SAFETY: `OPENSSL_zalloc` on a positive size.
-    let ctx: *mut TsRespCtx =
-        CRYPTO_zalloc(core::mem::size_of::<TsRespCtx>(), FILE.as_ptr(), 97).cast();
+    let ctx: *mut TsRespCtx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<TsRespCtx>(), FILE.as_ptr(), 97)
+    }
+    .cast();
     if ctx.is_null() {
         return ptr::null_mut();
     }

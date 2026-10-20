@@ -257,7 +257,11 @@ impl RawEngine {
     fn new() -> Option<RawEngine> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<Engine>()` bytes, which is exactly `Engine`'s layout.
-        let raw = CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW).cast::<Engine>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW)
+        }
+        .cast::<Engine>();
         ptr::NonNull::new(raw).map(|ptr| RawEngine { ptr })
     }
 
@@ -561,8 +565,11 @@ impl OwnedItem {
     /// `CRYPTO_malloc(sizeof(*item), FILE, 132)`, or `None` when it answers NULL; the item's `cb` is
     /// set before it is handed out.
     fn new(cb: Option<EngineCleanupCb>) -> Option<OwnedItem> {
-        let raw = CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM)
-            .cast::<EngineCleanupItem>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM)
+        }
+        .cast::<EngineCleanupItem>();
         let ptr = ptr::NonNull::new(raw)?;
         // SAFETY: `ptr` is a fresh, writable `EngineCleanupItem` of this call's own allocation.
         unsafe { (*ptr.as_ptr()).cb = cb };

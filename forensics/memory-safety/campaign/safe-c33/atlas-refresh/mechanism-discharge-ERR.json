@@ -4,14 +4,17 @@
   "consumer": {
     "family_id": "family:pure-ftpd",
     "blocker": "C2",
-    "imported_err_symbols": ["ERR_error_string", "ERR_get_error"],
+    "imported_err_symbols": [
+      "ERR_error_string",
+      "ERR_get_error"
+    ],
     "import_source": "consumer-closure-C2.json#/symbol_evidence.imported_symbols",
     "note": "The consumer imports only these two ERR symbols. The other ERR entry points named by the task are not imported by pure-ftpd; their in-crate callers are audited below because they are part of the mechanism."
   },
   "source_identity": {
     "repo": "/mnt/1tb_kingston/openssl-rs",
     "branch": "integrate/safe-c33",
-    "head": "241118587 (B32 dossier merge; B33 repairs are uncommitted working-tree changes)",
+    "head": "f78df27a8 (B33 merge) plus uncommitted B34 working-tree changes",
     "files": [
       "src/runtime/err.rs",
       "src/runtime/err_state.rs",
@@ -21,7 +24,7 @@
       "courts/phase4/rt_err_borrowed_data_probe.c"
     ],
     "authority": "OpenSSL 3.6.4 (pinned). No authority source tree is present in this checkout; contracts below are transcribed from the recorded authority sites already cited by the implementation.",
-    "working_tree": "modified by B33: NEO-ERR-1/2 code repairs, NEO-ERR-3..7 contract repairs, three new ERR unit tests and one C probe. Nothing was committed; the orchestrator commits on the staging branch. Untracked instrumented target dirs .asan-b33-target, .miri-b33-target and .tsan-b33-target are retained so the reviewer can inspect the exact artifacts."
+    "working_tree": "B34: NEO-ERR-6 repaired (CRYPTO_malloc/zalloc/calloc/malloc_array are now `pub unsafe extern \"C\" fn`, C ABI/symbols unchanged; 247 in-crate call sites updated across 143 files), NEO-ERR-7 repaired (thread-local reentrancy guard in err::with_state), NEO-ERR-3/4 finalized (contracts plus cheap ring-index validation in OSSL_ERR_STATE_restore). Two new unit tests. Nothing was committed; the orchestrator commits on the staging branch."
   },
   "environment": {
     "venue": "docker/openssl-rs-court.sh (minimal court container)",
@@ -36,7 +39,12 @@
     {
       "id": "ERR-01",
       "operation": "thread-local / shared ERR_STATE access",
-      "sites": ["src/runtime/err.rs:726-733", "src/runtime/err.rs:832-857", "src/runtime/err.rs:1021-1025", "src/runtime/dso_shared.rs:131-142"],
+      "sites": [
+        "src/runtime/err.rs:726-733",
+        "src/runtime/err.rs:832-857",
+        "src/runtime/err.rs:1021-1025",
+        "src/runtime/dso_shared.rs:131-142"
+      ],
       "contract": {
         "provenance": "`state` is the pointer returned by the authority's (or fallback) ERR_get_state: either this crate's TLS UnsafeCell<ErrState> or the dlsym-resolved libcrypto ERR_get_state().",
         "alignment": "correctly aligned for the public #[repr(C)] ERR_STATE layout.",
@@ -45,13 +53,16 @@
         "lifetime_alias": "live until thread exit; only the calling thread may use it; exactly one &mut for the duration of the closure; no reference is retained by callers.",
         "release": "TLS state is deliberately not freed (no Drop, authority-parity residual); OSSL_ERR_STATE_new blocks are freed by OwnedErrState::Drop."
       },
-      "caller_obligation": "pub(crate) callers use the closure only for the call and never retain the reference. External C: ERR_get_state's pointer is per-thread and valid until thread exit, must not be used from another thread or after thread exit, and must not be mutated concurrently with an ERR call. Installing an allocator hook that re-enters ERR on the same thread is outside the contract (NEO-ERR-7).",
+      "caller_obligation": "pub(crate) callers use the closure only for the call and never retain the reference. External C: ERR_get_state's pointer is per-thread and valid until thread exit, must not be used from another thread or after thread exit, and must not be mutated concurrently with an ERR call. A nested ERR call on the same thread (for example from an installed allocator hook) is refused by the thread-local guard and returns the no-state outcome; it does not alias the outer &mut.",
       "state": "ESTABLISHED"
     },
     {
       "id": "ERR-02",
       "operation": "slot error-data release / truncate / replace",
-      "sites": ["src/runtime/err.rs:317-344", "src/runtime/err.rs:431-447"],
+      "sites": [
+        "src/runtime/err.rs:317-344",
+        "src/runtime/err.rs:431-447"
+      ],
       "contract": {
         "provenance": "with ERR_TXT_MALLOCED and non-NULL, the pointer is the base of one whole block from the crate's CRYPTO_malloc/CRYPTO_strdup seam; without the flag it is borrowed and never released.",
         "alignment": "allocator alignment for a c_char block.",
@@ -66,7 +77,12 @@
     {
       "id": "ERR-03",
       "operation": "slot file / function string ownership and duplication",
-      "sites": ["src/runtime/err.rs:347-369", "src/runtime/err.rs:388-420", "src/runtime/err.rs:633-649", "src/runtime/err.rs:717-724"],
+      "sites": [
+        "src/runtime/err.rs:347-369",
+        "src/runtime/err.rs:388-420",
+        "src/runtime/err.rs:633-649",
+        "src/runtime/err.rs:717-724"
+      ],
       "contract": {
         "provenance": "slot err_file/err_func are NULL or previously duplicated seam blocks owned by the state; input file/func are NULL or NUL-terminated C strings (static authority strings, static site tables, or caller debug strings).",
         "alignment": "allocator alignment for c_char.",
@@ -75,13 +91,15 @@
         "lifetime_alias": "slot exclusively owns the previous duplicate and the new one; released exactly once, before installing the replacement (authority order).",
         "release": "OwnedStr::adopt/Drop through CRYPTO_free at L_FREE_FILE_*/L_FREE_FUNC_*."
       },
-      "caller_obligation": "raise_with/raise_site/ERR_set_debug pass NULL or NUL-terminated strings. The allocator-failure path in mem.rs passes a caller-supplied `file` and is the one external gap (NEO-ERR-6).",
+      "caller_obligation": "raise_with/raise_site/ERR_set_debug pass NULL or NUL-terminated strings. The allocator-failure path in mem.rs is now behind unsafe entry points whose # Safety requires `file` to be NULL or NUL-terminated (NEO-ERR-6).",
       "state": "ESTABLISHED"
     },
     {
       "id": "ERR-04",
       "operation": "owned OSSL_ERR_STATE block",
-      "sites": ["src/runtime/err.rs:665-713"],
+      "sites": [
+        "src/runtime/err.rs:665-713"
+      ],
       "contract": {
         "provenance": "OwnedErrState::new allocates via CRYPTO_zalloc(size_of::<ErrState>(), NULL, 0); from_raw only reclaims a pointer previously returned by into_raw.",
         "alignment": "CRYPTO_zalloc alignment satisfies ErrState.",
@@ -96,7 +114,10 @@
     {
       "id": "ERR-05",
       "operation": "C string length / static empty string",
-      "sites": ["src/runtime/err.rs:485", "src/runtime/err.rs:717-724"],
+      "sites": [
+        "src/runtime/err.rs:485",
+        "src/runtime/err.rs:717-724"
+      ],
       "contract": {
         "provenance": "callers pass a pointer known to be a C string; EMPTY_C is c\"\" with static lifetime.",
         "alignment": "byte-aligned.",
@@ -111,7 +132,9 @@
     {
       "id": "ERR-06",
       "operation": "internal raise path (raise_with / raise_site / dynamic / data)",
-      "sites": ["src/runtime/err.rs:872-1014"],
+      "sites": [
+        "src/runtime/err.rs:872-1014"
+      ],
       "contract": {
         "provenance": "ErrSite is a compile-time constant with static file/func pointers; msg is NULL or a NUL-terminated C string; the attached message is copied into a fresh seam block.",
         "alignment": "allocator alignment; ring indices 0..16.",
@@ -126,7 +149,10 @@
     {
       "id": "ERR-07",
       "operation": "variadic C adapters: set_error / take_data / finish_data / add_data",
-      "sites": ["src/runtime/err.rs:1067-1290", "src/runtime/err_variadic.c:118-203"],
+      "sites": [
+        "src/runtime/err.rs:1067-1290",
+        "src/runtime/err_variadic.c:118-203"
+      ],
       "contract": {
         "provenance": "msg is NULL or NUL-terminated; finish_data data is NULL or a seam block the call takes ownership of; take_data returns the slot pointer and detaches it.",
         "alignment": "allocator alignment for c_char.",
@@ -141,7 +167,9 @@
     {
       "id": "ERR-08",
       "operation": "ERR_set_error_data ownership transfer",
-      "sites": ["src/runtime/err.rs:1328-1343"],
+      "sites": [
+        "src/runtime/err.rs:1328-1343"
+      ],
       "contract": {
         "provenance": "data NULL or, with MALLOCED, the base of one whole seam block (not interior/stack/literal/foreign).",
         "alignment": "allocator alignment.",
@@ -156,7 +184,9 @@
     {
       "id": "ERR-09",
       "operation": "ERR_add_error_txt concatenation",
-      "sites": ["src/runtime/err.rs:1366-1433"],
+      "sites": [
+        "src/runtime/err.rs:1366-1433"
+      ],
       "contract": {
         "provenance": "sepr/txt NULL or NUL-terminated; existing MALLOCED slot data is NUL-terminated and owned by the state.",
         "alignment": "allocator alignment.",
@@ -171,7 +201,9 @@
     {
       "id": "ERR-10",
       "operation": "error reads (get/peek/all/legacy arities)",
-      "sites": ["src/runtime/err.rs:1458-1791"],
+      "sites": [
+        "src/runtime/err.rs:1458-1791"
+      ],
       "contract": {
         "provenance": "returned file/func/data pointers are ring-owned slot pointers or the static EMPTY_C; output pointers are caller-supplied.",
         "alignment": "caller outputs correctly aligned for their types.",
@@ -186,7 +218,9 @@
     {
       "id": "ERR-11",
       "operation": "clear / mark / pop / count entry points",
-      "sites": ["src/runtime/err.rs:1798-1911"],
+      "sites": [
+        "src/runtime/err.rs:1798-1911"
+      ],
       "contract": {
         "provenance": "operates only on the thread's ErrState; no pointers accepted.",
         "alignment": "n/a.",
@@ -201,7 +235,9 @@
     {
       "id": "ERR-12",
       "operation": "ERR_get_next_error_library",
-      "sites": ["src/runtime/err.rs:1915-1925"],
+      "sites": [
+        "src/runtime/err.rs:1915-1925"
+      ],
       "contract": {
         "provenance": "process-global AtomicU32.",
         "alignment": "n/a.",
@@ -216,7 +252,12 @@
     {
       "id": "ERR-13",
       "operation": "static error-string buffer and ERR_error_string[_n]",
-      "sites": ["src/runtime/err.rs:1942-1946", "src/runtime/err.rs:1948-1981", "src/runtime/err.rs:1987-2098", "src/runtime/err.rs:2105-2136"],
+      "sites": [
+        "src/runtime/err.rs:1942-1946",
+        "src/runtime/err.rs:1948-1981",
+        "src/runtime/err.rs:1987-2098",
+        "src/runtime/err.rs:2105-2136"
+      ],
       "contract": {
         "provenance": "buf is the caller's buffer or the process-global SharedBuf; func is NULL or NUL-terminated; lib/reason pointers are static tables or stack fallbacks.",
         "alignment": "c_char.",
@@ -231,7 +272,10 @@
     {
       "id": "ERR-14",
       "operation": "string registry load/lookup and legacy load_strings",
-      "sites": ["src/runtime/err.rs:749-798", "src/runtime/err.rs:2200-2237"],
+      "sites": [
+        "src/runtime/err.rs:749-798",
+        "src/runtime/err.rs:2200-2237"
+      ],
       "contract": {
         "provenance": "compiled static tables; registry state in atomics.",
         "alignment": "byte strings.",
@@ -246,7 +290,10 @@
     {
       "id": "ERR-15",
       "operation": "allocator debug `file` argument reaching ERR raise",
-      "sites": ["src/runtime/mem.rs:216-240", "src/runtime/mem.rs:439-461"],
+      "sites": [
+        "src/runtime/mem.rs:216-240",
+        "src/runtime/mem.rs:439-461"
+      ],
       "contract": {
         "provenance": "`file` is passed by the C caller of the safe CRYPTO_malloc/zalloc/calloc/realloc entry points.",
         "alignment": "n/a for the pointer itself; c_strlen requires byte-readable memory.",
@@ -261,7 +308,9 @@
     {
       "id": "ERR-16",
       "operation": "ERR_print_errors_cb / ERR_print_errors / _fp callback edge",
-      "sites": ["src/runtime/err.rs:2297-2414"],
+      "sites": [
+        "src/runtime/err.rs:2297-2414"
+      ],
       "contract": {
         "provenance": "cb is the caller's function pointer; u is opaque; bp/fp are live BIO/FILE handles.",
         "alignment": "cb signature matches ErrPrintCb; out is a live byte slice.",
@@ -276,7 +325,9 @@
     {
       "id": "ERR-17",
       "operation": "ERR_add_error_mem_bio",
-      "sites": ["src/runtime/err.rs:2427-2469"],
+      "sites": [
+        "src/runtime/err.rs:2427-2469"
+      ],
       "contract": {
         "provenance": "bio is NULL or a live BIO; separator is NULL or NUL-terminated; the BIO's memory buffer is returned by BIO_ctrl.",
         "alignment": "c_char.",
@@ -291,7 +342,10 @@
     {
       "id": "ERR-18",
       "operation": "deprecated no-op entry points",
-      "sites": ["src/runtime/err.rs:2249-2256", "src/runtime/err.rs:2224-2238"],
+      "sites": [
+        "src/runtime/err.rs:2249-2256",
+        "src/runtime/err.rs:2224-2238"
+      ],
       "contract": {
         "provenance": "pointer arguments are ignored and never dereferenced.",
         "alignment": "n/a.",
@@ -306,7 +360,9 @@
     {
       "id": "ERR-19",
       "operation": "OSSL_ERR_STATE_new / OSSL_ERR_STATE_free",
-      "sites": ["src/runtime/err_state.rs:61-85"],
+      "sites": [
+        "src/runtime/err_state.rs:61-85"
+      ],
       "contract": {
         "provenance": "new allocates through the OwnedErrState seam; free reclaims only a pointer previously returned by new.",
         "alignment": "zalloc alignment.",
@@ -321,7 +377,9 @@
     {
       "id": "ERR-20",
       "operation": "OSSL_ERR_STATE_save / save_to_mark",
-      "sites": ["src/runtime/err_state.rs:99-190"],
+      "sites": [
+        "src/runtime/err_state.rs:99-190"
+      ],
       "contract": {
         "provenance": "es is a caller-owned state, not the thread's own; after save its non-NULL MALLOCED slots are caller-owned seam blocks and must satisfy the slot contract.",
         "alignment": "ErrState alignment.",
@@ -336,7 +394,9 @@
     {
       "id": "ERR-21",
       "operation": "OSSL_ERR_STATE_restore",
-      "sites": ["src/runtime/err_state.rs:207-265"],
+      "sites": [
+        "src/runtime/err_state.rs:207-265"
+      ],
       "contract": {
         "provenance": "es is a caller-owned state, not the thread's own; each non-NULL err_data is readable for err_data_size bytes; err_file/err_func are NULL or NUL-terminated.",
         "alignment": "ErrState alignment.",
@@ -351,7 +411,10 @@
     {
       "id": "ERR-22",
       "operation": "FFI panic boundary / guard_ffi",
-      "sites": ["src/ffi/mod.rs:78", "src/runtime/err.rs:1022-2469"],
+      "sites": [
+        "src/ffi/mod.rs:78",
+        "src/runtime/err.rs:1022-2469"
+      ],
       "contract": {
         "provenance": "catch_unwind around every extern entry.",
         "alignment": "n/a.",
@@ -411,38 +474,38 @@
       "id": "FAST-TESTS-ERR",
       "instrument": "cargo test --lib runtime::err:: -- --test-threads=4",
       "result": "PASS",
-      "observed": "13 passed; 0 failed; 1723 filtered out (B33: +3 new tests)"
+      "observed": "14 passed; 0 failed; 1724 filtered out (B34: +1 guard test)"
     },
     {
       "id": "FAST-TESTS-ERR-STATE",
       "instrument": "cargo test --lib runtime::err_state:: -- --test-threads=4",
       "result": "PASS",
-      "observed": "4 passed; 0 failed; 1729 filtered out"
+      "observed": "5 passed; 0 failed; 1733 filtered out (B34: +1 out-of-range restore test)"
     },
     {
       "id": "BATCH-FULL-LIB",
       "instrument": "cargo test --lib -- --test-threads=4",
       "result": "PASS",
-      "observed": "1705 passed; 0 failed; 31 ignored; 0 filtered out (97.35s)"
+      "observed": "1707 passed; 0 failed; 31 ignored; 0 filtered out (94.12s)"
     },
     {
       "id": "BATCH-FULL-LIB-SERIAL",
       "instrument": "cargo test --lib -- --test-threads=1",
       "result": "PASS",
-      "observed": "1705 passed; 0 failed; 31 ignored; 0 filtered out (264.17s)"
+      "observed": "1707 passed; 0 failed; 31 ignored; 0 filtered out (239.83s)"
     },
     {
       "id": "BATCH-CLIPPY",
       "instrument": "cargo clippy --all-targets -- -D warnings",
       "result": "PASS",
-      "observed": "Finished dev profile; no warnings/errors"
+      "observed": "cargo clippy --all-targets -- -D warnings: no warnings/errors (B34, after 247 call-site edits)"
     },
     {
       "id": "MIRI-SB",
       "instrument": "cargo +nightly-2026-10-01 miri test --lib runtime::err:: -- --test-threads=1",
       "flags": "-Zmiri-disable-isolation -Zmiri-ignore-leaks",
       "result": "PASS",
-      "observed": "13 passed; 0 failed (B33, includes the new borrowed-copy and zero-extent tests)",
+      "observed": "14 passed; 0 failed (B34, includes the reentrancy-guard test)",
       "coverage_limit": "Miri models the static-link fallback TLS state; the dlsym-resolved authority ERR_get_state path is not modeled. The C variadic adapter is not executed by Miri; the Rust test reproduces its take_data -> CRYPTO_realloc sequence. No allocator-hook reentrancy is executed."
     },
     {
@@ -450,7 +513,7 @@
       "instrument": "cargo +nightly-2026-10-01 miri test --lib runtime::err -- --test-threads=1",
       "flags": "-Zmiri-tree-borrows -Zmiri-disable-isolation -Zmiri-ignore-leaks",
       "result": "PASS",
-      "observed": "17 passed (13 err + 4 err_state); 0 failed"
+      "observed": "19 passed (14 err + 5 err_state); 0 failed (B34)"
     },
     {
       "id": "MIRI-LEAK-NEGATIVE-OBSERVATION",
@@ -463,9 +526,9 @@
       "id": "ASAN",
       "instrument": "cargo +nightly-2026-10-01 test --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=1 with -Zsanitizer=address",
       "result": "PASS",
-      "observed": "17 passed; 0 failed; no AddressSanitizer report (B33)",
-      "binary_sha256": "not recorded in B33",
-      "instrumentation": "RUSTFLAGS=-Zsanitizer=address -Cdebuginfo=0 -Ccodegen-units=8, CARGO_INCREMENTAL=0; ASAN_OPTIONS=detect_leaks=0; OPENSSL_RS_COURT_DATA=35184372088832",
+      "observed": "19 passed; 0 failed; no AddressSanitizer report (B34)",
+      "binary_sha256": "not recorded in B34",
+      "instrumentation": "RUSTFLAGS=-Zsanitizer=address|thread -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0, CARGO_INCREMENTAL=0; ASAN_OPTIONS=detect_leaks=0; OPENSSL_RS_COURT_DATA=32/64 TiB. codegen-units=256 is required: the crate OOMs LLVM at 8/12 GiB with cgu=1/8 under sanitizer instrumentation.",
       "environment_note": "B32's OOM constraint (codegen-units=1 with debuginfo killed LLVM) is avoided by the same flags used here."
     },
     {
@@ -512,9 +575,9 @@
       "id": "TSAN",
       "instrument": "cargo +nightly-2026-10-01 test -Zbuild-std --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=4 with -Zsanitizer=thread",
       "result": "PASS",
-      "observed": "17 passed; 0 failed; no ThreadSanitizer report (B33)",
-      "binary_sha256": "not recorded in B33",
-      "instrumentation": "RUSTFLAGS=-Zsanitizer=thread -Cdebuginfo=0 -Ccodegen-units=8, CARGO_INCREMENTAL=0, OPENSSL_RS_COURT_DATA=70368744177664",
+      "observed": "19 passed; 0 failed; no ThreadSanitizer report (B34)",
+      "binary_sha256": "not recorded in B34",
+      "instrumentation": "RUSTFLAGS=-Zsanitizer=address|thread -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0, CARGO_INCREMENTAL=0; ASAN_OPTIONS=detect_leaks=0; OPENSSL_RS_COURT_DATA=32/64 TiB. codegen-units=256 is required: the crate OOMs LLVM at 8/12 GiB with cgu=1/8 under sanitizer instrumentation.",
       "environment_note": "TSan still requires -Zbuild-std (ABI mismatch otherwise) and a 64 TiB data limit for its shadow mapping."
     },
     {
@@ -522,17 +585,47 @@
       "instrument": "throwaway cargo project with two threads writing the same Box<u64> non-atomically, -Zsanitizer=thread -Zbuild-std",
       "result": "DETECTOR_FIRED",
       "observed": "WARNING: ThreadSanitizer: data race (pid=...)"
+    },
+    {
+      "id": "NEO7-GUARD-UNIT",
+      "instrument": "cargo test --lib runtime::err::tests::a_reentrant_state_access_is_refused_and_the_guard_resets",
+      "result": "PASS",
+      "observed": "nested with_state returned None; outer returned Some; the following access succeeded, so the guard reset. Also covered by Miri SB/TB, ASan and TSan runs."
     }
   ],
   "not_run": [
-    {"check": "Loom", "reason": "ERR has no loom-modeled state machine; its shared state is per-thread plus atomics. No loom harness exists for this module."},
-    {"check": "Kani", "reason": "ERR's unsafe surface is raw FFI/allocator ownership, outside Kani's supported boundary; no harness exists for this module."},
-    {"check": "full-library Miri", "reason": "out of scope and not supported for the mixed C/FFI crate; focused ERR module runs are the declared limit."},
-    {"check": "differential/functional ERR court against the authority", "reason": "this pass is a boundary repair, not a compatibility court; no new differential run was made. Existing RT-ERR evidence is unchanged and not re-claimed here."},
-    {"check": "Miri/ASan/TSan over the dlsym-resolved authority ERR_get_state path", "reason": "Miri cannot model dlsym; sanitizer unit tests take the fallback path. A separate mixed C/Rust harness is required."},
-    {"check": "Miri over the C variadic adapter", "reason": "Miri cannot execute the out-of-line C adapter. The Rust unit test reproduces the adapter's take_data -> CRYPTO_realloc sequence; the C probe covers the adapter outside Miri."},
-    {"check": "clang/compiler-rt ASan for the C probe", "reason": "the court's clang 14 lacks libclang_rt.asan archives; GCC 12.2 ASan was used instead and both the positive and negative controls ran."},
-    {"check": "allocator-hook reentrancy execution", "reason": "a hook that re-enters ERR would itself create the UB being tested; NEO-ERR-7 remains an external contract (the guard is unimplemented)."}
+    {
+      "check": "Loom",
+      "reason": "ERR has no loom-modeled state machine; its shared state is per-thread plus atomics. No loom harness exists for this module."
+    },
+    {
+      "check": "Kani",
+      "reason": "ERR's unsafe surface is raw FFI/allocator ownership, outside Kani's supported boundary; no harness exists for this module."
+    },
+    {
+      "check": "full-library Miri",
+      "reason": "out of scope and not supported for the mixed C/FFI crate; focused ERR module runs are the declared limit."
+    },
+    {
+      "check": "differential/functional ERR court against the authority",
+      "reason": "this pass is a boundary repair, not a compatibility court; no new differential run was made. Existing RT-ERR evidence is unchanged and not re-claimed here."
+    },
+    {
+      "check": "Miri/ASan/TSan over the dlsym-resolved authority ERR_get_state path",
+      "reason": "Miri cannot model dlsym; sanitizer unit tests take the fallback path. A separate mixed C/Rust harness is required."
+    },
+    {
+      "check": "Miri over the C variadic adapter",
+      "reason": "Miri cannot execute the out-of-line C adapter. The Rust unit test reproduces the adapter's take_data -> CRYPTO_realloc sequence; the C probe covers the adapter outside Miri."
+    },
+    {
+      "check": "clang/compiler-rt ASan for the C probe",
+      "reason": "the court's clang 14 lacks libclang_rt.asan archives; GCC 12.2 ASan was used instead and both the positive and negative controls ran."
+    },
+    {
+      "check": "allocator-hook reentrancy through a real C CRYPTO_set_mem_functions hook",
+      "reason": "the guard is exercised directly by a Rust unit test (nested with_state), but no C harness installs a hook that re-enters ERR. A real hook would exercise the same guard; building that harness is deferred to the independent check."
+    }
   ],
   "residuals": [
     {
@@ -582,15 +675,18 @@
     },
     {
       "id": "R-ERR-10",
-      "text": "NEO-ERR-6's repair is documentation on safe `extern \"C\"` entry points; a safe Rust caller can still pass a non-NUL-terminated `file` pointer and reach c_strlen. The sound remedies (unsafe signature or an accepted external contract) are deferred to independent review.",
-      "disposition": "RETAINED / SAFE-INTERFACE GAP"
+      "text": "NEO-ERR-6 is repaired at the entry points: CRYPTO_malloc, CRYPTO_zalloc, CRYPTO_calloc and CRYPTO_malloc_array are now `pub unsafe extern \"C\" fn` with a NULL-or-NUL-terminated `file` contract; symbols, signatures and the C ABI are unchanged. 247 in-crate call sites were updated. 24 of those sites forward a private owner-constructor parameter `file: *const c_char` and are recorded as retained caller obligations of those owners (they pass static coordinates today); converting them to SeamFile is a separate owner-model sweep.",
+      "disposition": "FIXED_AT_ENTRY_POINTS / RETAINED_AT_24_HELPERS"
     }
   ],
   "newly_exposed_obligations": [
     {
       "id": "NEO-ERR-1",
       "severity": "STOP_LEVEL",
-      "sites": ["src/runtime/err.rs:1100-1184", "src/runtime/err_variadic.c:137-145"],
+      "sites": [
+        "src/runtime/err.rs:1100-1184",
+        "src/runtime/err_variadic.c:137-145"
+      ],
       "finding": "openssl_rs_err_take_data detaches the slot pointer without reporting whether it was ERR_TXT_MALLOCED. err_variadic.c then unconditionally CRYPTO_reallocs the result. If a slot holds borrowed data (ERR_set_error_data(data, flags without MALLOCED)) and ERR_set_error/ERR_vset_error follows on the same slot, a caller-owned pointer is passed to CRYPTO_realloc: invalid free/realloc and UB.",
       "reachable_by": "external C ABI; not imported by pure-ftpd",
       "required": "Either (a) state and enforce that take_data may only be called on a MALLOCED slot and make the adapter fail closed otherwise, or (b) have take_data copy borrowed data into a fresh seam block (or return NULL) before detaching. Then document the returned ownership/extent in # Safety.",
@@ -604,7 +700,10 @@
     {
       "id": "NEO-ERR-2",
       "severity": "CONTRACT_GAP",
-      "sites": ["src/runtime/err.rs:1186-1243", "src/runtime/err_state.rs:269-282"],
+      "sites": [
+        "src/runtime/err.rs:1186-1243",
+        "src/runtime/err_state.rs:269-282"
+      ],
       "finding": "openssl_rs_err_finish_data stores the caller's size without requiring it to be consistent with the owned block. OSSL_ERR_STATE_restore later copies err_data_size bytes from that slot, so a size larger than the allocation becomes an out-of-bounds read.",
       "reachable_by": "external C ABI plus OSSL_ERR_STATE_save/restore; not imported by pure-ftpd",
       "required": "With MALLOCED and non-NULL data: size >= 1, size <= allocation extent, and a NUL within size. State this in # Safety.",
@@ -617,33 +716,40 @@
     {
       "id": "NEO-ERR-3",
       "severity": "CONTRACT_GAP",
-      "sites": ["src/runtime/err_state.rs:92-148", "src/runtime/err_state.rs:150-190"],
+      "sites": [
+        "src/runtime/err_state.rs:92-148",
+        "src/runtime/err_state.rs:150-190"
+      ],
       "finding": "OSSL_ERR_STATE_save/save_to_mark call dst.clear_all(true)/clear(i, true), which frees any slot whose MALLOCED flag is set. The # Safety text does not require the destination's MALLOCED slots to be seam blocks exclusively owned by the destination.",
       "reachable_by": "external C ABI; not imported by pure-ftpd",
       "required": "Require es to be a state from OSSL_ERR_STATE_new (or every MALLOCED slot to satisfy the slot contract), exclusively owned and not the calling thread's state.",
-      "disposition": "CONTRACT_ONLY (repaired in documentation; retained as an obligation)",
+      "disposition": "CONTRACT_ONLY (retained; no ABI-compatible runtime check)",
       "repair": "Both save and save_to_mark now state the destination ownership/provenance contract: OSSL_ERR_STATE_new, or every MALLOCED slot is one whole seam block exclusively owned by es and unreleased; es is exclusively owned and not mutated concurrently.",
-      "proof": "No runtime provenance marker exists in the public #[repr(C)] ERR_STATE layout, so this cannot be enforced without changing the ABI. Documentation alone is not discharge under AGENTS.md section 7.",
+      "proof": "No runtime provenance marker exists in the public #[repr(C)] ERR_STATE layout, so destination provenance cannot be cheaply validated without changing the ABI. Documentation alone is not discharge under AGENTS.md section 7.",
       "blocks_full_discharge": true,
       "remaining": "independent reviewer must either accept the external contract or require an ABI-compatible provenance tag; no positive control exists for a valid destination beyond the existing save/restore tests."
     },
     {
       "id": "NEO-ERR-4",
       "severity": "CONTRACT_GAP",
-      "sites": ["src/runtime/err_state.rs:192-269"],
+      "sites": [
+        "src/runtime/err_state.rs:192-269"
+      ],
       "finding": "OSSL_ERR_STATE_restore copies err_data_size bytes from err_data and duplicates err_file/err_func as C strings. The # Safety text says only 'live state owned by the caller', omitting the per-slot extent, NUL-termination and no-concurrent-mutation requirements.",
       "reachable_by": "external C ABI; not imported by pure-ftpd",
       "required": "State: non-NULL err_data is readable for err_data_size bytes; err_file/err_func are NULL or NUL-terminated; es is not mutated concurrently and is not the thread's own state.",
-      "disposition": "CONTRACT_ONLY (repaired in documentation; retained as an obligation)",
-      "repair": "restore's # Safety now states the source extent (exactly err_data_size readable bytes), the NULL-or-NUL-terminated file/func requirement with a valid-until-return lifetime, the no-concurrent-mutation requirement, and the existing exclusion of the calling thread's own state. The copy site is tied to NEO-ERR-2 as the writer-side half of the same extent contract.",
-      "proof": "The size is trusted as the extent by construction, exactly as the C authority does; no independent instrument can validate an external state's allocation extent.",
+      "disposition": "CONTRACT_ONLY + cheap validation (retained)",
+      "repair": "restore's # Safety states the source extent, NUL termination and no-concurrent-mutation requirements. A cheap authority-compatible check was added: top/bottom outside 0..ERR_STATE_SLOTS are treated as an empty state instead of indexing out of bounds or walking the ring forever. err_data_size remains trusted as the extent because bounded copying would change authority behaviour and no provenance metadata is available.",
+      "proof": "New unit test restore_rejects_an_out_of_range_ring_instead_of_walking_forever writes top = ERR_STATE_SLOTS + 7 and observes a clean return and free; it passes under Miri SB/TB, ASan and TSan.",
       "blocks_full_discharge": true,
       "remaining": "independent reviewer must accept the external source contract or require a bounded-copy design."
     },
     {
       "id": "NEO-ERR-5",
       "severity": "CONSUMER_RELEVANT_CONTRACT_GAP",
-      "sites": ["src/runtime/err.rs:2096-2129"],
+      "sites": [
+        "src/runtime/err.rs:2096-2129"
+      ],
       "finding": "ERR_error_string(e, NULL) writes the process-global 256-byte buffer. The prose documented that the authority is not thread-safe, but the # Safety section stated only 'buf NULL or writable for at least 256 bytes'. Concurrent calls/reads are a Rust data race and therefore UB.",
       "reachable_by": "pure-ftpd imports ERR_error_string; classic usage is ERR_error_string(ERR_get_error(), NULL)",
       "required": "Add to # Safety: with NULL buf the returned pointer aliases a process-global buffer; calls and reads must be externally synchronized, and the pointer is valid only until the next ERR_error_string call on any thread.",
@@ -657,54 +763,70 @@
     {
       "id": "NEO-ERR-6",
       "severity": "CROSS_MECHANISM_SAFE_INTERFACE_GAP",
-      "sites": ["src/runtime/mem.rs:216-240", "src/runtime/mem.rs:439-526"],
+      "sites": [
+        "src/runtime/mem.rs:216-240",
+        "src/runtime/mem.rs:439-526"
+      ],
       "finding": "CRYPTO_malloc/zalloc/calloc/malloc_array (safe extern C fns) pass their `file` argument to report_alloc_err -> raise_with -> c_strlen on the allocation-failure path, but their API does not require `file` to be NULL or NUL-terminated. A safe Rust caller can pass an arbitrary raw pointer.",
       "reachable_by": "safe Rust and C callers of the allocator seam; not reached by pure-ftpd's imported ERR symbols",
       "required": "Document the NULL-or-NUL-terminated precondition on every affected safe extern fn, or stop reading `file` as a string (e.g. copy only from the recorded seam coordinates). Belongs to RUNTIME_ALLOC_OWNERSHIP.",
-      "disposition": "CONTRACT_ONLY (retained; not soundness-discharged)",
-      "repair": "CRYPTO_malloc, CRYPTO_zalloc, CRYPTO_calloc and CRYPTO_malloc_array now document that `file` is NULL or a NUL-terminated string valid for the call and is read on the failure/overflow path. The text explicitly says the pointers are a C-string precondition, not safe Rust values.",
-      "proof": "No runtime check is possible; the precondition is on an arbitrary raw pointer.",
-      "blocks_full_discharge": true,
-      "remaining": "documentation alone does not satisfy AGENTS.md section 7. The independent reviewer must choose between (a) making these entry points `unsafe fn` (ABI symbol unchanged, Rust API breaking), or (b) an accepted external-ABI contract. RUNTIME_ALLOC_OWNERSHIP still owns this obligation."
+      "disposition": "FIXED (entry points are unsafe fns; C ABI unchanged)",
+      "repair": "CRYPTO_malloc, CRYPTO_zalloc, CRYPTO_calloc and CRYPTO_malloc_array are now `pub unsafe extern \"C\" fn` with a # Safety contract requiring `file` to be NULL or a NUL-terminated C string valid for the call. The internal helpers malloc_request/alloc/dealloc/clear_dealloc/report_alloc_err/raise_integer_overflow are unsafe fns with the same clause, and every other affected entry point (realloc/clear_realloc/free/memdup/strdup/strndup/aligned_alloc) has the clause added to its existing # Safety. C symbols, signatures and the calling convention are unchanged; only Rust callers see the unsafe requirement. 247 in-crate call sites across 143 files were updated with SAFETY-commented blocks.",
+      "proof": "cargo check --lib and cargo check --all-targets pass; the normal library tests (1707) and clippy --all-targets -D warnings pass. The 24 remaining `file` parameter forwards are enumerated in R-ERR-10.",
+      "blocks_full_discharge": false,
+      "remaining": "independent reviewer must confirm the ABI and adjudicate the 24 private helper parameters (SeamFile vs an unsafe helper contract)."
     },
     {
       "id": "NEO-ERR-7",
       "severity": "REENTRANCY_EXTERNAL_CONTRACT",
-      "sites": ["src/runtime/err.rs:823-857", "src/runtime/mem.rs:903-967"],
+      "sites": [
+        "src/runtime/err.rs:823-857",
+        "src/runtime/mem.rs:903-967"
+      ],
       "finding": "with_state holds &mut ErrState across allocation/release, so an installed allocator hook runs with that reference live. A hook that re-enters an ERR entry point on the same thread creates a second &mut: Rust UB. err.rs documents the hook as outside the contract, but CRYPTO_set_mem_functions' # Safety did not.",
       "reachable_by": "application-installed allocator hook; not by any in-crate caller",
       "required": "Either state the non-reentrancy contract at CRYPTO_set_mem_functions and have the discharge reviewer accept it, or add a thread-local reentrancy guard to with_state so nested calls return None. The guard is recommended.",
-      "disposition": "CONTRACT_ONLY (repaired at the external contract site; retained as an obligation)",
-      "repair": "CRYPTO_set_mem_functions' # Safety now states the rule: a hook must not re-enter any ERR entry point on the same thread while ERR holds &mut; allocation/release and other-thread re-entry remain allowed. It names with_state and the retained-obligation record.",
-      "proof": "No reentrancy test was added; a test that re-enters would itself be UB. The guard remains unimplemented.",
-      "blocks_full_discharge": true,
-      "remaining": "independent reviewer must accept the external contract or require the thread-local guard. A guard is the stronger repair and remains the recommended follow-up."
+      "disposition": "FIXED (thread-local reentrancy guard)",
+      "repair": "err::with_state now acquires a thread-local Cell<bool> guard before touching the state (and before load_crypto_strings). If the slot is already held, it returns None without forming a second &mut; the nested raise is dropped and the outer call completes. The guard is released by Drop on every exit path, including an unwinding closure. No allocator hook or application callback is invoked while the guard is held except through the state operations themselves.",
+      "proof": "New unit test a_reentrant_state_access_is_refused_and_the_guard_resets calls with_state inside with_state, asserts the nested call returns None and the outer call still returns Some, then asserts the guard has reset. Passes under Miri Stacked Borrows and Tree Borrows, ASan and TSan.",
+      "blocks_full_discharge": false,
+      "remaining": "A real C allocator-hook reentry harness is not run; the guard is tested directly. Independent reviewer must decide whether that coverage is sufficient or require an instrumented hook."
     }
   ],
   "hidden_obligations": {
     "unreported_before_this_pass": 7,
     "reported_now": 7,
     "remaining_hidden": 0,
-    "statement": "Every obligation this audit found is enumerated above with a site and a required clause. 'remaining_hidden = 0' means nothing found is undisclosed; it does NOT mean the code is safe. B33 repaired NEO-ERR-1 and NEO-ERR-2 in code, and NEO-ERR-3/4/5/6/7 in contract text. NEO-ERR-3, 4, 6 and 7 are retained obligations that still block full-mechanism discharge because documentation alone is not discharge under AGENTS.md section 7."
+    "statement": "Every obligation this audit found is enumerated above with a site and a required clause. 'remaining_hidden = 0' means nothing found is undisclosed; it does NOT mean the code is safe. B34 repaired NEO-ERR-6 and NEO-ERR-7 in code and added a cheap validation to NEO-ERR-4. NEO-ERR-3 (destination provenance) and NEO-ERR-4 (source extent) remain contract-only because no ABI-compatible runtime check exists, and the 24 private helper parameters noted in R-ERR-10 remain retained caller obligations."
   },
   "lifecycle": {
-    "previous": "CONTRACTED (B10-ERR-1/2/3)",
+    "previous": "CONTRACTED (B33)",
     "consumer_scope_state": "ESTABLISHED",
     "consumer_scope": "B10-ERR-1/2/3 consumer-reachable ERR surface in src/runtime/err.rs (including the raise path and the two imported entry points)",
     "full_mechanism_state": "CONTRACTED",
-    "full_mechanism_reason": "B33 landed the NEO-ERR-1/2 code repairs and the NEO-ERR-3..7 contract repairs, but the full mechanism is still CONTRACTED: NEO-ERR-3, 4, 6 and 7 remain retained obligations (documentation cannot discharge them), and no repair has been independently checked. The consumer scope is unchanged and ESTABLISHED, not INDEPENDENTLY_CHECKED.",
+    "full_mechanism_reason": "B34 repairs NEO-ERR-6 in code (the affected allocator entry points are now unsafe fns with a NULL-or-NUL-terminated `file` contract; the C ABI is identical) and NEO-ERR-7 in code (a thread-local guard refuses a reentrant ERR access instead of forming a second &mut). NEO-ERR-3/4 remain contract-only for provenance/extent (no ABI-compatible runtime check exists), with the one cheap authority-compatible check added: restore rejects out-of-range ring indices. No repair has been independently checked, so the full mechanism remains CONTRACTED and the consumer scope remains ESTABLISHED.",
     "discharged": false,
     "independently_checked": false,
-    "discharge_blockers": ["NEO-ERR-3", "NEO-ERR-4", "NEO-ERR-6", "NEO-ERR-7"],
+    "discharge_blockers": [
+      "NEO-ERR-3",
+      "NEO-ERR-4",
+      "independent review of B34 repairs"
+    ],
     "consumer_scope_review_blockers": [],
-    "review_pending_repairs": ["NEO-ERR-1", "NEO-ERR-2", "NEO-ERR-5"],
-    "next_independent_check": "A reviewer who is not this author must, against the post-B33 candidate (base 241118587 plus the B33 working-tree changes, or the committed staging tip): (1) re-derive the raise-site closure (34/3940/40/231/36) and confirm no runtime-constructed ErrSite; (2) reproduce Miri SB and TB, ASan and TSan with the recorded flags, including the firing NEO-ERR-1 negative controls (plain libc abort and ASan bad-free); (3) re-derive the NEO-ERR-1 invariant: openssl_rs_err_take_data must be the only source of the pointer the adapter reallocs, and that pointer must always be a seam block (inspect every writer of err_data/err_data_flags); (4) adjudicate NEO-ERR-3/4/6/7, either accepting the stated external contracts or requiring the stronger repairs (provenance tag, unsafe allocator signatures, or a with_state reentrancy guard); (5) confirm ERR_error_string's # Safety states the NULL-buffer serialization obligation; (6) build and run courts/phase4/rt_err_borrowed_data_probe.c against the exact candidate. Only then may a reviewer consider INDEPENDENTLY_CHECKED; DISCHARGED additionally requires the full text of AGENTS.md section 7 conditions 1-3."
+    "review_pending_repairs": [
+      "NEO-ERR-1",
+      "NEO-ERR-2",
+      "NEO-ERR-5",
+      "NEO-ERR-6",
+      "NEO-ERR-7"
+    ],
+    "next_independent_check": "A reviewer who is not this author must, against the committed B34 candidate (base f78df27a8 plus the B34 changes): (1) confirm the C ABI is unchanged: all four entry points still export CRYPTO_malloc/zalloc/calloc/malloc_array with the same signature and calling convention, now with Rust `unsafe`; (2) audit all 247 in-crate call sites, especially the 24 that forward a private helper's `file: *const c_char` parameter, and decide whether those helpers must take SeamFile or an unsafe contract; (3) re-run the NEO-ERR-7 guard test and decide whether a real C allocator-hook reentrancy harness is required; (4) reproduce Miri SB/TB, ASan and TSan with the recorded flags; (5) reproduce the BATCH serial/threaded library tests and clippy; (6) adjudicate NEO-ERR-3/4, accepting the external destination/source contracts or requiring an ABI-compatible provenance marker/bounded copy. Only then may the mechanism be considered for INDEPENDENTLY_CHECKED; DISCHARGED additionally requires AGENTS.md section 7 conditions 1-3."
   },
   "discharge_eligibility": {
     "consumer_c2_scope": "ESTABLISHED_PENDING_INDEPENDENT_CHECK",
     "detail": "The consumer-reachable ERR surface has a complete contract/caller/control dossier, passes Miri SB/TB, ASan and TSan, and NEO-ERR-5's NULL-buffer serialization obligation is now in ERR_error_string's # Safety. It remains ESTABLISHED: an independent reviewer must adjudicate the consumer scope at the new source identity.",
     "full_err_mechanism": "NOT_ELIGIBLE",
-    "full_detail": "NEO-ERR-1 is repaired in code (take_data copies borrowed data; the adapter's reallocs are always on seam blocks) and NEO-ERR-2 is repaired with a contract and a zero-extent rejection. NEO-ERR-3, 4, 6 and 7 are contract-only repairs and remain retained obligations; NEO-ERR-6's safe-interface gap is not soundness-discharged by documentation. No obligation has been independently checked, so the mechanism is not eligible for full discharge.",
+    "full_detail": "NEO-ERR-6 and NEO-ERR-7 are now code repairs, not contract-only: the allocator entry points are unsafe fns and with_state refuses reentry. NEO-ERR-3/4 remain contract-only for provenance and source extent, with a cheap ring-index validation added to restore. No independent check has been performed, so the full mechanism is not eligible for discharge.",
     "safe_compatible_count_changed": false,
     "safe_compatible_count_after": 0
   },

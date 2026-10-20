@@ -210,7 +210,11 @@ unsafe extern "C" fn rsa_newctx(provctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let prsactx = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 93).cast::<ProvRsaCtx>();
+    let prsactx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 93)
+    }
+    .cast::<ProvRsaCtx>();
     if prsactx.is_null() {
         return ptr::null_mut();
     }

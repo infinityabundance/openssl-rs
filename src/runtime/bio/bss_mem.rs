@@ -196,7 +196,11 @@ unsafe fn mem_init(bi: *mut Bio, flags: core::ffi::c_ulong) -> c_int {
         // `bb`'s handle releases the (still NULL) context on this path.
         return 0;
     }
-    let readp = CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast::<BufMem>();
+    let readp = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0)
+    }
+    .cast::<BufMem>();
     if readp.is_null() {
         // SAFETY: `buf` is this call's own and not yet published; `bb`'s handle releases the
         // context (whose `readp`/`buf` members are still NULL).

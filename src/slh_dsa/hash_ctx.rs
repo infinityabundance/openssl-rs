@@ -57,8 +57,11 @@ impl OwnedHashCtx {
     fn zalloc(alloc_line: c_int) -> Option<OwnedHashCtx> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of exactly `size_of::<SlhDsaHashCtx>()` bytes.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<SlhDsaHashCtx>(), FILE, alloc_line)
-            .cast::<SlhDsaHashCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<SlhDsaHashCtx>(), FILE, alloc_line)
+        }
+        .cast::<SlhDsaHashCtx>();
         NonNull::new(raw).map(|ptr| OwnedHashCtx { ptr: ptr.as_ptr() })
     }
 

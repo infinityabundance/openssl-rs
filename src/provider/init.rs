@@ -415,12 +415,15 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             };
             // SAFETY: a fresh zeroed array of `entries` entries; `CRYPTO_calloc` checks the
             // element-count product and raises the authority's integer-overflow error.
-            let strings = CRYPTO_calloc(
-                entries,
-                core::mem::size_of::<ErrStringData>(),
-                FILE,
-                LINE_REASON_STRINGS,
-            );
+            let strings = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_calloc(
+                    entries,
+                    core::mem::size_of::<ErrStringData>(),
+                    FILE,
+                    LINE_REASON_STRINGS,
+                )
+            };
             // SAFETY: `strings` is this call's fresh exclusive block from the seam; the handle's
             // `Drop` is its single release at the authority's own free site.
             // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.

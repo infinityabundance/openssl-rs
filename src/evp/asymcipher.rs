@@ -286,7 +286,10 @@ mod release_family_tests {
     #[test]
     fn release_is_cleansed_over_the_stored_length() {
         release_probe::clear();
-        let raw = CRYPTO_malloc(16, FILE_TEST.as_ptr(), 11);
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, FILE_TEST.as_ptr(), 11)
+        };
         assert!(!raw.is_null());
         // SAFETY: `raw` is the fresh seam block this test owns; `len` is its extent.
         let block = unsafe { OwnedBlock::take(raw, 16, FILE_TEST.as_ptr(), 12) }

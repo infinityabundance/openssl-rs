@@ -399,8 +399,11 @@ unsafe fn prepopulate_legacy_names(namemap: *mut OsslNamemap) {
 /// it did create.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) fn ossl_namemap_new(_libctx: *mut c_void) -> *mut OsslNamemap {
-    let nm = CRYPTO_zalloc(core::mem::size_of::<OsslNamemap>(), FILE, LINE_ZALLOC_MAP)
-        .cast::<OsslNamemap>();
+    let nm = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<OsslNamemap>(), FILE, LINE_ZALLOC_MAP)
+    }
+    .cast::<OsslNamemap>();
     if nm.is_null() {
         return ptr::null_mut();
     }

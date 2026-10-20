@@ -414,7 +414,11 @@ unsafe extern "C" fn linebuffer_ctrl(
             let mut p = current;
             // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             if obs > DEFAULT_LINEBUFFER_SIZE && obs != unsafe { (*c).obuf_size } {
-                p = CRYPTO_malloc(obs as usize, ptr::null(), 0).cast();
+                p = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    CRYPTO_malloc(obs as usize, ptr::null(), 0)
+                }
+                .cast();
                 if p.is_null() {
                     return 0;
                 }

@@ -253,8 +253,11 @@ impl<T: CtxDestroy> RawCtx<T> {
     ) -> Option<RawCtx<T>> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_malloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
-            .cast::<MaybeUninit<T>>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
+        }
+        .cast::<MaybeUninit<T>>();
         NonNull::new(raw).map(|ptr| RawCtx {
             ptr,
             file: release_file,
@@ -283,8 +286,11 @@ impl<T: CtxDestroy> RawCtx<T> {
     ) -> Option<RawCtx<T>> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
-            .cast::<MaybeUninit<T>>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), alloc_file.as_ptr(), alloc_line)
+        }
+        .cast::<MaybeUninit<T>>();
         NonNull::new(raw).map(|ptr| RawCtx {
             ptr,
             file: release_file,
@@ -396,7 +402,10 @@ mod release_family_tests {
     #[test]
     fn release_is_plain_at_the_null_coordinates() {
         release_probe::clear();
-        let raw = CRYPTO_malloc(8, ptr::null(), 0);
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(8, ptr::null(), 0)
+        };
         assert!(!raw.is_null());
         // SAFETY: `raw` is the fresh seam block this test owns.
         let block = unsafe { OwnedBlock::take(raw) }.expect("a non-NULL block is owned");
@@ -513,7 +522,10 @@ mod adv_partial_init_tests {
     fn owned_block_take_null_is_none() {
         // SAFETY: NULL is a valid input; `take` adopts nothing.
         assert!(unsafe { OwnedBlock::take(ptr::null_mut()) }.is_none());
-        let p = CRYPTO_malloc(16, ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: `p` is a fresh block this frame owns; the handle is its single release.
         assert!(unsafe { OwnedBlock::take(p) }.is_some());

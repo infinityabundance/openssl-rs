@@ -171,11 +171,14 @@ impl OwnedAddr {
     /// A fresh zeroed block of `BioAddr`'s size, or `None` when the allocator answers NULL — the
     /// authority's `OPENSSL_zalloc`.
     fn zalloc() -> Option<OwnedAddr> {
-        let raw = CRYPTO_malloc(
-            core::mem::size_of::<BioAddr>(),
-            ALLOC_FILE.as_ptr(),
-            ALLOC_LINE,
-        );
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<BioAddr>(),
+                ALLOC_FILE.as_ptr(),
+                ALLOC_LINE,
+            )
+        };
         let p = raw.cast::<BioAddr>();
         if !p.is_null() {
             // SAFETY: `p` is a fresh block of `size_of::<BioAddr>()` bytes.

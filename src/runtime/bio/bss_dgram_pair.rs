@@ -119,7 +119,11 @@ impl RingBuf {
     /// `ring_buf_init`
     fn init(&mut self, nbytes: usize) -> bool {
         // SAFETY: `CRYPTO_malloc` returns a fresh allocation of `nbytes`.
-        let p = CRYPTO_malloc(nbytes, ptr::null(), 0).cast::<u8>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(nbytes, ptr::null(), 0)
+        }
+        .cast::<u8>();
         if p.is_null() {
             return false;
         }

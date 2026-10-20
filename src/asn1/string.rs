@@ -53,7 +53,11 @@ struct OwnedBlock {
 impl OwnedBlock {
     /// A fresh block of `len` bytes through the installed allocator, or `None` when it answers NULL.
     fn new(len: usize) -> Option<OwnedBlock> {
-        let ptr = CRYPTO_malloc(len, FILE.as_ptr(), LINE).cast::<c_uchar>();
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE.as_ptr(), LINE)
+        }
+        .cast::<c_uchar>();
         if ptr.is_null() {
             None
         } else {
@@ -64,7 +68,11 @@ impl OwnedBlock {
     /// A fresh, zeroed block of `len` bytes through the installed allocator, or `None` when it
     /// answers NULL.
     fn new_zeroed(len: usize) -> Option<OwnedBlock> {
-        let ptr = CRYPTO_zalloc(len, FILE.as_ptr(), LINE).cast::<c_uchar>();
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, FILE.as_ptr(), LINE)
+        }
+        .cast::<c_uchar>();
         if ptr.is_null() {
             None
         } else {

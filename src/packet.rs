@@ -148,8 +148,11 @@ impl OwnedSub {
             return None;
         }
 
-        let raw = CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
-            .cast::<WpacketSub>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
+        }
+        .cast::<WpacketSub>();
         if raw.is_null() {
             return None;
         }

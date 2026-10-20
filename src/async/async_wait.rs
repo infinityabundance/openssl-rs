@@ -140,7 +140,11 @@ impl OwnedFdLookup {
     fn new_zeroed(file: *const c_char, line: c_int) -> Option<OwnedFdLookup> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<FdLookup>()` bytes, which is exactly the node's layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<FdLookup>(), file, line).cast::<FdLookup>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<FdLookup>(), file, line)
+        }
+        .cast::<FdLookup>();
         if raw.is_null() {
             return None;
         }

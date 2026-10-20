@@ -453,8 +453,11 @@ impl RawPkey {
     fn new() -> Option<RawPkey> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<EvpPkey>()` bytes, which is exactly `EvpPkey`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpPkey>(), FILE, LINE_ZALLOC_PKEY)
-            .cast::<EvpPkey>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EvpPkey>(), FILE, LINE_ZALLOC_PKEY)
+        }
+        .cast::<EvpPkey>();
         ptr::NonNull::new(raw).map(|ptr| RawPkey { ptr })
     }
 

@@ -142,11 +142,14 @@ impl OwnedCacheElem {
     fn new(free_line: c_int) -> Option<OwnedCacheElem> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<OpCacheElem>()` bytes, which is exactly the context's layout.
-        let raw = CRYPTO_malloc(
-            core::mem::size_of::<OpCacheElem>(),
-            FILE,
-            LINE_MALLOC_CACHE_ELEM,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<OpCacheElem>(),
+                FILE,
+                LINE_MALLOC_CACHE_ELEM,
+            )
+        }
         .cast::<OpCacheElem>();
         if raw.is_null() {
             None

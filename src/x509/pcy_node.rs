@@ -173,8 +173,11 @@ impl OwnedNode {
     fn new(data: *mut X509PolicyData, parent: *mut X509PolicyNode) -> Option<OwnedNode> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // the node's size, which is exactly `X509PolicyNode`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<X509PolicyNode>(), FILE.as_ptr(), 0)
-            .cast::<X509PolicyNode>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<X509PolicyNode>(), FILE.as_ptr(), 0)
+        }
+        .cast::<X509PolicyNode>();
         let ptr = NonNull::new(raw)?;
         // SAFETY: `ptr` is a fresh, uniquely-owned, `X509PolicyNode`-sized block, so writing the
         // value into it in place initialises it before any read.

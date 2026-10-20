@@ -285,8 +285,11 @@ impl OwnedSkey {
     /// `OPENSSL_zalloc(sizeof(*skey))` at `s_lib.c:39`, in the constructor window: `Drop` releases
     /// the bare block at the error arm's `:60`.
     fn zalloc() -> Option<OwnedSkey> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpSkey>(), FILE_LIB, LINE_ZALLOC_SKEY)
-            .cast::<EvpSkey>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EvpSkey>(), FILE_LIB, LINE_ZALLOC_SKEY)
+        }
+        .cast::<EvpSkey>();
         ptr::NonNull::new(raw).map(|ptr| OwnedSkey {
             ptr,
             release_line: LINE_FREE_SKEY_ON_ALLOC,

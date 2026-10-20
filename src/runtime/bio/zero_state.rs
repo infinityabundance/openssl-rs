@@ -39,7 +39,10 @@ macro_rules! zero_state_sweep {
             #[test]
             fn $f() {
                 let size = core::mem::size_of::<$t>();
-                let raw = crate::runtime::mem::CRYPTO_zalloc(size, core::ptr::null(), 0);
+                let raw = unsafe {
+                    // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                    crate::runtime::mem::CRYPTO_zalloc(size, core::ptr::null(), 0)
+                };
                 assert!(
                     !raw.is_null(),
                     "CRYPTO_zalloc refused the zero-state block for {}",

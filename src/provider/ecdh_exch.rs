@@ -140,8 +140,11 @@ unsafe extern "C" fn ecdh_newctx(provctx: *mut c_void) -> *mut c_void {
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let pectx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 97)
-        .cast::<ProvEcdhCtx>();
+    let pectx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 97)
+    }
+    .cast::<ProvEcdhCtx>();
     if pectx.is_null() {
         return ptr::null_mut();
     }
@@ -284,8 +287,11 @@ unsafe extern "C" fn ecdh_dupctx(vpecdhctx: *mut c_void) -> *mut c_void {
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let dstctx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 202)
-        .cast::<ProvEcdhCtx>();
+    let dstctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 202)
+    }
+    .cast::<ProvEcdhCtx>();
     if dstctx.is_null() {
         return ptr::null_mut();
     }

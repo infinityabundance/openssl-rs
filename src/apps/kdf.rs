@@ -115,7 +115,11 @@ fn app_params_new_from_opts(opts: &[String], paramdefs: *const OsslParam) -> *mu
     let Some(block_size) = entry_count.checked_mul(core::mem::size_of::<OsslParam>()) else {
         return ptr::null_mut();
     };
-    let params = CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489).cast::<OsslParam>();
+    let params = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489)
+    }
+    .cast::<OsslParam>();
     if params.is_null() {
         return ptr::null_mut();
     }

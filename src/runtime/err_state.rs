@@ -234,8 +234,18 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
 ///   and `ERR_set_error_data` establish when the slot is written);
 /// * `err_file` and `err_func` are NULL or NUL-terminated C strings that stay
 ///   valid until this call returns — `set_debug` duplicates them;
+/// * `err_data_size` is the authoritative extent of `err_data`; a cached size
+///   larger than the actual block is outside this contract and is not detectable
+///   here without allocator provenance metadata;
 /// * `es` is not mutated concurrently with this call (the loop holds `&*es` for
 ///   its duration), and the caller does not release the state while it runs.
+///
+/// The ring indices are the one part of that contract this function can cheaply
+/// check: an out-of-range `top`/`bottom` would make the ring walk below
+/// non-terminating, so such a state is treated as empty. The authority trusts the
+/// indices; it can only produce in-range values itself, so the rejection is
+/// unobservable for every authority-produced state and is recorded as a
+/// transcription addition.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     if es.is_null() {
@@ -243,6 +253,10 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     }
     // SAFETY: `es` is a live state per the caller's contract and is only read here.
     let src = unsafe { &*es };
+    let slots = ERR_STATE_SLOTS as i32;
+    if !(0..slots).contains(&src.top) || !(0..slots).contains(&src.bottom) {
+        return;
+    }
     if src.bottom == src.top {
         return;
     }
@@ -323,6 +337,21 @@ mod tests {
             assert_eq!((*es).bottom, 0);
             OSSL_ERR_STATE_free(es);
             OSSL_ERR_STATE_free(core::ptr::null_mut());
+        }
+    }
+
+    #[test]
+    fn restore_rejects_an_out_of_range_ring_instead_of_walking_forever() {
+        let es = OSSL_ERR_STATE_new();
+        assert!(!es.is_null());
+        // SAFETY: `es` is a fresh, exclusively owned state. Writing an out-of-range
+        // index models a C caller that broke the ring contract; `restore` must
+        // treat it as empty rather than index out of bounds or fail to terminate.
+        unsafe {
+            (*es).top = ERR_STATE_SLOTS as i32 + 7;
+            (*es).bottom = 0;
+            OSSL_ERR_STATE_restore(es);
+            OSSL_ERR_STATE_free(es);
         }
     }
 

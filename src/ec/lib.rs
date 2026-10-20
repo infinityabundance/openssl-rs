@@ -161,7 +161,11 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
         // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
         // bytes, which is exactly `T`'s layout.
-        let raw = CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line).cast::<T>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), file, alloc_line)
+        }
+        .cast::<T>();
         ptr::NonNull::new(raw).map(|ptr| OwnedCtx {
             ptr,
             file,

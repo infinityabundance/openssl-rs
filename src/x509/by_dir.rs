@@ -235,7 +235,11 @@ impl RawDir {
     fn new() -> Option<RawDir> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<ByDir>()` bytes, which is exactly `BY_DIR`'s layout.
-        let raw = CRYPTO_malloc(size_of::<ByDir>(), FILE.as_ptr(), LINE_MALLOC_DIR).cast::<ByDir>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<ByDir>(), FILE.as_ptr(), LINE_MALLOC_DIR)
+        }
+        .cast::<ByDir>();
         ptr::NonNull::new(raw).map(|ptr| RawDir { ptr })
     }
 

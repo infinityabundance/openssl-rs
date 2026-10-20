@@ -70,11 +70,14 @@ impl RawMethod {
     fn new() -> Option<RawMethod> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh zeroed block of
         // `size_of::<X509LookupMethod>()` bytes, which is exactly `X509_LOOKUP_METHOD`'s layout.
-        let raw = CRYPTO_zalloc(
-            size_of::<X509LookupMethod>(),
-            FILE.as_ptr(),
-            LINE_ZALLOC_METH,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                size_of::<X509LookupMethod>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_METH,
+            )
+        }
         .cast::<X509LookupMethod>();
         NonNull::new(raw).map(|ptr| RawMethod { ptr })
     }

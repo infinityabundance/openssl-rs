@@ -372,8 +372,11 @@ impl OwnedRandCtx {
     /// `OPENSSL_zalloc(sizeof(*ctx))` at `:350`, in the constructor window: `Drop` releases the bare
     /// block at the error arm's `:374`.
     fn zalloc() -> Option<OwnedRandCtx> {
-        let raw = CRYPTO_zalloc(core::mem::size_of::<EvpRandCtx>(), FILE, LINE_ZALLOC_CTX)
-            .cast::<EvpRandCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<EvpRandCtx>(), FILE, LINE_ZALLOC_CTX)
+        }
+        .cast::<EvpRandCtx>();
         ptr::NonNull::new(raw).map(|ptr| OwnedRandCtx {
             ptr,
             release_line: LINE_FREE_CTX_ON_NEW,
