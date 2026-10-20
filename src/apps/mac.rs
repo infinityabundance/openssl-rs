@@ -66,6 +66,7 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::{stdin, stdout};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `#define BUFSIZE 1024 * 8` — `apps/mac.c:21`.
 const BUFSIZE: usize = 1024 * 8;
@@ -94,7 +95,8 @@ enum BufRelease {
 
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, line)
@@ -257,7 +259,7 @@ pub fn main(argv: &[String]) -> i32 {
     // `buf = app_malloc(BUFSIZE, "I/O buffer");` — `apps/mac.c:98`. The block is this frame's
     // scratch, allocated through the crate's allocator seam at the authority's own size/`file`/
     // `line` and released once by `Drop` on every exit below.
-    let Some(buf) = OwnedBuf::new(BUFSIZE, c"apps/mac.c".as_ptr(), 98) else {
+    let Some(buf) = OwnedBuf::new(BUFSIZE, SeamFile::new(c"apps/mac.c"), 98) else {
         return ret;
     };
 

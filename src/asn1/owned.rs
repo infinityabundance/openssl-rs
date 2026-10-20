@@ -24,6 +24,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// An owned `CRYPTO_*` block.
 ///
@@ -49,7 +50,8 @@ impl<T> OwnedBlock<T> {
     /// wrapped, too-small request never reaches the allocator. No block is allocated
     /// on that path, so nothing is leaked, and when the product does not overflow the
     /// request is byte-for-byte the authority's own size.
-    pub(crate) fn malloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
+    pub(crate) fn malloc(count: usize, file: SeamFile, line: c_int) -> Option<OwnedBlock<T>> {
+        let file = file.as_ptr();
         let size = count.checked_mul(core::mem::size_of::<T>())?;
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
@@ -65,7 +67,8 @@ impl<T> OwnedBlock<T> {
     /// As [`malloc`](OwnedBlock::malloc), the byte count is `checked_mul`-guarded so
     /// an overflow answers the module's failure outcome without ever asking the
     /// allocator for a wrapped size.
-    pub(crate) fn zalloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedBlock<T>> {
+    pub(crate) fn zalloc(count: usize, file: SeamFile, line: c_int) -> Option<OwnedBlock<T>> {
+        let file = file.as_ptr();
         let size = count.checked_mul(core::mem::size_of::<T>())?;
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
@@ -138,13 +141,21 @@ mod release_family_tests {
 
     const FILE: &core::ffi::CStr = c"test/asn1_owned.rs";
 
+    // Compile-time lock on the NEO-ERR-6 safe interface: both safe constructors'
+    // `file` parameter is `SeamFile`, not a raw pointer. A regression to
+    // `*const c_char` (which a safe caller could fabricate) fails to compile here.
+    const _: fn(usize, crate::runtime::mem_coords::SeamFile, c_int) -> Option<OwnedBlock<u8>> =
+        OwnedBlock::<u8>::malloc;
+    const _: fn(usize, crate::runtime::mem_coords::SeamFile, c_int) -> Option<OwnedBlock<u8>> =
+        OwnedBlock::<u8>::zalloc;
+
     /// D1-style drift guard: this family's release is the plain `CRYPTO_free` at the
     /// caller-supplied per-instance `(file, line)`, not the module constants or a
     /// cleansed arm.
     #[test]
     fn release_is_plain_at_the_instance_coordinates() {
         release_probe::clear();
-        let block = OwnedBlock::<u8>::malloc(4, FILE.as_ptr(), 7).expect("4 bytes allocate");
+        let block = OwnedBlock::<u8>::malloc(4, SeamFile::new(FILE), 7).expect("4 bytes allocate");
         drop(block);
         let call = release_probe::take().expect("the release was recorded");
         assert_eq!(call.arm, Arm::Plain);

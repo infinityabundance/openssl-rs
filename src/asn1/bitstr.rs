@@ -52,6 +52,7 @@ use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site_dynamic;
 use crate::runtime::mem::CRYPTO_clear_realloc;
+use crate::runtime::mem_coords::SeamFile;
 
 extern "C" {
     /// `int strcmp(const char *, const char *)`.
@@ -359,7 +360,7 @@ pub(crate) unsafe fn ossl_c2i_ASN1_BIT_STRING(
         // SAFETY: `len_usize` is the new allocation's size, and it is at least 1 here. `OwnedBlock`
         // records the authority's own `(FILE, LINE)` and its `Drop` is the block's single release
         // until ownership is transferred to `ret` below.
-        let Some(buf) = OwnedBlock::<u8>::malloc(len_usize, FILE.as_ptr(), LINE) else {
+        let Some(buf) = OwnedBlock::<u8>::malloc(len_usize, SeamFile::new(FILE), LINE) else {
             // Reaches `err` with `i` still holding the count byte, which the
             // authority then raises as a reason code. Reproduced; see the module
             // doc.

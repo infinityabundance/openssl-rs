@@ -275,12 +275,16 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
 
             thread_es.err_flags[top] = src.err_flags[from];
             thread_es.err_buffer[top] = src.err_buffer[from];
-            thread_es.set_debug(
-                top,
-                src.err_file[from],
-                src.err_line[from],
-                src.err_func[from],
-            );
+            // SAFETY: the source slots hold NULL or NUL-terminated strings owned by
+            // the caller's state, per restore's contract.
+            unsafe {
+                thread_es.set_debug(
+                    top,
+                    src.err_file[from],
+                    src.err_line[from],
+                    src.err_func[from],
+                )
+            };
 
             if !src.err_data[from].is_null() && src.err_data_size[from] != 0 {
                 let size = src.err_data_size[from];

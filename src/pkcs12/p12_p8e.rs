@@ -46,6 +46,7 @@ use crate::pkcs12::p12_decr::PKCS12_item_i2d_encrypt_ex;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/pkcs12/p12_p8e.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_p8e.c";
@@ -219,7 +220,7 @@ pub unsafe extern "C" fn PKCS8_set0_pbe_ex(
     // `p12_p8e.c:83`, at the same size and coordinates. The block stays owned (never runs a
     // destructor) until both slots below are written, so a partial initialisation releases only
     // the block.
-    let Some(p8) = OwnedBlock::<X509Sig>::zalloc(1, FILE.as_ptr(), 83) else {
+    let Some(p8) = OwnedBlock::<X509Sig>::zalloc(1, SeamFile::new(FILE), 83) else {
         // SAFETY: `enckey` is this call's own octet string.
         unsafe { ASN1_OCTET_STRING_free(enckey) };
         return ptr::null_mut();

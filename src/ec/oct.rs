@@ -39,6 +39,7 @@ use crate::runtime::err::{
     peek_last_lib, peek_last_reason, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_X9_62_prime_field;
 
 /// `ERR_LIB_BN` — `include/openssl/err.h`, the library `EC_R_INVALID_COMPRESSED_POINT`'s raise
@@ -63,12 +64,8 @@ struct PointBuf {
 impl PointBuf {
     /// `CRYPTO_malloc(len, file, alloc_line)`, released by `Drop` at `file`/`release_line`, or
     /// `None` when the allocator answers NULL. `len` is the encoder's byte count, not a product.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<PointBuf> {
+    fn new(len: usize, file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<PointBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, alloc_line)
@@ -750,7 +747,7 @@ pub unsafe extern "C" fn EC_POINT_point2buf(
         }
         // `PointBuf::new` is the authority's `OPENSSL_malloc(len)` at `ec_oct.c:147`; its
         // `Drop` is the `OPENSSL_free` at `:151` on the encoder-refusal path.
-        let Some(buf) = PointBuf::new(len, FILE_EC_OCT.as_ptr(), 147, 151) else {
+        let Some(buf) = PointBuf::new(len, SeamFile::new(FILE_EC_OCT), 147, 151) else {
             return 0;
         };
         len = EC_POINT_point2oct(group, point, form, buf.as_ptr(), len, ctx);

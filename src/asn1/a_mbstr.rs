@@ -50,6 +50,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::ctype::{ossl_isascii, ossl_isasn1print, ossl_isdigit};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the multibyte conversions.
@@ -628,7 +629,7 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
             }
             return -1;
         };
-        let Some(p) = OwnedBlock::<c_uchar>::malloc(count, FILE.as_ptr(), LINE) else {
+        let Some(p) = OwnedBlock::<c_uchar>::malloc(count, SeamFile::new(FILE), LINE) else {
             if free_out {
                 // SAFETY: `dest` was allocated above and is not shared.
                 unsafe { ASN1_STRING_free(dest) };

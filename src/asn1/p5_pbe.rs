@@ -47,6 +47,7 @@ use crate::asn1::x_algor::{X509Algor, X509_ALGOR_free, X509_ALGOR_new, X509_ALGO
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_nid2obj;
 
 /// `PKCS5_DEFAULT_ITER` — `include/openssl/evp.h:45`.
@@ -71,12 +72,8 @@ impl SaltBuf {
     /// `CRYPTO_malloc(len, file, alloc_line)`, released by `Drop` at `file`/`release_line`, or
     /// `None` when the allocator answers NULL. `len` is a byte count, so there is no product to
     /// guard.
-    fn new(
-        len: usize,
-        file: *const c_char,
-        alloc_line: c_int,
-        release_line: c_int,
-    ) -> Option<SaltBuf> {
+    fn new(len: usize, file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<SaltBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, file, alloc_line)
@@ -268,7 +265,7 @@ pub unsafe extern "C" fn PKCS5_pbe_set0_algor_ex(
 
         // `SaltBuf::new` is the authority's `OPENSSL_malloc(saltlen)` at `p5_pbe.c:53`; its
         // `Drop` is the `OPENSSL_free` at `:76` on the one failure path that reaches it.
-        let Some(sstr) = SaltBuf::new(salt_bytes, FILE.as_ptr(), 53, 76) else {
+        let Some(sstr) = SaltBuf::new(salt_bytes, SeamFile::new(FILE), 53, 76) else {
             PBEPARAM_free(pbe);
             return 0;
         };
