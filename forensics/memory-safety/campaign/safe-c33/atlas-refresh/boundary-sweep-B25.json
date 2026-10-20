@@ -1,0 +1,257 @@
+{
+  "receipt": "boundary-sweep-B25",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "a19eae0f7",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ssl/record/rec_layer_s3.rs"
+    ],
+    "working_tree_blob": {
+      "src/ssl/record/rec_layer_s3.rs": "bcb2a73764453c3a8c321c8e7fcddb0a7aff27b8"
+    },
+    "pre_fix_blob": {
+      "src/ssl/record/rec_layer_s3.rs": "5f5cdcbb519bb7b524077e84ccd972320b73d185"
+    }
+  },
+  "stop_status": "CLEAR after repair. One UB-class defect reachable from a legal C call (B25-D1: SSL_write(s, NULL, 0) under an active write key), one record-type confusion (B25-D2), one malformed-alert acceptance (B25-D3) and one silent record-overflow desync (B25-D4) were repaired in this file. No ABI, #[repr(C)] layout, exported symbol/signature, allocator seam, unsafe lint attribute or detector changed; hidden obligations: 0.",
+  "authority": {
+    "source": "Pinned authority tree in this checkout: forensics/authorities/src/openssl-3.5.9/. ssl/record/rec_layer_s3.c:273-489 (ssl3_write_bytes; zero-length reaches tot == len at :356-358), :491-553 (ossl_tls_handle_rlayer_return), :612-... (ssl3_read_bytes), :864-944 (received-alert block, exact-two-byte PACKET check at :868-874), ssl/record/methods/tls_common.c:560-680 (header parse; over-long record is RLAYERfatal(SSL_AD_RECORD_OVERFLOW, SSL_R_PACKET_LENGTH_TOO_LONG) at :669-672), :1920-1975 (write retry/flush transport).",
+    "abi": "No export, signature, #[repr(C)] layout, allocator coordinate or unsafe lint attribute changed. The only production additions are an early success for len == 0, a defensive fragment-bound refusal in a private fn, an exact-two-byte alert test, a fatal on record overflow, and two field writes clearing the discarded-message state.",
+    "external_contracts": [
+      "ssl3_write_bytes: live connection s; write BIO owned by the caller; buf readable for len bytes, never dereferenced when len == 0. Returns 1 on success (the caller sets *written), -1 on a record/BIOS failure.",
+      "ssl3_read_bytes / ssl3_read_one_record: live connection; read BIO owned by the caller; buf writable for cap bytes; rectype writable. A record whose plaintext exceeds cap is consumed and dropped with -1 (B25-R3).",
+      "tls13_next_handshake_message: live connection; buf writable for cap bytes; the buffered state (rd_msg_len/off) is private to this module and satisfies rd_msg_off <= rd_msg_len <= rd_msg_buf.len() at every use.",
+      "BIO callbacks are application-controlled reentrancy edges. No Rust reference or non-reentrant borrow is held across BIO_read/BIO_write/BIO_ctrl; a callback must not free or re-enter the same connection (B25-R1).",
+      "The record accumulator fields (rec_hdr_len, rec_body_len, rd_msg_len, rd_msg_off) are zero-initialised by the zero-valid Ssl constructor and written only by this module; any future writer must preserve the bounds above (B25-R5)."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B25-RL-1",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "mechanism": "record write path: ssl3_write_bytes fragmentation, ssl3_write_one_record encode/header, ssl3_write_all BIO transport and flush",
+      "disposition": "CONTRACTED",
+      "contract": "ssl3_write_bytes fragments at SSL3_RT_MAX_PLAIN_LENGTH; a zero-length request returns success without writing (authority tot == len). ssl3_write_one_record refuses len > SSL3_RT_MAX_PLAIN_LENGTH, so the 17000-byte encoder scratch and the two-byte length field are always in range. ssl3_write_all advances only while off < len and surfaces a retryable BIO failure as -1 with rwstate = SSL_WRITING.",
+      "defects": [
+        "B25-D1",
+        "B25-D5"
+      ],
+      "residuals": [
+        "B25-R1",
+        "B25-R2"
+      ]
+    },
+    {
+      "id": "B25-RL-2",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "mechanism": "record read accumulator and resumption: ssl3_read_one_record (header/body), over-long record arm, ssl3_read_bytes_rlayer_return EOF/retry classification",
+      "disposition": "CONTRACTED",
+      "contract": "The five-byte header and the declared body are accumulated in rec_hdr/rec_body with off < bound at every add; the declared length is bounded by rec_body.len() before the body loop; cap is checked before every caller-buffer copy; a short BIO_read resumes from the retained field state. The over-long header is fatal (record overflow) because the header bytes are already consumed.",
+      "defects": [
+        "B25-D4"
+      ],
+      "residuals": [
+        "B25-R1",
+        "B25-R3",
+        "B25-R4",
+        "B25-R5"
+      ]
+    },
+    {
+      "id": "B25-RL-3",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "mechanism": "TLS1.3 handshake-message buffering: tls13_next_handshake_message multi-message drain and non-handshake record skip",
+      "disposition": "CONTRACTED",
+      "contract": "A buffered message is delivered only when p + 4 <= rd_msg_len (so the four header bytes are initialised) and p + msg_len <= rd_msg_len && msg_len <= cap; otherwise nothing is copied. A fully consumed non-handshake record is discarded and now clears rd_msg_len/rd_msg_off before returning -1, so its body cannot be reparsed as a handshake header.",
+      "defects": [
+        "B25-D2"
+      ],
+      "residuals": [
+        "B25-R1",
+        "B25-R4",
+        "B25-R5"
+      ]
+    },
+    {
+      "id": "B25-RL-4",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "mechanism": "received-alert decode: ssl3_read_bytes_alert and raise_alert_received",
+      "disposition": "SAFETY_DISCHARGED",
+      "contract": "Only exactly two alert bytes are read (len != 2 is fatal before any byte access); the caller's buffer is writable for the record body, which ssl3_read_one_record bounds by cap. The warning/fatal/close_notify classification and the ERR coordinate match rec_layer_s3.c:864-944; raise_alert_received uses static strings and a NUL-terminated heap message the error setter copies.",
+      "defects": [
+        "B25-D3"
+      ],
+      "residuals": []
+    },
+    {
+      "id": "B25-RL-5",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "mechanism": "record-layer state accessors: RECORD_LAYER_write_pending/read_pending, SSL_CTX_set_default_read_buffer_len, SSL_set_default_read_buffer_len, SSL_rstate_string(_long)",
+      "disposition": "SAFETY_DISCHARGED",
+      "contract": "All entry points take NULL-or-live pointers, test NULL before any dereference, and return either a scalar field, 0, or a pointer to a process-lifetime C string literal. The context setter's NULL arm is a documented safety improvement (the authority dereferences NULL); the connection setter's NULL arm matches. No allocation, reference or lifetime is created.",
+      "defects": [],
+      "residuals": [
+        "B25-R7"
+      ]
+    }
+  ],
+  "caller_closure": [
+    {
+      "file": "src/ssl/ssl_lib.rs",
+      "caller": "ssl_write_internal (ssl3_write_bytes:6835)",
+      "disposition": "SAFE",
+      "evidence": "Public SSL_write/SSL_write_ex/SSL_write_ex2 contract is buf readable for num; num == 0 is now the authority's no-record success and never reaches an encoder. The C-valid NULL/0 call is covered by B25-D1's repair and its control."
+    },
+    {
+      "file": "src/ssl/ssl_lib.rs",
+      "caller": "ssl_read_internal (ssl3_read_bytes:6623)",
+      "disposition": "SAFE",
+      "evidence": "Decrypts into the full-size rx_buf (TLS13_HS_BUF_LEN = 16384) and copies min(num, n) to the caller, so no record is dropped for a small application buffer; the returned n is bounded by the cap."
+    },
+    {
+      "file": "src/ssl/ssl_lib.rs",
+      "caller": "ssl3_shutdown's close_notify discard (ssl3_read_bytes:7279)",
+      "disposition": "SAFE (residual B25-R3)",
+      "evidence": "2048-byte stack buffer, writable for cap; a larger peer record is consumed and dropped with -1, which only ends the shutdown retry. No out-of-bounds access."
+    },
+    {
+      "file": "src/ssl/ssl_lib.rs",
+      "caller": "ssl3_send_alert (ssl3_write_bytes:7238)",
+      "disposition": "SAFE",
+      "evidence": "Two-byte stack array, readable for len 2; the write path bounds the record."
+    },
+    {
+      "file": "src/ssl/statem/statem.rs",
+      "caller": "ossl_statem_send_fatal (ssl3_write_bytes:252)",
+      "disposition": "SAFE",
+      "evidence": "Two-byte alert array; wbio is NULL-checked before the call and BIO_write(NULL) is a safe refusal."
+    },
+    {
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "caller": "client_read / tls12_client_read_ccs (ssl3_read_bytes / tls13_next_handshake_message)",
+      "disposition": "SAFE",
+      "evidence": "16384-byte stack buffers matching the buffer's cap; results are read only when n > 0."
+    },
+    {
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "caller": "tls12_read_handshake, tls12_read_change_cipher_spec, tls13_server_drive",
+      "disposition": "SAFE (residual B25-R3 for the 16-byte CCS cap)",
+      "evidence": "Handshake reads use a 16384-byte buffer; the CCS reader uses 16 bytes and accepts only n > 0 with the CCS type; every TLS1.3 driver indexes buf[0] only after n > 0."
+    },
+    {
+      "file": "src/ssl/tls13_enc.rs",
+      "caller": "write_handshake_message (ssl3_write_bytes:1528)",
+      "disposition": "SAFE",
+      "evidence": "Frames at most 17000 bytes and passes the message to ssl3_write_bytes, which fragments at 16384; the new bound in ssl3_write_one_record confirms the encoder scratch extent."
+    },
+    {
+      "file": "src/ssl/s3_lib.rs",
+      "caller": "record_layer_read_pending / record_layer_write_pending",
+      "disposition": "SAFE",
+      "evidence": "Reads a scalar field of a live connection; no pointer escape."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean (final blob)",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (final blob)",
+      "focused_tests": "cargo test --lib ssl::record::rec_layer_s3 -- --test-threads=1: 3 passed / 0 failed / 0 ignored (1721 filtered out).",
+      "structural_guards": "No CRYPTO_* coordinate, #[repr(C)] layout, exported symbol, signature or unsafe lint attribute changed. Production unsafe expressions: 0 added, 0 removed (one existing block extended by the fatal call). Every new unsafe expression is test-only and carries a SAFETY comment."
+    },
+    "controls_observed": [
+      "an_over_long_alert_is_invalid_not_close_notify fires against pre-fix behaviour: with `len < 2` restored, ssl3_read_bytes answered 0 (clean close_notify) instead of -1 and the assertion failed with left 0 / right -1. With the fix it answers -1, poisons the state and leaves SSL_RECEIVED_SHUTDOWN clear.",
+      "a_discarded_non_handshake_record_is_not_reparsed_as_handshake fires against pre-fix behaviour: with the `_ => return -1` reset removed, the second call delivered the discarded application-data body (out[4] = 0xAA = 170) instead of the handshake record (0xBB = 187). With the fix it delivers 0xBB.",
+      "a_zero_length_write_emits_no_record_and_never_dereferences_null fires against pre-fix behaviour: with the len == 0 guard removed, the TLS1.3 encoder path answered -1 (and Miri's zero-length copy is the UB witness); with the fix ssl3_write_bytes answers 1 and the memory BIO has zero pending bytes.",
+      "All three controls were run after a temporary reverse mutation of the final blob and the file was restored from /tmp/rec_layer_s3.b25.rs before the batch gate; the final blob hash is recorded above."
+    ],
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4 on the final blob: 1697 passed, 0 failed, 27 ignored (1724 total, 83.38 s).",
+      "serial": "cargo test --lib -- --test-threads=1 on the final blob: 1697 passed, 0 failed, 27 ignored (1724 total, 365.96 s).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: clean on the final blob.",
+      "probes": "bash scripts/adv-probe.sh: all 26 probes passed on the final blob (one process per allocator-injection probe), including the SSL member-buffer/member-slot set and the allocator/cleansed-free canaries.",
+      "venue": "docker/openssl-rs-court.sh (8 GiB cgroup), CARGO_BUILD_JOBS=4; host available memory checked before builds (61 GiB, 44 GiB free)."
+    }
+  },
+  "miri": {
+    "status": "PASS (three boundary controls only)",
+    "toolchain": "nightly-2026-10-01-x86_64-unknown-linux-gnu, cargo-miri 0.1.0.",
+    "stacked_borrows": "MIRIFLAGS=\"-Zmiri-disable-isolation -Zmiri-ignore-leaks\" cargo +nightly-2026-10-01 miri test --lib boundary_tests -- --test-threads=1: 3 passed / 0 failed.",
+    "tree_borrows": "same command with -Zmiri-tree-borrows: 3 passed / 0 failed.",
+    "scope": "The three controls only: zero-length write/encoder extent, discarded-record buffering, exact-two-byte alert with the error queue. Not full-library Miri and not the BIO/packet/statem callers. -Zmiri-ignore-leaks is required because the global ERR queue intentionally retains the error raised by the alert control; the first run stopped on that leak, not on a UB report."
+  },
+  "asan": {
+    "status": "NOT_RUN",
+    "reason": "The repairs change control flow, a fatal transition and two field writes; no allocation size, ownership or access extent changed. The UB class in B25-D1 is a zero-length source-pointer copy, which Miri covers under both borrow models; the ASan court was not rebuilt."
+  },
+  "loom_or_tsan": "NOT_RUN. No lock, atomic or shared-ownership transition changed; the threaded full-suite run is the only concurrency evidence.",
+  "invalidated_evidence": {
+    "closed": "The record layer's deferred status (M80 and earlier queue entries) is closed. The pre-fix blob 5f5cdcbb5 no longer describes the candidate.",
+    "invalidated": "Any prior Miri, native or forensic result bound to src/ssl/record/rec_layer_s3.rs before blob bcb2a7376 is invalidated by the four repairs and the new controls. The M80 note that the file was deferred is superseded.",
+    "not_invalidated": "The CRYPTO_* allocator seam, every #[repr(C)] layout and every exported symbol/signature are unchanged, so the allocator, ABI and symbol receipts survive. The BIO B1/B2 contracts, the B3/B4/B17 TLS contracts and B23's WPACKET state are unchanged and reused; no shared owner or precondition was edited. The full suite and all 26 probes pass on the final blob."
+  },
+  "hidden_obligations": [],
+  "hidden_obligations_note": "0. Every residual below is stated at the point of use and in this receipt: BIO callback reentrancy, short-write resumption, the cap-limited consume-and-drop, the zero-length record return, the field-range invariants, and the deliberate NULL-context setter divergence. None is an unstated caller requirement.",
+  "new_unsafe_assumptions": [],
+  "new_unsafe_assumptions_note": "None in production. The repairs add a safe early return, a safe length refusal, an exact-length test, a fatal transition through an existing unsafe call, and two field writes. The controls add test-only unsafe expressions under SAFETY comments.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "No production unsafe expression was deleted.",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 7,
+  "test_only_unsafe_note": "The boundary_tests module: one unsafe helper fn and six unsafe blocks (zeroed_ssl, BIO_new, the fixture queue, and one per control). All are #[cfg(test)] and carry SAFETY comments.",
+  "boundary_size": "1 file, +166/-11 (src/ssl/record/rec_layer_s3.rs; 123 lines of controls plus the five repairs and their comments). No allocation size, #[repr(C)] layout, exported symbol or signature changed.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Every record-layer entry point in scope is an unsafe fn or unsafe extern \"C\" with a stated contract; ssl3_write_one_record and ssl3_read_one_record are private. No safe wrapper was added. The tests are the only new callers and they build their own exclusive objects.",
+  "residuals": [
+    {
+      "id": "B25-R1",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED external-ABI contract (reentrancy edge)",
+      "description": "BIO_read/BIO_write/BIO_ctrl invoke application-controlled callbacks. No Rust reference or borrow is held across them (all connection access is through raw pointers), but a callback that frees or re-enters the same connection can invalidate s or interleave the record accumulator. This is the authority's non-reentrant record-layer contract and is not enforceable in this file."
+    },
+    {
+      "id": "B25-R2",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED reduced-model boundary",
+      "description": "A retryable or zero BIO_write after the record header has been committed leaves a partial record in the transport; the pending-write resumption (wpend_tot/re-entry) is not modelled, so a retry starts a new record. The function doc states this. It is a stream-integrity residual, not UB, and the authority's own failure handling is likewise not rolled back at this layer."
+    },
+    {
+      "id": "B25-R3",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED compatibility divergence",
+      "description": "A record whose plaintext exceeds the caller's cap is fully consumed from the BIO and dropped with -1. The authority retains the record and copies at most the caller's length. Only the 2048-byte SSL_shutdown discard and the 16-byte TLS1.2 CCS reader can hit this; neither loses protocol-relevant data. Not UB."
+    },
+    {
+      "id": "B25-R4",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED compatibility divergence",
+      "description": "A zero-length record returns 0 from ssl3_read_bytes, so SSL_read's callers treat it as terminal, where the authority's `totalbytes == 0 -> goto start` skips empty records and keeps reading. The reduced reader does not distinguish an empty completed record from the EOF/retry return. Not UB; no test currently drives an empty record."
+    },
+    {
+      "id": "B25-R5",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED internal invariant",
+      "description": "rec_hdr_len <= 5, rec_body_len <= declared length, rd_msg_len <= rd_msg_buf.len() and rd_msg_off <= rd_msg_len are established by SSL_new's zero initialisation and by this module's writes. The fields are pub within the crate; any future writer must preserve them. The buffered-message accesses are array-bounds checked and the copies are additionally guarded."
+    },
+    {
+      "id": "B25-R6",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "NOT_RUN assurance",
+      "description": "Miri ran only the three boundary controls (stacked and tree borrows), not the BIO/packet/statem callers or full-library Miri. ASan was not rebuilt; Loom/TSan are not applicable (no concurrency change). No executable authority differential was driven for these exact arms; the parity claims rest on the pinned 3.5.9 source coordinates."
+    },
+    {
+      "id": "B25-R7",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "severity": "low",
+      "disposition": "RECORDED deliberate safety improvement",
+      "description": "SSL_CTX_set_default_read_buffer_len returns for a NULL context, while the authority dereferences it. This pre-existing divergence is a deliberate safety improvement stated in the module header; the connection setter's NULL no-op matches the authority."
+    }
+  ],
+  "escalations": []
+}
