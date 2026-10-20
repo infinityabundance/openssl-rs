@@ -1,0 +1,636 @@
+{
+  "schema": "safe-c33/mechanism-discharge/v1",
+  "mechanism": "ERR",
+  "consumer": {
+    "family_id": "family:pure-ftpd",
+    "blocker": "C2",
+    "imported_err_symbols": ["ERR_error_string", "ERR_get_error"],
+    "import_source": "consumer-closure-C2.json#/symbol_evidence.imported_symbols",
+    "note": "The consumer imports only these two ERR symbols. The other ERR entry points named by the task are not imported by pure-ftpd; their in-crate callers are audited below because they are part of the mechanism."
+  },
+  "source_identity": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "head": "a5c93369729a73f025f924c1b1ccb8e95d25d00d",
+    "files": [
+      "src/runtime/err.rs",
+      "src/runtime/err_state.rs",
+      "src/runtime/err_variadic.c",
+      "src/runtime/dso_shared.rs",
+      "src/runtime/mem.rs"
+    ],
+    "authority": "OpenSSL 3.6.4 (pinned). No authority source tree is present in this checkout; contracts below are transcribed from the recorded authority sites already cited by the implementation.",
+    "working_tree": "unmodified; only untracked scratch directories (.asan-err-target, .tsan-err-target) were created by this audit and retained so the reviewer can inspect the exact instrumented binaries"
+  },
+  "environment": {
+    "venue": "docker/openssl-rs-court.sh (minimal court container)",
+    "target": "x86_64-unknown-linux-gnu",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "nightly_for_controls": "nightly-2026-10-01-x86_64-unknown-linux-gnu",
+    "miri": "0.1.0 (21b707e3f9 2026-09-30)",
+    "clang": "Debian clang 14.0.6",
+    "libc": "Debian GLIBC 2.36-9+deb12u14"
+  },
+  "surface": [
+    {
+      "id": "ERR-01",
+      "operation": "thread-local / shared ERR_STATE access",
+      "sites": ["src/runtime/err.rs:726-733", "src/runtime/err.rs:832-857", "src/runtime/err.rs:1021-1025", "src/runtime/dso_shared.rs:131-142"],
+      "contract": {
+        "provenance": "`state` is the pointer returned by the authority's (or fallback) ERR_get_state: either this crate's TLS UnsafeCell<ErrState> or the dlsym-resolved libcrypto ERR_get_state().",
+        "alignment": "correctly aligned for the public #[repr(C)] ERR_STATE layout.",
+        "extent": "one whole ERR_STATE block; fields indexed 0..16 by the ring invariant top/bottom in 0..16.",
+        "init": "zero-initialized at thread first use, then maintained by the ring operations; every referenced field is initialized for ErrState.",
+        "lifetime_alias": "live until thread exit; only the calling thread may use it; exactly one &mut for the duration of the closure; no reference is retained by callers.",
+        "release": "TLS state is deliberately not freed (no Drop, authority-parity residual); OSSL_ERR_STATE_new blocks are freed by OwnedErrState::Drop."
+      },
+      "caller_obligation": "pub(crate) callers use the closure only for the call and never retain the reference. External C: ERR_get_state's pointer is per-thread and valid until thread exit, must not be used from another thread or after thread exit, and must not be mutated concurrently with an ERR call. Installing an allocator hook that re-enters ERR on the same thread is outside the contract (NEO-ERR-7).",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-02",
+      "operation": "slot error-data release / truncate / replace",
+      "sites": ["src/runtime/err.rs:317-344", "src/runtime/err.rs:431-447"],
+      "contract": {
+        "provenance": "with ERR_TXT_MALLOCED and non-NULL, the pointer is the base of one whole block from the crate's CRYPTO_malloc/CRYPTO_strdup seam; without the flag it is borrowed and never released.",
+        "alignment": "allocator alignment for a c_char block.",
+        "extent": "strlen + 1 bytes of NUL-terminated contents fit within the allocation; the deall path only needs the base pointer, the truncate path needs at least one writable byte.",
+        "init": "NUL-terminated before it is stored; the truncate path writes byte 0 only.",
+        "lifetime_alias": "exclusively owned by this state when MALLOCED; no other owner releases it; released exactly once by OwnedStr::adopt/Drop through CRYPTO_free at the recorded site.",
+        "release": "clear_data(i, true) or set_data replacement; borrowed data is dropped by pointer overwrite without release."
+      },
+      "caller_obligation": "External ERR_set_error_data establishes the MALLOCED contract; internal slot_buf_alloc/attach_message/openssl_rs_err_set_error/add_data/add_error_txt build seam blocks. The borrowed path is only stored, never released.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-03",
+      "operation": "slot file / function string ownership and duplication",
+      "sites": ["src/runtime/err.rs:347-369", "src/runtime/err.rs:388-420", "src/runtime/err.rs:633-649", "src/runtime/err.rs:717-724"],
+      "contract": {
+        "provenance": "slot err_file/err_func are NULL or previously duplicated seam blocks owned by the state; input file/func are NULL or NUL-terminated C strings (static authority strings, static site tables, or caller debug strings).",
+        "alignment": "allocator alignment for c_char.",
+        "extent": "input readable through its NUL; fresh block is strlen + 1 bytes.",
+        "init": "the duplicate is fully initialized including the terminator; a NULL or empty input stores NULL.",
+        "lifetime_alias": "slot exclusively owns the previous duplicate and the new one; released exactly once, before installing the replacement (authority order).",
+        "release": "OwnedStr::adopt/Drop through CRYPTO_free at L_FREE_FILE_*/L_FREE_FUNC_*."
+      },
+      "caller_obligation": "raise_with/raise_site/ERR_set_debug pass NULL or NUL-terminated strings. The allocator-failure path in mem.rs passes a caller-supplied `file` and is the one external gap (NEO-ERR-6).",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-04",
+      "operation": "owned OSSL_ERR_STATE block",
+      "sites": ["src/runtime/err.rs:665-713"],
+      "contract": {
+        "provenance": "OwnedErrState::new allocates via CRYPTO_zalloc(size_of::<ErrState>(), NULL, 0); from_raw only reclaims a pointer previously returned by into_raw.",
+        "alignment": "CRYPTO_zalloc alignment satisfies ErrState.",
+        "extent": "exactly one ErrState block.",
+        "init": "zeroed by zalloc, which is a valid ErrState (authority shape: err_line 0 until first clear).",
+        "lifetime_alias": "exclusive owner; into_raw forgets the owner; from_raw requires the C caller gave up ownership and has not freed it.",
+        "release": "Drop runs clear_all(true) then CRYPTO_free(..., ERR_C_FILE, 209); exactly once."
+      },
+      "caller_obligation": "OSSL_ERR_STATE_free accepts NULL or a live block from OSSL_ERR_STATE_new that has not been freed.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-05",
+      "operation": "C string length / static empty string",
+      "sites": ["src/runtime/err.rs:485", "src/runtime/err.rs:717-724"],
+      "contract": {
+        "provenance": "callers pass a pointer known to be a C string; EMPTY_C is c\"\" with static lifetime.",
+        "alignment": "byte-aligned.",
+        "extent": "readable allocation containing a NUL; the loop cannot leave the allocation before the NUL.",
+        "init": "NUL-terminated by construction or caller contract.",
+        "lifetime_alias": "valid for the duration of the call; no store.",
+        "release": "n/a (read only)."
+      },
+      "caller_obligation": "Every call site checks NULL where NULL is allowed and otherwise carries the NUL-termination contract in its # Safety comment.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-06",
+      "operation": "internal raise path (raise_with / raise_site / dynamic / data)",
+      "sites": ["src/runtime/err.rs:872-1014"],
+      "contract": {
+        "provenance": "ErrSite is a compile-time constant with static file/func pointers; msg is NULL or a NUL-terminated C string; the attached message is copied into a fresh seam block.",
+        "alignment": "allocator alignment; ring indices 0..16.",
+        "extent": "checked_add for len+1; a refused allocation attaches nothing; copies are bounded by the computed lengths.",
+        "init": "slot is cleared then debug strings and packed error are installed; an interrupted raise leaves err_buffer 0 and is invisible to reads.",
+        "lifetime_alias": "msg is read only during the call and never retained; the copy is owned by the slot.",
+        "release": "slot owner releases the copy on the next clear/replace."
+      },
+      "caller_obligation": "Structural closure: 34 raise_with, 3940 raise_site, 40 raise_site_dynamic, 231 raise_site_data, 36 raise_site_dynamic_data sites. Site expressions are &err_sites::X/&CONST or &'static ErrSite parameters (e.g. cms_site, repeated_param_site returns &'static). Message expressions are .as_ptr() on NUL-terminated buffers/CString, C literals, static gai_strerror, or *const c_char helper parameters carrying a NUL-termination # Safety. No safe function constructs an ErrSite from a runtime pointer.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-07",
+      "operation": "variadic C adapters: set_error / take_data / finish_data / add_data",
+      "sites": ["src/runtime/err.rs:1067-1216", "src/runtime/err_variadic.c:118-203"],
+      "contract": {
+        "provenance": "msg is NULL or NUL-terminated; finish_data data is NULL or a seam block the call takes ownership of; take_data returns the slot pointer and detaches it.",
+        "alignment": "allocator alignment for c_char.",
+        "extent": "checked_add for every concatenation and terminator; take_data writes the cached err_data_size; finish_data stores the caller's size.",
+        "init": "copies are NUL-terminated; empty/NULL data attaches nothing; flags are stored unchanged.",
+        "lifetime_alias": "finish_data transfers exclusive ownership of data to the slot; take_data transfers the slot pointer out and leaves the slot NULL/flagless.",
+        "release": "slot owner releases a MALLOCED block once; the C adapter owns a taken block until finish_data or realloc."
+      },
+      "caller_obligation": "err_variadic.c passes buffers produced by BIO_vsnprintf/CRYPTO_realloc. OPEN GAP: take_data does not report whether the detached pointer was MALLOCED, and the adapter unconditionally CRYPTO_reallocs it (NEO-ERR-1); finish_data does not require size <= extent (NEO-ERR-2).",
+      "state": "CONTRACTED"
+    },
+    {
+      "id": "ERR-08",
+      "operation": "ERR_set_error_data ownership transfer",
+      "sites": ["src/runtime/err.rs:1254-1269"],
+      "contract": {
+        "provenance": "data NULL or, with MALLOCED, the base of one whole seam block (not interior/stack/literal/foreign).",
+        "alignment": "allocator alignment.",
+        "extent": "at least strlen(data)+1; the cached size is exactly that.",
+        "init": "NUL-terminated within a readable allocation.",
+        "lifetime_alias": "exclusive ownership is transferred to the queue; caller must not use or free it after the call. Without MALLOCED it stays borrowed until cleared/replaced.",
+        "release": "the queue's CRYPTO_free is the single release for MALLOCED data."
+      },
+      "caller_obligation": "C caller supplies the documented flags and ownership; the # Safety section states the full contract.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-09",
+      "operation": "ERR_add_error_txt concatenation",
+      "sites": ["src/runtime/err.rs:1292-1359"],
+      "contract": {
+        "provenance": "sepr/txt NULL or NUL-terminated; existing MALLOCED slot data is NUL-terminated and owned by the state.",
+        "alignment": "allocator alignment.",
+        "extent": "checked_add of old_len + sep_len + txt_len + 1; new seam block exactly that size.",
+        "init": "full copy plus terminator; empty separator suppressed when there is no string data.",
+        "lifetime_alias": "new block replaces the old; old release happens in set_data; inputs read only during the call.",
+        "release": "slot owner releases the replacement once."
+      },
+      "caller_obligation": "C caller passes NUL-terminated separators/text. Recorded compatibility residual: the authority's ERR_PRINT_BUF_SIZE-100 split is not implemented.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-10",
+      "operation": "error reads (get/peek/all/legacy arities)",
+      "sites": ["src/runtime/err.rs:1384-1717"],
+      "contract": {
+        "provenance": "returned file/func/data pointers are ring-owned slot pointers or the static EMPTY_C; output pointers are caller-supplied.",
+        "alignment": "caller outputs correctly aligned for their types.",
+        "extent": "each non-NULL output is writable for its type; returned C strings are NUL-terminated.",
+        "init": "slot values are initialized by the raise path; empty fields are rendered as EMPTY_C.",
+        "lifetime_alias": "returned slot pointers remain valid only until the next ERR operation reuses/clears that slot (authority parity); the state reference is released before returning.",
+        "release": "Pop detaches/clears according to flags; Peek does not transfer ownership."
+      },
+      "caller_obligation": "External C passes NULL or writable outputs; the returned pointers must not be freed or retained past the next queue operation.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-11",
+      "operation": "clear / mark / pop / count entry points",
+      "sites": ["src/runtime/err.rs:1724-1837"],
+      "contract": {
+        "provenance": "operates only on the thread's ErrState; no pointers accepted.",
+        "alignment": "n/a.",
+        "extent": "indices derived from the maintained 0..16 ring invariant.",
+        "init": "cleared slots carry err_line -1 and zeroed flags/buffer.",
+        "lifetime_alias": "no reference escapes.",
+        "release": "clear(false) truncates owned data rather than freeing, matching the authority's reuse."
+      },
+      "caller_obligation": "None beyond the per-thread queue contract; all are safe extern C fns with no pointer arguments.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-12",
+      "operation": "ERR_get_next_error_library",
+      "sites": ["src/runtime/err.rs:1841-1851"],
+      "contract": {
+        "provenance": "process-global AtomicU32.",
+        "alignment": "n/a.",
+        "extent": "n/a.",
+        "init": "starts at 0, returns +128.",
+        "lifetime_alias": "atomic, no reference.",
+        "release": "n/a."
+      },
+      "caller_obligation": "None.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-13",
+      "operation": "static error-string buffer and ERR_error_string[_n]",
+      "sites": ["src/runtime/err.rs:1856-1860", "src/runtime/err.rs:1862-1895", "src/runtime/err.rs:1901-2012", "src/runtime/err.rs:2019-2050"],
+      "contract": {
+        "provenance": "buf is the caller's buffer or the process-global SharedBuf; func is NULL or NUL-terminated; lib/reason pointers are static tables or stack fallbacks.",
+        "alignment": "c_char.",
+        "extent": "non-NULL buf writable for len (write path requires len >= 1); SharedBuf is exactly 256 bytes; strerror_r buffer is 256 bytes.",
+        "init": "the formatter always NUL-terminates within len.",
+        "lifetime_alias": "with a non-NULL buf only that buffer is written; with NULL buf the process-global 256-byte buffer is shared and unsynchronised, matching the authority's documented non-thread-safe API.",
+        "release": "no allocation; returned static/shared pointer is not owned by the caller."
+      },
+      "caller_obligation": "OPEN GAP: the # Safety section does not state that NULL-buf calls and reads of the returned pointer must be externally synchronized (NEO-ERR-5). The GNU strerror_r ABI is a glibc platform assumption, not portable to XSI strerror_r.",
+      "state": "CONTRACTED"
+    },
+    {
+      "id": "ERR-14",
+      "operation": "string registry load/lookup and legacy load_strings",
+      "sites": ["src/runtime/err.rs:749-798", "src/runtime/err.rs:2114-2151"],
+      "contract": {
+        "provenance": "compiled static tables; registry state in atomics.",
+        "alignment": "byte strings.",
+        "extent": "every table entry is a static byte string with a NUL.",
+        "init": "loaded flags gate visibility exactly as the authority.",
+        "lifetime_alias": "returned pointers have static lifetime; atomics are the only shared mutation.",
+        "release": "n/a."
+      },
+      "caller_obligation": "ERR_load_strings/_const/_unload ignore their pointer arguments, so no caller precondition is needed for memory safety. Compatibility residual: ERR_load_strings is a no-op returning 1 (in-crate caller provider/init.rs:450), so provider-supplied strings are not registered.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-15",
+      "operation": "allocator debug `file` argument reaching ERR raise",
+      "sites": ["src/runtime/mem.rs:216-240", "src/runtime/mem.rs:439-447"],
+      "contract": {
+        "provenance": "`file` is passed by the C caller of the safe CRYPTO_malloc/zalloc/calloc/realloc entry points.",
+        "alignment": "n/a for the pointer itself; c_strlen requires byte-readable memory.",
+        "extent": "must contain a NUL; the failure path calls c_strlen through report_alloc_err -> raise_with.",
+        "init": "NUL-terminated.",
+        "lifetime_alias": "read only during the raise; not retained (the duplicate is stored).",
+        "release": "n/a."
+      },
+      "caller_obligation": "OPEN GAP (cross-mechanism, RUNTIME_ALLOC_OWNERSHIP): the safe extern fns do not document that `file` must be NULL or NUL-terminated; a safe Rust caller can pass an arbitrary raw pointer and reach c_strlen on the failure path (NEO-ERR-6).",
+      "state": "CONTRACTED"
+    },
+    {
+      "id": "ERR-16",
+      "operation": "ERR_print_errors_cb / ERR_print_errors / _fp callback edge",
+      "sites": ["src/runtime/err.rs:2211-2328"],
+      "contract": {
+        "provenance": "cb is the caller's function pointer; u is opaque; bp/fp are live BIO/FILE handles.",
+        "alignment": "cb signature matches ErrPrintCb; out is a live byte slice.",
+        "extent": "len is out.len(); BIO_write/FILE fwrite receive a valid range.",
+        "init": "out is fully built before the callback; error fields are copied, not aliased.",
+        "lifetime_alias": "the state reference is released before cb is called, so cb may raise/re-enter ERR; cb must not retain `out` after returning. No lock or &mut is held across the callback.",
+        "release": "errors popped by get_error_all are consumed; a cb returning <= 0 leaves the remainder queued."
+      },
+      "caller_obligation": "External C supplies a valid callback and a live handle; the # Safety sections state the handle contracts. This is the audited reentrancy edge and it is handled.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-17",
+      "operation": "ERR_add_error_mem_bio",
+      "sites": ["src/runtime/err.rs:2341-2383"],
+      "contract": {
+        "provenance": "bio is NULL or a live BIO; separator is NULL or NUL-terminated; the BIO's memory buffer is returned by BIO_ctrl.",
+        "alignment": "c_char.",
+        "extent": "BIO_ctrl's positive len is valid for the buffer; the function re-fetches the pointer after BIO_write because the buffer may move.",
+        "init": "a missing trailing NUL is written before reading as a string.",
+        "lifetime_alias": "the BIO owns the buffer; no reference escapes; separator is read only during the call.",
+        "release": "no ownership transfer."
+      },
+      "caller_obligation": "Depends on the BIO mechanism's live-handle and BIO_CTRL_INFO contracts (BIO is a separate consumer blocker).",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-18",
+      "operation": "deprecated no-op entry points",
+      "sites": ["src/runtime/err.rs:2163-2170", "src/runtime/err.rs:2138-2152"],
+      "contract": {
+        "provenance": "pointer arguments are ignored and never dereferenced.",
+        "alignment": "n/a.",
+        "extent": "n/a.",
+        "init": "n/a.",
+        "lifetime_alias": "n/a.",
+        "release": "n/a."
+      },
+      "caller_obligation": "None for memory safety; ERR_remove_thread_state/ERR_remove_state are authority-parity no-ops.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-19",
+      "operation": "OSSL_ERR_STATE_new / OSSL_ERR_STATE_free",
+      "sites": ["src/runtime/err_state.rs:61-85"],
+      "contract": {
+        "provenance": "new allocates through the OwnedErrState seam; free reclaims only a pointer previously returned by new.",
+        "alignment": "zalloc alignment.",
+        "extent": "one ErrState.",
+        "init": "zeroed state is a valid empty ErrState.",
+        "lifetime_alias": "exclusive ownership; free accepts NULL and rejects nothing (caller must not double free).",
+        "release": "clear_all(true) then CRYPTO_free once."
+      },
+      "caller_obligation": "C caller passes NULL or a live, not-yet-freed block from OSSL_ERR_STATE_new.",
+      "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-20",
+      "operation": "OSSL_ERR_STATE_save / save_to_mark",
+      "sites": ["src/runtime/err_state.rs:99-190"],
+      "contract": {
+        "provenance": "es is a caller-owned state, not the thread's own; after save its non-NULL MALLOCED slots are caller-owned seam blocks and must satisfy the slot contract.",
+        "alignment": "ErrState alignment.",
+        "extent": "one ErrState; per-slot data extents as stored.",
+        "init": "destination cleared first; source slots transferred (save) or selectively moved and zeroed (save_to_mark).",
+        "lifetime_alias": "dst &mut and thread-state &mut are distinct because es != thread state; ownership of buffers moves to dst exactly once.",
+        "release": "dst owns the moved blocks; its later clear/free releases them."
+      },
+      "caller_obligation": "Current # Safety says only live caller-owned and not the thread's own. OPEN GAP: it omits that every MALLOCED slot of es must be a seam block exclusively owned by es, because clear_all(true)/clear(i,true) frees them (NEO-ERR-3).",
+      "state": "CONTRACTED"
+    },
+    {
+      "id": "ERR-21",
+      "operation": "OSSL_ERR_STATE_restore",
+      "sites": ["src/runtime/err_state.rs:207-265"],
+      "contract": {
+        "provenance": "es is a caller-owned state, not the thread's own; each non-NULL err_data is readable for err_data_size bytes; err_file/err_func are NULL or NUL-terminated.",
+        "alignment": "ErrState alignment.",
+        "extent": "the copy uses exactly err_data_size bytes; set_debug reads the source strings as C strings.",
+        "init": "source slots are fully initialized by save or by the caller.",
+        "lifetime_alias": "&*es must not alias the thread state's &mut; no concurrent mutation of es during the call.",
+        "release": "restore duplicates error data into fresh seam blocks owned by the thread queue; it does not take ownership from es."
+      },
+      "caller_obligation": "Current # Safety omits the per-slot extent and string-termination requirements and the no-concurrent-mutation rule (NEO-ERR-4).",
+      "state": "CONTRACTED"
+    },
+    {
+      "id": "ERR-22",
+      "operation": "FFI panic boundary / guard_ffi",
+      "sites": ["src/ffi/mod.rs:78", "src/runtime/err.rs:1022-2383"],
+      "contract": {
+        "provenance": "catch_unwind around every extern entry.",
+        "alignment": "n/a.",
+        "extent": "n/a.",
+        "init": "ERR mutations allocate/copy before installing, so a caught panic leaves an incomplete slot (err_buffer 0, invisible) rather than a partially freed slot.",
+        "lifetime_alias": "AssertUnwindSafe is used; catching a panic does not repair arbitrary partial state.",
+        "release": "no destructor runs on a caught panic beyond unwinding of locals."
+      },
+      "caller_obligation": "Retained: panic safety is failure-atomic for ERR's own slots; this does not generalize to other stateful contexts.",
+      "state": "ESTABLISHED"
+    }
+  ],
+  "caller_closure": {
+    "result": "CLOSED_FOR_CONSUMER_CORE_WITH_TWO_REPAIRS",
+    "consumer_imports": {
+      "ERR_error_string": "No in-crate callers; external C only. Non-NULL buf: writable 256 bytes established by caller. NULL buf: process-global buffer; external synchronization is the authority's documented non-thread-safe contract and must be stated in # Safety (NEO-ERR-5).",
+      "ERR_get_error": "16 in-crate call sites, all inside #[cfg(test)] modules; no production in-crate caller. Safe extern fn, no pointer arguments; external contract is the per-thread queue."
+    },
+    "other_entry_points": {
+      "ERR_error_string_n": "1 production call site: src/apps/errstr.rs:97 with [c_char; 256] and len 256; buffer/len contract established.",
+      "ERR_peek_error": "103 call sites (2 production in src/cmp/cmp_server.rs:510,617; remainder tests). Safe fn, no pointer preconditions.",
+      "ERR_clear_error": "184 call sites across cms/provider/rand/rsa/dh/pkcs12/runtime; safe fn, no pointer preconditions.",
+      "ERR_set_mark": "123 call sites; safe fn, no memory preconditions.",
+      "ERR_pop_to_mark": "124 call sites; safe fn, no memory preconditions.",
+      "ERR_load_strings": "1 in-crate call site src/provider/init.rs:450. The pointer is ignored by the implementation, so no safety precondition applies; compatibility no-op residual recorded.",
+      "raise_with": "34 call sites. file is a static authority string or the CRYPTO_malloc caller's file (NEO-ERR-6).",
+      "raise_site": "3940 call sites; site is &err_sites::X, &CONST, or &'static ErrSite from cms_site/repeated_param_site. No runtime-constructed ErrSite reachable from a safe function.",
+      "raise_site_dynamic": "40 call sites; static sites, runtime reason c_int.",
+      "raise_site_data": "231 call sites; message expressions are NUL-terminated buffers/CString (.as_ptr), C literals, static gai_strerror, or *const c_char parameters with a NUL-termination contract.",
+      "raise_site_dynamic_data": "36 call sites; same message patterns plus runtime reason."
+    },
+    "external_contracts": [
+      "ERR queue state is per-thread; ERR_get_state's pointer is valid until thread exit and must not cross threads.",
+      "Pointers returned by ERR_get/peek/error_string point into the ring or static storage and are valid only until the next queue mutation or, for the static buffer, the next ERR_error_string(NULL) call on any thread.",
+      "ERR_error_string(NULL) is not thread-safe and requires external synchronization (authority parity).",
+      "ERR_set_error_data transfers ownership only with ERR_TXT_MALLOCED; without it the pointer stays borrowed.",
+      "OSSL_ERR_STATE_save/save_to_mark/restore require states from OSSL_ERR_STATE_new (or an equivalent state satisfying the slot contract), never the thread's own state.",
+      "Allocator hooks installed by CRYPTO_set_mem_functions must be valid for the process lifetime and must not re-enter ERR on the same thread (retained; see NEO-ERR-7).",
+      "strerror_r is the GNU variant (glibc); the XSI variant has a different ABI."
+    ],
+    "allocator_hook_reentrancy": {
+      "edge": "with_state holds &mut ErrState while slot_buf_alloc/OwnedStr::adopt run, so an installed CRYPTO_set_mem_functions hook runs with that reference live.",
+      "reachability": "Only an application-installed allocator hook that calls an ERR entry point on the same thread. No in-crate caller does this.",
+      "current_status": "Documented as outside the contract in err.rs:823-831, but CRYPTO_set_mem_functions' # Safety (mem.rs:907-916) does not state it.",
+      "risk": "A re-entrant hook creates a second &mut to the same ErrState: Rust UB. The authority has the same recursion hazard but not a Rust aliasing violation.",
+      "required_resolution": "Either state the non-reentrancy external contract at CRYPTO_set_mem_functions (and accept it in the discharge review), or add a thread-local reentrancy guard that makes the nested call return None. A guard is the stronger resolution and is recommended before DISCHARGE."
+    }
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "FMT_OK (no diff)"
+    },
+    {
+      "id": "FAST-TESTS-ERR",
+      "instrument": "cargo test --lib runtime::err:: -- --test-threads=4",
+      "result": "PASS",
+      "observed": "10 passed; 0 failed; 1723 filtered out"
+    },
+    {
+      "id": "FAST-TESTS-ERR-STATE",
+      "instrument": "cargo test --lib runtime::err_state:: -- --test-threads=4",
+      "result": "PASS",
+      "observed": "4 passed; 0 failed; 1729 filtered out"
+    },
+    {
+      "id": "BATCH-FULL-LIB",
+      "instrument": "cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1702 passed; 0 failed; 31 ignored"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "Finished dev profile; no warnings/errors"
+    },
+    {
+      "id": "MIRI-SB",
+      "instrument": "cargo +nightly-2026-10-01 miri test --lib runtime::err:: -- --test-threads=1",
+      "flags": "-Zmiri-disable-isolation -Zmiri-ignore-leaks",
+      "result": "PASS",
+      "observed": "10 passed; 0 failed",
+      "coverage_limit": "Miri models the static-link fallback TLS state; the dlsym-resolved authority ERR_get_state path is not modeled. No allocator-hook reentrancy is executed."
+    },
+    {
+      "id": "MIRI-TB",
+      "instrument": "cargo +nightly-2026-10-01 miri test --lib runtime::err -- --test-threads=1",
+      "flags": "-Zmiri-tree-borrows -Zmiri-disable-isolation -Zmiri-ignore-leaks",
+      "result": "PASS",
+      "observed": "14 passed (10 err + 4 err_state); 0 failed"
+    },
+    {
+      "id": "MIRI-LEAK-NEGATIVE-OBSERVATION",
+      "instrument": "same Miri SB run without -Zmiri-ignore-leaks",
+      "result": "DETECTOR_FIRED",
+      "observed": "Miri reported a leaked allocation from the thread-local queue after data_flags_and_ownership; backtrace through openssl_rs_err_set_error.",
+      "classification": "Resource residual, not UB: the thread-local ErrState has no Drop by design (B10-ERR-1 residual). The leak checker is therefore active. All aliasing runs use -Zmiri-ignore-leaks and this finding is not treated as a pass of the leak axis."
+    },
+    {
+      "id": "ASAN",
+      "instrument": "cargo +nightly-2026-10-01 test --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=1 with -Zsanitizer=address",
+      "result": "PASS",
+      "observed": "14 passed; 0 failed; no AddressSanitizer report",
+      "binary_sha256": "ee5032cd976c6d544a7ecaf65b7a6348d3b9594079a7ced8a3892572d40e7cfb",
+      "instrumentation": "binary exports __asan_init and 24 __asan_report* symbols",
+      "environment_note": "codegen-units=1 with debuginfo OOM-killed LLVM inside the 8 GiB cgroup; the passing build uses -Cdebuginfo=0 -Ccodegen-units=8, CARGO_INCREMENTAL=0, jobs=2. ASan shadow reservation requires OPENSSL_RS_COURT_DATA raised from 4 GiB to 32 TiB for the run."
+    },
+    {
+      "id": "ASAN-NEGATIVE-CONTROL",
+      "instrument": "rustc -Zsanitizer=address heap-buffer-overflow canary",
+      "result": "DETECTOR_FIRED",
+      "observed": "ERROR: AddressSanitizer: heap-buffer-overflow on address ... at pc ...",
+      "note": "The court's clang lacks compiler-rt ASan archives, so the canary is a Rust binary using rustc's ASan runtime; it fires."
+    },
+    {
+      "id": "TSAN",
+      "instrument": "cargo +nightly-2026-10-01 test -Zbuild-std --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=4 with -Zsanitizer=thread",
+      "result": "PASS",
+      "observed": "14 passed; 0 failed; no ThreadSanitizer report",
+      "binary_sha256": "2aab0a5e043fd636f701245f35024a0cc9faf543ab869a5ac28ab1213e692d81",
+      "instrumentation": "binary exports __tsan_init and 5 __tsan_read*/__tsan_report* symbols",
+      "environment_note": "TSan requires -Zbuild-std (ABI mismatch otherwise) and OPENSSL_RS_COURT_DATA=64 TiB for its 32 TiB shadow mapping."
+    },
+    {
+      "id": "TSAN-NEGATIVE-CONTROL",
+      "instrument": "throwaway cargo project with two threads writing the same Box<u64> non-atomically, -Zsanitizer=thread -Zbuild-std",
+      "result": "DETECTOR_FIRED",
+      "observed": "WARNING: ThreadSanitizer: data race (pid=...)"
+    }
+  ],
+  "not_run": [
+    {"check": "Loom", "reason": "ERR has no loom-modeled state machine; its shared state is per-thread plus atomics. No loom harness exists for this module."},
+    {"check": "Kani", "reason": "ERR's unsafe surface is raw FFI/allocator ownership, outside Kani's supported boundary; no harness exists for this module."},
+    {"check": "full-library Miri", "reason": "out of scope and not supported for the mixed C/FFI crate; focused ERR module run is the declared limit."},
+    {"check": "differential/functional ERR court against the authority", "reason": "this pass is a safety mechanism discharge, not a compatibility court; no new differential run was made. Existing RT-ERR evidence is unchanged and not re-claimed here."},
+    {"check": "Miri/ASan/TSan over the dlsym-resolved authority ERR_get_state path", "reason": "Miri cannot model dlsym; sanitizer unit tests take the fallback path. A separate mixed C/Rust harness is required."}
+  ],
+  "residuals": [
+    {
+      "id": "R-ERR-1",
+      "text": "The thread-local ErrState has no Drop; owned data buffers in the TLS queue are not released at thread exit. This is authority-parity by design and is a resource residual, not UB. Miri's leak checker observes it.",
+      "disposition": "RETAINED"
+    },
+    {
+      "id": "R-ERR-2",
+      "text": "with_state reaches the shared per-thread state through dso_shared::err_state_ptr, so both DSOs observe the authority binding's one queue.",
+      "disposition": "RETAINED"
+    },
+    {
+      "id": "R-ERR-3",
+      "text": "Pointers returned by get/peek and error_string point into the ring/static storage and are valid only until the next queue mutation; authority parity.",
+      "disposition": "RETAINED"
+    },
+    {
+      "id": "R-ERR-4",
+      "text": "ERR_add_error_txt does not implement the authority's ERR_PRINT_BUF_SIZE-100 split; only manifests for ~4 KiB error data; no court probes it.",
+      "disposition": "RETAINED / COMPATIBILITY"
+    },
+    {
+      "id": "R-ERR-5",
+      "text": "ERR_load_strings/_const/_unload are no-ops returning 1, so provider-supplied strings are not registered.",
+      "disposition": "RETAINED / COMPATIBILITY"
+    },
+    {
+      "id": "R-ERR-6",
+      "text": "Error-queue text is PUBLIC_DATA metadata and is not cleansed; the authority does not cleanse it either.",
+      "disposition": "RETAINED"
+    },
+    {
+      "id": "R-ERR-7",
+      "text": "guard_ffi catches unwinding but uses AssertUnwindSafe; it does not repair arbitrary partial state. For ERR's own slots an interrupted raise is invisible (err_buffer 0), so the local mutation is failure-atomic.",
+      "disposition": "RETAINED"
+    },
+    {
+      "id": "R-ERR-8",
+      "text": "strerror_r is assumed to be the GNU variant; the XSI variant has an incompatible ABI.",
+      "disposition": "RETAINED / PLATFORM ASSUMPTION"
+    }
+  ],
+  "newly_exposed_obligations": [
+    {
+      "id": "NEO-ERR-1",
+      "severity": "STOP_LEVEL",
+      "sites": ["src/runtime/err.rs:1113-1128", "src/runtime/err_variadic.c:138-163"],
+      "finding": "openssl_rs_err_take_data detaches the slot pointer without reporting whether it was ERR_TXT_MALLOCED. err_variadic.c then unconditionally CRYPTO_reallocs the result. If a slot holds borrowed data (ERR_set_error_data(data, flags without MALLOCED)) and ERR_raise_data/ERR_vset_error follows, a caller-owned pointer is passed to CRYPTO_realloc: invalid free/realloc and UB.",
+      "reachable_by": "external C ABI; not imported by pure-ftpd",
+      "required": "Either (a) state and enforce that take_data may only be called on a MALLOCED slot and make the adapter fail closed otherwise, or (b) have take_data copy borrowed data into a fresh seam block (or return NULL) before detaching. Then document the returned ownership/extent in # Safety.",
+      "blocks_full_discharge": true
+    },
+    {
+      "id": "NEO-ERR-2",
+      "severity": "CONTRACT_GAP",
+      "sites": ["src/runtime/err.rs:1141-1160", "src/runtime/err_variadic.c:163"],
+      "finding": "openssl_rs_err_finish_data stores the caller's size without requiring it to be consistent with the owned block. OSSL_ERR_STATE_restore later copies err_data_size bytes from that slot, so a size larger than the allocation becomes an out-of-bounds read.",
+      "reachable_by": "external C ABI plus OSSL_ERR_STATE_save/restore; not imported by pure-ftpd",
+      "required": "With MALLOCED and non-NULL data: size >= 1, size <= allocation extent, and a NUL within size. State this in # Safety.",
+      "blocks_full_discharge": true
+    },
+    {
+      "id": "NEO-ERR-3",
+      "severity": "CONTRACT_GAP",
+      "sites": ["src/runtime/err_state.rs:99-190"],
+      "finding": "OSSL_ERR_STATE_save/save_to_mark call dst.clear_all(true)/clear(i, true), which frees any slot whose MALLOCED flag is set. The # Safety text does not require the destination's MALLOCED slots to be seam blocks exclusively owned by the destination.",
+      "reachable_by": "external C ABI; not imported by pure-ftpd",
+      "required": "Require es to be a state from OSSL_ERR_STATE_new (or every MALLOCED slot to satisfy the slot contract), exclusively owned and not the calling thread's state.",
+      "blocks_full_discharge": true
+    },
+    {
+      "id": "NEO-ERR-4",
+      "severity": "CONTRACT_GAP",
+      "sites": ["src/runtime/err_state.rs:207-265"],
+      "finding": "OSSL_ERR_STATE_restore copies err_data_size bytes from err_data and duplicates err_file/err_func as C strings. The # Safety text says only 'live state owned by the caller', omitting the per-slot extent, NUL-termination and no-concurrent-mutation requirements.",
+      "reachable_by": "external C ABI; not imported by pure-ftpd",
+      "required": "State: non-NULL err_data is readable for err_data_size bytes; err_file/err_func are NULL or NUL-terminated; es is not mutated concurrently and is not the thread's own state.",
+      "blocks_full_discharge": true
+    },
+    {
+      "id": "NEO-ERR-5",
+      "severity": "CONSUMER_RELEVANT_CONTRACT_GAP",
+      "sites": ["src/runtime/err.rs:1853-1860", "src/runtime/err.rs:2026-2050"],
+      "finding": "ERR_error_string(e, NULL) writes the process-global 256-byte buffer. The prose documents that the authority is not thread-safe, but the # Safety section states only 'buf NULL or writable for at least 256 bytes'. Concurrent calls/reads are a Rust data race and therefore UB.",
+      "reachable_by": "pure-ftpd imports ERR_error_string; classic usage is ERR_error_string(ERR_get_error(), NULL)",
+      "required": "Add to # Safety: with NULL buf the returned pointer aliases a process-global buffer; calls and reads must be externally synchronized, and the pointer is valid only until the next ERR_error_string call on any thread.",
+      "blocks_full_discharge": false,
+      "blocks_consumer_scope_review": true
+    },
+    {
+      "id": "NEO-ERR-6",
+      "severity": "CROSS_MECHANISM_SAFE_INTERFACE_GAP",
+      "sites": ["src/runtime/mem.rs:216-240", "src/runtime/mem.rs:439-471"],
+      "finding": "CRYPTO_malloc/zalloc/calloc (safe extern C fns) pass their `file` argument to report_alloc_err -> raise_with -> c_strlen on the allocation-failure path, but their API does not require `file` to be NULL or NUL-terminated. A safe Rust caller can pass an arbitrary raw pointer.",
+      "reachable_by": "safe Rust and C callers of the allocator seam; not reached by pure-ftpd's imported ERR symbols",
+      "required": "Document the NULL-or-NUL-terminated precondition on every affected safe extern fn, or stop reading `file` as a string (e.g. copy only from the recorded seam coordinates). Belongs to RUNTIME_ALLOC_OWNERSHIP.",
+      "blocks_full_discharge": true
+    },
+    {
+      "id": "NEO-ERR-7",
+      "severity": "REENTRANCY_EXTERNAL_CONTRACT",
+      "sites": ["src/runtime/err.rs:823-857", "src/runtime/mem.rs:907-940"],
+      "finding": "with_state holds &mut ErrState across allocation/release, so an installed allocator hook runs with that reference live. A hook that re-enters an ERR entry point on the same thread creates a second &mut: Rust UB. err.rs documents the hook as outside the contract, but CRYPTO_set_mem_functions' # Safety does not.",
+      "reachable_by": "application-installed allocator hook; not by any in-crate caller",
+      "required": "Either state the non-reentrancy contract at CRYPTO_set_mem_functions and have the discharge reviewer accept it, or add a thread-local reentrancy guard to with_state so nested calls return None. The guard is recommended.",
+      "blocks_full_discharge": true
+    }
+  ],
+  "hidden_obligations": {
+    "unreported_before_this_pass": 7,
+    "reported_now": 7,
+    "remaining_hidden": 0,
+    "statement": "Every obligation this audit found is enumerated above with a site and a required clause. 'remaining_hidden = 0' means nothing found is undisclosed; it does NOT mean the code is safe. NEO-ERR-1..4, 6 and 7 are open repairs/contracts that block full-mechanism discharge."
+  },
+  "lifecycle": {
+    "previous": "CONTRACTED (B10-ERR-1/2/3)",
+    "consumer_scope_state": "ESTABLISHED",
+    "consumer_scope": "B10-ERR-1/2/3 consumer-reachable ERR surface in src/runtime/err.rs (including the raise path and the two imported entry points)",
+    "full_mechanism_state": "CONTRACTED",
+    "full_mechanism_reason": "NEO-ERR-1..4 (err_state/variadic ownership and extent contracts), NEO-ERR-6 (allocator file argument) and NEO-ERR-7 (allocator-hook reentrancy) are open. They are not consumer-import-reachable through pure-ftpd, but they are part of the declared ERR unsafe surface.",
+    "discharged": false,
+    "independently_checked": false,
+    "discharge_blockers": ["NEO-ERR-1", "NEO-ERR-2", "NEO-ERR-3", "NEO-ERR-4", "NEO-ERR-6", "NEO-ERR-7"],
+    "consumer_scope_review_blockers": ["NEO-ERR-5"],
+    "next_independent_check": "A reviewer who is not this author must, against source a5c933697: (1) re-derive the raise-site closure (34/3940/40/231/36) and confirm no runtime-constructed ErrSite; (2) reproduce Miri SB and TB, ASan and TSan with the recorded flags, including both firing negative controls; (3) adjudicate NEO-ERR-1..7, either requiring the contract repairs or accepting the stated external contracts; (4) confirm that ERR_error_string's # Safety states the NULL-buffer serialization obligation before any INDEPENDENTLY_CHECKED claim, and (5) if repairs land, re-run FAST/BATCH at the new source identity because evidence is bound to a5c933697. Only then may a reviewer consider INDEPENDENTLY_CHECKED; DISCHARGED additionally requires the full text of AGENTS.md section 7 conditions 1-3."
+  },
+  "discharge_eligibility": {
+    "consumer_c2_scope": "REVIEW_READY_WITH_ONE_CONTRACT_REPAIR",
+    "detail": "The consumer-reachable ERR surface has a complete contract/caller/control dossier and passes Miri SB/TB, ASan and TSan. It is not review-ready as-is because NEO-ERR-5 (ERR_error_string NULL-buffer thread safety) must be moved into the # Safety contract. Once that documentation repair lands, an independent reviewer can adjudicate the consumer scope.",
+    "full_err_mechanism": "NOT_ELIGIBLE",
+    "full_detail": "NEO-ERR-1, NEO-ERR-2, NEO-ERR-3, NEO-ERR-4, NEO-ERR-6 and NEO-ERR-7 are open contract or code obligations. NEO-ERR-1 is STOP-level: a legitimate external call sequence (ERR_set_error_data with borrowed flags, then ERR_raise_data) reaches CRYPTO_realloc on a borrowed pointer. It is not imported by pure-ftpd, so it does not block the C2 consumer path, but it blocks full ERR discharge.",
+    "safe_compatible_count_changed": false,
+    "safe_compatible_count_after": 0
+  },
+  "non_claims": [
+    "Not INDEPENDENTLY_CHECKED and not DISCHARGED; the author cannot certify their own evidence.",
+    "Does not change the consumer SAFE_COMPATIBLE count (still 0/33) and does not promote pure-ftpd.",
+    "Does not discharge OSSL_ERR_STATE_helpers, RUNTIME_ALLOC_OWNERSHIP, BIO, or any other mechanism.",
+    "Miri/ASan/TSan evidence covers only the named unit tests and the fallback TLS-state path; it does not cover dlsym-resolved authority state, real allocator hooks, or all 3940 raise sites.",
+    "No differential/functional court was run in this pass; compatibility is not re-asserted.",
+    "No source files were changed and no commit/branch/push was made."
+  ]
+}
