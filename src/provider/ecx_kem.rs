@@ -333,7 +333,8 @@ unsafe fn ecx_match_params(key1: *const EcxKey, key2: *const EcxKey) -> c_int {
 /// `static int ecx_key_check(const ECX_KEY *ecx, int requires_privatekey)` — `ecx_kem.c:188-193`.
 ///
 /// # Safety
-/// `ecx` is live.
+/// `ecx` is a live `ECX_KEY`. The KEM dispatch never supplies NULL here: the framework passes the
+/// key held by the operation's `EVP_PKEY_CTX` at every `*_init` call.
 unsafe fn ecx_key_check(ecx: *const EcxKey, requires_privatekey: c_int) -> c_int {
     // SAFETY: `ecx` is live per the contract.
     if unsafe { (*ecx).privkey }.is_null() {
@@ -362,7 +363,7 @@ unsafe fn ecxkem_init(
         return 0;
     }
 
-    // SAFETY: the caller's contract; `ecx` may be NULL and `ecx_key_check` reads it only then.
+    // SAFETY: the caller's contract; `ecx` is the live key the dispatch passes at every init call.
     unsafe {
         if ecx_key_check(ecx, c_int::from(operation == EVP_PKEY_OP_DECAPSULATE)) == 0 {
             return 0;

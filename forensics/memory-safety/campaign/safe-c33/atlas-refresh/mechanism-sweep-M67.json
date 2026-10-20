@@ -1,0 +1,177 @@
+{
+  "receipt": "mechanism-sweep-M67",
+  "branch": "integrate/safe-c33",
+  "source_head": "1d5186002",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH. One documentation-accuracy repair in src/provider/ecx_kem.rs (a SAFETY comment claimed ecx_key_check tolerated a NULL key while its body dereferences it); no behaviour changed. No unrepaired memory-safety defect, ABI regression, hidden obligation or unsafe-safe-Rust API was found.",
+  "scope": "Per-file contract audit of the DSA keymgmt (generation context, import/export), ECDH and ECX key exchange, ECX DHKEM, the EC/SM2-to-blob encoder, the RSA/DSA PVK/MSBLOB encoder, the shared provider endecoder helpers, and the storemgmt DER/MSBLOB/PVK object decoders. src/evp/method_store.rs (the OSSL_METHOD_CONSTRUCT_METHOD registry boundary) was deferred again and src/provider/file_store_any2obj.rs substituted. Data classes: key-exchange shared secrets, KEM IKM/PRK/DH buffers and PVK/MSBLOB private-key bytes are SECRET_DATA/CLEANSING_REQUIRED; UKM is sensitive lifecycle state; OIDs, public keys and algorithm names are PUBLIC_DATA. No constant-time claim is made from source inspection.",
+  "files": [
+    "src/provider/file_store_any2obj.rs",
+    "src/provider/dsa_kmgmt.rs",
+    "src/provider/ecdh_exch.rs",
+    "src/provider/ecx_exch.rs",
+    "src/provider/ecx_kem.rs",
+    "src/provider/encode_key2blob.rs",
+    "src/provider/encode_key2ms.rs",
+    "src/provider/endecoder_common.rs"
+  ],
+  "files_not_run": [
+    "src/evp/method_store.rs"
+  ],
+  "defects": [],
+  "documentation_corrections": [
+    {
+      "file": "src/provider/ecx_kem.rs",
+      "site": "ecx_key_check / ecxkem_init",
+      "change": "The SAFETY comment said the key 'may be NULL'; the body dereferences (*ecx).privkey. The contract now states the KEM dispatch passes a live ECX_KEY at every init call, matching the authority and the actual precondition. Comment-only; no code or layout change."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    {
+      "mechanism": "keyexch/KEM dispatch dereferences (ecdh_freectx, ecdh_derive, ecx_freectx, ecx_derive, ecxkem_freectx, ecxkem_encapsulate/decapsulate)",
+      "files": [
+        "src/provider/ecdh_exch.rs",
+        "src/provider/ecx_exch.rs",
+        "src/provider/ecx_kem.rs"
+      ],
+      "obligation": "Each is an unsafe extern \"C\" function whose documented contract is the corresponding OSSL_FUNC_KEYEXCH_*/OSSL_FUNC_KEM_* dispatch contract; that contract supplies a non-NULL live context (and, for init/derive, a live key) created by newctx/init. The authority dereferences identically. No safe-Rust caller can reach these functions; the obligation is the C ABI's and is stated at each declaration.",
+      "status": "documented dispatch precondition, not a hidden obligation"
+    },
+    {
+      "mechanism": "ProvEcxCtx::propq ownership statement (ecx_kem)",
+      "file": "src/provider/ecx_kem.rs",
+      "obligation": "The field is documented as owned but is never assigned and therefore always NULL on this profile; the authority's ecx_kem.c also never assigns or frees ctx->propq. There is no allocation, so no leak and no cleansing obligation today. Recorded so a future assignment cannot silently acquire an unreleased allocation.",
+      "status": "documented inert field; authoritative behaviour preserved"
+    },
+    {
+      "mechanism": "private-key copies handed to callbacks (dsa_export OSSL_PARAM block; ossl_read_der DER block)",
+      "files": [
+        "src/provider/dsa_kmgmt.rs",
+        "src/provider/endecoder_common.rs"
+      ],
+      "obligation": "dsa_export's OSSL_PARAM_BLD_to_param block and ossl_read_der's BUF_MEM data are released by the caller/authority through plain OSSL_PARAM_free/OPENSSL_free, exactly as the authority does; the private-key bytes they may carry are therefore not cleansed on those release paths. This is a preserved authority property, not a new conversion obligation; the owning key objects (DSA/EVP_PKEY/ECX_KEY) cleanse their own BIGNUMs through their destructors.",
+      "status": "authority-faithful; reported for the secret-lifetime ledger"
+    }
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf (adopt_plain / adopt_cleansed / new_cleansed / new_secure_cleansed / into_raw) for UKM, IKM, seed and derived-secret buffers",
+    "OB-3 OwnedCtx/RawCtx/CtxDestroy for Any2objCtx and Key2msCtx, including the all-zero-block destroy-body obligation and the block-vs-member destructor split",
+    "OB-4 member-buffer slots for owned key/digest/IKM fields replaced in place",
+    "RC-1 reference-count ownership for EC_KEY, EVP_MD, ECX_KEY and EVP_PKEY up-ref/free pairs",
+    "B19 BIGNUM cleansing through DSA_free/EVP_PKEY_free/ossl_ecx_key_free",
+    "BUF_MEM_free contract: the data block is released with the authority's cleansing CRYPTO_clear_free over the block capacity, while BUF_MEM_new/BUF_MEM_grow failure semantics are preserved",
+    "callback contracts from B1/B2/B6-B20: OSSL_CALLBACK/OSSL_PASSPHRASE_CALLBACK arguments are caller-owned, invoked with a key-terminated local OSSL_PARAM array and no live &mut across the call",
+    "C ABI contracts for the core-BIO bridge (ossl_bio_new_from_core_bio takes its own reference and BIO_free releases it), caller-owned output buffers and NULL-or-live key arguments",
+    "provider encoder context allocator convention (NULL/0 CRYPTO_zalloc coordinates for provider encode/decode contexts, established in M27 for decode_msblob2key and encode_key2any)"
+  ],
+  "secret_bearing_buffers": [
+    {
+      "buffer": "ecx_kem ctx->ikm",
+      "release": "OwnedBuf::adopt_cleansed at ecx_kem.c:321 for replacement and :177 in freectx; cleansed on success, replacement, failure and context teardown"
+    },
+    {
+      "buffer": "ecx_kem dhkm / prk / derivekey tmpbuf",
+      "release": "OPENSSL_cleanse-equivalent on every derive_secret and ossl_ecx_dhkem_derive_private return path, and tmpbuf cleansed when it, not the caller's IKM, supplied the seed"
+    },
+    {
+      "buffer": "ecdh_exch kdf_ukm",
+      "release": "old block plain CRYPTO_free on replacement (authority); final block CRYPTO_clear_free over kdf_ukmlen in freectx and dup failure paths"
+    },
+    {
+      "buffer": "ecdh_exch X9.63 staging secret and derive_skey output",
+      "release": "OwnedBuf::new_secure_cleansed and OwnedBuf::new_cleansed respectively; cleansed on every early return"
+    },
+    {
+      "buffer": "dsa_kmgmt generation seed",
+      "release": "OwnedBuf::adopt_cleansed on replacement, parameter failure and dsa_gen_cleanup; mdname/mdprops are public strings and use plain release"
+    },
+    {
+      "buffer": "file_store_any2obj der/msblob/pvk BUF_MEM",
+      "release": "BUF_MEM_free on every success, failure and empty-handed path; its data block is cleansed over the block capacity, covering PVK/MSBLOB private-key bytes"
+    },
+    {
+      "buffer": "encode_key2ms Key2msCtx::pwdata and imported EVP_PKEY",
+      "release": "ossl_pw_clear_passphrase_data in CtxDestroy::destroy_body; EVP_PKEY_free cleanses the key's own BIGNUMs. PVK/MSBLOB encoding writes directly to the core BIO; no private-key buffer is owned by the unit"
+    },
+    {
+      "buffer": "encode_key2blob public point",
+      "release": "OwnedBlock::take after i2o_ECPublicKey; PUBLIC_DATA, no cleansing required"
+    }
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 243.24 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1672 passed / 0 failed / 27 ignored; 1699 total; 86.54 s; --test-threads=4)",
+    "focused_tests": "PASS (provider::file_store_any2obj 2 passed / 0 failed, including the zero-state sweep; provider::encode_key2blob 2 passed / 0 failed). The remaining six units have no name-filtered unit tests and are exercised by the full library suite."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/provider/init.rs",
+      "src/provider/kem_util.rs",
+      "src/provider/keymgmt.rs",
+      "src/provider/legacyprov.rs",
+      "src/provider/mac_legacy_sig.rs",
+      "src/provider/ml_common_codecs.rs",
+      "src/provider/ml_dsa_sig.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs OSSL_METHOD_CONSTRUCT_METHOD registry / temporary-method-store dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / Tree Borrows / ASan over the key-exchange, KEM and encoder contexts",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "authority differential court for ECDH/X25519/X448/DHKEM outputs and PVK/MSBLOB bytes against the pinned binary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "affected adversarial probes (none exists for these units)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement (no source change to a secret-dependent operation; no claim made)",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred registry boundary at the head of the queue.",
+    "ProvEcxCtx::propq is never assigned on this profile (authority-identical) and is documented as an inert owned-typed field, not an allocation.",
+    "Private-key copies in dsa_export's OSSL_PARAM block and ossl_read_der's DER block follow the authority's plain releases; the key objects themselves cleanse their BIGNUMs.",
+    "The ecx_kem documentation correction changes no code, layout, symbol or allocator coordinate.",
+    "No constant-time claim is made for ECDH, ECX exchange, DHKEM or the encoders from source inspection."
+  ],
+  "not_discharged": true,
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "Miri/ASan over the exchange/KEM contexts, authority differential courts for derived secrets and PVK/MSBLOB bytes, the FRF suite and dependency-graph regeneration are BOUNDARY/SEAL work. The single source edit was a comment, so no negative control was added."
+  }
+}
