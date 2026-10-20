@@ -145,7 +145,9 @@ type GetReasonStringsFn = unsafe extern "C" fn(provctx: *mut c_void) -> *const O
 /// [`raise_name_data`] builds the authority's `"name=%s"` shape.
 ///
 /// # Safety
-/// `prov` must be a live, not-yet-initialised provider.
+/// `prov` must be live, not-yet-initialised, and not reachable from another thread for the
+/// duration: the initialisation flag is tested and set without a lock here, exactly as the
+/// authority's is, because its caller initialises a provider before publishing it.
 pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     // The authority's `ossl_assert(!prov->flag_initialized)`. `NDEBUG` is defined in this
     // build, so the macro is `(x) != 0` and this is the `if` it expands to.
@@ -261,9 +263,16 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                 .as_ref()
                 .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
 
-            // SAFETY: `merged_ptr` is NULL or NUL-terminated; the load is the DSO layer's.
-            let loaded = unsafe { DSO_load(dso, merged_ptr, ptr::null_mut(), 0) };
-            if merged_ptr.is_null() || loaded.is_null() {
+            // The authority short-circuits on a NULL merge result (`merged_path == NULL ||`)
+            // and never calls `DSO_load` in that case. Calling it with a NULL filename would
+            // raise `DSO_R_NO_FILENAME` on the error queue, which the authority does not.
+            let loaded = if merged_ptr.is_null() {
+                ptr::null_mut()
+            } else {
+                // SAFETY: `merged_ptr` is NUL-terminated; the load is the DSO layer's.
+                unsafe { DSO_load(dso, merged_ptr, ptr::null_mut(), 0) }
+            };
+            if loaded.is_null() {
                 // SAFETY: `dso` is live and holds the only reference to itself.
                 unsafe { DSO_free(dso) };
                 // SAFETY: `prov` is live.
@@ -344,7 +353,11 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     if !provider_dispatch.is_null() {
         let mut d = provider_dispatch;
         // SAFETY: the walk stops at the `function_id == 0` terminator, which every provider
-        // table ends with; each entry read is within the provider's own array.
+        // table ends with -- a provider ABI obligation this side cannot verify, exactly as the
+        // authority's `for (; provider_dispatch->function_id != 0; ...)` cannot. Each entry read
+        // is within the provider's own array. An entry that publishes an id with a NULL
+        // `function` is stored as the raw NULL for the eight `void *` fields; the one typed
+        // field (reason strings) is skipped, because a NULL Rust `fn` value is not valid.
         unsafe {
             while (*d).function_id != 0 {
                 match (*d).function_id {
@@ -356,7 +369,12 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                     FUNC_PROVIDER_GET_CAPABILITIES => (*prov).get_capabilities = (*d).function,
                     FUNC_PROVIDER_QUERY_OPERATION => (*prov).query_operation = (*d).function,
                     FUNC_PROVIDER_UNQUERY_OPERATION => (*prov).unquery_operation = (*d).function,
-                    FUNC_PROVIDER_GET_REASON_STRINGS => {
+                    FUNC_PROVIDER_GET_REASON_STRINGS if !(*d).function.is_null() => {
+                        // The authority's `OSSL_FUNC_provider_get_reason_strings` macro
+                        // answers NULL for an entry whose `function` is NULL, and its caller
+                        // then skips the table. Forming a Rust `fn` value from NULL is not a
+                        // valid value, so the guard keeps a provider's NULL entry the no-op
+                        // it is in C.
                         get_reason_strings = Some(core::mem::transmute::<
                             *mut c_void,
                             GetReasonStringsFn,
@@ -372,6 +390,10 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     if let Some(get_reason_strings) = get_reason_strings {
         // SAFETY: `prov` is live and `provctx` is what the provider just returned.
         let table = unsafe { get_reason_strings((*prov).provctx) };
+        // The authority dereferences the answer without a NULL test (`reasonstrings[cnt]`),
+        // which is undefined behaviour for a provider that returns NULL. Refusing instead is
+        // a deliberate safety improvement over the authority, not a behaviour parity claim:
+        // the table is simply not installed.
         if !table.is_null() {
             // Count to the terminator first, refusing an entry that already carries a library
             // number -- the copy below would otherwise double-prefix it.
@@ -491,3 +513,61 @@ const LINE_ALLOCATED_PATH_FREE: c_int = 1022;
 const LINE_LOAD_DIR_FREE: c_int = 1023;
 /// `provider_init`'s `OPENSSL_calloc(cnt + 1, sizeof(ERR_STRING_DATA))`.
 const LINE_REASON_STRINGS: c_int = 1121;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provider::{ossl_provider_free, ossl_provider_new};
+
+    /// A provider table that publishes `get_reason_strings` with a NULL `function`. The
+    /// authority's `OSSL_FUNC_provider_get_reason_strings` macro answers NULL for exactly this
+    /// entry and `provider_init`'s `if (p_get_reason_strings != NULL)` skips the table, so the
+    /// provider still initialises. This is the negative control for the typed-field guard in
+    /// the walk: without it the NULL entry became an invalid Rust `fn` value and was called.
+    static NULL_REASON_DISPATCH: [OsslDispatch; 2] = [
+        OsslDispatch {
+            function_id: FUNC_PROVIDER_GET_REASON_STRINGS,
+            function: ptr::null_mut(),
+        },
+        OsslDispatch {
+            function_id: 0,
+            function: ptr::null_mut(),
+        },
+    ];
+
+    unsafe extern "C" fn null_reason_init(
+        _handle: *const c_void,
+        _input: *const OsslDispatch,
+        output: *mut *const OsslDispatch,
+        provctx: *mut *mut c_void,
+    ) -> c_int {
+        // SAFETY: both out-parameters are writable per `ProviderInitFn`'s contract.
+        unsafe {
+            *output = NULL_REASON_DISPATCH.as_ptr();
+            *provctx = ptr::null_mut();
+        }
+        1
+    }
+
+    #[test]
+    fn a_null_reason_strings_entry_is_ignored_like_the_authority() {
+        const NAME: &core::ffi::CStr = c"init-null-reason-strings";
+        // SAFETY: a NULL context is the default one and every pointer is a literal or a value
+        // this test owns.
+        unsafe {
+            let prov = ossl_provider_new(
+                ptr::null_mut(),
+                NAME.as_ptr(),
+                Some(null_reason_init),
+                ptr::null_mut(),
+                0,
+            );
+            assert!(!prov.is_null(), "the provider must construct");
+            assert_eq!(provider_init(prov), 1, "a NULL entry is not a failure");
+            assert_ne!((*prov).flags & FLAG_INITIALIZED, 0);
+            assert_eq!((*prov).dispatch, NULL_REASON_DISPATCH.as_ptr());
+            assert!((*prov).teardown.is_null(), "NULL is stored as absent");
+            ossl_provider_free(prov);
+        }
+    }
+}
