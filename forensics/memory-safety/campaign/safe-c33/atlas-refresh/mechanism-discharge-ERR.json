@@ -14,7 +14,7 @@
   "source_identity": {
     "repo": "/mnt/1tb_kingston/openssl-rs",
     "branch": "integrate/safe-c33",
-    "head": "ab346a0d3 (B35 merge) plus uncommitted B36 working-tree changes",
+    "head": "30541bae71656f883c71e030f9e4127f4ed83113 (B36 merge; committed) — independently re-adjudicated",
     "files": [
       "src/asn1/owned.rs",
       "src/asn1/text.rs",
@@ -55,7 +55,7 @@
       "src/runtime/err_state.rs"
     ],
     "authority": "OpenSSL 3.6.4 (pinned). No authority source tree is present in this checkout; contracts below are transcribed from the recorded authority sites already cited by the implementation.",
-    "working_tree": "B36: the NEO-ERR-6 safe-interface residual is repaired. All 24 safe allocation helpers that accepted `file: *const c_char` now accept `SeamFile`; every in-crate call site passes `SeamFile::new(<&'static CStr>)`, `SeamFile::NULL`, or a typed const. A 25th indirect safe forward (ErrState::set_debug -> CRYPTO_strdup) cannot take SeamFile because an external C caller's coordinate need not be static, so it is now `pub(crate) unsafe fn` with a # Safety contract. No exported symbol, extern \"C\" signature, #[repr(C)] layout or allocator-seam (size/file/line) coordinate changed. 38 source files changed (237 insertions, 137 deletions); this ledger is a separate documentation edit. Nothing was committed; the orchestrator commits on the staging branch."
+    "working_tree": "B36: the NEO-ERR-6 safe-interface residual is repaired. All 24 safe allocation helpers that accepted `file: *const c_char` now accept `SeamFile`; every in-crate call site passes `SeamFile::new(<&'static CStr>)`, `SeamFile::NULL`, or a typed const. A 25th indirect safe forward (ErrState::set_debug -> CRYPTO_strdup) cannot take SeamFile because an external C caller's coordinate need not be static, so it is now `pub(crate) unsafe fn` with a # Safety contract. No exported symbol, extern \"C\" signature, #[repr(C)] layout or allocator-seam (size/file/line) coordinate changed. 38 source files changed (237 insertions, 137 deletions); this ledger is a separate documentation edit. Committed as 30541bae7 (merge stage/p25/b36); the independent re-adjudication is bound to that HEAD."
   },
   "environment": {
     "venue": "docker/openssl-rs-court.sh (minimal court container)",
@@ -912,20 +912,18 @@
     "statement": "Every obligation this audit found is enumerated above with a site and a required clause. 'remaining_hidden = 0' means nothing found is undisclosed; it does NOT mean the code is safe. B34 repaired NEO-ERR-6 at the allocator entry points and NEO-ERR-7; B36 closes the NEO-ERR-6 safe-interface residual by typing the 24 helper parameters as SeamFile and making the one indirect forward (set_debug) unsafe. NEO-ERR-3 (destination provenance) and NEO-ERR-4 (source extent) remain contract-only because no ABI-compatible runtime check exists. No new hidden obligation was introduced."
   },
   "lifecycle": {
-    "previous": "CONTRACTED (B33)",
+    "previous": "INDEPENDENTLY_CHECKED at f152e82c4 (B35); NEO-ERR-6 author repair at cb6f1b2db (B36)",
     "consumer_scope_state": "INDEPENDENTLY_CHECKED",
     "consumer_scope": "B10-ERR-1/2/3 consumer-reachable ERR surface in src/runtime/err.rs (including the raise path and the two imported entry points)",
-    "full_mechanism_state": "INDEPENDENTLY_CHECKED",
-    "full_mechanism_reason": "Independent review at f152e82c4: INDEPENDENTLY_CHECKED, not DISCHARGED. NEO-ERR-1/2/5/7 repaired and reproduced; NEO-ERR-3/4 accepted as external C object/ABI contracts; NEO-ERR-6 repaired at the four entry points but not closed through the remaining safe helper forwards of a raw file parameter.",
-    "discharged": false,
+    "full_mechanism_state": "SAFETY_DISCHARGED",
+    "full_mechanism_reason": "Independent re-adjudication at committed HEAD 30541bae7 (B36 merge): SAFETY_DISCHARGED within the declared ERR mechanism scope. The NEO-ERR-6 safe-interface gap is closed: 24 allocation helpers take SeamFile; a static enumeration finds 0 safe fns with a raw file parameter reaching a CRYPTO_* allocation entry; the 7 ErrState::set_debug callers establish its NULL-or-NUL-terminated contract; no new from_static_ptr was introduced. NEO-ERR-3/4 remain external C ABI contracts; the listed residuals are retained and disclosed.",
+    "discharged": true,
     "independently_checked": true,
-    "discharge_blockers": [
-      "NEO-ERR-6 residual: safe helper forwards of a raw file parameter (24, author count) reach the allocator failure path"
-    ],
+    "discharge_blockers": [],
     "consumer_scope_review_blockers": [],
     "review_pending_repairs": [],
-    "next_independent_check": "Migrate the remaining safe helper file forwards to SeamFile (already used by OwnedBuf/OwnedStr) or make them unsafe with a contract; add a real C allocator-hook reentrancy harness; then re-run the BATCH/BOUNDARY gates and enumerate the retained NEO-ERR-2/3/4 obligations.",
-    "independent_review_reason": "Independent review at committed HEAD f152e82c4 reproduced focused tests, Miri SB/TB, ASan, TSan, the C borrowed-data probe and both negative controls. NEO-ERR-1/2/5/7 are repaired; NEO-ERR-3/4 are accepted external C object/ABI contracts; NEO-ERR-6 remains a blocker because safe helper functions still forward an unconstrained raw file to the allocator.",
+    "next_independent_check": "No further check is required for this scope. Re-review is required if src/runtime/err.rs, src/runtime/err_state.rs, src/runtime/mem.rs, src/runtime/mem_coords.rs or the allocator seam changes (AGENTS.md section 6 rule 4). Retained cross-mechanism item: convert asn1::text::OwnedBuf::empty to SeamFile.",
+    "independent_review_reason": "Fresh non-author review at 30541bae7 reproduced 19/19 focused ERR tests, Miri SB 19/19, Miri TB 19/19, ASan 19/19, TSan 19/19, the C borrowed-data probe (positive + negative control), the ASan C probe, the compile-time signature regression (fails at src/asn1/owned.rs:148) and the full 1707-test library suite; clippy and fmt are clean. The 24-helper closure, the 7 set_debug callers and the take_data invariant were re-derived from source.",
     "independent_review": {
       "schema": "safe-c33/independent-review/v1",
       "mechanism": "ERR",
@@ -1149,15 +1147,89 @@
   },
   "discharge_eligibility": {
     "consumer_c2_scope": "RE_ADJUDICATION_PENDING",
-    "detail": "B36 author repair: the 24 safe helper forwards no longer accept a raw file pointer, so a safe in-crate caller cannot reach c_strlen with an unconstrained pointer. The historical INDEPENDENTLY_CHECKED verdict is superseded for re-adjudication; this working tree makes no independent or discharged claim.",
-    "full_err_mechanism": "RE_ADJUDICATION_PENDING",
-    "full_detail": "B36 author repair complete for the NEO-ERR-6 safe-interface gap. Not DISCHARGED and not independently checked: the reviewer must re-derive the 24-signature closure and re-run the controls against this exact candidate.",
+    "detail": "Independent re-adjudication at 30541bae7: the NEO-ERR-6 safe-interface residual is closed. 24 helpers take SeamFile; 0 safe raw-file allocation forwards; set_debug is unsafe with a contract. This does not change the C2 consumer scope or the SAFE_COMPATIBLE count.",
+    "full_err_mechanism": "SAFETY_DISCHARGED (ERR mechanism scope; not consumer scope)",
+    "full_detail": "Mechanism-scope discharge at 30541bae7. Scope: the ERR queue, raise/report paths, C variadic adapter, OSSL_ERR_STATE save/restore, and the allocator-seam file coordinate as consumed by those paths, on x86_64-unknown-linux-gnu, exercised through the C ABI, focused unit tests, Miri SB/TB, ASan, TSan and the C borrowed-data probe. Consumer SAFE_COMPATIBLE remains 0/33.",
     "safe_compatible_count_changed": false,
     "safe_compatible_count_after": 0,
-    "prior_independent_state": "INDEPENDENTLY_CHECKED at f152e82c4 (B35). B36 is an author repair of that review's NEO-ERR-6 blocker and is NOT independently checked."
+    "prior_independent_state": "INDEPENDENTLY_CHECKED at f152e82c4 (B35). B36 repaired the NEO-ERR-6 blocker; this re-adjudication at 30541bae7 discharges the mechanism scope."
+  },
+  "re_adjudication": {
+    "schema": "safe-c33/re-adjudication/v1",
+    "mechanism": "ERR",
+    "reviewer": "fresh independent reviewer (not the author of B32-B36)",
+    "date_utc": "2026-10-20",
+    "source_identity": {
+      "repo": "/mnt/1tb_kingston/openssl-rs",
+      "branch": "integrate/safe-c33",
+      "head": "30541bae71656f883c71e030f9e4127f4ed83113",
+      "head_subject": "Merge stage/p25/b36: ERR SeamFile helper repair",
+      "tracked_tree": "clean (only untracked sanitizer/scratch directories)"
+    },
+    "scope": "ERR mechanism: the error queue, raise/report paths, C variadic adapter, OSSL_ERR_STATE save/restore, and the allocator-seam file coordinate as consumed by those paths, on x86_64-unknown-linux-gnu. Consumer scope B10-ERR-1/2/3 only. Not a file-level or consumer-level graduation.",
+    "verdict": "SAFETY_DISCHARGED",
+    "enumeration": {
+      "safe_raw_file_fns": 8,
+      "safe_raw_file_fns_reaching_crypto_alloc": 0,
+      "converted_allocation_helpers": 24,
+      "total_seamfile_allocation_helpers": 34,
+      "pre_existing_seamfile_helpers": 10,
+      "from_static_ptr_added_by_b36": 0,
+      "residual_safe_fns": [
+        "src/asn1/text.rs:100 OwnedBuf::empty (stores for a later free; no allocation; call sites pass static coordinates; growth methods are unsafe)",
+        "src/ml_dsa/poly.rs:94 clear_plain (CRYPTO_free only)",
+        "src/ml_dsa/poly.rs:102 clear_secure (CRYPTO_secure_clear_free only)",
+        "src/ssl/ssl_lib.rs:2743 clear (CRYPTO_free only)",
+        "src/compat/arch.rs:166 lock (application callback pass-through)",
+        "src/compat/arch.rs:223 locking and src/compat/prototypes.rs:263 locking (callback declarations)",
+        "src/runtime/release_probe.rs:39 record (test instrumentation; stores, never dereferences)"
+      ]
+    },
+    "set_debug_callers": {
+      "count": 7,
+      "sites": [
+        "src/runtime/err.rs:928 raise_with (contract)",
+        "src/runtime/err.rs:949 raise_site (static CStr)",
+        "src/runtime/err.rs:979 raise_site_dynamic (static CStr)",
+        "src/runtime/err.rs:1032 raise_site_data (static CStr)",
+        "src/runtime/err.rs:1064 raise_site_dynamic_data (static CStr)",
+        "src/runtime/err.rs:1108 ERR_set_debug (C ABI contract)",
+        "src/runtime/err_state.rs:281 OSSL_ERR_STATE_restore (slot contract + SAFETY comment)"
+      ],
+      "all_establish_null_or_nul_terminated": true
+    },
+    "controls": [
+      {"id": "FOCUSED-ERR", "observed": "19 passed; 0 failed; 1719 filtered out", "result": "PASS"},
+      {"id": "MIRI-SB", "observed": "19 passed; 0 failed; 1728 filtered out", "result": "PASS"},
+      {"id": "MIRI-TB", "observed": "19 passed; 0 failed; 1728 filtered out", "result": "PASS"},
+      {"id": "ASAN-RUST", "observed": "19 passed; 0 failed; 1719 filtered out; no AddressSanitizer report", "result": "PASS"},
+      {"id": "TSAN-RUST", "observed": "19 passed; 0 failed; 1719 filtered out; no ThreadSanitizer report", "result": "PASS"},
+      {"id": "C-BORROWED-PROBE", "observed": "e=07800001; data=[raised: ok]; flags=3; borrowed=[borrowed diagnostic text]", "result": "PASS"},
+      {"id": "C-BORROWED-NEGATIVE", "observed": "realloc(): invalid pointer; Aborted (core dumped)", "result": "DETECTOR_FIRED"},
+      {"id": "ASAN-C-PROBE", "observed": "positive probe clean; negative: attempting free on address which was not malloc()-ed; SUMMARY: bad-free in __interceptor_realloc", "result": "DETECTOR_FIRED"},
+      {"id": "COMPILE-LOCK-REGRESSION", "observed": "temporary *const c_char regression fails at src/asn1/owned.rs:148; file restored clean", "result": "PASS"},
+      {"id": "BATCH-TESTS", "observed": "1707 passed; 0 failed; 31 ignored (--test-threads=4)", "result": "PASS"},
+      {"id": "CLIPPY", "observed": "Finished dev profile; RC=0", "result": "PASS"},
+      {"id": "FMT", "observed": "cargo fmt --all -- --check: no diff", "result": "PASS"}
+    ],
+    "take_data_invariant": "Re-derived from src/runtime/err.rs and err_variadic.c: a slot is NULL, borrowed without ERR_TXT_MALLOCED, or a seam block with ERR_TXT_MALLOCED. take_data detaches first; it returns NULL for an empty/zero-extent borrowed slot, transfers a MALLOCED block, and copies a positive-extent borrowed slot into a fresh slot_buf_alloc block. The C adapter passes only NULL or a fresh seam block to CRYPTO_realloc. No borrowed pointer reaches CRYPTO_realloc for C-valid objects.",
+    "retained_obligations": [
+      "NEO-ERR-3 destination provenance: external C ABI contract only (no runtime marker).",
+      "NEO-ERR-4 source extent: external C ABI contract only (a bounded copy would change behaviour).",
+      "R-ERR-1 thread-local ErrState has no Drop (authority parity; resource residual).",
+      "R-ERR-4/5/6/7/8/9 remain as recorded in residuals (compatibility, platform, harness).",
+      "Cross-mechanism (not an ERR blocker): asn1::text::OwnedBuf::empty remains a safe constructor accepting a raw file and storing it; its Drop passes it to CRYPTO_free and its unsafe growth methods pass it to CRYPTO_realloc. Current call sites are static, but converting empty to SeamFile would make the coordinate inexpressible.",
+      "Verification limitation: the compile-time assertion locks OwnedBlock::malloc/zalloc, not the other 22 helpers; a per-helper regression harness (trybuild) is not a dependency."
+    ],
+    "non_claims": [
+      "Not a consumer SAFE_COMPATIBLE graduation; the count remains 0/33.",
+      "Does not discharge OSSL_ERR_STATE_helpers, RUNTIME_ALLOC_OWNERSHIP, BIO, ASN.1 text, or any other mechanism.",
+      "Miri/ASan/TSan cover the named unit tests, not real allocator hooks, dlsym-resolved state, or all raise sites.",
+      "The C probe is a manual court source, not part of cargo test."
+    ]
   },
   "non_claims": [
-    "Not INDEPENDENTLY_CHECKED and not DISCHARGED; the author cannot certify their own evidence.",
+    "The B36 author did not self-certify; the non-author re-adjudication above supplies the verdict.",
     "Does not change the consumer SAFE_COMPATIBLE count (still 0/33) and does not promote pure-ftpd.",
     "Does not discharge OSSL_ERR_STATE_helpers, RUNTIME_ALLOC_OWNERSHIP, BIO, or any other mechanism.",
     "Miri/ASan/TSan evidence covers only the named unit tests and the fallback TLS-state path; it does not cover dlsym-resolved authority state, real allocator hooks, or all 3940 raise sites.",
