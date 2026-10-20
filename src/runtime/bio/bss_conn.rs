@@ -547,9 +547,17 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                         if !next.is_null() {
                             // SAFETY: `c` and `b` are live; the descriptor is
                             // replaced, so the old one is closed first.
+                            //
+                            // Deliberate divergence from the authority: the
+                            // close goes through `conn_close_socket`, which also
+                            // clears `b.num`. The authority closes the descriptor
+                            // and leaves the dead number in the slot, so a later
+                            // `BIO_free` (or a callback that stops the machine
+                            // here) closes that number a second time -- after the
+                            // kernel may have handed it to an unrelated object.
                             unsafe {
                                 (*c).addr_iter = next;
-                                super::bss_sock::BIO_closesocket((*b).num);
+                                conn_close_socket(b);
                                 (*c).state = BIO_CONN_S_CREATE_SOCKET;
                             }
                             // SAFETY: `ERR_pop_to_mark` manipulates the queue.
@@ -608,10 +616,12 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                             // SAFETY: `iter` is a live node.
                             let next = unsafe { BIO_ADDRINFO_next(iter) };
                             if !next.is_null() {
-                                // SAFETY: `c` and `b` are live.
+                                // SAFETY: `c` and `b` are live. As in the
+                                // blocking advance above, invalidate the slot
+                                // with the close so it cannot be released twice.
                                 unsafe {
                                     (*c).addr_iter = next;
-                                    super::bss_sock::BIO_closesocket((*b).num);
+                                    conn_close_socket(b);
                                     (*c).state = BIO_CONN_S_CREATE_SOCKET;
                                 }
                                 break 'switch;
@@ -1348,3 +1358,139 @@ pub unsafe extern "C" fn BIO_new_connect(str_: *const c_char) -> *mut Bio {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(BioConnect => zero_state_sweep_bio_connect);
+
+#[cfg(test)]
+mod tests {
+    use super::super::{BIO_callback_ctrl, BIO_ctrl, BIO_free};
+    use super::*;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    const F_GETFD: c_int = 1;
+    const UNSET: usize = usize::MAX;
+
+    extern "C" {
+        fn dup2(oldfd: c_int, newfd: c_int) -> c_int;
+    }
+
+    static CREATE_SOCKET_CALLBACKS: AtomicUsize = AtomicUsize::new(0);
+    static FIRST_FD: AtomicUsize = AtomicUsize::new(UNSET);
+    static POST_ADVANCE_NUM: AtomicUsize = AtomicUsize::new(UNSET);
+
+    /// Stop the state machine at its second `CREATE_SOCKET` transition: the one
+    /// that follows a failed `connect(2)` after the retry advance has closed the
+    /// previous descriptor.
+    unsafe extern "C" fn stop_after_advance(b: *mut Bio, state: c_int, ret: c_int) -> c_int {
+        if state == BIO_CONN_S_CONNECT {
+            // SAFETY: `b` is live: `conn_state` passes the BIO it was given.
+            FIRST_FD.store(unsafe { (*b).num } as usize, Ordering::SeqCst);
+        } else if state == BIO_CONN_S_CREATE_SOCKET {
+            let n = CREATE_SOCKET_CALLBACKS.fetch_add(1, Ordering::SeqCst) + 1;
+            if n == 2 {
+                // SAFETY: as above.
+                POST_ADVANCE_NUM.store(unsafe { (*b).num } as usize, Ordering::SeqCst);
+                return 0;
+            }
+        }
+        ret
+    }
+
+    /// The retry advance closes the descriptor; the slot must be invalidated in
+    /// the same step. The authority leaves the dead number in `BIO.num`, so a
+    /// later `BIO_free` closes it a second time -- which can destroy whatever
+    /// unrelated object the kernel has since given that descriptor number.
+    ///
+    /// The probe runs against loopback `localhost:1` (the court resolves it to
+    /// IPv6 and IPv4, so the first `connect(2)` fails with a next address) and
+    /// stops through the info callback immediately after the advance.
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    #[test]
+    fn retry_advance_invalidates_the_closed_descriptor() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(
+            std::env::var_os("OPENSSL_RS_ADV_PROBE").is_some(),
+            "run via scripts/adv-probe.sh with OPENSSL_RS_ADV_PROBE=1"
+        );
+        CREATE_SOCKET_CALLBACKS.store(0, Ordering::SeqCst);
+        FIRST_FD.store(UNSET, Ordering::SeqCst);
+        POST_ADVANCE_NUM.store(UNSET, Ordering::SeqCst);
+
+        // SAFETY: `localhost:1` is a NUL-terminated name; the BIO owns the
+        // descriptor it creates and this test holds its single reference.
+        let bio = unsafe { BIO_new_connect(c"localhost:1".as_ptr()) };
+        assert!(!bio.is_null(), "BIO_new_connect must succeed");
+        // SAFETY: `bio` is live; the control stores the function pointer.
+        let cb_ret = unsafe {
+            BIO_callback_ctrl(
+                bio,
+                super::super::BIO_CTRL_SET_CALLBACK,
+                Some(stop_after_advance),
+            )
+        };
+        assert_eq!(cb_ret, 1, "the info callback must be installed");
+
+        // SAFETY: `bio` is live and the state-machine control takes no pointer.
+        let state_ret = unsafe {
+            BIO_ctrl(
+                bio,
+                super::super::BIO_C_DO_STATE_MACHINE,
+                0,
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(
+            state_ret, 0,
+            "the callback must stop the machine after the advance"
+        );
+        assert_eq!(
+            CREATE_SOCKET_CALLBACKS.load(Ordering::SeqCst),
+            2,
+            "the machine must fail one connect and advance to the next address"
+        );
+        let first = FIRST_FD.load(Ordering::SeqCst);
+        assert_ne!(first, UNSET, "no socket was created");
+        let first = first as c_int;
+
+        // The advance must actually release the descriptor, not merely forget
+        // it. This check runs before any descriptor is opened, so `first` cannot
+        // have been reused by this process yet.
+        // SAFETY: `first` is the number of the descriptor the state machine
+        // created; `fcntl` accepts a closed descriptor number and reports EBADF.
+        let genuinely_closed = unsafe { sys::fcntl(first, F_GETFD, 0) };
+        assert_eq!(
+            genuinely_closed, -1,
+            "the retry advance must close the descriptor it retires, not just invalidate the slot"
+        );
+
+        // Put a fresh descriptor on the number the advance released. Pre-fix the
+        // BIO still holds that number; post-fix its slot is invalid.
+        // SAFETY: the path is a static NUL-terminated string; `O_RDONLY` is 0.
+        let raw = unsafe { sys::open(c"/dev/null".as_ptr(), 0, 0) };
+        assert_ne!(raw, -1, "/dev/null is available");
+        if raw != first {
+            // SAFETY: both descriptors are live and distinct.
+            assert_eq!(unsafe { dup2(raw, first) }, first);
+            // SAFETY: `raw` is a live descriptor this test owns.
+            unsafe { sys::close(raw) };
+        }
+        // SAFETY: `first` now names an open descriptor owned by this test.
+        let replacement_open = unsafe { sys::fcntl(first, F_GETFD, 0) };
+        assert_ne!(replacement_open, -1, "the replacement must be open");
+
+        // SAFETY: `bio` is live and carries this test's single reference.
+        assert_eq!(unsafe { BIO_free(bio) }, 1);
+        // SAFETY: `first` still names this test's descriptor, unless the BIO
+        // released it a second time.
+        let survived_free = unsafe { sys::fcntl(first, F_GETFD, 0) };
+        assert_ne!(
+            survived_free, -1,
+            "BIO_free closed a descriptor the retry advance had already released"
+        );
+        assert_eq!(
+            POST_ADVANCE_NUM.load(Ordering::SeqCst),
+            INVALID_SOCKET as usize,
+            "the retry advance must leave BIO.num invalid after closing the descriptor"
+        );
+        // SAFETY: `first` is this test's open descriptor.
+        unsafe { sys::close(first) };
+    }
+}
