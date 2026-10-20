@@ -2931,13 +2931,19 @@ unsafe fn pkcs12kdf_derive(
                 d = CRYPTO_malloc(v, FILE_PKCS12KDF, LINE).cast();
                 ai = CRYPTO_malloc(u, FILE_PKCS12KDF, LINE).cast();
                 b = CRYPTO_malloc(v + 1, FILE_PKCS12KDF, LINE).cast();
-                let slen = v * saltlen.div_ceil(v);
-                let plen = if passlen != 0 {
-                    v * passlen.div_ceil(v)
-                } else {
-                    0
+                let Some(slen) = v.checked_mul(saltlen.div_ceil(v)) else {
+                    break 'end;
                 };
-                let ilen = slen + plen;
+                let Some(plen) = (if passlen != 0 {
+                    v.checked_mul(passlen.div_ceil(v))
+                } else {
+                    Some(0)
+                }) else {
+                    break 'end;
+                };
+                let Some(ilen) = slen.checked_add(plen) else {
+                    break 'end;
+                };
                 i_buf_len = ilen;
                 i_buf = CRYPTO_malloc(ilen, FILE_PKCS12KDF, LINE).cast();
                 if d.is_null() || ai.is_null() || b.is_null() || i_buf.is_null() {
@@ -3997,6 +4003,15 @@ unsafe fn pbkdf2_derive(
             return 0;
         }
 
+        // Deliberate §17 divergence: the authority truncates these sizes to `int` at the HMAC
+        // boundary. Refuse before any allocation or buffer read. Exact refused set:
+        // `passlen > i32::MAX`; `saltlen < 0` is a defensive check (the provider entry point
+        // refuses every `salt_len > i32::MAX` before casting). `keylen` is **not** refused: the
+        // loop below is widened to `usize`.
+        if passlen > c_int::MAX as usize || saltlen < 0 {
+            return 0;
+        }
+
         /*
          * This check should always be done because keylen / mdlen >= (2^32 - 1)
          * results in an overflow of the loop counter 'i'.
@@ -4014,7 +4029,7 @@ unsafe fn pbkdf2_derive(
             return 0;
         }
         let mut p = key;
-        let mut tkeylen = keylen as c_int;
+        let mut tkeylen: usize = keylen;
 
         'err: {
             if HMAC_Init_ex(
@@ -4033,7 +4048,11 @@ unsafe fn pbkdf2_derive(
             }
             let mut i: c_ulong = 1;
             while tkeylen != 0 {
-                let cplen = if tkeylen > mdlen { mdlen } else { tkeylen };
+                let cplen = if tkeylen > mdlen as usize {
+                    mdlen as usize
+                } else {
+                    tkeylen
+                };
                 /*
                  * We are unlikely to ever use more than 256 blocks (5120 bits!) but
                  * just in case...
@@ -4051,7 +4070,7 @@ unsafe fn pbkdf2_derive(
                 {
                     break 'err;
                 }
-                ptr::copy_nonoverlapping(digtmp.as_ptr(), p, cplen as usize);
+                ptr::copy_nonoverlapping(digtmp.as_ptr(), p, cplen);
                 let mut j: u64 = 1;
                 while j < iter {
                     if HMAC_CTX_copy(hctx, hctx_tpl) == 0 {
@@ -4062,20 +4081,23 @@ unsafe fn pbkdf2_derive(
                     {
                         break 'err;
                     }
-                    for (k, byte) in digtmp.iter().enumerate().take(cplen as usize) {
+                    for (k, byte) in digtmp.iter().enumerate().take(cplen) {
                         *p.add(k) ^= byte;
                     }
                     j += 1;
                 }
                 tkeylen -= cplen;
                 i += 1;
-                p = p.add(cplen as usize);
+                p = p.add(cplen);
             }
             ret = 1;
         }
 
         HMAC_CTX_free(hctx);
         HMAC_CTX_free(hctx_tpl);
+        // `digtmp` holds the derived U value on every path that reached the loop; cleanse it
+        // before returning (the authority leaves it on the stack).
+        cleanse(digtmp.as_mut_ptr().cast(), digtmp.len());
         ret
     }
 }
@@ -4268,6 +4290,12 @@ unsafe extern "C" fn pbkdf2_ctx_derive(
         }
         if (*ctx).salt.is_null() {
             return fail_at(&err_sites::PROV_PBKDF2_275);
+        }
+        // Deliberate §17 divergence: refuse every salt length above `i32::MAX` *before* the cast
+        // below, so the `k * 2^32 + r` truncation cannot silently use a prefix. The authority
+        // casts to `int` and truncates. Exact refused set: `salt_len > i32::MAX`.
+        if (*ctx).salt_len > c_int::MAX as usize {
+            return 0;
         }
         let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
         pbkdf2_derive(
@@ -7762,6 +7790,16 @@ unsafe fn scrypt_alg(
         /* If no key return to indicate parameters are OK */
         if key.is_null() {
             return 1;
+        }
+
+        // Deliberate §17 divergence: the authority casts these to `int` for the PBKDF2 calls
+        // below. Refuse before allocating or reading. Exact refused set: `passlen > i32::MAX`,
+        // `saltlen > i32::MAX`, or `keylen > i32::MAX`.
+        if passlen > c_int::MAX as usize
+            || saltlen > c_int::MAX as usize
+            || keylen > c_int::MAX as usize
+        {
+            return fail_at(&err_sites::PROV_SCRYPT_644);
         }
 
         let Some(b_owner) = OwnedBuf::take(
@@ -13371,6 +13409,10 @@ mod tests {
         };
         use crate::params::OSSL_PARAM_construct_uint32;
 
+        // This test fetches/frees KDFs and their digests/MACs; hold the crate-wide lock so no
+        // sibling test can perturb the shared method-store reference counts.
+        let _g = crate::test_support::lock_global_state();
+
         let mut cases = parse_argon2_vectors(ARGON2_VECTORS);
         assert_eq!(cases.len(), 23, "the file's `KDF =` cases");
 
@@ -13470,6 +13512,9 @@ mod tests {
             1
         }
 
+        // The method is created and freed here; hold the crate-wide lock so the shared method
+        // store cannot be perturbed by a sibling test.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns every object it touches.
         unsafe {
             for key_len in [16usize, 23, 24] {
@@ -13516,6 +13561,10 @@ mod tests {
     fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
         use core::sync::atomic::Ordering;
 
+        // The fetched SHA256 and the method store are shared process-global state; holding the
+        // crate-wide lock keeps the before/after refcount readings free of a sibling's ±1.
+        let _g = crate::test_support::lock_global_state();
+
         // SAFETY: this test owns every object it touches.
         unsafe {
             let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
@@ -13554,6 +13603,9 @@ mod tests {
     /// NULL `ctx_init`. When the source has a MAC context, the duplicate owns a distinct one.
     #[test]
     fn kbkdf_dup_copies_uninitialised_and_initialised_mac_states() {
+        // The HMAC fetch/free and the MAC context are process-global method-store state; hold the
+        // crate-wide lock so no sibling test can perturb the cache between them.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns every context it creates.
         unsafe {
             let bare = kbkdf_new(ptr::null_mut());
@@ -13610,6 +13662,9 @@ mod tests {
     /// so the failure path must cleanse/release it and `free` must not release it again.
     #[test]
     fn argon2_failed_fill_releases_the_secret_matrix() {
+        // `kdf_argon2_derive` fetches the BLAKE2B MAC/digest from the shared cache; hold the
+        // crate-wide lock so its fetch/free cannot race a sibling's refcount assertion.
+        let _g = crate::test_support::lock_global_state();
         // SAFETY: this test owns the context and its matrix.
         unsafe {
             let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
@@ -13789,6 +13844,76 @@ mod tests {
 
                 adv_alloc::assert_no_double_free();
                 kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// Width-guard regression for the password KDFs. The authority truncates lengths to
+        /// `int` at the HMAC/PBKDF2 boundary; the port refuses the truncating set before any
+        /// allocation or buffer read. The probe checks that neither path reaches the allocator:
+        /// PBKDF2 with `passlen > i32::MAX` and scrypt with `keylen > i32::MAX`.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn password_kdf_width_guards_refuse_before_allocating() {
+            use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
+
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: the guards return before any pointer is dereferenced or any block is
+            // allocated; `salt`/`key` are live locals and `md` is a fetched digest freed below.
+            unsafe {
+                let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+                assert!(!md.is_null(), "a live digest for the PBKDF2 guard");
+                let salt = [0u8; 16];
+                let mut key = [0u8; 16];
+
+                adv_alloc::reset();
+                let ret = pbkdf2_derive(
+                    ptr::null_mut(),
+                    ptr::dangling::<c_char>(),
+                    c_int::MAX as usize + 1,
+                    salt.as_ptr(),
+                    16,
+                    1000,
+                    md,
+                    key.as_mut_ptr(),
+                    16,
+                    0,
+                );
+                assert_eq!(ret, 0, "PBKDF2 must refuse the truncating passlen");
+                assert!(
+                    adv_alloc::events().is_empty(),
+                    "PBKDF2 reached the allocator before its width guard"
+                );
+
+                // `n=2, r=1, p=1` gives a 640-byte B/V/X/T block; if the keylen guard is
+                // bypassed that request is the one the allocator sees.
+                adv_alloc::reset();
+                let ret = scrypt_alg(
+                    ptr::null(),
+                    0,
+                    salt.as_ptr(),
+                    16,
+                    2,
+                    1,
+                    1,
+                    u64::MAX,
+                    key.as_mut_ptr(),
+                    c_int::MAX as usize + 1,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                );
+                assert_eq!(ret, 0, "scrypt must refuse the truncating keylen");
+                assert!(
+                    !adv_alloc::events()
+                        .iter()
+                        .any(|e| matches!(e, adv_alloc::Ev::Malloc { n, .. } if *n == 640)),
+                    "scrypt reached the allocator before its width guard"
+                );
+
+                EVP_MD_free(md);
             }
         }
 
