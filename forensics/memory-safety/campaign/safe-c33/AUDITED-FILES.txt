@@ -666,3 +666,11 @@ src/runtime/time.rs
 src/runtime/trace.rs
 src/runtime/uid.rs
 src/seed.rs
+src/selftest/indicator.rs
+src/selftest/mod.rs
+src/slh_dsa/adrs.rs
+src/slh_dsa/fors.rs
+src/slh_dsa/hash_ctx.rs
+src/slh_dsa/hash.rs
+src/slh_dsa/hypertree.rs
+src/slh_dsa/mod.rs

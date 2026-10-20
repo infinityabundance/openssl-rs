@@ -75,7 +75,10 @@ const SLH_ADRSC_OFF_KEYPAIR_ADDR: usize = 10;
 const SLH_ADRSC_OFF_CHAIN_ADDR: usize = 14;
 const SLH_ADRSC_OFF_HASH_ADDR: usize = 18;
 const SLH_ADRSC_SIZE_TYPE: usize = 1;
-const SLH_ADRSC_SIZE_TYPECLEAR: usize = SLH_ADRS_SIZE - (SLH_ADRSC_OFF_TYPE + SLH_ADRSC_SIZE_TYPE);
+// `slh_adrs.c:35` defines this as the *uncompressed* constant: the clear runs from
+// offset 10 to the end of the 22-byte compressed blob, i.e. 12 bytes. Deriving it
+// from the compressed offsets would clear 22 bytes and run past the blob.
+const SLH_ADRSC_SIZE_TYPECLEAR: usize = SLH_ADRS_SIZE_TYPECLEAR;
 const SLH_ADRSC_SIZE_KEYPAIR_ADDR: usize = SLH_ADRS_SIZE_KEYPAIR_ADDR;
 
 // The seven address types — `slh_adrs.h:28-34`.
