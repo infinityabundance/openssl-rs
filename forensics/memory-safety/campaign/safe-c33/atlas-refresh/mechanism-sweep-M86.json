@@ -1,0 +1,98 @@
+{
+  "receipt": "mechanism-sweep-M86",
+  "branch": "integrate/safe-c33",
+  "source_head": "ccb3c1154",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the affected RT-STORE differential probe. Eight files audited; no memory-safety defect and no ABI/layout regression found; two documentation-only SAFETY-contract corrections and no behavioural edit; no new unsafe operation and no new hidden obligation.",
+  "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the ISSUER_SIGN_TOOL item group, v2i/i2r callbacks and row; the noAssertion and noRevAvail ASN1_NULL rows; the PROXY_POLICY and PROXY_CERT_INFO_EXTENSION item groups; the POLICY_CONSTRAINTS item group and its i2v/v2i pair; the PKEY_USAGE_PERIOD item group and printer; the POLICY_MAPPING/POLICY_MAPPINGS item groups, their i2v/v2i pair and error helper; and both OSSL_ROLE_SPEC_CERT_ID item groups with their two printers.",
+  "files": [
+    "src/x509/v3_ist.rs",
+    "src/x509/v3_no_ass.rs",
+    "src/x509/v3_no_rev_avail.rs",
+    "src/x509/v3_pcia.rs",
+    "src/x509/v3_pcons.rs",
+    "src/x509/v3_pku.rs",
+    "src/x509/v3_pmaps.rs",
+    "src/x509/v3_rolespec.rs"
+  ],
+  "files_not_run": [],
+  "defects": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "test_only_unsafe_operations": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [
+    "src/x509/v3_no_ass.rs:65: the i2s SAFETY contract cited a non-existent binding `s`; corrected to the actual compile-time constant `c\"NULL\"`. The validity contract (a static NUL-terminated string passed to CRYPTO_strdup) is unchanged and the generated code is unchanged.",
+    "src/x509/v3_no_rev_avail.rs:57: the same stale SAFETY binding name corrected the same way; no behavioural change."
+  ],
+  "boundary_control": [
+    "No negative control was added: the batch found no memory-safety defect and changed no executable code. The affected RT-STORE court drives the ISSUER_SIGN_TOOL, PROXY_POLICY/PROXY_CERT_INFO_EXTENSION and PKEY_USAGE_PERIOD item groups (new/build/encode/decode/re-encode/free) against the pinned authority; it passed with 1038 observations and 0 residuals, both exits 0.",
+    "The five units without a direct RT-STORE arm (v3_no_ass, v3_no_rev_avail, v3_pcons, v3_pmaps, v3_rolespec) have unexported rows and no probe-named item entry point; their contracts were checked against the admitted source and the library link, not behaviourally exercised on this candidate."
+  ],
+  "not_discharged": [
+    "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "Miri/ASan/Loom/TSan were not run: no owner, extent, aliasing or concurrency mechanism changed.",
+    "No dudect/ctgrind claim is made.",
+    "The other phase-10 courts were not re-run (not affected); the phase-11 X.509 suite was not re-run for this batch and its last candidate-bound pass is reused.",
+    "v3_no_ass, v3_no_rev_avail, v3_pcons, v3_pmaps and v3_rolespec are reviewed but not behaviourally driven on this candidate; their exported item functions are link/reference-covered only.",
+    "FRF and the SEAL-level forensic regeneration were not run."
+  ],
+  "retained_obligations": [
+    "src/x509/v3_ist.rs: `nval` is a live STACK_OF(CONF_VALUE) and every element is NULL or a live CONF_VALUE whose `name` is NUL-terminated (the authority's own strcmp precondition); each member is a live ASN1_UTF8STRING and each `value` operand is NULL or NUL-terminated; `ist_member_guard` reproduces the authority's member/value NULL short-circuit and its ASN1_STRING_set failure answer; every failure arm frees the partially filled item once; `i2r` receives a live item and each non-NULL member's `data` is valid for `length` (BIO_write does not touch it when `length <= 0`); the row's `it` is the owned static ISSUER_SIGN_TOOL descriptor.",
+    "src/x509/v3_no_ass.rs and src/x509/v3_no_rev_avail.rs: the four callbacks ignore their value/context arguments; i2r writes nothing and answers 1; r2i/s2i answer the ASN1_NULL sentinel `1`; i2s answers one allocator-seam CRYPTO_strdup block transferred to the caller; each row's item is ASN1_NULL_it.",
+    "src/x509/v3_pcia.rs: the exported item groups follow the ASN1_ITEM contract (NULL-or-writable slot, readable cursor and extent for d2i; NULL-or-live value and NULL-or-writable cursor for i2d; NULL-or-live value for free); both descriptors name static templates and the asserted #[repr(C)] sizes/offsets; the inner PROXY_POLICY item is the crate-owned static descriptor.",
+    "src/x509/v3_pcons.rs: the exported allocator group follows the ASN1_ITEM contract; `i2v` receives a live POLICY_CONSTRAINTS; `v2i` receives a live CONF_VALUE stack with NUL-terminated non-NULL names; each X509V3_get_value_int failure, an unknown name and the both-fields-NULL empty arm free `pcons` exactly once and answer NULL.",
+    "src/x509/v3_pku.rs: the exported item group follows the ASN1_ITEM contract; `i2r` receives a live PKEY_USAGE_PERIOD, each non-NULL member is a live ASN1_GENERALIZEDTIME and the prints match the authority's exact literals and separator placement.",
+    "src/x509/v3_pmaps.rs: the exported item groups follow the ASN1_ITEM contract; `i2v` receives a live stack of live POLICY_MAPPING entries, both 80-byte buffers are writable and each object is live for i2t_ASN1_OBJECT; `v2i` receives a live CONF_VALUE stack, treats a NULL name-or-value and a failed OBJ_txt2obj as the authority's error arms, frees the current objects and the built list exactly once, and the reserve makes the unchecked push infallible; the pop_free thunk receives NULL or a live POLICY_MAPPING.",
+    "src/x509/v3_rolespec.rs: the exported item groups follow the ASN1_ITEM contract; the syntax printer receives a live STACK_OF(OSSL_ROLE_SPEC_CERT_ID) whose elements are live; every element's roleName/roleCertIssuer are live GENERAL_NAMEs, the serial/locator are optional, and each printer refusal arm answers 0 exactly as the authority does."
+  ],
+  "shared_boundary_files": [
+    "src/asn1/layout.rs (Asn1Item/Asn1Template/Asn1String layouts and the repr(C) assertions)",
+    "src/asn1/new.rs, src/asn1/d2i.rs, src/asn1/i2d.rs, src/asn1/fre.rs (the exported item four)",
+    "src/asn1/items.rs (the referenced item descriptors)",
+    "src/runtime/stack.rs (OPENSSL_sk_* NULL/range discipline, new_reserve, pop_free)",
+    "src/runtime/mem.rs (CRYPTO_strdup and the allocator seam)",
+    "src/runtime/err.rs (raise_site/raise_site_data and the ErrSite coordinates)",
+    "src/x509/v3_lib.rs (X509V3_EXT_METHOD callback types and MULTILINE)",
+    "src/x509/v3_utl.rs (X509V3_add_value, X509V3_add_value_int, X509V3_get_value_int)",
+    "src/x509/v3_san.rs and src/x509/v3_genn.rs (GENERAL_NAME_print/GENERAL_NAME_it)",
+    "src/x509/t_x509.rs (ossl_serial_number_print)"
+  ],
+  "secret_bearing_buffers": "No secret-bearing buffer or cleansing claim changed. Every audited unit handles public certificate configuration and extension data; the only allocations are public strings, ASN.1 values and object stacks, released by the receiving item or extension machinery.",
+  "residuals": [
+    "M86-R1 (info, authority UB not reproduced): when a CONF_VALUE has a NULL name and a non-NULL value, v2i_POLICY_MAPPINGS reaches ERR_raise_data(..., \"%s\", val->name) in the authority, a NULL argument to %s that is undefined behaviour (glibc renders it as \"(null)\"). The port's raise_site_data accepts NULL and attaches no data. A valid configuration stack has a non-NULL NUL-terminated name, so the arm is unreachable from a valid config and the difference is never a memory-safety one."
+  ],
+  "unrelated_residuals": [],
+  "deferred": [],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "focused": "cargo test --lib -- --test-threads=4 x509::v3: 20 passed / 0 failed / 0 ignored (1711 filtered out)",
+    "full_lib_serial": "1700 passed / 0 failed / 31 ignored (1731 total), 196.95 s, --test-threads=1",
+    "full_lib_threads4": "1700 passed / 0 failed / 31 ignored (1731 total), 105.31 s, --test-threads=4",
+    "affected_probe": "RT-STORE 1038 observations, 0 residuals, authority and candidate exits both 0; candidate binary sha256 14e62df0538d7c877e5627c7dde2fc542f3928ae9523b2cfb25446e59880a38a, candidate libcrypto.so.3 sha256 c82bf5209a20297ebb8efdf0093047f95ec36f518bbafdb114cd1cae5f2bfc4b"
+  },
+  "queue_after": {
+    "remaining": 22,
+    "audited": 741
+  },
+  "next_queue": {
+    "next_file": "src/x509/v3_sda.rs",
+    "then": [
+      "src/x509/v3_sda.rs",
+      "src/x509/v3_single_use.rs",
+      "src/x509/v3_skid.rs",
+      "src/x509/v3_soa_id.rs",
+      "src/x509/v3_tlsf.rs",
+      "src/x509/v3_usernotice.rs",
+      "src/x509/v3_utf8.rs",
+      "src/x509/x509aset.rs"
+    ]
+  }
+}

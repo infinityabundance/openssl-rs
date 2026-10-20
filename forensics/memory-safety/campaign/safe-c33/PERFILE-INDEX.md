@@ -8033,3 +8033,81 @@ link/reference-covered, not behaviourally driven on this candidate.
 **Next eight from the file head.** `src/x509/v3_ist.rs`, `src/x509/v3_no_ass.rs`,
 `src/x509/v3_no_rev_avail.rs`, `src/x509/v3_pcia.rs`, `src/x509/v3_pcons.rs`,
 `src/x509/v3_pku.rs`, `src/x509/v3_pmaps.rs`, `src/x509/v3_rolespec.rs`.
+
+## M86 (mechanism) — per-file contract sweep (issuer sign tool, the two ASN1_NULL extension rows, proxy-certificate items, policy constraints/mappings, key-usage period, role-specification items)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M86.json`](atlas-refresh/mechanism-sweep-M86.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`ccb3c1154`. Two documentation-only edits correct the `SAFETY:` binding name in
+the two `ASN1_NULL` rows; there is no behavioural change. No `#[repr(C)]`
+layout, exported symbol/signature, allocator coordinate, excluded symbol or lint
+attribute changed, and the two edited units' code is unchanged.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/v3_ist.rs` | the four-field `ISSUER_SIGN_TOOL` template/item and its exported `_new`/`_free`/`d2i_`/`i2d_` group; `ist_member_guard`'s member/value NULL and `ASN1_STRING_set` arms; `v2i_issuer_sign_tool`'s NULL-element skip, four name arms, unknown-name arm and every free; `i2r_issuer_sign_tool`'s NULL-item and per-member writes; the `MULTILINE` row and its seven locally declared raise sites | no defect; matches `v3_ist.c:25-144` |
+| `src/x509/v3_no_ass.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_no_ass.c:17-53`; the `SAFETY:` contract cited a non-existent binding `s`, repaired to `c"NULL"` without changing the contract |
+| `src/x509/v3_no_rev_avail.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_no_rev_avail.c:17-53`; the same stale `SAFETY:` binding name repaired |
+| `src/x509/v3_pcia.rs` | the `PROXY_POLICY` and `PROXY_CERT_INFO_EXTENSION` templates, descriptors, `#[repr(C)]` assertions and both exported five-name item groups | no defect; matches `v3_pcia.c:50-62` |
+| `src/x509/v3_pcons.rs` | the item/allocator group, `i2v_POLICY_CONSTRAINTS`, `v2i_POLICY_CONSTRAINTS`'s allocation, unknown-name and empty-extension arms with every `pcons` free, and the row | no defect; matches `v3_pcons.c:36-91` |
+| `src/x509/v3_pku.rs` | the `PKEY_USAGE_PERIOD` template/item and exported group; `i2r_PKEY_USAGE_PERIOD`'s two optional-member writes; the row | no defect; matches `v3_pku.c:21-52` |
+| `src/x509/v3_pmaps.rs` | the `POLICY_MAPPING`/`POLICY_MAPPINGS` item groups, the `pop_free` thunk, `i2v_POLICY_MAPPINGS`'s two 80-byte buffers, `v2i_POLICY_MAPPINGS`'s reserve/name/value/OID/new arms, `v3_pmaps_err`, and the row | no defect; matches `v3_pmaps.c:34-109`; the pre-reserved push is infallible exactly as the authority's comment asserts |
+| `src/x509/v3_rolespec.rs` | both `OSSL_ROLE_SPEC_CERT_ID*` item groups, the EXPLICIT/IMPLICIT-OPTIONAL templates, the two printers and the row | no defect; matches `v3_rolespec.c:15-95` |
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated. Every unsafe operation already carries its contract: the
+shared `ASN1_ITEM` slot/cursor contract for every exported item group; the
+`OpenSslStack` NULL/range/`pop_free` discipline (including the pre-reserved push
+whose failure the authority also ignores); the B1/B2/B6–B29 extension-callback
+contracts for every `i2v`/`v2i`/`i2r`/`r2i`/`i2s`/`s2i` slot; the established
+v3-table ABI-compatible callback-cast contract; the OB-1/OB-2 block transfer for
+the two `CRYPTO_strdup` `i2s` returns; and the `CRYPTO_*` allocator seam with its
+recorded `file`/`line` coordinates. Hidden obligations: **0**.
+
+**Contracts reused.** OB-1/OB-2 for the two `ASN1_NULL` `i2s` returns; the
+`ASN1_ITEM` template/item and exported `new`/`free`/`d2i`/`i2d` contract; the
+`OPENSSL_sk_*` NULL/range and `pop_free` destructor discipline; the
+B1/B2/B6–B29 callback contracts; the v3-table callback-cast contract;
+`X509V3_add_value(_int)`/`X509V3_get_value_int`'s failure and ownership
+semantics; the `raise_site`/`ErrSite` coordinates (seven local `v3_ist`, four
+`v3_pmaps`, three `v3_pcons`); and the `CRYPTO_*` allocator seam.
+
+**Residuals.** `M86-R1` (info, authority UB not reproduced): when a
+`CONF_VALUE` has a NULL `name` and a non-NULL `value`, `v2i_POLICY_MAPPINGS`
+reaches `ERR_raise_data(..., "%s", val->name)` in the authority — a NULL
+argument to `%s`, undefined behaviour that glibc happens to render as
+`(null)`. The port's `raise_site_data` accepts NULL and attaches no data. A
+valid `STACK_OF(CONF_VALUE)` from the configuration layer has a non-NULL,
+NUL-terminated name, so the arm is unreachable from a valid config and the
+difference is never a memory-safety one.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `x509::v3` tests
+**20 passed / 0 failed** (1711 filtered); full library **1700 passed / 0 failed /
+31 ignored** (1731 total) serially (196.95 s) and with `--test-threads=4`
+(105.31 s), in the court with `CARGO_BUILD_JOBS=4`; affected probe **RT-STORE
+1038 observations, 0 residuals**, both exits 0 (candidate binary
+`14e62df0…a38a`, candidate `libcrypto.so.3` `c82bf520…cfc4b`). No unexplained
+test removal and no newly ignored test.
+
+**NOT_RUN.** Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency
+mechanism changed); dudect/ctgrind (no constant-time claim); the other phase-10
+courts (not affected); the phase-11 X.509 suite (not re-run; its last
+candidate-bound pass is reused); full Phase-25 forensic regeneration; FRF and
+SEAL. `v3_no_ass`, `v3_no_rev_avail`, `v3_pcons`, `v3_pmaps` and `v3_rolespec`
+are reviewed against the authority but have no RT-STORE arm on this candidate
+(their rows are unexported and the probe does not name their exported item
+functions); they are otherwise link/reference-covered only. `v3_ist`,
+`v3_pcia` and `v3_pku` item groups are behaviourally driven by RT-STORE.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **22**, `AUDITED-FILES.txt` **741**.
+**Next ordinary position.** `src/x509/v3_sda.rs`.
+**Next eight from the file head.** `src/x509/v3_sda.rs`, `src/x509/v3_single_use.rs`,
+`src/x509/v3_skid.rs`, `src/x509/v3_soa_id.rs`, `src/x509/v3_tlsf.rs`,
+`src/x509/v3_usernotice.rs`, `src/x509/v3_utf8.rs`, `src/x509/x509aset.rs`.
