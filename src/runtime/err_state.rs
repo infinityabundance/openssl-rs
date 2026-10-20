@@ -90,7 +90,11 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_free(es: *mut ErrState) {
 /// module header for why the destination is cleared first.
 ///
 /// # Safety
-/// `es` must be NULL or a live state owned by the caller.
+/// `es` must be NULL or a live state owned by the caller. It must **not** be the
+/// calling thread's own state (the pointer `ERR_get_state` returns): the authority's
+/// `memcpy` tolerates that aliasing, but holding `&mut *es` and the thread state's
+/// `&mut` at the same time would be undefined in Rust, so the input is excluded
+/// rather than reproduced.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
     if es.is_null() {
@@ -119,7 +123,9 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save(es: *mut ErrState) {
 /// queue moves; with no queue at all the destination is left empty.
 ///
 /// # Safety
-/// `es` must be NULL or a live state owned by the caller.
+/// `es` must be NULL or a live state owned by the caller, and must not be the
+/// calling thread's own state (the destination `&mut` and the thread state's `&mut`
+/// taken inside `with_state` would alias).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
     if es.is_null() {
@@ -194,7 +200,9 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_save_to_mark(es: *mut ErrState) {
 /// `top = count - 1`) that walks exactly `0 .. count - 1`.
 ///
 /// # Safety
-/// `es` must be NULL or point to a live state. It is only read.
+/// `es` must be NULL or point to a live state owned by the caller; it must not be
+/// the calling thread's own state, because `&*es` would alias the `&mut` that
+/// `with_state` takes on it.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     if es.is_null() {

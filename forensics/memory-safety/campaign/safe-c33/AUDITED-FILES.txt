@@ -650,3 +650,11 @@ src/runtime/buffer.rs
 src/runtime/conf/init_settings.rs
 src/runtime/confmod/asn1.rs
 src/runtime/conf/modparse.rs
+src/runtime/conf/sap.rs
+src/runtime/dir.rs
+src/runtime/dso_shared.rs
+src/runtime/err_state.rs
+src/runtime/ex_data.rs
+src/runtime/getenv.rs
+src/runtime/owned_buf.rs
+src/runtime/rcu.rs
