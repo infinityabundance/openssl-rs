@@ -1263,7 +1263,8 @@ unsafe extern "C" fn pkey_rsa_ctrl_str(
         } else if unsafe { cstr_is(value, b"auto") } {
             RSA_PSS_SALTLEN_AUTO
         } else {
-            atoi(value)
+            // SAFETY: `value` is NUL-terminated per the function's contract.
+            unsafe { atoi(value) }
         };
         // SAFETY: `ctx` is live.
         return unsafe { EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, saltlen) };

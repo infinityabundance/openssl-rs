@@ -283,7 +283,9 @@ fn wait_random_seeded() -> c_int {
             let mut un: Utsname = unsafe { core::mem::zeroed() };
             // SAFETY: `un` is a live local of the platform's `struct utsname`.
             if uname(&mut un) == 0 {
-                let kernel0 = atoi(un.release.as_ptr());
+                // SAFETY: `un.release` is a live 65-byte `[c_char]` array that `uname` filled and
+                // NUL-terminated, so `atoi` reads within it.
+                let kernel0 = unsafe { atoi(un.release.as_ptr()) };
                 // SAFETY: `un.release` is a live 65-byte `[c_char]` array that `uname` filled and
                 // NUL-terminated, so `strchr` reads within it.
                 let dot = unsafe { sys::strchr(un.release.as_ptr(), b'.' as c_int) };
@@ -292,7 +294,7 @@ fn wait_random_seeded() -> c_int {
                 } else {
                     // SAFETY: `dot` is non-null on this arm and points into `un.release`, a
                     // NUL-terminated 65-byte field, so `dot + 1` is within it.
-                    atoi(unsafe { dot.add(1) })
+                    unsafe { atoi(dot.add(1)) }
                 };
                 if kernel0 > DEVRANDOM_SAFE_KERNEL[0]
                     || (kernel0 == DEVRANDOM_SAFE_KERNEL[0] && kernel1 >= DEVRANDOM_SAFE_KERNEL[1])
