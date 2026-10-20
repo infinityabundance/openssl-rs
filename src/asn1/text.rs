@@ -72,7 +72,7 @@ const OBJ_BUF: usize = 80;
 /// NULL pointer is a valid, empty block whose release is the authority's own no-op `free(NULL)`.
 struct OwnedBuf {
     ptr: *mut u8,
-    file: *const c_char,
+    file: SeamFile,
     line: c_int,
 }
 
@@ -80,10 +80,11 @@ impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)` for the fixed render buffer, or `None` when the allocator
     /// answers NULL.
     fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
-        let file = file.as_ptr();
         let raw = unsafe {
-            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
-            CRYPTO_malloc(len, file, line)
+            // SAFETY: `file.as_ptr()` is NULL or a NUL-terminated coordinate backed by static
+            // storage (or `SeamFile::NULL`), valid for the call, so `malloc_request`/the
+            // installed hook may read it.
+            CRYPTO_malloc(len, file.as_ptr(), line)
         }
         .cast::<u8>();
         if raw.is_null() {
@@ -96,8 +97,9 @@ impl OwnedBuf {
         })
     }
 
-    /// A reader's empty scratch buffer, before its first growth.
-    fn empty(file: *const c_char, line: c_int) -> OwnedBuf {
+    /// A reader's empty scratch buffer, before its first growth, at a typed
+    /// static coordinate.
+    fn empty(file: SeamFile, line: c_int) -> OwnedBuf {
         OwnedBuf {
             ptr: core::ptr::null_mut(),
             file,
@@ -116,7 +118,13 @@ impl OwnedBuf {
         // SAFETY: per this method's contract, the block is NULL or this handle's own of `old`
         // bytes; `CRYPTO_clear_realloc` clears the tail it discards.
         let raw = unsafe {
-            CRYPTO_clear_realloc(self.ptr.cast::<c_void>(), old, new, self.file, self.line)
+            CRYPTO_clear_realloc(
+                self.ptr.cast::<c_void>(),
+                old,
+                new,
+                self.file.as_ptr(),
+                self.line,
+            )
         }
         .cast::<u8>();
         if raw.is_null() {
@@ -134,8 +142,15 @@ impl OwnedBuf {
     /// `self.ptr` is NULL or a live block that this handle owns.
     unsafe fn realloc(&mut self, new: usize) -> Option<()> {
         // SAFETY: per this method's contract, the block is NULL or this handle's own.
-        let raw = unsafe { CRYPTO_realloc(self.ptr.cast::<c_void>(), new, self.file, self.line) }
-            .cast::<u8>();
+        let raw = unsafe {
+            CRYPTO_realloc(
+                self.ptr.cast::<c_void>(),
+                new,
+                self.file.as_ptr(),
+                self.line,
+            )
+        }
+        .cast::<u8>();
         if raw.is_null() {
             return None;
         }
@@ -161,7 +176,7 @@ impl Drop for OwnedBuf {
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
         // own `CRYPTO_free` accepts NULL, which the readers' `err:` tails pass it.
-        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file.as_ptr(), self.line) };
     }
 }
 
@@ -424,7 +439,7 @@ pub unsafe extern "C" fn a2i_ASN1_INTEGER(
     size: c_int,
 ) -> c_int {
     guard_ffi(0, || {
-        let mut s = OwnedBuf::empty(F_INT_FILE.as_ptr(), LINE);
+        let mut s = OwnedBuf::empty(SeamFile::new(F_INT_FILE), LINE);
         let mut slen: c_int = 0;
         let mut num: c_int = 0;
         let mut first = true;
@@ -622,7 +637,7 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
     size: c_int,
 ) -> c_int {
     guard_ffi(0, || {
-        let mut s = OwnedBuf::empty(F_STRING_FILE.as_ptr(), LINE);
+        let mut s = OwnedBuf::empty(SeamFile::new(F_STRING_FILE), LINE);
         let mut slen: c_int = 0;
         let mut num: c_int = 0;
         let mut first = true;
@@ -756,4 +771,23 @@ pub unsafe extern "C" fn a2i_ASN1_STRING(
         }
         1
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const FILE: &core::ffi::CStr = c"test/asn1_text.rs";
+
+    // Compile-time lock on the B38 safe interface: both safe constructors take a
+    // `SeamFile`, not a raw pointer. A regression to `*const c_char` fails to
+    // compile here.
+    const _: fn(SeamFile, c_int) -> OwnedBuf = OwnedBuf::empty;
+    const _: fn(usize, SeamFile, c_int) -> Option<OwnedBuf> = OwnedBuf::new;
+
+    #[test]
+    fn empty_starts_at_a_typed_static_coordinate() {
+        let buf = OwnedBuf::empty(SeamFile::new(FILE), LINE);
+        assert!(buf.as_ptr().is_null());
+    }
 }
