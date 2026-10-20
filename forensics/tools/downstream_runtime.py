@@ -198,6 +198,18 @@ PROGRAMS: dict[str, dict] = {
     "pure-ftpd": {"program": "src/pure-ftpd", "launch": ["--help"], "version_re": r"pure-ftpd"},
     "redis": {"program": "src/redis-server", "launch": ["--version"], "version_re": r"Redis server"},
     "isync": {"program": "src/mbsync", "launch": ["--version"], "version_re": r"mbsync|isync"},
+    # The 24.20 L7-expansion batch: four executable consumers and one DNSSEC tool set whose
+    # functional level is a real local TLS/crypto operation rather than a banner.
+    "fossil": {"program": "fossil", "launch": ["version"],
+               "version_re": r"fossil version"},
+    "ldns": {"program": "examples/.libs/ldns-signzone", "launch": ["-h"],
+             "version_re": r"ldns-signzone", "lib_paths": [".libs"],
+             "make_targets": ["examples"]},
+    "rsync": {"program": "rsync", "launch": ["--version"],
+              "version_re": r"rsync\s+version"},
+    "socat": {"program": "socat", "launch": ["-V"], "version_re": r"socat version"},
+    "squid": {"program": "src/squid", "launch": ["-v"],
+              "version_re": r"Squid Cache: Version"},
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -1269,6 +1281,322 @@ def _wl_isync(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _wl_socat(ctx: dict) -> dict:
+    """A TLS socat: a verified TLS 1.3 session carries a round trip to an EXEC peer.
+
+    `OPENSSL-LISTEN` is socat's own libssl server path; the authority's `s_client` verifies the
+    certificate and sends a line that a one-shot shell peer answers. A client trusting only the
+    unrelated CA must be rejected, so an unverifiable server certificate is a recorded failure.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    echo = d / "echo.sh"
+    echo.write_text("#!/bin/sh\nread line\nprintf 'socat-echo:%s\\n' \"$line\"\n",
+                    encoding="utf-8")
+    os.chmod(echo, 0o755)
+    argv = [str(ctx["program"]),
+            (f"OPENSSL-LISTEN:{port},reuseaddr,fork,cert={pki['srv_crt']},"
+             f"key={pki['srv_key']},verify=0"),
+            f"EXEC:{echo}"]
+    srv, of, ef = _spawn(argv, d, ctx["env"], d / "socat.out", d / "socat.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([], "socat did not open its TLS port", "runtime-failure", d)
+        echo_res = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
+                             stdin_text="phase24-socat\n", timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    runtime_ok = "socat-echo:phase24-socat" in echo_res["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS session did not carry the peer's echo" if not runtime_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(("authority s_client echo", echo_res),
+                                      ("authority s_client unrelated-ca (must fail)", neg),
+                                      ("socat", {"exit_code": 0,
+                                                 "stdout": _read(d / "socat.err")})),
+            "workload": ("socat: verified TLS1.3 session + encrypted echo round trip + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_rsync(ctx: dict) -> dict:
+    """A local rsync: a verified copy plus the checksum path (`-c`) that consumes OpenSSL MD5.
+
+    `rsync -ac` compares file digests instead of sizes/mtimes. A same-content file whose mtime
+    alone moved must not be transferred, while changed content must be. The pair distinguishes a
+    working digest path from a copy that silently ignores it.
+    """
+    d, rs = ctx["workdir"], ctx["program"]
+    src, dst = d / "src", d / "dst"
+    src.mkdir(parents=True, exist_ok=True)
+    dst.mkdir(parents=True, exist_ok=True)
+    probe = src / "probe.txt"
+    probe.write_text("phase24-rsync-payload\n", encoding="utf-8")
+    copy = _run_captured([str(rs), "-a", f"{src}/", f"{dst}/"], env=ctx["env"], timeout=30)
+    copied = (dst / "probe.txt").is_file() and (
+        (dst / "probe.txt").read_text(encoding="utf-8") == probe.read_text(encoding="utf-8"))
+    # Move only the mtime: a checksum comparison must see identical content and skip the file.
+    stamp = time.time() + 300
+    os.utime(probe, (stamp, stamp))
+    skip = _run_captured([str(rs), "-ac", "--itemize-changes", f"{src}/", f"{dst}/"],
+                         env=ctx["env"], timeout=30)
+    skip_ok = skip["ok"] and not any(line.startswith(">f")
+                                     for line in skip["stdout"].splitlines())
+    # Change the content: the same checksum path must now transfer the file.
+    probe.write_text("phase24-rsync-payload-changed\n", encoding="utf-8")
+    changed = _run_captured([str(rs), "-ac", "--itemize-changes", f"{src}/", f"{dst}/"],
+                            env=ctx["env"], timeout=30)
+    change_ok = (changed["ok"]
+                 and any(line.startswith(">f") for line in changed["stdout"].splitlines())
+                 and (dst / "probe.txt").read_text(encoding="utf-8")
+                 == probe.read_text(encoding="utf-8"))
+    runtime_ok = copy["ok"] and copied
+    functional_ok = runtime_ok and skip_ok and change_ok
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the local copy did not complete" if not runtime_ok else
+             "the checksum path transferred an unchanged file" if not skip_ok else
+             "the checksum path did not transfer changed content"),
+            "transcript": _transcript(("rsync -a copy", copy), ("rsync -ac unchanged", skip),
+                                      ("rsync -ac changed", changed)),
+            "workload": "rsync: local copy + OpenSSL-MD5 checksum skip/transfer",
+            "local_only": True}
+
+
+def _wl_fossil(ctx: dict) -> dict:
+    """A TLS fossil server: a verified TLS 1.3 handshake and a real HTTP 200 from the SCM UI."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    env = dict(ctx["env"], USER="fossil", LOGNAME="fossil", HOME=str(d))
+    repo = d / "repo.fossil"
+    init = _run_captured([str(ctx["program"]), "init", "-A", "fossil", str(repo)], cwd=d,
+                         env=env, timeout=30)
+    if not init["ok"] or not repo.is_file():
+        return _wl_fail([("fossil init", {"exit_code": init["exit_code"],
+                                        "stdout": "repository created" if repo.is_file() else ""})],
+                        f"fossil could not create its repository: {census._error_line(init)}",
+                        "runtime-failure", d)
+    srv, of, ef = _spawn([str(ctx["program"]), "server", "--localhost", "--nojail", "--port",
+                          str(port), "--cert", str(pki["srv_crt"]), "--pkey",
+                          str(pki["srv_key"]), str(repo)], d, env, d / "fossil.out",
+                         d / "fossil.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("fossil init", {"exit_code": init["exit_code"],
+                                            "stdout": "repository created" if repo.is_file()
+                                            else ""})],
+                            "fossil did not open its TLS port", "runtime-failure", d)
+        hs = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-brief"], stdin_text="",
+                       timeout=25)
+        get = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
+                        stdin_text="GET /home HTTP/1.0\r\nHost: 127.0.0.1\r\n"
+                                   "Connection: close\r\n\r\n", timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
+    finally:
+        _stop(srv)
+        _kill_comm("fossil")
+        of.close()
+        ef.close()
+    runtime_ok = ("Verification: OK" in hs["stderr"]
+                  and "Protocol version: TLSv1.3" in hs["stderr"])
+    page_ok = "HTTP/1.0 200 OK" in get["stdout"] and "Fossil" in get["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and page_ok and neg_rejected
+    # The SCM page carries server timestamps and generated identifiers; only the status and the
+    # functional marker are evidence, so the transcript keeps exactly those.
+    get_note = {"exit_code": get["exit_code"],
+                "stdout": "\n".join(line for line in get["stdout"].splitlines()
+                                     if line.startswith("HTTP/") or "Fossil" in line)[:400]}
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS 1.3 handshake did not verify" if not runtime_ok else
+             "the SCM UI did not answer an HTTP request" if not page_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(("fossil init", {"exit_code": init["exit_code"],
+                                                       "stdout": "repository created"
+                                                       if repo.is_file() else ""}),
+                                      ("authority s_client -brief", hs),
+                                      ("authority s_client GET /home", get_note),
+                                      ("authority s_client unrelated-ca (must fail)", neg)),
+            "workload": "fossil: verified TLS1.3 server + HTTP 200 + unrelated-CA reject",
+            "local_only": True}
+
+
+def _wl_squid(ctx: dict) -> dict:
+    """A TLS squid: the authority client fetches through squid's `https_port` proxy.
+
+    The proxy terminates TLS with its own libssl, forwards a plain HTTP request to a local origin,
+    and returns the origin's body. A client trusting only the unrelated CA must be rejected.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    for stale in Path("/dev/shm").glob("squid-*"):
+        try:
+            stale.unlink()
+        except OSError:
+            pass
+    docroot = d / "docroot"
+    docroot.mkdir(parents=True, exist_ok=True)
+    (docroot / "index.html").write_text("phase24-squid-ok\n", encoding="utf-8")
+    origin_port = _free_port()
+    origin, oof, oef = _spawn([sys.executable, "-m", "http.server", str(origin_port), "--bind",
+                              "127.0.0.1"], docroot, ctx["env"], d / "origin.out",
+                             d / "origin.err")
+    srv = of = ef = None
+    try:
+        if not _wait_tcp("127.0.0.1", origin_port):
+            return _wl_fail([], "the local HTTP origin did not listen", "runtime-failure", d)
+        icons = d / "icons"
+        icons.mkdir(parents=True, exist_ok=True)
+        mime = d / "mime.conf"
+        mime.write_text("text/plain txt\n", encoding="utf-8")
+        for writable in (d, docroot, icons):
+            os.chmod(writable, 0o777)
+        for readable in (pki["srv_crt"], pki["srv_key"], mime):
+            os.chmod(readable, 0o644)
+        conf = d / "squid.conf"
+        conf.write_text(
+            f"http_port 127.0.0.1:{_free_port()}\n"
+            f"https_port 127.0.0.1:{port} tls-cert={pki['srv_crt']} "
+            f"tls-key={pki['srv_key']}\n"
+            "acl all src all\n"
+            "http_access allow all\n"
+            "cache deny all\n"
+            "cache_replacement_policy heap\n"
+            "memory_replacement_policy heap\n"
+            "unlinkd_program /bin/true\n"
+            "cache_effective_user nobody\n"
+            "cache_effective_group nogroup\n"
+            f"pid_filename {d}/squid.pid\n"
+            f"coredump_dir {d}\n"
+            f"access_log stdio:{d}/access.log\n"
+            f"cache_log {d}/cache.log\n"
+            "cache_store_log none\n"
+            f"mime_table {mime}\n"
+            f"icon_directory {icons}\n"
+            "visible_hostname phase24\n", encoding="utf-8")
+        srv, of, ef = _spawn([str(ctx["program"]), "-N", "-f", str(conf)], d, ctx["env"],
+                             d / "squid.out", d / "squid.err")
+        if not _wait_tcp("127.0.0.1", port, timeout=25):
+            return _wl_fail([], "squid did not open its TLS proxy port", "runtime-failure", d)
+        get = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
+                        stdin_text=(f"GET http://127.0.0.1:{origin_port}/index.html HTTP/1.0\r\n"
+                                    "Host: 127.0.0.1\r\nConnection: close\r\n\r\n"),
+                        timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
+    finally:
+        if srv is not None:
+            _stop(srv)
+        _kill_comm("squid")
+        _stop(origin)
+        for handle in (of, ef, oof, oef):
+            if handle is not None:
+                handle.close()
+    runtime_ok = "HTTP/1.1 200 OK" in get["stdout"] and "phase24-squid-ok" in get["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and neg_rejected
+    # Keep the status line and the origin's marker; the origin's Date/Last-Modified are not evidence.
+    get_note = {"exit_code": get["exit_code"],
+                "stdout": "\n".join(line for line in get["stdout"].splitlines()
+                                     if line.startswith("HTTP/") or "phase24-squid-ok" in line)}
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the proxied fetch did not return the origin's payload" if not runtime_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(("authority s_client GET via https_port", get_note),
+                                      ("authority s_client unrelated-ca (must fail)", neg)),
+            "workload": "squid: verified TLS1.3 https_port proxy fetch + unrelated-CA reject",
+            "local_only": True}
+
+
+def _wl_ldns(ctx: dict) -> dict:
+    """A DNSSEC workload: ldns generates a key, signs a zone, and verifies the signature.
+
+    `ldns-keygen` and `ldns-signzone` consume the subject's libcrypto for RSA/SHA-256,
+    `ldns-verify-zone` validates the RRSIGs, and a one-record tamper must be reported as a bogus
+    signature. The random key tag is evidence only of key generation, so it is not transcribed.
+    """
+    d, root = ctx["workdir"], ctx["root"]
+    keygen = root / "examples" / ".libs" / "ldns-keygen"
+    verify = root / "examples" / ".libs" / "ldns-verify-zone"
+    if not keygen.is_file() or not verify.is_file():
+        return _wl_fail([], "the ldns tools were not built by the examples target",
+                        "runtime-failure", d)
+    zone = d / "example.com.zone"
+    zone.write_text(
+        "example.com. 3600 IN SOA ns.example.com. hostmaster.example.com. 1 3600 600 86400 3600\n"
+        "example.com. 3600 IN NS ns.example.com.\n"
+        "ns.example.com. 3600 IN A 127.0.0.1\n"
+        "www.example.com. 3600 IN A 127.0.0.1\n", encoding="utf-8")
+    gen = _run_captured([str(keygen), "-a", "RSASHA256", "-b", "2048", "example.com"], cwd=d,
+                        env=ctx["env"], timeout=60)
+    names = [line.strip() for line in gen["stdout"].splitlines() if line.strip().startswith("K")]
+    base = names[-1] if names else ""
+    signed = d / "signed.zone"
+    sign = _run_captured([str(ctx["program"]), "-n", "-f", str(signed), str(zone), base], cwd=d,
+                         env=ctx["env"], timeout=60) if base else None
+    checked = _run_captured([str(verify), str(signed)], cwd=d, env=ctx["env"], timeout=60) \
+        if signed.is_file() else None
+    tampered = d / "tampered.zone"
+    tamper_rejected = False
+    tamper = None
+    if signed.is_file():
+        tampered.write_text(
+            re.sub(r"(www\.example\.com\.\s+3600\s+IN\s+A\s+)127\.0\.0\.1", r"\g<1>127.0.0.2",
+                   signed.read_text(encoding="utf-8"), count=1), encoding="utf-8")
+        tamper = _run_captured([str(verify), str(tampered)], cwd=d, env=ctx["env"], timeout=60)
+        tamper_rejected = (tamper["exit_code"] != 0
+                           and "Bogus DNSSEC signature" in (tamper["stdout"] + tamper["stderr"]))
+    runtime_ok = bool(gen["ok"] and base and sign and sign["ok"] and checked and checked["ok"])
+    functional_ok = (runtime_ok and "verified" in (checked["stdout"] + checked["stderr"])
+                     and tamper_rejected)
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the zone could not be keyed and signed" if not runtime_ok else
+             "the signed zone did not verify" if "verified" not in
+             (checked["stdout"] + checked["stderr"]) else
+             "a tampered record was not reported as a bogus signature"),
+            "transcript": _transcript(
+                ("ldns-keygen", {"exit_code": gen["exit_code"],
+                                 "stdout": "key generated" if base else "no key"}),
+                ("ldns-signzone", sign), ("ldns-verify-zone", checked),
+                ("ldns-verify-zone tampered (must fail)", tamper)),
+            "workload": ("ldns: DNSSEC RSASHA256 keygen + zone signing + verify + tamper reject"),
+            "local_only": True}
+
+
 def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> dict:
     return {"runtime_ok": False, "functional_ok": False,
             "failure_class": failure_class or "runtime-failure", "residual": "runtime-failure",
@@ -1285,6 +1613,11 @@ RUNNERS = {
     "monit": _wl_monit,
     "pure-ftpd": _wl_pureftpd,
     "isync": _wl_isync,
+    "fossil": _wl_fossil,
+    "ldns": _wl_ldns,
+    "rsync": _wl_rsync,
+    "socat": _wl_socat,
+    "squid": _wl_squid,
 }
 
 
@@ -1397,6 +1730,25 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
     evidence = [f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
                 f"artifact:{prog['program']}", "local_only:loopback"]
+    build_env = dict(os.environ, PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
+                     CPPFLAGS=f"-I{prefix}/include", LDFLAGS=f"-L{prefix}/lib")
+
+    # A few admitted programs live behind an upstream target the shared recipe's `make` does not
+    # build (ldns's tools are `make examples`). The workload's own target is built here with the
+    # identical prefix environment, so the program loaded is the program built against the subject.
+    targets = list(prog.get("make_targets") or [])
+    if targets:
+        prep = census._run(["make", MAKE_JOBS, *targets], cwd=root, env=build_env)
+        if not prep["ok"]:
+            return _runtime_row(
+                fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
+                failure_class="load-failure",
+                reason=(f"the workload target {targets} did not build: "
+                        f"{census._error_line(prep)}"),
+                specimen_id=spec_id, variant_id=variant_id, source_sha256=source_sha256,
+                evidence=evidence + [f"build:{','.join(targets)}"], canvas=None, limits=limits,
+                prefix=prefix, source_root_hash=source_root_hash, launch=None, workload=None,
+                transcript=_transcript(("make " + " ".join(targets), prep)), local_only=True)
 
     if not program.is_file():
         return _runtime_row(
@@ -1445,10 +1797,7 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
 
     ctx = {"family": name, "subject": subject, "program": program, "root": root, "prefix": prefix,
            "authority_prefix": authority_prefix, "workdir": workdir, "port": _free_port(),
-           "env": env, "build_env": dict(os.environ,
-                                         PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
-                                         CPPFLAGS=f"-I{prefix}/include",
-                                         LDFLAGS=f"-L{prefix}/lib")}
+           "env": env, "build_env": build_env}
     try:
         result = runner(ctx)
     except Exception as exc:  # noqa: BLE001 — a fixture failure is recorded, never raised
