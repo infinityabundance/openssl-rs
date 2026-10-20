@@ -731,3 +731,11 @@ src/x509/v3_ia5.rs
 src/x509/v3_ind_iss.rs
 src/x509/v3_int.rs
 src/x509/v3_iobo.rs
+src/x509/v3_ist.rs
+src/x509/v3_no_ass.rs
+src/x509/v3_no_rev_avail.rs
+src/x509/v3_pcia.rs
+src/x509/v3_pcons.rs
+src/x509/v3_pku.rs
+src/x509/v3_pmaps.rs
+src/x509/v3_rolespec.rs
