@@ -53,6 +53,8 @@ probes=(
   "provider::kdf::tests::adv_probe::sskdf_defaulted_kmac_cleanse_uses_the_allocation_length"
   "provider::kdf::tests::adv_probe::pbkdf1_derived_key_is_cleansed_before_release"
   "provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair"
+  "store::store_lib::adv_probe::refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader"
+  "store::store_lib::adv_probe::canary_double_release_is_detected"
 )
 
 failures=0

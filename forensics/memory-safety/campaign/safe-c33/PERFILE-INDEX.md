@@ -7523,6 +7523,10 @@ while the cache `Query` still points at it. The authority has the same double re
 boundary repair, before promotion; it is not a defect of `store_meth.rs` (the caller violates
 `OSSL_STORE_LOADER_free`'s owned-reference contract).
 
+**Closure.** `B26-X1` is **CLOSED** by B27 (source witness `src/store/store_lib.rs:938-948`,
+blob `42160a17f`; pre-fix `:940-942`, blob `868e19cd1`). See
+[`atlas-refresh/boundary-sweep-B27.json`](atlas-refresh/boundary-sweep-B27.json).
+
 **Gates observed (final blob).** `cargo fmt --all -- --check` clean;
 `cargo clippy --all-targets -- -D warnings` clean; focused `store_meth` **2 passed / 0
 failed**, `the_file_fetch_resolves_through_the_published_row` **1 passed / 0 failed**; full
@@ -7549,6 +7553,84 @@ differential, FRF/SEAL.
 **Queue.** `REMAINING-AUDIT.txt` **54**, `AUDITED-FILES.txt` **709**.
 **Next ordinary position.** `src/ui/ui_openssl.rs`; before any promotion, repair
 `src/store/store_lib.rs:942` (B26-X1), which was previously audited at M1.
+**Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
+`src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
+`src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.
+
+## BOUNDARY SWEEP B27 — `OSSL_STORE_open_ex` fetched-loader error path (`store/store_lib.rs`)
+
+Receipt: [`atlas-refresh/boundary-sweep-B27.json`](atlas-refresh/boundary-sweep-B27.json).
+
+**Candidate identity.** `integrate/safe-c33` at source HEAD `a0cbd56b4`; worktree
+`src/store/store_lib.rs` blob `42160a17f` (pre-fix `868e19cd1`). Authority:
+`crypto/store/store_lib.c:63-238` (open and its `err` tail), `:234` (the suppressed second
+release), `:577-597` (`ossl_store_close_it`), `:1028-1100` (`OSSL_STORE_attach`);
+`crypto/store/store_meth.c` fetch/free refcount; `crypto/property/property.c:559-610` and
+`:900-960` (cache entry ownership).
+
+**Disposition.** `SAFETY_DISCHARGED` for the exact scope B26-X1 named: the `fetched_loader`
+error-path release in `OSSL_STORE_open_ex`. `B26-X1` is **CLOSED**. The rest of the file's M1
+boundaries are unchanged.
+
+**Ownership trace (one release per acquired reference).** `OSSL_STORE_LOADER_fetch` returns one
+caller reference. A refused `open` releases and nulls it in the loop (`:853`). A live
+`loader_ctx` transfers the reference into `tmpctx`; `ossl_store_close_it` releases it (`:938`)
+and the local is not released again. `loader_ctx == NULL` means no context took it (every such
+fetch arm already released it), so the else branch (`:943-948`) is the local's single release.
+The success path transfers the reference to `ctx.fetched_loader`, released by
+`OSSL_STORE_close`'s `close_it`. No path leaks and no path double-releases.
+
+**Defect repaired.** `B26-X1` (high, double release / use-after-free under allocation failure).
+The `err` tail no longer runs the unconditional `OSSL_STORE_LOADER_free(fetched_loader)` after
+`ossl_store_close_it(&mut tmpctx)`; the authority's same release at `store_lib.c:234` is not
+reproduced (§17). Compatibility of the temporary-context close and of every non-error path is
+unchanged; no export, signature, `#[repr(C)]` layout, allocator size/`file`/`line`, or lint
+attribute changed, and no unsafe operation was added or removed.
+
+**Controls observed.** New `store::store_lib::adv_probe`:
+`refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader` arms the `OwnedCtx`
+`zalloc` at `(NULL, 0)`, proves from the allocator transcript that the `propq_copy` allocation
+preceded the refusal (the post-provider-open OOM window), flushes the loader store cache, and
+asserts the loader block is **not** freed while the implementation entry still owns it; it then
+removes that entry and asserts exactly one allocator release and no double release.
+`canary_double_release_is_detected` proves the recording allocator's detector fires on a
+deliberate second release. The probe was also run against the temporarily restored pre-fix
+shape and fails at the intended assertion (normal court and ASan venue); the repair was
+restored before the final blob.
+
+**Gates observed (final blob).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; full library **1697 passed / 0 failed / 29
+ignored** (1726 total) with `--test-threads=1` (236.71 s) and `--test-threads=4` (87.02 s), in
+the court with `CARGO_BUILD_JOBS=4`; both new probes **1 passed / 0 failed** each, alone, in
+the normal court and under the ASan venue (`target/asan-focus`, nightly-2026-10-05).
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: **0**. Test-only unsafe added:
+2 probe tests (existing `CRYPTO_*`/harness APIs; `#[cfg(test)]`, `#[ignore]`d, never in a
+release build). Residual: `B27-R1` `OSSL_STORE_attach`'s authority-parity OOM leak (not UB).
+
+**NEW STOP-CLASS FINDING, NOT REPAIRED (B27-X2, high).** `OSSL_STORE_attach` assigns
+`loader_ctx` before `loader_set_params`; when that call refuses, `p_close` closes the context
+and `fetched_loader` is freed and nulled, but the local `loader_ctx` stays non-NULL. The
+published ctx then has `loader = NULL` with a closed `loader_ctx`, and `OSSL_STORE_close` /
+`OSSL_STORE_load` dereference `(*ctx).loader` (`:652`, `:1273`). A C-valid `params` array the
+provider legitimately refuses reaches it (for `file`, a repeated `properties` key or an
+`expect` parameter of the wrong type). The authority has the identical defect at
+`store_lib.c:1093-1098` / `:585-590`. Out of this single-repair batch by instruction; it
+blocks promotion of `store_lib.rs` and is the next boundary repair. Proposed control: an
+attach probe with a refused params array that then calls `OSSL_STORE_close` and
+`OSSL_STORE_load` under ASan.
+
+**NOT_RUN.** Miri (the path needs the installable allocator seam and real provider machinery),
+Loom/TSan (no lock/atomic protocol edited), `RT-STORE`/`RT-FETCH` differential, FRF/SEAL.
+
+**Classification.** `SAFETY_DISCHARGED` for the B26-X1 mechanism; no safe-Rust caller can cause
+UB through the repaired path (`safe_callers_can_cause_ub: false`). The file is **not** ready to
+promote because of the open C-ABI finding B27-X2.
+
+**Queue.** `REMAINING-AUDIT.txt` **54**, `AUDITED-FILES.txt` **709** (the repaired file was
+already audited; no queue movement).
+**Next ordinary position.** `src/ui/ui_openssl.rs`. Before promoting `src/store/store_lib.rs`,
+repair B27-X2 (`OSSL_STORE_attach`'s refused `loader_set_params` path).
 **Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
 `src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
 `src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.
