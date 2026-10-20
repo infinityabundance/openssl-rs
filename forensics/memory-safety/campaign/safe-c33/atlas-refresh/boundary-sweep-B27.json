@@ -1,0 +1,151 @@
+{
+  "receipt": "boundary-sweep-B27",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "a0cbd56b4",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/store/store_lib.rs"
+    ],
+    "working_tree_blob": {
+      "src/store/store_lib.rs": "42160a17fa2f8e1805eac5cffb91a44dd3c9672b"
+    },
+    "pre_fix_blob": {
+      "src/store/store_lib.rs": "868e19cd1d6dad2c8d0ba909eb21d150c9f9dd3c"
+    }
+  },
+  "stop_status": "CLEAR for the single B26-X1 repair: src/store/store_lib.rs:942's unconditional second release of fetched_loader is removed and the error path now releases each acquired reference exactly once (close_it for a transferred reference, the local only when no loader_ctx exists). The OOM refusal probe passes in the normal court and under ASan, and fails on the pre-fix shape at the intended assertion. NEW STOP-CLASS FINDING, NOT REPAIRED IN THIS SINGLE-REPAIR BATCH: B27-X2, OSSL_STORE_attach returns a context with loader = NULL and a closed loader_ctx when loader_set_params refuses after a successful provider attach; OSSL_STORE_close / OSSL_STORE_load then dereference the NULL loader. Reachable from a C-valid params array (e.g. a repeated properties key). The authority has the same NULL dereference at store_lib.c:1093-1098/:577-597. It blocks promotion of store_lib.rs and is the next boundary repair.",
+  "authority": {
+    "source": "forensics/authorities/src/openssl-3.6.4/crypto/store/store_lib.c:63-238 (OSSL_STORE_open_ex and its err tail), :234 (the Coverity-suppressed second release), :577-597 (ossl_store_close_it), :1028-1100 (OSSL_STORE_attach); crypto/store/store_meth.c fetch/free refcount, crypto/property/property.c:559-610 (impl_cache_free) and :900-960 (cache_set up-ref).",
+    "abi": "No export, signature, #[repr(C)] layout, allocator size/file/line, unsafe lint attribute or detector changed. The repair only narrows the error-path control flow in OSSL_STORE_open_ex.",
+    "external_contracts": [
+      "OSSL_STORE_LOADER_fetch returns one reference the caller owns; OSSL_STORE_LOADER_free releases exactly one caller-owned reference (RC-1/D562; store_meth.rs:225).",
+      "ossl_store_close_it releases the context's fetched_loader reference (store_lib.c:592) and the cached_info stack; it never nulls the member.",
+      "The method store's cache entry owns its own reference (cache_set up-refs), and the implementation entry owns its own reference (add up-refs); each is released by impl_cache_free / impl_free exactly once.",
+      "OSSL_STORE_open_ex: a non-NULL loader_ctx means the loader was opened; every refusal after it must hand the loader to close_it or release the local reference, never both.",
+      "A provider set_ctx_params callback may legitimately answer 0; that is a defined refusal, not an ABI violation."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B26-X1",
+      "file": "src/store/store_lib.rs",
+      "mechanism": "OSSL_STORE_open_ex error-path ownership of fetched_loader: fetch (one caller reference), transfer into tmpctx, ossl_store_close_it release, and the tail release",
+      "disposition": "SAFETY_DISCHARGED (scope: the fetched_loader error-path release; the rest of the file's M1 boundaries are unchanged)",
+      "contract": "At most one OSSL_STORE_LOADER_fetch reference exists per OSSL_STORE_open_ex call. It is transferred to tmpctx when loader_ctx is non-NULL and released by ossl_store_close_it; the local is not released again. When loader_ctx is NULL, no context took the reference and the local is the single release (every fetch-without-open loop arm already released and nulled it). The success path transfers the reference to ctx.fetched_loader, released by OSSL_STORE_close's close_it.",
+      "defects": [],
+      "residuals": []
+    }
+  ],
+  "caller_closure": [
+    {
+      "file": "src/store/store_lib.rs",
+      "caller": "OSSL_STORE_open_ex:812 fetch, :853 refused-open release, :938 close_it, :943-948 branch release",
+      "disposition": "SAFETY_DISCHARGED (B26-X1 closed)",
+      "evidence": "The post-fix blob has exactly one release site per acquired reference: the else branch at :948 runs only when loader_ctx is NULL (no context took the reference), and close_it at :938 releases the transferred reference. The OOM probe forces the OwnedCtx refusal after a successful provider open, proves the property copy preceded the refusal, flushes the loader store cache, and asserts the loader block was not freed while the implementation entry still owned it."
+    },
+    {
+      "file": "src/store/store_result.rs",
+      "caller": "OSSL_STORE_INFO / ctx consumers via OSSL_STORE_LOADER_get0_provider and OSSL_STORE_load",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "The loader is live and borrowed; no ownership transfer. The repaired error path never hands out a context, so no consumer sees a released loader."
+    },
+    {
+      "file": "src/provider/file_store.rs",
+      "caller": "file_open / file_set_ctx_params through the published OSSL_OP_STORE row",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "The probe opens a real temporary file through the default/base providers' file loader; file_open answers a live loader_ctx and file_set_ctx_params answers 1 for the probe's property query."
+    },
+    {
+      "file": "src/store/store_lib.rs",
+      "caller": "OSSL_STORE_attach:1642 fetch, :1668/:1680 refused-attach releases, :1699-1710 ctx build",
+      "disposition": "STOP-CLASS DEFECT (B27-X2, out of this single-repair batch)",
+      "evidence": "When loader_set_params refuses (:1672) after p_attach answered a live loader_ctx, p_close closes that context and fetched_loader is freed and nulled, but the local loader_ctx stays non-NULL. The function then allocates ctx and publishes loader = NULL, fetched_loader = NULL, loader_ctx = closed pointer. OSSL_STORE_close -> ossl_store_close_it takes the fetched_loader == NULL branch and dereferences (*ctx).loader (NULL) at store_lib.rs:652; OSSL_STORE_load does the same at :1273. The authority has the identical defect (store_lib.c:1093-1098 then :585-590). A C-valid params array refused by the provider (repeated properties key, or expect with a wrong type) reaches it. Not repaired here; recorded as the next boundary repair."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean (final blob).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (final blob).",
+      "focused_tests": "store::store_lib::adv_probe::refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader: 1 passed / 0 failed; store::store_lib::adv_probe::canary_double_release_is_detected: 1 passed / 0 failed (each alone, OPENSSL_RS_ADV_PROBE=1, --test-threads=1).",
+      "structural_guards": "CRYPTO_* seam unchanged; #[repr(C)] OsslStoreCtx unchanged; all exports and signatures unchanged; unsafe lint attributes unchanged; the repair adds no unsafe operation and removes none (one release site is deleted from the error path)."
+    },
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1697 passed / 0 failed / 29 ignored (1726 total), 87.02 s.",
+      "serial": "cargo test --lib -- --test-threads=1: 1697 passed / 0 failed / 29 ignored (1726 total), 236.71 s.",
+      "note": "Both runs are on the final blob, after the fix and both probes. The two new probes are ignored in the routine suite (process-global allocator installation) and were run separately."
+    },
+    "asan": {
+      "status": "PASS (targeted, fixed path)",
+      "command": "docker/openssl-rs-asan.sh exec; RUSTFLAGS=-Zsanitizer=address,-Cdebuginfo=1,-Clinker=clang,-Ccodegen-units=1 CC=/asan/bin/asan-cc AR=ar ASAN_OPTIONS=allocator_may_return_null=1:detect_leaks=0:symbolize=1 CARGO_TARGET_DIR=/work/target/asan-focus CARGO_BUILD_JOBS=4 cargo +nightly-2026-10-05 test -Zbuild-std --lib --target x86_64-unknown-linux-gnu -- --ignored --exact store::store_lib::adv_probe::refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader --test-threads=1",
+      "result": "1 passed / 0 failed. The same command on the temporary pre-fix shape failed at the probe's cache-ownership assertion (no ASan UAF was reached, because the probe detects the stolen cache reference at the flush before the dangling implementation entry is dereferenced)."
+    }
+  },
+  "controls_observed": [
+    "refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader: arms the OwnedCtx zalloc (NULL,0) request of size_of::<OsslStoreCtx>(); proves from the allocator transcript that the propq_copy allocation preceded the refused request (so the open reached the post-provider-open OOM window); asserts the loader block is NOT in the free log after the cache flush; then removes the implementation entry and asserts exactly one allocator release of that pointer and no double release.",
+    "Negative control (pre-fix shape, exercised by temporarily restoring the unconditional release at store_lib.rs:942): the probe fails with 'B26-X1: the loader store cache released a loader it no longer owned after a refused context allocation', in both the normal court and the ASan venue. The repair was restored immediately; the final blob is the post-fix blob above.",
+    "canary_double_release_is_detected: a deliberate second CRYPTO_free sets adv_alloc::double_free(), proving the recording allocator's double-release detector is live."
+  ],
+  "miri": {
+    "status": "NOT_RUN",
+    "reason": "The refusal path requires the installable CRYPTO_set_mem_functions hook and real provider machinery (provider load, dispatch tables, thread-local ERR state), which are outside Miri's supported FFI set. The repair is a control-flow narrowing with no new pointer arithmetic, aliasing or borrow."
+  },
+  "loom_or_tsan": "NOT_RUN. No lock, atomic protocol or shared-ownership transition was edited; the refcount protocol is unchanged and the full threaded suite is the concurrency evidence.",
+  "invalidated_evidence": {
+    "closed": "B26-X1 (the B26 escalation against src/store/store_lib.rs:942) is CLOSED.",
+    "invalidated": "Allocator-transcript or differential evidence that asserted the pre-fix error path made two OSSL_STORE_LOADER_free calls for one fetch reference is invalid for the post-fix blob 42160a17f. The failure-path transcript now ends with one loader release (or zero before the cache flush, when the cache entry still owns its reference).",
+    "not_invalidated": "The success-path ownership (ctx.fetched_loader released by OSSL_STORE_close), OSSL_STORE_info/search ownership, B26's store_meth loader lifecycle, and all layout/export/signature receipts are unchanged and reused."
+  },
+  "hidden_obligations": 0,
+  "hidden_obligations_note": "Zero for the repaired mechanism. Every remaining preconditions is stated at the point of use, and the one newly discovered path is reported as B27-X2 rather than left implicit. Residual non-UB item: OSSL_STORE_attach leaks the fetched loader (and the provider's loader_ctx) when OwnedCtx::zalloc or ossl_pw_set_ui_method refuses; the authority has the same OOM leak (store_lib.c:1086-1101). It is recorded, not hidden, and is not a memory-safety defect.",
+  "new_unsafe_assumptions": 0,
+  "new_unsafe_assumptions_note": "None. The repair deletes a release; it adds no raw operation, reference or lifetime assumption. The probes are test-only and use the existing test harness.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "No unsafe operation was removed; one unsafe call (OSSL_STORE_LOADER_free) was removed from the loader_ctx != NULL error path, and the same call remains in the loader_ctx == NULL branch. Unsafe operations introduced: 0. Test-only unsafe added: 2 tests using the existing allocator/CRYPTO APIs (test-only, never in a release build).",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 2,
+  "test_only_unsafe_note": "adv_probe::refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader and adv_probe::canary_double_release_is_detected are #[cfg(test)] + #[ignore] probes in the established scripts/adv-probe.sh pattern.",
+  "boundary_size": "1 file, src/store/store_lib.rs: error path +5/-4 (branch split and the closure comment), plus one #[cfg(test)] adv_probe module and two entries in scripts/adv-probe.sh. No layout, export, signature or allocation size changed.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "No safe-Rust interface reaches the repaired path: OSSL_STORE_open_ex/OSSL_STORE_close are unsafe extern \"C\" with stated contracts. The C ABI is the boundary, and a C-valid allocation failure no longer causes the double release. The separate B27-X2 attach NULL dereference is reachable from a C-valid params array through OSSL_STORE_attach, which is also an unsafe extern \"C\" entry point; it is recorded as STOP-class and blocks promotion of this file.",
+  "residuals": [
+    {
+      "id": "B27-R1",
+      "file": "src/store/store_lib.rs",
+      "severity": "low",
+      "disposition": "RECORDED authority-parity OOM leak (not UB)",
+      "description": "OSSL_STORE_attach returns NULL on an OwnedCtx::zalloc or ossl_pw_set_ui_method refusal without releasing fetched_loader or loader_ctx. The authority has the same leak at store_lib.c:1086-1101. No ownership is transferred and no invalid release occurs; out of scope for this single-repair batch."
+    },
+    {
+      "id": "B27-R2",
+      "file": "src/store/store_lib.rs",
+      "severity": "high",
+      "disposition": "OPEN STOP-CLASS (B27-X2)",
+      "description": "See escalations: OSSL_STORE_attach publishes loader = NULL with a closed loader_ctx after a refused loader_set_params, and close/load dereference the NULL loader."
+    }
+  ],
+  "escalations": [
+    {
+      "id": "B26-X1",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B27",
+      "file": "src/store/store_lib.rs",
+      "line": 942,
+      "pre_fix_witness": "a0cbd56b4:src/store/store_lib.rs:940-942 (blob 868e19cd1d6dad2c8d0ba909eb21d150c9f9dd3c): unconditional OSSL_STORE_LOADER_free(fetched_loader) after ossl_store_close_it(&mut tmpctx).",
+      "source_witness": "src/store/store_lib.rs:938-948 on blob 42160a17fa2f8e1805eac5cffb91a44dd3c9672b: close_it at :938 releases the transferred reference; the else branch at :943-948 releases the local only when loader_ctx is NULL (where the loop already released and nulled every refused-open fetch).",
+      "control_witness": "src/store/store_lib.rs:2713 refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader (passes post-fix in court and ASan; fails on the pre-fix shape) and :2828 canary_double_release_is_detected.",
+      "authority_parity": "The authority's store_lib.c:234 second release is not reproduced (§17). Compatibility of the non-double-release intent and of the temporary-context close is preserved."
+    },
+    {
+      "id": "B27-X2",
+      "status": "OPEN",
+      "file": "src/store/store_lib.rs",
+      "line": "652, 1273 (and the attach build at 1672-1716)",
+      "severity": "high",
+      "class": "NULL dereference after a provider set_ctx_params refusal",
+      "description": "OSSL_STORE_attach's fetched branch assigns loader_ctx before loader_set_params; when loader_set_params refuses, p_close closes the context and fetched_loader is freed and nulled, but loader_ctx remains non-NULL. The ctx is published with loader = NULL and fetched_loader = NULL. OSSL_STORE_close's ossl_store_close_it then executes the fetched_loader == NULL arm and dereferences (*ctx).loader (NULL); OSSL_STORE_load reaches the same member earlier. The authority has the identical defect at store_lib.c:1093-1098 (ctx->loader = fetched_loader = NULL with loader_ctx non-NULL) and :585-590 (ctx->loader->closefn).",
+      "reachability": "C-valid: a params array the provider legitimately refuses (for the file row, a repeated properties key makes file_set_ctx_params_decoder answer None, or an expect parameter with the wrong type makes OSSL_PARAM_get_int fail). loader_set_params then answers 0 and the branch runs.",
+      "scope": "Out of this single-repair batch by instruction. Proposed repair: clear loader_ctx (and do not publish the context) when the params refusal closes it, or keep the authority's return-NULL intent; control: an attach probe with a refused params array that then calls OSSL_STORE_close and OSSL_STORE_load under ASan."
+    }
+  ]
+}
