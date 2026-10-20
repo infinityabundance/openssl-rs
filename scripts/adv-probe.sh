@@ -65,6 +65,8 @@ probes=(
   "ml_dsa::tests::keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap"
   "provider::ml_dsa_kmgmt::adv_probe::refused_propq_allocation_cleanses_the_gen_entropy"
   "provider::ml_dsa_sig::adv_probe::refused_signature_copy_cleanses_the_dupctx_entropy"
+  "provider::kdf::tests::adv_probe::argon2_memory_boundary_refusal_matrix"
+  "provider::kdf::tests::adv_probe::hmac_drbg_entropy_replacement_cleanses_the_incumbent"
 )
 
 failures=0
