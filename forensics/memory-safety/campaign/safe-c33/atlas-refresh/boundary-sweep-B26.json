@@ -1,0 +1,206 @@
+{
+  "receipt": "boundary-sweep-B26",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "aa21a21a2",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/store/store_meth.rs"
+    ],
+    "working_tree_blob": {
+      "src/store/store_meth.rs": "8f9d5e630d5a965e31b991d287879a273e163d16"
+    },
+    "pre_fix_blob": {
+      "src/store/store_meth.rs": "e728991f3e12da9019f8a4d575c441e04ffb52a6"
+    }
+  },
+  "stop_status": "CLEAR for src/store/store_meth.rs after two repairs (B26-SM-D1 allocator-seam coordinates, B26-SM-D2 safe-wrapper obligation). CROSS-FILE STOP-CLASS FINDING: src/store/store_lib.rs:942 releases fetched_loader a second time after ossl_store_close_it already released the caller's reference. It is OOM-reachable (propq_copy / OwnedCtx allocation refusal after a successful provider open) and leaves the method-store cache owning a freed loader; the authority has the same defect at store_lib.c:234. It is outside this one-file batch, not repaired here, and must be the next boundary repair before any promotion.",
+  "authority": {
+    "source": "forensics/authorities/src/openssl-3.6.4/crypto/store/store_meth.c (511 lines, read whole) and crypto/store/store_local.h:82-117. store_lib.c:63-238 (OSSL_STORE_open_ex and its err tail), :577-597 (ossl_store_close_it), crypto/property/property.c:559-610 (ossl_method_store_do_all) used for callback/reentrancy comparison.",
+    "abi": "No export, signature, #[repr(C)] layout, allocator size, unsafe lint attribute or detector changed. new_loader's CRYPTO_zalloc/CRYPTO_free coordinates now match store_meth.c:50 and :39 (and :55 on the refused provider up-ref); loader_from_algorithm, the mcm callbacks, the value-returning accessors and do_all_provided are unchanged in behaviour.",
+    "external_contracts": [
+      "OSSL_STORE_LOADER_free: loader is NULL or a live loader this crate allocated, and the caller owns exactly one reference to it. A provider loader is released through RC-1/D562; a legacy loader (prov == NULL) releases the block directly and never touches the count.",
+      "OSSL_STORE_LOADER_up_ref: loader is live; a provider loader's positive count is incremented; the legacy arm answers 1 without a count, as the authority does.",
+      "The provider's OSSL_DISPATCH table is non-NULL, terminated by function_id == 0, and every present entry has the signature of the OSSL_FUNC_STORE_* id it names.",
+      "An OSSL_ALGORITHM supplied by the algorithm walk is live for the call; algorithm_names, property_definition and algorithm_description outlive the loader (the loader holds a provider reference).",
+      "The mcm callback contract of B22-MCM-1..4: put increments the method reference, a NULL store names the global store, the temporary store belongs to the mcm owner, and no callback re-enters the held store lock.",
+      "Do_all callbacks receive a borrowed loader; they must not release the store's reference without first acquiring their own via OSSL_STORE_LOADER_up_ref.",
+      "OSSL_STORE_LOADER_names_do_all callback names are borrowed from the name map and valid only for that callback."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B26-SM-1",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "loader object lifecycle: new_loader (zalloc, count-1 store, provider up-ref), CtxDestroy body, OSSL_STORE_LOADER_up_ref/free, up_ref_loader/free_loader",
+      "disposition": "CONTRACTED",
+      "contract": "new_loader publishes a zeroed, valid OsslStoreLoader with count 1 and, on success, one provider reference; the failure arms release only what was acquired (no provider when the up-ref was refused; block only). OSSL_STORE_LOADER_free releases exactly one caller reference; a provider loader is freed by the Last down-ref under the REF_DESTROYING sentinel, a re-entrant free observes Retired, and a legacy loader releases the block directly.",
+      "defects": ["B26-SM-D1"],
+      "residuals": ["B26-R1", "B26-R2"]
+    },
+    {
+      "id": "B26-SM-2",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "dispatch scan, construction and destruction: loader_from_algorithm (ten OSSL_FUNC_STORE_* slots), construct_loader (namemap add, name map key is the scheme), destruct_loader",
+      "disposition": "CONTRACTED",
+      "contract": "The first non-NULL function per id wins; the authority's four-clause sanity check (open|attach, load, eof, close; set_ctx_params optional) frees the partial loader and raises OSSL_STORE_R_LOADER_INCOMPLETE exactly once. construct_loader pairs with destruct_loader through the B22 mcm put/destruct refcount contract: construct answers 1 reference, put takes one, destruct drops the construction reference.",
+      "defects": [],
+      "residuals": ["B26-R5"]
+    },
+    {
+      "id": "B26-SM-3",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "fetch plumbing: LoaderDataSt, get_tmp_loader_store/dealloc, reserve/unreserve, get_loader_from_store/put_loader_in_store bridges, inner_loader_fetch, OSSL_STORE_LOADER_fetch",
+      "disposition": "CONTRACTED",
+      "contract": "The temporary store is created by get and released exactly once by the fetch/do_all owner; every loader returned to the caller carries one caller reference and every cached loader carries one cache reference. Lock order is biglock -> namemap/property lock; no user callback runs under either lock. The unsupported-vs-fetch-failed reason split and the dynamic error text match store_meth.c:346-369.",
+      "defects": [],
+      "residuals": ["B26-R5"]
+    },
+    {
+      "id": "B26-SM-4",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "store maintenance: ossl_store_loader_store_cache_flush, ossl_store_loader_store_remove_all_provided",
+      "disposition": "CONTRACTED",
+      "contract": "A missing slot-15 store answers 1 (the authority's answer); otherwise the call is forwarded to the method store under its own locks. The provider is used only by identity.",
+      "defects": [],
+      "residuals": []
+    },
+    {
+      "id": "B26-SM-5",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "by-name accessors: get0_provider, get0_properties, get_number, get0_description, is_a, names_do_all, settable_ctx_params",
+      "disposition": "CONTRACTED",
+      "contract": "Every returned provider/string/param pointer is borrowed from the loader or its provider and must not be freed. get0_provider/get0_properties/get_number guard NULL and raise the authority's PASSED_NULL_PARAMETER; get0_description does not guard, matching store_meth.c:440-443 and its live-loader contract. is_a compares the name-map number with scheme_id; names_do_all passes borrowed names and never holds the map lock across the callback.",
+      "defects": [],
+      "residuals": ["B26-R3"]
+    },
+    {
+      "id": "B26-SM-6",
+      "file": "src/store/store_meth.rs",
+      "mechanism": "enumeration: OSSL_STORE_LOADER_do_all_provided, do_one",
+      "disposition": "CONTRACTED",
+      "contract": "The fetch fills the temporary store first; both stores are then walked through ossl_method_store_do_all, which snapshots under the read lock and invokes the visitor after releasing it. The visitor receives a borrowed loader and this file neither takes nor releases its reference; user_fn must be non-NULL.",
+      "defects": [],
+      "residuals": ["B26-R4"]
+    }
+  ],
+  "caller_closure": [
+    {
+      "file": "src/store/store_lib.rs",
+      "caller": "OSSL_STORE_open_ex:812 fetch, :853 first release on a refused open, :942 tail release after ossl_store_close_it",
+      "disposition": "STOP-CLASS DEFECT (cross-file, not repaired in this batch)",
+      "evidence": "The fetch returns one caller reference and cache_set takes one cache reference. If the loader opened successfully but propq_copy or the OwnedCtx allocation is refused, control reaches 'err, ossl_store_close_it (&tmpctx) releases the caller reference (:665 -> store_meth.rs free), and :942 releases it again. The second release consumes the cache's reference and frees the block while the method-store Query still holds its pointer; a later cache_get/flush then uses freed memory. The authority has the same double release at store_lib.c:234 under a Coverity suppression. Repair (not applied here): clear fetched_loader after close_it or free it only in the branch where close_it was not called; control: allocator-refusal probe through OSSL_STORE_open_ex."
+    },
+    {
+      "file": "src/store/store_result.rs",
+      "caller": "OSSL_STORE_INFO / ctx fetch consumers via OSSL_STORE_LOADER_get0_provider",
+      "disposition": "SAFE",
+      "evidence": "The loader is live and holds a provider reference; get0_provider returns a borrowed pointer that is not released by the accessor. No ownership transfer."
+    },
+    {
+      "file": "src/provider/file_store.rs",
+      "caller": "the_file_fetch_resolves_through_the_published_row",
+      "disposition": "SAFE",
+      "evidence": "Loads the default/base providers, fetches the 'file' loader, checks is_a, and frees the one returned reference exactly once. Ran on the final blob."
+    },
+    {
+      "file": "src/store/store_register.rs",
+      "caller": "OSSL_STORE_LOADER_new legacy constructor (:251-275)",
+      "disposition": "SAFE (residual B26-R1)",
+      "evidence": "zalloc() + into_raw() is reclaimed by the same OSSL_STORE_LOADER_free legacy arm; prov stays NULL, so the count is untouched and the block is freed once. Its allocation coordinates remain the seam's inert (NULL, 0) rather than store_register.c:46."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean (final blob).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (final blob).",
+      "focused_tests": "store_meth filter: 2 passed / 0 failed (zero_state_sweep_ossl_store_loader and the provider activation store-removal test); the_file_fetch_resolves_through_the_published_row: 1 passed / 0 failed.",
+      "structural_guards": "CRYPTO_* seam size unchanged; FILE/LINE now (store_meth.c, 50/39/55) for the loader block. #[repr(C)] OsslStoreLoader and LoaderDataSt layouts unchanged. Ten exports and every signature unchanged. unsafe lint attributes unchanged; one private fn made unsafe with a stated contract, no new unsafe operation."
+    },
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1697 passed / 0 failed / 27 ignored (1724 total), 92.64 s.",
+      "serial": "cargo test --lib -- --test-threads=1: 1697 passed / 0 failed / 27 ignored (1724 total), 235.78 s.",
+      "note": "Both runs are on the final blob (after both repairs and the call-site SAFETY comments); the earlier run of the same suite, before the B26-SM-D2 marker change, also passed 1697/0/27."
+    }
+  },
+  "controls_observed": [
+    "provider::file_store::tests::the_file_fetch_resolves_through_the_published_row exercises the real default/base providers, construct_loader, the mcm put/get path, cache_set, is_a and one free; passed on the final blob.",
+    "store::store_meth::zero_state_sweep_ossl_store_loader executes destroy_body on an all-zero loader (CtxDestroy obligation (b)).",
+    "No new negative control was added: the two repairs are a coordinate choice and an unsafe marker. The cross-file OOM double release has no in-scope control and is recorded NOT_RUN."
+  ],
+  "miri": {
+    "status": "NOT_RUN",
+    "reason": "The boundary's observable paths require the C allocator seam and real provider machinery (provider load, dispatch tables, thread-local ERR state), which are outside Miri's supported FFI set. The one Miri-runnable test (zero_state_sweep_ossl_store_loader) is allocation-only and the repairs change no pointer arithmetic, aliasing or borrow."
+  },
+  "asan": {
+    "status": "NOT_RUN",
+    "reason": "No allocation size, ownership transition or access extent changed in this file. The one confirmed memory-safety defect is in src/store/store_lib.rs and needs an allocator-refusal probe, not ASan on the normal path; it is out of this batch."
+  },
+  "loom_or_tsan": "NOT_RUN. No lock, atomic protocol or shared-ownership transition was edited. The store's lock order is unchanged and was exercised by the full threaded suite; the callback reentrancy order is B22-MCM's, unchanged.",
+  "invalidated_evidence": {
+    "closed": "The B25/M82 deferral of src/store/store_meth.rs is closed; the file is in AUDITED-FILES.txt.",
+    "invalidated": "Loader allocation/release transcripts bound to the pre-fix blob e728991f3 are superseded for provider loaders: the allocator now records (store_meth.c, 50) and the release (store_meth.c, 39), with (55) on the refused provider up-ref. Any allocator-transcript receipt that asserted the inert (NULL, 0) coordinates for this type is invalid for the provider arm.",
+    "not_invalidated": "RC-1/D562, OB-3 CtxDestroy/zero-validity, OB-1/OB-2 member buffers, B9/B10 registry serialization, B22-MCM refcount/put/destruct, and the #[repr(C)]/exported-symbol receipts are unchanged and reused. Store_register's legacy allocation coordinate residual is unchanged."
+  },
+  "hidden_obligations": 0,
+  "hidden_obligations_note": "Zero. Every caller obligation is stated at the point of use: live/non-NULL provider to new_loader; terminated, signature-correct provider dispatch table and live OSSL_ALGORITHM; live/non-NULL libctx to get_loader_store (now unsafe); owned-reference discipline for up_ref/free; borrowed loader/name/param pointers for the accessors and callbacks; and the B22 mcm refcount/temporary-store/no-lock-reentry contract. The cross-file store_lib double release is a caller violation of the free contract, recorded as an escalation, not an unstated obligation of this file.",
+  "new_unsafe_assumptions": 0,
+  "new_unsafe_assumptions_note": "None added. B26-SM-D2 made the existing libctx-liveness obligation explicit by making the private get_loader_store unsafe; it did not add a dereference or a raw operation.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_removed_detail": "None. ",
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 0,
+  "test_only_unsafe_note": "No test-only code added.",
+  "boundary_size": "1 file, +68/-21 (src/store/store_meth.rs; the seam coordinates, the unsafe marker and its call-site SAFETY comments, and the borrowed-pointer/callback contract text). No layout, export, signature or allocation size changed.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "No safe interface in this file can reach a raw dereference: every entry point is unsafe with a contract, and get_loader_store is now unsafe too. The remaining crate-wide lib_ctx_get_data safe wrapper is a pre-existing cross-file wrapper (D113) whose own obligation is unchanged; this file no longer relies on it at a safe boundary.",
+  "residuals": [
+    {
+      "id": "B26-R1",
+      "file": "src/store/store_register.rs",
+      "severity": "low",
+      "disposition": "RECORDED cross-file allocator-seam residual",
+      "description": "The legacy OSSL_STORE_LOADER_new path keeps OwnedCtx::zalloc()'s inert (NULL, 0) allocation coordinate instead of the authority's store_register.c:46. The shared release now records store_meth.c:39 exactly for both loader kinds. store_register.rs is outside this one-file batch."
+    },
+    {
+      "id": "B26-R2",
+      "file": "src/context/mod.rs",
+      "severity": "low",
+      "disposition": "RECORDED crate-wide safe-wrapper assumption (D113)",
+      "description": "lib_ctx_get_data is declared safe but forwards the raw context to OSSL_LIB_CTX_get_data, which dereferences it. This file now carries the liveness contract at an unsafe get_loader_store; other safe callers of the wrapper are unchanged and outside this batch."
+    },
+    {
+      "id": "B26-R3",
+      "file": "src/store/store_meth.rs",
+      "severity": "low",
+      "disposition": "RECORDED borrowed-pointer lifetime",
+      "description": "propdef/description/scheme and the settable-params array are provider/algorithm-owned; the name-map strings are valid only during the callback. The loader's provider reference keeps the first group alive; the second is stated on names_do_all."
+    },
+    {
+      "id": "B26-R4",
+      "file": "src/store/store_meth.rs",
+      "severity": "low",
+      "disposition": "RECORDED external-ABI callback contract",
+      "description": "do_all_provided's user_fn must be non-NULL and receives a borrowed loader from the store's snapshot; a callback that releases it without its own up-ref is a caller error. The authority has the same contract."
+    },
+    {
+      "id": "B26-R5",
+      "file": "src/store/store_meth.rs",
+      "severity": "low",
+      "disposition": "RECORDED provider-ABI contract",
+      "description": "The OSSL_DISPATCH table termination and the signature match of each OSSL_FUNC_STORE_* entry are provider obligations established by the core provider machinery, not by this file. A NULL table is treated as empty (a defined refusal) rather than the authority's dereference."
+    }
+  ],
+  "escalations": [
+    {
+      "id": "B26-X1",
+      "file": "src/store/store_lib.rs",
+      "line": 942,
+      "severity": "high",
+      "class": "double release / use-after-free under allocation failure",
+      "description": "OSSL_STORE_open_ex's err tail calls OSSL_STORE_LOADER_free(fetched_loader) after ossl_store_close_it(&tmpctx) already released the context's reference (:665), when loader_ctx was non-NULL. The second call releases a reference the caller no longer owns; with the cache reference present it frees the block while the method-store Query still points at it, so the next cache hit or flush uses freed memory. The path is reachable when propq_copy (:887) or the OwnedCtx allocation (:896) is refused after a successful provider open. The authority reproduces the same release at store_lib.c:234 (Coverity-suppressed).",
+      "scope": "Out of this one-file batch by instruction; store_lib.rs was audited at M1, so this is a newly discovered defect in an audited file. Proposed repair: set fetched_loader to NULL after ossl_store_close_it at the err tail (or free only in the loader_ctx == NULL branch), keeping the authority's non-double-release intent; control: allocator-refusal probe asserting one release and a live cache entry, then a cache flush.",
+      "authority_parity": "store_lib.c:210-237 (the err tail) and :577-597 (close_it)"
+    }
+  ]
+}

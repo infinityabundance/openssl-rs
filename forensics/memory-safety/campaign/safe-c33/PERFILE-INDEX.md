@@ -7477,3 +7477,78 @@ unsafe assumptions: **0**; unsafe operations introduced/removed/relocated:
 `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`, `src/x509/by_store.rs`,
 `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`, `src/x509/pcy_node.rs`,
 `src/x509/t_acert.rs`.
+
+## BOUNDARY SWEEP B26 — OSSL_STORE_LOADER method registry, fetch and enumeration (`store/store_meth.rs`)
+
+Receipt: [`atlas-refresh/boundary-sweep-B26.json`](atlas-refresh/boundary-sweep-B26.json).
+
+**Candidate identity.** `integrate/safe-c33` at source HEAD `aa21a21a2`; worktree
+`src/store/store_meth.rs` blob `8f9d5e630` (pre-fix `e728991f3`). Authority:
+`crypto/store/store_meth.c` (511 lines, read whole) and `crypto/store/store_local.h:82-117`;
+`store_lib.c:63-238/:577-597` and `crypto/property/property.c:559-610` for the caller and
+store-walk comparison.
+
+**Disposition.** CONTRACTED, not `SAFETY_DISCHARGED` (the file's caller closure contains a
+confirmed cross-file defect; see B26-X1). Six boundaries, all CONTRACTED:
+B26-SM-1 loader lifecycle (`new_loader`, `CtxDestroy`, `up_ref`/`free`, the two store
+callbacks; RC-1/D562 + OB-3); B26-SM-2 dispatch scan/construct/destruct (the ten
+`OSSL_FUNC_STORE_*` slots, the four-clause sanity check, the B22 mcm put/destruct refcount
+pairing); B26-SM-3 fetch plumbing (`LoaderDataSt`, temporary store, reserve/unreserve,
+get/put bridges, `inner_loader_fetch`, `OSSL_STORE_LOADER_fetch`; B9/B10/B22 registry
+serialization and lock order biglock -> namemap/property); B26-SM-4 store maintenance;
+B26-SM-5 accessors (borrowed provider/string/param pointers); B26-SM-6 enumeration
+(snapshot-under-lock, borrowed loader).
+
+**Defects repaired.**
+- **B26-SM-D1 (low, allocator seam, `new_loader`/`OSSL_STORE_LOADER_free`).** The loader
+  block was allocated and released at the seam's inert `(NULL, 0)`, so an allocator hook saw
+  neither the authority's `store_meth.c:50` allocation nor its `:39` release (`:55` on the
+  refused provider up-ref). `new_loader` now uses `OwnedCtx::zalloc_at` and moves the
+  failure-only release to `:55`; `OSSL_STORE_LOADER_free` uses `from_raw_at` at `:39` for
+  both provider and legacy loaders. Size/layout unchanged.
+- **B26-SM-D2 (low, safe-wrapper obligation).** `get_loader_store` was a safe `fn` that
+  forwarded a raw `libctx` to the crate's safe `lib_ctx_get_data` wrapper, whose body
+  dereferences the context (D113). It is now `unsafe fn` with a stated NULL-or-live contract
+  and SAFETY comments at every call site. No new raw operation; the existing obligation is
+  now carried at an unsafe boundary of this file.
+
+**STOP-class cross-file finding (not repaired here).** `B26-X1` (`src/store/store_lib.rs:942`,
+high): `OSSL_STORE_open_ex`'s `err` tail releases `fetched_loader` after
+`ossl_store_close_it` already released the context's reference (when `loader_ctx` is non-NULL).
+OOM-reachable (the `propq_copy` or `OwnedCtx` allocation refusal after a successful provider
+open); the second release consumes the method-store cache's reference and frees the block
+while the cache `Query` still points at it. The authority has the same double release at
+`store_lib.c:234` (Coverity-suppressed). Proposed repair: clear `fetched_loader` after
+`close_it` at the `err` tail; control: allocator-refusal probe plus a cache flush. Next
+boundary repair, before promotion; it is not a defect of `store_meth.rs` (the caller violates
+`OSSL_STORE_LOADER_free`'s owned-reference contract).
+
+**Gates observed (final blob).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `store_meth` **2 passed / 0
+failed**, `the_file_fetch_resolves_through_the_published_row` **1 passed / 0 failed**; full
+library **1697 passed / 0 failed / 27 ignored** (1724 total) with `--test-threads=4`
+(92.64 s) and `--test-threads=1` (235.78 s), in the court with `CARGO_BUILD_JOBS=4`.
+
+**Assumptions.** Eliminated: 0. Relocated: 0. New: 0. Hidden: **0**. No production unsafe
+operation added or removed; one private safe function made unsafe to state its existing
+obligation, and the allocator transcript changed only for the loader block (to the
+authority's coordinates). Residuals: B26-R1 legacy constructor coordinates
+(`store_register.rs`), B26-R2 the crate-wide `lib_ctx_get_data` safe wrapper, B26-R3 borrowed
+provider/name pointers, B26-R4 the do_all borrowed-loader/callback contract, B26-R5 the
+provider dispatch termination/signature contract.
+
+**NOT_RUN.** Miri (the boundary's observable paths require the C allocator seam and real
+provider machinery), ASan (no allocation/access extent changed in this file; B26-X1 needs an
+allocation-refusal probe in `store_lib.rs`), Loom/TSan (no lock or atomic protocol edited;
+the full threaded suite is the only concurrency evidence), `RT-STORE`/`RT-FETCH`
+differential, FRF/SEAL.
+
+**Classification.** CONTRACTED. No safe caller can cause UB through this file's interfaces
+(`safe_callers_can_cause_ub: false`); the blocking item is the caller B26-X1.
+
+**Queue.** `REMAINING-AUDIT.txt` **54**, `AUDITED-FILES.txt` **709**.
+**Next ordinary position.** `src/ui/ui_openssl.rs`; before any promotion, repair
+`src/store/store_lib.rs:942` (B26-X1), which was previously audited at M1.
+**Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
+`src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
+`src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.
