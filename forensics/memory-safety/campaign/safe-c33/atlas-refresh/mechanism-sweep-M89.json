@@ -1,0 +1,115 @@
+{
+  "receipt": "mechanism-sweep-M89",
+  "branch": "integrate/safe-c33",
+  "source_head": "0bfd7f1e5",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH, plus the campaign census reconciliation. Six files audited; one low-severity compatibility defect repaired with a focused regression test, no memory-safety defect, no ABI/layout regression, no new unsafe operation and no new hidden obligation. The 761-file PARTIAL queue is complete. The pinned 868-file census is stale relative to the 877-file current tree: nine post-census files are listed in census.unaccounted_files and must be folded into a refreshed census before any SEAL or SAFE_COMPATIBLE claim.",
+  "scope": "Per-file contract audit of the final six entries of REMAINING-AUDIT.txt: the X509 trust table and its checkers; X509_certificate_type; the X509_ATTRIBUTE item, constructor and attribute-value printer; the X509_EXTENSION/X509_EXTENSIONS item wrappers; the X509_REQ/X509_REQ_INFO items and the request callbacks, distinguishing-id accessors and library-context helpers; and the X509_CERT_AUX item with the alias/key-id/trust/reject surface.",
+  "files": [
+    "src/x509/x509_trust.rs",
+    "src/x509/x509type.rs",
+    "src/x509/x_attrib.rs",
+    "src/x509/x_exten.rs",
+    "src/x509/x_req.rs",
+    "src/x509/x_x509a.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M89-D1",
+      "file": "src/x509/x_attrib.rs",
+      "line": 266,
+      "severity": "low",
+      "class": "compatibility",
+      "detail": "is_dn_oid returned true for NID_undef, so the V_ASN1_SEQUENCE arm sent every unknown-OID sequence to d2i_X509_NAME. In the exact authority tag (openssl-3.6.4/crypto/x509/x_attrib.c:169-214) the inner switch starts `case NID_undef: /* Unrecognized OID. */ break;`, which exits that inner switch and reaches `return ASN1_parse_dump(...)`; only the nine named attribute types decode a distinguished name. The visible consequence: for an empty Name encoding (`30 00`) the crate printed nothing and answered 0 where the authority dumps and answers positive, and for other bytes it printed `(COULD NOT DECODE DISTINGUISHED NAME)` and answered 0. v3_attrdesc calls the printer with obj_nid 0, so every SEQUENCE algorithm parameter took the wrong arm. Repaired by removing NID_undef from is_dn_oid and correcting the adjacent contract note; a focused regression test pins the DER-dump answer. The line number is the pre-edit locus; is_dn_oid now begins at line 265."
+    }
+  ],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "test_only_unsafe_operations": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [
+    "src/x509/x_attrib.rs:261-264: the is_dn_oid note claimed NID_undef is attempted as a distinguished name and only falls back to the DER dump when the decode fails. The authority's `case NID_undef: break;` leaves the inner switch for ASN1_parse_dump, so the note now states that only the nine named attribute types take the DN decode and NID_undef takes the dump."
+  ],
+  "boundary_control": [
+    "The repaired branch is a compatibility relation, so its control is a differential read of the exact authority tag (openssl-3.6.4/crypto/x509/x_attrib.c:169-214) plus a focused unit test (`x509::x_attrib::tests::undefined_oid_sequence_is_dumped_not_decoded_as_a_name`) that feeds an empty SEQUENCE through an ASN1_TYPE with obj_nid NID_undef and observes a positive answer and a non-empty memory-BIO dump. The old arm answered 0 on the same input.",
+    "No C probe exercises ossl_print_attribute_value through v3_aaa/v3_attrdesc/v3_attrmap/v3_sda, so no existing probe transcript changes; the closest probe (RT-STORE) prints basicConstraints and an unknown extension, neither of which reaches the attribute printer."
+  ],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean, before and after the test refinement",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean (14.92 s incremental)",
+    "focused": "cargo test --lib undefined_oid_sequence_is_dumped -- --test-threads=4: 1 passed / 0 failed / 0 ignored (1732 filtered)",
+    "full_lib_serial": "1702 passed / 0 failed / 31 ignored (1733 total), 275.97 s, --test-threads=1",
+    "full_lib_threads4": "1702 passed / 0 failed / 31 ignored (1733 total), 90.32 s, --test-threads=4",
+    "affected_probe": "NOT_RUN: no affected C probe transcript. No court builds an authority-attribute/attribute-descriptor/attribute-mapping/SDA extension and prints it, so none reaches ossl_print_attribute_value. The repaired branch is covered by the focused unit test and the openssl-3.6.4 source differential. Miri/ASan/Loom/TSan and dudect/ctgrind were not run; no owner, extent, aliasing, concurrency or constant-time mechanism changed."
+  },
+  "census": {
+    "candidate_head": "0bfd7f1e5",
+    "census_snapshot_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+    "census_generated_utc": "2026-10-17T21:31:36Z",
+    "src_rs_files_current": 877,
+    "census_files": 868,
+    "zero_unsafe": 92,
+    "boundary_covered": 15,
+    "partial": 761,
+    "audited_partial": 761,
+    "remaining": 0,
+    "audited_files_lines": 763,
+    "audited_files_note": "AUDITED-FILES.txt has 763 unique lines: the 761 PARTIAL files plus two BOUNDARY_COVERED files that received boundary receipts and are also listed (src/bn/recp.rs B12, src/runtime/thread.rs B11). The PARTIAL-vs-AUDITED set difference is empty in both directions after excluding those two extras.",
+    "zero_unsafe_nonzero_sites": 0,
+    "boundary_covered_unattributed": 0,
+    "unaccounted_files": [
+      "src/runtime/bio/owned_ctx_model.rs (cfg(test)-only model)",
+      "src/runtime/bio/zero_state.rs (cfg(test)-only sweep)",
+      "src/runtime/foreign.rs (production; OwnedCtx/FreeOnDrop owner boundary)",
+      "src/runtime/member_slot_model.rs (cfg(test)-only model)",
+      "src/runtime/member_slot.rs (production; OB-4 member-buffer slot)",
+      "src/runtime/mem_coords.rs (production; B-ALLOC-SEAM coordinate)",
+      "src/runtime/owned_buf_model.rs (cfg(test)-only model)",
+      "src/runtime/owned_str_model.rs (cfg(test)-only model)",
+      "src/runtime/release_probe.rs (cfg(test)-only probe)"
+    ],
+    "unaccounted_note": "These nine files are absent from the pinned 868-file census commit c09eef8b and were added later. Six are compiled only under cfg(test). Three are production helpers at already-established shared boundaries, but they have no census attribution row. They are unclassified with respect to the census, not with respect to the 761-file per-file queue; a census refresh and attribution pass are required at the next BATCH/SEAL gate. No claim of full campaign closure is made."
+  },
+  "retained_obligations": [
+    "src/x509/x509_trust.rs: the reserved rows live in a static UnsafeCell under the authority's unlocked single-threaded table discipline; dynamic rows are CRYPTO_malloc blocks released once by OwnedCtx, and RawTrust releases only the block on the error tail; a row's name is owned only when X509_TRUST_DYNAMIC_NAME is set; X509_TRUST_add's existing-row strdup failure leaves the row with a NULL name and does not free the row, matching the authority's `err: if (idx < 0)` guard; tr_cmp receives pointer-to-element slots; X509_TRUST_cleanup is NULL-tolerant; X509_check_trust's fallback slot is a valid checker and a NULL slot answers 0 instead of reproducing the authority's UB call.",
+    "src/x509/x509type.rs: x is live and pkey is NULL-or-live; X509_get0_pubkey may answer NULL and is rechecked; OBJ_find_sigid_algs writes its out-slot only when it answers success; the unit raises nothing.",
+    "src/x509/x_attrib.rs: X509_ATTRIBUTE_create takes a static OID by reference, uses the item's empty set stack, and adopts the ASN1_TYPE through ASN1_TYPE_set after a successful push; a failed push releases the attribute and the value exactly once and never the caller's adopted value; the printer requires a live BIO and a live ASN1_TYPE whose selector matches the arm taken; each union arm is read only for its own tag; the DN arm frees its decoded name; print_oid writes into its own 80-byte buffer.",
+    "src/x509/x_exten.rs: X509_EXTENSION_free/dup/d2i/i2d and the X509_EXTENSIONS wrapper follow the item layer's allocation, cursor and ownership contract; the embedded OCTET STRING is released by the item destructor, never separately.",
+    "src/x509/x_req.rs: pval/exarg obey the item layer's callback contract; rinf_cb installs one empty attribute stack on NEW_POST; req_cb clears distinguishing_id on D2I_PRE/NEW_POST, frees it and the propq member exactly once on FREE_POST, and on DUP_POST copies the context and property query and duplicates the public key, releasing each duplicate once; the GET0 out-slots are writable; the distinguishing-id setter transfers the octet string; ossl_x509_req_set0_libctx is NULL-tolerant and clears propq only through the member-slot token; X509_REQ_new_ex frees the request on a refused context copy.",
+    "src/x509/x_x509a.rs: aux_get creates at most one X509_CERT_AUX and answers NULL on refusal; the alias/key-id NULL-name arms clear only an existing string; X509_add1_trust_object accepts a NULL object and answers 1 after aux/stack setup, while X509_add1_reject_object requires a non-NULL object (the authority's own asymmetry); every OBJ_dup product is released exactly once on failure; trust/reject clear use the NULL-tolerant pop_free; the get0 readers borrow the stored alias/key-id data and write len only when it is non-NULL."
+  ],
+  "residuals": [],
+  "shared_boundary_files": [
+    "src/asn1/a_type.rs (ASN1_TYPE_new/free/set and the adopted-pointer contract)",
+    "src/asn1/d2i.rs, src/asn1/i2d.rs, src/asn1/fre.rs, src/asn1/new.rs, src/asn1/a_dup.rs (item layer allocation, cursor and destructor contracts)",
+    "src/asn1/x_algor.rs, src/asn1/items.rs (X509_ALGOR and the ASN1 item descriptors)",
+    "src/runtime/stack.rs (OPENSSL_sk_new/push/pop_free/value/num/sort/find and the NULL answers)",
+    "src/runtime/mem.rs (CRYPTO_malloc/strdup/free and the allocator seam)",
+    "src/runtime/owned_str.rs, src/runtime/owned_buf.rs, src/runtime/bio/owned.rs (OwnedStr/OwnedCtx block release)",
+    "src/runtime/member_slot.rs (PropqSlot clear/store token)",
+    "src/runtime/err.rs, src/runtime/err_sites.rs (raise_site and the local x509_trust/x_req coordinates)",
+    "src/x509/x509_req.rs (X509Req/X509ReqInfo layouts and the PropqSlot definition)",
+    "src/x509/x_x509.rs, src/x509/x_x509a.rs (X509 aux field and the X509_CERT_AUX layout)",
+    "src/x509/x_name.rs, src/x509/x_pubkey.rs (X509_NAME/X509_PUBKEY item and free contracts)"
+  ],
+  "secret_bearing_buffers": "No secret-bearing buffer or cleansing claim changed. The batch handles public certificate, request, attribute, extension and trust-table data; the property-query string in X509_REQ is non-secret configuration and keeps its existing member-slot release at the authority's seam coordinates. No CRYPTO_clear_free arm exists or was removed here.",
+  "unrelated_residuals": [],
+  "deferred": [],
+  "queue_after": {
+    "remaining": 0,
+    "audited": 761,
+    "audited_files_lines": 763
+  },
+  "next_queue": {
+    "next_file": null,
+    "then": [],
+    "next_workstream": "Downstream consumer courts (deepen L7 evidence for curl, nginx, OpenSSH, HAProxy, Redis and the other L7 families), an independent review of the per-file receipts, a refreshed 877-file census with attribution for the nine post-census files, and the SEAL dependency-closure evidence. No family is SAFE_COMPATIBLE from this queue alone."
+  }
+}
