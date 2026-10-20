@@ -1,0 +1,224 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v1",
+  "subphase": "C3",
+  "family": "redis",
+  "date_utc": "2026-10-20",
+  "generated": "2026-10-20",
+  "candidate": "d0f0fb992",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "head": "d0f0fb992d63ce377b5198bd03b24ba64f2e3eb9",
+    "head_subject": "Merge stage/p25/release-pkg: package under crates.io size limit (8.2 MiB)",
+    "includes_err_discharge_commit": "c394c8365 (B37, mechanism-scope SAFETY_DISCHARGED at 30541bae7)",
+    "err_discharge_is_ancestor_of_head": true
+  },
+  "ledger_record": {
+    "source": "forensics/memory-safety/campaign/safe-c33/state.json#/cohort/families/redis and atlas-refresh/consumer-status-C1.json#/l7_families[family=redis]",
+    "family_id": "family:redis",
+    "pinned_version": "7.4.1",
+    "p1000_rank": 40,
+    "ledger_level": "L7-functional",
+    "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+    "l7": "L7-functional",
+    "workload": "redis: TLS handshake + encrypted PING/+PONG",
+    "functional_ok": true,
+    "runtime_ok": true,
+    "load_all_under_prefix": true,
+    "linkage_proven": true,
+    "transcript_sha256": "07302a1fe4d4f0d0068398fb4d844ae699e4c879052bcc3b2a982a6b6aa9faec",
+    "source_sha256": "bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2",
+    "courts": [
+      "forensics/tools/downstream_runtime.py (24.7, executed; only harness for this family)"
+    ],
+    "evidence_gap": "Single-harness evidence. No independent phase17-style harness; C1 next_action requires one. This blocks independent compatibility confirmation, not the safety closure."
+  },
+  "symbol_evidence": {
+    "source": "forensics/downstream/usage-fingerprints.json#/body/fingerprints[family_id=family:redis]",
+    "artifact_rel": "src/redis-server",
+    "artifact_sha256": "5cb4cb3e08fb7cfeceace3a77d22f566dfe8335112aa8e89b6caf3aadbefeefd",
+    "max_level": "L5-loaded",
+    "linkage_proof_all_under_authority": true,
+    "openssl_headers": [
+      "openssl/conf.h",
+      "openssl/decoder.h",
+      "openssl/err.h",
+      "openssl/pem.h",
+      "openssl/rand.h",
+      "openssl/ssl.h"
+    ],
+    "imported_symbol_count": 51,
+    "imported_symbols": [
+      "BIO_ctrl",
+      "BIO_free",
+      "BIO_new",
+      "BIO_s_mem",
+      "ERR_clear_error",
+      "ERR_error_string_n",
+      "ERR_get_error",
+      "ERR_peek_last_error",
+      "ERR_reason_error_string",
+      "EVP_PKEY_free",
+      "OPENSSL_cleanup",
+      "OPENSSL_init_crypto",
+      "OPENSSL_init_ssl",
+      "OSSL_DECODER_CTX_free",
+      "OSSL_DECODER_CTX_new_for_pkey",
+      "OSSL_DECODER_from_fp",
+      "PEM_write_bio_X509",
+      "RAND_poll",
+      "SSL_CTX_ctrl",
+      "SSL_CTX_free",
+      "SSL_CTX_load_verify_locations",
+      "SSL_CTX_new",
+      "SSL_CTX_set0_tmp_dh_pkey",
+      "SSL_CTX_set_cipher_list",
+      "SSL_CTX_set_ciphersuites",
+      "SSL_CTX_set_default_passwd_cb",
+      "SSL_CTX_set_default_passwd_cb_userdata",
+      "SSL_CTX_set_default_verify_paths",
+      "SSL_CTX_set_options",
+      "SSL_CTX_set_session_id_context",
+      "SSL_CTX_set_timeout",
+      "SSL_CTX_set_verify",
+      "SSL_CTX_use_PrivateKey_file",
+      "SSL_CTX_use_certificate_chain_file",
+      "SSL_accept",
+      "SSL_connect",
+      "SSL_ctrl",
+      "SSL_free",
+      "SSL_get1_peer_certificate",
+      "SSL_get_error",
+      "SSL_new",
+      "SSL_pending",
+      "SSL_read",
+      "SSL_set_accept_state",
+      "SSL_set_connect_state",
+      "SSL_set_fd",
+      "SSL_set_verify",
+      "SSL_shutdown",
+      "SSL_write",
+      "TLS_client_method",
+      "TLS_method"
+    ]
+  },
+  "closure_source": {
+    "authoritative_list": "forensics/memory-safety/campaign/safe-c33/state.json#/cohort/families/redis.mechanisms",
+    "corroborating_list": "atlas-refresh/candidate.json#/cohort/families[family=redis].mechanisms",
+    "generator_exists": false,
+    "note": "No consumer-closure generator exists in forensics/tools or safe-c33. atlas_refresh.py generates per-family mechanism counts (MECHANISM_PATHS) but not consumer-closure-C*.json. C3 was computed by adjoining the authoritative 7-mechanism list to state.json mechanism states, the boundary-sweep receipts, and the newer mechanism-discharge-ERR receipt."
+  },
+  "mechanisms": [
+    {
+      "id": "ERR",
+      "status": "DISCHARGED",
+      "safety_state": "SAFETY_DISCHARGED (mechanism scope)",
+      "discharged": true,
+      "evidence": "atlas-refresh/mechanism-discharge-ERR.json: full ERR mechanism SAFETY_DISCHARGED at 30541bae7 (B37, merge c394c8365), scope = ERR queue, raise/report paths, C variadic adapter, OSSL_ERR_STATE save/restore, allocator-seam file coordinate. Independent review: atlas-refresh/independent-review-ERR.json (B35, INDEPENDENTLY_CHECKED at f152e82c4; NEO-ERR-6 closed at B36).",
+      "blocker": null,
+      "caveat": "consumer_c2_scope is RE_ADJUDICATION_PENDING. Redis imports ERR_peek_last_error and ERR_reason_error_string, which are not individually enumerated in the B35/B37 entry-point lists; both are implemented in src/runtime/err.rs within the queue/report surface. Consumer-scope mapping is an inference, not a fresh adjudication.",
+      "next_action": "Re-adjudicate redis consumer scope: confirm ERR_peek_last_error and ERR_reason_error_string fall inside the B37 declared ERR scope, then record the C3 consumer mapping."
+    },
+    {
+      "id": "RAND_CMS_STORE_KEYFMT",
+      "status": "CONTRACTED",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]; converted files src/cms/cms_env.rs, src/pem/pvkfmt.rs, src/store/store_lib.rs. Boundary receipts: B27 store_lib is scope-limited SAFETY_DISCHARGED (only the fetched_loader error-path release); B11 p12_crt, B17 decode_pvk2key, B1 file_store are CONTRACTED. No boundary receipt covers src/rand/rand_lib.rs (RAND_poll).",
+      "blocker": "Mechanism is not SAFETY_DISCHARGED. Redis's only RAND symbol, RAND_poll (src/rand/rand_lib.rs:582), has no boundary receipt; PEM_write_bio_X509 keys the PEM/key-format sub-surface.",
+      "next_action": "Contract RAND_poll (src/rand/rand_lib.rs:582) as a consumer-reachable boundary (seed/poll result, no owned block), the smallest uncovered redis symbol in this mechanism."
+    },
+    {
+      "id": "BIO",
+      "status": "BLOCKED",
+      "safety_state": "UNSAFE_OPEN",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=BIO] = UNSAFE_OPEN, converted_files_on_branch = []. Boundary receipts exist only for src/runtime/bio/iolib.rs (B1), bss_conn/bss_dgram/bss_dgram_pair (B2), bss_bio (B6), all CONTRACTED. Redis's surface is BIO_new/BIO_free (src/runtime/bio/mod.rs) and BIO_s_mem (src/runtime/bio/bss_mem.rs), plus BIO_ctrl (iolib.rs, contracted).",
+      "blocker": "No ownership reconstruction and no boundary receipt for the memory-BIO constructor/destructor used by redis; B1/B2/B6 do not cover bss_mem or the BIO_new/BIO_free owners.",
+      "next_action": "Boundary sweep of the memory-BIO ctor/dtor path: src/runtime/bio/mod.rs BIO_new/BIO_free and src/runtime/bio/bss_mem.rs BIO_s_mem (the 4 BIO symbols redis imports)."
+    },
+    {
+      "id": "EVP_PKEY_PROVIDER",
+      "status": "CONTRACTED",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]; 11 converted files. Boundary receipts CONTRACTED: B17 encoder_pkey, B17 provider/decode_pvk2key, B21 evp/algorithm, B22 evp/method_store, B8 provider/mod, B9 provider/activate/ec_kmgmt, B10 provider/rsa_kmgmt + evp/pkey_asn1, B14 provider/mac_legacy_kmgmt, B7 provider/conf, B17 evp/evp_pbe.",
+      "blocker": "No mechanism-scope discharge. Redis's OSSL_DECODER_CTX_new_for_pkey/from_fp/free and EVP_PKEY_free path is not separately receipted; the decoder-ctx owner is not one of the contracted files.",
+      "next_action": "Contract the OSSL_DECODER_CTX ownership path (new_for_pkey/from_fp/free) used by redis key decode; B17 provider/decode_pvk2key is the nearest contract."
+    },
+    {
+      "id": "RUNTIME_ALLOC_OWNERSHIP",
+      "status": "BLOCKED",
+      "safety_state": "UNSAFE_OPEN",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=RUNTIME_ALLOC_OWNERSHIP] = UNSAFE_OPEN, converted_files_on_branch = []. B34 added per-call SAFETY contracts across 152 files for the CRYPTO_* allocator entry points and repaired NEO-ERR-6/7; B36 made the file seam inexpressible in safe helpers. These are contracts, not an ownership model, and the registry state was not promoted.",
+      "blocker": "No ownership reconstruction at mechanism scope; the allocator seam has contracts but no discharged ownership model. Redis's OPENSSL_init_crypto/OPENSSL_init_ssl/OPENSSL_cleanup path depends on it.",
+      "next_action": "Independently review the B34/B36 allocator-seam contracts for the OPENSSL_init/cleanup path and decide whether they support a RUNTIME_ALLOC_OWNERSHIP ownership model; do not promote on the contract comments alone."
+    },
+    {
+      "id": "RUNTIME_CONCURRENCY",
+      "status": "CONTRACTED",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=RUNTIME_CONCURRENCY]; converted files src/context/namemap.rs, src/runtime/thread_events.rs. Boundary receipts CONTRACTED: B11 src/runtime/thread.rs, B15 src/runtime/init.rs, B15 src/runtime/thread_events.rs, B9 src/context/namemap.rs.",
+      "blocker": "No mechanism-scope discharge; CLOSURE.md records 25 unsynchronized mutable globals remaining in crypto/threads/init.",
+      "next_action": "Finish the crypto/init one-time-initialisation ordering for OPENSSL_init_crypto/OPENSSL_init_ssl (the init symbols redis imports), reusing the B15 init.rs contract."
+    },
+    {
+      "id": "SSL_SESSION",
+      "status": "CONTRACTED",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "discharged": false,
+      "evidence": "state.json#/mechanisms[id=SSL_SESSION]; converted files src/ssl/ssl_lib.rs, ssl_sess.rs, statem/statem_clnt.rs, statem/statem_srvr.rs. Boundary receipts CONTRACTED: B4 ssl_sess, B3/B4 statem_clnt, B3 statem_srvr, B3/B7/B17 ssl_lib, B25 rec_layer_s3 (also scope-limited SAFETY_DISCHARGED), B6 bio_ssl.",
+      "blocker": "No mechanism-scope discharge; ssl/dtls is recorded as an UNRESOLVED CVE mechanism in CLOSURE.md.",
+      "next_action": "Re-adjudicate SSL_CTX_set_session_id_context and SSL_CTX_set_timeout ownership (B4 ssl_sess contract) as the narrow redis-reachable session surface."
+    }
+  ],
+  "discharged_count": 1,
+  "total_count": 7,
+  "graduation": "BLOCKED",
+  "verdict": {
+    "state": "BLOCKED",
+    "safe_compatible": false,
+    "reason": "1 of 7 measured mechanisms is SAFETY_DISCHARGED (ERR, mechanism scope). The remaining 6 are 4x OWNERSHIP_RECONSTRUCTED/CONTRACTED (RAND_CMS_STORE_KEYFMT, EVP_PKEY_PROVIDER, RUNTIME_CONCURRENCY, SSL_SESSION) and 2x UNSAFE_OPEN (BIO, RUNTIME_ALLOC_OWNERSHIP). AGENTS.md section 7 requires every applicable mechanism SAFETY_DISCHARGED. L7 functional DROP_IN_PASS is necessary but not sufficient.",
+    "blockers": [
+      { "mechanism": "BIO", "state": "UNSAFE_OPEN", "required": "SAFETY_DISCHARGED" },
+      { "mechanism": "RUNTIME_ALLOC_OWNERSHIP", "state": "UNSAFE_OPEN", "required": "SAFETY_DISCHARGED" },
+      { "mechanism": "RAND_CMS_STORE_KEYFMT", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED" },
+      { "mechanism": "EVP_PKEY_PROVIDER", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED" },
+      { "mechanism": "RUNTIME_CONCURRENCY", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED" },
+      { "mechanism": "SSL_SESSION", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED" },
+      { "blocker": "consumer-scope ERR re-adjudication", "detail": "ERR mechanism scope is discharged; the redis consumer mapping (ERR_peek_last_error, ERR_reason_error_string) is RE_ADJUDICATION_PENDING." },
+      { "blocker": "expansion candidate", "detail": "X509_VERIFY_POLICY is not in the measured 7 but redis imports four verify-path symbols; conservative reading adds it unless non-impact is proven." },
+      { "blocker": "single-harness compatibility", "detail": "No independent phase17-style redis harness; blocks independent compatibility confirmation, not safety discharge." }
+    ]
+  },
+  "closure_expansion_candidates": {
+    "rule": "Conservative reading, matching C2: an imported symbol that enters an x509/pem/evp/BIO entry point pulls that mechanism into the closure unless non-impact is proven. This is inference, not a measured call graph.",
+    "candidates": [
+      {
+        "mechanism": "X509_VERIFY_POLICY",
+        "safety_state": "OWNERSHIP_RECONSTRUCTED",
+        "basis": "SSL_CTX_load_verify_locations, SSL_CTX_set_default_verify_paths, SSL_CTX_set_verify, SSL_get1_peer_certificate",
+        "why_not_in_measured_7": "state.json#/cohort/families/redis.mechanisms omits X509_VERIFY_POLICY, and candidate.json uses the same list. The omission is not explained by a recorded non-impact proof.",
+        "status": "CONTRACTED (B17 ssl_lib/SSL_set1_param/X509_VERIFY_PARAM_inherit; x509 policy campaign exists), not counted in total_count"
+      }
+    ]
+  },
+  "schema_mismatch": {
+    "requested_vs_c2": "The task requested keys family/candidate/generated/mechanisms[id,status,evidence,blocker,next_action]/discharged_count/total_count/graduation. C2 uses schema/subphase/date_utc/candidate_identity/closure[].safety_state/verdict/counts. C3 keeps the task keys and adds C2-compatible schema, source_identity, ledger_record, symbol_evidence, safety_state, discharged, verdict, closure_expansion_candidates. The requested 5-value status is a coarse projection of the campaign's 3-value safety_state vocabulary; safety_state is retained verbatim.",
+    "status_projection": {
+      "DISCHARGED": "safety_state == SAFETY_DISCHARGED",
+      "CONTRACTED": "safety_state == OWNERSHIP_RECONSTRUCTED (ownership model or boundary contracts exist, no mechanism discharge)",
+      "INDEPENDENTLY_CHECKED": "independent review exists but no discharge (none among the 7 after B37)",
+      "BLOCKED": "safety_state == UNSAFE_OPEN; no ownership reconstruction; blocks graduation",
+      "UNKNOWN": "no state could be determined (none among the 7)"
+    }
+  },
+  "non_claims": [
+    "This is a measurement and closure record, not a safety discharge or a SAFE_COMPATIBLE promotion.",
+    "Errors and statuses came from state.json at the frozen inventory candidate (67ae7f8e9) plus the later boundary and mechanism-discharge receipts; the source tree is HEAD d0f0fb992. No source file was re-audited for this record.",
+    "The redis mechanism list is the measured fingerprint join in state.json/candidate.json; the X509_VERIFY_POLICY expansion is inference and is not counted.",
+    "No cargo/rustc/test was run for C3. No build or test evidence is claimed here.",
+    "L7 functional evidence is a single harness (downstream_runtime.py); it does not establish independent compatibility."
+  ]
+}
