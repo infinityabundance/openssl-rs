@@ -57,6 +57,7 @@ use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::str::OPENSSL_strcasecmp;
 
 use super::hash_ctx::{
@@ -65,6 +66,7 @@ use super::hash_ctx::{
 use super::params::ossl_slh_dsa_params_get;
 use super::xmss::ossl_slh_xmss_node;
 use super::{SlhDsaHashCtx, SlhDsaKey, SLH_DSA_MAX_N};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `core_dispatch.h:649`, `PRIVATE_KEY | PUBLIC_KEY`.
 ///
@@ -77,6 +79,7 @@ pub(crate) const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
 
 /// The unit's own `__FILE__` — `slh_dsa_key.c` is a plain `.c`.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c");
 /// `slh_dsa_key.c:106`, the `OPENSSL_zalloc(sizeof(*ret))` in `..._new`.
 const LINE_ZALLOC_NEW: c_int = 106;
 /// `slh_dsa_key.c:152`, the `OPENSSL_zalloc` in `..._dup`.
@@ -91,7 +94,7 @@ const LINE_FREE_KEY: c_int = 134;
 pub(crate) unsafe fn slh_dsa_key_hash_cleanup(key: *mut SlhDsaKey) {
     // SAFETY: `key` is live per the contract.
     unsafe {
-        CRYPTO_free((*key).propq.cast::<c_void>(), FILE, LINE_FREE_PROPQ);
+        drop(OwnedStr::adopt((*key).propq, FILE_SEAM, LINE_FREE_PROPQ));
         if (*key).md_big != (*key).md {
             EVP_MD_free((*key).md_big);
         }
@@ -158,8 +161,11 @@ pub(crate) unsafe fn ossl_slh_dsa_key_new(
         return ptr::null_mut();
     }
 
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_NEW).cast::<SlhDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_NEW)
+    }
+    .cast::<SlhDsaKey>();
     if ret.is_null() {
         return ret;
     }
@@ -169,11 +175,19 @@ pub(crate) unsafe fn ossl_slh_dsa_key_new(
         (*ret).libctx = libctx;
         (*ret).params = params;
         if !propq.is_null() {
-            (*ret).propq = CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ret).propq.is_null() {
+            // `CRYPTO_strdup` answers NULL or a plain NUL-terminated copy the crate allocated and
+            // no one else owns; the handle adopts it so a refusal below releases it at the
+            // authority's own site.
+            // SAFETY: `propq` is NULL or a NUL-terminated C string per the contract.
+            let Some(q) = OwnedStr::adopt(
+                CRYPTO_strdup(propq, FILE, LINE_STRDUP_PROPQ),
+                FILE_SEAM,
+                LINE_FREE_PROPQ,
+            ) else {
                 ossl_slh_dsa_key_free(ret);
                 return ptr::null_mut();
-            }
+            };
+            (*ret).propq = q.into_raw();
         }
         if slh_dsa_key_hash_init(ret) == 0 {
             ossl_slh_dsa_key_free(ret);
@@ -217,8 +231,11 @@ pub(crate) unsafe fn ossl_slh_dsa_key_dup(
     if src.is_null() {
         return ptr::null_mut();
     }
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_DUP).cast::<SlhDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<SlhDsaKey>(), FILE, LINE_ZALLOC_DUP)
+    }
+    .cast::<SlhDsaKey>();
     if ret.is_null() {
         return ret;
     }
@@ -232,11 +249,17 @@ pub(crate) unsafe fn ossl_slh_dsa_key_dup(
         (*ret).has_priv = 0;
         slh_dsa_key_hash_dup(ret, src);
         if !(*src).propq.is_null() {
-            (*ret).propq = CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ);
-            if (*ret).propq.is_null() {
+            // SAFETY: `(*src).propq` is NULL or a NUL-terminated string this file's `_new`/`_dup`
+            // strdup'd and no other owner releases.
+            let Some(q) = OwnedStr::adopt(
+                CRYPTO_strdup((*src).propq, FILE, LINE_STRDUP_PROPQ),
+                FILE_SEAM,
+                LINE_FREE_PROPQ,
+            ) else {
                 ossl_slh_dsa_key_free(ret);
                 return ptr::null_mut();
-            }
+            };
+            (*ret).propq = q.into_raw();
         }
         if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
             /* The public components are present if the private key is present. */

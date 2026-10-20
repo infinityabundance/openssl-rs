@@ -188,6 +188,110 @@ unsafe fn ok_ctx(b: *mut Bio) -> *mut BioOkCtx {
     unsafe { BIO_get_data(b).cast() }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership seam
+// ---------------------------------------------------------------------------------------------
+
+/// Owned storage for a [`BioOkCtx`] that is **not yet** a valid context -- the `ok_new` window.
+///
+/// The two releases the authority performs on a `BIO_OK_CTX` differ: a failure to create the
+/// `EVP_MD_CTX` frees the block with a bare `OPENSSL_free` (plain `CRYPTO_free` at `:143`), while
+/// `ok_free` frees the armed context as a secret-bearing block with `OPENSSL_clear_free`
+/// (`CRYPTO_clear_free` at `:162`) after releasing its `md`. The two states are therefore two
+/// types: [`RawCtx`] owns storage that is not yet a valid context and releases the block **alone**
+/// (never a destructor body, because the context never became valid), and [`OwnedCtx`] owns a live
+/// context a BIO published and runs the authority's `ok_free` body. Both stay `CRYPTO_*`-seam
+/// allocations at the authority's own size/`file`/`line`, so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes every end; only the *ownership* is these types.
+struct RawCtx {
+    ptr: *mut BioOkCtx,
+}
+
+impl RawCtx {
+    /// `CRYPTO_zalloc(sizeof(BIO_OK_CTX), FILE, 136)` -- `ok_new`'s own allocation -- or `None`
+    /// when the allocator answers NULL.
+    fn zalloc() -> Option<RawCtx> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<BioOkCtx>()` bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<BioOkCtx>(), FILE, 136)
+        }
+        .cast::<BioOkCtx>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(RawCtx { ptr: raw })
+        }
+    }
+
+    /// The writable start of the block, for `ok_new`'s field writes.
+    fn as_ptr(&self) -> *mut BioOkCtx {
+        self.ptr
+    }
+
+    /// The validated transition: the storage now holds a live context the BIO owns.
+    ///
+    /// # Safety
+    /// Every field this file's methods and [`OwnedCtx`]'s `Drop` read has been written, so the
+    /// block is a valid `BioOkCtx`; no other owner will release it.
+    unsafe fn assume_init(self) -> OwnedCtx {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        OwnedCtx { ptr }
+    }
+}
+
+impl Drop for RawCtx {
+    /// Releases the block **alone** with the authority's own bare `OPENSSL_free` on `ok_new`'s
+    /// failure path (`:143`) -- never the armed context's cleansing release, which would be wrong
+    /// for a context that never became valid, and never a destructor body.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
+        // single release, and the authority's own bare `CRYPTO_free` is the whole of it.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE, 143) };
+    }
+}
+
+/// An owned, live [`BioOkCtx`]: the block a BIO's data slot holds, released the authority's way.
+struct OwnedCtx {
+    ptr: *mut BioOkCtx,
+}
+
+impl OwnedCtx {
+    /// Give up ownership of the block to the C ABI's BIO data slot.
+    fn into_raw(self) -> *mut BioOkCtx {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim the block a BIO's data slot holds.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live context `ok_new` published and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut BioOkCtx) -> Option<OwnedCtx> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedCtx { ptr })
+        }
+    }
+}
+
+impl Drop for OwnedCtx {
+    /// The authority's own `ok_free` body: the `EVP_MD_CTX` release, then the secret-bearing
+    /// context's `OPENSSL_clear_free`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the live context this handle owns and has not released; `md` is
+        // NULL or the digest context `ok_new` created, and `EVP_MD_CTX_free` accepts NULL.
+        unsafe { EVP_MD_CTX_free((*self.ptr).md) };
+        // SAFETY: `self.ptr` is that same context, readable for `size_of::<BioOkCtx>()` bytes; the
+        // authority's own `CRYPTO_clear_free` zeroes then releases it and accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), core::mem::size_of::<BioOkCtx>(), FILE, 162) };
+    }
+}
+
 /// `static int ok_new(BIO *bi)` — `crypto/evp/bio_ok.c:132-150`.
 ///
 /// `cont` and `sigio` are **1**, and `BIO_set_init(bi, 0)` leaves the filter *uninitialised* until
@@ -198,23 +302,31 @@ unsafe fn ok_ctx(b: *mut Bio) -> *mut BioOkCtx {
 /// # Safety
 /// `bi` must be the live BIO `BIO_new` is creating.
 unsafe extern "C" fn ok_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `OPENSSL_zalloc` is `CRYPTO_zalloc`; the block is this call's own.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<BioOkCtx>(), FILE, 136).cast::<BioOkCtx>();
-    if ctx.is_null() {
+    // SAFETY: `CRYPTO_zalloc` (`OPENSSL_zalloc`) returns a fresh, zeroed block of the requested
+    // size, or NULL; the block is this call's own.
+    let Some(ctx) = RawCtx::zalloc() else {
         return 0;
-    }
-    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    };
+    let c = ctx.as_ptr();
+    // SAFETY: `c` is a fresh zeroed block this call owns.
     unsafe {
-        (*ctx).cont = 1;
-        (*ctx).sigio = 1;
-        (*ctx).md = EVP_MD_CTX_new();
-        if (*ctx).md.is_null() {
-            CRYPTO_free(ctx.cast(), FILE, 143);
+        (*c).cont = 1;
+        (*c).sigio = 1;
+        (*c).md = EVP_MD_CTX_new();
+        if (*c).md.is_null() {
+            // The context never became a valid `BioOkCtx` (its `md` was not created); `ctx` drops
+            // here as a `RawCtx`, releasing the block alone -- exactly the authority's own bare
+            // `OPENSSL_free` on this path (`:143`), never the armed context's cleansing release.
             return 0;
         }
         BIO_set_init(bi, 0);
-        BIO_set_data(bi, ctx.cast());
+        BIO_set_data(bi, c.cast());
     }
+    // `cont`/`sigio`/`md` were all written above, so the storage is a valid `BioOkCtx`; it is now
+    // the BIO's, and `ok_free` reclaims it through `OwnedCtx::from_raw`, whose `Drop` runs the
+    // authority's `ok_free` body.
+    // SAFETY: as just stated, and `ctx` is the sole owner of the block.
+    let _ = unsafe { ctx.assume_init() }.into_raw();
     1
 }
 
@@ -235,9 +347,10 @@ unsafe extern "C" fn ok_free(a: *mut Bio) -> c_int {
     let ctx = unsafe { ok_ctx(a) };
     // SAFETY: `ctx` is this BIO's own context, and `ok_new` publishes the data slot only once
     // `ctx->md` is non-NULL, so both the digest context and the block are this call's to release.
+    // `OwnedCtx`'s `Drop` runs the authority's `ok_free` body: the `EVP_MD_CTX` release, then the
+    // context's `OPENSSL_clear_free` (`CRYPTO_clear_free` at `:162`).
     unsafe {
-        EVP_MD_CTX_free((*ctx).md);
-        CRYPTO_clear_free(ctx.cast(), core::mem::size_of::<BioOkCtx>(), FILE, 162);
+        drop(OwnedCtx::from_raw(ctx));
         BIO_set_data(a, ptr::null_mut());
         BIO_set_init(a, 0);
     }

@@ -40,10 +40,12 @@ use crate::asn1::x_int64::{INT32_it, UINT32_it, ZINT32_it, ZINT64_it, ZUINT32_it
 use crate::evp::pkey::EVP_PKEY_free;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::ssl::ssl_ciph::ssl3_get_cipher_by_id;
 use crate::ssl::ssl_lib::{
-    SslSession, SSL3_MAX_SSL_SESSION_ID_LENGTH, SSL_MAX_SID_CTX_LENGTH,
+    MemberCStrSlot, SslSession, SSL3_MAX_SSL_SESSION_ID_LENGTH, SSL_MAX_SID_CTX_LENGTH,
     TLS13_MAX_RESUMPTION_PSK_LENGTH,
 };
 use crate::ssl::ssl_sess::{ssl_session_calculate_timeout, SSL_SESSION_free, SSL_SESSION_new};
@@ -52,6 +54,7 @@ use crate::x509::x_x509::{X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_asn1.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_asn1.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `ERR_LIB_X509` — `include/openssl/err.h.in`.
@@ -80,6 +83,10 @@ const SSL3_VERSION_MAJOR: i32 = 0x03;
 const DTLS1_VERSION_MAJOR: i32 = 0xFE;
 /// `DTLS1_BAD_VER` — `prov_ssl.h:30`.
 const DTLS1_BAD_VER: i32 = 0x0100;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a helper-allocated block
+// ---------------------------------------------------------------------------------------------
 
 /// `struct SSL_SESSION_ASN1` — `ssl_asn1.c:18-49`, the whole record.
 #[repr(C)]
@@ -391,24 +398,66 @@ unsafe fn libc_strlen(s: *const c_char) -> usize {
     n
 }
 
-/// `ssl_session_strndup` — `ssl_asn1.c:229-239`.
+/// `ssl_session_strndup` — `ssl_asn1.c:229-239`, over a member-buffer handle.
+///
+/// It releases the incumbent through [`MemberCStrSlot::clear`] and stores the fresh block through
+/// [`MemberCStrSlot::store`], so the free-then-allocate order and the "release exactly once"
+/// argument exist in one place. Every `SSL_SESSION` C-string member now goes through this form.
 ///
 /// # Safety
-/// `pdst` must be a live slot; `src` may be NULL.
-unsafe fn ssl_session_strndup(pdst: *mut *mut c_char, src: *mut Asn1String) -> c_int {
-    // SAFETY: `pdst` is the caller's live slot.
-    unsafe {
-        CRYPTO_free((*pdst).cast(), FILE, 0);
-        *pdst = ptr::null_mut();
-        if src.is_null() {
-            return 1;
-        }
-        *pdst = CRYPTO_strndup((*src).data.cast(), (*src).length as usize, FILE, 0).cast();
-        if (*pdst).is_null() {
-            return 0;
-        }
+/// `dst` is the member handle of a live session whose member obeys the member-buffer invariant;
+/// `src` may be NULL.
+unsafe fn ssl_session_strndup_slot(dst: &mut MemberCStrSlot, src: *mut Asn1String) -> c_int {
+    let empty = dst.clear(FILE_SEAM, 0);
+    if src.is_null() {
+        return 1;
     }
+    // SAFETY: `src` is a live `ASN1_OCTET_STRING` per the caller's contract; the seam
+    // answers a fresh block this call owns.
+    let Some(dup) =
+        (unsafe { OwnedCStr::strndup((*src).data.cast(), (*src).length as usize, FILE_SEAM, 0) })
+    else {
+        return 0;
+    };
+    empty.store(dup);
     1
+}
+
+/// Adopt an `ASN1_STRING`'s `data` block into a session blob member.
+///
+/// The authority takes `as->field->data` and nulls the string's own pointer. That is sound only
+/// while the string owns the block: [`ASN1_STRING_FLAG_EMBED`] says `data` points into storage
+/// the string does **not** own, and a negative `length` cannot describe a block. Neither is
+/// reachable for the `OCTET STRING`s this template produces, but both are rejected (and asserted)
+/// rather than allowed to transfer a non-owned or nonsensical pointer. On success the string's
+/// `data` is NULL and the returned block is the caller's to store; the decoded octet-string
+/// allocation is `len + 1` bytes, which satisfies `MemberBufSlot::store`'s "at least `len`"
+/// precondition.
+///
+/// # Safety
+/// `str_` must be NULL or a live `ASN1_STRING` owned by the decoded value.
+unsafe fn adopt_octet_string(str_: *mut Asn1String) -> Option<(*mut u8, usize)> {
+    if str_.is_null() {
+        return None;
+    }
+    // SAFETY: `str_` is live per the contract.
+    let (flags, length) = unsafe { ((*str_).flags, (*str_).length) };
+    // This is a release-mode assertion, not a `debug_assert!`: a hostile or corrupted decoded
+    // string must never transfer a non-owned or nonsensical pointer, and `debug_assert!` cannot
+    // uphold that invariant in release (AGENTS.md §21.4).
+    if length < 0 || flags & ASN1_STRING_FLAG_EMBED != 0 {
+        return None;
+    }
+    // SAFETY: `str_` is live; taking `data` hands the block over and nulls the string's own
+    // pointer, so the string's destructor will not release it.
+    unsafe {
+        let data = (*str_).data;
+        if data.is_null() && length != 0 {
+            return None;
+        }
+        (*str_).data = ptr::null_mut();
+        Some((data, length as usize))
+    }
 }
 
 /// `ssl_session_memcpy` — `ssl_asn1.c:243-255`: copy an octet string out, refusing oversize.
@@ -557,18 +606,14 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
             ssl_session_sinit(
                 &mut as_.tlsext_hostname,
                 &mut tlsext_hostname,
-                s.ext_hostname,
+                s.ext_hostname(),
             );
         }
-        if !s.ext_tick.is_null() {
-            // SAFETY: live locals; the tick buffer is `ext_ticklen` bytes.
+        let (tick_ptr, tick_len) = s.ext_tick();
+        if !tick_ptr.is_null() {
+            // SAFETY: live locals; the tick buffer is `tick_len` bytes.
             unsafe {
-                ssl_session_oinit(
-                    &mut as_.tlsext_tick,
-                    &mut tlsext_tick,
-                    s.ext_tick,
-                    s.ext_ticklen,
-                );
+                ssl_session_oinit(&mut as_.tlsext_tick, &mut tlsext_tick, tick_ptr, tick_len);
             }
         }
 
@@ -601,16 +646,17 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
             ssl_session_sinit(
                 &mut as_.psk_identity_hint,
                 &mut psk_identity_hint,
-                s.psk_identity_hint,
+                s.psk_identity_hint(),
             );
-            ssl_session_sinit(&mut as_.psk_identity, &mut psk_identity, s.psk_identity);
-            ssl_session_sinit(&mut as_.srp_username, &mut srp_username, s.srp_username);
+            ssl_session_sinit(&mut as_.psk_identity, &mut psk_identity, s.psk_identity());
+            ssl_session_sinit(&mut as_.srp_username, &mut srp_username, s.srp_username());
         }
 
         as_.flags = s.flags as u64;
         as_.max_early_data = s.ext_max_early_data;
 
-        if s.ext_alpn_selected.is_null() {
+        let (alpn_ptr, alpn_len) = s.ext_alpn_selected();
+        if alpn_ptr.is_null() {
             as_.alpn_selected = ptr::null_mut();
         } else {
             // SAFETY: live locals and the session's own buffer.
@@ -618,14 +664,15 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 ssl_session_oinit(
                     &mut as_.alpn_selected,
                     &mut alpn_selected,
-                    s.ext_alpn_selected,
-                    s.ext_alpn_selected_len,
+                    alpn_ptr,
+                    alpn_len,
                 );
             }
         }
         as_.tlsext_max_fragment_len_mode = s.max_fragment_len_mode as u32;
 
-        if s.ticket_appdata.is_null() {
+        let (appdata_ptr, appdata_len) = s.ticket_appdata();
+        if appdata_ptr.is_null() {
             as_.ticket_appdata = ptr::null_mut();
         } else {
             // SAFETY: live locals and the session's own buffer.
@@ -633,8 +680,8 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 ssl_session_oinit(
                     &mut as_.ticket_appdata,
                     &mut ticket_appdata,
-                    s.ticket_appdata,
-                    s.ticket_appdata_len,
+                    appdata_ptr,
+                    appdata_len,
                 );
             }
         }
@@ -647,8 +694,10 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
                 &SSL_SESSION_ASN1_ITEM,
             )
         };
+        // Release the DER block `i2d_PUBKEY` built through the seam's owner, at the authority's own
+        // site.
         // SAFETY: `peer_rpk.data` is the allocation `i2d_PUBKEY` produced, NULL or owned.
-        unsafe { CRYPTO_free(peer_rpk.data.cast(), FILE, 0) };
+        drop(unsafe { OwnedBuf::adopt_plain_nullable(peer_rpk.data, FILE_SEAM, 0) });
         ret
     })
 }
@@ -804,25 +853,52 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
             }
             (*ret).verify_result = (*as_).verify_result as c_long;
 
-            if ssl_session_strndup(&mut (*ret).ext_hostname, (*as_).tlsext_hostname) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `ext_hostname` member obeys the member-buffer
+                // invariant.
+                let mut host = (*ret).ext_hostname_slot();
+                // SAFETY: `host` is the member handle; `(*as_).tlsext_hostname` may be NULL.
+                if ssl_session_strndup_slot(&mut host, (*as_).tlsext_hostname) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
-            if ssl_session_strndup(&mut (*ret).psk_identity_hint, (*as_).psk_identity_hint) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `psk_identity_hint` member obeys the member-buffer
+                // invariant.
+                let mut hint = (*ret).psk_identity_hint_slot();
+                // SAFETY: `hint` is the member handle; `(*as_).psk_identity_hint` may be NULL.
+                if ssl_session_strndup_slot(&mut hint, (*as_).psk_identity_hint) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
-            if ssl_session_strndup(&mut (*ret).psk_identity, (*as_).psk_identity) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `psk_identity` member obeys the member-buffer
+                // invariant.
+                let mut identity = (*ret).psk_identity_slot();
+                // SAFETY: `identity` is the member handle; `(*as_).psk_identity` may be NULL.
+                if ssl_session_strndup_slot(&mut identity, (*as_).psk_identity) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
 
             (*ret).ext_tick_lifetime_hint = (*as_).tlsext_tick_lifetime_hint as c_ulong;
             (*ret).ext_tick_age_add = (*as_).tlsext_tick_age_add;
-            CRYPTO_free((*ret).ext_tick.cast(), FILE, 0);
-            if !(*as_).tlsext_tick.is_null() {
-                (*ret).ext_tick = (*(*as_).tlsext_tick).data;
-                (*ret).ext_ticklen = (*(*as_).tlsext_tick).length as usize;
-                (*(*as_).tlsext_tick).data = ptr::null_mut();
-            } else {
-                (*ret).ext_tick = ptr::null_mut();
+            {
+                // SAFETY: `ret` is live and its `ext_tick` pair obeys the blob member-buffer
+                // invariant.
+                let mut tick = (*ret).ext_tick_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                tick.clear(FILE, 0);
+                if !(*as_).tlsext_tick.is_null() {
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).tlsext_tick) else {
+                        return d2i_err(as_, ret, a);
+                    };
+                    // SAFETY: `data`/`len` are the octet string's block, whose ownership this call
+                    // adopts; the member is empty after `clear`.
+                    tick.store(data, len);
+                }
             }
 
             if !(*as_).comp_id.is_null() {
@@ -835,32 +911,52 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
                 (*ret).compress_meth = 0;
             }
 
-            if ssl_session_strndup(&mut (*ret).srp_username, (*as_).srp_username) == 0 {
-                return d2i_err(as_, ret, a);
+            {
+                // SAFETY: `ret` is live and its `srp_username` member obeys the member-buffer
+                // invariant.
+                let mut srp = (*ret).srp_username_slot();
+                // SAFETY: `srp` is the member handle; `(*as_).srp_username` may be NULL.
+                if ssl_session_strndup_slot(&mut srp, (*as_).srp_username) == 0 {
+                    return d2i_err(as_, ret, a);
+                }
             }
             (*ret).flags = (*as_).flags as u32;
             (*ret).ext_max_early_data = (*as_).max_early_data;
 
-            CRYPTO_free((*ret).ext_alpn_selected.cast(), FILE, 0);
-            if !(*as_).alpn_selected.is_null() {
-                (*ret).ext_alpn_selected = (*(*as_).alpn_selected).data;
-                (*ret).ext_alpn_selected_len = (*(*as_).alpn_selected).length as usize;
-                (*(*as_).alpn_selected).data = ptr::null_mut();
-            } else {
-                (*ret).ext_alpn_selected = ptr::null_mut();
-                (*ret).ext_alpn_selected_len = 0;
+            {
+                // SAFETY: `ret` is live and its `ext_alpn_selected` pair obeys the blob
+                // member-buffer invariant.
+                let mut alpn = (*ret).ext_alpn_selected_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                alpn.clear(FILE, 0);
+                if !(*as_).alpn_selected.is_null() {
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).alpn_selected) else {
+                        return d2i_err(as_, ret, a);
+                    };
+                    // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
+                    alpn.store(data, len);
+                }
             }
 
             (*ret).max_fragment_len_mode = (*as_).tlsext_max_fragment_len_mode as u8;
 
-            CRYPTO_free((*ret).ticket_appdata.cast(), FILE, 0);
-            if !(*as_).ticket_appdata.is_null() {
-                (*ret).ticket_appdata = (*(*as_).ticket_appdata).data;
-                (*ret).ticket_appdata_len = (*(*as_).ticket_appdata).length as usize;
-                (*(*as_).ticket_appdata).data = ptr::null_mut();
-            } else {
-                (*ret).ticket_appdata = ptr::null_mut();
-                (*ret).ticket_appdata_len = 0;
+            {
+                // SAFETY: `ret` is live and its `ticket_appdata` pair obeys the blob member-buffer
+                // invariant.
+                let mut appdata = (*ret).ticket_appdata_slot();
+                // Release any incumbent at the authority's own site; a fresh session's member is
+                // unset, so this is `CRYPTO_free`'s no-op.
+                appdata.clear(FILE, 0);
+                if !(*as_).ticket_appdata.is_null() {
+                    // SAFETY: the decoded value owns the octet string.
+                    let Some((data, len)) = adopt_octet_string((*as_).ticket_appdata) else {
+                        return d2i_err(as_, ret, a);
+                    };
+                    // SAFETY: `data`/`len` adopt the octet string's block; the member is empty.
+                    appdata.store(data, len);
+                }
             }
 
             asn1_free_as(as_);
@@ -927,3 +1023,59 @@ fn raise_crypto() {
 
 // `ERR_R_CRYPTO_LIB` is the coordinate the ex-data arms raise.
 const _: c_int = ERR_R_CRYPTO_LIB;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn string_with(data: *mut u8, length: c_int, flags: c_long) -> Asn1String {
+        Asn1String {
+            length,
+            type_: V_ASN1_OCTET_STRING,
+            data,
+            flags,
+        }
+    }
+
+    /// The adoption guard rejects a string that does not own its block (`EMBED`) or whose length
+    /// cannot describe one, and leaves the source untouched on rejection. On a valid string it
+    /// takes the block and NULLs the source. The two rejected states are unreachable for a decoded
+    /// octet string, which is exactly why the guard is an assertion rather than a behaviour change
+    /// on a reachable input.
+    #[test]
+    fn adopt_octet_string_rejects_embed_and_negative_length() {
+        let mut block = [1u8, 2, 3, 4];
+
+        // A valid string hands its block over.
+        let mut valid = string_with(block.as_mut_ptr(), 4, 0);
+        // SAFETY: `valid` is a live string whose `data` block is `block`, owned by this frame.
+        let adopted = unsafe { adopt_octet_string(&mut valid) };
+        assert_eq!(adopted, Some((block.as_mut_ptr(), 4)));
+        assert!(valid.data.is_null(), "the adopted source must be NULLed");
+
+        // EMBED says the string does not own `data`; ownership must not be transferred.
+        let mut embed = string_with(block.as_mut_ptr(), 4, ASN1_STRING_FLAG_EMBED);
+        // SAFETY: `embed` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut embed) }, None);
+        assert_eq!(
+            embed.data,
+            block.as_mut_ptr(),
+            "a rejected source is untouched"
+        );
+
+        // A negative length cannot describe a block.
+        let mut negative = string_with(block.as_mut_ptr(), -1, 0);
+        // SAFETY: `negative` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut negative) }, None);
+        assert_eq!(
+            negative.data,
+            block.as_mut_ptr(),
+            "a rejected source is untouched"
+        );
+
+        // NULL with a non-zero length violates the member invariant and is rejected too.
+        let mut null_block = string_with(core::ptr::null_mut(), 4, 0);
+        // SAFETY: `null_block` is live; the guard reads only `flags`/`length`/`data`.
+        assert_eq!(unsafe { adopt_octet_string(&mut null_block) }, None);
+    }
+}

@@ -55,7 +55,8 @@ use crate::runtime::bio::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -64,6 +65,7 @@ use crate::txt_db::{TXT_DB_free, TXT_DB_read, TxtDb};
 
 use super::srp_lib::{SRP_Calc_x_ex, SRP_get_default_gN};
 use super::{SrpGN, SrpGNCache, SrpUserPwd, SrpVbase};
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &CStr = c"crypto/srp/srp_vfy.c";
@@ -320,13 +322,27 @@ pub unsafe extern "C" fn SRP_user_pwd_free(user_pwd: *mut SrpUserPwd) {
     if user_pwd.is_null() {
         return;
     }
-    // SAFETY: `user_pwd` is live per the contract; its fields are the ones this module set.
+    // SAFETY: `user_pwd` is live per the contract; its fields are the ones this module set. Each
+    // block is this module's own allocation, released through the seam at the authority's exact
+    // sites (184-186).
     unsafe {
         BN_free((*user_pwd).s);
         BN_clear_free((*user_pwd).v);
-        CRYPTO_free((*user_pwd).id.cast(), FILE.as_ptr(), 184);
-        CRYPTO_free((*user_pwd).info.cast(), FILE.as_ptr(), 185);
-        CRYPTO_free(user_pwd.cast(), FILE.as_ptr(), 186);
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*user_pwd).id.cast(),
+            SeamFile::new(FILE),
+            184,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*user_pwd).info.cast(),
+            SeamFile::new(FILE),
+            185,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            user_pwd.cast(),
+            SeamFile::new(FILE),
+            186,
+        ));
     }
 }
 
@@ -337,11 +353,11 @@ pub unsafe extern "C" fn SRP_user_pwd_free(user_pwd: *mut SrpUserPwd) {
 /// Takes no pointers.
 #[no_mangle]
 pub unsafe extern "C" fn SRP_user_pwd_new() -> *mut SrpUserPwd {
-    // The allocation is one `SRP_user_pwd`, the authority's `OPENSSL_malloc`.
-    let ret = CRYPTO_malloc(size_of::<SrpUserPwd>(), FILE.as_ptr(), 193).cast::<SrpUserPwd>();
-    if ret.is_null() {
+    // The allocation is one `SRP_user_pwd`, the authority's `OPENSSL_malloc`, through the seam.
+    let Some(buf) = OwnedBuf::new(size_of::<SrpUserPwd>(), SeamFile::new(FILE), 193) else {
         return ptr::null_mut();
-    }
+    };
+    let ret = buf.as_ptr().cast::<SrpUserPwd>();
     // SAFETY: `ret` is a fresh, uninitialised object; every field is written before return.
     unsafe {
         (*ret).N = ptr::null();
@@ -351,6 +367,8 @@ pub unsafe extern "C" fn SRP_user_pwd_new() -> *mut SrpUserPwd {
         (*ret).id = ptr::null_mut();
         (*ret).info = ptr::null_mut();
     }
+    // Ownership moves to the caller; give up the handle without running its release.
+    let _ = buf.into_raw();
     ret
 }
 
@@ -387,12 +405,27 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
 ) -> c_int {
     // SAFETY: `vinfo` is live per the contract.
     unsafe {
-        CRYPTO_free((*vinfo).id.cast(), FILE.as_ptr(), 214);
-        CRYPTO_free((*vinfo).info.cast(), FILE.as_ptr(), 215);
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vinfo).id.cast(),
+            SeamFile::new(FILE),
+            214,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vinfo).info.cast(),
+            SeamFile::new(FILE),
+            215,
+        ));
         (*vinfo).id = ptr::null_mut();
         (*vinfo).info = ptr::null_mut();
         if !id.is_null() {
-            (*vinfo).id = CRYPTO_strdup(id, FILE.as_ptr(), 218);
+            // The duplicate is a helper allocation the seam adopts; it becomes the field's block
+            // on success and is released by `SRP_user_pwd_free` at line 184.
+            let id_buf = OwnedBuf::adopt_plain_nullable(
+                CRYPTO_strdup(id, FILE.as_ptr(), 218).cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                184,
+            );
+            (*vinfo).id = id_buf.into_raw().cast::<c_char>();
             if (*vinfo).id.is_null() {
                 return 0;
             }
@@ -400,7 +433,12 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
         if info.is_null() {
             return 1;
         }
-        (*vinfo).info = CRYPTO_strdup(info, FILE.as_ptr(), 220);
+        let info_buf = OwnedBuf::adopt_plain_nullable(
+            CRYPTO_strdup(info, FILE.as_ptr(), 220).cast::<c_uchar>(),
+            SeamFile::new(FILE),
+            185,
+        );
+        (*vinfo).info = info_buf.into_raw().cast::<c_char>();
         c_int::from(!(*vinfo).info.is_null())
     }
 }
@@ -513,37 +551,44 @@ unsafe fn srp_user_pwd_dup(src: *mut SrpUserPwd) -> *mut SrpUserPwd {
 /// `seed_key` must be NULL or NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn SRP_VBASE_new(seed_key: *mut c_char) -> *mut SrpVbase {
-    // The allocation is one `SRP_VBASE`, the authority's `OPENSSL_malloc`.
-    let vb = CRYPTO_malloc(size_of::<SrpVbase>(), FILE.as_ptr(), 279).cast::<SrpVbase>();
-    if vb.is_null() {
+    // The allocation is one `SRP_VBASE`, the authority's `OPENSSL_malloc`, through the seam; its
+    // `Drop` is the single release of every failure path below.
+    let Some(vb_buf) = OwnedBuf::new(size_of::<SrpVbase>(), SeamFile::new(FILE), 279) else {
         return ptr::null_mut();
-    }
+    };
+    let vb = vb_buf.as_ptr().cast::<SrpVbase>();
     // SAFETY: `vb` is a fresh, uninitialised object.
     unsafe {
         (*vb).users_pwd = OPENSSL_sk_new_null();
         if (*vb).users_pwd.is_null() {
-            CRYPTO_free(vb.cast(), FILE.as_ptr(), 286);
             return ptr::null_mut();
         }
         (*vb).gN_cache = OPENSSL_sk_new_null();
         if (*vb).gN_cache.is_null() {
             OPENSSL_sk_free((*vb).users_pwd);
-            CRYPTO_free(vb.cast(), FILE.as_ptr(), 286);
             return ptr::null_mut();
         }
         (*vb).default_g = ptr::null();
         (*vb).default_N = ptr::null();
         (*vb).seed_key = ptr::null_mut();
         if !seed_key.is_null() {
-            (*vb).seed_key = CRYPTO_strdup(seed_key, FILE.as_ptr(), 292);
+            // The duplicate is a helper allocation the seam adopts; it becomes the field's block
+            // on success (released by `SRP_VBASE_free` at line 307).
+            let seed_buf = OwnedBuf::adopt_plain_nullable(
+                CRYPTO_strdup(seed_key, FILE.as_ptr(), 292).cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                307,
+            );
+            (*vb).seed_key = seed_buf.into_raw().cast::<c_char>();
             if (*vb).seed_key.is_null() {
                 OPENSSL_sk_free((*vb).users_pwd);
                 OPENSSL_sk_free((*vb).gN_cache);
-                CRYPTO_free(vb.cast(), FILE.as_ptr(), 295);
                 return ptr::null_mut();
             }
         }
     }
+    // Ownership moves to the caller.
+    let _ = vb_buf.into_raw();
     vb
 }
 
@@ -557,12 +602,21 @@ pub unsafe extern "C" fn SRP_VBASE_free(vb: *mut SrpVbase) {
     if vb.is_null() {
         return;
     }
-    // SAFETY: `vb` is live per the contract and owns both stacks and its seed key.
+    // SAFETY: `vb` is live per the contract and owns both stacks and its seed key (the two blocks
+    // released through the seam at the authority's sites 307-308).
     unsafe {
         OPENSSL_sk_pop_free((*vb).users_pwd, Some(srp_user_pwd_free_void));
         OPENSSL_sk_free((*vb).gN_cache);
-        CRYPTO_free((*vb).seed_key.cast(), FILE.as_ptr(), 307);
-        CRYPTO_free(vb.cast(), FILE.as_ptr(), 308);
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*vb).seed_key.cast(),
+            SeamFile::new(FILE),
+            307,
+        ));
+        drop(OwnedBuf::adopt_plain_nullable(
+            vb.cast(),
+            SeamFile::new(FILE),
+            308,
+        ));
     }
 }
 
@@ -583,7 +637,6 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
     // `sk_SRP_gN_new_null` is the safe constructor and answers NULL on failure.
     let srp_gn_tab = OPENSSL_sk_new_null();
     let mut last_index: *mut c_char = ptr::null_mut();
-    let mut gn: *mut SrpGN = ptr::null_mut();
     let mut user_pwd: *mut SrpUserPwd = ptr::null_mut();
     let mut tmpdb: *mut TxtDb = ptr::null_mut();
     // SAFETY: `BIO_s_file` answers a static method table.
@@ -644,15 +697,25 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
             let pp = unsafe { OPENSSL_sk_value((*tmpdb).data, i) }.cast::<*mut c_char>();
             // SAFETY: `pp` is a live row and `DB_SRPTYPE` indexes it in range.
             if unsafe { **pp.add(DB_SRPTYPE as usize) } == DB_SRP_INDEX {
-                // The allocation is one `SRP_gN`, the authority's `OPENSSL_malloc`.
-                gn = CRYPTO_malloc(size_of::<SrpGN>(), FILE.as_ptr(), 438).cast::<SrpGN>();
-                if gn.is_null() {
+                // The object is this frame's until it is inserted; the seam's `Drop` is the
+                // single release of every failure path below (the id first, then the object).
+                let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGN>(), SeamFile::new(FILE), 438)
+                else {
                     break 'err;
-                }
-                // SAFETY: `gn` is live; `pp[DB_SRPID]` is NUL-terminated.
-                unsafe {
-                    (*gn).id = CRYPTO_strdup(*pp.add(DB_SRPID as usize), FILE.as_ptr(), 441);
-                }
+                };
+                let gn = gn_buf.as_ptr().cast::<SrpGN>();
+                // SAFETY: `gn` is live; `pp[DB_SRPID]` is NUL-terminated. The duplicate is a
+                // helper allocation the seam adopts; it is released with the object on failure.
+                let id_buf = unsafe {
+                    let buf = OwnedBuf::adopt_plain_nullable(
+                        CRYPTO_strdup(*pp.add(DB_SRPID as usize), FILE.as_ptr(), 441)
+                            .cast::<c_uchar>(),
+                        SeamFile::new(FILE),
+                        498,
+                    );
+                    (*gn).id = buf.as_ptr().cast::<c_char>();
+                    buf
+                };
                 // SAFETY: `gn` is live; `id` was just written.
                 if unsafe { (*gn).id }.is_null() {
                     break 'err;
@@ -673,11 +736,12 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
                 if unsafe { (*gn).g }.is_null() {
                     break 'err;
                 }
-                // SAFETY: `srp_gn_tab` is live and `gn`'s ownership passes on success.
+                // SAFETY: `srp_gn_tab` is live; both blocks' ownership passes to it on success.
                 if unsafe { OPENSSL_sk_insert(srp_gn_tab, gn.cast(), 0) } == 0 {
                     break 'err;
                 }
-                gn = ptr::null_mut();
+                let _ = id_buf.into_raw();
+                let _ = gn_buf.into_raw();
 
                 // SAFETY: `vb` is live; `pp[DB_SRPID]` is a live row field.
                 if !unsafe { (*vb).seed_key }.is_null() {
@@ -737,28 +801,20 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
 
         if !last_index.is_null() {
             // SAFETY: `last_index` is a live row field and `srp_gn_tab` is live.
-            gn = unsafe { SRP_get_gN_by_id(last_index, srp_gn_tab) };
-            if gn.is_null() {
+            let lgn = unsafe { SRP_get_gN_by_id(last_index, srp_gn_tab) };
+            if lgn.is_null() {
                 error_code = SRP_ERR_VBASE_BN_LIB;
                 break 'err;
             }
-            // SAFETY: `vb` is live and `gn`'s `g`/`N` are borrowed from `vb->gN_cache`.
+            // SAFETY: `vb` is live and `lgn`'s `g`/`N` are borrowed from `vb->gN_cache`.
             unsafe {
-                (*vb).default_g = (*gn).g;
-                (*vb).default_N = (*gn).N;
+                (*vb).default_g = (*lgn).g;
+                (*vb).default_N = (*lgn).N;
             }
-            gn = ptr::null_mut();
         }
         error_code = SRP_NO_ERROR;
     }
 
-    if !gn.is_null() {
-        // SAFETY: `gn` is a live object this call allocated and never handed on.
-        unsafe {
-            CRYPTO_free((*gn).id.cast(), FILE.as_ptr(), 498);
-            CRYPTO_free(gn.cast(), FILE.as_ptr(), 499);
-        }
-    }
     // SAFETY: `user_pwd` is NULL or a live object that was never inserted.
     unsafe { SRP_user_pwd_free(user_pwd) };
     // SAFETY: `tmpdb` is NULL or a live object from `TXT_DB_read`.
@@ -778,28 +834,32 @@ pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c
 /// `ch` must be NULL or NUL-terminated.
 unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     let mut tmp = [0u8; MAX_LEN];
-    // The allocation is one `SRP_gN_cache`, the authority's `OPENSSL_malloc`.
-    let newgN = CRYPTO_malloc(size_of::<SrpGNCache>(), FILE.as_ptr(), 315).cast::<SrpGNCache>();
-    if newgN.is_null() {
+    // The object is this frame's until it is handed back; the seam's `Drop` is the single release
+    // of every failure path below.
+    let Some(gn_buf) = OwnedBuf::new(size_of::<SrpGNCache>(), SeamFile::new(FILE), 315) else {
         return ptr::null_mut();
-    }
+    };
+    let newgN = gn_buf.as_ptr().cast::<SrpGNCache>();
 
     // SAFETY: `tmp` is `MAX_LEN` bytes and `ch` is NUL-terminated.
     let len = unsafe { t_fromb64(tmp.as_mut_ptr(), tmp.len(), ch) };
     if len < 0 {
-        // SAFETY: `newgN` is live and holds nothing yet.
-        unsafe { CRYPTO_free(newgN.cast(), FILE.as_ptr(), 332) };
         return ptr::null_mut();
     }
 
-    // SAFETY: `newgN` is live; `ch` is NUL-terminated.
-    unsafe {
-        (*newgN).b64_bn = CRYPTO_strdup(ch, FILE.as_ptr(), 324);
-    }
+    // SAFETY: `newgN` is live; `ch` is NUL-terminated. The duplicate is a helper allocation the
+    // seam adopts; it is released with the object on failure (the authority's 330 site).
+    let b64_buf = unsafe {
+        let buf = OwnedBuf::adopt_plain_nullable(
+            CRYPTO_strdup(ch, FILE.as_ptr(), 324).cast::<c_uchar>(),
+            SeamFile::new(FILE),
+            330,
+        );
+        (*newgN).b64_bn = buf.as_ptr().cast::<c_char>();
+        buf
+    };
     // SAFETY: `newgN` is live.
     if unsafe { (*newgN).b64_bn }.is_null() {
-        // SAFETY: `newgN` is live.
-        unsafe { CRYPTO_free(newgN.cast(), FILE.as_ptr(), 332) };
         return ptr::null_mut();
     }
 
@@ -809,13 +869,11 @@ unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     }
     // SAFETY: `newgN` is live.
     if unsafe { (*newgN).bn }.is_null() {
-        // SAFETY: `newgN` is live and owns `b64_bn`.
-        unsafe {
-            CRYPTO_free((*newgN).b64_bn.cast(), FILE.as_ptr(), 330);
-            CRYPTO_free(newgN.cast(), FILE.as_ptr(), 332);
-        }
         return ptr::null_mut();
     }
+    // Ownership of both blocks moves to the caller (released by `SRP_gN_free`).
+    let _ = b64_buf.into_raw();
+    let _ = gn_buf.into_raw();
     newgN
 }
 
@@ -828,11 +886,20 @@ unsafe fn SRP_gN_free(gN_cache: *mut SrpGNCache) {
     if gN_cache.is_null() {
         return;
     }
-    // SAFETY: `gN_cache` is live per the contract and owns both fields.
+    // SAFETY: `gN_cache` is live per the contract and owns both fields (the two blocks released
+    // through the seam at the authority's sites 340-342).
     unsafe {
-        CRYPTO_free((*gN_cache).b64_bn.cast(), FILE.as_ptr(), 340);
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*gN_cache).b64_bn.cast(),
+            SeamFile::new(FILE),
+            340,
+        ));
         BN_free((*gN_cache).bn);
-        CRYPTO_free(gN_cache.cast(), FILE.as_ptr(), 342);
+        drop(OwnedBuf::adopt_plain_nullable(
+            gN_cache.cast(),
+            SeamFile::new(FILE),
+            342,
+        ));
     }
 }
 
@@ -1094,7 +1161,6 @@ pub unsafe extern "C" fn SRP_create_verifier_ex(
     propq: *const c_char,
 ) -> *mut c_char {
     let mut result: *mut c_char = ptr::null_mut();
-    let mut vf: *mut c_char = ptr::null_mut();
     let mut defgNid: *mut c_char = ptr::null_mut();
     let mut vfsize: c_int = 0;
     let mut tmp = [0u8; MAX_LEN];
@@ -1190,49 +1256,60 @@ pub unsafe extern "C" fn SRP_create_verifier_ex(
         // SAFETY: `v` is live.
         let num_v = unsafe { bn_num_bytes(v) };
         vfsize = num_v * 2;
-        // The allocation is `vfsize` bytes, the authority's `OPENSSL_malloc`.
-        vf = CRYPTO_malloc(vfsize as usize, FILE.as_ptr(), 670).cast::<c_char>();
-        if vf.is_null() {
+        // `vf` is this frame's scratch, allocated through the crate's allocator seam at the
+        // authority's own size/`file`/`line` (`OPENSSL_malloc`); `Drop` is its single release
+        // (the authority's cleansing `OPENSSL_clear_free`) unless ownership moves into
+        // `*verifier` below.
+        let Some(vf) = OwnedBuf::new_cleansed_released(
+            vfsize as usize,
+            SeamFile::new(FILE),
+            670,
+            SeamFile::NULL,
+            0,
+        ) else {
             break 'done;
-        }
-        // SAFETY: `vf` is `vfsize` bytes; `tmp` holds `num_v` bytes; `num_v` is positive.
-        if unsafe { t_tob64(vf, tmp.as_ptr(), num_v) } == 0 {
+        };
+        // SAFETY: `vf` is `vfsize` writable bytes; `tmp` holds `num_v` readable bytes; `num_v` is
+        // positive.
+        if unsafe { t_tob64(vf.as_ptr().cast::<c_char>(), tmp.as_ptr(), num_v) } == 0 {
             break 'done;
         }
 
         // SAFETY: `salt` is writable per the contract.
         if unsafe { *salt }.is_null() {
-            // The allocation is `SRP_RANDOM_SALT_LEN * 2` bytes, the authority's
-            // `OPENSSL_malloc_array`.
-            let tmp_salt = CRYPTO_malloc((SRP_RANDOM_SALT_LEN as usize) * 2, FILE.as_ptr(), 678)
-                .cast::<c_char>();
-            if tmp_salt.is_null() {
+            // `tmp_salt` is this frame's scratch too, `SRP_RANDOM_SALT_LEN * 2` bytes at the
+            // authority's own size/`file`/`line` (`OPENSSL_malloc_array`); its release is the
+            // authority's plain `OPENSSL_free`, and ownership moves to `*salt` on success.
+            let Some(tmp_salt) =
+                OwnedBuf::new((SRP_RANDOM_SALT_LEN as usize) * 2, SeamFile::new(FILE), 678)
+            else {
+                break 'done;
+            };
+            // SAFETY: `tmp_salt` is `SRP_RANDOM_SALT_LEN * 2` writable bytes; `tmp2` holds
+            // `SRP_RANDOM_SALT_LEN` readable bytes.
+            if unsafe {
+                t_tob64(
+                    tmp_salt.as_ptr().cast::<c_char>(),
+                    tmp2.as_ptr(),
+                    SRP_RANDOM_SALT_LEN,
+                )
+            } == 0
+            {
                 break 'done;
             }
-            // SAFETY: `tmp_salt` is `SRP_RANDOM_SALT_LEN * 2` bytes; `tmp2` holds
-            // `SRP_RANDOM_SALT_LEN` bytes.
-            if unsafe { t_tob64(tmp_salt, tmp2.as_ptr(), SRP_RANDOM_SALT_LEN) } == 0 {
-                // SAFETY: `tmp_salt` is live.
-                unsafe { CRYPTO_free(tmp_salt.cast(), FILE.as_ptr(), 682) };
-                break 'done;
-            }
-            // SAFETY: `salt` is writable per the contract.
-            unsafe { *salt = tmp_salt };
+            // SAFETY: `salt` is writable per the contract; ownership of the block moves to it.
+            unsafe { *salt = tmp_salt.into_raw().cast::<c_char>() };
         }
 
-        // SAFETY: both slots are writable per the contract.
-        unsafe {
-            *verifier = vf;
-            vf = ptr::null_mut();
-        }
+        // SAFETY: `verifier` is writable per the contract; ownership of the block moves to it.
+        unsafe { *verifier = vf.into_raw().cast::<c_char>() };
         result = defgNid;
     }
 
-    // SAFETY: every pointer below is live or NULL; `CRYPTO_clear_free` accepts NULL.
+    // SAFETY: every pointer below is live or NULL; both releases accept NULL.
     unsafe {
         BN_free(N_bn_alloc);
         BN_free(g_bn_alloc);
-        CRYPTO_clear_free(vf.cast(), vfsize as usize, FILE.as_ptr(), 694);
         BN_clear_free(s);
         BN_clear_free(v);
     }

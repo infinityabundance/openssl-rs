@@ -41,7 +41,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -63,8 +63,9 @@ use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 
 /// `OSSL_OP_KEM` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KEM: c_int = 14;
@@ -77,6 +78,8 @@ const LINE_ZALLOC_KEM: c_int = 287;
 const LINE_FREE_TYPE_NAME: c_int = 443;
 /// `EVP_KEM_free`'s `OPENSSL_free(kem)` (line 446).
 const LINE_FREE_KEM: c_int = 446;
+/// `evp_kem_new`'s `OPENSSL_free(kem)` when the up-ref fails (line 295).
+const LINE_FREE_KEM_UP_REF: c_int = 295;
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the thirteen function-pointer types.
@@ -188,6 +191,28 @@ pub struct EvpKem {
     pub(crate) auth_decapsulate_init: Option<KemAuthDecapsulateInitFn>,
 }
 
+/// The authority's `EVP_KEM_free` body minus the block release [`OwnedCtx`]'s `Drop` performs: the
+/// type name and the provider reference (`:443`, `:444`).
+// SAFETY: (a) `destroy_body` is the authority's `EVP_KEM_free` member body, releasing exactly this
+// object's type name and provider reference once (each releaser accepts the unset NULL) and never
+// the enclosing block, which `OwnedCtx` releases; (b) `EvpKem` is a `#[repr(C)]` record of raw
+// pointers, an integer, an `AtomicI32` and many `Option<fn>` dispatch slots, so an all-zero block
+// is a valid `EvpKem` the body is sound on.
+unsafe impl CtxDestroy for EvpKem {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_KEM;
+    const LINE_FREE: c_int = LINE_FREE_KEM;
+
+    unsafe fn destroy_body(ptr: *mut EvpKem) {
+        // SAFETY: `ptr` is a live method per the trait contract; `type_name` is NULL or this
+        // object's own allocation and `prov` is NULL or an owned provider reference.
+        unsafe {
+            CRYPTO_free((*ptr).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 /// `static void evp_kem_free(void *data)` — the shape `evp_generic_fetch` wants.
 ///
 /// # Safety
@@ -211,18 +236,30 @@ unsafe extern "C" fn evp_kem_up_ref(data: *mut c_void) -> c_int {
 /// # Safety
 /// `prov` must be live.
 unsafe fn evp_kem_new(prov: *mut OsslProvider) -> *mut EvpKem {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate: it validates its own argument. */
-    let kem = CRYPTO_zalloc(core::mem::size_of::<EvpKem>(), FILE, LINE_ZALLOC_KEM).cast::<EvpKem>();
-    if kem.is_null() {
+    // A zeroed `EvpKem` (all-NULL pointers, zero scalars) is the authority's own `OPENSSL_zalloc`
+    // state, so `OwnedCtx::zalloc` may validate it.
+    let Some(kem) = OwnedCtx::<EvpKem>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `kem` is this call's own object and `prov` is live.
+    };
+    let p = kem.as_ptr();
+    // SAFETY: `p` is a fresh zeroed block this call owns and `prov` is live.
     unsafe {
-        (*kem).refcnt = AtomicI32::new(1);
-        (*kem).prov = prov;
-        ossl_provider_up_ref(prov);
+        (*p).refcnt = AtomicI32::new(1);
+        // The authority refuses on a failed up-ref before assigning `prov` (`kem.c:292-298`).
+        // `ossl_provider_up_ref` rolls the increment back only on its child-provider arm; the
+        // non-child overflow arm returns 0 without rollback. Assigning `prov` would double-release
+        // on the child arm; the overflow arm's increment is retained (practically unreachable i32
+        // wrap leak, as in the authority's callers).
+        if !prov.is_null() && ossl_provider_up_ref(prov) == 0 {
+            // The authority's failure arm frees the fresh block directly, at its own coordinate
+            // (`kem.c:295`); no member has been assigned yet.
+            core::mem::forget(kem);
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_KEM_UP_REF);
+            return ptr::null_mut();
+        }
+        (*p).prov = prov;
     }
-    kem
+    kem.into_raw()
 }
 
 /// `static void *evp_kem_from_algorithm(int name_id, const OSSL_ALGORITHM *algodef,
@@ -357,19 +394,18 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
     if kem.is_null() {
         return;
     }
-    // SAFETY: `kem` is live per the contract.
-    let last = unsafe { (*kem).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `kem` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*kem).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_KEM_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
-    // SAFETY: `kem` is live and this was the last reference.
-    let (type_name, prov) = unsafe { ((*kem).type_name, (*kem).prov) };
-    // SAFETY: `type_name` was allocated for this object.
-    unsafe { CRYPTO_free(type_name.cast(), FILE, LINE_FREE_TYPE_NAME) };
-    // SAFETY: `prov` is live and holds the reference `evp_kem_new` took.
-    unsafe { ossl_provider_free(prov) };
-    // SAFETY: `kem` is this object's own allocation.
-    unsafe { CRYPTO_free(kem.cast(), FILE, LINE_FREE_KEM) };
+    // SAFETY: the count reached zero, so this is the last reference and the block is this call's;
+    // `Drop` runs the type-name and provider releases (`:443`) then the block release at `:446`.
+    unsafe { drop(OwnedCtx::<EvpKem>::from_raw(kem)) };
 }
 
 /// `int EVP_KEM_up_ref(EVP_KEM *kem)`.
@@ -378,9 +414,11 @@ pub unsafe extern "C" fn EVP_KEM_free(kem: *mut EvpKem) {
 /// `kem` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEM_up_ref(kem: *mut EvpKem) -> c_int {
-    // SAFETY: `kem` is live per the contract.
-    unsafe { (*kem).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `kem` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*kem).refcnt) }
 }
 
 /// `OSSL_PROVIDER *EVP_KEM_get0_provider(const EVP_KEM *kem)`.
@@ -1133,3 +1171,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpKem => zero_state_sweep_evp_kem);

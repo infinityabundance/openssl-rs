@@ -20,7 +20,8 @@ use crate::evp::exchange::{EVP_PKEY_derive, EVP_PKEY_derive_init, EVP_PKEY_deriv
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey, EvpPkeyCtx};
 use crate::evp::pmeth_gn::{EVP_PKEY_keygen, EVP_PKEY_keygen_init};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::x509_cmp::X509_get0_pubkey;
 use crate::x509::x_x509::X509;
@@ -30,6 +31,7 @@ use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_ias_cert_cmp,
     ossl_cms_keyid_cert_cmp, ossl_cms_set1_ias, ossl_cms_set1_keyid, raise_cms,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_USE_KEYID` — `cms.h.in:100`.
 const CMS_USE_KEYID: c_uint = 0x10000;
@@ -418,8 +420,6 @@ unsafe fn cms_kek_cipher(
     let mut kek = [0u8; EVP_MAX_KEY_LENGTH];
     let mut keklen;
     let mut rv = 0;
-    let mut out: *mut c_uchar = ptr::null_mut();
-    let mut out_alloc_len = 0usize;
     let mut outlen: c_int = 0;
     let mut outsize = 0usize;
 
@@ -489,9 +489,16 @@ unsafe fn cms_kek_cipher(
     } else {
         outlen as usize
     };
+    // The ciphered key is this frame's scratch, allocated through the crate's allocator seam at
+    // `outsize`; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `outsize > 0`.
-    out = CRYPTO_malloc(outsize, c"cms_kari.c".as_ptr(), 235).cast::<c_uchar>();
-    if out.is_null() {
+    let Some(out) = OwnedBuf::new_cleansed_released(
+        outsize,
+        SeamFile::new(c"cms_kari.c"),
+        235,
+        SeamFile::NULL,
+        0,
+    ) else {
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
@@ -500,13 +507,20 @@ unsafe fn cms_kek_cipher(
             (*kari).pctx = ptr::null_mut();
         }
         return 0;
-    }
-    out_alloc_len = outlen as usize;
+    };
     // SAFETY: `kari` is live; `out` is writable.
-    if unsafe { EVP_CipherUpdate((*kari).ctx.cast(), out, &mut outlen, input, inlen as c_int) } == 0
+    if unsafe {
+        EVP_CipherUpdate(
+            (*kari).ctx.cast(),
+            out.as_ptr(),
+            &mut outlen,
+            input,
+            inlen as c_int,
+        )
+    } == 0
     {
-        // SAFETY: `out` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(out, out_alloc_len) };
+        // `out` clears and releases its own block, at the authority's own site.
+        drop(out);
         // SAFETY: the context and key are live.
         unsafe {
             OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
@@ -516,9 +530,9 @@ unsafe fn cms_kek_cipher(
         }
         return 0;
     }
-    // SAFETY: `pout`/`poutlen` are writable.
+    // SAFETY: `pout`/`poutlen` are writable; ownership of the block transfers to the caller.
     unsafe {
-        *pout = out;
+        *pout = out.into_raw();
         *poutlen = outlen as usize;
     }
     rv = 1;
@@ -571,23 +585,28 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_decrypt(
         )
     } == 0
     {
-        // SAFETY: `cek` is NULL or owned.
-        unsafe { CRYPTO_free(cek.cast(), c"cms_kari.c".as_ptr(), 281) };
+        // The helper leaves no block in the slot on failure; the authority's `err:` release is a
+        // plain `CRYPTO_free`, run here by `Drop`.
+        // SAFETY: `cek` is NULL or a live block the helper allocated and no one else owns.
+        let cek_owned =
+            unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
+        drop(cek_owned);
         return rv;
     }
+    // The decrypted CEK is the helper's block; its release is the authority's plain `CRYPTO_free`.
+    // SAFETY: `cek` is a live block the helper allocated and no one else owns.
+    let cek_owned =
+        unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
     // SAFETY: `cms` is live.
     let ec = unsafe { super::cms_env::ossl_cms_get0_env_enc_content(cms) };
     // SAFETY: `ec` is live.
     unsafe { super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen) };
-    // SAFETY: `ec` is live.
+    // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
     unsafe {
-        (*ec).key = cek;
+        (*ec).key = cek_owned.into_raw();
         (*ec).keylen = ceklen;
     }
-    cek = ptr::null_mut();
     rv = 1;
-    // SAFETY: `cek` is NULL here.
-    unsafe { CRYPTO_free(cek.cast(), c"cms_kari.c".as_ptr(), 281) };
     rv
 }
 

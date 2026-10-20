@@ -47,11 +47,13 @@ use crate::evp::pkey::{EVP_PKEY_free, EvpPkey};
 use crate::pkcs7::pk7_doit::{PKCS7_dataFinal, PKCS7_dataInit};
 use crate::pkcs7::pk7_lib::PKCS7_stream;
 use crate::runtime::bio::Bio;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
 use crate::runtime::obj::{
     Asn1Object, NID_pkcs7_data, NID_pkcs7_digest, NID_pkcs7_encrypted, NID_pkcs7_enveloped,
     NID_pkcs7_signed, NID_pkcs7_signedAndEnveloped,
 };
+use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::stack::OpenSslStack;
 use crate::x509::x_attrib::X509_ATTRIBUTE_it;
 use crate::x509::x_crl::X509_CRL_it;
@@ -67,8 +69,56 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/pkcs7/pk7_asn1.c";
 pub struct Pkcs7Ctx {
     /// `OSSL_LIB_CTX *libctx`.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — owned by the `PKCS7`, freed by [`PKCS7_free`].
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — an object-owned C-string **member buffer**. Its ownership invariant is
+    /// stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/[`Pkcs7Ctx::propq`]; see the
+    /// `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at this exact offset so the
+    /// `#[repr(C)]` layout is the authority's. It is **private**: every reader goes through
+    /// [`Pkcs7Ctx::propq`] and every writer through [`PropqSlot`], so the field's accesses are
+    /// compile-time-confined to this module.
+    propq: *mut c_char,
+}
+
+impl Pkcs7Ctx {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `PKCS7_CTX::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. This module-local thin wrapper exists only so call
+/// sites keep the `PropqSlot::of(&mut ctx)` shape over the private field. The field is
+/// private and every read, write and release goes through [`Pkcs7Ctx::propq`] and
+/// this handle, so [`Self::of`] is **safe**: the invariant follows from the item
+/// layer's zeroing allocation and from this being the field's only writer.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object's embedded context.
+    pub(crate) fn of(ctx: &'a mut Pkcs7Ctx) -> PropqSlot<'a> {
+        // SAFETY: `ctx` is live; `propq` is private to this module, constructed NULL
+        // by the item layer and written only by this handle, so the member-buffer
+        // invariant holds and the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut ctx.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+
+    /// Assert that the freshly zeroed field is empty and answer the store token.
+    ///
+    /// # Safety
+    /// The caller establishes that `ctx.propq` is currently NULL.
+    pub(crate) unsafe fn assume_empty(self) -> EmptyCStrSlot<'a> {
+        // SAFETY: the caller establishes the field is NULL.
+        unsafe { self.0.assume_empty() }
+    }
 }
 
 /// `struct pkcs7_issuer_and_serial_st` — `pkcs7.h.in:54-57`.
@@ -1609,21 +1659,29 @@ pub unsafe extern "C" fn PKCS7_new_ex(libctx: *mut c_void, propq: *const c_char)
     if pkcs7.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `pkcs7` is live and its `ctx` slot is writable.
-    unsafe {
-        (*pkcs7).ctx.libctx = libctx;
-        (*pkcs7).ctx.propq = ptr::null_mut();
+    // SAFETY: `pkcs7` is live and its `ctx.libctx` slot is writable.
+    unsafe { (*pkcs7).ctx.libctx = libctx };
+    // The item layer `CRYPTO_zalloc`s the whole object, so `ctx.propq` is already unset (NULL).
+    // Take the duplicate first so a failed copy can release the object *before* the handle borrows
+    // it, then store only on success; the authority's explicit `propq = NULL` is this no-op made
+    // implicit by the zeroing allocation.
+    let copy = if propq.is_null() {
+        None
+    } else {
+        // SAFETY: `propq` is NUL-terminated per the caller's contract; the seam answers
+        // a fresh block this call owns.
+        unsafe { OwnedCStr::dup(propq, SeamFile::new(FILE), 102) }
+    };
+    if !propq.is_null() && copy.is_none() {
+        // SAFETY: `pkcs7` is live and owned here.
+        unsafe { PKCS7_free(pkcs7) };
+        return ptr::null_mut();
     }
-    if !propq.is_null() {
-        // SAFETY: `propq` is NUL-terminated per the caller's contract.
-        let copy = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 102) };
-        if copy.is_null() {
-            // SAFETY: `pkcs7` is live and owned here.
-            unsafe { PKCS7_free(pkcs7) };
-            return ptr::null_mut();
-        }
-        // SAFETY: `pkcs7` is live and its `ctx.propq` slot is writable.
-        unsafe { (*pkcs7).ctx.propq = copy };
+    // SAFETY: `pkcs7` is a live `PKCS7` whose `ctx` the item layer zeroed, so its `propq` member
+    // is unset and obeys the member-buffer invariant.
+    let empty = unsafe { PropqSlot::of(&mut (*pkcs7).ctx).assume_empty() };
+    if let Some(copy) = copy {
+        empty.store(copy);
     }
     pkcs7
 }
@@ -1638,9 +1696,10 @@ pub unsafe extern "C" fn PKCS7_free(p7: *mut Pkcs7) {
     if p7.is_null() {
         return;
     }
-    // SAFETY: `p7` is live; its `ctx.propq` is either null or this object's own copy.
+    // SAFETY: `p7` is live; its `ctx.propq` obeys the member-buffer invariant (NULL or this
+    // object's own single `CRYPTO_strdup` block), so `clear` is that block's one release.
     unsafe {
-        CRYPTO_free((*p7).ctx.propq.cast(), FILE.as_ptr(), 115);
+        PropqSlot::of(&mut (*p7).ctx).clear(SeamFile::new(FILE), 115);
         ASN1_item_free(p7.cast(), PKCS7_it());
     }
 }
@@ -1665,7 +1724,7 @@ pub unsafe extern "C" fn d2i_PKCS7(
         // SAFETY: `*a` is a live `PKCS7` per the caller's contract.
         unsafe {
             libctx = (**a).ctx.libctx;
-            propq = (**a).ctx.propq;
+            propq = (**a).ctx.propq();
         }
     }
     // SAFETY: the caller's contract carries throughout.

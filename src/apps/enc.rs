@@ -284,8 +284,6 @@ pub fn main(argv: &[String]) -> i32 {
     let mut iter = 0i64;
     let mut pbkdf2 = false;
     let mut saltlen = 0i32;
-    let mut skeyopts_present = false;
-    let mut _skeymgmt: Option<String> = None;
 
     loop {
         // `while ((o = opt_next()) != OPT_EOF)` — `apps/enc.c:207`.
@@ -401,11 +399,13 @@ pub fn main(argv: &[String]) -> i32 {
             // `case OPT_NONE: cipher = NULL; break;` — `apps/enc.c:343-345`.
             OptMatch::Flag("none") => ciphername = None,
             // `case OPT_SKEYOPT: ... sk_OPENSSL_STRING_push(skeyopts, opt_arg());`
-            // — `apps/enc.c:346-351`.
-            OptMatch::Value("skeyopt", _) => skeyopts_present = true,
+            // — `apps/enc.c:346-351`. The opaque symmetric key path is not
+            // landed (see the header), so this must not fall through to the raw
+            // key path: doing so would silently use an all-zero key.
+            OptMatch::Value("skeyopt", _) => return not_landed("enc -skeyopt"),
             // `case OPT_SKEYMGMT: skeymgmt = opt_arg(); break;` —
             // `apps/enc.c:352-354`.
-            OptMatch::Value("skeymgmt", v) => _skeymgmt = Some(v),
+            OptMatch::Value("skeymgmt", _) => return not_landed("enc -skeymgmt"),
             // `case OPT_R_CASES: if (!opt_rand(o)) goto end;` —
             // `apps/enc.c:355-358`.
             OptMatch::Value("rand", _) | OptMatch::Value("writerand", _) => {
@@ -431,7 +431,7 @@ pub fn main(argv: &[String]) -> i32 {
     }
     // `if (!app_RAND_load()) goto end;` — `apps/enc.c:369-370`. Skipped (see the
     // header); unobservable for the raw-key arms.
-    let _ = (verbose, skeyopts_present, _skeymgmt, _hsalt, _digestname);
+    let _ = (verbose, _hsalt, _digestname);
 
     // `if (saltlen == 0 || pbkdf2 == 0) saltlen = PKCS5_SALT_LEN;` —
     // `apps/enc.c:371-372`.
@@ -506,7 +506,7 @@ pub fn main(argv: &[String]) -> i32 {
     }
     // `if ((str == NULL) && (cipher != NULL) && (hkey == NULL) &&
     // (skeyopts == NULL)) { ... prompt ... }` — `apps/enc.c:436-465`.
-    if !cipher.is_null() && hkey.is_none() && !skeyopts_present {
+    if !cipher.is_null() && hkey.is_none() {
         // SAFETY: `in_tail` is live and not freed again.
         unsafe { BIO_free(in_tail) };
         // SAFETY: `cipher` is live and not freed again.

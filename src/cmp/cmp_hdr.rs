@@ -5,7 +5,8 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(private_interfaces)]
 
-use core::ffi::{c_char, c_int, c_long};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::asn1::a_type::ASN1_TYPE_free;
@@ -27,7 +28,8 @@ use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::bio::sys::time;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_id_it_implicitConfirm, NID_undef, OBJ_nid2obj, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -257,19 +259,28 @@ pub(crate) unsafe fn ossl_cmp_hdr_update_messageTime(hdr: *mut CmpPkiHeader) -> 
 /// # Safety
 /// `tgt` is a writable slot; `ctx` is a live `OSSL_CMP_CTX`.
 unsafe fn set_random(tgt: *mut *mut Asn1String, ctx: *mut OsslCmpCtx, len: c_int) -> c_int {
-    // SAFETY: `CRYPTO_malloc` returns `len` writable bytes or NULL.
-    let bytes = CRYPTO_malloc(len as usize, FILE.as_ptr(), 117).cast::<u8>();
     let mut res = 0;
-    // SAFETY: `bytes` is NULL or writable for `len` bytes; `ctx` is live.
-    if bytes.is_null() || unsafe { RAND_bytes_ex((*ctx).libctx, bytes, len as usize, 0) } <= 0 {
+    // The local owner is the authority's single plain free on every path.
+    match OwnedBuf::new_plain_released(
+        len as usize,
+        SeamFile::new(FILE),
+        117,
+        SeamFile::new(FILE),
+        124,
+    ) {
         // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cmp(121, c"set_random", 110) };
-    } else {
-        // SAFETY: `tgt` is a writable slot; `bytes` is readable for `len` bytes.
-        res = unsafe { ossl_cmp_asn1_octet_string_set1_bytes(tgt, bytes, len) };
+        None => unsafe { raise_cmp(121, c"set_random", 110) },
+        Some(bytes) => {
+            // SAFETY: `bytes` is writable for `len` bytes; `ctx` is live.
+            if unsafe { RAND_bytes_ex((*ctx).libctx, bytes.as_ptr(), len as usize, 0) } <= 0 {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { raise_cmp(121, c"set_random", 110) };
+            } else {
+                // SAFETY: `tgt` is a writable slot; `bytes` is readable for `len` bytes.
+                res = unsafe { ossl_cmp_asn1_octet_string_set1_bytes(tgt, bytes.as_ptr(), len) };
+            }
+        }
     }
-    // SAFETY: `bytes` is NULL or was allocated here.
-    unsafe { CRYPTO_free(bytes.cast(), FILE.as_ptr(), 124) };
     res
 }
 
@@ -468,9 +479,18 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
         if unsafe { set_random(ptr::addr_of_mut!((*ctx).transaction_id), ctx, 16) } == 0 {
             return 0;
         }
-        // SAFETY: `ctx` is live; the transaction is now set.
-        let tid = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id) };
-        if !tid.is_null() {
+        // SAFETY: `i2s_ASN1_OCTET_STRING` answers NULL or a block from the crate's
+        // allocator seam; this frame becomes its only owner and `Drop` releases it at the
+        // authority's line 258.
+        let tid = unsafe {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            OwnedBuf::adopt_plain(
+                i2s_ASN1_OCTET_STRING(ptr::null_mut(), (*ctx).transaction_id).cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                258,
+            )
+        };
+        if let Some(tid) = &tid {
             // SAFETY: `tid` is NUL-terminated; `ctx` is live.
             unsafe {
                 ossl_cmp_log_str(
@@ -479,12 +499,14 @@ pub(crate) unsafe fn ossl_cmp_hdr_set_transactionID(
                     c"ossl_cmp_hdr_set_transactionID",
                     FILE,
                     257,
-                    format_args!("Starting new transaction with ID={}", cstr_to_str(tid)),
+                    format_args!(
+                        "Starting new transaction with ID={}",
+                        cstr_to_str(tid.as_ptr().cast::<c_char>())
+                    ),
                 )
             };
         }
-        // SAFETY: `tid` is NULL or allocated by `i2s_ASN1_OCTET_STRING`.
-        unsafe { CRYPTO_free(tid.cast(), FILE.as_ptr(), 258) };
+        // `tid`'s owner releases the block here, after the log call.
     }
     // SAFETY: `ctx`/`hdr` are live.
     unsafe {

@@ -28,13 +28,41 @@ use core::ptr;
 
 use crate::bn::bignum::{BN_clear_free, BigNum};
 use crate::ec::{EcKey, EcdsaSig};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// The translation-unit coordinate the `OPENSSL_zalloc`/`OPENSSL_free` pair in the four
-/// `ECDSA_SIG_*` accessors is attributed to, as the allocator reports it.
-const FILE: *const c_char = c"crypto/ec/ec_asn1.c".as_ptr();
+/// `ECDSA_SIG_*` accessors is attributed to, as the allocator reports it. `crypto/ec/ec_asn1.c`
+/// is a source-tree file, so its `__FILE__` carries the admitted build record's prefix.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c".as_ptr();
+
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
+
+// SAFETY: (a) the object owns exactly the two `BIGNUM`s and nothing else, so `destroy_body`
+// releases those and never the enclosing block, which `OwnedCtx` releases; (b) an all-zero block
+// is a valid `EcdsaSig` (two NULL `BIGNUM` pointers) and `BN_clear_free(NULL)` is the seam's own
+// NULL no-op, so `destroy_body` is sound on the authority's zeroed constructed state.
+unsafe impl CtxDestroy for EcdsaSig {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = 1189;
+    const LINE_FREE: c_int = 1200;
+
+    /// `ECDSA_SIG_free`'s body without the block release: the two owned scalars are cleared, as
+    /// the authority does before its `OPENSSL_free(sig)` at `ec_asn1.c:1200`.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this crate allocated and has not released (the trait contract).
+    unsafe fn destroy_body(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the trait contract; each scalar is NULL or an owned `BIGNUM`.
+        unsafe {
+            BN_clear_free((*ptr).r);
+            BN_clear_free((*ptr).s);
+        }
+    }
+}
 
 /// `ECDSA_SIG *ECDSA_do_sign(const unsigned char *dgst, int dlen, EC_KEY *eckey)` —
 /// `crypto/ec/ecdsa_sign.c:20-23`.
@@ -249,8 +277,16 @@ pub unsafe extern "C" fn ECDSA_verify(
 /// [`crate::ec::ecdsa_ossl::ossl_ecdsa_simple_sign_sig`] sets them.
 #[no_mangle]
 pub extern "C" fn ECDSA_SIG_new() -> *mut EcdsaSig {
-    // `OPENSSL_zalloc(sizeof(*sig))`, line 1189.
-    CRYPTO_zalloc(core::mem::size_of::<EcdsaSig>(), FILE, 1189).cast::<EcdsaSig>()
+    // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*sig))` at `ec_asn1.c:1189`.
+    // The zeroed block *is* the authority's constructed state here (two NULL scalars), so the
+    // staged handle's transition is immediate -- and keeping the storage staged until that
+    // transition means a partial initialisation can never run the full destructor.
+    let Some(sig) = RawCtx::<EcdsaSig>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: the block is the authority's fully constructed zeroed `EcdsaSig` (both scalars NULL),
+    // which the `CtxDestroy` implementation above declares valid.
+    unsafe { sig.assume_init() }.into_raw()
 }
 
 /// `void ECDSA_SIG_free(ECDSA_SIG *sig)` — `crypto/ec/ec_asn1.c:1194-1200`.
@@ -263,16 +299,10 @@ pub extern "C" fn ECDSA_SIG_new() -> *mut EcdsaSig {
 /// `sig` is NULL or a live object, and must not be used again after this call.
 #[no_mangle]
 pub unsafe extern "C" fn ECDSA_SIG_free(sig: *mut EcdsaSig) {
-    if sig.is_null() {
-        return;
-    }
-    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
-    unsafe {
-        BN_clear_free((*sig).r);
-        BN_clear_free((*sig).s);
-        // `OPENSSL_free(sig)`, line 1198.
-        CRYPTO_free(sig.cast(), FILE, 1198);
-    }
+    // SAFETY: `sig` is NULL or a block `ECDSA_SIG_new` handed out and `Drop` has not released;
+    // `from_raw` reclaims it (NULL yields `None`), and its `Drop` runs the authority's own
+    // `BN_clear_free` pair followed by the single `OPENSSL_free(sig)` at `ec_asn1.c:1200`.
+    drop(unsafe { OwnedCtx::<EcdsaSig>::from_raw(sig) });
 }
 
 /// `void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)` —
@@ -391,3 +421,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcdsaSig => zero_state_sweep_ecdsa_sig);

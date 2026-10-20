@@ -50,14 +50,14 @@ const LINE_SELECT: c_int = 69;
 static DIGEST_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
 
 /// The `ENGINE_TABLE **` the table helpers take.
-fn digest_table_slot() -> *mut *mut OpenSslLhash {
+pub(crate) fn digest_table_slot() -> *mut *mut OpenSslLhash {
     core::ptr::addr_of!(DIGEST_TABLE) as *mut *mut OpenSslLhash
 }
 
 /// `void ENGINE_unregister_digests(ENGINE *e)` — `crypto/engine/tb_digest.c:17-20`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_unregister_digests(e: *mut Engine) {
     // SAFETY: the table slot is this module's static; `e` is the caller's engine.
@@ -73,7 +73,7 @@ unsafe extern "C" fn engine_unregister_all_digests() {
 /// `int ENGINE_register_digests(ENGINE *e)` — `:27-38`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_register_digests(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -119,7 +119,7 @@ pub extern "C" fn ENGINE_register_all_digests() {
 /// `int ENGINE_set_default_digests(ENGINE *e)` — `:48-59`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_default_digests(e: *mut Engine) -> c_int {
     // SAFETY: `e` is the caller's engine.
@@ -164,7 +164,7 @@ pub extern "C" fn ENGINE_get_digest_engine(nid: c_int) -> *mut Engine {
 /// `const EVP_MD *ENGINE_get_digest(ENGINE *e, int nid)` — `:73-82`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_digest(e: *mut Engine, nid: c_int) -> *const c_void {
     let mut ret: *const c_void = ptr::null();
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn ENGINE_get_digest(e: *mut Engine, nid: c_int) -> *const
 /// `ENGINE_DIGESTS_PTR ENGINE_get_digests(const ENGINE *e)` — `:85-88`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_digests(e: *const Engine) -> Option<EngineDigestsPtr> {
     // SAFETY: `e` is the caller's engine.
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn ENGINE_get_digests(e: *const Engine) -> Option<EngineDi
 /// `int ENGINE_set_digests(ENGINE *e, ENGINE_DIGESTS_PTR f)` — `:91-95`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_digests(e: *mut Engine, f: Option<EngineDigestsPtr>) -> c_int {
     // SAFETY: `e` is the caller's engine.

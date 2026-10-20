@@ -47,7 +47,8 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::{raise_with, ERR_clear_error, ERR_peek_error};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::ssl::ssl_cert::{ssl_cert_lookup_by_pkey, ssl_security_cert, SSL_CERT_INFO};
 use crate::ssl::ssl_lib::SSL_is_quic;
@@ -64,6 +65,7 @@ use crate::x509::x_x509::{d2i_X509, X509_free, X509_new_ex, X509};
 
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/ssl_rsa.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_rsa.c");
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
 /// `ERR_LIB_PEM` — `err.h:81`.
@@ -317,7 +319,7 @@ pub unsafe extern "C" fn SSL_use_certificate_file(
             if in_.is_null() {
                 return 0;
             }
-            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq);
+            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 79);
                 BIO_free(in_);
@@ -330,7 +332,15 @@ pub unsafe extern "C" fn SSL_use_certificate_file(
                 cert = d2i_X509_bio(in_, &mut x);
             } else if type_ == SSL_FILETYPE_PEM {
                 j = ERR_R_PEM_LIB;
-                cert = PEM_read_bio_X509(in_, &mut x, None, ptr::null_mut());
+                // `ssl_rsa.c:87-88`: the authority forwards the connection's default password
+                // callback, so an encrypted certificate block reaches the application's
+                // callback instead of `PEM_def_callback`.
+                cert = PEM_read_bio_X509(
+                    in_,
+                    &mut x,
+                    (*ssl).default_passwd_callback,
+                    (*ssl).default_passwd_callback_userdata,
+                );
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 95);
                 X509_free(x);
@@ -373,7 +383,7 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_file(
             if in_.is_null() {
                 return 0;
             }
-            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq);
+            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 336);
                 BIO_free(in_);
@@ -386,7 +396,14 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_file(
                 cert = d2i_X509_bio(in_, &mut x);
             } else if type_ == SSL_FILETYPE_PEM {
                 j = ERR_R_PEM_LIB;
-                cert = PEM_read_bio_X509(in_, &mut x, None, ptr::null_mut());
+                // `ssl_rsa.c:338-339`: the context's default password callback, exactly as
+                // the chain loader forwards it.
+                cert = PEM_read_bio_X509(
+                    in_,
+                    &mut x,
+                    (*ctx).default_passwd_callback,
+                    (*ctx).default_passwd_callback_userdata,
+                );
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 347);
                 X509_free(x);
@@ -421,7 +438,7 @@ pub unsafe extern "C" fn SSL_use_certificate_ASN1(
     guard_ffi(0, || {
         // SAFETY: `ssl` is live per the caller's contract.
         unsafe {
-            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq);
+            let mut x = X509_new_ex((*(*ssl).ctx).libctx, (*(*ssl).ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 118);
                 return 0;
@@ -453,7 +470,7 @@ pub unsafe extern "C" fn SSL_CTX_use_certificate_ASN1(
     guard_ffi(0, || {
         // SAFETY: `ctx` is live per the caller's contract.
         unsafe {
-            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq);
+            let mut x = X509_new_ex((*ctx).libctx, (*ctx).propq());
             if x.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 368);
                 return 0;
@@ -540,14 +557,14 @@ pub unsafe extern "C" fn SSL_use_PrivateKey_file(
                     (*ssl).default_passwd_callback,
                     (*ssl).default_passwd_callback_userdata,
                     sc.libctx,
-                    sc.propq,
+                    sc.propq(),
                 );
                 (ERR_R_PEM_LIB, p)
             } else if type_ == SSL_FILETYPE_ASN1 {
                 let sc = &*(*ssl).ctx;
                 (
                     ERR_R_ASN1_LIB,
-                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), sc.libctx, sc.propq),
+                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), sc.libctx, sc.propq()),
                 )
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 208);
@@ -596,13 +613,13 @@ pub unsafe extern "C" fn SSL_CTX_use_PrivateKey_file(
                     (*ctx).default_passwd_callback,
                     (*ctx).default_passwd_callback_userdata,
                     (*ctx).libctx,
-                    (*ctx).propq,
+                    (*ctx).propq(),
                 );
                 (ERR_R_PEM_LIB, p)
             } else if type_ == SSL_FILETYPE_ASN1 {
                 (
                     ERR_R_ASN1_LIB,
-                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), (*ctx).libctx, (*ctx).propq),
+                    d2i_PrivateKey_ex_bio(in_, ptr::null_mut(), (*ctx).libctx, (*ctx).propq()),
                 )
             } else {
                 raise_ssl(SSL_R_BAD_SSL_FILETYPE, 424);
@@ -639,7 +656,8 @@ pub unsafe extern "C" fn SSL_use_PrivateKey_ASN1(
         unsafe {
             let mut p = d;
             let sc = &*(*ssl).ctx;
-            let pkey = d2i_PrivateKey_ex(type_, ptr::null_mut(), &mut p, len, sc.libctx, sc.propq);
+            let pkey =
+                d2i_PrivateKey_ex(type_, ptr::null_mut(), &mut p, len, sc.libctx, sc.propq());
             if pkey.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 233);
                 return 0;
@@ -673,7 +691,7 @@ pub unsafe extern "C" fn SSL_CTX_use_PrivateKey_ASN1(
                 &mut p,
                 len,
                 (*ctx).libctx,
-                (*ctx).propq,
+                (*ctx).propq(),
             );
             if pkey.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 449);
@@ -705,6 +723,27 @@ unsafe fn use_certificate_chain_file(
         raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 492);
         return 0;
     }
+    // `ssl_rsa.c:479-490`: the authority forwards the **context's** default password callback
+    // (branching on `ctx`, not on `real_ctx`) to both PEM readers. Dropping it here made an
+    // encrypted certificate block fall through to `PEM_def_callback` instead of the application's
+    // callback.
+    let (passwd_callback, passwd_callback_userdata) = if !ctx.is_null() {
+        // SAFETY: `ctx` is non-NULL in this branch and live per the caller's contract.
+        unsafe {
+            (
+                (*ctx).default_passwd_callback,
+                (*ctx).default_passwd_callback_userdata,
+            )
+        }
+    } else {
+        // SAFETY: `ctx` is NULL, so the caller supplied a live `ssl`.
+        unsafe {
+            (
+                (*ssl).default_passwd_callback,
+                (*ssl).default_passwd_callback_userdata,
+            )
+        }
+    };
     let real_ctx = if ssl.is_null() {
         ctx
     } else {
@@ -717,15 +756,16 @@ unsafe fn use_certificate_chain_file(
         return 0;
     }
     // SAFETY: `real_ctx` is live.
-    let mut x = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq) };
+    let mut x = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq()) };
     if x.is_null() {
         raise_ssl(ERR_R_ASN1_LIB, 509);
         // SAFETY: `in_` is this frame's own BIO.
         unsafe { BIO_free(in_) };
         return 0;
     }
-    // SAFETY: `in_` is a live readable BIO.
-    let ok = unsafe { PEM_read_bio_X509_AUX(in_, &mut x, None, ptr::null_mut()) };
+    // SAFETY: `in_` is a live readable BIO; `x` is live; the callbacks are the context's own.
+    let ok =
+        unsafe { PEM_read_bio_X509_AUX(in_, &mut x, passwd_callback, passwd_callback_userdata) };
     if ok.is_null() {
         raise_ssl(ERR_R_PEM_LIB, 515);
         // SAFETY: both owned here.
@@ -769,7 +809,7 @@ unsafe fn use_certificate_chain_file(
         }
         loop {
             // SAFETY: `real_ctx` is live.
-            let mut ca = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq) };
+            let mut ca = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq()) };
             if ca.is_null() {
                 raise_ssl(ERR_R_ASN1_LIB, 549);
                 ret = 0;
@@ -780,8 +820,11 @@ unsafe fn use_certificate_chain_file(
                 }
                 return ret;
             }
-            // SAFETY: `in_` is a live readable BIO; `ca` is live.
-            let read = unsafe { PEM_read_bio_X509(in_, &mut ca, None, ptr::null_mut()) };
+            // SAFETY: `in_` is a live readable BIO; `ca` is live; the callbacks are the
+            // context's own.
+            let read = unsafe {
+                PEM_read_bio_X509(in_, &mut ca, passwd_callback, passwd_callback_userdata)
+            };
             if !read.is_null() {
                 // SAFETY: exactly one of `ctx`/`ssl` is non-NULL and live; `ca` is live.
                 let r = unsafe {
@@ -1108,8 +1151,12 @@ fn extension_contextoff(version: c_uint) -> usize {
 
 /// `static size_t extension_append_length(unsigned int version, size_t extension_length)` —
 /// `ssl/ssl_rsa.c:775-778`.
-fn extension_append_length(version: c_uint, extension_length: usize) -> usize {
-    extension_length + extension_contextoff(version)
+///
+/// The authority's `+` wraps on overflow; the crate reports that as the same failure outcome a
+/// refused allocation has (`None`), so no wrapped, too-small length reaches the copy or the
+/// allocator (AGENTS.md §3).
+fn extension_append_length(version: c_uint, extension_length: usize) -> Option<usize> {
+    extension_length.checked_add(extension_contextoff(version))
 }
 
 /// `static void extension_append(unsigned int version, const unsigned char *extension,
@@ -1156,16 +1203,31 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
         // SAFETY: `ctx`/`serverinfo` are the caller's.
         unsafe {
             if version == SSL_SERVERINFOV1 {
-                let sinfo_length = extension_append_length(SSL_SERVERINFOV1, serverinfo_length);
-                let sinfo = crate::runtime::mem::CRYPTO_zalloc(sinfo_length, FILE, 818);
-                if sinfo.is_null() {
+                let Some(sinfo_length) =
+                    extension_append_length(SSL_SERVERINFOV1, serverinfo_length)
+                else {
                     return 0;
-                }
-                let sinfo = sinfo.cast::<u8>();
-                extension_append(SSL_SERVERINFOV1, serverinfo, serverinfo_length, sinfo);
-                let ret = SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, sinfo, sinfo_length);
-                CRYPTO_free(sinfo.cast(), FILE, 827);
-                return ret;
+                };
+                // The V1->V2 rebuild buffer, allocated at the authority's own site (`:818`) and
+                // released by `Drop` at its own site (`:827`).
+                let Some(sinfo) =
+                    OwnedBuf::new_zeroed_released(sinfo_length, FILE_SEAM, 818, FILE_SEAM, 827)
+                else {
+                    return 0;
+                };
+                extension_append(
+                    SSL_SERVERINFOV1,
+                    serverinfo,
+                    serverinfo_length,
+                    sinfo.as_ptr(),
+                );
+                // The recursive installer copies `sinfo`, which `Drop` then releases.
+                return SSL_CTX_use_serverinfo_ex(
+                    ctx,
+                    SSL_SERVERINFOV2,
+                    sinfo.as_ptr(),
+                    sinfo_length,
+                );
             }
             if serverinfo_process_buffer(version, serverinfo, serverinfo_length, ptr::null_mut())
                 == 0
@@ -1179,15 +1241,47 @@ pub unsafe extern "C" fn SSL_CTX_use_serverinfo_ex(
                 return 0;
             }
             let cpk = crate::ssl::ssl_lib::cert_active_key((*ctx).cert);
-            let new_serverinfo =
-                CRYPTO_realloc((*cpk).serverinfo.cast(), serverinfo_length, FILE, 839).cast::<u8>();
+            let (incumbent, incumbent_len) = (*cpk).serverinfo();
+            // If the caller passed a range inside the member's incumbent block, `realloc` may move
+            // and release that block before the copy (and the validation callback below) read it.
+            // The authority reallocs and then copies from the caller's pointer (`ssl_rsa.c:839-844`)
+            // — a use-after-free for this caller; tee the bytes first. This is the §17 UB
+            // elimination recorded as D564.
+            let mut alias_copy: Vec<u8> = Vec::new();
+            let mut source = serverinfo;
+            if !incumbent.is_null() {
+                let inc_start = incumbent as usize;
+                let inc_end = inc_start.saturating_add(incumbent_len);
+                let src_start = serverinfo as usize;
+                let src_end = src_start.saturating_add(serverinfo_length);
+                if src_start < inc_end && inc_start < src_end {
+                    if alias_copy.try_reserve_exact(serverinfo_length).is_err() {
+                        return 0;
+                    }
+                    // SAFETY: `serverinfo` is readable for `serverinfo_length` bytes per the
+                    // caller's contract, and the range overlaps the live incumbent block.
+                    alias_copy.extend_from_slice(core::slice::from_raw_parts(
+                        serverinfo,
+                        serverinfo_length,
+                    ));
+                    source = alias_copy.as_ptr();
+                }
+            }
+            // The block stays `CertKey`'s: the authority regrows its `serverinfo` in place through
+            // `CRYPTO_realloc`, and on a refused regrowth the handle leaves the old block (and its
+            // `cert_pkey_clear` release) intact.
+            // SAFETY: `cpk` is live and its `serverinfo` pair obeys the blob member-buffer invariant.
+            let new_serverinfo = (*cpk)
+                .serverinfo_slot()
+                .realloc(serverinfo_length, FILE, 839);
             if new_serverinfo.is_null() {
                 return 0;
             }
-            (*cpk).serverinfo = new_serverinfo;
-            ptr::copy_nonoverlapping(serverinfo, new_serverinfo, serverinfo_length);
-            (*cpk).serverinfo_length = serverinfo_length;
-            if serverinfo_process_buffer(version, serverinfo, serverinfo_length, ctx) == 0 {
+            // SAFETY: `new_serverinfo` is the (possibly moved) block `(*cpk).serverinfo` now owns,
+            // writable for `serverinfo_length` bytes; `source` is readable for that many (the
+            // caller's block, or the tee taken before the regrow).
+            ptr::copy_nonoverlapping(source, new_serverinfo, serverinfo_length);
+            if serverinfo_process_buffer(version, source, serverinfo_length, ctx) == 0 {
                 raise_ssl(SSL_R_INVALID_SERVERINFO_DATA, 853);
                 return 0;
             }
@@ -1407,3 +1501,240 @@ const _: unsafe extern "C" fn(*const Ssl) -> c_int = SSL_is_quic;
 // `SSL_CERT_INFO` and the constants document the table `ssl_cert_lookup_by_pkey` searches.
 const _: (usize, usize) = (SSL_CERT_INFO.len(), SSL_PKEY_NUM);
 const _: (usize, usize, usize) = (SSL_PKEY_RSA, NAME_PREFIX1.len(), NAME_PREFIX2.len());
+
+#[cfg(test)]
+mod checked_arithmetic_tests {
+    use super::*;
+
+    /// The `extension_length + contextoff` sum is checked: at the representable maximum the
+    /// authority's `+` wraps and then copies `extension_length` bytes into a too-small buffer.
+    #[test]
+    fn extension_append_length_rejects_usize_max() {
+        assert_eq!(extension_append_length(SSL_SERVERINFOV1, 1), Some(5));
+        assert_eq!(extension_append_length(SSL_SERVERINFOV2, 1), Some(1));
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX),
+            None,
+            "V1's +4 must not wrap"
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV2, usize::MAX),
+            Some(usize::MAX),
+            "the V2 arm adds zero and must not invent an overflow"
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX - 4),
+            Some(usize::MAX)
+        );
+        assert_eq!(
+            extension_append_length(SSL_SERVERINFOV1, usize::MAX - 3),
+            None
+        );
+    }
+}
+
+/// Adversarial self-aliasing probe (`adv-probe.sh`, §16).
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{cert_active_key, SSL_CTX_free, SSL_CTX_new};
+
+    /// Passing the member's own block back to `SSL_CTX_use_serverinfo_ex` must not leave the copy
+    /// reading the block `realloc` just moved and released. The forced move makes the old order a
+    /// deterministic failure rather than allocator-luck.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn self_aliasing_serverinfo_is_teed_before_realloc() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // One V2 extension: context 0, type 0x1234, zero-length body.
+        let mut data = [0u8; 8];
+        data[4] = 0x12;
+        data[5] = 0x34;
+
+        // SAFETY: the method table is static; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+        assert_eq!(
+            // SAFETY: `data` is readable for eight bytes and `ctx` is live.
+            unsafe { SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, data.as_ptr(), data.len()) },
+            1,
+            "the first install must succeed"
+        );
+
+        // SAFETY: `ctx` is live and its certificate container is the context's own.
+        let cpk = unsafe { cert_active_key((*ctx).cert) };
+        assert!(!cpk.is_null());
+        // SAFETY: `cpk` is live and its member obeys the blob invariant.
+        let (member, member_len) = unsafe { (*cpk).serverinfo() };
+        assert_eq!(member_len, data.len());
+        assert!(!member.is_null());
+
+        // Change the extension type in place so the second (aliasing) install registers a fresh
+        // type rather than refusing a duplicate. Same length, same block.
+        data[5] = 0x36;
+        // SAFETY: `member` is the live eight-byte member block; byte 5 is in range.
+        unsafe { member.cast_mut().add(5).write(0x36) };
+
+        adv_alloc::reset();
+        // Force the regrow to move and zero the block it releases, so a post-realloc read through
+        // the caller's (now stale) pointer is deterministic.
+        adv_alloc::arm_move_realloc(member.cast_mut().cast(), data.len());
+        // SAFETY: `member` is readable for eight bytes (the caller's aliasing argument) and `ctx`
+        // is live.
+        let ret = unsafe { SSL_CTX_use_serverinfo_ex(ctx, SSL_SERVERINFOV2, member, data.len()) };
+        adv_alloc::disarm_move_realloc();
+
+        assert_eq!(
+            ret, 1,
+            "an aliasing install must copy before the regrow releases the source"
+        );
+        let ev = adv_alloc::events();
+        assert!(
+            ev.iter()
+                .any(|e| matches!(e, Ev::Realloc { n, refused: false } if *n == data.len())),
+            "the forced move must have been intercepted: {ev:?}"
+        );
+
+        // SAFETY: `cpk` is live and its member still obeys the invariant after the regrow.
+        let (moved, moved_len) = unsafe { (*cpk).serverinfo() };
+        assert_eq!(moved_len, data.len());
+        assert_ne!(moved, member, "the forced regrow must have moved the block");
+        // SAFETY: `moved` is the live member block of eight bytes.
+        let bytes = unsafe { core::slice::from_raw_parts(moved, data.len()) };
+        assert_eq!(
+            bytes,
+            data.as_slice(),
+            "the member must hold the pre-regrow bytes"
+        );
+
+        // SAFETY: `ctx` is live and owned by this frame.
+        unsafe { SSL_CTX_free(ctx) };
+        adv_alloc::assert_no_double_free();
+    }
+}
+
+/// B8 regression controls for the certificate-file password-callback edge.
+///
+/// The fixture is an encrypted PEM block whose body decodes to 48 zero bytes. It is not a
+/// certificate, so both loaders must answer 0; what is observed is that the application's
+/// password callback **was consulted**, which is the B7 follow-up's whole subject. Without the
+/// forwarding each loader reaches `PEM_def_callback` instead and the counter stays 0.
+#[cfg(test)]
+mod password_callback_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::evp::pem_bridge::PemPasswordCb;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_default_passwd_cb,
+        SSL_CTX_set_default_passwd_cb_userdata, SSL_free, SSL_new, SSL_set_default_passwd_cb,
+        SSL_set_default_passwd_cb_userdata,
+    };
+    use core::sync::atomic::{AtomicUsize, Ordering};
+    use std::ffi::CString;
+
+    const ENCRYPTED_PEM: &str = "-----BEGIN CERTIFICATE-----\n\
+Proc-Type: 4,ENCRYPTED\n\
+DEK-Info: AES-256-CBC,00000000000000000000000000000000\n\
+\n\
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\
+-----END CERTIFICATE-----\n";
+
+    const PASSWORD: &[u8] = b"boundary-b8";
+
+    static CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn password_cb(
+        buf: *mut c_char,
+        size: c_int,
+        _rwflag: c_int,
+        _u: *mut c_void,
+    ) -> c_int {
+        CALLS.fetch_add(1, Ordering::SeqCst);
+        if buf.is_null() || size <= 0 || PASSWORD.len() + 1 > size as usize {
+            return -1;
+        }
+        // SAFETY: `buf` is writable for `size` bytes and the copy fits the test above.
+        unsafe {
+            ptr::copy_nonoverlapping(PASSWORD.as_ptr().cast::<c_char>(), buf, PASSWORD.len());
+            *buf.add(PASSWORD.len()) = 0;
+        }
+        PASSWORD.len() as c_int
+    }
+
+    fn write_fixture() -> (std::path::PathBuf, CString) {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, Ordering::SeqCst);
+        let path =
+            std::env::temp_dir().join(format!("openssl-rs-b8-{}-{n}.pem", std::process::id()));
+        if std::fs::write(&path, ENCRYPTED_PEM).is_err() {
+            panic!("cannot write the temporary PEM fixture");
+        }
+        let Some(text) = path.to_str() else {
+            panic!("the temporary path is not UTF-8");
+        };
+        let cpath = match CString::new(text) {
+            Ok(c) => c,
+            Err(_) => panic!("the temporary path contains a NUL byte"),
+        };
+        (path, cpath)
+    }
+
+    #[test]
+    fn ctx_certificate_file_forwards_the_password_callback() {
+        let _g = crate::test_support::lock_global_state();
+        CALLS.store(0, Ordering::SeqCst);
+        let (path, cpath) = write_fixture();
+        // SAFETY: the method table is static; the context and file are this frame's.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+            SSL_CTX_set_default_passwd_cb(ctx, Some(password_cb as PemPasswordCb));
+            SSL_CTX_set_default_passwd_cb_userdata(ctx, ptr::null_mut());
+            let ret = SSL_CTX_use_certificate_file(ctx, cpath.as_ptr(), SSL_FILETYPE_PEM);
+            assert_eq!(ret, 0, "the fixture body is not a certificate");
+            assert_eq!(
+                CALLS.load(Ordering::SeqCst),
+                1,
+                "SSL_CTX_use_certificate_file must forward the default password callback"
+            );
+            SSL_CTX_free(ctx);
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn connection_certificate_file_forwards_the_password_callback() {
+        let _g = crate::test_support::lock_global_state();
+        CALLS.store(0, Ordering::SeqCst);
+        let (path, cpath) = write_fixture();
+        // SAFETY: the method table is static; the context, connection and file are this
+        // frame's.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null(), "SSL_new must succeed");
+            SSL_set_default_passwd_cb(ssl, Some(password_cb as PemPasswordCb));
+            SSL_set_default_passwd_cb_userdata(ssl, ptr::null_mut());
+            let ret = SSL_use_certificate_file(ssl, cpath.as_ptr(), SSL_FILETYPE_PEM);
+            assert_eq!(ret, 0, "the fixture body is not a certificate");
+            assert_eq!(
+                CALLS.load(Ordering::SeqCst),
+                1,
+                "SSL_use_certificate_file must forward the default password callback"
+            );
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+}

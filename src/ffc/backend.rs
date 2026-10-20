@@ -79,8 +79,11 @@ use crate::params::{
 /// it directly.
 ///
 /// # Safety
-/// `ffc` is NULL or a live, writable `FFC_PARAMS`; `params` is a key-terminated descriptor array.
-/// On success ownership of the converted numbers passes to `ffc`.
+/// `ffc` must be a live, writable, non-NULL `FFC_PARAMS` — the body dereferences it for every
+/// scalar field. `params` is NULL or a key-terminated descriptor array. On success ownership of
+/// the converted numbers passes to `ffc`. The data of a `DIGEST` or `DIGEST_PROPS`
+/// `UTF8_STRING` parameter is stored in the object by pointer, not copied (the authority does the
+/// same), so it must remain valid for as long as the object is used.
 #[allow(dead_code)] // read by the provider keymgmt's `import`; wrapped by dh_backend.c and dsa_lib.c
 pub(crate) unsafe fn ossl_ffc_params_fromdata(
     ffc: *mut FfcParams,

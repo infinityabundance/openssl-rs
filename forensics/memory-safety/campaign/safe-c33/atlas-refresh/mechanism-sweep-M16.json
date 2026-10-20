@@ -1,0 +1,125 @@
+{
+  "receipt": "mechanism-sweep-M16",
+  "branch": "integrate/safe-c33",
+  "worktree": true,
+  "date": "2026-10-19",
+  "source_head": "2df1ba407",
+  "verification_level": "FAST plus BATCH; no STOP-class defect; one debug-build counter overflow and two too-weak safety contracts repaired; two deliberate divergences recorded",
+  "scope": "ordinary mechanism-contract sweep starting at the queued src/dsa/object.rs (live rank 178) and continuing down the production-site ranking. Eight ordinary files audited: src/dsa/object.rs (178), src/x509/v3_ac_tgt.rs (190), src/cmp/cmp_hdr.rs (191), src/cms/cms_dh.rs (192), src/slh_dsa/dsa.rs (193), src/x509/dane.rs (194), src/x509/pcy_cache.rs (195), src/bn/rand.rs (196). No file in this run was classified as a new boundary.",
+  "files": [
+    "src/dsa/object.rs",
+    "src/x509/v3_ac_tgt.rs",
+    "src/cmp/cmp_hdr.rs",
+    "src/cms/cms_dh.rs",
+    "src/slh_dsa/dsa.rs",
+    "src/x509/dane.rs",
+    "src/x509/pcy_cache.rs",
+    "src/bn/rand.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M16-D1",
+      "file": "src/bn/rand.rs",
+      "lines_post_fix": "1056-1059",
+      "severity": "low",
+      "class": "non-faithful unsigned-char increment",
+      "description": "ossl_bn_gen_dsa_nonce_fixed_top incremented its per-iteration digest counter (`unsigned char i` in the authority) with Rust `i += 1` on a u8. The authority wraps modulo 256; a range above roughly 130k bits would make debug builds panic (caught by guard_ffi and turned into a spurious 0) instead of continuing. Unreachable for any valid DSA/ECDSA group, but the wrap is the authority's arithmetic.",
+      "fix": "`i = i.wrapping_add(1)`, matching the same file's established wrapping_add use for the authority's int arithmetic."
+    },
+    {
+      "id": "M16-D2",
+      "file": "src/x509/pcy_cache.rs",
+      "lines_post_fix": "459-461",
+      "severity": "low",
+      "class": "too-weak validity contract (NULL accepted, dereferenced)",
+      "description": "ossl_policy_cache_set's `# Safety` admitted a NULL `x`, but its first statement dereferences `x` and the authority dereferences unconditionally; NULL is C-invalid input, so the contract licensed UB.",
+      "fix": "Contract narrowed to a live, non-NULL `X509`; no code change."
+    },
+    {
+      "id": "M16-D3",
+      "file": "src/x509/pcy_cache.rs",
+      "lines_post_fix": "480-483",
+      "severity": "low",
+      "class": "too-weak validity contract (NULL accepted, dereferenced)",
+      "description": "ossl_policy_cache_find_data's `# Safety` admitted a NULL `id`, but the comparator reaches `OBJ_cmp`, which reads it; NULL is C-invalid input.",
+      "fix": "Contract narrowed to a live, non-NULL `ASN1_OBJECT`; no code change."
+    },
+    {
+      "id": "M16-D4",
+      "file": "src/dsa/object.rs",
+      "lines_post_fix": "720-725",
+      "severity": "low",
+      "class": "deliberate divergence not recorded as one",
+      "description": "DSA_set0_key releases the outgoing key with BN_clear_free where dsa_lib.c:320/324 uses BN_free. The cleansing is a safety improvement (the outgoing value is key material) and is observable only to a reader of freed memory, but the doc claimed the authority clears.",
+      "fix": "Doc now records the divergence and its non-observability; the cleansing release is retained."
+    },
+    {
+      "id": "M16-D5",
+      "file": "src/slh_dsa/dsa.rs",
+      "lines_post_fix": "482-487",
+      "severity": "low",
+      "class": "deliberate allocator-release divergence not recorded as one",
+      "description": "msg_encode's internal WPACKET-failure path clear-frees the heap block at slh_dsa.c:309, whereas the authority plain-frees that failure block at :278 (and clear-frees only the block returned to the caller, at :309/:339). Cleansing is deliberate because the block may carry part of a confidential message.",
+      "fix": "Doc now records the deviation explicitly; the cleansing release is retained."
+    }
+  ],
+  "no_defect_found": [
+    "src/dsa/object.rs: DSA_new/_method/ossl_dsa_new's staged RawCtx construction, the lock/reference/ex_data/params ordering and the DSA_free err label; DSA_free's down_ref sentinel and member-release order; DSA_up_ref; DSA_dup_DH's params-copy-then-keys order and its single err label; DSA_set_method's finish/engine-clear/init order; set0_pqg's three refusals; set0_key's non-NULL slot replacement and dirty_cnt bump; security_bits/bits sentinels; ossl_dsa_ffc_params_fromdata's success-only bump match dsa_lib.c.",
+    "src/x509/v3_ac_tgt.rs: the three static SEQUENCE items (size/offset asserts, templates, static accessors), the CHOICE descriptor and union offset, the two SEQUENCE OF item templates (primitive utype -1, single-template tcount 0 per the crate's item machine), the three IMPLEMENT_ASN1_FUNCTIONS groups, all five printers (including the compiled OPENSSL_NO_DEPRECATED_3_6 sig_print arm and the BIO_write/X509_signature_dump tail) and the ext-method row match v3_ac_tgt.c.",
+    "src/cmp/cmp_hdr.rs: the three null-raising getters, pvno get/set, protection NID, senderNonce, NULL-DN predicate, sender/recipient setters, messageTime, set_random's OwnedBuf adoption/raise/release, senderKID, both freeText pushers, generalInfo push0/push1 (dup then free-on-push-failure), set_implicitConfirm's two ownership arms, has_implicitConfirm, set_transactionID's 16-byte draw plus OwnedBuf-adopted i2s log text, and hdr_init's sender/recipient selection and all failure returns match cmp_hdr.c.",
+    "src/cms/cms_dh.rs: dh_cms_set_peerkey's OID/type checks, DER-to-BN, full-width pad, copy/set1/derive sequence and single err label; dh_cms_set_shared_info's ESDH-only check, SHA1 KDF, AlgorithmIdentifier decode, wrap-mode fetch, key length/OID, UKM adoption and ownership transfer with the authority's err order; dh_cms_decrypt's peer-key/shared-info raises; dh_cms_encrypt's uninitialised-arm DER encode, KDF selection, wrap identifier, UKM transfer, penc adoption and single tail release; ossl_cms_dh_envelope's dispatch match cms_dh.c.",
+    "src/slh_dsa/dsa.rs: slh_sign_internal's size/private-key guards, WPACKET/PACKET cursors, PRF_MSG/H_MSG, md and tree/leaf extraction, FORS/HT chain and err-label cleansing; slh_verify_internal's key/size guards, H_MSG, digest cursor, FORS/HT and remaining==0; msg_encode's raw/stack/heap encodings and overflow test; ossl_slh_dsa_(sign|verify)'s MsgBlock obligations; bytes_to_u64_be and get_tree_ids' widths/masks match slh_dsa.c.",
+    "src/x509/dane.rs: the SslDane layout asserts, the DANETLS predicate family, dane_i2d's two selectors/raises, dane_match_cert's mask narrowing, selector cache release at its two coordinates, digest agility, match recording/up-ref and tail cache free; check_dane_issuer; check_dane_pkeys' bare-TA match and chain pruning; dane_match_rpk's single DER encode, digest reuse and tail release; dane_reset; get1_trusted_issuer's chain save/restore match x509_vfy.c:3087-3506.",
+    "src/x509/pcy_cache.rs: policy_cache_create's duplicate-anyPolicy/duplicate-OID/push-failure arms and cleanup order; policy_cache_new's four extension decodes, shared i out-parameter semantics, bad_cache flag and tail; the CtxDestroy body; find_data's key-element lookup; and the pcy_map.c transcription (anyPolicy critical flag, shared qualifiers, MAPPED flags, push failures) match the authorities.",
+    "src/bn/rand.rs: bnrand's bits/top/bottom guards, mask arithmetic, TESTING patterner, top/bottom setting, BN_bin2bn and clearing free; bnrand_range's two rejection arms and 100-iteration ceiling; the fixed-top draw/flag/mask/reject loop; the DSA-nonce SHA-512 loop, buffer widths, 64-iteration ceiling and end-label release order match bn_rand.c. The documented NULL-range graceful refusal is a recorded safety extension."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "contracts_reused": [
+    "RC-1 refcount protocol (DSA_free's DownRef::Last sentinel, DSA_up_ref)",
+    "OB-1 OwnedBuf/OwnedBlock adoption, nullable adoption, release lines, into_raw suppression and cleansing-free release",
+    "OB-3 OwnedCtx/RawCtx staged malloc/zalloc, from_raw and the CtxDestroy member-only contract",
+    "ASN.1 item/template/free/dup/d2i/i2d contracts, including the primitive-item single-template convention and callback ordering",
+    "OpenSSL stack element/comparator/key convention (address-of-slot comparator arguments)",
+    "B1/B2 BIO lifecycle and printf/puts/write contracts used by the printers",
+    "ERR raise-coordinate contract (file/line/func/lib/reason, local ErrSite declarations)",
+    "C-ABI exported-symbol, out-parameter, null-or-live and destructor contracts",
+    "The crate's null-BIGNUM-reads-as-zero `as_ref` convention at the public BN boundary"
+  ],
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "focused_tests": "PASS: dsa::object 2 passed / 0 failed / 2 ignored (allocator probes), bn::rand 7/0, x509::pcy_cache 1/0",
+    "library_tests_serial": "PASS: 1606 passed / 0 failed / 27 ignored (225.02 s)",
+    "library_tests_threads_4": "PASS: 1606 passed / 0 failed / 27 ignored (102.45 s)",
+    "affected_adversarial_probes": "NOT_RUN: the only probe-bearing file is src/dsa/object.rs, whose change is documentation-only; no OPENSSL_RS_ADV_PROBE arm is affected. The two dsa::object::adv_probe tests remain ignored under the normal suite."
+  },
+  "residuals": [
+    "DSA_set0_key keeps the cleansing BN_clear_free of outgoing key material instead of the authority's BN_free; the difference is visible only to a reader of freed memory and is recorded at the function.",
+    "msg_encode keeps a cleansing release on its internal WPACKET-failure path, where the authority plain-frees; the block may hold part of a confidential message, so the improvement is retained and recorded.",
+    "ossl_bn_gen_dsa_nonce_fixed_top skips EVP_DigestUpdate for a NULL message (the authority would pass NULL to the update); the function's contract requires a readable span, so this is a defensive guard for C-invalid input, not reachable from a conforming caller.",
+    "Line coordinates remain the crate's established 0-at-inert-mdebug convention for dsa/object, pcy_cache and bn/rand; no coordinate was changed in this batch.",
+    "ASan/Miri/Loom/TSan, full-suite sanitizers, FRF-Fuzz, authority differentials, independent review and SEAL regeneration are NOT_RUN."
+  ],
+  "not_discharged": true,
+  "next_queue": {
+    "file": "src/rsa/ossl.rs",
+    "rank_in_attribution": 197,
+    "then": [
+      "src/srp/srp_lib.rs (198)",
+      "src/engine/eng_list.rs (199)",
+      "src/ocsp/ocsp_ext.rs (200)",
+      "src/provider/ml_dsa_kmgmt.rs (201)",
+      "src/rsa/ctrl.rs (202)",
+      "src/cms/cms_asn1.rs (203)"
+    ],
+    "boundary_queue": []
+  }
+}

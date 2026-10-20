@@ -19,6 +19,16 @@
 //! it. `BN_clear(x)` is the authority's step (4) and clears only the context temporary; the caller's
 //! buffer is deliberately not cleared here.
 //!
+//! ## The error-path buffer is cleansed, and that is a recorded deviation
+//!
+//! On every failure after the output block is allocated, the authority releases it with a plain
+//! `OPENSSL_free(buf)` at its `err:` label (`ecdh_ossl.c:145`). That block may already hold the
+//! shared secret's leading bytes (the `memset`/`BN_bn2bin` pair writes them before the length check
+//! that can fail), so this transcription cleanses it on release. The allocator seam keeps the
+//! authority's exact `file`/`line` and extent; the release is `OPENSSL_clear_free` rather than
+//! `OPENSSL_free`, and the divergence is deliberate per AGENTS.md §5.1/§17. The success path still
+//! transfers the uncleansed block to the caller, who owns and clears it.
+//!
 //! ## `BN_num_bytes` is the header's macro, not a symbol
 //!
 //! `bn.h`'s `#define BN_num_bytes(a) ((BN_num_bits(a) + 7) / 8)` is expanded at its one site
@@ -44,11 +54,63 @@ use crate::ec::lib::{
 use crate::ec::{EcKey, EcPoint};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 
-/// The translation-unit coordinate the one `OPENSSL_malloc`/`OPENSSL_free` pair in this unit is
-/// attributed to, as the allocator reports it.
-const FILE: *const c_char = c"crypto/ec/ecdh_ossl.c".as_ptr();
+/// The translation-unit coordinate the one allocation/release pair in this unit is attributed to,
+/// as the allocator reports it.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c".as_ptr();
+
+/// The shared-secret buffer, owned by this call until it is handed to the caller.
+///
+/// It is allocated at the authority's own `CRYPTO_malloc(buflen, FILE, 124)`; until the transfer
+/// edge its `Drop` performs the authority's `err:` release (`:145`). The success edge transfers
+/// the block uncleansed, exactly as the authority does (the caller owns and clears it); every
+/// failure edge cleanses it before release (the module's recorded deviation).
+struct OwnedSecretBuf {
+    ptr: *mut core::ffi::c_uchar,
+    /// The allocated extent, which the cleansing release needs.
+    len: usize,
+}
+
+impl OwnedSecretBuf {
+    /// `OPENSSL_malloc(buflen)`, `ecdh_ossl.c:124`, or `None` on refusal.
+    fn malloc(len: usize) -> Option<OwnedSecretBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
+        // bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE, 124)
+        }
+        .cast::<core::ffi::c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedSecretBuf { ptr: raw, len })
+        }
+    }
+
+    /// The writable start of the buffer.
+    fn as_ptr(&self) -> *mut core::ffi::c_uchar {
+        self.ptr
+    }
+
+    /// The transfer edge: give the block to the caller, whose contract is to own it.
+    fn into_raw(self) -> *mut core::ffi::c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedSecretBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `malloc` allocated for `self.len` bytes and has not been
+        // handed out; this is its single release. The authority frees it plainly at `err:`
+        // (`ecdh_ossl.c:145`); the block is secret-bearing on this path, so the release is the
+        // cleansing one (the module's recorded deviation).
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, 145) };
+    }
+}
 
 /// `int ossl_ecdh_compute_key(unsigned char **psec, size_t *pseclen, const EC_POINT *pub_key,
 /// const EC_KEY *ecdh)` — `crypto/ec/ecdh_ossl.c:28-37`. Internal.
@@ -113,7 +175,6 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
     unsafe {
         let mut tmp: *mut EcPoint = ptr::null_mut();
         let mut ret: c_int = 0;
-        let mut buf: *mut core::ffi::c_uchar = ptr::null_mut();
 
         let ctx = BN_CTX_new_ex((*ecdh).libctx);
         if ctx.is_null() {
@@ -124,14 +185,14 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
         if x.is_null() {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:66`, ERR_R_BN_LIB).
             raise_site(&err_sites::ECDH_OSSL_66);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
         let mut priv_key = EC_KEY_get0_private_key(ecdh);
         if priv_key.is_null() {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:72`, EC_R_MISSING_PRIVATE_KEY).
             raise_site(&err_sites::ECDH_OSSL_72);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
         let group = EC_KEY_get0_group(ecdh);
@@ -144,12 +205,12 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
             if EC_GROUP_get_cofactor(group, x, ptr::null_mut()) == 0 {
                 // SAFETY: a compile-time-constant site (`ecdh_ossl.c:84`, ERR_R_EC_LIB).
                 raise_site(&err_sites::ECDH_OSSL_84);
-                return err_simple(buf, tmp, x, ctx, ret);
+                return err_simple(tmp, x, ctx, ret);
             }
             if BN_mul(x, x, priv_key, ctx) == 0 {
                 // SAFETY: a compile-time-constant site (`ecdh_ossl.c:88`, ERR_R_BN_LIB).
                 raise_site(&err_sites::ECDH_OSSL_88);
-                return err_simple(buf, tmp, x, ctx, ret);
+                return err_simple(tmp, x, ctx, ret);
             }
             priv_key = x;
         }
@@ -158,14 +219,14 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
         if tmp.is_null() {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:95`, ERR_R_EC_LIB).
             raise_site(&err_sites::ECDH_OSSL_95);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
         if EC_POINT_mul(group, tmp, ptr::null(), pub_key, priv_key, ctx) == 0 {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:100`,
             // EC_R_POINT_ARITHMETIC_FAILURE).
             raise_site(&err_sites::ECDH_OSSL_100);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
         /*
@@ -177,7 +238,7 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:110`,
             // EC_R_POINT_ARITHMETIC_FAILURE).
             raise_site(&err_sites::ECDH_OSSL_110);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
         /*
@@ -190,54 +251,55 @@ pub unsafe extern "C" fn ossl_ecdh_simple_compute_key(
         if len > buflen as usize {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:121`, ERR_R_INTERNAL_ERROR).
             raise_site(&err_sites::ECDH_OSSL_121);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
-        buf = CRYPTO_malloc(buflen as usize, FILE, 124).cast::<core::ffi::c_uchar>();
-        if buf.is_null() {
-            return err_simple(buf, tmp, x, ctx, ret);
-        }
+        let Some(owner) = OwnedSecretBuf::malloc(buflen as usize) else {
+            return err_simple(tmp, x, ctx, ret);
+        };
+        let buf = owner.as_ptr();
+        // The owner lives until the success transfer edge. On an error return, `err_simple`'s
+        // explicit cleanup runs first and this `Drop` then performs the authority's last `err:`
+        // release in the same order.
+        let mut buf_owner = Some(owner);
 
         ptr::write_bytes(buf, 0, buflen as usize - len);
         if len != BN_bn2bin(x, buf.add(buflen as usize - len)) as usize {
             // SAFETY: a compile-time-constant site (`ecdh_ossl.c:129`, ERR_R_BN_LIB).
             raise_site(&err_sites::ECDH_OSSL_129);
-            return err_simple(buf, tmp, x, ctx, ret);
+            return err_simple(tmp, x, ctx, ret);
         }
 
-        *pout = buf;
+        // The buffer is handed to the caller; the `err:` path below must not release it. This is
+        // the ownership transfer edge the authority expresses by nulling its local `buf`.
+        match buf_owner.take() {
+            Some(owner) => *pout = owner.into_raw(),
+            // Unreachable: the owner was installed immediately after the allocation above.
+            None => return err_simple(tmp, x, ctx, ret),
+        }
         *poutlen = buflen as usize;
-        // The buffer is handed to the caller; the `err:` label below must not release it.
-        buf = ptr::null_mut();
 
         ret = 1;
-        err_simple(buf, tmp, x, ctx, ret)
+        err_simple(tmp, x, ctx, ret)
     }
 }
 
 /// The authority's `err:` label of [`ossl_ecdh_simple_compute_key`] (`ecdh_ossl.c:139-145`).
 ///
-/// Step (4): the context temporary is cleared, the point cleared and freed, the context released,
-/// and the output buffer freed **only when it has not been handed over** — which is why the caller
-/// nulls `buf` on the success path.
+/// Step (4): the context temporary is cleared, the point cleared and freed, and the context
+/// released. The output buffer is no longer a parameter: [`OwnedSecretBuf`]'s `Drop` performs the
+/// authority's `OPENSSL_free(buf)` at `:145` **after** this cleanup, in the authority's order,
+/// whenever the call did not hand the buffer to its caller.
 ///
 /// # Safety
 ///
 /// Each pointer is NULL or is the object [`ossl_ecdh_simple_compute_key`] holds.
-unsafe fn err_simple(
-    buf: *mut core::ffi::c_uchar,
-    tmp: *mut EcPoint,
-    x: *mut BigNum,
-    ctx: *mut BnCtx,
-    ret: c_int,
-) -> c_int {
+unsafe fn err_simple(tmp: *mut EcPoint, x: *mut BigNum, ctx: *mut BnCtx, ret: c_int) -> c_int {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
         BN_clear(x);
         EC_POINT_clear_free(tmp);
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        // `OPENSSL_free(buf)`, line 145.
-        CRYPTO_free(buf.cast::<c_void>(), FILE, 145);
         ret
     }
 }

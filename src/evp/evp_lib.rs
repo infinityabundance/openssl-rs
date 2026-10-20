@@ -28,6 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
@@ -38,14 +39,14 @@ use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_modified, OsslParam,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` — `include/openssl/core_names.h:546`, value
 /// `"algorithm-id"`. The key a signature provider answers the `AlgorithmIdentifier` DER under.
 const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
 
 /// `crypto/evp/evp_lib.c`, the unit's own path, for the two allocation coordinates.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c");
 /// `EVP_CIPHER_CTX_get_algor`'s `OPENSSL_malloc(aid_len)` (`evp_lib.c:1361`).
 const LINE_MALLOC_AID_CIPHER: c_int = 1361;
 /// Its `OPENSSL_free(aid)` (`evp_lib.c:1369`).
@@ -54,6 +55,10 @@ const LINE_FREE_AID_CIPHER: c_int = 1369;
 const LINE_MALLOC_AID_PKEY: c_int = 1479;
 /// Its `OPENSSL_free(aid)` (`evp_lib.c:1487`).
 const LINE_FREE_AID_PKEY: c_int = 1487;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of an `aid` scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `int EVP_CIPHER_CTX_get_algor(EVP_CIPHER_CTX *ctx, X509_ALGOR **alg)` —
 /// `crypto/evp/evp_lib.c:1337-1373`.
@@ -97,19 +102,25 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor(
         return -2;
     }
     if !alg.is_null() && aid_len <= c_long::MAX as usize {
-        // SAFETY: this allocates a fresh block of `aid_len` bytes.
-        let aid = CRYPTO_malloc(aid_len, FILE, LINE_MALLOC_AID_CIPHER).cast::<c_uchar>();
-        if !aid.is_null() {
+        // The block is owned here: its `Drop` is its single release at the authority's own site, so
+        // no path below writes a `CRYPTO_free` by hand.
+        if let Some(aid) = OwnedBuf::new_plain_released(
+            aid_len,
+            FILE_SEAM,
+            LINE_MALLOC_AID_CIPHER,
+            FILE_SEAM,
+            LINE_FREE_AID_CIPHER,
+        ) {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds
             // `aid_len` writable bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_SIGNATURE_PARAM_ALGORITHM_ID,
-                    aid.cast::<c_void>(),
+                    aid.as_ptr().cast::<c_void>(),
                     aid_len,
                 )
             };
-            let mut pp: *const c_uchar = aid;
+            let mut pp: *const c_uchar = aid.as_ptr();
             // SAFETY: `ctx` is live, `params` is this frame's array, `pp` is this frame's slot, and
             // `alg` is the caller's out-parameter.
             unsafe {
@@ -121,8 +132,6 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor(
                 }
             }
         }
-        // SAFETY: `aid` is NULL or the block allocated above, released exactly once.
-        unsafe { CRYPTO_free(aid.cast::<c_void>(), FILE, LINE_FREE_AID_CIPHER) };
     }
     ret
 }
@@ -170,19 +179,25 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor(
         return -2;
     }
     if !alg.is_null() && aid_len <= c_long::MAX as usize {
-        // SAFETY: this allocates a fresh block of `aid_len` bytes.
-        let aid = CRYPTO_malloc(aid_len, FILE, LINE_MALLOC_AID_PKEY).cast::<c_uchar>();
-        if !aid.is_null() {
+        // The block is owned here: its `Drop` is its single release at the authority's own site, so
+        // no path below writes a `CRYPTO_free` by hand.
+        if let Some(aid) = OwnedBuf::new_plain_released(
+            aid_len,
+            FILE_SEAM,
+            LINE_MALLOC_AID_PKEY,
+            FILE_SEAM,
+            LINE_FREE_AID_PKEY,
+        ) {
             // SAFETY: the constructor writes one entry of this frame's array, and `aid` holds
             // `aid_len` writable bytes.
             unsafe {
                 params[0] = OSSL_PARAM_construct_octet_string(
                     OSSL_SIGNATURE_PARAM_ALGORITHM_ID,
-                    aid.cast::<c_void>(),
+                    aid.as_ptr().cast::<c_void>(),
                     aid_len,
                 )
             };
-            let mut pp: *const c_uchar = aid;
+            let mut pp: *const c_uchar = aid.as_ptr();
             // SAFETY: `ctx` is live, `params` is this frame's array, `pp` is this frame's slot, and
             // `alg` is the caller's out-parameter.
             unsafe {
@@ -194,8 +209,6 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor(
                 }
             }
         }
-        // SAFETY: `aid` is NULL or the block allocated above, released exactly once.
-        unsafe { CRYPTO_free(aid.cast::<c_void>(), FILE, LINE_FREE_AID_PKEY) };
     }
     ret
 }

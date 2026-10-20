@@ -148,6 +148,84 @@ unsafe fn as_ref_blinding<'a>(p: *const Blinding) -> Option<&'a Blinding> {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership seam
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `BN_BLINDING` block — the authority's opaque `struct bn_blinding_st`.
+///
+/// The type is opaque, so its representation is the crate's own `Box`, exactly as
+/// [`crate::bn::bignum`]'s `BigNum` is. Only its *ownership* is this type: [`Self::new`] allocates
+/// the block, `Drop` runs the authority's own destructor body (the five member releases, each of
+/// which accepts NULL) and then the block's single `Box` release, and
+/// [`Self::into_raw`]/[`Self::from_raw`] are the C-ABI boundary. The raw-pointer accessors above
+/// remain for the exported functions that only borrow the object for one call.
+struct OwnedCtx {
+    ptr: *mut Blinding,
+}
+
+impl OwnedCtx {
+    /// A fresh `Blinding`, exactly as `BN_BLINDING_new` builds it before any member is set: every
+    /// pointer NULL, `counter == -1` (fresh, never used), and no flags.
+    fn new() -> OwnedCtx {
+        OwnedCtx {
+            ptr: Box::into_raw(Box::new(Blinding {
+                a: core::ptr::null_mut(),
+                ai: core::ptr::null_mut(),
+                e: core::ptr::null_mut(),
+                mod_: core::ptr::null_mut(),
+                tid: 0,
+                counter: -1,
+                flags: 0,
+                m_ctx: core::ptr::null_mut(),
+                bn_mod_exp: None,
+                lock: core::ptr::null_mut(),
+            })),
+        }
+    }
+
+    /// The block's stable address, for the member accesses the exported functions make.
+    fn as_ptr(&self) -> *mut Blinding {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the C caller.
+    fn into_raw(self) -> *mut Blinding {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block an exported function holds.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this crate allocated and has not released.
+    unsafe fn from_raw(ptr: *mut Blinding) -> Option<OwnedCtx> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedCtx { ptr })
+        }
+    }
+}
+
+impl Drop for OwnedCtx {
+    /// The authority's own `BN_BLINDING_free` body (the five member releases), then the block's
+    /// single `Box` release.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; every member is
+        // NULL or a live object this context owns, and each releaser accepts NULL.
+        unsafe {
+            BN_free((*self.ptr).a);
+            BN_free((*self.ptr).ai);
+            BN_free((*self.ptr).e);
+            BN_free((*self.ptr).mod_);
+            CRYPTO_THREAD_lock_free((*self.ptr).lock);
+            drop(Box::from_raw(self.ptr));
+        }
+    }
+}
+
 /// `BN_BLINDING *BN_BLINDING_new(const BIGNUM *A, const BIGNUM *Ai, BIGNUM *mod)`
 ///
 /// # Safety
@@ -160,18 +238,10 @@ pub unsafe extern "C" fn BN_BLINDING_new(
     m: *mut BigNum,
 ) -> *mut Blinding {
     guard_ffi(core::ptr::null_mut(), || {
-        let fresh = Box::into_raw(Box::new(Blinding {
-            a: core::ptr::null_mut(),
-            ai: core::ptr::null_mut(),
-            e: core::ptr::null_mut(),
-            mod_: core::ptr::null_mut(),
-            tid: 0,
-            counter: -1,
-            flags: 0,
-            m_ctx: core::ptr::null_mut(),
-            bn_mod_exp: None,
-            lock: core::ptr::null_mut(),
-        }));
+        // The block is owned by the handle from the start, so every failure arm below releases it
+        // exactly once -- the members set so far, then the block -- through `Drop`.
+        let ctx = OwnedCtx::new();
+        let fresh = ctx.as_ptr();
 
         // SAFETY: the lock constructor takes no pointers, so this call needs no
         // `unsafe`.
@@ -181,8 +251,7 @@ pub unsafe extern "C" fn BN_BLINDING_new(
         if lock.is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_BLIND_41) };
-            // SAFETY: `fresh` is the object this call allocated.
-            drop(unsafe { Box::from_raw(fresh) });
+            // `ctx` is unpublished, so the handle releases the block (every member is NULL).
             return core::ptr::null_mut();
         }
 
@@ -195,8 +264,7 @@ pub unsafe extern "C" fn BN_BLINDING_new(
             // SAFETY: as above.
             unsafe { (*fresh).a = dup };
             if dup.is_null() {
-                // SAFETY: `fresh` is the object this call allocated.
-                unsafe { BN_BLINDING_free(fresh) };
+                // `ctx` is unpublished; the handle releases the block and the members set so far.
                 return core::ptr::null_mut();
             }
         }
@@ -206,8 +274,6 @@ pub unsafe extern "C" fn BN_BLINDING_new(
             // SAFETY: as above.
             unsafe { (*fresh).ai = dup };
             if dup.is_null() {
-                // SAFETY: `fresh` is the object this call allocated.
-                unsafe { BN_BLINDING_free(fresh) };
                 return core::ptr::null_mut();
             }
         }
@@ -218,8 +284,6 @@ pub unsafe extern "C" fn BN_BLINDING_new(
         // SAFETY: `fresh` is live and uniquely owned.
         unsafe { (*fresh).mod_ = mdup };
         if mdup.is_null() {
-            // SAFETY: `fresh` is the object this call allocated.
-            unsafe { BN_BLINDING_free(fresh) };
             return core::ptr::null_mut();
         }
         // `bn_blind.c:62-63`: the caller's consttime request is carried onto the
@@ -232,7 +296,7 @@ pub unsafe extern "C" fn BN_BLINDING_new(
                 BN_set_flags(mdup, BN_FLG_CONSTTIME);
             }
         }
-        fresh
+        ctx.into_raw()
     })
 }
 
@@ -247,22 +311,10 @@ pub unsafe extern "C" fn BN_BLINDING_new(
 #[no_mangle]
 pub unsafe extern "C" fn BN_BLINDING_free(b: *mut Blinding) {
     guard_ffi((), || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let Some(b) = (unsafe { as_mut_blinding(b) }) else {
-            return;
-        };
-        // SAFETY: every member is null or a live object this context owns, and each
-        // `BN_free` accepts null.
-        unsafe {
-            BN_free(b.a);
-            BN_free(b.ai);
-            BN_free(b.e);
-            BN_free(b.mod_);
-            CRYPTO_THREAD_lock_free(b.lock);
-        }
-        // SAFETY: the caller's contract is exactly that `b` came from
-        // `BN_BLINDING_new` and has not been freed.
-        drop(unsafe { Box::from_raw(b as *mut Blinding) });
+        // SAFETY: null-or-live per this function's `# Safety` section. The reclaimed handle's
+        // `Drop` runs the authority's own destructor body (the five member releases) and then the
+        // block's single `Box` release.
+        drop(unsafe { OwnedCtx::from_raw(b) });
     });
 }
 

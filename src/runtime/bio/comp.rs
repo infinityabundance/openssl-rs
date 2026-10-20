@@ -35,6 +35,7 @@ use core::ptr;
 
 use crate::ffi::guard_ffi;
 
+use super::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use super::BioMethod;
 
 /// `const BIO_METHOD *BIO_f_zlib(void)`
@@ -156,6 +157,29 @@ pub struct CompCtx {
     pub data: *mut c_void,
 }
 
+/// The authority's `COMP_CTX_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs:
+/// the method's `finish` hook runs on the still-live context, exactly as `comp_lib.c` runs it
+/// before its own `OPENSSL_free(ctx)`. A method-less context has no hook to run.
+// SAFETY: (a) `destroy_body` is the authority's `COMP_CTX_free` member body, running the method's
+// `finish` hook on the still-live context once and never releasing the enclosing block, which
+// `OwnedCtx` releases; (b) `CompCtx` is a `#[repr(C)]` record of a raw pointer and integers, so an
+// all-zero block (NULL `meth`, no hook) is a valid `CompCtx` the body is sound on.
+unsafe impl CtxDestroy for CompCtx {
+    unsafe fn destroy_body(ptr: *mut CompCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        let meth = unsafe { (*ptr).meth };
+        if !meth.is_null() {
+            // SAFETY: `meth` is the method the context was built with and is live for as long as
+            // the context is.
+            if let Some(finish) = unsafe { (*meth).finish } {
+                // SAFETY: `ptr` is live and about to be released; the hook's contract is the
+                // authority's.
+                unsafe { finish(ptr) };
+            }
+        }
+    }
+}
+
 /// The six factories. Each body is `meth = NULL; #ifndef OPENSSL_NO_<LIB> ... `,
 /// so under this profile every one of them is the initialiser and nothing else.
 ///
@@ -237,8 +261,9 @@ pub extern "C" fn COMP_get_name(meth: *const CompMethod) -> *const c_char {
 ///
 /// A zeroed context, or NULL for a NULL method or a failing allocator. The
 /// authority's `meth->init` hook runs *after* the method is stored and its failure
-/// frees the context, so a method that rejects its own context yields NULL rather
-/// than a half-built object.
+/// frees the block with a bare `OPENSSL_free` -- *not* through `COMP_CTX_free`, so
+/// `meth->finish` must not run: it may assume the state `init` would have built. A
+/// method that rejects its own context therefore yields NULL without a `finish` call.
 ///
 /// # Safety
 /// `meth` must be NULL or point at a live `CompMethod` for the lifetime of the
@@ -249,30 +274,30 @@ pub unsafe extern "C" fn COMP_CTX_new(meth: *mut CompMethod) -> *mut CompCtx {
         if meth.is_null() {
             return core::ptr::null_mut();
         }
-        // SAFETY: `CRYPTO_zalloc` initialises every byte, so the returned context
-        // is a valid `CompCtx` before any field is written.
-        let ret = crate::runtime::mem::CRYPTO_zalloc(
-            core::mem::size_of::<CompCtx>(),
-            core::ptr::null(),
-            0,
-        )
-        .cast::<CompCtx>();
-        if ret.is_null() {
+        // SAFETY: `RawCtx::zalloc` initialises every byte, so the block is a valid zeroed
+        // `CompCtx` once `meth` is written, or NULL when the allocator refuses.
+        let Some(ctx) = RawCtx::<CompCtx>::zalloc() else {
             return core::ptr::null_mut();
-        }
-        // SAFETY: `ret` is a fresh, zeroed, uniquely-owned `CompCtx`.
+        };
+        let ret = ctx.as_ptr();
+        // SAFETY: `ret` is a fresh, zeroed, uniquely-owned block; writing one field is a
+        // write to initialised storage and leaves every other field at its zero value.
         unsafe { (*ret).meth = meth };
         // SAFETY: `meth` is live per the caller's contract.
         if let Some(init) = unsafe { (*meth).init } {
             // SAFETY: `ret` is live and uniquely owned; the hook's contract is the
             // authority's (it receives the context it is initialising).
             if unsafe { init(ret) } == 0 {
-                // SAFETY: as above; the context never escaped.
-                unsafe { crate::runtime::mem::CRYPTO_free(ret.cast(), core::ptr::null(), 0) };
+                // The authority's failure arm is `OPENSSL_free(ctx)` -- bare, without
+                // `COMP_CTX_free` -- so `finish` must not run on this partially initialised
+                // context. Dropping the `RawCtx` releases the block alone.
                 return core::ptr::null_mut();
             }
         }
-        ret
+        // SAFETY: every field is initialised (the block was zeroed, `meth` was written) and
+        // `init` succeeded; `ctx` is the block's single owner.
+        let owned = unsafe { ctx.assume_init() };
+        owned.into_raw()
     })
 }
 
@@ -323,22 +348,9 @@ pub unsafe extern "C" fn COMP_CTX_get_type(ctx: *const CompCtx) -> c_int {
 /// freed.
 #[no_mangle]
 pub unsafe extern "C" fn COMP_CTX_free(ctx: *mut CompCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the caller's contract.
-    let meth = unsafe { (*ctx).meth };
-    if !meth.is_null() {
-        // SAFETY: `meth` is the method the context was built with and is live for
-        // as long as the context is.
-        if let Some(finish) = unsafe { (*meth).finish } {
-            // SAFETY: `ctx` is live and about to be released; the hook's contract
-            // is the authority's.
-            unsafe { finish(ctx) };
-        }
-    }
-    // SAFETY: `ctx` came from `CRYPTO_zalloc` and has not been freed.
-    unsafe { crate::runtime::mem::CRYPTO_free(ctx.cast(), core::ptr::null(), 0) };
+    // SAFETY: `ctx` is NULL or a context from [`COMP_CTX_new`]; `from_raw` maps NULL to `None`,
+    // and `Drop` runs the authority's own `finish` body before the block release.
+    unsafe { drop(OwnedCtx::<CompCtx>::from_raw(ctx)) };
 }
 
 /// `int COMP_compress_block(COMP_CTX *ctx, unsigned char *out, int olen,
@@ -415,6 +427,13 @@ pub unsafe extern "C" fn COMP_expand_block(
 #[cfg(test)]
 mod comp_api_tests {
     use super::*;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    /// Negative control for the `finish` hook: the successful-free path must run it.
+    static FINISHES_AFTER_FREE: AtomicUsize = AtomicUsize::new(0);
+
+    /// A refused `init` must not reach `finish`, matching the authority's bare free.
+    static FINISHES_AFTER_REFUSED_INIT: AtomicUsize = AtomicUsize::new(0);
 
     #[test]
     fn every_factory_answers_null_in_this_profile() {
@@ -472,7 +491,9 @@ mod comp_api_tests {
         unsafe extern "C" fn rejects(_ctx: *mut CompCtx) -> c_int {
             0
         }
-        unsafe extern "C" fn note_finish(_ctx: *mut CompCtx) {}
+        unsafe extern "C" fn note_finish(_ctx: *mut CompCtx) {
+            FINISHES_AFTER_FREE.fetch_add(1, Ordering::SeqCst);
+        }
 
         let mut meth = CompMethod {
             type_: 42,
@@ -515,6 +536,11 @@ mod comp_api_tests {
 
             COMP_CTX_free(ctx);
         }
+        assert_eq!(
+            FINISHES_AFTER_FREE.load(Ordering::SeqCst),
+            1,
+            "a successful free runs the method's finish hook exactly once (negative control)"
+        );
 
         // A method with no hooks: `-1`, not a crash and not a zero.
         let mut bare = CompMethod {
@@ -553,4 +579,37 @@ mod comp_api_tests {
         // SAFETY: `refusing` is live and correctly laid out.
         unsafe { assert!(COMP_CTX_new(&mut refusing).is_null()) };
     }
+
+    #[test]
+    fn a_refused_init_does_not_run_the_finish_hook() {
+        // The authority's `COMP_CTX_new` failure arm is `OPENSSL_free(ctx)`, not
+        // `COMP_CTX_free(ctx)`, so `finish` must not observe a context whose `init`
+        // refused. A finish hook that relies on state `init` would have built (which the
+        // authority lets it do) makes running it here a fault, not just a divergence.
+        unsafe extern "C" fn refuses(_ctx: *mut CompCtx) -> c_int {
+            0
+        }
+        unsafe extern "C" fn note_finish(_ctx: *mut CompCtx) {
+            FINISHES_AFTER_REFUSED_INIT.fetch_add(1, Ordering::SeqCst);
+        }
+        let mut meth = CompMethod {
+            type_: 0,
+            name: core::ptr::null(),
+            init: Some(refuses),
+            finish: Some(note_finish),
+            compress: None,
+            expand: None,
+        };
+        // SAFETY: `meth` is live and correctly laid out for the whole call.
+        unsafe { assert!(COMP_CTX_new(&mut meth).is_null()) };
+        assert_eq!(
+            FINISHES_AFTER_REFUSED_INIT.load(Ordering::SeqCst),
+            0,
+            "a refused init releases with the authority's bare free and never calls finish"
+        );
+    }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CompCtx => zero_state_sweep_comp_ctx);

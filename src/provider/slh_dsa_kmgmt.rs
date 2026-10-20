@@ -61,8 +61,11 @@ use crate::params::{
 };
 use crate::provider::cipher::{param_int, param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 use crate::selftest::OsslCallback;
 use crate::slh_dsa::hash_ctx::{ossl_slh_dsa_hash_ctx_free, ossl_slh_dsa_hash_ctx_new};
 use crate::slh_dsa::key::{
@@ -102,6 +105,8 @@ const SLH_DSA_POSSIBLE_SELECTIONS: c_int = OSSL_KEYMGMT_SELECT_KEYPAIR;
 /// The unit's own `__FILE__`. `.c.in`-generated, so the bare build-relative path.
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c".as_ptr();
+const FILE_SEAM: SeamFile =
+    SeamFile::new(c"../../src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c");
 /// `slh_dsa_kmgmt.c:297`, the `OPENSSL_zalloc(sizeof(*gctx))` in `slh_dsa_gen_init`.
 const LINE_ZALLOC_GCTX: c_int = 297;
 /// `slh_dsa_kmgmt.c:111`, the `OPENSSL_strdup(p.propq->data)` in `slh_dsa_gen_set_params`.
@@ -110,6 +115,33 @@ const LINE_STRDUP_PROPQ: c_int = 111;
 const LINE_FREE_GCTX: c_int = 300;
 /// `slh_dsa_kmgmt.c:452`, the `OPENSSL_free(gctx->propq)` sites.
 const LINE_FREE_PROPQ: c_int = 452;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the generation context and its `propq` duplicate
+// ---------------------------------------------------------------------------------------------
+
+/// `slh_dsa_gen_cleanup`'s body (`slh_dsa_kmgmt.c.in:450-452`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: cleanse the entropy, then release the `propq` duplicate, in the
+/// authority's own order.
+// SAFETY: (a) `destroy_body` is the authority's `slh_dsa_gen_cleanup` member body, cleansing the
+// entropy array and releasing exactly this context's own property query once (the `OwnedStr::adopt`
+// accepts the unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b)
+// `SlhDsaGenCtx` is a `#[repr(C)]` record of raw pointers, a fixed byte array and a `usize`, so an
+// all-zero block is a valid `SlhDsaGenCtx` the body is sound on.
+unsafe impl CtxDestroy for SlhDsaGenCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_GCTX;
+    const LINE_FREE: c_int = LINE_FREE_GCTX;
+
+    unsafe fn destroy_body(ptr: *mut SlhDsaGenCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `propq` is NULL or this file's own
+        // `CRYPTO_strdup` block.
+        unsafe {
+            OPENSSL_cleanse((*ptr).entropy.as_mut_ptr().cast(), (*ptr).entropy.len());
+            drop(OwnedStr::adopt((*ptr).propq, FILE_SEAM, LINE_FREE_PROPQ));
+        }
+    }
+}
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -630,20 +662,21 @@ unsafe extern "C" fn slh_dsa_gen_init(
         return ptr::null_mut();
     }
 
-    // SAFETY: `CRYPTO_zalloc` answers a zeroed block or NULL.
-    let gctx = CRYPTO_zalloc(core::mem::size_of::<SlhDsaGenCtx>(), FILE, LINE_ZALLOC_GCTX)
-        .cast::<SlhDsaGenCtx>();
-    if !gctx.is_null() {
-        // SAFETY: `gctx` is a fresh zeroed block this call owns.
-        unsafe {
-            (*gctx).libctx = libctx;
-            if slh_dsa_gen_set_params(gctx.cast(), params) == 0 {
-                CRYPTO_free(gctx.cast(), FILE, LINE_FREE_GCTX);
-                return ptr::null_mut();
-            }
+    // SAFETY: `gctx` is a fresh zeroed block this call owns; `params` is the caller's and `libctx`
+    // the creating provider's.
+    let Some(gctx) = OwnedCtx::<SlhDsaGenCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `gctx` is this call's own fresh zeroed block; `libctx` is the creating provider's
+    // context and `params` is the caller's.
+    unsafe {
+        (*gctx.as_ptr()).libctx = libctx;
+        if slh_dsa_gen_set_params(gctx.as_ptr().cast(), params) == 0 {
+            // `gctx`'s `Drop` runs the authority's own free body and its single block release.
+            return ptr::null_mut();
         }
     }
-    gctx.cast()
+    gctx.into_raw().cast()
 }
 
 /// `static void *slh_dsa_gen(void *genctx, const char *alg)` — `slh_dsa_kmgmt.c:595-616`.
@@ -773,7 +806,9 @@ unsafe extern "C" fn slh_dsa_gen_set_params(
             if (*p.propq).data_type != OSSL_PARAM_UTF8_STRING {
                 return 0;
             }
-            CRYPTO_free((*gctx).propq.cast(), FILE, LINE_FREE_PROPQ);
+            // The incumbent duplicate is released by its own `Drop` before the new one is stored;
+            // the authority's `OPENSSL_free(gctx->propq)`, line 452.
+            drop(OwnedStr::adopt((*gctx).propq, FILE_SEAM, LINE_FREE_PROPQ));
             (*gctx).propq =
                 CRYPTO_strdup((*p.propq).data.cast::<c_char>(), FILE, LINE_STRDUP_PROPQ);
             if (*gctx).propq.is_null() {
@@ -803,18 +838,10 @@ unsafe extern "C" fn slh_dsa_gen_settable_params(
 /// # Safety
 /// The keymgmt `gen_cleanup` dispatch contract.
 unsafe extern "C" fn slh_dsa_gen_cleanup(genctx: *mut c_void) {
-    let gctx = genctx.cast::<SlhDsaGenCtx>();
-
-    if gctx.is_null() {
-        return;
-    }
-
-    // SAFETY: `gctx` is the caller's live context.
-    unsafe {
-        OPENSSL_cleanse((*gctx).entropy.as_mut_ptr().cast(), (*gctx).entropy.len());
-        CRYPTO_free((*gctx).propq.cast(), FILE, LINE_FREE_PROPQ);
-        CRYPTO_free(gctx.cast(), FILE, LINE_ZALLOC_GCTX);
-    }
+    // SAFETY: the `gen_cleanup` dispatch contract; `genctx` is NULL or a live context this file
+    // allocated and `Drop` is its single release, running the authority's own free body (cleanse the
+    // entropy, release the `propq` duplicate) before the block release.
+    drop(unsafe { OwnedCtx::<SlhDsaGenCtx>::from_raw(genctx.cast()) });
 }
 
 /// `MAKE_KEYMGMT_FUNCTIONS(alg, fn)` — `slh_dsa_kmgmt.c:455-488`, once per parameter set.
@@ -1012,3 +1039,7 @@ make_keymgmt_functions!(
     slh_dsa_shake_256f_new_key,
     slh_dsa_shake_256f_gen
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(SlhDsaGenCtx => zero_state_sweep_slh_dsa_gen_ctx);

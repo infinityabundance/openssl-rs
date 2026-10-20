@@ -58,10 +58,12 @@ use crate::evp::pkey_ctx::{
 };
 use crate::runtime::err::err_reasons::SSL_R_SSL3_EXT_INVALID_MAX_FRAGMENT_LENGTH;
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha512, NID_undef, OBJ_nid2ln,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_cert::ssl_security;
 use crate::ssl::ssl_ciph_table::{
     SSL_aDSS, SSL_aECDSA, SSL_aPSK, SSL_aRSA, SSL_aSRP, SSL_kDHEPSK, SSL_kECDHE, SSL_kECDHEPSK,
@@ -74,6 +76,7 @@ use crate::ssl::statem::statem_lib::{ssl_get_min_max_version, ssl_version_cmp};
 const ERR_LIB_SSL: c_int = 20;
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/t1_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/t1_lib.c");
 
 /// `TLSEXT_max_fragment_length_DISABLED` — `tls1.h:227`.
 const TLSEXT_max_fragment_length_DISABLED: u8 = 0;
@@ -88,6 +91,10 @@ const TLSEXT_max_fragment_length_UNSPECIFIED: u8 = 255;
 fn is_max_fragment_length_ext_valid(value: u8) -> bool {
     (TLSEXT_max_fragment_length_512..=TLSEXT_max_fragment_length_4096).contains(&value)
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `SIGALG_LOOKUP` — `ssl_local.h:1186-1212`, reduced to the three fields `SSL_get1_builtin_sigalgs`
 /// reads: the TLS name, the hash NID and the `EVP_PKEY` type.
@@ -540,20 +547,18 @@ pub unsafe extern "C" fn SSL_get1_builtin_sigalgs(libctx: *mut c_void) -> *mut c
     unsafe { EVP_PKEY_free(tmpkey) };
 
     // `OPENSSL_malloc`-equivalent: a `CRYPTO_malloc` block the caller frees with `OPENSSL_free`,
-    // exactly as the authority's `OPENSSL_malloc`/`OPENSSL_realloc` buffer is.
+    // exactly as the authority's `OPENSSL_malloc`/`OPENSSL_realloc` buffer is. `OwnedBuf::new`
+    // allocates it at the authority's own size/file/line, and `into_raw` hands it to the caller.
     let bytes = out.as_bytes();
-    // `CRYPTO_malloc` answers NULL on failure, which is checked; `FILE` is a static NUL-terminated
-    // string. It is a safe entry point in this crate.
-    let ret = CRYPTO_malloc(bytes.len() + 1, FILE, 2298).cast::<u8>();
-    if ret.is_null() {
+    let Some(ret) = OwnedBuf::new(bytes.len() + 1, FILE_SEAM, 2298) else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `ret` is a fresh block of at least `bytes.len() + 1` bytes.
     unsafe {
-        ptr::copy_nonoverlapping(bytes.as_ptr(), ret, bytes.len());
-        *ret.add(bytes.len()) = 0;
+        ptr::copy_nonoverlapping(bytes.as_ptr(), ret.as_ptr().cast::<u8>(), bytes.len());
+        *ret.as_ptr().cast::<u8>().add(bytes.len()) = 0;
     }
-    ret.cast()
+    ret.into_raw().cast()
 }
 
 // -------------------------------------------------------------------------------------------
@@ -722,7 +727,10 @@ pub(crate) const DEFAULT_GROUPS: [u16; 7] = [
 /// that never called a group setter reaches exactly the authority's default arm.
 ///
 /// # Safety
-/// `s` must be NULL or a live connection.
+/// `s` must be NULL or a live connection. The returned slice borrows the connection's
+/// `supportedgroups` list (or the static default list); although its type is `'static`, the
+/// caller must not use it after any operation that frees or replaces that list or destroys
+/// `s` — in practice, only for the duration of the current handshake step.
 pub(crate) unsafe fn tls1_get_supported_groups(s: *const Ssl) -> &'static [u16] {
     if !s.is_null() {
         // SAFETY: `s` is live per the contract.
@@ -758,6 +766,8 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
 ///
 /// # Safety
 /// `groups` must hold `ngroups` readable `int`s; `grpext`/`grpextlen` must be writable.
+/// `*grpext` must be NULL or an initialised block allocated from the crate's `CRYPTO_*`
+/// malloc seam and exclusively owned by this call (the authority's `OPENSSL_free(*grpext)`).
 pub(crate) unsafe fn tls1_set_groups(
     grpext: *mut *mut u16,
     grpextlen: *mut usize,
@@ -780,19 +790,23 @@ pub(crate) unsafe fn tls1_set_groups(
         }
         list[i] = id;
     }
-    // SAFETY: `grpext`/`grpextlen` are writable per the contract.
-    let mem = CRYPTO_malloc(ngroups * core::mem::size_of::<u16>(), FILE, 0);
-    if mem.is_null() {
+    let Some(mem) = OwnedBuf::new(ngroups * core::mem::size_of::<u16>(), FILE_SEAM, 0) else {
         return 0;
-    }
+    };
     for (i, g) in list[..ngroups].iter().enumerate() {
         // SAFETY: `mem` is a fresh `ngroups`-element allocation.
-        unsafe { *mem.cast::<u16>().add(i) = *g };
+        unsafe { *mem.as_ptr().cast::<u16>().add(i) = *g };
     }
-    // SAFETY: the writable pointers belong to a live context.
+    // SAFETY: `grpext`/`grpextlen` are writable per the contract, and the previous `*grpext` is a
+    // plain block this crate allocated that no one else owns.
     unsafe {
-        CRYPTO_free((*grpext).cast(), FILE, 0);
-        *grpext = mem.cast();
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*grpext).cast(),
+            FILE_SEAM,
+            0,
+        ));
+        *grpext = mem.into_raw().cast();
         *grpextlen = ngroups;
     }
     1

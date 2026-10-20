@@ -65,7 +65,9 @@ use crate::dso::{
 use crate::runtime::bio::sys::{errno, set_errno};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 
 extern "C" {
     /// `void *dlopen(const char *filename, int flags)`.
@@ -113,6 +115,10 @@ const RTLD_LAZY: c_int = 1;
 // path — a leftover of the `dlopen`-flag "hack" its own comment describes. There is
 // nothing to reproduce, and this note is the record of that rather than a silent gap.
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a converted filename
+// ---------------------------------------------------------------------------------------------
+
 /// `static int dlfcn_load(DSO *dso)`
 ///
 /// # Safety
@@ -130,18 +136,22 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
         unsafe { raise_site(&err_sites::DSO_DLFCN_102) };
         return 0;
     }
+    // The converter's block is this frame's from here on; `Drop` is its single release at the
+    // authority's own error-path site.
+    // SAFETY: `filename` is NULL or the live `CRYPTO_strdup` block the converter allocated and no
+    // one else owns.
+    let filename = unsafe { OwnedStr::adopt_nullable(filename, FILE_SEAM, LINE_FREE_TRANSLATED) };
     // SAFETY: `dso` is live.
     if unsafe { (*dso).flags } & DSO_FLAG_GLOBAL_SYMBOLS != 0 {
         flags |= RTLD_GLOBAL;
     }
     // SAFETY: `filename` is NUL-terminated by the converter.
-    let ptr_ = unsafe { dlopen(filename, flags) };
+    let ptr_ = unsafe { dlopen(filename.as_ptr(), flags) };
     if ptr_.is_null() {
         // SAFETY: the site is constant and `filename` is NUL-terminated; the message
         // carries `dlerror()`'s text.
-        unsafe { raise_data_load_failed(&err_sites::DSO_DLFCN_115, filename) };
-        // SAFETY: `filename` came from `CRYPTO_strdup` inside the converter.
-        unsafe { CRYPTO_free(filename.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED) };
+        unsafe { raise_data_load_failed(&err_sites::DSO_DLFCN_115, filename.as_ptr()) };
+        // `filename`'s `Drop` is the authority's own `CRYPTO_free` on this error tail.
         return 0;
     }
     // SAFETY: writing `errno` is the authority's `set_sys_error`.
@@ -150,22 +160,23 @@ unsafe extern "C" fn dlfcn_load(dso: *mut Dso) -> c_int {
     if unsafe { meth_data_push(dso, ptr_) } <= 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSO_DLFCN_125) };
-        // SAFETY: `filename` is still owned here, and the handle was not pushed.
-        unsafe {
-            CRYPTO_free(filename.cast::<c_void>(), FILE, LINE_FREE_TRANSLATED);
-            dlclose(ptr_);
-        }
+        // `filename`'s `Drop` is the authority's own `CRYPTO_free`, in the authority's own order
+        // before the handle is closed.
+        drop(filename);
+        // SAFETY: the handle was not pushed, so it is this frame's to close.
+        unsafe { dlclose(ptr_) };
         return 0;
     }
     // `dso->loaded_filename = filename` — the object takes ownership of the translated
-    // name, which is why the success path frees nothing.
-    // SAFETY: `dso` is live and `filename` is the allocation just made.
-    unsafe { (*dso).loaded_filename = filename };
+    // name, which is why the success path hands the block over rather than releasing it.
+    // SAFETY: `dso` is live and `filename` is the allocation just made and handed over.
+    unsafe { (*dso).loaded_filename = filename.into_raw() };
     1
 }
 
 /// The authority's translation unit.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c");
 /// `dlfcn_load`'s error-path `OPENSSL_free(filename)`.
 const LINE_FREE_TRANSLATED: c_int = 133;
 /// `dlfcn_merger`'s joins.
@@ -308,7 +319,11 @@ unsafe extern "C" fn dlfcn_name_converter(dso: *mut Dso, filename: *const c_char
             rsize += 3; // the length of "lib"
         }
     }
-    let translated = CRYPTO_malloc(rsize, FILE, LINE_MALLOC_TRANSLATED).cast::<c_char>();
+    let translated = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(rsize, FILE, LINE_MALLOC_TRANSLATED)
+    }
+    .cast::<c_char>();
     if translated.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DSO_DLFCN_260) };
@@ -350,7 +365,8 @@ unsafe extern "C" fn dlfcn_name_converter(dso: *mut Dso, filename: *const c_char
 /// `static int dlfcn_pathbyaddr(void *addr, char *path, int sz)`
 ///
 /// # Safety
-/// `path` must be NULL or have `sz` writable bytes.
+/// `path` is NULL only when `sz <= 0` (the sizing call writes nothing). When `sz > 0` it must
+/// point at `sz` writable bytes: the authority writes through it without a NULL test.
 unsafe extern "C" fn dlfcn_pathbyaddr(addr: *mut c_void, path: *mut c_char, sz: c_int) -> c_int {
     let mut dli = DlInfo {
         dli_fname: ptr::null(),
@@ -463,6 +479,7 @@ mod tests {
         DSO_convert_filename, DSO_free, DSO_load, DSO_merge, DSO_new, DSO_set_filename,
         DSO_FLAG_NAME_TRANSLATION_EXT_ONLY, DSO_FLAG_NO_NAME_TRANSLATION,
     };
+    use crate::runtime::mem::CRYPTO_free;
     use core::ffi::c_long;
 
     #[test]

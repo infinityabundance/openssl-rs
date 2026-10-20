@@ -1,0 +1,332 @@
+{
+  "schema": "safe-c33/consumer-status/1",
+  "campaign": "safe-c33",
+  "subphase": "C1",
+  "date_utc": "2026-10-20",
+  "source_identity": {
+    "repository": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "head_sha": "e0def58aabe60f86c6f376f612db22036aa20791",
+    "head_subject": "Merge stage/p25/b31: post-census helper coverage",
+    "candidate_crate_version": "0.0.27"
+  },
+  "environment": {
+    "entry_point": "docker/openssl-rs-court.sh exec",
+    "court_image": "openssl-rs-court:1",
+    "platform": "linux",
+    "cargo_build_jobs": 4,
+    "authority": "openssl-3.6.4-production",
+    "note": "All builds and workload execution ran inside the minimal court container; nothing ran on the host."
+  },
+  "ledger": {
+    "cohort": "forensics/memory-safety/campaign/safe-c33/state.json#cohort",
+    "cohort_families": "forensics/downstream/p1000-run.json#body.families",
+    "family_freeze": "forensics/downstream/family-freeze.json",
+    "build_link_atlas": "forensics/downstream/build-link-atlas.json",
+    "runtime_functional_atlas": "forensics/downstream/runtime-functional-atlas.json",
+    "phase17_corpus": "forensics/atlas/downstream-corpus.json",
+    "phase17_records": "courts/phase17/downstream/<program>/result.json",
+    "counts": {
+      "total": 33,
+      "L4_linked": 25,
+      "L7_functional": 8,
+      "L7_names": ["curl", "haproxy", "isync", "monit", "nginx", "openssh", "pure-ftpd", "redis"],
+      "fingerprinted_mechanism_coverage": ["curl", "haproxy", "monit", "openssh", "pure-ftpd", "redis"],
+      "linkage_inferred_mechanism_coverage": ["isync", "nginx"]
+    }
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "02613bc21d4169c5d48dbcc88a7ed6ec13bd178396c7e129d19c5f5b6d356770",
+    "libssl_so_3_sha256": "dde65b92158c0fbde92ac615540a3f632ad476b3fc3e13b5a40fc8b8759a9578",
+    "built_from_head": true,
+    "note": "The shell was rebuilt from HEAD e0def58aa after the previous install build at a2b0104cc. The previous runtime atlas identity (libcrypto 33f6210e..., libssl 0f3834ca...) is superseded by this rebuild."
+  },
+  "commands": [
+    {
+      "cmd": "bash docker/openssl-rs-court.sh exec sh -c 'PATH=/usr/local/cargo/bin:... CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh'",
+      "exit": 0,
+      "observed": "Crate, distribution shell and install prefix rebuilt; 11/11 Phase-2 courts pass; artifacts/phase2/COURTS.json all_pass=true.",
+      "log": "court/p25/c1-rebuild.log"
+    },
+    {
+      "cmd": "bash docker/openssl-rs-court.sh exec sh -c 'python3 forensics/tools/downstream_runtime.py --measure'",
+      "exit": 0,
+      "elapsed_seconds": 199,
+      "observed": "authority loaded=8 runtime=8 functional=8 failed=0; candidate loaded=8 runtime=8 functional=8 failed=0; candidate_reaches_baseline=35; reaches_linked_baseline=33; below_baseline=0; baseline_not_linked=2.",
+      "log": "court/p25/c1-runtime.log"
+    },
+    {
+      "cmd": "bash docker/openssl-rs-court.sh exec sh -c 'python3 forensics/tools/downstream_runtime.py --check'",
+      "exit": 0,
+      "observed": "with_recipe=35 cand_loaded=8 cand_functional=8 reaches_baseline=35 findings=0 control honest=True",
+      "log": "court/p25/c1-runtime-check.log"
+    },
+    {
+      "cmd": "bash docker/openssl-rs-court.sh exec sh -c 'python3 forensics/tools/downstream_runtime.py --self-test'",
+      "exit": 0,
+      "observed": "Self-test ok: host refusal, normaliser preservation, committed atlas zero findings, and every seeded mutation caught.",
+      "log": "court/p25/c1-runtime-selftest.log"
+    }
+  ],
+  "l7_families": [
+    {
+      "family": "curl",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "8.10.1",
+      "variant_id": "variant:curl:8.10.1:pristine",
+      "source_sha256": "d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
+      "transcript_sha256": "293a535bacfa90a918353d97b776c68bf5e5c86f4131f339ec7a799ded8e4ade",
+      "evidence": {
+        "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed)",
+        "courts/phase17/downstream/curl (8.22.0, NOT_RUN this subphase; corpus is stale)"
+      ],
+      "next_action": "Refresh the Phase-17 curl record at its 8.22.0 pin against the HEAD install, then audit the curl mechanism closure (9 mechanisms; ASN1_OCSP/ERR/RUNTIME_ALLOC_OWNERSHIP are not discharged)."
+    },
+    {
+      "family": "haproxy",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "3.0.6",
+      "variant_id": "variant:haproxy:3.0.6:pristine",
+      "source_sha256": "cf1bf58b5bc79c48db7b01667596ffd98343adb29a41096f075f00a8f90a7335",
+      "transcript_sha256": "43fed4596fa957e80e7a9c5f0402ca4278b58729b9302e08101e20674570a1b0",
+      "evidence": {
+        "workload": "haproxy: TLS terminator with a verified response",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed)",
+        "courts/phase17/downstream/haproxy (3.0.29, NOT_RUN this subphase; corpus is stale)"
+      ],
+      "next_action": "Refresh the Phase-17 haproxy record at its 3.0.29 pin against the HEAD install, then audit the haproxy mechanism closure (9 mechanisms)."
+    },
+    {
+      "family": "isync",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "1.5.0",
+      "variant_id": "variant:isync:1.5.0:pristine",
+      "source_sha256": "a0c81e109387bf279da161453103399e77946afecf5c51f9413c5e773557f78d",
+      "transcript_sha256": "a2d3d44dd0d6cf99e3d35af562c5fecf84dd31af2df0bae508ca58e959b8465f",
+      "evidence": {
+        "workload": "isync: mbsync IMAPS fetch from a local IMAP peer into a Maildir",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed; only harness for this family)"
+      ],
+      "next_action": "Add an independent phase17-style harness (single-harness evidence today) and audit the isync mechanism closure (9 mechanisms, linkage-inferred)."
+    },
+    {
+      "family": "monit",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "5.34.3",
+      "variant_id": "variant:monit:5.34.3:pristine",
+      "source_sha256": "669d8b95ddec124d1444ba5264f67fdeae8e90e53b2929719f4750fc5ff3ba60",
+      "transcript_sha256": "855544c6e45656da214ed4dfd6cb55c9b01a847b187f5d7f4bb04049406bc1b2",
+      "evidence": {
+        "workload": "monit: TLS httpd handshake + HTTP response",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed; only harness for this family)"
+      ],
+      "next_action": "Add an independent phase17-style harness (single-harness evidence today) and audit the monit mechanism closure (7 mechanisms)."
+    },
+    {
+      "family": "nginx",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "1.26.3",
+      "variant_id": "variant:nginx:1.26.3:pristine",
+      "source_sha256": "69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
+      "transcript_sha256": "d5da50c89e224ff750b4e13602dd71f33d19421ae966d2607f95f1d09ebfacf9",
+      "evidence": {
+        "workload": "nginx: verified TLS1.3 server response",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed)",
+        "courts/phase17/downstream/nginx (1.26.3, NOT_RUN this subphase; corpus is stale)"
+      ],
+      "next_action": "Refresh the Phase-17 nginx record against the HEAD install (it already has an independent harness) and audit the nginx mechanism closure (9 mechanisms, linkage-inferred)."
+    },
+    {
+      "family": "openssh",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; libcrypto only; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "9.9p1",
+      "variant_id": "variant:openssh:9.9p1:pristine",
+      "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+      "transcript_sha256": "4195eee0d91ac666837457a0eedeec77dd1aaad64d1eeebad962d98a9a0ce271",
+      "evidence": {
+        "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed)",
+        "courts/phase17/downstream/openssh (10.5p1, NOT_RUN this subphase; corpus is stale)"
+      ],
+      "next_action": "Refresh the Phase-17 openssh record at its 10.5p1 pin against the HEAD install, then audit the libcrypto-only openssh mechanism closure (8 mechanisms)."
+    },
+    {
+      "family": "pure-ftpd",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "1.0.52",
+      "variant_id": "variant:pure-ftpd:1.0.52:pristine",
+      "source_sha256": "1126f3a95856d08889ff89703cb1aa9ec9924d939d154e96904c920f05dc3c74",
+      "transcript_sha256": "afcf1c7a2bdb63f87357070ad4b1cd962ab28a2041083ffcede71b6ec384e5b3",
+      "evidence": {
+        "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed; only harness for this family)"
+      ],
+      "next_action": "Add an independent phase17-style harness, then audit the smallest mechanism closure in the cohort (4 mechanisms: ERR, RAND_CMS_STORE_KEYFMT, RUNTIME_CONCURRENCY, SSL_SESSION)."
+    },
+    {
+      "family": "redis",
+      "ledger_level": "L7-functional",
+      "l4": "L4-linked (rebuilt and linked in-run; sonames resolved under candidate prefix)",
+      "l7": "L7-functional",
+      "pinned_version": "7.4.1",
+      "variant_id": "variant:redis:7.4.1:pristine",
+      "source_sha256": "bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2",
+      "transcript_sha256": "07302a1fe4d4f0d0068398fb4d844ae699e4c879052bcc3b2a982a6b6aa9faec",
+      "evidence": {
+        "workload": "redis: TLS handshake + encrypted PING/+PONG",
+        "functional_ok": true,
+        "runtime_ok": true,
+        "load_all_under_prefix": true,
+        "linkage_proven": true,
+        "authority_applicable_level": "L7-functional",
+        "current_candidate": true
+      },
+      "courts": [
+        "forensics/tools/downstream_runtime.py (24.7, executed; only harness for this family)"
+      ],
+      "next_action": "Add an independent phase17-style harness, then audit the redis mechanism closure (7 mechanisms)."
+    }
+  ],
+  "l4_only_families": [
+    {"family": "cyrus-sasl", "l4": "L4-linked"},
+    {"family": "dovecot", "l4": "L4-linked"},
+    {"family": "fetchmail", "l4": "L4-linked"},
+    {"family": "fossil", "l4": "L4-linked"},
+    {"family": "hiredis-ssl", "l4": "L4-linked"},
+    {"family": "iperf3", "l4": "L4-linked"},
+    {"family": "keepalived", "l4": "L4-linked"},
+    {"family": "kmod", "l4": "L4-linked"},
+    {"family": "ldns", "l4": "L4-linked"},
+    {"family": "libarchive", "l4": "L4-linked"},
+    {"family": "libevent", "l4": "L4-linked"},
+    {"family": "librdkafka", "l4": "L4-linked"},
+    {"family": "libretls", "l4": "L4-linked"},
+    {"family": "links", "l4": "L4-linked"},
+    {"family": "mosquitto", "l4": "L4-linked"},
+    {"family": "openvpn", "l4": "L4-linked"},
+    {"family": "proxytunnel", "l4": "L4-linked"},
+    {"family": "rsync", "l4": "L4-linked"},
+    {"family": "socat", "l4": "L4-linked"},
+    {"family": "squid", "l4": "L4-linked"},
+    {"family": "sslscan", "l4": "L4-linked"},
+    {"family": "ssmtp", "l4": "L4-linked"},
+    {"family": "stunnel", "l4": "L4-linked"},
+    {"family": "tinc", "l4": "L4-linked"},
+    {"family": "tnftp", "l4": "L4-linked"}
+  ],
+  "l4_only_evidence": {
+    "source": "forensics/downstream/build-link-atlas.json",
+    "measured_at": "2026-10-08",
+    "candidate_identity_in_atlas": {
+      "libcrypto_so_3_sha256": "33f6210e368c968a46d3ddeab3184f636bd36215ff929672864a387303b9e4c8",
+      "libssl_so_3_sha256": "0f3834cad97351a47bee807b85c628882e6722b188104cbc1d26c88d1464c038"
+    },
+    "current_candidate": false,
+    "note": "These 25 L4 verdicts are bound to the superseded candidate identity. They are reported as ledger status only and were NOT re-measured against the HEAD build in this subphase. No L7 evidence exists or is claimed for them."
+  },
+  "stale_evidence": [
+    {
+      "artifact": "forensics/downstream/build-link-atlas.json",
+      "measured_at": "2026-10-08",
+      "reason": "Predates the HEAD rebuild; candidate hashes 33f6210e.../0f3834ca... do not match the HEAD build 02613bc2.../dde65b92..."
+    },
+    {
+      "artifact": "courts/phase17/downstream/<program>/result.json and forensics/atlas/downstream-corpus.json",
+      "measured_at": "2026-10-15",
+      "reason": "Predates HEAD; the /court build trees are absent, so no phase17 binary in the court is current. The records are version-labelled 0.0.27 but were produced before the HEAD source changes and the HEAD rebuild."
+    },
+    {
+      "artifact": "forensics/downstream/p1000-run.json",
+      "measured_at": "2026-10-15",
+      "reason": "Carries the frozen DROP_IN_PASS ledger verdicts; not a current-candidate build or functional measurement."
+    }
+  ],
+  "not_run": [
+    {
+      "scope": "phase17 downstream driver (curl 8.22.0, haproxy 3.0.29, nginx 1.26.3, openssh 10.5p1, plus git and CPython)",
+      "status": "NOT_RUN",
+      "blocker": "The driver rebuilds six programs (including CPython) and its /court work trees are absent; it is a separate six-program corpus, not the source of the eight-family L7 ledger. The required eight-family L7 measurement was executed through the 24.7 runtime harness instead."
+    }
+  ],
+  "safe_compatible_claims": {
+    "count": 0,
+    "statement": "No family was marked SAFE_COMPATIBLE. Current-candidate L4+L7 functional evidence is necessary but not sufficient: every applicable mechanism in each family's dependency closure must be SAFETY_DISCHARGED, and none of the eight has that closure established."
+  },
+  "next_highest_value_subphase": {
+    "name": "C2 - mechanism-closure audit for the smallest L7 families and independent-harness coverage",
+    "why": "All eight L7 families now have current-candidate functional evidence at HEAD, so the remaining gap is safety graduation, not functionality. Start with pure-ftpd (4 mechanisms, the smallest closure) and redis (7), then isync/monit, then the 9-mechanism families (curl, haproxy, nginx) and openssh (8). In parallel, add an independent phase17-style harness for isync, monit, pure-ftpd and redis, which today rest on one harness.",
+    "explicit_non_claim": "This subphase does not graduate any family; it establishes which mechanism obligations block each family's SAFE_COMPATIBLE promotion."
+  }
+}

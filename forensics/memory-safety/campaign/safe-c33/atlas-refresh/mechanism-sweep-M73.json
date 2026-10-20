@@ -1,0 +1,146 @@
+{
+  "receipt": "mechanism-sweep-M73",
+  "branch": "integrate/safe-c33",
+  "source_head": "a7b39ac9e",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; four hostile-input UB repairs (three in the two buffer filters, one in the shared legacy length adapters those filters dispatch through), six focused controls, the full library suite serially and with four threads, clippy and fmt, and the affected Phase 4 BIO courts plus all Phase 2 ABI courts after rebuilding the candidate shell from the current source. No production unsafe expression was added or removed.",
+  "scope": "Per-file contract audit of the buffer filter, the non-blocking test filter, the null filter, the prefix filter, the caching read filter, the debug callback pair, the accept BIO and the fd BIO. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred and none was a newly discovered callback boundary. Checking the eight filters' caller preconditions exposed a shared defect in the legacy bwrite_conv/bread_conv adapters (method.rs, already audited); the STOP-class defect was repaired in place and is recorded as M73-D4.",
+  "files": [
+    "src/runtime/bio/bf_buff.rs",
+    "src/runtime/bio/bf_nbio.rs",
+    "src/runtime/bio/bf_null.rs",
+    "src/runtime/bio/bf_prefix.rs",
+    "src/runtime/bio/bf_readbuff.rs",
+    "src/runtime/bio/bio_cb.rs",
+    "src/runtime/bio/bss_acpt.rs",
+    "src/runtime/bio/bss_fd.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M73-D1",
+      "file": "src/runtime/bio/bf_buff.rs",
+      "lines_pre_fix": "462-484",
+      "line_post_fix": 463,
+      "severity": "medium",
+      "class": "UB from a negative or over-INT_MAX control length, and a zero-length NULL copy",
+      "description": "The BIO_C_SET_BUFF_READ_DATA arm stored num in the int ibuf_len and then passed num as the usize copy count, without bounding num to the int range or excluding a zero count. BIO_ctrl is a long-valued public ABI, so a negative num reached copy_nonoverlapping as a huge count; a value above INT_MAX left a negative ibuf_len that a later buffer_read would use as a huge count, and a zero count still required non-NULL pointers. The authority truncates num to int and hands the truncated value to memcpy, which is itself undefined for negative or wrapping values. The arm now refuses num < 0 and num > INT_MAX, refuses a positive count with a NULL data pointer, and skips the zero-length copy. Conforming requests keep the authority's result and allocation coordinates.",
+      "divergence": "Only inputs for which the authority's memcpy is undefined are refused (return 0 instead of faulting); every in-range request is unchanged."
+    },
+    {
+      "id": "M73-D2",
+      "file": "src/runtime/bio/bf_buff.rs",
+      "lines_pre_fix": "636-658",
+      "line_post_fix": 662,
+      "severity": "medium",
+      "class": "UB from a negative control length or a NULL destination in BIO_CTRL_PEEK",
+      "description": "BIO_CTRL_PEEK clamped only the upper bound (num > ibuf_len). A negative num stayed negative and reached copy_nonoverlapping as a huge count, and a zero count with a NULL destination was also passed to copy_nonoverlapping, whose pointer arguments must be non-NULL even at length zero. The authority's memcpy(ptr, ..., num) has the same undefined inputs. The arm now refuses a negative n and skips the copy when n == 0, so n > 0 with a NULL destination is refused as well. Otherwise the returned count and copied bytes are unchanged.",
+      "divergence": "Inputs on which the authority's memcpy is undefined are refused; the valid range is unchanged."
+    },
+    {
+      "id": "M73-D3",
+      "file": "src/runtime/bio/bf_readbuff.rs",
+      "lines_pre_fix": "132-137",
+      "line_post_fix": 139,
+      "severity": "medium",
+      "class": "signed-overflow disabling a cache resize, leading to an out-of-bounds write",
+      "description": "readbuffer_resize added ibuf_off + DEFAULT_BUFFER_SIZE - 1 + sz in int. A request whose length plus the already-consumed prefix exceeds INT_MAX wrapped negative, so sz never compared greater than ibuf_size, the resize was skipped, and readbuffer_read/readbuffer_gets then wrote the requested bytes past the cache allocation. The authority has the same signed overflow. The addition is now checked and an overflowing request is refused like an allocation failure (return false, which the callers already treat as a read failure). Non-overflowing requests keep the authority's block rounding exactly.",
+      "divergence": "A size the authority's signed arithmetic cannot represent is refused rather than allowed to reach a heap write."
+    },
+    {
+      "id": "M73-D4",
+      "file": "src/runtime/bio/method.rs",
+      "lines_pre_fix": "97-102 and 137-142",
+      "line_post_fix": 97,
+      "severity": "high",
+      "class": "shared length-adapter UB: an unclamped usize becomes a negative c_int",
+      "description": "bwrite_conv and bread_conv clamped only when `datal as c_long > INT_MAX`. For a size_t above LONG_MAX the cast makes the comparison negative, so the clamp is skipped and `datal as c_int` wraps to a negative length, which the legacy filter/socket methods then use as a huge usize count. BIO_write_ex/BIO_read_ex accept usize lengths, so `SIZE_MAX` is a legal public request; the authority compares the size_t directly (`if (datal > INT_MAX) datal = INT_MAX`) and passes INT_MAX. Both adapters now use the authority's comparison. The eight audited filters all dispatch their legacy read/write slots through these shims, which is how the precondition check found it.",
+      "divergence": "None for conforming lengths; the authority's exact INT_MAX clamp is restored for every size_t."
+    }
+  ],
+  "documentation_corrections": [
+    "src/runtime/bio/bf_buff.rs's SET_BUFF_READ_DATA arm now states why the length is bounded and why the zero-length copy is skipped.",
+    "src/runtime/bio/bf_buff.rs's PEEK arm records why a negative request is refused and why zero is not copied.",
+    "src/runtime/bio/bf_readbuff.rs's resize helper records the authority's overflow and the failure-semantics refusal.",
+    "src/runtime/bio/method.rs's two legacy adapters now clamp on the size_t value, matching the authority's comparison rather than a narrowing cast."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    "The buffer and readbuffer contexts are created by their own create callbacks and released once by OwnedCtx; their buffers are single-owner seam blocks released by OwnedBlock.",
+    "BIO control callers must pass the pointer shape each command documents: an int* for SET_BUFF_SIZE/SET_FD, a NUL-terminated string for SET_ACCEPT/SET_PREFIX, and a BIO* for DUP and SET_ACCEPT(3).",
+    "The debug callback requires a live BIO and the argp shape of the operation; cb_arg is written as a BIO exactly as the authority casts it, and the callback may re-enter BIO operations.",
+    "The accept BIO's cached name/service pointers are borrowed to the caller through BIO_C_GET_ACCEPT and remain owned by the accept context.",
+    "The fd BIO closes the descriptor only when shutdown and init are set; fd_gets requires a writable buffer of size bytes.",
+    "The authority's acpt_free leak when the caller clears shutdown (BIO_NOCLOSE) is retained, as are the authority's SET_BUFF_READ_DATA capacity bookkeeping and prefix_write zero-progress loop.",
+    "The legacy adapters require the caller's buffer to be valid for the clamped length; the sink sees INT_MAX, never a wrapped negative value."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBlock and OB-3 OwnedCtx/CtxDestroy (including the zero-state sweep)",
+    "BIO control/read/write and callback contracts from B1/B2/B6-B22",
+    "RC-1 guard_ffi and raise_site error reporting",
+    "CRYPTO_* allocator seam at the authority's exact size/file/line",
+    "D351's rule that the authority's text, including its faults, is preserved unless it is undefined behaviour",
+    "The authority's size_t-to-int clamp in bio_meth.c's bread_conv/bwrite_conv"
+  ],
+  "secret_bearing_buffers": [
+    "src/runtime/bio/bf_buff.rs and bf_readbuff.rs cache application data; they hold no key material and make no cleansing claim, matching the authority.",
+    "src/runtime/bio/bf_nbio.rs draws one RAND_priv_bytes byte per transfer to choose the retry pacing; the byte is not returned and is not a secret output.",
+    "src/runtime/bio/bf_prefix.rs duplicates the caller's prefix text and releases it once; the prefix is public output formatting.",
+    "src/runtime/bio/bio_cb.rs emits only BIO metadata (pointer, method name, length, return) to cb_arg or stderr; it copies no application data.",
+    "src/runtime/bio/bss_acpt.rs caches public host/service strings and addresses; no secret material is stored.",
+    "src/runtime/bio/bss_fd.rs owns no secret buffer; it only moves caller bytes through read/write."
+  ],
+  "gates": {
+    "fast_fmt": "PASS: cargo fmt --all -- --check (court container)",
+    "fast_check": "PASS: cargo test --lib runtime::bio --no-run",
+    "fast_focused_tests": "PASS: cargo test --lib runtime::bio:: -- --test-threads=4, 82 passed / 0 failed; the five filter controls, the shared-adapter control and the four zero-state sweeps among them",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+    "full_lib_threaded": "PASS: 1684 passed / 0 failed / 27 ignored in 92.33 s with --test-threads=4",
+    "full_lib_serial": "PASS: 1684 passed / 0 failed / 27 ignored in 201.51 s with --test-threads=1",
+    "affected_courts": "PASS: RT-BIO, RT-BIO-DEBUG and RT-BIO-FILTER, 0 residuals each, after the second (final) candidate-shell rebuild from the current source",
+    "phase2_abi": "PASS: 11/11 Phase 2 ABI courts after the second (final) rebuild",
+    "structural_guards": "No #[repr(C)] layout, exported symbol, signature, unsafe lint attribute, allocation size or FILE value changed. Production unsafe expressions added: 0; removed: 0. The build-generated tracked artifacts were restored to HEAD after the court run."
+  },
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "runtime::bio::method::tests::legacy_adapters_clamp_size_max_to_int_max; runtime::bio::bf_buff::tests::set_buffer_read_data_refuses_a_negative_length; runtime::bio::bf_buff::tests::peek_refuses_a_negative_length; runtime::bio::bf_readbuff::tests::resize_refuses_an_offset_that_would_overflow",
+    "reason": "Each control drives the exact hostile value that previously reached copy_nonoverlapping, a negative legacy length, or a skipped resize. The positive companions (set_buffer_read_data_accepts_a_bounded_copy and legacy_adapters_clamp_size_max_to_int_max's written/readbytes checks) pin the in-range result. Reverting a guard makes its control fault, report the unclamped value, or skip the refusal."
+  },
+  "not_discharged": [
+    "The eight audited files (and the shared adapter repaired as M73-D4) are audited, not SAFETY_DISCHARGED.",
+    "The authority's leak when acpt_free sees shutdown == 0 (BIO_set_close(BIO_NOCLOSE)) is retained.",
+    "BIO_C_SET_BUFF_READ_DATA still does not update ibuf_size when it grows ibuf, matching the authority.",
+    "prefix_write keeps the authority's zero-progress loop if a downstream write reports success with zero bytes.",
+    "No constant-time claim is made for the filters, the callback formatter or the BIO control paths."
+  ],
+  "residuals": [],
+  "deferred": [
+    "ASan: no ownership, extent or layout change; the repairs are range guards at public controls and checked arithmetic.",
+    "Miri/Loom: no aliasing or concurrency change; the repaired paths are single-threaded control handling.",
+    "Allocator-failure injection for the readbuffer realloc refusal arm.",
+    "Dependency-graph regeneration, FRF and SEAL.",
+    "Constant-time review (no secret-dependent control flow claim)."
+  ],
+  "next_queue": {
+    "file": "src/runtime/bio/bss_log.rs",
+    "then": [
+      "src/runtime/bio/bss_null.rs",
+      "src/runtime/bio/bss_sock.rs",
+      "src/runtime/bio/comp.rs",
+      "src/runtime/bio/core_bio.rs",
+      "src/runtime/bio/dump.rs",
+      "src/runtime/bio/legacy_host.rs",
+      "src/runtime/bio/owned.rs"
+    ]
+  },
+  "shared_boundary_files": [
+    "src/runtime/bio/method.rs"
+  ]
+}

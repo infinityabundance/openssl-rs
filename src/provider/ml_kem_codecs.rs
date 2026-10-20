@@ -59,24 +59,37 @@ use crate::provider::ml_kem_kmgmt::ossl_prov_ml_kem_new;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
+use crate::runtime::mem::{CRYPTO_memcmp, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_obj2nid;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::secure::CRYPTO_secure_malloc;
 
 /// The unit's own `__FILE__`. `ml_kem_codecs.c` is a plain `.c`, so the compiler records the
 /// source-tree path with the build's relative prefix (D235).
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(
+    c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+);
 /// `ml_kem_codecs.c:388`, `ossl_ml_kem_d2i_PKCS8`'s `OPENSSL_secure_malloc(p8fmt->priv_length)`.
 const LINE_SECURE_MALLOC: c_int = 388;
 /// `ml_kem_codecs.c:421`, `ossl_ml_kem_i2d_pubkey`'s `OPENSSL_malloc(publen)`.
 const LINE_MALLOC_PUB: c_int = 421;
+/// `ml_kem_codecs.c:427`, `ossl_ml_kem_i2d_pubkey`'s failure `OPENSSL_free(*out)`.
+const LINE_FREE_ENC_PUB: c_int = 427;
 /// `ml_kem_codecs.c:486`, `ossl_ml_kem_i2d_prvkey`'s `OPENSSL_malloc((size_t)len)`.
 const LINE_MALLOC: c_int = 486;
+/// `ml_kem_codecs.c:554`, `ossl_ml_kem_i2d_prvkey`'s failure `OPENSSL_free(buf)`.
+const LINE_FREE_ENC_PRV: c_int = 554;
 /// `ml_kem_codecs.c:586`, `ossl_ml_kem_key_to_text`'s `OPENSSL_malloc(prvlen)`.
 const LINE_MALLOC_TO_TEXT_PRV: c_int = 586;
 /// `ml_kem_codecs.c:602`, `ossl_ml_kem_key_to_text`'s `OPENSSL_malloc(key->vinfo->pubkey_bytes)`.
 const LINE_MALLOC_TO_TEXT_PUB: c_int = 602;
+/// `ml_kem_codecs.c:616`, `ossl_ml_kem_key_to_text`'s `OPENSSL_free(pubenc)`.
+const LINE_FREE_TO_TEXT_PUB: c_int = 616;
+/// `ml_kem_codecs.c:617`, `ossl_ml_kem_key_to_text`'s `OPENSSL_free(prvenc)`.
+const LINE_FREE_TO_TEXT_PRV: c_int = 617;
 
 /// `OSSL_PKEY_PARAM_ML_KEM_INPUT_FORMATS` — `core_names.h:433`.
 const OSSL_PKEY_PARAM_ML_KEM_INPUT_FORMATS: *const c_char = c"ml-kem.input_formats".as_ptr();
@@ -432,17 +445,6 @@ unsafe fn raise_one(site: &err_sites::ErrSite, prefix: &str, alg: *const c_char,
 /// the authority spells with a cast.
 type OsslSsizeT = i64;
 
-/// Free a format-slot list the helper returned, if any.
-///
-/// # Safety
-/// `slots` must be NULL or a list `ossl_ml_common_pkcs8_fmt_order` returned.
-unsafe fn free_slots(slots: *mut MlCommonPkcs8FmtPref, line: c_int) {
-    if !slots.is_null() {
-        // SAFETY: `slots` is this call's list and `line` its coordinate.
-        unsafe { CRYPTO_free(slots.cast(), FILE, line) };
-    }
-}
-
 /// `ML_KEM_KEY *ossl_ml_kem_d2i_PUBKEY(const uint8_t *pubenc, int publen, int evp_type,`
 /// `PROV_CTX *provctx, const char *propq)` — `ml_kem_codecs.c:234-266`.
 ///
@@ -723,7 +725,8 @@ pub(crate) unsafe fn ossl_ml_kem_d2i_PKCS8(
 
     // SAFETY: `slots` is NULL or this frame's list; `p8inf` is live.
     unsafe {
-        free_slots(slots, 400);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(slots.cast(), FILE_SEAM, 400));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
         if ret.is_null() {
             ossl_ml_kem_key_free(key);
@@ -760,15 +763,20 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_pubkey(key: *const MlKemKey, out: *mut *mut
         return 0;
     }
     // SAFETY: `out` is writable and the allocation is the authority's own.
-    let p = CRYPTO_malloc(publen, FILE, LINE_MALLOC_PUB).cast::<c_uchar>();
-    if p.is_null() {
+    let Some(p) = OwnedBuf::new_plain_released(
+        publen,
+        FILE_SEAM,
+        LINE_MALLOC_PUB,
+        FILE_SEAM,
+        LINE_FREE_ENC_PUB,
+    ) else {
         return 0;
-    }
+    };
     // SAFETY: `out` is writable per the contract.
-    unsafe { *out = p };
+    unsafe { *out = p.as_ptr() };
     // SAFETY: `p` is a live buffer of `publen` bytes; `key` is live.
-    if unsafe { ossl_ml_kem_encode_public_key(p, publen, key) } == 0 {
-        // SAFETY: `v` is live and `p` is this frame's allocation.
+    if unsafe { ossl_ml_kem_encode_public_key(p.as_ptr(), publen, key) } == 0 {
+        // SAFETY: `v` is live; `p`'s `Drop` releases the block at the authority's own site.
         unsafe {
             raise_one(
                 &err_sites::ML_KEM_CODECS_424,
@@ -776,10 +784,11 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_pubkey(key: *const MlKemKey, out: *mut *mut
                 (*v).algorithm_name,
                 " public key",
             );
-            CRYPTO_free(p.cast(), FILE, 427);
         }
         return 0;
     }
+    // The caller's `*out` took ownership of the block.
+    let _ = p.into_raw();
 
     publen as c_int
 }
@@ -835,7 +844,6 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
 
     let len: c_int;
     let mut ret: c_int = 0;
-    let mut buf: *mut u8 = ptr::null_mut();
 
     'end: {
         // If we don't have a seed, skip seedful entries.
@@ -874,10 +882,21 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
                 break 'end;
             }
 
-            buf = CRYPTO_malloc(len as usize, FILE, LINE_MALLOC).cast::<u8>();
-            if buf.is_null() {
+            // The private-key DER is secret-bearing: the failure-path release cleanses the
+            // allocation, and the release coordinates are the authority's `end:` free rather
+            // than the allocation line. Deliberate secret-residue improvement over
+            // `ml_kem_codecs.c:554`; on success the caller takes the block and frees it as the
+            // authority does.
+            let Some(buf_owned) = OwnedBuf::new_cleansed_released(
+                len as usize,
+                FILE_SEAM,
+                LINE_MALLOC,
+                FILE_SEAM,
+                LINE_FREE_ENC_PRV,
+            ) else {
                 break 'end;
-            }
+            };
+            let buf = buf_owned.as_ptr();
             let mut pos = buf;
 
             match (*p8fmt).p8_shift {
@@ -949,19 +968,14 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
             }
 
             if pos == buf.add(len as usize) {
-                *out = buf;
+                *out = buf_owned.into_raw();
                 ret = len;
             }
         }
     }
 
-    // SAFETY: `fmt_slots` is NULL or this frame's list; `buf` is NULL or this frame's allocation.
-    unsafe {
-        free_slots(fmt_slots, 552);
-        if ret == 0 {
-            CRYPTO_free(buf.cast(), FILE, 554);
-        }
-    }
+    // SAFETY: `fmt_slots` is NULL or this frame's list.
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE_SEAM, 552) });
     ret
 }
 
@@ -989,8 +1003,8 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
 
     // SAFETY: `key` is live; the encode helpers answer 0 on failure.
     unsafe {
-        let mut prvenc: *mut u8 = ptr::null_mut();
-        let mut pubenc: *mut u8 = ptr::null_mut();
+        let mut prvenc: Option<OwnedBuf> = None;
+        let mut pubenc: Option<OwnedBuf> = None;
         let mut seed = [0u8; ML_KEM_SEED_BYTES];
 
         'end: {
@@ -1012,16 +1026,22 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     }
                 }
                 if ossl_ml_kem_have_prvkey(key) {
-                    prvenc = CRYPTO_malloc(prvlen, FILE, LINE_MALLOC_TO_TEXT_PRV).cast::<u8>();
-                    if prvenc.is_null() {
+                    let Some(b) = OwnedBuf::new_cleansed_released(
+                        prvlen,
+                        FILE_SEAM,
+                        LINE_MALLOC_TO_TEXT_PRV,
+                        FILE_SEAM,
+                        LINE_FREE_TO_TEXT_PRV,
+                    ) else {
+                        break 'end;
+                    };
+                    if ossl_ml_kem_encode_private_key(b.as_ptr(), prvlen, key) == 0 {
                         break 'end;
                     }
-                    if ossl_ml_kem_encode_private_key(prvenc, prvlen, key) == 0 {
+                    if ossl_bio_print_labeled_buf(out, c"dk:".as_ptr(), b.as_ptr(), prvlen) == 0 {
                         break 'end;
                     }
-                    if ossl_bio_print_labeled_buf(out, c"dk:".as_ptr(), prvenc, prvlen) == 0 {
-                        break 'end;
-                    }
+                    prvenc = Some(b);
                 }
                 ret = 1;
             }
@@ -1033,13 +1053,21 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     break 'end;
                 }
 
-                pubenc = CRYPTO_malloc(publen, FILE, LINE_MALLOC_TO_TEXT_PUB).cast::<u8>();
-                if pubenc.is_null()
-                    || ossl_ml_kem_encode_public_key(pubenc, publen, key) == 0
-                    || ossl_bio_print_labeled_buf(out, c"ek:".as_ptr(), pubenc, publen) == 0
+                let Some(b) = OwnedBuf::new_plain_released(
+                    publen,
+                    FILE_SEAM,
+                    LINE_MALLOC_TO_TEXT_PUB,
+                    FILE_SEAM,
+                    LINE_FREE_TO_TEXT_PUB,
+                ) else {
+                    break 'end;
+                };
+                if ossl_ml_kem_encode_public_key(b.as_ptr(), publen, key) == 0
+                    || ossl_bio_print_labeled_buf(out, c"ek:".as_ptr(), b.as_ptr(), publen) == 0
                 {
                     break 'end;
                 }
+                pubenc = Some(b);
                 ret = 1;
             }
         }
@@ -1054,8 +1082,12 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
             );
         }
 
-        CRYPTO_free(pubenc.cast(), FILE, 616);
-        CRYPTO_free(prvenc.cast(), FILE, 617);
+        // `prvenc`/`pubenc` release their blocks here, the authority's own order and sites.
+        drop(pubenc);
+        drop(prvenc);
+        // `seed` is a stack copy of the private seed. The authority leaves it to the stack;
+        // clearing it is a deliberate secret-residue improvement (`ml_kem_codecs.c:560`).
+        OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
     }
     ret
 }

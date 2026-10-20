@@ -24,12 +24,14 @@ use crate::evp::cipher_ctx::{
 };
 use crate::evp::evp_pbe::EVP_PBE_CipherInit_ex;
 use crate::rand::rand_lib::RAND_bytes_ex;
-use crate::runtime::mem::CRYPTO_malloc;
+
 use crate::runtime::obj::{NID_id_alg_PWRI_KEK, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::OPENSSL_sk_push;
 
 use super::cms_asn1::*;
 use super::cms_lib::{ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_CIPH_FLAG_AEAD_CIPHER` — `include/openssl/evp.h:531`.
 const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
@@ -463,7 +465,6 @@ unsafe fn kek_unwrap_key(
     // SAFETY: `ctx` is live.
     let blocklen = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
     let mut rv = 0;
-    let mut tmp: *mut c_uchar = ptr::null_mut();
     let mut outl: c_int = 0;
 
     if blocklen < 4 {
@@ -476,17 +477,24 @@ unsafe fn kek_unwrap_key(
     if inlen > c_int::MAX as usize || !inlen.is_multiple_of(blocklen as usize) {
         return 0;
     }
+    // The decrypted scratch is this frame's block, allocated through the crate's allocator seam;
+    // its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
     // SAFETY: `inlen > 0`.
-    tmp = CRYPTO_malloc(inlen, c"cms_pwri.c".as_ptr(), 219).cast::<c_uchar>();
-    if tmp.is_null() {
+    let Some(tmp) = OwnedBuf::new_cleansed_released(
+        inlen,
+        SeamFile::new(c"cms_pwri.c"),
+        219,
+        SeamFile::NULL,
+        0,
+    ) else {
         return 0;
-    }
+    };
     // Setup IV by decrypting last two blocks.
     // SAFETY: `ctx` is live; the buffers are sized.
     let ok = unsafe {
         EVP_DecryptUpdate(
             ctx,
-            tmp.add(inlen - 2 * blocklen as usize),
+            tmp.as_ptr().add(inlen - 2 * blocklen as usize),
             &mut outl,
             input.add(inlen - 2 * blocklen as usize),
             blocklen * 2,
@@ -496,9 +504,9 @@ unsafe fn kek_unwrap_key(
         && unsafe {
             EVP_DecryptUpdate(
                 ctx,
-                tmp,
+                tmp.as_ptr(),
                 &mut outl,
-                tmp.add(inlen - blocklen as usize),
+                tmp.as_ptr().add(inlen - blocklen as usize),
                 blocklen,
             )
         } != 0
@@ -506,7 +514,7 @@ unsafe fn kek_unwrap_key(
         && unsafe {
             EVP_DecryptUpdate(
                 ctx,
-                tmp,
+                tmp.as_ptr(),
                 &mut outl,
                 input,
                 (inlen - blocklen as usize) as c_int,
@@ -518,40 +526,35 @@ unsafe fn kek_unwrap_key(
             != 0
         // Decrypt again.
         // SAFETY: `ctx` is live; `tmp` is the buffer.
-        && unsafe { EVP_DecryptUpdate(ctx, tmp, &mut outl, tmp, inlen as c_int) } != 0;
+        && unsafe { EVP_DecryptUpdate(ctx, tmp.as_ptr(), &mut outl, tmp.as_ptr(), inlen as c_int) }
+            != 0;
     if !ok {
-        // SAFETY: `tmp` is owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(tmp, inlen) };
         return 0;
     }
-    // Check check bytes.
     // SAFETY: `tmp` is readable for `inlen >= 2*blocklen >= 8`.
-    if (unsafe { *tmp.add(1) ^ *tmp.add(4) }
+    let raw = tmp.as_ptr();
+    // Check check bytes.
+    // SAFETY: `raw` is readable for `inlen >= 2*blocklen >= 8`.
+    if (unsafe { *raw.add(1) ^ *raw.add(4) }
         // SAFETY: the arguments meet the callee's contract.
-        & unsafe { *tmp.add(2) ^ *tmp.add(5) }
+        & unsafe { *raw.add(2) ^ *raw.add(5) }
         // SAFETY: the arguments meet the callee's contract.
-        & unsafe { *tmp.add(3) ^ *tmp.add(6) })
+        & unsafe { *raw.add(3) ^ *raw.add(6) })
         != 0xff
     {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(tmp, inlen) };
         return 0;
     }
-    // SAFETY: `tmp` is readable.
-    if inlen < 4 + unsafe { *tmp } as usize {
-        // SAFETY: each pointer is NULL or owned here.
-        unsafe { super::cms_asn1::OPENSSL_clear_free(tmp, inlen) };
+    // SAFETY: `raw` is readable.
+    if inlen < 4 + unsafe { *raw } as usize {
         return 0;
     }
-    // SAFETY: `outlen` is writable; `tmp` is readable.
-    let n = unsafe { *tmp } as usize;
+    // SAFETY: `outlen` is writable; `raw` is readable.
+    let n = unsafe { *raw } as usize;
     // SAFETY: the arguments meet the callee's contract.
     unsafe { *outlen = n };
-    // SAFETY: `out` is writable for `n`; `tmp + 4` is readable for `n`.
-    unsafe { ptr::copy_nonoverlapping(tmp.add(4), out, n) };
+    // SAFETY: `out` is writable for `n`; `raw + 4` is readable for `n`.
+    unsafe { ptr::copy_nonoverlapping(raw.add(4), out, n) };
     rv = 1;
-    // SAFETY: `tmp` is owned here.
-    unsafe { super::cms_asn1::OPENSSL_clear_free(tmp, inlen) };
     rv
 }
 
@@ -643,9 +646,8 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
     let mut kekctx: *mut EvpCipherCtx = ptr::null_mut();
     let mut name = [0 as c_char; OSSL_MAX_NAME_SIZE];
     let mut kekcipher: *mut crate::evp::cipher::EvpCipher = ptr::null_mut();
-    let mut key: *mut c_uchar = ptr::null_mut();
+    let mut key: Option<OwnedBuf> = None;
     let mut keylen = 0usize;
-    let mut key_alloc_len = 0usize;
     // SAFETY: `cms` is live.
     let cms_ctx = unsafe { super::cms_lib::ossl_cms_get0_cmsctx(cms) };
 
@@ -837,39 +839,59 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
                 break 'body;
             }
 
+            // The wrapped key is this frame's block, allocated through the crate's allocator
+            // seam; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
             // SAFETY: `keylen > 0`.
-            key = CRYPTO_malloc(keylen, c"cms_pwri.c".as_ptr(), 392).cast::<c_uchar>();
-
-            if key.is_null() {
+            let Some(key_buf) = OwnedBuf::new_cleansed_released(
+                keylen,
+                SeamFile::new(c"cms_pwri.c"),
+                392,
+                SeamFile::NULL,
+                0,
+            ) else {
                 break 'body;
-            }
-            key_alloc_len = keylen;
+            };
 
-            // SAFETY: `ec` is live; `key` is writable.
-            if unsafe { kek_wrap_key(key, &mut keylen, (*ec).key, (*ec).keylen, kekctx, cms_ctx) }
-                == 0
+            // SAFETY: `ec` is live; `key_buf` is writable.
+            if unsafe {
+                kek_wrap_key(
+                    key_buf.as_ptr(),
+                    &mut keylen,
+                    (*ec).key,
+                    (*ec).keylen,
+                    kekctx,
+                    cms_ctx,
+                )
+            } == 0
             {
+                // Keep the block for the tail's release at the authority's own site.
+                key = Some(key_buf);
                 break 'body;
             }
-            // SAFETY: `pwri` is live.
+            // SAFETY: `pwri` is live; ownership of the block transfers to the `ASN1_STRING`.
             unsafe {
-                (*(*pwri).encrypted_key).data = key;
+                (*(*pwri).encrypted_key).data = key_buf.into_raw();
                 (*(*pwri).encrypted_key).length = keylen as c_int;
             }
-            key = ptr::null_mut();
         } else {
             // SAFETY: `pwri` is live.
             let elen = unsafe { (*(*pwri).encrypted_key).length };
+            // The unwrapped key is this frame's block, allocated through the crate's allocator
+            // seam; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
             // SAFETY: `elen >= 0`.
-            key = CRYPTO_malloc(elen as usize, c"cms_pwri.c".as_ptr(), 403).cast::<c_uchar>();
-            if key.is_null() {
+            let Some(key_buf) = OwnedBuf::new_cleansed_released(
+                elen as usize,
+                SeamFile::new(c"cms_pwri.c"),
+                403,
+                SeamFile::NULL,
+                0,
+            ) else {
                 break 'body;
-            }
-            key_alloc_len = elen as usize;
-            // SAFETY: `pwri` is live; `key` is writable.
+            };
+            // SAFETY: `pwri` is live; `key_buf` is writable.
             if unsafe {
                 kek_unwrap_key(
-                    key,
+                    key_buf.as_ptr(),
                     &mut keylen,
                     (*(*pwri).encrypted_key).data,
                     elen as usize,
@@ -885,32 +907,32 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
                         crate::runtime::err::err_reasons::CMS_R_UNWRAP_FAILURE,
                     )
                 };
+                // Keep the block for the tail's release at the authority's own site.
+                key = Some(key_buf);
                 break 'body;
             }
 
-            // SAFETY: `ec` is live.
-            unsafe { super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen) };
-            // SAFETY: `ec` is live.
+            // SAFETY: `ec` is live; ownership of the block transfers to `ec.key`.
             unsafe {
-                (*ec).key = key;
+                super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
+                (*ec).key = key_buf.into_raw();
                 (*ec).keylen = keylen;
             }
-            key = ptr::null_mut();
         }
 
         r = 1;
     }
 
-    // SAFETY: each is NULL or owned.
+    // SAFETY: `kekcipher`/`kekctx` are NULL or owned.
     unsafe {
         EVP_CIPHER_free(kekcipher);
         EVP_CIPHER_CTX_free(kekctx);
-
-        if r == 0 {
-            super::cms_asn1::OPENSSL_clear_free(key, key_alloc_len);
-        }
-        X509_ALGOR_free(kekalg);
     }
+    // `key` still holds the block only when the wrap/unwrap above failed; its release is the
+    // authority's cleansing `OPENSSL_clear_free`, run by `Drop` (a no-op once ownership moved on).
+    drop(key);
+    // SAFETY: `kekalg` is NULL or owned.
+    unsafe { X509_ALGOR_free(kekalg) };
 
     r
 }

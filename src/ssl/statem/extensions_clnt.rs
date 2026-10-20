@@ -121,8 +121,8 @@ const EXT_RETURN_FAIL: c_int = -1;
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_server_name(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // SAFETY: `s` is live.
-    let host = unsafe { (*s).ext_hostname };
+    // SAFETY: `s` is live; its `ext_hostname` member obeys the member-buffer invariant.
+    let host = unsafe { (*s).ext_hostname() };
     if host.is_null() {
         return EXT_RETURN_NOT_SENT;
     }
@@ -152,13 +152,12 @@ unsafe fn tls_construct_ctos_server_name(s: *mut Ssl, pkt: *mut Wpacket) -> c_in
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_alpn(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // SAFETY: `s` is live.
-    let alpn = unsafe { (*s).ext_alpn };
+    // SAFETY: `s` is live; `ext_alpn`/`ext_alpn_len` obey the member-buffer invariant.
+    let (alpn, alpn_len) = unsafe { (*s).ext_alpn() };
     if alpn.is_null() {
         return EXT_RETURN_NOT_SENT;
     }
-    // SAFETY: `s` is live; `ext_alpn_len` counts the bytes `ext_alpn` holds.
-    let alpn_len = unsafe { (*s).ext_alpn_len } as usize;
+    let alpn_len = alpn_len as usize;
     // SAFETY: `pkt` is live; `WPACKET_sub_memcpy_u16` is a 2-byte sub-packet around the list.
     unsafe {
         if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_ALPN) == 0
@@ -365,7 +364,8 @@ unsafe fn tls_construct_ctos_supported_groups(s: *mut Ssl, pkt: *mut Wpacket) ->
 /// is what `ssl_generate_pkey` (`ssl/ssl_rsa.c`/`t1_lib.c`) does.
 ///
 /// # Safety
-/// `s` must be a live connection and `pkt` a live packet.
+/// `s` must be a live connection whose `ctx` is live (every connection constructed by
+/// `SSL_new` satisfies this), and `pkt` a live packet.
 unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
     use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
     use crate::runtime::mem::CRYPTO_free;
@@ -386,7 +386,7 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
 
     let group = OSSL_TLS_GROUP_ID_x25519;
     // SAFETY: `s` is live; `ctx` is the connection's context.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
     // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; `params` is a
     // terminated array.
@@ -428,6 +428,12 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
     unsafe {
         CRYPTO_free(pub_.cast(), core::ptr::null(), 0);
         if ret == EXT_RETURN_SENT {
+            // The slot owns the previous ephemeral, if any. The authority reuses the stored
+            // `ks_pkey[0]` in the HRR arm; this reduced client has no share table, so it keeps
+            // the freshly generated key and must release the value it displaces.
+            if !(*s).pkey.is_null() {
+                EVP_PKEY_free((*s).pkey.cast());
+            }
             (*s).pkey = pkey.cast();
         } else {
             EVP_PKEY_free(pkey);
@@ -520,13 +526,13 @@ unsafe fn tls_construct_ctos_session_ticket(s: *mut Ssl, pkt: *mut Wpacket) -> c
         let sess = (*s).session;
         if (*s).new_session == 0
             && !sess.is_null()
-            && !(*sess).ext_tick.is_null()
-            && (*sess).ext_ticklen > 0
+            && !(*sess).ext_tick().0.is_null()
+            && (*sess).ext_tick().1 > 0
             && (*sess).ssl_version != crate::ssl::ssl_lib::TLS1_3_VERSION
         {
-            ((*sess).ext_tick, (*sess).ext_ticklen)
+            (*sess).ext_tick()
         } else {
-            (core::ptr::null_mut::<u8>(), 0usize)
+            (core::ptr::null::<u8>(), 0usize)
         }
     };
     // SAFETY: `pkt` is live; `tick` names `ticklen` readable bytes (or is NULL).

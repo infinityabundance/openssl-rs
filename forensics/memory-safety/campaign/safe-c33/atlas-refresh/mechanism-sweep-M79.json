@@ -1,0 +1,147 @@
+{
+  "receipt": "mechanism-sweep-M79",
+  "branch": "integrate/safe-c33",
+  "source_head": "091b06366",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the affected Phase 8 and Phase 14 courts on the exact worktree; no hidden obligation remains. Four changes: two secret-cleansing releases in the SM2 cipher, a latent slice-extent guard in the SM2 verifier, cleansing of the SM4 stack schedule copy, and three completed XMSS Safety contracts. Focused tests, the full library suite serially and with four threads, clippy, fmt and the affected differential courts. ASan, Miri, Loom, timing measurement and FRF/SEAL NOT_RUN.",
+  "scope": "Per-file contract audit of the eight head entries of REMAINING-AUDIT.txt: the SLH-DSA parameter table and XMSS tree, the SM2 cipher and signature units, the legacy SM3 EVP_MD static, the SM4 block cipher, and the DTLS state and SRTP surfaces. None was deferred or skipped. All affected Phase 8 and Phase 14 courts pass; the two accepted, witnessed Phase 8 divergences are unchanged.",
+  "files": [
+    "src/slh_dsa/params.rs",
+    "src/slh_dsa/xmss.rs",
+    "src/sm2/crypt.rs",
+    "src/sm2/sign.rs",
+    "src/sm3/legacy_sm3.rs",
+    "src/sm4.rs",
+    "src/ssl/d1_lib.rs",
+    "src/ssl/d1_srtp.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M79-D1",
+      "file": "src/sm2/crypt.rs",
+      "lines_pre_fix": "483-487, 663-669 (cleanup tails); allocations at 362-363, 371 and 577-579",
+      "line_post_fix": "506-507, 690-691",
+      "severity": "medium",
+      "class": "secret-bearing release omission (derived shared secret; not UB)",
+      "description": "x2y2 holds the ECDH shared point (x2 || y2) and msg_mask the X9.63 KDF output. Both are SECRET_DATA: x2y2 is the shared point at all times, and msg_mask is still the raw mask on a failure before the xor (including a failed retry iteration). The authority releases both with a plain CRYPTO_free at sm2_crypt.c:281-282 and :422-423, and the transcription reproduced that release.",
+      "fix": "Track each block's exact allocation extent (2 * field_size and msg_len) and release with CRYPTO_clear_free at the same file/line coordinates and the same extent. NULL/refused allocations remain the authority's free(NULL) no-op. c3 and computed_c3 are public digests and remain plainly released. This mirrors the already-recorded ecdh_ossl.rs deviation.",
+      "witness": "Allocation and release coordinates are unchanged; the affected RT-ASYM-CIPHER (118 observations) differential court passes on the exact worktree. No unit test observes the post-free memory, and the deviation is memory-only."
+    },
+    {
+      "id": "M79-D2",
+      "file": "src/sm2/sign.rs",
+      "lines_pre_fix": "669-676",
+      "line_post_fix": "676-681",
+      "severity": "low",
+      "class": "latent slice-extent hazard (negative/zero i2d length)",
+      "description": "ossl_sm2_internal_verify passed i2d_ECDSA_SIG's result straight to from_raw_parts after only testing derlen != sig_len. i2d answers a negative length when its allocation fails, and a negative signed value cast to usize is an enormous slice extent; the authority's memcmp would only reach that arm when sig_len is negative too, which d2i has already refused, but the safe slice must not depend on that subtle short circuit.",
+      "fix": "Reject derlen <= 0 with the authority's own SM2_R_INVALID_ENCODING site before creating either slice. No valid input changes behaviour: a decoded ECDSA-Sig-Value re-encodes to at least the DER sequence header.",
+      "witness": "The Phase 8 RT-SIGNATURE court (472 observations, including the SM2 signature rows) passes unchanged."
+    },
+    {
+      "id": "M79-D3",
+      "file": "src/sm4.rs",
+      "lines_pre_fix": "264-286",
+      "line_post_fix": "294",
+      "severity": "low",
+      "class": "secret-bearing temporary not cleansed (authority parity)",
+      "description": "ossl_sm4_set_key keeps the evolving four-word schedule in a stack array. The array holds the secret key schedule and remains on the stack after the return; the authority and this file's AES/ARIA siblings leave it there.",
+      "fix": "Cleanse the frame's own k array with OPENSSL_cleanse after the last write. The caller's SM4_KEY is a separate copy and is unchanged; provider contexts release the whole block with CRYPTO_clear_free.",
+      "witness": "No observable behaviour changes; the Phase 8 RT-CIPHER (7291 observations, with the one recorded defltwrap.pad21 divergence) and CT-CIPHER (3190 vectors) courts pass."
+    },
+    {
+      "id": "M79-D4",
+      "file": "src/slh_dsa/xmss.rs",
+      "lines_pre_fix": "36-37, 133-134, 194-195",
+      "line_post_fix": "38, 136, 198",
+      "severity": "low",
+      "class": "unsafe contract incompleteness (documentation only)",
+      "description": "The three XMSS Safety contracts named the context and the spans but not the row/height bounds the recursion and the in-place index shift require. A caller could pass an out-of-range node_id and, in a debug build, overflow the unchecked 2 * node_id arithmetic; the valid callers are bounded but the obligation was hidden.",
+      "fix": "State h <= hm and node_id < 2^h for the node walk, and node_id < 2^hm for sign and pk_from_sig. The callers establish this: key generation passes node_id = 0 with h = hm, and get_tree_ids masks the decoded leaf index with (1 << hm) - 1.",
+      "witness": "Call-site inspection: src/slh_dsa/key.rs:496-504 and src/slh_dsa/dsa.rs:711-741. No code change."
+    }
+  ],
+  "unrelated_residuals": [],
+  "deferred": [
+    "src/ssl/d1_lib.rs DTLSv1_listen remains reduced past the cookie stage and is a single-pass read loop; both are the module's recorded measured divergences from Phase 14.8 and were not changed.",
+    "The SM2 BN_CTX scalar temporaries keep the authority's release; secure-flag cleansing is B19's established contract, not re-decided here.",
+    "SM4's table-driven middle rounds and their side-channel properties are unchanged; no constant-time claim is made."
+  ],
+  "not_discharged": [
+    "All eight files are audited, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "The SLH-DSA consumer family still depends on unaudited or separately audited provider/key units in its closure; this receipt does not complete it.",
+    "The SM2/SM4/SM3 cryptographic axis is covered only by the existing differential and correctness courts; no timing or formal evidence is added here."
+  ],
+  "retained_obligations": [
+    "slh_dsa/params.rs: the static table's alg pointers are 'static NUL-terminated strings and the table is never written; the lookup accepts NULL or a NUL-terminated alg.",
+    "slh_dsa/xmss.rs: ctx is live with its key/params and method tables; every span is as stated; lnode/rnode are cleansed on every h > 0 exit; node_id/h are bounded as now documented.",
+    "sm2/crypt.rs: key/digest/buffers are live as the function contracts say; the SM2_Ciphertext item is the module's static; x2y2 and msg_mask are cleansed at the authority's release coordinates.",
+    "sm2/sign.rs: key, digest, id/msg and the DER buffers are live as stated; the ECDSA_SIG set0 transfer is exclusive; the re-encoded DER block is adopted exactly once by OwnedBuf.",
+    "sm4.rs: key is readable for 16 bytes, ks is writable for a whole SM4_KEY, in/out are 16 bytes; the local schedule is cleansed in-frame.",
+    "ssl/d1_lib.rs: Dtls1State is a zero-valid block with an empty member destructor and an Option<fn> callback; d1 must be NULL or a block from dtls1_new_state; the parser cursors never exceed their datagram.",
+    "ssl/d1_srtp.rs: profiles is a NUL-terminated string, out is a writable stack slot, and every returned profile/stack is borrowed from the context or the static table."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [
+    "The SM2 cleansing change is a deliberate authority deviation (plain CRYPTO_free -> CRYPTO_clear_free) at unchanged coordinates; it is memory-only and cannot be observed by a functional court.",
+    "The SM4 local cleanse is a deliberate authority deviation at no observable coordinate.",
+    "No constant-time behaviour is claimed for SM2, SM4 or SM3 from source inspection."
+  ],
+  "next_queue": {
+    "file": "src/ssl/methods.rs",
+    "then": [
+      "src/ssl/quic/quic_impl.rs",
+      "src/ssl/quic/quic_method.rs",
+      "src/ssl/quic/quic_tls_api.rs",
+      "src/ssl/record/rec_layer_s3.rs",
+      "src/ssl/rio/poll_immediate.rs",
+      "src/ssl/s3_lib.rs",
+      "src/ssl/ssl_asn1.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "slh_dsa/xmss.rs: the three Safety contracts now state the row/height bounds the recursion relies on.",
+    "sm2/crypt.rs: the module header records the two cleansing releases as a \u00a75.1 deviation.",
+    "sm4.rs: the set_key body records why the local schedule copy is cleansed."
+  ],
+  "shared_boundary_files": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [
+    "src/sm4.rs: one OPENSSL_cleanse of the frame's own [u32; 4] schedule temporary, inside a documented unsafe block; no new caller precondition."
+  ],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [
+    "src/sm2/crypt.rs: the two derived-secret releases moved from CRYPTO_free to CRYPTO_clear_free at the same file/line coordinates and the exact allocation extent; no new caller precondition."
+  ],
+  "secret_bearing_buffers": [
+    "xmss.rs: lnode/rnode are cleansed in full on every h > 0 exit; tmp_adrs and the tree addresses are public; sk_seed is caller-owned and not copied here.",
+    "sm2/crypt.rs: x2y2 (shared point) and msg_mask (KDF mask) are cleansed on every exit, including refused-allocation and all-zero-mask retry paths; c3/computed_c3 are public digests and stay plainly released; ptext_buf is zeroed on failure and transferred on success.",
+    "sm2/sign.rs: Z and e are public hash values; the nonce k and private dA live in BN_CTX and are covered by B19's secure-flag cleansing; r/s are transferred to the public ECDSA_SIG; the re-encoded DER block is public and plainly released.",
+    "sm3/legacy_sm3.rs: the static EVP_MD holds no secret; the digest state in md_data is cleared by the EVP_MD_CTX owner's cleanse-then-free.",
+    "sm4.rs: the caller's SM4_KEY schedule is cleansed by the provider context's whole-block CRYPTO_clear_free; the module's own stack schedule copy is now cleansed in-frame.",
+    "ssl/d1_lib.rs and ssl/d1_srtp.rs: no secret contents (cookies are protocol data, the SRTP profiles are static public metadata)."
+  ],
+  "boundary_control": {
+    "negative_control_added": false,
+    "reason": "No detector here claims to observe a missing cleanse; the changes are release-mechanism and precondition corrections with no reachable UB witness. The SM2 verifier guard is exercised by RT-SIGNATURE's malformed-encoding rows, and the SM4 schedule cleanse is inert for every output. A post-free memory canary would itself depend on use-after-free observation and is not added."
+  },
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "check": "cargo check --lib finished clean",
+    "focused_sm2": "10 passed / 0 failed",
+    "focused_slh_dsa": "9 passed / 0 failed",
+    "focused_sm4": "5 passed / 0 failed",
+    "focused_legacy_sm3": "2 passed / 0 failed",
+    "focused_d1": "3 passed / 0 failed / 1 ignored (process-global allocator probe)",
+    "full_lib_serial": "1694 passed / 0 failed / 27 ignored (253.04 s)",
+    "full_lib_threads4": "1694 passed / 0 failed / 27 ignored (89.52 s)",
+    "phase8_affected": "all pass; RT-ASYM-CIPHER 118, RT-SIGNATURE 472, RT-CIPHER 7291 + 1 recorded divergence, RT-CIPHER-MEM 382, RT-DIGEST 670 observations",
+    "phase14_affected": "11/11 pass; RT-DTLS 42 observations"
+  }
+}

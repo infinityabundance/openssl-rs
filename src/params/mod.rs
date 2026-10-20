@@ -69,7 +69,8 @@ use crate::bn::bignum::BigNum;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_zalloc;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::time::TimeT;
 
 pub mod build;
@@ -80,6 +81,10 @@ pub mod from_text;
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/params.c";
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the octet-string output buffers
+// ---------------------------------------------------------------------------------------------
 
 /// `OSSL_PARAM_UNMODIFIED` — `return_size`'s "nothing has written this yet" value.
 pub(crate) const OSSL_PARAM_UNMODIFIED: usize = usize::MAX;
@@ -2263,8 +2268,15 @@ unsafe fn get_string_internal(
     }
     let sz = p.data_size;
     // A UTF-8 string always wants a terminator; a zero-length value of any other type
-    // still wants a byte so the allocation is not a zero-length request.
-    let alloc_sz = sz + usize::from(type_ == OSSL_PARAM_UTF8_STRING || sz == 0);
+    // still wants a byte so the allocation is not a zero-length request. The authority's
+    // C `sz + 1` wraps for a hostile `data_size`; refuse instead of allocating a wrapped
+    // extent (§3).
+    let Some(alloc_sz) = sz.checked_add(usize::from(type_ == OSSL_PARAM_UTF8_STRING || sz == 0))
+    else {
+        // The authority's C addition wraps and has no defined outcome for this extent;
+        // answer the module's ordinary refusal rather than inventing an error reason.
+        return false;
+    };
     if !used_len.is_null() {
         // SAFETY: `used_len` is writable for one `size_t`.
         unsafe { *used_len = sz };
@@ -2284,11 +2296,10 @@ unsafe fn get_string_internal(
     if cur.is_null() {
         // `OPENSSL_malloc(alloc_sz)`, which is `CRYPTO_zalloc`'s sibling: the
         // authority uses malloc here, so the bytes are *not* zeroed.
-        let fresh = crate::runtime::mem::CRYPTO_malloc(alloc_sz, FILE.as_ptr(), LINE);
-        if fresh.is_null() {
+        let Some(fresh) = OwnedBuf::new(alloc_sz, SeamFile::new(FILE), LINE) else {
             return false;
-        }
-        cur = fresh;
+        };
+        cur = fresh.into_raw().cast();
         // SAFETY: `val` and `max_len` are writable for one element each.
         unsafe {
             *val = cur;
@@ -2978,9 +2989,14 @@ pub(crate) unsafe fn ossl_param_get1_octet_string_from_param(
     // SAFETY: `*out` is NULL or a block of `*out_len` bytes from this allocator, and
     // `out`/`out_len` are writable.
     unsafe {
-        if !(*out).is_null() {
-            crate::runtime::mem::CRYPTO_clear_free((*out).cast(), *out_len, FILE.as_ptr(), LINE);
-        }
+        // The previous block is the caller's; `adopt_cleansed` adopts it and its `Drop` is the
+        // authority's own cleansing `CRYPTO_clear_free((*out), *out_len)`.
+        drop(OwnedBuf::adopt_cleansed(
+            *out,
+            *out_len,
+            SeamFile::new(FILE),
+            LINE,
+        ));
         *out = buf.cast();
         *out_len = len;
     }
@@ -3066,7 +3082,12 @@ unsafe fn setbuf_fromparams(
         if q.data.is_null() || q.data_size == 0 {
             continue;
         }
-        let next = written + q.data_size;
+        // A wrapped sum must not pass the capacity check below: `next > cap` would be
+        // false and the copy would run past `out`. The authority's static packet uses
+        // checked accounting; refuse the parameter array instead.
+        let Some(next) = written.checked_add(q.data_size) else {
+            return false;
+        };
         if !counting_only {
             if next > cap {
                 return false;
@@ -3114,43 +3135,46 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         // stays `sz` (zero)**, because the authority's `fin:` label writes `sz` and the early arm
         // jumps to it without changing it; a length of one here made `X963KDF` hash a stray zero
         // byte (D346).
-        let z = CRYPTO_zalloc(1, FILE.as_ptr(), LINE);
-        if z.is_null() {
+        let Some(z) = OwnedBuf::new_zeroed(1, SeamFile::new(FILE), LINE) else {
             return 0;
-        }
+        };
         // SAFETY: `out`/`out_len` are writable and `*out` is releaseable.
         unsafe {
-            if !(*out).is_null() {
-                crate::runtime::mem::CRYPTO_clear_free(
-                    (*out).cast(),
-                    *out_len,
-                    FILE.as_ptr(),
-                    LINE,
-                );
-            }
-            *out = z.cast();
+            // The previous block is the caller's; `adopt_cleansed` adopts it and its `Drop` cleanses it.
+            drop(OwnedBuf::adopt_cleansed(
+                *out,
+                *out_len,
+                SeamFile::new(FILE),
+                LINE,
+            ));
+            *out = z.into_raw();
             *out_len = sz;
         }
         return 1;
     }
-    let res = CRYPTO_zalloc(sz, FILE.as_ptr(), LINE);
-    if res.is_null() {
+    let Some(res) = OwnedBuf::new_zeroed_cleansed(sz, SeamFile::new(FILE), LINE) else {
         return 0;
-    }
+    };
+    // The concatenation is KDF material, so its release on the failure path and by the caller is
+    // the authority's own cleansing `CRYPTO_clear_free(res, sz)`; the constructor fixed the
+    // cleansing length to the allocation length.
     let mut cap = sz;
     // SAFETY: `res` is writable for `sz` bytes, which the counting pass has shown is
     // enough; `params` is readable for `n` pointers.
-    if !unsafe { setbuf_fromparams(n, params, res.cast(), &mut cap) } {
-        // SAFETY: `res` is a block of `sz` bytes from this allocator.
-        unsafe { crate::runtime::mem::CRYPTO_clear_free(res, sz, FILE.as_ptr(), LINE) };
+    if !unsafe { setbuf_fromparams(n, params, res.as_ptr(), &mut cap) } {
+        // `res` is the fill that failed; its `Drop` cleanses it.
         return 0;
     }
     // SAFETY: `out`/`out_len` are writable and `*out` is releaseable.
     unsafe {
-        if !(*out).is_null() {
-            crate::runtime::mem::CRYPTO_clear_free((*out).cast(), *out_len, FILE.as_ptr(), LINE);
-        }
-        *out = res.cast();
+        // The previous block is the caller's; `adopt_cleansed` adopts it and its `Drop` cleanses it.
+        drop(OwnedBuf::adopt_cleansed(
+            *out,
+            *out_len,
+            SeamFile::new(FILE),
+            LINE,
+        ));
+        *out = res.into_raw();
         *out_len = cap;
     }
     1
@@ -3176,4 +3200,61 @@ pub unsafe extern "C" fn OSSL_PARAM_construct_BN(
     crate::ffi::guard_ffi(END, || {
         construct(key, OSSL_PARAM_UNSIGNED_INTEGER, buf.cast(), bsize)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    /// A hostile `data_size` must not wrap the accounting sum and let
+    /// `copy_nonoverlapping` write past the caller's buffer. The checked sum refuses
+    /// before reading `data` or writing a byte.
+    #[test]
+    fn buffer_accounting_refuses_a_wrapping_data_size() {
+        let mut byte = [0u8; 1];
+        let p = construct(
+            c"k".as_ptr(),
+            OSSL_PARAM_OCTET_STRING,
+            byte.as_mut_ptr().cast::<c_void>(),
+            usize::MAX,
+        );
+        let params = [&p as *const OsslParam];
+        let mut out = [0u8; 8];
+        let mut outlen = out.len();
+        // SAFETY: `params` is one live descriptor; `out`/`outlen` are this frame's. The
+        // descriptor's extent cannot be read here, which is exactly what must be refused.
+        let ok = unsafe { setbuf_fromparams(1, params.as_ptr(), out.as_mut_ptr(), &mut outlen) };
+        assert!(!ok, "a wrapping extent must be refused");
+        assert_eq!(
+            outlen,
+            out.len(),
+            "a refusal must not report a consumed length"
+        );
+        assert_eq!(out, [0u8; 8], "a refusal must not write");
+    }
+
+    /// The allocation path must refuse the same wrap instead of allocating zero bytes
+    /// and publishing a short extent to the caller.
+    #[test]
+    fn string_extent_refuses_a_wrapping_terminator() {
+        let mut byte = [0u8; 1];
+        let p = construct(
+            c"k".as_ptr(),
+            OSSL_PARAM_UTF8_STRING,
+            byte.as_mut_ptr().cast::<c_void>(),
+            usize::MAX,
+        );
+        let mut val: *mut c_void = ptr::null_mut();
+        let mut max_len = 0usize;
+        let mut used_len = 0usize;
+        // SAFETY: `p` is live and the three out-slots are this frame's. `*val` is NULL,
+        // so the allocation path is taken and the extent sum is the value under test.
+        let ok =
+            unsafe { get_string_internal(&p, &mut val, &mut max_len, &mut used_len, p.data_type) };
+        assert!(!ok, "a wrapping allocation extent must be refused");
+        assert!(val.is_null(), "no block may be published");
+        assert_eq!(max_len, 0);
+    }
 }

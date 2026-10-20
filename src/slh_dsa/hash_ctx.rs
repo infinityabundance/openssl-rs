@@ -18,6 +18,7 @@
 #![allow(unreachable_pub)]
 
 use core::ffi::{c_char, c_int};
+use core::ptr::NonNull;
 
 use crate::evp::digest::{EVP_DigestInit_ex2, EVP_MD_CTX_dup, EVP_MD_CTX_free, EVP_MD_CTX_new};
 use crate::evp::mac::{EVP_MAC_CTX_dup, EVP_MAC_CTX_free, EVP_MAC_CTX_new};
@@ -36,6 +37,58 @@ const LINE_ZALLOC_DUP: c_int = 70;
 /// `slh_dsa_hash_ctx.c:113`, the `OPENSSL_clear_free` in `..._free`.
 const LINE_CLEAR_FREE: c_int = 113;
 
+/// An owned `SLH_DSA_HASH_CTX` block allocated through the crate's allocator seam.
+///
+/// Both constructors allocate the block, fill in its members, and hand it to the C caller on
+/// success. Until that hand-out this handle owns it, so every refused member construction
+/// releases the partially built context through the authority's own
+/// [`ossl_slh_dsa_hash_ctx_free`] (the function the authority's constructor already calls on those
+/// paths) instead of a hand-written walk over the members installed so far.
+struct OwnedHashCtx {
+    ptr: *mut SlhDsaHashCtx,
+}
+
+impl OwnedHashCtx {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, alloc_line)`, or `None` when the allocator answers NULL.
+    ///
+    /// A zeroed block is the initial state the authority's destructor is written for: every member
+    /// it releases is NULL, and every EVP `*_free` call it makes is total on NULL. That is exactly
+    /// the state the authority's own constructor frees when a later step fails.
+    fn zalloc(alloc_line: c_int) -> Option<OwnedHashCtx> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of exactly `size_of::<SlhDsaHashCtx>()` bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<SlhDsaHashCtx>(), FILE, alloc_line)
+        }
+        .cast::<SlhDsaHashCtx>();
+        NonNull::new(raw).map(|ptr| OwnedHashCtx { ptr: ptr.as_ptr() })
+    }
+
+    /// The stable address the constructor initialises.
+    fn as_ptr(&self) -> *mut SlhDsaHashCtx {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut SlhDsaHashCtx {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedHashCtx {
+    /// Release the block through the authority's own `*_free` body.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc` produced and has not handed out. Its members are
+        // either zero or contexts this constructor installed, which is precisely the partial state
+        // the authority's constructor releases on its failure paths; `Drop` runs once, so this is
+        // the block's single release.
+        unsafe { ossl_slh_dsa_hash_ctx_free(self.ptr) };
+    }
+}
+
 /// `SLH_DSA_HASH_CTX *ossl_slh_dsa_hash_ctx_new(const SLH_DSA_KEY *key)` —
 /// `slh_dsa_hash_ctx.c:26-61`.
 ///
@@ -43,22 +96,20 @@ const LINE_CLEAR_FREE: c_int = 113;
 /// `key` is live; its `md`, `md_big`, `hmac` members are the fetched methods `key_hash_init`
 /// resolved (NULL `md` is a fetch failure this crate never builds).
 pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_new(key: *const SlhDsaKey) -> *mut SlhDsaHashCtx {
-    let ret = CRYPTO_zalloc(core::mem::size_of::<SlhDsaHashCtx>(), FILE, LINE_ZALLOC_NEW)
-        .cast::<SlhDsaHashCtx>();
-    if ret.is_null() {
+    let Some(ctx) = OwnedHashCtx::zalloc(LINE_ZALLOC_NEW) else {
         return core::ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ret` is a fresh zeroed block this call owns; `key` is live per the contract.
+    // SAFETY: `ctx` is a fresh zeroed block this call owns; `key` is live per the contract. Every
+    // early return below drops `ctx`, which is the authority's own failure-path release.
     unsafe {
+        let ret = ctx.as_ptr();
         (*ret).key = key;
         (*ret).md_ctx = EVP_MD_CTX_new();
         if (*ret).md_ctx.is_null() {
-            ossl_slh_dsa_hash_ctx_free(ret);
             return core::ptr::null_mut();
         }
         if EVP_DigestInit_ex2((*ret).md_ctx, (*key).md, core::ptr::null()) != 1 {
-            ossl_slh_dsa_hash_ctx_free(ret);
             return core::ptr::null_mut();
         }
         if !(*key).md_big.is_null() {
@@ -68,24 +119,21 @@ pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_new(key: *const SlhDsaKey) -> *mut Sl
             } else {
                 (*ret).md_big_ctx = EVP_MD_CTX_new();
                 if (*ret).md_big_ctx.is_null() {
-                    ossl_slh_dsa_hash_ctx_free(ret);
                     return core::ptr::null_mut();
                 }
                 if EVP_DigestInit_ex2((*ret).md_big_ctx, (*key).md_big, core::ptr::null()) != 1 {
-                    ossl_slh_dsa_hash_ctx_free(ret);
                     return core::ptr::null_mut();
                 }
             }
             if !(*key).hmac.is_null() {
                 (*ret).hmac_ctx = EVP_MAC_CTX_new((*key).hmac);
                 if (*ret).hmac_ctx.is_null() {
-                    ossl_slh_dsa_hash_ctx_free(ret);
                     return core::ptr::null_mut();
                 }
             }
         }
     }
-    ret
+    ctx.into_raw()
 }
 
 /// `SLH_DSA_HASH_CTX *ossl_slh_dsa_hash_ctx_dup(const SLH_DSA_HASH_CTX *src)` —
@@ -94,21 +142,20 @@ pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_new(key: *const SlhDsaKey) -> *mut Sl
 /// # Safety
 /// `src` is live.
 pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_dup(src: *const SlhDsaHashCtx) -> *mut SlhDsaHashCtx {
-    let ret = CRYPTO_zalloc(core::mem::size_of::<SlhDsaHashCtx>(), FILE, LINE_ZALLOC_DUP)
-        .cast::<SlhDsaHashCtx>();
-    if ret.is_null() {
+    let Some(ctx) = OwnedHashCtx::zalloc(LINE_ZALLOC_DUP) else {
         return core::ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ret` is fresh; `src` is live per the contract. The identity tests below are the
-    // authority's and are what stop a double-dup/double-free of the shared first context.
+    // SAFETY: `ctx` is fresh; `src` is live per the contract. The identity tests below are the
+    // authority's and are what stop a double-dup/double-free of the shared first context. Every
+    // early return drops `ctx`, which is the authority's own failure-path release.
     unsafe {
+        let ret = ctx.as_ptr();
         (*ret).hmac_digest_used = (*src).hmac_digest_used;
         (*ret).key = (*src).key;
         if !(*src).md_ctx.is_null() {
             (*ret).md_ctx = EVP_MD_CTX_dup((*src).md_ctx);
             if (*ret).md_ctx.is_null() {
-                ossl_slh_dsa_hash_ctx_free(ret);
                 return core::ptr::null_mut();
             }
         }
@@ -116,7 +163,6 @@ pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_dup(src: *const SlhDsaHashCtx) -> *mu
             if (*src).md_big_ctx != (*src).md_ctx {
                 (*ret).md_big_ctx = EVP_MD_CTX_dup((*src).md_big_ctx);
                 if (*ret).md_big_ctx.is_null() {
-                    ossl_slh_dsa_hash_ctx_free(ret);
                     return core::ptr::null_mut();
                 }
             } else {
@@ -126,18 +172,19 @@ pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_dup(src: *const SlhDsaHashCtx) -> *mu
         if !(*src).hmac_ctx.is_null() {
             (*ret).hmac_ctx = EVP_MAC_CTX_dup((*src).hmac_ctx);
             if (*ret).hmac_ctx.is_null() {
-                ossl_slh_dsa_hash_ctx_free(ret);
                 return core::ptr::null_mut();
             }
         }
     }
-    ret
+    ctx.into_raw()
 }
 
 /// `void ossl_slh_dsa_hash_ctx_free(SLH_DSA_HASH_CTX *ctx)` — `slh_dsa_hash_ctx.c:104-114`.
 ///
 /// # Safety
-/// `ctx` is NULL or live.
+/// `ctx` is NULL or live. A context this module's constructors allocate but have not finished
+/// building is live for this function: its not-yet-set members are NULL, and every release below
+/// is total on NULL.
 pub(crate) unsafe fn ossl_slh_dsa_hash_ctx_free(ctx: *mut SlhDsaHashCtx) {
     if ctx.is_null() {
         return;

@@ -68,8 +68,10 @@ use crate::params::OsslParam;
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_X9_62_id_ecPublicKey, NID_sha256, NID_sm3, OBJ_length, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x_pubkey::{
     ossl_x509_PUBKEY_get0_libctx, X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param,
 };
@@ -80,7 +82,7 @@ const EC_PKEY_NO_PARAMETERS: c_int = 0x001;
 /// `OSSL_PKEY_PARAM_USE_COFACTOR_ECDH` — `include/openssl/core_names.h:400`.
 const OSSL_PKEY_PARAM_USE_COFACTOR_ECDH: *const c_char = c"use-cofactor-ecdh".as_ptr();
 /// The authority's translation unit, for the `OPENSSL_free`/`OPENSSL_clear_free` sites below.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c");
 
 /// `static int eckey_param2type(int *pptype, void **ppval, const EC_KEY *ec_key)` —
 /// `crypto/ec/ec_ameth.c:29-66`.
@@ -160,7 +162,6 @@ unsafe fn eckey_param2type(
 unsafe extern "C" fn eckey_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -> c_int {
     let mut pval: *mut c_void = ptr::null_mut();
     let mut ptype: c_int = 0;
-    let mut penc: *mut c_uchar = ptr::null_mut();
 
     // SAFETY: `pkey` is live.
     let ec_key = unsafe { (*pkey).pkey.cast::<EcKey>() };
@@ -180,50 +181,58 @@ unsafe extern "C" fn eckey_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey)
             if ptype == V_ASN1_SEQUENCE {
                 ASN1_STRING_free(pval.cast::<Asn1String>());
             }
-            CRYPTO_free(penc.cast(), FILE, 96);
         }
         return 0;
     }
+    // `penc` is this frame's scratch block, allocated through the crate's allocator seam at
+    // `penclen` and released by its handle's `Drop` -- the authority's plain `CRYPTO_free` -- at
+    // the `err:` sites below, or handed to `X509_PUBKEY_set0_param` on success.
     // SAFETY: `penclen` is a positive size.
-    penc = CRYPTO_malloc(penclen as usize, FILE, 83).cast::<c_uchar>();
-    if penc.is_null() {
+    let Some(penc) = OwnedBuf::new(penclen as usize, FILE_SEAM, 83) else {
         // goto err
-        // SAFETY: `ptype` names what `pval` is, and `penc` is the NULL the allocation returned.
+        // SAFETY: `ptype` names what `pval` is.
         unsafe {
             if ptype == V_ASN1_SEQUENCE {
                 ASN1_STRING_free(pval.cast::<Asn1String>());
             }
-            CRYPTO_free(penc.cast(), FILE, 96);
         }
         return 0;
-    }
-    let mut p = penc;
+    };
+    let mut p = penc.as_ptr();
     // SAFETY: `ec_key` is live and `p` points into the `penclen` buffer.
     penclen = unsafe { i2o_ECPublicKey(ec_key, &mut p) };
     if penclen <= 0 {
         // goto err
-        // SAFETY: `ptype` names what `pval` is and `penc` is the buffer this call filled.
+        // SAFETY: `ptype` names what `pval` is; `penc` releases its block on drop.
         unsafe {
             if ptype == V_ASN1_SEQUENCE {
                 ASN1_STRING_free(pval.cast::<Asn1String>());
             }
-            CRYPTO_free(penc.cast(), FILE, 96);
         }
         return 0;
     }
     // SAFETY: `pk` is live and `pval`/`penc` are the objects the setter takes ownership of.
-    if unsafe { X509_PUBKEY_set0_param(pk, OBJ_nid2obj(EVP_PKEY_EC), ptype, pval, penc, penclen) }
-        != 0
+    if unsafe {
+        X509_PUBKEY_set0_param(
+            pk,
+            OBJ_nid2obj(EVP_PKEY_EC),
+            ptype,
+            pval,
+            penc.as_ptr(),
+            penclen,
+        )
+    } != 0
     {
+        // Ownership of the block transfers to the `X509_PUBKEY`.
+        let _ = penc.into_raw();
         return 1;
     }
     // goto err
-    // SAFETY: `ptype` names what `pval` is and `penc` is the buffer this call filled.
+    // SAFETY: `ptype` names what `pval` is; `penc` releases its block on drop.
     unsafe {
         if ptype == V_ASN1_SEQUENCE {
             ASN1_STRING_free(pval.cast::<Asn1String>());
         }
-        CRYPTO_free(penc.cast(), FILE, 96);
     }
     0
 }
@@ -372,6 +381,11 @@ unsafe extern "C" fn eckey_priv_encode(
         return 0;
     }
 
+    // `ep` is the block `i2d_ECPrivateKey` allocated; the handle adopts it so the failure path
+    // below releases it at the authority's own site and the success path hands it on.
+    // SAFETY: `ep` is a live block `i2d_ECPrivateKey` allocated and no one else owns, readable for
+    // `eplen` bytes.
+    let ep = unsafe { OwnedBuf::adopt_cleansed_nullable(ep, eplen as usize, SeamFile::NULL, 0) };
     // SAFETY: `p8` is live and `pval`/`ep` are the objects the setter takes ownership of.
     if unsafe {
         PKCS8_pkey_set0(
@@ -380,17 +394,15 @@ unsafe extern "C" fn eckey_priv_encode(
             0,
             ptype,
             pval,
-            ep,
+            ep.as_ptr(),
             eplen,
         )
     } == 0
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::EC_AMETH_192) };
-        // SAFETY: `ep` is the buffer `eplen` long.
-        unsafe { CRYPTO_clear_free(ep.cast(), eplen as usize, FILE, 193) };
         // goto err
-        // SAFETY: `ptype` names what `pval` is.
+        // SAFETY: `ptype` names what `pval` is; `ep` releases its block on drop.
         unsafe {
             if ptype == V_ASN1_SEQUENCE {
                 ASN1_STRING_free(pval.cast::<Asn1String>());
@@ -398,6 +410,8 @@ unsafe extern "C" fn eckey_priv_encode(
         }
         return 0;
     }
+    // Ownership of the block transfers to the `PKCS8_PRIV_KEY_INFO`.
+    let _ = ep.into_raw();
 
     1
 }
@@ -539,10 +553,15 @@ enum EcPrintT {
 unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPrintT) -> c_int {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     unsafe {
-        let mut priv_: *mut c_uchar = ptr::null_mut();
-        let mut pub_: *mut c_uchar = ptr::null_mut();
+        let mut priv_buf: *mut c_uchar = ptr::null_mut();
+        let mut pub_buf: *mut c_uchar = ptr::null_mut();
         let mut privlen: usize = 0;
         let mut publen: usize = 0;
+        // `pub_buf` and `priv_buf` are the blocks the helpers below allocate; each handle owns its
+        // block and releases it -- the authority's plain `CRYPTO_free` for `pub_buf` and its
+        // cleansing `CRYPTO_clear_free` for `priv_buf` -- at the authority's own `err:` site.
+        let mut pub_owned: Option<OwnedBuf> = None;
+        let mut priv_owned: Option<OwnedBuf> = None;
 
         if x.is_null() {
             raise_site(&err_sites::EC_AMETH_292);
@@ -555,25 +574,37 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
         }
 
         if ktype != EcPrintT::Param && !EC_KEY_get0_public_key(x).is_null() {
-            publen = EC_KEY_key2buf(x, EC_KEY_get_conv_form(x), &mut pub_, ptr::null_mut());
+            publen = EC_KEY_key2buf(x, EC_KEY_get_conv_form(x), &mut pub_buf, ptr::null_mut());
+            // SAFETY: `pub_buf` is NULL or a live block `EC_KEY_key2buf` allocated and no one else
+            // owns.
+            pub_owned = Some(OwnedBuf::adopt_plain_nullable(pub_buf, FILE_SEAM, 343));
             if publen == 0 {
                 // goto err
                 raise_site(&err_sites::EC_AMETH_341);
-                CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-                CRYPTO_free(pub_.cast(), FILE, 343);
                 return 0;
             }
         }
 
         if ktype == EcPrintT::Private && !EC_KEY_get0_private_key(x).is_null() {
-            privlen = EC_KEY_priv2buf(x, &mut priv_);
+            privlen = EC_KEY_priv2buf(x, &mut priv_buf);
+            // SAFETY: `priv_buf` is NULL or a live block `EC_KEY_priv2buf` allocated and no one
+            // else owns, readable for `privlen` bytes.
+            priv_owned = Some(OwnedBuf::adopt_cleansed_nullable(
+                priv_buf,
+                privlen,
+                SeamFile::NULL,
+                0,
+            ));
             if privlen == 0 {
                 raise_site(&err_sites::EC_AMETH_341);
-                CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-                CRYPTO_free(pub_.cast(), FILE, 343);
                 return 0;
             }
         }
+        // The prints below read the two blocks through their handles.
+        let priv_ = priv_owned
+            .as_ref()
+            .map_or(ptr::null_mut(), OwnedBuf::as_ptr);
+        let pub_ = pub_owned.as_ref().map_or(ptr::null_mut(), OwnedBuf::as_ptr);
 
         let ecstr: *const c_char = match ktype {
             EcPrintT::Private => c"Private-Key".as_ptr(),
@@ -590,8 +621,6 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
             ) <= 0
         {
             raise_site(&err_sites::EC_AMETH_341);
-            CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-            CRYPTO_free(pub_.cast(), FILE, 343);
             return 0;
         }
 
@@ -600,8 +629,6 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
                 || ASN1_buf_print(bp, priv_, privlen, off + 4) == 0)
         {
             raise_site(&err_sites::EC_AMETH_341);
-            CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-            CRYPTO_free(pub_.cast(), FILE, 343);
             return 0;
         }
 
@@ -610,20 +637,16 @@ unsafe fn do_ec_key_print(bp: *mut Bio, x: *const EcKey, off: c_int, ktype: EcPr
                 || ASN1_buf_print(bp, pub_, publen, off + 4) == 0)
         {
             raise_site(&err_sites::EC_AMETH_341);
-            CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-            CRYPTO_free(pub_.cast(), FILE, 343);
             return 0;
         }
 
         if ECPKParameters_print(bp, group, off) == 0 {
             raise_site(&err_sites::EC_AMETH_341);
-            CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-            CRYPTO_free(pub_.cast(), FILE, 343);
             return 0;
         }
 
-        CRYPTO_clear_free(priv_.cast(), privlen, FILE, 342);
-        CRYPTO_free(pub_.cast(), FILE, 343);
+        // `priv_buf` and `pub_buf` are released by their handles' `Drop` at the authority's `err:`
+        // site.
         1
     }
 }
@@ -928,7 +951,7 @@ unsafe extern "C" fn ec_pkey_export_to(
 
     /* export the domain parameters */
     // SAFETY: `ecg` is live and every other argument is the caller's.
-    if unsafe {
+    let group_ok = unsafe {
         ossl_ec_group_todata(
             ecg,
             tmpl,
@@ -938,14 +961,20 @@ unsafe extern "C" fn ec_pkey_export_to(
             bnctx,
             &mut gen_buf,
         )
-    } == 0
-    {
+    } != 0;
+    // `gen_buf` is the domain-parameters block the call allocated; the handle owns it so every exit
+    // below releases what it built -- the authority's plain `CRYPTO_free`.
+    // SAFETY: `gen_buf` is NULL or a live block `ossl_ec_group_todata` allocated and no one else
+    // owns.
+    let gen_owned = unsafe { OwnedBuf::adopt_plain_nullable(gen_buf, FILE_SEAM, 602) };
+    // `pub_key_buf` is adopted only if the public point below is exported; its handle starts empty.
+    let mut pub_key_owned: Option<OwnedBuf> = None;
+    if !group_ok {
         // goto err
-        // SAFETY: `tmpl`, `bnctx`, and the buffers are live.
+        // SAFETY: `tmpl` and `bnctx` are live and owned here; `gen_owned` releases its block on
+        // drop.
         unsafe {
             OSSL_PARAM_BLD_free(tmpl);
-            CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-            CRYPTO_free(gen_buf.cast(), FILE, 602);
             BN_CTX_end(bnctx);
             BN_CTX_free(bnctx);
         }
@@ -966,6 +995,11 @@ unsafe extern "C" fn ec_pkey_export_to(
         // SAFETY: `ecg`/`pub_point` are live and every other argument is the caller's.
         let pub_key_buflen =
             unsafe { EC_POINT_point2buf(ecg, pub_point, format, &mut pub_key_buf, bnctx) };
+        // `pub_key_buf` is the point the call allocated; the handle owns it.
+        // SAFETY: `pub_key_buf` is NULL or a live block `EC_POINT_point2buf` allocated and no one
+        // else owns.
+        pub_key_owned =
+            Some(unsafe { OwnedBuf::adopt_plain_nullable(pub_key_buf, FILE_SEAM, 601) });
         if pub_key_buflen == 0
             // SAFETY: `tmpl` is live and the buffer is `pub_key_buflen` long.
             || unsafe {
@@ -978,11 +1012,10 @@ unsafe extern "C" fn ec_pkey_export_to(
             } == 0
         {
             // goto err
-            // SAFETY: `tmpl` is live and the buffers/context this arm has built are owned here.
+            // SAFETY: `tmpl` and `bnctx` are live and owned here; the handles release their blocks
+            // on drop.
             unsafe {
                 OSSL_PARAM_BLD_free(tmpl);
-                CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-                CRYPTO_free(gen_buf.cast(), FILE, 602);
                 BN_CTX_end(bnctx);
                 BN_CTX_free(bnctx);
             }
@@ -996,11 +1029,10 @@ unsafe extern "C" fn ec_pkey_export_to(
         let ecbits = unsafe { EC_GROUP_order_bits(ecg) };
         if ecbits <= 0 {
             // goto err
-            // SAFETY: `tmpl` is live and the buffers/context this arm has built are owned here.
+            // SAFETY: `tmpl` and `bnctx` are live and owned here; the handles release their blocks
+            // on drop.
             unsafe {
                 OSSL_PARAM_BLD_free(tmpl);
-                CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-                CRYPTO_free(gen_buf.cast(), FILE, 602);
                 BN_CTX_end(bnctx);
                 BN_CTX_free(bnctx);
             }
@@ -1012,11 +1044,10 @@ unsafe extern "C" fn ec_pkey_export_to(
         if unsafe { OSSL_PARAM_BLD_push_BN_pad(tmpl, OSSL_PKEY_PARAM_PRIV_KEY, priv_key, sz) } == 0
         {
             // goto err
-            // SAFETY: `tmpl` is live and the buffers/context this arm has built are owned here.
+            // SAFETY: `tmpl` and `bnctx` are live and owned here; the handles release their blocks
+            // on drop.
             unsafe {
                 OSSL_PARAM_BLD_free(tmpl);
-                CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-                CRYPTO_free(gen_buf.cast(), FILE, 602);
                 BN_CTX_end(bnctx);
                 BN_CTX_free(bnctx);
             }
@@ -1039,11 +1070,10 @@ unsafe extern "C" fn ec_pkey_export_to(
         } == 0
         {
             // goto err
-            // SAFETY: `tmpl` is live and the buffers/context this arm has built are owned here.
+            // SAFETY: `tmpl` and `bnctx` are live and owned here; the handles release their blocks
+            // on drop.
             unsafe {
                 OSSL_PARAM_BLD_free(tmpl);
-                CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-                CRYPTO_free(gen_buf.cast(), FILE, 602);
                 BN_CTX_end(bnctx);
                 BN_CTX_free(bnctx);
             }
@@ -1059,15 +1089,16 @@ unsafe extern "C" fn ec_pkey_export_to(
     // SAFETY: `importer` is the destination's own function.
     let rv = unsafe { importer.map_or(0, |f| f(to_keydata, selection, params)) };
 
-    // SAFETY: every pointer is live.
+    // SAFETY: `tmpl`/`params`/`bnctx` are live and owned here.
     unsafe {
         OSSL_PARAM_BLD_free(tmpl);
         OSSL_PARAM_free(params);
-        CRYPTO_free(pub_key_buf.cast(), FILE, 601);
-        CRYPTO_free(gen_buf.cast(), FILE, 602);
         BN_CTX_end(bnctx);
         BN_CTX_free(bnctx);
     }
+    // The two scratch blocks are released here, at the authority's fall-through `err:` site.
+    drop(pub_key_owned);
+    drop(gen_owned);
     rv
 }
 

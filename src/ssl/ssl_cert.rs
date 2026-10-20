@@ -648,7 +648,13 @@ pub unsafe extern "C" fn SSL_add_dir_cert_subjects_to_stack(
                     break;
                 }
                 let flen = c_strlen(filename);
-                if dlen + flen + 2 > buf.len() {
+                // The authority adds three `size_t`s directly; make the bound check
+                // un-overflowable (`dlen + flen + 2` is the final path length with `/` and NUL).
+                let too_long = dlen
+                    .checked_add(flen)
+                    .and_then(|n| n.checked_add(2))
+                    .is_none_or(|n| n > buf.len());
+                if too_long {
                     raise_ssl(SSL_R_PATH_TOO_LONG, 984);
                     break;
                 }
@@ -1147,7 +1153,7 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
         let sctx = (*s).ctx;
         let verify_store = (*sctx).cert_store;
         // `ctx = X509_STORE_CTX_new_ex(sctx->libctx, sctx->propq)` — `:453-457`.
-        let ctx = X509_STORE_CTX_new_ex((*sctx).libctx, (*sctx).propq);
+        let ctx = X509_STORE_CTX_new_ex((*sctx).libctx, (*sctx).propq());
         if ctx.is_null() {
             raise_ssl(ERR_R_X509_LIB, 455);
             return 0;

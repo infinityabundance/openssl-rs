@@ -19,8 +19,11 @@ use crate::cmp::cmp_util::{
 };
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_get_type, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::{CRYPTO_strdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_hmac_sha1, NID_sha256, NID_subject_alt_name, OBJ_nid2sn};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OpenSslStack,
 };
@@ -41,6 +44,10 @@ use crate::x509::x_x509::{X509_free, X509};
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_ctx.c";
+
+/// This unit's `__FILE__` as the allocator seam's `file` argument.
+const FILE_C: *const c_char = FILE.as_ptr();
+const FILE_C_SEAM: SeamFile = SeamFile::new(c"crypto/cmp/cmp_ctx.c");
 
 /// `ERR_LIB_CMP`.
 const ERR_LIB_CMP: c_int = 58;
@@ -295,9 +302,10 @@ macro_rules! ctx_set1_char {
             if !val.is_null() && dup.is_null() {
                 return 0;
             }
-            // SAFETY: `ctx` is live.
+            // SAFETY: `ctx` is live; the incumbent member came from this allocator or is NULL and
+            // this frame owns it exclusively.
             unsafe {
-                CRYPTO_free((*ctx).$field.cast(), FILE.as_ptr(), 0);
+                drop(OwnedStr::adopt((*ctx).$field, SeamFile::new(FILE), 0));
                 (*ctx).$field = dup;
             }
             1
@@ -432,6 +440,95 @@ unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int)
     1
 }
 
+/// The authority's `OPENSSL_cleanse(ctx->secretValue->data,
+/// ctx->secretValue->length)` — `cmp_ctx.c:212-213` (free) and `:439-440` (replacement).
+///
+/// `OPENSSL_cleanse`, not `write_bytes`: the latter is a dead store once the block is freed and
+/// may be removed by the optimiser.
+///
+/// # Safety
+/// `value` is NULL or a live `ASN1_OCTET_STRING`; when it has a non-NULL `data`, that buffer is
+/// writable for `length` bytes.
+unsafe fn cleanse_secret_value(value: *mut Asn1String) {
+    if value.is_null() {
+        return;
+    }
+    // SAFETY: `value` is live per the contract.
+    let (data, length) = unsafe { ((*value).data, (*value).length) };
+    if !data.is_null() && length > 0 {
+        // SAFETY: `data` is the string's content buffer, writable for `length` bytes. The cleanse
+        // covers the secret extent the authority names; the trailing NUL is not secret.
+        unsafe { OPENSSL_cleanse(data.cast::<c_void>(), length as usize) };
+    }
+}
+
+/// `OSSL_CMP_CTX_free`'s body (`cmp_ctx.c:185-245`), without the block release [`OwnedCtx`]'s
+/// `Drop` performs: every member the authority releases there, in the authority's own order --
+/// including the two `secret_value` cleansing arms, which are kept as the authority writes them.
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_CMP_CTX_free` member body, releasing exactly
+// this context's own strings, keys, stacks and objects once (each releaser accepts the unset NULL)
+// and never the enclosing block, which `OwnedCtx` releases; (b) `OsslCmpCtx` is a `#[repr(C)]`
+// record of raw pointers, integers, `Option<fn>` and a pointer-typed `CbPtr`, so an all-zero block
+// is a valid `OsslCmpCtx` the body is sound on.
+unsafe impl CtxDestroy for OsslCmpCtx {
+    const FILE: *const c_char = FILE_C;
+    const LINE_ALLOC: c_int = 102;
+    const LINE_FREE: c_int = 244;
+
+    unsafe fn destroy_body(ctx: *mut OsslCmpCtx) {
+        // SAFETY: `ctx` is a live context per the trait contract; each field is NULL or owned by the
+        // context, and the `char` members came from this file's own `CRYPTO_strdup`.
+        unsafe {
+            drop(OwnedStr::adopt((*ctx).propq, FILE_C_SEAM, 196));
+            drop(OwnedStr::adopt((*ctx).server_path, FILE_C_SEAM, 197));
+            drop(OwnedStr::adopt((*ctx).server, FILE_C_SEAM, 198));
+            drop(OwnedStr::adopt((*ctx).proxy, FILE_C_SEAM, 199));
+            drop(OwnedStr::adopt((*ctx).no_proxy, FILE_C_SEAM, 200));
+
+            X509_free((*ctx).srv_cert);
+            X509_free((*ctx).validated_srv_cert);
+            X509_NAME_free((*ctx).expected_sender);
+            X509_STORE_free((*ctx).trusted);
+            OSSL_STACK_OF_X509_free((*ctx).untrusted);
+
+            X509_free((*ctx).cert);
+            OSSL_STACK_OF_X509_free((*ctx).chain);
+            EVP_PKEY_free((*ctx).pkey);
+            ASN1_OCTET_STRING_free((*ctx).reference_value);
+            cleanse_secret_value((*ctx).secret_value);
+            ASN1_OCTET_STRING_free((*ctx).secret_value);
+            EVP_MD_free((*ctx).pbm_owf);
+
+            X509_NAME_free((*ctx).recipient);
+            EVP_MD_free((*ctx).digest);
+            ASN1_OCTET_STRING_free((*ctx).transaction_id);
+            ASN1_OCTET_STRING_free((*ctx).sender_nonce);
+            ASN1_OCTET_STRING_free((*ctx).recip_nonce);
+            ASN1_OCTET_STRING_free((*ctx).first_sender_nonce);
+            itavs_free((*ctx).geninfo_itavs);
+            OSSL_STACK_OF_X509_free((*ctx).extra_certs_out);
+
+            EVP_PKEY_free((*ctx).new_pkey);
+            X509_NAME_free((*ctx).issuer);
+            ASN1_INTEGER_free((*ctx).serial_number);
+            X509_NAME_free((*ctx).subject_name);
+            OPENSSL_sk_pop_free((*ctx).subject_alt_names, Some(general_name_free_void));
+            OPENSSL_sk_pop_free((*ctx).req_extensions, Some(x509_extension_free_void));
+            OPENSSL_sk_pop_free((*ctx).policies, Some(policy_free_void));
+            X509_free((*ctx).old_cert);
+            X509_REQ_free((*ctx).p10_csr.cast());
+
+            itavs_free((*ctx).genm_itavs);
+
+            OPENSSL_sk_pop_free((*ctx).status_string, Some(utf8_string_free_void));
+            X509_free((*ctx).new_cert);
+            OSSL_STACK_OF_X509_free((*ctx).new_chain);
+            OSSL_STACK_OF_X509_free((*ctx).ca_pubs);
+            OSSL_STACK_OF_X509_free((*ctx).extra_certs_in);
+        }
+    }
+}
+
 /// `OSSL_CMP_CTX *OSSL_CMP_CTX_new(OSSL_LIB_CTX *libctx, const char *propq)` — `cmp_ctx.c:100-142`.
 ///
 /// # Safety
@@ -441,70 +538,61 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_new(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut OsslCmpCtx {
-    // SAFETY: `CRYPTO_zalloc` returns zeroed memory or NULL.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<OsslCmpCtx>(), FILE.as_ptr(), 102) as *mut OsslCmpCtx;
-    if ctx.is_null() {
+    let Some(ctx) = OwnedCtx::<OsslCmpCtx>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ctx` is live and zeroed.
-    unsafe {
-        (*ctx).libctx = libctx;
-    }
+    };
+    let p = ctx.as_ptr();
+
+    // SAFETY: `p` is a fresh zeroed block this call owns and `libctx` is the caller's context.
+    unsafe { (*p).libctx = libctx };
     if !propq.is_null() {
-        // SAFETY: `propq` is NUL-terminated.
+        // SAFETY: `propq` is NUL-terminated and `p` is this call's own live block.
         let dup = unsafe { CRYPTO_strdup(propq, FILE.as_ptr(), 108) };
-        // SAFETY: `ctx` is live.
-        unsafe { (*ctx).propq = dup };
+        // SAFETY: `p` is live.
+        unsafe { (*p).propq = dup };
         if dup.is_null() {
-            // SAFETY: `ctx` is live.
-            unsafe { OSSL_CMP_CTX_free(ctx) };
+            // The half-built context is released by `ctx`'s `Drop` at the authority's own site.
             return ptr::null_mut();
         }
     }
-    // SAFETY: `ctx` is live.
+    // SAFETY: `p` is this call's own live block.
     unsafe {
-        (*ctx).log_verbosity = OSSL_CMP_LOG_INFO;
-        (*ctx).status = crate::cmp::cmp_status::OSSL_CMP_PKISTATUS_unspecified;
-        (*ctx).fail_info_code = -1;
-        (*ctx).keep_alive = 1;
-        (*ctx).msg_timeout = -1;
-        (*ctx).tls_used = -1;
+        (*p).log_verbosity = OSSL_CMP_LOG_INFO;
+        (*p).status = crate::cmp::cmp_status::OSSL_CMP_PKISTATUS_unspecified;
+        (*p).fail_info_code = -1;
+        (*p).keep_alive = 1;
+        (*p).msg_timeout = -1;
+        (*p).tls_used = -1;
     }
     let untrusted = OPENSSL_sk_new_null();
     if untrusted.is_null() {
-        // SAFETY: `ctx` is live.
-        unsafe { OSSL_CMP_CTX_free(ctx) };
+        // The context is released by `ctx`'s `Drop` at the authority's own site.
         return ptr::null_mut();
     }
-    // SAFETY: `ctx` is live.
+    // SAFETY: `p` is live.
     unsafe {
-        (*ctx).untrusted = untrusted;
-        (*ctx).pbm_slen = 16;
+        (*p).untrusted = untrusted;
+        (*p).pbm_slen = 16;
     }
-    // SAFETY: `ctx` is live.
-    if unsafe { cmp_ctx_set_md(ctx, ptr::addr_of_mut!((*ctx).pbm_owf), NID_sha256) } == 0 {
-        // SAFETY: `ctx` is live.
-        unsafe { OSSL_CMP_CTX_free(ctx) };
+    // SAFETY: `p` is live.
+    if unsafe { cmp_ctx_set_md(p, ptr::addr_of_mut!((*p).pbm_owf), NID_sha256) } == 0 {
         return ptr::null_mut();
     }
-    // SAFETY: `ctx` is live.
+    // SAFETY: `p` is live.
     unsafe {
-        (*ctx).pbm_itercnt = 500;
-        (*ctx).pbm_mac = NID_hmac_sha1;
+        (*p).pbm_itercnt = 500;
+        (*p).pbm_mac = NID_hmac_sha1;
     }
-    // SAFETY: `ctx` is live.
-    if unsafe { cmp_ctx_set_md(ctx, ptr::addr_of_mut!((*ctx).digest), NID_sha256) } == 0 {
-        // SAFETY: `ctx` is live.
-        unsafe { OSSL_CMP_CTX_free(ctx) };
+    // SAFETY: `p` is live.
+    if unsafe { cmp_ctx_set_md(p, ptr::addr_of_mut!((*p).digest), NID_sha256) } == 0 {
         return ptr::null_mut();
     }
-    // SAFETY: `ctx` is live.
+    // SAFETY: `p` is live.
     unsafe {
-        (*ctx).popo_method = OSSL_CRMF_POPO_SIGNATURE;
-        (*ctx).revocation_reason = CRL_REASON_NONE;
+        (*p).popo_method = OSSL_CRMF_POPO_SIGNATURE;
+        (*p).revocation_reason = CRL_REASON_NONE;
     }
-    ctx
+    ctx.into_raw()
 }
 
 /// `void OSSL_CMP_CTX_free(OSSL_CMP_CTX *ctx)` — `cmp_ctx.c:185-245`.
@@ -513,65 +601,9 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_new(
 /// `ctx` is NULL or a live `OSSL_CMP_CTX` returned by [`OSSL_CMP_CTX_new`].
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_CTX_free(ctx: *mut OsslCmpCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live; each field is NULL or owned by the context.
-    unsafe {
-        CRYPTO_free((*ctx).propq.cast(), FILE.as_ptr(), 196);
-        CRYPTO_free((*ctx).server_path.cast(), FILE.as_ptr(), 197);
-        CRYPTO_free((*ctx).server.cast(), FILE.as_ptr(), 198);
-        CRYPTO_free((*ctx).proxy.cast(), FILE.as_ptr(), 199);
-        CRYPTO_free((*ctx).no_proxy.cast(), FILE.as_ptr(), 200);
-
-        X509_free((*ctx).srv_cert);
-        X509_free((*ctx).validated_srv_cert);
-        X509_NAME_free((*ctx).expected_sender);
-        X509_STORE_free((*ctx).trusted);
-        OSSL_STACK_OF_X509_free((*ctx).untrusted);
-
-        X509_free((*ctx).cert);
-        OSSL_STACK_OF_X509_free((*ctx).chain);
-        EVP_PKEY_free((*ctx).pkey);
-        ASN1_OCTET_STRING_free((*ctx).reference_value);
-        if !(*ctx).secret_value.is_null() {
-            let len = (*(*ctx).secret_value).length as usize;
-            if len > 0 && !(*(*ctx).secret_value).data.is_null() {
-                ptr::write_bytes((*(*ctx).secret_value).data, 0, len);
-            }
-        }
-        ASN1_OCTET_STRING_free((*ctx).secret_value);
-        EVP_MD_free((*ctx).pbm_owf);
-
-        X509_NAME_free((*ctx).recipient);
-        EVP_MD_free((*ctx).digest);
-        ASN1_OCTET_STRING_free((*ctx).transaction_id);
-        ASN1_OCTET_STRING_free((*ctx).sender_nonce);
-        ASN1_OCTET_STRING_free((*ctx).recip_nonce);
-        ASN1_OCTET_STRING_free((*ctx).first_sender_nonce);
-        itavs_free((*ctx).geninfo_itavs);
-        OSSL_STACK_OF_X509_free((*ctx).extra_certs_out);
-
-        EVP_PKEY_free((*ctx).new_pkey);
-        X509_NAME_free((*ctx).issuer);
-        ASN1_INTEGER_free((*ctx).serial_number);
-        X509_NAME_free((*ctx).subject_name);
-        OPENSSL_sk_pop_free((*ctx).subject_alt_names, Some(general_name_free_void));
-        OPENSSL_sk_pop_free((*ctx).req_extensions, Some(x509_extension_free_void));
-        OPENSSL_sk_pop_free((*ctx).policies, Some(policy_free_void));
-        X509_free((*ctx).old_cert);
-        X509_REQ_free((*ctx).p10_csr.cast());
-
-        itavs_free((*ctx).genm_itavs);
-
-        OPENSSL_sk_pop_free((*ctx).status_string, Some(utf8_string_free_void));
-        X509_free((*ctx).new_cert);
-        OSSL_STACK_OF_X509_free((*ctx).new_chain);
-        OSSL_STACK_OF_X509_free((*ctx).ca_pubs);
-        OSSL_STACK_OF_X509_free((*ctx).extra_certs_in);
-
-        CRYPTO_free(ctx.cast(), FILE.as_ptr(), 244);
-    }
+    // SAFETY: the caller's contract; `ctx` is NULL or a live context this file allocated and `Drop`
+    // is its single release, running the authority's own free body.
+    drop(unsafe { OwnedCtx::<OsslCmpCtx>::from_raw(ctx) });
 }
 
 /// `int OSSL_CMP_CTX_reinit(OSSL_CMP_CTX *ctx)` — `cmp_ctx.c:152-182`.
@@ -1042,10 +1074,7 @@ pub unsafe extern "C" fn OSSL_CMP_CTX_set1_secretValue(
     // SAFETY: `ctx` is live.
     unsafe {
         if !(*ctx).secret_value.is_null() {
-            let l = (*(*ctx).secret_value).length as usize;
-            if l > 0 && !(*(*ctx).secret_value).data.is_null() {
-                ptr::write_bytes((*(*ctx).secret_value).data, 0, l);
-            }
+            cleanse_secret_value((*ctx).secret_value);
             ASN1_OCTET_STRING_free((*ctx).secret_value);
         }
         (*ctx).secret_value = secret_value;
@@ -1712,3 +1741,38 @@ pub(crate) unsafe fn ossl_cmp_print_log(
 /// Keeps the message-engine severity names reachable.
 #[allow(dead_code)]
 const _LOG_DEBUG: c_int = OSSL_CMP_LOG_DEBUG;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::{ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
+
+    /// Both release paths (`destroy_body` and `OSSL_CMP_CTX_set1_secretValue`) call the cleanser.
+    /// The canary reads the bytes after the call: `OPENSSL_cleanse`, unlike a plain `write_bytes`
+    /// whose store is dead once the block is freed, is required to survive optimisation.
+    #[test]
+    fn a_secret_value_is_cleansed_before_release() {
+        // SAFETY: the ASN.1 constructors own their buffers and this test is single-threaded.
+        unsafe {
+            let value = ASN1_OCTET_STRING_new();
+            assert!(!value.is_null());
+            let secret = [0x5au8; 16];
+            assert_eq!(
+                ASN1_OCTET_STRING_set(value, secret.as_ptr(), secret.len() as c_int),
+                1
+            );
+            assert_eq!(*(*value).data, 0x5a, "the canary starts unzeroed");
+            cleanse_secret_value(value);
+            let data = (*value).data;
+            assert!(!data.is_null());
+            for i in 0..secret.len() {
+                assert_eq!(*data.add(i), 0, "byte {i} was not cleansed");
+            }
+            ASN1_OCTET_STRING_free(value);
+        }
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslCmpCtx => zero_state_sweep_ossl_cmp_ctx);

@@ -27,7 +27,8 @@ use core::ffi::{c_char, c_int, c_void};
 
 use crate::asn1::x_pkey::{X509Pkey, X509_PKEY_free};
 use crate::evp::pem_bridge::EvpCipherInfo;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::mem::CRYPTO_free;
 use crate::x509::x_crl::{X509Crl, X509_CRL_free};
 use crate::x509::x_x509::{X509_free, X509};
 
@@ -71,14 +72,42 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Info, enc_data) == 56);
 };
 
+/// `X509_INFO_free`'s member releases, without the record's own `OPENSSL_free` at `:36`.
+///
+/// (a) The body releases `enc_data` at the authority's `:35` and never the enclosing record,
+/// which [`OwnedCtx`]'s `Drop` releases at `:36`; and (b) a zeroed `X509Info` is the state
+/// `X509_INFO_new` itself publishes (three NULL pointers, a zeroed `EVP_CIPHER_INFO` and
+/// `enc_len == 0`), every releaser accepts NULL, so the safe zeroed constructor may run it.
+// SAFETY: the trait's two obligations are established by the body below -- it releases only the
+// record's own members (each NULL or owned) and never the block, and the zeroed constructor state
+// is the authority's own, for which every release is the NULL no-op.
+unsafe impl CtxDestroy for X509Info {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC;
+    const LINE_FREE: c_int = LINE_FREE_RECORD;
+
+    unsafe fn destroy_body(x: *mut X509Info) {
+        // SAFETY: `x` is a live context per the trait contract; the three object slots are NULL or
+        // owned by this record and `enc_data` is NULL or its own buffer.
+        unsafe {
+            X509_free((*x).x509);
+            X509_CRL_free((*x).crl);
+            X509_PKEY_free((*x).x_pkey);
+            CRYPTO_free((*x).enc_data.cast::<c_void>(), FILE, LINE_FREE_DATA);
+        }
+    }
+}
+
 /// `X509_INFO *X509_INFO_new(void)` — `crypto/asn1/x_info.c:16-25`.
 ///
 /// A zero-allocation: every slot is NULL and every scalar zero, so the reader can test
-/// `xi->x509 != NULL` and the writer can test `xi->enc_data != NULL` on a fresh value.
+/// `xi->x509 != NULL` and the writer can test `xi->enc_data != NULL` on a fresh value. That zeroed
+/// image is the trait's validated state, so the owner may be built directly.
 #[no_mangle]
 pub extern "C" fn X509_INFO_new() -> *mut X509Info {
-    // SAFETY: the allocator's contract; the file/line are the authority's own.
-    CRYPTO_zalloc(core::mem::size_of::<X509Info>(), FILE, LINE_ZALLOC).cast::<X509Info>()
+    // `OwnedCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(*x))` at `:20`; `into_raw`
+    // publishes the stable record the C ABI hands back to `X509_INFO_free`.
+    OwnedCtx::<X509Info>::zalloc().map_or_else(core::ptr::null_mut, OwnedCtx::into_raw)
 }
 
 /// `void X509_INFO_free(X509_INFO *x)` — `crypto/asn1/x_info.c:27-37`.
@@ -91,13 +120,12 @@ pub unsafe extern "C" fn X509_INFO_free(x: *mut X509Info) {
     if x.is_null() {
         return;
     }
-    // SAFETY: `x` is live and each field is its own.
-    unsafe {
-        X509_free((*x).x509);
-        X509_CRL_free((*x).crl);
-        X509_PKEY_free((*x).x_pkey);
-        CRYPTO_free((*x).enc_data.cast::<c_void>(), FILE, LINE_FREE_DATA);
-        // SAFETY: `x` is this call's own record.
-        CRYPTO_free(x.cast::<c_void>(), FILE, LINE_FREE_RECORD);
-    }
+    // SAFETY: `x` is NULL or a live record this file allocated and has not released per the
+    // contract; the reclaimed handle's `Drop` runs the authority's member releases (`enc_data` at
+    // `:35`) and then the record's own release at `:36`, each exactly once.
+    drop(unsafe { OwnedCtx::<X509Info>::from_raw(x) });
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Info => zero_state_sweep_x509_info);

@@ -278,11 +278,14 @@ static TEVENT_REGISTER_RUNONCE: AtomicI32 = AtomicI32::new(0);
 /// both whatever the order, which is why the two `sk`/`lock` frees are unconditional there.
 extern "C" fn create_global_tevent_register() {
     // `CRYPTO_zalloc` is a SAFE function in this crate (D113), so this is unguarded.
-    let gtr = CRYPTO_zalloc(
-        core::mem::size_of::<GlobalTeventRegister>(),
-        FILE,
-        lines::L_GTR_NEW,
-    )
+    let gtr = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<GlobalTeventRegister>(),
+            FILE,
+            lines::L_GTR_NEW,
+        )
+    }
     .cast::<GlobalTeventRegister>();
     if gtr.is_null() {
         return;
@@ -362,11 +365,14 @@ fn manage_thread_local(ctx: *mut c_void, alloc: bool, keep: bool) -> *mut *mut T
     if alloc {
         if hands.is_null() {
             // SAFETY: a fresh zeroed block of exactly this type.
-            hands = CRYPTO_zalloc(
-                core::mem::size_of::<*mut ThreadEventHandler>(),
-                FILE,
-                lines::L_HANDS_ALLOC,
-            )
+            hands = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(
+                    core::mem::size_of::<*mut ThreadEventHandler>(),
+                    FILE,
+                    lines::L_HANDS_ALLOC,
+                )
+            }
             .cast::<*mut ThreadEventHandler>();
             if hands.is_null() {
                 return ptr::null_mut();
@@ -533,7 +539,7 @@ extern "C" fn init_thread_destructor(hands: *mut c_void) {
     let heads = hands.cast::<*mut ThreadEventHandler>();
     // SAFETY: `heads` is the value the key held, which is a head this module allocated.
     unsafe {
-        init_thread_stop(ptr::null_mut(), heads);
+        let _ = init_thread_stop(ptr::null_mut(), heads);
         init_thread_remove_handlers(heads);
         CRYPTO_free(heads.cast::<c_void>(), FILE, lines::L_DESTRUCTOR_FREE);
     }
@@ -590,23 +596,51 @@ pub(crate) unsafe fn ossl_init_thread_start(
     }
 
     // SAFETY: a fresh block of exactly this type.
-    let hand = CRYPTO_malloc(
-        core::mem::size_of::<ThreadEventHandler>(),
-        FILE,
-        lines::L_HAND_NEW,
-    )
+    let hand = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(
+            core::mem::size_of::<ThreadEventHandler>(),
+            FILE,
+            lines::L_HAND_NEW,
+        )
+    }
     .cast::<ThreadEventHandler>();
     if hand.is_null() {
         return 0;
     }
-    // SAFETY: `hands` is live (it was just allocated and registered), so `*hands` is a live
-    // head slot; `hand` is this function's own allocation.
+    // `hand` is fully built before it is published, so these three writes touch no shared state.
+    // SAFETY: `hand` is this function's own fresh allocation.
     unsafe {
         (*hand).handfn = handfn;
         (*hand).arg = arg;
         (*hand).index = index;
+    }
+
+    // Publishing the head **is** shared state: the global register holds the *address* of every
+    // thread's head, and another thread's `init_thread_deregister` (reached from
+    // `ossl_provider_free`) or `init_thread_stop` walks those heads under the register's write
+    // lock. The authority stores `*hands` with no lock, so a registration racing a deregistration
+    // is a data race in the authority too; the crate does not reproduce it
+    // (`docs/SECURITY_DIVERGENCE_POLICY.md` section 5) and takes the same lock the walk holds --
+    // see D-TEVENT-DEREG-RACE-1.
+    let gtr = get_global_tevent_register();
+    if gtr.is_null() {
+        // SAFETY: `hand` was never published, so nothing else holds it.
+        unsafe { CRYPTO_free(hand.cast::<c_void>(), FILE, lines::L_DEREG_FREE_HAND) };
+        return 0;
+    }
+    // SAFETY: `gtr` is live and non-NULL, so its lock is live and so is the head slot `hands`.
+    unsafe {
+        if CRYPTO_THREAD_write_lock((*gtr).lock) == 0 {
+            // The only way this fails is a same-thread re-acquisition: a handler registering
+            // during a stop that already holds this lock. The crate refuses that
+            // (`D-TEVENT-REENTRANT-1`) and releases `hand` rather than leaving it unreachable.
+            CRYPTO_free(hand.cast::<c_void>(), FILE, lines::L_DEREG_FREE_HAND);
+            return 0;
+        }
         (*hand).next = *hands;
         *hands = hand;
+        CRYPTO_THREAD_unlock((*gtr).lock);
     }
     1
 }
@@ -724,18 +758,23 @@ unsafe fn init_thread_deregister(
 ///
 /// # Safety
 /// `hands` must be NULL or a live head this module allocated.
-unsafe fn init_thread_stop(arg: *mut c_void, hands: *mut *mut ThreadEventHandler) {
+///
+/// Answers whether the caller may release the head. `false` means this thread
+/// already holds the register's write lock, so an enclosing stop is walking this
+/// very list: nothing was touched, and the caller must not release it. A NULL
+/// `heads` or an absent register is `true` (there is no enclosing walk).
+unsafe fn init_thread_stop(arg: *mut c_void, hands: *mut *mut ThreadEventHandler) -> bool {
     if hands.is_null() {
-        return;
+        return true;
     }
     let gtr = get_global_tevent_register();
     if gtr.is_null() {
-        return;
+        return true;
     }
     // SAFETY: `gtr` is live and non-NULL.
     unsafe {
         if CRYPTO_THREAD_write_lock((*gtr).lock) == 0 {
-            return;
+            return false;
         }
 
         let mut curr = *hands;
@@ -763,6 +802,7 @@ unsafe fn init_thread_stop(arg: *mut c_void, hands: *mut *mut ThreadEventHandler
         }
         CRYPTO_THREAD_unlock((*gtr).lock);
     }
+    true
 }
 
 /// `void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx)`.
@@ -803,7 +843,9 @@ pub(crate) unsafe fn ossl_ctx_thread_stop(ctx: *mut c_void) {
     // without clearing the slot and without taking ownership of the head.
     let hands = fetch_thread_local(ctx);
     // SAFETY: `hands` is NULL or a live head this module allocated and still owns.
-    unsafe { init_thread_stop(ctx, hands) };
+    // `fetch_thread_local` leaves the slot set, so a refused lock means an
+    // enclosing stop is walking this list; that frame owns the release.
+    let _ = unsafe { init_thread_stop(ctx, hands) };
 }
 
 /// `void OPENSSL_thread_stop_ex(OSSL_LIB_CTX *ctx)`.
@@ -854,7 +896,14 @@ pub extern "C" fn OPENSSL_thread_stop() {
         // SAFETY: `clear_thread_local` answers this thread's head, NULL or live.
         unsafe {
             let hands = clear_thread_local(ptr::null_mut());
-            init_thread_stop(ptr::null_mut(), hands);
+            if !init_thread_stop(ptr::null_mut(), hands) {
+                // The register lock is held by this thread, so an enclosing stop
+                // is walking this very list (the documented EDEADLK divergence).
+                // Put the head back and leave everything else alone: releasing it
+                // here would free storage the enclosing walk still writes.
+                set_thread_event_handler(ptr::null_mut(), hands);
+                return;
+            }
             init_thread_remove_handlers(hands);
             if !hands.is_null() {
                 CRYPTO_free(hands.cast::<c_void>(), FILE, lines::L_DESTRUCTOR_FREE);
@@ -1178,6 +1227,47 @@ mod tests {
             );
             crate::context::OSSL_LIB_CTX_free(ctx);
         }
+    }
+
+    /// A handler that asks for the **whole-thread** stop while a per-context stop
+    /// is walking this thread's list.
+    ///
+    /// The per-context stop fetches the head without clearing the thread's slot and
+    /// then calls `init_thread_stop` under the register's write lock. The nested
+    /// `OPENSSL_thread_stop` therefore finds the live head, fails to take the lock
+    /// (same-thread re-acquisition is the crate's documented EDEADLK divergence),
+    /// and must leave the head alone: an enclosing walk is still using it.
+    unsafe extern "C" fn stop_whole_thread(_arg: *mut c_void) {
+        CALLS.fetch_add(1, Ordering::SeqCst);
+        OPENSSL_thread_stop();
+    }
+
+    #[test]
+    fn a_handler_that_stops_the_thread_during_a_context_stop_is_refused() {
+        let _guard = lock();
+        reset();
+        // SAFETY: the handler and argument are this module's own.
+        unsafe {
+            assert_eq!(
+                ossl_init_thread_start(ptr::null(), arg_a(), Some(stop_whole_thread)),
+                1
+            );
+            ossl_ctx_thread_stop(arg_a());
+        }
+        assert_eq!(CALLS.load(Ordering::SeqCst), 1, "the handler runs once");
+
+        // The refused nested stop must not have released the head the outer walk
+        // owns. Registering again and stopping the whole thread must still work.
+        // SAFETY: as above.
+        unsafe {
+            assert_eq!(
+                ossl_init_thread_start(ptr::null(), arg_b(), Some(count_handler)),
+                1
+            );
+        }
+        OPENSSL_thread_stop();
+        assert_eq!(CALLS.load(Ordering::SeqCst), 2);
+        assert_eq!(LAST_ARG.load(Ordering::SeqCst), arg_b());
     }
 
     /// `crate::runtime::threads_common::clean_local()`, named once for the test above so that

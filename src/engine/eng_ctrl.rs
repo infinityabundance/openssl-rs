@@ -122,6 +122,15 @@ unsafe fn int_ctrl_cmd_by_num(defn: *const EngineCmdDefn, num: c_uint) -> c_int 
         while !int_ctrl_cmd_is_null(defn.add(idx)) && (*defn.add(idx)).cmd_num < num {
             idx += 1;
         }
+        // The authority's loop stops on the terminator and then compares its
+        // `cmd_num` (zero) against `num`. A request for command 0 therefore
+        // "finds" the terminator, and `int_ctrl_helper` next reads its NULL
+        // `cmd_name` (`strlen(NULL)` for GET_NAME_LEN/GET_NAME_FROM_CMD) or the
+        // entry after the array (GET_NEXT_CMD_TYPE). Command 0 is not a valid
+        // command number, so fail closed instead of reproducing that read.
+        if int_ctrl_cmd_is_null(defn.add(idx)) {
+            return -1;
+        }
         if (*defn.add(idx)).cmd_num == num {
             return idx as c_int;
         }
@@ -259,7 +268,15 @@ unsafe fn int_ctrl_helper(
 /// `int ENGINE_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f)(void))` — `:125-171`.
 ///
 /// # Safety
-/// The pointer arguments must be valid per the authority's C contract.
+/// `e` must be NULL or a live [`Engine`]. If `e` is live, its `cmd_defns` (when
+/// non-NULL) must point to a complete, immutable list that outlives the engine:
+/// each entry's `cmd_name` is NUL-terminated, `cmd_desc` is NULL or
+/// NUL-terminated, and the list ends at the first entry whose `cmd_num` is zero
+/// or whose `cmd_name` is NULL. `p` must be NULL except for
+/// `ENGINE_CTRL_GET_CMD_FROM_NAME` (a NUL-terminated name),
+/// `ENGINE_CTRL_GET_NAME_FROM_CMD` and `ENGINE_CTRL_GET_DESC_FROM_CMD` (a
+/// writable buffer of at least the corresponding `*_LEN` result plus one byte).
+/// `f` is passed to the engine's own `ctrl` callback unchanged.
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_ctrl(
     e: *mut Engine,
@@ -501,5 +518,111 @@ pub unsafe extern "C" fn ENGINE_ctrl_cmd_string(
         1
     } else {
         0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{
+        ENGINE_free, ENGINE_new, ENGINE_set_cmd_defns, ENGINE_set_ctrl_function,
+    };
+
+    /// A `ctrl` callback is all the framework needs to take the table path.
+    unsafe extern "C" fn no_op_ctrl(
+        _e: *mut Engine,
+        _cmd: c_int,
+        _i: c_long,
+        _p: *mut c_void,
+        _f: Option<unsafe extern "C" fn()>,
+    ) -> c_int {
+        0
+    }
+
+    /// Command 0 is the list terminator's own number. The authority's by-number
+    /// search leaves the cursor on the terminator and compares its `cmd_num`
+    /// against the requested number, so 0 matches and the helper then reads the
+    /// terminator's NULL name (or one entry past the array). This crate refuses
+    /// that instead of reproducing the out-of-bounds read.
+    #[test]
+    fn a_zero_command_number_does_not_match_the_terminator() {
+        // An empty but complete list: valid, and `ENGINE_CTRL_GET_FIRST_CMD_TYPE`
+        // reports 0 for it. Its only entry is the terminator.
+        let empty = [EngineCmdDefn {
+            cmd_num: 0,
+            cmd_name: core::ptr::null(),
+            cmd_desc: core::ptr::null(),
+            cmd_flags: 0,
+        }];
+        let full = [
+            EngineCmdDefn {
+                cmd_num: 5,
+                cmd_name: c"FOO".as_ptr(),
+                cmd_desc: c"foo".as_ptr(),
+                cmd_flags: ENGINE_CMD_FLAG_NO_INPUT,
+            },
+            EngineCmdDefn {
+                cmd_num: 0,
+                cmd_name: core::ptr::null(),
+                cmd_desc: core::ptr::null(),
+                cmd_flags: 0,
+            },
+        ];
+        // SAFETY: `e` owns the only structural reference; both lists outlive every
+        // call below and are terminated.
+        unsafe {
+            let e = ENGINE_new();
+            assert!(!e.is_null(), "the engine allocation must succeed");
+            assert_eq!(ENGINE_set_ctrl_function(e, Some(no_op_ctrl)), 1);
+
+            assert_eq!(ENGINE_set_cmd_defns(e, empty.as_ptr()), 1);
+            // The terminator has cmd_name == NULL; a match here would make the
+            // helper call strlen(NULL) for command 14 and read past the array for
+            // command 12.
+            assert_eq!(
+                ENGINE_ctrl(
+                    e,
+                    ENGINE_CTRL_GET_NAME_LEN_FROM_CMD,
+                    0,
+                    core::ptr::null_mut(),
+                    None
+                ),
+                -1
+            );
+            assert_eq!(
+                ENGINE_ctrl(
+                    e,
+                    ENGINE_CTRL_GET_NEXT_CMD_TYPE,
+                    0,
+                    core::ptr::null_mut(),
+                    None
+                ),
+                -1
+            );
+
+            // A real command still answers from a non-empty list.
+            assert_eq!(ENGINE_set_cmd_defns(e, full.as_ptr()), 1);
+            assert_eq!(
+                ENGINE_ctrl(
+                    e,
+                    ENGINE_CTRL_GET_NAME_LEN_FROM_CMD,
+                    5,
+                    core::ptr::null_mut(),
+                    None
+                ),
+                3
+            );
+            assert_eq!(
+                ENGINE_ctrl(
+                    e,
+                    ENGINE_CTRL_GET_NAME_LEN_FROM_CMD,
+                    0,
+                    core::ptr::null_mut(),
+                    None
+                ),
+                -1
+            );
+            assert_eq!(ENGINE_free(e), 1);
+        }
     }
 }

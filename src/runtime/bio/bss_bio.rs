@@ -35,9 +35,10 @@ use crate::runtime::err::err_sites::{
     BSS_BIO_286, BSS_BIO_361, BSS_BIO_426, BSS_BIO_429, BSS_BIO_617,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use super::{
     Bio, BioMethod, BIO_CTRL_DUP, BIO_CTRL_EOF, BIO_CTRL_FLUSH, BIO_CTRL_GET_CLOSE,
     BIO_CTRL_PENDING, BIO_CTRL_RESET, BIO_CTRL_SET_CLOSE, BIO_CTRL_WPENDING,
@@ -73,6 +74,22 @@ pub struct BioBioSt {
     pub buf: *mut c_char,
     /// Bytes the peer last asked for and did not get.
     pub request: usize,
+}
+
+/// The authority's `bio_free` body *minus* the block release [`OwnedCtx`]'s `Drop` performs: the
+/// ring buffer `buf`, when it has been allocated, is released exactly as `bio_free` releases it.
+/// `buf` stays a plain `#[repr(C)]` member the authority owns and resizes by hand in `bio_ctrl`;
+/// only the context block's own ownership moves to the handle.
+// SAFETY: (a) `destroy_body` is the authority's `bio_free` member body, releasing exactly this
+// context's ring buffer once (the `OwnedBlock::take` accepts the unset NULL) and never the
+// enclosing block, which `OwnedCtx` releases; (b) `BioBioSt` is a `#[repr(C)]` record of a raw
+// pointer and integers, so an all-zero block is a valid `BioBioSt` the body is sound on.
+unsafe impl CtxDestroy for BioBioSt {
+    unsafe fn destroy_body(ptr: *mut BioBioSt) {
+        // SAFETY: `ptr` is a live context per the trait contract; `buf` is NULL or an owned seam
+        // block whose single release is the block handle's `Drop`.
+        unsafe { drop(OwnedBlock::take((*ptr).buf.cast())) };
+    }
 }
 
 /// A compiled-in method table. `BIO_s_bio()` returns its address.
@@ -128,16 +145,18 @@ unsafe fn peer_ctx(b: *mut BioBioSt) -> *mut BioBioSt {
 /// `bio` must be a live BIO. Note this sets the capacity but **not** `init`, so
 /// an unpaired endpoint reads as uninitialised until it is paired.
 unsafe extern "C" fn bio_new(bio: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let b: *mut BioBioSt = CRYPTO_zalloc(core::mem::size_of::<BioBioSt>(), ptr::null(), 0).cast();
-    if b.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(ctx) = OwnedCtx::<BioBioSt>::zalloc() else {
         return 0;
-    }
+    };
+    let b = ctx.as_ptr();
     // SAFETY: `b` is a fresh allocation and `bio` is live.
     unsafe {
         (*b).size = DEFAULT_PAIR_SIZE;
         (*bio).ptr = b.cast();
     }
+    // The context is now the BIO's; `bio_free` reclaims it through `OwnedCtx::from_raw`.
+    let _ = ctx.into_raw();
     1
 }
 
@@ -159,11 +178,8 @@ unsafe extern "C" fn bio_free(bio: *mut Bio) -> c_int {
         // SAFETY: `bio` is live and paired.
         unsafe { bio_destroy_pair(bio) };
     }
-    // SAFETY: `buf` is NULL or owned here.
-    unsafe {
-        CRYPTO_free((*b).buf.cast(), ptr::null(), 0);
-        CRYPTO_free(b.cast(), ptr::null(), 0);
-    }
+    // SAFETY: the block is the BIO's own; `Drop` frees the ring buffer it owns and then the block.
+    unsafe { drop(OwnedCtx::<BioBioSt>::from_raw(b)) };
     1
 }
 
@@ -181,8 +197,17 @@ unsafe extern "C" fn bio_read(bio: *mut Bio, out: *mut c_char, size_: c_int) -> 
     let mut size = size_ as usize;
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    if b.is_null() {
+        return 0;
+    }
     // SAFETY: `b` is a live paired context and `peer_ctx` tolerates a NULL peer.
     let pb = unsafe { peer_ctx(b) };
+    // `init` and the method data are settable through the public BIO accessors; an
+    // endpoint whose `init` says pair but whose peer/data slot is absent has nothing to
+    // read. The authority would dereference the NULL peer here.
+    if pb.is_null() {
+        return 0;
+    }
     // SAFETY: `pb` is live.
     unsafe { (*pb).request = 0 };
 
@@ -258,6 +283,13 @@ unsafe extern "C" fn bio_write(bio: *mut Bio, in_: *const c_char, num_: c_int) -
     let mut num = num_ as usize;
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    // SAFETY: the dereference runs only when `b` was just established non-NULL, so it reads
+    // a live context's `buf` member.
+    if b.is_null() || unsafe { (*b).buf.is_null() } {
+        // `BIO_set_data`/`BIO_set_init` are public; an endpoint forced to look paired
+        // without a ring buffer has nowhere to write.
+        return 0;
+    }
 
     // SAFETY: `b` is live.
     unsafe { (*b).request = 0 };
@@ -325,8 +357,14 @@ unsafe fn bio_nread0(bio: *mut Bio, buf: *mut *mut c_char) -> isize {
     }
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    if b.is_null() {
+        return 0;
+    }
     // SAFETY: `b` is a live paired context and `peer_ctx` tolerates a NULL peer.
     let pb = unsafe { peer_ctx(b) };
+    if pb.is_null() {
+        return 0;
+    }
     // SAFETY: `pb` is live.
     unsafe { (*pb).request = 0 };
 
@@ -402,6 +440,13 @@ unsafe fn bio_nwrite0(bio: *mut Bio, buf: *mut *mut c_char) -> isize {
     }
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    // SAFETY: the dereference runs only when `b` was just established non-NULL, so it reads
+    // a live context's `buf` member.
+    if b.is_null() || unsafe { (*b).buf.is_null() } {
+        // As in `bio_write`: a forced initialised state without a ring buffer is not a
+        // writable endpoint.
+        return 0;
+    }
     // SAFETY: `b` is live.
     unsafe { (*b).request = 0 };
     // SAFETY: `b` is live.
@@ -579,6 +624,9 @@ unsafe extern "C" fn bio_ctrl(bio: *mut Bio, cmd: c_int, num: c_long, ptr_: *mut
             if unsafe { !(*b).peer.is_null() } {
                 // SAFETY: `b` is live and paired.
                 let pb = unsafe { peer_ctx(b) };
+                if pb.is_null() {
+                    return 0;
+                }
                 // SAFETY: `pb` is live.
                 (unsafe { (*pb).len }) as c_long
             } else {
@@ -612,6 +660,9 @@ unsafe extern "C" fn bio_ctrl(bio: *mut Bio, cmd: c_int, num: c_long, ptr_: *mut
             if unsafe { !(*b).peer.is_null() } {
                 // SAFETY: `b` is live and paired.
                 let pb = unsafe { peer_ctx(b) };
+                if pb.is_null() {
+                    return 0;
+                }
                 // SAFETY: `pb` is live.
                 unsafe { c_long::from((*pb).len == 0 && (*pb).closed != 0) }
             } else {
@@ -714,12 +765,15 @@ unsafe fn bio_destroy_pair(bio: *mut Bio) {
     }
     // SAFETY: `peer_bio` is live and paired back to `bio`.
     let pb = unsafe { peer_ctx(b) };
-    // SAFETY: all live.
+    // SAFETY: all live; `peer_bio` is still a live BIO even when its method data was
+    // replaced through the public accessors, and `pb` is then NULL.
     unsafe {
-        (*pb).peer = ptr::null_mut();
+        if !pb.is_null() {
+            (*pb).peer = ptr::null_mut();
+            (*pb).len = 0;
+            (*pb).offset = 0;
+        }
         (*peer_bio).init = 0;
-        (*pb).len = 0;
-        (*pb).offset = 0;
         (*b).peer = ptr::null_mut();
         (*bio).init = 0;
         (*b).len = 0;
@@ -816,4 +870,45 @@ pub unsafe extern "C" fn BIO_new_bio_pair(
         }
         ret
     })
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioBioSt => zero_state_sweep_bio_bio_st);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::bio::{
+        BIO_ctrl, BIO_free, BIO_new, BIO_read, BIO_set_init, BIO_write, BIO_CTRL_EOF,
+        BIO_CTRL_PENDING,
+    };
+
+    /// `BIO_set_init` is a public accessor, so a live pair BIO can be made to report an
+    /// initialised state without `bio_make_pair` ever having run. The read/write paths must not
+    /// dereference the absent peer or ring buffer; they answer the uninitialised result instead.
+    #[test]
+    fn forced_initialised_state_without_a_pair_is_inert() {
+        // SAFETY: `bio` is a live BIO from this method's own constructor; the test deliberately
+        // puts it in the state the public accessor can produce.
+        unsafe {
+            let bio = BIO_new(BIO_s_bio());
+            assert!(!bio.is_null());
+            BIO_set_init(bio, 1);
+
+            let mut byte: c_char = 0;
+            assert_eq!(
+                BIO_read(bio, (&mut byte as *mut c_char).cast::<c_void>(), 1),
+                0
+            );
+            assert_eq!(
+                BIO_write(bio, (&byte as *const c_char).cast::<c_void>(), 1),
+                0
+            );
+            assert_eq!(BIO_ctrl(bio, BIO_CTRL_PENDING, 0, ptr::null_mut()), 0);
+            assert_eq!(BIO_ctrl(bio, BIO_CTRL_EOF, 0, ptr::null_mut()), 1);
+
+            assert_eq!(BIO_free(bio), 1);
+        }
+    }
 }

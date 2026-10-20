@@ -1,0 +1,173 @@
+{
+  "receipt": "mechanism-sweep-M59",
+  "branch": "integrate/safe-c33",
+  "source_head": "fb4d7d3b7",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression, hidden obligation or unsafe-safe-Rust API); four digest-context leak repairs, one NULL-contract correction and one failure-path secret-cleanse hardening",
+  "scope": "Per-file contract audit of the ML-DSA core, the ML-KEM key/encapsulation/decapsulation core and CCM. evp/method_store.rs was deferred again as the method-store registry boundary; modes/ccm.rs was substituted from the head of the stable queue. ML-DSA/ML-KEM private keys, seeds and nonces are classified as secret; no constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/ml_dsa/hash.rs",
+    "src/ml_dsa/mod.rs",
+    "src/ml_dsa/ntt.rs",
+    "src/ml_dsa/sample.rs",
+    "src/ml_dsa/sign.rs",
+    "src/ml_kem/key.rs",
+    "src/ml_kem/mod.rs",
+    "src/modes/ccm.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M59-D1",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 679,
+      "line_post_fix": 682,
+      "severity": "low",
+      "class": "safety contract permits a NULL pointer the body dereferences",
+      "description": "ossl_ml_kem_key_reset documented `key` as 'live, or NULL' and an inline comment claimed NULL returned above, but the body dereferences key unconditionally. The authority (crypto/ml_kem/ml_kem.c:1943) has no NULL test either, so the body is correct and the contract was the defect.",
+      "fix": "The # Safety section now requires a live, non-NULL key and states that NULL is the caller's contract violation rather than a refusal. No code or ABI change.",
+      "witness": "All in-tree callers (key_free, parse, genkey, provider) pass a live key."
+    },
+    {
+      "id": "M59-D2",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 1044,
+      "line_post_fix": 1048,
+      "severity": "medium",
+      "class": "resource leak on an argument-refusal path",
+      "description": "ossl_ml_kem_parse_public_key allocated EVP_MD_CTX before checking len, so a length mismatch returned 0 with the digest context still live. The authority creates the context inside the short-circuiting `||` condition and never allocates on that arm.",
+      "fix": "The length is checked first; the context is allocated only on the accepting arm. Observable return value unchanged.",
+      "witness": "Focused ml_kem tests (8) and the full library suite pass."
+    },
+    {
+      "id": "M59-D3",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 1086,
+      "line_post_fix": 1094,
+      "severity": "medium",
+      "class": "resource leak on an argument-refusal path",
+      "description": "ossl_ml_kem_parse_private_key had the same allocate-before-length-check leak as M59-D2.",
+      "fix": "Length checked before allocation, matching the authority's short-circuit order.",
+      "witness": "Focused ml_kem tests (8) and the full library suite pass."
+    },
+    {
+      "id": "M59-D4",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 1201,
+      "line_post_fix": 1219,
+      "severity": "medium",
+      "class": "resource leak on an argument-refusal path",
+      "description": "ossl_ml_kem_encap_seed allocated EVP_MD_CTX before validating ctext/clen/shared_secret/slen/entropy/elen, leaking it on every rejected argument. The authority's `||` chain allocates only after all arguments pass.",
+      "fix": "Arguments are validated first; the context is then allocated. Observable return value unchanged.",
+      "witness": "Focused ml_kem tests (8) and the full library suite pass."
+    },
+    {
+      "id": "M59-D5",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 1302,
+      "line_post_fix": 1326,
+      "severity": "medium",
+      "class": "resource leak on an argument-refusal path",
+      "description": "ossl_ml_kem_decap allocated EVP_MD_CTX before the length/ciphertext checks; an invalid argument filled the fallback random secret and returned with the context still live.",
+      "fix": "The context is created only on the accepting arm; the RNG fallback still runs both for a rejected argument and for an allocation failure, matching the authority's single condition.",
+      "witness": "Focused ml_kem tests (8) and the full library suite pass."
+    },
+    {
+      "id": "M59-D6",
+      "file": "src/ml_kem/key.rs",
+      "line_pre_fix": 1137,
+      "line_post_fix": 1149,
+      "secondary_lines": "pre-fix early returns at 1141 and 1151; post-fix cleanses at 1162 and 1169",
+      "severity": "medium",
+      "class": "secret-bearing stack buffer not cleansed on failure paths",
+      "description": "ossl_ml_kem_genkey returned on encode_seed failure, RAND_priv_bytes_ex failure and EVP_MD_CTX_new failure without cleansing the 64-byte seed. The mdctx arm leaves a fully generated private-key seed on the stack. The authority has the same residue.",
+      "fix": "Every early return after seed material can be present now runs OPENSSL_cleanse(seed, 64). This is a deliberate §5 failure-path cleansing divergence; it has no observable behaviour change.",
+      "witness": "Focused ml_kem tests (8) and the full library suite pass."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "Authority allocation boundaries and release arms through the CRYPTO_* seam (OwnedBuf in src/ml_dsa/sign.rs and src/ml_kem/key.rs), including CRYPTO_clear_free/CRYPTO_secure_clear_free vs CRYPTO_free",
+    "Vector/Matrix (ptr,len) member-extent model and the #[repr(C)] layout assertions in src/ml_kem/mod.rs",
+    "CCM caller-supplied block128_f/ccm128_f callback and opaque-context ownership contract",
+    "FIPS 203/204 pointer-extent, length-refusal and zero-length-digest-update contracts",
+    "Authority-defined cleanse arms for derived seeds, masking buffers and ML-KEM secure storage"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred registry/dispatch boundary.",
+    "MlKemKey::rho_pkhash is not initialised by key_new; the authority also leaves it untouched after OPENSSL_malloc, and add_storage zeroes it when dup == 0, so no path reads it uninitialised.",
+    "src/ml_dsa/poly.rs Vector::as_slice/matrix_as_slice would form a slice from NULL when the count is zero; every reachable constructor uses a positive rank and poly.rs is outside this batch. Hardening candidate, no reachable path.",
+    "The ML-DSA scratch-size arithmetic in src/ml_dsa/sign.rs uses unchecked products/additions; k/l/gamma2 come from the immutable parameter table, so no overflow is reachable. Checked arithmetic is a §3 hardening candidate.",
+    "CCM does not cleanse cmac/nonce; the authority has no cleanse arm there. Classified as a keyed intermediate residue in the caller's context, not a key schedule.",
+    "No constant-time claim is made for ML-DSA, ML-KEM or CCM from source inspection; dudect/ctgrind are BOUNDARY/SEAL work."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 216.08 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 96.71 s)",
+    "focused_tests": "PASS (26 passed / 0 failed: ml_kem::tests 8, ml_dsa 14, modes::ccm 4)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for ML-DSA, ML-KEM or CCM)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M59-D1 is a contract correction. M59-D2..D5 are allocation-order repairs whose refusal arms are exercised only by invalid arguments; no focused control exists yet. M59-D6 is a stack-residue cleansing whose runtime witness would need a stack scanner. Miri/ASan/valgrind, dudect/ctgrind and the negative controls are BOUNDARY/SEAL work."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/modes/gcm.rs",
+      "src/modes/mod.rs",
+      "src/modes/ocb.rs",
+      "src/modes/siv128.rs",
+      "src/modes/wrap.rs",
+      "src/modes/xts.rs",
+      "src/ocsp/ocsp_cl.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "runtime controls for the M59-D2..D5 refusal arms (invalid lengths / invalid buffers)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "runtime witness for M59-D6 stack cleansing (stack-residue scanner)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement of ML-DSA, ML-KEM and CCM (dudect/ctgrind under the exact build profile)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, FRF suite, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    }
+  ]
+}

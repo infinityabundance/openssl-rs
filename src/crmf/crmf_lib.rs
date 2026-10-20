@@ -43,9 +43,11 @@ use crate::runtime::constant_time::{
 use crate::runtime::err::err_reasons::*;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{raise_site, ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::obj::{NID_cmKGA, NID_ext_key_usage};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -1566,6 +1568,10 @@ unsafe extern "C" fn asn1_object_free_void(p: *mut c_void) {
     unsafe { crate::asn1::prim::ASN1_OBJECT_free(p.cast()) };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the heap buffers `OSSL_CRMF_ENCRYPTEDVALUE_decrypt` and its callers manage by hand.
+// ---------------------------------------------------------------------------------------------
+
 /// `EVP_PKEY *OSSL_CRMF_ENCRYPTEDKEY_get1_pkey(const OSSL_CRMF_ENCRYPTEDKEY *encryptedKey,`
 /// `X509_STORE *ts, STACK_OF(X509) *extra, EVP_PKEY *pkey, X509 *cert, ASN1_OCTET_STRING *secret,`
 /// `OSSL_LIB_CTX *libctx, const char *propq)` — `crmf_lib.c:658-749`.
@@ -1597,22 +1603,24 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_get1_pkey(
     // SAFETY: `encrypted_key` is live per the check above.
     if unsafe { (*encrypted_key).type_ } != OSSL_CRMF_ENCRYPTEDKEY_ENVELOPEDDATA {
         let mut len: c_int = 0;
-        // SAFETY: the union arm is the deprecated encValue, and the remaining pointers are the
-        // caller's.
-        // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
+        // SAFETY: the decrypted buffer is owned here; `len` is its length.
         let p = unsafe {
-            OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
-                (*encrypted_key).value.encrypted_value,
-                libctx,
-                propq,
-                pkey,
-                &mut len,
+            OwnedBuf::adopt_plain(
+                OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
+                    (*encrypted_key).value.encrypted_value,
+                    libctx,
+                    propq,
+                    pkey,
+                    &mut len,
+                ),
+                SeamFile::new(FILE),
+                685,
             )
         };
         let mut ret: *mut EvpPkey = ptr::null_mut();
-        if !p.is_null() {
-            let mut p_copy = p as *const u8;
-            // SAFETY: `p`/`p_copy` are a readable buffer of `len` bytes; `d2i` reads it.
+        if let Some(buf) = p.as_ref() {
+            let mut p_copy = buf.as_ptr() as *const u8;
+            // SAFETY: `buf`/`p_copy` are a readable buffer of `len` bytes; `d2i` reads it.
             ret = unsafe {
                 crate::asn1::d2i_pr::d2i_AutoPrivateKey_ex(
                     ptr::null_mut(),
@@ -1623,11 +1631,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_get1_pkey(
                 )
             };
         }
-        // SAFETY: `p` is a heap buffer this function owns or NULL.
-        if !p.is_null() {
-            // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
-            unsafe { crate::runtime::mem::CRYPTO_free(p.cast(), FILE.as_ptr(), 685) };
-        }
+        // `p` drops here: the authority's own plain release at 685.
         return ret;
     }
 
@@ -1846,11 +1850,11 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
     // The C's `EVP_CIPHER *cipher`, `EVP_CIPHER_CTX *evp_ctx`, `EVP_PKEY_CTX *pkctx` are owned
     // pointers; the `end:` tail releases each.
     let evp_ctx: *mut crate::evp::cipher_ctx::EvpCipherCtx;
-    let mut ek: *mut u8 = ptr::null_mut();
+    let mut ek: Option<OwnedBuf>;
     let mut eksize: usize = 0;
     let mut cipher: *mut crate::evp::cipher::EvpCipher;
-    let mut iv: *mut u8 = ptr::null_mut();
-    let out: *mut u8;
+    let mut iv: Option<OwnedBuf> = None;
+    let mut out: Option<OwnedBuf>;
     let mut ret = 0;
     let mut name = [0i8; OSSL_MAX_NAME_SIZE];
 
@@ -1894,67 +1898,121 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
     let cikeysize = unsafe { crate::evp::cipher::EVP_CIPHER_get_key_length(cipher) };
     // SAFETY: `libctx`/`pkey`/`propq` are the caller's.
     let pkctx = unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_pkey(libctx, pkey, propq) };
-    // SAFETY: `pkctx` is NULL or live.
-    if !pkctx.is_null() && unsafe { crate::evp::asymcipher::EVP_PKEY_decrypt_init(pkctx) } > 0 {
-        // SAFETY: `enc` is live and its `enc_symm_key` is a live BIT STRING.
+    // The authority's `else { goto end; }` after the decrypt-init test: with `ek`,
+    // `iv`, `out` and `evp_ctx` still NULL, the tail is just the two releases.
+    // SAFETY: `pkctx` is NULL or live; `cipher` is live.
+    if pkctx.is_null() || unsafe { crate::evp::asymcipher::EVP_PKEY_decrypt_init(pkctx) } <= 0 {
+        // SAFETY: `pkctx` is NULL or live; `cipher` is live.
         unsafe {
-            let enc_key = (*enc).enc_symm_key;
-            if crate::evp::asymcipher::EVP_PKEY_decrypt(
-                pkctx,
-                ptr::null_mut(),
-                &mut eksize,
-                (*enc_key).data,
-                (*enc_key).length as usize,
-            ) <= 0
-            {
-                // fall to the exit path
-            } else {
-                ek = CRYPTO_malloc(eksize, FILE.as_ptr(), 802).cast::<u8>();
-                if !ek.is_null() {
-                    let retval = crate::evp::asymcipher::EVP_PKEY_decrypt(
-                        pkctx,
-                        ek,
-                        &mut eksize,
-                        (*enc_key).data,
-                        (*enc_key).length as usize,
-                    );
-                    let failure = !constant_time_is_zero_s(
-                        (constant_time_msb_u32(retval as u32)
-                            | constant_time_is_zero_u32(retval as u32))
-                            as usize,
-                    );
-                    let failure = failure | !constant_time_eq_s(eksize, cikeysize as usize);
-                    if failure != 0 {
-                        ERR_clear_error();
-                        raise_crmf(
-                            810,
-                            c"OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
-                            CRMF_R_ERROR_DECRYPTING_SYMMETRIC_KEY,
-                        );
-                        // SAFETY: `pkctx`/`cipher` are NULL or owned; `ek` is owned.
-                        CRYPTO_free(ek.cast(), FILE.as_ptr(), 846);
-                        crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
-                        crate::evp::cipher::EVP_CIPHER_free(cipher);
-                        return ptr::null_mut();
-                    }
-                }
-            }
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
         }
+        return ptr::null_mut();
+    }
+    // SAFETY: `enc` is live and its `enc_symm_key` is a live BIT STRING.
+    let enc_key = unsafe { (*enc).enc_symm_key };
+    // SAFETY: `pkctx`/`enc_key` are live; `eksize` is this frame's out-parameter.
+    if unsafe {
+        crate::evp::asymcipher::EVP_PKEY_decrypt(
+            pkctx,
+            ptr::null_mut(),
+            &mut eksize,
+            (*enc_key).data,
+            (*enc_key).length as usize,
+        )
+    } <= 0
+    {
+        // The authority's `|| (ek = OPENSSL_malloc(eksize)) == NULL` arm jumps to
+        // `end:` with no buffer acquired, so only the two contexts are released.
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
+    }
+    // The decrypted symmetric key, allocated through the crate's allocator seam; `ek`'s
+    // `Drop` is its single release, plain until the end path selects the cleansing
+    // form. The conditional arm fixes `num` at the whole allocation extent (`eksize`)
+    // and starts plain; every path after allocation below selects the authority's
+    // cleansing release.
+    // SAFETY: the block is the seam's fresh, exclusively owned allocation of
+    // `eksize` bytes, which is its whole extent.
+    ek = unsafe {
+        OwnedBuf::adopt_conditional(
+            CRYPTO_malloc(eksize, FILE.as_ptr(), 802).cast::<u8>(),
+            eksize,
+            false,
+            SeamFile::new(FILE),
+            846,
+        )
+    };
+    // SAFETY: `ek` is `Some` exactly when the seam answered a non-NULL block.
+    let Some(ek_ptr) = ek.as_ref().map(OwnedBuf::as_ptr) else {
+        // The authority's refused-`OPENSSL_malloc` arm: `goto end` with `ek == NULL`.
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
+    };
+    // SAFETY: `pkctx`/`ek_ptr`/`enc_key` are live.
+    let retval = unsafe {
+        crate::evp::asymcipher::EVP_PKEY_decrypt(
+            pkctx,
+            ek_ptr,
+            &mut eksize,
+            (*enc_key).data,
+            (*enc_key).length as usize,
+        )
+    };
+    let failure = !constant_time_is_zero_s(
+        (constant_time_msb_u32(retval as u32) | constant_time_is_zero_u32(retval as u32)) as usize,
+    );
+    let failure = failure | !constant_time_eq_s(eksize, cikeysize as usize);
+    if failure != 0 {
+        // SAFETY: the queue clear and the raise site carry no pointer obligations.
+        unsafe {
+            ERR_clear_error();
+            raise_crmf(
+                810,
+                c"OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
+                CRMF_R_ERROR_DECRYPTING_SYMMETRIC_KEY,
+            );
+        };
+        // `end:` clears the decrypted key at 846 before releasing the contexts.
+        if let Some(block) = ek.as_mut() {
+            block.set_clear(true);
+        }
+        drop(ek.take());
+        // SAFETY: `pkctx` is live; `cipher` is live.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
+            crate::evp::cipher::EVP_CIPHER_free(cipher);
+        }
+        return ptr::null_mut();
     }
     // SAFETY: `cipher` is live.
     let iv_len = unsafe { crate::evp::cipher::EVP_CIPHER_get_iv_length(cipher) };
     // SAFETY: `iv_len` is the cipher's own length; allocate that many bytes.
     if iv_len > 0 {
-        iv = CRYPTO_malloc(iv_len as usize, FILE.as_ptr(), 817).cast::<u8>();
+        iv = OwnedBuf::new_plain_released(
+            iv_len as usize,
+            SeamFile::new(FILE),
+            817,
+            SeamFile::new(FILE),
+            847,
+        );
     }
-    if iv.is_null()
+    if iv.is_none()
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
         || unsafe { (*enc).symm_alg }.is_null()
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
         || unsafe {
             crate::asn1::evp_asn1::ASN1_TYPE_get_octetstring(
                 (*(*enc).symm_alg).parameter,
-                iv,
+                iv.as_ref().map(OwnedBuf::as_ptr).unwrap_or(ptr::null_mut()),
                 iv_len,
             )
         } != iv_len
@@ -1968,10 +2026,13 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
             );
             crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
             EVP_CIPHER_free(cipher);
-            if !iv.is_null() {
-                CRYPTO_free(iv.cast(), FILE.as_ptr(), 847);
-            }
         };
+        // The authority's `end:` clears the decrypted key at 846 on this arm too.
+        if let Some(block) = ek.as_mut() {
+            block.set_clear(true);
+        }
+        drop(ek.take());
+        // `iv` drops here: the authority's only IV release path is the plain one at 847.
         return ptr::null_mut();
     }
     // SAFETY: `enc` is live; the cipher's block size and the payload length bound the output.
@@ -1979,32 +2040,48 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
         let enc_value = (*enc).enc_value;
         let total = (*enc_value).length as usize
             + crate::evp::cipher::EVP_CIPHER_get_block_size(cipher) as usize;
-        out = CRYPTO_malloc(total, FILE.as_ptr(), 826).cast::<u8>();
+        out =
+            OwnedBuf::new_plain_released(total, SeamFile::new(FILE), 826, SeamFile::new(FILE), 850);
         evp_ctx = crate::evp::cipher_ctx::EVP_CIPHER_CTX_new();
-        if out.is_null() || evp_ctx.is_null() {
+        if out.is_none() || evp_ctx.is_null() {
             // tail
             crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(evp_ctx);
             EVP_CIPHER_free(cipher);
-            CRYPTO_free(ek.cast(), FILE.as_ptr(), 846);
-            CRYPTO_free(iv.cast(), FILE.as_ptr(), 847);
-            if !out.is_null() {
-                CRYPTO_free(out.cast(), FILE.as_ptr(), 850);
+            // The authority's `end:` clears the decrypted key at 846; `iv`/`out` are
+            // plain releases at 847/850.
+            if let Some(block) = ek.as_mut() {
+                block.set_clear(true);
             }
+            drop(ek.take());
+            drop(iv.take());
+            drop(out.take());
             return ptr::null_mut();
         }
+        let out_ptr = out
+            .as_ref()
+            .map(OwnedBuf::as_ptr)
+            .unwrap_or(ptr::null_mut());
         crate::evp::cipher_ctx::EVP_CIPHER_CTX_set_padding(evp_ctx, 0);
         let mut n: c_int = 0;
-        if crate::evp::cipher_ctx::EVP_DecryptInit(evp_ctx, cipher, ek, iv) == 0
+        if crate::evp::cipher_ctx::EVP_DecryptInit(
+            evp_ctx,
+            cipher,
+            ek.as_ref().map(OwnedBuf::as_ptr).unwrap_or(ptr::null_mut()),
+            iv.as_ref().map(OwnedBuf::as_ptr).unwrap_or(ptr::null_mut()),
+        ) == 0
             || crate::evp::cipher_ctx::EVP_DecryptUpdate(
                 evp_ctx,
-                out,
+                out_ptr,
                 outlen,
                 (*enc_value).data,
                 (*enc_value).length as c_int,
             ) == 0
-            || crate::evp::cipher_ctx::EVP_DecryptFinal(evp_ctx, out.add(*outlen as usize), &mut n)
-                == 0
+            || crate::evp::cipher_ctx::EVP_DecryptFinal(
+                evp_ctx,
+                out_ptr.add(*outlen as usize),
+                &mut n,
+            ) == 0
         {
             raise_crmf(
                 836,
@@ -2018,12 +2095,22 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_decrypt(
         crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pkctx);
         crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(evp_ctx);
         EVP_CIPHER_free(cipher);
-        CRMF_free_clear(ek, eksize);
-        CRYPTO_free(iv.cast(), FILE.as_ptr(), 847);
-        if ret != 0 {
-            return out;
+        // The end path cleanses the decrypted symmetric key: `ek`'s `Drop` is the authority's own
+        // cleansing release at 846.
+        if let Some(ek_block) = ek.as_mut() {
+            ek_block.set_clear(true);
         }
-        CRYPTO_free(out.cast(), FILE.as_ptr(), 850);
+        drop(ek.take());
+        // `iv` drops here: the authority's only IV release path is the plain one at 847.
+        drop(iv.take());
+        if ret != 0 {
+            return out
+                .take()
+                .map(OwnedBuf::into_raw)
+                .unwrap_or(ptr::null_mut());
+        }
+        // `out` drops here: the authority's own plain release at 850.
+        drop(out.take());
     }
     ptr::null_mut()
 }
@@ -2033,21 +2120,6 @@ const OSSL_MAX_NAME_SIZE: usize = 50;
 
 /// `OSSL_CRMF_ENCRYPTEDKEY_ENVELOPEDDATA` — `crmf_local.h:54`.
 const OSSL_CRMF_ENCRYPTEDKEY_ENVELOPEDDATA: c_int = 1;
-
-/// Release and zero a heap buffer, the authority's `OPENSSL_clear_free`.
-///
-/// # Safety
-/// `p` is NULL or a buffer of `len` bytes this function owns.
-unsafe fn CRMF_free_clear(p: *mut u8, len: usize) {
-    if p.is_null() {
-        return;
-    }
-    // SAFETY: `p` is a live buffer of `len` bytes per the contract; zero it, then free.
-    unsafe {
-        core::ptr::write_bytes(p, 0, len);
-        crate::runtime::mem::CRYPTO_free(p.cast(), FILE.as_ptr(), 846);
-    }
-}
 
 /// `X509 *OSSL_CRMF_ENCRYPTEDVALUE_get1_encCert(const OSSL_CRMF_ENCRYPTEDVALUE *ecert,`
 /// `OSSL_LIB_CTX *libctx, const char *propq, EVP_PKEY *pkey)` — `crmf_lib.c:861-883`.
@@ -2062,20 +2134,24 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_get1_encCert(
     pkey: *mut EvpPkey,
 ) -> *mut X509 {
     let mut len: c_int = 0;
-    // SAFETY: the arguments are the caller's.
-    let buf = unsafe { OSSL_CRMF_ENCRYPTEDVALUE_decrypt(ecert, libctx, propq, pkey, &mut len) };
-    let mut cert: *mut X509;
-    if buf.is_null() {
+    // SAFETY: the decrypted buffer is owned here; `len` is its length.
+    let buf = unsafe {
+        OwnedBuf::adopt_plain(
+            OSSL_CRMF_ENCRYPTEDVALUE_decrypt(ecert, libctx, propq, pkey, &mut len),
+            SeamFile::new(FILE),
+            881,
+        )
+    };
+    let Some(buf) = buf else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: `libctx`/`propq` are the caller's.
-    cert = unsafe { X509_new_ex(libctx, propq) };
+    let mut cert = unsafe { X509_new_ex(libctx, propq) };
     if cert.is_null() {
-        // SAFETY: `buf` is a heap buffer this function owns.
-        unsafe { crate::runtime::mem::CRYPTO_free(buf.cast(), FILE.as_ptr(), 881) };
+        // `buf` drops here: the authority's own plain release at 881.
         return ptr::null_mut();
     }
-    let mut p: *const u8 = buf;
+    let mut p: *const u8 = buf.as_ptr();
     // SAFETY: `p` is a readable cursor over `len` bytes; `cert` is a live writable slot.
     if unsafe { d2i_X509(&mut cert, &mut p, len as c_long) }.is_null() {
         // SAFETY: the enclosing function's `# Safety` section is the contract for the pointers here.
@@ -2089,8 +2165,7 @@ pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_get1_encCert(
         }
         cert = ptr::null_mut();
     }
-    // SAFETY: `buf` is a heap buffer this function owns.
-    unsafe { crate::runtime::mem::CRYPTO_free(buf.cast(), FILE.as_ptr(), 881) };
+    // `buf` drops here: the authority's own plain release at 881.
     cert
 }
 

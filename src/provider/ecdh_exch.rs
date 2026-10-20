@@ -30,7 +30,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
 use crate::bn::bignum::BN_is_one;
@@ -75,10 +75,9 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
-};
-use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_KDF_NAME_X963KDF` — `core_names.h`, the name the X9.63 KDF is fetched by.
 const OSSL_KDF_NAME_X963KDF: *const c_char = c"X963KDF".as_ptr();
@@ -95,6 +94,8 @@ const PROV_ECDH_NAME_SIZE: usize = 80;
 
 /// The generated unit's own `__FILE__`.
 const FILE_ECDH_EXCH: *const c_char = c"providers/implementations/exchange/ecdh_exch.c".as_ptr();
+const FILE_ECDH_EXCH_SEAM: SeamFile =
+    SeamFile::new(c"providers/implementations/exchange/ecdh_exch.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
@@ -126,6 +127,9 @@ struct ProvEcdhCtx {
     kdf_outlen: usize,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a key-exchange buffer
+
 /// `static void *ecdh_newctx(void *provctx)` — `ecdh_exch.c.in:90-107`.
 ///
 /// # Safety
@@ -136,8 +140,11 @@ unsafe extern "C" fn ecdh_newctx(provctx: *mut c_void) -> *mut c_void {
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let pectx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 97)
-        .cast::<ProvEcdhCtx>();
+    let pectx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 97)
+    }
+    .cast::<ProvEcdhCtx>();
     if pectx.is_null() {
         return ptr::null_mut();
     }
@@ -255,12 +262,14 @@ unsafe extern "C" fn ecdh_freectx(vpecdhctx: *mut c_void) {
         EC_KEY_free((*pecdhctx).peerk);
 
         EVP_MD_free((*pecdhctx).kdf_md);
-        CRYPTO_clear_free(
-            (*pecdhctx).kdf_ukm.cast(),
+        // The UKM's handle releases the field's own block through the authority's cleansing free;
+        // the context block stays on the raw seam (its release is part of the destructor body).
+        drop(OwnedBuf::adopt_cleansed(
+            (*pecdhctx).kdf_ukm.cast::<c_uchar>(),
             (*pecdhctx).kdf_ukmlen,
-            FILE_ECDH_EXCH,
+            FILE_ECDH_EXCH_SEAM,
             189,
-        );
+        ));
 
         CRYPTO_free(pecdhctx.cast(), FILE_ECDH_EXCH, 191);
     }
@@ -278,8 +287,11 @@ unsafe extern "C" fn ecdh_dupctx(vpecdhctx: *mut c_void) -> *mut c_void {
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let dstctx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 202)
-        .cast::<ProvEcdhCtx>();
+    let dstctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdhCtx>(), FILE_ECDH_EXCH, 202)
+    }
+    .cast::<ProvEcdhCtx>();
     if dstctx.is_null() {
         return ptr::null_mut();
     }
@@ -321,17 +333,24 @@ unsafe extern "C" fn ecdh_dupctx(vpecdhctx: *mut c_void) -> *mut c_void {
 
         /* Duplicate UKM data if present */
         if !(*srcctx).kdf_ukm.is_null() && (*srcctx).kdf_ukmlen > 0 {
-            (*dstctx).kdf_ukm = CRYPTO_memdup(
-                (*srcctx).kdf_ukm.cast(),
+            // The copy is this frame's own block, handed to `dstctx->kdf_ukm`; `ecdh_freectx`
+            // releases the field at the authority's own cleansing free.
+            let Some(buf) = OwnedBuf::adopt_cleansed(
+                CRYPTO_memdup(
+                    (*srcctx).kdf_ukm.cast(),
+                    (*srcctx).kdf_ukmlen,
+                    FILE_ECDH_EXCH,
+                    234,
+                )
+                .cast::<c_uchar>(),
                 (*srcctx).kdf_ukmlen,
-                FILE_ECDH_EXCH,
-                234,
-            )
-            .cast::<u8>();
-            if (*dstctx).kdf_ukm.is_null() {
+                FILE_ECDH_EXCH_SEAM,
+                189,
+            ) else {
                 ecdh_freectx(dstctx.cast());
                 return ptr::null_mut();
-            }
+            };
+            (*dstctx).kdf_ukm = buf.into_raw().cast::<u8>();
         }
     }
     dstctx.cast()
@@ -537,8 +556,16 @@ unsafe extern "C" fn ecdh_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p.ukm, &mut tmp_ukm, 0, &mut tmp_ukmlen) == 0 {
                 return 0;
             }
-            CRYPTO_free((*pectx).kdf_ukm.cast(), FILE_ECDH_EXCH, 350);
-            (*pectx).kdf_ukm = tmp_ukm.cast::<u8>();
+            // The old UKM releases through its handle at the authority's own plain free; the
+            // replacement is the helper's fresh block, handed to the field through a second handle.
+            drop(OwnedBuf::adopt_plain(
+                (*pectx).kdf_ukm.cast::<c_uchar>(),
+                FILE_ECDH_EXCH_SEAM,
+                350,
+            ));
+            (*pectx).kdf_ukm =
+                OwnedBuf::adopt_plain(tmp_ukm.cast::<c_uchar>(), FILE_ECDH_EXCH_SEAM, 350)
+                    .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*pectx).kdf_ukmlen = tmp_ukmlen;
         }
     }
@@ -819,7 +846,7 @@ unsafe fn ecdh_plain_derive(
 ///
 /// # Safety
 /// As [`ecdh_plain_derive`].
-#[allow(non_snake_case, unused_assignments)] // the authority's own internal name; `stmp` is assigned before its only read
+#[allow(non_snake_case)] // the authority's own internal name
 unsafe fn ecdh_X9_63_kdf_derive(
     vpecdhctx: *mut c_void,
     secret: *mut u8,
@@ -827,7 +854,6 @@ unsafe fn ecdh_X9_63_kdf_derive(
     outlen: usize,
 ) -> c_int {
     let pecdhctx = vpecdhctx.cast::<ProvEcdhCtx>();
-    let mut stmp: *mut u8 = ptr::null_mut();
     let mut stmplen: usize = 0;
     let mut ret: c_int = 0;
 
@@ -845,12 +871,14 @@ unsafe fn ecdh_X9_63_kdf_derive(
         if ecdh_plain_derive(vpecdhctx, ptr::null_mut(), &mut stmplen, 0) == 0 {
             return 0;
         }
-        stmp = CRYPTO_secure_malloc(stmplen, FILE_ECDH_EXCH, 574).cast::<u8>();
-        if stmp.is_null() {
+        // The staging buffer is this frame's own secure-heap block; the handle cleanses and
+        // releases it through the crate's allocator seam on every path below.
+        let Some(stmp_buf) = OwnedBuf::new_secure_cleansed(stmplen, FILE_ECDH_EXCH_SEAM, 574)
+        else {
             return 0;
-        }
+        };
+        let stmp = stmp_buf.as_ptr().cast::<u8>();
         if ecdh_plain_derive(vpecdhctx, stmp, &mut stmplen, stmplen) == 0 {
-            CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_ECDH_EXCH, 591);
             return ret;
         }
 
@@ -867,13 +895,10 @@ unsafe fn ecdh_X9_63_kdf_derive(
             ptr::null(),
         ) == 0
         {
-            CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_ECDH_EXCH, 591);
             return ret;
         }
         *psecretlen = (*pecdhctx).kdf_outlen;
         ret = 1;
-
-        CRYPTO_secure_clear_free(stmp.cast(), stmplen, FILE_ECDH_EXCH, 591);
     }
     ret
 }
@@ -915,42 +940,49 @@ unsafe extern "C" fn ecdh_derive_skey(
     outlen: usize,
     _params_in: *const OsslParam,
 ) -> *mut c_void {
-    let mut secret: *mut u8 = ptr::null_mut();
     let mut secretlen: usize = 0;
 
     if import.is_none() || outlen == 0 {
         return ptr::null_mut();
     }
 
-    // SAFETY: `vpecdhctx` is the caller's context; `secret` is NULL so this is the size probe.
+    // SAFETY: `vpecdhctx` is the caller's context; `ptr::null_mut()` is the size probe.
     unsafe {
-        if ecdh_derive(vpecdhctx, secret, &mut secretlen, outlen) == 0 {
+        if ecdh_derive(vpecdhctx, ptr::null_mut(), &mut secretlen, outlen) == 0 {
             return ptr::null_mut();
         }
 
-        secret = CRYPTO_malloc(secretlen, FILE_ECDH_EXCH, 626).cast::<u8>();
-        if secret.is_null() {
+        // The secret is this frame's own block; the handle cleanses and releases it through the
+        // crate's allocator seam on every path below.
+        let Some(secret) = OwnedBuf::new_cleansed(secretlen, FILE_ECDH_EXCH_SEAM, 626) else {
             return ptr::null_mut();
-        }
+        };
 
-        if ecdh_derive(vpecdhctx, secret, &mut secretlen, outlen) == 0 || secretlen != outlen {
-            CRYPTO_clear_free(secret.cast(), secretlen, FILE_ECDH_EXCH, 631);
+        if ecdh_derive(
+            vpecdhctx,
+            secret.as_ptr().cast::<u8>(),
+            &mut secretlen,
+            outlen,
+        ) == 0
+            || secretlen != outlen
+        {
             return ptr::null_mut();
         }
 
         let mut params: [OsslParam; 2] = [END, END];
-        params[0] =
-            OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, secret.cast(), outlen);
+        params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_SKEY_PARAM_RAW_BYTES,
+            secret.as_ptr().cast(),
+            outlen,
+        );
         let _ = OSSL_PARAM_construct_end();
 
         /* This is mandatory, no need to check for its presence */
-        let ret = match import {
+        match import {
             Some(f) => f(provctx, OSSL_SKEYMGMT_SELECT_SECRET_KEY, params.as_ptr()),
             None => ptr::null_mut(),
-        };
-        CRYPTO_clear_free(secret.cast(), secretlen, FILE_ECDH_EXCH, 640);
-
-        ret
+        }
+        // `secret`'s handle cleanses and releases the block here.
     }
 }
 

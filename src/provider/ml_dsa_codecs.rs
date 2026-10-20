@@ -46,13 +46,18 @@ use crate::provider::ml_dsa_kmgmt::ossl_prov_ml_dsa_new;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memcmp;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_obj2nid;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `ml_dsa_codecs.c` is a plain `.c`, so the compiler records the
 /// source-tree path with the build's relative prefix (D235).
 const FILE: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(
+    c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+);
 /// `ml_dsa_codecs.c:263`, the `end:` arm's `OPENSSL_free(fmt_slots)` in `ossl_ml_dsa_d2i_PKCS8`.
 const LINE_FREE_IN_SLOTS: c_int = 263;
 /// `ml_dsa_codecs.c:282`, `ossl_ml_dsa_i2d_pubkey`'s `OPENSSL_memdup(pk, params->pk_len)`.
@@ -414,17 +419,6 @@ unsafe fn raise_one(site: &err_sites::ErrSite, prefix: &str, alg: *const c_char,
     unsafe { raise_site_data(site, msg.as_ptr().cast()) };
 }
 
-/// Free a format-slot list the helper returned, if any.
-///
-/// # Safety
-/// `slots` must be NULL or a list `ossl_ml_common_pkcs8_fmt_order` returned.
-unsafe fn free_slots(slots: *mut MlCommonPkcs8FmtPref, line: c_int) {
-    if !slots.is_null() {
-        // SAFETY: `slots` is this call's list and `line` its coordinate.
-        unsafe { CRYPTO_free(slots.cast(), FILE, line) };
-    }
-}
-
 /// `ML_DSA_KEY *ossl_ml_dsa_d2i_PUBKEY(const uint8_t *pk, int pk_len, int evp_type,`
 /// `PROV_CTX *provctx, const char *propq)` — `ml_dsa_codecs.c:109-139`.
 ///
@@ -679,7 +673,11 @@ pub(crate) unsafe fn ossl_ml_dsa_d2i_PKCS8(
 
     // SAFETY: `slots` is NULL or this frame's list; `p8inf` is live.
     unsafe {
-        free_slots(slots, LINE_FREE_IN_SLOTS);
+        drop(OwnedBuf::adopt_plain(
+            slots.cast(),
+            FILE_SEAM,
+            LINE_FREE_IN_SLOTS,
+        ));
         PKCS8_PRIV_KEY_INFO_free(p8inf);
         if ret.is_null() {
             ossl_ml_dsa_key_free(key);
@@ -715,13 +713,14 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_pubkey(key: *const MlDsaKey, out: *mut *mut
         return 0;
     }
     // SAFETY: `pk` is readable for `pk_len` and the allocation is the authority's own.
-    let dup = unsafe { CRYPTO_memdup(pk.cast(), (*params).pk_len, FILE, LINE_MEMDUP_PUB) }
-        .cast::<c_uchar>();
-    if dup.is_null() {
+    let Some(dup) =
+        (unsafe { OwnedBuf::new_memdup(pk.cast(), (*params).pk_len, FILE_SEAM, LINE_MEMDUP_PUB) })
+    else {
         return 0;
-    }
+    };
+    // The caller's `*out` takes ownership of the duplicated block.
     // SAFETY: `out` is writable per the contract.
-    unsafe { *out = dup };
+    unsafe { *out = dup.into_raw() };
     // SAFETY: `params` is live.
     unsafe { (*params).pk_len as c_int }
 }
@@ -781,7 +780,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
 
     let len: c_int;
     let mut ret: c_int = 0;
-    let mut buf: *mut u8 = ptr::null_mut();
+    let mut buf: Option<OwnedBuf> = None;
 
     'end: {
         // If we don't have a seed, skip seedful entries.
@@ -820,11 +819,18 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
                 break 'end;
             }
 
-            buf = CRYPTO_malloc(len as usize, FILE, LINE_MALLOC).cast::<u8>();
-            if buf.is_null() {
+            let Some(b) = OwnedBuf::new_plain_released(
+                len as usize,
+                FILE_SEAM,
+                LINE_MALLOC,
+                FILE_SEAM,
+                LINE_FREE_OUT_BUF,
+            ) else {
                 break 'end;
-            }
-            let mut pos = buf;
+            };
+            let buf_ptr = b.as_ptr();
+            buf = Some(b);
+            let mut pos = buf_ptr;
 
             match (*p8fmt).p8_shift {
                 0 => pos = store_u32_be(pos, (*p8fmt).p8_magic),
@@ -844,10 +850,10 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
             if (*p8fmt).seed_length != 0 {
                 // Either the tag/len were already included in |magic| or they require us to write
                 // two bytes now.
-                if pos.add(2) == buf.add((*p8fmt).seed_offset) {
+                if pos.add(2) == buf_ptr.add((*p8fmt).seed_offset) {
                     pos = store_u16_be(pos, (*p8fmt).seed_magic);
                 }
-                if pos != buf.add((*p8fmt).seed_offset) {
+                if pos != buf_ptr.add((*p8fmt).seed_offset) {
                     raise_one(
                         &err_sites::ML_DSA_CODECS_367,
                         "error encoding ",
@@ -860,10 +866,10 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
                 pos = pos.add(ML_DSA_SEED_BYTES);
             }
             if (*p8fmt).priv_length != 0 {
-                if pos.add(4) == buf.add((*p8fmt).priv_offset) {
+                if pos.add(4) == buf_ptr.add((*p8fmt).priv_offset) {
                     pos = store_u32_be(pos, (*p8fmt).priv_magic);
                 }
-                if pos != buf.add((*p8fmt).priv_offset) {
+                if pos != buf_ptr.add((*p8fmt).priv_offset) {
                     raise_one(
                         &err_sites::ML_DSA_CODECS_378,
                         "error encoding ",
@@ -878,7 +884,7 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
             // OQS form output with tacked-on public key.
             if (*p8fmt).pub_length != 0 {
                 // The OQS pubkey is never separately DER-wrapped.
-                if pos != buf.add((*p8fmt).pub_offset) {
+                if pos != buf_ptr.add((*p8fmt).pub_offset) {
                     raise_one(
                         &err_sites::ML_DSA_CODECS_389,
                         "error encoding ",
@@ -891,20 +897,21 @@ pub(crate) unsafe fn ossl_ml_dsa_i2d_prvkey(
                 pos = pos.add((*params).pk_len);
             }
 
-            if pos == buf.add(len as usize) {
-                *out = buf;
+            if pos == buf_ptr.add(len as usize) {
+                // The caller's `*out` takes ownership of the block.
+                if let Some(b) = buf.take() {
+                    *out = b.into_raw().cast::<u8>();
+                }
                 ret = len;
             }
         }
     }
 
-    // SAFETY: `fmt_slots` is this frame's list; `buf` is NULL or this frame's allocation.
-    unsafe {
-        free_slots(fmt_slots, LINE_FREE_OUT_SLOTS);
-        if ret == 0 {
-            CRYPTO_free(buf.cast(), FILE, LINE_FREE_OUT_BUF);
-        }
-    }
+    // SAFETY: `fmt_slots` is NULL or this frame's list.
+    drop(unsafe { OwnedBuf::adopt_plain(fmt_slots.cast(), FILE_SEAM, LINE_FREE_OUT_SLOTS) });
+    // `buf` still holds the block only when it was not handed to the caller's `out`; its `Drop`
+    // releases it at the authority's own `:405`.
+    drop(buf);
     ret
 }
 

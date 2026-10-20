@@ -49,8 +49,8 @@ use crate::passphrase::OsslPassphraseCallback;
 use crate::provider::cipher::param_utf8_string;
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::endecoder_common::ossl_read_der;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, NID_X9_62_id_ecPublicKey, OBJ_obj2nid, OBJ_obj2txt};
 use crate::selftest::OsslCallback;
 use crate::x509::x_pubkey::{
@@ -88,19 +88,25 @@ struct Spki2TypespkiCtx {
     propq: [c_char; OSSL_MAX_PROPQUERY_SIZE],
 }
 
+// SAFETY: a zeroed `Spki2TypespkiCtx` is the authority's own constructed state -- `provctx` is NULL
+// and `propq` is all NUL -- and the authority's `spki2typespki_freectx` owns no member, so an
+// all-zero value needs no destructor work. The enclosing block is released by `OwnedCtx`'s `Drop`
+// through the same `CRYPTO_free(NULL, 0)` seam the authority uses.
+unsafe impl CtxDestroy for Spki2TypespkiCtx {
+    unsafe fn destroy_body(_ptr: *mut Spki2TypespkiCtx) {}
+}
+
 /// `static void *spki2typespki_newctx(void *provctx)` — `decode_spki2typespki.c:44-51`.
 ///
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe extern "C" fn spki2typespki_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<Spki2TypespkiCtx>(), ptr::null(), 0)
-        .cast::<Spki2TypespkiCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh zeroed allocation this frame owns.
-        unsafe { (*ctx).provctx = provctx };
-    }
-    ctx.cast::<c_void>()
+    let Some(ctx) = OwnedCtx::<Spki2TypespkiCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx` is this call's own freshly zeroed block and `provctx` is the caller's.
+    unsafe { (*ctx.as_ptr()).provctx = provctx };
+    ctx.into_raw().cast::<c_void>()
 }
 
 /// `static void spki2typespki_freectx(void *vctx)` — `decode_spki2typespki.c:53-58`.
@@ -108,8 +114,9 @@ unsafe extern "C" fn spki2typespki_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn spki2typespki_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or the context `spki2typespki_newctx` allocated.
-    unsafe { CRYPTO_free(vctx.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the block `spki2typespki_newctx` handed out with `into_raw`, and no
+    // other owner releases it; `Drop` performs the authority's single `CRYPTO_free(NULL, 0)`.
+    drop(unsafe { OwnedCtx::<Spki2TypespkiCtx>::from_raw(vctx.cast()) });
 }
 
 /// `struct spki2typespki_set_ctx_params_st` — `decode_spki2typespki.c:70-72`, the one field the
@@ -340,6 +347,11 @@ unsafe extern "C" fn spki2typespki_decode(
         return 1;
     }
 
+    // SAFETY: `der` is the non-NULL buffer `ossl_read_der` just allocated through the crate's
+    // allocator seam, and no other owner releases it; `Drop` performs the authority's single plain
+    // `CRYPTO_free(NULL, 0)`.
+    let der_owner = unsafe { OwnedBlock::take(der.cast()) };
+
     // SAFETY: `der` is a live buffer of `len` bytes, `ctx` the caller's context, and the callbacks
     // are the framework's.
     let ok = unsafe {
@@ -355,8 +367,8 @@ unsafe extern "C" fn spki2typespki_decode(
             (*ctx).propq.as_ptr(),
         )
     };
-    // SAFETY: `der` is the buffer `ossl_read_der` allocated and this call owns it.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+    // The owner releases the DER buffer here, at the authority's own plain `(NULL, 0)` site.
+    drop(der_owner);
     ok
 }
 
@@ -427,3 +439,7 @@ mod tests {
         assert_eq!(i, 5);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Spki2TypespkiCtx => zero_state_sweep_spki2_typespki_ctx);

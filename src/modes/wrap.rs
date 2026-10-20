@@ -104,7 +104,12 @@ unsafe fn unwrap_raw(
 ) -> usize {
     // SAFETY: the caller's contract.
     unsafe {
-        let inlen = inlen - 8;
+        // The authority subtracts 8 from an unsigned `size_t` and relies on the range
+        // test below to reject the wrapped value. Subtracting first here would panic in
+        // a debug build (a length below eight is caller-controlled); refuse instead.
+        let Some(inlen) = inlen.checked_sub(8) else {
+            return 0;
+        };
         if (inlen & 0x7) != 0 || !(16..=CRYPTO128_WRAP_MAX).contains(&inlen) {
             return 0;
         }
@@ -196,13 +201,16 @@ pub unsafe extern "C" fn CRYPTO_128_wrap_pad(
 ) -> usize {
     // SAFETY: the caller's contract, plus the bounds the branches below establish.
     unsafe {
-        let blocks_padded = inlen.div_ceil(8);
-        let padded_len = blocks_padded * 8;
-        let padding_len = padded_len - inlen;
-
+        // Validate before the ceiling arithmetic: the authority's `(inlen + 7) / 8` is
+        // computed in unsigned arithmetic and only then range-tested, but a Rust
+        // `div_ceil`/multiply over the full `usize` range would panic in a debug build.
         if inlen == 0 || inlen >= CRYPTO128_WRAP_MAX {
             return 0;
         }
+
+        let blocks_padded = inlen.div_ceil(8);
+        let padded_len = blocks_padded * 8;
+        let padding_len = padded_len - inlen;
 
         let mut aiv = [0u8; 8];
         if icv.is_null() {
@@ -249,6 +257,9 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
 ) -> usize {
     // SAFETY: the caller's contract, plus the range test below before any access.
     unsafe {
+        // The range test precedes `inlen / 8 - 1`: for `inlen < 8` that subtraction
+        // underflowed (as it does in the authority's `size_t` arithmetic) and a Rust
+        // debug build would panic before reaching the test.
         if (inlen & 0x7) != 0 || !(16..CRYPTO128_WRAP_MAX).contains(&inlen) {
             return 0;
         }
@@ -345,4 +356,68 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap(
 ) -> usize {
     // SAFETY: the caller's contract.
     unsafe { unwrap128(key, iv, out, input, inlen, block) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // The refusal arms never call the block function; this only satisfies the signature.
+    unsafe extern "C" fn toy_block(_input: *const u8, _out: *mut u8, _key: *const c_void) {}
+
+    /// Every range test must precede any `inlen` arithmetic. A NULL buffer is safe here
+    /// only because the refusal happens first, which is exactly what these arms assert:
+    /// `inlen - 8` and `inlen / 8 - 1` used to underflow, and the padded-length ceiling
+    /// used to overflow, before the range test ran (a debug-build panic across the C ABI
+    /// where the authority answers 0).
+    #[test]
+    fn out_of_range_lengths_are_refused_before_pointer_use() {
+        // SAFETY: each call returns from its length test before touching a pointer.
+        unsafe {
+            assert_eq!(
+                CRYPTO_128_unwrap(
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                    7,
+                    toy_block,
+                ),
+                0
+            );
+            assert_eq!(
+                CRYPTO_128_unwrap_pad(
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                    7,
+                    toy_block,
+                ),
+                0
+            );
+            assert_eq!(
+                CRYPTO_128_wrap_pad(
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                    usize::MAX,
+                    toy_block,
+                ),
+                0
+            );
+            assert_eq!(
+                CRYPTO_128_wrap_pad(
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                    0,
+                    toy_block,
+                ),
+                0
+            );
+        }
+    }
 }

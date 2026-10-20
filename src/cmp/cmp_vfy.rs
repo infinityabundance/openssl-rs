@@ -11,7 +11,7 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(private_interfaces)]
 
-use core::ffi::{c_int, c_ulong};
+use core::ffi::{c_char, c_int, c_ulong};
 use core::ptr;
 
 use crate::asn1::a_verify::ASN1_item_verify_ex;
@@ -41,7 +41,8 @@ use crate::runtime::err::{
     raise_site, ERR_add_error_mem_bio, ERR_add_error_txt, ERR_clear_last_mark, ERR_peek_last_error,
     ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::t_x509::{ossl_x509_print_ex_brief, OSSL_STACK_OF_X509_free};
 use crate::x509::v3_genn::{GeneralName, GEN_DIRNAME};
@@ -405,9 +406,13 @@ unsafe fn check_name(
     }
     // SAFETY: `actual_name` is live.
     let str_ = unsafe { X509_NAME_oneline(actual_name, ptr::null_mut(), 0) };
+    // The string is the printer's own; the handle releases it at the authority's own line for the
+    // path that reaches it.
+    // SAFETY: `str_` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
+    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 176) };
     // SAFETY: both names are live.
     if unsafe { X509_NAME_cmp(actual_name, expect_name) } == 0 {
-        if log_success != 0 && !str_.is_null() {
+        if log_success != 0 && !str_.as_ptr().is_null() {
             // SAFETY: `ctx` is live; `str_` is NUL-terminated.
             unsafe {
                 ossl_cmp_log_str(
@@ -420,16 +425,14 @@ unsafe fn check_name(
                         " {} matches {}: {}",
                         actual_desc.to_string_lossy(),
                         expect_desc.to_string_lossy(),
-                        std::ffi::CStr::from_ptr(str_).to_string_lossy(),
+                        std::ffi::CStr::from_ptr(str_.as_ptr().cast::<c_char>()).to_string_lossy(),
                     ),
                 )
             };
         }
-        // SAFETY: `str_` is NULL or this call's own.
-        unsafe { CRYPTO_free(str_.cast(), FILE.as_ptr(), 176) };
         return 1;
     }
-    if !str_.is_null() {
+    if !str_.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str_` is NUL-terminated.
         unsafe {
             ossl_cmp_log_str(
@@ -441,16 +444,19 @@ unsafe fn check_name(
                 format_args!(
                     " actual name in {} = {}",
                     actual_desc.to_string_lossy(),
-                    std::ffi::CStr::from_ptr(str_).to_string_lossy(),
+                    std::ffi::CStr::from_ptr(str_.as_ptr().cast::<c_char>()).to_string_lossy(),
                 ),
             )
         };
     }
-    // SAFETY: `str_` is NULL or this call's own.
-    unsafe { CRYPTO_free(str_.cast(), FILE.as_ptr(), 182) };
+    // The authority releases the string at its own line 182 on this arm.
+    str_.set_release_line(182);
     // SAFETY: `expect_name` is live.
     let str2 = unsafe { X509_NAME_oneline(expect_name, ptr::null_mut(), 0) };
-    if !str2.is_null() {
+    // The string is the printer's own; the handle is its single release at the authority's own line.
+    // SAFETY: `str2` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
+    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), SeamFile::new(FILE), 185) };
+    if !str2.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str2` is NUL-terminated.
         unsafe {
             ossl_cmp_log_str(
@@ -462,13 +468,11 @@ unsafe fn check_name(
                 format_args!(
                     " does not match {} = {}",
                     expect_desc.to_string_lossy(),
-                    std::ffi::CStr::from_ptr(str2).to_string_lossy(),
+                    std::ffi::CStr::from_ptr(str2.as_ptr().cast::<c_char>()).to_string_lossy(),
                 ),
             )
         };
     }
-    // SAFETY: `str2` is NULL or this call's own.
-    unsafe { CRYPTO_free(str2.cast(), FILE.as_ptr(), 185) };
     0
 }
 
@@ -500,9 +504,14 @@ unsafe fn check_kid(
     }
     // SAFETY: `ckid` is live.
     let str_ = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), ckid) };
+    // The string is the helper's own; the handle releases it at the authority's own line for the
+    // path that reaches it.
+    // SAFETY: `str_` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
+    // owns.
+    let mut str_ = unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 208) };
     // SAFETY: both are live.
     if unsafe { ASN1_OCTET_STRING_cmp(ckid, skid) } == 0 {
-        if !str_.is_null() {
+        if !str_.as_ptr().is_null() {
             // SAFETY: `ctx` is live; `str_` is NUL-terminated.
             unsafe {
                 ossl_cmp_log_str(
@@ -513,16 +522,14 @@ unsafe fn check_kid(
                     207,
                     format_args!(
                         " subjectKID matches senderKID: {}",
-                        std::ffi::CStr::from_ptr(str_).to_string_lossy(),
+                        std::ffi::CStr::from_ptr(str_.as_ptr().cast::<c_char>()).to_string_lossy(),
                     ),
                 )
             };
         }
-        // SAFETY: `str_` is NULL or this call's own.
-        unsafe { CRYPTO_free(str_.cast(), FILE.as_ptr(), 208) };
         return 1;
     }
-    if !str_.is_null() {
+    if !str_.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str_` is NUL-terminated.
         unsafe {
             ossl_cmp_log_str(
@@ -533,16 +540,20 @@ unsafe fn check_kid(
                 213,
                 format_args!(
                     " cert Subject Key Identifier = {}",
-                    std::ffi::CStr::from_ptr(str_).to_string_lossy(),
+                    std::ffi::CStr::from_ptr(str_.as_ptr().cast::<c_char>()).to_string_lossy(),
                 ),
             )
         };
     }
-    // SAFETY: `str_` is NULL or this call's own.
-    unsafe { CRYPTO_free(str_.cast(), FILE.as_ptr(), 214) };
+    // The authority releases the string at its own line 214 on this arm.
+    str_.set_release_line(214);
     // SAFETY: `skid` is live.
     let str2 = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), skid) };
-    if !str2.is_null() {
+    // The string is the helper's own; the handle is its single release at the authority's own line.
+    // SAFETY: `str2` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
+    // owns.
+    let str2 = unsafe { OwnedBuf::adopt_plain_nullable(str2.cast(), SeamFile::new(FILE), 217) };
+    if !str2.as_ptr().is_null() {
         // SAFETY: `ctx` is live; `str2` is NUL-terminated.
         unsafe {
             ossl_cmp_log_str(
@@ -553,13 +564,11 @@ unsafe fn check_kid(
                 216,
                 format_args!(
                     " does not match senderKID    = {}",
-                    std::ffi::CStr::from_ptr(str2).to_string_lossy(),
+                    std::ffi::CStr::from_ptr(str2.as_ptr().cast::<c_char>()).to_string_lossy(),
                 ),
             )
         };
     }
-    // SAFETY: `str2` is NULL or this call's own.
-    unsafe { CRYPTO_free(str2.cast(), FILE.as_ptr(), 217) };
     0
 }
 
@@ -624,30 +633,42 @@ unsafe fn cert_acceptable(
             ),
         )
     };
-    // SAFETY: `cert` is live.
-    let sname = unsafe { X509_NAME_oneline(X509_get_subject_name(cert), ptr::null_mut(), 0) };
-    if !sname.is_null() {
-        // SAFETY: `ctx` is live; `sname` is NUL-terminated.
-        unsafe {
-            ossl_cmp_log_str(
-                OSSL_CMP_LOG_INFO,
-                ctx,
-                c"cert_acceptable",
-                FILE,
-                255,
-                format_args!(
-                    "  subject = {}",
-                    std::ffi::CStr::from_ptr(sname).to_string_lossy()
-                ),
-            )
-        };
+    {
+        // SAFETY: `cert` is live.
+        let sname = unsafe { X509_NAME_oneline(X509_get_subject_name(cert), ptr::null_mut(), 0) };
+        // The string is the printer's own; the handle is its single release at the authority's own
+        // line.
+        // SAFETY: `sname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else
+        // owns.
+        let sname =
+            unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), SeamFile::new(FILE), 256) };
+        if !sname.as_ptr().is_null() {
+            // SAFETY: `ctx` is live; `sname` is NUL-terminated.
+            unsafe {
+                ossl_cmp_log_str(
+                    OSSL_CMP_LOG_INFO,
+                    ctx,
+                    c"cert_acceptable",
+                    FILE,
+                    255,
+                    format_args!(
+                        "  subject = {}",
+                        std::ffi::CStr::from_ptr(sname.as_ptr().cast::<c_char>()).to_string_lossy()
+                    ),
+                )
+            };
+        }
     }
-    // SAFETY: `sname` is NULL or this call's own.
-    unsafe { CRYPTO_free(sname.cast(), FILE.as_ptr(), 256) };
     if !self_issued {
         // SAFETY: `cert` is live.
         let iname = unsafe { X509_NAME_oneline(X509_get_issuer_name(cert), ptr::null_mut(), 0) };
-        if !iname.is_null() {
+        // The string is the printer's own; the handle is its single release at the authority's own
+        // line.
+        // SAFETY: `iname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else
+        // owns.
+        let iname =
+            unsafe { OwnedBuf::adopt_plain_nullable(iname.cast(), SeamFile::new(FILE), 261) };
+        if !iname.as_ptr().is_null() {
             // SAFETY: `ctx` is live; `iname` is NUL-terminated.
             unsafe {
                 ossl_cmp_log_str(
@@ -658,13 +679,11 @@ unsafe fn cert_acceptable(
                     260,
                     format_args!(
                         "  issuer  = {}",
-                        std::ffi::CStr::from_ptr(iname).to_string_lossy()
+                        std::ffi::CStr::from_ptr(iname.as_ptr().cast::<c_char>()).to_string_lossy()
                     ),
                 )
             };
         }
-        // SAFETY: `iname` is NULL or this call's own.
-        unsafe { CRYPTO_free(iname.cast(), FILE.as_ptr(), 261) };
     }
 
     // SAFETY: `cert` is live; the two stacks are NULL or live.
@@ -1159,11 +1178,20 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
     let _ = scrt;
     // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
     let sname = unsafe { X509_NAME_oneline((*sender).d.directoryName, ptr::null_mut(), 0) };
+    // The string is the printer's own; the handle is its single release at the authority's own line.
+    // SAFETY: `sname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
+    let sname = unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), SeamFile::new(FILE), 534) };
     let skid_str = if skid.is_null() {
-        ptr::null_mut()
+        // SAFETY: the slot takes a NULL block, whose release is the no-op `free(NULL)`.
+        unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), 535) }
     } else {
         // SAFETY: `skid` is live.
-        unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), skid) }
+        let raw = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), skid) };
+        // The string is the helper's own; the handle is its single release at the authority's own
+        // line.
+        // SAFETY: `raw` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one else
+        // owns.
+        unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 535) }
     };
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).log_cb }.is_some() {
@@ -1177,7 +1205,7 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
                 c"trying to verify msg signature with a valid cert that..",
             );
         }
-        if !sname.is_null() {
+        if !sname.as_ptr().is_null() {
             // SAFETY: `ctx`/`sname` are live.
             unsafe {
                 ossl_cmp_log_str(
@@ -1188,12 +1216,12 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
                     513,
                     format_args!(
                         "matches msg sender    = {}",
-                        std::ffi::CStr::from_ptr(sname).to_string_lossy()
+                        std::ffi::CStr::from_ptr(sname.as_ptr().cast::<c_char>()).to_string_lossy()
                     ),
                 )
             };
         }
-        if !skid_str.is_null() {
+        if !skid_str.as_ptr().is_null() {
             // SAFETY: `ctx`/`skid_str` are live.
             unsafe {
                 ossl_cmp_log_str(
@@ -1204,7 +1232,8 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
                     515,
                     format_args!(
                         "matches msg senderKID = {}",
-                        std::ffi::CStr::from_ptr(skid_str).to_string_lossy()
+                        std::ffi::CStr::from_ptr(skid_str.as_ptr().cast::<c_char>())
+                            .to_string_lossy()
                     ),
                 )
             };
@@ -1230,25 +1259,23 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
 
     // SAFETY: the site is a compile-time constant.
     unsafe { raise_cmp(523, c"check_msg_find_cert", 145) };
-    if !sname.is_null() {
+    if !sname.as_ptr().is_null() {
         // SAFETY: `sname` is NUL-terminated.
         unsafe {
             ERR_add_error_txt(ptr::null(), c"for msg sender name = ".as_ptr());
-            ERR_add_error_txt(ptr::null(), sname);
+            ERR_add_error_txt(ptr::null(), sname.as_ptr().cast::<c_char>());
         }
     }
-    if !skid_str.is_null() {
+    if !skid_str.as_ptr().is_null() {
         // SAFETY: `skid_str` is NUL-terminated.
         unsafe {
             ERR_add_error_txt(c" and ".as_ptr(), c"for msg senderKID = ".as_ptr());
-            ERR_add_error_txt(ptr::null(), skid_str);
+            ERR_add_error_txt(ptr::null(), skid_str.as_ptr().cast::<c_char>());
         }
     }
-    // SAFETY: both are NULL or this call's own.
-    unsafe {
-        CRYPTO_free(sname.cast(), FILE.as_ptr(), 534);
-        CRYPTO_free(skid_str.cast(), FILE.as_ptr(), 535);
-    }
+    // The authority releases both strings at its own `:534`/`:535` sites, in that order.
+    drop(sname);
+    drop(skid_str);
     0
 }
 
@@ -1457,17 +1484,28 @@ unsafe fn check_transactionID_or_nonce(
         /* the authority raises with the two hex strings as error data */
         // SAFETY: `expected` is live.
         let expected_str = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), expected) };
+        // The string is the helper's own; the handle is its single release at the authority's own
+        // line.
+        // SAFETY: `expected_str` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no
+        // one else owns.
+        let expected_str = unsafe {
+            OwnedBuf::adopt_plain_nullable(expected_str.cast(), SeamFile::new(FILE), 668)
+        };
         let actual_str = if actual.is_null() {
-            ptr::null_mut()
+            // SAFETY: the slot takes a NULL block, whose release is the no-op `free(NULL)`.
+            unsafe { OwnedBuf::adopt_plain_nullable(ptr::null_mut(), SeamFile::new(FILE), 669) }
         } else {
             // SAFETY: `actual` is live.
-            unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), actual) }
+            let raw = unsafe { i2s_ASN1_OCTET_STRING(ptr::null_mut(), actual) };
+            // The string is the helper's own; the handle is its single release at the authority's
+            // own line.
+            // SAFETY: `raw` is NULL or a live C string `i2s_ASN1_OCTET_STRING` allocated and no one
+            // else owns.
+            unsafe { OwnedBuf::adopt_plain_nullable(raw.cast(), SeamFile::new(FILE), 669) }
         };
-        // SAFETY: the strings are NULL or this call's own.
-        unsafe {
-            CRYPTO_free(expected_str.cast(), FILE.as_ptr(), 668);
-            CRYPTO_free(actual_str.cast(), FILE.as_ptr(), 669);
-        }
+        // The authority releases both strings at its own `:668`/`:669` sites, in that order.
+        drop(expected_str);
+        drop(actual_str);
         return 0;
     }
     1
@@ -1524,8 +1562,11 @@ pub(crate) unsafe fn ossl_cmp_msg_check_update(
         {
             // SAFETY: `dname` is live.
             let str_ = unsafe { X509_NAME_oneline(dname, ptr::null_mut(), 0) };
-            // SAFETY: `str_` is NULL or this call's own.
-            unsafe { CRYPTO_free(str_.cast(), FILE.as_ptr(), 730) };
+            // The string is the printer's own; the handle is its single release at the authority's
+            // own line.
+            // SAFETY: `str_` is NULL or a live C string `X509_NAME_oneline` allocated and no one
+            // else owns.
+            drop(unsafe { OwnedBuf::adopt_plain_nullable(str_.cast(), SeamFile::new(FILE), 730) });
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cmp(728, c"ossl_cmp_msg_check_update", 106) };
             return 0;

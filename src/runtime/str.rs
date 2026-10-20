@@ -33,19 +33,29 @@
 //! exists to paper over the two `strerror_r` ABIs, and the admitted profile has
 //! exactly one of them.
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
+#[cfg(test)]
+use core::ffi::c_void;
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     O_STR_229, O_STR_235, O_STR_241, O_STR_270, O_STR_303, O_STR_315, O_STR_352,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+#[cfg(test)]
+use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem::CRYPTO_zalloc;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use crate::runtime::bio::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `DEFAULT_SEPARATOR` — the `:` the two convenience entry points separate with.
 const DEFAULT_SEPARATOR: c_char = b':' as c_char;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
 
 /// `ossl_tolower(c)` from `crypto/ctype.c`.
 ///
@@ -367,26 +377,23 @@ unsafe fn ossl_hexstr2buf_sep(
         return core::ptr::null_mut();
     }
     buf_n /= 2;
-    // SAFETY: a plain allocation of `buf_n` bytes.
-    let buf = CRYPTO_malloc(buf_n, core::ptr::null(), 0).cast::<c_uchar>();
-    if buf.is_null() {
+    let Some(buf) = OwnedBuf::new(buf_n, SeamFile::NULL, 0) else {
         return core::ptr::null_mut();
-    }
+    };
     if !buflen.is_null() {
         // SAFETY: `buflen` is writable per the caller's contract.
         unsafe { *buflen = 0 };
     }
     let mut tmp_buflen = 0usize;
     // SAFETY: `buf` is writable for `buf_n` bytes; `str_` is NUL-terminated.
-    if unsafe { hexstr2buf_sep(buf, buf_n, &mut tmp_buflen, str_, sep) } != 0 {
+    if unsafe { hexstr2buf_sep(buf.as_ptr(), buf_n, &mut tmp_buflen, str_, sep) } != 0 {
         if !buflen.is_null() {
             // SAFETY: `buflen` is writable per the caller's contract.
             unsafe { *buflen = tmp_buflen as c_long };
         }
-        return buf;
+        return buf.into_raw();
     }
-    // SAFETY: `buf` came from `CRYPTO_malloc` above.
-    unsafe { CRYPTO_free(buf.cast::<c_void>(), core::ptr::null(), 0) };
+    // `buf`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
     core::ptr::null_mut()
 }
 
@@ -444,6 +451,11 @@ unsafe fn buf2hexstr_sep(
         unsafe { raise_site(&O_STR_303) };
         return 0;
     }
+    // The authority's `if (len == 0) ++len;`: with a separator and no input bytes
+    // the encoding is still one NUL byte, so the length and the writable extent
+    // must both be 1. Without this clamp an empty `OPENSSL_buf2hexstr_ex` call
+    // reports length 0 and writes one byte through the caller's `str`.
+    let len = if len == 0 { 1 } else { len };
 
     if !strlength.is_null() {
         // SAFETY: `strlength` is writable per the caller's contract.
@@ -514,7 +526,11 @@ pub unsafe extern "C" fn OPENSSL_buf2hexstr_ex(
 unsafe fn ossl_buf2hexstr_sep(buf: *const c_uchar, buflen: c_long, sep: c_char) -> *mut c_char {
     if buflen == 0 {
         // SAFETY: a plain zeroed allocation of one byte.
-        return CRYPTO_zalloc(1, core::ptr::null(), 0).cast::<c_char>();
+        return unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(1, core::ptr::null(), 0)
+        }
+        .cast::<c_char>();
     }
 
     let has_sep = promoted(sep) != 0;
@@ -532,18 +548,25 @@ unsafe fn ossl_buf2hexstr_sep(buf: *const c_uchar, buflen: c_long, sep: c_char) 
     }
 
     let tmp_n = if has_sep { wide * 3 } else { 1 + wide * 2 };
-    // SAFETY: a plain allocation of `tmp_n` bytes.
-    let tmp = CRYPTO_malloc(tmp_n, core::ptr::null(), 0).cast::<c_char>();
-    if tmp.is_null() {
+    let Some(tmp) = OwnedBuf::new(tmp_n, SeamFile::NULL, 0) else {
         return core::ptr::null_mut();
-    }
+    };
 
     // SAFETY: `tmp` is writable for `tmp_n` bytes; `buf` is readable for `wide`.
-    if unsafe { buf2hexstr_sep(tmp, tmp_n, core::ptr::null_mut(), buf, wide, sep) } != 0 {
-        return tmp;
+    if unsafe {
+        buf2hexstr_sep(
+            tmp.as_ptr().cast::<c_char>(),
+            tmp_n,
+            core::ptr::null_mut(),
+            buf,
+            wide,
+            sep,
+        )
+    } != 0
+    {
+        return tmp.into_raw().cast::<c_char>();
     }
-    // SAFETY: `tmp` came from `CRYPTO_malloc` above.
-    unsafe { CRYPTO_free(tmp.cast::<c_void>(), core::ptr::null(), 0) };
+    // `tmp`'s `Drop` is the authority's own `CRYPTO_free` on this failure tail.
     core::ptr::null_mut()
 }
 
@@ -828,6 +851,62 @@ mod tests {
         };
         assert_eq!(rc, 1);
         assert_eq!(need, 9, "3 bytes as 8 digits plus 2 separators plus NUL");
+    }
+
+    #[test]
+    fn buf2hexstr_ex_empty_with_separator_requires_one_byte() {
+        let mut need = 0usize;
+        // Measuring form: the empty encoding still includes the terminator (the
+        // authority's `if (len == 0) ++len;`).
+        // SAFETY: `need` is writable; a NULL `str` is the measuring form and a
+        // NULL `buf` is never read when `buflen` is 0.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                core::ptr::null_mut(),
+                0,
+                &mut need,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 1);
+        assert_eq!(need, 1);
+
+        // A zero-byte destination is too small rather than silently overrun.
+        let mut out = [0xAAu8; 1];
+        let mut got = usize::MAX;
+        // SAFETY: `out` is writable for zero bytes, `got` is writable, and the
+        // empty input has no readable requirement.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                out.as_mut_ptr().cast::<c_char>(),
+                0,
+                &mut got,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 0);
+        assert_eq!(out[0], 0xAA, "the refused call must not write");
+        assert_eq!(got, 1, "the authority reports the required length first");
+
+        // One byte is enough and receives the terminator.
+        // SAFETY: `out` is writable for one byte and `got` is writable.
+        let rc = unsafe {
+            OPENSSL_buf2hexstr_ex(
+                out.as_mut_ptr().cast::<c_char>(),
+                out.len(),
+                &mut got,
+                core::ptr::null(),
+                0,
+                b':' as c_char,
+            )
+        };
+        assert_eq!(rc, 1);
+        assert_eq!(got, 1);
+        assert_eq!(out[0], 0);
     }
 
     #[test]

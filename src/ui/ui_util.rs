@@ -69,6 +69,62 @@ struct PemPasswordCbData {
     rwflag: c_int,
 }
 
+/// An owned `struct pem_password_cb_data` block allocated through the crate's allocator seam.
+///
+/// The block stays a `CRYPTO_zalloc`/`OPENSSL_free` at the authority's own `(NULL, 0)` site -- the
+/// wrapper's `OPENSSL_zalloc`, `ui_dup_method_data`'s `OPENSSL_memdup` and the ex-data free
+/// callback's `OPENSSL_free` all record that coordinate -- so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes it. Only its *ownership* is this type: [`Self::zalloc`]
+/// allocates it, [`Self::adopt`] takes up a block the ex-data machinery hands over, `Drop` is its
+/// single release, and [`Self::into_raw`] hands it to the method's ex-data slot.
+struct OwnedPwData {
+    ptr: ptr::NonNull<PemPasswordCbData>,
+}
+
+impl OwnedPwData {
+    /// `OPENSSL_zalloc(sizeof(struct pem_password_cb_data))`, or `None` when it answers NULL.
+    fn zalloc() -> Option<OwnedPwData> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<PemPasswordCbData>()` bytes, which is exactly the struct's layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<PemPasswordCbData>(), ptr::null(), 0)
+        }
+        .cast::<PemPasswordCbData>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedPwData { ptr })
+    }
+
+    /// Adopt a block the ex-data machinery hands over, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block this type allocated through the crate's allocator seam that no
+    /// other owner will release -- this handle's `Drop` is its single release.
+    unsafe fn adopt(ptr: *mut PemPasswordCbData) -> Option<OwnedPwData> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedPwData { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut PemPasswordCbData {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the method's ex-data slot.
+    fn into_raw(self) -> *mut PemPasswordCbData {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPwData {
+    /// The block's single release at the authority's `OPENSSL_free(data)` site (`NULL`, `0`).
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0) };
+    }
+}
+
 /// `static int ui_method_data_index = -1;` — `crypto/ui/ui_util.c:81`.
 ///
 /// An `AtomicI32` rather than a `static mut`, for the reason the crate gives everywhere it needs
@@ -135,8 +191,10 @@ unsafe extern "C" fn ui_free_method_data(
     _argl: c_long,
     _argp: *mut c_void,
 ) {
-    // SAFETY: `data` is the slot's data, allocated by `ui_dup_method_data` or the wrapper.
-    unsafe { CRYPTO_free(data, ptr::null(), 0) };
+    // SAFETY: `data` is the slot's data, allocated by `ui_dup_method_data` or the wrapper; it is
+    // NULL or this unit's own block and no other owner releases it -- the handle's `Drop` is its
+    // single release.
+    drop(unsafe { OwnedPwData::adopt(data.cast::<PemPasswordCbData>()) });
 }
 
 /// `DEFINE_RUN_ONCE_STATIC(ui_method_data_index_init)` — the once body,
@@ -347,51 +405,45 @@ pub unsafe extern "C" fn UI_UTIL_wrap_read_pem_callback(
     cb: Option<PemPasswordCb>,
     rwflag: c_int,
 ) -> *mut UiMethod {
-    let mut ui_method: *mut UiMethod = ptr::null_mut();
-
-    // SAFETY: the constructor takes a size and the file/line pair; it reads nothing else.
-    let data =
-        CRYPTO_zalloc(size_of::<PemPasswordCbData>(), ptr::null(), 0).cast::<PemPasswordCbData>();
-    let ok = !data.is_null();
-    if ok {
-        // SAFETY: the literal is readable and NUL-terminated.
-        ui_method = unsafe { UI_create_method(c"PEM password callback wrapper".as_ptr()) };
-        if ui_method.is_null()
-            // SAFETY: `ui_method` is live and each callback has the method's own signature.
-            || unsafe {
-                UI_method_set_opener(ui_method, Some(ui_open))
-                    | UI_method_set_reader(ui_method, Some(ui_read))
-                    | UI_method_set_writer(ui_method, Some(ui_write))
-                    | UI_method_set_closer(ui_method, Some(ui_close))
-            } < 0
-            || !run_once_get_index()
-            // SAFETY: `ui_method` is live and `data` is the allocation made above.
-            || unsafe {
-                UI_method_set_ex_data(
-                    ui_method,
-                    UI_METHOD_DATA_INDEX.load(Ordering::Acquire),
-                    data.cast::<c_void>(),
-                )
-            } == 0
-        {
-            // SAFETY: both are NULL or live; `UI_destroy_method` accepts NULL.
-            unsafe {
-                UI_destroy_method(ui_method);
-                CRYPTO_free(data.cast::<c_void>(), ptr::null(), 0);
-            }
-            return ptr::null_mut();
-        }
-    }
-
-    if data.is_null() {
+    // The wrapper's own `struct pem_password_cb_data`. The handle releases it through the crate's
+    // allocator seam on every failure path below, and `into_raw` hands it to the method's ex-data
+    // slot on success.
+    let Some(data) = OwnedPwData::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: the literal is readable and NUL-terminated.
+    let ui_method = unsafe { UI_create_method(c"PEM password callback wrapper".as_ptr()) };
+    if ui_method.is_null()
+        // SAFETY: `ui_method` is live and each callback has the method's own signature.
+        || unsafe {
+            UI_method_set_opener(ui_method, Some(ui_open))
+                | UI_method_set_reader(ui_method, Some(ui_read))
+                | UI_method_set_writer(ui_method, Some(ui_write))
+                | UI_method_set_closer(ui_method, Some(ui_close))
+        } < 0
+        || !run_once_get_index()
+        // SAFETY: `ui_method` is live and `data` is this call's own allocation, handed to the slot.
+        || unsafe {
+            UI_method_set_ex_data(
+                ui_method,
+                UI_METHOD_DATA_INDEX.load(Ordering::Acquire),
+                data.as_ptr().cast::<c_void>(),
+            )
+        } == 0
+    {
+        // SAFETY: both are NULL or live; `UI_destroy_method` accepts NULL. `data`'s `Drop` releases
+        // the block on this path.
+        unsafe { UI_destroy_method(ui_method) };
         return ptr::null_mut();
     }
 
-    // SAFETY: `data` is the live allocation made above and not yet handed to anyone else.
+    // SAFETY: `data` is this call's own fresh block and not yet handed to any other owner.
     unsafe {
-        (*data).rwflag = rwflag;
-        (*data).cb = cb.unwrap_or(PEM_def_callback);
+        (*data.as_ptr()).rwflag = rwflag;
+        (*data.as_ptr()).cb = cb.unwrap_or(PEM_def_callback);
     }
+    // The ex-data slot now owns the block; give up the handle's ownership.
+    let _ = data.into_raw();
     ui_method
 }
 

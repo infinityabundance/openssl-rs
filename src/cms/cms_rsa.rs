@@ -37,14 +37,16 @@ use crate::rsa::ctrl::{
 use crate::rsa::RsaOaepParams;
 use crate::runtime::err::err_reasons;
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem::CRYPTO_memdup;
 use crate::runtime::obj::{
     Asn1Object, NID_pSpecified, NID_rsaEncryption, NID_rsaesOaep, OBJ_find_sigid_algs, OBJ_nid2obj,
     OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::{CmsRecipientInfo, CmsSignerInfo};
 use super::cms_lib::raise_cms;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `ERR_LIB_RSA` — `include/openssl/err.h.in:84`.
 const ERR_LIB_RSA: c_int = 4;
@@ -131,7 +133,11 @@ unsafe fn rsa_cms_sign(si: *mut CmsSignerInfo) -> c_int {
         return 0;
     }
     let aid_len = params[0].return_size;
-    if aid_len == 0 {
+    // The provider writes into `aid` and reports the bytes it produced. A conforming provider
+    // never reports more than the buffer it was handed; bound the report anyway so a
+    // non-conforming provider cannot turn `d2i_X509_ALGOR` into an out-of-bounds read of this
+    // stack buffer (the authority trusts the report and would read past `aid`).
+    if aid_len == 0 || aid_len > aid.len() {
         return 0;
     }
     // SAFETY: `pp` is readable for `aid_len`.
@@ -338,18 +344,30 @@ unsafe fn rsa_cms_decrypt(ri: *mut CmsRecipientInfo) -> c_int {
         }
         if !label.is_null() {
             // SAFETY: `label` is readable for `labellen`.
-            let dup_label = unsafe {
+            let dup_label_raw = unsafe {
                 CRYPTO_memdup(label.cast(), labellen as usize, c"cms_rsa.c".as_ptr(), 103)
+                    .cast::<c_uchar>()
             };
-            if dup_label.is_null() {
+            if dup_label_raw.is_null() {
                 break 'body;
             }
-            // SAFETY: `pkctx` is live; `dup_label` ownership transfers.
-            if unsafe { EVP_PKEY_CTX_set0_rsa_oaep_label(pkctx, dup_label, labellen) } <= 0 {
-                // SAFETY: `dup_label` is owned here.
-                unsafe { CRYPTO_free(dup_label, c"cms_rsa.c".as_ptr(), 109) };
+            // The duplicated label is the helper's own `CRYPTO_malloc` block; it is adopted so the
+            // failure path below releases what it built at the authority's own site.
+            // SAFETY: `dup_label_raw` is a live block `CRYPTO_memdup` allocated and no one owns.
+            let dup_label = unsafe {
+                OwnedBuf::adopt_plain_nullable(dup_label_raw, SeamFile::new(c"cms_rsa.c"), 109)
+            };
+            // SAFETY: `pkctx` is live; `dup_label` is `labellen` readable bytes.
+            if unsafe {
+                EVP_PKEY_CTX_set0_rsa_oaep_label(pkctx, dup_label.as_ptr().cast(), labellen)
+            } <= 0
+            {
+                // `dup_label` releases its own block at the authority's own site on drop.
                 break 'body;
             }
+            // Ownership of the block moves into `pkctx`, which frees it; give up the handle without
+            // running its release.
+            let _ = dup_label.into_raw();
         }
         rv = 1;
     }

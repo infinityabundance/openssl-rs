@@ -270,8 +270,9 @@ type Transform = unsafe fn(*mut c_void, *const c_uchar);
 /// `tls-data-size` arm of `hmac_prov.c`.
 ///
 /// # Safety
-/// Every pointer above is live for the length stated, `md_out` is writable for the digest's size,
-/// and `md_out_size` is NULL or writable.
+/// Every pointer above is live for the length stated (with `mac_secret` allowed to be NULL only
+/// when `mac_secret_length` is 0), `md_out` is writable for the digest's size, and `md_out_size`
+/// is NULL or writable.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 pub(crate) unsafe fn ssl3_cbc_digest_record(
     md: *const EvpMd,
@@ -463,7 +464,11 @@ pub(crate) unsafe fn ssl3_cbc_digest_record(
             if ossl_assert(mac_secret_length <= MAX_HASH_BLOCK_SIZE) == 0 {
                 return 0;
             }
-            ptr::copy_nonoverlapping(mac_secret, hmac_pad.as_mut_ptr(), mac_secret_length);
+            // A zero-length copy must not require a non-NULL source in Rust (the authority's
+            // `memcpy(..., 0)` performs no access either); the copy is skipped for an empty key.
+            if mac_secret_length != 0 {
+                ptr::copy_nonoverlapping(mac_secret, hmac_pad.as_mut_ptr(), mac_secret_length);
+            }
             for byte in hmac_pad.iter_mut().take(md_block_size) {
                 *byte ^= 0x36;
             }

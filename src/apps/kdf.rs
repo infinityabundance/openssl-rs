@@ -46,7 +46,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::apps::openssl::not_landed;
@@ -62,7 +62,9 @@ use crate::runtime::bio::bss_file::{BIO_new_file, BIO_new_fp};
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::sys::{stdin, stdout};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_buf2hexstr;
 
 /// `atoi(s)` — the `stdlib.h` decimal conversion `-keylen` uses
@@ -91,12 +93,9 @@ fn atoi(s: &str) -> c_int {
     }
 }
 
-/// `app_malloc(num, ...)` — `apps/lib/apps.c`, reduced to the allocation the body
-/// observes.
-fn app_malloc(num: usize) -> *mut c_void {
-    // SAFETY: a non-zero size and a static file/line label.
-    CRYPTO_malloc(num, c"apps/kdf.c".as_ptr(), 182)
-}
+// ---------------------------------------------------------------------------------------------
+// Ownership of the derived key and its rendering
+// ---------------------------------------------------------------------------------------------
 
 /// `app_params_new_from_opts(opts, paramdefs)` — `apps/lib/apps.c:3477-3523`,
 /// transcribed inline (see the header). Returns a `key`-terminated `OSSL_PARAM`
@@ -108,12 +107,18 @@ fn app_params_new_from_opts(opts: &[String], paramdefs: *const OsslParam) -> *mu
     }
     let sz = opts.len();
     // `params = OPENSSL_calloc(sz + 1, sizeof(OSSL_PARAM));` —
-    // `apps/lib/apps.c:3489-3491`.
-    let params = CRYPTO_zalloc(
-        (sz + 1) * core::mem::size_of::<OsslParam>(),
-        c"apps/lib/apps.c".as_ptr(),
-        3489,
-    )
+    // `apps/lib/apps.c:3489-3491`. `OPENSSL_calloc` rejects an overflowing
+    // `nmemb * size`; make that overflow explicit instead of wrapping here.
+    let Some(entry_count) = sz.checked_add(1) else {
+        return ptr::null_mut();
+    };
+    let Some(block_size) = entry_count.checked_mul(core::mem::size_of::<OsslParam>()) else {
+        return ptr::null_mut();
+    };
+    let params = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(block_size, c"apps/lib/apps.c".as_ptr(), 3489)
+    }
     .cast::<OsslParam>();
     if params.is_null() {
         return ptr::null_mut();
@@ -374,9 +379,11 @@ pub fn main(argv: &[String]) -> i32 {
     }
 
     // `dkm_bytes = app_malloc(dkm_len, "out buffer"); if (dkm_bytes == NULL) goto
-    // err;` — `apps/kdf.c:182-184`.
-    let dkm_bytes = app_malloc(dkm_len as usize).cast::<u8>();
-    if dkm_bytes.is_null() {
+    // err;` — `apps/kdf.c:182-184`. The block is the derived key, so its release on every exit
+    // below is the authority's own cleansing `OPENSSL_clear_free(dkm_bytes, dkm_len)` at `:206`.
+    let Some(dkm_bytes) =
+        OwnedBuf::new_cleansed_at(dkm_len as usize, SeamFile::new(c"apps/kdf.c"), 182, 206)
+    else {
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
         unsafe { BIO_free(out) };
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
@@ -384,16 +391,16 @@ pub fn main(argv: &[String]) -> i32 {
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
         unsafe { EVP_KDF_free(kdf) };
         return ret;
-    }
+    };
 
     // `if (!EVP_KDF_derive(ctx, dkm_bytes, dkm_len, NULL)) { BIO_printf(bio_err,
     // "EVP_KDF_derive failed\n"); goto err; }` — `apps/kdf.c:186-189`.
     // SAFETY: `ctx` is live and `dkm_bytes` is `dkm_len` writable bytes.
-    if unsafe { EVP_KDF_derive(ctx, dkm_bytes, dkm_len as usize, ptr::null()) } == 0 {
+    if unsafe { EVP_KDF_derive(ctx, dkm_bytes.as_ptr(), dkm_len as usize, ptr::null()) } == 0 {
         eprintln!("EVP_KDF_derive failed");
-        // SAFETY: `dkm_bytes` is the block from `app_malloc`; freed under
-        // `OPENSSL_clear_free`.
-        unsafe { CRYPTO_free(dkm_bytes.cast(), c"apps/kdf.c".as_ptr(), 206) };
+        // The derived key's release is the authority's own cleansing
+        // `OPENSSL_clear_free(dkm_bytes, dkm_len)` at `:206`.
+        drop(dkm_bytes);
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
         unsafe { BIO_free(out) };
         // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
@@ -406,16 +413,20 @@ pub fn main(argv: &[String]) -> i32 {
     if out_bin {
         // `BIO_write(out, dkm_bytes, dkm_len);` — `apps/kdf.c:192`.
         // SAFETY: `out` is live and `dkm_bytes` is `dkm_len` readable bytes.
-        unsafe { crate::runtime::bio::iolib::BIO_write(out, dkm_bytes.cast(), dkm_len) };
+        unsafe { crate::runtime::bio::iolib::BIO_write(out, dkm_bytes.as_ptr().cast(), dkm_len) };
     } else {
         // `hexout = OPENSSL_buf2hexstr(dkm_bytes, dkm_len); ... BIO_printf(out,
         // "%s\n\n", hexout);` — `apps/kdf.c:194-199`.
         // SAFETY: `dkm_bytes` is `dkm_len` readable bytes.
-        let hexout = unsafe { OPENSSL_buf2hexstr(dkm_bytes, dkm_len as c_long) };
-        if hexout.is_null() {
+        let hexout = unsafe { OPENSSL_buf2hexstr(dkm_bytes.as_ptr(), dkm_len as c_long) };
+        // The rendering is adopted under the authority's own plain `OPENSSL_free(hexout)` at
+        // `:211`; `adopt` answers `None` for the allocation's NULL, which is the failure branch.
+        // SAFETY: `hexout` is NULL or the one block this call's `OPENSSL_buf2hexstr` allocated.
+        let Some(hexout) = (unsafe {
+            OwnedBuf::adopt_plain(hexout.cast::<c_uchar>(), SeamFile::new(c"apps/kdf.c"), 211)
+        }) else {
             eprintln!("Memory allocation failure");
-            // SAFETY: `dkm_bytes` is the block from `app_malloc`.
-            unsafe { CRYPTO_free(dkm_bytes.cast(), c"apps/kdf.c".as_ptr(), 206) };
+            drop(dkm_bytes);
             // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
             unsafe { BIO_free(out) };
             // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
@@ -423,21 +434,27 @@ pub fn main(argv: &[String]) -> i32 {
             // SAFETY: `out`/`ctx`/`kdf` are live and not freed again.
             unsafe { EVP_KDF_free(kdf) };
             return ret;
-        }
+        };
         // `BIO_printf(out, "%s\n\n", hexout);` — `apps/kdf.c:199`.
         // SAFETY: `out` is live and `hexout` is NUL-terminated.
-        unsafe { BIO_printf(out, c"%s\n\n".as_ptr(), hexout.cast_const()) };
-        // SAFETY: `hexout` is the block from `OPENSSL_buf2hexstr`.
-        unsafe { CRYPTO_free(hexout.cast(), c"apps/kdf.c".as_ptr(), 211) };
+        unsafe {
+            BIO_printf(
+                out,
+                c"%s\n\n".as_ptr(),
+                hexout.as_ptr().cast::<c_char>().cast_const(),
+            )
+        };
+        drop(hexout);
     }
 
     // `ret = 0;` — `apps/kdf.c:202`.
     ret = 0;
 
     // `err: if (ret != 0) ERR_print_errors(bio_err); OPENSSL_clear_free(dkm_bytes,
-    // dkm_len); ... BIO_free(out); ...` — `apps/kdf.c:203-214`.
-    // SAFETY: `dkm_bytes` is the block from `app_malloc`.
-    unsafe { CRYPTO_free(dkm_bytes.cast(), c"apps/kdf.c".as_ptr(), 206) };
+    // dkm_len); ... BIO_free(out); ...` — `apps/kdf.c:203-214`. `dkm_bytes` is the derived key
+    // and its release is the authority's own cleansing `OPENSSL_clear_free` at `:206`, run here by
+    // `Drop`.
+    drop(dkm_bytes);
     // SAFETY: `out` is live and not freed again.
     unsafe { BIO_free(out) };
     // SAFETY: `ctx` is live and not freed again.

@@ -42,9 +42,9 @@ use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
+use crate::runtime::bio::owned::OwnedCtx;
 use crate::runtime::ctype::{ossl_isalpha, ossl_isdigit};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::CRYPTO_zalloc;
 use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
@@ -258,18 +258,21 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_new(
         return ptr::null_mut();
     }
 
-    // SAFETY: the constructor asks only for a zeroed block of the object's size.
-    let res = CRYPTO_zalloc(core::mem::size_of::<OsslStoreLoader>(), ptr::null(), 0)
-        .cast::<OsslStoreLoader>();
-    if res.is_null() {
+    // A zeroed loader is the authority's constructed state (see the `CtxDestroy` impl in
+    // `store_meth.rs`: NULL `prov`, zero refcount, all-NULL callbacks), so the owner's
+    // valid-`T` transition holds. `OwnedCtx` allocates at the same `(NULL, 0)` seam coordinate
+    // as the authority's `CRYPTO_zalloc` and owns the block until `into_raw` hands it out.
+    let Some(res) = OwnedCtx::<OsslStoreLoader>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `res` is a fresh, uniquely-owned block.
+    };
+    let loader = res.as_ptr();
+    // SAFETY: `loader` is fresh and uniquely owned; both fields are plain pointers.
     unsafe {
-        (*res).engine = e;
-        (*res).scheme = scheme;
+        (*loader).engine = e;
+        (*loader).scheme = scheme;
     }
-    res
+    // The C caller now owns the loader; `OSSL_STORE_LOADER_free` reclaims it.
+    res.into_raw()
 }
 
 /// `const ENGINE *OSSL_STORE_LOADER_get0_engine(const OSSL_STORE_LOADER *loader)` —

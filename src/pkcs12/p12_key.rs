@@ -59,7 +59,8 @@ use crate::params::{
 };
 use crate::pkcs12::p12_utl::{OPENSSL_asc2uni, OPENSSL_utf82uni};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_clear_free;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/pkcs12/p12_key.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
 const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_key.c";
@@ -77,6 +78,13 @@ const OSSL_KDF_PARAM_SALT: *const c_char = c"salt".as_ptr();
 const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
 /// `OSSL_KDF_PARAM_ITER` — `include/openssl/core_names.h:290`, `"iter"`.
 const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
+
+// The converted password buffer and its single, *cleansing* release.
+//
+// `OPENSSL_asc2uni`/`OPENSSL_utf82uni` answer a fresh block the caller owns; the bytes are
+// password material, so the authority releases them with `OPENSSL_clear_free(unipass, uniplen)`
+// after cleansing exactly `uniplen` bytes. `OwnedBuf::adopt_cleansed` records that length and
+// the authority's release line, so `Drop` reproduces the same free at the same coordinates.
 
 /// `PKCS12_key_gen_asc_ex` — `crypto/pkcs12/p12_key.c:19-39`.
 ///
@@ -115,16 +123,30 @@ pub unsafe extern "C" fn PKCS12_key_gen_asc_ex(
             return 0;
         }
     }
-    // SAFETY: `unipass`/`uniplen` describe the conversion's own buffer, or are NULL/0; the rest of
-    // the arguments are forwarded under this function's contract.
+    // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
+    // owner's `Drop` is its single, cleansing release at `p12_key.c:37`.
+    let unipass = unsafe {
+        OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, SeamFile::new(FILE), 37)
+    };
+    // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
+    // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass, uniplen, salt, saltlen, id, iter, n, out, md_type, ctx, propq,
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr()),
+            uniplen,
+            salt,
+            saltlen,
+            id,
+            iter,
+            n,
+            out,
+            md_type,
+            ctx,
+            propq,
         )
     };
-    // SAFETY: `unipass` is the conversion's own buffer of `uniplen` bytes (or NULL/0), and it is a
-    // password, so it is cleansed before release.
-    unsafe { CRYPTO_clear_free(unipass.cast(), uniplen.max(0) as usize, FILE.as_ptr(), 37) };
+    // The owner drops here, reproducing the authority's free after the KDF call.
+    drop(unipass);
     c_int::from(ret > 0)
 }
 
@@ -200,16 +222,30 @@ pub unsafe extern "C" fn PKCS12_key_gen_utf8_ex(
             return 0;
         }
     }
-    // SAFETY: `unipass`/`uniplen` describe the conversion's own buffer, or are NULL/0; the rest of
-    // the arguments are forwarded under this function's contract.
+    // SAFETY: `unipass` is NULL or the conversion's fresh exclusive block of `uniplen` bytes; the
+    // owner's `Drop` is its single, cleansing release at `p12_key.c:67`.
+    let unipass = unsafe {
+        OwnedBuf::adopt_cleansed(unipass, uniplen.max(0) as usize, SeamFile::new(FILE), 67)
+    };
+    // SAFETY: the raw pointer and length describe the conversion's own buffer, or are NULL/0; the
+    // rest of the arguments are forwarded under this function's contract.
     let ret = unsafe {
         PKCS12_key_gen_uni_ex(
-            unipass, uniplen, salt, saltlen, id, iter, n, out, md_type, ctx, propq,
+            unipass.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr()),
+            uniplen,
+            salt,
+            saltlen,
+            id,
+            iter,
+            n,
+            out,
+            md_type,
+            ctx,
+            propq,
         )
     };
-    // SAFETY: `unipass` is the conversion's own buffer of `uniplen` bytes (or NULL/0), and it is a
-    // password, so it is cleansed before release.
-    unsafe { CRYPTO_clear_free(unipass.cast(), uniplen.max(0) as usize, FILE.as_ptr(), 67) };
+    // The owner drops here, reproducing the authority's free after the KDF call.
+    drop(unipass);
     c_int::from(ret > 0)
 }
 
@@ -435,5 +471,49 @@ mod tests {
         };
         assert_eq!(rc, 0);
         ERR_clear_error();
+    }
+}
+
+/// Cleansed-release boundary court for the password owner ([`OwnedBuf`], §16).
+///
+/// `OPENSSL_clear_free` is the authority's release for password material; the allocator hook reads
+/// the block before forwarding the release, so a `Drop` that freed without cleansing cannot pass.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_malloc;
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn unipass_drop_cleanses_before_release() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        const LEN: usize = 16;
+
+        // `CRYPTO_malloc` is safe; `p` is a fresh block of `LEN` bytes owned by this frame.
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(LEN, FILE.as_ptr(), 37)
+        }
+        .cast::<c_uchar>();
+        assert!(!p.is_null(), "the password canary block must allocate");
+        // SAFETY: `p` is the fresh `LEN`-byte block above and is not yet owned elsewhere.
+        unsafe { core::ptr::write_bytes(p, 0xAA, LEN) };
+
+        adv_alloc::reset();
+        // SAFETY: `p` is the live `LEN`-byte block above; the hook reads exactly those bytes
+        // before forwarding the release.
+        unsafe { adv_alloc::arm_cleansed_free(LEN) };
+        // SAFETY: `p` is the live `LEN`-byte block and the shared owner becomes its sole owner;
+        // `Drop` releases it exactly once through the authority's `CRYPTO_clear_free`.
+        drop(unsafe { OwnedBuf::adopt_cleansed(p, LEN, SeamFile::new(FILE), 37) });
+
+        adv_alloc::assert_not_cleansed();
+        adv_alloc::assert_no_double_free();
     }
 }

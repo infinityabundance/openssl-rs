@@ -48,6 +48,8 @@ use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
 use crate::runtime::bio::{BIO_free, BIO_read};
 use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::selftest::OsslCallback;
 
 /// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY`/`_PUBLIC_KEY` — `core_dispatch.h:640-641`.
@@ -98,25 +100,78 @@ pub(crate) struct Msblob2keyCtx {
     selection: c_int,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the decoder context and of the blob-body scratch
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `Msblob2keyCtx` block.
+///
+/// The block keeps its layout and its stable address (the dispatch hands it to the `decode` and
+/// `export_object` callbacks as `*mut c_void`), but its *ownership* is this type: [`Self::new`]
+/// allocates it through the crate's allocator seam, `Drop` is its single release, and
+/// [`Self::into_raw`]/[`Self::from_raw`] cross only at the `newctx`/`freectx` ABI boundary. The
+/// block stays a `CRYPTO_malloc` at the authority's own size rather than a Rust `Box` so a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation exactly as it
+/// observes the authority's.
+struct OwnedCtx {
+    ptr: ptr::NonNull<Msblob2keyCtx>,
+}
+
+impl OwnedCtx {
+    /// `CRYPTO_malloc(size_of::<Msblob2keyCtx>(), NULL, 0)` zeroed as the authority's
+    /// `OPENSSL_zalloc` would, or `None` when the allocator answers NULL.
+    fn new(provctx: *mut c_void, desc: *const KeytypeDesc) -> Option<OwnedCtx> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<Msblob2keyCtx>(), ptr::null(), 0)
+        }
+        .cast::<Msblob2keyCtx>();
+        let ptr = ptr::NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh, exclusively owned block of exactly `Msblob2keyCtx`'s size and
+        // alignment; zeroing it makes every field (two raw pointers and an `int`) a valid value.
+        unsafe {
+            ptr::write_bytes(ptr.as_ptr(), 0, 1);
+            (*ptr.as_ptr()).provctx = provctx;
+            (*ptr.as_ptr()).desc = desc;
+        }
+        Some(OwnedCtx { ptr })
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut Msblob2keyCtx {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut Msblob2keyCtx) -> Option<OwnedCtx> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl Drop for OwnedCtx {
+    /// The context's single release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0) };
+    }
+}
+
 /// `static struct msblob2key_ctx_st *msblob2key_newctx(void *provctx,
 /// const struct keytype_desc_st *desc)` — `decode_msblob2key.c:63-73`.
 ///
 /// # Safety
 /// The decoder `newctx` dispatch contract.
 unsafe fn msblob2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut Msblob2keyCtx {
-    // SAFETY: `CRYPTO_zalloc` answers a zeroed block of the struct's size or NULL.
-    let ctx = CRYPTO_malloc(core::mem::size_of::<Msblob2keyCtx>(), ptr::null(), 0)
-        .cast::<Msblob2keyCtx>();
-    if ctx.is_null() {
-        return ptr::null_mut();
+    match OwnedCtx::new(provctx, desc) {
+        Some(ctx) => ctx.into_raw(),
+        None => ptr::null_mut(),
     }
-    // SAFETY: `ctx` is this call's fresh allocation; zero it as the authority's zalloc does.
-    unsafe {
-        ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<Msblob2keyCtx>());
-        (*ctx).provctx = provctx;
-        (*ctx).desc = desc;
-    }
-    ctx
 }
 
 /// `static void msblob2key_freectx(void *vctx)` — `decode_msblob2key.c:75-80`.
@@ -124,8 +179,9 @@ unsafe fn msblob2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *
 /// # Safety
 /// The decoder `freectx` dispatch contract.
 unsafe extern "C" fn msblob2key_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is this call's own allocation.
-    unsafe { CRYPTO_free(vctx, ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the block a previous `msblob2key_newctx` gave up through
+    // `into_raw` and has not released.
+    drop(unsafe { OwnedCtx::from_raw(vctx.cast::<Msblob2keyCtx>()) });
 }
 
 /// `static int msblob2key_does_selection(void *provctx, int selection)` —
@@ -221,21 +277,19 @@ unsafe extern "C" fn msblob2key_decode(
         return 1;
     }
     // SAFETY: `length` bytes as a raw allocation.
-    let buf = CRYPTO_malloc(length as usize, ptr::null(), 0).cast::<u8>();
-    if buf.is_null() {
+    let Some(buf) =
+        OwnedBuf::new_plain_released(length as usize, SeamFile::NULL, 0, SeamFile::NULL, 0)
+    else {
         // SAFETY: `in_` is this decode's own reference.
         unsafe { BIO_free(in_) };
         return 0;
-    }
+    };
     // SAFETY: `buf` holds `length` bytes and `in_` is live.
-    if unsafe { BIO_read(in_, buf.cast::<c_void>(), length as c_int) } != length as c_int {
+    if unsafe { BIO_read(in_, buf.as_ptr().cast::<c_void>(), length as c_int) } != length as c_int {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PROV_DECODE_MSBLOB2KEY_138) };
-        // SAFETY: `in_`/`buf` are this decode's own.
-        unsafe {
-            BIO_free(in_);
-            CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
-        }
+        // SAFETY: `in_` is this decode's own reference.
+        unsafe { BIO_free(in_) };
         return 1;
     }
 
@@ -248,24 +302,18 @@ unsafe extern "C" fn msblob2key_decode(
         let mut pwdata: crate::passphrase::OsslPassphraseData = unsafe { core::mem::zeroed() };
         // SAFETY: `pwdata` is this frame's and the callback arguments are the caller's.
         if unsafe { ossl_pw_set_ossl_passphrase_cb(&raw mut pwdata, pw_cb, pw_cbarg) } == 0 {
-            // SAFETY: `in_`/`buf` are this decode's own.
-            unsafe {
-                BIO_free(in_);
-                CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
-            }
+            // SAFETY: `in_` is this decode's own reference.
+            unsafe { BIO_free(in_) };
             // SAFETY: `key` is NULL here.
             unsafe { free_key(desc, key) };
             return 0;
         }
-        p = buf;
+        p = buf.as_ptr().cast::<u8>();
         // SAFETY: the callback was read from the live descriptor and `p`/`bitlen` are this frame's.
         key = unsafe { ((*desc).read_private_key.unwrap_unchecked())(&raw mut p, bitlen, ispub) };
         if selection != 0 && key.is_null() {
-            // SAFETY: `in_`/`buf` are this decode's own.
-            unsafe {
-                BIO_free(in_);
-                CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
-            }
+            // SAFETY: `in_` is this decode's own reference.
+            unsafe { BIO_free(in_) };
             // SAFETY: `key` is NULL.
             unsafe { free_key(desc, key) };
             return 1;
@@ -277,15 +325,12 @@ unsafe extern "C" fn msblob2key_decode(
         // SAFETY: `desc` is live.
         && unsafe { (*desc).read_public_key }.is_some()
     {
-        p = buf;
+        p = buf.as_ptr().cast::<u8>();
         // SAFETY: the callback was read from the live descriptor and `p`/`bitlen` are this frame's.
         key = unsafe { ((*desc).read_public_key.unwrap_unchecked())(&raw mut p, bitlen, ispub) };
         if selection != 0 && key.is_null() {
-            // SAFETY: `in_`/`buf` are this decode's own.
-            unsafe {
-                BIO_free(in_);
-                CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
-            }
+            // SAFETY: `in_` is this decode's own reference.
+            unsafe { BIO_free(in_) };
             // SAFETY: `key` is NULL.
             unsafe { free_key(desc, key) };
             return 1;
@@ -303,11 +348,8 @@ unsafe extern "C" fn msblob2key_decode(
 
     /* Ending up "empty handed" is not an error. */
     let mut ok = 1;
-    // SAFETY: `in_`/`buf` are this decode's own.
-    unsafe {
-        BIO_free(in_);
-        CRYPTO_free(buf.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `in_` is this decode's own reference; `buf` is released by its own `Drop`.
+    unsafe { BIO_free(in_) };
 
     if !key.is_null() {
         let mut object_type = OSSL_OBJECT_PKEY;

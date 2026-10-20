@@ -1,0 +1,181 @@
+{
+  "receipt": "mechanism-sweep-M14",
+  "branch": "integrate/safe-c33",
+  "worktree": true,
+  "date": "2026-10-19",
+  "source_head": "74a18c4c5",
+  "verification_level": "FAST plus BATCH; one STOP-class negative-length/undefined-behaviour family repaired in the RSA padding entry points; no open STOP",
+  "scope": "mechanism-contract sweep over the large-file deferral and the live attribution ranking. Eight ordinary files audited: src/rsa/mod.rs (large-file deferral, targeted reads), src/cms/cms_pwri.rs, src/runtime/bio/mod.rs, src/x509/v3_pci.rs, src/evp/exchange.rs, src/evp/e_aria.rs, src/encoder_meth.rs, src/crmf/crmf_asn.rs. src/property/store.rs (live rank 1), src/provider/activate.rs (live rank 2) and src/context/namemap.rs were skipped to the BOUNDARY queue. src/cms/cms_ec.rs (live rank 168) remains queued.",
+  "files": [
+    "src/rsa/mod.rs",
+    "src/cms/cms_pwri.rs",
+    "src/runtime/bio/mod.rs",
+    "src/x509/v3_pci.rs",
+    "src/evp/exchange.rs",
+    "src/evp/e_aria.rs",
+    "src/encoder_meth.rs",
+    "src/crmf/crmf_asn.rs"
+  ],
+  "files_not_run": [
+    "src/property/store.rs — method-store lock and provider callback/reentrancy boundary (B1/B8 store contracts); BOUNDARY.",
+    "src/provider/activate.rs — provider activation/deactivation and refcount lifecycle; BOUNDARY.",
+    "src/context/namemap.rs — shared name-map refcount/lock boundary; BOUNDARY.",
+    "src/cms/cms_ec.rs — ordinary, but below the audited four in the live ranking; next run."
+  ],
+  "defects": [
+    {
+      "id": "M14-D1",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "951-956",
+      "severity": "medium",
+      "class": "negative length -> size_t::MAX copy (authority UB)",
+      "description": "RSA_padding_add_none reaches memcpy only when flen == tlen. When both are negative, the equality holds and the authority (rsa_none.c:20-35) passes the negated int to memcpy. A C-valid hostile call therefore copies S::MAX bytes.",
+      "fix": "After the two authority comparisons, an equal negative flen is refused at the existing too-small coordinate (0). Non-negative inputs are unchanged.",
+      "witness": "rsa::tests::the_padding_entry_points_refuse_lengths_that_cannot_describe_a_block (flen = tlen = -1 -> 0)."
+    },
+    {
+      "id": "M14-D2",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "985-990",
+      "severity": "medium",
+      "class": "negative length -> oversized memset plus size_t::MAX copy (authority UB)",
+      "description": "RSA_padding_check_none checks only flen > tlen. A negative flen with a non-negative tlen makes tlen - flen larger than the destination and hands negated flen to memcpy (rsa_none.c:37-49).",
+      "fix": "A negative flen is refused at the existing too-large coordinate (-1); the copy and its arithmetic run only for 0 <= flen <= tlen.",
+      "witness": "M14 control (tlen 8, flen -1 -> -1)."
+    },
+    {
+      "id": "M14-D3",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1017-1023",
+      "severity": "medium",
+      "class": "negative length / wrapping arithmetic -> out-of-bounds writes (authority UB)",
+      "description": "RSA_padding_add_X931 computes j = tlen - flen - 2 before any check. A negative flen makes j positive and the later header/terminator writes exceed tlen; INT_MIN makes the subtraction itself wrap. The authority (rsa_x931.c:43-77) does the same.",
+      "fix": "Negative tlen/flen are refused at the existing RSA_X931_56 coordinate before the subtraction; every non-negative input keeps the authority's j and output bytes.",
+      "witness": "M14 control (flen -1 -> -1; tlen INT_MIN -> -1)."
+    },
+    {
+      "id": "M14-D4",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1074",
+      "severity": "medium",
+      "class": "sub-minimum block -> out-of-bounds header/trailer reads and size_t::MAX copy (authority UB)",
+      "description": "RSA_padding_check_X931 reads from[0], then a header and a trailer, then copies flen - 2 bytes. flen 0/1 (with num == flen) reads past the input and, for flen 1, copies -1 as size_t. A negative equal pair is worse. The authority (rsa_x931.c:79-122) has the same fault.",
+      "fix": "The first refusal now requires flen >= 2 as well as num == flen and a valid header; valid X9.31 blocks (minimum two octets) are unchanged.",
+      "witness": "M14 control (flen = num = 1 -> -1; flen = num = -1 -> -1)."
+    },
+    {
+      "id": "M14-D5",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1166-1171",
+      "severity": "medium",
+      "class": "negative length / wrapping arithmetic -> out-of-bounds memset plus size_t::MAX copy (authority UB)",
+      "description": "RSA_padding_add_PKCS1_type_1 checks only flen > tlen - 11. A negative flen passes that test and makes j = tlen - 3 - flen exceed the destination, while memcpy receives the negated length; INT_MIN wraps the upper-bound subtraction. The authority (rsa_pk1.c:34-52) has both faults.",
+      "fix": "Negative tlen/flen are refused at the existing RSA_PK1_38 coordinate before the subtraction; the valid 0 <= flen <= tlen - 11 path is byte-identical.",
+      "witness": "M14 control (flen -1 -> 0; tlen INT_MIN -> 0)."
+    },
+    {
+      "id": "M14-D6",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1738-1749",
+      "severity": "medium",
+      "class": "wrapping length arithmetic -> out-of-bounds writes (authority UB)",
+      "description": "ossl_rsa_padding_add_PKCS1_type_2_ex's upper-bound test computes tlen - RSA_PKCS1_PADDING_SIZE. For tlen INT_MIN that subtraction wraps, the test can pass, and j = tlen - 3 - flen wraps to a large positive memset/copy length.",
+      "fix": "A negative tlen is refused at the existing too-large coordinate before the subtraction. The authority's flen < 0 refusal (RSA_PK1_135) and all valid inputs are unchanged.",
+      "witness": "M14 control (RSA_padding_add_PKCS1_type_2 with tlen INT_MIN -> 0)."
+    },
+    {
+      "id": "M14-D7",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1297-1301",
+      "severity": "low",
+      "class": "negative seed length -> size_t::MAX read (authority UB)",
+      "description": "PKCS1_MGF1 passes seedlen as usize to EVP_DigestUpdate. A negative seedlen becomes a huge read length; the authority (rsa_oaep.c:350-393) does the same conversion.",
+      "fix": "A negative seedlen answers -1 before the digest context is allocated. A non-positive len still answers 0 as the authority does.",
+      "witness": "M14 control (seedlen -1 -> -1)."
+    },
+    {
+      "id": "M14-D8",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "1480, 2503-2507",
+      "severity": "low",
+      "class": "negative label length -> size_t::MAX read (authority UB)",
+      "description": "Both OAEP bodies pass plen as usize to EVP_Digest; the check body also passed a negative flen through (its existing tlen/flen guard already refused it). The authority (rsa_oaep.c:54-166) does the same conversion.",
+      "fix": "The check body refuses plen < 0 alongside its tlen/flen/mdlen guard; the add body refuses tlen <= 0, flen < 0 and plen < 0 at the existing RSA_OAEP_99 coordinate before computing emlen. Valid labels are unchanged.",
+      "witness": "M14 control (add with flen -1 -> 0 and plen -1 -> 0; check with plen -1 -> -1)."
+    },
+    {
+      "id": "M14-D9",
+      "file": "src/rsa/mod.rs",
+      "lines_post_fix": "2028",
+      "severity": "low",
+      "class": "negative label length -> size_t::MAX HMAC read",
+      "description": "ossl_rsa_prf passes llen as usize to HMAC_Update. Its only callers pass the constants 7 and 6, so the path was latent rather than reachable; the contract did not state the bound.",
+      "fix": "The existing length-disagreement guard now also refuses llen < 0. Valid calls are unchanged.",
+      "witness": "Covered by the type-2 implicit-rejection suite (the function is exercised through its callers)."
+    }
+  ],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "test_only_unsafe_added": [
+    "src/rsa/mod.rs tests::the_padding_entry_points_refuse_lengths_that_cannot_describe_a_block: frame-owned buffers and the exported and internal padding entry points, one SAFETY block."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf (rsa padding scratch/cleansed releases, cms_pwri KEK buffers, e_aria GCM IV slot)",
+    "OB-3 OwnedCtx/CtxDestroy (evp/exchange EvpKeyExch, encoder_meth OsslEncoder/OsslEncoderCtx, including the zero-state sweeps)",
+    "OB-4 member-buffer slot (e_aria gcm/ccm iv ownership split between c->iv and a heap block)",
+    "RC-1 refcount/destroying sentinel (BIO_free, OSSL_ENCODER_free, OSSL_KEYEXCH_free)",
+    "B1/B2 BIO lifecycle, chain and callback-non-invalidation contracts (runtime/bio/mod.rs)",
+    "ASN.1 item/template and alloc/free/dup/wrapper contracts (crmf/crmf_asn.rs)",
+    "C-ABI exported-symbol/out-parameter/destructor contracts"
+  ],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "focused_tests": "PASS (rsa:: 82 passed / 0 failed / 1 ignored, including the new M14 control)",
+    "lib_serial": "PASS (1603 passed / 0 failed / 27 ignored; 66.27 s)",
+    "lib_test_threads_4": "PASS (1603 passed / 0 failed / 27 ignored; 95.32 s; no secure-heap isolation failure)",
+    "affected_adversarial_probes": "NOT_RUN (no probe in scripts/adv-probe.sh covers the RSA padding entry points; the controls are the new in-module regression test)"
+  },
+  "boundary_control": {
+    "status": "PARTIAL",
+    "reason": "The negative/minimum-length controls run the repaired entry points with frame-owned buffers, so a missing guard performs the negated-length copy immediately. A deliberate guard-removal mutation was not run because it injects undefined behaviour outside ASan. ASan/Miri on the repaired paths and authority differentials for the refusal divergences remain BOUNDARY gates."
+  },
+  "no_defect_found": [
+    "src/cms/cms_pwri.rs: KEK wrap/unwrap lengths are checked before buffers (inlen >= 2*blocklen, multiple, <= INT_MAX; unwrap's raw[0] bounded by inlen < 4 + n), and the password-recipient allocation/free paths match cms_pwri.c. The Null-password arm is refused before passlen is used. No defect.",
+    "src/runtime/bio/mod.rs: BIO_new_ex/create-failure, free-veto reference consumption, free_all's shared-element stop, push/pop link repair and dup_chain's partial-copy teardown match bio_lib.c and the B1/B2 contracts. No defect.",
+    "src/x509/v3_pci.rs: policy_grow's realloc ownership, the four failure-arm releases, the file-read retry loop and r2i_pci's err cleanup match v3_pci.c; process_pci_value_err nulls the freed slot so the caller's cleanup cannot double-free. No defect.",
+    "src/evp/exchange.rs: the raw derive buffer's plain/cleansed release split, the fetched SKEYMGMT ownership on every arm, and the length-mismatch refusal match exchange.c. No defect.",
+    "src/evp/e_aria.rs: GCM/CCM IV allocation, COPY re-pointing and cleanup match e_aria.c; the GCM SET_IV_INV ctrl's arg is the EVP_CIPHER ctrl contract's explicit-IV length and is left as authority parity, as in the M7 e_aes audit.",
+    "src/encoder_meth.rs: the four-clause provider-function sanity test is transcribed exactly (including its OR shape), and the encoder/context destructors release only their members. No defect.",
+    "src/crmf/crmf_asn.rs: item templates and the thin new/free/dup/d2i/i2d wrappers forward the ASN.1 contract; the Sync statics are const-built. No defect."
+  ],
+  "residuals": [
+    "RSA padding negative-length refusals now raise the authority's existing error coordinates for inputs that were undefined behaviour there; the error reason for some negative combinations is therefore an intentional divergence.",
+    "e_aria's legacy EVP_CTRL_GCM_SET_IV_INV keeps the authority's unchecked arg length; the callback is engine-reachable only and the EVP_CIPHER ctrl contract owns that argument, matching the M7 e_aes result.",
+    "cms_pwri's kek_wrap_key reads input[0..3] for a block length of 1 only if a registered KEK cipher had a 0-2 byte key and block size 1; no such cipher exists in the tree, and the authority has the same shape.",
+    "src/property/store.rs, src/provider/activate.rs and src/context/namemap.rs remain BOUNDARY (locks/callbacks/refcounts).",
+    "ASan/Miri/Loom, full-suite sanitizers, FRF-Fuzz, the authority differential for the negative-length refusals and SEAL regeneration are NOT_RUN."
+  ],
+  "not_discharged": true,
+  "next_queue": {
+    "file": "src/cms/cms_ec.rs",
+    "rank_in_attribution": 168,
+    "then": [
+      "src/context/namemap.rs (BOUNDARY)",
+      "src/provider/ec_kmgmt.rs (BOUNDARY)",
+      "src/pkcs7/pk7_asn1.rs",
+      "src/x509/x_crl.rs"
+    ],
+    "boundary_queue": [
+      "src/property/store.rs",
+      "src/provider/activate.rs",
+      "src/context/namemap.rs",
+      "src/provider/ec_kmgmt.rs"
+    ]
+  }
+}

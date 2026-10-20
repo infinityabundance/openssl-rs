@@ -918,7 +918,7 @@
     {
       "name": "security-divergence-policy",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "2c111361650e76f51ce76513dbd3e12effe9c6df05690e0fad90630ffb889026"
+      "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7"
     },
     {
       "name": "openssl-3.6.3-historical-symbols-libcrypto.json",
@@ -1033,7 +1033,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "e32becabfd54bbf1a47b19951ffa87cbfa63cd4b0301327fffd2f5785571fd1d"
+      "sha256": "34710e5b6b1592abef8bba3a37a99ec193c5b48796180aa76598cd4ad60ef027"
     },
     {
       "name": "symbol-ownership",

@@ -34,14 +34,10 @@ use crate::asn1::prim::ASN1_OBJECT_free;
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
 use crate::runtime::stack::{OPENSSL_sk_new_null, OPENSSL_sk_pop_free};
 use crate::x509::pcy_lib::X509PolicyData;
 use crate::x509::v3_cpols::{POLICYQUALINFO_free, PolicyInfo, PolicyQualInfo};
-
-/// `OPENSSL_FILE` for this unit's allocator expansions.
-const FILE: &CStr = c"crypto/x509/pcy_data.c";
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -91,22 +87,28 @@ unsafe extern "C" fn asn1_object_free_void(a: *mut c_void) {
 /// Releases the policy OID, the qualifier set (unless it is shared) and the expected-policy set,
 /// then the data. A NULL data is a no-op, matching the authority's first guard.
 ///
+/// The data block is a Rust-owned [`Box`] built by [`ossl_policy_data_new`] (its inner members are
+/// the authority's C objects, released here at the boundary); reclaiming the box is the whole
+/// release of the block, so there is no raw `CRYPTO_free` of the data any more.
+///
 /// # Safety
 ///
-/// `data` must be NULL or policy data this crate owns and has not already freed.
+/// `data` must be NULL or a block [`ossl_policy_data_new`] returned and has not already been freed.
 pub(crate) unsafe fn ossl_policy_data_free(data: *mut X509PolicyData) {
     if data.is_null() {
         return;
     }
-    // SAFETY: `data` is live per the contract; each member is NULL or owned by it.
+    // SAFETY: `data` is a block `ossl_policy_data_new` built with `Box::into_raw` and has not
+    // been freed; reclaiming the box is the whole release of the block.
+    let data = unsafe { Box::from_raw(data) };
+    // SAFETY: each member is NULL or owned by `data`.
     unsafe {
-        ASN1_OBJECT_free((*data).valid_policy);
+        ASN1_OBJECT_free(data.valid_policy);
         // Don't free qualifiers if shared (`:24`).
-        if ((*data).flags & POLICY_DATA_FLAG_SHARED_QUALIFIERS as u32) == 0 {
-            OPENSSL_sk_pop_free((*data).qualifier_set, Some(policy_qualinfo_free_void));
+        if (data.flags & POLICY_DATA_FLAG_SHARED_QUALIFIERS as u32) == 0 {
+            OPENSSL_sk_pop_free(data.qualifier_set, Some(policy_qualinfo_free_void));
         }
-        OPENSSL_sk_pop_free((*data).expected_policy_set, Some(asn1_object_free_void));
-        CRYPTO_free(data.cast(), FILE.as_ptr(), 0);
+        OPENSSL_sk_pop_free(data.expected_policy_set, Some(asn1_object_free_void));
     }
 }
 
@@ -126,6 +128,10 @@ pub(crate) unsafe extern "C" fn policy_data_free_void(d: *mut c_void) {
 /// With `cid` non-NULL the OID is duplicated and `policy`'s own OID is left alone; with `cid`
 /// NULL the OID and qualifier set are moved out of `policy`. `crit` sets
 /// `POLICY_DATA_FLAG_CRITICAL`.
+///
+/// The data block is a Rust-owned [`Box`] (the `#[repr(C)]` layout and the `pcy_lib.rs` size/offset
+/// asserts are unchanged) handed out as `Box::into_raw` for the boundary; [`ossl_policy_data_free`]
+/// reclaims it.
 ///
 /// # Safety
 ///
@@ -150,50 +156,43 @@ pub(crate) unsafe fn ossl_policy_data_new(
     } else {
         core::ptr::null_mut()
     };
-    // A fresh block of the data's own size, written below before it is read.
-    let ret = CRYPTO_zalloc(core::mem::size_of::<X509PolicyData>(), FILE.as_ptr(), 0)
-        .cast::<X509PolicyData>();
-    if ret.is_null() {
+    // The expected-policy set is created first; a failure releases the duplicated OID and raises
+    // the authority's `pcy_data.c:61` site, before the data block exists (`goto err`).
+    let expected_policy_set = OPENSSL_sk_new_null();
+    if expected_policy_set.is_null() {
         // SAFETY: `id` is owned here.
         unsafe { ASN1_OBJECT_free(id) };
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&PCY_DATA_61) };
         return core::ptr::null_mut();
     }
-    // SAFETY: `ret` is live and writable.
-    unsafe { (*ret).expected_policy_set = OPENSSL_sk_new_null() };
-    // SAFETY: `ret` is live.
-    if unsafe { (*ret).expected_policy_set }.is_null() {
-        // SAFETY: `ret` is owned here; `id` is owned here.
-        unsafe {
-            CRYPTO_free(ret.cast(), FILE.as_ptr(), 0);
-            ASN1_OBJECT_free(id);
-            raise_site(&PCY_DATA_61);
-        }
-        return core::ptr::null_mut();
-    }
-
-    if crit != 0 {
-        // SAFETY: `ret` is live and writable.
-        unsafe { (*ret).flags = POLICY_DATA_FLAG_CRITICAL as u32 };
-    }
-
-    if !id.is_null() {
-        // SAFETY: `ret` is live and writable.
-        unsafe { (*ret).valid_policy = id };
-    } else {
-        // SAFETY: `ret` and `policy` are live; the OID moves out of `policy` (`:71-73`).
-        unsafe {
-            (*ret).valid_policy = (*policy).policyid;
+    // SAFETY: `policy` is NULL or a live `POLICYINFO`; with `cid` NULL the OID moves out of it
+    // (`:71-73`), and the qualifier set moves out whenever `policy` is non-NULL (`:75-78`).
+    let (valid_policy, qualifier_set) = unsafe {
+        let valid_policy = if !id.is_null() {
+            id
+        } else {
+            let policyid = (*policy).policyid;
             (*policy).policyid = core::ptr::null_mut();
-        }
-    }
-
-    if !policy.is_null() {
-        // SAFETY: `ret` and `policy` are live; the qualifier set moves out of `policy` (`:75-78`).
-        unsafe {
-            (*ret).qualifier_set = (*policy).qualifiers;
+            policyid
+        };
+        let qualifier_set = if !policy.is_null() {
+            let qualifiers = (*policy).qualifiers;
             (*policy).qualifiers = core::ptr::null_mut();
-        }
-    }
-
-    ret
+            qualifiers
+        } else {
+            core::ptr::null_mut()
+        };
+        (valid_policy, qualifier_set)
+    };
+    Box::into_raw(Box::new(X509PolicyData {
+        flags: if crit != 0 {
+            POLICY_DATA_FLAG_CRITICAL as u32
+        } else {
+            0
+        },
+        valid_policy,
+        qualifier_set,
+        expected_policy_set,
+    }))
 }

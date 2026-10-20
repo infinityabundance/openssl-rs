@@ -65,14 +65,16 @@ use crate::ffc::params_generate::{
 };
 use crate::ffc::FFC_PARAM_TYPE_DH;
 use crate::rand::sys::atoi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_dup, OBJ_sn2nid};
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/dh/dh_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c");
 
 /// `pkey_dh_init`'s `OPENSSL_zalloc(sizeof(*dctx))` (`:58`).
 const LINE_ZALLOC_DCTX: c_int = 58;
@@ -126,6 +128,36 @@ struct DhPkeyCtx {
     kdf_outlen: usize,
 }
 
+/// [`OwnedCtx`]'s destructor body for [`DhPkeyCtx`], without the block's own release.
+///
+/// `pkey_dh_cleanup` is the authority's `DH_PKEY_CTX` destructor: it releases the KDF's
+/// shared-info buffer and its OID, then the block. `Drop` performs the block release at the
+/// authority's own site, so this body is the first two members alone -- kept as the authority's own
+/// `OPENSSL_free`/`ASN1_OBJECT_free` calls so a caller-installed `CRYPTO_set_mem_functions` hook
+/// observes the releases at the same sites.
+// SAFETY: (a) `destroy_body` is the authority's `pkey_dh_cleanup` member body, releasing exactly
+// this context's own object, key-gen scratch and shared-info buffer once (each releaser accepts the
+// unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `DhPkeyCtx` is a
+// `#[repr(C)]` record of raw pointers, integers, a small integer array and `usize`s, so an all-zero
+// block is a valid `DhPkeyCtx` the body is sound on.
+unsafe impl CtxDestroy for DhPkeyCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_DCTX;
+    const LINE_FREE: c_int = LINE_FREE_DCTX;
+
+    /// # Safety
+    ///
+    /// `ptr` is a live context this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut DhPkeyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `kdf_ukm` is NULL or this
+        // context's own block and `kdf_oid` is NULL or an owned object.
+        unsafe {
+            CRYPTO_free((*ptr).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
+            ASN1_OBJECT_free((*ptr).kdf_oid);
+        }
+    }
+}
+
 /// `strcmp(s, lit) == 0` in the crate's `CStr` idiom.
 ///
 /// # Safety
@@ -140,21 +172,21 @@ unsafe fn cstr_is(s: *const c_char, lit: &[u8]) -> bool {
 /// # Safety
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_dh_init(ctx: *mut EvpPkeyCtx) -> c_int {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate. */
-    let dctx = CRYPTO_zalloc(core::mem::size_of::<DhPkeyCtx>(), FILE, LINE_ZALLOC_DCTX)
-        .cast::<DhPkeyCtx>();
-    if dctx.is_null() {
+    // A fresh zeroed `DH_PKEY_CTX` is the authority's own starting state, so this is `OPENSSL_zalloc`
+    // at the authority's exact size/`file`/`line`; `Drop` reclaims the block at `pkey_dh_cleanup`'s.
+    let Some(dctx) = OwnedCtx::<DhPkeyCtx>::zalloc() else {
         return 0;
-    }
-    // SAFETY: `dctx` is this call's own allocation and `ctx` is live per the contract.
+    };
+    let p = dctx.as_ptr();
+    // SAFETY: `p` is this call's own fresh zeroed context and `ctx` is live per the contract.
     unsafe {
-        (*dctx).prime_len = 2048;
-        (*dctx).subprime_len = -1;
-        (*dctx).generator = 2;
-        (*dctx).kdf_type = EVP_PKEY_DH_KDF_NONE as c_char;
+        (*p).prime_len = 2048;
+        (*p).subprime_len = -1;
+        (*p).generator = 2;
+        (*p).kdf_type = EVP_PKEY_DH_KDF_NONE as c_char;
 
-        (*ctx).data = dctx.cast::<c_void>();
-        (*ctx).keygen_info = ptr::addr_of_mut!((*dctx).gentmp).cast::<c_int>();
+        (*ctx).data = dctx.into_raw().cast::<c_void>();
+        (*ctx).keygen_info = ptr::addr_of_mut!((*p).gentmp).cast::<c_int>();
         (*ctx).keygen_info_count = 2;
     }
     1
@@ -166,18 +198,11 @@ unsafe extern "C" fn pkey_dh_init(ctx: *mut EvpPkeyCtx) -> c_int {
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_dh_cleanup(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is live per the contract.
-    let dctx = unsafe { (*ctx).data }.cast::<DhPkeyCtx>();
-
-    // SAFETY: `dctx` is NULL or this method's own live context.
-    if !dctx.is_null() {
-        // SAFETY: the fields are NULL or this context's own allocations, and `CRYPTO_free` accepts
-        // NULL.
-        unsafe {
-            CRYPTO_free((*dctx).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
-            ASN1_OBJECT_free((*dctx).kdf_oid);
-            CRYPTO_free(dctx.cast::<c_void>(), FILE, LINE_FREE_DCTX);
-        }
-    }
+    let data = unsafe { (*ctx).data };
+    // SAFETY: `data` is NULL or the block this method's `init` installed and no other owner has
+    // released; `from_raw` maps NULL to `None` and its `Drop` runs the authority's own cleanup body
+    // and block release.
+    drop(unsafe { OwnedCtx::<DhPkeyCtx>::from_raw(data.cast::<DhPkeyCtx>()) });
 }
 
 /// `static int pkey_dh_copy(EVP_PKEY_CTX *dst, const EVP_PKEY_CTX *src)` — `:83`.
@@ -245,7 +270,13 @@ unsafe extern "C" fn pkey_dh_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
 /// `static int pkey_dh_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` — `:114`.
 ///
 /// # Safety
-/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`].
+/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
+/// `EVP_PKEY_CTRL_DH_KDF_UKM`, a non-NULL `p2` must be the whole, exclusively
+/// owned block from this crate's `CRYPTO_*` seam; ownership transfers to the
+/// context. A negative `p1` is refused with `-2` instead of being recorded as a
+/// `size_t` (the authority records it, and a later X9.42 derive would read that
+/// many bytes from `p2`); every non-negative length preserves the authority's
+/// behaviour. Other arms follow the authority's per-arm contract.
 unsafe extern "C" fn pkey_dh_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,
@@ -352,13 +383,21 @@ unsafe extern "C" fn pkey_dh_ctrl(
             1
         }
         EVP_PKEY_CTRL_DH_KDF_UKM => {
-            // SAFETY: `dctx`'s field is this context's own or NULL, and `CRYPTO_free` accepts NULL.
+            // A negative length is not a byte count: recording it as a `size_t` would make a
+            // later X9.42 derive read that many bytes from `p2`. The authority stores it; this
+            // arm refuses the invalid input, which is unobservable for every valid length.
+            if !p2.is_null() && p1 < 0 {
+                return -2;
+            }
+            // SAFETY: `dctx`'s field is this context's own block (or NULL) and no other owner
+            // releases it; `Drop` performs its single release at the authority's own replacement
+            // site.
             unsafe {
-                CRYPTO_free(
-                    (*dctx).kdf_ukm.cast::<c_void>(),
-                    FILE,
+                drop(OwnedBuf::adopt_plain(
+                    (*dctx).kdf_ukm,
+                    FILE_SEAM,
                     LINE_FREE_KDF_UKM_CTRL,
-                );
+                ));
                 (*dctx).kdf_ukm = p2.cast::<u8>();
                 if !p2.is_null() {
                     (*dctx).kdf_ukmlen = p1 as usize;
@@ -408,7 +447,8 @@ unsafe extern "C" fn pkey_dh_ctrl_str(
     // SAFETY: `type_` is NUL-terminated per the contract.
     if unsafe { cstr_is(type_, b"dh_rfc5114") } {
         // SAFETY: `value` is NUL-terminated and `ctx` is live.
-        let id = atoi(value);
+        // SAFETY: `value` is NUL-terminated per the contract.
+        let id = unsafe { atoi(value) };
         if !(0..=3).contains(&id) {
             return -2;
         }
@@ -727,17 +767,17 @@ unsafe extern "C" fn pkey_dh_derive(
         if zlen <= 0 {
             return 0;
         }
-        /* `CRYPTO_malloc` is a safe entry point of this crate. */
-        let z = CRYPTO_malloc(zlen as usize, FILE, LINE_MALLOC_Z).cast::<u8>();
-        if z.is_null() {
+        // `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
+        // authority's own cleansing `OPENSSL_clear_free` at `:453`.
+        let Some(z_buf) =
+            OwnedBuf::new_cleansed_at(zlen as usize, FILE_SEAM, LINE_MALLOC_Z, LINE_CLEAR_FREE_Z)
+        else {
             return 0;
-        }
+        };
+        let z = z_buf.as_ptr();
         // SAFETY: `z` is this call's own buffer and `dhpubbn`/`dh` are live.
         if unsafe { DH_compute_key_padded(z, dhpubbn, dh) } <= 0 {
-            // SAFETY: `z` is this call's own buffer.
-            unsafe {
-                CRYPTO_clear_free(z.cast::<c_void>(), zlen as usize, FILE, LINE_CLEAR_FREE_Z)
-            };
+            // `z_buf`'s `Drop` performs the authority's own cleansing release at every exit.
             return ret;
         }
         // SAFETY: the caller's buffer, this call's buffer, the live context fields and the OID.
@@ -758,8 +798,7 @@ unsafe extern "C" fn pkey_dh_derive(
             unsafe { *keylen = kdf_outlen };
             ret = 1;
         }
-        // SAFETY: `z` is this call's own buffer.
-        unsafe { CRYPTO_clear_free(z.cast::<c_void>(), zlen as usize, FILE, LINE_CLEAR_FREE_Z) };
+        // `z_buf`'s `Drop` performs the authority's own cleansing release at every exit.
         return ret;
     }
     0
@@ -859,3 +898,34 @@ pub(crate) unsafe extern "C" fn ossl_dh_pkey_method() -> *const EvpPkeyMethod {
 pub(crate) unsafe extern "C" fn ossl_dhx_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(DHX_PKEY_METH)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_id};
+
+    /// The UKM length is recorded as a `size_t` and later read as one by the X9.42 derive, so a
+    /// negative value must be refused rather than stored. Nothing is transferred on the refusal.
+    #[test]
+    fn a_negative_ukm_length_is_refused() {
+        // SAFETY: both arguments are the null engine and an id.
+        let ctx = unsafe { EVP_PKEY_CTX_new_id(EVP_PKEY_DH, ptr::null_mut()) };
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is live and this installs this method's own context.
+        assert_eq!(unsafe { pkey_dh_init(ctx) }, 1);
+        let mut buf = [0u8; 4];
+        // SAFETY: `ctx` is live and holds the context `pkey_dh_init` installed; `buf` is live for
+        // the call and a refused ctrl transfers no ownership.
+        let ret =
+            unsafe { pkey_dh_ctrl(ctx, EVP_PKEY_CTRL_DH_KDF_UKM, -1, buf.as_mut_ptr().cast()) };
+        assert_eq!(ret, -2, "a negative UKM length is refused");
+        // SAFETY: `ctx` holds the context installed above and no other release has run.
+        unsafe { pkey_dh_cleanup(ctx) };
+        // SAFETY: `ctx` came from `EVP_PKEY_CTX_new_id` and is not used again.
+        unsafe { EVP_PKEY_CTX_free(ctx) };
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(DhPkeyCtx => zero_state_sweep_dh_pkey_ctx);

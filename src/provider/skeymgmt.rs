@@ -41,8 +41,9 @@ use crate::params::{
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::param_octet_string;
 use crate::provider::ctx::prov_libctx_of;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_memdup};
 use crate::selftest::OsslCallback;
 
 /// `FILE_GENERIC_SKEYMGMT` — the generated unit's own `__FILE__`.
@@ -78,6 +79,27 @@ pub(crate) struct ProvSkey {
 #[inline]
 fn is_running() -> c_int {
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `PROV_SKEY` block and its secret member
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) `destroy_body` is `generic_free`'s member body, releasing exactly this key's own
+// secret buffer once (the clearer accepts the unset NULL) and never the enclosing block, which
+// `OwnedCtx` releases; (b) `ProvSkey` is a `#[repr(C)]` record of raw pointers and integers, so an
+// all-zero block is a valid `ProvSkey` the body is sound on (`CRYPTO_clear_free(NULL, 0, ...)`).
+unsafe impl CtxDestroy for ProvSkey {
+    const FILE: *const c_char = FILE_GENERIC_SKEYMGMT;
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    unsafe fn destroy_body(ptr: *mut ProvSkey) {
+        // SAFETY: `ptr` is a live key per the trait contract.
+        unsafe {
+            CRYPTO_clear_free((*ptr).data.cast(), (*ptr).length, FILE_GENERIC_SKEYMGMT, 0);
+        }
+    }
 }
 
 /// `static const OSSL_PARAM generic_skey_import_list[]` — `generic.c:37-40`.
@@ -119,22 +141,10 @@ unsafe fn generic_skey_import_decode(params: *const OsslParam) -> Result<*const 
 /// # Safety
 /// `keydata` is NULL or a `PROV_SKEY` this module allocated.
 pub(crate) unsafe extern "C" fn generic_free(keydata: *mut c_void) {
-    // SAFETY: `keydata` is NULL or a live key per the contract.
-    unsafe {
-        let generic = keydata.cast::<ProvSkey>();
-
-        if generic.is_null() {
-            return;
-        }
-
-        CRYPTO_clear_free(
-            (*generic).data.cast(),
-            (*generic).length,
-            FILE_GENERIC_SKEYMGMT,
-            0,
-        );
-        CRYPTO_free(generic.cast(), FILE_GENERIC_SKEYMGMT, 0);
-    }
+    // SAFETY: `keydata` is NULL or a live key this module allocated and no other owner has released;
+    // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `generic_free` body
+    // (the `CRYPTO_clear_free` of the secret bytes) and block release.
+    drop(unsafe { OwnedCtx::<ProvSkey>::from_raw(keydata.cast::<ProvSkey>()) });
 }
 
 /// `void *generic_import(void *provctx, int selection, const OSSL_PARAM params[])` — `generic.c:70-115`.
@@ -169,36 +179,39 @@ pub(crate) unsafe extern "C" fn generic_import(
             return ptr::null_mut();
         }
 
-        let mut generic = CRYPTO_zalloc(core::mem::size_of::<ProvSkey>(), FILE_GENERIC_SKEYMGMT, 0)
-            .cast::<ProvSkey>();
-        if generic.is_null() {
+        // A fresh zeroed `PROV_SKEY` is the authority's own `OPENSSL_zalloc` state, so this is
+        // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
+        // `generic_free`'s own site.
+        let Some(generic) = OwnedCtx::<ProvSkey>::zalloc() else {
             return ptr::null_mut();
-        }
+        };
+        let generic_ptr = generic.as_ptr();
 
-        (*generic).libctx = libctx;
+        (*generic_ptr).libctx = libctx;
 
-        (*generic).type_ = SKEY_TYPE_GENERIC;
+        (*generic_ptr).type_ = SKEY_TYPE_GENERIC;
 
         'end: {
-            (*generic).data = CRYPTO_memdup(
+            (*generic_ptr).data = CRYPTO_memdup(
                 (*raw_bytes).data,
                 (*raw_bytes).data_size,
                 FILE_GENERIC_SKEYMGMT,
                 0,
             )
             .cast::<u8>();
-            if (*generic).data.is_null() {
+            if (*generic_ptr).data.is_null() {
                 break 'end;
             }
-            (*generic).length = (*raw_bytes).data_size;
+            (*generic_ptr).length = (*raw_bytes).data_size;
             ok = 1;
         }
 
         if ok == 0 {
-            generic_free(generic.cast());
-            generic = ptr::null_mut();
+            // `generic`'s `Drop` runs `generic_free`'s body (the member `CRYPTO_clear_free`) and the
+            // block release, and the half-built key is never handed out.
+            return ptr::null_mut();
         }
-        generic.cast()
+        generic.into_raw().cast()
     }
 }
 
@@ -380,3 +393,7 @@ pub(crate) static DEFLT_SKEYMGMT: [OsslAlgorithm; 3] = [
         algorithm_description: ptr::null(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvSkey => zero_state_sweep_prov_skey);

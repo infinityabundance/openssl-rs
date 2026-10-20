@@ -93,7 +93,7 @@ pub(crate) unsafe fn tls12_setup_cipher(s: *mut Ssl, cipher_id: u16) -> c_int {
     unsafe {
         if (*s).tls13_cipher.is_null() {
             let libctx = (*(*s).ctx).libctx;
-            let propq = (*(*s).ctx).propq;
+            let propq = (*(*s).ctx).propq();
             let c = EVP_CIPHER_fetch(libctx, name.as_ptr().cast(), propq);
             if c.is_null() {
                 return 0;
@@ -339,9 +339,15 @@ pub(crate) unsafe fn tls12_derive_key_block(s: *mut Ssl) -> c_int {
 pub(crate) unsafe fn tls12_install_write(s: *mut Ssl, is_client: bool) -> c_int {
     // SAFETY: `s` is live.
     let key_len = unsafe { (*s).cipher_key_len };
+    // The destination is the fixed 32-byte write-key array; refusing a longer key here
+    // keeps the copy below bounded even if `cipher_key_len` is set by another schedule.
+    // SAFETY: `s` is live.
+    if key_len == 0 || key_len > unsafe { (*s).enc_key.len() } {
+        return 0;
+    }
     // SAFETY: `s` is live.
     let kb_len = unsafe { (*s).tls12_key_block_len };
-    if key_len == 0 || kb_len < 2 * key_len + 2 * TLS12_FIXED_IV_LEN {
+    if kb_len < 2 * key_len + 2 * TLS12_FIXED_IV_LEN {
         return 0;
     }
     let (koff, ioff) = if is_client {
@@ -375,9 +381,14 @@ pub(crate) unsafe fn tls12_install_write(s: *mut Ssl, is_client: bool) -> c_int 
 pub(crate) unsafe fn tls12_install_read(s: *mut Ssl, is_client: bool) -> c_int {
     // SAFETY: `s` is live.
     let key_len = unsafe { (*s).cipher_key_len };
+    // As in `tls12_install_write`, the destination is the fixed 32-byte read-key array.
+    // SAFETY: `s` is live.
+    if key_len == 0 || key_len > unsafe { (*s).dec_key.len() } {
+        return 0;
+    }
     // SAFETY: `s` is live.
     let kb_len = unsafe { (*s).tls12_key_block_len };
-    if key_len == 0 || kb_len < 2 * key_len + 2 * TLS12_FIXED_IV_LEN {
+    if kb_len < 2 * key_len + 2 * TLS12_FIXED_IV_LEN {
         return 0;
     }
     // The peer's write direction is this side's read direction.

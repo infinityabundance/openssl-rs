@@ -226,6 +226,11 @@ unsafe extern "C" fn rc4_hmac_md5_ctrl(
     let key = unsafe { data(ctx) };
     match type_ {
         EVP_CTRL_AEAD_SET_MAC_KEY => {
+            // A negative length becomes a `size_t` in the authority and then a huge read; it
+            // is never a valid key length, so refuse it rather than reproduce that fault (§17).
+            if arg < 0 {
+                return -1;
+            }
             let mut hmac_key = [0u8; 64];
             // SAFETY: `key` is live and `ptr_` is readable for `arg` bytes per the contract.
             unsafe {

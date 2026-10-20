@@ -146,7 +146,7 @@ unsafe extern "C" fn shim_realloc(
 }
 
 /// Install the shim, once, before the first `CRYPTO_*` allocation.
-fn install() {
+pub(crate) fn install() {
     INSTALL.call_once(|| {
         // SAFETY: the three shims satisfy the `CRYPTO_*_fn` contract and are
         // `'static`. This is the first `CRYPTO_*` call in the filtered process.
@@ -185,7 +185,8 @@ fn miri_tcb_allocator_slot_reports_the_installed_shim() {
     // default branch answers NULL for zero. That distinguishes the slot's contents
     // from the libc default by behaviour, which is robust where comparing function
     // addresses across coercion sites is not (Miri does not make those stable).
-    let zero = CRYPTO_malloc(0, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let zero = unsafe { CRYPTO_malloc(0, ptr::null(), 0) };
     assert!(
         !zero.is_null(),
         "the installed branch handles a zero-length request"
@@ -205,7 +206,8 @@ fn miri_tcb_allocator_slot_reports_the_installed_shim() {
 #[test]
 fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     install();
-    let p = CRYPTO_malloc(64, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let p = unsafe { CRYPTO_malloc(64, ptr::null(), 0) };
     assert!(!p.is_null());
     // SAFETY: 64 bytes were requested.
     unsafe { ptr::write_bytes(p.cast::<u8>(), 0xAB, 64) };
@@ -214,7 +216,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     // SAFETY: `p` came from this allocator.
     unsafe { CRYPTO_free(p, ptr::null(), 0) };
 
-    let z = CRYPTO_zalloc(16, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let z = unsafe { CRYPTO_zalloc(16, ptr::null(), 0) };
     assert!(!z.is_null());
     for i in 0..16 {
         // SAFETY: `z` is live for 16 zeroed bytes.
@@ -223,7 +226,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
     // SAFETY: `z` came from this allocator.
     unsafe { CRYPTO_free(z, ptr::null(), 0) };
 
-    let c = CRYPTO_calloc(4, 8, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let c = unsafe { CRYPTO_calloc(4, 8, ptr::null(), 0) };
     assert!(!c.is_null());
     // SAFETY: `c` is live for 32 zeroed bytes.
     unsafe { assert_eq!(c.cast::<u8>().read(), 0) };
@@ -234,7 +238,8 @@ fn miri_tcb_alloc_zalloc_calloc_own_zero_and_release() {
 #[test]
 fn miri_tcb_realloc_preserves_and_clear_realloc_shrinks_in_place() {
     install();
-    let p = CRYPTO_malloc(32, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let p = unsafe { CRYPTO_malloc(32, ptr::null(), 0) };
     assert!(!p.is_null());
     // SAFETY: 32 bytes were requested.
     unsafe { ptr::write_bytes(p.cast::<u8>(), 0x5A, 32) };
@@ -307,8 +312,10 @@ fn miri_tcb_buffer_gateway_grows_and_releases() {
 #[test]
 fn miri_tcb_stack_lifetimes_and_pop_free() {
     install();
-    let a = CRYPTO_malloc(8, ptr::null(), 0);
-    let b = CRYPTO_malloc(8, ptr::null(), 0);
+    // SAFETY: `file` is NULL, which the entry point permits.
+    let a = unsafe { CRYPTO_malloc(8, ptr::null(), 0) };
+    // SAFETY: as above.
+    let b = unsafe { CRYPTO_malloc(8, ptr::null(), 0) };
     assert!(!a.is_null() && !b.is_null());
     let sk = crate::runtime::stack::OPENSSL_sk_new_null();
     assert!(!sk.is_null());
@@ -379,22 +386,27 @@ fn miri_tcb_object_registry_lookup_round_trips() {
 fn miri_tcb_x509_lifetime_and_refcount() {
     use crate::x509::x509_set::X509_up_ref;
     use crate::x509::x_x509::{X509_free, X509_new};
+    use core::sync::atomic::Ordering;
     install();
     let x = X509_new();
     assert!(!x.is_null());
     // SAFETY: `x` is a freshly built X509 owned by this frame.
     unsafe {
-        assert_eq!((*x).references, 1, "a fresh X509 starts at reference 1");
+        assert_eq!(
+            (*x).references.load(Ordering::Relaxed),
+            1,
+            "a fresh X509 starts at reference 1"
+        );
         assert_eq!(
             X509_up_ref(x),
             1,
             "up_ref reports that the old count was >= 1"
         );
-        assert_eq!((*x).references, 2);
+        assert_eq!((*x).references.load(Ordering::Relaxed), 2);
         // The first free is a decrement, not a release.
         X509_free(x);
         assert_eq!(
-            (*x).references,
+            (*x).references.load(Ordering::Relaxed),
             1,
             "the item layer decrements under ASN1_AFLG_REFCOUNT"
         );

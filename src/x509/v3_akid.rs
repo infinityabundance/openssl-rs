@@ -44,8 +44,9 @@ use crate::asn1::string::{ASN1_INTEGER_free, ASN1_OCTET_STRING_free, ASN1_STRING
 use crate::runtime::bio::sys::strcmp;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier};
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -174,6 +175,10 @@ unsafe extern "C" fn conf_value_free_thunk(p: *mut c_void) {
     unsafe { X509V3_conf_free(p.cast::<ConfValue>()) };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `i2s_ASN1_OCTET_STRING` strings the `i2v` callback allocates
+// ---------------------------------------------------------------------------------------------
+
 /// `(X509V3_EXT_I2V)i2v_AUTHORITY_KEYID` — the cast the row's initialiser writes.
 const fn as_i2v(
     f: unsafe extern "C" fn(
@@ -275,13 +280,21 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
 
     // SAFETY: `akeyid` is live per the contract.
     if unsafe { !(*akeyid).keyid.is_null() } {
-        // SAFETY: the keyid is a live `ASN1_OCTET_STRING`.
-        let tmp = unsafe { i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).keyid) };
-        if tmp.is_null() {
+        // `tmp` owns the string; its `Drop` is the authority's release -- `:58` on the success path,
+        // or `:54` on the error path.
+        // SAFETY: the keyid is a live `ASN1_OCTET_STRING`; the allocator answers NULL or a fresh
+        // block the authority releases at its own `:58` site.
+        let Some(mut tmp) = (unsafe {
+            OwnedStr::adopt(
+                i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).keyid),
+                SeamFile::new(FILE),
+                58,
+            )
+        }) else {
             // SAFETY: the site is a declared constant.
             unsafe { raise_site(&V3_AKID_49) };
             return core::ptr::null_mut();
-        }
+        };
         // `(akeyid->issuer || akeyid->serial) ? "keyid" : NULL`.
         // SAFETY: `akeyid` is live.
         let name = unsafe {
@@ -292,15 +305,14 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
             }
         };
         // SAFETY: `tmp` is NUL-terminated; `extlist` is this call's own sink.
-        if unsafe { X509V3_add_value(name, tmp, &mut extlist) } == 0 {
-            // SAFETY: `tmp` is this call's own allocation; the authority frees it at `:54`.
-            unsafe { CRYPTO_free(tmp.cast(), FILE.as_ptr(), 54) };
+        if unsafe { X509V3_add_value(name, tmp.as_ptr(), &mut extlist) } == 0 {
+            // The authority frees `tmp` at `:54` on this path; `err!()` returns, dropping it there.
+            tmp.set_release_line(54);
             // SAFETY: the site is a declared constant.
             unsafe { raise_site(&V3_AKID_55) };
             err!();
         }
-        // SAFETY: `tmp` is this call's own allocation; the authority frees it at `:58`.
-        unsafe { CRYPTO_free(tmp.cast(), FILE.as_ptr(), 58) };
+        // `tmp` drops here, at the authority's `:58` site.
     }
     // SAFETY: `akeyid` is live.
     if unsafe { !(*akeyid).issuer.is_null() } {
@@ -316,21 +328,28 @@ unsafe extern "C" fn i2v_AUTHORITY_KEYID(
     }
     // SAFETY: `akeyid` is live.
     if unsafe { !(*akeyid).serial.is_null() } {
-        // SAFETY: the serial is a live `ASN1_OCTET_STRING`.
-        let tmp = unsafe { i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).serial) };
-        if tmp.is_null() {
+        // `tmp` owns the string; its `Drop` is the authority's release -- `:78` on the success path,
+        // or `:75` on the error path.
+        // SAFETY: the serial is a live `ASN1_OCTET_STRING`; the allocator answers NULL or a fresh
+        // block the authority releases at its own `:78` site.
+        let Some(mut tmp) = (unsafe {
+            OwnedStr::adopt(
+                i2s_ASN1_OCTET_STRING(core::ptr::null_mut(), (*akeyid).serial),
+                SeamFile::new(FILE),
+                78,
+            )
+        }) else {
             // SAFETY: the site is a declared constant.
             unsafe { raise_site(&V3_AKID_71) };
-            err!();
-        }
+            err!()
+        };
         // SAFETY: `tmp` is NUL-terminated; `extlist` is this call's own sink.
-        if unsafe { X509V3_add_value(c"serial".as_ptr(), tmp, &mut extlist) } == 0 {
-            // SAFETY: `tmp` is this call's own allocation; the authority frees it at `:75`.
-            unsafe { CRYPTO_free(tmp.cast(), FILE.as_ptr(), 75) };
+        if unsafe { X509V3_add_value(c"serial".as_ptr(), tmp.as_ptr(), &mut extlist) } == 0 {
+            // The authority frees `tmp` at `:75` on this path; `err!()` returns, dropping it there.
+            tmp.set_release_line(75);
             err!();
         }
-        // SAFETY: `tmp` is this call's own allocation; the authority frees it at `:78`.
-        unsafe { CRYPTO_free(tmp.cast(), FILE.as_ptr(), 78) };
+        // `tmp` drops here, at the authority's `:78` site.
     }
     extlist
 }

@@ -36272,3 +36272,68 @@ makes the mechanism inexpressible, and `validate_cve_replay` refuses one with no
 seal's property is `NOT_CLAIMED` with the non-claims named as findings, so a passing `MS-SEAL` is an
 instrument plus an observation record and must never be read as "the candidate is memory safe".
 
+## D561 -- The AES key-wrap row refuses an output extent the authority's check admits
+
+The pinned authority's `aes_wrap_cipher` checks only `outsize < inl`
+(`providers/implementations/ciphers/cipher_aes_wrp.c:249`), then calls
+`aes_wrap_cipher_internal`, whose encrypting arm writes `up8(inl) + 8` with padding (or `inl + 8`
+without). A caller passing `outsize == inl` therefore satisfies the authority's check but is
+overrun by the wrap call. The crate keeps the authority's first check, so every case the authority
+rejected with `PROV_R_OUTPUT_BUFFER_TOO_SMALL` is still rejected at the same source coordinate
+(`PROV_CIPHER_AES_WRP_250`), and additionally rejects the encrypting arm's actual write extent.
+The added check runs only for an actual write: it is skipped when `input == NULL` (the authority's
+helper returns 0 at `:174`), when `out == NULL` (its size-query arm at `:203`), and when the input
+length is one the helper refuses before writing (`:178-192`), so it neither preempts a size query
+nor changes an `INVALID_INPUT_LENGTH` result. The decrypting arm's extent is `inl - 8`, which the
+authority's check already covers, so no accepted decrypt case changes. This is a deliberate
+memory-safety divergence, not a transcription slip: no under-sized destination reaches the wrap
+function and no buffer is written through.
+
+## D562 -- Reference increments refuse a retired or overflowing count instead of wrapping
+
+The crate's shared reference-count gate (`runtime::refcount`) deliberately diverges from the
+pinned authority in one direction, recorded here as the §17 classification rather than only in
+code comments. The authority's `CRYPTO_UP_REF` increments the count first and tests the *new*
+value: on a zero count it makes the count 1 and returns 0 (failure), and at `i32::MAX` the C11
+atomic fetch-add wraps to `i32::MIN` (defined two's-complement behaviour on the atomic arm) while
+the public wrapper reports failure. The crate's `up_ref` performs a checked compare-and-swap: a
+zero, negative, destroying, or `i32::MAX` count is refused with answer 0 and **the count is left
+unchanged**. No live object is observable differently: every successful increment on a positive
+live count keeps the authority's relaxed ordering and answer 1, and the same public callers still
+test the answer rather than assuming success. The divergence removes two unsafe outcomes -- the
+resurrection of an object whose last reference was already released, and a wrapped count that
+would fabricate the `REF_DESTROYING` sentinel -- and is applied uniformly to `ENGINE` and to every
+family converted to the shared gate. It is documented in `AGENTS.md` §17 terms: this is an
+elimination of a known-unsafe mechanism, not a compatibility defect, and no accepted positive-count
+call changes behaviour.
+
+## D563 -- Session string/blob setters copy before they release the incumbent
+
+`SSL_SESSION_set1_hostname`, `SSL_SESSION_set1_alpn_selected`,
+`SSL_SESSION_set1_ticket_appdata` and `SSL_ctrl(SSL_CTRL_SET_TLSEXT_HOSTNAME)` are documented to
+accept any readable argument, and the matching getters (`SSL_SESSION_get0_hostname`,
+`SSL_SESSION_get0_alpn_selected`, `SSL_SESSION_get0_ticket_appdata`, `SSL_get_servername`)
+return the session's own member pointer. The authority releases that member first and then calls
+`OPENSSL_strdup`/`OPENSSL_memdup`/`strlen` on the caller's pointer
+(`ssl/ssl_sess.c:1083/1088`, `:1134/1140`, `:1484/1490`, `ssl/s3_lib.c:4029/4043`), so a C caller
+that passes the getter's own answer back is a use-after-free. The crate now validates and
+duplicates the incoming value **before** the release and then makes the release at the same
+authority coordinate; a refused duplicate still leaves the authority's post-failure `(NULL, 0)`
+state. This is an `AGENTS.md` §17 elimination of UB in the authority, not a rejection of a
+documented success: every non-aliasing call keeps the authority's value and answer, and only the
+allocator-event order changes (duplicate before release), matching the ordering already used by
+`SSL_CTX_set_alpn_protos` and `set_cert_type`. Witnesses:
+`ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing` and
+`ssl::s3_lib::adv_probe::self_aliasing_sni_control_copies_before_clearing`.
+
+## D564 -- Serverinfo install declares its source before regrowing the member
+
+`SSL_CTX_use_serverinfo_ex` may be passed a range inside the very `(ptr, len)` member it is about
+to `CRYPTO_realloc`. The authority reallocs first and then copies --- and re-validates --- through
+the caller's pointer (`ssl/ssl_rsa.c:839-844`), which is a use-after-free whenever `realloc` moves
+the block. The crate detects a source range that overlaps the live incumbent, copies it into a
+temporary buffer before the regrow, and uses that temporary for both the `memcpy` and the second
+`serverinfo_process_buffer` call. Non-aliasing callers are unchanged; an aliasing caller gets the
+documented success instead of the authority's UB. This is an `AGENTS.md` §17 elimination of UB in
+the authority. Witness: `ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc`.
+

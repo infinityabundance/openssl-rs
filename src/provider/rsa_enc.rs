@@ -32,7 +32,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -73,11 +73,14 @@ use crate::runtime::constant_time::{
     constant_time_msb_s, constant_time_msb_u32, constant_time_select, constant_time_select_int,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The unit's own `__FILE__`. `rsa_enc.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
 const FILE: *const c_char = c"providers/implementations/asymciphers/rsa_enc.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/asymciphers/rsa_enc.c");
 
 /// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
@@ -194,6 +197,10 @@ static PADDING_ITEM: [PaddingItem; 5] = [
     },
 ];
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
 /// `static void *rsa_newctx(void *provctx)` — `rsa_enc.c.in:87-100`.
 ///
 /// # Safety
@@ -203,7 +210,11 @@ unsafe extern "C" fn rsa_newctx(provctx: *mut c_void) -> *mut c_void {
         return ptr::null_mut();
     }
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let prsactx = CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 93).cast::<ProvRsaCtx>();
+    let prsactx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvRsaCtx>(), FILE, 93)
+    }
+    .cast::<ProvRsaCtx>();
     if prsactx.is_null() {
         return ptr::null_mut();
     }
@@ -352,22 +363,28 @@ unsafe extern "C" fn rsa_encrypt(
         if (*prsactx).pad_mode == RSA_PKCS1_OAEP_PADDING {
             let rsasize = RSA_size((*prsactx).rsa);
 
-            let tbuf = CRYPTO_malloc(rsasize as usize, FILE, 197).cast::<u8>();
-            if tbuf.is_null() {
+            // The scratch is this frame's own block; the handle releases it through the crate's
+            // allocator seam on every path out of the arm. It holds the padded plaintext, so the
+            // release cleanses it (a deliberate improvement over the authority's plain
+            // `OPENSSL_free`); the allocation and each early release stay at the authority's own
+            // coordinates (`rsa_enc.c.in:197`, `:202`, `:215`, `:220`).
+            let Some(mut tbuf) =
+                OwnedBuf::new_cleansed_released(rsasize as usize, FILE_SEAM, 197, FILE_SEAM, 220)
+            else {
                 return 0;
-            }
+            };
             if (*prsactx).oaep_md.is_null() {
                 (*prsactx).oaep_md =
                     EVP_MD_fetch((*prsactx).libctx, c"SHA-1".as_ptr(), ptr::null());
                 if (*prsactx).oaep_md.is_null() {
-                    CRYPTO_free(tbuf.cast(), FILE, 202);
+                    tbuf.set_release_line(202);
                     raise_site(&err_sites::PROV_RSA_ENC_201);
                     return 0;
                 }
             }
             ret = ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
                 (*prsactx).libctx,
-                tbuf,
+                tbuf.as_ptr(),
                 rsasize,
                 input,
                 inlen as c_int,
@@ -378,11 +395,10 @@ unsafe extern "C" fn rsa_encrypt(
             );
 
             if ret == 0 {
-                CRYPTO_free(tbuf.cast(), FILE, 215);
+                tbuf.set_release_line(215);
                 return 0;
             }
-            ret = RSA_public_encrypt(rsasize, tbuf, out, (*prsactx).rsa, RSA_NO_PADDING);
-            CRYPTO_free(tbuf.cast(), FILE, 220);
+            ret = RSA_public_encrypt(rsasize, tbuf.as_ptr(), out, (*prsactx).rsa, RSA_NO_PADDING);
         } else {
             ret = RSA_public_encrypt(
                 inlen as c_int,
@@ -454,17 +470,29 @@ unsafe extern "C" fn rsa_decrypt(
         if (*prsactx).pad_mode == RSA_PKCS1_OAEP_PADDING
             || (*prsactx).pad_mode == RSA_PKCS1_WITH_TLS_PADDING
         {
-            let tbuf = CRYPTO_malloc(len, FILE, 272).cast::<u8>();
-            if tbuf.is_null() {
+            // The scratch is this frame's own block; the handle releases it through the crate's
+            // allocator seam on every path out of the arm. It holds the decrypted ciphertext
+            // before unpadding, so the release cleanses it (a deliberate improvement over the
+            // authority's plain `OPENSSL_free`); allocation and each early release stay at the
+            // authority's coordinates (`rsa_enc.c.in:272`, `:281`, `:289`, `:304`, `:311`).
+            let Some(mut tbuf) =
+                OwnedBuf::new_cleansed_released(len, FILE_SEAM, 272, FILE_SEAM, 311)
+            else {
                 return 0;
-            }
-            ret = RSA_private_decrypt(inlen as c_int, input, tbuf, (*prsactx).rsa, RSA_NO_PADDING);
+            };
+            ret = RSA_private_decrypt(
+                inlen as c_int,
+                input,
+                tbuf.as_ptr(),
+                (*prsactx).rsa,
+                RSA_NO_PADDING,
+            );
             /*
              * With no padding then, on success ret should be len, otherwise an
              * error occurred (non-constant time)
              */
             if ret != len as c_int {
-                CRYPTO_free(tbuf.cast(), FILE, 281);
+                tbuf.set_release_line(281);
                 raise_site(&err_sites::PROV_RSA_ENC_280);
                 return 0;
             }
@@ -473,7 +501,7 @@ unsafe extern "C" fn rsa_decrypt(
                     (*prsactx).oaep_md =
                         EVP_MD_fetch((*prsactx).libctx, c"SHA-1".as_ptr(), ptr::null());
                     if (*prsactx).oaep_md.is_null() {
-                        CRYPTO_free(tbuf.cast(), FILE, 289);
+                        tbuf.set_release_line(289);
                         raise_site(&err_sites::PROV_RSA_ENC_288);
                         return 0;
                     }
@@ -481,7 +509,7 @@ unsafe extern "C" fn rsa_decrypt(
                 ret = RSA_padding_check_PKCS1_OAEP_mgf1(
                     out,
                     outsize as c_int,
-                    tbuf,
+                    tbuf.as_ptr(),
                     len as c_int,
                     len as c_int,
                     (*prsactx).oaep_label,
@@ -492,21 +520,20 @@ unsafe extern "C" fn rsa_decrypt(
             } else {
                 /* RSA_PKCS1_WITH_TLS_PADDING */
                 if (*prsactx).client_version == 0 {
+                    tbuf.set_release_line(304);
                     raise_site(&err_sites::PROV_RSA_ENC_301);
-                    CRYPTO_free(tbuf.cast(), FILE, 304);
                     return 0;
                 }
                 ret = ossl_rsa_padding_check_PKCS1_type_2_TLS(
                     (*prsactx).libctx,
                     out,
                     outsize,
-                    tbuf,
+                    tbuf.as_ptr(),
                     len,
                     (*prsactx).client_version as c_int,
                     (*prsactx).alt_version as c_int,
                 );
             }
-            CRYPTO_free(tbuf.cast(), FILE, 311);
         } else {
             if (*prsactx).implicit_rejection == 0 && (*prsactx).pad_mode == RSA_PKCS1_PADDING {
                 pad_mode = RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING;
@@ -533,7 +560,14 @@ unsafe extern "C" fn rsa_freectx(vprsactx: *mut c_void) {
         RSA_free((*prsactx).rsa);
         EVP_MD_free((*prsactx).oaep_md);
         EVP_MD_free((*prsactx).mgf1_md);
-        CRYPTO_free((*prsactx).oaep_label.cast(), FILE, 332);
+        // The label's handle releases the field's own plain block at the authority's site; the
+        // context block stays on the raw seam (its release is part of the destructor body).
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain(
+            (*prsactx).oaep_label.cast::<c_uchar>(),
+            FILE_SEAM,
+            332,
+        ));
         CRYPTO_free(prsactx.cast(), FILE, 334);
     }
 }
@@ -579,18 +613,22 @@ unsafe extern "C" fn rsa_dupctx(vprsactx: *mut c_void) -> *mut c_void {
         }
 
         if !(*dstctx).oaep_label.is_null() {
-            let dup = CRYPTO_memdup(
-                (*dstctx).oaep_label.cast(),
-                (*dstctx).oaep_labellen,
-                FILE,
+            // The whole-struct copy above left `dstctx->oaep_label` aliasing `srcctx`'s block; the
+            // authority assigns the `OPENSSL_memdup` result straight into the field, so a failed
+            // duplication leaves it NULL and `rsa_freectx` then frees nothing.
+            let src_label = (*dstctx).oaep_label;
+            let src_labellen = (*dstctx).oaep_labellen;
+            (*dstctx).oaep_label = ptr::null_mut();
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            let Some(dup) = OwnedBuf::adopt_plain(
+                CRYPTO_memdup(src_label.cast(), src_labellen, FILE, 369).cast::<c_uchar>(),
+                FILE_SEAM,
                 369,
-            )
-            .cast::<u8>();
-            if dup.is_null() {
+            ) else {
                 rsa_freectx(dstctx.cast());
                 return ptr::null_mut();
-            }
-            (*dstctx).oaep_label = dup;
+            };
+            (*dstctx).oaep_label = dup.into_raw().cast::<u8>();
         }
 
         dstctx.cast()
@@ -1067,8 +1105,18 @@ unsafe extern "C" fn rsa_set_ctx_params(vprsactx: *mut c_void, params: *const Os
             if OSSL_PARAM_get_octet_string(p.label, &mut tmp_label, 0, &mut tmp_labellen) == 0 {
                 return 0;
             }
-            CRYPTO_free((*prsactx).oaep_label.cast(), FILE, 576);
-            (*prsactx).oaep_label = tmp_label.cast::<u8>();
+            // The old label's handle releases it at the authority's own site; the replacement is
+            // the helper's fresh block, handed to the field through a second handle.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain(
+                (*prsactx).oaep_label.cast::<c_uchar>(),
+                FILE_SEAM,
+                576,
+            ));
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            (*prsactx).oaep_label =
+                OwnedBuf::adopt_plain(tmp_label.cast::<c_uchar>(), FILE_SEAM, 576)
+                    .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             (*prsactx).oaep_labellen = tmp_labellen;
         }
 

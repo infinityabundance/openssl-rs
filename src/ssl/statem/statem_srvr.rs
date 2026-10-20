@@ -59,6 +59,10 @@ use core::ffi::{c_int, c_uint};
 use core::ptr;
 
 use crate::packet::Wpacket;
+use crate::runtime::foreign::OwnedCtx;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_lib::Ssl;
 use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
@@ -195,6 +199,14 @@ const CCS_MAX_LENGTH: usize = 1;
 const FINISHED_MAX_LENGTH: usize = 64;
 const KEY_UPDATE_MAX_LENGTH: usize = 1;
 const END_OF_EARLY_DATA_MAX_LENGTH: usize = 0;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership reclaimed from the hand-written releases in this file
+// ---------------------------------------------------------------------------------------------
+
+// The shared [`OwnedBuf`] owns a `CRYPTO_*` block this frame allocated (or a `get1` out-pointer
+// it took back), so its single release is `Drop`'s `CRYPTO_free` at the authority's own
+// `(file, line)` and no call site writes a `CRYPTO_free` by hand.
 
 #[inline]
 fn is_tls13(s: *const Ssl) -> bool {
@@ -801,8 +813,8 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
     if !ctx.is_null() {
         // SAFETY: `ctx` is the live context read above.
         if let Some(cb) = unsafe { (*ctx).alpn_select_cb } {
-            // SAFETY: `s` is live.
-            let proposed = unsafe { (*s).s3_alpn_proposed };
+            // SAFETY: `s` is live; its `s3_alpn_proposed` member obeys the member-buffer invariant.
+            let (proposed, proposed_len) = unsafe { (*s).s3_alpn_proposed() };
             if !proposed.is_null() {
                 let mut selected: *const u8 = core::ptr::null();
                 let mut selected_len: u8 = 0;
@@ -814,28 +826,29 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
                         &mut selected,
                         &mut selected_len,
                         proposed,
-                        (*s).s3_alpn_proposed_len as core::ffi::c_uint,
+                        proposed_len as core::ffi::c_uint,
                         (*ctx).alpn_select_cb_arg,
                     )
                 };
                 if r == SSL_TLSEXT_ERR_OK {
-                    // SAFETY: `s` is live; `selected`/`selected_len` name a live buffer.
+                    // SAFETY: `s` is live; `selected`/`selected_len` name a live buffer and the
+                    // `s3_alpn_selected` member obeys the member-buffer invariant.
                     unsafe {
-                        use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                        CRYPTO_free((*s).s3_alpn_selected.cast(), core::ptr::null(), 0);
-                        (*s).s3_alpn_selected = CRYPTO_memdup(
+                        use crate::runtime::mem::CRYPTO_memdup;
+                        let mut slot = (*s).s3_alpn_selected_slot();
+                        slot.clear(core::ptr::null(), 0);
+                        let dup = CRYPTO_memdup(
                             selected.cast(),
                             selected_len as usize,
                             core::ptr::null(),
                             0,
                         )
                         .cast::<u8>();
-                        if (*s).s3_alpn_selected.is_null() {
-                            (*s).s3_alpn_selected_len = 0;
+                        if dup.is_null() {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                             return 0;
                         }
-                        (*s).s3_alpn_selected_len = selected_len as usize;
+                        slot.store(dup, selected_len as usize);
                     }
                     return 1;
                 } else if r != SSL_TLSEXT_ERR_NOACK {
@@ -1024,16 +1037,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 return 0;
             }
             // SAFETY: `s` is live; `eb[5..]` holds `nlen` readable bytes with no interior NUL, so
-            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator.
+            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator, and the
+            // `ext_hostname` member obeys the member-buffer invariant.
             unsafe {
-                use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
-                CRYPTO_free((*s).ext_hostname.cast(), core::ptr::null(), 0);
-                (*s).ext_hostname =
-                    CRYPTO_strndup(eb.as_ptr().add(5).cast(), nlen, core::ptr::null(), 0);
-                if (*s).ext_hostname.is_null() {
+                let mut slot = (*s).ext_hostname_slot();
+                let empty = slot.clear(SeamFile::NULL, 0);
+                let Some(dup) =
+                    OwnedCStr::strndup(eb.as_ptr().add(5).cast(), nlen, SeamFile::NULL, 0)
+                else {
                     ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                     return 0;
-                }
+                };
+                empty.store(dup);
             }
             sni_sent = true;
         }
@@ -1097,18 +1112,19 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
                 return 0;
             }
-            // SAFETY: `s` is live; `list` is `list_len` readable bytes.
+            // SAFETY: `s` is live; `list` is `list_len` readable bytes and the `s3_alpn_proposed`
+            // member obeys the member-buffer invariant.
             unsafe {
-                use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
-                CRYPTO_free((*s).s3_alpn_proposed.cast(), core::ptr::null(), 0);
-                (*s).s3_alpn_proposed =
-                    CRYPTO_memdup(list.as_ptr().cast(), list.len(), core::ptr::null(), 0)
-                        .cast::<u8>();
-                if (*s).s3_alpn_proposed.is_null() {
+                use crate::runtime::mem::CRYPTO_memdup;
+                let mut slot = (*s).s3_alpn_proposed_slot();
+                slot.clear(core::ptr::null(), 0);
+                let dup = CRYPTO_memdup(list.as_ptr().cast(), list.len(), core::ptr::null(), 0)
+                    .cast::<u8>();
+                if dup.is_null() {
                     ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                     return 0;
                 }
-                (*s).s3_alpn_proposed_len = list.len();
+                slot.store(dup, list.len());
             }
         }
         if etype == TLSEXT_TYPE_POST_HANDSHAKE_AUTH {
@@ -1739,7 +1755,7 @@ const MSG_FLOW_READING_13: c_int = 2;
 /// `s` is live.
 unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live; the selected protocol is owned by the connection.
-    let (selected, sel_len) = unsafe { ((*s).s3_alpn_selected, (*s).s3_alpn_selected_len) };
+    let (selected, sel_len) = unsafe { (*s).s3_alpn_selected() };
     // The `Extension extensions<0..2^16-1>` block, then a two-byte length prefix in `body`.
     let mut ext = [0u8; 512];
     let mut ext_len = 0usize;
@@ -1891,46 +1907,68 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
     if unsafe { (*cpk).x509 }.is_null() {
         return 0;
     }
-    let mut der = [0u8; 8192];
-    let mut p = der.as_mut_ptr();
-    // SAFETY: `cpk.x509` is live; `p` points at `der`'s storage.
-    let derlen = unsafe { i2d_X509((*cpk).x509, &mut p) };
+    // Size the DER first (the authority's `i2d_X509(x, NULL)` before
+    // `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer writes
+    // the whole encoding and takes no capacity argument, so a fixed stack buffer would
+    // be overflowed by any certificate larger than it. Encoding into a block sized from
+    // this first pass is the authority's own ordering.
+    // SAFETY: `cpk.x509` is live; a NULL out-pointer asks only for the length.
+    let derlen = unsafe { i2d_X509((*cpk).x509, ptr::null_mut()) };
     if derlen <= 0 {
         return 0;
     }
     let derlen = derlen as usize;
-    if derlen > der.len() {
-        return 0;
-    }
     // `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>` (`ssl3.h`,
     // RFC 8446 §4.4.2): the six-byte entry prefix plus the empty two-byte extension block.
-    let entry_len = 3 + derlen + 2;
-    let clen = entry_len;
-    let body_len = 1 + ctx_len + 3 + clen;
-    let mut body = [0u8; 8200];
-    if body_len > body.len() {
+    let Some(body_len) = 1usize
+        .checked_add(ctx_len)
+        .and_then(|n| n.checked_add(3))
+        .and_then(|n| n.checked_add(3))
+        .and_then(|n| n.checked_add(derlen))
+        .and_then(|n| n.checked_add(2))
+    else {
+        return 0;
+    };
+    // `write_handshake_message` frames `4 + body_len` bytes in a 17000-byte block; keep
+    // the allocation bounded by the same reduced boundary.
+    if body_len > 17000 - 4 {
         return 0;
     }
-    body[0] = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
-    body[1..1 + ctx_len].copy_from_slice(context);
-    let mut p = 1 + ctx_len;
-    body[p] = (clen >> 16) as u8;
-    body[p + 1] = (clen >> 8) as u8;
-    body[p + 2] = clen as u8;
-    p += 3;
-    body[p] = (derlen >> 16) as u8;
-    body[p + 1] = (derlen >> 8) as u8;
-    body[p + 2] = derlen as u8;
-    p += 3;
-    // SAFETY: `body[p..]` has room for `derlen` bytes.
-    unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), derlen) };
-    p += derlen;
-    // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
-    body[p] = 0;
-    body[p + 1] = 0;
-    // SAFETY: `s` is live; `body` is `body_len` initialised bytes.
+    // The body block, allocated through the crate's allocator seam; its single release
+    // is the handle's `Drop` on every refusal below.
+    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    // Every byte below is written before the block is read or released.
+    let body_ptr = body.as_ptr();
+    let clen = 3 + derlen + 2;
+    // SAFETY: `body_ptr` is writable for `body_len` bytes (checked above); `context` is
+    // readable for `ctx_len`; the DER slot has `derlen` writable bytes.
     unsafe {
-        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), body_len)
+        *body_ptr = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
+        core::ptr::copy_nonoverlapping(context.as_ptr(), body_ptr.add(1), ctx_len);
+        let mut p = 1 + ctx_len;
+        *body_ptr.add(p) = (clen >> 16) as u8;
+        *body_ptr.add(p + 1) = (clen >> 8) as u8;
+        *body_ptr.add(p + 2) = clen as u8;
+        p += 3;
+        *body_ptr.add(p) = (derlen >> 16) as u8;
+        *body_ptr.add(p + 1) = (derlen >> 8) as u8;
+        *body_ptr.add(p + 2) = derlen as u8;
+        p += 3;
+        // The authority encodes into the exact reservation it sized above; the slot holds
+        // a pointer with `derlen` writable bytes, so the whole encoding fits.
+        let mut out = body_ptr.add(p);
+        if i2d_X509((*cpk).x509, &mut out) != derlen as c_int {
+            return 0;
+        }
+        p += derlen;
+        // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
+        *body_ptr.add(p) = 0;
+        *body_ptr.add(p + 1) = 0;
+        debug_assert_eq!(p + 2, body_len);
+
+        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body_ptr, body_len)
     }
 }
 
@@ -1943,7 +1981,7 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
 /// # Safety
 /// `s` is live.
 pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -> c_int {
-    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
+    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
@@ -1989,11 +2027,17 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
         return 0;
     }
     pos += hl;
-    // SAFETY: no preconditions.
-    let mctx = EVP_MD_CTX_new();
-    if mctx.is_null() {
+    // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned `EVP_MD_CTX`
+    // block (or NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_MD_CTX_free` -- its single release.
+    let Some(mctx_owner) =
+        (unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) })
+    else {
         return 0;
-    }
+    };
+    // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
+    // handle's `Drop` at the end of the frame.
+    let mctx = mctx_owner.as_ptr();
     // SAFETY: `cpk` is a live slot; `privatekey` is the loaded signing key.
     let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
     // The authority's `tls12_get_sigandhash`/`tls1_lookup_sigalg` picks the scheme by key type
@@ -2047,7 +2091,6 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
                 ) > 0;
             }
         }
-        EVP_MD_CTX_free(mctx);
     }
     c_int::from(ok)
 }
@@ -2186,19 +2229,20 @@ pub(crate) unsafe fn tls13_server_send_pha_cert_request(s: *mut Ssl) -> c_int {
     }
     // SAFETY: `s` is live; the previous context (if any) is owned here.
     unsafe {
-        crate::runtime::mem::CRYPTO_free((*s).pha_context.cast(), core::ptr::null(), 0);
-        (*s).pha_context = crate::runtime::mem::CRYPTO_memdup(
+        // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
+        let mut slot = (*s).pha_context_slot();
+        slot.clear(core::ptr::null(), 0);
+        let dup = crate::runtime::mem::CRYPTO_memdup(
             ctx.as_ptr().cast(),
             ctx.len(),
             core::ptr::null(),
             0,
         )
         .cast::<u8>();
-        if (*s).pha_context.is_null() {
-            (*s).pha_context_len = 0;
+        if dup.is_null() {
             return 0;
         }
-        (*s).pha_context_len = ctx.len();
+        slot.store(dup, ctx.len());
     }
     // SAFETY: `s` is live; rewinding happens before the request is added to the transcript
     // (`statem_srvr.c:3044-3048`).
@@ -2397,7 +2441,7 @@ unsafe fn tls12_choose_group(s: *const Ssl, clnt_groups: &[u16]) -> u16 {
 /// # Safety
 /// `s` is live; `sig` is writable.
 pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Option<(u16, usize)> {
-    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
+    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
@@ -2412,11 +2456,13 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     // SAFETY: `pkey` is live.
     let is_ec = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) }
         == crate::evp::pkey_ctx::EVP_PKEY_EC;
-    // SAFETY: no preconditions.
-    let mctx = EVP_MD_CTX_new();
-    if mctx.is_null() {
-        return None;
-    }
+    // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned
+    // `EVP_MD_CTX` block (or NULL, which yields `None`), live and owned solely by this handle, whose
+    // `Drop` runs `EVP_MD_CTX_free` -- its single release.
+    let mctx_owner = unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) }?;
+    // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
+    // handle's `Drop` at the end of the frame.
+    let mctx = mctx_owner.as_ptr();
     // SAFETY: no preconditions.
     let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
@@ -2445,7 +2491,6 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
         {
             ok = true;
         }
-        EVP_MD_CTX_free(mctx);
     }
     if !ok {
         return None;
@@ -2464,9 +2509,7 @@ pub(crate) unsafe fn tls12_verify(
     sigalg: u16,
     sig: &[u8],
 ) -> bool {
-    use crate::evp::digest::{
-        EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    };
+    use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     if sigalg != 0x0401 && sigalg != 0x0403 {
@@ -2474,11 +2517,17 @@ pub(crate) unsafe fn tls12_verify(
     }
     // SAFETY: no preconditions.
     let md = EVP_sha256();
-    // SAFETY: no preconditions.
-    let mctx = EVP_MD_CTX_new();
-    if mctx.is_null() {
+    // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned
+    // `EVP_MD_CTX` block (or NULL, which yields `None`), live and owned solely by this handle, whose
+    // `Drop` runs `EVP_MD_CTX_free` -- its single release.
+    let Some(mctx_owner) =
+        (unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) })
+    else {
         return false;
-    }
+    };
+    // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
+    // handle's `Drop` at the end of the frame.
+    let mctx = mctx_owner.as_ptr();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut ok = false;
     // SAFETY: `mctx`/`pkey` are live.
@@ -2490,7 +2539,6 @@ pub(crate) unsafe fn tls12_verify(
         {
             ok = true;
         }
-        EVP_MD_CTX_free(mctx);
     }
     ok
 }
@@ -2589,62 +2637,139 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
     use crate::x509::x_x509::{i2d_X509, X509};
     // SAFETY: `s` is live.
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
-    let mut body = [0u8; 8300];
+    let leaf = if cpk.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: `cpk` is a live slot.
+        unsafe { (*cpk).x509 }
+    };
+    // SAFETY: `cpk` is NULL or a live certificate container.
+    let chain = if cpk.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: the `else` arm runs only when `cpk` is non-NULL and live.
+        unsafe { (*cpk).chain }
+    };
+    let n = if chain.is_null() {
+        0
+    } else {
+        // SAFETY: `chain` is a live stack.
+        unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) }
+    };
+
+    // First pass: size every DER blob exactly (the authority's `i2d_X509(x, NULL)`
+    // before `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer
+    // writes the whole encoding and takes no capacity argument, so a fixed stack buffer
+    // would be overflowed by a certificate larger than it.
+    let mut list_len = 0usize;
+    if !leaf.is_null() {
+        // SAFETY: `leaf` is a live certificate; a NULL out-pointer asks only for the length.
+        let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let Some(next) = list_len
+            .checked_add(3)
+            .and_then(|v| v.checked_add(dlen as usize))
+        else {
+            return 0;
+        };
+        list_len = next;
+    }
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
+        if x.is_null() {
+            continue;
+        }
+        // SAFETY: `x` is a live certificate; a NULL out-pointer asks for the length.
+        let dlen = unsafe { i2d_X509(x, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let Some(next) = list_len
+            .checked_add(3)
+            .and_then(|v| v.checked_add(dlen as usize))
+        else {
+            return 0;
+        };
+        list_len = next;
+    }
+    // `certificate_list<0..2^24-1>`, and the handshake writer's 17000-byte framing bound.
+    if list_len > 0xFF_FFFF {
+        return 0;
+    }
+    let Some(body_len) = 3usize.checked_add(list_len) else {
+        return 0;
+    };
+    if body_len > 17000 - 4 {
+        return 0;
+    }
+    // The body block, allocated through the crate's allocator seam; its single release is
+    // the handle's `Drop` on every refusal below. Every byte is written by the second pass.
+    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let body_ptr = body.as_ptr();
     let mut p = 3usize;
-    let mut der = [0u8; 8192];
-    let mut derptr = der.as_mut_ptr();
-    // SAFETY: `s` is live; `cpk` is a live certificate container.
-    if !cpk.is_null() && !unsafe { (*cpk).x509 }.is_null() {
-        // SAFETY: `cpk.x509` is live; `derptr` points at `der`'s storage.
-        let dlen = unsafe { i2d_X509((*cpk).x509, &mut derptr) };
-        if dlen <= 0 || dlen as usize > der.len() || p + 3 + dlen as usize > body.len() {
+    // Second pass: encode each certificate into its exact reservation.
+    if !leaf.is_null() {
+        // SAFETY: `leaf` is a live certificate.
+        let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
+        if dlen <= 0 {
             return 0;
         }
         let dlen = dlen as usize;
-        body[p] = (dlen >> 16) as u8;
-        body[p + 1] = (dlen >> 8) as u8;
-        body[p + 2] = dlen as u8;
-        p += 3;
-        // SAFETY: `body` has room for `dlen` bytes at `p`.
-        unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), dlen) };
-        p += dlen;
-    }
-    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
-    // SAFETY: `s`/`cpk` are live.
-    if !cpk.is_null() && !unsafe { (*cpk).chain }.is_null() {
-        // SAFETY: `cpk.chain` is a live stack of certificates.
-        let chain = unsafe { (*cpk).chain };
-        // SAFETY: `chain` is a live stack.
-        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) };
-        for i in 0..n {
-            // SAFETY: `i` is in range.
-            let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
-            if x.is_null() {
-                continue;
-            }
-            let mut d2 = [0u8; 8192];
-            let mut d2p = d2.as_mut_ptr();
-            // SAFETY: `x` is a live certificate.
-            let dlen = unsafe { i2d_X509(x, &mut d2p) };
-            if dlen <= 0 || dlen as usize > d2.len() || p + 3 + dlen as usize > body.len() {
+        // SAFETY: `body_ptr` is writable for `body_len` bytes; `p + 3 + dlen <= body_len`
+        // follows from the first pass and the `checked_add`s above.
+        unsafe {
+            *body_ptr.add(p) = (dlen >> 16) as u8;
+            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
+            *body_ptr.add(p + 2) = dlen as u8;
+            p += 3;
+            let mut out = body_ptr.add(p);
+            if i2d_X509(leaf, &mut out) != dlen as c_int {
                 return 0;
             }
-            let dlen = dlen as usize;
-            body[p] = (dlen >> 16) as u8;
-            body[p + 1] = (dlen >> 8) as u8;
-            body[p + 2] = dlen as u8;
-            p += 3;
-            // SAFETY: `body` has room for `dlen` bytes at `p`.
-            unsafe { core::ptr::copy_nonoverlapping(d2.as_ptr(), body.as_mut_ptr().add(p), dlen) };
             p += dlen;
         }
     }
-    let list_len = p - 3;
-    body[0] = (list_len >> 16) as u8;
-    body[1] = (list_len >> 8) as u8;
-    body[2] = list_len as u8;
-    // SAFETY: `s` is live; `body` is `p` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body.as_ptr(), p) }
+    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
+        if x.is_null() {
+            continue;
+        }
+        // SAFETY: `x` is a live certificate.
+        let dlen = unsafe { i2d_X509(x, ptr::null_mut()) };
+        if dlen <= 0 {
+            return 0;
+        }
+        let dlen = dlen as usize;
+        // SAFETY: `body_ptr` is writable for `body_len` bytes; the first pass reserved
+        // exactly `3 + dlen` for this entry.
+        unsafe {
+            *body_ptr.add(p) = (dlen >> 16) as u8;
+            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
+            *body_ptr.add(p + 2) = dlen as u8;
+            p += 3;
+            let mut out = body_ptr.add(p);
+            if i2d_X509(x, &mut out) != dlen as c_int {
+                return 0;
+            }
+            p += dlen;
+        }
+    }
+    debug_assert_eq!(p - 3, list_len);
+    debug_assert_eq!(p, body_len);
+    // SAFETY: `body_ptr` is writable for `body_len` bytes; `body_start` is the list body.
+    unsafe {
+        *body_ptr = (list_len >> 16) as u8;
+        *body_ptr.add(1) = (list_len >> 8) as u8;
+        *body_ptr.add(2) = list_len as u8;
+        write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body_ptr, body_len)
+    }
 }
 
 /// `tls_construct_server_key_exchange` (`statem_srvr.c:2699-2860`) for the reduced ECDHE path:
@@ -2654,8 +2779,9 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
-    use crate::runtime::mem::CRYPTO_free;
+    use crate::evp::pkey::{
+        evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EvpPkey,
+    };
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     let group = unsafe { (*s).group_id };
@@ -2666,28 +2792,44 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
         return -1;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     let mut params = [crate::params::END; 1];
-    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
-    let pkey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };
-    if pkey.is_null() {
+    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; and
+    // `evp_pkey_keygen` is the matching constructor, answering the whole, aligned key block (or
+    // NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
+    // `EVP_PKEY_free` -- its single release.
+    let Some(pkey) = (unsafe {
+        OwnedCtx::<EvpPkey>::new(evp_pkey_keygen(
+            libctx,
+            c"X25519".as_ptr(),
+            propq,
+            params.as_mut_ptr(),
+        ))
+    }) else {
         return 0;
-    }
+    };
     let mut pub_ = core::ptr::null_mut::<u8>();
     // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
-    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey, &mut pub_) };
+    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey.as_ptr(), &mut pub_) };
     if publen == 0 {
-        // SAFETY: `pkey` is live and this call owns it.
-        unsafe { EVP_PKEY_free(pkey) };
+        // The refusal releases the key it built: returning drops `pkey`. `pub_` stays as the
+        // authority leaves it (the failed `get1` does not hand one back).
         return 0;
     }
+    // The `get1` out-pointer is this frame's now: its single release is the handle's `Drop`, so the
+    // frame no longer writes a `CRYPTO_free` by hand.
+    // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
+    let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
+    else {
+        return 0;
+    };
     // Store the server ephemeral (`ssl_generate_pkey`).
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
     unsafe {
         if !(*s).pkey.is_null() {
             EVP_PKEY_free((*s).pkey.cast());
         }
-        (*s).pkey = pkey.cast();
+        (*s).pkey = pkey.into_raw().cast();
     }
     let mut params_buf = [0u8; 128];
     params_buf[0] = 3; // named_curve
@@ -2695,7 +2837,9 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     params_buf[2] = group as u8;
     params_buf[3] = publen as u8;
     // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room.
-    unsafe { core::ptr::copy_nonoverlapping(pub_, params_buf.as_mut_ptr().add(4), publen) };
+    unsafe {
+        core::ptr::copy_nonoverlapping(pub_.as_ptr(), params_buf.as_mut_ptr().add(4), publen)
+    };
     let params_len = 4 + publen;
     let mut tbs = [0u8; 32 + 32 + 128];
     // SAFETY: `s` is live; both randoms are 32-byte arrays; `tbs` has room.
@@ -2707,8 +2851,8 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     let mut sig = [0u8; 1024];
     // SAFETY: `s` is live; `tbs`/`sig` are writable locals.
     let sigalg_len = unsafe { tls12_sign(s, &tbs[..64 + params_len], &mut sig) };
-    // SAFETY: `pub_` is the block `get1` allocated.
-    unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
+    // The `get1` block's single release is this drop, at the authority's own release point.
+    drop(pub_);
     let Some((sigalg, siglen)) = sigalg_len else {
         return 0;
     };
@@ -2772,7 +2916,7 @@ const TLS12_TICKET_LEN: usize = 64;
 /// # Safety
 /// `s` must be a live connection with its handshake session set.
 unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     let sess = unsafe { (*s).session };
@@ -2805,14 +2949,15 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
     // Record the ticket on the session and set the client-mirrored resume id (`SHA256(ticket)`).
     // SAFETY: `sess` is live.
     unsafe {
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(TLS12_TICKET_LEN, core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, TLS12_TICKET_LEN);
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = TLS12_TICKET_LEN;
+        // `tp` is this call's fresh block of `TLS12_TICKET_LEN` bytes; the member is empty.
+        (*sess).ext_tick_slot().store(tp, TLS12_TICKET_LEN);
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
         (*sess).not_resumable = 0;
         let mut digest = [0u8; 32];
@@ -2847,11 +2992,10 @@ const EVP_MAX_IV_LENGTH: usize = 16;
 /// `s` is live with a set handshake session.
 unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
     use crate::evp::cipher_ctx::{
-        EVP_CIPHER_CTX_free, EVP_CIPHER_CTX_get_iv_length, EVP_CIPHER_CTX_new, EVP_EncryptFinal_ex,
-        EVP_EncryptUpdate,
+        EVP_CIPHER_CTX_get_iv_length, EVP_CIPHER_CTX_new, EVP_EncryptFinal_ex, EVP_EncryptUpdate,
     };
-    use crate::mac::hmac::{HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Update};
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::mac::hmac::{HMAC_CTX_new, HMAC_Final, HMAC_Update};
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::ssl_asn1::i2d_SSL_SESSION;
     // SAFETY: `s` is live.
     unsafe {
@@ -2865,37 +3009,39 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
             return None;
         }
         let slen = slen as usize;
-        let senc = CRYPTO_malloc(slen, core::ptr::null(), 0).cast::<u8>();
-        if senc.is_null() {
-            return None;
-        }
-        let mut p = senc;
+        // The serialisation buffer, allocated through the crate's allocator seam at the authority's
+        // own size and site; its single release is the handle's `Drop`, so every refusal below
+        // releases it rather than freeing by hand.
+        // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
+        let senc = OwnedBuf::adopt_plain(
+            CRYPTO_malloc(slen, core::ptr::null(), 0).cast(),
+            SeamFile::NULL,
+            0,
+        )?;
+        let mut p = senc.as_ptr();
         if i2d_SSL_SESSION(sess, &mut p) <= 0 {
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
         let tctx = (*s).session_ctx;
         if tctx.is_null() {
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
-        let ctx = EVP_CIPHER_CTX_new();
-        let hctx = HMAC_CTX_new();
-        if ctx.is_null() || hctx.is_null() {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
-            return None;
-        }
+        // The cipher and HMAC contexts, owned here: their single release is `Drop` running the
+        // authority's own `EVP_CIPHER_CTX_free`/`HMAC_CTX_free`, on every refusal and on success.
+        // SAFETY: `EVP_CIPHER_CTX_new` is the matching constructor: it answered the whole, aligned
+        // `EVP_CIPHER_CTX` block (or NULL, which yields `None`), live and owned solely by this
+        // handle, whose `Drop` runs `EVP_CIPHER_CTX_free` -- its single release.
+        let ctx = OwnedCtx::<crate::evp::cipher_ctx::EvpCipherCtx>::new(EVP_CIPHER_CTX_new())?;
+        // SAFETY: `HMAC_CTX_new` is the matching constructor: it answered the whole, aligned
+        // `HMAC_CTX` block (or NULL, which yields `None`), live and owned solely by this handle,
+        // whose `Drop` runs `HMAC_CTX_free` -- its single release.
+        let hctx = OwnedCtx::<crate::mac::hmac::HmacCtx>::new(HMAC_CTX_new())?;
         let mut key_name = [0u8; TLSEXT_KEYNAME_LENGTH];
         let mut iv = [0u8; EVP_MAX_IV_LENGTH];
         let cb = match (*tctx).ticket_key_cb {
             Some(cb) => cb,
             None => {
                 // No default-key arm (the module boundary above); suppress the ticket.
-                EVP_CIPHER_CTX_free(ctx);
-                HMAC_CTX_free(hctx);
-                CRYPTO_free(senc.cast(), core::ptr::null(), 0);
                 return None;
             }
         };
@@ -2904,41 +3050,52 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
             s,
             key_name.as_mut_ptr(),
             iv.as_mut_ptr(),
-            ctx.cast(),
-            hctx.cast(),
+            ctx.as_ptr().cast(),
+            hctx.as_ptr().cast(),
             1,
         );
         if ret <= 0 {
             // `ret == 0`/`< 0` (`statem_srvr.c:4250-4275`): a TLS1.3 zero-length ticket is not
             // allowed, so construction is suppressed.
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
-        let iv_len = EVP_CIPHER_CTX_get_iv_length(ctx);
+        let iv_len = EVP_CIPHER_CTX_get_iv_length(ctx.as_ptr());
         if iv_len < 0 {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
         let iv_len = iv_len as usize;
+        // The callback's `iv` is `EVP_MAX_IV_LENGTH` bytes (the authority's buffer); a
+        // cipher reporting a longer IV would make the copy below read past it.
+        if iv_len > EVP_MAX_IV_LENGTH {
+            return None;
+        }
         // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`).
         let mut enc = [0u8; 0xFF00 + 32];
         let mut enc1: c_int = 0;
         let mut enc2: c_int = 0;
-        if EVP_EncryptUpdate(ctx, enc.as_mut_ptr(), &mut enc1, senc, slen as c_int) <= 0
-            || EVP_EncryptFinal_ex(ctx, enc.as_mut_ptr().add(enc1 as usize), &mut enc2) <= 0
+        if EVP_EncryptUpdate(
+            ctx.as_ptr(),
+            enc.as_mut_ptr(),
+            &mut enc1,
+            senc.as_ptr(),
+            slen as c_int,
+        ) <= 0
+            || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.as_mut_ptr().add(enc1 as usize), &mut enc2)
+                <= 0
         {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
-        let enclen = enc1 as usize + enc2 as usize;
-        // ticket = key_name || iv || ciphertext, then HMAC over that prefix.
-        let mut ticket = vec![0u8; TLSEXT_KEYNAME_LENGTH + iv_len + enclen + 32];
+        let enclen = (enc1 as usize).checked_add(enc2 as usize)?;
+        // ticket = key_name || iv || ciphertext, then HMAC over that prefix. The MAC tail
+        // is reserved as `EVP_MAX_MD_SIZE`: the application's `ticket_key_cb` chooses the
+        // HMAC digest, so the write length is not known here, and the authority reserves
+        // `EVP_MAX_MD_SIZE` for exactly this `HMAC_Final` (`statem_srvr.c:4314-4317`). A
+        // 32-byte reservation would be overflowed by SHA-384/512.
+        let ticket_cap = TLSEXT_KEYNAME_LENGTH
+            .checked_add(iv_len)
+            .and_then(|n| n.checked_add(enclen))
+            .and_then(|n| n.checked_add(crate::ssl::ssl_lib::EVP_MAX_MD_SIZE))?;
+        let mut ticket = vec![0u8; ticket_cap];
         ticket[..TLSEXT_KEYNAME_LENGTH].copy_from_slice(&key_name);
         ticket[TLSEXT_KEYNAME_LENGTH..TLSEXT_KEYNAME_LENGTH + iv_len]
             .copy_from_slice(&iv[..iv_len]);
@@ -2946,18 +3103,16 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
             .copy_from_slice(&enc[..enclen]);
         let mac_at = TLSEXT_KEYNAME_LENGTH + iv_len + enclen;
         let mut hlen: c_uint = 0;
-        if HMAC_Update(hctx, ticket.as_ptr(), mac_at) <= 0
-            || HMAC_Final(hctx, ticket.as_mut_ptr().add(mac_at), &mut hlen) <= 0
+        if HMAC_Update(hctx.as_ptr(), ticket.as_ptr(), mac_at) <= 0
+            || HMAC_Final(hctx.as_ptr(), ticket.as_mut_ptr().add(mac_at), &mut hlen) <= 0
         {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
-            CRYPTO_free(senc.cast(), core::ptr::null(), 0);
             return None;
         }
-        ticket.truncate(mac_at + hlen as usize);
-        EVP_CIPHER_CTX_free(ctx);
-        HMAC_CTX_free(hctx);
-        CRYPTO_free(senc.cast(), core::ptr::null(), 0);
+        let hlen = hlen as usize;
+        if hlen > crate::ssl::ssl_lib::EVP_MAX_MD_SIZE {
+            return None;
+        }
+        ticket.truncate(mac_at + hlen);
         Some(ticket)
     }
 }
@@ -2972,10 +3127,9 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
 /// `s` is live; `etick` readable for `eticklen`.
 unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ssl_lib::SslSession {
     use crate::evp::cipher_ctx::{
-        EVP_CIPHER_CTX_free, EVP_CIPHER_CTX_get_iv_length, EVP_CIPHER_CTX_new, EVP_DecryptFinal_ex,
-        EVP_DecryptUpdate,
+        EVP_CIPHER_CTX_get_iv_length, EVP_CIPHER_CTX_new, EVP_DecryptFinal_ex, EVP_DecryptUpdate,
     };
-    use crate::mac::hmac::{HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Update};
+    use crate::mac::hmac::{HMAC_CTX_new, HMAC_Final, HMAC_Update};
     use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::ssl_asn1::d2i_SSL_SESSION;
     // SAFETY: `s` is live.
@@ -2987,18 +3141,24 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
         if tctx.is_null() {
             return core::ptr::null_mut();
         }
-        let ctx = EVP_CIPHER_CTX_new();
-        let hctx = HMAC_CTX_new();
-        if ctx.is_null() || hctx.is_null() {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
+        // The cipher and HMAC contexts, owned here: their single release is `Drop` running the
+        // authority's own `EVP_CIPHER_CTX_free`/`HMAC_CTX_free`, on every refusal and on success.
+        // SAFETY: `EVP_CIPHER_CTX_new` is the matching constructor: it answered the whole, aligned
+        // `EVP_CIPHER_CTX` block (or NULL, which yields `None`), live and owned solely by this
+        // handle, whose `Drop` runs `EVP_CIPHER_CTX_free` -- its single release.
+        let Some(ctx) = OwnedCtx::<crate::evp::cipher_ctx::EvpCipherCtx>::new(EVP_CIPHER_CTX_new())
+        else {
             return core::ptr::null_mut();
-        }
+        };
+        // SAFETY: `HMAC_CTX_new` is the matching constructor: it answered the whole, aligned
+        // `HMAC_CTX` block (or NULL, which yields `None`), live and owned solely by this handle,
+        // whose `Drop` runs `HMAC_CTX_free` -- its single release.
+        let Some(hctx) = OwnedCtx::<crate::mac::hmac::HmacCtx>::new(HMAC_CTX_new()) else {
+            return core::ptr::null_mut();
+        };
         let cb = match (*tctx).ticket_key_cb {
             Some(cb) => cb,
             None => {
-                EVP_CIPHER_CTX_free(ctx);
-                HMAC_CTX_free(hctx);
                 return core::ptr::null_mut();
             }
         };
@@ -3007,36 +3167,31 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
             s,
             etick.as_ptr() as *mut u8,
             etick.as_ptr().add(TLSEXT_KEYNAME_LENGTH) as *mut u8,
-            ctx.cast(),
-            hctx.cast(),
+            ctx.as_ptr().cast(),
+            hctx.as_ptr().cast(),
             0,
         );
         if rv <= 0 {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
             return core::ptr::null_mut();
         }
-        let ivlen = EVP_CIPHER_CTX_get_iv_length(ctx);
+        let ivlen = EVP_CIPHER_CTX_get_iv_length(ctx.as_ptr());
         if ivlen < 0 {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
             return core::ptr::null_mut();
         }
         let ivlen = ivlen as usize;
-        let mlen = crate::mac::hmac::HMAC_size(hctx);
-        if mlen == 0 || etick.len() <= TLSEXT_KEYNAME_LENGTH + ivlen + mlen {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
+        let mlen = crate::mac::hmac::HMAC_size(hctx.as_ptr());
+        if mlen == 0
+            || mlen > crate::ssl::ssl_lib::EVP_MAX_MD_SIZE
+            || etick.len() <= TLSEXT_KEYNAME_LENGTH + ivlen + mlen
+        {
             return core::ptr::null_mut();
         }
         let enc_end = etick.len() - mlen;
         let mut tick_hmac = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
         let mut hlen: c_uint = 0;
-        if HMAC_Update(hctx, etick.as_ptr(), enc_end) <= 0
-            || HMAC_Final(hctx, tick_hmac.as_mut_ptr(), &mut hlen) <= 0
+        if HMAC_Update(hctx.as_ptr(), etick.as_ptr(), enc_end) <= 0
+            || HMAC_Final(hctx.as_ptr(), tick_hmac.as_mut_ptr(), &mut hlen) <= 0
         {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
             return core::ptr::null_mut();
         }
         let mut diff = 0u8;
@@ -3044,42 +3199,36 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
             diff |= tick_hmac[i] ^ etick[enc_end + i];
         }
         if diff != 0 {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
             return core::ptr::null_mut();
         }
-        // Decrypt the blob after the IV.
+        // Decrypt the blob after the IV. The plaintext buffer, allocated through the crate's
+        // allocator seam at the authority's own size and site, is released by its handle's `Drop`.
         let ct_at = TLSEXT_KEYNAME_LENGTH + ivlen;
         let ct_len = enc_end - ct_at;
-        let sdec = CRYPTO_malloc(ct_len + 16, core::ptr::null(), 0).cast::<u8>();
-        if sdec.is_null() {
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
+        // SAFETY: `CRYPTO_malloc` is this crate's own allocator and answers a block or NULL.
+        let Some(sdec) = OwnedBuf::adopt_plain(
+            CRYPTO_malloc(ct_len + 16, core::ptr::null(), 0).cast(),
+            SeamFile::NULL,
+            0,
+        ) else {
             return core::ptr::null_mut();
-        }
+        };
         let mut dec1: c_int = 0;
         let mut dec2: c_int = 0;
         if EVP_DecryptUpdate(
-            ctx,
-            sdec,
+            ctx.as_ptr(),
+            sdec.as_ptr(),
             &mut dec1,
             etick.as_ptr().add(ct_at),
             ct_len as c_int,
         ) <= 0
-            || EVP_DecryptFinal_ex(ctx, sdec.add(dec1 as usize), &mut dec2) <= 0
+            || EVP_DecryptFinal_ex(ctx.as_ptr(), sdec.as_ptr().add(dec1 as usize), &mut dec2) <= 0
         {
-            crate::runtime::mem::CRYPTO_free(sdec.cast(), core::ptr::null(), 0);
-            EVP_CIPHER_CTX_free(ctx);
-            HMAC_CTX_free(hctx);
             return core::ptr::null_mut();
         }
         let slen = dec1 as usize + dec2 as usize;
-        let mut pp: *const u8 = sdec;
-        let sess = d2i_SSL_SESSION(core::ptr::null_mut(), &mut pp, slen as core::ffi::c_long);
-        crate::runtime::mem::CRYPTO_free(sdec.cast(), core::ptr::null(), 0);
-        EVP_CIPHER_CTX_free(ctx);
-        HMAC_CTX_free(hctx);
-        sess
+        let mut pp: *const u8 = sdec.as_ptr();
+        d2i_SSL_SESSION(core::ptr::null_mut(), &mut pp, slen as core::ffi::c_long)
     }
 }
 
@@ -3096,7 +3245,7 @@ unsafe fn tls13_decrypt_ticket(s: *mut Ssl, etick: &[u8]) -> *mut crate::ssl::ss
 /// # Safety
 /// `s` must be a live server connection whose handshake session is set.
 unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::runtime::mem::CRYPTO_malloc;
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     unsafe {
@@ -3165,14 +3314,15 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         // Record the ticket on the session; the client uses `SHA256(ticket)` as its resume id
         // (`statem_clnt.c:2851`). The server session's id stays empty (the stateless ticket is
         // self-describing), matching the authority.
-        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        // Release any incumbent at the authority's own site (see `MemberBufSlot`).
+        (*sess).ext_tick_slot().clear(core::ptr::null(), 0);
         let tp = CRYPTO_malloc(ticket.len(), core::ptr::null(), 0).cast::<u8>();
         if tp.is_null() {
             return 0;
         }
         core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticket.len());
-        (*sess).ext_tick = tp;
-        (*sess).ext_ticklen = ticket.len();
+        // `tp` is this call's fresh block of `ticket.len()` bytes; the member is empty.
+        (*sess).ext_tick_slot().store(tp, ticket.len());
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
         (*sess).not_resumable = 0;
 
@@ -3344,7 +3494,7 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
     // SAFETY: `body[1..1+ptlen]` is `ptlen` readable bytes; the name is NUL-terminated.
     let peer = unsafe {
         crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
@@ -3945,4 +4095,268 @@ unsafe fn server_wait(s: *mut Ssl) -> c_int {
         (*s).rwstate = 3; // SSL_READING
     }
     -1
+}
+
+// -------------------------------------------------------------------------------------------
+// Adversarial allocator-refusal test (`stage/p25/adv-tests`, §16 / §18)
+// -------------------------------------------------------------------------------------------
+//
+// Drives the TLS1.2 server ticket writer with its replacement allocation refused and asserts the
+// recorded safety improvement: the member is left `(NULL, 0)` rather than holding the just-freed
+// pointer, so the later session destructor cannot release a dangling block.
+//
+// Run alone in its own process, under the gate, with the ignore-aware filter:
+//   OPENSSL_RS_ADV_PROBE=1 cargo test --lib \
+//     ssl::statem::statem_srvr::adv_probe -- --ignored --exact --test-threads=1 --nocapture
+// or, for every probe one process at a time, `scripts/adv-probe.sh`.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    use crate::ssl::adv_alloc::{self, Ev};
+    use crate::ssl::ssl_sess::{SSL_SESSION_free, SSL_SESSION_new};
+
+    /// The refusal path of `tls12_construct_new_session_ticket`: the incumbent ticket is released,
+    /// the replacement allocation is refused, and the writer answers its authority error with the
+    /// member left empty. The allocator transcript is the authority's (one free, then the one
+    /// refused request); the destruction performs no second release of the freed block.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn tls12_construct_refused_ticket_alloc_leaves_ext_tick_empty() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // Let RAND initialise its DRBG before the measured window, so its one-off allocation is
+        // not mistaken for the writer's own replacement request.
+        let mut warm = [0u8; 8];
+        // SAFETY: `warm` is writable for 8 bytes.
+        unsafe { crate::rand::rand_lib::RAND_bytes(warm.as_mut_ptr(), 8) };
+
+        // SAFETY: the session and the `Ssl` block are this frame's own allocations.
+        let (sess, s, incumbent) = unsafe {
+            let sess = SSL_SESSION_new();
+            assert!(!sess.is_null(), "SSL_SESSION_new must answer a session");
+            let incumbent = CRYPTO_malloc(20, core::ptr::null(), 0).cast::<u8>();
+            assert!(!incumbent.is_null());
+            (*sess).ext_tick_slot().store(incumbent, 20);
+            let s = adv_alloc::zeroed_ssl();
+            assert!(!s.is_null(), "a zeroed Ssl block must be allocatable");
+            (*s).session = sess;
+            (*s).hit = 0;
+            (sess, s, incumbent)
+        };
+
+        adv_alloc::reset();
+        adv_alloc::arm(TLS12_TICKET_LEN);
+        // SAFETY: `s` is the live connection this frame built, with its session set.
+        let r = unsafe { tls12_construct_new_session_ticket(s) };
+        adv_alloc::disarm();
+
+        assert_eq!(
+            r, 0,
+            "a refused ticket allocation must return the authority's error"
+        );
+        // SAFETY: `sess` is live.
+        let (p, n) = unsafe { (*sess).ext_tick() };
+        assert!(
+            p.is_null() && n == 0,
+            "the refused path must leave the member (NULL, 0)"
+        );
+
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+                .count(),
+            1,
+            "exactly one request is refused"
+        );
+        let at = match ev
+            .iter()
+            .position(|e| matches!(e, Ev::Malloc { refused: true, .. }))
+        {
+            Some(i) => i,
+            None => panic!("the ticket allocation must be refused: {ev:?}"),
+        };
+        assert!(
+            matches!(&ev[at], Ev::Malloc { n, site: true, refused: true } if *n == TLS12_TICKET_LEN),
+            "the refused request is the writer's own (NULL,0) request of TLS12_TICKET_LEN"
+        );
+        assert!(
+            ev[..at]
+                .iter()
+                .any(|e| matches!(e, Ev::Free { p } if *p == incumbent as usize)),
+            "the incumbent is released before the refused replacement"
+        );
+
+        // The destruction must not release the freed incumbent a second time.
+        // SAFETY: `sess` is live and owned here; `s` is the block `zeroed_ssl` allocated.
+        unsafe {
+            SSL_SESSION_free(sess);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        assert!(
+            !adv_alloc::double_free(),
+            "the session destructor must not release the freed incumbent"
+        );
+    }
+
+    /// Negative control (§16): prove the double-release instrument fires, so the assertion above
+    /// is meaningful. A block is released twice; the hook must flag it (and must not forward the
+    /// second release, so the run continues to the assertion).
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_double_release_is_detected() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+        // SAFETY: `b` is a fresh block; the second release is the deliberate test-only defect.
+        unsafe {
+            let b = CRYPTO_malloc(16, core::ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            CRYPTO_free(b.cast(), core::ptr::null(), 0);
+            CRYPTO_free(b.cast(), core::ptr::null(), 0);
+        }
+        assert!(
+            adv_alloc::double_free(),
+            "the instrument must flag a double release (negative control)"
+        );
+    }
+
+    /// Build a certificate whose DER exceeds the old fixed 8192-byte stack buffer.
+    ///
+    /// `i2d_X509` writes the whole encoding into a non-NULL out-pointer without a
+    /// capacity argument, so this is the input that made the pre-fix flight writers
+    /// overflow their stack buffers.
+    unsafe fn oversized_certificate() -> *mut crate::x509::x_x509::X509 {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free};
+        use crate::x509::x509_set::{
+            X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+        };
+        use crate::x509::x509_vfy::X509_gmtime_adj;
+        use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+        use crate::x509::x_all::X509_sign;
+        use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+        use crate::x509::x_x509::{i2d_X509, X509_new};
+        // SAFETY: every pointer below is this frame's own fresh object.
+        unsafe {
+            // A complete self-signed certificate is needed: the ASN.1 encoder refuses a
+            // certificate whose mandatory issuer/key/validity fields are unset, and an
+            // incomplete synthetic object would not exercise `i2d_X509` at all.
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                ptr::null_mut(),
+                ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                c"prime256v1".as_ptr(),
+            );
+            assert!(!pkey.is_null(), "an EC key must be generatable");
+            let x = X509_new();
+            assert!(!x.is_null(), "X509_new must answer a certificate");
+            let name = X509_NAME_new();
+            assert!(!name.is_null(), "X509_NAME_new must answer a name");
+            let big = [b'A'; 60];
+            // `CN` has the authority's 64-byte string-table bound, so build the oversized
+            // DER from many valid entries rather than one invalid one. Seventy entries keep
+            // the control above the old 8192-byte buffer but below this reduction's
+            // 17000-byte handshake-message writer bound.
+            for _ in 0..70 {
+                assert_eq!(
+                    X509_NAME_add_entry_by_txt(
+                        name,
+                        c"CN".as_ptr(),
+                        MBSTRING_UTF8,
+                        big.as_ptr(),
+                        big.len() as c_int,
+                        -1,
+                        0,
+                    ),
+                    1,
+                    "the large name must be accepted"
+                );
+            }
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(
+                ASN1_INTEGER_set(ptr::addr_of_mut!((*x).cert_info.serialNumber), 1),
+                1
+            );
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            EVP_PKEY_free(pkey);
+            let derlen = i2d_X509(x, ptr::null_mut());
+            assert!(
+                derlen > 8192,
+                "the control certificate must exceed the old 8192-byte buffer, got {derlen}"
+            );
+            x
+        }
+    }
+
+    unsafe fn construct_tls13(s: *mut Ssl) -> c_int {
+        // SAFETY: `s` is the live connection the helper built.
+        unsafe { tls13_construct_certificate(s, &[]) }
+    }
+
+    unsafe fn construct_tls12(s: *mut Ssl) -> c_int {
+        // SAFETY: `s` is the live connection the helper built.
+        unsafe { tls12_construct_certificate(s) }
+    }
+
+    /// Drive one flight writer over the oversized certificate with a memory BIO, so a
+    /// successful return proves the whole body was encoded and written. The certificate
+    /// is installed as a borrow and cleared before `SSL_free` releases the container.
+    fn oversized_cert_flight(construct: unsafe fn(*mut Ssl) -> c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: all objects are created and released by this frame.
+        unsafe {
+            let ctx = crate::ssl::ssl_lib::SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null(), "a TLS context must be allocatable");
+            let s = crate::ssl::ssl_lib::SSL_new(ctx);
+            assert!(!s.is_null(), "a TLS connection must be allocatable");
+            let x = oversized_certificate();
+            let cpk = crate::ssl::ssl_lib::cert_active_key((*s).cert);
+            assert!(
+                !cpk.is_null(),
+                "the connection must carry a certificate slot"
+            );
+            (*cpk).x509 = x;
+            let bio = crate::runtime::bio::BIO_new(crate::runtime::bio::bss_mem::BIO_s_mem());
+            assert!(!bio.is_null(), "a memory BIO must be allocatable");
+            (*s).wbio = bio; // ownership transferred; `SSL_free` releases it
+            assert_eq!(
+                construct(s),
+                1,
+                "the oversized certificate must be framed, not refused or overflowed"
+            );
+            (*cpk).x509 = ptr::null_mut();
+            crate::x509::x_x509::X509_free(x);
+            crate::ssl::ssl_lib::SSL_free(s);
+            crate::ssl::ssl_lib::SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn oversized_certificate_does_not_overflow_the_tls13_flight_buffer() {
+        oversized_cert_flight(construct_tls13);
+    }
+
+    #[test]
+    fn oversized_certificate_does_not_overflow_the_tls12_flight_buffer() {
+        oversized_cert_flight(construct_tls12);
+    }
 }

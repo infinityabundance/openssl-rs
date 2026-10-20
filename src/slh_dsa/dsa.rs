@@ -25,9 +25,10 @@
 //!
 //! `encode == 0` returns the raw message (`:250-254`); otherwise the pure encoding
 //! `00 || ctx_len || ctx || msg` is written into `tmp` when it fits and into an allocation
-//! otherwise (`:259-282`), and the caller frees that allocation only when it is neither the
-//! message nor the stack buffer (`:307-312`). The nested tests are transcribed rather than
-//! simplified, because the "is it ours to free" answer is exactly what they compute.
+//! otherwise (`:259-282`). The "is it ours to free" answer the authority's nested tests
+//! (`:307-312`) compute is expressed by the value: [`msg_encode`] answers a [`MsgBlock`] whose
+//! `Drop` frees the heap block, cleanses the stack buffer, or leaves the borrowed message alone,
+//! so the caller no longer distinguishes the three cases by raw pointer comparison.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -37,7 +38,6 @@
 #![allow(clippy::too_many_arguments)]
 
 use core::ffi::{c_char, c_int, c_void};
-use core::ptr;
 
 use crate::packet::{
     Packet, WPACKET_finish, WPACKET_get_curr, WPACKET_init_static_len, WPACKET_memcpy,
@@ -45,12 +45,14 @@ use crate::packet::{
 };
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::adrs::SLH_ADRS_TYPE_FORS_TREE;
 use super::fors::{ossl_slh_fors_pk_from_sig, ossl_slh_fors_sign};
 use super::hypertree::{ossl_slh_ht_sign, ossl_slh_ht_verify};
 use super::{SlhDsaHashCtx, SlhDsaKey, SLH_DSA_MAX_CONTEXT_STRING_LEN, SLH_MAX_N};
+use crate::runtime::mem_coords::SeamFile;
 
 /// `SLH_MAX_M` — `slh_dsa.c:17`, the largest `H_MSG` output (see `slh_params.c`).
 const SLH_MAX_M: usize = 49;
@@ -442,6 +444,9 @@ unsafe fn slh_verify_internal(
 /// `size_t ctx_len, int encode, uint8_t *tmp, size_t tmp_len, size_t *out_len)` —
 /// `slh_dsa.c:242-283`.
 ///
+/// The caller's release obligation is attached to the value: the returned [`MsgBlock`] frees the
+/// heap block, cleanses the stack buffer, or borrows the message.
+///
 /// # Safety
 /// `msg` is readable for `msg_len`, `ctx` for `ctx_len`; `tmp` is writable for `tmp_len`;
 /// `out_len` is writable.
@@ -454,36 +459,44 @@ unsafe fn msg_encode(
     tmp: *mut u8,
     tmp_len: usize,
     out_len: *mut usize,
-) -> *mut u8 {
+) -> Option<MsgBlock> {
     if encode == 0 {
         /* Raw message. */
         // SAFETY: `out_len` is writable per the contract.
         unsafe { *out_len = msg_len };
-        return msg.cast_mut();
+        return Some(MsgBlock::Message(msg.cast_mut()));
     }
 
     if ctx_len > SLH_DSA_MAX_CONTEXT_STRING_LEN {
-        return ptr::null_mut();
+        return None;
     }
 
     /* Pure encoding. */
     let encoded_len = 1 + 1 + ctx_len + msg_len;
     if encoded_len < msg_len {
         /* Check for overflow. */
-        return ptr::null_mut();
+        return None;
     }
     // SAFETY: `out_len` is writable per the contract.
     unsafe { *out_len = encoded_len };
-    let mut cleanup_pkt = false;
-    let encoded = if encoded_len <= tmp_len {
-        tmp
+    // The heap block, if the encoding does not fit `tmp`, is owned here so its release is `Drop`'s
+    // cleansing free on **every** path below. This is a deliberate safety improvement over the
+    // authority, which plain-frees an internal `WPACKET` failure at `:278` and clear-frees only the
+    // block the caller receives, at `:309`/`:339`; the block may already carry part of a
+    // confidential message on the failure path, so the cleansing release is kept there too.
+    let heap = if encoded_len <= tmp_len {
+        None
     } else {
-        let p = CRYPTO_zalloc(encoded_len, FILE, LINE_MSG_ENCODE).cast::<u8>();
-        if p.is_null() {
-            return ptr::null_mut();
-        }
-        cleanup_pkt = true;
-        p
+        Some(OwnedBuf::new_zeroed_cleansed_at(
+            encoded_len,
+            FILE_SEAM,
+            LINE_MSG_ENCODE,
+            LINE_CLEAR_FREE,
+        )?)
+    };
+    let encoded = match &heap {
+        Some(buf) => buf.as_ptr(),
+        None => tmp,
     };
     // SAFETY: `Wpacket` is a packet builder of integers and pointers only, and the value is
     // initialised by the `WPACKET_init_static_len` immediately below before it is read.
@@ -498,23 +511,74 @@ unsafe fn msg_encode(
             && WPACKET_finish(&mut pkt) != 0
     };
     if !ok {
-        if cleanup_pkt {
-            // SAFETY: `encoded` is this call's own allocation and `cleanup_pkt` says so.
-            unsafe { CRYPTO_free(encoded.cast::<c_void>(), FILE, LINE_MSG_ENCODE) };
-        }
+        // The heap block, if any, is released by its handle here; the caller's stack buffer is left
+        // exactly as the authority leaves it (the caller never receives it back).
+        drop(heap);
         // SAFETY: `pkt` is a live local.
         unsafe { crate::packet::WPACKET_cleanup(&mut pkt) };
-        return ptr::null_mut();
+        return None;
     }
-    encoded
+    Some(match heap {
+        Some(buf) => MsgBlock::Heap(buf),
+        None => MsgBlock::Stack {
+            ptr: tmp,
+            len: tmp_len,
+        },
+    })
 }
 
 /// The unit's own `__FILE__` — `slh_dsa.c` is a plain `.c`.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c");
 /// `slh_dsa.c:267`, the `OPENSSL_zalloc(encoded_len)` in `msg_encode`.
 const LINE_MSG_ENCODE: c_int = 267;
 /// `slh_dsa.c:309`/`:339`, the two `OPENSSL_clear_free(m, m_len)` call sites.
 const LINE_CLEAR_FREE: c_int = 309;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership seams
+// ---------------------------------------------------------------------------------------------
+
+/// The block [`msg_encode`] answers with, and its release obligation.
+///
+/// The authority hands back `msg` itself for a raw message, `tmp` when the pure encoding fits, and
+/// an `OPENSSL_zalloc` block otherwise, and only the caller's nested tests decide which one is
+/// released. Attaching the obligation to the value makes that test inexpressible: the third case
+/// owns the block, the second cleanses the caller's stack buffer at its length, and the first
+/// borrows the caller's own message and is neither freed nor cleansed.
+enum MsgBlock {
+    /// `encode == 0` -- the caller's own message.
+    Message(*mut u8),
+    /// The caller's stack buffer, cleansed at its length.
+    Stack { ptr: *mut u8, len: usize },
+    /// A heap block, released with the authority's cleansing `OPENSSL_clear_free`.
+    Heap(OwnedBuf),
+}
+
+impl MsgBlock {
+    /// The message pointer the two internal drivers read.
+    fn as_ptr(&self) -> *mut u8 {
+        match self {
+            MsgBlock::Message(p) => *p,
+            MsgBlock::Stack { ptr, .. } => *ptr,
+            MsgBlock::Heap(buf) => buf.as_ptr(),
+        }
+    }
+}
+
+impl Drop for MsgBlock {
+    fn drop(&mut self) {
+        match self {
+            MsgBlock::Message(_) => {}
+            MsgBlock::Stack { ptr, len } => {
+                // SAFETY: `ptr`/`len` are the caller's own stack buffer and its length.
+                unsafe { OPENSSL_cleanse((*ptr).cast::<c_void>(), *len) };
+            }
+            // `OwnedBuf`'s own `Drop` is the cleansing free.
+            MsgBlock::Heap(_) => {}
+        }
+    }
+}
 
 /// `int ossl_slh_dsa_sign(SLH_DSA_HASH_CTX *slh_ctx, const uint8_t *msg, size_t msg_len,`
 /// `const uint8_t *ctx, size_t ctx_len, const uint8_t *add_rand, int encode,`
@@ -536,12 +600,18 @@ pub(crate) unsafe fn ossl_slh_dsa_sign(
 ) -> c_int {
     let mut m_tmp = [0u8; 1024];
     let m_tmp_ptr = m_tmp.as_mut_ptr();
-    let mut m = m_tmp_ptr;
     let mut m_len: usize = 0;
 
-    if !sig.is_null() {
+    let block = if sig.is_null() {
+        // Without a signature the authority never encodes: `m` stays the stack buffer, which is
+        // the only thing released.
+        MsgBlock::Stack {
+            ptr: m_tmp_ptr,
+            len: m_tmp.len(),
+        }
+    } else {
         // SAFETY: `msg`/`ctx` are as the caller's contract and `m_tmp` is this frame's.
-        m = unsafe {
+        match unsafe {
             msg_encode(
                 msg,
                 msg_len,
@@ -552,23 +622,17 @@ pub(crate) unsafe fn ossl_slh_dsa_sign(
                 m_tmp.len(),
                 &mut m_len,
             )
-        };
-        if m.is_null() {
-            return 0;
+        } {
+            Some(block) => block,
+            None => return 0,
         }
-    }
+    };
+    let m = block.as_ptr();
     // SAFETY: the internal driver's own contract.
     let ret = unsafe { slh_sign_internal(slh_ctx, m, m_len, sig, siglen, sigsize, add_rand) };
-    /* The encoded message may contain confidential message content. */
-    if m != msg.cast_mut() {
-        if m != m_tmp_ptr {
-            // SAFETY: `m` is this call's own allocation and `m_len` its length.
-            unsafe { CRYPTO_clear_free(m.cast::<c_void>(), m_len, FILE, LINE_CLEAR_FREE) };
-        } else {
-            // SAFETY: a local buffer.
-            unsafe { OPENSSL_cleanse(m_tmp_ptr.cast::<c_void>(), m_tmp.len()) };
-        }
-    }
+    /* The encoded message may contain confidential message content; the block releases -- or
+     * cleanses -- exactly what the authority does. */
+    drop(block);
     ret
 }
 
@@ -593,7 +657,7 @@ pub(crate) unsafe fn ossl_slh_dsa_verify(
     let mut m_len: usize = 0;
 
     // SAFETY: `msg`/`ctx` are as the caller's contract and `m_tmp` is this frame's.
-    let m = unsafe {
+    let block = match unsafe {
         msg_encode(
             msg,
             msg_len,
@@ -604,23 +668,17 @@ pub(crate) unsafe fn ossl_slh_dsa_verify(
             m_tmp.len(),
             &mut m_len,
         )
+    } {
+        Some(block) => block,
+        None => return 0,
     };
-    if m.is_null() {
-        return 0;
-    }
+    let m = block.as_ptr();
 
     // SAFETY: the internal driver's own contract.
     let ret = unsafe { slh_verify_internal(slh_ctx, m, m_len, sig, sig_len) };
-    /* The encoded message may contain confidential message content. */
-    if m != msg.cast_mut() {
-        if m != m_tmp_ptr {
-            // SAFETY: `m` is this call's own allocation and `m_len` its length.
-            unsafe { CRYPTO_clear_free(m.cast::<c_void>(), m_len, FILE, LINE_CLEAR_FREE) };
-        } else {
-            // SAFETY: a local buffer.
-            unsafe { OPENSSL_cleanse(m_tmp_ptr.cast::<c_void>(), m_tmp.len()) };
-        }
-    }
+    /* The encoded message may contain confidential message content; the block releases -- or
+     * cleanses -- exactly what the authority does. */
+    drop(block);
     ret
 }
 

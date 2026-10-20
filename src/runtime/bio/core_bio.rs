@@ -48,8 +48,8 @@ use core::sync::atomic::{AtomicI32, Ordering};
 use crate::runtime::bio::bss_file::BIO_new_file;
 use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
 use crate::runtime::bio::iolib::{BIO_ctrl, BIO_gets, BIO_puts, BIO_read_ex, BIO_write_ex};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::{BIO_free, BIO_up_ref, Bio};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
 #[allow(dead_code)] // unreachable until 6.8b-i publishes the core dispatch table
@@ -86,6 +86,27 @@ pub(crate) struct OsslCoreBio {
     pub(crate) bio: *mut Bio,
 }
 
+/// The authority's `ossl_core_bio_free` body *minus* the block release [`OwnedCtx`]'s `Drop`
+/// performs.
+///
+/// The whole body is `BIO_free(cb->bio)`, but its **answer** must reach the caller
+/// (`ossl_core_bio_free` returns `BIO_free`'s result, not a constant), so the release is run
+/// explicitly on the freeing path and this destructor body is empty — exactly the shape
+/// `OSSL_STORE_CTX`'s destructor takes. `FILE`/`LINE_*` are the authority's own coordinates for
+/// this translation unit (lines 25 and 50 of `ossl_core_bio.c`).
+#[allow(dead_code)] // unreachable until 6.8b-i publishes the core dispatch table
+                    // SAFETY: (a) `ossl_core_bio_free` runs `BIO_free(cb->bio)` explicitly on the freeing path, so
+                    // `destroy_body` is the empty body here and never releases the enclosing block, which `OwnedCtx`
+                    // releases; (b) `OsslCoreBio` is a `#[repr(C)]` record of an `AtomicI32` and a raw pointer, so an
+                    // all-zero block is a valid `OsslCoreBio` the empty body is trivially sound on.
+unsafe impl CtxDestroy for OsslCoreBio {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = L_CORE_BIO_NEW;
+    const LINE_FREE: c_int = L_CORE_BIO_FREE;
+
+    unsafe fn destroy_body(_ptr: *mut OsslCoreBio) {}
+}
+
 /// `static OSSL_CORE_BIO *core_bio_new(void)`.
 ///
 /// `OPENSSL_malloc` and **not** `zalloc`, so the BIO field is uninitialised until the caller
@@ -97,20 +118,22 @@ pub(crate) struct OsslCoreBio {
 /// None: the answer is a new handle or NULL.
 #[allow(dead_code)] // unreachable until 6.8b-i publishes the core dispatch table
 unsafe fn core_bio_new() -> *mut OsslCoreBio {
-    // SAFETY: a fresh block of exactly this type; `CRYPTO_malloc` is a safe function in this
-    // crate, so no block is needed for the call itself.
-    let cb = CRYPTO_malloc(core::mem::size_of::<OsslCoreBio>(), FILE, L_CORE_BIO_NEW)
-        .cast::<OsslCoreBio>();
-    if cb.is_null() {
+    // SAFETY: `RawCtx::malloc` answers NULL or a fresh, uninitialised block of exactly this type;
+    // the storage is not yet a valid `OsslCoreBio`, so it is a `RawCtx`.
+    let Some(cb) = RawCtx::<OsslCoreBio>::malloc() else {
         return ptr::null_mut();
-    }
+    };
+    let p = cb.as_ptr();
     // The authority's `CRYPTO_NEW_REF` cannot fail for an inline atomic, so its failure arm
     // -- `OPENSSL_free(cb)` at line 28 and `return NULL` -- is unreachable here. The
     // reference count is therefore *set* rather than *created*.
-    // SAFETY: `cb` is a fresh block this function owns, so the field write is to
+    // SAFETY: `p` is a fresh block this handle owns, so the field write is to
     // uninitialised-owned storage.
-    unsafe { (*cb).ref_cnt = AtomicI32::new(1) };
-    cb
+    unsafe { (*p).ref_cnt = AtomicI32::new(1) };
+    // The handle escapes with `bio` still uninitialised; it becomes a valid `OsslCoreBio` when a
+    // constructor sets `bio`, and is then reclaimed at the C ABI through `OwnedCtx::from_raw`.
+    // `destroy_body` is empty, so the destructor never reads the uninitialised field.
+    cb.into_raw()
 }
 
 /// `int ossl_core_bio_up_ref(OSSL_CORE_BIO *cb)`.
@@ -151,10 +174,11 @@ pub(crate) unsafe fn ossl_core_bio_free(cb: *mut OsslCoreBio) -> c_int {
         return 1;
     }
     // SAFETY: this is the last reference, so nothing else can reach the handle; the BIO is
-    // the one this handle owns.
+    // the one this handle owns. Run the authority's release to return its answer, then let the
+    // handle's `Drop` release the block -- the only release.
     unsafe {
         let res = BIO_free((*cb).bio);
-        CRYPTO_free(cb.cast::<c_void>(), FILE, L_CORE_BIO_FREE);
+        drop(OwnedCtx::<OsslCoreBio>::from_raw(cb));
         res
     }
 }
@@ -525,3 +549,7 @@ mod tests {
         assert_eq!(unsafe { ossl_core_bio_free(cb) }, 1);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslCoreBio => zero_state_sweep_ossl_core_bio);

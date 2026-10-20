@@ -170,6 +170,20 @@ fn load_content_info(
     cms
 }
 
+/// Owns the detached-content BIO `SMIME_read_CMS_ex` hands back through its
+/// `bcont` out-parameter; the authority releases it with `BIO_free(indata)` at
+/// `apps/cms.c:1512` on every exit. The BIO is a standalone memory BIO from the
+/// MIME split, so `BIO_free` (not `BIO_free_all`) is its release.
+struct DetachedBio(*mut Bio);
+
+impl Drop for DetachedBio {
+    fn drop(&mut self) {
+        // SAFETY: `self.0` is NULL or the one BIO this frame owns; the field is
+        // never read after the release and no other owner releases it.
+        unsafe { BIO_free(self.0) };
+    }
+}
+
 /// `int cms_main(int argc, char **argv)` — `apps/cms.c:371-1518`.
 #[allow(clippy::never_loop)] // every arm returns or breaks; the authority's loop never iterates
 pub fn main(argv: &[String]) -> i32 {
@@ -409,11 +423,11 @@ pub fn main(argv: &[String]) -> i32 {
     }
 
     let mut cms: *mut CmsContentInfo = core::ptr::null_mut();
-    let mut indata: *mut Bio = core::ptr::null_mut();
+    let mut indata = DetachedBio(core::ptr::null_mut());
     if operation & SMIME_IP != 0 {
         // `cms = load_content_info(informat, in, flags, &indata, "SMIME");` —
         // `apps/cms.c:1061-1064`.
-        cms = load_content_info(informat, inbio, flags as c_int, &mut indata, "SMIME");
+        cms = load_content_info(informat, inbio, flags as c_int, &mut indata.0, "SMIME");
         if cms.is_null() {
             // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
             unsafe { BIO_free(inbio) };
@@ -569,7 +583,7 @@ pub fn main(argv: &[String]) -> i32 {
     // The `-verify` arm — `apps/cms.c:1392-1413`.
     if operation == SMIME_VERIFY {
         // SAFETY: FFI call; the arguments are this frame's live pointers, and the callee's own `# Safety` section states the contract.
-        let ok = unsafe { CMS_verify(cms, core::ptr::null_mut(), store, indata, out, flags) };
+        let ok = unsafe { CMS_verify(cms, core::ptr::null_mut(), store, indata.0, out, flags) };
         if ok > 0 {
             eprintln!("CMS Verification successful");
         } else {

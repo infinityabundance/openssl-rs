@@ -44,6 +44,23 @@
 //! `store_result.c`'s `ossl_store_handle_load_result`, landed in [`super::store_result`];
 //! the row that resolves is exactly the loader this function consumes.
 //!
+//! # Ownership: the three objects are owned Rust, the two plain blocks with them
+//!
+//! Every `OSSL_STORE_CTX`, `OSSL_STORE_INFO` and `OSSL_STORE_SEARCH` this unit allocates for
+//! itself is an [`OwnedCtx`]: it stays a `CRYPTO_zalloc` at the authority's own size on the
+//! crate's allocator seam (`__FILE__`/`__LINE__` NULL/0, as the authority writes them), so a
+//! caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its release, and
+//! `Drop` is the only release. A constructor returns through [`OwnedCtx::into_raw`] rather than a
+//! bare pointer, a refusal path returns rather than freeing what it half-built, and
+//! `OSSL_STORE_close`/`OSSL_STORE_INFO_free`/`OSSL_STORE_SEARCH_free` reclaim through
+//! [`OwnedCtx::from_raw`] so [`CtxDestroy::destroy_body`] runs the authority's own free body
+//! before the block release. `OSSL_STORE_SEARCH`'s destructor body is empty; the other two are not.
+//!
+//! The name buffer `i2d_X509_NAME` fills in `OSSL_STORE_find` and the `CRYPTO_strdup` property
+//! copy `OSSL_STORE_open_ex` keeps are [`OwnedBuf`]s: `Drop` releases them at the authority's
+//! own (NULL, 0) site, and the property copy is handed to the context with
+//! [`OwnedBuf::into_raw`] at the moment its `properties` member takes it over.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(unreachable_pub)]
@@ -71,12 +88,14 @@ use crate::passphrase::{
 };
 use crate::provider::{ossl_provider_ctx, OSSL_PROVIDER_get0_provider_ctx};
 use crate::runtime::bio::core_bio::{ossl_core_bio_free, ossl_core_bio_new_from_bio};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_shift, OpenSslStack,
 };
@@ -96,6 +115,7 @@ use super::{
     OsslStoreLoader, OsslStoreLoaderCtx, OSSL_STORE_INFO_CERT, OSSL_STORE_INFO_CRL,
     OSSL_STORE_INFO_NAME, OSSL_STORE_INFO_PARAMS, OSSL_STORE_INFO_PKEY, OSSL_STORE_INFO_PUBKEY,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 extern "C" {
     /// Pull one general-purpose argument from a live `va_list`.
@@ -104,6 +124,77 @@ extern "C" {
     /// `OSSL_STORE_vctrl` is the only reader; it needs the caller's `int *`, and a
     /// `va_arg` walk cannot be written in stable Rust.
     fn openssl_rs_va_gp(ap: *mut c_void) -> u64;
+}
+
+// ---------------------------------------------------------------------------
+// Ownership of the three objects and the two plain blocks
+// ---------------------------------------------------------------------------
+
+// The shared [`OwnedBuf`] owns a `CRYPTO_*`-seam block that is not one of the file's objects
+// (here the `CRYPTO_strdup` property copy and the `i2d_X509_NAME` name buffer), released at the
+// authority's own (NULL, 0) site, so a caller-installed `CRYPTO_set_mem_functions` hook observes
+// it. `into_raw` hands the property copy to the context `properties` member that takes it over.
+
+// The three object destructors: each is exactly what its unit's `*_free` performed by hand, minus
+// the block release `OwnedCtx`'s `Drop` now owns.
+
+// SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_CTX` has no destructor body beyond
+// `ossl_store_close_it`, which is run explicitly at close, so no member is released here and never
+// the enclosing block. (b) holds trivially: the body touches nothing, so an all-zero context is
+// valid -- what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for OsslStoreCtx {
+    /// Empty: `OSSL_STORE_CTX` has no destructor body beyond `ossl_store_close_it`, which
+    /// `OSSL_STORE_close` runs explicitly to return its answer, so the block release is the only
+    /// work `Drop` has left here.
+    unsafe fn destroy_body(_ptr: *mut OsslStoreCtx) {}
+}
+
+// SAFETY: (a) holds: `destroy_body` is empty -- `OSSL_STORE_SEARCH_free` is a bare block free, so no
+// member is released here and never the enclosing block. (b) holds trivially: the body touches
+// nothing, so an all-zero search is valid -- what the safe `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for OsslStoreSearch {
+    /// Empty: `OSSL_STORE_SEARCH_free` is a bare block free.
+    unsafe fn destroy_body(_ptr: *mut OsslStoreSearch) {}
+}
+
+// SAFETY: (a) holds: `destroy_body` is `OSSL_STORE_INFO_free` minus the block -- the member
+// selected by `type_`, each releaser NULL-tolerant, never the enclosing block. (b) holds: an
+// all-zero info has `type_` unset, so the `_ => {}` arm releases nothing -- what the safe
+// `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for OsslStoreInfo {
+    unsafe fn destroy_body(ptr: *mut OsslStoreInfo) {
+        // SAFETY: `ptr` is a live object per the trait contract.
+        unsafe {
+            match (*ptr).type_ {
+                OSSL_STORE_INFO_NAME => {
+                    // SAFETY: the type is NAME, so `name`/`desc` are live and owned.
+                    CRYPTO_free((*ptr).data.name.name.cast::<c_void>(), ptr::null(), 0);
+                    CRYPTO_free((*ptr).data.name.desc.cast::<c_void>(), ptr::null(), 0);
+                }
+                OSSL_STORE_INFO_PARAMS => {
+                    // SAFETY: the type is PARAMS, so `params` is live and owned.
+                    EVP_PKEY_free((*ptr).data.params);
+                }
+                OSSL_STORE_INFO_PUBKEY => {
+                    // SAFETY: the type is PUBKEY, so `pubkey` is live and owned.
+                    EVP_PKEY_free((*ptr).data.pubkey);
+                }
+                OSSL_STORE_INFO_PKEY => {
+                    // SAFETY: the type is PKEY, so `pkey` is live and owned.
+                    EVP_PKEY_free((*ptr).data.pkey);
+                }
+                OSSL_STORE_INFO_CERT => {
+                    // SAFETY: the type is CERT, so `x509` is live and owned as an `X509`.
+                    X509_free((*ptr).data.x509.cast::<X509>());
+                }
+                OSSL_STORE_INFO_CRL => {
+                    // SAFETY: the type is CRL, so `crl` is live and owned as an `X509_CRL`.
+                    X509_CRL_free((*ptr).data.crl.cast::<X509Crl>());
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -485,9 +576,10 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
 /// *loader_ctx, const OSSL_PARAM params[], const char *propq)` — `store_lib.c:35-61`.
 ///
 /// `loader->p_set_ctx_params` is dereferenced unconditionally by the authority when
-/// `params != NULL`; the crate spells that as a skip, because the only callers are in
-/// the fetched branch, which no candidate transcript reaches while no store row is
-/// published (see the module doc).
+/// `params != NULL`; the crate spells that as a skip, because both callers are in the
+/// fetched branch and a provider loader may legitimately leave `p_set_ctx_params` NULL
+/// (`store_meth.rs` treats it as optional), where `OSSL_STORE_ctrl`'s own convention is
+/// that a loader without one ignores the parameters and answers 1.
 ///
 /// # Safety
 /// `loader` must be live; `params` NULL or a terminated array; `propq` NULL or
@@ -609,8 +701,6 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     let mut loader: *const OsslStoreLoader = ptr::null();
     let mut fetched_loader: *mut OsslStoreLoader = ptr::null_mut();
     let mut loader_ctx: *mut OsslStoreLoaderCtx = ptr::null_mut();
-    let mut ctx: *mut OsslStoreCtx = ptr::null_mut();
-    let mut propq_copy: *mut c_char = ptr::null_mut();
     let mut no_loader_found: c_int = 1;
     let mut scheme_copy = [0 as c_char; 256];
     let mut schemes: [*const c_char; 2] = [ptr::null(); 2];
@@ -669,6 +759,10 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
     ERR_set_mark();
 
     'err: {
+        // The property-query copy this attempt keeps, owned until it is handed to the context's
+        // `properties` member below or released by `Drop` on a refusal.
+        let mut propq_copy: Option<OwnedBuf> = None;
+
         if !ui_method.is_null()
             // SAFETY: `pwdata` is live; the two calls set and enable caching.
             && (unsafe { ossl_pw_set_ui_method(&mut pwdata, ui_method, ui_data) } == 0
@@ -786,28 +880,34 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         }
 
         if !propq.is_null() {
-            // SAFETY: `propq` is NUL-terminated.
-            propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
-            if propq_copy.is_null() {
+            // SAFETY: `propq` is NUL-terminated per the contract, so `CRYPTO_strdup` answers this
+            // crate's own property copy; that block is owned here until `Drop` releases it or the
+            // context's `properties` member takes it over, and no other owner holds it.
+            propq_copy = unsafe {
+                let copy = CRYPTO_strdup(propq, ptr::null(), 0);
+                OwnedBuf::adopt_plain(copy.cast::<u8>(), SeamFile::NULL, 0)
+            };
+            if propq_copy.is_none() {
                 break 'err;
             }
         }
-        // SAFETY: `size_of::<OsslStoreCtx>()` is the context the authority allocates.
-        ctx = CRYPTO_zalloc(core::mem::size_of::<OsslStoreCtx>(), ptr::null(), 0)
-            .cast::<OsslStoreCtx>();
-        if ctx.is_null() {
+        // The context block, allocated through the crate's allocator seam; `Drop` is its single
+        // release on every refusal below and `into_raw` hands it out on success.
+        let Some(ctx) = OwnedCtx::<OsslStoreCtx>::zalloc() else {
             break 'err;
-        }
+        };
 
         // SAFETY: `ctx` is a fresh zeroed allocation and every pointer stored is live.
         unsafe {
-            (*ctx).properties = propq_copy;
-            (*ctx).fetched_loader = fetched_loader;
-            (*ctx).loader = loader;
-            (*ctx).loader_ctx = loader_ctx;
-            (*ctx).post_process = post_process;
-            (*ctx).post_process_data = post_process_data;
-            ptr::write(&mut (*ctx).pwdata, pwdata);
+            (*ctx.as_ptr()).properties = propq_copy
+                .take()
+                .map_or(ptr::null_mut(), |b| b.into_raw().cast::<c_char>());
+            (*ctx.as_ptr()).fetched_loader = fetched_loader;
+            (*ctx.as_ptr()).loader = loader;
+            (*ctx.as_ptr()).loader_ctx = loader_ctx;
+            (*ctx.as_ptr()).post_process = post_process;
+            (*ctx.as_ptr()).post_process_data = post_process_data;
+            ptr::write(&mut (*ctx.as_ptr()).pwdata, pwdata);
         }
 
         /*
@@ -818,7 +918,7 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
         // SAFETY: a mark was set at entry.
         ERR_pop_to_mark();
 
-        return ctx;
+        return ctx.into_raw();
     }
 
     // err:
@@ -837,18 +937,18 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
 
         // SAFETY: the three fields above are the context's live ones.
         unsafe { ossl_store_close_it(&mut tmpctx) };
+        // `ossl_store_close_it` releases the one reference this frame's `OSSL_STORE_LOADER_fetch`
+        // acquired and it was handed over through `tmpctx.fetched_loader`; the local carries no
+        // second release. The authority frees it again at `store_lib.c:234` (the Coverity-
+        // suppressed OOM double release this repair does not reproduce, §17).
+    } else {
+        // SAFETY: no `loader_ctx` exists, so no temporary context took the fetch reference. Every
+        // loop path that fetched a loader and failed to open one already released and nulled it,
+        // so this is either NULL (the authority's no-op) or the single release of the reference
+        // this frame still owns.
+        unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
     }
-    // SAFETY: `fetched_loader` is NULL or a freed-by-the-line-above loader, matching the
-    // authority's own double release on this unreachable-in-candidate path.
-    unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
-    if !propq_copy.is_null() {
-        // SAFETY: `propq_copy` is the `CRYPTO_strdup` this function owns.
-        unsafe { CRYPTO_free(propq_copy.cast::<c_void>(), ptr::null(), 0) };
-    }
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is the `CRYPTO_zalloc` this function owns.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
-    }
+    // `propq_copy` and `ctx` were scoped to the block above and released by their `Drop` there.
     ptr::null_mut()
 }
 
@@ -1091,12 +1191,14 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         }
         // SAFETY: `bld` is live and non-NULL.
         unsafe { OSSL_PARAM_BLD_free(bld) };
-        // SAFETY: `name_der` is NULL or the buffer `i2d_X509_NAME` allocated; `number` is NULL or
-        // the BIGNUM `ASN1_INTEGER_to_BN` allocated.
-        unsafe {
-            CRYPTO_free(name_der, ptr::null(), 0);
-            BN_free(number);
-        }
+        // The `name_der` buffer `i2d_X509_NAME` filled is adopted by an owner whose `Drop` is its
+        // release; `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated, released by
+        // `BN_free`.
+        // SAFETY: `name_der` is NULL or the `i2d_X509_NAME` block this frame allocated on the
+        // crate's allocator seam and owns; no other owner holds it.
+        let _name_der = unsafe { OwnedBuf::adopt_plain(name_der.cast::<u8>(), SeamFile::NULL, 0) };
+        // SAFETY: `number` is NULL or the BIGNUM `ASN1_INTEGER_to_BN` allocated.
+        unsafe { BN_free(number) };
     } else {
         /* legacy loader section */
         // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
@@ -1404,8 +1506,11 @@ pub unsafe extern "C" fn OSSL_STORE_close(ctx: *mut OsslStoreCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the contract.
     let ret = unsafe { ossl_store_close_it(ctx) };
 
-    // SAFETY: `ctx` is the context this call owns.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+    // The block is this call's own (NULL is a no-op); `OwnedCtx`'s `Drop` is its single release.
+    // `OSSL_STORE_CTX`'s destructor body is empty because `ossl_store_close_it` above is it, run
+    // here to return its answer.
+    // SAFETY: `ctx` is NULL or the context this call owns and has not released.
+    unsafe { drop(OwnedCtx::<OsslStoreCtx>::from_raw(ctx)) };
     ret
 }
 
@@ -1566,22 +1671,30 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
                 } else {
                     ptr::null_mut()
                 };
-                loader_ctx = attached.cast::<OsslStoreLoaderCtx>();
-                if loader_ctx.is_null() {
+                if attached.is_null() {
                     // SAFETY: `fetched_loader` is live and not kept.
                     unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
                     fetched_loader = ptr::null_mut();
                 // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
                 } else if unsafe { loader_set_params(fetched_loader, attached, params, propq) } == 0
                 {
+                    // A refused params set closes the context and refuses the attach: publishing a
+                    // store whose loader is NULL would make `OSSL_STORE_close`/`OSSL_STORE_load`
+                    // dereference that NULL loader (B27-X2). `loader_ctx` is assigned only on the
+                    // accepted-params path below, so this refusal leaves it NULL and the guard at
+                    // the end of this function returns NULL. The authority publishes the closed
+                    // context with `loader = NULL` (store_lib.c:1093-1098); that UB is not
+                    // reproduced (§17).
                     // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
                     if let Some(p_close) = unsafe { (*fetched_loader).p_close } {
-                        // SAFETY: `attached` is the provider's own context.
+                        // SAFETY: `attached` is the provider's own context and this is its close.
                         unsafe { p_close(attached) };
                     }
                     // SAFETY: `fetched_loader` is live and not kept.
                     unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
                     fetched_loader = ptr::null_mut();
+                } else {
+                    loader_ctx = attached.cast::<OsslStoreLoaderCtx>();
                 }
             }
             loader = fetched_loader;
@@ -1596,33 +1709,31 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
         return ptr::null_mut();
     }
 
-    // SAFETY: `size_of::<OsslStoreCtx>()` is the context the authority allocates.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<OsslStoreCtx>(), ptr::null(), 0).cast::<OsslStoreCtx>();
-    if ctx.is_null() {
+    // The context block, allocated through the crate's allocator seam; `Drop` is its single
+    // release on the refusal below and `into_raw` hands it out on success.
+    let Some(ctx) = OwnedCtx::<OsslStoreCtx>::zalloc() else {
         // SAFETY: the mark was set above.
         ERR_clear_last_mark();
         return ptr::null_mut();
-    }
+    };
 
     if !ui_method.is_null()
         // SAFETY: `ctx` is a fresh zeroed allocation; `pwdata` is live.
-        && unsafe { ossl_pw_set_ui_method(&mut (*ctx).pwdata, ui_method, ui_data) } == 0
+        && unsafe { ossl_pw_set_ui_method(&mut (*ctx.as_ptr()).pwdata, ui_method, ui_data) } == 0
     {
         // SAFETY: the mark was set above.
         ERR_clear_last_mark();
-        // SAFETY: `ctx` is the allocation just made.
-        unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+        // `ctx` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
     // SAFETY: `ctx` is live and every pointer stored is live.
     unsafe {
-        (*ctx).fetched_loader = fetched_loader;
-        (*ctx).loader = loader;
-        (*ctx).loader_ctx = loader_ctx;
-        (*ctx).post_process = post_process;
-        (*ctx).post_process_data = post_process_data;
+        (*ctx.as_ptr()).fetched_loader = fetched_loader;
+        (*ctx.as_ptr()).loader = loader;
+        (*ctx.as_ptr()).loader_ctx = loader_ctx;
+        (*ctx.as_ptr()).post_process = post_process;
+        (*ctx.as_ptr()).post_process_data = post_process_data;
     }
 
     /*
@@ -1633,7 +1744,7 @@ pub unsafe extern "C" fn OSSL_STORE_attach(
     // SAFETY: the mark was set above.
     ERR_pop_to_mark();
 
-    ctx
+    ctx.into_raw()
 }
 
 // ---------------------------------------------------------------------------
@@ -1705,32 +1816,35 @@ pub unsafe extern "C" fn openssl_rs_store_vctrl(
 /// `OSSL_STORE_INFO *OSSL_STORE_INFO_new(int type, void *data)` — `store_lib.c:614-624`.
 ///
 /// # Safety
-/// `data` is stored as-is; ownership is transferred to the returned object.
+///
+/// `data` is stored as-is. On success its ownership transfers to the returned object;
+/// on a refused allocation no object exists and the caller retains it (the authority's
+/// own `:619-621` failure arm leaks it, and that behaviour is preserved).
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_new(
     type_: c_int,
     data: *mut c_void,
 ) -> *mut OsslStoreInfo {
-    // SAFETY: `size_of::<OsslStoreInfo>()` is the allocation the authority makes.
-    let info = CRYPTO_zalloc(core::mem::size_of::<OsslStoreInfo>(), ptr::null(), 0)
-        .cast::<OsslStoreInfo>();
-
-    if info.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(info) = OwnedCtx::<OsslStoreInfo>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `info` is a fresh zeroed allocation.
     unsafe {
-        (*info).type_ = type_;
-        (*info).data.data = data;
+        (*info.as_ptr()).type_ = type_;
+        (*info.as_ptr()).data.data = data;
     }
-    info
+    info.into_raw()
 }
 
 /// `OSSL_STORE_INFO *OSSL_STORE_INFO_new_NAME(char *name)` — `store_lib.c:626-639`.
 ///
 /// # Safety
-/// `name` is NULL or an allocation whose ownership transfers to the object.
+///
+/// `name` is NULL or an allocation whose ownership transfers to the returned object.
+/// On a refused allocation no object exists and the caller retains `name`; the
+/// authority's `:631-633` arm returns without releasing it, which is preserved.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_new_NAME(name: *mut c_char) -> *mut OsslStoreInfo {
     // SAFETY: `OSSL_STORE_INFO_new` stores a NULL union member.
@@ -2154,43 +2268,9 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_get1_CRL(info: *const OsslStoreInfo) ->
 /// `info` must be NULL or a live object not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
-    if info.is_null() {
-        return;
-    }
-
-    // SAFETY: `info` is live per the contract.
-    match unsafe { (*info).type_ } {
-        OSSL_STORE_INFO_NAME => {
-            // SAFETY: the type is NAME, so `name`/`desc` are live and owned.
-            unsafe {
-                CRYPTO_free((*info).data.name.name.cast::<c_void>(), ptr::null(), 0);
-                CRYPTO_free((*info).data.name.desc.cast::<c_void>(), ptr::null(), 0);
-            }
-        }
-        OSSL_STORE_INFO_PARAMS => {
-            // SAFETY: the type is PARAMS, so `params` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.params) };
-        }
-        OSSL_STORE_INFO_PUBKEY => {
-            // SAFETY: the type is PUBKEY, so `pubkey` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.pubkey) };
-        }
-        OSSL_STORE_INFO_PKEY => {
-            // SAFETY: the type is PKEY, so `pkey` is live and owned.
-            unsafe { EVP_PKEY_free((*info).data.pkey) };
-        }
-        OSSL_STORE_INFO_CERT => {
-            // SAFETY: the type is CERT, so `x509` is live and owned as an `X509`.
-            unsafe { X509_free((*info).data.x509.cast::<X509>()) };
-        }
-        OSSL_STORE_INFO_CRL => {
-            // SAFETY: the type is CRL, so `crl` is live and owned as an `X509_CRL`.
-            unsafe { X509_CRL_free((*info).data.crl.cast::<X509Crl>()) };
-        }
-        _ => {}
-    }
-    // SAFETY: `info` is the allocation `OSSL_STORE_INFO_new` made.
-    unsafe { CRYPTO_free(info.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `info` is NULL or a live object not already freed; `from_raw` reclaims it (NULL is
+    // a no-op) and `Drop` runs the authority's own union-member releases and the block release.
+    unsafe { drop(OwnedCtx::<OsslStoreInfo>::from_raw(info)) };
 }
 
 // ---------------------------------------------------------------------------
@@ -2204,20 +2284,17 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
 /// `name` is borrowed; the caller must keep it alive for the search's lifetime.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_name(name: *mut c_void) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_NAME;
-        (*search).name = name;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_NAME;
+        (*search.as_ptr()).name = name;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_issuer_serial(X509_NAME *name,
@@ -2230,21 +2307,18 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_issuer_serial(
     name: *mut c_void,
     serial: *const c_void,
 ) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
-        (*search).name = name;
-        (*search).serial = serial;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
+        (*search.as_ptr()).name = name;
+        (*search.as_ptr()).serial = serial;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_key_fingerprint(const EVP_MD *digest,
@@ -2258,19 +2332,16 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
     bytes: *const c_uchar,
     len: usize,
 ) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `Drop` releases it on the
+    // two refusals below and `into_raw` hands it out on success.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `digest` is NULL or live; a NULL is the authority's own refusal.
     let md_size = unsafe { EVP_MD_get_size(digest) };
     if md_size <= 0 {
-        // SAFETY: `search` is the allocation just made.
-        unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+        // `search` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
@@ -2291,19 +2362,18 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
         }
         // SAFETY: `msg` is a NUL-terminated stack buffer.
         unsafe { raise_site_data(&STORE_LIB_959, msg.as_ptr()) };
-        // SAFETY: `search` is the allocation just made.
-        unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+        // `search` is released by its `Drop` as this frame returns.
         return ptr::null_mut();
     }
 
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT;
-        (*search).digest = digest;
-        (*search).string = bytes;
-        (*search).stringlength = len;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT;
+        (*search.as_ptr()).digest = digest;
+        (*search.as_ptr()).string = bytes;
+        (*search.as_ptr()).stringlength = len;
     }
-    search
+    search.into_raw()
 }
 
 /// `OSSL_STORE_SEARCH *OSSL_STORE_SEARCH_by_alias(const char *alias)` —
@@ -2313,23 +2383,20 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_key_fingerprint(
 /// `alias` must be NUL-terminated and outlive the search.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_alias(alias: *const c_char) -> *mut OsslStoreSearch {
-    // SAFETY: `size_of::<OsslStoreSearch>()` is the allocation the authority makes.
-    let search = CRYPTO_zalloc(core::mem::size_of::<OsslStoreSearch>(), ptr::null(), 0)
-        .cast::<OsslStoreSearch>();
-
-    if search.is_null() {
+    // The object block, allocated through the crate's allocator seam; `into_raw` hands it out.
+    let Some(search) = OwnedCtx::<OsslStoreSearch>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
 
     // SAFETY: `alias` is NUL-terminated per the contract.
     let len = unsafe { c_strlen(alias) };
     // SAFETY: `search` is a fresh zeroed allocation.
     unsafe {
-        (*search).search_type = OSSL_STORE_SEARCH_BY_ALIAS;
-        (*search).string = alias.cast::<c_uchar>();
-        (*search).stringlength = len;
+        (*search.as_ptr()).search_type = OSSL_STORE_SEARCH_BY_ALIAS;
+        (*search.as_ptr()).string = alias.cast::<c_uchar>();
+        (*search.as_ptr()).stringlength = len;
     }
-    search
+    search.into_raw()
 }
 
 /// `void OSSL_STORE_SEARCH_free(OSSL_STORE_SEARCH *search)` — `store_lib.c:988-991`.
@@ -2338,8 +2405,9 @@ pub unsafe extern "C" fn OSSL_STORE_SEARCH_by_alias(alias: *const c_char) -> *mu
 /// `search` must be NULL or an object from one of the constructors, not already freed.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_STORE_SEARCH_free(search: *mut OsslStoreSearch) {
-    // SAFETY: `search` is NULL or the allocation a constructor made.
-    unsafe { CRYPTO_free(search.cast::<c_void>(), ptr::null(), 0) };
+    // SAFETY: `search` is NULL or the allocation a constructor made; it is reclaimed (NULL is a
+    // no-op) and its `Drop` runs the bare block release `OSSL_STORE_SEARCH_free` performed.
+    unsafe { drop(OwnedCtx::<OsslStoreSearch>::from_raw(search)) };
 }
 
 /// `int OSSL_STORE_SEARCH_get_type(const OSSL_STORE_SEARCH *criterion)` —
@@ -2592,3 +2660,406 @@ mod tests {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// OOM-refusal probe (`scripts/adv-probe.sh`, §16 negative control)
+// ---------------------------------------------------------------------------
+// The allocator hook is process-global, so the probes are `#[ignore]`d and run one process per
+// probe. This one drives the `OSSL_STORE_open_ex` refusal window that B26-X1 names: the provider's
+// loader has opened successfully, then the `OSSL_STORE_CTX` block allocation is refused.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_malloc;
+    use crate::ssl::adv_alloc;
+
+    /// Load the two providers whose published `OSSL_OP_STORE` rows resolve the `file` loader.
+    ///
+    /// # Safety
+    /// The caller serialises with the rest of the process-global provider-state tests.
+    unsafe fn load_providers() {
+        // SAFETY: both names are static NUL-terminated literals, and the caller holds the global
+        // state lock that the provider store requires.
+        unsafe {
+            assert!(
+                !crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"default".as_ptr())
+                    .is_null(),
+                "the default provider loads"
+            );
+            assert!(
+                !crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"base".as_ptr()).is_null(),
+                "the base provider loads"
+            );
+        }
+    }
+
+    /// A real file the published `file` loader can open, and its `file:` URI.
+    fn temporary_store_file() -> (std::path::PathBuf, std::ffi::CString) {
+        let path =
+            std::env::temp_dir().join(format!("openssl-rs-b26x1-{}-store.pem", std::process::id()));
+        std::fs::write(
+            &path,
+            b"-----BEGIN B26X1 PROBE-----\n-----END B26X1 PROBE-----\n",
+        )
+        .expect("the probe writes its own temporary store file");
+        let uri = std::ffi::CString::new(format!("file:{}", path.display()))
+            .expect("the temporary path has no interior NUL");
+        (path, uri)
+    }
+
+    /// A refused `OSSL_STORE_CTX` allocation *after* a successful provider open must leave the
+    /// loader store's cache entry owning a live loader.
+    ///
+    /// Pre-fix (`store_lib.rs:942`), the error path released the fetched loader twice: once through
+    /// `ossl_store_close_it`, once directly. The second release stole the reference the method
+    /// store's cache entry owned, so the cache flush below freed the loader block while the
+    /// implementation entry still pointed at it. Post-fix only `ossl_store_close_it` releases the
+    /// fetched reference, and the flush releases the cache entry's own reference.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader() {
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        let (path, uri) = temporary_store_file();
+        // SAFETY: the caller holds the process-global state lock.
+        unsafe { load_providers() };
+
+        let propq = c"provider=default";
+        // Warm the loader store's result cache so the probe knows the loader object's address and
+        // can watch its releases. The fetch returns one reference; releasing it leaves the
+        // implementation entry and the cache entry (two references) owning the object.
+        // SAFETY: `scheme`/`propq` are NUL-terminated literals, and `OSSL_STORE_LOADER_fetch`
+        // returns a reference this frame owns.
+        let loader = unsafe {
+            crate::store::store_meth::OSSL_STORE_LOADER_fetch(
+                ptr::null_mut(),
+                c"file".as_ptr(),
+                propq.as_ptr(),
+            )
+        };
+        assert!(!loader.is_null(), "the published `file` row resolves");
+        // SAFETY: `loader` is live and the accessor only reads its provider pointer.
+        let provider = unsafe { crate::store::store_meth::OSSL_STORE_LOADER_get0_provider(loader) };
+        // SAFETY: this releases exactly the reference the fetch above returned.
+        unsafe { crate::store::store_meth::OSSL_STORE_LOADER_free(loader) };
+
+        // Refuse exactly the `OSSL_STORE_CTX` block `OwnedCtx::zalloc` requests at `(NULL, 0)`.
+        // That request is made after the provider's `open` has answered a live loader context and
+        // after `propq_copy` has succeeded -- the B26-X1 OOM window.
+        let ctx_size = core::mem::size_of::<OsslStoreCtx>();
+        let copy_size = propq.to_bytes().len() + 1;
+        adv_alloc::reset();
+        adv_alloc::arm(ctx_size);
+        // SAFETY: every pointer is NULL or NUL-terminated per `OSSL_STORE_open_ex`'s contract.
+        let ctx = unsafe {
+            OSSL_STORE_open_ex(
+                uri.as_ptr(),
+                ptr::null_mut(),
+                propq.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        adv_alloc::disarm();
+        assert!(
+            ctx.is_null(),
+            "the refused context allocation must fail the open"
+        );
+
+        // Self-verify the refusal reached the intended window: the `propq_copy` allocation (the
+        // statement immediately before the context allocation) must be observed *before* the
+        // refused request. An arm consumed inside the provider open cannot satisfy this.
+        let ev = adv_alloc::events();
+        let refused = ev
+            .iter()
+            .position(
+                |e| matches!(e, adv_alloc::Ev::Malloc { n, site: true, refused: true } if *n == ctx_size),
+            )
+            .expect("the armed `OSSL_STORE_CTX` allocation was not the request refused");
+        let copy = ev
+            .iter()
+            .position(
+                |e| matches!(e, adv_alloc::Ev::Malloc { n, site: true, refused: false } if *n == copy_size),
+            )
+            .expect("the property-query copy was not allocated, so the open did not reach the OOM window");
+        assert!(
+            copy < refused,
+            "the refused allocation preceded the property copy, so it was not the context allocation"
+        );
+
+        // Pre-fix, the flush frees the loader block because the stolen reference had already taken
+        // the count to one; post-fix the cache entry still holds its own reference and no allocator
+        // release may be observed here.
+        adv_alloc::assert_no_double_free();
+        // SAFETY: NULL selects the default library context's store loader store; the flush releases
+        // only the cached results' own references.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_cache_flush(ptr::null_mut());
+        }
+        let freed_by_flush = adv_alloc::events()
+            .iter()
+            .any(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize));
+        assert!(
+            !freed_by_flush,
+            "B26-X1: the loader store cache released a loader it no longer owned after a refused context allocation"
+        );
+
+        // Release the implementation entry's reference: post-fix this is the loader block's single
+        // allocator release, and the double-release detector must stay quiet.
+        // SAFETY: `provider` is live (both providers remain loaded) and this is the store that holds
+        // the `file` loader's implementation entry.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_remove_all_provided(provider);
+        }
+        let releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize))
+            .count();
+        assert_eq!(
+            releases, 1,
+            "the loader block must be released exactly once across the refused open, the cache flush and the store removal"
+        );
+        adv_alloc::assert_no_double_free();
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    /// A refused `loader_set_params` must refuse the attach, not publish a store whose
+    /// `loader` is NULL and whose `loader_ctx` is already closed.
+    ///
+    /// **Pre-fix (`store_lib.rs:1672-1687`).** The fetched branch assigned `loader_ctx`
+    /// before calling `loader_set_params`. On refusal it closed that context, freed and
+    /// nulled `fetched_loader`, and left the local `loader_ctx` non-NULL, so the
+    /// `loader_ctx.is_null()` guard did not fire: the function published a store with
+    /// `loader = NULL`, `fetched_loader = NULL` and a closed `loader_ctx`. Both
+    /// `OSSL_STORE_close` (through `ossl_store_close_it`) and `OSSL_STORE_load` then
+    /// dereferenced `(*ctx).loader` (NULL).
+    ///
+    /// **Post-fix.** `loader_ctx` is assigned only on the accepted-params path, so the
+    /// refusal leaves it NULL and the attach returns NULL. The provider's `close` still ran:
+    /// the file loader's context holds one reference on the probe's BIO, so after attach the
+    /// BIO's public reference count is 1 (the probe's own). A missing `p_close` would leave it
+    /// at 2; a second `p_close` would release the probe's reference and make the explicit
+    /// `BIO_free` below a double release.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn refused_loader_params_refuses_the_attach_without_publishing_a_null_loader() {
+        use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
+        use crate::runtime::bio::BIO_free;
+
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        // SAFETY: the caller holds the process-global state lock.
+        unsafe { load_providers() };
+
+        let propq = c"provider=default";
+        // Warm the loader store's cache so the loader block has independent cache and
+        // implementation references; the probe then watches the fetch reference's release.
+        // SAFETY: `scheme`/`propq` are NUL-terminated literals, and this fetch returns a
+        // reference this frame owns.
+        let loader = unsafe {
+            crate::store::store_meth::OSSL_STORE_LOADER_fetch(
+                ptr::null_mut(),
+                c"file".as_ptr(),
+                propq.as_ptr(),
+            )
+        };
+        assert!(!loader.is_null(), "the published `file` row resolves");
+        // SAFETY: `loader` is live and the accessor only reads its provider pointer.
+        let provider = unsafe { crate::store::store_meth::OSSL_STORE_LOADER_get0_provider(loader) };
+        // SAFETY: this releases exactly the reference the warm-up fetch returned.
+        unsafe { crate::store::store_meth::OSSL_STORE_LOADER_free(loader) };
+
+        // A memory BIO the file loader can attach to. The probe keeps one reference; the
+        // file loader's context takes another, and `OSSL_STORE_attach`'s core-BIO wrapper a
+        // third. The reference accounting below depends on all three.
+        // SAFETY: the literal is live for the call and `BIO_new_mem_buf` copies no ownership
+        // of a read-only buffer; the returned BIO carries this frame's reference.
+        let bio = unsafe { BIO_new_mem_buf(c"b27x2-probe".as_ptr().cast(), 11) };
+        assert!(!bio.is_null(), "the probe's memory BIO is created");
+
+        // `file_set_ctx_params_decoder` refuses a repeated key, so `file_set_ctx_params`
+        // answers 0 and `loader_set_params` answers 0. This is a C-valid params array and a
+        // defined provider refusal, not a malformed call.
+        let mut expect: c_int = 0;
+        // SAFETY: the key is a static literal and `expect` is writable for an `int`.
+        let duplicated =
+            unsafe { OSSL_PARAM_construct_int(OSSL_STORE_PARAM_EXPECT.as_ptr(), &mut expect) };
+        let params = [duplicated, duplicated, OSSL_PARAM_construct_end()];
+
+        adv_alloc::reset();
+        // SAFETY: every pointer is NULL or live per `OSSL_STORE_attach`'s contract; `params` is
+        // a terminated array with a duplicated key, which the provider legitimately refuses.
+        let ctx = unsafe {
+            OSSL_STORE_attach(
+                bio,
+                c"file".as_ptr(),
+                ptr::null_mut(),
+                propq.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                params.as_ptr(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(
+            ctx.is_null(),
+            "B27-X2: a refused loader_set_params must refuse the attach, not publish a store with loader = NULL"
+        );
+
+        // Drop the probe's BIO reference. If the provider's `close` ran, the attach left
+        // exactly this one reference on the BIO (its core-BIO wrapper took and released one,
+        // and the file context took one that `file_close` released); if `p_close` did not run,
+        // the count is still 2 here and the context's reference leaks. The BIO is a `Box`, so
+        // the CRYPTO-seam transcript cannot observe it: its public reference count is the
+        // witness.
+        // SAFETY: `bio` is this frame's live reference (the attach released the other two),
+        // so its public reference count is readable.
+        let references = unsafe { (*bio).references.load(core::sync::atomic::Ordering::SeqCst) };
+        assert_eq!(
+            references, 1,
+            "B27-X2: the refused attach must close the loader context exactly once (the BIO must be left with only the probe's reference)"
+        );
+        // SAFETY: `bio` is the live reference this frame owns and this is its single release.
+        let freed = unsafe { BIO_free(bio) };
+        assert_eq!(freed, 1, "the probe's BIO free succeeds");
+        adv_alloc::assert_no_double_free();
+
+        // `OSSL_STORE_close` accepts NULL and answers 1. `OSSL_STORE_load` requires a live
+        // context; the refusal publishes none, so there is no store through which it could
+        // reach a NULL loader. The negative control below drives the pre-fix published shape
+        // through both call sites in isolated child processes.
+        // SAFETY: NULL is the documented no-op input.
+        assert_eq!(unsafe { OSSL_STORE_close(ptr::null_mut()) }, 1);
+
+        // The fetched loader reference the attach acquired was released by the refusal: after
+        // flushing the cache entry's own reference the block is not freed, and after removing
+        // the implementation entry's reference it is freed exactly once. A leaked fetch
+        // reference would leave the count at one and produce no release.
+        // SAFETY: NULL selects the default library context's loader store.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_cache_flush(ptr::null_mut());
+        }
+        let freed_by_flush = adv_alloc::events()
+            .iter()
+            .any(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize));
+        assert!(
+            !freed_by_flush,
+            "the loader store cache released a loader the implementation entry still owns"
+        );
+        // SAFETY: `provider` is live (both providers remain loaded) and this is the store that
+        // holds the `file` loader's implementation entry.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_remove_all_provided(provider);
+        }
+        let loader_releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize))
+            .count();
+        assert_eq!(
+            loader_releases, 1,
+            "the loader block must be released exactly once across the refused attach, the cache flush and the store removal"
+        );
+        adv_alloc::assert_no_double_free();
+    }
+
+    /// Negative control (§16): the pre-fix published shape faults at both call sites.
+    ///
+    /// A zeroed `OsslStoreCtx` with `loader = NULL`, `fetched_loader = NULL` and a non-NULL
+    /// (already closed) `loader_ctx` is exactly what the pre-fix attach published. `close`
+    /// reaches `(*(*ctx).loader).closefn` and `load` reaches `OSSL_STORE_eof`'s
+    /// `(*(*ctx).loader).eof`; both dereference the NULL loader. Each call runs in its own
+    /// child process so the fault is contained and the parent can observe it. This control
+    /// proves the shipped probe's NULL assertion is not vacuous.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_published_null_loader_store_faults_on_close_and_load() {
+        const CHILD_ENV: &str = "OPENSSL_RS_B27X2_CANARY";
+        const THIS: &str = "store::store_lib::adv_probe::canary_published_null_loader_store_faults_on_close_and_load";
+
+        if let Ok(mode) = std::env::var(CHILD_ENV) {
+            // SAFETY: this is the pre-fix published shape: no live loader, so both call sites
+            // dereference NULL. The fault is the control's expected outcome.
+            unsafe {
+                let mut ctx: OsslStoreCtx = core::mem::zeroed();
+                ctx.loader = ptr::null();
+                ctx.fetched_loader = ptr::null_mut();
+                ctx.loader_ctx = core::ptr::dangling_mut::<OsslStoreLoaderCtx>();
+                if mode == "close" {
+                    let _ = ossl_store_close_it(&mut ctx);
+                } else {
+                    let _ = OSSL_STORE_load(&mut ctx);
+                }
+            }
+            // Reaching here means the pre-fix shape did not fault, so the control is dead.
+            std::process::exit(1);
+        }
+
+        use std::os::unix::process::ExitStatusExt;
+
+        let exe = std::env::current_exe().expect("the test binary has a path");
+        let run = |mode: &str| {
+            std::process::Command::new(&exe)
+                .args([
+                    "--exact",
+                    THIS,
+                    "--ignored",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(CHILD_ENV, mode)
+                // Under ASan, let the kernel deliver the fault so the parent observes SIGSEGV
+                // rather than ASan's intercepted exit code.
+                .env("ASAN_OPTIONS", "handle_segv=0")
+                .status()
+                .expect("the canary child starts")
+        };
+
+        for mode in ["close", "load"] {
+            let status = run(mode);
+            let signal = status.signal();
+            // The pre-fix shape has no loader, so the call dereferences NULL. In a debug court
+            // Rust's own null check turns that into a non-unwinding panic (SIGABRT); an
+            // optimised or sanitised venue may deliver SIGSEGV instead. Either is the fault
+            // this control exists to observe; a normal exit is not.
+            assert!(
+                matches!(signal, Some(6) | Some(11)),
+                "the pre-fix published shape must fault on {mode} (observed signal {signal:?})"
+            );
+        }
+    }
+
+    /// Negative control (§16): the recording allocator's double-release detector must fire on a
+    /// deliberate second release, so a quiet [`adv_alloc::double_free`] above means something.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_double_release_is_detected() {
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+        // SAFETY: `b` is a fresh block; the second release is the deliberate test-only defect.
+        unsafe {
+            let b = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+        }
+        assert!(
+            adv_alloc::double_free(),
+            "the instrument must flag a double release (negative control)"
+        );
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslStoreCtx => zero_state_sweep_ossl_store_ctx, OsslStoreSearch => zero_state_sweep_ossl_store_search, OsslStoreInfo => zero_state_sweep_ossl_store_info);

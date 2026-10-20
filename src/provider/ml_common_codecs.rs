@@ -36,8 +36,9 @@
 use core::ffi::{c_char, c_int};
 use core::ptr;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::runtime::err::{err_sites, raise_site_data};
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free};
+use crate::runtime::mem::CRYPTO_calloc;
 use crate::runtime::str::OPENSSL_strncasecmp;
 
 /// `ML_COMMON_SPKI_OVERHEAD` — `ml_common_codecs.h:29`. The 22 bytes every ML-KEM/ML-DSA
@@ -264,34 +265,43 @@ pub(crate) unsafe fn ossl_ml_common_pkcs8_fmt_order(
     direction: *const c_char,
     formats: *const c_char,
 ) -> *mut MlCommonPkcs8FmtPref {
+    // `ret` is the authority's own `OPENSSL_calloc(NUM_PKCS8_FORMATS + 1, sizeof(*ret))` at
+    // `:45`; the handle's `Drop` is the authority's own `OPENSSL_free(ret)` at `:82`, on every
+    // refusal path below. `into_raw` hands the block out on success.
     // SAFETY: the allocation's arguments are the authority's own.
-    let ret = CRYPTO_calloc(
-        NUM_PKCS8_FORMATS + 1,
-        core::mem::size_of::<MlCommonPkcs8FmtPref>(),
-        FILE,
-        LINE_CALLOC,
-    )
-    .cast::<MlCommonPkcs8FmtPref>();
-    if ret.is_null() {
+    let Some(ret) = (unsafe {
+        OwnedBlock::<MlCommonPkcs8FmtPref>::from_raw(
+            CRYPTO_calloc(
+                NUM_PKCS8_FORMATS + 1,
+                core::mem::size_of::<MlCommonPkcs8FmtPref>(),
+                FILE,
+                LINE_CALLOC,
+            )
+            .cast::<MlCommonPkcs8FmtPref>(),
+            FILE,
+            LINE_FREE,
+        )
+    }) else {
         return ptr::null_mut();
-    }
+    };
+    let ret_p = ret.as_ptr();
 
-    // SAFETY: `ret` has NUM_PKCS8_FORMATS + 1 slots; `p8fmt` has NUM_PKCS8_FORMATS entries.
+    // SAFETY: `ret_p` has NUM_PKCS8_FORMATS + 1 slots; `p8fmt` has NUM_PKCS8_FORMATS entries.
     unsafe {
         for i in 0..NUM_PKCS8_FORMATS {
-            (*ret.add(i)).fmt = p8fmt.add(i);
-            (*ret.add(i)).pref = 0;
+            (*ret_p.add(i)).fmt = p8fmt.add(i);
+            (*ret_p.add(i)).pref = 0;
         }
     }
 
     // Default to compile-time table order when none specified.
     if formats.is_null() {
-        return ret;
+        return ret.into_raw();
     }
 
     let mut fmt = formats;
     let mut count = 0usize;
-    // SAFETY: `ret` has NUM_PKCS8_FORMATS slots and `fmt` walks a NUL-terminated string.
+    // SAFETY: `ret_p` has NUM_PKCS8_FORMATS slots and `fmt` walks a NUL-terminated string.
     unsafe {
         loop {
             fmt = fmt.add(span_separators(fmt));
@@ -302,14 +312,14 @@ pub(crate) unsafe fn ossl_ml_common_pkcs8_fmt_order(
             let len = end.offset_from(fmt) as usize;
             for i in 0..NUM_PKCS8_FORMATS {
                 // Skip slots already selected or with a different name.
-                if (*ret.add(i)).pref > 0
-                    || OPENSSL_strncasecmp((*(*ret.add(i)).fmt).p8_name, fmt, len) != 0
+                if (*ret_p.add(i)).pref > 0
+                    || OPENSSL_strncasecmp((*(*ret_p.add(i)).fmt).p8_name, fmt, len) != 0
                 {
                     continue;
                 }
                 // First time match.
                 count += 1;
-                (*ret.add(i)).pref = count as c_int;
+                (*ret_p.add(i)).pref = count as c_int;
                 break;
             }
             fmt = end;
@@ -321,21 +331,21 @@ pub(crate) unsafe fn ossl_ml_common_pkcs8_fmt_order(
 
     // No formats matched, raise an error.
     if count == 0 {
-        // SAFETY: `ret` is this frame's allocation.
-        unsafe { CRYPTO_free(ret.cast(), FILE, LINE_FREE) };
+        // The authority's own `OPENSSL_free(ret)` at `:82`; the handle's `Drop` runs it.
+        drop(ret);
         // SAFETY: both strings are NUL-terminated per the contract.
         unsafe { raise_no_format(algorithm_name, direction) };
         return ptr::null_mut();
     }
 
     // Sort by preference, with 0's last.
-    // SAFETY: `ret`'s first NUM_PKCS8_FORMATS slots are initialised.
-    let selected = unsafe { core::slice::from_raw_parts_mut(ret, NUM_PKCS8_FORMATS) };
+    // SAFETY: `ret_p`'s first NUM_PKCS8_FORMATS slots are initialised.
+    let selected = unsafe { core::slice::from_raw_parts_mut(ret_p, NUM_PKCS8_FORMATS) };
     selected.sort_by_key(|slot| pref_order_key(slot.pref));
     // Terminate the list at first unselected entry, perhaps reserved slot.
-    // SAFETY: `count < NUM_PKCS8_FORMATS + 1`, so `ret.add(count)` is within the allocation.
-    unsafe { (*ret.add(count)).fmt = ptr::null() };
-    ret
+    // SAFETY: `count < NUM_PKCS8_FORMATS + 1`, so `ret_p.add(count)` is within the allocation.
+    unsafe { (*ret_p.add(count)).fmt = ptr::null() };
+    ret.into_raw()
 }
 
 #[cfg(test)]
@@ -424,8 +434,9 @@ mod tests {
                 b"bare-seed".to_vec()
             ]
         );
-        // SAFETY: `list` is this frame's allocation.
-        unsafe { CRYPTO_free(list.cast(), FILE, LINE_FREE) };
+        // SAFETY: `list` is this frame's allocation; the handle's `Drop` is the authority's own
+        // `OPENSSL_free(list)` at `(FILE, LINE_FREE)`.
+        drop(unsafe { OwnedBlock::<MlCommonPkcs8FmtPref>::from_raw(list, FILE, LINE_FREE) });
     }
 
     /// A selection string picks the named formats in the order they are listed, and the unselected
@@ -447,8 +458,9 @@ mod tests {
         // SAFETY: `names` reads a list this call returned.
         let got = unsafe { names(list) };
         assert_eq!(got, vec![b"bare-seed".to_vec(), b"seed-only".to_vec()]);
-        // SAFETY: `list` is this frame's allocation.
-        unsafe { CRYPTO_free(list.cast(), FILE, LINE_FREE) };
+        // SAFETY: `list` is this frame's allocation; the handle's `Drop` is the authority's own
+        // `OPENSSL_free(list)` at `(FILE, LINE_FREE)`.
+        drop(unsafe { OwnedBlock::<MlCommonPkcs8FmtPref>::from_raw(list, FILE, LINE_FREE) });
     }
 
     /// A selection string naming nothing raises `PROV_R_ML_DSA_NO_FORMAT` and answers NULL.

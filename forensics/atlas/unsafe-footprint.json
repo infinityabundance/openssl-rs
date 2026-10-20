@@ -248,14 +248,14 @@
         "classification": "boundary",
         "extern_c_fns": 40,
         "files": 5,
-        "lines": 4211,
+        "lines": 4268,
         "module": "context",
-        "safety_comments": 240,
+        "safety_comments": 241,
         "unsafe_blocks": 232,
         "unsafe_externs": 36,
-        "unsafe_fns": 33,
+        "unsafe_fns": 34,
         "unsafe_impls": 2,
-        "unsafe_sites": 303,
+        "unsafe_sites": 304,
         "unsafe_traits": 0
       },
       {
@@ -500,7 +500,7 @@
         "classification": "core",
         "extern_c_fns": 1646,
         "files": 67,
-        "lines": 79604,
+        "lines": 79610,
         "module": "evp",
         "safety_comments": 6334,
         "unsafe_blocks": 6207,
@@ -878,14 +878,14 @@
         "classification": "boundary",
         "extern_c_fns": 811,
         "files": 80,
-        "lines": 125735,
+        "lines": 125760,
         "module": "runtime",
-        "safety_comments": 3578,
-        "unsafe_blocks": 3469,
+        "safety_comments": 3580,
+        "unsafe_blocks": 3471,
         "unsafe_externs": 623,
         "unsafe_fns": 304,
         "unsafe_impls": 13,
-        "unsafe_sites": 4409,
+        "unsafe_sites": 4411,
         "unsafe_traits": 0
       },
       {
@@ -1101,16 +1101,16 @@
     ],
     "scan": {
       "files": 862,
-      "lines": 803248,
+      "lines": 803336,
       "root": "src",
-      "sources_sha256": "4805a5c936ea101ef9ed39c6ffcd32170ce85717419b1cf82b911f3cf6d16a5e"
+      "sources_sha256": "c2d4ae8fa03d27c37fd0a6bf503d18d8e43f3311d0c1d50a11e623813aa3cac8"
     },
     "totals": {
       "by_class": {
         "boundary": {
           "extern_c_fns": 1092,
           "modules": 6,
-          "unsafe_sites": 5899
+          "unsafe_sites": 5902
         },
         "core": {
           "extern_c_fns": 9777,
@@ -1120,13 +1120,13 @@
       },
       "extern_c_fns": 10869,
       "files": 862,
-      "lines": 803248,
-      "safety_comments": 46385,
-      "unsafe_blocks": 44572,
+      "lines": 803336,
+      "safety_comments": 46388,
+      "unsafe_blocks": 44574,
       "unsafe_externs": 9998,
-      "unsafe_fns": 4137,
+      "unsafe_fns": 4138,
       "unsafe_impls": 135,
-      "unsafe_sites": 58842,
+      "unsafe_sites": 58845,
       "unsafe_traits": 0
     }
   },
@@ -1135,7 +1135,7 @@
     {
       "name": "crate-sources",
       "note": "sha256 over the sorted (repo-relative path, file sha256) pairs of every src/**/*.rs file; the crate source tree has no single path to hash, and this pins exactly the bytes the scan read",
-      "sha256": "4805a5c936ea101ef9ed39c6ffcd32170ce85717419b1cf82b911f3cf6d16a5e"
+      "sha256": "c2d4ae8fa03d27c37fd0a6bf503d18d8e43f3311d0c1d50a11e623813aa3cac8"
     }
   ],
   "kind": "unsafe-footprint",

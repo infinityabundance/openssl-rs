@@ -47,17 +47,21 @@
 
 use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::mem::size_of;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_reasons::X509_R_INVALID_TRUST;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     Asn1Object, NID_OCSP_sign, NID_ad_OCSP, NID_anyExtendedKeyUsage, NID_client_auth,
     NID_code_sign, NID_email_protect, NID_server_auth, NID_time_stamp, OBJ_obj2nid,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
@@ -136,6 +140,87 @@ const LINE_FREE_ERR_TRTMP: c_int = 180;
 const LINE_FREE_DYN_NAME: c_int = 191;
 /// `trtable_free`'s `OPENSSL_free(p)` (`:192`).
 const LINE_FREE_DYN_P: c_int = 192;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the file's heap records and the dynamic rows' names
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `trtable_free` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the dynamic row's owned name.
+///
+/// [`OwnedCtx::from_raw_at`] is only ever reached for the rows the dynamic `trtable` holds, and every
+/// one of those carries `X509_TRUST_DYNAMIC`, so the authority's leading `(*p).flags &
+/// X509_TRUST_DYNAMIC` early return is unobservable here.
+// SAFETY: (a) holds: `destroy_body` is the authority's `X509_TRUST` free body -- it releases the
+// row's own dynamic `name` string when the DYNAMIC_NAME flag is set (NULL-tolerant) and never the
+// enclosing block. (b) holds: `X509Trust` is a `#[repr(C)]` record of integers, an `Option<fn>` and
+// two raw pointers, so an all-zero block is a valid value; its zero `flags` skips the free.
+unsafe impl CtxDestroy for X509Trust {
+    unsafe fn destroy_body(ptr: *mut X509Trust) {
+        // SAFETY: `ptr` is a live row per the trait contract; `name` is NULL or this file's own
+        // `CRYPTO_strdup` block.
+        unsafe {
+            if (*ptr).flags & X509_TRUST_DYNAMIC_NAME != 0 {
+                CRYPTO_free(
+                    (*ptr).name.cast::<c_void>(),
+                    FILE.as_ptr(),
+                    LINE_FREE_DYN_NAME,
+                );
+            }
+        }
+    }
+}
+
+/// An owned `X509_TRUST` block still under construction.
+///
+/// `X509_TRUST_add` allocates the row and fills its members one at a time; until the row is
+/// installed its release is the block alone -- the authority's own `OPENSSL_free(trtmp)` at its
+/// `err:` label (`:180`) -- so the destructor ([`CtxDestroy::destroy_body`]) over a name that may
+/// not be set must not run. [`Self::finish`] hands the block to the dynamic table on success.
+struct RawTrust {
+    ptr: ptr::NonNull<X509Trust>,
+}
+
+impl RawTrust {
+    /// `CRYPTO_malloc(sizeof(*trtmp), FILE, 142)`, or `None` when it answers NULL.
+    fn new() -> Option<RawTrust> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
+        // `size_of::<X509Trust>()` bytes, which is exactly `X509_TRUST`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<X509Trust>(), FILE.as_ptr(), LINE_MALLOC_TRTMP)
+        }
+        .cast::<X509Trust>();
+        ptr::NonNull::new(raw).map(|ptr| RawTrust { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut X509Trust {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the dynamic table.
+    fn finish(self) -> *mut X509Trust {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawTrust {
+    /// The authority's `X509_TRUST_add` error-path release (`:180`): the block alone.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free` at the `err:` label.
+        unsafe {
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                FILE.as_ptr(),
+                LINE_FREE_ERR_TRTMP,
+            )
+        };
+    }
+}
 
 /// One `x509_trust.c` raise coordinate, declared locally (see the module doc).
 const fn x509_trust_site(line: c_int, func: &'static CStr, reason: c_int) -> ErrSite {
@@ -314,45 +399,20 @@ unsafe extern "C" fn tr_cmp(a: *const c_void, b: *const c_void) -> c_int {
     unsafe { (**a.cast::<*const X509Trust>()).trust - (**b.cast::<*const X509Trust>()).trust }
 }
 
-/// `static void trtable_free(X509_TRUST *p)` — `x509_trust.c:185-194`.
-///
-/// Frees a dynamic row's owned name and then the row; a reserved row (no `X509_TRUST_DYNAMIC`) and
-/// NULL are left alone, so the reserved table's string literals are never released.
-///
-/// # Safety
-///
-/// `p` must be NULL or a row this module allocated through [`X509_TRUST_add`].
-unsafe fn trtable_free(p: *mut X509Trust) {
-    if p.is_null() {
-        return;
-    }
-    // SAFETY: `p` is non-NULL and live per the contract.
-    if (unsafe { (*p).flags } & X509_TRUST_DYNAMIC) == 0 {
-        return;
-    }
-    // SAFETY: `p` is a dynamic row and its fields are live.
-    if (unsafe { (*p).flags } & X509_TRUST_DYNAMIC_NAME) != 0 {
-        // SAFETY: `name` is the dynamic row's own owned string.
-        unsafe {
-            CRYPTO_free(
-                (*p).name.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_DYN_NAME,
-            );
-        }
-    }
-    // SAFETY: `p` is the row this function frees.
-    unsafe { CRYPTO_free(p.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_DYN_P) };
-}
-
 /// The `X509_TRUST` destructor [`X509_TRUST_cleanup`] passes to `OPENSSL_sk_pop_free`.
 ///
+/// Takes the raw element the stack hands back and reclaims it as an [`OwnedCtx`], whose `Drop` is
+/// the row's single release at the authority's own `trtable_free` sites (`:191`/`:192`).
+///
 /// # Safety
 ///
-/// `elem` must be NULL or an `X509_TRUST` this module allocated.
+/// `elem` must be NULL or a dynamic `X509_TRUST` this module allocated.
 unsafe extern "C" fn trtable_free_thunk(elem: *mut c_void) {
-    // SAFETY: `elem` is NULL or a row per the contract; `trtable_free` accepts NULL.
-    unsafe { trtable_free(elem.cast::<X509Trust>()) };
+    // SAFETY: `elem` is NULL or a dynamic row this module allocated; `from_raw` reclaims it and
+    // `Drop` runs the authority's own free body and block release.
+    drop(unsafe {
+        OwnedCtx::<X509Trust>::from_raw_at(elem.cast(), SeamFile::new(FILE), LINE_FREE_DYN_P)
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -547,45 +607,47 @@ pub unsafe extern "C" fn X509_TRUST_add(
 
     // SAFETY: the table, if present, is this module's own.
     let idx = unsafe { X509_TRUST_get_by_id(id) };
+    // `raw` owns the fresh row this call allocates; an existing row (`idx >= 0`) is the reserved or
+    // dynamic table's and is left raw.
+    let raw: Option<RawTrust>;
     let trtmp: *mut X509Trust;
     if idx < 0 {
-        // SAFETY: the allocator takes the file/line for its mdbg record only.
-        let p = CRYPTO_malloc(
-            core::mem::size_of::<X509Trust>(),
-            FILE.as_ptr(),
-            LINE_MALLOC_TRTMP,
-        )
-        .cast::<X509Trust>();
-        if p.is_null() {
+        let Some(r) = RawTrust::new() else {
             return 0;
-        }
-        trtmp = p;
-        // SAFETY: `trtmp` is this call's own fresh row.
-        unsafe { (*trtmp).flags = X509_TRUST_DYNAMIC };
+        };
+        // SAFETY: `r` is this call's own fresh row.
+        unsafe { (*r.as_ptr()).flags = X509_TRUST_DYNAMIC };
+        trtmp = r.as_ptr();
+        raw = Some(r);
     } else {
         // SAFETY: `idx` is a valid index per `X509_TRUST_get_by_id`.
         trtmp = unsafe { X509_TRUST_get0(idx) };
+        raw = None;
     }
 
     // SAFETY: `trtmp` is a live row per the above.
-    if (unsafe { (*trtmp).flags } & X509_TRUST_DYNAMIC_NAME) != 0 {
-        // SAFETY: the row owns its name when the dynamic-name bit is set.
-        unsafe {
-            CRYPTO_free(
-                (*trtmp).name.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_STD_NAME,
-            )
-        };
+    if unsafe { (*trtmp).flags } & X509_TRUST_DYNAMIC_NAME != 0 {
+        // The row owned a name; handing it to an owner makes its `Drop` the authority's own
+        // `OPENSSL_free` at `:150`.
+        // SAFETY: `name` is the row's own dynamic string; no other owner will release it.
+        drop(unsafe { OwnedStr::adopt((*trtmp).name, SeamFile::new(FILE), LINE_FREE_STD_NAME) });
     }
     // SAFETY: `name` is NUL-terminated per the contract; the allocator takes file/line only.
-    let dup = unsafe { CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_TRTMP_NAME) };
+    let dup = unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strdup(name, FILE.as_ptr(), LINE_STRDUP_TRTMP_NAME),
+            SeamFile::new(FILE),
+            LINE_FREE_ERR_NAME,
+        )
+    };
     // SAFETY: `trtmp` is live and writable.
-    unsafe { (*trtmp).name = dup };
-    if dup.is_null() {
-        // SAFETY: `trtmp` is this call's live row; `idx < 0` releases it, `idx >= 0` leaves it.
-        return unsafe { x509_trust_add_err(idx, trtmp) };
-    }
+    unsafe { (*trtmp).name = dup.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr()) };
+    let Some(dup) = dup else {
+        // The strdup failed. For a fresh row this is the authority's `err:` tail and releases the
+        // block alone; for an existing row that tail's `idx < 0` test leaves it, so `raw` is `None`.
+        drop(raw);
+        return 0;
+    };
     // SAFETY: `trtmp` is live and writable.
     unsafe {
         // Keep the dynamic flag of existing entry, then set all other flags.
@@ -606,8 +668,10 @@ pub unsafe extern "C" fn X509_TRUST_add(
             if table.is_null() {
                 // SAFETY: the site's pointers are static.
                 unsafe { raise_site(&X509_TRUST_168) };
-                // SAFETY: `trtmp` is this call's live row; `idx < 0` releases it.
-                return unsafe { x509_trust_add_err(idx, trtmp) };
+                // The authority's `err:` tail releases the fresh row and its name.
+                drop(dup);
+                drop(raw);
+                return 0;
             }
             TRTABLE.store(table, Ordering::Release);
         }
@@ -615,34 +679,19 @@ pub unsafe extern "C" fn X509_TRUST_add(
         if unsafe { OPENSSL_sk_push(table, trtmp.cast::<c_void>()) } == 0 {
             // SAFETY: the site's pointers are static.
             unsafe { raise_site(&X509_TRUST_172) };
-            // SAFETY: `trtmp` is this call's live row; `idx < 0` releases it.
-            return unsafe { x509_trust_add_err(idx, trtmp) };
+            // The authority's `err:` tail releases the fresh row and its name.
+            drop(dup);
+            drop(raw);
+            return 0;
+        }
+        // The push succeeded, so the dynamic table owns the block now.
+        if let Some(r) = raw {
+            let _ = r.finish();
         }
     }
+    // The row (a fresh one that was pushed, or an existing one) owns the name now.
+    let _ = dup.into_raw();
     1
-}
-
-/// The `err:` label of [`X509_TRUST_add`] — `x509_trust.c:177-182`.
-///
-/// A dynamic row that failed to install is released whole; a reserved row that failed is left in
-/// place (the authority only frees when `idx < 0`).
-///
-/// # Safety
-///
-/// `trtmp` must be live; `idx` is `X509_TRUST_get_by_id`'s answer.
-unsafe fn x509_trust_add_err(idx: c_int, trtmp: *mut X509Trust) -> c_int {
-    if idx < 0 {
-        // SAFETY: `trtmp` is this call's own uninstalled row and its name field.
-        unsafe {
-            CRYPTO_free(
-                (*trtmp).name.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_ERR_NAME,
-            );
-            CRYPTO_free(trtmp.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_ERR_TRTMP);
-        }
-    }
-    0
 }
 
 /// `void X509_TRUST_cleanup(void)` — `x509_trust.c:196-200`.
@@ -829,3 +878,7 @@ unsafe extern "C" fn obj_trust(id: c_int, x: *mut X509, flags: c_int) -> c_int {
     // SAFETY: `x` is live per the contract; `trust_compat` ignores its first argument.
     unsafe { trust_compat(ptr::null_mut(), x, flags) }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(X509Trust => zero_state_sweep_x509_trust);

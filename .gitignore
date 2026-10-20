@@ -2,6 +2,13 @@
 /target
 **/*.rs.bk
 
+# Sanitizer, Miri and TSan court scratch directories. These are host-disk
+# build outputs from the court container and must never enter a package.
+/.asan-*/
+/.miri-*/
+/.tsan-*/
+/.ob4work/
+
 # Authority material is large and content-addressed. The registry
 # (forensics/authorities/AUTHORITIES.json) IS checked in, because it is the
 # evidence that binds claims to hashes. The per-file SOURCE_MANIFEST.*.json is

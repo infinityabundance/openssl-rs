@@ -78,7 +78,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::AtomicI32;
+#[cfg(test)]
+use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
@@ -94,7 +96,9 @@ use crate::params::{
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `OSSL_OP_MAC` — `include/openssl/core_dispatch.h`. The third operation the walk visits, and
 /// the one this class is fetched under.
@@ -102,6 +106,7 @@ const OSSL_OP_MAC: c_int = 3;
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c");
 /// `evp_mac_new`'s `OPENSSL_zalloc(sizeof(*mac))` (line 49), in `mac_meth.c`.
 const LINE_ZALLOC_MAC: c_int = 49;
 /// `evp_mac_free`'s `OPENSSL_free(mac)`, in `mac_meth.c`.
@@ -314,7 +319,11 @@ unsafe extern "C" fn evp_mac_free(vmac: *mut c_void) {
 /// # Safety
 /// No preconditions: it allocates and writes one field.
 unsafe fn evp_mac_new() -> *mut EvpMac {
-    let mac = CRYPTO_zalloc(core::mem::size_of::<EvpMac>(), FILE, LINE_ZALLOC_MAC).cast::<EvpMac>();
+    let mac = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpMac>(), FILE, LINE_ZALLOC_MAC)
+    }
+    .cast::<EvpMac>();
     if mac.is_null() {
         return ptr::null_mut();
     }
@@ -494,9 +503,11 @@ pub unsafe extern "C" fn EVP_MAC_fetch(
 /// `mac` must be a live `EvpMac`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MAC_up_ref(mac: *mut EvpMac) -> c_int {
-    // SAFETY: `mac` is live per the contract.
-    unsafe { (*mac).refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `mac` is live; this call acts for the caller's existing reference and
+    // acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*mac).refcnt) }
 }
 
 /// `void EVP_MAC_free(EVP_MAC *mac)`.
@@ -513,10 +524,14 @@ pub unsafe extern "C" fn EVP_MAC_free(mac: *mut EvpMac) {
     if mac.is_null() {
         return;
     }
-    // SAFETY: `mac` is live per the contract.
-    let last = unsafe { (*mac).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `mac` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*mac).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `EVP_MAC_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference and the block is this call's.
     unsafe {
@@ -818,8 +833,11 @@ pub unsafe extern "C" fn EVP_MAC_do_all_provided(
 /// `mac` must be a live `EvpMac` this call may take a reference to.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MAC_CTX_new(mac: *mut EvpMac) -> *mut EvpMacCtx {
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMacCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_ZALLOC_CTX)
+    }
+    .cast::<EvpMacCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }
@@ -922,11 +940,17 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     if unsafe { (*src).algctx }.is_null() {
         return ptr::null_mut();
     }
-    let dst = CRYPTO_malloc(core::mem::size_of::<EvpMacCtx>(), FILE, LINE_MALLOC_CTX_DUP)
-        .cast::<EvpMacCtx>();
-    if dst.is_null() {
+    // The duplicate is this frame's block, allocated through the crate's allocator seam at the
+    // authority's own size/`file`/`line`; `Drop` releases it on the failure tail and `into_raw`
+    // hands it to the caller on success.
+    let Some(mut dst_buf) = OwnedBuf::new(
+        core::mem::size_of::<EvpMacCtx>(),
+        FILE_SEAM,
+        LINE_MALLOC_CTX_DUP,
+    ) else {
         return ptr::null_mut();
-    }
+    };
+    let dst = dst_buf.as_ptr().cast::<EvpMacCtx>();
     // SAFETY: `dst` is a fresh block of exactly the source's size and `src` is a live object.
     unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
 
@@ -934,8 +958,9 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     if unsafe { EVP_MAC_up_ref((*dst).meth) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::MAC_LIB_63) };
-        // SAFETY: `dst` is this call's own block and nothing else holds it.
-        unsafe { CRYPTO_free(dst.cast::<c_void>(), FILE, LINE_FREE_CTX_ON_DUP) };
+        // The authority releases the duplicate at its own site, `:65`.
+        dst_buf.set_release_line(LINE_FREE_CTX_ON_DUP);
+        drop(dst_buf);
         return ptr::null_mut();
     }
 
@@ -951,12 +976,13 @@ pub unsafe extern "C" fn EVP_MAC_CTX_dup(src: *const EvpMacCtx) -> *mut EvpMacCt
     unsafe { (*dst).algctx = algctx };
     if algctx.is_null() {
         // SAFETY: `dst` is this call's own context, and the reference taken above is given back
-        // here. `freectx` is called with the NULL the failed duplicate left, which is the state
-        // the authority releases from too.
-        unsafe { EVP_MAC_CTX_free(dst) };
+        // here. The context's own releaser takes the block over -- `into_raw` gives it up without a
+        // second release. `freectx` is called with the NULL the failed duplicate left, which is the
+        // state the authority releases from too.
+        unsafe { EVP_MAC_CTX_free(dst_buf.into_raw().cast::<EvpMacCtx>()) };
         return ptr::null_mut();
     }
-    dst
+    dst_buf.into_raw().cast::<EvpMacCtx>()
 }
 
 /// `EVP_MAC *EVP_MAC_CTX_get0_mac(EVP_MAC_CTX *ctx)`.
@@ -1381,12 +1407,19 @@ pub unsafe extern "C" fn EVP_Q_mac(
     if ran {
         let mut out = out;
         if out.is_null() {
-            out = CRYPTO_malloc(len, FILE, LINE_MALLOC_Q_MAC).cast::<c_uchar>();
-            // SAFETY: `out` is the block just allocated, or NULL, and `ctx` is live.
-            if !out.is_null() && unsafe { EVP_MAC_final(ctx, out, ptr::null_mut(), len) } == 0 {
-                // SAFETY: `out` is this call's own block and the final refused to fill it.
-                unsafe { CRYPTO_free(out.cast::<c_void>(), FILE, LINE_FREE_Q_MAC) };
-                out = ptr::null_mut();
+            // The output buffer is this frame's block, allocated through the crate's allocator seam
+            // at the authority's own size/`file`/`line`; `Drop` releases it if the final refuses
+            // and `into_raw` hands it to the caller on success.
+            if let Some(mut buf) = OwnedBuf::new(len, FILE_SEAM, LINE_MALLOC_Q_MAC) {
+                // SAFETY: `buf` is the block just allocated, or NULL, and `ctx` is live.
+                if unsafe { EVP_MAC_final(ctx, buf.as_ptr(), ptr::null_mut(), len) } == 0 {
+                    // The authority releases the half-filled block at its own site, `:301`.
+                    buf.set_release_line(LINE_FREE_Q_MAC);
+                    drop(buf);
+                    out = ptr::null_mut();
+                } else {
+                    out = buf.into_raw();
+                }
             }
         }
         res = out;

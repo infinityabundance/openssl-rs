@@ -29,9 +29,9 @@
 use core::ffi::{c_char, c_int, c_uint};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::{BIO_read, BIO_test_flags, BIO_FLAGS_SHOULD_RETRY};
 use crate::runtime::err::raise_with;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::ssl::ssl_lib::{ssl_set_accept_state, SSL_clear, SSL_get_rbio, SSL_get_wbio, Ssl};
 
 /// `OPENSSL_FILE` of this translation unit.
@@ -100,6 +100,18 @@ pub struct Dtls1State {
     pub cookie: [u8; DTLS1_COOKIE_LENGTH],
 }
 
+// SAFETY: (a) `Dtls1State` has no owned members — its only pointer is the `Option<fn>` timer
+// callback — so `destroy_body` is empty and never releases the enclosing block, which `OwnedCtx`
+// releases; (b) an all-zero block is a valid state (a null-niche `None` callback, zero scalars and
+// a zeroed cookie array), which is exactly the authority's `OPENSSL_zalloc` result.
+unsafe impl CtxDestroy for Dtls1State {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = 79;
+    const LINE_FREE: c_int = 168;
+
+    unsafe fn destroy_body(_ptr: *mut Dtls1State) {}
+}
+
 /// `dtls1_new`'s allocation half — `d1_lib.c:79-102`: a zeroed `DTLS1_STATE`, with the server cookie
 /// length pre-set (`d1_lib.c:87-89`).
 ///
@@ -107,13 +119,17 @@ pub struct Dtls1State {
 /// The returned pointer is a live, zeroed `Dtls1State` with the authority's server default; the
 /// caller owns it and releases it with [`dtls1_free`].
 pub(crate) unsafe fn dtls1_new_state(server: bool) -> *mut Dtls1State {
-    // SAFETY: `CRYPTO_zalloc` returns NULL or a zeroed block of this size.
-    let d1 = CRYPTO_zalloc(core::mem::size_of::<Dtls1State>(), FILE, 79).cast::<Dtls1State>();
-    if !d1.is_null() && server {
-        // SAFETY: `d1` is a fresh zeroed allocation.
-        unsafe { (*d1).cookie_len = DTLS1_COOKIE_LENGTH as c_uint };
+    // The owner's allocation is the authority's own `CRYPTO_zalloc` at `d1_lib.c:79`, and a zeroed
+    // state is valid, so it may be validated immediately. `into_raw` gives the `Ssl` the stable
+    // pointer its field stores; the matching free reclaims it.
+    let Some(d1) = OwnedCtx::<Dtls1State>::zalloc() else {
+        return core::ptr::null_mut();
+    };
+    if server {
+        // SAFETY: `d1` is a fresh zeroed block this call still owns.
+        unsafe { (*d1.as_ptr()).cookie_len = DTLS1_COOKIE_LENGTH as c_uint };
     }
-    d1
+    d1.into_raw()
 }
 
 /// `dtls1_free` — `d1_lib.c:151-170`, reduced to releasing the state block the queues above are not
@@ -128,10 +144,12 @@ pub(crate) unsafe fn dtls1_free(ssl: *mut Ssl) {
     }
     // SAFETY: `ssl` is live per the caller's contract.
     unsafe {
-        if (*ssl).d1.is_null() {
+        let d1 = (*ssl).d1;
+        if d1.is_null() {
             return;
         }
-        CRYPTO_free((*ssl).d1.cast(), FILE, 168);
+        // Free first and clear the field afterwards, exactly as `d1_lib.c:168` does.
+        drop(OwnedCtx::<Dtls1State>::from_raw(d1));
         (*ssl).d1 = core::ptr::null_mut();
     }
 }
@@ -444,3 +462,87 @@ pub unsafe extern "C" fn DTLS_set_timer_cb(ssl: *mut Ssl, cb: Option<DtlsTimerCb
         unsafe { (*(*ssl).d1).timer_cb = cb };
     })
 }
+
+/// Allocator and lifecycle boundary court for [`dtls1_new_state`]/[`dtls1_free`] (§16).
+///
+/// The refusal arm is size-only: the state block is allocated at this file's own `(FILE, 79)`
+/// coordinate, which the SSL ticket probes' site-specific arming cannot reach.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::adv_alloc::{self, Ev};
+    use core::ptr;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn dtls_state_refusal_and_lifecycle() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let size = core::mem::size_of::<Dtls1State>();
+
+        adv_alloc::reset();
+        adv_alloc::arm_any(size);
+        // SAFETY: `dtls1_new_state` takes no caller pointer; a refusal answers NULL.
+        let d1 = unsafe { dtls1_new_state(true) };
+        adv_alloc::disarm_any();
+
+        assert!(
+            d1.is_null(),
+            "a refused Dtls1State block must make dtls1_new_state answer NULL"
+        );
+        let ev = adv_alloc::events();
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: true, .. } if *n == size))
+                .count(),
+            1,
+            "exactly the Dtls1State-sized request is refused"
+        );
+        assert_eq!(
+            ev.iter()
+                .filter(|e| matches!(e, Ev::Malloc { n, refused: false, .. } if *n == size))
+                .count(),
+            0,
+            "the refused request must never be forwarded"
+        );
+        assert!(
+            !ev.iter().any(|e| matches!(e, Ev::Free { .. })),
+            "a refusal before the block exists must not release anything"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // The success path: a live state block is released exactly once and the `Ssl` field is
+        // cleared before the caller frees the enclosing (zeroed) connection block.
+        // SAFETY: `zeroed_ssl` answers NULL or a live zeroed `Ssl` block this frame owns.
+        let s = unsafe { adv_alloc::zeroed_ssl() };
+        assert!(!s.is_null(), "the zeroed Ssl block must allocate");
+        adv_alloc::reset();
+        // SAFETY: `s` is live and zeroed; `dtls1_new_state` answers a fresh block this field owns.
+        unsafe { (*s).d1 = dtls1_new_state(true) };
+        // SAFETY: `s` is live; `dtls1_free` releases the field's block and clears it.
+        unsafe {
+            assert!(
+                !(*s).d1.is_null(),
+                "the unarmed state allocation must succeed"
+            );
+            dtls1_free(s);
+            assert!(
+                (*s).d1.is_null(),
+                "dtls1_free must clear the field after releasing the state"
+            );
+        }
+        adv_alloc::assert_no_double_free();
+        // SAFETY: `s` is the zeroed block from `zeroed_ssl`; this is its single release.
+        unsafe { CRYPTO_free(s.cast(), ptr::null(), 0) };
+        adv_alloc::assert_no_double_free();
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Dtls1State => zero_state_sweep_dtls1_state);

@@ -42,9 +42,10 @@ use crate::ml_kem::ML_KEM_SHARED_SECRET_BYTES;
 use crate::params::{OsslParam, END};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::mlx_kmgmt::{mlx_kem_have_prvkey, mlx_kem_have_pubkey, MlxKey};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::runtime::mem::OPENSSL_cleanse;
 
 /// `OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY` — `core_names.h:398`.
 const OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY: *const c_char = c"encoded-pub-key".as_ptr();
@@ -76,6 +77,18 @@ struct ProvMlxKemCtx {
     op: c_int,
 }
 
+// SAFETY: (a) `ProvMlxKemCtx` owns no members — `key` is explicitly borrowed by `mlx_kem_init` and
+// `libctx` is the caller's — so `destroy_body` is empty and never releases the enclosing block,
+// which `OwnedCtx` releases; (b) an all-zero block is a valid `ProvMlxKemCtx`, but `newctx` still
+// writes every field before `assume_init` because the authority allocates with `OPENSSL_malloc`.
+unsafe impl CtxDestroy for ProvMlxKemCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_NEWCTX;
+    const LINE_FREE: c_int = LINE_FREECTX;
+
+    unsafe fn destroy_body(_ptr: *mut ProvMlxKemCtx) {}
+}
+
 /// `static int mlx_kem_init(void *vctx, int op, void *key, const OSSL_PARAM params[])` —
 /// `mlx_kem.c:56-66`.
 ///
@@ -100,20 +113,21 @@ unsafe fn mlx_kem_init(vctx: *mut c_void, op: c_int, key: *mut c_void) -> c_int 
 /// # Safety
 /// The KEM `newctx` dispatch contract.
 unsafe extern "C" fn mlx_kem_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked.
-    let ctx = CRYPTO_malloc(core::mem::size_of::<ProvMlxKemCtx>(), FILE, LINE_NEWCTX)
-        .cast::<ProvMlxKemCtx>();
-    if ctx.is_null() {
+    // `RawCtx::malloc` is the authority's `OPENSSL_malloc(sizeof(*ctx))` at `mlx_kem.c:42`; the
+    // block is not a valid context until every field below is written, so it stays a `RawCtx`.
+    let Some(ctx) = RawCtx::<ProvMlxKemCtx>::malloc() else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `ctx` is a fresh allocation; every field is written below.
+    // SAFETY: `ctx.as_ptr()` is the fresh uninitialised block this call owns; every field is
+    // written, after which `assume_init` is the one validated transition to the owner.
     unsafe {
-        (*ctx).libctx = prov_libctx_of(provctx);
-        (*ctx).key = ptr::null_mut();
-        (*ctx).op = 0;
+        let raw = ctx.as_ptr();
+        (*raw).libctx = prov_libctx_of(provctx);
+        (*raw).key = ptr::null_mut();
+        (*raw).op = 0;
+        ctx.assume_init().into_raw().cast::<c_void>()
     }
-    ctx.cast()
 }
 
 /// `static void mlx_kem_freectx(void *vctx)` — `mlx_kem.c:51-54`.
@@ -121,8 +135,13 @@ unsafe extern "C" fn mlx_kem_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The KEM `freectx` dispatch contract.
 unsafe extern "C" fn mlx_kem_freectx(vctx: *mut c_void) {
-    // SAFETY: `vctx` is the caller's; `CRYPTO_free` accepts NULL.
-    unsafe { CRYPTO_free(vctx, FILE, LINE_FREECTX) };
+    // SAFETY: `vctx` is NULL or the block `mlx_kem_newctx` handed out and has not been released;
+    // `from_raw` maps NULL to `None`, and `Drop` is the block's single release at `mlx_kem.c:53`.
+    unsafe {
+        drop(OwnedCtx::<ProvMlxKemCtx>::from_raw(
+            vctx.cast::<ProvMlxKemCtx>(),
+        ))
+    };
 }
 
 /// `static int mlx_kem_encapsulate_init(void *vctx, void *vkey, const OSSL_PARAM params[])` —
@@ -493,9 +512,13 @@ unsafe extern "C" fn mlx_kem_decapsulate(
             let cbuf = ctext.add((1 - ml_kem_slot) as usize * (*(*key).minfo).ctext_bytes);
             sbuf = shsec.add((1 - ml_kem_slot) as usize * ML_KEM_SHARED_SECRET_BYTES);
             ctx = EVP_PKEY_CTX_new_from_pkey((*key).libctx, (*key).xkey, (*key).propq);
+            // The authority's `ctx == NULL || (xkey = EVP_PKEY_new()) == NULL`: a failed
+            // context allocation must not allocate the peer key.
+            if ctx.is_null() {
+                break 'end;
+            }
             xkey = EVP_PKEY_new();
-            if ctx.is_null()
-                || xkey.is_null()
+            if xkey.is_null()
                 || EVP_PKEY_copy_parameters(xkey, (*key).xkey) <= 0
                 || EVP_PKEY_set1_encoded_public_key(xkey, cbuf, decap_clen) <= 0
                 || EVP_PKEY_derive_init(ctx) <= 0
@@ -570,3 +593,7 @@ pub(crate) static MLX_ASYM_KEM_FUNCTIONS: [OsslDispatch; 9] = [
         function: ptr::null_mut(),
     },
 ];
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvMlxKemCtx => zero_state_sweep_prov_mlx_kem_ctx);

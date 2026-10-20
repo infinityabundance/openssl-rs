@@ -56,6 +56,15 @@
 use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
 use core::ptr;
 
+use super::addr::{self, BioAddr};
+use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedCtx};
+use super::sys;
+use super::{
+    Bio, BioMethod, BIO_DGRAM_CAP_HANDLES_DST_ADDR, BIO_DGRAM_CAP_HANDLES_SRC_ADDR,
+    BIO_DGRAM_CAP_PROVIDES_DST_ADDR, BIO_DGRAM_CAP_PROVIDES_SRC_ADDR, BIO_FLAGS_READ,
+    BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY, BIO_FLAGS_WRITE, BIO_TYPE_DGRAM,
+};
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     BSS_DGRAM_1231, BSS_DGRAM_1301, BSS_DGRAM_1307, BSS_DGRAM_1402, BSS_DGRAM_1410, BSS_DGRAM_1420,
@@ -65,16 +74,6 @@ use crate::runtime::err::err_sites::{
 };
 use crate::runtime::err::{
     raise_site, raise_site_data, raise_site_dynamic, raise_site_dynamic_data,
-};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
-
-use super::addr::{self, BioAddr};
-use super::method::{bread_conv, bwrite_conv};
-use super::sys;
-use super::{
-    Bio, BioMethod, BIO_DGRAM_CAP_HANDLES_DST_ADDR, BIO_DGRAM_CAP_HANDLES_SRC_ADDR,
-    BIO_DGRAM_CAP_PROVIDES_DST_ADDR, BIO_DGRAM_CAP_PROVIDES_SRC_ADDR, BIO_FLAGS_READ,
-    BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY, BIO_FLAGS_WRITE, BIO_TYPE_DGRAM,
 };
 
 /// The method name the authority reports for a datagram BIO.
@@ -266,6 +265,17 @@ struct BioDgramData {
     local_addr_enabled: c_char,
 }
 
+/// The authority's `dgram_free` body for the context block. `dgram_free` clears the socket state
+/// through `dgram_clear` and then releases the block; the block has no destructor body of its own,
+/// so the whole of its ownership is [`OwnedCtx`]'s `Drop`.
+// SAFETY: (a) `dgram_free` releases no member of the context block, so `destroy_body` is the empty
+// authority body and never the enclosing block, which `OwnedCtx` releases; (b) `BioDgramData` is a
+// `#[repr(C)]` record of nested plain address/time records and integers, so an all-zero block is a
+// valid `BioDgramData` the empty body is trivially sound on.
+unsafe impl CtxDestroy for BioDgramData {
+    unsafe fn destroy_body(_ptr: *mut BioDgramData) {}
+}
+
 /// The method data of a live datagram BIO.
 ///
 /// # Safety
@@ -318,14 +328,13 @@ pub unsafe extern "C" fn BIO_new_dgram(fd: c_int, close_flag: c_int) -> *mut Bio
 /// # Safety
 /// `bi` must be the BIO `BIO_new` is constructing.
 unsafe extern "C" fn dgram_new(bi: *mut Bio) -> c_int {
-    // SAFETY: `CRYPTO_zalloc` returns nulled memory of the requested size.
-    let data = CRYPTO_zalloc(core::mem::size_of::<BioDgramData>(), ptr::null(), 0);
-    if data.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns nulled memory of the requested size, or NULL.
+    let Some(data) = OwnedCtx::<BioDgramData>::zalloc() else {
         return 0;
-    }
-    // SAFETY: `bi` is live and `data` is a fresh block of exactly this type.
+    };
+    // SAFETY: `bi` is live and `data` is a fresh block of exactly this type, handed to the BIO.
     unsafe {
-        (*bi).ptr = data;
+        (*bi).ptr = data.into_raw().cast();
     }
     1
 }
@@ -344,9 +353,12 @@ unsafe extern "C" fn dgram_free(a: *mut Bio) -> c_int {
     if unsafe { dgram_clear(b) } == 0 {
         return 0;
     }
-    // SAFETY: `dgram_new` allocated this block and `destroy` runs once.
+    // SAFETY: `dgram_new` allocated this block and `destroy` runs once; `Drop` is its single
+    // release (the pointer the BIO still holds is left as the authority leaves it).
     unsafe {
-        CRYPTO_free(b.ptr, ptr::null(), 0);
+        drop(OwnedCtx::<BioDgramData>::from_raw(
+            b.ptr.cast::<BioDgramData>(),
+        ));
     }
     1
 }
@@ -2051,3 +2063,7 @@ mod tests {
         assert!(!is_v4_mapped(&almost));
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BioDgramData => zero_state_sweep_bio_dgram_data);

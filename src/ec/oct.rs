@@ -11,7 +11,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_uchar};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::bn::arith::{
@@ -39,6 +39,7 @@ use crate::runtime::err::{
     peek_last_lib, peek_last_reason, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_X9_62_prime_field;
 
 /// `ERR_LIB_BN` — `include/openssl/err.h`, the library `EC_R_INVALID_COMPRESSED_POINT`'s raise
@@ -46,7 +47,62 @@ use crate::runtime::obj::NID_X9_62_prime_field;
 const ERR_LIB_BN: c_int = 3;
 
 /// The `crypto/ec/ec_oct.c` translation unit, for the one allocation pair attributed to it.
-const FILE_EC_OCT: &core::ffi::CStr = c"crypto/ec/ec_oct.c";
+const FILE_EC_OCT: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c";
+
+/// An owned point-encoding buffer from [`EC_POINT_point2buf`].
+///
+/// The authority allocates it with `OPENSSL_malloc` at `ec_oct.c:147`, releases it at `:151`
+/// when the second `EC_POINT_point2oct` refuses, and otherwise hands it to the caller. The
+/// block stays at the authority's own size and coordinates; `Drop` is the single plain release
+/// on the failure path and [`Self::into_raw`] is the exact transfer edge.
+struct PointBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl PointBuf {
+    /// `CRYPTO_malloc(len, file, alloc_line)`, released by `Drop` at `file`/`release_line`, or
+    /// `None` when the allocator answers NULL. `len` is the encoder's byte count, not a product.
+    fn new(len: usize, file: SeamFile, alloc_line: c_int, release_line: c_int) -> Option<PointBuf> {
+        let file = file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, alloc_line)
+        }
+        .cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(PointBuf {
+                ptr: raw,
+                file,
+                line: release_line,
+            })
+        }
+    }
+
+    /// The block's address, for the encoder call.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the caller's `pbuf` slot.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for PointBuf {
+    /// The authority's `OPENSSL_free(buf)` at `ec_oct.c:151`, on the refusal path.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; `Drop` runs
+        // once, so this is its single release at the authority's own coordinate.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `int ossl_ec_GFp_simple_set_compressed_coordinates(const EC_GROUP *group, EC_POINT *point,
 /// const BIGNUM *x_, int y_bit, BN_CTX *ctx)` — `crypto/ec/ecp_oct.c:22-157`.
@@ -689,16 +745,17 @@ pub unsafe extern "C" fn EC_POINT_point2buf(
         if len == 0 {
             return 0;
         }
-        let buf = CRYPTO_malloc(len, FILE_EC_OCT.as_ptr(), 147).cast::<c_uchar>();
-        if buf.is_null() {
+        // `PointBuf::new` is the authority's `OPENSSL_malloc(len)` at `ec_oct.c:147`; its
+        // `Drop` is the `OPENSSL_free` at `:151` on the encoder-refusal path.
+        let Some(buf) = PointBuf::new(len, SeamFile::new(FILE_EC_OCT), 147, 151) else {
             return 0;
-        }
-        len = EC_POINT_point2oct(group, point, form, buf, len, ctx);
+        };
+        len = EC_POINT_point2oct(group, point, form, buf.as_ptr(), len, ctx);
         if len == 0 {
-            CRYPTO_free(buf.cast(), FILE_EC_OCT.as_ptr(), 151);
             return 0;
         }
-        *pbuf = buf;
+        // The transfer edge: the caller's `pbuf` takes over the block.
+        *pbuf = buf.into_raw();
         len
     }
 }

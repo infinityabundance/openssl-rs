@@ -92,6 +92,104 @@ const FILE_PACKET: *const c_char = c"../../src/openssl-3.6.4/crypto/packet.c".as
 /// `__LINE__` is inert under `OPENSSL_NO_CRYPTO_MDEBUG`, which this profile defines.
 const LINE: c_int = 0;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the sub-packet nodes
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `WPACKET_SUB` node allocated through the crate's `CRYPTO_zalloc` seam.
+///
+/// The packet's `subs` chain is stored in `#[repr(C)]` fields the body reads by name, so this
+/// handle owns a node only for the windows around a transition: between its allocation and the
+/// write into `pkt->subs`, and between taking a node off the chain and the authority's plain
+/// `CRYPTO_free`. `Drop` is the block's single release, at the authority's own `file`/`line`. A
+/// zeroed block is a valid `WPACKET_SUB` — every member is a pointer or an integer — so `zalloc`
+/// hands one out directly.
+struct OwnedSub {
+    ptr: *mut WpacketSub,
+}
+
+/// Test-only allocation fault injection for the failed-initialisation control.
+///
+/// `#[cfg(test)]`-only: the threshold is thread-local, so a test that forces the next
+/// `WPACKET_SUB` allocation to fail cannot disturb a concurrently running test. The module
+/// does not exist in a release build (AGENTS §13: test-only bypasses never ship).
+#[cfg(test)]
+mod test_hooks {
+    use core::cell::Cell;
+
+    std::thread_local! {
+        static SUB_ALLOC_FAILURES: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Make the next `WPACKET_SUB` allocation on this thread answer NULL.
+    pub(super) fn fail_next_sub_alloc() {
+        SUB_ALLOC_FAILURES.with(|n| n.set(1));
+    }
+
+    /// Consume one pending fault, if any.
+    pub(super) fn take_sub_alloc_failure() -> bool {
+        SUB_ALLOC_FAILURES.with(|n| {
+            let pending = n.get();
+            if pending == 0 {
+                false
+            } else {
+                n.set(pending - 1);
+                true
+            }
+        })
+    }
+}
+
+impl OwnedSub {
+    /// `CRYPTO_zalloc(sizeof(WPACKET_SUB), FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedSub> {
+        #[cfg(test)]
+        if test_hooks::take_sub_alloc_failure() {
+            return None;
+        }
+
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
+        }
+        .cast::<WpacketSub>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedSub { ptr: raw })
+    }
+
+    /// Reclaim a node the packet's `subs` chain holds, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is a live `WPACKET_SUB` this unit allocated through the seam and no other owner will
+    /// release.
+    unsafe fn adopt(ptr: *mut WpacketSub) -> OwnedSub {
+        OwnedSub { ptr }
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut WpacketSub {
+        self.ptr
+    }
+
+    /// Give up ownership of the block to the `pkt->subs` field that takes it over.
+    fn into_raw(self) -> *mut WpacketSub {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedSub {
+    /// The block's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `zalloc`/`adopt` took and has not handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE_PACKET, LINE) };
+    }
+}
+
 /// `GETBUF(p)` — `crypto/packet.c:40-44`: the static buffer if there is one, else the `BUF_MEM`'s
 /// data, else NULL.
 ///
@@ -241,7 +339,13 @@ pub(crate) unsafe extern "C" fn WPACKET_sub_reserve_bytes__(
             return 0;
         }
 
-        if WPACKET_reserve_bytes(pkt, lenbytes + len, allocbytes) == 0 {
+        // The authority passes `lenbytes + len` to the reserve as a raw
+        // `size_t` sum. A wrapped sum would reserve fewer bytes than the
+        // caller then treats as allocated (§3), so refuse the overflow.
+        let Some(total) = lenbytes.checked_add(len) else {
+            return 0;
+        };
+        if WPACKET_reserve_bytes(pkt, total, allocbytes) == 0 {
             return 0;
         }
 
@@ -267,18 +371,24 @@ fn maxmaxsize(lenbytes: usize) -> usize {
 ///
 /// # Safety
 ///
-/// `pkt` is live with its `buf`/`staticbuf`/`maxsize`/`endfirst` already set.
+/// `pkt` is live with its `buf`/`staticbuf`/`maxsize`/`endfirst` already set. On failure the
+/// packet is left in the authority's failed-init state: `curr`/`written` are zero and `subs` is
+/// NULL, so [`WPACKET_cleanup`] is defined after the refusal.
 unsafe fn wpacket_intern_init_len(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
     // SAFETY: `pkt` is live per the contract.
     unsafe {
         (*pkt).curr = 0;
         (*pkt).written = 0;
+        // The authority writes `pkt->subs = OPENSSL_zalloc(...)` directly, so a failed
+        // allocation leaves `subs` NULL rather than untouched. Callers clean up after a
+        // refusal, and `WPACKET_cleanup` walks `subs`; clearing it here before the allocation
+        // makes that clean-up state defined instead of an uninitialised read.
+        (*pkt).subs = core::ptr::null_mut();
 
-        (*pkt).subs = CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE)
-            .cast::<WpacketSub>();
-        if (*pkt).subs.is_null() {
+        let Some(subs) = OwnedSub::zalloc() else {
             return 0;
-        }
+        };
+        (*pkt).subs = subs.into_raw();
 
         if lenbytes == 0 {
             return 1;
@@ -289,7 +399,8 @@ unsafe fn wpacket_intern_init_len(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
 
         let mut lenchars: *mut c_uchar = core::ptr::null_mut();
         if WPACKET_allocate_bytes(pkt, lenbytes, &mut lenchars) == 0 {
-            CRYPTO_free((*pkt).subs.cast(), FILE_PACKET, LINE);
+            // SAFETY: `(*pkt).subs` is the node this call just installed and has not released.
+            drop(OwnedSub::adopt((*pkt).subs));
             (*pkt).subs = core::ptr::null_mut();
             return 0;
         }
@@ -304,7 +415,9 @@ unsafe fn wpacket_intern_init_len(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
 ///
 /// # Safety
 ///
-/// `pkt` is live; `buf` is writable for `len` bytes and outlives the packet.
+/// `pkt` is live; `buf` is writable for `len` bytes and outlives the packet. On failure the
+/// packet is left cleanable (`subs` NULL): `WPACKET_cleanup` may be called after a refusal. If
+/// the argument guard refuses, only `subs` is written; no other field may be read.
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_init_static_len(
     pkt: *mut Wpacket,
@@ -316,6 +429,10 @@ pub(crate) unsafe extern "C" fn WPACKET_init_static_len(
 
     /* `ossl_assert(buf != NULL && len > 0)`, a live guard under `NDEBUG`. */
     if buf.is_null() || len == 0 {
+        // SAFETY: `pkt` is live per the contract. The guard refuses before the authority
+        // touches the packet; leaving `subs` NULL keeps `WPACKET_cleanup` defined for a caller
+        // that cleans up unconditionally after a refusal.
+        unsafe { (*pkt).subs = core::ptr::null_mut() };
         return 0;
     }
 
@@ -335,7 +452,9 @@ pub(crate) unsafe extern "C" fn WPACKET_init_static_len(
 ///
 /// # Safety
 ///
-/// `pkt` is live; `buf` is writable for `len` bytes and outlives the packet.
+/// `pkt` is live; `buf` is writable for `len` bytes and outlives the packet. On failure the
+/// packet is left cleanable (`subs` NULL): `WPACKET_cleanup` may be called after a refusal. If
+/// the argument guard refuses, only `subs` is written; no other field may be read.
 #[allow(dead_code)] // transcribed whole; the DER path does not use it (D342)
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_init_der(
@@ -345,6 +464,9 @@ pub(crate) unsafe extern "C" fn WPACKET_init_der(
 ) -> c_int {
     /* `ossl_assert(buf != NULL && len > 0)`, a live guard under `NDEBUG`. */
     if buf.is_null() || len == 0 {
+        // SAFETY: `pkt` is live per the contract. As in [`WPACKET_init_static_len`], the refusal
+        // leaves an empty sub-packet chain so a subsequent `WPACKET_cleanup` is defined.
+        unsafe { (*pkt).subs = core::ptr::null_mut() };
         return 0;
     }
 
@@ -364,7 +486,9 @@ pub(crate) unsafe extern "C" fn WPACKET_init_der(
 ///
 /// # Safety
 ///
-/// `pkt` is live; `buf` is a live `BUF_MEM` that outlives the packet.
+/// `pkt` is live; `buf` is a live `BUF_MEM` that outlives the packet. On failure the packet is
+/// left cleanable (`subs` NULL): `WPACKET_cleanup` may be called after a refusal. If the
+/// argument guard refuses, only `subs` is written; no other field may be read.
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_init_len(
     pkt: *mut Wpacket,
@@ -373,6 +497,9 @@ pub(crate) unsafe extern "C" fn WPACKET_init_len(
 ) -> c_int {
     /* `ossl_assert(buf != NULL)`, a live guard under `NDEBUG`. */
     if buf.is_null() {
+        // SAFETY: `pkt` is live per the contract; the refusal leaves an empty sub-packet chain
+        // so a subsequent `WPACKET_cleanup` is defined.
+        unsafe { (*pkt).subs = core::ptr::null_mut() };
         return 0;
     }
 
@@ -406,7 +533,8 @@ pub(crate) unsafe extern "C" fn WPACKET_init(pkt: *mut Wpacket, buf: *mut BufMem
 ///
 /// # Safety
 ///
-/// `pkt` is live.
+/// `pkt` is live. On failure the packet is left cleanable (`subs` NULL), so `WPACKET_cleanup`
+/// may be called after a refusal.
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_init_null(pkt: *mut Wpacket, lenbytes: usize) -> c_int {
     // SAFETY: `pkt` is live per the contract.
@@ -424,7 +552,8 @@ pub(crate) unsafe extern "C" fn WPACKET_init_null(pkt: *mut Wpacket, lenbytes: u
 ///
 /// # Safety
 ///
-/// `pkt` is live.
+/// `pkt` is live. On failure the packet is left cleanable (`subs` NULL), so `WPACKET_cleanup`
+/// may be called after a refusal.
 #[allow(dead_code)] // transcribed whole; the DER path does not use it (D342)
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_init_null_der(pkt: *mut Wpacket) -> c_int {
@@ -485,10 +614,16 @@ fn put_value(mut data: *mut c_uchar, mut value: u64, mut len: usize) -> c_int {
         // SAFETY: as above; the cursor walks down within the same `len`-byte span.
         unsafe {
             *data = (value & 0xff) as c_uchar;
-            data = data.sub(1);
         }
         value >>= 8;
         len -= 1;
+        // The authority's `data--` runs even after the final (first) byte, forming a pointer
+        // one before the span. That is UB in C and fails Rust's `offset` precondition, so the
+        // walk stops after the last write; the bytes written are unchanged.
+        if len > 0 {
+            // SAFETY: at least one byte of the span remains, so `data - 1` is still in bounds.
+            data = unsafe { data.sub(1) };
+        }
     }
 
     /* Whether the value fit in the assigned number of bytes. */
@@ -606,7 +741,7 @@ unsafe fn wpacket_intern_close(pkt: *mut Wpacket, sub: *mut WpacketSub, doclose:
         // SAFETY: `pkt` and `sub` are live; `sub->parent` is live or NULL.
         unsafe {
             (*pkt).subs = (*sub).parent;
-            CRYPTO_free(sub.cast(), FILE_PACKET, LINE);
+            drop(OwnedSub::adopt(sub));
         }
     }
 
@@ -675,7 +810,8 @@ pub(crate) unsafe extern "C" fn WPACKET_finish(pkt: *mut Wpacket) -> c_int {
 
         let ret = wpacket_intern_close(pkt, (*pkt).subs, 1);
         if ret != 0 {
-            CRYPTO_free((*pkt).subs.cast(), FILE_PACKET, LINE);
+            // SAFETY: `(*pkt).subs` is a live node this packet owns.
+            drop(OwnedSub::adopt((*pkt).subs));
             (*pkt).subs = core::ptr::null_mut();
         }
 
@@ -707,31 +843,30 @@ pub(crate) unsafe extern "C" fn WPACKET_start_sub_packet_len__(
     }
 
     // SAFETY: `pkt` is live.
-    let sub =
-        CRYPTO_zalloc(core::mem::size_of::<WpacketSub>(), FILE_PACKET, LINE).cast::<WpacketSub>();
-    if sub.is_null() {
+    let Some(sub) = OwnedSub::zalloc() else {
         return 0;
-    }
+    };
+    let subp = sub.as_ptr();
 
-    // SAFETY: `pkt` and `sub` are live.
+    // SAFETY: `pkt` is live; `sub` is this call's fresh block.
     unsafe {
-        (*sub).parent = (*pkt).subs;
-        (*pkt).subs = sub;
-        (*sub).pwritten = (*pkt).written + lenbytes;
-        (*sub).lenbytes = lenbytes;
+        (*subp).parent = (*pkt).subs;
+        (*pkt).subs = sub.into_raw();
+        (*subp).pwritten = (*pkt).written + lenbytes;
+        (*subp).lenbytes = lenbytes;
     }
 
     if lenbytes == 0 {
-        // SAFETY: `sub` is live.
+        // SAFETY: `subp` is the live node just installed.
         unsafe {
-            (*sub).packet_len = 0;
+            (*subp).packet_len = 0;
         }
         return 1;
     }
 
-    // SAFETY: `pkt` and `sub` are live.
+    // SAFETY: `pkt` and `subp` are live.
     unsafe {
-        (*sub).packet_len = (*pkt).written;
+        (*subp).packet_len = (*pkt).written;
 
         let mut lenchars: *mut c_uchar = core::ptr::null_mut();
         if WPACKET_allocate_bytes(pkt, lenbytes, &mut lenchars) == 0 {
@@ -1007,7 +1142,10 @@ pub(crate) unsafe extern "C" fn WPACKET_is_null_buf(pkt: *mut Wpacket) -> c_int 
 ///
 /// # Safety
 ///
-/// `pkt` is live.
+/// `pkt` is live and `subs` is NULL or the head of a chain of `WPACKET_SUB` nodes this unit
+/// allocated and still owns. Every `WPACKET_init_*` entry point writes `subs` before it returns,
+/// including after a refusal (NULL), so a packet whose init failed is safe to clean up. Only
+/// `subs` is read, so no other field need be initialised on a refused init.
 #[allow(non_snake_case)] // the authority's name is the contract
 pub(crate) unsafe extern "C" fn WPACKET_cleanup(pkt: *mut Wpacket) {
     // SAFETY: `pkt` is live; each `sub` is one of its live sub-packets, walked through `parent`.
@@ -1015,7 +1153,7 @@ pub(crate) unsafe extern "C" fn WPACKET_cleanup(pkt: *mut Wpacket) {
         let mut sub = (*pkt).subs;
         while !sub.is_null() {
             let parent = (*sub).parent;
-            CRYPTO_free(sub.cast(), FILE_PACKET, LINE);
+            drop(OwnedSub::adopt(sub));
             sub = parent;
         }
         (*pkt).subs = core::ptr::null_mut();
@@ -1209,6 +1347,23 @@ mod tests {
         }
     }
 
+    /// The sub-packet reserve's `lenbytes + len` extent is checked: a wrapped
+    /// sum must be refused rather than reserving fewer bytes than the caller
+    /// then treats as allocated (§3, §16).
+    #[test]
+    fn an_overflowing_sub_packet_extent_is_refused() {
+        // SAFETY: `pkt` is a live local and `init_null` creates its sub-packet.
+        unsafe {
+            let mut pkt = core::mem::zeroed::<Wpacket>();
+            assert_eq!(WPACKET_init_null(&mut pkt, 8), 1);
+            assert_eq!(
+                WPACKET_sub_reserve_bytes__(&mut pkt, usize::MAX, core::ptr::null_mut(), 2,),
+                0
+            );
+            WPACKET_cleanup(&mut pkt);
+        }
+    }
+
     #[test]
     fn a_null_packet_counts_and_writes_nothing() {
         // SAFETY: `pkt` is a live local.
@@ -1222,6 +1377,72 @@ mod tests {
             assert_eq!(written, 2);
             assert!(WPACKET_get_curr(&mut pkt).is_null());
             assert_eq!(WPACKET_finish(&mut pkt), 1);
+        }
+    }
+
+    /// Control for the failed-initialisation state of `wpacket_intern_init_len`.
+    ///
+    /// The authority writes `pkt->subs = OPENSSL_zalloc(...)` directly, so a failed allocation
+    /// leaves `subs` NULL. The callers in the providers call `WPACKET_cleanup` unconditionally
+    /// after an init refusal, so the failure path must write `subs`. The packet starts as
+    /// `MaybeUninit`, and every field is read below: a regression that leaves any field
+    /// uninitialised is an uninitialised read here (and a Miri error), not a silent pass.
+    #[test]
+    fn a_failed_sub_alloc_leaves_a_fully_initialised_cleanable_packet() {
+        let mut buf = [0u8; 8];
+        let mut pkt = core::mem::MaybeUninit::<Wpacket>::uninit();
+        test_hooks::fail_next_sub_alloc();
+
+        // SAFETY: `pkt` is this frame's storage and `buf` is writable for its length. The forced
+        // allocation failure leaves the packet in the authority's failed-init state (`subs`
+        // NULL), which is what makes the cleanup below defined.
+        unsafe {
+            assert_eq!(
+                WPACKET_init_der(pkt.as_mut_ptr(), buf.as_mut_ptr(), buf.len()),
+                0
+            );
+            let p = pkt.as_ptr();
+            assert!((*p).buf.is_null());
+            assert!(!(*p).staticbuf.is_null());
+            assert_eq!((*p).maxsize, buf.len());
+            assert_eq!((*p).endfirst, 1);
+            assert_eq!((*p).curr, 0);
+            assert_eq!((*p).written, 0);
+            assert!((*p).subs.is_null());
+            WPACKET_cleanup(pkt.as_mut_ptr());
+        }
+    }
+
+    /// Negative control for the same failure path: a poisoned `subs` field must be overwritten
+    /// by the refused init. If the root fix regresses and the failure path leaves `subs`
+    /// untouched, this assertion fires before `WPACKET_cleanup` can release a garbage pointer.
+    #[test]
+    fn a_failed_sub_alloc_overwrites_a_poisoned_subs_field() {
+        let mut buf = [0u8; 8];
+        let mut pkt = core::mem::MaybeUninit::<Wpacket>::uninit();
+        // SAFETY: `pkt` is this frame's storage; the poison is a byte pattern, and the call under
+        // test rewrites every field before it is read, so no poisoned bit pattern is ever
+        // interpreted as a pointer except by the assertion this control exists to trip.
+        unsafe {
+            core::ptr::write_bytes(
+                pkt.as_mut_ptr().cast::<u8>(),
+                0xAA,
+                core::mem::size_of::<Wpacket>(),
+            );
+        }
+        test_hooks::fail_next_sub_alloc();
+
+        // SAFETY: as above; `subs` is asserted NULL before the cleanup that would consume it.
+        unsafe {
+            assert_eq!(
+                WPACKET_init_der(pkt.as_mut_ptr(), buf.as_mut_ptr(), buf.len()),
+                0
+            );
+            assert!(
+                (*pkt.as_ptr()).subs.is_null(),
+                "failed init left `subs` untouched (poisoned with 0xAA); cleanup would free it"
+            );
+            WPACKET_cleanup(pkt.as_mut_ptr());
         }
     }
 }

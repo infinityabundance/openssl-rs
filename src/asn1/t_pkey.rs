@@ -35,7 +35,8 @@ use crate::ffi::guard_ffi;
 use crate::runtime::bio::iolib::{BIO_puts, BIO_write};
 use crate::runtime::bio::print::{BIO_indent, BIO_printf};
 use crate::runtime::bio::Bio;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority translation unit for the two printers.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/t_pkey.c";
@@ -180,13 +181,12 @@ pub unsafe extern "C" fn ASN1_bn_print(
         }
 
         let buflen = nbytes as usize + 1;
-        // SAFETY: `CRYPTO_malloc` answers null or `buflen` bytes.
-        let buf = CRYPTO_malloc(buflen, FILE.as_ptr(), LINE).cast::<c_uchar>();
-        if buf.is_null() {
+        // The local owner is the authority's single cleansing free on both exit paths.
+        let Some(buf) = OwnedBuf::new_cleansed(buflen, SeamFile::new(FILE), LINE) else {
             return 0;
-        }
+        };
         // SAFETY: `buf` owns `buflen` bytes and `buflen >= 2`.
-        unsafe { *buf = 0 };
+        unsafe { *buf.as_ptr() = 0 };
         // SAFETY: `bp` is a live BIO, `number` is NUL-terminated.
         let header = unsafe {
             BIO_printf(
@@ -201,30 +201,25 @@ pub unsafe extern "C" fn ASN1_bn_print(
             )
         };
         if header <= 0 {
-            // SAFETY: `buf` came from this allocator and is not owned elsewhere.
-            unsafe { CRYPTO_clear_free(buf.cast(), buflen, FILE.as_ptr(), LINE) };
             return 0;
         }
         // SAFETY: `buf` owns `buflen` and the caller's contract makes `num` live;
         // `BN_bn2bin` writes exactly `nbytes` bytes at `buf + 1`.
-        let n = unsafe { BN_bn2bin(num, buf.add(1)) };
+        let n = unsafe { BN_bn2bin(num, buf.as_ptr().add(1)) };
 
         // The magnitude's first octet is significant only from here on. When its
         // top bit is set the leading zero is what keeps the printed form unsigned,
         // so it stays in the count; otherwise the leading zero is skipped.
         // SAFETY: `buf` has `buflen = nbytes + 1` bytes and `n <= nbytes`.
-        let (tmp, n) = if unsafe { *buf.add(1) } & 0x80 != 0 {
-            (buf, n + 1)
+        let (tmp, n) = if unsafe { *buf.as_ptr().add(1) } & 0x80 != 0 {
+            (buf.as_ptr(), n + 1)
         } else {
             // SAFETY: one byte past the start of an allocation of at least two bytes.
-            (unsafe { buf.add(1) }, n)
+            (unsafe { buf.as_ptr().add(1) }, n)
         };
 
         // SAFETY: `tmp` holds `n` bytes and `bp` is a live BIO.
         let rv = unsafe { ASN1_buf_print(bp, tmp, n as usize, indent + NEG_INDENT) };
-        // SAFETY: `buf` came from this allocator, is not owned elsewhere, and is
-        // `buflen` bytes long; the secret-clearing free is the authority's.
-        unsafe { CRYPTO_clear_free(buf.cast(), buflen, FILE.as_ptr(), LINE) };
         if rv == 0 {
             0
         } else {

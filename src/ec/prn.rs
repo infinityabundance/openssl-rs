@@ -146,6 +146,52 @@ unsafe fn print_bin(
     }
 }
 
+/// The group generator's encoded block, allocated by [`EC_POINT_point2buf`].
+///
+/// The block is secret-free but the authority releases it with `OPENSSL_clear_free` at
+/// `eck_prn.c:218`, so the owner preserves that cleansing release with the exact length the helper
+/// reported. The `(ptr, len)` pair is the allocation's extent, which is why the two are stored
+/// together and never updated independently.
+struct GenBuf {
+    ptr: *mut c_uchar,
+    len: usize,
+}
+
+impl GenBuf {
+    /// Adopt the `(ptr, len)` pair `EC_POINT_point2buf` handed back.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live block the crate's allocator seam produced through
+    /// `EC_POINT_point2buf`; `len` is that block's exact allocation extent; this frame owns the
+    /// block exclusively and no other owner will release it. The returned owner's `Drop` is its
+    /// single, cleansing release.
+    unsafe fn adopt(ptr: *mut c_uchar, len: usize) -> Option<GenBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(GenBuf { ptr, len })
+        }
+    }
+
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Drop for GenBuf {
+    /// `OPENSSL_clear_free(gen_buf, gen_buf_len)` — `eck_prn.c:218`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block adopted above and `self.len` is its exact extent; `Drop`
+        // runs once, so this is the single cleansing release at the authority's coordinate.
+        unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), self.len, FILE, 218) };
+    }
+}
+
 /// `int ECPKParameters_print(BIO *bp, const EC_GROUP *x, int off)` —
 /// `crypto/ec/eck_prn.c:70-221`.
 ///
@@ -170,8 +216,7 @@ pub unsafe extern "C" fn ECPKParameters_print(
     let mut p: *mut BigNum = ptr::null_mut();
     let mut a: *mut BigNum = ptr::null_mut();
     let mut b: *mut BigNum = ptr::null_mut();
-    let mut gen_buf: *mut c_uchar = ptr::null_mut();
-    let mut gen_buf_len: usize = 0;
+    let mut gen_buf: Option<GenBuf> = None;
     let mut seed: *mut c_uchar = ptr::null_mut();
     let mut seed_len: usize = 0;
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
@@ -242,11 +287,16 @@ pub unsafe extern "C" fn ECPKParameters_print(
                 }
 
                 let form = EC_GROUP_get_point_conversion_form(x);
-                gen_buf_len = EC_POINT_point2buf(x, point, form, &mut gen_buf, ctx);
+                let mut gen_buf_raw: *mut c_uchar = ptr::null_mut();
+                let gen_buf_len = EC_POINT_point2buf(x, point, form, &mut gen_buf_raw, ctx);
                 if gen_buf_len == 0 {
                     reason = ERR_R_EC_LIB;
                     break 'err;
                 }
+                // SAFETY: the helper answered a fresh block of exactly `gen_buf_len` bytes through
+                // the crate's allocator seam; this frame owns it exclusively and no other release
+                // exists. The owner's `Drop` is the authority's `:218` cleansing release.
+                gen_buf = GenBuf::adopt(gen_buf_raw, gen_buf_len);
 
                 let s = EC_GROUP_get0_seed(x);
                 if !s.is_null() {
@@ -305,8 +355,10 @@ pub unsafe extern "C" fn ECPKParameters_print(
                 } else {
                     c"Generator (hybrid):".as_ptr()
                 };
-                if !gen_buf.is_null() && print_bin(bp, form_str, gen_buf, gen_buf_len, off) == 0 {
-                    break 'err;
+                if let Some(buf) = gen_buf.as_ref() {
+                    if print_bin(bp, form_str, buf.as_ptr(), buf.len(), off) == 0 {
+                        break 'err;
+                    }
                 }
 
                 if !order.is_null()
@@ -334,7 +386,9 @@ pub unsafe extern "C" fn ECPKParameters_print(
         BN_free(p);
         BN_free(a);
         BN_free(b);
-        CRYPTO_clear_free(gen_buf.cast::<c_void>(), gen_buf_len, FILE, 218);
+        // The authority's release order is p, a, b, gen_buf, ctx; the owner is dropped here so the
+        // allocator transcript keeps that order rather than waiting for the function's end.
+        drop(gen_buf);
         BN_CTX_free(ctx);
         ret
     }

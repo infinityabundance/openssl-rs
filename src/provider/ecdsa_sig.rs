@@ -31,7 +31,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::bn::bignum::{BN_clear_free, BigNum};
@@ -83,6 +84,7 @@ use crate::provider::der_ec_sig::ossl_DER_w_algorithmIdentifier_ECDSA_with_MD;
 use crate::provider::digest_to_nid::ossl_digest_get_approved_nid;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcpy};
 
@@ -92,6 +94,7 @@ const OSSL_MAX_ALGORITHM_ID_SIZE: usize = 256;
 /// The unit's own `__FILE__`. `ecdsa_sig.c` is `.c.in`-generated, so the build compiles it from the
 /// build tree and the compiler records the bare path (D235's finding).
 const FILE: *const c_char = c"providers/implementations/signature/ecdsa_sig.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"providers/implementations/signature/ecdsa_sig.c");
 
 /// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
@@ -174,6 +177,10 @@ fn is_running() -> c_int {
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a context's scratch buffer
+// ---------------------------------------------------------------------------------------------
+
 /// `static void *ecdsa_newctx(void *provctx, const char *propq)` — `ecdsa_sig.c.in:124-152`.
 ///
 /// # Safety
@@ -184,7 +191,11 @@ unsafe extern "C" fn ecdsa_newctx(provctx: *mut c_void, propq: *const c_char) ->
     }
 
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvEcdsaCtx>(), FILE, 138).cast::<ProvEcdsaCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcdsaCtx>(), FILE, 138)
+    }
+    .cast::<ProvEcdsaCtx>();
     if ctx.is_null() {
         return ptr::null_mut();
     }
@@ -194,10 +205,19 @@ unsafe extern "C" fn ecdsa_newctx(provctx: *mut c_void, propq: *const c_char) ->
         (*ctx).libctx = prov_libctx_of(provctx);
         (*ctx).flags = FLAG_ALLOW_MD;
         if !propq.is_null() {
-            (*ctx).propq = CRYPTO_strdup(propq, FILE, 147);
-            if (*ctx).propq.is_null() {
-                CRYPTO_free(ctx.cast(), FILE, 149);
-                return ptr::null_mut();
+            // The copy is a plain block this context owns; a refusal drops it with the context at
+            // the authority's `err:` site.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
+                CRYPTO_strdup(propq, FILE, 147).cast::<c_uchar>(),
+                FILE_SEAM,
+                628,
+            ) {
+                Some(buf) => (*ctx).propq = buf.into_raw().cast::<c_char>(),
+                None => {
+                    CRYPTO_free(ctx.cast(), FILE, 149);
+                    return ptr::null_mut();
+                }
             }
         }
     }
@@ -875,8 +895,20 @@ unsafe extern "C" fn ecdsa_freectx(vctx: *mut c_void) {
     unsafe {
         EVP_MD_CTX_free((*ctx).mdctx);
         EVP_MD_free((*ctx).md);
-        CRYPTO_free((*ctx).propq.cast(), FILE, 628);
-        CRYPTO_free((*ctx).sig.cast(), FILE, 629);
+        // Each field's handle releases its own plain block at the authority's site; the context
+        // block stays on the raw seam (its release is part of the destructor body).
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).propq.cast::<c_uchar>(),
+            FILE_SEAM,
+            628,
+        ));
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+        drop(OwnedBuf::adopt_plain(
+            (*ctx).sig.cast::<c_uchar>(),
+            FILE_SEAM,
+            629,
+        ));
         EC_KEY_free((*ctx).ec);
         BN_clear_free((*ctx).kinv);
         BN_clear_free((*ctx).r);
@@ -892,6 +924,15 @@ unsafe extern "C" fn ecdsa_dupctx(vctx: *mut c_void) -> *mut c_void {
     let srcctx = vctx.cast::<ProvEcdsaCtx>();
 
     if is_running() == 0 {
+        return ptr::null_mut();
+    }
+
+    // The authority refuses to duplicate a context that carries the CAVS precomputed
+    // nonce pair (`ecdsa_sig.c:634-638`). Those fields stay NULL without the ACVP test
+    // arm, but the raw copy would otherwise alias the two `BIGNUM`s and `freectx` would
+    // release each of them twice.
+    // SAFETY: `srcctx` is the caller's live context.
+    if unsafe { !(*srcctx).kinv.is_null() || !(*srcctx).r.is_null() } {
         return ptr::null_mut();
     }
 
@@ -936,16 +977,28 @@ unsafe extern "C" fn ecdsa_dupctx(vctx: *mut c_void) -> *mut c_void {
             }
         }
         if !(*srcctx).propq.is_null() {
-            (*dstctx).propq = CRYPTO_strdup((*srcctx).propq, FILE, 667);
-            if (*dstctx).propq.is_null() {
-                return ecdsa_dupctx_err(dstctx);
+            // The copy is a plain block the handle takes up; a refusal drops it with the context at
+            // the authority's `err:` site.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
+                CRYPTO_strdup((*srcctx).propq, FILE, 667).cast::<c_uchar>(),
+                FILE_SEAM,
+                628,
+            ) {
+                Some(buf) => (*dstctx).propq = buf.into_raw().cast::<c_char>(),
+                None => return ecdsa_dupctx_err(dstctx),
             }
         }
         if !(*srcctx).sig.is_null() {
-            (*dstctx).sig =
-                CRYPTO_memdup((*srcctx).sig.cast(), (*srcctx).siglen, FILE, 670).cast::<u8>();
-            if (*dstctx).sig.is_null() {
-                return ecdsa_dupctx_err(dstctx);
+            // As above, for the signature copy.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            match OwnedBuf::adopt_plain(
+                CRYPTO_memdup((*srcctx).sig.cast(), (*srcctx).siglen, FILE, 670).cast::<c_uchar>(),
+                FILE_SEAM,
+                629,
+            ) {
+                Some(buf) => (*dstctx).sig = buf.into_raw().cast::<u8>(),
+                None => return ecdsa_dupctx_err(dstctx),
             }
         }
     }
@@ -1605,7 +1658,14 @@ unsafe extern "C" fn ecdsa_sigalg_set_ctx_params(
         }
 
         if (*ctx).operation == EVP_PKEY_OP_VERIFYMSG && !p.sig.is_null() {
-            CRYPTO_free((*ctx).sig.cast(), FILE, 1011);
+            // The old signature's handle releases it at the authority's own site; the replacement is
+            // the helper's fresh block, handed to the field through a second handle.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            drop(OwnedBuf::adopt_plain(
+                (*ctx).sig.cast::<c_uchar>(),
+                FILE_SEAM,
+                1011,
+            ));
             (*ctx).sig = ptr::null_mut();
             (*ctx).siglen = 0;
             let mut sig: *mut c_void = ptr::null_mut();
@@ -1614,10 +1674,17 @@ unsafe extern "C" fn ecdsa_sigalg_set_ctx_params(
             {
                 return 0;
             }
-            (*ctx).sig = sig.cast::<u8>();
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            (*ctx).sig = OwnedBuf::adopt_plain(sig.cast::<c_uchar>(), FILE_SEAM, 629)
+                .map_or(ptr::null_mut(), |buf| buf.into_raw().cast::<u8>());
             /* The signature must not be empty. */
             if (*ctx).siglen == 0 {
-                CRYPTO_free((*ctx).sig.cast(), FILE, 1019);
+                // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+                drop(OwnedBuf::adopt_plain(
+                    (*ctx).sig.cast::<c_uchar>(),
+                    FILE_SEAM,
+                    1019,
+                ));
                 (*ctx).sig = ptr::null_mut();
                 return 0;
             }

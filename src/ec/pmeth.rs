@@ -63,17 +63,19 @@ use crate::evp::pkey_ctx::{
     OPENSSL_EC_NAMED_CURVE,
 };
 use crate::rand::sys::atoi;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
-};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_ecdsa_with_SHA1, NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256,
     NID_sha3_384, NID_sha3_512, NID_sha512, NID_sm3, NID_undef, OBJ_ln2nid, OBJ_sn2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `crypto/ec/ec_pmeth.c` — the translation unit every allocation and error below is attributed to.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c");
 
 /// `pkey_ec_init`'s `OPENSSL_zalloc(sizeof(*dctx))` (`:51`).
 const LINE_ZALLOC_DCTX: c_int = 51;
@@ -125,6 +127,37 @@ struct EcPkeyCtx {
     kdf_outlen: usize,
 }
 
+/// [`OwnedCtx`]'s destructor body for [`EcPkeyCtx`], without the block's own release.
+///
+/// `pkey_ec_cleanup` is the authority's `EC_PKEY_CTX` destructor: it releases the key/paramgen
+/// group, the duplicated cofactor key and the KDF's shared-info buffer, then the block. `Drop`
+/// performs the block release at the authority's own site, so this body is the first three members
+/// alone -- kept as the authority's own `EC_*_free`/`OPENSSL_free` calls so a caller-installed
+/// `CRYPTO_set_mem_functions` hook observes the releases at the same sites.
+// SAFETY: (a) `destroy_body` is the authority's `pkey_ec_cleanup` member body, releasing exactly
+// this context's own group, duplicated cofactor key and shared-info buffer once (each releaser
+// accepts the unset NULL) and never the enclosing block, which `OwnedCtx` releases; (b) `EcPkeyCtx`
+// is a `#[repr(C)]` record of raw pointers, `char`-typed integers and `usize`s, so an all-zero block
+// is a valid `EcPkeyCtx` the body is sound on.
+unsafe impl CtxDestroy for EcPkeyCtx {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_DCTX;
+    const LINE_FREE: c_int = LINE_FREE_DCTX;
+
+    /// # Safety
+    ///
+    /// `ptr` is a live context this file allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut EcPkeyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `gen_group`/`co_key` are each NULL
+        // or owned objects and `kdf_ukm` is NULL or this context's own block.
+        unsafe {
+            EC_GROUP_free((*ptr).gen_group);
+            EC_KEY_free((*ptr).co_key);
+            CRYPTO_free((*ptr).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
+        }
+    }
+}
+
 /// `strcmp(s, lit) == 0` in the crate's `CStr` idiom.
 ///
 /// # Safety
@@ -139,22 +172,30 @@ unsafe fn cstr_is(s: *const c_char, lit: &[u8]) -> bool {
 /// # Safety
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_ec_init(ctx: *mut EvpPkeyCtx) -> c_int {
-    /* `CRYPTO_zalloc` is a safe entry point of this crate. */
-    let dctx = CRYPTO_zalloc(core::mem::size_of::<EcPkeyCtx>(), FILE, LINE_ZALLOC_DCTX)
-        .cast::<EcPkeyCtx>();
-    if dctx.is_null() {
+    // A fresh zeroed `EC_PKEY_CTX` is the authority's own starting state, so this is `OPENSSL_zalloc`
+    // at the authority's exact size/`file`/`line`; `Drop` reclaims the block at `pkey_ec_cleanup`'s.
+    let Some(dctx) = OwnedCtx::<EcPkeyCtx>::zalloc() else {
         return 0;
-    }
-    // SAFETY: `dctx` is this call's own allocation and `ctx` is live per the contract.
+    };
+    let p = dctx.as_ptr();
+    // SAFETY: `p` is this call's own fresh zeroed context and `ctx` is live per the contract.
     unsafe {
-        (*dctx).cofactor_mode = -1;
-        (*dctx).kdf_type = EVP_PKEY_ECDH_KDF_NONE as c_char;
-        (*ctx).data = dctx.cast::<c_void>();
+        (*p).cofactor_mode = -1;
+        (*p).kdf_type = EVP_PKEY_ECDH_KDF_NONE as c_char;
+        (*ctx).data = dctx.into_raw().cast::<c_void>();
     }
     1
 }
 
 /// `static int pkey_ec_copy(EVP_PKEY_CTX *dst, const EVP_PKEY_CTX *src)` — `:60`.
+///
+/// The authority leaves the members it has already duplicated in `dst->data` when a later
+/// duplication fails. Its only caller, `EVP_PKEY_CTX_dup`, clears `rctx->pmeth` before freeing the
+/// copy (`pmeth_lib.c:608-610`), so `pkey_ec_cleanup` is never reached and the fresh `dst->data`
+/// block and any duplicated group/key/UKM leak. This transcription releases that partially built
+/// context on every failure return and clears `dst->data`, so a caller that still runs
+/// `pkey_ec_cleanup` sees a NULL slot rather than a double free. That is a recorded memory-safety
+/// improvement over the authority, not a change to the success path.
 ///
 /// # Safety
 /// `dst` and `src` must be live.
@@ -178,6 +219,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).gen_group = dup };
         if dup.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     }
@@ -191,6 +234,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).co_key = dup };
         if dup.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     }
@@ -214,6 +259,8 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
         // SAFETY: `dctx` is live.
         unsafe { (*dctx).kdf_ukm = ukm.cast::<u8>() };
         if ukm.is_null() {
+            // SAFETY: `dst` is live and holds the context `pkey_ec_init` installed above.
+            unsafe { pkey_ec_cleanup(dst) };
             return 0;
         }
     } else {
@@ -231,19 +278,13 @@ unsafe extern "C" fn pkey_ec_copy(dst: *mut EvpPkeyCtx, src: *const EvpPkeyCtx) 
 /// `ctx` must be live.
 unsafe extern "C" fn pkey_ec_cleanup(ctx: *mut EvpPkeyCtx) {
     // SAFETY: `ctx` is live per the contract.
-    let dctx = unsafe { (*ctx).data }.cast::<EcPkeyCtx>();
-    if dctx.is_null() {
-        return;
-    }
-    // SAFETY: the three fields are NULL or this context's own allocations, and both frees accept
-    // NULL.
-    unsafe {
-        EC_GROUP_free((*dctx).gen_group);
-        EC_KEY_free((*dctx).co_key);
-        CRYPTO_free((*dctx).kdf_ukm.cast::<c_void>(), FILE, LINE_FREE_KDF_UKM);
-        CRYPTO_free(dctx.cast::<c_void>(), FILE, LINE_FREE_DCTX);
-        (*ctx).data = ptr::null_mut();
-    }
+    let data = unsafe { (*ctx).data };
+    // SAFETY: `data` is NULL or the block this method's `init` installed and no other owner has
+    // released; `from_raw` maps NULL to `None` and its `Drop` runs the authority's own cleanup body
+    // and block release.
+    drop(unsafe { OwnedCtx::<EcPkeyCtx>::from_raw(data.cast::<EcPkeyCtx>()) });
+    // SAFETY: `ctx` is live, and the field is cleared exactly as the authority clears it.
+    unsafe { (*ctx).data = ptr::null_mut() };
 }
 
 /// `static int pkey_ec_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned
@@ -430,15 +471,17 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
     if unsafe { pkey_ec_derive(ctx, ptr::null_mut(), &mut ktmplen) } == 0 {
         return 0;
     }
-    /* `CRYPTO_malloc` is a safe entry point of this crate. */
-    let ktmp = CRYPTO_malloc(ktmplen, FILE, LINE_MALLOC_KTMP).cast::<u8>();
-    if ktmp.is_null() {
+    /* `CRYPTO_malloc` is a safe entry point of this crate; the buffer's single release is the
+     * authority's own cleansing `OPENSSL_clear_free` at `:242`. */
+    let Some(ktmp_buf) =
+        OwnedBuf::new_cleansed_at(ktmplen, FILE_SEAM, LINE_MALLOC_KTMP, LINE_CLEAR_FREE_KTMP)
+    else {
         return 0;
-    }
+    };
+    let ktmp = ktmp_buf.as_ptr();
     // SAFETY: `ktmp` is this call's own buffer of `ktmplen` bytes and `ctx` is live.
     if unsafe { pkey_ec_derive(ctx, ktmp, &mut ktmplen) } == 0 {
-        // SAFETY: `ktmp` is this call's own buffer.
-        unsafe { CRYPTO_clear_free(ktmp.cast::<c_void>(), ktmplen, FILE, LINE_CLEAR_FREE_KTMP) };
+        // `ktmp_buf`'s `Drop` performs the authority's own cleansing release at every exit.
         return 0;
     }
     /* The KDF's nine arguments are the caller's buffer, this call's buffer and the context's own
@@ -458,8 +501,7 @@ unsafe extern "C" fn pkey_ec_kdf_derive(
         )
     };
     let rv = if ok != 0 { 1 } else { 0 };
-    // SAFETY: `ktmp` is this call's own buffer.
-    unsafe { CRYPTO_clear_free(ktmp.cast::<c_void>(), ktmplen, FILE, LINE_CLEAR_FREE_KTMP) };
+    // `ktmp_buf`'s `Drop` performs the authority's own cleansing release at every exit.
     rv
 }
 
@@ -475,7 +517,11 @@ unsafe fn md_type_of(p2: *const c_void) -> c_int {
 /// `static int pkey_ec_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` — `:247`.
 ///
 /// # Safety
-/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`].
+/// As [`crate::evp::pkey_ctx::PkeyMethCtrlFn`]. For
+/// `EVP_PKEY_CTRL_EC_KDF_UKM`, a non-NULL `p2` must be the whole, exclusively
+/// owned block from this crate's `CRYPTO_*` seam and `p1` its non-negative byte
+/// length; ownership transfers to the context. Other arms follow the authority's
+/// per-arm contract.
 unsafe extern "C" fn pkey_ec_ctrl(
     ctx: *mut EvpPkeyCtx,
     type_: c_int,
@@ -617,13 +663,15 @@ unsafe extern "C" fn pkey_ec_ctrl(
             1
         }
         EVP_PKEY_CTRL_EC_KDF_UKM => {
-            // SAFETY: `dctx`'s field is this context's own or NULL, and `CRYPTO_free` accepts NULL.
+            // SAFETY: `dctx`'s field is this context's own block (or NULL) and no other owner
+            // releases it; `Drop` performs its single release at the authority's own replacement
+            // site.
             unsafe {
-                CRYPTO_free(
-                    (*dctx).kdf_ukm.cast::<c_void>(),
-                    FILE,
+                drop(OwnedBuf::adopt_plain(
+                    (*dctx).kdf_ukm,
+                    FILE_SEAM,
                     LINE_FREE_KDF_UKM_CTRL,
-                );
+                ));
                 (*dctx).kdf_ukm = p2.cast::<u8>();
                 if !p2.is_null() {
                     (*dctx).kdf_ukmlen = p1 as usize;
@@ -864,3 +912,59 @@ pub(crate) static EC_PKEY_METH: EvpPkeyMethod = EvpPkeyMethod {
 pub(crate) unsafe extern "C" fn ossl_ec_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(EC_PKEY_METH)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// `pkey_ec_copy` acquires the destination context and then a group/key/UKM in order. A later
+    /// failure must release the earlier acquisitions: `CRYPTO_memdup` refuses `siz >= INT_MAX`
+    /// before reading, which fails the UKM duplication after the source group has already been
+    /// duplicated into `dst`. The test checks the release by the cleared slot (and then calls
+    /// `pkey_ec_cleanup` to prove it is a no-op rather than a double free).
+    #[test]
+    fn copy_failure_releases_the_partially_built_destination() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the NID names a built-in curve; the answer is a fresh group this test owns.
+        let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+        assert!(!group.is_null());
+
+        static UKM: u8 = 0;
+        // SAFETY: `EcPkeyCtx` is a `#[repr(C)]` record of raw pointers, `char`s and `usize`s, so
+        // the all-zero image is valid; the fields `pkey_ec_copy` reads are set below.
+        let mut src_ctx: EcPkeyCtx = unsafe { core::mem::zeroed() };
+        src_ctx.gen_group = group;
+        src_ctx.cofactor_mode = -1;
+        src_ctx.kdf_ukm = (&UKM as *const u8).cast_mut();
+        // `CRYPTO_memdup` refuses this length before reading the pointer.
+        src_ctx.kdf_ukmlen = i32::MAX as usize;
+
+        // SAFETY: `EvpPkeyCtx` is a `#[repr(C)]` record whose zero image is valid; `data` is the
+        // only field this call reads.
+        let mut src: EvpPkeyCtx = unsafe { core::mem::zeroed() };
+        src.data = (&mut src_ctx as *mut EcPkeyCtx).cast();
+        // SAFETY: zeroed `dst` has a NULL `data`, which is what `pkey_ec_init` expects.
+        let mut dst: EvpPkeyCtx = unsafe { core::mem::zeroed() };
+
+        // SAFETY: both contexts are live and `dst` is the caller's fresh copy target.
+        let ret = unsafe { pkey_ec_copy(&mut dst, &src) };
+        assert_eq!(ret, 0, "the oversized UKM must be refused");
+        assert!(
+            dst.data.is_null(),
+            "the failed copy must release and clear the partial destination"
+        );
+        // SAFETY: `dst` is live and its `data` is NULL; this must be a no-op, not a double free.
+        unsafe { pkey_ec_cleanup(&mut dst) };
+
+        // SAFETY: the source context and its group are this test's; the duplicate owned its own.
+        unsafe {
+            assert!(!src_ctx.gen_group.is_null());
+            EC_GROUP_free(src_ctx.gen_group);
+        }
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EcPkeyCtx => zero_state_sweep_ec_pkey_ctx);

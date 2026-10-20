@@ -13,7 +13,7 @@
 //! * `ossl_policy_level_find_node` (`:42-56`) — a level lookup by parent and OID.
 //! * `ossl_policy_level_add_node` (`:58-125`) — the CVE-2023-0464 node cap, the anyPolicy slot,
 //!   the sorted node stack and the extra-data stack.
-//! * `ossl_policy_node_free` (`:127-130`) — `OPENSSL_free`.
+//! * `ossl_policy_node_free` (`:127-130`) — `OPENSSL_free`; here the release of an [`OwnedNode`].
 //! * `ossl_policy_node_match` (`:137-156`) — the valid-policy or expected-policy-set match.
 //!
 //! These are `ossl_*` internal symbols the authority's version script hides from `libcrypto.so`
@@ -21,6 +21,16 @@
 //! 11.2 court drives. `ossl_policy_node_free` and `ossl_policy_data_free` (in `pcy_data.rs`) are
 //! now the crate-canonical destructors of their units, and `pcy_tree.rs` calls them instead of its
 //! former private copies.
+//!
+//! ## Ownership
+//!
+//! The node block is owned by an [`OwnedNode`]: `ossl_policy_level_add_node` allocates it through
+//! the crate's allocator seam and links its stable address, and every release (the level stack's
+//! `pop_free`, an anyPolicy, `exnode_free`, a prune, an error path) drops the handle. No caller
+//! writes a `CRYPTO_free` for a node. The block itself stays a `CRYPTO_zalloc` at the node's exact
+//! size rather than a Rust `Box`, because the failure-injection differential refuses the first
+//! 24-byte allocation of the check window to prove `ossl_policy_level_add_node` propagates NULL —
+//! a `Box` allocates on Rust's global allocator, which the caller-installed hook does not observe.
 //!
 //! ## The raise sites
 //!
@@ -36,6 +46,7 @@
 #![allow(non_snake_case)]
 
 use core::ffi::{c_int, c_void, CStr};
+use core::ptr::NonNull;
 
 use crate::runtime::bio::ERR_R_CRYPTO_LIB;
 use crate::runtime::err::err_sites::ErrSite;
@@ -82,6 +93,135 @@ const PCY_NODE_99: ErrSite = pcy_node_site(99, c"ossl_policy_level_add_node", ER
 /// `ossl_policy_level_add_node`'s failed extra-data push at `pcy_node.c:103`.
 const PCY_NODE_103: ErrSite = pcy_node_site(103, c"ossl_policy_level_add_node", ERR_R_CRYPTO_LIB);
 
+/// A live policy node together with its datum — the walks' checked view of one node.
+///
+/// The graph reaches nodes as raw pointers: a level's sorted stack element (`OPENSSL_sk_value`'s
+/// `void *`) and a node's `parent` edge. [`Node::of`] is the node's recorded raw boundary — the one
+/// place a `*mut X509PolicyNode` becomes a borrow — and a walk then reads the relationship fields
+/// through the borrow (`node.nchild`, `node.parent`, `data.flags`, `data.valid_policy`,
+/// `data.expected_policy_set`) instead of dereferencing a raw pointer inline.
+///
+/// A node the graph links always refers to a live datum (`ossl_policy_level_add_node` links a
+/// non-NULL `data`), so [`Node::of`] answers `None` only for a NULL node or the defensive
+/// NULL-`data` case the authority's `exnode_free` guards.
+#[derive(Clone, Copy)]
+pub(crate) struct Node<'a> {
+    /// The `X509_POLICY_NODE` block itself.
+    pub(crate) node: &'a X509PolicyNode,
+    /// The policy datum the node refers to.
+    pub(crate) data: &'a X509PolicyData,
+}
+
+impl<'a> Node<'a> {
+    /// Borrow the node `raw` and its datum.
+    ///
+    /// # Safety
+    ///
+    /// `raw` is NULL or a live node this crate owns and has not freed, and the borrow does not
+    /// outlive it; its `data` is a live datum.
+    pub(crate) unsafe fn of(raw: *mut X509PolicyNode) -> Option<Node<'a>> {
+        // SAFETY: `raw` is NULL or a live node per the contract.
+        let node = unsafe { raw.as_ref() }?;
+        // SAFETY: the node's `data` is NULL or a live datum per the contract.
+        let data = unsafe { node.data.as_ref() }?;
+        Some(Node { node, data })
+    }
+
+    /// The node's parent, exclusively borrowed, for the `nchild` maintenance the walks perform
+    /// (`node->parent->nchild--`).
+    ///
+    /// The borrow is **mutation-derived**: the receiver is `&mut self`, and the returned reference's
+    /// lifetime is tied to that borrow, so the compiler enforces that this `Node` value is
+    /// exclusively borrowed while the parent is written and that the borrow cannot outlive the
+    /// value. One `Node` therefore cannot hand out two conflicting `&mut` to the same parent.
+    ///
+    /// # Safety
+    ///
+    /// The `parent` edge is NULL or a live node, and no other borrow of that parent node is live.
+    /// `Node` is `Copy`, so two `Node` values built from the same raw node — or from distinct links
+    /// to a shared parent — remain a caller obligation: the graph's own walks keep one `Node` per
+    /// node, and this method cannot prove that from the shared `&X509PolicyNode` it holds.
+    pub(crate) unsafe fn parent_mut(&mut self) -> Option<&mut X509PolicyNode> {
+        // The pointer is copied out first so the returned reference does not borrow the shared
+        // `self.node` field; the `&mut self` receiver ties the result to this `Node` value.
+        let parent = self.node.parent;
+        // SAFETY: the parent edge is NULL or a live node per the contract.
+        unsafe { parent.as_mut() }
+    }
+}
+
+/// An owned policy-node block — the owner of one [`X509PolicyNode`].
+///
+/// The node keeps the authority's `#[repr(C)]` layout (the graph's links and the `get0` accessors
+/// see that same address), but its *ownership* is this type: `new` allocates the block through the
+/// crate's allocator seam and `Drop` is its single release, so no caller writes a `CRYPTO_free` for
+/// a node and the release can never be performed with the wrong size or allocator.
+///
+/// The allocation stays on the `CRYPTO_*` seam rather than moving to a Rust `Box` on purpose: the
+/// failure-injection differential refuses the first **24-byte** allocation of the check window (the
+/// root anyPolicy node) to prove `ossl_policy_level_add_node` propagates NULL. A `Box` allocates on
+/// Rust's global allocator, which a caller-installed `CRYPTO_set_mem_functions` hook does not
+/// observe, so the refusal would never fire and the return word would diverge. The seam is the
+/// residual raw boundary the freeze records; the ownership above it is Rust's.
+struct OwnedNode {
+    ptr: NonNull<X509PolicyNode>,
+}
+
+impl OwnedNode {
+    /// Allocate a fresh node datum/parent block through the installed allocator, or `None` if it
+    /// answers NULL (the authority's `CRYPTO_zalloc` answer).
+    fn new(data: *mut X509PolicyData, parent: *mut X509PolicyNode) -> Option<OwnedNode> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // the node's size, which is exactly `X509PolicyNode`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<X509PolicyNode>(), FILE.as_ptr(), 0)
+        }
+        .cast::<X509PolicyNode>();
+        let ptr = NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh, uniquely-owned, `X509PolicyNode`-sized block, so writing the
+        // value into it in place initialises it before any read.
+        unsafe {
+            ptr.as_ptr().write(X509PolicyNode {
+                data,
+                parent,
+                nchild: 0,
+            })
+        };
+        Some(OwnedNode { ptr })
+    }
+
+    /// The stable address the graph links and the accessors hand back.
+    fn as_ptr(&self) -> *mut X509PolicyNode {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the graph, answering its address.
+    fn into_raw(self) -> *mut X509PolicyNode {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block that was handed to the graph, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live block a previous `into_raw` gave up and `Drop` has not yet
+    /// released.
+    unsafe fn from_raw(ptr: *mut X509PolicyNode) -> Option<OwnedNode> {
+        NonNull::new(ptr).map(|ptr| OwnedNode { ptr })
+    }
+}
+
+impl Drop for OwnedNode {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed), and this is its
+        // single release; `Drop` runs once.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast(), FILE.as_ptr(), 0) };
+    }
+}
+
 /// `static int node_cmp(const X509_POLICY_NODE *const *a, const X509_POLICY_NODE *const *b)` —
 /// `crypto/x509/pcy_node.c:17-21`.
 ///
@@ -90,11 +230,23 @@ const PCY_NODE_103: ErrSite = pcy_node_site(103, c"ossl_policy_level_add_node", 
 /// The stack comparator contract: `a` and `b` point at element slots holding live
 /// `X509_POLICY_NODE *`.
 unsafe extern "C" fn node_cmp(a: *const c_void, b: *const c_void) -> c_int {
-    // SAFETY: the comparator contract above; both elements are live node pointers.
-    unsafe {
-        let na = *(a.cast::<*const X509PolicyNode>());
-        let nb = *(b.cast::<*const X509PolicyNode>());
-        OBJ_cmp((*(*na).data).valid_policy, (*(*nb).data).valid_policy)
+    // SAFETY: the comparator contract above; both element slots hold live node pointers.
+    let (na, nb) = unsafe {
+        (
+            *(a.cast::<*const X509PolicyNode>()),
+            *(b.cast::<*const X509PolicyNode>()),
+        )
+    };
+    // SAFETY: both elements are live nodes; the graph links a live datum to each.
+    match (unsafe { Node::of(na.cast_mut()) }, unsafe {
+        Node::of(nb.cast_mut())
+    }) {
+        // SAFETY: each node's `data` is a live datum; `OBJ_cmp` reads only the two OIDs.
+        (Some(x), Some(y)) => unsafe { OBJ_cmp(x.data.valid_policy, y.data.valid_policy) },
+        // A NULL element or datum is outside the comparator contract (the graph links a live datum
+        // to every node it sorts), so this arm is unreachable; it exists only to keep the Rust
+        // total where the authority would fault.
+        _ => 0,
     }
 }
 
@@ -148,16 +300,21 @@ pub(crate) unsafe fn ossl_policy_level_find_node(
     id: *const Asn1Object,
 ) -> *mut X509PolicyNode {
     // SAFETY: `level` is live per the contract.
-    let num = unsafe { OPENSSL_sk_num((*level).nodes) };
+    let level = unsafe { &*level };
+    // SAFETY: `level.nodes` is NULL or a live node stack.
+    let num = unsafe { OPENSSL_sk_num(level.nodes) };
     for i in 0..num {
         // SAFETY: `i` is in range; the element is a live node.
-        let node = unsafe { OPENSSL_sk_value((*level).nodes, i) }.cast::<X509PolicyNode>();
-        // SAFETY: `node` is live.
-        if unsafe { (*node).parent }.cast_const() == parent {
-            // SAFETY: `node` is live; its data is a live policy datum.
-            if unsafe { OBJ_cmp((*(*node).data).valid_policy, id) } == 0 {
-                return node;
-            }
+        let raw = unsafe { OPENSSL_sk_value(level.nodes, i) }.cast::<X509PolicyNode>();
+        // SAFETY: `raw` is a live node; the graph links a live datum to it.
+        let Some(node) = (unsafe { Node::of(raw) }) else {
+            continue;
+        };
+        if node.node.parent.cast_const() == parent
+            // SAFETY: `node`'s datum and `id` are live `ASN1_OBJECT`s.
+            && unsafe { OBJ_cmp(node.data.valid_policy, id) } == 0
+        {
+            return raw;
         }
     }
     core::ptr::null_mut()
@@ -182,102 +339,107 @@ pub(crate) unsafe fn ossl_policy_level_add_node(
     extra_data: c_int,
 ) -> *mut X509PolicyNode {
     // SAFETY: `tree` is live per the contract.
-    if unsafe { (*tree).node_maximum > 0 && (*tree).node_count >= (*tree).node_maximum } {
+    let tree = unsafe { &mut *tree };
+    if tree.node_maximum > 0 && tree.node_count >= tree.node_maximum {
         return core::ptr::null_mut();
     }
+    // SAFETY: `data` is a live datum per the contract.
+    let data_ref = unsafe { &*data };
 
-    // A fresh block of the node's own size, written below before it is read.
-    let node = CRYPTO_zalloc(core::mem::size_of::<X509PolicyNode>(), FILE.as_ptr(), 0)
-        .cast::<X509PolicyNode>();
-    if node.is_null() {
+    // The node block, allocated through the crate's allocator seam and owned by this handle until
+    // it is linked into the tree below. A refused allocation answers NULL, unchanged.
+    let Some(node) = OwnedNode::new(data, parent) else {
         return core::ptr::null_mut();
-    }
-    // SAFETY: `node` is live and writable.
-    unsafe {
-        (*node).data = data;
-        (*node).parent = parent;
-    }
+    };
+    let node_ptr = node.as_ptr();
 
     let mut extra_data_error = false;
     if !level.is_null() {
-        // SAFETY: `data` is live per the contract.
-        if unsafe { OBJ_obj2nid((*data).valid_policy) } == NID_any_policy {
-            // SAFETY: `level` is live.
-            if !unsafe { (*level).anyPolicy }.is_null() {
-                // SAFETY: `node` is owned here.
-                unsafe { ossl_policy_node_free(node) };
+        // SAFETY: `level` is a live, writable level per the contract.
+        let level = unsafe { &mut *level };
+        // SAFETY: `data_ref`'s OID is a live `ASN1_OBJECT`.
+        if unsafe { OBJ_obj2nid(data_ref.valid_policy) } == NID_any_policy {
+            if !level.anyPolicy.is_null() {
+                // The level already has an anyPolicy; `node` drops here, releasing the block.
                 return core::ptr::null_mut();
             }
-            // SAFETY: `level` is live and writable.
-            unsafe { (*level).anyPolicy = node };
+            level.anyPolicy = node_ptr;
         } else {
-            // SAFETY: `level` is live and writable.
-            unsafe {
-                if (*level).nodes.is_null() {
-                    (*level).nodes = ossl_policy_node_cmp_new();
-                }
-                if (*level).nodes.is_null() {
-                    raise_site(&PCY_NODE_85);
-                    ossl_policy_node_free(node);
-                    return core::ptr::null_mut();
-                }
-                if OPENSSL_sk_push((*level).nodes, node.cast::<c_void>()) == 0 {
-                    raise_site(&PCY_NODE_89);
-                    ossl_policy_node_free(node);
-                    return core::ptr::null_mut();
-                }
+            if level.nodes.is_null() {
+                // SAFETY: the new node stack is owned here.
+                level.nodes = unsafe { ossl_policy_node_cmp_new() };
+            }
+            if level.nodes.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&PCY_NODE_85) };
+                // `node` drops here, releasing the block.
+                return core::ptr::null_mut();
+            }
+            // SAFETY: `level.nodes` is a live node stack; `node_ptr` is a live node.
+            if unsafe { OPENSSL_sk_push(level.nodes, node_ptr.cast::<c_void>()) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&PCY_NODE_89) };
+                // `node` drops here, releasing the block.
+                return core::ptr::null_mut();
             }
         }
     }
 
     if extra_data != 0 {
-        // SAFETY: `tree` is live and writable.
-        unsafe {
-            if (*tree).extra_data.is_null() {
-                (*tree).extra_data = OPENSSL_sk_new_null();
-            }
-            if (*tree).extra_data.is_null() {
-                raise_site(&PCY_NODE_99);
-                extra_data_error = true;
-            } else if OPENSSL_sk_push((*tree).extra_data, data.cast::<c_void>()) == 0 {
-                raise_site(&PCY_NODE_103);
+        if tree.extra_data.is_null() {
+            tree.extra_data = OPENSSL_sk_new_null();
+        }
+        if tree.extra_data.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&PCY_NODE_99) };
+            extra_data_error = true;
+        } else {
+            // SAFETY: `tree.extra_data` is a live stack; `data` is the live datum.
+            if unsafe { OPENSSL_sk_push(tree.extra_data, data.cast::<c_void>()) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&PCY_NODE_103) };
                 extra_data_error = true;
             }
         }
         if extra_data_error {
-            // SAFETY: `level` is NULL or live; `node` is owned here.
-            unsafe {
-                if !level.is_null() {
-                    if (*level).anyPolicy == node {
-                        (*level).anyPolicy = core::ptr::null_mut();
-                    } else {
-                        let _ = OPENSSL_sk_pop((*level).nodes);
-                    }
+            // SAFETY: `level` is NULL or a live level per the contract; unlink the node `node_ptr`
+            // just linked.
+            if !level.is_null() {
+                // SAFETY: `level` is live and writable per the contract.
+                let level = unsafe { &mut *level };
+                if level.anyPolicy == node_ptr {
+                    level.anyPolicy = core::ptr::null_mut();
+                } else {
+                    // SAFETY: `level.nodes` is the live stack `node_ptr` was pushed onto.
+                    let _ = unsafe { OPENSSL_sk_pop(level.nodes) };
                 }
-                ossl_policy_node_free(node);
             }
+            // `node` drops here, releasing the block, the authority's `goto err`.
             return core::ptr::null_mut();
         }
     }
 
-    // SAFETY: `tree` and `parent` are live here.
-    unsafe {
-        (*tree).node_count += 1;
-        if !parent.is_null() {
-            (*parent).nchild += 1;
-        }
+    tree.node_count += 1;
+    // SAFETY: `parent` is NULL or a live node per the contract.
+    if let Some(parent) = unsafe { parent.as_mut() } {
+        parent.nchild += 1;
     }
-    node
+    // Ownership transfers to the graph: the level stack and the `get0` accessors hold `node_ptr`, and
+    // `ossl_policy_node_free` reclaims it through `OwnedNode`.
+    node.into_raw()
 }
 
 /// `void ossl_policy_node_free(X509_POLICY_NODE *node)` — `crypto/x509/pcy_node.c:127-130`.
+///
+/// A NULL node is a no-op; otherwise the block is reclaimed through [`OwnedNode`], whose `Drop` is
+/// the single release.
 ///
 /// # Safety
 ///
 /// `node` must be NULL or a node this crate owns and has not already freed.
 pub(crate) unsafe fn ossl_policy_node_free(node: *mut X509PolicyNode) {
-    // SAFETY: `node` is NULL or an owned block per the contract.
-    unsafe { CRYPTO_free(node.cast(), FILE.as_ptr(), 0) };
+    // SAFETY: `node` is NULL or an owned block per the contract; `OwnedNode`'s `Drop` releases it.
+    drop(unsafe { OwnedNode::from_raw(node) });
 }
 
 /// `int ossl_policy_node_match(const X509_POLICY_LEVEL *lvl, const X509_POLICY_NODE *node, const ASN1_OBJECT *oid)`
@@ -294,23 +456,23 @@ pub(crate) unsafe fn ossl_policy_node_match(
     node: *const X509PolicyNode,
     oid: *const Asn1Object,
 ) -> c_int {
-    // SAFETY: `node` is live per the contract.
-    let x = unsafe { (*node).data };
-    // SAFETY: `lvl` and `x` are live.
-    if unsafe {
-        ((*lvl).flags & X509_V_FLAG_INHIBIT_MAP) != 0
-            || ((*x).flags & POLICY_DATA_FLAG_MAP_MASK) == 0
-    } {
-        // SAFETY: `x` is live.
-        return c_int::from(unsafe { OBJ_cmp((*x).valid_policy, oid) } == 0);
+    // SAFETY: `lvl` is live per the contract.
+    let lvl = unsafe { &*lvl };
+    // SAFETY: `node` is a live node; the graph links a live datum to it.
+    let Some(node) = (unsafe { Node::of(node.cast_mut()) }) else {
+        return 0;
+    };
+    let x = node.data;
+    if (lvl.flags & X509_V_FLAG_INHIBIT_MAP) != 0 || (x.flags & POLICY_DATA_FLAG_MAP_MASK) == 0 {
+        // SAFETY: `x`'s valid policy and `oid` are live `ASN1_OBJECT`s.
+        return c_int::from(unsafe { OBJ_cmp(x.valid_policy, oid) } == 0);
     }
-    // SAFETY: `x` is live.
-    let num = unsafe { OPENSSL_sk_num((*x).expected_policy_set) };
+    // SAFETY: `x.expected_policy_set` is NULL or a live stack.
+    let num = unsafe { OPENSSL_sk_num(x.expected_policy_set) };
     for i in 0..num {
         // SAFETY: `i` is in range; the element is a live `ASN1_OBJECT`.
-        let policy_oid =
-            unsafe { OPENSSL_sk_value((*x).expected_policy_set, i) }.cast::<Asn1Object>();
-        // SAFETY: `policy_oid` is live.
+        let policy_oid = unsafe { OPENSSL_sk_value(x.expected_policy_set, i) }.cast::<Asn1Object>();
+        // SAFETY: `policy_oid` and `oid` are live.
         if unsafe { OBJ_cmp(policy_oid, oid) } == 0 {
             return 1;
         }

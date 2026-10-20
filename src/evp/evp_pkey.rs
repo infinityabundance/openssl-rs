@@ -43,8 +43,9 @@ use crate::evp::pkey::{
 };
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x509_att::{
     X509at_add1_attr, X509at_add1_attr_by_NID, X509at_add1_attr_by_OBJ, X509at_add1_attr_by_txt,
     X509at_delete_attr, X509at_get_attr, X509at_get_attr_by_NID, X509at_get_attr_by_OBJ,
@@ -210,12 +211,24 @@ pub(crate) unsafe fn ossl_evp_pkey2pkcs8(pkey: *const EvpPkey) -> *mut Pkcs8Priv
             unsafe { OSSL_ENCODER_CTX_free(ctx) };
             return ptr::null_mut();
         }
-        let pp: *const c_uchar = der;
+        // SAFETY: `der` is the block `OSSL_ENCODER_to_data` allocated in full and `derlen`
+        // describes it; this frame owns it exclusively until the local drops below. The block was
+        // the encoder BIO's `BUF_MEM` data (`max >= length == derlen`), so cleansing `derlen`
+        // bytes stays inside the allocation.
+        //
+        // Divergence (§17): the authority plain-frees this private-key encoding at `(NULL, 0)`.
+        // This crate cleanses the same DER extent before release, because the PKCS#8 private-key
+        // DER is secret-bearing (§5); the release coordinates are unchanged.
+        let der_owned = unsafe { OwnedBuf::adopt_cleansed(der, derlen, SeamFile::NULL, 0) };
+        let pp: *const c_uchar = der_owned
+            .as_ref()
+            .map_or(ptr::null(), |buf| buf.as_ptr().cast_const());
         let mut pp_mut = pp;
         // SAFETY: `pp_mut` is a readable cursor and `derlen` describes it.
         p8 = unsafe { d2i_PKCS8_PRIV_KEY_INFO(ptr::null_mut(), &raw mut pp_mut, derlen as c_long) };
-        // SAFETY: `der` is the buffer the encoder allocated.
-        unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+        // The authority releases the encoder's DER at its own `(NULL, 0)` site, before the
+        // `p8` null check; dropping the owner here keeps that order.
+        drop(der_owned);
         if p8.is_null() {
             // SAFETY: `ctx` is live.
             unsafe { OSSL_ENCODER_CTX_free(ctx) };
@@ -320,7 +333,16 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
         return ptr::null_mut();
     }
 
-    let mut p8_data: *const c_uchar = encoded_data;
+    // SAFETY: `encoded_data` is the block `i2d_PKCS8_PRIV_KEY_INFO` allocated in full,
+    // `encoded_len` is its exact extent (the authority's own cleansing length), and this frame
+    // owns it exclusively.
+    let Some(encoded) = (unsafe {
+        OwnedBuf::adopt_cleansed(encoded_data, encoded_len as usize, SeamFile::NULL, 0)
+    }) else {
+        return ptr::null_mut();
+    };
+
+    let mut p8_data: *const c_uchar = encoded.as_ptr().cast_const();
     let mut len: usize = encoded_len as usize;
     let selection = EVP_PKEY_KEYPAIR | EVP_PKEY_KEY_PARAMETERS;
     // SAFETY: `pkey` is this frame's slot; the two strings are live and NUL-terminated.
@@ -365,15 +387,9 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
         pkey = unsafe { evp_pkcs82pkey_legacy(p8, libctx, propq) };
     }
 
-    // SAFETY: `encoded_data` is the buffer `i2d_PKCS8_PRIV_KEY_INFO` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            encoded_data.cast::<c_void>(),
-            encoded_len as usize,
-            ptr::null(),
-            0,
-        )
-    };
+    // The authority's cleansing release of the private key DER at its own `(NULL, 0)` site,
+    // before the decoder context is released; `Drop` is that release.
+    drop(encoded);
     // SAFETY: `dctx` is NULL or live.
     unsafe { OSSL_DECODER_CTX_free(dctx) };
     pkey

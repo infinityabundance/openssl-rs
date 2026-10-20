@@ -54,14 +54,23 @@ use crate::runtime::err::err_reasons::{
     X509V3_R_USER_TOO_LONG,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_sxnet;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_MULTILINE};
 use crate::x509::v3_utl::{i2s_ASN1_INTEGER, s2i_ASN1_INTEGER};
 
 /// `OPENSSL_FILE` for this unit's `OPENSSL_free` expansions — `crypto/x509/v3_sxnet.c`.
 const FILE: &core::ffi::CStr = c"crypto/x509/v3_sxnet.c";
+/// `sxnet_i2r`'s `OPENSSL_free(tmp)` — `crypto/x509/v3_sxnet.c:84`.
+const LINE_FREE_TMP: c_int = 84;
+
+// An `i2s_ASN1_INTEGER` result owned by the frame that received it (`OwnedStr`).
+//
+// `i2s_ASN1_INTEGER` answers a NUL-terminated `OPENSSL_malloc`/`OPENSSL_strdup` block; the caller
+// owns it, and the authority releases it once (`v3_sxnet.c:84`). The shared owner makes that
+// release the only one.
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -360,11 +369,17 @@ unsafe extern "C" fn sxnet_i2r(
     while i < num {
         // SAFETY: `sx->ids` is live and `i` is in bounds.
         let id = unsafe { OPENSSL_sk_value((*sx).ids, i) }.cast::<Sxnetid>();
-        // SAFETY: `id` is a live identifier; `zone` is its live integer.
-        let tmp = unsafe { i2s_ASN1_INTEGER(ptr::null_mut(), (*id).zone) };
-        if tmp.is_null() {
+        // SAFETY: `id` is a live identifier; `zone` is its live integer; the result is the
+        // helper's exclusively owned seam block (or NULL).
+        let Some(tmp) = (unsafe {
+            OwnedStr::adopt(
+                i2s_ASN1_INTEGER(ptr::null_mut(), (*id).zone),
+                SeamFile::new(FILE),
+                LINE_FREE_TMP,
+            )
+        }) else {
             return 0;
-        }
+        };
         // SAFETY: `out` is a live BIO; `tmp` is NUL-terminated.
         unsafe {
             BIO_printf(
@@ -372,11 +387,10 @@ unsafe extern "C" fn sxnet_i2r(
                 c"\n%*sZone: %s, User: ".as_ptr(),
                 indent,
                 c"".as_ptr(),
-                tmp,
+                tmp.as_ptr(),
             )
         };
-        // SAFETY: `tmp` is this call's own, from `i2s_ASN1_INTEGER`.
-        unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 84) };
+        drop(tmp);
         // SAFETY: `out` is live; `id->user` is its live string.
         unsafe { ASN1_STRING_print(out, (*id).user) };
         i += 1;

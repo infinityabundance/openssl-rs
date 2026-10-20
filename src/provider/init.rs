@@ -53,7 +53,9 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedStr;
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
 use crate::context::dispatch::OsslDispatch;
@@ -67,11 +69,13 @@ use crate::runtime::defaults::ossl_get_modulesdir;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data, ERR_load_strings};
 use crate::runtime::getenv::ossl_safe_getenv;
-use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_strdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::thread::{CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_core.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/provider_core.c");
 
 // The provider-side dispatch ids `provider_init` looks for, from
 // `include/openssl/core_dispatch.h`'s 1024-series. Read from the header rather than derived
@@ -141,7 +145,9 @@ type GetReasonStringsFn = unsafe extern "C" fn(provctx: *mut c_void) -> *const O
 /// [`raise_name_data`] builds the authority's `"name=%s"` shape.
 ///
 /// # Safety
-/// `prov` must be a live, not-yet-initialised provider.
+/// `prov` must be live, not-yet-initialised, and not reachable from another thread for the
+/// duration: the initialisation flag is tested and set without a lock here, exactly as the
+/// authority's is, because its caller initialises a provider before publishing it.
 pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     // The authority's `ossl_assert(!prov->flag_initialized)`. `NDEBUG` is defined in this
     // build, so the macro is `(x) != 0` and this is the `if` it expands to.
@@ -170,8 +176,6 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             // SAFETY: `prov` is live, so the field write is to owned storage.
             unsafe { (*prov).module = dso };
 
-            let mut allocated_load_dir: *mut c_char = ptr::null_mut();
-            let mut load_dir: *const c_char = ptr::null();
             // SAFETY: `prov` is live, so `libctx` is the context it was constructed against.
             let libctx = unsafe { (*prov).libctx };
             // SAFETY: `libctx` is NULL or live.
@@ -179,25 +183,30 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             if store.is_null() {
                 return 0;
             }
-            // SAFETY: `store` is live, so `default_path_lock` was created with it.
-            unsafe {
+            // SAFETY: `store` is live, so `default_path_lock` was created with it; `dup` is this
+            // call's fresh exclusive block from the seam.
+            let (_allocated_load_dir, mut load_dir) = unsafe {
                 if CRYPTO_THREAD_read_lock((*store).default_path_lock) == 0 {
                     return 0;
                 }
                 if (*store).default_path.is_null() {
                     CRYPTO_THREAD_unlock((*store).default_path_lock);
+                    (None, ptr::null())
                 } else {
                     // The duplicate is made **before** the unlock so the lock covers the read
-                    // of the string, and released on every failure path below.
-                    allocated_load_dir =
-                        CRYPTO_strdup((*store).default_path, FILE, LINE_LOAD_DIR_DUP);
+                    // of the string, and released by the owner on every path below.
+                    let dup = CRYPTO_strdup((*store).default_path, FILE, LINE_LOAD_DIR_DUP);
                     CRYPTO_THREAD_unlock((*store).default_path_lock);
-                    if allocated_load_dir.is_null() {
+                    if dup.is_null() {
                         return 0;
                     }
-                    load_dir = allocated_load_dir;
+                    let owned = OwnedStr::adopt(dup, FILE_SEAM, LINE_LOAD_DIR_FREE);
+                    let ptr = owned
+                        .as_ref()
+                        .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
+                    (owned, ptr)
                 }
-            }
+            };
             if load_dir.is_null() {
                 // The *secure* variant: ignored for a set-user-ID process.
                 // SAFETY: the literal is NUL-terminated.
@@ -222,53 +231,58 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             }
 
             // SAFETY: `prov` is live.
-            let mut module_path: *const c_char = unsafe { (*prov).path };
-            let mut allocated_path: *mut c_char = ptr::null_mut();
-            if module_path.is_null() {
+            let module_path: *const c_char = unsafe { (*prov).path };
+            let (_allocated_path, module_path) = if module_path.is_null() {
                 // `provider_core.c:1009` passes the provider's **name**, not NULL: the DSO's own
                 // `filename` is unset for a provider constructed by name, so a NULL here would
                 // raise `DSO_R_NO_FILENAME` and the module could never load.
                 // SAFETY: `dso` is live and `name` is the provider's NUL-terminated name; the
-                // answer is a fresh allocation.
-                allocated_path = unsafe { DSO_convert_filename(dso, (*prov).name) };
-                module_path = allocated_path;
-            }
-            let mut merged_path: *mut c_char = ptr::null_mut();
+                // answer is a fresh allocation, adopted by the handle whose `Drop` is its single
+                // release at the authority's own free site.
+                let owned = unsafe {
+                    let path = DSO_convert_filename(dso, (*prov).name);
+                    OwnedStr::adopt(path, FILE_SEAM, LINE_ALLOCATED_PATH_FREE)
+                };
+                let ptr = owned
+                    .as_ref()
+                    .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
+                (owned, ptr)
+            } else {
+                (None, module_path)
+            };
+            let mut merged_path: Option<OwnedStr> = None;
             if !module_path.is_null() {
                 // SAFETY: both specs are NULL or NUL-terminated; the answer is a fresh
                 // allocation.
-                merged_path = unsafe { DSO_merge(dso, module_path, load_dir) };
+                let merged = unsafe { DSO_merge(dso, module_path, load_dir) };
+                // SAFETY: `merged` is this call's fresh exclusive block from the seam; the
+                // handle's `Drop` is its single release at the authority's own free site.
+                merged_path = unsafe { OwnedStr::adopt(merged, FILE_SEAM, LINE_MERGED_PATH_FREE) };
             }
+            let merged_ptr = merged_path
+                .as_ref()
+                .map_or(ptr::null(), |s| s.as_ptr() as *const c_char);
 
-            // SAFETY: `merged_path` is NULL or NUL-terminated; the load is the DSO layer's.
-            let loaded = unsafe { DSO_load(dso, merged_path, ptr::null_mut(), 0) };
-            if merged_path.is_null() || loaded.is_null() {
+            // The authority short-circuits on a NULL merge result (`merged_path == NULL ||`)
+            // and never calls `DSO_load` in that case. Calling it with a NULL filename would
+            // raise `DSO_R_NO_FILENAME` on the error queue, which the authority does not.
+            let loaded = if merged_ptr.is_null() {
+                ptr::null_mut()
+            } else {
+                // SAFETY: `merged_ptr` is NUL-terminated; the load is the DSO layer's.
+                unsafe { DSO_load(dso, merged_ptr, ptr::null_mut(), 0) }
+            };
+            if loaded.is_null() {
                 // SAFETY: `dso` is live and holds the only reference to itself.
                 unsafe { DSO_free(dso) };
                 // SAFETY: `prov` is live.
                 unsafe { (*prov).module = ptr::null_mut() };
             }
 
-            // SAFETY: each pointer is NULL or one of this function's own allocations.
-            unsafe {
-                if !merged_path.is_null() {
-                    CRYPTO_free(merged_path.cast::<c_void>(), FILE, LINE_MERGED_PATH_FREE);
-                }
-                if !allocated_path.is_null() {
-                    CRYPTO_free(
-                        allocated_path.cast::<c_void>(),
-                        FILE,
-                        LINE_ALLOCATED_PATH_FREE,
-                    );
-                }
-                if !allocated_load_dir.is_null() {
-                    CRYPTO_free(
-                        allocated_load_dir.cast::<c_void>(),
-                        FILE,
-                        LINE_LOAD_DIR_FREE,
-                    );
-                }
-            }
+            // The authority's three `OPENSSL_free` calls are now the owners' `Drop` at the end of
+            // this block, in the same order: `merged_path` (1021), `allocated_path` (1022) and
+            // `allocated_load_dir` (1023). Rust drops locals in reverse declaration order, so no
+            // release moved relative to the authority's.
         }
 
         // SAFETY: `prov` is live.
@@ -339,7 +353,11 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     if !provider_dispatch.is_null() {
         let mut d = provider_dispatch;
         // SAFETY: the walk stops at the `function_id == 0` terminator, which every provider
-        // table ends with; each entry read is within the provider's own array.
+        // table ends with -- a provider ABI obligation this side cannot verify, exactly as the
+        // authority's `for (; provider_dispatch->function_id != 0; ...)` cannot. Each entry read
+        // is within the provider's own array. An entry that publishes an id with a NULL
+        // `function` is stored as the raw NULL for the eight `void *` fields; the one typed
+        // field (reason strings) is skipped, because a NULL Rust `fn` value is not valid.
         unsafe {
             while (*d).function_id != 0 {
                 match (*d).function_id {
@@ -351,7 +369,12 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
                     FUNC_PROVIDER_GET_CAPABILITIES => (*prov).get_capabilities = (*d).function,
                     FUNC_PROVIDER_QUERY_OPERATION => (*prov).query_operation = (*d).function,
                     FUNC_PROVIDER_UNQUERY_OPERATION => (*prov).unquery_operation = (*d).function,
-                    FUNC_PROVIDER_GET_REASON_STRINGS => {
+                    FUNC_PROVIDER_GET_REASON_STRINGS if !(*d).function.is_null() => {
+                        // The authority's `OSSL_FUNC_provider_get_reason_strings` macro
+                        // answers NULL for an entry whose `function` is NULL, and its caller
+                        // then skips the table. Forming a Rust `fn` value from NULL is not a
+                        // valid value, so the guard keeps a provider's NULL entry the no-op
+                        // it is in C.
                         get_reason_strings = Some(core::mem::transmute::<
                             *mut c_void,
                             GetReasonStringsFn,
@@ -367,6 +390,10 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
     if let Some(get_reason_strings) = get_reason_strings {
         // SAFETY: `prov` is live and `provctx` is what the provider just returned.
         let table = unsafe { get_reason_strings((*prov).provctx) };
+        // The authority dereferences the answer without a NULL test (`reasonstrings[cnt]`),
+        // which is undefined behaviour for a provider that returns NULL. Refusing instead is
+        // a deliberate safety improvement over the authority, not a behaviour parity claim:
+        // the table is simply not installed.
         if !table.is_null() {
             // Count to the terminator first, refusing an entry that already carries a library
             // number -- the copy below would otherwise double-prefix it.
@@ -383,33 +410,47 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             cnt += 1; // One for the terminating item.
 
             // One extra entry for the library name itself.
-            // SAFETY: a fresh zeroed array of `cnt + 1` entries.
-            let strings = CRYPTO_calloc(
-                cnt + 1,
-                core::mem::size_of::<ErrStringData>(),
-                FILE,
-                LINE_REASON_STRINGS,
-            )
-            .cast::<ErrStringData>();
-            if strings.is_null() {
+            let Some(entries) = cnt.checked_add(1) else {
                 return 0;
-            }
-            // SAFETY: `strings` has `cnt + 1` writable entries; each `string` borrows from the
+            };
+            // SAFETY: a fresh zeroed array of `entries` entries; `CRYPTO_calloc` checks the
+            // element-count product and raises the authority's integer-overflow error.
+            let strings = unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_calloc(
+                    entries,
+                    core::mem::size_of::<ErrStringData>(),
+                    FILE,
+                    LINE_REASON_STRINGS,
+                )
+            };
+            // SAFETY: `strings` is this call's fresh exclusive block from the seam; the handle's
+            // `Drop` is its single release at the authority's own free site.
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL answers `None`.
+            let Some(strings) = (unsafe {
+                OwnedBuf::adopt_plain(strings.cast::<c_uchar>(), FILE_SEAM, LINE_REASON_STRINGS)
+            }) else {
+                return 0;
+            };
+            let table_out = strings.as_ptr().cast::<ErrStringData>();
+            // SAFETY: `table_out` has `entries` writable entries; each `string` borrows from the
             // provider's own table, which outlives the provider because the provider owns it.
             unsafe {
                 // SAFETY: `prov` is live.
                 let error_lib = (*prov).error_lib;
-                (*strings).error = err_pack_lib(error_lib);
-                (*strings).string = (*prov).name;
+                (*table_out).error = err_pack_lib(error_lib);
+                (*table_out).string = (*prov).name;
                 let mut i = 1usize;
                 while i <= cnt {
-                    (*strings.add(i)).error = (*table.add(i - 1)).id as c_ulong;
-                    (*strings.add(i)).string = (*table.add(i - 1)).ptr;
+                    (*table_out.add(i)).error = (*table.add(i - 1)).id as c_ulong;
+                    (*table_out.add(i)).string = (*table.add(i - 1)).ptr;
                     i += 1;
                 }
-                // SAFETY: `prov` is live and the array is the one just built.
-                (*prov).error_strings = strings.cast::<c_void>();
-                ERR_load_strings(error_lib, strings.cast::<c_void>());
+                // SAFETY: `prov` is live and the array is the one just built; the provider takes
+                // ownership of it here, exactly as the authority stores the pointer before
+                // `ERR_load_strings`.
+                (*prov).error_strings = strings.into_raw().cast::<c_void>();
+                ERR_load_strings(error_lib, (*prov).error_strings);
             }
         }
     }
@@ -475,3 +516,61 @@ const LINE_ALLOCATED_PATH_FREE: c_int = 1022;
 const LINE_LOAD_DIR_FREE: c_int = 1023;
 /// `provider_init`'s `OPENSSL_calloc(cnt + 1, sizeof(ERR_STRING_DATA))`.
 const LINE_REASON_STRINGS: c_int = 1121;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provider::{ossl_provider_free, ossl_provider_new};
+
+    /// A provider table that publishes `get_reason_strings` with a NULL `function`. The
+    /// authority's `OSSL_FUNC_provider_get_reason_strings` macro answers NULL for exactly this
+    /// entry and `provider_init`'s `if (p_get_reason_strings != NULL)` skips the table, so the
+    /// provider still initialises. This is the negative control for the typed-field guard in
+    /// the walk: without it the NULL entry became an invalid Rust `fn` value and was called.
+    static NULL_REASON_DISPATCH: [OsslDispatch; 2] = [
+        OsslDispatch {
+            function_id: FUNC_PROVIDER_GET_REASON_STRINGS,
+            function: ptr::null_mut(),
+        },
+        OsslDispatch {
+            function_id: 0,
+            function: ptr::null_mut(),
+        },
+    ];
+
+    unsafe extern "C" fn null_reason_init(
+        _handle: *const c_void,
+        _input: *const OsslDispatch,
+        output: *mut *const OsslDispatch,
+        provctx: *mut *mut c_void,
+    ) -> c_int {
+        // SAFETY: both out-parameters are writable per `ProviderInitFn`'s contract.
+        unsafe {
+            *output = NULL_REASON_DISPATCH.as_ptr();
+            *provctx = ptr::null_mut();
+        }
+        1
+    }
+
+    #[test]
+    fn a_null_reason_strings_entry_is_ignored_like_the_authority() {
+        const NAME: &core::ffi::CStr = c"init-null-reason-strings";
+        // SAFETY: a NULL context is the default one and every pointer is a literal or a value
+        // this test owns.
+        unsafe {
+            let prov = ossl_provider_new(
+                ptr::null_mut(),
+                NAME.as_ptr(),
+                Some(null_reason_init),
+                ptr::null_mut(),
+                0,
+            );
+            assert!(!prov.is_null(), "the provider must construct");
+            assert_eq!(provider_init(prov), 1, "a NULL entry is not a failure");
+            assert_ne!((*prov).flags & FLAG_INITIALIZED, 0);
+            assert_eq!((*prov).dispatch, NULL_REASON_DISPATCH.as_ptr());
+            assert!((*prov).teardown.is_null(), "NULL is stored as absent");
+            ossl_provider_free(prov);
+        }
+    }
+}

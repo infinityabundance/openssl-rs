@@ -476,3 +476,22 @@ fn the_keymgmt_selection_bits_are_the_headers_and_select_as_the_header_says() {
         OSSL_LIB_CTX_free(libctx);
     }
 }
+
+/// The compressed address's `set_type_and_clear` clears only the twelve bytes that
+/// follow the type field, so the ten bytes past the 22-byte blob are untouched.
+/// Deriving the length from the compressed offsets would clear 22 bytes and run to
+/// the end of the 32-byte backing array; this test pins the authority's extent.
+#[test]
+fn the_compressed_address_clear_stays_inside_its_blob() {
+    // SAFETY: `ossl_slh_get_adrs_fn` reads only its selector and answers a
+    // `'static` table; every writer below is bounded by the 32-byte `SlhAdrs`.
+    unsafe {
+        let f = super::adrs::ossl_slh_get_adrs_fn(1);
+        assert!(!f.is_null(), "the compressed method table");
+        let mut adrs = [0xAAu8; super::adrs::SLH_ADRS_SIZE_MAX];
+        ((*f).set_type_and_clear)(adrs.as_mut_ptr(), 3);
+        assert_eq!(adrs[9], 3, "the type byte");
+        assert_eq!(&adrs[10..22], &[0u8; 12], "the cleared tail of the blob");
+        assert_eq!(&adrs[22..], &[0xAAu8; 10], "past the compressed blob");
+    }
+}

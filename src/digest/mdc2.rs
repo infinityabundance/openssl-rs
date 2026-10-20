@@ -142,7 +142,9 @@ pub unsafe extern "C" fn MDC2_Init(c: *mut Mdc2Ctx) -> c_int {
 /// `crypto/mdc2/mdc2dgst.c:45-75`.
 ///
 /// # Safety
-/// `c` a live context; `in` readable for `len` bytes.
+/// `c` is a context initialised by [`MDC2_Init`] (or by this function's own predecessor) and
+/// not modified through its public fields: `num < MDC2_BLOCK`. `in` is readable for `len`
+/// bytes. A context whose `num` was written externally is C-invalid and is not covered.
 #[no_mangle]
 pub unsafe extern "C" fn MDC2_Update(c: *mut Mdc2Ctx, input: *const u8, len: usize) -> c_int {
     // SAFETY: the caller's contract.
@@ -180,7 +182,10 @@ pub unsafe extern "C" fn MDC2_Update(c: *mut Mdc2Ctx, input: *const u8, len: usi
 /// `int MDC2_Final(unsigned char *md, MDC2_CTX *c)` — `crypto/mdc2/mdc2dgst.c:116-132`.
 ///
 /// # Safety
-/// `md` writable for sixteen bytes; `c` a live context.
+/// `md` writable for sixteen bytes; `c` is a context initialised by [`MDC2_Init`] and updated
+/// only through [`MDC2_Update`], so `num < MDC2_BLOCK`. (A `num` of `MDC2_BLOCK` would make the
+/// `data[i] = 0x80` padding write one byte past the block; the field is public in the C header,
+/// so the bound is a caller obligation rather than a type invariant.)
 #[no_mangle]
 pub unsafe extern "C" fn MDC2_Final(md: *mut u8, c: *mut Mdc2Ctx) -> c_int {
     // SAFETY: the caller's contract.

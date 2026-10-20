@@ -1,0 +1,159 @@
+{
+  "receipt": "boundary-sweep-B40",
+  "date": "2026-10-20",
+  "mechanism": "BIO",
+  "subphase": "BIO fd-ownership cluster: connect retry advance descriptor invalidation",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "a5361b0d9",
+    "base_subject": "Merge stage/p25/distance: recomputed campaign measurement",
+    "source_commit": "7b1b712df",
+    "committed": true,
+    "changed_files": 2,
+    "diffstat": "src/runtime/bio/bss_conn.rs: +139/-3 (fix, regression probe, later probe hardening +12/-1); scripts/adv-probe.sh: 1 appended entry",
+    "scope": "src/runtime/bio/bss_conn.rs (connect state machine, conn_close_socket, conn_free, BIO_new_connect/BIO_new_udp/BIO_new_dgram), cross-checked against bss_dgram.rs and bss_acpt.rs close paths"
+  },
+  "stop_status": "NO_STOP_DEFECT REMAINING IN THE REVIEWED SCOPE. One genuine fd double-close was found and repaired; the independent non-author reviewer reproduced the defect, ACCEPTed the repair, and the probe was then hardened on the reviewer's residual so that it proves closure rather than mere slot invalidation. BIO remains CONTRACTED at mechanism level.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change. No exported symbol, extern \"C\" signature or #[repr(C)] layout changed.",
+    "external_contracts": [
+      "A BIO whose num is INVALID_SOCKET must not be used as an fd by any path.",
+      "BIO_free must close an owned descriptor at most once for the BIO's lifetime.",
+      "bss_conn.c:170-275 and 280-360 close b->num on retry advance and leave the stale number; the authority's own conn_close_socket does invalidate. This repair restores the helper's invariant."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B40-BIO-4",
+      "file": "src/runtime/bio/bss_conn.rs:552,614 (pre-fix) -> both routed through conn_close_socket",
+      "operation": "connect retry advance closes the current socket",
+      "before": "Both advance sites called BIO_closesocket((*b).num) and left the dead descriptor number published in the BIO. A later BIO_free, or an info callback that stops the state machine at that point, closed the same number again -- an fd double close whose second victim may be an unrelated object's descriptor.",
+      "after": "Both sites call conn_close_socket, which closes iff num != INVALID_SOCKET and then sets it. Republish happens only through CREATE_SOCKET, so a second close of the same live fd is not reachable.",
+      "mechanism": "ELIMINATED: a BIO holding a descriptor it no longer owns is no longer reachable from the retry path.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer, mutation control; probe hardened to assert fcntl(F_GETFD) == -1)"
+    }
+  ],
+  "divergence": {
+    "class": "documented OpenSSL behaviour that is itself unsafe is not reproduced (AGENTS.md section 17)",
+    "authority_behaviour": "The authority leaves the stale descriptor number after both retry advances.",
+    "our_behaviour": "The slot is invalidated together with the close.",
+    "observable_delta": "While an info callback halts the machine immediately after an advance, BIO_get_fd and BIO_CTRL_GET_RPOLL/WPOLL_DESCRIPTOR report -1 instead of a dead number, and a re-entrant BIO_free no longer touches it.",
+    "compatibility_consequence": "No change to return values, error queue, or syscalls on any non-halted path. The halted intermediate state reports the only value that is true: the BIO no longer owns a descriptor.",
+    "status": "ACCEPTED DIVERGENCE, recorded here and in code at both call sites"
+  },
+  "reviewer": {
+    "independent": true,
+    "author": "conversion subagent",
+    "reviewer": "separate adversarial subagent (did not write the change)",
+    "verdict": "ACCEPT",
+    "strongest_reason": "Both advance sites close-and-invalidate exactly once through the idempotent helper, and the negative control reproduces the pre-fix double close deterministically (BIO_free closing a replacement descriptor) while the fixed tree passes.",
+    "signed_scope": "Connect-BIO descriptor close/invalidate invariant on blocking and nonblocking advance paths. BATCH evidence. Not a BIO-family discharge.",
+    "residual_raised_and_fixed": "The probe could not distinguish 'closed and invalidated' from 'invalidated without close'; it now asserts fcntl(F_GETFD) == -1 immediately after the advance, before any descriptor reuse."
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "exit 0 (author, reviewer, and after probe hardening)"
+    },
+    {
+      "id": "FAST-FOCUSED",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib bio -- --test-threads=4",
+      "result": "PASS",
+      "observed": "104 passed; 0 failed; 6 ignored"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "exit 0; no warnings"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1710 passed; 0 failed; 36 ignored (1746 run), 91.83 s"
+    },
+    {
+      "id": "PROBE-ISOLATED",
+      "instrument": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact --test-threads=1 runtime::bio::bss_conn::tests::retry_advance_invalidates_the_closed_descriptor",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed; 1745 filtered"
+    },
+    {
+      "id": "NEGATIVE-CONTROL-MUTATION",
+      "instrument": "restore BIO_closesocket((*b).num) at one advance site, rebuild, run the probe",
+      "result": "PASS (control fires)",
+      "observed": "probe FAILED at bss_conn.rs:1473 'BIO_free closed a descriptor the retry advance had already released' (fcntl left/right -1); restored, git status clean, HEAD unchanged. Re-demonstrated after probe hardening: FAILED exit 101."
+    },
+    {
+      "id": "RAW-CLOSE-SWEEP",
+      "instrument": "rg -n 'close_socket|libc::close|closesocket' on bss_conn/bss_dgram/bss_acpt",
+      "result": "PASS",
+      "observed": "bss_conn raw close only inside conn_close_socket (line 302); bss_dgram only inside dgram_clear, which clears init so a later destroy cannot re-close; bss_acpt closes only a not-yet-owned local. No stray close of a BIO-owned fd."
+    },
+    {
+      "id": "IDEMPOTENCE",
+      "instrument": "inspection of conn_close_socket",
+      "result": "PASS",
+      "observed": "if num != INVALID_SOCKET { shutdown if state==OK; close; num = INVALID_SOCKET }. A second call performs no syscall. The shutdown arm is unreachable from the advances (state is CONNECT/BLOCKED_CONNECT, never OK)."
+    },
+    {
+      "id": "LEAK-DIRECTION",
+      "instrument": "enumerate every INVALID_SOCKET assignment in bss_conn",
+      "result": "PASS",
+      "observed": "two assignments: conn_new (no fd yet) and immediately after BIO_closesocket of the previous value. No invalidate-without-close path."
+    }
+  ],
+  "not_run": [
+    {
+      "check": "Miri on this path",
+      "reason": "NOT_RUN as a soundness check: Miri aborts with 'unsupported operation: getaddrinfo: flag hints are not supported' (addr_info.rs:436), so the connect path cannot execute under it."
+    },
+    {
+      "check": "ASan",
+      "reason": "NOT_RUN: the venue's /asan/bin/asan-cc wrapper is absent (exit 101), and ASan does not instrument descriptor ownership, so it is the wrong instrument for this defect class."
+    },
+    {
+      "check": "BOUNDARY-level independent caller/dependency-closure audit of all Bio users",
+      "reason": "NOT_RUN: the reviewer audited the three files and cross-checked the acpt cleanup; a full closure audit is required before BIO mechanism discharge."
+    },
+    {
+      "check": "callback reentrancy edge (info callback re-entering BIO_free)",
+      "reason": "NOT_RUN: pre-existing retained obligation, not introduced by this change."
+    },
+    {
+      "check": "serial full suite",
+      "reason": "NOT_RUN at this level; scheduled for the next BATCH checkpoint."
+    }
+  ],
+  "obligations": {
+    "discharged_at_boundary_scope": [
+      "retry advance cannot leave a dead descriptor published (B40-BIO-4)",
+      "probe proves genuine closure (fcntl F_GETFD == -1), not only slot invalidation"
+    ],
+    "retained": [
+      "re-entrant BIO_free from an info callback remains an open reentrancy edge",
+      "BIO mechanism still lacks family-wide closure audit, serial suite and full probe suite",
+      "BIO_new_udp has no symbol in authority 3.6.4; not applicable and not claimed"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BOUNDARY_INDEPENDENTLY_CHECKED",
+    "independently_checked": true,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "The connect-BIO descriptor invariant is independently checked. BIO remains CONTRACTED: the redis closure stays BLOCKED because BIO needs family-wide closure evidence and RUNTIME_ALLOC_OWNERSHIP is still UNSAFE_OPEN."
+  },
+  "non_claims": [
+    "Not a BIO mechanism discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "Not evidence for the datagram or datagram-pair paths beyond the shared BIO_new/BIO_free and clear paths that were inspected.",
+    "Miri and ASan did not run on this path; neither absence is a pass."
+  ]
+}

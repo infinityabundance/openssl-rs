@@ -1,0 +1,1338 @@
+[
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/bn/bignum.rs",
+    "line": 239,
+    "symbol": "dup_cstring",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(bytes.as_ptr(), p.cast::<u8>(), bytes.len()); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/bn/intern.rs",
+    "line": 347,
+    "symbol": "bn_copy_words",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(src.d.as_ptr(), out, src.d.len()) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/dh/mod.rs",
+    "line": 528,
+    "symbol": "DH_meth_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(dhm, ret.as_ptr(), 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/dsa/mod.rs",
+    "line": 533,
+    "symbol": "DSA_meth_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(dsam, ret.as_ptr(), 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ec/ecx_backend.rs",
+    "line": 365,
+    "symbol": "ossl_ecx_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ec/ecx_backend.rs",
+    "line": 379,
+    "symbol": "ossl_ecx_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*key).privkey, (*ret).privkey, (*ret).keylen); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ec/lib.rs",
+    "line": 604,
+    "symbol": "EC_GROUP_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*src).seed, (*dest).seed, (*src).seed_len); identity guard is present in the function, verify it covers this copy and that no partially-overlapping alias reaches it."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/cipher.rs",
+    "line": 1490,
+    "symbol": "EVP_CIPHER_meth_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/cipher_ctx.rs",
+    "line": 1095,
+    "symbol": "EVP_CIPHER_CTX_copy",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(in_, out, 1) }; exported/caller-supplied copy API with no identity guard. A C caller may pass dst==src (a legal self-assignment in the authority for some of these). Evidence needed: confirm the authority semantics for dst==src and add the same identity short-circuit used by EVP_PKEY_meth_copy; Miri control with equal pointers."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/cipher_ctx.rs",
+    "line": 1127,
+    "symbol": "EVP_CIPHER_CTX_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(in_, out, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/cipher_ctx.rs",
+    "line": 1141,
+    "symbol": "EVP_CIPHER_CTX_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(in_data, fresh, ctx_size as usize) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/digest.rs",
+    "line": 1245,
+    "symbol": "EVP_MD_meth_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/digest.rs",
+    "line": 2880,
+    "symbol": "EVP_MD_CTX_copy_ex",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(in_, out, 1); identity guard is present in the function, verify it covers this copy and that no partially-overlapping alias reaches it."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/digest.rs",
+    "line": 3005,
+    "symbol": "EVP_MD_CTX_copy_ex",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(in_, out, 1); identity guard is present in the function, verify it covers this copy and that no partially-overlapping alias reaches it."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/digest.rs",
+    "line": 3097,
+    "symbol": "evp_md_ctx_copy_legacy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(in_, out, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/digest.rs",
+    "line": 3164,
+    "symbol": "evp_md_ctx_copy_legacy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/encode.rs",
+    "line": 295,
+    "symbol": "EVP_ENCODE_CTX_copy",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(sctx, dctx, 1) }; exported/caller-supplied copy API with no identity guard. A C caller may pass dst==src (a legal self-assignment in the authority for some of these). Evidence needed: confirm the authority semantics for dst==src and add the same identity short-circuit used by EVP_PKEY_meth_copy; Miri control with equal pointers."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/kdf.rs",
+    "line": 908,
+    "symbol": "EVP_KDF_CTX_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/mac.rs",
+    "line": 940,
+    "symbol": "EVP_MAC_CTX_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/pkey_asn1.rs",
+    "line": 665,
+    "symbol": "EVP_PKEY_asn1_copy",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; exported/caller-supplied copy API with no identity guard. A C caller may pass dst==src (a legal self-assignment in the authority for some of these). Evidence needed: confirm the authority semantics for dst==src and add the same identity short-circuit used by EVP_PKEY_meth_copy; Miri control with equal pointers."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/evp/pkey_ctx.rs",
+    "line": 2177,
+    "symbol": "EVP_PKEY_meth_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; identity guard is present in the function, verify it covers this copy and that no partially-overlapping alias reaches it."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/hpke/mod.rs",
+    "line": 3338,
+    "symbol": "c_memdup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(p, out, len) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/hpke/mod.rs",
+    "line": 3358,
+    "symbol": "c_strdup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(s, out, len); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/mac/cmac.rs",
+    "line": 314,
+    "symbol": "CMAC_CTX_copy",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*in_).k1.as_ptr(), (*out).k1.as_mut_ptr(), bl as usize); exported/caller-supplied copy API with no identity guard. A C caller may pass dst==src (a legal self-assignment in the authority for some of these). Evidence needed: confirm the authority semantics for dst==src and add the same identity short-circuit used by EVP_PKEY_meth_copy; Miri control with equal pointers."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/mac/cmac.rs",
+    "line": 315,
+    "symbol": "CMAC_CTX_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*in_).k2.as_ptr(), (*out).k2.as_mut_ptr(), bl as usize); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/mac/cmac.rs",
+    "line": 316,
+    "symbol": "CMAC_CTX_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*in_).tbl.as_ptr(), (*out).tbl.as_mut_ptr(), bl as usize); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/mac/cmac.rs",
+    "line": 317,
+    "symbol": "CMAC_CTX_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/encoders.rs",
+    "line": 291,
+    "symbol": "packet_copy_bytes",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dest, len) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/key.rs",
+    "line": 669,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/key.rs",
+    "line": 674,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/key.rs",
+    "line": 710,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/key.rs",
+    "line": 730,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/key.rs",
+    "line": 747,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_dsa/poly.rs",
+    "line": 363,
+    "symbol": "vector_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(src.poly, dst.poly, src.num_poly); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/ml_kem/key.rs",
+    "line": 885,
+    "symbol": "ossl_ml_kem_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/modes/ocb.rs",
+    "line": 286,
+    "symbol": "CRYPTO_ocb128_copy_ctx",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); exported/caller-supplied copy API with no identity guard. A C caller may pass dst==src (a legal self-assignment in the authority for some of these). Evidence needed: confirm the authority semantics for dst==src and add the same identity short-circuit used by EVP_PKEY_meth_copy; Miri control with equal pointers."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/modes/ocb.rs",
+    "line": 303,
+    "symbol": "CRYPTO_ocb128_copy_ctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/params/dup.rs",
+    "line": 319,
+    "symbol": "ossl_param_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/params/mod.rs",
+    "line": 372,
+    "symbol": "copy_integer",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(src, dest, src_len); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/params/mod.rs",
+    "line": 389,
+    "symbol": "copy_integer",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dest, dest_len) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 11228,
+    "symbol": "copy_state",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 18793,
+    "symbol": "cast5_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(ctx.cast::<ProvCastCtx>(), ret.cast::<ProvCastCtx>(), 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 19141,
+    "symbol": "blowfish_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 19508,
+    "symbol": "idea_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(ctx.cast::<ProvIdeaCtx>(), ret.cast::<ProvIdeaCtx>(), 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 19836,
+    "symbol": "seed_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(ctx.cast::<ProvSeedCtx>(), ret.cast::<ProvSeedCtx>(), 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 20216,
+    "symbol": "rc2_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(ctx.cast::<ProvRc2Ctx>(), ret.cast::<ProvRc2Ctx>(), 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 20722,
+    "symbol": "rc4_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(ctx.cast::<ProvRc4Ctx>(), ret.cast::<ProvRc4Ctx>(), 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/cipher.rs",
+    "line": 21850,
+    "symbol": "rc4_hmac_md5_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 346,
+    "symbol": "dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, owner.ptr.as_ptr(), 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 434,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx.cast::<u8>(), outctx.cast::<u8>(), size_of::<Ctx>()) over the whole provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 620,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx.cast::<u8>(), outctx.cast::<u8>(), size_of::<ShaCtx>()) over the whole provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 907,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<Md5Sha1Ctx>()) over the whole provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 1089,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<Md5Sha1Ctx>()) over the whole provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 1263,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<MdData>()) over the whole provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/digest.rs",
+    "line": 1749,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<MdData>()) over the whole provider digest context, inside a copyctx callback (BLAKE2); this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/eddsa_sig.rs",
+    "line": 921,
+    "symbol": "eddsa_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(srcctx, dstctx, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/kdf.rs",
+    "line": 9088,
+    "symbol": "hmac_drbg_kdf_base_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*src).k.as_ptr(), (*dst).k.as_mut_ptr(), EVP_MAX_MD_SIZE); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/kdf.rs",
+    "line": 9089,
+    "symbol": "hmac_drbg_kdf_base_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*src).v.as_ptr(), (*dst).v.as_mut_ptr(), EVP_MAX_MD_SIZE); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/kdf.rs",
+    "line": 9838,
+    "symbol": "copy_block",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/legacyprov.rs",
+    "line": 237,
+    "symbol": "dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, owner.ptr.as_ptr(), 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/legacyprov.rs",
+    "line": 323,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<ctx>()) over the whole legacy-provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/legacyprov.rs",
+    "line": 521,
+    "symbol": "copyctx",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(inctx, outctx, size_of::<Mdc2Ctx>()) over the whole legacy-provider digest context, inside a copyctx callback; this is a provider DIGEST copyctx callback whose region is copied with copy_nonoverlapping, but EVP_MD_CTX_copy_ex(self,self) deliberately calls copyctx with out==in (src/evp/digest.rs:2925-2930). Evidence needed: run EVP_MD_CTX_copy_ex(ctx,ctx) on each row with a registered copyctx; Miri/ASan confirms the overlap violation; add an identity guard or use ptr::copy."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/mac.rs",
+    "line": 274,
+    "symbol": "dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, owner.ptr.as_ptr(), 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/mac.rs",
+    "line": 1932,
+    "symbol": "hmac_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping((*src).key, (*dst).key, (*src).keylen); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/mac.rs",
+    "line": 2476,
+    "symbol": "dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(...) (multiline whole-region copy); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/mac.rs",
+    "line": 3806,
+    "symbol": "kmac_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/mac.rs",
+    "line": 3811,
+    "symbol": "kmac_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/rsa_enc.rs",
+    "line": 577,
+    "symbol": "rsa_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(srcctx, dstctx, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/rsa_kem.rs",
+    "line": 228,
+    "symbol": "rsakem_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(srcctx, dstctx, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/rsa_sig.rs",
+    "line": 2190,
+    "symbol": "rsa_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(srcctx, d, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/sm2_enc.rs",
+    "line": 265,
+    "symbol": "sm2_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(srcctx, dstctx, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/provider/sm2_sig.rs",
+    "line": 613,
+    "symbol": "sm2sig_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: ptr::copy_nonoverlapping(srcctx, dstctx, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/rsa/mod.rs",
+    "line": 475,
+    "symbol": "RSA_meth_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(meth, ret, 1); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/runtime/buffer.rs",
+    "line": 370,
+    "symbol": "copy_header",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { ptr::copy_nonoverlapping(src, dst, 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/runtime/err.rs",
+    "line": 558,
+    "symbol": "dup_c",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(s, buf.as_ptr(), len); destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/runtime/obj.rs",
+    "line": 669,
+    "symbol": "dup_cstr",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(src, dst, n + 1) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/runtime/obj.rs",
+    "line": 759,
+    "symbol": "object_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(src.data, d, src.length as usize) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/slh_dsa/adrs.rs",
+    "line": 154,
+    "symbol": "slh_adrs_copy_keypair_address",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/slh_dsa/adrs.rs",
+    "line": 183,
+    "symbol": "slh_adrs_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(src, dst, SLH_ADRS_SIZE) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/slh_dsa/adrs.rs",
+    "line": 228,
+    "symbol": "slh_adrsc_copy_keypair_address",
+    "severity": "LOW",
+    "evidence_needed": "operation: core::ptr::copy_nonoverlapping(; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "1_self_aliasing_copy",
+    "file": "src/slh_dsa/adrs.rs",
+    "line": 259,
+    "symbol": "slh_adrsc_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { core::ptr::copy_nonoverlapping(src, dst, SLH_ADRSC_SIZE) }; destination is a freshly allocated block or the copy is field-wise over non-overlapping members, so a same-pointer call is not reachable through the public entry point. Evidence needed: confirm the allocation/publication path cannot hand the same pointer for both sides."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/asymcipher.rs",
+    "line": 303,
+    "symbol": "evp_asym_cipher_from_algorithm",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: (*p).prov = prov; ossl_provider_up_ref(prov) ignored. Same child-provider failure leaves a published provider pointer without a reference. Evidence needed: failure-injection through ossl_provider_up_ref_parent."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/exchange.rs",
+    "line": 351,
+    "symbol": "evp_keyexch_new",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: (*exchange).prov = prov; ossl_provider_up_ref(prov) ignored. Evidence needed: child-provider failure injection causes an unbalanced provider reference on free."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/kem.rs",
+    "line": 247,
+    "symbol": "evp_kem_new",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: (*p).prov = prov; ossl_provider_up_ref(prov) ignored. Evidence needed: child-provider failure injection and a free-path refcount negative control."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/keymgmt.rs",
+    "line": 656,
+    "symbol": "evp_keymgmt_from_algorithm",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: (*keymgmt_ptr).prov = prov; then ossl_provider_up_ref(prov) with the result ignored. ossl_provider_up_ref can fail when a child provider cannot take the parent reference, so the stored field may be released later without a held reference. Evidence needed: force child-provider parent up-ref failure and exercise keymgmt free."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/signature.rs",
+    "line": 403,
+    "symbol": "evp_signature_new",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: ossl_provider_up_ref(prov) ignored, then (*p).prov = prov. A refused provider reference is published anyway. Evidence needed: child-provider failure injection + EVP_SIGNATURE_free refcount control."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/evp/skeymgmt.rs",
+    "line": 1391,
+    "symbol": "evp_skeymgmt_fetch_from_prov/dup path",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_SKEYMGMT_up_ref(origin) ignored in the same-provider short-circuit. EVP_SKEYMGMT_up_ref is constant-1 here. Evidence needed: refcount identity and short-circuit free balance."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_dsa/key.rs",
+    "line": 768,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*src).shake128_md) ignored, then (*ret).shake128_md = (*src).shake128_md. Constant-1 ref in this crate. Evidence needed: identity of EVP_MD_up_ref and the static/fetched origin of these methods."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_dsa/key.rs",
+    "line": 769,
+    "symbol": "ossl_ml_dsa_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*src).shake256_md) ignored, then stored. Same constant-1 analysis as line 768."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_kem/key.rs",
+    "line": 904,
+    "symbol": "ossl_ml_kem_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*ret).shake128_md) ignored (field already copied from src). Constant-1 ref; retained for audit. Evidence needed: refcount identity and ownership of the source method."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_kem/key.rs",
+    "line": 905,
+    "symbol": "ossl_ml_kem_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*ret).shake256_md) ignored. Same as line 904."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_kem/key.rs",
+    "line": 906,
+    "symbol": "ossl_ml_kem_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*ret).sha3_256_md) ignored. Same as line 904."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ml_kem/key.rs",
+    "line": 907,
+    "symbol": "ossl_ml_kem_key_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_MD_up_ref((*ret).sha3_512_md) ignored. Same as line 904."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/modes/siv128.rs",
+    "line": 502,
+    "symbol": "ossl_siv128_copy_ctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: (*dest).mac = (*src).mac; then EVP_MAC_up_ref((*dest).mac); on refusal it returns 0 after publication. EVP_MAC_up_ref is constant-1 here, but the authority order is the class pattern. Evidence needed: refcount implementation identity; a failed-ref injection if it becomes fallible."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/ssl_lib.rs",
+    "line": 998,
+    "symbol": "cert_copy_security",
+    "severity": "LOW",
+    "evidence_needed": "operation: X509_up_ref(fslot.x509) ignored, then tslot.x509 = fslot.x509. X509_up_ref reports 0 only for a non-live count, but the class asks for the check. Evidence needed: ownership witness that the source certificate is live with refs >= 1."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/ssl_lib.rs",
+    "line": 1003,
+    "symbol": "cert_copy_security",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_PKEY_up_ref(...) ignored, then the key is stored. EVP_PKEY_up_ref returns a constant 1 in this crate, so no failure is representable. Evidence needed: source identity of the constant-1 implementation."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/ssl_lib.rs",
+    "line": 1050,
+    "symbol": "ssl_cert_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: X509_up_ref(cpk.x509) ignored inside the pkeys loop, then rpk.x509 = cpk.x509. Evidence needed: prove the ladder cannot publish an unowned certificate on a failed ref."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/ssl_lib.rs",
+    "line": 1054,
+    "symbol": "ssl_cert_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: EVP_PKEY_up_ref(cpk.privatekey) ignored, then stored. Constant-1 ref in this crate; retained as an ignored-result audit item."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/ssl_lib.rs",
+    "line": 1075,
+    "symbol": "ssl_cert_dup",
+    "severity": "LOW",
+    "evidence_needed": "operation: OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]) ignored, then stored. Unlike X509_up_ref this one can report 0. Evidence needed: failed-ref control through the comp-cert loop + Drop path."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 1744,
+    "symbol": "tls_process_server_certificate",
+    "severity": "LOW",
+    "evidence_needed": "operation: X509_up_ref(leaf) ignored, then (*s).peer_cert = leaf. A later verification failure returns 0 with the session holding the pointer. Evidence needed: live-certificate refcount witness and failure-path ownership review."
+  },
+  {
+    "class": "2_publication_before_acquisition",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 2394,
+    "symbol": "tls_process_server_certificate",
+    "severity": "LOW",
+    "evidence_needed": "operation: X509_up_ref(leaf) ignored, then (*s).peer_cert = leaf (second certificate path). Evidence needed: same as line 1744."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/apps/kdf.rs",
+    "line": 186,
+    "symbol": "app_params_free",
+    "severity": "LOW",
+    "evidence_needed": "operation: let entry = unsafe { &*params.add(i) }; safe fn dereferences raw parameter params without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/apps/mac.rs",
+    "line": 197,
+    "symbol": "app_params_free",
+    "severity": "LOW",
+    "evidence_needed": "operation: let entry = unsafe { &*params.add(i) }; safe fn dereferences raw parameter params without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/asn1/d2i.rs",
+    "line": 1834,
+    "symbol": "err_tail",
+    "severity": "LOW",
+    "evidence_needed": "operation: let name = unsafe { (*errtt).field_name }; safe fn dereferences raw parameter errtt without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/asn1/i2d.rs",
+    "line": 441,
+    "symbol": "aux_const_cb",
+    "severity": "LOW",
+    "evidence_needed": "operation: let aux = unsafe { &*aux }; safe fn dereferences raw parameter aux without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/cms/cms_sd.rs",
+    "line": 122,
+    "symbol": "i2d_ESS_SIGNING_CERT",
+    "severity": "LOW",
+    "evidence_needed": "operation: if unsafe { OBJ_obj2nid((*cms).content_type) } != crate::runtime::obj::NID_pkcs7_signed {; safe fn dereferences raw parameter cms without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 414,
+    "symbol": "context_init",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*ctx).lock = lock }; safe fn dereferences raw parameter ctx without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 707,
+    "symbol": "context_deinit_objs",
+    "severity": "LOW",
+    "evidence_needed": "operation: if !(*ctx).evp_method_store.is_null() {; safe fn dereferences raw parameter ctx without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 954,
+    "symbol": "context_deinit",
+    "severity": "LOW",
+    "evidence_needed": "operation: CRYPTO_THREAD_lock_free((*ctx).lock); safe fn dereferences raw parameter ctx without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 1479,
+    "symbol": "lib_ctx_write_lock",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { CRYPTO_THREAD_write_lock((*ctx).lock) }; safe fn dereferences raw parameter ctx without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 1490,
+    "symbol": "lib_ctx_read_lock",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { CRYPTO_THREAD_read_lock((*ctx).lock) }; safe fn dereferences raw parameter ctx without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/mod.rs",
+    "line": 1501,
+    "symbol": "lib_ctx_unlock",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { CRYPTO_THREAD_unlock((*ctx).lock) }; safe fn dereferences raw parameter ctx without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/namemap.rs",
+    "line": 519,
+    "symbol": "ossl_namemap_empty",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: if CRYPTO_THREAD_read_lock((*namemap).lock) == 0 {; safe fn dereferences raw parameter namemap without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/context/thread_data.rs",
+    "line": 247,
+    "symbol": "avail_threads_locked",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*tdata).max_threads.wrapping_sub((*tdata).active_threads) }; safe fn dereferences raw parameter tdata without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/des/mod.rs",
+    "line": 98,
+    "symbol": "d_encrypt",
+    "severity": "LOW",
+    "evidence_needed": "operation: let (u, t) = unsafe { (r ^ *s.add(idx), r ^ *s.add(idx + 1)) }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/des/mod.rs",
+    "line": 121,
+    "symbol": "d_encrypt_fc",
+    "severity": "LOW",
+    "evidence_needed": "operation: u ^= r ^ *s.add(idx); safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/digest/md32.rs",
+    "line": 73,
+    "symbol": "nl_nh",
+    "severity": "LOW",
+    "evidence_needed": "operation: let (nl, old_nh) = unsafe { (*c).nl_nh() }; safe fn dereferences raw parameter c without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/digest/wp.rs",
+    "line": 103,
+    "symbol": "whirlpool_block",
+    "severity": "LOW",
+    "evidence_needed": "operation: let input = unsafe { *p.add(i) }; safe fn dereferences raw parameter p without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ec/ecdsa_ossl.rs",
+    "line": 82,
+    "symbol": "memcmp",
+    "severity": "LOW",
+    "evidence_needed": "operation: match (*(*eckey).group); safe fn dereferences raw parameter eckey without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ec/ecx_meth.rs",
+    "line": 127,
+    "symbol": "keylen",
+    "severity": "LOW",
+    "evidence_needed": "operation: let id = unsafe { (*(*pkey).ameth).pkey_id }; safe fn dereferences raw parameter pkey without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/modes/mod.rs",
+    "line": 123,
+    "symbol": "ctr128_inc",
+    "severity": "LOW",
+    "evidence_needed": "operation: c += *counter.add(n as usize) as u32; safe fn dereferences raw parameter counter without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/modes/mod.rs",
+    "line": 141,
+    "symbol": "ctr96_inc",
+    "severity": "LOW",
+    "evidence_needed": "operation: c += *counter.add(n as usize) as u32; safe fn dereferences raw parameter counter without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/packet.rs",
+    "line": 546,
+    "symbol": "put_value",
+    "severity": "LOW",
+    "evidence_needed": "operation: *data = (value & 0xff) as c_uchar; safe fn dereferences raw parameter data without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/provider/mac.rs",
+    "line": 1359,
+    "symbol": "crounds",
+    "severity": "LOW",
+    "evidence_needed": "operation: let value = unsafe { (*ctx).crounds }; safe fn dereferences raw parameter ctx without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/provider/mac.rs",
+    "line": 1370,
+    "symbol": "drounds",
+    "severity": "LOW",
+    "evidence_needed": "operation: let value = unsafe { (*ctx).drounds }; safe fn dereferences raw parameter ctx without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/provider/seed_src.rs",
+    "line": 831,
+    "symbol": "gen_byte",
+    "severity": "LOW",
+    "evidence_needed": "operation: let mut n = unsafe { (*t).seed }; safe fn dereferences raw parameter t without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/bio/bss_acpt.rs",
+    "line": 657,
+    "symbol": "set_retry_special",
+    "severity": "LOW",
+    "evidence_needed": "operation: (*b).flags |= super::BIO_FLAGS_IO_SPECIAL | super::BIO_FLAGS_SHOULD_RETRY; safe fn dereferences raw parameter b without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/bio/bss_acpt.rs",
+    "line": 665,
+    "symbol": "clear_retry_flags",
+    "severity": "LOW",
+    "evidence_needed": "operation: (*b).flags &= !(super::BIO_FLAGS_RWS | super::BIO_FLAGS_SHOULD_RETRY); safe fn dereferences raw parameter b without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/bio/bss_conn.rs",
+    "line": 369,
+    "symbol": "set_retry_special",
+    "severity": "LOW",
+    "evidence_needed": "operation: (*b).flags |= BIO_FLAGS_IO_SPECIAL | BIO_FLAGS_SHOULD_RETRY; safe fn dereferences raw parameter b without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/bio/bss_conn.rs",
+    "line": 377,
+    "symbol": "clear_retry_flags",
+    "severity": "LOW",
+    "evidence_needed": "operation: (*b).flags &= !(BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY); safe fn dereferences raw parameter b without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/bio/bss_conn.rs",
+    "line": 685,
+    "symbol": "retry_flags",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*b).flags & (BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY) }; safe fn dereferences raw parameter b without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/err.rs",
+    "line": 1737,
+    "symbol": "strerror_r",
+    "severity": "LOW",
+    "evidence_needed": "operation: *buf.add(n) = 0; safe fn dereferences raw parameter buf without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/runtime/secure.rs",
+    "line": 872,
+    "symbol": "first_byte",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { *p.cast::<u8>() }; safe fn dereferences raw parameter p without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 323,
+    "symbol": "ssl_set_version_bound",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: unsafe { *bound = version }; safe fn dereferences raw parameter bound without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 299,
+    "symbol": "is_tls13",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).version == TLS1_3_VERSION }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 305,
+    "symbol": "is_dtls",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).version >> 8 == DTLS1_VERSION_MAJOR }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 312,
+    "symbol": "cert_req_allowed",
+    "severity": "LOW",
+    "evidence_needed": "operation: let c = (*s).pending_cipher; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 330,
+    "symbol": "key_exchange_expected",
+    "severity": "LOW",
+    "evidence_needed": "operation: let c = (*s).pending_cipher; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 342,
+    "symbol": "do_compressed_cert",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).ext_client_cert_type == 1 && (*s).ext_compress_certificate_from_peer_0 != 0 }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 350,
+    "symbol": "client13_read_transition",
+    "severity": "LOW",
+    "evidence_needed": "operation: match (*s).hand_state {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 606,
+    "symbol": "client13_write_transition",
+    "severity": "LOW",
+    "evidence_needed": "operation: match (*s).hand_state {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "line": 695,
+    "symbol": "client13_cert_or_finished",
+    "severity": "LOW",
+    "evidence_needed": "operation: if (*s).s3_tmp_cert_req == 0 {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 341,
+    "symbol": "is_tls13",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).version == TLS1_3_VERSION }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 347,
+    "symbol": "is_dtls",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).version >> 8 == DTLS1_VERSION_MAJOR }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 353,
+    "symbol": "is_first_handshake",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).s3_tmp_finish_md_len == 0 }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 366,
+    "symbol": "do_compressed_cert",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { (*s).ext_client_cert_type == 1 && (*s).ext_compress_certificate_from_peer_0 != 0 }; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 373,
+    "symbol": "send_certificate_request",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: let c = (*s).pending_cipher; safe fn dereferences raw parameter s without a validity check. Visibility: pub(crate). Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 400,
+    "symbol": "send_server_key_exchange",
+    "severity": "LOW",
+    "evidence_needed": "operation: let c = (*s).pending_cipher; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 416,
+    "symbol": "server13_read_transition",
+    "severity": "LOW",
+    "evidence_needed": "operation: match (*s).hand_state {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 485,
+    "symbol": "server13_cert_or_finished",
+    "severity": "LOW",
+    "evidence_needed": "operation: if (*s).s3_tmp_cert_request != 0 {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/statem/statem_srvr.rs",
+    "line": 617,
+    "symbol": "server13_write_transition",
+    "severity": "LOW",
+    "evidence_needed": "operation: match (*s).hand_state {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/ssl/tls13_enc.rs",
+    "line": 121,
+    "symbol": "handshake_md",
+    "severity": "LOW",
+    "evidence_needed": "operation: if unsafe { (*s).hs_md_kind } == 1 {; safe fn dereferences raw parameter s without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "4_safe_fn_raw_deref",
+    "file": "src/x509/x509_cmp.rs",
+    "line": 910,
+    "symbol": "suite_b_end",
+    "severity": "LOW",
+    "evidence_needed": "operation: unsafe { *perror_depth = i }; safe fn dereferences raw parameter perror_depth without a validity check. Visibility: private. Evidence needed: enumerate all safe callers and prove provenance/alignment/initialisation/extent; or make the fn unsafe with a # Safety contract."
+  },
+  {
+    "class": "5_destination_extent",
+    "file": "src/evp/e_des3.rs",
+    "line": 632,
+    "symbol": "des_ede3_wrap",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: legacy do_cipher writes out+8 prefix through inl+16 (BUF_reverse(out, ..., inl+16)); the function has no outsize parameter and relies on the EVP layer/C caller to size inl+16. Evidence needed: trace EVP_EncryptUpdate sizing for this EVP_CIPH_FLAG_CUSTOM_CIPHER row and add a contract or buffer control."
+  },
+  {
+    "class": "5_destination_extent",
+    "file": "src/provider/cipher_tdes_wrap.rs",
+    "line": 377,
+    "symbol": "tdes_wrap_cipher",
+    "severity": "HIGH",
+    "evidence_needed": "operation: if outsize < inl { return 0; } then des_ede3_wrap writes inl + TDES_IVLEN + TDES_ICVLEN (= inl+16). The check does not cover the encrypt path. Evidence needed: guard-page/ASan call with outsize==inl on the encrypting one-shot; compare with the fixed AES-wrap derived requirement at src/provider/cipher.rs:3958-3981."
+  },
+  {
+    "class": "5_destination_extent",
+    "file": "src/provider/cipher_tdes_wrap.rs",
+    "line": 409,
+    "symbol": "tdes_wrap_update",
+    "severity": "HIGH",
+    "evidence_needed": "operation: if outsize < inl { return 0; } then forwards to tdes_wrap_cipher, whose encrypt path writes inl+16. Same missing derived check. Evidence needed: ASan/guard-page update call with outsize between inl and inl+16."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/cmp/cmp_ctx.rs",
+    "line": 479,
+    "symbol": "ossl_cmp_ctx_free / cleanup",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::write_bytes((*(*ctx).secret_value).data, 0, len) before ASN1_OCTET_STRING_free. This is secret_value, and write_bytes is non-volatile, so the optimizer may remove the clearing (OPENSSL_cleanse uses volatile writes + fence). Evidence needed: confirm the authority uses OPENSSL_cleanse here and replace with runtime::mem::cleanse/OPENSSL_cleanse; add an optimised-build canary."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/cmp/cmp_ctx.rs",
+    "line": 1062,
+    "symbol": "ossl_cmp_ctx_set0_secret_value",
+    "severity": "HIGH",
+    "evidence_needed": "operation: ptr::write_bytes((*(*ctx).secret_value).data, 0, l) before freeing/replacing secret_value; non-volatile clear of secret material. Evidence needed: same as line 479; use OPENSSL_cleanse and test under an eliding optimizer."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/ec/lib.rs",
+    "line": 275,
+    "symbol": "EC_GROUP free path",
+    "severity": "LOW",
+    "evidence_needed": "operation: CRYPTO_free((*ptr).seed) (also :597, :607, :1113). The EC group seed is public entropy metadata, not secret key material. Evidence needed: confirm role; otherwise switch to clear_free."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/hpke/mod.rs",
+    "line": 1834,
+    "symbol": "hpke_do_encap (EVP_PKEY_encapsulate failure)",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: CRYPTO_free((*ctx).shared_secret, ...) on the encapsulate failure path, while destroy_ctx_body uses CRYPTO_clear_free for the same member (src/hpke/mod.rs:1186-1191). Evidence needed: check hpke.c:532 authority release; if clear_free, replace and add a failure-path cleanse control."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/hpke/mod.rs",
+    "line": 1983,
+    "symbol": "hpke_do_decap failure tail",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: CRYPTO_free((*ctx).shared_secret) when erv==0, while the destructor uses CRYPTO_clear_free. Evidence needed: authority hpke.c:636 release mode; failure-path cleanse control."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/pkcs12/p12_mutl.rs",
+    "line": 1029,
+    "symbol": "PKCS12_pbe_add / mac construction",
+    "severity": "LOW",
+    "evidence_needed": "operation: CRYPTO_free(known_salt) where the value is a PKCS#12 salt (public metadata), so no cleanse obligation is established. Evidence needed: confirm role classification; if treated as secret, use CRYPTO_clear_free."
+  },
+  {
+    "class": "6_secret_cleanse_gap",
+    "file": "src/provider/kdf.rs",
+    "line": 11330,
+    "symbol": "kdf_argon2_ctx_set_secret",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: CRYPTO_free((*ctx).secret) after buflen > ARGON2_MAX_SECRET, while the normal replacement path uses CRYPTO_clear_free (line 11309) and the field is secret. Evidence needed: authority argon2.c release at this arm; if clear_free, correct it and add a failed-range cleanse control."
+  },
+  {
+    "class": "7_failure_path_release",
+    "file": "src/dh/pmeth.rs",
+    "line": 212,
+    "symbol": "pkey_dh_copy",
+    "severity": "LOW",
+    "evidence_needed": "operation: OBJ_dup result assigned to dst->kdf_oid, then a NULL result returns 0; earlier field copies have no allocation. Evidence needed: caller-side dst reset witness."
+  },
+  {
+    "class": "7_failure_path_release",
+    "file": "src/ec/pmeth.rs",
+    "line": 194,
+    "symbol": "pkey_ec_copy",
+    "severity": "MEDIUM",
+    "evidence_needed": "operation: EC_GROUP_dup result stored in dst->gen_group; if the later EC_KEY_dup (or ukm memdup) fails, the function returns 0 with the earlier allocation still in dst. Evidence needed: identify the caller of pmeth->copy and prove it resets/frees dst on failure; otherwise add a local unwind."
+  },
+  {
+    "class": "7_failure_path_release",
+    "file": "src/provider/cipher.rs",
+    "line": 5191,
+    "symbol": "aes_xts_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: CRYPTO_malloc block is returned even if (*hw).copyctx is None (no initialisation/publication check). Comment claims unreachable. Evidence needed: prove the hw table always installs copyctx; otherwise refuse or initialise."
+  },
+  {
+    "class": "7_failure_path_release",
+    "file": "src/provider/cipher.rs",
+    "line": 5834,
+    "symbol": "sm4_xts_dupctx",
+    "severity": "LOW",
+    "evidence_needed": "operation: same shape as aes_xts_dupctx: malloc block returned after optional copyctx, no failure release/publication guard. Evidence needed: hw-table witness and a negative control with copyctx absent."
+  }
+]

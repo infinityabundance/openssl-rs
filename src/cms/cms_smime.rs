@@ -802,6 +802,87 @@ unsafe fn cms_signerinfo_verify_cert(
     r
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the CAdES trust-chain array
+// ---------------------------------------------------------------------------------------------
+
+/// An owned zeroed array of the CAdES verifier's per-signer trust-chain slots.
+///
+/// The block stays a `CRYPTO_zalloc` at the authority's exact size and `cms_smime.c:397` site, and
+/// only its *ownership* is this type: `new` allocates it, [`Self::slot`]/[`Self::chain`] derive the
+/// slot addresses from it, and `Drop` runs the authority's own cleanup -- each filled slot's
+/// `sk_X509_pop_free(chain, X509_free)` followed by the block's single `CRYPTO_free` at `:529`. A
+/// Rust `Vec` would hide both the allocation and its release from a caller-installed
+/// `CRYPTO_set_mem_functions` hook.
+struct OwnedChainArray {
+    ptr: *mut *mut OpenSslStack,
+    count: usize,
+}
+
+impl OwnedChainArray {
+    /// `OPENSSL_zalloc(sizeof(*si_chains) * count, FILE, 397)`, or `None` when the allocator answers
+    /// NULL.
+    fn new(count: c_int) -> Option<OwnedChainArray> {
+        let count = count as usize;
+        // The authority's `sizeof(*si_chains) * scount`; the multiply is checked so an overflowing
+        // count is a plain allocation failure rather than a silent wraparound.
+        let bytes = count.checked_mul(core::mem::size_of::<*mut OpenSslStack>())?;
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(bytes, FILE.as_ptr(), 397)
+        }
+        .cast::<*mut OpenSslStack>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedChainArray { ptr: raw, count })
+    }
+
+    /// The writable address of the `i`th slot, for the verifier call that fills it.
+    ///
+    /// Every index a caller uses is in bounds; an out-of-range index is rejected with NULL rather
+    /// than yielding an invalid pointer.
+    fn slot(&self, i: usize) -> *mut *mut OpenSslStack {
+        if i >= self.count {
+            return ptr::null_mut();
+        }
+        // SAFETY: `i < self.count`, the element count the block was allocated for, so the offset is
+        // within the `CRYPTO_zalloc` block `new` owns.
+        unsafe { self.ptr.add(i) }
+    }
+
+    /// The `i`th chain the verifier stored, or NULL when the slot is empty.
+    fn chain(&self, i: usize) -> *mut OpenSslStack {
+        let slot = self.slot(i);
+        if slot.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `slot` is a live writable slot of this owner; it is zeroed or holds a stack this
+        // call owns.
+        unsafe { *slot }
+    }
+}
+
+impl Drop for OwnedChainArray {
+    /// The authority's own cleanup at its `:529` site: each filled slot's
+    /// `sk_X509_pop_free(chain, X509_free)`, then the block's `CRYPTO_free`.
+    fn drop(&mut self) {
+        let mut i = 0;
+        while i < self.count {
+            // `i < self.count`, so the slot is zeroed or holds a stack this call owns.
+            let chain = self.chain(i);
+            // SAFETY: `chain` is NULL or a stack of `X509` this call owns; the thunk is the
+            // authority's own `X509_free`.
+            unsafe { OPENSSL_sk_pop_free(chain, Some(x509_free_void)) };
+            i += 1;
+        }
+        // SAFETY: `self.ptr` is the block `new` allocated and has not released; its single release
+        // is the authority's own `CRYPTO_free` at `:529`, which accepts the block.
+        unsafe { CRYPTO_free(self.ptr.cast(), FILE.as_ptr(), 529) };
+    }
+}
+
 /// `int CMS_verify(CMS_ContentInfo *cms, STACK_OF(X509) *certs, X509_STORE *store, BIO *dcont,`
 /// `BIO *out, unsigned int flags)` — `cms_smime.c:344-535`.
 ///
@@ -819,7 +900,7 @@ pub(crate) unsafe extern "C" fn CMS_verify(
     let sinfos: *mut OpenSslStack;
     let mut untrusted: *mut OpenSslStack = ptr::null_mut();
     let mut crls: *mut OpenSslStack = ptr::null_mut();
-    let mut si_chains: *mut *mut OpenSslStack = ptr::null_mut();
+    let mut si_chains: Option<OwnedChainArray> = None;
     let mut signer: *mut X509 = ptr::null_mut();
     let mut scount = 0;
     let mut ret = 0;
@@ -911,14 +992,9 @@ pub(crate) unsafe extern "C" fn CMS_verify(
         if (flags & CMS_NO_SIGNER_CERT_VERIFY) == 0 || cades_verify {
             if cades_verify {
                 /* Certificate trust chain is required to check CAdES signature */
-                // SAFETY: the allocator answers a fresh, zeroed array.
-                si_chains = CRYPTO_zalloc(
-                    scount as usize * core::mem::size_of::<*mut OpenSslStack>(),
-                    FILE.as_ptr(),
-                    397,
-                )
-                .cast::<*mut OpenSslStack>();
-                if si_chains.is_null() {
+                // `si_chains` owns the zeroed array; `Drop` is the authority's `:529` release.
+                si_chains = OwnedChainArray::new(scount);
+                if si_chains.is_none() {
                     break 'err2;
                 }
             }
@@ -949,14 +1025,13 @@ pub(crate) unsafe extern "C" fn CMS_verify(
                 // SAFETY: `i` is in range.
                 let si = unsafe { OPENSSL_sk_value(sinfos, i) }.cast::<CmsSignerInfo>();
 
-                // SAFETY: `si`/`store` are live; `untrusted`/`crls` are NULL or live.
-                let chain = if si_chains.is_null() {
-                    ptr::null_mut()
-                } else {
-                    // SAFETY: `i < scount`, the array's length.
-                    unsafe { si_chains.add(i as usize) }
+                // The slot is writable when the CAdES array was allocated, NULL otherwise.
+                let chain = match si_chains.as_ref() {
+                    Some(chains) => chains.slot(i as usize),
+                    None => ptr::null_mut(),
                 };
-                // SAFETY: as above.
+                // SAFETY: `si`/`store` are live; `untrusted`/`crls` are NULL or live; `chain` is
+                // NULL or a writable slot this call owns.
                 if unsafe { cms_signerinfo_verify_cert(si, store, untrusted, crls, chain, ctx) }
                     == 0
                 {
@@ -983,11 +1058,9 @@ pub(crate) unsafe extern "C" fn CMS_verify(
                     break 'err2;
                 }
                 if cades_verify {
-                    let si_chain = if si_chains.is_null() {
-                        ptr::null_mut()
-                    } else {
-                        // SAFETY: `i < scount`, the array's length.
-                        unsafe { *si_chains.add(i as usize) }
+                    let si_chain = match si_chains.as_ref() {
+                        Some(chains) => chains.chain(i as usize),
+                        None => ptr::null_mut(),
                     };
 
                     // SAFETY: `si` is live; `si_chain` is NULL or live.
@@ -1129,18 +1202,10 @@ pub(crate) unsafe extern "C" fn CMS_verify(
         }
     }
 
-    if !si_chains.is_null() {
-        let mut i = 0;
-        while i < scount {
-            // SAFETY: `i < scount`, the array's length.
-            let chain = unsafe { *si_chains.add(i as usize) };
-            // SAFETY: `chain` is NULL or a stack of `X509` this call owns.
-            unsafe { OPENSSL_sk_pop_free(chain, Some(x509_free_void)) };
-            i += 1;
-        }
-        // SAFETY: `si_chains` is the array allocated above.
-        unsafe { CRYPTO_free(si_chains.cast(), FILE.as_ptr(), 529) };
-    }
+    // `si_chains` owns the CAdES chain array; dropping it here runs the authority's own cleanup --
+    // each filled chain's `sk_X509_pop_free` and the block's `CRYPTO_free` at `:529` -- before the
+    // `untrusted`/`crls` releases below, as the authority orders them.
+    drop(si_chains.take());
     // SAFETY: each is NULL or a stack this call owns.
     unsafe {
         OPENSSL_sk_pop_free(untrusted, Some(x509_free_void));

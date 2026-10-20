@@ -1,0 +1,179 @@
+{
+  "schema": "safe-c33/mechanism-sweep/v1",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "e78732884",
+  "worktree": "source: src/engine/tb_eckey.rs, src/engine/tb_pkmeth.rs, src/engine/tb_rand.rs, src/engine/tb_rsa.rs, src/ess/ess_asn1.rs, src/evp/c_allc.rs, src/evp/c_alld.rs, src/evp/e_aes_cbc_hmac_sha1.rs; ledger: REMAINING-AUDIT.txt, AUDITED-FILES.txt, PERFILE-INDEX.md section 59 and this file.",
+  "scope": "The four still-unaudited engine operation tables named by M52, the ESS ASN.1 item group, the two legacy EVP registration lists, and a substituted next ordinary entry after src/evp/algorithm.rs was confirmed as a provider-dispatch/registry callback boundary. The only repair is the M53-D1 safety-contract wording class: functions that dereference e unconditionally no longer claim NULL was permitted. No production unsafe operation, FFI symbol, allocation extent/line, repr(C) layout, exported signature or unsafe lint attribute changed.",
+  "verification_level": "FAST+BATCH",
+  "files_dispositions_summary": {
+    "audited_no_change": 4,
+    "defect_repaired": 4
+  },
+  "hidden_obligations": 0,
+  "new_unsafe_assumptions": 0,
+  "unsafe_ops_removed": 0,
+  "unsafe_ops_relocated": 0,
+  "safety_contract_repairs": [
+    {
+      "id": "M53-D1",
+      "files": [
+        "src/engine/tb_eckey.rs",
+        "src/engine/tb_pkmeth.rs",
+        "src/engine/tb_rand.rs",
+        "src/engine/tb_rsa.rs"
+      ],
+      "severity": "low",
+      "kind": "safety-contract-documentation",
+      "note": "Twenty-one # Safety clauses said e 'must be NULL or point to a live Engine' for ENGINE_unregister_*, ENGINE_register_*, ENGINE_set_default_*, the getter/setter pairs and ENGINE_get_pkey_meth, whose bodies dereference e unconditionally. A permitted input that is UB is not a sound contract; each now requires a non-NULL live Engine. engine_pkey_meths_free keeps its NULL-tolerant wording because it tests NULL; ENGINE_set_pkey_meths now names e explicitly. No code changed.",
+      "clause_count": 21
+    }
+  ],
+  "file_dispositions": [
+    {
+      "file": "src/engine/tb_eckey.rs",
+      "mechanisms": [
+        "EC_TABLE static (authority spelling dh_table) and slot",
+        "dummy_nid = 1",
+        "ENGINE_register/unregister/set_default_EC",
+        "ENGINE_get_default_EC",
+        "ENGINE_get/set_EC opaque method accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_eckey.c:18-76. M53-D1 contract repair. EC_KEY_METHOD remains opaque in this unit; no method is dereferenced."
+    },
+    {
+      "file": "src/engine/tb_pkmeth.rs",
+      "mechanisms": [
+        "PKEY_METH_TABLE static and slot",
+        "ENGINE_PKEY_METHS_PTR count-and-nids callback",
+        "ENGINE_register/unregister/set_default_pkey_meths",
+        "ENGINE_get_pkey_meth_engine / ENGINE_get_pkey_meth",
+        "ENGINE_get/set_pkey_meths accessors",
+        "engine_pkey_meths_free teardown walk"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_pkmeth.c:18-117. M53-D1 contract repair. engine_pkey_meths_free retains its NULL test and NULL-tolerant contract; the callback must set nids to num_nids integers when it answers a positive count, the same B15/B16 obligation used by tb_cipher.rs."
+    },
+    {
+      "file": "src/engine/tb_rand.rs",
+      "mechanisms": [
+        "RAND_TABLE static and slot",
+        "dummy_nid = 1",
+        "ENGINE_register/unregister/set_default_RAND",
+        "ENGINE_get_default_RAND",
+        "ENGINE_get/set_RAND opaque method accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_rand.c:18-76. M53-D1 contract repair. The unit raises no error, matching the authority."
+    },
+    {
+      "file": "src/engine/tb_rsa.rs",
+      "mechanisms": [
+        "RSA_TABLE static and slot",
+        "dummy_nid = 1",
+        "ENGINE_register/unregister/set_default_RSA",
+        "ENGINE_get_default_RSA",
+        "ENGINE_get/set_RSA opaque method accessors"
+      ],
+      "disposition": "defect_repaired",
+      "note": "crypto/engine/tb_rsa.c:18-76. M53-D1 contract repair. RSA_METHOD remains opaque in this unit."
+    },
+    {
+      "file": "src/ess/ess_asn1.rs",
+      "mechanisms": [
+        "EssIssuerSerial/EssCertId/EssCertIdV2/EssSigningCert/EssSigningCertV2 repr(C) layouts and asserted offsets",
+        "five ASN1_SEQUENCE templates and their field flags",
+        "static_ vs exported _it accessor split",
+        "generated new/free/dup/d2i/i2d wrappers"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/ess/ess_asn1.c:19-58. Every template flag, offset, item name, tcount and size matches the authority: SEQUENCE_OF, SIMPLE, OPT and SEQUENCE_OF_OPT map to ASN1_TFLG_SEQUENCE_OF/0/ASN1_TFLG_OPTIONAL/SEQUENCE_OF|OPTIONAL. ESS_ISSUER_SERIAL, ESS_CERT_ID and ESS_CERT_ID_V2 keep file-local item accessors; the two signing-cert items publish _it, as nm -D does."
+    },
+    {
+      "file": "src/evp/c_allc.rs",
+      "mechanisms": [
+        "openssl_add_all_ciphers_int registration order",
+        "EVP_add_cipher_alias over OBJ_NAME_add",
+        "no-rc5 profile omissions",
+        "_cfb128 spelling of the EVP_*_cfb macros"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/evp/c_allc.c:21-265. All 199 registration lines of the authority are represented in order; the only absent block is OPENSSL_NO_RC5, which the admitted no-rc5 profile compiles out. Alias target NIDs are object-table entries, so OBJ_nid2sn's static is always non-NULL."
+    },
+    {
+      "file": "src/evp/c_alld.rs",
+      "mechanisms": [
+        "openssl_add_all_digests_int registration order",
+        "EVP_add_digest_alias over OBJ_NAME_add",
+        "no-md2 profile omission"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/evp/c_alld.c:18-60. Registration order, the ssl3-md5/ssl3-sha1/sha1WithRSA/ripemd/rmd160 aliases and every enabled digest match the authority; md2 is absent under the admitted no-md2 profile."
+    },
+    {
+      "file": "src/evp/e_aes_cbc_hmac_sha1.rs",
+      "mechanisms": [
+        "AES_128/256_CBC_HMAC_SHA1 compile-time EVP_CIPHER statics and Sync wrapper",
+        "init_key / do_cipher / ctrl callbacks over the provider context",
+        "EVP_CTRL_AEAD_TLS1_AAD pad-length arithmetic",
+        "multiblock AAD/encrypt delegation",
+        "set/get_asn1_iv callbacks",
+        "AES-NI-gated NULL answer"
+      ],
+      "disposition": "audited_no_change",
+      "note": "crypto/evp/e_aes_cbc_hmac_sha1.c:67-954 (AES-NI arm). The 13-byte AAD length is checked before every p[arg-n] access; encrypt writes 4 version bytes and decrypt copies 13 bytes into the 16-byte aux; md/head state copies use in-structure slots; the provider context is 792 bytes with head/md at the asserted offsets. No defect."
+    }
+  ],
+  "not_run_files": [
+    {
+      "file": "src/evp/algorithm.rs",
+      "reason": "Provider-dispatch/registry boundary: the algorithm walk stores reserve_store/fn_/unreserve_store/pre/post function pointers in AlgorithmData and drives them through ossl_provider_doall_activated and per-provider callbacks; it needs its own BOUNDARY pass rather than a contract-wording pass. Left in REMAINING-AUDIT.txt."
+    }
+  ],
+  "not_run": [
+    "BOUNDARY for src/evp/algorithm.rs (provider-dispatch/registry callback boundary; deferred and still queued)",
+    "RT-ENGINE / RT-EVP authority differentials for the exact candidate (not rebuilt or replayed)",
+    "FRF/probe suite (no allocator, ASN.1 extent or protocol change in this batch)",
+    "Miri (no miri component in the court toolchain)",
+    "ASan (safety-contract wording only; no memory-access pattern changed)",
+    "SEAL"
+  ],
+  "tests": {
+    "focused": "cargo test --lib engine:: -- --test-threads=4: 20 passed / 0 failed / 0 ignored (1667 filtered); cargo test --lib legacy_evp:: -- --test-threads=4: 5 passed / 0 failed",
+    "adv_probes": "none replayed; the batch changes no allocation, ASN.1 extent, protocol path or algorithm body",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "fmt": "cargo fmt --all -- --check clean",
+    "lib_serial": "1660 passed / 0 failed / 27 ignored (228.46 s, --test-threads=1)",
+    "lib_threads4": "1660 passed / 0 failed / 27 ignored (82.14 s, --test-threads=4)"
+  },
+  "queue_after_batch": {
+    "remaining_audit": 290,
+    "audited_files": 473,
+    "next_eight": [
+      "src/evp/algorithm.rs",
+      "src/evp/e_aes_cbc_hmac_sha256.rs",
+      "src/evp/e_bf.rs",
+      "src/evp/e_cast.rs",
+      "src/evp/e_des.rs",
+      "src/evp/e_idea.rs",
+      "src/evp/e_rc4_hmac_md5.rs",
+      "src/evp/e_rc4.rs"
+    ]
+  },
+  "reconciliation": {
+    "canonical_audited_before_batch": 465,
+    "canonical_unaudited_before_batch": 298,
+    "canonical_audited_after_batch": 473,
+    "canonical_unaudited_after_batch": 290,
+    "audited_this_batch": 8,
+    "not_run_this_batch": 1,
+    "method": "The eight audited files were removed from REMAINING-AUDIT.txt and algorithm.rs was retained as a NOT_RUN boundary; the eight were merged into AUDITED-FILES.txt in path order. Counts are entries, not files touched."
+  },
+  "retained_observations": [
+    "src/evp/algorithm.rs is not a registry table like the tb_* units but the provider algorithm walk; its function-pointer callbacks require the BOUNDARY treatment rather than a contract pass.",
+    "The ENGINE_PKEY_METHS_PTR callback must set nids to num_nids integers whenever it answers a positive count. This is the established B15/B16 engine callback obligation, inherited unchanged from the authority; no new hidden obligation was introduced.",
+    "The batch contains no secret copy and makes no constant-time claim; engine method tables, ASN.1 templates and legacy name registration are public data, and no cryptographic algorithm was changed.",
+    "The M52-D1 NULL-permissive class is now closed across the engine operation tables; no sibling tb_* file in this batch retains that wording except engine_pkey_meths_free, whose body tests NULL."
+  ]
+}

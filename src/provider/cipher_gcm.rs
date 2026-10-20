@@ -96,7 +96,9 @@ use crate::provider::cipher::{
 use crate::provider::ctx::prov_libctx_of;
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::mem::{
+    CRYPTO_clear_free, CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse,
+};
 
 /// `ERR_LIB_PROV` — `include/openssl/proverr.h`.
 const ERR_LIB_PROV: c_int = 57;
@@ -834,6 +836,14 @@ unsafe fn getivgen(ctx: *mut ProvGcmCtx, out: *mut c_uchar, mut olen: usize) -> 
         if (*ctx).bits.iv_gen() == 0 || (*ctx).bits.key_set() == 0 {
             return 0;
         }
+        // The invocation field is at least eight bytes in size (`ciphercommon_gcm.c:122-127`); the
+        // increment below subtracts eight from `ivlen`. The whole-IV restore arm of
+        // `gcm_tls_iv_set_fixed` sets `iv_gen` without checking that length, so an `ivlen` below
+        // eight would wrap the offset and write outside `iv`. Refuse rather than reproduce the
+        // authority's out-of-bounds store (§17).
+        if (*ctx).ivlen < 8 {
+            return 0;
+        }
         let hw = (*ctx).hw;
         if ((*hw).setiv)(ctx, (*ctx).iv.as_ptr(), (*ctx).ivlen) == 0 {
             return 0;
@@ -862,6 +872,13 @@ unsafe fn setivinv(ctx: *mut ProvGcmCtx, in_: *mut c_uchar, inl: usize) -> c_int
     // SAFETY: the caller's contract.
     unsafe {
         if (*ctx).bits.iv_gen() == 0 || (*ctx).bits.key_set() == 0 || (*ctx).bits.enc() != 0 {
+            return 0;
+        }
+        // `ciphercommon_gcm.c:134-146` writes at `iv + ivlen - inl` with no upper bound on `inl`.
+        // A `data_size` larger than `ivlen` reaches here from the public parameter interface and
+        // would make the subtraction wrap, so the copy would write outside `iv`. Refuse instead of
+        // reproducing the authority's out-of-bounds store (§17).
+        if inl > (*ctx).ivlen {
             return 0;
         }
         ptr::copy_nonoverlapping(
@@ -1326,8 +1343,13 @@ unsafe fn gcm_tls_iv_set_fixed(ctx: *mut ProvGcmCtx, iv: *const c_uchar, len: us
         }
         /* Fixed field must be at least 4 bytes and invocation field at least 8. The width
          * arithmetic is the authority's `size_t` subtraction, so `wrapping_sub` states its
-         * semantics rather than panicking under this profile's `overflow-checks`. */
+         * semantics rather than panicking under this profile's `overflow-checks`. The explicit
+         * `len > ivlen` arm is a deliberate widening of the guard: the authority's subtraction
+         * wraps for `len > ivlen`, so its check passes and the `memcpy`/`RAND_bytes_ex` below write
+         * with an underflowed length. Refuse instead of reproducing that out-of-bounds write
+         * (§17); a legitimate call has `len <= ivlen - 8`. */
         if len < EVP_GCM_TLS_FIXED_IV_LEN
+            || len > (*ctx).ivlen
             || (*ctx).ivlen.wrapping_sub(len) < EVP_GCM_TLS_EXPLICIT_IV_LEN
         {
             return 0;
@@ -1672,6 +1694,171 @@ unsafe fn ossl_prov_aes_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
     ptr::addr_of!(AES_GCM_HW)
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a context block
+// ---------------------------------------------------------------------------------------------
+
+/// The `__FILE__` a GCM unit's context block names.
+///
+/// Unlike `src/provider/cipher.rs`'s `CipherDestroy`, a GCM context carries no member teardown: the
+/// authority's `*_gcm_freectx` is the cleansing block release alone (`cipher_aes_gcm.c:55-61`,
+/// `cipher_aria_gcm.c:45-51`, `cipher_sm4_gcm.c:47-53`), and `CRYPTO_clear_free` wipes the whole
+/// `CRYPTO_clear_free` wipes the whole
+/// block -- the key schedule included -- so [`OwnedCtx`]'s `Drop` needs only the `FILE` the block
+/// names.
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the release through a safe interface:
+///
+/// * (a) **destructor** -- the authority's `*_gcm_freectx` is the cleansing block release alone
+///   (`cipher_aes_gcm.c:55-61`, `cipher_aria_gcm.c:45-51`, `cipher_sm4_gcm.c:47-53`): the object
+///   owns no member released separately, so [`OwnedCtx`]'s `Drop` (the cleansing block release only)
+///   is the complete destructor and `FILE` names the block's own release site; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which the cleansing
+///   block release is sound. This is the obligation the safe [`OwnedCtx::new`] leans on: it
+///   validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust omit part of a context's teardown; breaking (b) releases a block that
+/// is not a valid `Self`.
+unsafe trait GcmDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+}
+
+/// An owned GCM context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the dispatch hands
+/// it out as `*mut c_void` and takes it back in `*_gcm_freectx`), but its *ownership* is this type:
+/// `new` allocates it through the crate's allocator seam and `Drop` is its single cleansing release.
+/// The block stays a `CRYPTO_zalloc` at `size_of::<T>()` released with `CRYPTO_clear_free` on
+/// purpose -- a caller-installed `CRYPTO_set_mem_functions` hook observes the allocation, its size
+/// and the cleansing release exactly as it observes the authority's, which a Rust `Box` would hide.
+struct OwnedCtx<T: GcmDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: GcmDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None`
+    /// when it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the dispatch hands out and `*_gcm_freectx` takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: GcmDestroy> Drop for OwnedCtx<T> {
+    /// The context's single cleansing release, through the same allocator seam the block was
+    /// allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once and `CRYPTO_clear_free` cleanses then frees it.
+        unsafe {
+            CRYPTO_clear_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                core::mem::size_of::<T>(),
+                T::FILE,
+                LINE,
+            );
+        }
+    }
+}
+
+/// An owned block whose single release is the authority's **plain** (non-cleansing) `CRYPTO_free`.
+///
+/// This is the block a row's `*_gcm_dupctx` allocates with `CRYPTO_memdup` and repairs in place: the
+/// shallow copy's `gcm.key` still points at the source's schedule until the copy is repaired, so
+/// only its single plain `CRYPTO_free` release may run on it -- never [`OwnedCtx`]'s cleansing
+/// release -- while it is owned. The copy is handed back out through [`Self::into_raw`] and is
+/// released, later, by the row's `*_gcm_freectx` (an [`OwnedCtx`]).
+struct OwnedRaw<T: GcmDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: GcmDestroy> OwnedRaw<T> {
+    /// Adopt a block `CRYPTO_memdup` answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `raw` is NULL or a live block the crate's `CRYPTO_memdup` seam allocated in full at
+    /// `size_of::<T>()` (not a sub-range) and aligned for `T`; this frame exclusively owns it and
+    /// has not released it. The block is a *partially repaired* copy whose `gcm.key` still aliases
+    /// the source's, so only its single plain `CRYPTO_free` release may run on it until it is
+    /// repaired.
+    unsafe fn adopt(raw: *mut T) -> Option<OwnedRaw<T>> {
+        ptr::NonNull::new(raw).map(|ptr| OwnedRaw { ptr })
+    }
+
+    /// The block's address, for the repair the copy makes.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller: the duplicate succeeded.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T: GcmDestroy> Drop for OwnedRaw<T> {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block the row's `*_gcm_dupctx` allocated and has not handed out;
+        // its single release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE) };
+    }
+}
+
+// The three GCM context kinds: each block names its own unit's `__FILE__`.
+
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvAesGcmCtx {
+    const FILE: *const c_char = FILE_AES_GCM;
+}
+
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvAriaGcmCtx {
+    const FILE: *const c_char = FILE_ARIA_GCM;
+}
+
+// SAFETY: (a) holds: the context owns no member released separately, so `OwnedCtx`'s cleansing block
+// release is the whole `*_gcm_freectx`, and `FILE` names the block's own release site. (b) holds: an
+// all-zero context is valid and the cleanse-release is sound -- what the safe `OwnedCtx::new` leans on.
+unsafe impl GcmDestroy for ProvSm4GcmCtx {
+    const FILE: *const c_char = FILE_SM4_GCM;
+}
+
 /// `aes_gcm_newctx` — `cipher_aes_gcm.c:23-35`.
 ///
 /// # Safety
@@ -1683,16 +1870,18 @@ unsafe fn aes_gcm_newctx(provctx: *mut c_void, keybits: usize) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesGcmCtx>(), FILE_AES_GCM, LINE);
-        if !ctx.is_null() {
-            ossl_gcm_initctx(
-                provctx,
-                ctx.cast::<ProvGcmCtx>(),
-                keybits,
-                ossl_prov_aes_hw_gcm(keybits),
-            );
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAesGcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_gcm_initctx(
+            provctx,
+            ctx.as_ptr().cast::<ProvGcmCtx>(),
+            keybits,
+            ossl_prov_aes_hw_gcm(keybits),
+        );
+        ctx.into_raw().cast()
     }
 }
 
@@ -1711,20 +1900,26 @@ unsafe extern "C" fn aes_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
         if ctx.is_null() {
             return ptr::null_mut();
         }
-        let dupctx = CRYPTO_memdup(
-            provctx,
-            core::mem::size_of::<ProvAesGcmCtx>(),
-            FILE_AES_GCM,
-            LINE,
-        );
-        if !dupctx.is_null() {
-            let dup = dupctx.cast::<ProvAesGcmCtx>();
-            let gcm = ptr::addr_of_mut!((*dup).base.gcm);
-            if !gcm_key_is_null(gcm) {
-                gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
-            }
+        // The copy, allocated through the crate's allocator seam; the one member that needs
+        // repairing is the shallow copy's own `gcm.key`, which still points at the source's
+        // schedule until the repair below.
+        let Some(dupctx) = OwnedRaw::<ProvAesGcmCtx>::adopt(
+            CRYPTO_memdup(
+                provctx,
+                core::mem::size_of::<ProvAesGcmCtx>(),
+                FILE_AES_GCM,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let dup = dupctx.as_ptr();
+        let gcm = ptr::addr_of_mut!((*dup).base.gcm);
+        if !gcm_key_is_null(gcm) {
+            gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
         }
-        dupctx
+        dupctx.into_raw().cast()
     }
 }
 
@@ -1733,15 +1928,8 @@ unsafe extern "C" fn aes_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aes_gcm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `aes_gcm_newctx` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAesGcmCtx>(),
-            FILE_AES_GCM,
-            LINE,
-        )
-    };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAesGcmCtx>::from_raw(vctx.cast())) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1810,16 +1998,18 @@ unsafe fn aria_gcm_newctx(provctx: *mut c_void, keybits: usize) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAriaGcmCtx>(), FILE_ARIA_GCM, LINE);
-        if !ctx.is_null() {
-            ossl_gcm_initctx(
-                provctx,
-                ctx.cast::<ProvGcmCtx>(),
-                keybits,
-                ossl_prov_aria_hw_gcm(keybits),
-            );
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvAriaGcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_gcm_initctx(
+            provctx,
+            ctx.as_ptr().cast::<ProvGcmCtx>(),
+            keybits,
+            ossl_prov_aria_hw_gcm(keybits),
+        );
+        ctx.into_raw().cast()
     }
 }
 
@@ -1835,20 +2025,26 @@ unsafe extern "C" fn aria_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
         if ctx.is_null() {
             return ptr::null_mut();
         }
-        let dupctx = CRYPTO_memdup(
-            provctx,
-            core::mem::size_of::<ProvAriaGcmCtx>(),
-            FILE_ARIA_GCM,
-            LINE,
-        );
-        if !dupctx.is_null() {
-            let dup = dupctx.cast::<ProvAriaGcmCtx>();
-            let gcm = ptr::addr_of_mut!((*dup).base.gcm);
-            if !gcm_key_is_null(gcm) {
-                gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
-            }
+        // The copy, allocated through the crate's allocator seam; the one member that needs
+        // repairing is the shallow copy's own `gcm.key`, which still points at the source's
+        // schedule until the repair below.
+        let Some(dupctx) = OwnedRaw::<ProvAriaGcmCtx>::adopt(
+            CRYPTO_memdup(
+                provctx,
+                core::mem::size_of::<ProvAriaGcmCtx>(),
+                FILE_ARIA_GCM,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let dup = dupctx.as_ptr();
+        let gcm = ptr::addr_of_mut!((*dup).base.gcm);
+        if !gcm_key_is_null(gcm) {
+            gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
         }
-        dupctx
+        dupctx.into_raw().cast()
     }
 }
 
@@ -1857,15 +2053,8 @@ unsafe extern "C" fn aria_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn aria_gcm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `aria_gcm_newctx` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvAriaGcmCtx>(),
-            FILE_ARIA_GCM,
-            LINE,
-        )
-    };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvAriaGcmCtx>::from_raw(vctx.cast())) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1965,16 +2154,18 @@ unsafe fn sm4_gcm_newctx(provctx: *mut c_void, keybits: usize) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm4GcmCtx>(), FILE_SM4_GCM, LINE);
-        if !ctx.is_null() {
-            ossl_gcm_initctx(
-                provctx,
-                ctx.cast::<ProvGcmCtx>(),
-                keybits,
-                ossl_prov_sm4_hw_gcm(keybits),
-            );
-        }
-        ctx
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<ProvSm4GcmCtx>::new() else {
+            return ptr::null_mut();
+        };
+        ossl_gcm_initctx(
+            provctx,
+            ctx.as_ptr().cast::<ProvGcmCtx>(),
+            keybits,
+            ossl_prov_sm4_hw_gcm(keybits),
+        );
+        ctx.into_raw().cast()
     }
 }
 
@@ -1989,20 +2180,26 @@ unsafe extern "C" fn sm4_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
         if ctx.is_null() {
             return ptr::null_mut();
         }
-        let dupctx = CRYPTO_memdup(
-            provctx,
-            core::mem::size_of::<ProvSm4GcmCtx>(),
-            FILE_SM4_GCM,
-            LINE,
-        );
-        if !dupctx.is_null() {
-            let dup = dupctx.cast::<ProvSm4GcmCtx>();
-            let gcm = ptr::addr_of_mut!((*dup).base.gcm);
-            if !gcm_key_is_null(gcm) {
-                gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
-            }
+        // The copy, allocated through the crate's allocator seam; the one member that needs
+        // repairing is the shallow copy's own `gcm.key`, which still points at the source's
+        // schedule until the repair below.
+        let Some(dupctx) = OwnedRaw::<ProvSm4GcmCtx>::adopt(
+            CRYPTO_memdup(
+                provctx,
+                core::mem::size_of::<ProvSm4GcmCtx>(),
+                FILE_SM4_GCM,
+                LINE,
+            )
+            .cast(),
+        ) else {
+            return ptr::null_mut();
+        };
+        let dup = dupctx.as_ptr();
+        let gcm = ptr::addr_of_mut!((*dup).base.gcm);
+        if !gcm_key_is_null(gcm) {
+            gcm_repoint_key(gcm, ptr::addr_of_mut!((*dup).ks).cast());
         }
-        dupctx
+        dupctx.into_raw().cast()
     }
 }
 
@@ -2011,15 +2208,8 @@ unsafe extern "C" fn sm4_gcm_dupctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sm4_gcm_freectx(vctx: *mut c_void) {
-    // SAFETY: the context is the one `sm4_gcm_newctx` allocated.
-    unsafe {
-        CRYPTO_clear_free(
-            vctx,
-            core::mem::size_of::<ProvSm4GcmCtx>(),
-            FILE_SM4_GCM,
-            LINE,
-        )
-    };
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<ProvSm4GcmCtx>::from_raw(vctx.cast())) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2277,5 +2467,44 @@ mod tests {
 
         assert_eq!(core::mem::size_of::<ProvGcmHw>(), 48);
         assert_eq!(core::mem::size_of::<GcmFlags>(), 1);
+    }
+
+    /// The three TLS-IV length arms refuse a width the authority's `size_t` arithmetic would wrap:
+    /// a `data_size` above `ivlen` for `tlsivfixed`/`tlsivinv`, and an `ivlen` below the eight-byte
+    /// invocation field for `tlsivgen`. The authority's own bodies perform an out-of-bounds write
+    /// for each (`ciphercommon_gcm.c:134-146`, `:790-813`, `:116-132`), which §17 forbids
+    /// reproducing, so the conversion refuses before the first store.
+    #[test]
+    fn the_tls_iv_length_arms_refuse_wrapped_lengths() {
+        // SAFETY: `aes_gcm_newctx` is the allocator seam for this context; NULL is the
+        // provider's absent context, which `PROV_LIBCTX_OF` accepts and stores as NULL.
+        let raw = unsafe { aes_gcm_newctx(ptr::null_mut(), 128) };
+        assert!(!raw.is_null(), "the allocator refused a GCM context");
+        let ctx = raw.cast::<ProvGcmCtx>();
+        // SAFETY: `ctx` is the live AES-GCM context this test just allocated; the flags and `ivlen`
+        // written here are this test's own state, and each buffer lives in this frame.
+        unsafe {
+            (*ctx).bits.set_key_set(true);
+            (*ctx).bits.set_iv_gen();
+            (*ctx).bits.set_enc(0);
+
+            // `setivinv` would write `inl` bytes at `iv + ivlen - inl`.
+            let mut inv = [0u8; 17];
+            assert_eq!(setivinv(ctx, inv.as_mut_ptr(), (*ctx).ivlen + 1), 0);
+
+            // `gcm_tls_iv_set_fixed` would copy `len` bytes and then draw `ivlen - len`.
+            let fixed = [0u8; 17];
+            assert_eq!(
+                gcm_tls_iv_set_fixed(ctx, fixed.as_ptr(), (*ctx).ivlen + 1),
+                0
+            );
+
+            // `getivgen` would increment at `iv + ivlen - 8`.
+            (*ctx).ivlen = 4;
+            let mut out = [0u8; 16];
+            assert_eq!(getivgen(ctx, out.as_mut_ptr(), 0), 0);
+
+            aes_gcm_freectx(raw);
+        }
     }
 }

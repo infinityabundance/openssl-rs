@@ -1,0 +1,320 @@
+{
+  "receipt": "boundary-sweep-B9",
+  "date": "2026-10-19",
+  "candidate": {
+    "base_head": "c1c783d3f",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/property/store.rs",
+      "src/provider/activate.rs",
+      "src/context/namemap.rs",
+      "src/provider/ec_kmgmt.rs"
+    ],
+    "working_tree_blob": {
+      "src/property/store.rs": "b00ab0933eb54b52d42e18d0a403880e46971b1c",
+      "src/provider/activate.rs": "389ae9484e955b0955aaffb84ba440a32f416ba0",
+      "src/context/namemap.rs": "ec3ba2b1955068f2f25401213092bb4f21732bcb",
+      "src/provider/ec_kmgmt.rs": "4400dd1e4715acb616b838f2f0788e6c40292532"
+    }
+  },
+  "stop_status": "CLEAR - no confirmed memory-safety defect, no ABI regression and no new hidden obligation. One refcount/ownership defect in ossl_provider_doall_activated (B9-D7), one OOM-path ownership leak in the property store (B9-D1), one short-circuit parity defect in EC keymgmt (B9-D9), one missing unsafe contract (B9-D5) and five allocator-seam coordinate defects (B9-D2/D3/D4/D6/D8) were found and repaired. FAST, BATCH (serial and --test-threads=4) and the affected opbits probe pass; the negative control for B9-D7 fires on the pre-fix shape. Nothing is promoted to SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+  "authority": {
+    "source": "openssl-3.6.4 crypto/property/property.c (store constructor/teardown, add/remove/fetch, cache get/set, stochastic flush, do_all snapshot), crypto/provider_core.c (provider_activate/deactivate, create_provider_children, fallback activation, doall_activated, operation bitset, delegated query surface), crypto/core_namemap.c (namemap constructor/teardown, key transform, add/name lookup, doall, first-use prepopulation) and providers/implementations/keymgmt/ec_kmgmt.c (parameter import/export, get_params, generation and cleanup, load/dup), cross-checked line by line against the crate bodies.",
+    "abi": "C ABI unchanged: no export, signature, #[repr(C)] layout or unsafe lint attribute changed. The changes are contract corrections, allocator-seam coordinates, one allocator-call correction, two ownership/refcount corrections and a short-circuit parity correction.",
+    "external_contracts": [
+      "OSSL_METHOD_STORE holds a reference on every implementation it accepts; ossl_method_store_add consumes that reference on acceptance and releases it on every refusal. The method up_ref/free callbacks are application/provider code and may be invoked under the store write lock (authority parity), so they must be short and non-reentrant.",
+      "A provider handle is caller-owned: every successful find/load/up-ref transfers a reference released exactly once. Activation and reference counts are separate; doall_activated raises both for every activated provider before any callback and must restore both for every one of them, including after a callback refusal.",
+      "Stored namemap names are borrowed strings; num2name and the doall callback may use them only while the map is not modified, and a doall callback must not release or mutate the map. The map's HashMap is protected by the namemap read/write lock on this platform (the authority's RCU table is not reproduced).",
+      "EC keymgmt import/export follows selection rules: domain parameters are mandatory, a private key requires the public key, and every later step is short-circuited when an earlier one fails. Parameter helpers borrow OSSL_PARAM arrays; the key object is owned by the keymgmt dispatch caller.",
+      "opbits_lock is non-reentrant. The (operation_bits, operation_bits_sz) pair is (NULL, 0) or one CRYPTO_* block of exactly operation_bits_sz bytes, published only after a successful realloc and zeroed across the gap."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B9-PROP-1",
+      "file": "src/property/store.rs",
+      "mechanism": "method-store construction, teardown, add/remove ownership and the OOM error tails",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D1", "B9-D2"],
+      "residuals": [
+        "Method up_ref/free callbacks run under the store write lock in remove, remove_all_provided, cache_set's replace/delete arms and cache_flush_some (authority parity); they must be short and must not reenter the store.",
+        "ossl_prop_defn_get/set run under the store write lock; an allocator hook that reenters property definition could deadlock (authority-parity liveness obligation).",
+        "cache_nelem is an unsigned counter decremented by the table's own item count; an inconsistent table would underflow exactly as the authority's does.",
+        "alg_copy ignores a stack-push refusal, preserving the authority's leak on that OOM path.",
+        "The repaired B9-D1 error arms are reachable only when an allocation inside add fails; no runtime allocation-failure canary exercises that arm (NOT_RUN)."
+      ]
+    },
+    {
+      "id": "B9-PROP-2",
+      "file": "src/property/store.rs",
+      "mechanism": "query cache get/set ownership, stack-built keys and stochastic flush",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D3"],
+      "residuals": [
+        "The query cache entry is one block sized size_of::<Query>() + strlen(query) with checked addition; the text and its terminator live in body and query points inside the same allocation.",
+        "The flush's seed is OPENSSL_rdtsc() or the relaxed process-global fallback; its outcome is deliberately non-reproducible, as in the authority.",
+        "Stack-built keys carry unused_up_ref/unused_free, which abort if the table ever calls them (a check, not a reachable path)."
+      ]
+    },
+    {
+      "id": "B9-PROP-3",
+      "file": "src/property/store.rs",
+      "mechanism": "do_all snapshot and temporary ALGORITHM release",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D3"],
+      "residuals": [
+        "do_all duplicates the implementation stacks under the read lock and runs the application visitor outside every lock; the copied header and stack are released by del_tmpalg, while the implementations remain store-owned.",
+        "A failed snapshot allocation returns without visiting, and a failed push keeps the authority's leak."
+      ]
+    },
+    {
+      "id": "B9-ACT-1",
+      "file": "src/provider/activate.rs",
+      "mechanism": "provider activation/deactivation, flag and store lock ordering, child callbacks, fallback activation",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "Child create/remove callbacks and the builtin fallback init run under the store lock (and, for children, the provider flag lock), matching provider_core.c; they must be short and non-reentrant. Fallbacks are builtins, never third-party providers.",
+        "provider_deactivate performs the parent down-ref and decoder-cache flush only after releasing the locks, as the authority does.",
+        "ossl_provider_available returns 0 without releasing the reference find took when flag_lock cannot be acquired; the authority has the same leak on that OOM/lock-failure arm."
+      ]
+    },
+    {
+      "id": "B9-ACT-2",
+      "file": "src/provider/activate.rs",
+      "mechanism": "ossl_provider_doall_activated three-phase sweep and undo",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D7"],
+      "residuals": [
+        "Phase 1 holds the store read lock and each provider's flag lock and raises both refcnt and activatecnt; phase 2 calls the application callback outside every lock; phase 3 restores the counts.",
+        "The callback must answer 1 to continue and 0 to stop; a refusal is not an error in the sweep's bookkeeping, but every raised count is still undone.",
+        "The early-unlock path can only be reached when a flag lock or the atomic count operation fails; no injection canary exercises it (NOT_RUN)."
+      ]
+    },
+    {
+      "id": "B9-ACT-3",
+      "file": "src/provider/activate.rs",
+      "mechanism": "operation-bitset member pair, delegated query surface and predefined fallback walk",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D6"],
+      "residuals": [
+        "OpBitsSlot derives a transient exclusive view over the two member fields; every use holds opbits_lock for writing (or reading, for test_operation_bit).",
+        "The realloc publishes (new pointer, new length) only on success; on refusal the old pair stays owned and is released by the same clear path.",
+        "The predefined-provider table and the provider dispatch tables are provider-owned statics and are never freed by the registry."
+      ]
+    },
+    {
+      "id": "B9-NAME-1",
+      "file": "src/context/namemap.rs",
+      "mechanism": "namemap construction/teardown, name insertion, alias numbering and the name->number table",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D4", "B9-D5"],
+      "residuals": [
+        "The table is a Rust HashMap protected by the namemap lock; the authority's lockless RCU HT is not reproduced. Reads take the read lock, writes the write lock.",
+        "map_mut is an unsafe view with a caller-chosen lifetime; its contract now requires the write lock (or sole pre-publication ownership) and forbids retaining the reference after unlock.",
+        "First-use prepopulation runs outside the map lock, as in the authority; two concurrent first uses can both prepopulate (idempotent names, possibly interleaved numbering).",
+        "A HashMap insertion cannot report the authority's dynamic TOO_MANY_NAMES/INTERNAL_ERROR choice; that raise site remains unreachable (pre-existing recorded residual)."
+      ]
+    },
+    {
+      "id": "B9-NAME-2",
+      "file": "src/context/namemap.rs",
+      "mechanism": "name lookup, display-name walk and borrowed name pointers",
+      "disposition": "CONTRACTED",
+      "defects": [],
+      "residuals": [
+        "ossl_namemap_num2name returns a pointer owned by the map; it is valid only while the map is unmodified, and the authority releases its lock before returning too.",
+        "ossl_namemap_doall_names duplicates the pointer array, releases the lock, then calls the application callback on borrowed names; the callback must not release or mutate the map (now stated in its # Safety contract).",
+        "key() reproduces the authority's bit-5 mask (not a case fold) over at most 63 bytes, stopping at NUL."
+      ]
+    },
+    {
+      "id": "B9-EC-1",
+      "file": "src/provider/ec_kmgmt.rs",
+      "mechanism": "EC/SM2 parameter import, export and get_params ownership",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D9", "B9-D8"],
+      "residuals": [
+        "Export scratch buffers pub_key/genbuf are adopted from the CRYPTO_* seam and released once at the authority's free coordinates on every path.",
+        "Import/export/validation steps are now short-circuited exactly as the authority's ok = ok && f(); no later step runs on a key whose earlier step failed.",
+        "common_get_params and ec_export allocate and start/reset a BN_CTX per call; every early return after BN_CTX_start balances end/free."
+      ]
+    },
+    {
+      "id": "B9-EC-2",
+      "file": "src/provider/ec_kmgmt.rs",
+      "mechanism": "generation context (ec_gen_init/set_params/cleanup/gen), load and dup",
+      "disposition": "CONTRACTED",
+      "defects": ["B9-D8"],
+      "residuals": [
+        "COPY_UTF8_PARAM/COPY_OCTET_PARAM free the incumbent before duplicating the caller's new value. A caller whose value aliases the incumbent would see the authority's own use-after-free; no safe accessor exposes the field, so the obligation stays at the dispatch boundary.",
+        "ec_gen_cleanup does not release group_check, matching the authority's own cleanup (preserved authority leak, not a hidden one).",
+        "dhkem_ikm is cleansed over the length recorded by its last successful memdup; a failed replacement leaves the field NULL, so no stale length is read.",
+        "common_load detaches the EC_KEY* from the caller's reference slot only when the SM2 check passes."
+      ]
+    }
+  ],
+  "defects": [
+    {
+      "id": "B9-D1",
+      "file": "src/property/store.rs",
+      "pre_fix_line": 757,
+      "post_fix_line": 765,
+      "severity": "medium",
+      "class": "OOM-path ownership leak (fresh ALGORITHM entry not released)",
+      "description": "When the new Algorithm entry's impls/cache allocation or its sparse-array insertion failed, ossl_method_store_add called alg_cleanup(0, NULL, NULL). The authority's err tail calls alg_cleanup(0, alg, NULL): the entry was never owned by the array, so the Rust shape leaked the block and any member acquired before the refusal.",
+      "fix": "The failure arm now passes the freshly allocated alg to alg_cleanup, matching property.c. The properties arm (where the authority's alg is still NULL) is unchanged.",
+      "regression": "Source/authority differential. Allocation-failure injection for this exact arm is NOT_RUN (no canary)."
+    },
+    {
+      "id": "B9-D2",
+      "file": "src/property/store.rs",
+      "pre_fix_line": 668,
+      "post_fix_line": 673,
+      "severity": "low",
+      "class": "allocator-seam transcript divergence (zalloc vs malloc, wrong free coordinate)",
+      "description": "Implementation was allocated with CRYPTO_zalloc although property.c:337 uses OPENSSL_malloc, and the refused-up-ref release recorded line 337 instead of the authority's OPENSSL_free(impl) at line 344. Size and file were correct; the allocator call and free coordinate were not.",
+      "fix": "CRYPTO_malloc at LINE_MALLOC_IMPL (337) and CRYPTO_free at the new LINE_FREE_IMPL_ADD (344). All fields are written before any read; properties is assigned before its first use.",
+      "regression": "property::store tests (11) and the full suite; no transcript assertion exists for this arm."
+    },
+    {
+      "id": "B9-D3",
+      "file": "src/property/store.rs",
+      "pre_fix_line": 1500,
+      "post_fix_line": 1508,
+      "severity": "low",
+      "class": "allocator-seam coordinate (del_tmpalg freed at alg_cleanup's line)",
+      "description": "del_tmpalg released its copied ALGORITHM with the coordinate of alg_cleanup's release (line 233) although the authority's OPENSSL_free in del_tmpalg is line 575.",
+      "fix": "Added LINE_FREE_TMPALG = 575 and used it in del_tmpalg.",
+      "regression": "do_all store test and full suite."
+    },
+    {
+      "id": "B9-D4",
+      "file": "src/context/namemap.rs",
+      "pre_fix_line": 119,
+      "post_fix_line": 120,
+      "severity": "low",
+      "class": "allocator-seam coordinates (all namemap allocation/release sites stale)",
+      "description": "The namemap constants named 3.6.4 lines 521/539/66, but the pinned authority's zalloc is line 554, its block free 583 and name_string_free's free 51. The two strdup call sites (240, 325) and their three release sites (257, 329, 388) also all used the one name-free line.",
+      "fix": "Added the six site-specific constants and mapped each allocation/release to its authority line.",
+      "regression": "context::namemap tests (6) and the full suite."
+    },
+    {
+      "id": "B9-D5",
+      "file": "src/context/namemap.rs",
+      "pre_fix_line": 435,
+      "post_fix_line": 447,
+      "severity": "low",
+      "class": "incomplete unsafe contract (exclusivity and lifetime not stated)",
+      "description": "map_mut returned a &'a mut HashMap for a caller-chosen lifetime with a contract that required only a live namemap. It did not require the write lock, exclusive access or a bounded lifetime, so the caller's actual obligations were hidden.",
+      "fix": "The # Safety section now requires the write lock (or sole pre-publication ownership), no second reference for the reference's lifetime, and no retention after unlock. All current callers already hold the write lock and use the reference for one statement.",
+      "regression": "Contract review; callers audited (namemap_add_name, add_names_locked). No safe Rust caller can reach map_mut."
+    },
+    {
+      "id": "B9-D6",
+      "file": "src/provider/activate.rs",
+      "pre_fix_line": 96,
+      "post_fix_line": 96,
+      "severity": "low",
+      "class": "allocator-seam coordinate (realloc off by one)",
+      "description": "L_SET_OPERATION_BIT_REALLOC was 2034; the pinned authority's OPENSSL_realloc token is on line 2035.",
+      "fix": "Corrected to 2035.",
+      "regression": "provider::activate tests and the opbits adversarial probe."
+    },
+    {
+      "id": "B9-D7",
+      "file": "src/provider/activate.rs",
+      "pre_fix_line": 1104,
+      "post_fix_line": 1109,
+      "severity": "medium",
+      "class": "refcount/activation-count ownership defect in the doall undo phase",
+      "description": "Phase 1 raises refcnt and activatecnt for every activated provider before any callback runs. On a callback refusal at index k the crate started the undo at k, leaking the raises for indices 0..k; the authority assigns curr = -1 before finish, whose curr++ restarts at 0. Separately, the early-unlock path (flag lock or atomic count failure at index k) started at k, down-refing a provider phase 1 had not raised, whereas the authority's for (curr++; ...) starts at k+1.",
+      "fix": "Phase 2 now always restarts the undo at 0 (both completion and refusal), and the early-unlock path increments curr before phase 3.",
+      "regression": "New control provider::activate::tests::doall_activated_undoes_every_raised_count_on_callback_refusal. Negative control observed: restoring the pre-fix phase-2 start makes it fail with activation count 3 instead of 2; the source was restored and the control passes. The early-unlock branch is NOT_RUN (no lock/atomic-failure injection)."
+    },
+    {
+      "id": "B9-D8",
+      "file": "src/provider/ec_kmgmt.rs",
+      "pre_fix_line": 1628,
+      "post_fix_line": 1630,
+      "severity": "low",
+      "class": "allocator-seam coordinates (macro-definition line used instead of invocation line)",
+      "description": "The five COPY_UTF8_PARAM replacements all recorded 1090 and the three COPY_OCTET_PARAM replacements recorded 1063/1065 (the macro-definition lines). The authority's OPENSSL_strdup/OPENSSL_memdup expand __LINE__ at the invocation site: 1091-1095 and 1103/1104/1107.",
+      "fix": "Each loop now carries its own invocation-line coordinate for both the incumbent release and the replacement allocation.",
+      "regression": "Full suite compile/run; no direct ec_gen_set_params unit test exists, so the authority differential is NOT_RUN."
+    },
+    {
+      "id": "B9-D9",
+      "file": "src/provider/ec_kmgmt.rs",
+      "pre_fix_line": 595,
+      "post_fix_line": 596,
+      "severity": "medium",
+      "class": "short-circuit parity defect (ok &= ran steps the authority skips)",
+      "description": "Every accumulation used bitwise ok &= f(), which evaluates f unconditionally, while ec_kmgmt.c uses ok = ok && f(). After a failed domain-parameter import/export or a failed validation check the crate still ran the key import/export or the remaining validation checks on a partial key, producing extra side effects and error records the authority never produces.",
+      "fix": "All 18 accumulation sites now use ok = c_int::from(ok != 0 && f() != 0), restoring the authority's short-circuit order in common_import, ec_export, ec_has, ec_match, sm2_validate and ec_validate.",
+      "regression": "Full suite; ec_kmgmt has no unit tests, so an authority differential for the refusal ordering is NOT_RUN."
+    }
+  ],
+  "controls": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check PASS",
+      "focused_tests": [
+        "provider::activate:: 7 passed / 0 failed / 1 ignored (includes the new doall refusal control)",
+        "property::store:: 11 passed / 0 failed",
+        "context::namemap:: 6 passed / 0 failed",
+        "provider::ec_kmgmt:: 0 tests in module"
+      ],
+      "clippy": "cargo clippy --all-targets -- -D warnings PASS (run before and after the EC short-circuit repair)"
+    },
+    "batch": {
+      "library_serial": "1604 passed / 0 failed / 27 ignored (290.17 s, --test-threads=1)",
+      "library_threaded": "1604 passed / 0 failed / 27 ignored (91.96 s, --test-threads=4)",
+      "probes": [
+        "OPENSSL_RS_ADV_PROBE=1 provider::activate::adv_probe::opbits_realloc_publishes_after_old_pair PASS (after the final production change)"
+      ],
+      "negative_control": "Restoring the pre-fix phase-2 undo start made doall_activated_undoes_every_raised_count_on_callback_refusal fail with left 3 / right 2; the source was restored and the control passes."
+    },
+    "not_run": [
+      "ASan / Miri / Loom / TSan for the audited units",
+      "allocation-failure canary for B9-D1",
+      "lock/atomic-failure injection for B9-D7's early-unlock branch",
+      "authority differential or compatibility court for EC keymgmt import/export/validate ordering and the EC parameter seam",
+      "FRF-Fuzz residual replay",
+      "independent reviewer sign-off",
+      "SEAL forensic regeneration"
+    ]
+  },
+  "obligations": {
+    "discharged": [
+      "B9-D1 OOM-path Algorithm leak",
+      "B9-D2/D3/D4/D6/D8 allocator-seam coordinates",
+      "B9-D5 map_mut exclusivity/lifetime contract",
+      "B9-D7 doall_activated undo range (both refusal and early-unlock paths)",
+      "B9-D9 short-circuit order in EC import/export/validation"
+    ],
+    "retained": [
+      "Method, child-provider and provider-init callbacks invoked under store/flag locks must be short and non-reentrant (authority parity).",
+      "Allocator-hook reentrancy while a store lock is held during property-definition work or provider parameter copying is a liveness obligation (authority parity).",
+      "Callers must hold and balance provider references; a concurrent up-ref against the last release is outside the C contract.",
+      "Namemap name pointers are borrowed while the map lives; doall callbacks must not release or mutate the map.",
+      "EC parameter-set self-aliasing (free-before-duplicate) remains a dispatch-boundary obligation, as in the authority.",
+      "ec_gen_cleanup's omitted group_check release is the authority's own leak, preserved and recorded."
+    ],
+    "newly_introduced": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "src/property/store.rs": "CONTRACTED",
+    "src/provider/activate.rs": "CONTRACTED",
+    "src/context/namemap.rs": "CONTRACTED",
+    "src/provider/ec_kmgmt.rs": "CONTRACTED",
+    "safe_compatible": false,
+    "note": "No consumer family graduates from this sweep. Callers such as src/evp/algorithm.rs (doall), src/provider/stores.rs (store bridges) and src/context/mod.rs (namemap slot) retain their own boundaries and were consulted as callers only. No safe Rust caller can cause UB through the four audited modules' interfaces."
+  },
+  "next": {
+    "ordinary_position": "src/cms/cms_ec.rs (168), then src/pkcs7/pk7_asn1.rs and src/x509/x_crl.rs",
+    "boundary_queue": "none from the B1-B9 queue",
+    "large_file_deferral": "src/rsa/mod.rs (123)",
+    "remaining_known_follow_up": "none from B8; the B1-B9 boundary queue is closed"
+  }
+}

@@ -25,8 +25,9 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::ct::ct_log::CtlogStore;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedBlock, OwnedCtx};
 use crate::runtime::bio::sys;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::x509::x509_set::X509_up_ref;
 use crate::x509::x_x509::X509_free;
 use crate::x509::x_x509::X509;
@@ -106,6 +107,26 @@ const _: () = {
     assert!(core::mem::offset_of!(CtPolicyEvalCtx, propq) == 40);
 };
 
+/// The authority's `CT_POLICY_EVAL_CTX_free` member body *minus* the block release [`OwnedCtx`]'s
+/// `Drop` performs.
+// SAFETY: (a) `destroy_body` is the authority's `CT_POLICY_EVAL_CTX_free` member body -- it
+// releases the context's own `cert`/`issuer` references and its duplicate of `propq` exactly once
+// (each releaser accepts the unset NULL) and never the enclosing block, which `OwnedCtx` releases;
+// (b) `CtPolicyEvalCtx` is a `#[repr(C)]` record of raw pointers and integers, so an all-zero block
+// is a valid `CtPolicyEvalCtx` the body is sound on.
+unsafe impl CtxDestroy for CtPolicyEvalCtx {
+    unsafe fn destroy_body(ptr: *mut CtPolicyEvalCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `cert`/`issuer` are NULL or live
+        // references this context owns, and `propq` is NULL or an owned seam block whose single
+        // release is the block handle's `Drop`.
+        unsafe {
+            X509_free((*ptr).cert);
+            X509_free((*ptr).issuer);
+            drop(OwnedBlock::take((*ptr).propq.cast()));
+        }
+    }
+}
+
 /// `CT_POLICY_EVAL_CTX *CT_POLICY_EVAL_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq)` —
 /// `crypto/ct/ct_policy.c:28-51`.
 ///
@@ -117,34 +138,37 @@ pub unsafe extern "C" fn CT_POLICY_EVAL_CTX_new_ex(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut CtPolicyEvalCtx {
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<CtPolicyEvalCtx>(), ptr::null(), 0)
-        .cast::<CtPolicyEvalCtx>();
-    if ctx.is_null() {
+    // SAFETY: `OwnedCtx::zalloc` returns a fresh zeroed `CtPolicyEvalCtx` of the authority's exact
+    // size, or NULL; an all-zero block is the valid context `CtPolicyEvalCtx`'s destructor is
+    // written for.
+    let Some(ctx) = OwnedCtx::<CtPolicyEvalCtx>::zalloc() else {
         return ptr::null_mut();
-    }
+    };
+    let c = ctx.as_ptr();
 
-    // SAFETY: `ctx` is a fresh zeroed allocation; `libctx` is a pointer value.
-    unsafe { (*ctx).libctx = libctx };
+    // SAFETY: `c` is a fresh zeroed allocation; `libctx` is a pointer value.
+    unsafe { (*c).libctx = libctx };
     if !propq.is_null() {
         // SAFETY: `propq` is NUL-terminated per the contract.
         let propq_copy = unsafe { CRYPTO_strdup(propq, ptr::null(), 0) };
         if propq_copy.is_null() {
-            // SAFETY: `ctx` is the allocation this call owns.
-            unsafe { CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0) };
+            // The context never escaped; the handle's `Drop` releases it (and the NULL members).
             return ptr::null_mut();
         }
-        // SAFETY: `ctx` is live; `propq_copy` is the copy this call owns.
-        unsafe { (*ctx).propq = propq_copy };
+        // SAFETY: `c` is live; `propq_copy` is the copy this call owns.
+        unsafe { (*c).propq = propq_copy };
     }
 
     let now = ossl_time_add(
         ossl_time_now(),
         ossl_seconds2time(SCT_CLOCK_DRIFT_TOLERANCE as u64),
     );
-    // SAFETY: `ctx` is live.
-    unsafe { (*ctx).epoch_time_in_ms = ossl_time2ms(now) };
+    // SAFETY: `c` is live.
+    unsafe { (*c).epoch_time_in_ms = ossl_time2ms(now) };
 
-    ctx
+    // The context is now the caller's; `CT_POLICY_EVAL_CTX_free` reclaims it through
+    // `OwnedCtx::from_raw`.
+    ctx.into_raw()
 }
 
 /// `CT_POLICY_EVAL_CTX *CT_POLICY_EVAL_CTX_new(void)` — `crypto/ct/ct_policy.c:53-56`.
@@ -164,13 +188,10 @@ pub unsafe extern "C" fn CT_POLICY_EVAL_CTX_free(ctx: *mut CtPolicyEvalCtx) {
     if ctx.is_null() {
         return;
     }
-    // SAFETY: `ctx` is live per the contract; each field is NULL or owned.
-    unsafe {
-        X509_free((*ctx).cert);
-        X509_free((*ctx).issuer);
-        CRYPTO_free((*ctx).propq.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(ctx.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `ctx` is the context `CT_POLICY_EVAL_CTX_new_ex` handed out per the contract; the
+    // handle's `Drop` runs the authority's own member releases (`X509_free` of `cert`/`issuer` and
+    // `CRYPTO_free` of `propq`) and then the block release.
+    unsafe { drop(OwnedCtx::<CtPolicyEvalCtx>::from_raw(ctx)) };
 }
 
 /// `int CT_POLICY_EVAL_CTX_set1_cert(CT_POLICY_EVAL_CTX *ctx, X509 *cert)` —
@@ -289,3 +310,7 @@ pub unsafe extern "C" fn CT_POLICY_EVAL_CTX_get_time(ctx: *const CtPolicyEvalCtx
     // SAFETY: `ctx` is live per the contract.
     unsafe { (*ctx).epoch_time_in_ms }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(CtPolicyEvalCtx => zero_state_sweep_ct_policy_eval_ctx);

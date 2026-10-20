@@ -54,8 +54,9 @@ use crate::passphrase::{
     ossl_pw_set_ui_method, OsslPassphraseCallback,
 };
 use crate::provider::{ossl_provider_libctx, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedBlock, RawCtx};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc_array, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_malloc_array;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
@@ -291,6 +292,16 @@ struct ConstructDataPkey {
     constructed_obj: *mut c_void,
 }
 
+// SAFETY: every field of `ConstructDataPkey` is a pointer or an `int`, so the zeroed block the
+// authority allocates is already a valid value. The block's release is the authority's bare
+// `OPENSSL_free` in `ossl_encoder_ctx_setup_for_pkey`'s `err:` label; `encoder_destruct_pkey`
+// is the encoder context's cleanup (`encoder_pkey.c:206-219`) and never releases the block, so
+// there is no destructor-visible member for `destroy_body` to release. The authority passes
+// `(NULL, 0)` as the allocator coordinates, which are this trait's defaults.
+unsafe impl CtxDestroy for ConstructDataPkey {
+    unsafe fn destroy_body(_ptr: *mut ConstructDataPkey) {}
+}
+
 /// `static int encoder_import_cb(const OSSL_PARAM params[], void *arg)` —
 /// `encoder_pkey.c:164-174`.
 ///
@@ -407,7 +418,7 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
     // the parameter is kept for signature fidelity.
     _propquery: *const c_char,
 ) -> c_int {
-    let mut data: *mut ConstructDataPkey = ptr::null_mut();
+    let mut data: Option<RawCtx<ConstructDataPkey>> = None;
     let mut prov: *const OsslProvider = ptr::null();
     let mut libctx: *mut c_void = ptr::null_mut();
     let mut ok = 0;
@@ -437,9 +448,8 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
                 error_occurred: 0,
             };
 
-            data = CRYPTO_zalloc(size_of::<ConstructDataPkey>(), ptr::null(), 0)
-                .cast::<ConstructDataPkey>();
-            if data.is_null() {
+            data = RawCtx::<ConstructDataPkey>::zalloc();
+            if data.is_none() {
                 return setup_fail(ctx, data, ok);
             }
 
@@ -473,19 +483,26 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
              */
             let namemap = ossl_namemap_stored(libctx);
             let end = OPENSSL_sk_num(encoder_data.names);
-            if end > 0 {
-                encoder_data.id_names =
+            let id_names = if end > 0 {
+                let id_names =
                     CRYPTO_malloc_array(end as usize, size_of::<c_int>(), ptr::null(), 0)
                         .cast::<c_int>();
-                if encoder_data.id_names.is_null() {
+                if id_names.is_null() {
                     OPENSSL_sk_free(keymgmt_data.names);
                     return setup_fail(ctx, data, ok);
                 }
+                encoder_data.id_names = id_names;
                 for i in 0..end {
                     let name = OPENSSL_sk_value(keymgmt_data.names, i).cast::<c_char>();
                     *encoder_data.id_names.add(i as usize) = ossl_namemap_name2num(namemap, name);
                 }
-            }
+                // SAFETY: `id_names` is this call's own seam block, allocated immediately above
+                // and not owned by anything else; its release below is the authority's own
+                // `CRYPTO_free(..., NULL, 0)`.
+                OwnedBlock::take(id_names.cast::<c_void>())
+            } else {
+                None
+            };
             /*
              * Place the encoders with a different provider as the keymgmt last (the chain is
              * processed in reverse order).
@@ -508,7 +525,10 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
                 (&mut encoder_data as *mut CollectedEncoder).cast::<c_void>(),
             );
 
-            CRYPTO_free(encoder_data.id_names.cast(), ptr::null(), 0);
+            // The scratch id array's single release, at the authority's own (NULL, 0) site and
+            // after the last read of it by the two `OSSL_ENCODER_do_all_provided` passes.
+            drop(id_names);
+            encoder_data.id_names = ptr::null_mut();
             OPENSSL_sk_free(keymgmt_data.names);
             if encoder_data.error_occurred != 0 {
                 raise_site(&err_sites::ENCODER_PKEY_316);
@@ -516,18 +536,24 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
             }
         }
 
-        if !data.is_null() && OSSL_ENCODER_CTX_get_num_encoders(ctx) != 0 {
-            if OSSL_ENCODER_CTX_set_construct(ctx, Some(encoder_construct_pkey)) == 0
-                || OSSL_ENCODER_CTX_set_construct_data(ctx, data.cast::<c_void>()) == 0
-                || OSSL_ENCODER_CTX_set_cleanup(ctx, Some(encoder_destruct_pkey)) == 0
-            {
-                return setup_fail(ctx, data, ok);
+        if let Some(data_ctx) = data.as_ref() {
+            let data_ptr = data_ctx.as_ptr();
+            if OSSL_ENCODER_CTX_get_num_encoders(ctx) != 0 {
+                if OSSL_ENCODER_CTX_set_construct(ctx, Some(encoder_construct_pkey)) == 0
+                    || OSSL_ENCODER_CTX_set_construct_data(ctx, data_ptr.cast::<c_void>()) == 0
+                    || OSSL_ENCODER_CTX_set_cleanup(ctx, Some(encoder_destruct_pkey)) == 0
+                {
+                    return setup_fail(ctx, data, ok);
+                }
+
+                (*data_ptr).pk = pkey;
+                (*data_ptr).selection = selection;
+
+                /* Avoid it being freed: the encoder context now owns the block. */
+                if let Some(owned) = data.take() {
+                    let _ = owned.into_raw();
+                }
             }
-
-            (*data).pk = pkey;
-            (*data).selection = selection;
-
-            data = ptr::null_mut(); /* Avoid it being freed */
         }
 
         ok = 1;
@@ -540,14 +566,17 @@ unsafe fn ossl_encoder_ctx_setup_for_pkey(
 /// The `err:` label of [`ossl_encoder_ctx_setup_for_pkey`] — `encoder_pkey.c:334-339`.
 ///
 /// # Safety
-/// `ctx` live; `data` NULL or a live `ConstructDataPkey` this call allocated.
-unsafe fn setup_fail(ctx: *mut OsslEncoderCtx, data: *mut ConstructDataPkey, ok: c_int) -> c_int {
-    if !data.is_null() {
-        // SAFETY: `ctx` is live and `data` is this call's own allocation.
-        unsafe {
-            OSSL_ENCODER_CTX_set_construct_data(ctx, ptr::null_mut());
-            CRYPTO_free(data.cast(), ptr::null(), 0);
-        }
+/// `ctx` live; `data` is this call's own scratch block or `None`.
+unsafe fn setup_fail(
+    ctx: *mut OsslEncoderCtx,
+    data: Option<RawCtx<ConstructDataPkey>>,
+    ok: c_int,
+) -> c_int {
+    if let Some(data) = data {
+        // SAFETY: `ctx` is live.
+        unsafe { OSSL_ENCODER_CTX_set_construct_data(ctx, ptr::null_mut()) };
+        // `RawCtx`'s `Drop` releases the block alone, at this call's own allocator coordinates.
+        drop(data);
     }
     ok
 }
@@ -645,3 +674,7 @@ pub unsafe extern "C" fn OSSL_ENCODER_CTX_new_for_pkey(
     unsafe { crate::encoder_meth::OSSL_ENCODER_CTX_free(ctx) };
     ptr::null_mut()
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ConstructDataPkey => zero_state_sweep_construct_data_pkey);

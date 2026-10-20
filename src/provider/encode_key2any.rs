@@ -133,13 +133,14 @@ use crate::rsa::object::{
 use crate::rsa::pss::ossl_rsa_pss_params_30_is_unrestricted;
 use crate::rsa::{Rsa, RsaPssParams30};
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{BIO_free, BIO_write, Bio};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{
-    CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc, OPENSSL_cleanse,
-};
+use crate::runtime::mem::{CRYPTO_memdup, OPENSSL_cleanse};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_length, OBJ_nid2obj};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::slh_dsa::key::{
     ossl_slh_dsa_key_get_priv, ossl_slh_dsa_key_get_priv_len, ossl_slh_dsa_key_get_pub,
     ossl_slh_dsa_key_get_pub_len,
@@ -308,6 +309,26 @@ pub(crate) struct Key2anyCtx {
     pwdata: OsslPassphraseData,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the blobs and the context block
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is `key2any_freectx` minus the block -- it releases exactly the
+// context's own passphrase data and cipher (each NULL/zero tolerant) and never the enclosing block.
+// (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::zalloc` leans on.
+unsafe impl CtxDestroy for Key2anyCtx {
+    /// `key2any_freectx`'s body minus the block release: clear the passphrase data, then free the
+    /// cipher.
+    unsafe fn destroy_body(ptr: *mut Key2anyCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ptr).pwdata));
+            EVP_CIPHER_free((*ptr).cipher);
+        }
+    }
+}
+
 /// `static void free_asn1_data(int type, void *data)` — `encode_key2any.c:76-86`.
 ///
 /// # Safety
@@ -341,6 +362,9 @@ unsafe fn key_to_p8info(
     if !p8info.is_null() {
         // SAFETY: `key` and `k2d` are the caller's per the contract; `der` is this frame's.
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
+        // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
+        // it.
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
         // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `p8info` is live, `der` is `derlen` readable bytes this call owns.
@@ -351,11 +375,13 @@ unsafe fn key_to_p8info(
                     0,
                     params_type,
                     params,
-                    der,
+                    der.as_ptr(),
                     derlen,
                 )
             } != 0
         {
+            // Ownership of `der` is transferred to `p8info`.
+            let _ = der.into_raw();
             return p8info;
         }
     }
@@ -364,8 +390,6 @@ unsafe fn key_to_p8info(
     unsafe { raise_site(&KEY2ANY_103) };
     // SAFETY: `p8info` is NULL or this call's object.
     unsafe { PKCS8_PRIV_KEY_INFO_free(p8info) };
-    // SAFETY: `der` is NULL or this call's allocation.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
     ptr::null_mut()
 }
 
@@ -471,13 +495,25 @@ unsafe fn key_to_pubkey(
     if !xpk.is_null() {
         // SAFETY: `key`/`k2d` are the caller's; `der` is this frame's.
         let derlen = unsafe { k2d(key, &mut der, ctx.cast()) };
+        // SAFETY: `der` is the block `k2d` allocated through the seam and no other owner holds
+        // it.
+        let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
         // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
         if derlen > 0
             // SAFETY: `xpk` is live and `der` is `derlen` readable bytes this call owns.
             && unsafe {
-                X509_PUBKEY_set0_param(xpk, OBJ_nid2obj(key_nid), params_type, params, der, derlen)
+                X509_PUBKEY_set0_param(
+                    xpk,
+                    OBJ_nid2obj(key_nid),
+                    params_type,
+                    params,
+                    der.as_ptr(),
+                    derlen,
+                )
             } != 0
         {
+            // Ownership of `der` is transferred to `xpk`.
+            let _ = der.into_raw();
             return xpk;
         }
     }
@@ -486,8 +522,6 @@ unsafe fn key_to_pubkey(
     unsafe { raise_site(&KEY2ANY_167) };
     // SAFETY: `xpk` is NULL or this call's object.
     unsafe { X509_PUBKEY_free(xpk) };
-    // SAFETY: `der` is NULL or this call's allocation.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
     ptr::null_mut()
 }
 
@@ -785,10 +819,12 @@ unsafe extern "C" fn key_to_type_specific_der_bio(
         return 0;
     }
 
+    // SAFETY: `k2d` succeeded, so `der` is a live block it allocated through the seam and no other
+    // owner holds it.
+    let der = unsafe { OwnedBuf::adopt_plain_nullable(der, SeamFile::NULL, 0) };
     // SAFETY: `out` is live and `der` is `derlen` readable bytes.
-    let ret = unsafe { BIO_write(out, der.cast::<c_void>(), derlen) };
-    // SAFETY: `der` is this call's allocation.
-    unsafe { CRYPTO_free(der.cast::<c_void>(), ptr::null(), 0) };
+    let ret = unsafe { BIO_write(out, der.as_ptr().cast::<c_void>(), derlen) };
+    // `der` is released by its `Drop` at this unit's own `(NULL, 0)`.
     c_int::from(ret > 0)
 }
 
@@ -1650,8 +1686,8 @@ unsafe extern "C" fn prepare_rsa_params(
                 unsafe { *pstrtype = V_ASN1_UNDEF };
                 return 1;
             }
-            // The two-pass WPACKET build; `str` is freed on every failure path.
-            let mut str: *mut c_uchar = ptr::null_mut();
+            // The two-pass WPACKET build; `str` is released by its `Drop` on every failure path.
+            let mut str: Option<OwnedBuf> = None;
             let mut str_sz: usize = 0;
             let mut failed = false;
 
@@ -1667,11 +1703,17 @@ unsafe extern "C" fn prepare_rsa_params(
                     }
                 } else {
                     // SAFETY: `str_sz` is the length the first pass measured.
-                    str = CRYPTO_malloc(str_sz, ptr::null(), 0).cast::<c_uchar>();
-                    if str.is_null()
-                        // SAFETY: `pkt` is live, `str` is `str_sz` writable bytes.
-                        || unsafe { WPACKET_init_der(&mut pkt, str, str_sz) } == 0
-                    {
+                    str =
+                        OwnedBuf::new_plain_released(str_sz, SeamFile::NULL, 0, SeamFile::NULL, 0);
+                    let init_ok = match str.as_ref() {
+                        Some(buf) => {
+                            // SAFETY: `pkt` is live, `buf` is `str_sz` writable bytes.
+                            let ok = unsafe { WPACKET_init_der(&mut pkt, buf.as_ptr(), str_sz) };
+                            ok != 0
+                        }
+                        None => false,
+                    };
+                    if !init_ok {
                         // SAFETY: `pkt` is live or partially initialised.
                         unsafe { WPACKET_cleanup(&mut pkt) };
                         failed = true;
@@ -1699,22 +1741,27 @@ unsafe extern "C" fn prepare_rsa_params(
             }
 
             if failed {
-                // SAFETY: `str` is NULL or this frame's allocation.
-                unsafe { CRYPTO_free(str.cast::<c_void>(), ptr::null(), 0) };
+                // `str` is released by its `Drop`.
                 return 0;
             }
 
             // SAFETY: no preconditions.
             let astr = ASN1_STRING_new();
             if astr.is_null() {
-                // SAFETY: `str` is NULL or this frame's allocation.
-                unsafe { CRYPTO_free(str.cast::<c_void>(), ptr::null(), 0) };
+                // `str` is released by its `Drop`.
                 return 0;
             }
-            // SAFETY: `astr` is live; `str` is this call's allocation of `str_sz` bytes, adopted.
+            // SAFETY: `astr` is live; `str` is this call's allocation of `str_sz` bytes, handed
+            // over to the string.
             unsafe {
                 *pstrtype = V_ASN1_SEQUENCE;
-                ASN1_STRING_set0(astr, str.cast::<c_void>(), str_sz as c_int);
+                ASN1_STRING_set0(
+                    astr,
+                    str.take()
+                        .map_or(ptr::null_mut(), OwnedBuf::into_raw)
+                        .cast::<c_void>(),
+                    str_sz as c_int,
+                );
                 *pstr = astr.cast::<c_void>();
             }
             1
@@ -1831,16 +1878,17 @@ unsafe extern "C" fn slh_dsa_pki_priv_to_der(
 /// # Safety
 /// The encoder `newctx` dispatch contract.
 unsafe extern "C" fn key2any_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: `CRYPTO_zalloc` validates its own allocation.
-    let ctx = CRYPTO_zalloc(size_of::<Key2anyCtx>(), ptr::null(), 0).cast::<Key2anyCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is a fresh, writable, correctly-sized allocation.
-        unsafe {
-            (*ctx).provctx = provctx.cast::<ProvCtx>();
-            (*ctx).save_parameters = 1;
-        }
+    // SAFETY: `CRYPTO_zalloc` validates its own allocation; the handle is the block's single owner.
+    let Some(ctx) = OwnedCtx::<Key2anyCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    let raw = ctx.as_ptr();
+    // SAFETY: `raw` is a fresh, writable, correctly-sized allocation.
+    unsafe {
+        (*raw).provctx = provctx.cast::<ProvCtx>();
+        (*raw).save_parameters = 1;
     }
-    ctx.cast::<c_void>()
+    ctx.into_raw().cast::<c_void>()
 }
 
 /// `static void key2any_freectx(void *vctx)` — `encode_key2any.c:1122-1129`.
@@ -1851,14 +1899,10 @@ unsafe extern "C" fn key2any_freectx(vctx: *mut c_void) {
     if vctx.is_null() {
         return;
     }
-    let ctx = vctx.cast::<Key2anyCtx>();
-    // SAFETY: `ctx` is the live context this call owns.
-    unsafe {
-        ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ctx).pwdata));
-        EVP_CIPHER_free((*ctx).cipher);
+    // SAFETY: `vctx` is a live block a previous `into_raw` gave up and `Drop` has not released.
+    if let Some(ctx) = unsafe { OwnedCtx::from_raw(vctx.cast::<Key2anyCtx>()) } {
+        drop(ctx);
     }
-    // SAFETY: `vctx` is this call's allocation.
-    unsafe { CRYPTO_free(vctx, ptr::null(), 0) };
 }
 
 /// `OSSL_ENCODER_PARAM_CIPHER` — `core_names.h`, `"cipher"`.
@@ -6587,3 +6631,7 @@ mod tests {
         assert_eq!(MASK_NO_PUB, 0x85);
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Key2anyCtx => zero_state_sweep_key2any_ctx);

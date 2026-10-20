@@ -231,7 +231,7 @@ pub unsafe extern "C" fn X509_verify(a: *mut X509, r: *mut EvpPkey) -> c_int {
             (*a).distinguishing_id,
             r,
             (*a).libctx,
-            (*a).propq,
+            (*a).propq(),
         )
     }
 }
@@ -401,7 +401,7 @@ pub unsafe extern "C" fn X509_REQ_sign(
             pkey,
             md,
             (*x).libctx,
-            (*x).propq,
+            (*x).propq(),
         )
     }
 }
@@ -528,7 +528,7 @@ pub unsafe extern "C" fn X509_sign(x: *mut X509, pkey: *mut EvpPkey, md: *const 
             pkey,
             md,
             (*x).libctx,
-            (*x).propq,
+            (*x).propq(),
         )
     }
 }
@@ -601,7 +601,7 @@ pub unsafe extern "C" fn X509_CRL_sign(
             pkey,
             md,
             (*x).libctx,
-            (*x).propq,
+            (*x).propq(),
         )
     }
 }
@@ -839,7 +839,7 @@ pub unsafe extern "C" fn d2i_PKCS7_fp(fp: *mut FILE, p7: *mut *mut Pkcs7) -> *mu
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).ctx.libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).ctx.propq };
+            propq = unsafe { (*existing).ctx.propq() };
         }
     }
     // SAFETY: `fp`/`p7` are the caller's and the context/property query come from the object.
@@ -882,7 +882,7 @@ pub unsafe extern "C" fn d2i_PKCS7_bio(bp: *mut Bio, p7: *mut *mut Pkcs7) -> *mu
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).ctx.libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).ctx.propq };
+            propq = unsafe { (*existing).ctx.propq() };
         }
     }
     // SAFETY: `bp`/`p7` are the caller's and the context/property query come from the object.
@@ -952,7 +952,7 @@ pub unsafe extern "C" fn d2i_X509_REQ_bio(bp: *mut Bio, req: *mut *mut X509Req) 
             // SAFETY: `existing` is live per the check above.
             libctx = unsafe { (*existing).libctx };
             // SAFETY: as above.
-            propq = unsafe { (*existing).propq };
+            propq = unsafe { (*existing).propq() };
         }
     }
     // SAFETY: `bp`/`req` are the caller's and the context/property query come from the request.
@@ -1517,7 +1517,7 @@ pub unsafe extern "C" fn X509_digest(
             data,
             len,
             (*cert).libctx,
-            (*cert).propq,
+            (*cert).propq(),
         )
     }
 }
@@ -1593,7 +1593,7 @@ pub unsafe extern "C" fn X509_digest_sig(
                 }
                 RSA_PSS_PARAMS_free(pss);
                 /* Fetch explicitly and do not fall back. */
-                md = EVP_MD_fetch((*cert).libctx, EVP_MD_get0_name(mmd), (*cert).propq);
+                md = EVP_MD_fetch((*cert).libctx, EVP_MD_get0_name(mmd), (*cert).propq());
                 if md.is_null() {
                     return ptr::null_mut();
                 }
@@ -1603,7 +1603,7 @@ pub unsafe extern "C" fn X509_digest_sig(
                     NID_ED448 => c"SHAKE256".as_ptr(),
                     _ => c"SHA256".as_ptr(),
                 };
-                md = EVP_MD_fetch((*cert).libctx, md_name, (*cert).propq);
+                md = EVP_MD_fetch((*cert).libctx, md_name, (*cert).propq());
                 if md.is_null() {
                     return ptr::null_mut();
                 }
@@ -1615,7 +1615,7 @@ pub unsafe extern "C" fn X509_digest_sig(
                 return ptr::null_mut();
             }
         } else {
-            md = EVP_MD_fetch((*cert).libctx, OBJ_nid2sn(mdnid), (*cert).propq);
+            md = EVP_MD_fetch((*cert).libctx, OBJ_nid2sn(mdnid), (*cert).propq());
             if md.is_null() {
                 /* `EVP_get_digestbynid(mdnid)` — `include/openssl/evp.h`, the macro
                  * `EVP_get_digestbyname(OBJ_nid2sn(nid))`. */
@@ -1692,7 +1692,7 @@ pub unsafe extern "C" fn X509_CRL_digest(
             md,
             len,
             (*data).libctx,
-            (*data).propq,
+            (*data).propq(),
         )
     }
 }
@@ -1724,7 +1724,7 @@ pub unsafe extern "C" fn X509_REQ_digest(
             md,
             len,
             (*data).libctx,
-            (*data).propq,
+            (*data).propq(),
         )
     }
 }

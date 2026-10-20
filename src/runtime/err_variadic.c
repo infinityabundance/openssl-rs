@@ -135,6 +135,13 @@ void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
     int flags = 0;
 
     if (fmt != NULL) {
+        /*
+         * `openssl_rs_err_take_data` detaches the slot and always returns NULL
+         * or a block this crate's allocator owns, copying borrowed slot data
+         * into a fresh block first. The `CRYPTO_realloc` calls below are
+         * therefore sound for every slot shape; do not weaken that invariant
+         * on the Rust side without changing this adapter.
+         */
         buf = openssl_rs_err_take_data(&buf_size);
 
         if (buf_size < ERR_MAX_DATA_SIZE

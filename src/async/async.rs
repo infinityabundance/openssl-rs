@@ -28,7 +28,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use crate::runtime::owned_buf::OwnedBuf;
+use core::ffi::{c_int, c_uint, c_void};
 use core::mem::size_of;
 use core::ptr::{self, null_mut};
 
@@ -41,7 +42,8 @@ use crate::crypto_async::async_wait::{async_wait_ctx_reset_counts, AsyncWaitCtx}
 use crate::ffi::guard_ffi;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ASYNC};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_reserve, OPENSSL_sk_pop, OPENSSL_sk_push, OpenSslStack,
 };
@@ -52,7 +54,7 @@ use crate::runtime::threads_common::{
 };
 
 /// The authority's `OPENSSL_FILE` for this unit.
-const FILE: *const c_char = c"crypto/async/async.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/async/async.c");
 /// `async_ctx_new`'s `OPENSSL_malloc(sizeof(*nctx))` (`:40`).
 const LINE_CTX: c_int = 40;
 /// `async_ctx_new`'s failure free and `async_ctx_free`'s `OPENSSL_free(ctx)` (`:53`, `:74`).
@@ -69,6 +71,10 @@ const LINE_JOB_ARGS: c_int = 260;
 const LINE_POOL: c_int = 361;
 /// `ASYNC_init_thread`'s failure free and `async_delete_thread_state`'s (`:368`, `:401`, `:413`).
 const LINE_POOL_FREE: c_int = 401;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of a heap block
+// ---------------------------------------------------------------------------------------------
 
 /// `#define ASYNC_JOB_RUNNING 0` — `async.c:26`.
 const ASYNC_JOB_RUNNING: c_int = 0;
@@ -144,18 +150,19 @@ unsafe fn async_ctx_new() -> *mut AsyncCtx {
         return null_mut();
     }
 
-    let nctx = CRYPTO_malloc(size_of::<AsyncCtx>(), FILE, LINE_CTX).cast::<AsyncCtx>();
-    if nctx.is_null() {
+    // The context block is this frame's own; its handle's `Drop` is the single release of every
+    // failure path below. Ownership moves to the caller on success.
+    let Some(nctx_buf) = OwnedBuf::new(size_of::<AsyncCtx>(), FILE_SEAM, LINE_CTX) else {
         return null_mut();
-    }
+    };
+    let nctx = nctx_buf.as_ptr().cast::<AsyncCtx>();
     // `async_fibre_init_dispatcher(&nctx->dispatcher)` is a no-op on this platform, but the
     // dispatcher storage still has to exist because `swapcontext` writes the calling thread's
     // context into it on the first switch.
     // SAFETY: no preconditions; the returned block is this call's own.
     let dispatcher = unsafe { async_fibre_alloc() };
     if dispatcher.is_null() {
-        // SAFETY: `nctx` is this call's own allocation.
-        unsafe { CRYPTO_free(nctx.cast::<c_void>(), FILE, LINE_CTX_FREE) };
+        // SAFETY: `nctx` is this call's own allocation; the handle releases it on drop.
         return null_mut();
     }
     // SAFETY: `nctx` and `dispatcher` are this call's own allocations.
@@ -173,14 +180,14 @@ unsafe fn async_ctx_new() -> *mut AsyncCtx {
         )
     } == 0
     {
-        // SAFETY: both blocks are this call's own.
+        // SAFETY: the dispatcher's storage is this call's own; the handle releases the context.
         unsafe {
             async_fibre_storage_free(dispatcher);
-            CRYPTO_free(nctx.cast::<c_void>(), FILE, LINE_CTX_FREE);
         }
         return null_mut();
     }
-    nctx
+    // Ownership moves to the caller.
+    nctx_buf.into_raw().cast::<AsyncCtx>()
 }
 
 /// `async_ctx *async_get_ctx(void)` — `async.c:58-62`.
@@ -218,7 +225,12 @@ unsafe fn async_ctx_free() -> c_int {
         // and is not released, only the opaque storage.
         unsafe {
             async_fibre_storage_free((*ctx).dispatcher);
-            CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_CTX_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                ctx.cast(),
+                FILE_SEAM,
+                LINE_CTX_FREE,
+            ));
         }
     }
     1
@@ -229,15 +241,16 @@ unsafe fn async_ctx_free() -> c_int {
 /// # Safety
 /// None; the result is owned by the caller if non-NULL.
 unsafe fn async_job_new() -> *mut AsyncJob {
-    let job = CRYPTO_zalloc(size_of::<AsyncJob>(), FILE, LINE_JOB_NEW).cast::<AsyncJob>();
-    if job.is_null() {
+    // The job block is this frame's own; its handle's `Drop` is the single release of the failure
+    // path below. Ownership moves to the caller on success.
+    let Some(job_buf) = OwnedBuf::new_zeroed(size_of::<AsyncJob>(), FILE_SEAM, LINE_JOB_NEW) else {
         return null_mut();
-    }
+    };
+    let job = job_buf.as_ptr().cast::<AsyncJob>();
     // SAFETY: no preconditions; the returned block is this call's own.
     let fibre = unsafe { async_fibre_alloc() };
     if fibre.is_null() {
-        // SAFETY: `job` is this call's own allocation.
-        unsafe { CRYPTO_free(job.cast::<c_void>(), FILE, LINE_JOB_FREE) };
+        // SAFETY: `job` is this call's own allocation; the handle releases it on drop.
         return null_mut();
     }
     // SAFETY: `job` and `fibre` are this call's own.
@@ -245,7 +258,8 @@ unsafe fn async_job_new() -> *mut AsyncJob {
         (*job).fibre = fibre;
         (*job).status = ASYNC_JOB_RUNNING;
     }
-    job
+    // Ownership moves to the caller.
+    job_buf.into_raw().cast::<AsyncJob>()
 }
 
 /// `static void async_job_free(ASYNC_JOB *job)` — `async.c:92-99`.
@@ -258,9 +272,19 @@ unsafe fn async_job_free(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract, and its two buffers are its own.
     unsafe {
-        CRYPTO_free((*job).funcargs, FILE, LINE_JOB_FREEARGS);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*job).funcargs.cast(),
+            FILE_SEAM,
+            LINE_JOB_FREEARGS,
+        ));
         async_fibre_release((*job).fibre);
-        CRYPTO_free(job.cast::<c_void>(), FILE, LINE_JOB_FREE);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            job.cast(),
+            FILE_SEAM,
+            LINE_JOB_FREE,
+        ));
     }
 }
 
@@ -327,7 +351,12 @@ unsafe fn async_release_job(job: *mut AsyncJob) {
     }
     // SAFETY: `job` is live per the contract and `pool` is this thread's.
     unsafe {
-        CRYPTO_free((*job).funcargs, FILE, LINE_JOB_FREEARGS);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*job).funcargs.cast(),
+            FILE_SEAM,
+            LINE_JOB_FREEARGS,
+        ));
         (*job).funcargs = null_mut();
         OPENSSL_sk_push((*pool).jobs, job.cast::<c_void>());
     }
@@ -497,17 +526,18 @@ pub unsafe extern "C" fn ASYNC_start_job(
                 return ASYNC_NO_JOBS;
             }
             if !args.is_null() && size > 0 {
-                let funcargs = CRYPTO_malloc(size, FILE, LINE_JOB_ARGS);
-                // SAFETY: `fresh` is this call's own job.
-                unsafe { (*fresh).funcargs = funcargs };
-                if funcargs.is_null() {
+                // The copied argument block is the job's own; `into_raw` hands it to `funcargs`.
+                let Some(funcargs) = OwnedBuf::new(size, FILE_SEAM, LINE_JOB_ARGS) else {
                     // SAFETY: `fresh` and `ctx` are live.
                     unsafe {
                         async_release_job(fresh);
                         (*ctx).currjob = null_mut();
                     }
                     return ASYNC_ERR;
-                }
+                };
+                let funcargs = funcargs.into_raw().cast::<c_void>();
+                // SAFETY: `fresh` is this call's own job.
+                unsafe { (*fresh).funcargs = funcargs };
                 // SAFETY: `args` is `size` bytes per the contract and `funcargs` is a fresh
                 // block of `size`; the two do not overlap.
                 unsafe { ptr::copy_nonoverlapping(args.cast::<u8>(), funcargs.cast::<u8>(), size) };
@@ -628,10 +658,13 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         {
             return 0;
         }
-        let pool = CRYPTO_zalloc(size_of::<AsyncPool>(), FILE, LINE_POOL).cast::<AsyncPool>();
-        if pool.is_null() {
+        // The pool block is this frame's own; its handle's `Drop` is the single release of every
+        // failure path below. Ownership moves to this thread's local store on success.
+        let Some(pool_buf) = OwnedBuf::new_zeroed(size_of::<AsyncPool>(), FILE_SEAM, LINE_POOL)
+        else {
             return 0;
-        }
+        };
+        let pool = pool_buf.as_ptr().cast::<AsyncPool>();
         // SAFETY: `pool` is fresh storage and `init_size` was checked against `INT_MAX`.
         unsafe {
             (*pool).jobs = OPENSSL_sk_new_reserve(None, init_size as c_int);
@@ -640,8 +673,7 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         if unsafe { (*pool).jobs }.is_null() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::ASYNC_367) };
-            // SAFETY: `pool` is this call's own allocation.
-            unsafe { CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE) };
+            // SAFETY: `pool` is this call's own allocation; the handle releases it on drop.
             return 0;
         }
         // SAFETY: `pool` is live.
@@ -678,14 +710,16 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
         {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::ASYNC_393) };
-            // SAFETY: `pool` is this call's own.
+            // SAFETY: `pool` is this call's own; its list and the jobs behind it are released
+            // first, then the handle releases the block.
             unsafe {
                 async_empty_pool(pool);
                 OPENSSL_sk_free((*pool).jobs);
-                CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE);
             }
             return 0;
         }
+        // Ownership moves to this thread's local store.
+        let _ = pool_buf.into_raw();
         1
     })
 }
@@ -694,6 +728,11 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
 ///
 /// Declared safe because that is the signature `ossl_init_thread_start` takes
 /// (`ThreadStopHandlerFn`); the handler's own unsafe work is in the block below.
+///
+/// When the thread-event framework invokes this, the B15 register lock is held for the
+/// whole walk. The allocator free and the caller-installed `ASYNC_set_mem_functions`
+/// free hook reached from here therefore run under that lock, exactly as in the
+/// authority; neither may re-enter thread registration.
 extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
     // SAFETY: the key is the crate's own.
     let pool = unsafe {
@@ -705,7 +744,12 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
         unsafe {
             async_empty_pool(pool);
             OPENSSL_sk_free((*pool).jobs);
-            CRYPTO_free(pool.cast::<c_void>(), FILE, LINE_POOL_FREE);
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            drop(OwnedBuf::adopt_plain_nullable(
+                pool.cast(),
+                FILE_SEAM,
+                LINE_POOL_FREE,
+            ));
             CRYPTO_THREAD_set_local_ex(
                 CRYPTO_THREAD_LOCAL_ASYNC_POOL_KEY,
                 CRYPTO_THREAD_NO_CONTEXT,
@@ -721,7 +765,10 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
 /// `void ASYNC_cleanup_thread(void)` — `crypto/async/async.c:421-427`.
 ///
 /// # Safety
-/// None; releases this thread's pool and context.
+/// None beyond the authority's documented precondition: no asynchronous job may be
+/// outstanding for this thread. A paused job's fibre still refers to the dispatcher this
+/// call releases, so resuming it afterwards is a use-after-free (the authority has the
+/// same contract and the same consequence).
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_cleanup_thread() {
     guard_ffi((), || {
@@ -889,6 +936,37 @@ mod tests {
         assert_eq!(STEPS.load(Ordering::SeqCst), 11);
         // SAFETY: `wctx` is this test's own and the job is finished.
         unsafe { ASYNC_WAIT_CTX_free(wctx) };
+    }
+
+    /// A job that finishes without pausing, so the resume path is not involved.
+    unsafe extern "C" fn finishing_job(_arg: *mut c_void) -> c_int {
+        42
+    }
+
+    /// Lazy pool creation, the finished job's return to the pool, and the thread cleanup that
+    /// releases the pool's jobs and then the context. The second call is the authority's own
+    /// idempotent arm (the keys are already NULL).
+    #[test]
+    fn thread_cleanup_releases_a_finished_job_and_is_idempotent() {
+        let _guard = crate::test_support::lock_global_state();
+        let mut job: *mut AsyncJob = null_mut();
+        let mut ret: c_int = -1;
+        // SAFETY: every pointer is this test's own; the job finishes before cleanup.
+        unsafe {
+            let r = ASYNC_start_job(
+                &raw mut job,
+                null_mut(),
+                &raw mut ret,
+                Some(finishing_job),
+                null_mut(),
+                0,
+            );
+            assert_eq!(r, ASYNC_FINISH);
+            assert!(job.is_null());
+            assert_eq!(ret, 42);
+            ASYNC_cleanup_thread();
+            ASYNC_cleanup_thread();
+        }
     }
 
     /// `ASYNC_pause_job` outside a job is a success with no switch, and the block/unblock pair

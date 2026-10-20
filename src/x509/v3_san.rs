@@ -54,12 +54,14 @@ use crate::runtime::bio::sys::{strchr, strcmp, strlen};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+use crate::runtime::mem::CRYPTO_strndup;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_NAIRealm, NID_SRVName, NID_XmppAddr, NID_certificate_issuer, NID_id_on_SmtpUTF8Mailbox,
     NID_issuer_alt_name, NID_ms_upn, NID_pkcs9_emailAddress, NID_subject_alt_name, OBJ_obj2nid,
     OBJ_obj2txt, OBJ_txt2obj,
 };
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num,
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_reserve, OPENSSL_sk_value, OpenSslStack,
@@ -566,18 +568,24 @@ pub unsafe extern "C" fn i2v_GENERAL_NAME(
         GEN_IPADD => {
             // SAFETY: the tag selects the `iPAddress` arm.
             let ip = unsafe { gen_ip(gen) };
-            // SAFETY: `ip` is live and its content is readable for `length` bytes.
-            let tmp = unsafe { ossl_ipaddr_to_asc((*ip).data, (*ip).length) };
-            if tmp.is_null() {
-                ret = core::ptr::null_mut();
-            } else {
+            // SAFETY: `ip` is live and its content is readable for `length` bytes; the returned
+            // block is this call's own allocation, released at the authority's site by `Drop`.
+            let tmp = unsafe {
+                OwnedStr::adopt(
+                    ossl_ipaddr_to_asc((*ip).data, (*ip).length),
+                    SeamFile::new(FILE),
+                    195,
+                )
+            };
+            if let Some(tmp) = tmp {
                 // SAFETY: `tmp` is NUL-terminated; `ret` is this call's own sink.
-                let added = unsafe { X509V3_add_value(c"IP Address".as_ptr(), tmp, &mut ret) };
-                // SAFETY: `tmp` is this call's own allocation (the authority frees it regardless).
-                unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 195) };
+                let added =
+                    unsafe { X509V3_add_value(c"IP Address".as_ptr(), tmp.as_ptr(), &mut ret) };
                 if added == 0 {
                     ret = core::ptr::null_mut();
                 }
+            } else {
+                ret = core::ptr::null_mut();
             }
         }
         GEN_RID => {
@@ -702,15 +710,20 @@ pub unsafe extern "C" fn GENERAL_NAME_print(out: *mut Bio, gen: *mut GeneralName
         GEN_IPADD => {
             // SAFETY: the tag selects the `iPAddress` arm.
             let ip = unsafe { gen_ip(gen) };
-            // SAFETY: `ip` is live and its content is readable for `length` bytes.
-            let tmp = unsafe { ossl_ipaddr_to_asc((*ip).data, (*ip).length) };
-            if tmp.is_null() {
+            // SAFETY: `ip` is live and its content is readable for `length` bytes; the returned
+            // block is this call's own allocation, released at the authority's site by `Drop`.
+            let tmp = unsafe {
+                OwnedStr::adopt(
+                    ossl_ipaddr_to_asc((*ip).data, (*ip).length),
+                    SeamFile::new(FILE),
+                    290,
+                )
+            };
+            let Some(tmp) = tmp else {
                 return 0;
-            }
+            };
             // SAFETY: `tmp` is NUL-terminated; `out` is live.
-            unsafe { BIO_printf(out, c"IP Address:%s".as_ptr(), tmp) };
-            // SAFETY: `tmp` is this call's own allocation.
-            unsafe { CRYPTO_free(tmp.cast::<c_void>(), FILE.as_ptr(), 290) };
+            unsafe { BIO_printf(out, c"IP Address:%s".as_ptr(), tmp.as_ptr()) };
         }
         GEN_RID => {
             // SAFETY: the tag selects the `registeredID` arm.
@@ -786,17 +799,24 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
         return 0;
     }
     let objlen = (p as usize).wrapping_sub(value as usize);
-    // SAFETY: `value` is NUL-terminated and `objlen <= strlen(value)`.
-    let objtmp = unsafe { CRYPTO_strndup(value, objlen, FILE.as_ptr(), 649) };
-    if objtmp.is_null() {
+    // SAFETY: `value` is NUL-terminated and `objlen <= strlen(value)`; the returned block is this
+    // call's own allocation, released at the authority's site by `Drop`.
+    let objtmp = unsafe {
+        OwnedStr::adopt(
+            CRYPTO_strndup(value, objlen, FILE.as_ptr(), 649),
+            SeamFile::new(FILE),
+            653,
+        )
+    };
+    let Some(objtmp) = objtmp else {
         // SAFETY: `gen`/`on` are live per this function's contract.
         unsafe { othername_err(gen, on) };
         return 0;
-    }
+    };
     // SAFETY: `objtmp` is NUL-terminated.
-    let type_id = unsafe { OBJ_txt2obj(objtmp, 0) };
-    // SAFETY: `objtmp` is this call's own allocation.
-    unsafe { CRYPTO_free(objtmp.cast::<c_void>(), FILE.as_ptr(), 653) };
+    let type_id = unsafe { OBJ_txt2obj(objtmp.as_ptr(), 0) };
+    // The authority releases the duplicate here (`:653`), before storing `type_id`.
+    drop(objtmp);
     // SAFETY: `on` is live.
     unsafe { (*on).type_id = type_id };
     if type_id.is_null() {

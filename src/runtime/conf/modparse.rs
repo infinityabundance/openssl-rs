@@ -58,6 +58,8 @@ use crate::runtime::err::err_sites::CONF_MOD_734;
 use crate::runtime::err::raise_site;
 use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::CRYPTO_strdup;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 
 // Open obligations, recorded here because only this module may be edited for the
 // `CONF_get1_default_config_file` work item:
@@ -132,6 +134,17 @@ pub unsafe extern "C" fn CONF_parse_list(
             }
             // SAFETY: `lstart` points into the caller's NUL-terminated string.
             let p = unsafe { sys::strchr(lstart, sep) };
+            // `strchr(s, 0)` returns the terminator rather than NULL, and the authority's loop
+            // then treats it as a separator, sets `lstart = p + 1`, and reads past the
+            // terminator on the next iteration (UB in the C). A NUL cannot delimit a C string,
+            // so a terminator match is normalised to "no separator" here; for every non-zero
+            // `sep`, `strchr` can never return the terminator and this changes nothing.
+            // SAFETY: a non-NULL `strchr` result points inside `lstart`'s allocation.
+            let p = if !p.is_null() && unsafe { *p } == 0 {
+                ptr::null_mut()
+            } else {
+                p
+            };
             // SAFETY: as above; `p == lstart` is tested before `*lstart` so the
             // read only happens when `lstart` is inside the string.
             let at_end = p == lstart || unsafe { *lstart } == 0;
@@ -200,8 +213,12 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         // SAFETY: the environment name is a static NUL-terminated string.
         let from_env = unsafe { ossl_safe_getenv(OPENSSL_CONF_ENV.as_ptr()) };
         if !from_env.is_null() {
-            // SAFETY: `from_env` is NUL-terminated.
-            return unsafe { CRYPTO_strdup(from_env, ptr::null(), 0) };
+            // SAFETY: `from_env` is NUL-terminated, and the block `CRYPTO_strdup` answers is
+            // this frame's until it is handed to the caller below.
+            let dup = unsafe {
+                OwnedStr::adopt(CRYPTO_strdup(from_env, ptr::null(), 0), SeamFile::NULL, 0)
+            };
+            return dup.map_or(ptr::null_mut(), OwnedStr::into_raw);
         }
 
         // The divergent branch. `X509_get_default_cert_area()` would return the
@@ -213,8 +230,16 @@ pub extern "C" fn CONF_get1_default_config_file() -> *mut c_char {
         // `OPENSSL_strdup("")` — so a caller that already handles that case
         // handles this one too, and `CONF_modules_load_file_ex` short-circuits it.
         // SAFETY: `c""` is a static NUL-terminated string, `ptr::null()` is the
-        // documented "no file/line" argument, and flag 0 is the default.
-        unsafe { CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0) }
+        // documented "no file/line" argument, flag 0 is the default, and the block
+        // `CRYPTO_strdup` answers is this frame's until it is handed to the caller below.
+        let dup = unsafe {
+            OwnedStr::adopt(
+                CRYPTO_strdup(c"".as_ptr(), ptr::null(), 0),
+                SeamFile::NULL,
+                0,
+            )
+        };
+        dup.map_or(ptr::null_mut(), OwnedStr::into_raw)
     })
 }
 
@@ -314,6 +339,17 @@ mod tests {
         assert_eq!(ret, 0);
     }
 
+    /// A NUL separator cannot delimit a C string. `strchr` answers the terminator,
+    /// and the authority's loop then steps past it on the next iteration (UB in the
+    /// C); the walk treats a terminator match as "no separator", so the whole list
+    /// is one element and the empty list is one empty element.
+    #[test]
+    fn a_nul_separator_matches_no_separator() -> Result<(), std::ffi::NulError> {
+        assert_eq!(split("a,b", 0, 0)?, vec![(Some("a,b".into()), 3)]);
+        assert_eq!(split("", 0, 0)?, vec![(None, 0)]);
+        Ok(())
+    }
+
     /// The authority's `X509_get_default_cert_area()` for the admitted build.
     /// Recorded here, beside the assertion that this build does not return it.
     const AUTHORITY_OPENSSLDIR: &core::ffi::CStr =
@@ -334,8 +370,9 @@ mod tests {
             AUTHORITY_OPENSSLDIR.to_bytes(),
             "the authority's forensic OPENSSLDIR is not this build's directory"
         );
-        // SAFETY: `p` came from `CRYPTO_strdup`.
-        unsafe { crate::runtime::mem::CRYPTO_free(p.cast::<c_void>(), ptr::null(), 0) };
+        // SAFETY: `p` is the string `CONF_get1_default_config_file` returned this frame and
+        // has not been released; `OwnedStr`'s `Drop` performs its single `CRYPTO_free`.
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
     }
 
     #[test]
@@ -347,8 +384,8 @@ mod tests {
         // SAFETY: the function returned a NUL-terminated owned string.
         let got = unsafe { core::ffi::CStr::from_ptr(p) };
         assert_eq!(got.to_str(), Ok("/tmp/openssl-rs-probe.cnf"));
-        // SAFETY: `p` came from `CRYPTO_strdup`.
-        unsafe { crate::runtime::mem::CRYPTO_free(p.cast::<c_void>(), ptr::null(), 0) };
+        // SAFETY: `p` is the string the function returned this frame; `Drop` releases it.
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
 
         std::env::remove_var("OPENSSL_CONF");
         let p = CONF_get1_default_config_file();
@@ -356,6 +393,6 @@ mod tests {
         // SAFETY: as above.
         assert_eq!(unsafe { core::ffi::CStr::from_ptr(p) }.to_str(), Ok(""));
         // SAFETY: as above.
-        unsafe { crate::runtime::mem::CRYPTO_free(p.cast::<c_void>(), ptr::null(), 0) };
+        drop(unsafe { OwnedStr::adopt(p, SeamFile::NULL, 0) });
     }
 }

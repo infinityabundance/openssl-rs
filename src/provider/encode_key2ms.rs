@@ -48,9 +48,9 @@ use crate::provider::ctx::prov_libctx_of;
 use crate::provider::endecoder_common::{ossl_prov_free_key, ossl_prov_import_key};
 use crate::rsa::Rsa;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::BIO_free;
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY`/`_PUBLIC_KEY` — `core_dispatch.h:640-641`. `pkey.rs` keeps its
 /// copies private, so the pair is spelled here as the two encoders' selection tests read them.
@@ -75,22 +75,41 @@ struct Key2msCtx {
     pwdata: OsslPassphraseData,
 }
 
+// SAFETY: (a) `destroy_body` is the authority's member release — the embedded
+// `ossl_passphrase_data_st`, whose clear accepts a never-initialised (all-zero) member — and never
+// the enclosing block, which `OwnedCtx` releases; (b) an all-zero `Key2msCtx` is valid: a null
+// `provctx`, zero scalars and a zeroed passphrase structure (null cache, `type_ == 0`), exactly the
+// authority's `OPENSSL_zalloc` result.
+unsafe impl CtxDestroy for Key2msCtx {
+    const FILE: *const c_char = ptr::null();
+    const LINE_ALLOC: c_int = 0;
+    const LINE_FREE: c_int = 0;
+
+    unsafe fn destroy_body(ptr: *mut Key2msCtx) {
+        // SAFETY: `ptr` is a live object per the trait contract; the passphrase data is the
+        // object's own member and the clear accepts its zero state.
+        unsafe { ossl_pw_clear_passphrase_data(&raw mut (*ptr).pwdata) };
+    }
+}
+
 /// `static void *key2ms_newctx(void *provctx)` — `encode_key2ms.c:79-89`.
 ///
 /// # Safety
 /// The encoder `newctx` dispatch contract.
 unsafe extern "C" fn key2ms_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: `CRYPTO_zalloc` takes a size and answers a zeroed block or NULL.
-    let ctx = CRYPTO_zalloc(core::mem::size_of::<Key2msCtx>(), ptr::null(), 0).cast::<Key2msCtx>();
-    if !ctx.is_null() {
-        // SAFETY: `ctx` is this call's fresh allocation.
-        unsafe {
-            (*ctx).provctx = provctx;
-            /* This is the strongest encryption level */
-            (*ctx).pvk_encr_level = 2;
-        }
+    // The owner allocates at the authority's own size and coordinates; a zeroed `Key2msCtx` is
+    // its constructed state, so `OwnedCtx` validates it directly. `into_raw` hands the slot the
+    // stable address the C dispatch keeps, and the matching free reclaims it.
+    let Some(ctx) = OwnedCtx::<Key2msCtx>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx` is a fresh zeroed block this call owns.
+    unsafe {
+        (*ctx.as_ptr()).provctx = provctx;
+        /* This is the strongest encryption level */
+        (*ctx.as_ptr()).pvk_encr_level = 2;
     }
-    ctx.cast::<c_void>()
+    ctx.into_raw().cast::<c_void>()
 }
 
 /// `static void key2ms_freectx(void *vctx)` — `encode_key2ms.c:91-97`.
@@ -98,14 +117,10 @@ unsafe extern "C" fn key2ms_newctx(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The encoder `freectx` dispatch contract.
 unsafe extern "C" fn key2ms_freectx(vctx: *mut c_void) {
-    if vctx.is_null() {
-        return;
-    }
-    let ctx = vctx.cast::<Key2msCtx>();
-    // SAFETY: `ctx` is the live context this call owns.
-    unsafe { ossl_pw_clear_passphrase_data(&raw mut (*ctx).pwdata) };
-    // SAFETY: `ctx` is this call's allocation.
-    unsafe { CRYPTO_free(vctx, ptr::null(), 0) };
+    // SAFETY: `vctx` is NULL or the live block `key2ms_newctx` handed out and has not released;
+    // `from_raw` maps NULL to `None`, and `Drop` runs the passphrase release followed by the
+    // block's single release at the authority's own coordinates.
+    unsafe { drop(OwnedCtx::<Key2msCtx>::from_raw(vctx.cast::<Key2msCtx>())) };
 }
 
 /// `key2pvk_set_ctx_params_list[]` — the generated settable list, one `OSSL_PARAM_int`.
@@ -545,3 +560,7 @@ make_msblob_encoder!(
     rsa_set1,
     err_sites::PROV_ENCODE_KEY2MS_275
 );
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Key2msCtx => zero_state_sweep_key2ms_ctx);

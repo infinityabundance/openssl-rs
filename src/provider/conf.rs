@@ -71,6 +71,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::conf::lib::{NCONF_get0_libctx, NCONF_get_section};
 use crate::runtime::conf::types::{Conf, ConfValue};
@@ -80,7 +81,7 @@ use crate::runtime::err::err_sites::{
     PROVIDER_CONF_328, PROVIDER_CONF_412,
 };
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -98,12 +99,14 @@ use super::{
     ossl_provider_new, ossl_provider_set_module_path, OsslProvider, OsslProviderInfo,
 };
 use crate::context::lib_ctx_get_data;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `crypto/provider_conf.c`, for the coordinates of every allocation this module makes.
 ///
 /// `OPENSSL_zalloc` and `OPENSSL_strdup` are macros over the `CRYPTO_*` family that fill in
 /// `OPENSSL_FILE`/`OPENSSL_LINE` at the call site.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_conf.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/provider_conf.c");
 
 /// `PROVIDER_CONF_GLOBAL *pcgbl = OPENSSL_zalloc(sizeof(*pcgbl))` in
 /// `ossl_prov_conf_ctx_new`.
@@ -139,6 +142,37 @@ pub(crate) struct ProviderConfGlobal {
     pub(crate) activated_providers: *mut OpenSslStack,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the per-context state object
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is `ossl_prov_conf_ctx_free` minus the block -- it releases the
+// `activated_providers` list and the lock, each NULL-tolerant, and never the enclosing block. (b)
+// holds: `ProviderConfGlobal` is a `#[repr(C)]` record of two raw pointers, so an all-zero block is
+// a valid value and the body is sound on it (`OPENSSL_sk_pop_free(NULL)` returns early and
+// `CRYPTO_THREAD_lock_free(NULL)` is a no-op).
+unsafe impl CtxDestroy for ProviderConfGlobal {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = L_PCGBL;
+    const LINE_FREE: c_int = L_PCGBL_FREE;
+
+    unsafe fn destroy_body(ptr: *mut ProviderConfGlobal) {
+        // SAFETY: `ptr` is a live `PROVIDER_CONF_GLOBAL` per the trait contract;
+        // `activated_providers` is NULL or this module's own list and `lock` is NULL or one this
+        // module created.
+        unsafe {
+            OPENSSL_sk_pop_free((*ptr).activated_providers, Some(provider_free_thunk));
+            CRYPTO_THREAD_lock_free((*ptr).lock);
+        }
+    }
+}
+
+// The object's two states are the canonical [`OwnedCtx`] (fully built, `Drop` runs
+// `ossl_prov_conf_ctx_free`'s body) and [`RawCtx`] (the block while its lock is not yet set,
+// released block-alone at the `:39` failure arm). Both stay `CRYPTO_zalloc` blocks at the
+// authority's size/interning coordinates, so a caller-installed `CRYPTO_set_mem_functions` hook
+// observes every allocation and release.
+
 /// `void *ossl_prov_conf_ctx_new(OSSL_LIB_CTX *libctx)`.
 ///
 /// The context's slot-16 constructor. It takes the context and does not read it — the
@@ -150,23 +184,26 @@ pub(crate) struct ProviderConfGlobal {
 /// `libctx` is accepted and unused; the authority's argument is the context being built, which
 /// the caller in `context_init` is holding, so it is live.
 pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut ProviderConfGlobal {
-    let pcgbl = CRYPTO_zalloc(core::mem::size_of::<ProviderConfGlobal>(), FILE, L_PCGBL)
-        .cast::<ProviderConfGlobal>();
-    if pcgbl.is_null() {
+    let Some(mut raw) =
+        RawCtx::<ProviderConfGlobal>::zalloc_at(FILE_SEAM, L_PCGBL, FILE_SEAM, L_PCGBL_ERR)
+    else {
         return ptr::null_mut();
-    }
+    };
 
-    // SAFETY: `pcgbl` is this call's own fresh zeroed object.
     let lock = CRYPTO_THREAD_lock_new();
     if lock.is_null() {
-        // SAFETY: `pcgbl` is this call's own allocation and has not been published.
-        unsafe { CRYPTO_free(pcgbl.cast::<c_void>(), FILE, L_PCGBL_ERR) };
+        // The authority's failure arm releases the block alone; that is `raw`'s `Drop`.
         return ptr::null_mut();
     }
-    // SAFETY: `pcgbl` is this call's own live object, so writing its field does not alias.
-    unsafe { (*pcgbl).lock = lock };
+    // SAFETY: `raw`'s block is this call's own live object, so writing its field does not alias.
+    unsafe { (*raw.as_ptr()).lock = lock };
 
-    pcgbl
+    // The constructed object is released by `ossl_prov_conf_ctx_free` at `:55`.
+    raw.set_release_line(L_PCGBL_FREE);
+    // SAFETY: `destroy_body` reads only `lock` (now set) and `activated_providers` (still the zero
+    // `zalloc` gave it), so the block is a valid `PROVIDER_CONF_GLOBAL` and `raw` holds its only
+    // ownership; `into_raw` hands it to the context slot.
+    unsafe { raw.assume_init().into_raw() }
 }
 
 /// `void ossl_prov_conf_ctx_free(void *vpcgbl)` — the slot's releaser.
@@ -184,15 +221,11 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut Provid
 /// has not already released.
 pub(crate) unsafe fn ossl_prov_conf_ctx_free(vpcgbl: *mut c_void) {
     let pcgbl = vpcgbl.cast::<ProviderConfGlobal>();
-    if pcgbl.is_null() {
-        return;
-    }
-    // SAFETY: `pcgbl` is live per the contract, so its two fields are this object's.
-    unsafe {
-        OPENSSL_sk_pop_free((*pcgbl).activated_providers, Some(provider_free_thunk));
-        CRYPTO_THREAD_lock_free((*pcgbl).lock);
-        CRYPTO_free(pcgbl.cast::<c_void>(), FILE, L_PCGBL_FREE);
-    }
+    // SAFETY: `pcgbl` is NULL or the object `ossl_prov_conf_ctx_new` returned and this function
+    // has not already released; `OwnedCtx`'s `Drop` runs the authority's own member release
+    // (`activated_providers`, the lock) followed by the block release. NULL is `None` and a no-op,
+    // matching the authority's own `free(NULL)`.
+    drop(unsafe { OwnedCtx::<ProviderConfGlobal>::from_raw_at(pcgbl, FILE_SEAM, L_PCGBL_FREE) });
 }
 
 /// The `ossl_provider_free` callback in the shape `OPENSSL_sk_pop_free` takes. The authority
@@ -577,7 +610,10 @@ unsafe fn provider_conf_parse_bool_setting(
 ) -> c_int {
     if confvalue.is_null() {
         // SAFETY: this thread's own error queue; the site and the message are the authority's.
-        unsafe { raise_site_data(&PROVIDER_CONF_280, directive_message(confname)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(&PROVIDER_CONF_280, directive_message(confname, &mut buf))
+        };
         return 0;
     }
 
@@ -590,7 +626,10 @@ unsafe fn provider_conf_parse_bool_setting(
         unsafe { *val = 0 };
     } else {
         // SAFETY: this thread's own error queue; the second site and the same message.
-        unsafe { raise_site_data(&PROVIDER_CONF_302, directive_message(confname)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(&PROVIDER_CONF_302, directive_message(confname, &mut buf))
+        };
         return 0;
     }
 
@@ -684,7 +723,13 @@ unsafe fn provider_conf_load(
     if ecmds.is_null() {
         // SAFETY: this thread's own error queue, the generated site, and the `section=%s`
         // message the authority formats.
-        unsafe { raise_site_data(&PROVIDER_CONF_328, section_not_found_message(value)) };
+        unsafe {
+            let mut buf = [0; ERR_MAX_DATA_SIZE];
+            raise_site_data(
+                &PROVIDER_CONF_328,
+                section_not_found_message(value, &mut buf),
+            )
+        };
         return 0;
     }
 
@@ -899,48 +944,108 @@ unsafe fn strlcat(dst: *mut c_char, src: *const c_char, siz: usize) -> usize {
 
 /// `"directive %s set to unrecognized value"` — the message both bool-setting raises carry.
 ///
-/// A `static` buffer, as `confmod/mod.rs`'s three are, for the reason recorded there: the
-/// authority's `ERR_vset_error` allocates, the raise copies the bytes before returning, and no
-/// caller holds the pointer afterwards. `BIO_snprintf` is the function `ERR_vset_error` itself
-/// formats through.
+/// The caller owns the storage. A process-global `static mut` buffer would be a data race:
+/// `provider_conf_load` runs from `OSSL_PROVIDER_load`, which may run concurrently for different
+/// library contexts, and `ERR_vset_error` copies the bytes before returning. `BIO_snprintf` is
+/// the function `ERR_vset_error` itself formats through.
 ///
 /// # Safety
 /// `confname` must be NUL-terminated.
-unsafe fn directive_message(confname: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
-    // SAFETY: the buffer is a static of exactly the declared length and the format string is a
-    // static NUL-terminated one whose single conversion is `%s`.
+unsafe fn directive_message(
+    confname: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
+    // SAFETY: `buf` is exactly the declared length and the format string is a static
+    // NUL-terminated one whose single conversion is `%s`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"directive %s set to unrecognized value".as_ptr(),
             confname,
         )
     };
-    // SAFETY: the pointer is to the static written immediately above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `"section=%s not found"` — the message `provider_conf_load` raises.
 ///
 /// # Safety
 /// `value` must be NUL-terminated.
-unsafe fn section_not_found_message(value: *const c_char) -> *const c_char {
-    static mut BUF: [c_char; ERR_MAX_DATA_SIZE] = [0; ERR_MAX_DATA_SIZE];
+unsafe fn section_not_found_message(
+    value: *const c_char,
+    buf: &mut [c_char; ERR_MAX_DATA_SIZE],
+) -> *const c_char {
     // SAFETY: as `directive_message`.
     unsafe {
         BIO_snprintf(
-            ptr::addr_of_mut!(BUF).cast::<c_char>(),
+            buf.as_mut_ptr(),
             ERR_MAX_DATA_SIZE,
             c"section=%s not found".as_ptr(),
             value,
         )
     };
-    // SAFETY: as above.
-    ptr::addr_of!(BUF).cast::<c_char>()
+    buf.as_ptr()
 }
 
 /// `ERR_MAX_DATA_SIZE`, from `crypto/err/err_local.h`. The authority refuses to format a
 /// message longer than this, so a longer one is truncated in both implementations.
 const ERR_MAX_DATA_SIZE: usize = 1024;
+
+#[cfg(test)]
+mod diagnostic_buffer_tests {
+    use super::*;
+
+    /// The formatter must write into the caller's storage, not a process-global buffer: a second
+    /// call with different input must not disturb the first result. This is the negative control
+    /// for the `static mut` diagnostic-buffer class; on that body both calls returned the same
+    /// address and the second overwrote the first.
+    #[test]
+    fn diagnostic_storage_is_caller_owned() {
+        let mut first = [0; ERR_MAX_DATA_SIZE];
+        let mut second = [0; ERR_MAX_DATA_SIZE];
+        // SAFETY: both inputs are static NUL-terminated strings and each buffer is distinct.
+        let a = unsafe { directive_message(c"alpha".as_ptr(), &mut first) };
+        // SAFETY: `a` points into `first`, which is still live.
+        let snapshot = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes().to_vec();
+        // SAFETY: as above, with its own storage.
+        let b = unsafe { directive_message(c"beta".as_ptr(), &mut second) };
+        assert_ne!(a, b, "caller-owned storage must not alias");
+        // SAFETY: `a` still points into the live `first` buffer.
+        let a_after = unsafe { std::ffi::CStr::from_ptr(a) }.to_bytes();
+        assert_eq!(a_after, snapshot.as_slice());
+        // SAFETY: `b` points into the live `second` buffer.
+        let b_after = unsafe { std::ffi::CStr::from_ptr(b) }.to_bytes();
+        assert_eq!(b_after, b"directive beta set to unrecognized value");
+    }
+
+    /// Concurrent diagnostic building is the trigger the old buffer raced on. Each thread keeps
+    /// its own storage, so every result matches its own input regardless of interleaving.
+    #[test]
+    fn concurrent_directives_do_not_interfere() {
+        std::thread::scope(|scope| {
+            for (input, expected) in [
+                (c"alpha", &b"directive alpha set to unrecognized value"[..]),
+                (c"beta", &b"directive beta set to unrecognized value"[..]),
+                (c"gamma", &b"directive gamma set to unrecognized value"[..]),
+                (c"delta", &b"directive delta set to unrecognized value"[..]),
+            ] {
+                scope.spawn(move || {
+                    for _ in 0..2000 {
+                        let mut buf = [0; ERR_MAX_DATA_SIZE];
+                        // SAFETY: `input` is a static NUL-terminated string and `buf` is this
+                        // thread's own storage.
+                        let p = unsafe { directive_message(input.as_ptr(), &mut buf) };
+                        // SAFETY: `p` points into this thread's live `buf`.
+                        let seen = unsafe { std::ffi::CStr::from_ptr(p) }.to_bytes();
+                        assert_eq!(seen, expected);
+                    }
+                });
+            }
+        });
+    }
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProviderConfGlobal => zero_state_sweep_provider_conf_global);

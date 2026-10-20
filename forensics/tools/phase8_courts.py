@@ -99,6 +99,46 @@ PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase8" / "probes"
 RUN_TIMEOUT_S = "60"
 
+# Recorded, source-witnessed divergences the candidate deliberately carries.
+#
+# A `pass` means the residual set is exactly this ledger: an entry matches only when the
+# court, the observation, **and both transcript values** are the ones written here. This is
+# not a suppression list -- a different candidate value at the same key, or any observation
+# not named here, still fails. It is the court-side record of the two §17 safety
+# divergences whose arms cannot be removed without losing the observation that motivated
+# them. `docs/PHASE-8-CRYPTO-SEAL.md` §5 previously said a passing court could not carry a
+# known difference, and that was achieved by omitting the arm (D-EC-2); here the arm is kept
+# and the difference is pinned, because omitting it would hide the very refusal under test.
+ACCEPTED_DIVERGENCES: dict[tuple[str, str], dict[str, str]] = {
+    ("RT-CIPHER", "defltwrap.pad21"): {
+        # The authority writes `up8(21) + 8 = 32` octets into a provider call whose `outsize`
+        # is the EVP-computed `inl + blocksize = 29`; the crate refuses before writing.
+        "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
+        "candidate": "0",
+        "class": "intentional_safe_divergence",
+        "witness": (
+            "docs/DECISIONS.md D561; src/provider/cipher.rs:3973-3984 (the encrypting arm's "
+            "write-extent check, retained after the authority's `outsize < inl` check at "
+            "cipher_aes_wrp.c:249); src/evp/cipher_ctx.rs:3816-3821 (the provider is handed "
+            "`inl + blocksize`, 29 here); crypto/modes/wrap128.c:188-228 (padded output is "
+            "`up8(inl) + 8`, 32 here)."
+        ),
+    },
+    ("RT-RSA", "rsa.obj_upref.zero_ref_after"): {
+        # `RSA_up_ref` on a zero count: the authority increments to 1 and reports failure;
+        # the shared gate refuses without resurrecting the retired object.
+        "authority": "1",
+        "candidate": "0",
+        "class": "intentional_safe_divergence",
+        "witness": (
+            "docs/DECISIONS.md D562; src/runtime/refcount.rs:163-185 (`up_ref` refuses a zero, "
+            "negative, destroying or `i32::MAX` count without changing it); "
+            "src/rsa/object.rs:719-726 (`RSA_up_ref` calls that gate). The authority's "
+            "`CRYPTO_UP_REF` increments first and reports the post-increment failure."
+        ),
+    },
+}
+
 # The differential courts, in the order they landed. 8.0 lands the runner with none of them,
 # which is the shape 7.0 had: the ledger and the stratum's wiring are evidence, and a court
 # arrives in the subphase that gives it something to observe. `RT-DIGEST` lands with 8.1 and
@@ -415,6 +455,20 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
                            "stderr": a_err.splitlines()[:12]}}
 
     residuals = diff(a_out, c_out)
+    accepted: list[dict] = []
+    unexplained: list[dict] = []
+    for residual in residuals:
+        entry = ACCEPTED_DIVERGENCES.get((name, residual["observation"]))
+        if (entry is not None
+                and residual["authority"] == entry["authority"]
+                and residual["candidate"] == entry["candidate"]):
+            accepted.append({
+                **residual,
+                "disposition": entry["class"],
+                "witness": entry["witness"],
+            })
+        else:
+            unexplained.append(residual)
     # A probe that died on a signal compared nothing beyond the prefix it managed
     # to print, so two sides dying the same way is not agreement.
     crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
@@ -427,9 +481,13 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
         "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
         "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
         "residual_count": len(residuals),
+        "accepted_divergence_count": len(accepted),
+        "unexplained_residual_count": len(unexplained),
         "residuals": residuals,
+        "accepted_divergences": accepted,
+        "unexplained_residuals": unexplained,
         "verdict": (
-            "pass" if not residuals and c_code == a_code and not crashed else "fail"
+            "pass" if not unexplained and c_code == a_code and not crashed else "fail"
         ),
         "staged_binaries": staged,
         "candidate_stderr_tail": c_err.splitlines()[-3:],
@@ -536,7 +594,10 @@ def main(argv: list[str]) -> int:
                     print(f"        actual   = {f['actual_hex'] or f['probe_detail']}")
             continue
         if r["verdict"] == "pass":
-            print(f"  {r['court']:<12} pass   ({r['authority_observations']} observations)")
+            accepted = r.get("accepted_divergence_count", 0)
+            note = (f" ({accepted} recorded divergence(s))" if accepted else "")
+            print(f"  {r['court']:<12} pass   "
+                  f"({r['authority_observations']} observations){note}")
         else:
             print(f"  {r['court']:<12} FAIL   stage={r.get('stage', 'compare')}")
             detail = r.get("detail")
@@ -547,7 +608,7 @@ def main(argv: list[str]) -> int:
             elif isinstance(detail, list):
                 for line in detail[:8]:
                     print(f"      {line}")
-            for res in r.get("residuals", [])[:12]:
+            for res in r.get("unexplained_residuals", r.get("residuals", []))[:12]:
                 print(f"      {res['observation']}: authority={res['authority']!r} "
                       f"candidate={res['candidate']!r} ({res['class']})")
     for name, needs in PENDING_CORRECTNESS_COURTS.items():

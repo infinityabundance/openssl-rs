@@ -40,7 +40,7 @@
 
 #![allow(dead_code)] // the landing callers are 9.2's front, 9.4's DRBGs and 9.5's seed sources
 
-use core::ffi::{c_int, c_uchar, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::mem::size_of;
 use core::ptr;
 
@@ -129,6 +129,126 @@ pub(crate) struct RandPool {
     pub(crate) entropy_requested: usize,
 }
 
+/// How the authority releases the pool's random buffer: always cleansed, on the secure heap when
+/// `pool->secure` is set and on the plain heap otherwise.
+enum BufRelease {
+    /// `CRYPTO_secure_clear_free(ptr, num, file, line)` — a secure pool.
+    SecureCleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+    /// `CRYPTO_clear_free(ptr, num, file, line)` — a plain pool.
+    Cleansed {
+        num: usize,
+        file: *const c_char,
+        line: c_int,
+    },
+}
+
+/// The release for a pool buffer of `num` bytes, at the authority's own freeing site.
+fn buf_release(secure: bool, num: usize, line: c_int) -> BufRelease {
+    let file = FILE.as_ptr();
+    if secure {
+        BufRelease::SecureCleansed { num, file, line }
+    } else {
+        BufRelease::Cleansed { num, file, line }
+    }
+}
+
+/// An owned random-pool buffer allocated through the crate's allocator seam.
+///
+/// The `#[repr(C)]` `RandPool::buffer` field keeps the raw pointer the pool's callers read, so this
+/// handle owns the block only for the windows around a transition — between an allocation and the
+/// field assignment, and between reclaiming the field and the authority's cleansing release. The
+/// block is never a `Vec`/`Box`, so a caller-installed `CRYPTO_set_mem_functions` hook still observes
+/// the allocation and its cleansing release at the authority's own size, `file` and `line`. `Drop`
+/// is the block's single release. The `RandPool` block itself, whose release is a compound destructor
+/// body (this buffer's cleansing release plus the block) and whose address the exported ABI exposes,
+/// stays on the raw seam, as in [`crate::ml_kem::key`].
+struct OwnedBuf {
+    ptr: *mut c_uchar,
+    release: BufRelease,
+}
+
+impl OwnedBuf {
+    /// A fresh, zeroed `len`-byte buffer: `CRYPTO_secure_zalloc` on the secure heap (`secure`) or
+    /// `CRYPTO_zalloc` on the plain one, or `None` when the allocator answers NULL. `alloc_line` is
+    /// the authority's allocation site; `release_line` is the site its `Drop` releases at.
+    fn zalloc(
+        secure: bool,
+        len: usize,
+        alloc_line: c_int,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        let raw = if secure {
+            // SAFETY: `FILE` is this unit's NUL-terminated C string; the secure allocator answers
+            // NULL or `len` zeroed bytes.
+            unsafe { CRYPTO_secure_zalloc(len, FILE.as_ptr(), alloc_line) }.cast::<c_uchar>()
+        } else {
+            unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(len, FILE.as_ptr(), alloc_line)
+            }
+            .cast::<c_uchar>()
+        };
+        if raw.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr: raw,
+            release: buf_release(secure, len, release_line),
+        })
+    }
+
+    /// Take up a live buffer the `RandPool::buffer` field holds, for release by `Drop` at the
+    /// authority's own site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate allocated through the seam (the secure heap when
+    /// `secure`), readable for `num` bytes and owned by no one else.
+    unsafe fn adopt(
+        secure: bool,
+        ptr: *mut c_uchar,
+        num: usize,
+        release_line: c_int,
+    ) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(OwnedBuf {
+            ptr,
+            release: buf_release(secure, num, release_line),
+        })
+    }
+
+    /// Give up ownership of the buffer to the `RandPool::buffer` field that takes it over.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The buffer's single cleansing release, through the same seam the authority uses.
+    fn drop(&mut self) {
+        match self.release {
+            BufRelease::SecureCleansed { num, file, line } => {
+                // SAFETY: `self.ptr` is the secure block this handle owns and has not released,
+                // readable for `num` bytes; `CRYPTO_secure_clear_free` cleanses then releases it and
+                // accepts NULL.
+                unsafe { CRYPTO_secure_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+            BufRelease::Cleansed { num, file, line } => {
+                // SAFETY: as the secure arm; `CRYPTO_clear_free` cleanses then releases and accepts
+                // NULL.
+                unsafe { CRYPTO_clear_free(self.ptr.cast::<c_void>(), num, file, line) };
+            }
+        }
+    }
+}
+
 /// `RAND_POOL *ossl_rand_pool_new(int entropy_requested, int secure, size_t min_len, size_t max_len)`
 /// — `rand_pool.c:22-52`.
 ///
@@ -142,8 +262,11 @@ pub(crate) fn ossl_rand_pool_new(
 ) -> *mut RandPool {
     // `CRYPTO_zalloc` is a safe function in this crate: it answers null or
     // `sizeof(RandPool)` zeroed bytes, as the authority's `OPENSSL_zalloc(sizeof(*pool))`.
-    let pool =
-        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_POOL).cast::<RandPool>();
+    let pool = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_POOL)
+    }
+    .cast::<RandPool>();
 
     if pool.is_null() {
         return ptr::null_mut();
@@ -168,24 +291,20 @@ pub(crate) fn ossl_rand_pool_new(
         p.alloc_len = p.max_len;
     }
 
-    if secure != 0 {
-        // SAFETY: the secure allocator answers null or `alloc_len` zeroed
-        // bytes; the authority's `OPENSSL_secure_zalloc`.
-        p.buffer =
-            unsafe { CRYPTO_secure_zalloc(p.alloc_len, FILE.as_ptr(), LINE_SECURE_ZALLOC_BUFFER) }
-                .cast::<c_uchar>();
+    let (alloc_line, release_line) = if secure != 0 {
+        (LINE_SECURE_ZALLOC_BUFFER, LINE_SECURE_CLEAR_FREE_BUFFER)
     } else {
-        // The plain allocator answers null or `alloc_len` zeroed bytes; the authority's
-        // `OPENSSL_zalloc`. Safe here for the reason the pool's own allocation is.
-        p.buffer = CRYPTO_zalloc(p.alloc_len, FILE.as_ptr(), LINE_ZALLOC_BUFFER).cast::<c_uchar>();
-    }
-
-    if p.buffer.is_null() {
-        // SAFETY: `pool` came from `CRYPTO_zalloc` above, was never published,
-        // and is released exactly once here.
+        (LINE_ZALLOC_BUFFER, LINE_CLEAR_FREE_BUFFER)
+    };
+    // The owner allocates the buffer through the same seam (secure or plain) as the authority and
+    // its `Drop` is the authority's own cleansing release.
+    let Some(buffer) = OwnedBuf::zalloc(secure != 0, p.alloc_len, alloc_line, release_line) else {
+        // SAFETY: `pool` came from `CRYPTO_zalloc` above, was never published, and is released
+        // exactly once here.
         unsafe { CRYPTO_free(pool.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_POOL_ERR) };
         return ptr::null_mut();
-    }
+    };
+    p.buffer = buffer.into_raw();
 
     p.entropy_requested = entropy_requested as usize;
     p.secure = secure;
@@ -195,8 +314,9 @@ pub(crate) fn ossl_rand_pool_new(
 /// `RAND_POOL *ossl_rand_pool_attach(const unsigned char *buffer, size_t len, size_t entropy)`
 /// — `rand_pool.c:60-82`.
 ///
-/// The `const` is cast away exactly as the authority does; attached buffers
-/// are never modified or freed.
+/// The `const` is cast away exactly as the authority does. Attached buffers are
+/// never freed, but `ossl_rand_pool_adin_mix_in` XORs into the pool through
+/// that field, so an attached buffer handed to it must be writable.
 pub(crate) fn ossl_rand_pool_attach(
     buffer: *const c_uchar,
     len: usize,
@@ -204,8 +324,11 @@ pub(crate) fn ossl_rand_pool_attach(
 ) -> *mut RandPool {
     // `CRYPTO_zalloc` is a safe function in this crate and answers null or
     // `sizeof(RandPool)` zeroed bytes.
-    let pool =
-        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_ATTACH).cast::<RandPool>();
+    let pool = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_ATTACH)
+    }
+    .cast::<RandPool>();
 
     if pool.is_null() {
         return ptr::null_mut();
@@ -238,30 +361,15 @@ pub(crate) unsafe fn ossl_rand_pool_free(pool: *mut RandPool) {
     let p = unsafe { &mut *pool };
 
     if p.attached == 0 {
-        if p.secure != 0 {
-            // SAFETY: `p.buffer` is the secure allocation of `p.alloc_len`
-            // bytes, released exactly once; the authority routes this to
-            // `OPENSSL_secure_clear_free`.
-            unsafe {
-                CRYPTO_secure_clear_free(
-                    p.buffer.cast::<c_void>(),
-                    p.alloc_len,
-                    FILE.as_ptr(),
-                    LINE_SECURE_CLEAR_FREE_BUFFER,
-                )
-            };
+        let release_line = if p.secure != 0 {
+            LINE_SECURE_CLEAR_FREE_BUFFER
         } else {
-            // SAFETY: `p.buffer` is the plain allocation of `p.alloc_len`
-            // bytes, released exactly once; `OPENSSL_clear_free`.
-            unsafe {
-                CRYPTO_clear_free(
-                    p.buffer.cast::<c_void>(),
-                    p.alloc_len,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_FREE_BUFFER,
-                )
-            };
-        }
+            LINE_CLEAR_FREE_BUFFER
+        };
+        // SAFETY: `p.buffer` is this pool's live buffer of `p.alloc_len` bytes, allocated through
+        // the seam and released exactly once; the handle's `Drop` runs the authority's own cleansing
+        // `OPENSSL_secure_clear_free`/`OPENSSL_clear_free`.
+        drop(unsafe { OwnedBuf::adopt(p.secure != 0, p.buffer, p.alloc_len, release_line) });
     }
 
     // SAFETY: `pool` was allocated by `CRYPTO_zalloc` and is released once.
@@ -366,8 +474,8 @@ pub(crate) unsafe fn ossl_rand_pool_entropy_needed(pool: *mut RandPool) -> usize
 /// Increase the allocation size — not usable for an attached pool.
 ///
 /// # Safety
-/// `pool` is a live pool.
-fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
+/// `pool` is a live pool and this call holds its only reference for the duration.
+unsafe fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
     // SAFETY: the caller's contract: `pool` is live and exclusively owned.
     let p = unsafe { &mut *pool };
 
@@ -392,46 +500,31 @@ fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
             }
         }
 
-        // Either the secure or the plain allocator answers null or `newlen` zeroed bytes. Only
-        // the secure half needs `unsafe` in this crate.
-        let fresh = if p.secure != 0 {
-            // SAFETY: a compile-time-constant allocation through the secure heap.
-            unsafe { CRYPTO_secure_zalloc(newlen, FILE.as_ptr(), LINE_SECURE_ZALLOC_GROW) }
+        // The owner allocates the enlarged buffer through the same seam (secure or plain) the
+        // authority uses, and its `Drop` is the authority's own cleansing release.
+        let secure = p.secure != 0;
+        let (alloc_line, grow_free_line) = if secure {
+            (LINE_SECURE_ZALLOC_GROW, LINE_SECURE_CLEAR_FREE_GROW)
         } else {
-            CRYPTO_zalloc(newlen, FILE.as_ptr(), LINE_ZALLOC_GROW)
+            (LINE_ZALLOC_GROW, LINE_CLEAR_FREE_GROW)
         };
-        if fresh.is_null() {
+        let pool_free_line = if secure {
+            LINE_SECURE_CLEAR_FREE_BUFFER
+        } else {
+            LINE_CLEAR_FREE_BUFFER
+        };
+        let Some(fresh) = OwnedBuf::zalloc(secure, newlen, alloc_line, pool_free_line) else {
             return 0;
-        }
-        // SAFETY: `fresh` is writable for `newlen` bytes, `p.buffer` for
+        };
+        // SAFETY: `fresh.ptr` is writable for `newlen` bytes, `p.buffer` for
         // `p.len` bytes, and the regions cannot overlap (fresh allocation).
         unsafe {
-            ptr::copy_nonoverlapping(p.buffer, fresh.cast::<c_uchar>(), p.len);
+            ptr::copy_nonoverlapping(p.buffer, fresh.ptr, p.len);
         }
-        if p.secure != 0 {
-            // SAFETY: `p.buffer` is the secure allocation of `p.alloc_len`
-            // bytes, released exactly once here.
-            unsafe {
-                CRYPTO_secure_clear_free(
-                    p.buffer.cast::<c_void>(),
-                    p.alloc_len,
-                    FILE.as_ptr(),
-                    LINE_SECURE_CLEAR_FREE_GROW,
-                )
-            };
-        } else {
-            // SAFETY: `p.buffer` is the plain allocation of `p.alloc_len`
-            // bytes, released exactly once here.
-            unsafe {
-                CRYPTO_clear_free(
-                    p.buffer.cast::<c_void>(),
-                    p.alloc_len,
-                    FILE.as_ptr(),
-                    LINE_CLEAR_FREE_GROW,
-                )
-            };
-        }
-        p.buffer = fresh.cast::<c_uchar>();
+        // SAFETY: `p.buffer` is this pool's live buffer of `p.alloc_len` bytes, released exactly
+        // once here through the handle's `Drop` (the authority's own cleansing release).
+        drop(unsafe { OwnedBuf::adopt(secure, p.buffer, p.alloc_len, grow_free_line) });
+        p.buffer = fresh.into_raw();
         p.alloc_len = newlen;
     }
     1
@@ -484,7 +577,8 @@ pub(crate) unsafe fn ossl_rand_pool_bytes_needed(
      * Make sure the buffer is large enough for the requested amount of data.
      * ... (see rand_pool.c:262-273 for the full rationale)
      */
-    if rand_pool_grow(pool, bytes_needed) == 0 {
+    // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+    if unsafe { rand_pool_grow(pool, bytes_needed) } == 0 {
         /* persistent error for this pool */
         // SAFETY: the caller's contract: `pool` is live and exclusively owned.
         let p = unsafe { &mut *pool };
@@ -545,7 +639,8 @@ pub(crate) unsafe fn ossl_rand_pool_add(
             unsafe { raise_site(&err_sites::RAND_POOL_321) };
             return 0;
         }
-        if rand_pool_grow(pool, len) == 0 {
+        // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+        if unsafe { rand_pool_grow(pool, len) } == 0 {
             return 0;
         }
         // SAFETY: `p.buffer` is writable for `p.alloc_len >= p.len + len`
@@ -586,7 +681,8 @@ pub(crate) unsafe fn ossl_rand_pool_add_begin(pool: *mut RandPool, len: usize) -
         return ptr::null_mut();
     }
 
-    if rand_pool_grow(pool, len) == 0 {
+    // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+    if unsafe { rand_pool_grow(pool, len) } == 0 {
         return ptr::null_mut();
     }
 
@@ -626,7 +722,9 @@ pub(crate) unsafe fn ossl_rand_pool_add_end(
 /// — `rand_pool.c:418-444`.
 ///
 /// # Safety
-/// `pool` is a live pool; `adin` is null or readable for `adin_len` bytes.
+/// `pool` is a live pool; `adin` is null or readable for `adin_len` bytes; the
+/// pool's buffer — including one attached by `ossl_rand_pool_attach` — is
+/// writable for `pool.len` bytes.
 pub(crate) unsafe fn ossl_rand_pool_adin_mix_in(
     pool: *mut RandPool,
     adin: *const c_uchar,

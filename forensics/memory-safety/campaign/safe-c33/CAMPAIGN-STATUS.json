@@ -1,0 +1,324 @@
+{
+  "schema": "openssl-rs/safe-c33/campaign-status/v1",
+  "kind": "safe-c33-campaign-status",
+  "generated_date": "2026-10-20",
+  "branch": "integrate/safe-c33",
+  "source_head": "30541bae71656f883c71e030f9e4127f4ed83113",
+  "source_head_subject": "Merge stage/p25/b36: ERR SeamFile helper repair",
+  "source_head_note": "Rebound at the independent ERR re-adjudication (B36 merge). The pinned census remains c09eef8b; no census refresh is claimed here.",
+  "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
+  "census": {
+    "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+    "pinned_src_content_sha256": "dadc34c4f1da59e05b25b0076123b0d7715784a92c41903d15a6730ba7154a6a",
+    "pinned_files": 868,
+    "pinned_partition": {
+      "ZERO_UNSAFE": 92,
+      "BOUNDARY_COVERED": 15,
+      "PARTIAL": 761
+    },
+    "current_tree_src_rs_files": 877,
+    "post_census_delta": {
+      "count": 9,
+      "TEST_ONLY": 6,
+      "BOUNDARY_COVERED": 3,
+      "PARTIAL": 0,
+      "ZERO_UNSAFE": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json",
+      "note": "The three production helpers are BOUNDARY_COVERED by the cited shared-boundary receipts (FreeOnDrop/OwnedCtx, OB-4 CStrSlot, SeamFile/B-ALLOC-SEAM). This is classification by receipt, not a census-registry predicate and not SAFETY_DISCHARGED."
+    },
+    "combined_partition": {
+      "ZERO_UNSAFE": 92,
+      "BOUNDARY_COVERED": 18,
+      "PARTIAL": 761,
+      "TEST_ONLY": 6,
+      "total": 877
+    },
+    "unaccounted_files": 0,
+    "delta_files": [
+      {
+        "path": "src/runtime/bio/owned_ctx_model.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 7,
+        "gated_by": "src/runtime/bio/owned.rs cfg(test) #[path] module",
+        "receipt": "PROGRESS.md subphase 87 (OB-3 model)"
+      },
+      {
+        "path": "src/runtime/bio/zero_state.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 2,
+        "gated_by": "src/runtime/bio/mod.rs cfg(test) module",
+        "receipt": "PROGRESS.md subphase 87 (OB-3 zero-state sweep)"
+      },
+      {
+        "path": "src/runtime/member_slot_model.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 8,
+        "gated_by": "src/runtime/mod.rs cfg(test) module",
+        "receipt": "PROGRESS.md subphase 89 (OB-4b)"
+      },
+      {
+        "path": "src/runtime/owned_buf_model.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 12,
+        "gated_by": "src/runtime/owned_buf.rs cfg(test) #[path] module",
+        "receipt": "PROGRESS.md subphase 85 (OB-1 model)"
+      },
+      {
+        "path": "src/runtime/owned_str_model.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 7,
+        "gated_by": "src/runtime/owned_str.rs cfg(test) #[path] module",
+        "receipt": "PROGRESS.md subphase 86 (OB-2 model)"
+      },
+      {
+        "path": "src/runtime/release_probe.rs",
+        "status": "TEST_ONLY",
+        "production_sites": 0,
+        "test_only_operations": 0,
+        "gated_by": "src/runtime/mod.rs cfg(test) module",
+        "receipt": "PROGRESS.md subphases 85/87 (release-arm probes)"
+      },
+      {
+        "path": "src/runtime/foreign.rs",
+        "status": "BOUNDARY_COVERED",
+        "production_sites": 19,
+        "covered_sites": 19,
+        "test_only_operations": 0,
+        "boundaries": ["B-DESTRUCTOR", "B-OWNER-ADOPT"],
+        "boundary_receipts": [
+          "DESTRUCTOR-CONTRACTS.md section 1 (FreeOnDrop trait contract)",
+          "DESTRUCTOR-CONTRACTS.md section 4 (FreeOnDrop impls, EST 7)",
+          "DESTRUCTOR-CONTRACTS.md section 5 (impl<T: FreeOnDrop> Drop for OwnedCtx)",
+          "OWNER-DUPLICATES.md section 5 (shared OwnedCtx) and section 9.1 (adoption contract)",
+          "PROGRESS.md subphase 47 (STOP-2: new made unsafe fn with full contract)",
+          "PROGRESS.md subphase 89 (six statem copies moved to runtime::foreign)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "107d0d503",
+        "note": "All 19 sites are covered. 5 unsafe FreeOnDrop impls are mechanically B-DESTRUCTOR; the trait/method declarations, the five impl bodies, the generic Drop body and unsafe fn OwnedCtx::new are the same shared boundary and are covered by the cited receipts. The census registry has no predicate for them; a full regeneration must encode this boundary."
+      },
+      {
+        "path": "src/runtime/mem_coords.rs",
+        "status": "BOUNDARY_COVERED",
+        "production_sites": 1,
+        "covered_sites": 1,
+        "test_only_operations": 1,
+        "boundaries": ["B-ALLOC-SEAM"],
+        "boundary_receipts": [
+          "PROGRESS.md subphase 70 (static lifetime for allocator file coordinates; adversarial review PASS)",
+          "OWNER-DUPLICATES.md (OwnedBuf/OwnedStr coordinate)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "4307d47fc",
+        "note": "The single production site is the contracted unsafe const fn from_static_ptr, covered by the SeamFile/B-ALLOC-SEAM receipt. The pinned line-exact worklist predates this file; a full regeneration must add it."
+      },
+      {
+        "path": "src/runtime/member_slot.rs",
+        "status": "BOUNDARY_COVERED",
+        "production_sites": 4,
+        "covered_sites": 4,
+        "test_only_operations": 22,
+        "boundaries": ["OB-4 member-buffer boundary"],
+        "boundary_receipts": [
+          "MEMBER-BUFFER-MODEL.md section 7 (CStrSlot invariant, clear/store token, of/assume_empty/store_raw contracts)",
+          "PROGRESS.md subphase 89 (OB-4b member-slot unification + OwnedCStr; Miri 7/7 Stacked and Tree Borrows)",
+          "atlas-refresh/mechanism-sweep-M89.json"
+        ],
+        "source_commit": "107d0d503",
+        "note": "All 4 production sites are the slot proof boundaries (of, clear, assume_empty, store_raw) and are covered by the OB-4 receipt. The census registry has no OB-4 predicate; a full regeneration must encode this boundary."
+      }
+    ]
+  },
+  "per_file_audit": {
+    "partial_total": 761,
+    "audited": 761,
+    "remaining": 0,
+    "remaining_list": "forensics/memory-safety/campaign/safe-c33/REMAINING-AUDIT.txt (empty)",
+    "audited_files_lines": 766,
+    "audited_files_note": "761 PARTIAL files plus five BOUNDARY_COVERED files that also received boundary receipts: src/bn/recp.rs (B12), src/runtime/thread.rs (B11), and the three post-census helpers src/runtime/foreign.rs, src/runtime/mem_coords.rs and src/runtime/member_slot.rs",
+    "completion_is_not_discharge": true
+  },
+  "mechanism_discharges": [
+    {
+      "id": "RC-1",
+      "mechanism": "shared reference counting",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 84,
+      "source": "544222da4",
+      "evidence": ["REFCOUNT-BOUNDARY.md", "REFCOUNT-CHECKS.md", "RUNTIME-ALIAS-EVIDENCE.md"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation."
+    },
+    {
+      "id": "OB-1",
+      "mechanism": "OwnedBuf release state",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 85,
+      "source": "70cfe8381",
+      "evidence": ["OWNER-CHECKS.md", "OWNER-CALLERS.md", "OWNER-DUPLICATES.md"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation."
+    },
+    {
+      "id": "OB-2",
+      "mechanism": "OwnedStr string ownership",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 86,
+      "source": "4f3093ad0",
+      "evidence": ["OB2-CHECKS.md", "OB2-CALLERS.md", "MEMBER-BUFFER-MODEL.md"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation."
+    },
+    {
+      "id": "OB-3",
+      "mechanism": "OwnedCtx/RawCtx context ownership",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 87,
+      "source": "bfe27c84b",
+      "merge": "3e9ebd582",
+      "evidence": ["OB3-CHECKS.md", "OB3-CALLERS.md", "DESTRUCTOR-CONTRACTS.md"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation."
+    },
+    {
+      "id": "ERR-1",
+      "mechanism": "ERR error-queue ownership and allocator file-coordinate seam",
+      "scope": "mechanism",
+      "state": "SAFETY_DISCHARGED",
+      "subphase": 88,
+      "source": "30541bae7",
+      "evidence": ["mechanism-discharge-ERR.json", "boundary-sweep-B36.json"],
+      "note": "Mechanism-scope discharge only; not a file-level or consumer-level graduation. Scope: ERR queue/raise/adapter/state paths and the allocator file coordinate they consume, on x86_64-unknown-linux-gnu. Consumer SAFE_COMPATIBLE remains 0/33."
+    }
+  ],
+  "scoped_boundary_discharges": [
+    {
+      "receipt": "boundary-sweep-B23",
+      "scope": "WPACKET failed initialisation and put_value backward walk",
+      "base_head": "9079a19a4",
+      "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+      "discharged_boundaries": ["B23-WPKT-1", "B23-WPKT-2"],
+      "retained_boundaries": [],
+      "defects_closed": ["B23-D1", "B23-D2"],
+      "hidden_obligations": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B23.json"
+    },
+    {
+      "receipt": "boundary-sweep-B25",
+      "scope": "record-layer alert decode and state accessors",
+      "base_head": "a19eae0f7",
+      "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+      "discharged_boundaries": ["B25-RL-4", "B25-RL-5"],
+      "retained_boundaries": ["B25-RL-1", "B25-RL-2", "B25-RL-3"],
+      "retained_state": "CONTRACTED",
+      "defects_closed": ["B25-D1", "B25-D2", "B25-D3", "B25-D4"],
+      "hidden_obligations": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B25.json"
+    },
+    {
+      "receipt": "boundary-sweep-B29",
+      "scope": "console stream/signal edge/callback buffer lifecycle",
+      "base_head": "1ffcd5ef8",
+      "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+      "discharged_boundaries": ["B29-UI-1", "B29-UI-2", "B29-UI-3"],
+      "retained_boundaries": ["B29-UI-4"],
+      "retained_state": "CONTRACTED",
+      "defects_closed": ["B29-D1", "B29-D2"],
+      "hidden_obligations": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B29.json",
+      "note": "The B29 receipt classifies the file as CONTRACTED because UI-4's registry concurrency remains an external caller obligation; only UI-1..3 are scoped discharges."
+    }
+  ],
+  "gates": {
+    "fmt": {
+      "result": "clean",
+      "source": "M89 receipt (final worktree)"
+    },
+    "clippy": {
+      "result": "clean",
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "source": "M89 receipt (final worktree)"
+    },
+    "library_tests": {
+      "passed": 1702,
+      "failed": 0,
+      "ignored": 31,
+      "total": 1733,
+      "ignored_note": "The 31 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
+      "source": "M89 receipt, serially and with --test-threads=4"
+    },
+    "per_file_audit_gate": {
+      "partial_audited": 761,
+      "remaining": 0,
+      "source": "M89 receipt"
+    },
+    "phase8": {
+      "courts_total": 18,
+      "passed": 18,
+      "all_pass": true,
+      "artifact": "artifacts/phase8/COURTS.json",
+      "accepted_divergences": [
+        {
+          "court": "RT-CIPHER",
+          "observation": "defltwrap.pad21",
+          "decision": "D561",
+          "disposition": "intentional_safe_divergence",
+          "witness": "docs/DECISIONS.md D561; src/provider/cipher.rs:3973-3984; src/evp/cipher_ctx.rs:3816-3821; crypto/modes/wrap128.c:188-228"
+        },
+        {
+          "court": "RT-RSA",
+          "observation": "rsa.obj_upref.zero_ref_after",
+          "decision": "D562",
+          "disposition": "intentional_safe_divergence",
+          "witness": "docs/DECISIONS.md D562; src/runtime/refcount.rs:163-185; src/rsa/object.rs:719-726"
+        }
+      ]
+    },
+    "this_batch": {
+      "batch": "B31 bookkeeping (post-census boundary-coverage reclassification)",
+      "rust_source_changed": false,
+      "cargo_fmt": "NOT_RUN - docs/JSON only, no Rust source changed",
+      "cargo_clippy": "NOT_RUN - docs/JSON only, no Rust source changed",
+      "full_library_suite": "NOT_RUN - docs/JSON only; the M89 result above is reused as prior evidence",
+      "json_validation": "python3 -m json.tool on post-census-delta.json and CAMPAIGN-STATUS.json",
+      "partition_recomputed": "92 ZERO_UNSAFE + 18 BOUNDARY_COVERED + 761 PARTIAL + 6 TEST_ONLY = 877; 761/761 PARTIAL audited; 0 remaining"
+    }
+  },
+  "consumers": {
+    "families_total": 33,
+    "l7_functional": 8,
+    "l4_only": 25,
+    "safe_compatible": 0,
+    "l7_families": [
+      "curl",
+      "haproxy",
+      "isync",
+      "monit",
+      "nginx",
+      "openssh",
+      "pure-ftpd",
+      "redis"
+    ],
+    "note": "The eight L7 results are historical/current-candidate differential evidence, not SAFE_COMPATIBLE graduation. Each family still needs its whole dependency closure SAFETY_DISCHARGED and current-candidate functional replay."
+  },
+  "remaining_obligations": [
+    "Independent review and adjudication of the per-file and boundary receipts; no record claims INDEPENDENTLY_CHECKED.",
+    "SEAL dependency-closure evidence for any consumer family.",
+    "Census-bound evidence refresh: the pinned census is c09eef8b (868 files); the nine post-census files are classified by a delta rebound at 98aa601cd (no src/ change since 1ae550590), not by a full regeneration. A full regeneration, including explicit predicates for the OB-4 and FreeOnDrop/unsafe-trait boundaries, is deferred to a SEAL point.",
+    "Generator persistence: ATTRIBUTION.md is generated by unsafe_attribution.py; the post-census delta section is supplementary and would be overwritten by a full regeneration. Fold the delta into the generator, or re-apply it, before the next SEAL regeneration.",
+    "Downstream consumer courts: deepen and replay L7 evidence for the eight L7 families and raise the 25 L4-only families to meaningful L7 evidence.",
+    "Census-registry encoding gap (not an audit gap): the pinned seven-predicate registry has no per-site predicate for the OB-4 member-slot boundary or the FreeOnDrop/unsafe-trait/OwnedCtx::new boundary. The delta classifies foreign.rs, member_slot.rs and mem_coords.rs BOUNDARY_COVERED by receipt; a full census regeneration must encode these boundaries explicitly at the SEAL gate.",
+    "Phase-25 full forensic regeneration, FRF fuzzing, ASan/Miri/Loom/TSan at the applicable BOUNDARY/SEAL gates, and dudect/ctgrind for any constant-time claim."
+  ],
+  "non_claims": [
+    "No consumer family is SAFE_COMPATIBLE; consumers remain 0/33.",
+    "No file-level DISCHARGED claim is made; the 761/761 per-file audit is audit completion, not discharge.",
+    "The four mechanism discharges and three scoped boundary discharges do not sum into any consumer-level graduation.",
+    "The nine-file delta is classification (6 TEST_ONLY + 3 BOUNDARY_COVERED by shared-boundary receipt), not a re-pin of the census and not a new safety claim."
+  ]
+}

@@ -72,7 +72,7 @@ use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 
 use crate::context::lib_ctx_get_data;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_unlock,
     CRYPTO_THREAD_write_lock, CryptoRwlock,
@@ -90,9 +90,9 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_child.c".a
 
 /// `return OPENSSL_zalloc(sizeof(struct child_prov_globals))` in
 /// `ossl_child_prov_ctx_new`.
-const L_GLOBALS: c_int = 29;
+const L_GLOBALS: c_int = 39;
 /// `OPENSSL_free(gbl)` in `ossl_child_prov_ctx_free`.
-const L_GLOBALS_FREE: c_int = 37;
+const L_GLOBALS_FREE: c_int = 47;
 
 /// `OSSL_LIB_CTX_CHILD_PROVIDER_INDEX` — `include/internal/cryptlib.h`.
 const OSSL_LIB_CTX_CHILD_PROVIDER_INDEX: c_int = 18;
@@ -190,6 +190,22 @@ pub(crate) struct ChildProvGlobals {
     pub(crate) c_prov_free: Option<ChildFreeFn>,
 }
 
+// SAFETY: (a) `destroy_body` is the authority's member release — the lock, which is NULL for a slot
+// that was never initialised and accepted by `CRYPTO_THREAD_lock_free` — and never the enclosing
+// block, which `OwnedCtx` releases; (b) an all-zero `ChildProvGlobals` is valid: every field is a
+// nullable raw pointer or an `Option<fn>` with the null niche, and the empty body is sound on it.
+unsafe impl CtxDestroy for ChildProvGlobals {
+    const FILE: *const c_char = FILE;
+    const LINE_ALLOC: c_int = L_GLOBALS;
+    const LINE_FREE: c_int = L_GLOBALS_FREE;
+
+    unsafe fn destroy_body(ptr: *mut ChildProvGlobals) {
+        // SAFETY: `ptr` is a live object per the trait contract; `lock` is NULL or the lock this
+        // object owns.
+        unsafe { CRYPTO_THREAD_lock_free((*ptr).lock) };
+    }
+}
+
 /// `void *ossl_child_prov_ctx_new(OSSL_LIB_CTX *libctx)`.
 ///
 /// `OPENSSL_zalloc` and nothing else: **no lock**. See the module documentation for why that
@@ -198,7 +214,11 @@ pub(crate) struct ChildProvGlobals {
 /// # Safety
 /// `libctx` is accepted and unused; the authority's argument is the context being built.
 pub(crate) unsafe fn ossl_child_prov_ctx_new(_libctx: *mut c_void) -> *mut c_void {
-    CRYPTO_zalloc(core::mem::size_of::<ChildProvGlobals>(), FILE, L_GLOBALS).cast::<c_void>()
+    // The owner allocates at the authority's own size and coordinates; a zeroed
+    // `ChildProvGlobals` is its constructed state, so `OwnedCtx` validates it directly. `into_raw`
+    // hands the slot the stable address the C objects keep, and the matching free reclaims it.
+    OwnedCtx::<ChildProvGlobals>::zalloc()
+        .map_or(ptr::null_mut(), |gbl| gbl.into_raw().cast::<c_void>())
 }
 
 /// `void ossl_child_prov_ctx_free(void *vgbl)`.
@@ -211,15 +231,14 @@ pub(crate) unsafe fn ossl_child_prov_ctx_new(_libctx: *mut c_void) -> *mut c_voi
 /// `vgbl` must be NULL or the object [`ossl_child_prov_ctx_new`] returned and this function
 /// has not already released.
 pub(crate) unsafe fn ossl_child_prov_ctx_free(vgbl: *mut c_void) {
-    let gbl = vgbl.cast::<ChildProvGlobals>();
-    if gbl.is_null() {
-        return;
-    }
-    // SAFETY: `gbl` is live per the contract, so both fields are this object's.
+    // SAFETY: `vgbl` is NULL or the live block `ossl_child_prov_ctx_new` handed out and has not
+    // released; `from_raw` maps NULL to `None`, and `Drop` runs the lock release followed by the
+    // block's single release at the authority's own coordinates.
     unsafe {
-        CRYPTO_THREAD_lock_free((*gbl).lock);
-        CRYPTO_free(gbl.cast::<c_void>(), FILE, L_GLOBALS_FREE);
-    }
+        drop(OwnedCtx::<ChildProvGlobals>::from_raw(
+            vgbl.cast::<ChildProvGlobals>(),
+        ))
+    };
 }
 
 /// `static int ossl_child_provider_init(const OSSL_CORE_HANDLE *handle,
@@ -721,3 +740,7 @@ pub(crate) unsafe fn ossl_provider_set_child(
     }
     1
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ChildProvGlobals => zero_state_sweep_child_prov_globals);

@@ -52,7 +52,7 @@ use crate::runtime::err::err_sites::{
     BIO_SOCK_410, BIO_SOCK_412, BIO_SOCK_416, BIO_SOCK_421,
 };
 use crate::runtime::err::{raise_site, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::owned_str::OwnedStr;
 
 use super::addr::{
     sockaddr, sockaddr_noconst, sockaddr_size, zeroed, BIO_ADDR_family, BIO_ADDR_hostname_string,
@@ -64,6 +64,7 @@ use super::addr_info::{
 };
 use super::bss_sock::{BIO_closesocket, BIO_sock_init, BIO_sock_should_retry, BIO_socket_nbio};
 use super::sys;
+use crate::runtime::mem_coords::SeamFile;
 
 /// `INVALID_SOCKET`.
 const INVALID_SOCKET: c_int = -1;
@@ -534,15 +535,15 @@ pub extern "C" fn BIO_set_tcp_ndelay(s: c_int, on: c_int) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_accept_socket(host: *mut c_char, bind_mode: c_int) -> c_int {
     guard_ffi(INVALID_SOCKET, || {
-        let mut h: *mut c_char = ptr::null_mut();
-        let mut p: *mut c_char = ptr::null_mut();
+        let mut h_raw: *mut c_char = ptr::null_mut();
+        let mut p_raw: *mut c_char = ptr::null_mut();
         let mut res: *mut BioAddrInfo = ptr::null_mut();
 
         // SAFETY: `host` is NUL-terminated and both out-parameters are writable.
         // Note the priority: this helper reads the string as `service:host` order,
         // which is `BIO_PARSE_PRIO_SERV`.
         let parsed = unsafe {
-            super::addr_info::BIO_parse_hostserv(host, &mut h, &mut p, BIO_PARSE_PRIO_SERV)
+            super::addr_info::BIO_parse_hostserv(host, &mut h_raw, &mut p_raw, BIO_PARSE_PRIO_SERV)
         };
         if parsed == 0 {
             // The parse raised, and the authority returns without freeing because
@@ -550,16 +551,26 @@ pub unsafe extern "C" fn BIO_get_accept_socket(host: *mut c_char, bind_mode: c_i
             return INVALID_SOCKET;
         }
 
+        // SAFETY: on success each out-parameter is NULL or a `CRYPTO_strndup` block this frame
+        // owns; no other owner holds either string.
+        let h = unsafe { OwnedStr::adopt(h_raw, SeamFile::NULL, 0) };
+        // SAFETY: as above for the service half.
+        let p = unsafe { OwnedStr::adopt(p_raw, SeamFile::NULL, 0) };
+        let h_ptr = h.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
+        let p_ptr = p.as_ref().map_or(ptr::null(), |s| s.as_ptr().cast_const());
+
         if BIO_sock_init() != 1 {
-            // SAFETY: each temporary is NULL or owned by this function.
+            // SAFETY: `res` is NULL or a chain `BIO_lookup` produced for this call.
+            // `h` and `p` drop in `cleanup_res` at the authority's `(NULL, 0)` release
+            // sites.
             return unsafe { cleanup_res(INVALID_SOCKET, res, h, p) };
         }
 
-        // SAFETY: `h` and `p` are NULL or NUL-terminated, and `res` is writable.
+        // SAFETY: `h_ptr` and `p_ptr` are NULL or NUL-terminated, and `res` is writable.
         let found = unsafe {
             BIO_lookup(
-                h,
-                p,
+                h_ptr,
+                p_ptr,
                 BIO_LOOKUP_SERVER,
                 sys::AF_UNSPEC,
                 sys::SOCK_STREAM,
@@ -603,21 +614,22 @@ pub unsafe extern "C" fn BIO_get_accept_socket(host: *mut c_char, bind_mode: c_i
 
 /// Free the temporaries of `BIO_get_accept_socket` and answer with `s`.
 ///
+/// The two strings are owned by this frame and released by their handles in the authority's
+/// `h`-then-`p` order. The address chain and the socket stay raw: `BIO_ADDRINFO_free` is the
+/// authority's own typed release for the chain, and the socket is not a seam allocation.
+///
 /// # Safety
-/// Each pointer must be NULL or owned by the caller, as `BIO_get_accept_socket`
-/// produced them.
-unsafe fn cleanup_res(s: c_int, res: *mut BioAddrInfo, h: *mut c_char, p: *mut c_char) -> c_int {
-    // SAFETY: `res` is NULL or an owned chain; `h`/`p` are NULL or owned strings
-    // from `CRYPTO_strndup`.
-    unsafe {
-        BIO_ADDRINFO_free(res);
-        if !h.is_null() {
-            CRYPTO_free(h.cast(), ptr::null(), 0);
-        }
-        if !p.is_null() {
-            CRYPTO_free(p.cast(), ptr::null(), 0);
-        }
-    }
+/// `res` must be NULL or the live chain `BIO_lookup` produced for this call and not yet freed.
+unsafe fn cleanup_res(
+    s: c_int,
+    res: *mut BioAddrInfo,
+    h: Option<OwnedStr>,
+    p: Option<OwnedStr>,
+) -> c_int {
+    // SAFETY: `res` is NULL or an owned chain per the contract.
+    unsafe { BIO_ADDRINFO_free(res) };
+    drop(h);
+    drop(p);
     s
 }
 
@@ -650,53 +662,64 @@ pub unsafe extern "C" fn BIO_accept(sock: c_int, ip_port: *mut *mut c_char) -> c
         }
 
         if !ip_port.is_null() {
-            // SAFETY: `res` is a live address.
-            let host = unsafe { BIO_ADDR_hostname_string(ptr::addr_of!(res), 1) };
+            // SAFETY: `res` is a live address; each result is NULL or a `CRYPTO_strdup` block this
+            // frame owns.
+            let host = unsafe {
+                OwnedStr::adopt(
+                    BIO_ADDR_hostname_string(ptr::addr_of!(res), 1),
+                    SeamFile::NULL,
+                    0,
+                )
+            };
             // SAFETY: as above.
-            let port = unsafe { BIO_ADDR_service_string(ptr::addr_of!(res), 1) };
-            let joined = if !host.is_null() && !port.is_null() {
+            let port = unsafe {
+                OwnedStr::adopt(
+                    BIO_ADDR_service_string(ptr::addr_of!(res), 1),
+                    SeamFile::NULL,
+                    0,
+                )
+            };
+            let joined = if let (Some(h), Some(p)) = (host.as_ref(), port.as_ref()) {
                 // SAFETY: both are NUL-terminated byte strings.
-                let hl = unsafe { sys::strlen(host) };
+                let hl = unsafe { sys::strlen(h.as_ptr()) };
                 // SAFETY: as above.
-                let pl = unsafe { sys::strlen(port) };
-                let size = hl + pl + 2;
-                // SAFETY: `CRYPTO_zalloc(0)` never happens here because the size is
-                // at least 2.
-                let buf = CRYPTO_zalloc(size, ptr::null(), 0).cast::<c_char>();
-                if !buf.is_null() {
+                let pl = unsafe { sys::strlen(p.as_ptr()) };
+                // A wrapped size would be a too-small allocation; treat it as the allocator's
+                // refusal arm instead of reproducing that overflow (§17).
+                let size = hl.checked_add(pl).and_then(|n| n.checked_add(2));
+                let buf = size.and_then(|len| {
+                    OwnedStr::new_zeroed(len, SeamFile::NULL, 0, SeamFile::NULL, 0)
+                });
+                if let Some(ref buf) = buf {
                     // SAFETY: `buf` has room for `hl + pl + 2` bytes including the
                     // terminator and the colon.
                     unsafe {
-                        sys::memcpy(buf.cast(), host.cast(), hl);
-                        *buf.add(hl) = b':' as c_char;
-                        sys::memcpy(buf.add(hl + 1).cast(), port.cast(), pl);
-                        *buf.add(hl + 1 + pl) = 0;
+                        sys::memcpy(buf.as_ptr().cast(), h.as_ptr().cast(), hl);
+                        *buf.as_ptr().add(hl) = b':' as c_char;
+                        sys::memcpy(buf.as_ptr().add(hl + 1).cast(), p.as_ptr().cast(), pl);
+                        *buf.as_ptr().add(hl + 1 + pl) = 0;
                     }
                 }
                 buf
             } else {
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BIO_SOCK_314) };
-                ptr::null_mut()
+                None
             };
 
+            // Ownership of a non-NULL joined block transfers to the caller here.
+            let joined_ptr = joined.map_or(ptr::null_mut(), OwnedStr::into_raw);
             // SAFETY: `ip_port` is writable per the caller's contract.
-            unsafe { *ip_port = joined };
+            unsafe { *ip_port = joined_ptr };
 
-            if joined.is_null() {
+            if joined_ptr.is_null() {
                 // The authority closes through `BIO_closesocket`, a safe call.
                 BIO_closesocket(ret);
                 ret = INVALID_SOCKET;
             }
-            // SAFETY: each is NULL or an allocation from `CRYPTO_strdup`.
-            unsafe {
-                if !host.is_null() {
-                    CRYPTO_free(host.cast(), ptr::null(), 0);
-                }
-                if !port.is_null() {
-                    CRYPTO_free(port.cast(), ptr::null(), 0);
-                }
-            }
+            // The authority releases `host` then `port`; the handles drop in that order.
+            drop(host);
+            drop(port);
         }
         ret
     })

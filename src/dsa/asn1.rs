@@ -406,10 +406,11 @@ mod tests {
     use super::*;
     use core::ptr;
 
+    use crate::asn1::i2d::{FILE as I2D_FILE, LINE as I2D_LINE};
+    use crate::asn1::owned::OwnedBlock;
     use crate::bn::arith::BN_cmp;
     use crate::bn::bignum::BN_set_word;
     use crate::dsa::object::{DSA_get0_key, DSA_get0_pqg, DSA_set0_key, DSA_set0_pqg};
-    use crate::runtime::mem::CRYPTO_free;
 
     /// A structurally valid `DSA`: `p = 23`, `q = 11`, `g = 2`, `y = 4`, `x = 2`. The templates do
     /// not validate the numbers, so this rounds trip every field without a generation.
@@ -498,7 +499,14 @@ mod tests {
             }
 
             DSA_free(back);
-            CRYPTO_free(der.cast(), ptr::null(), 0);
+            // `der` is the `i2d` frame's `CRYPTO_malloc` block at the encoder's own
+            // `FILE`/`LINE`, handed out with `into_raw`; this is its single release. The enclosing
+            // `unsafe` block carries the adoption contract.
+            drop(OwnedBlock::<c_uchar>::from_raw(
+                der,
+                I2D_FILE.as_ptr(),
+                I2D_LINE,
+            ));
             c_long::from(n)
         }
     }

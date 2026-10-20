@@ -1,0 +1,87 @@
+{
+  "schema": "openssl-rs/p25-campaign-handoff/1",
+  "task_id": "P25-X509-001",
+  "campaign": "x509-policy-tree",
+  "title": "X.509 policy-tree safe-core: reconnaissance + ownership/invariant freeze",
+  "branch": "stage/p25/x509-policy-tree",
+  "base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
+  "base_ref": "main",
+  "status": "reconnaissance-complete",
+  "scope_files": [
+    "src/x509/pcy_tree.rs",
+    "src/x509/pcy_node.rs",
+    "src/x509/pcy_cache.rs",
+    "src/x509/pcy_data.rs",
+    "src/x509/pcy_lib.rs"
+  ],
+  "authority": {
+    "src": "forensics/authorities/src/openssl-3.6.4/crypto/x509/pcy_*.c",
+    "headers": [
+      "forensics/authorities/src/openssl-3.6.4/crypto/x509/pcy_local.h",
+      "forensics/authorities/src/openssl-3.6.4/include/openssl/x509_vfy.h.in"
+    ]
+  },
+  "objective": "Freeze the ownership model and the invariants the X.509 policy-tree conversion must conserve, and decompose the conversion into independently recoverable units (649 interior ops; FFI_EXPORT 11, RAW_POINTER_DEREFERENCE 246, UNSAFE_FUNCTION_CALL 268, UNSAFE_METHOD_CALL 124).",
+  "ownership_model": {
+    "representation": "raw heap blocks; no arena, no Vec",
+    "structs": {
+      "X509PolicyData": {"def": "pcy_lib.rs:53-63", "size": 32},
+      "X509PolicyNode": {"def": "pcy_lib.rs:76-84", "size": 24},
+      "X509PolicyLevel": {"def": "pcy_lib.rs:94-104", "size": 32},
+      "X509PolicyTree": {"def": "pcy_lib.rs:115-133", "size": 64},
+      "X509PolicyCache": {"def": "pcy_lib.rs:153-165", "size": 40, "owner": "X509::policy_cache x_x509.rs:176-177"}
+    },
+    "level_array": "CRYPTO_calloc pcy_tree.rs:265, reached by pointer arithmetic (level.add/sub)",
+    "labels": {
+      "alloc": ["pcy_data.rs:154", "pcy_node.rs:190", "pcy_cache.rs:268", "pcy_tree.rs:255", "pcy_tree.rs:265", "pcy_tree.rs:801"],
+      "free": ["pcy_data.rs:97-111", "pcy_node.rs:278-281", "pcy_tree.rs:136", "pcy_tree.rs:586", "pcy_tree.rs:609", "pcy_tree.rs:624", "pcy_tree.rs:865-889"]
+    },
+    "repr_c_asserts": ["pcy_lib.rs:65-71", "pcy_lib.rs:86-91", "pcy_lib.rs:106-112", "pcy_lib.rs:135-145", "pcy_lib.rs:167-174", "x_x509.rs:220"],
+    "ffi_exports": 11,
+    "known_gap": "ossl_policy_cache_free (pcy_cache.rs:419-429) is #[allow(dead_code)] with no caller; the per-cert policy_cache leaks on X509_free. Recorded, not to be silently fixed."
+  },
+  "invariants": [
+    "public C ABI: 11 exported symbols' names/signatures unchanged (x509_vfy.h.in:800-823)",
+    "return word: FAILURE=-2 INVALID=-1 INTERNAL=0 VALID=1 EMPTY=2 EXPLICIT=4; *ptree/*pexplicit_policy set only on VALID",
+    "pointer identity + stable address: get0 accessors are borrowed, valid until X509_policy_tree_free; parent/node/policy pointers must be the identical graph objects; levels array and nodes must not move after linking",
+    "traversal ordering: node stacks sorted by OBJ_cmp(valid_policy); anyPolicy is index 0; authority set in level/parent order, user set in policy_oids order",
+    "allocator contract: graph built via OPENSSL_malloc/zalloc/calloc/free (CRYPTO_*), sizes observable through CRYPTO_set_mem_functions; failure returns NULL -> INTERNAL",
+    "error/raise semantics: pcy_tree raises nothing; ERR_raise sites stay in pcy_cache/pcy_data/pcy_node",
+    "cleanup: X509_policy_tree_free free set exact; SHARED_QUALIFIERS frees shared qualifiers once; cert refs released via X509_free",
+    "CVE-2023-0464 cap: node_maximum=1000; exceeding -> add_node NULL -> INTERNAL",
+    "cert refcounts: level.cert holds a counted ref (X509_up_ref pcy_tree.rs:312)"
+  ],
+  "baseline": {
+    "existing_court": "courts/phase11/rt_x509_verify_probe.c policy_surface (736-878): drives X509_policy_check return word + tree shape",
+    "null_arm_court": "courts/phase10/rt_store_probe.c (1070-1079): nine accessors NULL arms only",
+    "dedicated_differential": null,
+    "differential_model": {
+      "tool": "forensics/tools/ms_sparse_array_court.py",
+      "c_probe": "courts/phase25/rt_sparse_array_differential.c",
+      "artifact": "forensics/memory-safety/sparse-array-differential.json"
+    },
+    "authority_fixtures": {
+      "recipe": "forensics/authorities/src/openssl-3.6.4/test/recipes/80-test_policy_tree.t",
+      "data": "forensics/authorities/src/openssl-3.6.4/test/recipes/80-test_policy_tree_data/",
+      "files": ["small_policy_tree.pem", "small_leaf.pem", "large_policy_tree.pem", "large_leaf.pem"]
+    }
+  },
+  "next_action": "Start P25-X509-002: choose the stable-address representation (keep CRYPTO_* blocks or prove allocator conservation by differential) and build the minimal x509-policy differential harness (courts/phase25 + forensics/tools), running it green on the UNCONVERTED crate as the parity baseline.",
+  "stop_condition": "P25-X509-002 stops when the differential harness runs green against the unmodified crate (baseline parity) and records the exact graph block sizes and CRYPTO_*/sk_* call counts; the existing phase10/phase11 courts stay green.",
+  "units": [
+    {"id": "P25-X509-001", "objective": "recon + ownership/invariant freeze", "files": ["forensics/memory-safety/campaign/x509-policy-tree/HANDOFF.md", "forensics/memory-safety/campaign/x509-policy-tree/state.json"], "stop": "record written; no source changed"},
+    {"id": "P25-X509-002", "objective": "stable-address + allocator requirements + differential harness", "files": ["courts/phase25/x509_policy_differential.c", "forensics/tools/ms_x509_policy_court.py"], "stop": "harness green on unconverted crate; sizes/hook counts recorded"},
+    {"id": "P25-X509-003", "objective": "safe node/data ownership at stable addresses", "files": ["src/x509/pcy_data.rs", "src/x509/pcy_node.rs"], "stop": "no raw block alloc/free left; courts + differential green"},
+    {"id": "P25-X509-004", "objective": "safe traversal of the graph", "files": ["src/x509/pcy_tree.rs"], "stop": "no raw deref/unsafe method call in traversal; ordering transcript identical"},
+    {"id": "P25-X509-005", "objective": "destruction / ownership transfer as safe Drop", "files": ["src/x509/pcy_tree.rs", "src/x509/pcy_cache.rs", "src/x509/pcy_data.rs", "src/x509/pcy_node.rs"], "stop": "free-count transcript matches authority; no leak/double-free"},
+    {"id": "P25-X509-006", "objective": "public get0 accessors / pointer lifetimes", "files": ["src/x509/pcy_lib.rs"], "stop": "ABI unchanged; accessor identity+stability transcript identical"},
+    {"id": "P25-X509-007", "objective": "hostile cases + Miri/sanitizers/differential", "files": ["courts/", "forensics/tools/"], "stop": "miri/asan green; cap + failure-injection green; HIDDEN=0"},
+    {"id": "P25-X509-008", "objective": "reconcile + promote (ms_reduction adjudication)", "files": ["forensics/memory-safety/unsafe-reconstruction.json"], "stop": "reduction accepted, or REVERTED_NOT_A_REDUCTION recorded"}
+  ],
+  "constraints": [
+    "do not commit or push",
+    "do not modify docker/ or the court image",
+    "do not weaken any gate/lint/ABI",
+    "container-only tooling: bash docker/openssl-rs-court.sh exec bash -c '...'"
+  ]
+}

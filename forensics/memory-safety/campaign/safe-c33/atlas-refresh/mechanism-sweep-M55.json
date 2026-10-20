@@ -1,0 +1,126 @@
+{
+  "receipt": "mechanism-sweep-M55",
+  "branch": "integrate/safe-c33",
+  "source_head": "03ef9b1fd",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression or hidden obligation); no defect in the eight audited files, three authority-UB/overflow guards applied to the queued CBC-HMAC-SHA1 follow-up",
+  "scope": "Per-file audit of eight ordinary EVP units: the SM4 and DESX legacy cipher statics, the alg_section configuration handler, the two X509_ALGOR hand-offs, and the BLAKE2b/BLAKE2s, MD4 and MD5 legacy digest statics. keymgmt_lib.rs was skipped as a provider export/import dispatch boundary and legacy_md5.rs was substituted from the next stable queue slot. The queued M54 follow-up (negative/undersized/overflowing legacy controls in e_aes_cbc_hmac_sha1.rs) was repaired with two runtime controls.",
+  "files": [
+    "src/evp/e_sm4.rs",
+    "src/evp/evp_cnf.rs",
+    "src/evp/evp_lib.rs",
+    "src/evp/e_xcbc_d.rs",
+    "src/evp/legacy_blake2.rs",
+    "src/evp/legacy_evp.rs",
+    "src/evp/legacy_md4.rs",
+    "src/evp/legacy_md5.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/keymgmt_lib.rs",
+      "reason": "Provider export/import dispatch boundary: operation cache keyed on (name_id, prov), read/write lock protocol, provider callbacks. Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt and is the first file of the next queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M55-D1",
+      "file": "src/evp/e_aes_cbc_hmac_sha1.rs",
+      "line_pre_fix": 191,
+      "severity": "medium",
+      "class": "authority-UB reproduction (negative length becomes SIZE_MAX)",
+      "description": "EVP_CTRL_AEAD_SET_MAC_KEY with a negative arg reached the provider's size_t length and then a huge read from the caller's pointer. A negative key length is never valid; the authority makes the same int-to-size_t conversion and faults.",
+      "fix": "Refuse arg < 0 with -1 before any pointer use (§17).",
+      "witness": "Code and compile review; no in-tree fixture constructs a legacy CBC-HMAC-SHA1 context for this private control (NOT_RUN for a runtime control)."
+    },
+    {
+      "id": "M55-D2",
+      "file": "src/evp/e_aes_cbc_hmac_sha1.rs",
+      "line_pre_fix": 255,
+      "severity": "medium",
+      "class": "authority-UB reproduction (undersized control argument)",
+      "description": "The legacy MULTIBLOCK_ENCRYPT arm dereferenced the parameter block without the size test its _AAD sibling makes, so a short arg produced an out-of-bounds parameter read.",
+      "fix": "Refuse arg < size_of::<EvpCtrlTls11MultiblockParam>() with -1, matching the provider arm's recorded deliberate divergence.",
+      "witness": "Code and compile review; no in-tree fixture constructs the legacy context (NOT_RUN for a runtime control)."
+    },
+    {
+      "id": "M55-D3",
+      "file": "src/evp/e_aes_cbc_hmac_sha1.rs",
+      "line_pre_fix": 238,
+      "severity": "low",
+      "class": "signed overflow in a size answer",
+      "description": "EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE computed arg + 20 + 16 in c_int. The SHA-1 digest constant (20) is correct, but a fragment size near INT_MAX overflows: debug panics and release wraps. The authority's signed addition is undefined there.",
+      "fix": "Extract tls11_multiblock_max_bufsize(arg) with checked_add/checked padding and an overflow refusal of -1.",
+      "witness": "evp::e_aes_cbc_hmac_sha1::tests::the_tls11_max_bufsize_reserves_a_sha1_digest and the_tls11_max_bufsize_refuses_overflow (both pass)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "Legacy EVP_CIPHER callback contract: init/do_cipher/ctrl callers supply a live EVP_CIPHER_CTX whose cipher_data block has at least the cipher's ctx_size (cipher_ctx.rs, RC-1-adjacent)",
+    "OB-3/OB-4 shared owned-context release: EVP_CIPHER_CTX_reset and the init-failure paths cleanse cipher_data (OPENSSL_cleanse or CRYPTO_clear_free) before release",
+    "Legacy EVP_MD static contract: EVP_ORIG_GLOBAL objects are refused by up_ref/free; ctx_size 0 is safe because the provider fetch replaces the method before any callback reads md_data",
+    "OB-1 OwnedBuf: evp_lib.rs's aid block is owned at the authority's exact OPENSSL_malloc/OPENSSL_free file and line, with a single Drop release",
+    "NCONF section contract: NCONF_get_section answers a stack whose elements are live CONF_VALUE entries with NUL-terminated names",
+    "Authority differential contract for the legacy static initialisers: NID, pkey NID, size, block size, flags, origin, ASN.1 views and ctx_size field for field"
+  ],
+  "residuals": [
+    "The legacy ctrl callbacks of e_aes_cbc_hmac_sha1.rs remain reachable only through an engine; no in-tree fixture constructs such a context, so M55-D1/D2 have no runtime witness.",
+    "The digest statics in legacy_blake2.rs, legacy_md4.rs and legacy_md5.rs are carriers only: they own no md_data and cannot be armed through the normal EVP_DigestInit_ex path because the provider fetch either succeeds or refuses.",
+    "keymgmt_lib.rs is not audited in this receipt; its operation cache and provider round trip retain their existing obligations and remain queued.",
+    "No constant-time claim is made for any unit in this batch."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1664 passed / 0 failed / 27 ignored; 1691 total; 66.20 s)",
+    "lib_test_threads_4": "PASS (1664 passed / 0 failed / 27 ignored; 1691 total; 82.67 s)",
+    "focused_tests": "PASS (17 passed / 0 failed across the eight audited units and the repaired CBC-HMAC-SHA1 unit, including the two new M55-D3 controls)",
+    "affected_adversarial_probes": "NOT_RUN (no phase5 probe runner wired into scripts/; the changed answers are control-plane values)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "No reusable ownership boundary changed. The three repairs reject invalid control arguments and an overflowing size answer; the two negative/undersized guards have no in-tree fixture that can construct a legacy cipher context, so they are compile- and review-verified only."
+  },
+  "next_queue": {
+    "file": "src/evp/keymgmt_lib.rs",
+    "then": [
+      "src/evp/legacy_mdc2.rs",
+      "src/evp/legacy_ripemd.rs",
+      "src/evp/legacy_sha3.rs",
+      "src/evp/legacy_sha.rs",
+      "src/evp/legacy_wp.rs",
+      "src/evp/method_store.rs",
+      "src/evp/p5_crpt.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "legacy-context fixture and runtime control for negative/undersized AEAD control arguments",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "RT-CIPHER differential for EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE at several fragment sizes",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, constant-time/dudect on the touched units",
+      "status": "NOT_RUN",
+      "reason": "no toolchain component in the pinned image / no new secret-dependent branch was introduced",
+      "runs_at": "BOUNDARY or SEAL, whichever touches these carriers next"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    }
+  ]
+}

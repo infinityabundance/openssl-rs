@@ -70,6 +70,9 @@ use crate::x509::x_x509::{X509_free, X509};
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/cmp/cmp_client.c";
 
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
+
 /// `OSSL_CMP_PKIFAILUREINFO_incorrectData` — `include/openssl/cmp.h:118`.
 const OSSL_CMP_PKIFAILUREINFO_INCORRECT_DATA: c_int = 7;
 
@@ -661,8 +664,10 @@ unsafe fn send_receive_check(
                     OSSL_CMP_PKISI_BUFLEN - 1,
                 )
             };
+            // The joined error-details text is the authority's own `OPENSSL_free(text)` at line
+            // 243; the handle's `Drop` is that release.
             // SAFETY: `text` is NULL or this call's own.
-            unsafe { crate::runtime::mem::CRYPTO_free(text.cast(), FILE.as_ptr(), 243) };
+            let _text = unsafe { OwnedStr::adopt(text, SeamFile::new(FILE), 243) };
         }
         // SAFETY: `ctx` is live.
         if unsafe { (*ctx).status } != OSSL_CMP_PKISTATUS_rejection {
@@ -1183,9 +1188,15 @@ unsafe fn cert_response(
             return 0;
         }
 
-        // SAFETY: `ctx` is live.
-        let subj = unsafe {
-            X509_NAME_oneline(X509_get_subject_name((*ctx).new_cert), ptr::null_mut(), 0)
+        // The subject string is the authority's own `OPENSSL_free(subj)` at line 801, reached once
+        // at the `end:` label; the handle's `Drop` runs it on every return path below.
+        // SAFETY: `ctx` is live; `subj` is this call's own block.
+        let _subj = unsafe {
+            OwnedStr::adopt(
+                X509_NAME_oneline(X509_get_subject_name((*ctx).new_cert), ptr::null_mut(), 0),
+                SeamFile::new(FILE),
+                801,
+            )
         };
         // SAFETY: `ctx` is live.
         let rkey = unsafe { ossl_cmp_ctx_get0_newPubkey(ctx) };
@@ -1231,8 +1242,6 @@ unsafe fn cert_response(
             // SAFETY: `ctx` is live; `txt` is NULL or NUL-terminated.
             if unsafe { ossl_cmp_exchange_certConf(ctx, rid, fail_info, txt) } == 0 {
                 // ret = 0
-                // SAFETY: `subj` is NULL or this call's own.
-                unsafe { crate::runtime::mem::CRYPTO_free(subj.cast(), FILE.as_ptr(), 801) };
                 return 0;
             }
         }
@@ -1240,12 +1249,8 @@ unsafe fn cert_response(
         if fail_info != 0 {
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).status = OSSL_CMP_PKISTATUS_rejected_by_client };
-            // SAFETY: `subj` is NULL or this call's own.
-            unsafe { crate::runtime::mem::CRYPTO_free(subj.cast(), FILE.as_ptr(), 801) };
             return 0;
         }
-        // SAFETY: `subj` is NULL or this call's own.
-        unsafe { crate::runtime::mem::CRYPTO_free(subj.cast(), FILE.as_ptr(), 801) };
         return 1;
     }
 }

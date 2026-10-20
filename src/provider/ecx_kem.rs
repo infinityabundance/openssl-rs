@@ -37,7 +37,7 @@
 
 #![allow(unreachable_pub)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -69,7 +69,9 @@ use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `MAX_ECX_KEYLEN` — `ecx_kem.c:43`, the value of `X448_KEYLEN`.
 const MAX_ECX_KEYLEN: usize = X448_KEYLEN;
@@ -107,12 +109,23 @@ const OSSL_PKEY_PARAM_PUB_KEY: *const c_char = c"pub".as_ptr();
 /// The generated unit's own `__FILE__`. `ecx_kem.c.in` is `.c.in`-generated, so it is the bare
 /// build-relative path.
 const FILE_ECX_KEM: *const c_char = c"providers/implementations/kem/ecx_kem.c".as_ptr();
+const FILE_ECX_KEM_SEAM: SeamFile = SeamFile::new(c"providers/implementations/kem/ecx_kem.c");
 
 /// `ossl_prov_is_running()` — the literal 1 on this build.
 #[inline]
 fn is_running() -> c_int {
     1
 }
+
+// The KEM context's owned `ikm` — the authority's `unsigned char *ikm` / `size_t ikmlen` pair,
+// released with `OPENSSL_clear_free(ikm, ikmlen)`.
+//
+// The block stays a `CRYPTO_*`-seam allocation at the authority's own `__FILE__`/`__LINE__` (the
+// input is the `OSSL_PARAM_get_octet_string` helper's block; the context's replacement and its
+// final release are `ecx_kem.c:321`/`:177`), so a caller-installed `CRYPTO_set_mem_functions` hook
+// observes both ends. `OwnedBuf::adopt_cleansed` takes the pair, its `Drop` is the pair's single
+// cleansing release at the recorded site, and `OwnedBuf::into_raw` hands the `ikm` half back to
+// the context field.
 
 /// `PROV_ECX_CTX` — `ecx_kem.c:52-63`.
 #[repr(C)]
@@ -270,8 +283,11 @@ unsafe fn ecx_pubkey(ecx: *mut EcxKey) -> *mut u8 {
 /// The KEM `newctx` dispatch contract.
 unsafe extern "C" fn ecxkem_newctx(provctx: *mut c_void) -> *mut c_void {
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvEcxCtx>(), FILE_ECX_KEM, 163).cast::<ProvEcxCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcxCtx>(), FILE_ECX_KEM, 163)
+    }
+    .cast::<ProvEcxCtx>();
 
     if ctx.is_null() {
         return ptr::null_mut();
@@ -295,7 +311,13 @@ unsafe extern "C" fn ecxkem_freectx(vectx: *mut c_void) {
     // SAFETY: `ctx` is the caller's context; `recipient_key_set`/`sender_authkey_set` accept a
     // NULL key and release the held ones, and `ctx` is released last.
     unsafe {
-        CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_ECX_KEM, 177);
+        // The `ikm` pair's handle releases the field's own block at the authority's site.
+        drop(OwnedBuf::adopt_cleansed(
+            (*ctx).ikm.cast::<c_uchar>(),
+            (*ctx).ikmlen,
+            FILE_ECX_KEM_SEAM,
+            177,
+        ));
         recipient_key_set(ctx, ptr::null_mut());
         sender_authkey_set(ctx, ptr::null_mut());
         CRYPTO_free(ctx.cast(), FILE_ECX_KEM, 180);
@@ -314,7 +336,8 @@ unsafe fn ecx_match_params(key1: *const EcxKey, key2: *const EcxKey) -> c_int {
 /// `static int ecx_key_check(const ECX_KEY *ecx, int requires_privatekey)` — `ecx_kem.c:188-193`.
 ///
 /// # Safety
-/// `ecx` is live.
+/// `ecx` is a live `ECX_KEY`. The KEM dispatch never supplies NULL here: the framework passes the
+/// key held by the operation's `EVP_PKEY_CTX` at every `*_init` call.
 unsafe fn ecx_key_check(ecx: *const EcxKey, requires_privatekey: c_int) -> c_int {
     // SAFETY: `ecx` is live per the contract.
     if unsafe { (*ecx).privkey }.is_null() {
@@ -343,7 +366,7 @@ unsafe fn ecxkem_init(
         return 0;
     }
 
-    // SAFETY: the caller's contract; `ecx` may be NULL and `ecx_key_check` reads it only then.
+    // SAFETY: the caller's contract; `ecx` is the live key the dispatch passes at every init call.
     unsafe {
         if ecx_key_check(ecx, c_int::from(operation == EVP_PKEY_OP_DECAPSULATE)) == 0 {
             return 0;
@@ -541,8 +564,17 @@ unsafe extern "C" fn ecxkem_set_ctx_params(vctx: *mut c_void, params: *const Oss
             {
                 return 0;
             }
-            CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_ECX_KEM, 321);
-            (*ctx).ikm = tmp.cast::<u8>();
+            // The old `ikm`'s handle releases it at the authority's own site; the replacement is
+            // the helper's fresh block, handed to the field through a second handle.
+            drop(OwnedBuf::adopt_cleansed(
+                (*ctx).ikm.cast::<c_uchar>(),
+                (*ctx).ikmlen,
+                FILE_ECX_KEM_SEAM,
+                321,
+            ));
+            (*ctx).ikm =
+                OwnedBuf::adopt_cleansed(tmp.cast::<c_uchar>(), tmplen, FILE_ECX_KEM_SEAM, 321)
+                    .map_or(ptr::null_mut(), |b| b.into_raw().cast::<u8>());
             (*ctx).ikmlen = tmplen;
         }
 

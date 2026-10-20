@@ -39,6 +39,8 @@ use core::ptr;
 use crate::ffi::guard_ffi;
 use crate::runtime::conf::modparse::CONF_parse_list;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::ssl::ssl_ciph::{SSL_CTX_set_ciphersuites, SSL_set_ciphersuites};
 use crate::ssl::ssl_ciph_table as t;
@@ -48,6 +50,7 @@ use crate::ssl::ssl_lib::{
 };
 
 const FILE: *const c_char = c"ssl/ssl_conf.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/ssl_conf.c");
 
 /// `SSL_TFLAG_INV` — `ssl_conf.c:40`.
 const SSL_TFLAG_INV: c_uint = 0x1;
@@ -107,6 +110,10 @@ pub struct SslConfCtx {
     ntbl: usize,
     canames: *mut OpenSslStack,
 }
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the context block
+// ---------------------------------------------------------------------------------------------
 
 fn flag_both(name: &'static [u8], value: u64) -> SslFlagTbl {
     SslFlagTbl {
@@ -172,9 +179,39 @@ unsafe fn ssl_set_option(
     if (name_flags & SSL_TFLAG_INV) != 0 {
         on ^= 1;
     }
-    let pflags: *mut u64 = match name_flags & SSL_TFLAG_TYPE_MASK {
-        SSL_TFLAG_CERT => c.pcert_flags.cast::<u64>(),
-        SSL_TFLAG_VFY => c.pvfy_flags.cast::<u64>(),
+    match name_flags & SSL_TFLAG_TYPE_MASK {
+        SSL_TFLAG_CERT => {
+            let pflags = c.pcert_flags;
+            if pflags.is_null() {
+                return;
+            }
+            // SAFETY: `pcert_flags` points at the live `c_long cert_flags` field of the
+            // selected SSL/SSL_CTX, and `option_value` is one of the table's 32-bit flags.
+            // Each field is written through its own type; a widened view is not.
+            unsafe {
+                if on != 0 {
+                    *pflags |= option_value as c_long;
+                } else {
+                    *pflags &= !(option_value as c_long);
+                }
+            }
+        }
+        SSL_TFLAG_VFY => {
+            let pflags = c.pvfy_flags;
+            if pflags.is_null() {
+                return;
+            }
+            // SAFETY: `pvfy_flags` points at the live `c_int verify_mode` field. The
+            // authority writes one `uint32_t` here; writing a `u64` through a widened
+            // view would run four bytes past the field.
+            unsafe {
+                if on != 0 {
+                    *pflags |= option_value as c_int;
+                } else {
+                    *pflags &= !(option_value as c_int);
+                }
+            }
+        }
         _ => {
             // SAFETY: `poptions` is non-NULL (checked above) and points at a live u64.
             unsafe {
@@ -184,19 +221,6 @@ unsafe fn ssl_set_option(
                     *c.poptions &= !option_value;
                 }
             }
-            return;
-        }
-    };
-    if pflags.is_null() {
-        return;
-    }
-    // SAFETY: the flag pointers are live; the authority's table carries 32-bit values, so the
-    // high half written through the `c_long`-sized view stays zero.
-    unsafe {
-        if on != 0 {
-            *pflags |= option_value;
-        } else {
-            *pflags &= !option_value;
         }
     }
 }
@@ -362,6 +386,43 @@ unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut
     c_int::from(ssl_set_version_bound(method_version, new_version, bound))
 }
 
+/// Runs one option-list handler with `cctx->tbl` pointing at `table` for the duration of the
+/// parse. The authority's tables are `static`, so its pointer stays valid after the call; these
+/// tables are frame-local, so the pointer is cleared before returning. Nothing reads it between
+/// commands.
+///
+/// # Safety
+/// `cctx` is live; `value` is NUL-terminated.
+unsafe fn parse_option_list(
+    cctx: *mut SslConfCtx,
+    value: *const c_char,
+    table: &[SslFlagTbl],
+) -> c_int {
+    // SAFETY: `cctx` is live per the caller's contract.
+    unsafe {
+        (*cctx).tbl = table.as_ptr();
+        (*cctx).ntbl = table.len();
+    }
+    // SAFETY: `value` is NUL-terminated; the callback and arg are per `CONF_parse_list`.
+    let rv = unsafe {
+        CONF_parse_list(
+            value,
+            b',' as c_int,
+            1,
+            Some(ssl_set_option_list),
+            cctx.cast::<c_void>(),
+        )
+    };
+    // `table` lives in this frame only; leaving its address in the context would be a dangling
+    // pointer once this call returns.
+    // SAFETY: `cctx` is live per the caller's contract.
+    unsafe {
+        (*cctx).tbl = ptr::null();
+        (*cctx).ntbl = 0;
+    }
+    rv
+}
+
 /// `cmd_Protocol` — `ssl_conf.c:280-296`.
 unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
@@ -375,21 +436,8 @@ unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -
         flag_inv(b"DTLSv1", t::SSL_OP_NO_DTLSv1),
         flag_inv(b"DTLSv1.2", t::SSL_OP_NO_DTLSv1_2),
     ];
-    // SAFETY: `cctx` is live.
-    unsafe {
-        (*cctx).tbl = table.as_ptr();
-        (*cctx).ntbl = table.len();
-    }
-    // SAFETY: `value` is NUL-terminated; the callback and arg are per `CONF_parse_list`.
-    unsafe {
-        CONF_parse_list(
-            value,
-            b',' as c_int,
-            1,
-            Some(ssl_set_option_list),
-            cctx.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `cctx` is live and `value` is NUL-terminated per the caller's contract.
+    unsafe { parse_option_list(cctx, value, &table) }
 }
 
 /// `cmd_Options` — `ssl_conf.c:375-416`.
@@ -444,21 +492,8 @@ unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) ->
     if value.is_null() {
         return -3;
     }
-    // SAFETY: `cctx` is live.
-    unsafe {
-        (*cctx).tbl = table.as_ptr();
-        (*cctx).ntbl = table.len();
-    }
-    // SAFETY: as in `cmd_Protocol`.
-    unsafe {
-        CONF_parse_list(
-            value,
-            b',' as c_int,
-            1,
-            Some(ssl_set_option_list),
-            cctx.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `cctx` is live and `value` is NUL-terminated per the caller's contract.
+    unsafe { parse_option_list(cctx, value, &table) }
 }
 
 /// `cmd_VerifyMode` — `ssl_conf.c:418-436`.
@@ -483,21 +518,8 @@ unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char)
     if value.is_null() {
         return -3;
     }
-    // SAFETY: `cctx` is live.
-    unsafe {
-        (*cctx).tbl = table.as_ptr();
-        (*cctx).ntbl = table.len();
-    }
-    // SAFETY: `value` is NUL-terminated; the callback and arg are per `CONF_parse_list`.
-    unsafe {
-        CONF_parse_list(
-            value,
-            b',' as c_int,
-            1,
-            Some(ssl_set_option_list),
-            cctx.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `cctx` is live and `value` is NUL-terminated per the caller's contract.
+    unsafe { parse_option_list(cctx, value, &table) }
 }
 
 /// `cmd_CipherString` — `ssl_conf.c:258-267`.
@@ -1208,8 +1230,13 @@ pub unsafe extern "C" fn SSL_CONF_cmd_value_type(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_new() -> *mut SslConfCtx {
     guard_ffi(ptr::null_mut(), || {
-        // SAFETY: a fresh zeroed block.
-        CRYPTO_zalloc(core::mem::size_of::<SslConfCtx>(), FILE, 1059).cast::<SslConfCtx>()
+        // The context block is a `CRYPTO_zalloc` at the authority's own size/site; `into_raw`
+        // hands it to the caller, which returns it to `SSL_CONF_CTX_free`.
+        let Some(buf) = OwnedBuf::new_zeroed(core::mem::size_of::<SslConfCtx>(), FILE_SEAM, 1059)
+        else {
+            return ptr::null_mut();
+        };
+        buf.into_raw().cast::<SslConfCtx>()
     })
 }
 
@@ -1239,13 +1266,18 @@ pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
         if cctx.is_null() {
             return;
         }
+        // The authority's teardown of the context's member buffers, before the block release.
         // SAFETY: `cctx` is live and owned here.
         unsafe {
             free_cert_filename(&mut *cctx);
             CRYPTO_free((*cctx).prefix.cast(), FILE, 0);
             OPENSSL_sk_free((*cctx).canames);
-            CRYPTO_free(cctx.cast(), FILE, 1120);
         }
+        // Reclaim the block a matching `SSL_CONF_CTX_new` handed out; its single release is `Drop`.
+        // SAFETY: `cctx` is the live block `SSL_CONF_CTX_new` gave up per the caller's contract,
+        // not released before.
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE_SEAM, 1120) });
     })
 }
 
@@ -1416,4 +1448,49 @@ unsafe fn free_cert_filename(c: &mut SslConfCtx) {
     }
     c.cert_filename = ptr::null_mut();
     c.num_cert_filename = 0;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The verify-mode words of an `SSL`/`SSL_CTX` are `int`s. Writing them through
+    /// a widened `u64` view (as the pre-repair code did for both flag classes) runs
+    /// four bytes past the field. The four-byte heap allocation is what lets the
+    /// address sanitizer observe that overrun; without the instrument the value
+    /// assertion still pins the bits that must be written.
+    #[test]
+    fn a_verify_option_writes_only_its_own_word() {
+        let mut options: u64 = 0;
+        let mut word: Box<c_int> = Box::new(0);
+        // SAFETY: the context is this frame's zero-initialised storage (raw pointers and
+        // integers, all-zero is valid), and both pointers refer to live fields above.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.poptions = &raw mut options;
+        cctx.pvfy_flags = &raw mut *word;
+
+        // SAFETY: `cctx` is live and the pointer fields are this frame's live storage.
+        unsafe { ssl_set_option(&raw mut cctx, SSL_TFLAG_VFY, t::SSL_VERIFY_PEER, 1) };
+
+        assert_eq!(*word, t::SSL_VERIFY_PEER as c_int);
+    }
+
+    /// The option tables are frame-local, unlike the authority's `static` ones. A command
+    /// must not leave their address in the context once the parse returns.
+    #[test]
+    fn an_option_command_does_not_retain_its_frame_local_table() {
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state and every field is a
+        // raw pointer, `usize` or integer.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+
+        // SAFETY: `cctx` is this frame's live context; both strings are literals and
+        // NUL-terminated. File mode recognises the row by its `Options` spelling.
+        let rv = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"Bugs".as_ptr()) };
+        assert_eq!(rv, 2, "the option list was accepted");
+        assert!(
+            cctx.tbl.is_null() && cctx.ntbl == 0,
+            "the context retained a pointer to the handler's stack table"
+        );
+    }
 }

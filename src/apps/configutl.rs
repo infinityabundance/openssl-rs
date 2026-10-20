@@ -36,13 +36,13 @@ use core::ffi::{c_char, c_int, c_long};
 use crate::apps::openssl::not_landed;
 use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::CONFIGUTL_OPTIONS;
+use crate::asn1::owned::OwnedBlock;
 use crate::runtime::conf::lib::{
     NCONF_free, NCONF_get_section, NCONF_get_section_names, NCONF_load, NCONF_new,
 };
 use crate::runtime::conf::modparse::CONF_get1_default_config_file;
 use crate::runtime::conf::types::{Conf, ConfValue};
-use crate::runtime::mem::CRYPTO_free;
-use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value};
 
 /// `static void print_escaped_value(BIO *out, const char *value)` —
 /// `apps/configutl.c:20-68`.
@@ -151,19 +151,22 @@ pub fn main(argv: &[String]) -> i32 {
     let configfile: &str = match &configfile {
         Some(c) => c.as_str(),
         None => {
-            // SAFETY: `CONF_get1_default_config_file` returns an owned NUL-terminated
-            // string or NULL; it is freed below.
             let p = CONF_get1_default_config_file();
-            if p.is_null() {
+            // `CONF_get1_default_config_file` hands this frame one owned NUL-terminated block;
+            // `OwnedBlock`'s `Drop` is the authority's `OPENSSL_free(configfile)`, whose seam
+            // coordinate is (NULL, 0). A NULL answer is the authority's failed-`strdup` arm.
+            // SAFETY: `p` is NULL or a fresh block the helper allocated through the crate's
+            // seam, owned exclusively here and not released elsewhere.
+            let Some(p) = (unsafe { OwnedBlock::<c_char>::from_raw(p, core::ptr::null(), 0) })
+            else {
                 // `if (configfile == NULL) goto end;` — `apps/configutl.c:161-162`.
                 return ret;
-            }
-            // SAFETY: `p` is a NUL-terminated block; it is freed below.
-            owned_default = unsafe { core::ffi::CStr::from_ptr(p) }
+            };
+            // SAFETY: `p.as_ptr()` is the NUL-terminated block the helper produced; the copy
+            // outlives the handle, which releases the block at the end of this arm.
+            owned_default = unsafe { core::ffi::CStr::from_ptr(p.as_ptr()) }
                 .to_string_lossy()
                 .into_owned();
-            // SAFETY: `p` is the block just copied and not freed again.
-            unsafe { CRYPTO_free(p.cast(), core::ptr::null(), 0) };
             &owned_default
         }
     };
@@ -267,11 +270,17 @@ pub fn main(argv: &[String]) -> i32 {
             // arm's; see the header. Recorded rather than fabricated.
             // SAFETY: `cnf`/`sections` are live here.
             unsafe { NCONF_free(cnf) };
+            // SAFETY: `sections` is the stack `NCONF_get_section_names` allocated for
+            // this frame and it is not used again.
+            unsafe { OPENSSL_sk_free(sections) };
             return not_landed("configutl -out (unopenable)");
         }
     }
 
     // SAFETY: `cnf` and `sections` are live and not used again.
     unsafe { NCONF_free(cnf) };
+    // SAFETY: `sections` is the stack `NCONF_get_section_names` allocated for this
+    // frame; its elements are owned by `cnf`, so the stack only releases its array.
+    unsafe { OPENSSL_sk_free(sections) };
     ret
 }

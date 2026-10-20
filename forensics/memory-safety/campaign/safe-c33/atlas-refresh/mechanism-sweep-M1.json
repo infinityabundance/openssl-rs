@@ -1,0 +1,148 @@
+{
+  "receipt": "mechanism-sweep-M1",
+  "date": "2026-10-18",
+  "branch": "integrate/safe-c33",
+  "source_head": "258bcca51",
+  "worktree": "dirty: uncommitted OB-4b model plus this sweep",
+  "census_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
+  "verification_level": "BATCH",
+  "scope": "mechanism-contract sweep over next coherent ASN.1/X.509/CMS/PKCS7/params cluster; not full D-group enumeration",
+  "not_discharged": true,
+  "ob4b_model": {
+    "file": "src/runtime/member_slot_model.rs",
+    "state": "new test-only file, #[cfg(test)]",
+    "fixes": [
+      "ReallocOk now leaves exactly one owner instead of incrementing owners, matching the documented 0-or-1 real-trace invariant",
+      "ReallocFail on an empty/transferred slot preserves the outstanding empty-token state",
+      "ClearWithoutNulling now also records a double release on the second clear",
+      "explore() applies an ownership/phase/termination invariant check to every real transition"
+    ],
+    "tests": "15 model tests pass (exhaustive real rules + 7 negative controls + 3 production-correspondence)"
+  },
+  "defects": [
+    {
+      "id": "M1-D1",
+      "file": "src/params/mod.rs",
+      "pre_fix_line": 3078,
+      "post_fix_line": 3085,
+      "severity": "high (STOP-class, repaired in this batch)",
+      "class": "AGENTS.md section 3 wrapping extent: written + data_size could wrap and pass next > cap, then copy_nonoverlapping writes past the caller buffer",
+      "reachability": "reachable: setbuf_fromparams is called from provider/kdf.rs:1558, :5281 and :7290 with application-supplied OSSL_PARAM descriptors",
+      "fix": "checked_add with refusal before any read or write",
+      "witness": "params::tests::buffer_accounting_refuses_a_wrapping_data_size"
+    },
+    {
+      "id": "M1-D2",
+      "file": "src/params/mod.rs",
+      "pre_fix_line": 2272,
+      "post_fix_line": 2274,
+      "severity": "low",
+      "class": "AGENTS.md section 3 allocation extent: sz + terminator could wrap",
+      "fix": "checked_add; ordinary refusal, no invented error reason",
+      "witness": "params::tests::string_extent_refuses_a_wrapping_terminator"
+    },
+    {
+      "id": "M1-D3",
+      "file": "src/pem/pvkfmt.rs",
+      "pre_fix_line": 1520,
+      "post_fix_line": 1528,
+      "severity": "low",
+      "class": "AGENTS.md section 3 allocation extent: keylen + 8 was bounded only by the caller (PVK_MAX_KEYLEN)",
+      "fix": "checked_add computed once as enc_len; refusal frees the cipher context",
+      "witness": "compile/type check plus BATCH library suite (no direct unit test)"
+    },
+    {
+      "id": "M1-D4",
+      "file": "src/pem/pvkfmt.rs",
+      "pre_fix_line": 1694,
+      "post_fix_line": 1702,
+      "severity": "low",
+      "class": "AGENTS.md section 3 allocation extent: keylen + saltlen relied on the immediately preceding header bound",
+      "fix": "checked_add; refusal returns NULL",
+      "witness": "compile/type check plus BATCH library suite"
+    },
+    {
+      "id": "M1-D5",
+      "file": "src/pem/pvkfmt.rs",
+      "pre_fix_line": 1847,
+      "post_fix_line": 1850,
+      "severity": "low",
+      "class": "AGENTS.md section 3 allocation extent: i2b_PVK accumulated outlen += PVK_SALTLEN and outlen += pklen in a C int",
+      "fix": "checked_add on both sums; refusal returns -1",
+      "witness": "compile/type check plus BATCH library suite"
+    },
+    {
+      "id": "M1-D6",
+      "file": "src/x509/v3_utl.rs",
+      "pre_fix_line": 460,
+      "post_fix_line": 460,
+      "severity": "low",
+      "class": "AGENTS.md section 3 allocation extent: strlen(tmp) + 3 was unchecked",
+      "fix": "checked_add; the existing refusal arm releases tmp at the authority's line 150",
+      "witness": "x509::v3_utl::tests (3 tests) plus BATCH library suite"
+    },
+    {
+      "id": "M1-D7",
+      "file": "src/store/store_lib.rs",
+      "pre_fix_line": 1803,
+      "post_fix_line": 1806,
+      "severity": "documentation / contract",
+      "class": "OSSL_STORE_INFO_new and _new_NAME stated unconditional ownership transfer although the authority's allocation-refusal arm returns without consuming the input",
+      "fix": "safety contracts now state transfer only on success and record the preserved authority leak",
+      "witness": "review; no behaviour changed"
+    }
+  ],
+  "retained_obligations": [
+    "x509/x509_vfy.rs: X509_STORE_CTX_free destroy_body invokes the application cleanup callback; authority-compatible reentrancy edge, raw pointer only, no Rust &mut across the callback",
+    "x509/x_pubkey.rs: x509_pubkey_set0_libctx clears propq before CRYPTO_strdup; latent self-alias hazard, unreachable because the member is private and has no exported getter",
+    "rsa/pmeth.rs: pkey_rsa_copy leaves a partially built destination on BN_dup/CRYPTO_memdup refusal, matching the authority (resource leak, not UB)"
+  ],
+  "new_unsafe_assumptions": [],
+  "unsafe_operations_introduced": 0,
+  "abi_or_layout_changes": 0,
+  "allocator_coordinate_changes": 0,
+  "excluded_symbol_changes": 0,
+  "gates": {
+    "fmt": "PASS",
+    "clippy_all_targets_deny_warnings": "PASS",
+    "lib_serial": "1571 passed / 0 failed / 26 ignored",
+    "lib_test_threads_4": "1571 passed / 0 failed / 26 ignored",
+    "affected_adversarial_probes": "13/13 exact probes passed (SSL statem ticket, member-slot/member-buffer, self-alias, canaries)"
+  },
+  "deferred": [
+    {
+      "gate": "full per-file D-group records for the 12 files",
+      "status": "NOT_RUN",
+      "runs_at": "next per-file audit pass"
+    },
+    {
+      "gate": "impact/dependency graph regeneration (atlas_refresh.py) against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH integration checkpoint after the orchestrator commits this worktree"
+    },
+    {
+      "gate": "targeted Miri over the OB-4b model (Stacked and Tree Borrows)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY for the OB-4 member-slot mechanism"
+    },
+    {
+      "gate": "ASan build and the non-affected adversarial probes",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY/SEAL"
+    }
+  ],
+  "next_queue": {
+    "file": "src/cmp/cmp_msg.rs",
+    "rank_in_attribution": 14,
+    "unattributed_sites": 372,
+    "then": [
+      "src/ssl/t1_trce.rs (353)",
+      "src/cmp/cmp_asn.rs (316)",
+      "src/ts/ts_rsp_sign.rs (306)",
+      "src/cms/cms_smime.rs (288)",
+      "src/crmf/crmf_lib.rs (278)",
+      "src/provider/encode_key2any.rs (274)"
+    ],
+    "note": "src/ssl/ssl_lib.rs (rank 1, 1125 unattributed) remains a deliberately deferred boundary file; it needs its own callbacks/member-buffer batch."
+  }
+}

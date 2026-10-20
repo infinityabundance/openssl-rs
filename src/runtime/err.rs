@@ -68,9 +68,15 @@
 //! The state is reached through `UnsafeCell`, not a `RefCell`. That is not a
 //! shortcut: the authority re-enters its own state from inside these operations
 //! (a `CRYPTO_malloc` inside `err_set_debug`, for example), and a runtime borrow
-//! check would turn that into a panic where the authority simply proceeds. The
-//! absence of a borrow check is therefore part of the contract, and the
-//! invariants that make it sound are stated at each access.
+//! check would turn that into a panic where the authority simply proceeds.
+//!
+//! Reentry is instead **refused** by a thread-local guard: while one `with_state`
+//! closure holds `&mut ErrState`, a nested ERR call on the same thread returns
+//! the "no state" outcome without touching the state. That covers the one
+//! reentry edge this module cannot exclude by construction — a caller-installed
+//! `CRYPTO_set_mem_functions` hook that calls back into ERR while the closure is
+//! live — and turns what would be two aliasing `&mut` references into a defined
+//! failure (the nested raise is dropped; the outer operation completes).
 
 use core::cell::{Cell, UnsafeCell};
 use core::ffi::{c_char, c_int, c_ulong, c_void};
@@ -79,7 +85,9 @@ use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::init;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 
 #[path = "err_strings.rs"]
 mod err_strings;
@@ -287,16 +295,50 @@ impl ErrState {
     /// `err_clear_data`. With `deall` the buffer is released; without it a
     /// malloced buffer is kept but truncated, which is how the authority reuses
     /// data buffers across clears.
+    ///
+    /// ## The `MALLOCED` slot contract
+    ///
+    /// The authority's `ERR_TXT_MALLOCED` (`include/openssl/err.h.in:52`) is the
+    /// flag that selects `OPENSSL_free(es->err_data[i])` here
+    /// (`crypto/err/err_local.h:25`); `err_set_data` selects the same release for
+    /// the incumbent buffer at `:79`. That release is only sound when every
+    /// writer establishes the matching precondition:
+    ///
+    /// * with `ERR_TXT_MALLOCED` set, a non-NULL pointer is the base of one whole block
+    ///   from the crate's `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+    ///   `CRYPTO_strdup`, or an authority helper that allocates through one of
+    ///   them), its NUL-terminated contents fit within the allocated extent
+    ///   (`strlen + 1` for the `ERR_set_error_data` path, which is also the exact
+    ///   extent of a `CRYPTO_strdup` block), this state is its exclusive owner,
+    ///   and the release below is its single `CRYPTO_free`;
+    /// * without the flag the pointer is **borrowed**: it is never released here
+    ///   and must remain valid and NUL-terminated until the entry is cleared or
+    ///   replaced.
+    ///
+    /// Internal buffers are built by [`slot_buf_alloc`]. The only external
+    /// writer is [`ERR_set_error_data`], whose `# Safety` states the same
+    /// contract. The authority's own comment on that function records the
+    /// ownership transfer: "callers should be advised that this function takes
+    /// over ownership of the allocated memory" (`crypto/err/err.c:803-804`).
     pub(crate) fn clear_data(&mut self, i: usize, deall: bool) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             if deall {
-                // SAFETY: the MALLOCED flag says this state owns the pointer.
-                unsafe { CRYPTO_free(self.err_data[i].cast::<c_void>(), core::ptr::null(), 0) };
+                // Release the buffer this slot owns; the handle's `Drop` is the release.
+                // SAFETY: the MALLOCED flag says this state owns the pointer, and no other
+                // handle has released it.
+                unsafe {
+                    drop(OwnedStr::adopt(
+                        self.err_data[i],
+                        SeamFile::new(ERR_LOCAL_FILE),
+                        L_FREE_DATA_DEALL,
+                    ))
+                };
                 self.err_data[i] = core::ptr::null_mut();
                 self.err_data_size[i] = 0;
                 self.err_data_flags[i] = 0;
             } else if !self.err_data[i].is_null() {
-                // SAFETY: as above; the buffer is at least one byte.
+                // SAFETY: as above; the buffer is at least one byte and is kept (not
+                // released), so writing its first byte truncates it in place.
                 unsafe { *self.err_data[i] = 0 };
                 self.err_data_flags[i] = ERR_TXT_MALLOCED;
             }
@@ -314,11 +356,20 @@ impl ErrState {
         self.err_flags[i] = 0;
         self.err_buffer[i] = 0;
         self.err_line[i] = -1;
-        // SAFETY: these pointers are always either NULL or owned by this state.
+        // SAFETY: these pointers are always either NULL or owned by this state, and no
+        // other handle has released them.
         unsafe {
-            CRYPTO_free(self.err_file[i].cast::<c_void>(), core::ptr::null(), 0);
+            drop(OwnedStr::adopt(
+                self.err_file[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FILE_CLEAR,
+            ));
             self.err_file[i] = core::ptr::null_mut();
-            CRYPTO_free(self.err_func[i].cast::<c_void>(), core::ptr::null(), 0);
+            drop(OwnedStr::adopt(
+                self.err_func[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FUNC_CLEAR,
+            ));
             self.err_func[i] = core::ptr::null_mut();
         }
     }
@@ -340,28 +391,67 @@ impl ErrState {
     /// "may be provider owned", and a provider can be unloaded while the error
     /// is still queued. A NULL or empty string is stored as NULL, and the read
     /// side turns NULL back into `""`.
-    pub(crate) fn set_debug(
+    /// # Safety
+    /// `file` and `func` are each NULL or a NUL-terminated C string. The strings are
+    /// duplicated through `CRYPTO_strdup`, whose allocation-failure path reads `file`
+    /// as a C string; a non-NUL-terminated pointer is therefore undefined behaviour.
+    /// This cannot be `SeamFile`: an external C caller's coordinates need only be
+    /// valid for the call, not for static storage.
+    pub(crate) unsafe fn set_debug(
         &mut self,
         i: usize,
         file: *const c_char,
         line: c_int,
         func: *const c_char,
     ) {
-        // SAFETY: ownership of these pointers is this state's.
+        // SAFETY: the slot's string pointers are NULL or owned by this state and no other
+        // handle has released them; `file`/`func` are NULL or NUL-terminated C strings. Each
+        // fresh duplicate is taken through the seam and stored raw, and the slot's previous
+        // buffer is released by `Drop`. The release-then-allocate order is the authority's.
         unsafe {
-            CRYPTO_free(self.err_file[i].cast::<c_void>(), core::ptr::null(), 0);
-            self.err_file[i] = dup_c_string(file);
-            CRYPTO_free(self.err_func[i].cast::<c_void>(), core::ptr::null(), 0);
-            self.err_func[i] = dup_c_string(func);
+            drop(OwnedStr::adopt(
+                self.err_file[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FILE_SET_DEBUG,
+            ));
+            self.err_file[i] = match dup_c(file) {
+                Some(buf) => buf.into_raw(),
+                None => core::ptr::null_mut(),
+            };
+            drop(OwnedStr::adopt(
+                self.err_func[i],
+                SeamFile::new(ERR_LOCAL_FILE),
+                L_FREE_FUNC_SET_DEBUG,
+            ));
+            self.err_func[i] = match dup_c(func) {
+                Some(buf) => buf.into_raw(),
+                None => core::ptr::null_mut(),
+            };
         }
         self.err_line[i] = line;
     }
 
     /// `err_set_data`.
+    ///
+    /// Replacing a slot that already carries `ERR_TXT_MALLOCED` releases the
+    /// incumbent block first, then installs `data`/`size`/`flags`. The new value
+    /// must satisfy the slot contract documented on [`Self::clear_data`]: with
+    /// `ERR_TXT_MALLOCED`, a non-NULL `data` is the base of one whole seam block with
+    /// `strlen + 1` bytes of NUL-terminated contents, exclusively owned by this
+    /// state and released exactly once by this state; without the flag, `data` is
+    /// borrowed and must outlive the entry.
     pub(crate) fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
-            // SAFETY: MALLOCED means this state owns the buffer.
-            unsafe { CRYPTO_free(self.err_data[i].cast::<c_void>(), core::ptr::null(), 0) };
+            // Release the buffer this slot already owned before adopting the new one.
+            // SAFETY: the MALLOCED flag says this state owns the pointer and no other
+            // handle has released it; the new `data` is adopted raw below.
+            unsafe {
+                drop(OwnedStr::adopt(
+                    self.err_data[i],
+                    SeamFile::new(ERR_LOCAL_FILE),
+                    L_FREE_DATA_REPLACE,
+                ))
+            };
         }
         self.err_data[i] = data;
         self.err_data_size[i] = size;
@@ -396,11 +486,11 @@ impl ErrState {
     }
 }
 
-// SAFETY: the state is only ever reached through the thread-local `STATE`, so a
-// `&mut ErrState` derived from it is never observable by another thread. The
-// `Sync` marker is required by `thread_local!`, not a claim that this type is
-// shareable.
-unsafe impl Sync for ErrState {}
+// The state is only ever reached through the thread-local `STATE` (or the authority's
+// per-thread `ERR_get_state`), so no `Sync` marker is claimed for it: the struct contains raw
+// pointers and is deliberately not shareable. `thread_local!` needs only `'static`, and
+// `UnsafeCell<ErrState>` is `!Sync` regardless, which is the correct shape for per-thread
+// mutable state.
 
 /// The empty C string stored in place of NULL so the read side can hand back a
 /// non-NULL `""` without allocating, exactly as the authority does.
@@ -494,28 +584,146 @@ pub(crate) fn peek_last_lib() -> c_ulong {
     }
 }
 
-/// Duplicate a C string for storage in the ring, or NULL for NULL/empty input.
+/// The `__FILE__`/`__LINE__` the error-state **allocations** record.
+///
+/// The authority allocates every per-slot buffer and the `ERR_STATE` block by calling
+/// `CRYPTO_malloc`/`CRYPTO_zalloc` with the literal `NULL, 0` (the header's
+/// `CRYPTO_malloc(..., NULL, 0)` in `err_local.h` and the explicit `NULL, 0` in `err_save.c`),
+/// so those allocations record the inert coordinates. **Releases are not symmetric**: they go
+/// through `OPENSSL_free`, which records `OPENSSL_FILE`/`OPENSSL_LINE` at the `err_local.h` or
+/// `err.c` site that performs them. The release coordinates are therefore separate constants
+/// below; one `NULL`/`0` pair is not the contract for both halves.
+const ERR_FILE: *const c_char = core::ptr::null();
+const ERR_LINE: c_int = 0;
+
+/// `err_local.h` and `err.c` are the files whose `OPENSSL_free`/`CRYPTO_free` calls release a
+/// slot buffer and the state block. Both are plain source-tree files, so `__FILE__` carries the
+/// admitted build's prefix.
+const ERR_LOCAL_FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/err/err_local.h";
+const ERR_C_FILE: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/err/err.c";
+
+/// `err_clear_data`'s `OPENSSL_free(es->err_data[i])` — `err_local.h:25`.
+const L_FREE_DATA_DEALL: c_int = 25;
+/// `err_set_debug`'s `OPENSSL_free(es->err_file[i])` — `err_local.h:56`.
+const L_FREE_FILE_SET_DEBUG: c_int = 56;
+/// `err_set_debug`'s `OPENSSL_free(es->err_func[i])` — `err_local.h:66`.
+const L_FREE_FUNC_SET_DEBUG: c_int = 66;
+/// `err_set_data`'s replacement release — `err_local.h:79`.
+const L_FREE_DATA_REPLACE: c_int = 79;
+/// `err_clear`'s `OPENSSL_free(es->err_file[i])` — `err_local.h:92`.
+const L_FREE_FILE_CLEAR: c_int = 92;
+/// `err_clear`'s `OPENSSL_free(es->err_func[i])` — `err_local.h:94`.
+const L_FREE_FUNC_CLEAR: c_int = 94;
+/// `OSSL_ERR_STATE_free`'s `CRYPTO_free(state, OPENSSL_FILE, OPENSSL_LINE)` — `err.c:209`.
+const L_FREE_STATE: c_int = 209;
+
+// A per-slot buffer: the allocation a ring slot keeps in `err_data` (when
+// `ERR_TXT_MALLOCED`), `err_file` or `err_func`, owned by `OwnedStr`.
+//
+// The slot keeps the authority's `#[repr(C)]` raw `*mut c_char` — that layout is public and
+// cannot change — so ownership crosses the slot as a raw pointer. The shared owner allocates
+// through the crate's allocator seam and its `Drop` is the single release, through the same
+// seam. `slot_buf_alloc` and `dup_c` are the only allocating constructors; `OwnedStr::into_raw`
+// stores one into a slot and `OwnedStr::adopt` reclaims a slot's pointer for release, so the
+// `CRYPTO_malloc`/`CRYPTO_free` pair is no longer written by hand at a call site. The recorded
+// `__FILE__`/`__LINE__` are unchanged, so the hook observes the same file and line as it
+// observes for the authority's own `err_*` helpers: `NULL`/`0` for allocations and the
+// `err_local.h` site for each release.
+
+/// Allocate a fresh slot buffer of `len` bytes through the installed allocator at the inert
+/// `NULL`/`0` coordinates, or `None` when it answers NULL (the authority's refused
+/// `CRYPTO_malloc`).
+pub(crate) fn slot_buf_alloc(len: usize) -> Option<OwnedStr> {
+    OwnedStr::new(len, SeamFile::NULL, ERR_LINE, SeamFile::NULL, ERR_LINE)
+}
+
+/// A NUL-terminated duplicate of `s`, or `None` for NULL or empty input — the rule
+/// `err_set_debug` applies to the file and function strings.
 ///
 /// # Safety
 /// `s` must be NULL or a NUL-terminated C string.
-unsafe fn dup_c_string(s: *const c_char) -> *mut c_char {
+unsafe fn dup_c(s: *const c_char) -> Option<OwnedStr> {
     if s.is_null() {
-        return core::ptr::null_mut();
+        return None;
     }
     // SAFETY: `s` is NUL-terminated per the caller's contract.
     let len = unsafe { c_strlen(s) };
     if len == 0 {
-        return core::ptr::null_mut();
+        return None;
     }
-    // SAFETY: allocating `len + 1` bytes and copying exactly that many.
+    let buf = slot_buf_alloc(len + 1)?;
+    // SAFETY: `buf` is `len + 1` fresh bytes and `s` is valid for `len`.
     unsafe {
-        let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-        if p.is_null() {
-            return core::ptr::null_mut();
+        core::ptr::copy_nonoverlapping(s, buf.as_ptr(), len);
+        *buf.as_ptr().add(len) = 0;
+    }
+    Some(buf)
+}
+
+/// An owned heap `ERR_STATE`.
+///
+/// The authority's `OSSL_ERR_STATE_new` allocates the block with
+/// `CRYPTO_zalloc(sizeof(ERR_STATE), NULL, 0)` and `OSSL_ERR_STATE_free` releases every owned
+/// per-slot buffer and then the block. Ownership is this type: `new` allocates through the
+/// crate's allocator seam and `Drop` runs the authority's own free body ([`ErrState::clear_all`]
+/// with `deall`) followed by the block release, through the same seam. The `#[repr(C)]` layout,
+/// the stable address the C ABI hands out and takes back, and the recorded `__FILE__`/`__LINE__`
+/// of both the allocation and the release are unchanged, so a caller's
+/// `CRYPTO_set_mem_functions` hook observes the same size, file and sequence.
+///
+/// The **thread-local** state is deliberately not governed by this type: it is a
+/// `thread_local!` value with no `Drop`, exactly as it had none before, so nothing new is
+/// released at thread exit (see [`STATE`]).
+pub(crate) struct OwnedErrState {
+    ptr: ptr::NonNull<ErrState>,
+}
+
+impl OwnedErrState {
+    /// Allocate a fresh, zeroed state through the installed allocator, or `None` when it answers
+    /// NULL (the authority's refused `CRYPTO_zalloc`).
+    pub(crate) fn new() -> Option<OwnedErrState> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
+        // of `size_of::<ErrState>()` bytes, which is exactly the layout the C ABI expects.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<ErrState>(), ERR_FILE, ERR_LINE)
         }
-        core::ptr::copy_nonoverlapping(s, p, len);
-        *p.add(len) = 0;
+        .cast::<ErrState>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedErrState { ptr })
+    }
+
+    /// Give up ownership of the block to the C caller's state pointer.
+    pub(crate) fn into_raw(self) -> *mut ErrState {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
         p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    pub(crate) unsafe fn from_raw(ptr: *mut ErrState) -> Option<OwnedErrState> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedErrState { ptr })
+    }
+}
+
+impl Drop for OwnedErrState {
+    /// The authority's `OSSL_ERR_STATE_free` body: every slot is cleared with `deall` — its
+    /// owned buffers released — and then the block is released, through the same allocator seam
+    /// it was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is
+        // its single release; `clear_all(true)` is the authority's own free body, releasing each
+        // owned per-slot buffer first.
+        unsafe {
+            (*self.ptr.as_ptr()).clear_all(true);
+            CRYPTO_free(
+                self.ptr.as_ptr().cast::<c_void>(),
+                ERR_C_FILE.as_ptr(),
+                L_FREE_STATE,
+            );
+        }
     }
 }
 
@@ -537,6 +745,36 @@ thread_local! {
     /// Whether this thread has already performed the authority's per-thread
     /// state creation, which is what loads the crypto error strings.
     static STATE_READY: Cell<bool> = const { Cell::new(false) };
+    /// Whether this thread currently holds the `&mut ErrState` that `with_state`
+    /// hands its closure. A nested ERR call sees `true` and is refused instead
+    /// of forming a second `&mut` (NEO-ERR-7).
+    static STATE_IN_USE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Clears [`STATE_IN_USE`] on every exit path, including an unwinding closure.
+struct StateAccessGuard;
+
+impl StateAccessGuard {
+    /// Take the thread's state-access slot, or `None` when this thread already
+    /// holds it (a reentrant call) or the thread-local is being destroyed.
+    fn enter() -> Option<StateAccessGuard> {
+        STATE_IN_USE
+            .try_with(|in_use| {
+                if in_use.replace(true) {
+                    None
+                } else {
+                    Some(StateAccessGuard)
+                }
+            })
+            .ok()
+            .flatten()
+    }
+}
+
+impl Drop for StateAccessGuard {
+    fn drop(&mut self) {
+        let _ = STATE_IN_USE.try_with(|in_use| in_use.set(false));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -627,10 +865,24 @@ fn lib_loaded(lib: u32) -> bool {
 #[no_mangle]
 pub extern "C" fn err_free_strings_int() {}
 
+/// Run `f` with this thread's error state.
+///
+/// ## Reentrancy
+///
+/// The closure runs with `&mut ErrState`, and several callers allocate or release inside it, so
+/// the installed `CRYPTO_set_mem_functions` hooks run while that reference is live. A hook that
+/// re-enters the ERR API on the same thread is therefore refused by [`StateAccessGuard`]: the
+/// nested call returns `None` without touching the state, so the raise it attempted is dropped
+/// and the outer operation completes. This is a defined failure, not UB, and it is the only
+/// reentrancy edge here — no application callback is invoked from the closure.
 pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
     if init::stopped() {
         return None;
     }
+    // Refuse a nested access before loading strings or touching the state: those
+    // steps may themselves allocate, and a hook that re-enters ERR must not see a
+    // second `&mut`. The guard resets even if `f` unwinds.
+    let _access = StateAccessGuard::enter()?;
     // First ERR call on this thread: the authority creates the `ERR_STATE` and
     // that creation is what loads the crypto error strings.
     let _ = STATE_READY.try_with(|r| {
@@ -672,7 +924,8 @@ pub(crate) unsafe fn raise_with(lib: c_int, reason: c_int, file: *const c_char, 
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, file, line, EMPTY_C);
+        // SAFETY: `file` is NULL or NUL-terminated per this function's contract.
+        unsafe { s.set_debug(t, file, line, EMPTY_C) };
         s.set_error(t, lib, reason);
     });
 }
@@ -692,7 +945,8 @@ pub(crate) unsafe fn raise_site(site: &err_sites::ErrSite) {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, site.reason);
     });
 }
@@ -721,7 +975,8 @@ pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, reason);
     });
 }
@@ -737,16 +992,27 @@ unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
     }
     // SAFETY: `msg` is NUL-terminated per the caller's contract.
     let len = unsafe { c_strlen(msg) };
-    // SAFETY: allocate `len + 1`, copy, terminate.
+    // The buffer is built through the owned handle and then handed to the slot raw; the
+    // handle's `Drop` owns its release. A refused allocation attaches nothing, as the
+    // authority's own NULL `CRYPTO_malloc` does. An unrepresentable extent cannot be
+    // allocated either, so it is treated the same way.
+    let Some(alloc) = len.checked_add(1) else {
+        return;
+    };
+    let Some(buf) = slot_buf_alloc(alloc) else {
+        return;
+    };
+    // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
     unsafe {
-        let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-        if p.is_null() {
-            return;
-        }
-        core::ptr::copy_nonoverlapping(msg, p, len);
-        *p.add(len) = 0;
-        s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+        core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
+        *buf.as_ptr().add(len) = 0;
     }
+    s.set_data(
+        t,
+        buf.into_raw(),
+        len + 1,
+        ERR_TXT_MALLOCED | ERR_TXT_STRING,
+    );
 }
 
 /// `ERR_raise_data(lib, reason, "...")` at a recorded authority site.
@@ -762,7 +1028,8 @@ pub(crate) unsafe fn raise_site_data(site: &err_sites::ErrSite, msg: *const c_ch
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, site.reason);
         // SAFETY: `msg` is NUL-terminated per the caller's contract.
         unsafe { attach_message(s, t, msg) };
@@ -793,7 +1060,8 @@ pub(crate) unsafe fn raise_site_dynamic_data(
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, reason);
         // SAFETY: `msg` is NUL-terminated per the caller's contract.
         unsafe { attach_message(s, t, msg) };
@@ -836,7 +1104,8 @@ pub unsafe extern "C" fn ERR_set_debug(file: *const c_char, line: c_int, func: *
     guard_ffi((), || {
         with_state(|s| {
             let t = s.top as usize;
-            s.set_debug(t, file, line, func);
+            // SAFETY: `file`/`func` are NULL or NUL-terminated per this function's contract.
+            unsafe { s.set_debug(t, file, line, func) };
         });
     })
 }
@@ -862,16 +1131,24 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
             }
             // SAFETY: `msg` is NUL-terminated per the caller's contract.
             let len = unsafe { c_strlen(msg) };
-            // SAFETY: allocate `len + 1`, copy, terminate.
+            // The owned buffer's `Drop` owns the release once the slot holds it.
+            let Some(alloc) = len.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
+                return;
+            };
+            // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
             unsafe {
-                let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
-                core::ptr::copy_nonoverlapping(msg, p, len);
-                *p.add(len) = 0;
-                s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+                core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
+                *buf.as_ptr().add(len) = 0;
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                len + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
@@ -886,21 +1163,72 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
 /// Returns the buffer (which the caller now owns) and writes its size through
 /// `size`.
 ///
+/// ## The return value is always owned
+///
+/// The pointer is `NULL` or the base of one whole block from the crate's
+/// `CRYPTO_*` allocator seam, and the caller owns it. That holds even when the
+/// slot held **borrowed** data (`ERR_set_error_data` without
+/// `ERR_TXT_MALLOCED`): the borrowed bytes are copied into a fresh seam block
+/// and the borrowed original is left untouched, because the queue never owned
+/// it. The slot is detached in every case (`err_data` becomes NULL and the flags
+/// become 0).
+///
+/// This is the ownership invariant `ERR_vset_error` relies on: the variadic
+/// adapter passes the result to `CRYPTO_realloc` unconditionally, so a borrowed
+/// pointer must never escape this function. Reporting the slot's flag instead
+/// would make the adapter's correctness depend on a branch it could get wrong;
+/// copying here keeps the invariant local to the owner.
+///
 /// # Safety
-/// `size` must be writable for a `usize`.
+/// `size` must be NULL or writable for a `usize`.
 #[no_mangle]
 pub unsafe extern "C" fn openssl_rs_err_take_data(size: *mut usize) -> *mut c_char {
     guard_ffi(core::ptr::null_mut(), || {
         with_state(|s| {
             let t = s.top as usize;
             let p = s.err_data[t];
+            let p_size = s.err_data_size[t];
+            let p_flags = s.err_data_flags[t];
+            s.err_data[t] = core::ptr::null_mut();
+            s.err_data_size[t] = 0;
+            s.err_data_flags[t] = 0;
+            let owned = if p.is_null() {
+                core::ptr::null_mut()
+            } else if (p_flags & ERR_TXT_MALLOCED) != 0 {
+                // The queue owned this block; ownership transfers to the caller.
+                p
+            } else if p_size == 0 {
+                // A borrowed slot with no recorded extent cannot be copied and
+                // owns nothing; the adapter's NULL arm is the authority's
+                // no-message path.
+                core::ptr::null_mut()
+            } else {
+                // Borrowed slot: copy into a fresh seam block so the caller's
+                // `CRYPTO_realloc` never receives a pointer the queue did not
+                // allocate. `ERR_set_error_data` recorded `strlen + 1` as the
+                // extent, so `p_size` bytes are readable and NUL-terminated.
+                let Some(buf) = slot_buf_alloc(p_size) else {
+                    return core::ptr::null_mut();
+                };
+                // SAFETY: `buf` is `p_size` fresh bytes and the borrowed slot is
+                // readable for `p_size` bytes per its `ERR_set_error_data`
+                // contract. The blocks cannot overlap.
+                unsafe {
+                    core::ptr::copy_nonoverlapping(
+                        p.cast::<u8>(),
+                        buf.as_ptr().cast::<u8>(),
+                        p_size,
+                    )
+                };
+                buf.into_raw()
+            };
             if !size.is_null() {
                 // SAFETY: writable per the caller's contract.
-                unsafe { *size = s.err_data_size[t] };
+                unsafe {
+                    *size = if owned.is_null() { 0 } else { p_size };
+                }
             }
-            s.err_data[t] = core::ptr::null_mut();
-            s.err_data_flags[t] = 0;
-            p
+            owned
         })
         .unwrap_or(core::ptr::null_mut())
     })
@@ -916,6 +1244,14 @@ pub unsafe extern "C" fn openssl_rs_err_take_data(size: *mut usize) -> *mut c_ch
 ///
 /// # Safety
 /// `data` must be NULL or a `CRYPTO_malloc` block this call takes ownership of.
+///
+/// When `flags & ERR_TXT_MALLOCED` is set and `data` is non-NULL, the caller
+/// additionally guarantees that `size >= 1`, that `size` is no larger than the
+/// block's allocation extent, and that a NUL byte occurs within the first
+/// `size` bytes. `OSSL_ERR_STATE_save`/`restore` later copy exactly `size` bytes
+/// out of this slot, so an overstated extent is an out-of-bounds read; the size
+/// must stay valid for as long as the error state owns the block. A zero extent
+/// with a MALLOCED block is refused and the block is released rather than stored.
 #[no_mangle]
 pub unsafe extern "C" fn openssl_rs_err_finish_data(
     lib: c_int,
@@ -932,7 +1268,22 @@ pub unsafe extern "C" fn openssl_rs_err_finish_data(
             // A NULL buffer is the `fmt == NULL` case: the slot keeps no data at
             // all, which is different from keeping an empty string.
             if !data.is_null() {
-                s.set_data(t, data, size, flags);
+                if (flags & ERR_TXT_MALLOCED) != 0 && size == 0 {
+                    // Violates the extent contract above. The block was handed to
+                    // this call and must not leak, but a zero-byte owned slot
+                    // cannot be represented (the restore copy is size-driven), so
+                    // release it and keep the slot data-free.
+                    // SAFETY: `data` is one whole seam block owned by this call.
+                    unsafe {
+                        drop(OwnedStr::adopt(
+                            data,
+                            SeamFile::new(ERR_LOCAL_FILE),
+                            L_FREE_DATA_DEALL,
+                        ))
+                    };
+                } else {
+                    s.set_data(t, data, size, flags);
+                }
             }
         });
     })
@@ -965,21 +1316,31 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
                 } else {
                     0
                 };
-            let total = old_len + add_len;
-            // SAFETY: fresh allocation of `total + 1`; the old buffer, if any, is
-            // copied into it and then released.
+            let Some(total) = old_len.checked_add(add_len) else {
+                return;
+            };
+            let Some(alloc) = total.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
+                return;
+            };
+            // SAFETY: `buf` is `total + 1` fresh bytes; the old buffer (when `old_len` > 0)
+            // is valid for `old_len` and `msg` for `add_len`.
             unsafe {
-                let p = CRYPTO_malloc(total + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
+                let p = buf.as_ptr();
                 if old_len > 0 {
                     core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
                 }
                 core::ptr::copy_nonoverlapping(msg, p.add(old_len), add_len);
                 *p.add(total) = 0;
-                s.set_data(t, p, total + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                total + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
@@ -987,11 +1348,38 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
 /// `void ERR_set_error_data(char *data, int flags)`
 ///
 /// Takes ownership of `data`, which is the documented and slightly surprising
-/// part of this API: the caller must not free it afterwards.
+/// part of this API: the caller must not free it afterwards. The authority's own
+/// comment says "callers should be advised that this function takes over
+/// ownership of the allocated memory, i.e. they can't count on the pointer to
+/// remain valid" (`crypto/err/err.c:803-806`), and it stores the caller's `flags`
+/// unchanged after estimating the extent as `strlen(data) + 1`
+/// (`crypto/err/err.c:807`).
 ///
 /// # Safety
-/// `data` must be NULL or a NUL-terminated C string, and the caller must not use
-/// it again after this call.
+///
+/// `data` must be NULL or NUL-terminated within a readable allocation. The
+/// caller must not use or release the pointer after this call.
+///
+/// When `flags & ERR_TXT_MALLOCED` is set and `data` is non-NULL, the caller
+/// additionally guarantees:
+///
+/// * `data` is the base of one whole allocation from the process's active
+///   `CRYPTO_malloc`/`CRYPTO_strdup` seam (not an interior pointer, stack
+///   buffer, literal, or unrelated allocator block);
+/// * its extent is at least `strlen(data) + 1` bytes (exactly that for a
+///   `CRYPTO_strdup` block), so the cached size is valid for the allocation;
+/// * this call receives exclusive ownership: no other owner will release it, and
+///   the error queue's `CRYPTO_free` is its single release, now or when the slot
+///   is later cleared/replaced.
+///
+/// A NULL `data` with `ERR_TXT_MALLOCED` owns nothing: the slot stores NULL and
+/// the later release is the authority's no-op `free(NULL)`.
+///
+/// Without `ERR_TXT_MALLOCED`, the pointer is borrowed rather than owned: it is
+/// never released by the error queue and must remain valid and NUL-terminated
+/// until the entry is cleared or replaced. Passing a non-seam pointer *with* the
+/// flag, or releasing a MALLOCED pointer after this call, violates the C ABI
+/// contract and is not made safe by the Rust type system.
 #[no_mangle]
 pub unsafe extern "C" fn ERR_set_error_data(data: *mut c_char, flags: c_int) {
     guard_ffi((), || {
@@ -1063,13 +1451,22 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
                 } else {
                     0
                 };
-            let total = old_len + sep_len + txt_len;
-            // SAFETY: fresh allocation of `total + 1`, copying the three parts.
+            let Some(total) = old_len
+                .checked_add(sep_len)
+                .and_then(|n| n.checked_add(txt_len))
+            else {
+                return;
+            };
+            let Some(alloc) = total.checked_add(1) else {
+                return;
+            };
+            let Some(buf) = slot_buf_alloc(alloc) else {
+                return;
+            };
+            // SAFETY: `buf` is `total + 1` fresh bytes; the old data is valid for `old_len`,
+            // `sepr` for `sep_len` and `txt` for `txt_len`.
             unsafe {
-                let p = CRYPTO_malloc(total + 1, core::ptr::null(), 0).cast::<c_char>();
-                if p.is_null() {
-                    return;
-                }
+                let p = buf.as_ptr();
                 if old_len > 0 {
                     core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
                 }
@@ -1080,8 +1477,13 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
                     core::ptr::copy_nonoverlapping(txt, p.add(old_len + sep_len), txt_len);
                 }
                 *p.add(total) = 0;
-                s.set_data(t, p, total + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
             }
+            s.set_data(
+                t,
+                buf.into_raw(),
+                total + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            );
         });
     })
 }
@@ -1760,7 +2162,19 @@ pub unsafe extern "C" fn ERR_error_string_n(e: c_ulong, buf: *mut c_char, len: u
 /// thread, would observe the difference.
 ///
 /// # Safety
+///
 /// `buf` must be NULL or writable for at least 256 bytes.
+///
+/// With a NULL `buf` the returned pointer aliases the process-global
+/// `ERR_STRING_BUF`, exactly as the authority's `static char buf[256]` does.
+/// Writing it and reading the returned pointer are **not** synchronized by this
+/// function: concurrent calls (or a read concurrent with a call) on different
+/// threads are a data race and therefore undefined behaviour in Rust. A caller
+/// that uses the NULL-buffer form must serialize it externally — one lock or one
+/// thread — and must treat the returned pointer as valid only until the next
+/// `ERR_error_string` call on any thread. The buffer is reproduced as shared
+/// rather than moved to thread-local storage so pointer-comparison and
+/// overwrite-observation behaviour matches the authority; see the note above.
 #[no_mangle]
 pub unsafe extern "C" fn ERR_error_string(e: c_ulong, buf: *mut c_char) -> *mut c_char {
     guard_ffi(core::ptr::null_mut(), || {
@@ -2130,6 +2544,24 @@ mod tests {
         crate::test_support::lock_global_state()
     }
 
+    #[test]
+    fn a_reentrant_state_access_is_refused_and_the_guard_resets() {
+        let _g = lock();
+        let outer = with_state(|s| {
+            // A nested ERR call on this thread must not form a second `&mut`:
+            // it is refused with the same "no state" outcome as a stopped
+            // library, and it does not mutate the slot the outer call holds.
+            let nested = with_state(|inner| {
+                inner.top += 1;
+            });
+            assert!(nested.is_none(), "reentrant access must be refused");
+            s.top
+        });
+        assert!(outer.is_some(), "the outer access still succeeds");
+        // The guard resets on exit, so the next unrelated ERR call works.
+        assert!(with_state(|_| ()).is_some());
+    }
+
     /// Read a static C string returned by the tables.
     fn cstr(p: *const c_char) -> Option<String> {
         if p.is_null() {
@@ -2361,6 +2793,127 @@ mod tests {
         };
         assert_eq!(cstr(data).as_deref(), Some(""));
         assert_eq!(flags2, 0);
+        drain();
+    }
+
+    /// NEO-ERR-1 probe: a borrowed slot must not escape `take_data` as the
+    /// ``owned`` block the C variadic adapter passes to `CRYPTO_realloc`.
+    ///
+    /// The second half performs the adapter's exact realloc sequence on the
+    /// returned pointer, which is where the pre-fix code reallocated the
+    /// caller's borrowed storage.
+    #[test]
+    fn take_data_copies_borrowed_data_before_the_adapter_reallocs() {
+        let _g = lock();
+        drain();
+        ERR_new();
+        static BORROWED: &[u8] = b"borrowed message\0";
+        let borrowed = BORROWED.as_ptr().cast::<c_char>() as *mut c_char;
+        // SAFETY: static NUL-terminated storage; flags 0 means borrowed, so the
+        // queue never owns it.
+        unsafe { ERR_set_error_data(borrowed, 0) };
+
+        let mut size: usize = 0;
+        // SAFETY: `size` is writable.
+        let taken = unsafe { openssl_rs_err_take_data(&mut size) };
+        assert!(!taken.is_null(), "take_data must return an owned copy");
+        assert_ne!(
+            taken, borrowed,
+            "borrowed storage must not be returned as the owned block"
+        );
+        assert_eq!(size, BORROWED.len());
+
+        // Exactly what ERR_vset_error does: grow to ERR_MAX_DATA_SIZE, then
+        // shrink to the formatted length plus its terminator.
+        // SAFETY: `taken` is one whole block from the crate allocator.
+        let grown = unsafe {
+            crate::runtime::mem::CRYPTO_realloc(taken.cast(), 1024, core::ptr::null(), 0)
+        };
+        assert!(!grown.is_null(), "realloc of the owned copy must succeed");
+        // SAFETY: `grown` is at least 1024 bytes and NUL-terminated.
+        unsafe {
+            assert_eq!(
+                cstr(grown.cast::<c_char>()).as_deref(),
+                Some("borrowed message")
+            );
+            crate::runtime::mem::CRYPTO_free(grown, core::ptr::null(), 0);
+        }
+        // The borrowed original is untouched and still readable.
+        assert_eq!(
+            cstr(borrowed.cast_const()).as_deref(),
+            Some("borrowed message")
+        );
+        drain();
+    }
+
+    /// Negative control for NEO-ERR-1: the pre-fix adapter shape passed the
+    /// detached slot pointer to `CRYPTO_realloc` without establishing that the
+    /// slot owned it. On a borrowed slot that is an invalid realloc.
+    ///
+    /// Guarded so the normal suite never executes it. Run under ASan with
+    /// `OPENSSL_RS_ERR_NEGATIVE_CONTROL=1`; the sanitizer must reject the
+    /// realloc of static storage, which is what the pre-fix code did.
+    #[test]
+    fn borrowed_realloc_negative_control_fires_only_when_enabled() {
+        if std::env::var_os("OPENSSL_RS_ERR_NEGATIVE_CONTROL").is_none() {
+            return;
+        }
+        let _g = lock();
+        drain();
+        ERR_new();
+        static BORROWED: &[u8] = b"pre-fix borrowed slot\0";
+        let borrowed = BORROWED.as_ptr().cast::<c_char>() as *mut c_char;
+        // SAFETY: static NUL-terminated storage; flags 0 means borrowed.
+        unsafe { ERR_set_error_data(borrowed, 0) };
+        // SAFETY: deliberately violates the block contract. This is the canary,
+        // not a supported call, and ASan must report it.
+        unsafe { crate::runtime::mem::CRYPTO_realloc(borrowed.cast(), 1024, core::ptr::null(), 0) };
+        drain();
+    }
+
+    /// NEO-ERR-2: an owned slot with a zero extent is refused and the block is
+    /// released instead of being stored for a later size-driven copy.
+    #[test]
+    fn finish_data_rejects_a_zero_extent_malloced_block() {
+        let _g = lock();
+        drain();
+        ERR_new();
+        // SAFETY: one fresh seam block, written as a NUL-terminated string.
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(4, core::ptr::null(), 0)
+        };
+        assert!(!p.is_null());
+        // SAFETY: `p` is four writable bytes.
+        unsafe { core::ptr::copy_nonoverlapping(b"abc".as_ptr(), p.cast::<u8>(), 3) };
+        // SAFETY: `p` is a wholly owned seam block; size 0 violates the extent
+        // contract, so the call must release it rather than store it.
+        unsafe {
+            openssl_rs_err_finish_data(
+                15,
+                42,
+                p.cast::<c_char>(),
+                0,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            )
+        };
+        let mut data: *const c_char = core::ptr::null();
+        let mut flags: c_int = -1;
+        // SAFETY: NULL or writable out-parameters.
+        let e = unsafe {
+            ERR_peek_last_error_all(
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut data,
+                &mut flags,
+            )
+        };
+        assert_eq!(get_reason(e), 42);
+        // The read side renders an absent value as "" (EMPTY_C), so the flags
+        // are what prove the slot stored nothing.
+        assert_eq!(cstr(data).as_deref(), Some(""));
+        assert_eq!(flags, 0, "a zero-extent owned slot must not be stored");
         drain();
     }
 }

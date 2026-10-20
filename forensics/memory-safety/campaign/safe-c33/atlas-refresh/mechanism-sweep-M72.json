@@ -1,0 +1,176 @@
+{
+  "receipt": "mechanism-sweep-M72",
+  "branch": "integrate/safe-c33",
+  "source_head": "f2d470446",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; two zero-length raw-pointer UB repairs at the public signing/verification ABI, one aliasing use-after-free repair in the SP800-56B derivation, and two secret-residue repairs; focused and full library suites and the RSA-adjacent adversarial probe run afterwards. No production unsafe expression was added or removed.",
+  "scope": "Per-file contract audit of the SP800-56B RSA validators, the multiprime name tables and multiprime helpers, the two RSA printers, the PSS EMSA-PSS half and parameter object, the OAEP/PSS name map, the PKCS#1 v1.5 and ASN.1 OCTET STRING signing entry points, and the SP800-56B key generator. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred.",
+  "files": [
+    "src/rsa/check.rs",
+    "src/rsa/mp_names.rs",
+    "src/rsa/mp.rs",
+    "src/rsa/prn.rs",
+    "src/rsa/pss.rs",
+    "src/rsa/schemes.rs",
+    "src/rsa/sign.rs",
+    "src/rsa/sp800.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M72-D1",
+      "file": "src/rsa/sign.rs",
+      "lines_pre_fix": "391-396",
+      "line_post_fix": 398,
+      "severity": "medium",
+      "class": "UB from a zero-length source pointer",
+      "description": "encode_pkcs1 copied the message with copy_nonoverlapping(m, .., m_len) without excluding m_len == 0. RSA_sign(type, NULL, 0, ...) is a legal public call for an empty message, and copy_nonoverlapping requires a non-null source even for a zero count, so the transcription had UB where the authority's memcpy performs no access. The zero-length copy is now skipped; the encoded buffer is the DigestInfo prefix alone, unchanged from the authority's result."
+    },
+    {
+      "id": "M72-D2",
+      "file": "src/rsa/sign.rs",
+      "lines_pre_fix": "854-860",
+      "line_post_fix": 864,
+      "severity": "medium",
+      "class": "UB from a zero-length source pointer",
+      "description": "RSA_verify_ASN1_OCTET_STRING formed core::slice::from_raw_parts(m, m_len) and from_raw_parts((*sig).data, m_len) before comparing. With m_len == 0 and m == NULL (a valid empty message at the C ABI), from_raw_parts requires a non-null pointer even for a zero length; the same applies to a decoded zero-length OCTET STRING whose data may be NULL. The zero-length comparison is now short-circuited, which is exactly the authority's memcmp(.., 0) == 0 outcome."
+    },
+    {
+      "id": "M72-D3",
+      "file": "src/rsa/sp800.rs",
+      "lines_pre_fix": "310-326",
+      "line_post_fix": 315,
+      "severity": "medium",
+      "class": "use-after-free on an aliasing caller",
+      "description": "ossl_rsa_sp800_56b_derive_params_from_pq did, in the authority's order, BN_free(rsa->e) followed by BN_dup(e) and BN_mod_inverse(d, e, ..). RSA_generate_key_ex(rsa, bits, rsa->e, cb) is a legal call, so e may be rsa->e itself: the free-then-use sequence then reads and exponentiates released storage. The exponent is now duplicated before the old one is released and the later inverse reads the object's new copy, so the aliasing path is safe. The non-aliasing result, allocation coordinates and failure arm are unchanged. A new test derives from a key whose e is passed back in and pins the copy."
+    },
+    {
+      "id": "M72-D4",
+      "file": "src/rsa/sp800.rs",
+      "lines_pre_fix": "396-408",
+      "line_post_fix": 407,
+      "severity": "low",
+      "class": "secret residue on a failure path",
+      "description": "The err: label of ossl_rsa_sp800_56b_derive_params_from_pq released d, dmp1, dmq1 and iqmp with BN_free, matching the authority's memory-freedom-only release. Every one of those is private-key material and the label runs on the d-too-small retry arm and on every derivation failure, so the limbs remained in freed storage. The four now use BN_clear_free; e and n stay plainly freed because they are public. Deliberate improvement over the authority, not observable through the API; ownership and release counts are unchanged."
+    },
+    {
+      "id": "M72-D5",
+      "file": "src/rsa/check.rs",
+      "lines_pre_fix": "338-342",
+      "line_post_fix": 341,
+      "severity": "low",
+      "class": "secret residue in a temporary",
+      "description": "ossl_rsa_check_private_exponent cleansed r, p1, q1, lcm and gcd but left p1q1 = (p-1)(q-1) in its BN_CTX slot. Since (p-1)(q-1) = n - p - q + 1, its residue recovers p+q, which factors n. The slot is now BN_clear'd with the others. The authority leaves it uncleansed; this is a deliberate improvement, and the BN_CTX value, frame order and return value are unchanged."
+    }
+  ],
+  "documentation_corrections": [
+    "src/rsa/sign.rs's encode_pkcs1 comment now states that the empty-message copy is skipped rather than implying m is always readable.",
+    "src/rsa/sign.rs's ASN.1 OCTET STRING verification comment records why the empty comparison is short-circuited.",
+    "src/rsa/sp800.rs's derivation comment states that the exponent copy precedes the release because the caller may pass the object's own e."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "retained_obligations": [
+    "The SP800-56B validator, helper and generator entry points take live RSA/BIGNUM/BN_CTX pointers; each unsafe fn's # Safety section is that contract.",
+    "ossl_rsa_multip_info_free and _free_ex own their record and the members named in their contracts; _free_ex leaves r/d/t to the caller.",
+    "RSA_print_fp/RSA_print borrow the caller's FILE/BIO and RSA for the call; the throwaway EVP_PKEY holds its own reference.",
+    "The PSS add reader borrows mHash for hLen bytes and writes EM for RSA_size(rsa) bytes; the verify reader borrows EM for RSA_size(rsa) bytes.",
+    "RSA_sign/verify and the ASN.1 OCTET STRING pair borrow the caller's message, sigret/sigbuf and siglen under the documented lengths.",
+    "ossl_rsa_digestinfo_encoding answers a static table and writes *len only on a non-NULL answer."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-1 OwnedBuf (new_cleansed, adopt_plain, adopt_cleansed, Drop release)",
+    "OB-3 OwnedCtx/RawCtx and the CtxDestroy member-buffer contract for RsaPrimeInfo",
+    "RC-1 reference counting for the throwaway EVP_PKEY in RSA_print",
+    "B19 BIGNUM cleansing (BN_clear_free on private components)",
+    "CRYPTO_* allocator seam at the authority's exact size/file/line",
+    "D351's rule that the authority's text, including its faults, is preserved unless it is undefined behaviour"
+  ],
+  "secret_bearing_buffers": [
+    "src/rsa/check.rs: the key's d, p, q and CRT components are secret but are not freed here; every BN_CTX temporary that holds secret-derived material (r, p1, q1, lcm, p1q1, and the |p-q| slot in check_keypair) is BN_clear'd before BN_CTX_end. gcd(p-1,e) is left uncleansed, as in the authority, because it is public-exponent-derived.",
+    "src/rsa/mp.rs: RsaPrimeInfo.r/d/t/pp are allocated by BN_secure_new and released by BN_clear_free in ossl_rsa_multip_info_free and the CtxDestroy body; the record block is released by OwnedCtx.",
+    "src/rsa/prn.rs: no buffer is owned; private key material reaches the caller's BIO through EVP_PKEY_print_private, and the throwaway EVP_PKEY is released on every path.",
+    "src/rsa/pss.rs: the PSS salt buffer is released with OwnedBuf::adopt_cleansed on every add path, matching the authority's OPENSSL_clear_free; the verifier's DB is public encoded-message data released plainly, and its stack h_ is recomputed public verification material.",
+    "src/rsa/sign.rs: the DigestInfo buffer from encode_pkcs1 is cleansed by OwnedBuf on every return; the public-decrypt buffer in ossl_rsa_verify is cleansed; the decoded OCTET STRING and signature buffers are public data.",
+    "src/rsa/sp800.rs: generated p and q are BN_secure_new and are BN_clear_free'd on the generation failure arm; derivation failures now cleanse d, dmp1, dmq1 and iqmp with BN_clear_free (M72-D4); BN_CTX temporaries p1/q1/lcm/p1q1/gcd are BN_clear'd. The private-format exponent and modulus are freed plainly because they are public.",
+    "src/rsa/mp_names.rs and src/rsa/schemes.rs: static name/OID tables only; no secret-bearing storage."
+  ],
+  "gates": {
+    "fast_fmt": "PASS: cargo fmt --all -- --check (court container)",
+    "fast_check": "PASS: cargo check --lib",
+    "fast_focused_tests": "PASS: cargo test --lib rsa:: -- --test-threads=4, 85 passed / 0 failed / 1 ignored; includes the new derive-aliasing control and the extended encode_pkcs1 zero-length case",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+    "full_lib_threaded": "PASS: 1678 passed / 0 failed / 27 ignored in 92.53 s with --test-threads=4",
+    "full_lib_serial": "PASS: 1678 passed / 0 failed / 27 ignored in 227.40 s with --test-threads=1",
+    "adv_probes": "PASS: the RSA-adjacent probe ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc, 1/1; the remaining probes are not on the touched paths and were not run",
+    "structural_guards": "No #[repr(C)] layout, exported symbol, signature, unsafe lint attribute, allocation size or FILE value changed. No production unsafe expression was added or removed."
+  },
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "rsa::sp800::tests::derive_params_accepts_an_exponent_that_aliases_the_objects_own",
+    "reason": "M72-D3's failure is only reachable when the caller passes rsa->e back as efixed. The control derives from a small p/q with e aliased to rsa->e, asserts success, asserts a new exponent object with the same value, and then releases the object exactly once. Reverting to free-then-dup (or keeping the inverse on the released parameter) fails the control, as observed before the second repair."
+  },
+  "next_queue": {
+    "file": "src/runtime/bio/bf_buff.rs",
+    "then": [
+      "src/runtime/bio/bf_nbio.rs",
+      "src/runtime/bio/bf_null.rs",
+      "src/runtime/bio/bf_prefix.rs",
+      "src/runtime/bio/bf_readbuff.rs",
+      "src/runtime/bio/bio_cb.rs",
+      "src/runtime/bio/bss_acpt.rs",
+      "src/runtime/bio/bss_fd.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "authority executable differential for the RSA validator/print/PSS/sign/generator rows",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY (the pinned build tree is absent from this checkout; the crate's own authority citations were read directly)"
+    },
+    {
+      "gate": "ASan over the signing, PSS and SP800 derivation paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri over the zero-length comparisons and the aliasing derivation control",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "allocator-failure injection for the derivation retry arm and the signing allocations",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement for RSA private operations and PSS handling",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "FRF suite and SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "The eight files are audited, not SAFETY_DISCHARGED.",
+    "BN_free of the public exponent and modulus on the SP800 error arm is the authority's and is retained.",
+    "ossl_rsa_check_prime_factor leaves gcd(p-1,e) uncleansed, as the authority does; it is public-exponent-derived.",
+    "The PSS verifier's DB and h_ hold public verification material and are not cleansed, matching the authority.",
+    "No constant-time claim is made for RSA private operations, PSS, or the SP800 pairwise test."
+  ],
+  "not_discharged": true
+}

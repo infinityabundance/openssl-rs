@@ -189,7 +189,7 @@ pub unsafe extern "C" fn X509_issuer_and_serial_hash(a: *mut X509) -> c_ulong {
         return X509_issuer_and_serial_hash_err(ctx, f, ptr::null_mut(), ret);
     }
     // SAFETY: `a` is live; `libctx`/`propq` are its own.
-    let digest = unsafe { EVP_MD_fetch((*a).libctx, SN_MD5.as_ptr(), (*a).propq) };
+    let digest = unsafe { EVP_MD_fetch((*a).libctx, SN_MD5.as_ptr(), (*a).propq()) };
     if digest.is_null() {
         return X509_issuer_and_serial_hash_err(ctx, f, digest, ret);
     }

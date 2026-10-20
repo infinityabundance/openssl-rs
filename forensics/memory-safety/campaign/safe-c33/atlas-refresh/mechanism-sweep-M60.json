@@ -1,0 +1,185 @@
+{
+  "receipt": "mechanism-sweep-M60",
+  "branch": "integrate/safe-c33",
+  "source_head": "b12ba246b",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no confirmed UB left unrepaired, no ABI regression, no hidden obligation and no remaining unsafe-safe-Rust API); two soundness/aliasing repairs, three argument-ordering repairs, one failure-path leak repair and one overflow repair",
+  "scope": "Per-file contract audit of GCM, the non-AEAD mode helpers (CBC/OFB/CFB/CTR/CTS), OCB, AES-SIV, RFC 3394/5649 key wrap, XTS and the OCSP client plus OCSP HTTP client. evp/method_store.rs was deferred again as the method-store registry boundary; ocsp/ocsp_http.rs was substituted from the head of the stable queue. AEAD/IV/tag and wrap intermediates are classified as secret or security-critical; no constant-time claim is made for any file from source inspection.",
+  "files": [
+    "src/modes/gcm.rs",
+    "src/modes/mod.rs",
+    "src/modes/ocb.rs",
+    "src/modes/siv128.rs",
+    "src/modes/wrap.rs",
+    "src/modes/xts.rs",
+    "src/ocsp/ocsp_cl.rs",
+    "src/ocsp/ocsp_http.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M60-D1",
+      "file": "src/modes/mod.rs",
+      "line_pre_fix": 115,
+      "line_post_fix": 118,
+      "severity": "medium",
+      "class": "safe Rust function dereferences a caller-supplied raw pointer (unsafe-safe-Rust API)",
+      "description": "ctr128_inc and ctr96_inc were plain safe fns taking *mut u8 and dereferencing it, so a safe caller inside the crate could pass NULL and cause undefined behaviour.",
+      "fix": "Both are now unsafe fn with a # Safety contract requiring a writable sixteen-byte counter; the four in-file call sites carry SAFETY comments. The authority's arithmetic is unchanged.",
+      "witness": "focused modes:: tests (25) and the full library suite pass."
+    },
+    {
+      "id": "M60-D2",
+      "file": "src/modes/ocb.rs",
+      "line_pre_fix": 552,
+      "line_post_fix": 557,
+      "severity": "medium",
+      "class": "overlapping shared/mutable references in the in-place partial-block arm",
+      "description": "CRYPTO_ocb128_encrypt and CRYPTO_ocb128_decrypt formed from_raw_parts(inp, last_len) and from_raw_parts_mut(outp, last_len) over the same range whenever in == out, which EVP's block update may pass. Simultaneous &/&mut over one range is undefined behaviour even though the byte loop is read-then-write. The full-block arms already use a local copy.",
+      "fix": "The input tail is copied into a local [u8; 16] before the output is mutably borrowed; encrypt checksums the preserved plaintext, decrypt still checksums the written plaintext as the authority does. New regression test ocb_partial_block_in_place_matches_out_of_place pins bytes and tag against the out-of-place result.",
+      "witness": "modes::ocb tests, including the new in-place test, and the full library suite pass."
+    },
+    {
+      "id": "M60-D3",
+      "file": "src/modes/wrap.rs",
+      "line_pre_fix": 107,
+      "line_post_fix": 110,
+      "severity": "low",
+      "class": "size arithmetic before the length range test (debug-build panic across the C ABI)",
+      "description": "crypto_128_unwrap_raw evaluated inlen - 8 before the range test. A caller-supplied inlen below eight underflowed: the authority's unsigned subtraction wraps and is then rejected, but the Rust debug build panicked and aborted.",
+      "fix": "checked_sub(8) with a zero (refusal) answer for the short arm. Observable release behaviour is unchanged.",
+      "witness": "New modes::wrap test out_of_range_lengths_are_refused_before_pointer_use passes with NULL buffers."
+    },
+    {
+      "id": "M60-D4",
+      "file": "src/modes/wrap.rs",
+      "line_pre_fix": 199,
+      "line_post_fix": 207,
+      "severity": "low",
+      "class": "size arithmetic before the length range test (debug-build panic across the C ABI)",
+      "description": "CRYPTO_128_wrap_pad computed blocks_padded = inlen.div_ceil(8) and padded_len = blocks_padded * 8 before testing inlen == 0 || inlen >= CRYPTO128_WRAP_MAX; a huge caller length overflowed the multiply in a debug build.",
+      "fix": "The authority's range test now runs before the ceiling arithmetic.",
+      "witness": "New modes::wrap test includes inlen == usize::MAX and inlen == 0 with NULL buffers."
+    },
+    {
+      "id": "M60-D5",
+      "file": "src/modes/wrap.rs",
+      "line_pre_fix": 256,
+      "line_post_fix": 264,
+      "severity": "low",
+      "class": "size arithmetic before the length range test (debug-build panic across the C ABI)",
+      "description": "CRYPTO_128_unwrap_pad evaluated n = inlen / 8 - 1 before the range test; inlen below eight underflowed in a debug build.",
+      "fix": "The range test now precedes the block count.",
+      "witness": "New modes::wrap test passes inlen == 7 with NULL buffers."
+    },
+    {
+      "id": "M60-D6",
+      "file": "src/ocsp/ocsp_cl.rs",
+      "line_pre_fix": 543,
+      "line_post_fix": 550,
+      "severity": "medium",
+      "class": "failure-path resource leak and half-built state",
+      "description": "OCSP_request_sign's key-mismatch arm returned 0 with the freshly created OCSP_SIGNATURE still installed on the request. The authority's goto err frees that signature and clears req->optionalSignature.",
+      "fix": "The arm frees the signature and nulls the pointer before returning, matching the authority's error path.",
+      "witness": "Contract review; the arm needs a mismatched key pair and is not exercised by a unit test (runtime control NOT_RUN)."
+    },
+    {
+      "id": "M60-D7",
+      "file": "src/ocsp/ocsp_cl.rs",
+      "line_pre_fix": 240,
+      "line_post_fix": 243,
+      "severity": "low",
+      "class": "integer overflow in a caller-controlled scan bound (debug-build panic across the C ABI)",
+      "description": "OCSP_resp_find computed last + 1; last == INT_MAX overflowed in a debug build. The authority's signed addition is undefined for that value.",
+      "fix": "saturating_add(1): the scan is empty and the answer is -1, the same answer the release build produced by wrapping.",
+      "witness": "New ocsp::ocsp_cl test resp_find_accepts_the_largest_last_without_overflowing passes."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "Validated-initialisation owner transition and single cleansing release: GcmRawCtx (block-only Drop, authority CRYPTO_free at gcm128.c:1616) to GcmCtxOwner (CRYPTO_clear_free over sizeof(GcmCtx))",
+    "RawCtx/CtxDestroy for OcbCtx and Siv128Context: destroy_body releases owned members and cleanses the context, never the enclosing block",
+    "OCB L-table member extent: CRYPTO_clear_free(l, max_l_index * 16); copy_ctx copies l_index + 1 populated entries into a max_l_index-sized block; lookup_l grows before writing",
+    "Caller-populated #[repr(C)] XTS128_CONTEXT (key1/key2/block1/block2) and the caller's in/out/iv extent contracts",
+    "C ABI caller contracts for ctx liveness, NULL-or-live optional pointers and in-place operation, plus the CRYPTO_* allocator seam at the authority's FILE/LINE coordinates",
+    "Authority 3.6.4 source semantics for gcm128.c, ctr128.c, cfb128.c, cts128.c, ocb128.c, siv128.c, wrap128.c, xts128.c and ocsp_cl.c"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary.",
+    "OCSP_request_sign's set1_name-failure arm returns without freeing a pre-existing optionalSignature, whereas the authority's goto err frees it and clears the pointer. The Rust arm is safer and is reachable only on an allocation failure; recorded as a divergence.",
+    "OCSP_check_validity still evaluates t_now + nsec and t_now - maxsec without checked arithmetic. nsec/maxsec are caller configuration rather than network data and the authority's signed overflow is undefined; hardening candidate.",
+    "The in-place OCB partial-block tag now checksums the original plaintext. The authority's C reads in after writing out, so an exactly-overlapping caller would checksum ciphertext and produce a different tag; the safe result is retained and pinned by a regression test, and non-overlapping behaviour is identical.",
+    "wrap.rs locals a/b, OCB pad/tail and SIV locals t/q are not cleansed, as the authority also leaves them; they are keyed intermediates, not key stores.",
+    "No constant-time claim is made for GCM, OCB, AES-SIV, key wrap or XTS from source inspection; dudect/ctgrind remain BOUNDARY/SEAL work."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "check_lib": "PASS (cargo check --lib)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 246.82 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1669 passed / 0 failed / 27 ignored; 1696 total; 85.30 s)",
+    "focused_tests": "PASS (45 passed / 0 failed: modes:: 25, ocsp:: 1, name-filtered wrap 19)",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for the modes or OCSP families)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M60-D2 is pinned by a new in-place-vs-out-of-place regression test; M60-D3..D5 and M60-D7 are pinned by new refusal-arm tests with NULL buffers. M60-D1 is a signature-level soundness repair and M60-D6 needs an injected mismatched key pair with an allocator observation. Miri/ASan/valgrind, dudect/ctgrind and the negative controls are BOUNDARY/SEAL work."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/ocsp/ocsp_lib.rs",
+      "src/ocsp/ocsp_prn.rs",
+      "src/ocsp/ocsp_srv.rs",
+      "src/ocsp/v3_ocsp.rs",
+      "src/param_build_set.rs",
+      "src/params/dup.rs",
+      "src/params/from_text.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "runtime control for the M60-D6 mismatched-key failure path",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri / ASan / valgrind over the OCB partial-block and wrap refusal arms",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement of GCM, OCB, AES-SIV, key wrap and XTS (dudect/ctgrind under the exact build profile)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, FRF suite, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    }
+  ]
+}

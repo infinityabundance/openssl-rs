@@ -47,9 +47,9 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
-use core::sync::atomic::Ordering;
 
 use crate::bn::arith::{BN_cmp, BN_sub};
 use crate::bn::bignum::{
@@ -78,7 +78,7 @@ use crate::evp::pkey_asn1::Engine;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_EX_INDEX_EC_KEY};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem::CRYPTO_clear_free;
 use crate::runtime::obj::{NID_X9_62_prime_field, NID_sm2};
 use crate::selftest::{
     OSSL_SELF_TEST_free, OSSL_SELF_TEST_get_callback, OSSL_SELF_TEST_new, OSSL_SELF_TEST_onbegin,
@@ -86,10 +86,12 @@ use crate::selftest::{
 };
 
 use crate::ec::backend::ossl_ec_key_dup;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The translation-unit coordinate the `OPENSSL_free`/`OPENSSL_clear_free`/`OPENSSL_malloc` sites
 /// in this unit are attributed to, as the allocator reports them.
 const FILE: *const c_char = c"crypto/ec/ec_key.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/ec/ec_key.c");
 
 /// `OSSL_SELF_TEST_TYPE_PCT` — `include/openssl/self_test.h:32`.
 const OSSL_SELF_TEST_TYPE_PCT: &core::ffi::CStr = c"Conditional_PCT";
@@ -227,15 +229,16 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         return;
     }
 
-    // `CRYPTO_DOWN_REF(&r->references, &i)`: a release fetch-sub, then the header's conditional
-    // acquire fence when the count reaches zero.
-    // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_sub(1, Ordering::Release) }.wrapping_sub(1);
-    if i == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    if i > 0 {
-        return;
+    // `CRYPTO_DOWN_REF(&r->references, &i)` — the shared gate claims the last reference with
+    // the destroying sentinel. `EC_KEY_free`'s body calls `meth->finish`, the group's `keyfinish`
+    // and `CRYPTO_free_ex_data`, so a re-entrant `EC_KEY_free` from one of those callbacks must be
+    // a defined no-op rather than a second teardown.
+    // SAFETY: `r` is live per the contract and this frame owns the reference it releases;
+    // on `Last` it is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*r).references) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
 
@@ -275,8 +278,9 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         EC_GROUP_free((*r).group);
         EC_POINT_free((*r).pub_key);
         BN_clear_free((*r).priv_key);
-        // `OPENSSL_free(r->propq)`, line 101.
-        CRYPTO_free((*r).propq.cast(), FILE, 101);
+        // `OPENSSL_free(r->propq)`, line 101; the handle's `Drop` is that release.
+        // SAFETY: `(*r).propq` is NULL or this object's own block.
+        drop(OwnedBuf::adopt_plain((*r).propq.cast(), FILE_SEAM, 101));
         // `OPENSSL_clear_free((void *)r, sizeof(EC_KEY))`, line 103.
         CRYPTO_clear_free(r.cast(), core::mem::size_of::<EcKey>(), FILE, 103);
     }
@@ -427,14 +431,11 @@ pub unsafe extern "C" fn EC_KEY_dup(ec_key: *const EcKey) -> *mut EcKey {
 /// `r` is a live object.
 #[no_mangle]
 pub unsafe extern "C" fn EC_KEY_up_ref(r: *mut EcKey) -> c_int {
-    // `CRYPTO_UP_REF` is a *relaxed* fetch-add.
-    // SAFETY: `r` is live per the contract.
-    let i = unsafe { (*r).references.fetch_add(1, Ordering::Relaxed) }.wrapping_add(1);
-    if i > 1 {
-        1
-    } else {
-        0
-    }
+    // The shared protocol uses the authority's relaxed increment on a live count and refuses a
+    // zero, destroying or `i32::MAX` count without changing it.
+    // SAFETY: `r` is live per the contract; this call acts for the caller's existing
+    // reference and acquires exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*r).references) }
 }
 
 /// `ENGINE *EC_KEY_get0_engine(const EC_KEY *eckey)` — `crypto/ec/ec_key.c:204-207`.
@@ -1832,17 +1833,18 @@ pub unsafe extern "C" fn EC_KEY_priv2buf(eckey: *const EcKey, pbuf: *mut *mut c_
         if len == 0 {
             return 0;
         }
-        let buf = CRYPTO_malloc(len, FILE, 1019).cast::<c_uchar>();
-        if buf.is_null() {
+        // The buffer, allocated through the crate's allocator seam at the authority's own line 1019;
+        // its release is the authority's `OPENSSL_free(buf)` at line 1023, run by the handle's `Drop`
+        // on the failure path below and given up to `*pbuf` on success.
+        let Some(buf) = OwnedBuf::new_plain_released(len, FILE_SEAM, 1019, FILE_SEAM, 1023) else {
             return 0;
-        }
-        len = EC_KEY_priv2oct(eckey, buf, len);
+        };
+        len = EC_KEY_priv2oct(eckey, buf.as_ptr(), len);
         if len == 0 {
-            // `OPENSSL_free(buf)`, line 1023.
-            CRYPTO_free(buf.cast(), FILE, 1023);
+            // `buf`'s `Drop` releases the buffer at the authority's own (FILE, 1023) site.
             return 0;
         }
-        *pbuf = buf;
+        *pbuf = buf.into_raw();
         len
     }
 }

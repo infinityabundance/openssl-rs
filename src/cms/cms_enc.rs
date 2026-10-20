@@ -29,16 +29,18 @@ use crate::evp::legacy_evp::EVP_get_cipherbyname;
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_GET_CIPHER_CTX};
 use crate::runtime::err::{ERR_clear_error, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::CRYPTO_malloc;
+
 use crate::runtime::obj::{
     NID_pkcs7_data, NID_pkcs7_encrypted, NID_undef, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::cms_asn1::*;
 use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_get0_cmsctx, raise_cms,
     ERR_R_ASN1_LIB, ERR_R_EVP_LIB,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// `EVP_CIPH_FLAG_AEAD_CIPHER` — `include/openssl/evp.h:531`.
 const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
@@ -48,6 +50,13 @@ const EVP_MAX_IV_LENGTH: usize = 16;
 const EVP_CTRL_AEAD_SET_TAG: c_int = 0x11;
 /// `ERR_R_BIO_LIB` — `include/openssl/err.h`.
 const ERR_R_BIO_LIB: c_int = 524290;
+
+/// Whether `ivlen` fits the authority's `iv[EVP_MAX_IV_LENGTH]`: the stack buffer
+/// `ossl_cms_EncryptedContent_init_bio` fills with `RAND_bytes_ex` and copies from.
+#[inline]
+fn iv_length_fits_authority_buffer(ivlen: c_int) -> bool {
+    (0..=EVP_MAX_IV_LENGTH as c_int).contains(&ivlen)
+}
 
 /// `BIO_get_cipher_ctx(BIO *, EVP_CIPHER_CTX **)` — `BIO_ctrl(b, BIO_C_GET_CIPHER_CTX, 0, pctx)`.
 ///
@@ -77,7 +86,7 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
     };
     let mut iv = [0u8; EVP_MAX_IV_LENGTH];
     let mut piv: *mut c_uchar = ptr::null_mut();
-    let mut tkey: *mut c_uchar = ptr::null_mut();
+    let mut tkey: Option<OwnedBuf> = None;
     let mut len = 0;
     let mut ivlen: c_int = 0;
     let mut tkeylen = 0usize;
@@ -209,6 +218,22 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             }
             return ptr::null_mut();
         }
+        // The authority fills `unsigned char iv[EVP_MAX_IV_LENGTH]` with `ivlen` bytes
+        // (`cms_enc.c:96-98`) and later `memcpy`s `ivlen` bytes into `aparams.iv`
+        // (`:179`). A provider may advertise an `ivlen` larger than
+        // `EVP_MAX_IV_LENGTH`; the authority then overruns its stack buffer, which
+        // §17 forbids reproducing. Refuse instead, at the authority's own IV-length
+        // refusal coordinate and reason.
+        if !iv_length_fits_authority_buffer(ivlen) {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cms(92, c"ossl_cms_EncryptedContent_init_bio", ERR_R_EVP_LIB) };
+            // SAFETY: the context and cipher are live.
+            unsafe {
+                EVP_CIPHER_free(fetched_ciph);
+                BIO_free(b);
+            }
+            return ptr::null_mut();
+        }
 
         if ivlen > 0 {
             // SAFETY: `iv` is writable.
@@ -316,25 +341,34 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
         // Generate random session key.
         // SAFETY: `ec` is live.
         if enc == 0 || unsafe { (*ec).key }.is_null() {
+            // The session key is this frame's scratch, allocated through the crate's allocator seam
+            // at the authority's own size/`file`/`line`; its release is the authority's cleansing
+            // `OPENSSL_clear_free`, run by `Drop` unless ownership moves into `ec->key`.
             // SAFETY: `tkeylen > 0`.
-            tkey = CRYPTO_malloc(tkeylen, c"cms_enc.c".as_ptr(), 130).cast::<c_uchar>();
-            if tkey.is_null() {
+            let Some(key) = OwnedBuf::new_cleansed_released(
+                tkeylen,
+                SeamFile::new(c"cms_enc.c"),
+                130,
+                SeamFile::NULL,
+                0,
+            ) else {
                 break 'body;
-            }
-            // SAFETY: `ctx` is live; `tkey` is writable.
-            if unsafe { EVP_CIPHER_CTX_rand_key(ctx, tkey) } <= 0 {
+            };
+            // SAFETY: `ctx` is live; `key` is `tkeylen` writable bytes.
+            let rand_ok = unsafe { EVP_CIPHER_CTX_rand_key(ctx, key.as_ptr()) };
+            tkey = Some(key);
+            if rand_ok <= 0 {
                 break 'body;
             }
         }
 
         // SAFETY: `ec` is live.
         if unsafe { (*ec).key }.is_null() {
-            // SAFETY: `ec` is live.
+            // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
             unsafe {
-                (*ec).key = tkey;
+                (*ec).key = tkey.take().map_or(ptr::null_mut(), OwnedBuf::into_raw);
                 (*ec).keylen = tkeylen;
             }
-            tkey = ptr::null_mut();
             if enc != 0 {
                 keep_key = 1;
             } else {
@@ -363,13 +397,13 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
                     break 'body;
                 } else {
                     // Use random key.
-                    // SAFETY: `ec` is live.
+                    // SAFETY: `ec` is live; the old key is `ec`'s own and the block moves into
+                    // `ec->key`.
                     unsafe {
                         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
-                        (*ec).key = tkey;
+                        (*ec).key = tkey.take().map_or(ptr::null_mut(), OwnedBuf::into_raw);
                         (*ec).keylen = tkeylen;
                     }
-                    tkey = ptr::null_mut();
                     // SAFETY: the queue is this thread's.
                     ERR_clear_error();
                 }
@@ -441,7 +475,6 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
             (*ec).key = ptr::null_mut();
         }
-        super::cms_asn1::OPENSSL_clear_free(tkey, tkeylen);
         if ok != 0 {
             return b;
         }
@@ -465,14 +498,21 @@ pub(crate) unsafe fn ossl_cms_EncryptedContent_init(
     // SAFETY: `ec` is live.
     unsafe {
         (*ec).cipher = cipher.cast();
-        if !key.is_null() {
-            let k = CRYPTO_malloc(keylen, c"cms_enc.c".as_ptr(), 218);
-            if k.is_null() {
-                return 0;
-            }
-            ptr::copy_nonoverlapping(key, k.cast::<u8>(), keylen);
-            (*ec).key = k.cast();
-        }
+    }
+    if !key.is_null() {
+        // The session key is this frame's scratch, allocated through the crate's allocator seam at
+        // the authority's own size/`file`/`line`; ownership of the block moves into `ec->key`.
+        // SAFETY: `key` is non-NULL and readable for `keylen`.
+        let Some(owned) = OwnedBuf::new(keylen, SeamFile::new(c"cms_enc.c"), 218) else {
+            return 0;
+        };
+        // SAFETY: `key` is readable for `keylen`; `owned` is `keylen` writable bytes.
+        unsafe { ptr::copy_nonoverlapping(key, owned.as_ptr(), keylen) };
+        // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
+        unsafe { (*ec).key = owned.into_raw() };
+    }
+    // SAFETY: `ec` is live.
+    unsafe {
         (*ec).keylen = keylen;
         if !cipher.is_null() {
             (*ec).content_type = OBJ_nid2obj(NID_pkcs7_data);
@@ -566,5 +606,24 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedData_init_bio(
             ossl_cms_get0_cmsctx(cms),
             0,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{iv_length_fits_authority_buffer, EVP_MAX_IV_LENGTH};
+
+    /// Negative/positive control for the §17 guard: a provider's advertised IV length
+    /// above the authority's stack-buffer size is refused instead of copied.
+    #[test]
+    fn iv_length_guard_rejects_a_provider_iv_larger_than_the_buffer() {
+        assert!(iv_length_fits_authority_buffer(0));
+        assert!(iv_length_fits_authority_buffer(
+            EVP_MAX_IV_LENGTH as core::ffi::c_int
+        ));
+        assert!(!iv_length_fits_authority_buffer(
+            EVP_MAX_IV_LENGTH as core::ffi::c_int + 1
+        ));
+        assert!(!iv_length_fits_authority_buffer(-1));
     }
 }

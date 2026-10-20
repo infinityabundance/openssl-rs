@@ -1,0 +1,129 @@
+{
+  "receipt": "mechanism-sweep-M58",
+  "branch": "integrate/safe-c33",
+  "source_head": "cfe1798ec",
+  "worktree": true,
+  "date": "2026-10-19",
+  "verification_level": "FAST plus BATCH; no STOP (no UB, ABI regression, hidden obligation or unsafe-safe-Rust API); one safety-contract correction and one zero-length-copy UB guard",
+  "scope": "Per-file contract audit of the head of the stable queue: the three FFC key-validation checks, the FFC parameter validators, the HTTP URL splitter and proxy selector, IDEA, the legacy HMAC object interface, the internal Poly1305 unit, and the SipHash primitive. evp/method_store.rs was deferred again as the method-store registry boundary; mac/ssl3_cbc.rs was substituted from the head of the stable queue. src/mac/ssl3_cbc.rs (constant-time TLS/SSLv3 record MAC) is audited for ownership/bounds and classified for secret residue, but no constant-time claim is made.",
+  "files": [
+    "src/ffc/key_validate.rs",
+    "src/ffc/params_validate.rs",
+    "src/http/http_lib.rs",
+    "src/idea.rs",
+    "src/mac/hmac.rs",
+    "src/mac/poly1305.rs",
+    "src/mac/siphash.rs",
+    "src/mac/ssl3_cbc.rs"
+  ],
+  "files_not_run": [
+    {
+      "file": "src/evp/method_store.rs",
+      "reason": "Method-store registry and OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary (store locking, construct/reserve/unreserve callbacks, method cache). Deferred for a dedicated boundary audit; it remains in REMAINING-AUDIT.txt at the head of the queue."
+    }
+  ],
+  "defects": [
+    {
+      "id": "M58-D1",
+      "file": "src/mac/siphash.rs",
+      "line_pre_fix": 180,
+      "line_post_fix": 180,
+      "secondary_lines": "204 (SipHash_set_hash_size)",
+      "severity": "low",
+      "class": "safety contract permits a NULL pointer the body dereferences",
+      "description": "SipHash_hash_size and SipHash_set_hash_size both documented `ctx` as 'NULL or live', but each body dereferences ctx unconditionally. The upstream authority (crypto/siphash/siphash.c) has no NULL test in either function, so the body is correct and the contract was the defect: a caller relying on the documented allowance could pass NULL and cause UB.",
+      "fix": "Both # Safety sections now require a live, non-NULL context and state that NULL is the caller's contract violation rather than a refusal. No code or ABI change.",
+      "witness": "Documentation-only; the five siphash unit tests and the provider caller pass non-NULL contexts."
+    },
+    {
+      "id": "M58-D2",
+      "file": "src/mac/ssl3_cbc.rs",
+      "line_pre_fix": 465,
+      "line_post_fix": 469,
+      "severity": "low",
+      "class": "zero-length pointer validity (Rust copy_nonoverlapping with NULL source)",
+      "description": "The TLS HMAC-arm key copy called ptr::copy_nonoverlapping(mac_secret, hmac_pad, mac_secret_length) unconditionally. Rust requires both pointers to be non-NULL even for a zero-byte copy, while the authority's memcpy(dst, NULL, 0) performs no access. A caller passing mac_secret = NULL with mac_secret_length == 0 (legal under the old contract's 'live for the length stated' wording) could therefore trigger UB where the authority does nothing.",
+      "fix": "The copy is skipped when mac_secret_length == 0. The # Safety section now allows a NULL mac_secret only for the empty secret. No observable behaviour change for non-empty secrets; no allocator, symbol, signature or layout change.",
+      "witness": "Compile, clippy and the four mac::ssl3_cbc tests (all non-empty secrets) pass. No in-tree caller exercises the empty-secret case yet (the function is awaiting hmac_prov.c's tls-data-size arm), so the zero-length arm has no runtime witness (NOT_RUN)."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "contracts_reused": [
+    "OB-2 OwnedStr adoption and release at authority coordinates, including the port's null-tolerant handoff (src/http/http_lib.rs)",
+    "OB-3 OwnedCtx/CtxDestroy with the all-zero-block destroy-body sweep (src/mac/hmac.rs HmacCtx)",
+    "Caller-owned BIGNUM private-key output and FFC params copy/cleanup contracts (src/ffc/key_validate.rs, src/ffc/params_validate.rs)",
+    "Authority-documented pointer extents for digest dispatch and constant-time selection helpers (src/mac/ssl3_cbc.rs)",
+    "Wrapping-arithmetic convention for unsigned long transcriptions and the authority's exact idea_mul spelling (src/idea.rs; cross-checked against upstream crypto/idea/idea_local.h)",
+    "Authority cleanse arms through conversion: keytmp/pad on the goto-err and success paths (src/mac/hmac.rs), whole-context cleanse on Final (src/mac/poly1305.rs)"
+  ],
+  "residuals": [
+    "src/evp/method_store.rs remains the deferred registry/dispatch boundary.",
+    "src/mac/ssl3_cbc.rs does not cleanse hmac_pad (a recoverable MAC-secret XOR pad) or the keyed md_state/mac_out/first_block/block images; the authority has no cleanse either. Following the recorded provider/mac.rs precedent for Poly1305's provider free, this batch classifies the residue rather than diverging; adding the cleanses is a hardening candidate for a security batch.",
+    "src/mac/siphash.rs has no cleanse in the authority (key mixed into v0..v3 and leavings persists in the caller's context); cleansing belongs to the provider free path and is outside this batch.",
+    "src/mac/hmac.rs forwards impl to EVP_DigestInit_ex. Current upstream 3.6-dev adds an early `if (impl != NULL) return 0`, while the 3.0 source forwards it (matching this port and its doc). The pinned 3.6.4 tree is not in this checkout; forwarding is memory-safe because evp_md_init_internal refuses a non-NULL impl before dereference, but ctx->md is mutated before that refusal, a compatibility difference if the pin has the early check.",
+    "No constant-time claim is made for src/mac/ssl3_cbc.rs or src/mac/siphash.rs from source inspection."
+  ],
+  "not_discharged": true,
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 272.50 s; --test-threads=1)",
+    "lib_test_threads_4": "PASS (1666 passed / 0 failed / 27 ignored; 1693 total; 97.95 s)",
+    "focused_tests": "PASS (27 passed / 0 failed: ffc::key_validate 3, ffc::params_validate 6, idea::tests 2, mac::hmac 4, mac::poly1305 3, mac::siphash 5, mac::ssl3_cbc 4). src/http/http_lib.rs has no in-tree unit test.",
+    "affected_adversarial_probes": "NOT_RUN (scripts/adv-probe.sh has no probe for the FFC validators, URL parser, IDEA, HMAC/Poly1305/SipHash or the TLS CBC MAC)"
+  },
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M58-D1 is documentation-only. M58-D2's empty-secret arm has no in-tree caller yet, so no runtime control can reach it; the existing focused tests exercise non-empty secrets. A negative control for the ssl3_cbc secret-residue classification (allocator/stack witness) and dudect/ctgrind for the constant-time claims are BOUNDARY/SEAL work."
+  },
+  "next_queue": {
+    "file": "src/evp/method_store.rs",
+    "then": [
+      "src/ml_dsa/hash.rs",
+      "src/ml_dsa/mod.rs",
+      "src/ml_dsa/ntt.rs",
+      "src/ml_dsa/sample.rs",
+      "src/ml_dsa/sign.rs",
+      "src/ml_kem/key.rs",
+      "src/ml_kem/mod.rs"
+    ]
+  },
+  "deferred": [
+    {
+      "gate": "src/evp/method_store.rs method-store registry / OSSL_METHOD_CONSTRUCT_METHOD dispatch boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "runtime control for M58-D2 (empty MAC secret) and negative controls for the ssl3_cbc secret residue",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "constant-time measurement of src/mac/ssl3_cbc.rs and src/mac/siphash.rs (dudect/ctgrind under the exact build profile)",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    },
+    {
+      "gate": "pinned-authority differential for the ssl3_cbc SSLv3 arm (no authority tree in this checkout; upstream master has removed is_sslv3)",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint against a pinned authority"
+    },
+    {
+      "gate": "dependency-graph regeneration against the exact candidate",
+      "status": "NOT_RUN",
+      "runs_at": "BATCH checkpoint after commit"
+    },
+    {
+      "gate": "Miri, ASan/valgrind, FRF suite, SEAL",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY / SEAL"
+    }
+  ]
+}

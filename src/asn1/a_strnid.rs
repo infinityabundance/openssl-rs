@@ -68,6 +68,65 @@ pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/a_strnid.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
 
+/// A runtime registry row from [`stable_get`]'s `CRYPTO_zalloc`.
+///
+/// The row stays at the authority's size and allocation site, and its single release is the
+/// authority's own `CRYPTO_free(row, FILE, line)` — through `Drop` while it is local, and through
+/// [`ASN1_STRING_TABLE_cleanup`]'s `st_free` once the stack owns it.
+struct OwnedRow {
+    ptr: *mut Asn1StringTable,
+}
+
+impl OwnedRow {
+    /// `CRYPTO_zalloc(sizeof(*rv), FILE, line)`, or `None` when the allocator answers NULL.
+    fn zalloc() -> Option<OwnedRow> {
+        let ptr = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<Asn1StringTable>(), FILE.as_ptr(), LINE)
+        }
+        .cast::<Asn1StringTable>();
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedRow { ptr })
+        }
+    }
+
+    /// The row's stable address, for the registry insertion and field writes.
+    fn as_ptr(&self) -> *mut Asn1StringTable {
+        self.ptr
+    }
+
+    /// Transfer the row to the registry stack, which now owns it.
+    fn into_raw(self) -> *mut Asn1StringTable {
+        let ptr = self.ptr;
+        core::mem::forget(self);
+        ptr
+    }
+
+    /// Reclaim a row from the registry stack for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live row this module allocated at [`FILE`]/[`LINE`], and no other
+    /// owner will release it: the returned handle's `Drop` is its single release.
+    unsafe fn from_raw(ptr: *mut Asn1StringTable) -> Option<OwnedRow> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedRow { ptr })
+        }
+    }
+}
+
+impl Drop for OwnedRow {
+    /// The row's single release, at the authority's own `stable_get` coordinates.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a row this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    }
+}
+
 // ---------------------------------------------------------------------------
 // `tbl_standard[]` — `crypto/asn1/tbl_standard.h`
 //
@@ -334,18 +393,20 @@ fn stable_get(nid: c_int) -> *mut Asn1StringTable {
     if !tmp.is_null() && unsafe { (*tmp).flags } & STABLE_FLAGS_MALLOC != 0 {
         return tmp;
     }
-    // SAFETY: `CRYPTO_zalloc` answers null or a zeroed row.
-    let rv = CRYPTO_zalloc(core::mem::size_of::<Asn1StringTable>(), FILE.as_ptr(), LINE)
-        .cast::<Asn1StringTable>();
-    if rv.is_null() {
+    // SAFETY: `CRYPTO_zalloc` answers null or a zeroed row; the owner holds it until the registry
+    // either refuses the insertion (released by `Drop`) or accepts it (`into_raw`).
+    let Some(row) = OwnedRow::zalloc() else {
         return core::ptr::null_mut();
-    }
+    };
+    let rv = row.as_ptr();
     // SAFETY: `st` is live and `rv` is not owned elsewhere.
     if unsafe { OPENSSL_sk_push(st, rv.cast::<c_void>()) } == 0 {
-        // SAFETY: `rv` came from this allocator and was refused by the stack.
-        unsafe { CRYPTO_free(rv.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        // The stack refused the row, so `row` is still the local owner and releases it here at
+        // the authority's exact site.
         return core::ptr::null_mut();
     }
+    // The registry accepted the row; the stack is now its owner and `st_free` releases it.
+    let rv = row.into_raw();
     if !tmp.is_null() {
         // SAFETY: `tmp` and `rv` are live rows.
         unsafe {
@@ -444,9 +505,9 @@ unsafe extern "C" fn st_free(tbl: *mut c_void) {
         return;
     };
     if r.flags & STABLE_FLAGS_MALLOC != 0 {
-        // SAFETY: the flag says this row came from `CRYPTO_zalloc` in
-        // `stable_get`, and the stack is being released.
-        unsafe { CRYPTO_free(tbl, FILE.as_ptr(), LINE) };
+        // SAFETY: the flag says this row came from `CRYPTO_zalloc` in `stable_get` and was handed
+        // to the stack, so this callback is its single release.
+        drop(unsafe { OwnedRow::from_raw(tbl.cast::<Asn1StringTable>()) });
     }
 }
 

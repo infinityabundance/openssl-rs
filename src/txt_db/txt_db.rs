@@ -71,7 +71,9 @@ use crate::runtime::lhash::{
     OPENSSL_LH_delete, OPENSSL_LH_free, OPENSSL_LH_insert, OPENSSL_LH_new, OPENSSL_LH_retrieve,
     OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::mem::{CRYPTO_malloc, CRYPTO_malloc_array};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -80,6 +82,7 @@ use crate::runtime::stack::{
 /// The authority's `OPENSSL_FILE` for this unit, so an allocation a caller's
 /// `CRYPTO_set_mem_functions` sees carries the authority's coordinate.
 const FILE: *const c_char = c"crypto/txt_db/txt_db.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"crypto/txt_db/txt_db.c");
 
 /// `BUFSIZE` — `crypto/txt_db/txt_db.c:18`.
 const BUFSIZE: c_int = 512;
@@ -173,12 +176,25 @@ unsafe fn read_err(buf: *mut BufMem, ret: *mut TxtDb) -> *mut TxtDb {
     unsafe { BUF_MEM_free(buf) };
     if !ret.is_null() {
         // SAFETY: `ret` is live and its three fields are as `TXT_DB_read` set them; the
-        // authority's `sk_OPENSSL_PSTRING_free` is `OPENSSL_sk_free` (the array only).
+        // authority's `sk_OPENSSL_PSTRING_free` is `OPENSSL_sk_free` (the array only), and each
+        // block below is this object's own single release, run by the handle's `Drop`.
         unsafe {
             OPENSSL_sk_free((*ret).data);
-            CRYPTO_free((*ret).index.cast(), FILE, READ_FREE_INDEX);
-            CRYPTO_free((*ret).qual.cast(), FILE, READ_FREE_QUAL);
-            CRYPTO_free(ret.cast(), FILE, READ_FREE_DB);
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*ret).index.cast(),
+                FILE_SEAM,
+                READ_FREE_INDEX,
+            ));
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*ret).qual.cast(),
+                FILE_SEAM,
+                READ_FREE_QUAL,
+            ));
+            drop(OwnedBuf::adopt_plain_nullable(
+                ret.cast(),
+                FILE_SEAM,
+                READ_FREE_DB,
+            ));
         }
     }
     ptr::null_mut()
@@ -212,7 +228,11 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ptr::null_mut()) };
         }
         // `CRYPTO_malloc` is the safe allocator and answers NULL on failure.
-        let ret = CRYPTO_malloc(size_of::<TxtDb>(), FILE, MALLOC_DB).cast::<TxtDb>();
+        let ret = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<TxtDb>(), FILE, MALLOC_DB)
+        }
+        .cast::<TxtDb>();
         if ret.is_null() {
             // SAFETY: `buf` is live and there is no `ret` yet.
             break 'err unsafe { read_err(buf, ret) };
@@ -239,12 +259,15 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ret) };
         }
         // An array of `num` lhash pointers; `CRYPTO_malloc_array` is safe.
-        let index = CRYPTO_malloc_array(
-            num as usize,
-            size_of::<*mut OpenSslLhash>(),
-            FILE,
-            MALLOC_INDEX,
-        )
+        let index = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(
+                num as usize,
+                size_of::<*mut OpenSslLhash>(),
+                FILE,
+                MALLOC_INDEX,
+            )
+        }
         .cast::<*mut OpenSslLhash>();
         // SAFETY: `ret` is live.
         unsafe { (*ret).index = index };
@@ -253,9 +276,11 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ret) };
         }
         // An array of `num` qualifier slots; `CRYPTO_malloc_array` is safe.
-        let qual =
+        let qual = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc_array(num as usize, size_of::<Option<QualFn>>(), FILE, MALLOC_QUAL)
-                .cast::<Option<QualFn>>();
+        }
+        .cast::<Option<QualFn>>();
         // SAFETY: `ret` is live.
         unsafe { (*ret).qual = qual };
         if qual.is_null() {
@@ -270,8 +295,17 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             }
         }
 
-        // `add = (num + 1) * sizeof(char *)`: the pointer array each row begins with.
-        let add: c_int = (num + 1) * size_of::<*mut c_char>() as c_int;
+        // `add = (num + 1) * sizeof(char *)`: the pointer array each row begins with. The
+        // product is checked rather than wrapping: a wrapped `add` would place the row cursor
+        // before the pointer array while the block was sized from the wrapped value, so the
+        // field and sentinel stores below could write outside it.
+        let Some(add) = num
+            .checked_add(1)
+            .and_then(|n| n.checked_mul(size_of::<*mut c_char>() as c_int))
+        else {
+            // SAFETY: `buf` and `ret` are live; the arrays are initialised.
+            break 'err unsafe { read_err(buf, ret) };
+        };
         // SAFETY: `buf` holds `size` bytes.
         unsafe { *(*buf).data.add((size - 1) as usize) = 0 };
         let mut offset: c_int = 0;
@@ -306,18 +340,26 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             // SAFETY: `offset >= 1`; the newline becomes the field terminator.
             unsafe { *(*buf).data.add((offset - 1) as usize) = 0 };
             // A fresh block of `add + offset` bytes: the pointer array and the
-            // NUL-terminated line packed after it; `CRYPTO_malloc` is safe.
-            let row = CRYPTO_malloc((add + offset) as usize, FILE, MALLOC_ROW).cast::<c_char>();
-            if row.is_null() {
+            // NUL-terminated line packed after it. The sum is checked so the extent can never
+            // wrap below the pointer array's own `add` bytes. The handle owns the block and
+            // releases it on every exit below that does not hand it to the row's stack.
+            let Some(row_bytes) = add
+                .checked_add(offset)
+                .and_then(|n| usize::try_from(n).ok())
+            else {
                 // SAFETY: `buf` and `ret` are live.
                 break 'err unsafe { read_err(buf, ret) };
-            }
+            };
+            let Some(mut row) = OwnedBuf::new(row_bytes, FILE_SEAM, MALLOC_ROW) else {
+                // SAFETY: `buf` and `ret` are live.
+                break 'err unsafe { read_err(buf, ret) };
+            };
             offset = 0;
 
             // `pp` is the row's pointer array; the cursor `p` starts at the data region.
-            let pp = row.cast::<*mut c_char>();
+            let pp = row.as_ptr().cast::<*mut c_char>();
             // SAFETY: `row` has `add` bytes for the pointer array before that region.
-            let mut p = unsafe { row.add(add as usize) };
+            let mut p = unsafe { row.as_ptr().cast::<c_char>().add(add as usize) };
             let mut n: c_int = 0;
             // SAFETY: `pp` has `num + 1` slots and `n == 0`.
             unsafe { *pp.add(n as usize) = p };
@@ -370,8 +412,10 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             }
             // SAFETY: `f` is readable.
             if n != num || unsafe { *f } != 0 {
-                // SAFETY: `pp` is the row's own pointer array.
-                unsafe { CRYPTO_free(pp.cast(), FILE, READ_FREE_ROW_BAD) };
+                // The authority releases the malformed row at its own site, `:104`, before the
+                // shared error tail.
+                row.set_release_line(READ_FREE_ROW_BAD);
+                drop(row);
                 // SAFETY: `ret` is live.
                 unsafe { (*ret).error = DB_ERROR_WRONG_NUM_FIELDS };
                 // SAFETY: `buf` and `ret` are live.
@@ -381,11 +425,15 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             unsafe { *pp.add(n as usize) = p };
             // SAFETY: `ret` is live and `pp` is the row handed over to the stack.
             if unsafe { OPENSSL_sk_push((*ret).data, pp.cast()) } == 0 {
-                // SAFETY: `pp` is the row's own pointer array.
-                unsafe { CRYPTO_free(pp.cast(), FILE, READ_FREE_ROW_PUSH) };
+                // The authority releases the un-pushed row at its own site, `:110`, before the
+                // shared error tail.
+                row.set_release_line(READ_FREE_ROW_PUSH);
+                drop(row);
                 // SAFETY: `buf` and `ret` are live.
                 break 'err unsafe { read_err(buf, ret) };
             }
+            // The row is on the stack now, which owns it: the handle gives it up.
+            let _ = row.into_raw();
         }
         // SAFETY: `buf` is live.
         unsafe { BUF_MEM_free(buf) };
@@ -742,10 +790,22 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                 i -= 1;
             }
             // SAFETY: the array came from `CRYPTO_malloc_array` in `TXT_DB_read`.
-            unsafe { CRYPTO_free((*db).index.cast(), FILE, FREE_INDEX) };
+            unsafe {
+                drop(OwnedBuf::adopt_plain_nullable(
+                    (*db).index.cast(),
+                    FILE_SEAM,
+                    FREE_INDEX,
+                ))
+            };
         }
         // SAFETY: the array came from `CRYPTO_malloc_array` or is NULL.
-        unsafe { CRYPTO_free((*db).qual.cast(), FILE, FREE_QUAL) };
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*db).qual.cast(),
+                FILE_SEAM,
+                FREE_QUAL,
+            ))
+        };
         // SAFETY: `db` is live.
         if !unsafe { (*db).data }.is_null() {
             // SAFETY: `data` is a live stack.
@@ -759,8 +819,15 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                     // A row the caller built with a NULL sentinel: each field is its own
                     // allocation.
                     for n in 0..nf {
-                        // SAFETY: `n` is in `[0, nf)`.
-                        unsafe { CRYPTO_free((*p.add(n as usize)).cast(), FILE, FREE_FIELD_NEW) };
+                        // SAFETY: `n` is in `[0, nf)` and the field is this row's own single
+                        // allocation.
+                        unsafe {
+                            drop(OwnedBuf::adopt_plain_nullable(
+                                (*p.add(n as usize)).cast(),
+                                FILE_SEAM,
+                                FREE_FIELD_NEW,
+                            ))
+                        };
                     }
                 } else {
                     // A row this module built: fields inside the block are not freed, the
@@ -770,18 +837,36 @@ pub unsafe extern "C" fn TXT_DB_free(db: *mut TxtDb) {
                         let field = unsafe { *p.add(n as usize) };
                         if (field as usize) < (p as usize) || (field as usize) > (max as usize) {
                             // SAFETY: `field` lies outside the row's own block.
-                            unsafe { CRYPTO_free(field.cast(), FILE, FREE_FIELD_EXT) };
+                            unsafe {
+                                drop(OwnedBuf::adopt_plain_nullable(
+                                    field.cast(),
+                                    FILE_SEAM,
+                                    FREE_FIELD_EXT,
+                                ))
+                            };
                         }
                     }
                 }
                 // SAFETY: the row block is this object's own allocation.
-                unsafe { CRYPTO_free(p.cast(), FILE, FREE_ROW) };
+                unsafe {
+                    drop(OwnedBuf::adopt_plain_nullable(
+                        p.cast(),
+                        FILE_SEAM,
+                        FREE_ROW,
+                    ))
+                };
                 i -= 1;
             }
             // SAFETY: `data` is a live stack whose elements are released above.
             unsafe { OPENSSL_sk_free((*db).data) };
         }
         // SAFETY: `db` was allocated by `CRYPTO_malloc` in `TXT_DB_read`.
-        unsafe { CRYPTO_free(db.cast(), FILE, FREE_DB) };
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                db.cast(),
+                FILE_SEAM,
+                FREE_DB,
+            ))
+        };
     });
 }

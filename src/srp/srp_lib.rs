@@ -23,7 +23,7 @@
 // does.
 #![allow(unused_assignments)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use std::sync::OnceLock;
 
@@ -45,9 +45,11 @@ use crate::evp::digest::{
     EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free, EvpMd,
 };
 use crate::runtime::bio::sys::{strcmp, strlen};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+
+use crate::runtime::owned_buf::OwnedBuf;
 
 use super::SrpGN;
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &CStr = c"crypto/srp/srp_lib.c";
@@ -83,8 +85,8 @@ unsafe fn bn_num_bytes(a: *const BigNum) -> c_int {
 ///
 /// # Safety
 ///
-/// `x`, `y` and `N` must be NULL or live `BIGNUM`s; `libctx` NULL or a live library context;
-/// `propq` NULL or NUL-terminated.
+/// `x` and `y` must be NULL or live `BIGNUM`s; `N` must be live (the authority's `BN_num_bytes(N)`
+/// dereferences it); `libctx` NULL or a live library context; `propq` NULL or NUL-terminated.
 unsafe fn srp_Calc_xy(
     x: *const BigNum,
     y: *const BigNum,
@@ -99,9 +101,19 @@ unsafe fn srp_Calc_xy(
     if sha1.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: `N` is NULL or live per the contract.
+    // SAFETY: `N` is live per the contract.
     let numN = unsafe { bn_num_bytes(N) };
-    let mut tmp: *mut c_uchar = ptr::null_mut();
+    // A live input can still answer a negative width only if its bit length overflowed the
+    // authority's `int`; casting that to `usize` and doubling it would wrap (and panic a debug
+    // build across this C ABI), so the authority's allocation failure is answered instead.
+    if numN < 0 {
+        // SAFETY: `sha1` came from `EVP_MD_fetch`.
+        unsafe {
+            EVP_MD_free(sha1);
+        }
+        return ptr::null_mut();
+    }
+    let mut tmp: Option<OwnedBuf> = None;
     'done: {
         // `x != N` is the authority's pointer comparison: a straddling `x` is already
         // reduced modulo `N`.
@@ -118,17 +130,24 @@ unsafe fn srp_Calc_xy(
             break 'done;
         }
         // The allocation is `numN * 2` bytes, the authority's `OPENSSL_malloc_array`.
-        tmp = CRYPTO_malloc((numN as usize) * 2, FILE.as_ptr(), LINE_MALLOC_TMP).cast::<c_uchar>();
-        if tmp.is_null() {
+        let Some(buf) = OwnedBuf::new_plain_released(
+            (numN as usize) * 2,
+            SeamFile::new(FILE),
+            LINE_MALLOC_TMP,
+            SeamFile::new(FILE),
+            LINE_FREE_TMP,
+        ) else {
             break 'done;
-        }
-        // SAFETY: `x`/`y` are NULL or live; `tmp` is a live buffer of `numN * 2` bytes; the
+        };
+        let tmp_ptr = buf.as_ptr();
+        tmp = Some(buf);
+        // SAFETY: `x`/`y` are NULL or live; `tmp_ptr` is a live buffer of `numN * 2` bytes; the
         // digest buffer is `SHA_DIGEST_LENGTH` bytes and `sha1` is the fetched method.
         let ok = unsafe {
-            BN_bn2binpad(x, tmp, numN) >= 0
-                && BN_bn2binpad(y, tmp.add(numN as usize), numN) >= 0
+            BN_bn2binpad(x, tmp_ptr, numN) >= 0
+                && BN_bn2binpad(y, tmp_ptr.add(numN as usize), numN) >= 0
                 && EVP_Digest(
-                    tmp.cast(),
+                    tmp_ptr.cast(),
                     (numN as usize) * 2,
                     digest.as_mut_ptr(),
                     ptr::null_mut(),
@@ -142,11 +161,12 @@ unsafe fn srp_Calc_xy(
         // SAFETY: the digest buffer is live and `SHA_DIGEST_LENGTH` bytes long.
         res = unsafe { BN_bin2bn(digest.as_ptr(), SHA_DIGEST_LENGTH, ptr::null_mut()) };
     }
-    // SAFETY: `sha1` came from `EVP_MD_fetch`; `tmp` from `CRYPTO_malloc` (or is NULL).
+    // SAFETY: `sha1` came from `EVP_MD_fetch`.
     unsafe {
         EVP_MD_free(sha1);
-        CRYPTO_free(tmp.cast(), FILE.as_ptr(), LINE_FREE_TMP);
     }
+    // The scratch handle releases `tmp` at the authority's own site.
+    drop(tmp);
     res
 }
 
@@ -367,7 +387,7 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
     }
 
     let mut dig = [0u8; SHA_DIGEST_LENGTH as usize];
-    let mut cs: *mut c_uchar = ptr::null_mut();
+    let mut cs: Option<OwnedBuf> = None;
     let mut res: *mut BigNum = ptr::null_mut();
     let mut sha1: *mut EvpMd = ptr::null_mut();
 
@@ -379,11 +399,17 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
 
     'done: {
         // SAFETY: `s` is NULL or live; the allocation is `BN_num_bytes(s)` bytes.
-        cs = unsafe { CRYPTO_malloc(bn_num_bytes(s) as usize, FILE.as_ptr(), LINE_MALLOC_CS) }
-            .cast::<c_uchar>();
-        if cs.is_null() {
+        let Some(buf) = OwnedBuf::new_plain_released(
+            unsafe { bn_num_bytes(s) } as usize,
+            SeamFile::new(FILE),
+            LINE_MALLOC_CS,
+            SeamFile::new(FILE),
+            LINE_FREE_CS,
+        ) else {
             break 'done;
-        }
+        };
+        let cs_ptr = buf.as_ptr();
+        cs = Some(buf);
 
         // SAFETY: the arguments are forwarded under this function's contract.
         sha1 = unsafe { EVP_MD_fetch(libctx, c"SHA1".as_ptr(), propq) };
@@ -404,13 +430,13 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
         if !ok {
             break 'done;
         }
-        // SAFETY: `s` is live and `cs` is `BN_num_bytes(s)` bytes.
-        ok = unsafe { BN_bn2bin(s, cs) } >= 0;
+        // SAFETY: `s` is live and `cs_ptr` is `BN_num_bytes(s)` bytes.
+        ok = unsafe { BN_bn2bin(s, cs_ptr) } >= 0;
         if !ok {
             break 'done;
         }
-        // SAFETY: `s` is live; `cs` holds `BN_num_bytes(s)` bytes.
-        ok = unsafe { EVP_DigestUpdate(ctxt, cs.cast(), bn_num_bytes(s) as usize) } != 0;
+        // SAFETY: `s` is live; `cs_ptr` holds `BN_num_bytes(s)` bytes.
+        ok = unsafe { EVP_DigestUpdate(ctxt, cs_ptr.cast(), bn_num_bytes(s) as usize) } != 0;
         if ok {
             // SAFETY: `dig` is live and `SHA_DIGEST_LENGTH` bytes.
             ok = unsafe {
@@ -425,13 +451,13 @@ pub unsafe extern "C" fn SRP_Calc_x_ex(
         res = unsafe { BN_bin2bn(dig.as_ptr(), SHA_DIGEST_LENGTH, ptr::null_mut()) };
     }
 
-    // SAFETY: `sha1` came from `EVP_MD_fetch`; `cs` from `CRYPTO_malloc` (or NULL); `ctxt`
-    // came from `EVP_MD_CTX_new`.
+    // SAFETY: `sha1` came from `EVP_MD_fetch`; `ctxt` came from `EVP_MD_CTX_new`.
     unsafe {
         EVP_MD_free(sha1);
-        CRYPTO_free(cs.cast(), FILE.as_ptr(), LINE_FREE_CS);
         EVP_MD_CTX_free(ctxt);
     }
+    // The scratch handle releases `cs` at the authority's own site.
+    drop(cs);
     res
 }
 

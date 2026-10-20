@@ -92,6 +92,106 @@ pub(crate) use crate::selftest::OsslCallback;
 
 /// `OPENSSL_free(prov->operation_bits)` in `provider_remove_store_methods`.
 const L_REMOVE_METHODS_FREE_BITS: c_int = 1373;
+/// `OPENSSL_realloc(provider->operation_bits, ...)` in `ossl_provider_set_operation_bit`.
+const L_SET_OPERATION_BIT_REALLOC: c_int = 2035;
+
+/// A validated handle over `OsslProvider`'s `(operation_bits, operation_bits_sz)` member pair.
+///
+/// The member-buffer invariant, stated once: the pair is always `(NULL, 0)` or a single block the
+/// crate's allocator seam produced, of exactly `operation_bits_sz` bytes, owned solely by the
+/// provider. The provider is its only owner: it is regrown in place by
+/// [`OpBitsSlot::realloc`] and released exactly once by [`OpBitsSlot::clear`].
+///
+/// The fields must keep their `#[repr(C)]` type, offset and companion (`usize`) to reproduce the
+/// authority's layout, so this is a transient view over them, not a resident owner -- the
+/// resident-member counterpart of the `MemberBufSlot` model and of the campaign's
+/// attribute-only `OwnedBuf`. `realloc` is the in-place regrow: on refusal the old block is left
+/// in the member, exactly `realloc`'s semantics.
+struct OpBitsSlot {
+    /// `unsigned char *operation_bits`.
+    bits: *mut *mut u8,
+    /// `size_t operation_bits_sz` -- the live allocation's byte extent.
+    len: *mut usize,
+}
+
+impl OpBitsSlot {
+    /// Derive the handle from the provider's two member fields.
+    ///
+    /// # Safety
+    ///
+    /// `bits`/`len` are the `operation_bits`/`operation_bits_sz` fields of a live provider and
+    /// currently obey the member-buffer invariant. The caller holds the provider's `opbits_lock`
+    /// **for writing** whenever the handle is used, so no other thread reads or writes the pair
+    /// through any of its methods.
+    unsafe fn of(bits: *mut *mut u8, len: *mut usize) -> OpBitsSlot {
+        OpBitsSlot { bits, len }
+    }
+
+    /// Release the incumbent (if any) through the authority's own `CRYPTO_free` site, leaving
+    /// `(NULL, 0)`. This is the authority's `if (bits != NULL) { free(bits); bits = NULL; }
+    /// bits_sz = 0;` in the same order; `CRYPTO_free`'s NULL no-op makes the guard unnecessary.
+    fn clear(&mut self) {
+        // SAFETY: by the invariant the incumbent is NULL or the provider's own single block, so
+        // this is that block's one release; `CRYPTO_free` ignores NULL.
+        unsafe {
+            let old = *self.bits;
+            CRYPTO_free(old.cast::<c_void>(), FILE, L_REMOVE_METHODS_FREE_BITS);
+            *self.bits = ptr::null_mut();
+            *self.len = 0;
+        }
+    }
+
+    /// The live allocation's current byte extent.
+    fn len(&self) -> usize {
+        // SAFETY: the handle's contract makes `len` a live provider field.
+        unsafe { *self.len }
+    }
+
+    /// The `index`-th byte mutably, or `None` when it is not allocated.
+    fn byte_mut(&mut self, index: usize) -> Option<&mut u8> {
+        // SAFETY: the handle's contract makes the pair valid; the invariant makes the pointer a
+        // block of exactly `*len` bytes when it is non-NULL, and the exclusive (write-locked)
+        // contract makes the returned borrow the only live access to that byte.
+        unsafe {
+            if index < *self.len {
+                Some(&mut *(*self.bits).add(index))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Regrow the incumbent **in place** through the authority's own `CRYPTO_realloc` site,
+    /// reproducing `realloc`'s failure semantics exactly: on success the member becomes
+    /// `(new, new_len)` and the (possibly moved) block is returned for the caller to fill; on
+    /// failure (NULL) the old block is **kept** and the member is left unchanged, so the provider
+    /// still owns -- and will still release -- it.
+    ///
+    /// # Safety
+    ///
+    /// `new_len > 0` (a zero-byte request releases through this seam and cannot be the in-place
+    /// regrow). The caller must initialise bytes `[old_len, new_len)` before any of them are read.
+    unsafe fn realloc(&mut self, new_len: usize) -> *mut u8 {
+        debug_assert!(new_len > 0, "operation_bits realloc to zero is a release");
+        // SAFETY: by the invariant the old pointer is NULL or the provider's own block; a NULL
+        // answer from `CRYPTO_realloc` means the old block was not released and is still owned.
+        unsafe {
+            let old = *self.bits;
+            let new = CRYPTO_realloc(
+                old.cast::<c_void>(),
+                new_len,
+                FILE,
+                L_SET_OPERATION_BIT_REALLOC,
+            )
+            .cast::<u8>();
+            if !new.is_null() {
+                *self.bits = new;
+                *self.len = new_len;
+            }
+            new
+        }
+    }
+}
 
 /// `typedef int (*OSSL_CALLBACK)(const OSSL_PARAM params[], void *arg)` — `openssl/core.h`.
 ///
@@ -219,15 +319,13 @@ unsafe fn provider_remove_store_methods(prov: *mut OsslProvider) -> c_int {
         if CRYPTO_THREAD_write_lock((*prov).opbits_lock) == 0 {
             return 0;
         }
-        if !(*prov).operation_bits.is_null() {
-            CRYPTO_free(
-                (*prov).operation_bits.cast::<c_void>(),
-                FILE,
-                L_REMOVE_METHODS_FREE_BITS,
-            );
-            (*prov).operation_bits = ptr::null_mut();
-        }
-        (*prov).operation_bits_sz = 0;
+        // SAFETY: `prov` is live and the write lock is held, so the pair is exclusively ours and
+        // obeys the member-buffer invariant.
+        let mut bits = OpBitsSlot::of(
+            ptr::addr_of_mut!((*prov).operation_bits),
+            ptr::addr_of_mut!((*prov).operation_bits_sz),
+        );
+        bits.clear();
         CRYPTO_THREAD_unlock((*prov).opbits_lock);
         1
     } == 0
@@ -1003,11 +1101,18 @@ pub(crate) unsafe fn ossl_provider_doall_activated(
         if curr == max {
             ret = 1;
         }
-        // The authority's `curr = -1` before the finish loop, re-expressed: phase 3 walks the
-        // whole copy on success and from the last-called provider on a callback refusal.
-        if curr == max {
-            curr = 0;
-        }
+        // The authority assigns `curr = -1` before the finish loop on **both** the
+        // completed sweep and a callback refusal; `finish`'s `curr++` then starts the
+        // undo at index 0. That is required because phase 1 raised every surviving
+        // provider's reference and activation count *before* any callback ran, so a
+        // provider whose callback already answered still needs its raise undone.
+        curr = 0;
+    } else {
+        // `goto err_unlock` leaves `curr` at the provider whose flag lock or count
+        // operation failed; the authority's `finish` loop is `for (curr++; ...)`, so the
+        // undo starts at the **next** entry. Starting at `curr` would down-ref a provider
+        // phase 1 never raised.
+        curr += 1;
     }
 
     // Phase 3: undo, from `curr` onwards.
@@ -1357,31 +1462,33 @@ pub(crate) unsafe fn ossl_provider_set_operation_bit(
         if CRYPTO_THREAD_write_lock((*provider).opbits_lock) == 0 {
             return 0;
         }
-        if (*provider).operation_bits_sz <= byte {
-            // The authority's line number, so a failing reallocation records what a consumer
-            // would see from the authority.
-            let tmp = CRYPTO_realloc(
-                (*provider).operation_bits.cast::<c_void>(),
-                byte + 1,
-                FILE,
-                2034,
-            )
-            .cast::<u8>();
+        // SAFETY: `provider` is live and the write lock is held, so the pair is exclusively ours
+        // and obeys the member-buffer invariant.
+        let mut bits = OpBitsSlot::of(
+            ptr::addr_of_mut!((*provider).operation_bits),
+            ptr::addr_of_mut!((*provider).operation_bits_sz),
+        );
+        if bits.len() <= byte {
+            let Some(new_len) = byte.checked_add(1) else {
+                CRYPTO_THREAD_unlock((*provider).opbits_lock);
+                return 0;
+            };
+            let old_len = bits.len();
+            // SAFETY: `new_len > 0` and the caller fills the bytes this publishes below.
+            let tmp = bits.realloc(new_len);
             if tmp.is_null() {
                 CRYPTO_THREAD_unlock((*provider).opbits_lock);
                 return 0;
             }
-            (*provider).operation_bits = tmp;
-            // The gap: everything from the old size to `byte` inclusive is zeroed.
-            ptr::write_bytes(
-                tmp.add((*provider).operation_bits_sz),
-                0,
-                byte + 1 - (*provider).operation_bits_sz,
-            );
-            (*provider).operation_bits_sz = byte + 1;
+            // The gap: everything from the old size to `byte` inclusive is zeroed. `realloc`
+            // preserves the old bytes and says nothing about the new ones.
+            // SAFETY: `tmp` is the live block of `new_len` bytes and the range is in bounds.
+            ptr::write_bytes(tmp.add(old_len), 0, new_len - old_len);
         }
-        // SAFETY: `operation_bits_sz > byte`, so `byte` is in bounds.
-        *(*provider).operation_bits.add(byte) |= bit;
+        // SAFETY: the invariant and `bits` publication make `byte` in bounds.
+        if let Some(b) = bits.byte_mut(byte) {
+            *b |= bit;
+        }
         CRYPTO_THREAD_unlock((*provider).opbits_lock);
     }
     1
@@ -1994,6 +2101,95 @@ mod tests {
         }
     }
 
+    /// `ossl_provider_doall_activated`'s undo phase must restore **every** count it
+    /// raised in phase 1, including when the application callback refuses. The authority
+    /// assigns `curr = -1` before its finish loop in both cases, so the down-ref sweep
+    /// starts at index 0. This control activates two providers, refuses the callback on
+    /// the second one, and then observes the first provider's activation count: a phase 3
+    /// that starts at the refusing provider leaves the first one raised, and the next
+    /// activation answers 3 instead of 2.
+    #[repr(C)]
+    struct DoAllProbe {
+        first: *mut OsslProvider,
+        second: *mut OsslProvider,
+        calls: c_int,
+        saw_first: c_int,
+    }
+
+    unsafe extern "C" fn refuse_on_second(prov: *mut OsslProvider, data: *mut c_void) -> c_int {
+        // SAFETY: `data` is the `DoAllProbe` passed by the test below.
+        unsafe {
+            let probe = data.cast::<DoAllProbe>();
+            (*probe).calls += 1;
+            if prov == (*probe).first {
+                (*probe).saw_first = 1;
+                return 1;
+            }
+            if prov == (*probe).second && (*probe).saw_first != 0 {
+                return 0;
+            }
+            1
+        }
+    }
+
+    #[test]
+    fn doall_activated_undoes_every_raised_count_on_callback_refusal() {
+        let _g = lock();
+        // SAFETY: the helper's contract is this test's; the two names are distinct, so both
+        // objects are inserted in this order and appear in that order in the provider stack.
+        let first = unsafe { activated_test_provider(c"rs-doall-a") };
+        // SAFETY: the same helper contract; a distinct name gives a distinct provider.
+        let second = unsafe { activated_test_provider(c"rs-doall-b") };
+        let mut probe = DoAllProbe {
+            first,
+            second,
+            calls: 0,
+            saw_first: 0,
+        };
+
+        // SAFETY: both providers are live and in the default store; the callback and its data
+        // outlive the call.
+        let ret = unsafe {
+            ossl_provider_doall_activated(
+                ptr::null_mut(),
+                refuse_on_second,
+                ptr::addr_of_mut!(probe).cast::<c_void>(),
+            )
+        };
+        assert_eq!(ret, 0, "a refused callback fails the sweep");
+        assert_eq!(
+            probe.saw_first, 1,
+            "the first provider must be visited first"
+        );
+        assert!(
+            probe.calls >= 2,
+            "the callback must reach the second provider"
+        );
+
+        // Both providers are back at their single activation from the helper. The extra
+        // activation below answers 2 when phase 3 undid the raise and 3 when it did not.
+        // SAFETY: `first` is live and in the store.
+        unsafe {
+            assert_eq!(
+                provider_activate(first, 1, 0),
+                2,
+                "phase 3 must undo the raise on providers the callback already visited"
+            );
+            assert_eq!(
+                provider_activate(second, 1, 0),
+                2,
+                "phase 3 must undo the raise on the refusing provider too"
+            );
+            // Return to zero activations before releasing the caller's references, so the
+            // store does not retain activated state from this control.
+            assert_eq!(provider_deactivate(first, 1, 1), 1);
+            assert_eq!(ossl_provider_deactivate(first, 1), 1);
+            assert_eq!(ossl_provider_deactivate(second, 1), 1);
+            ossl_provider_free(first);
+            ossl_provider_free(second);
+        }
+    }
+
     /// The other half of the life-cycle rule, made its own test because it needs the *absence*
     /// of a store: a provider whose last reference goes is torn down, and that is the only
     /// place the teardown happens.
@@ -2104,5 +2300,83 @@ mod tests {
             .filter(|row| row.is_fallback != 0)
             .count();
         assert_eq!(fallbacks, 1, "only `default` is a fallback in this profile");
+    }
+}
+
+/// Publication-ordering boundary court for [`ossl_provider_set_operation_bit`] (§16 / §21).
+///
+/// **Scope.** This establishes **publication ordering only**: the intercepted `CRYPTO_realloc`
+/// observes the *old* `(operation_bits, operation_bits_sz)` pair during the call, and the new pair
+/// becomes visible only after it returns. It does **not** model a genuine reentrant call that takes
+/// the same `opbits_lock`: that lock is non-reentrant, so such a call would deadlock rather than
+/// expose a partially published pair. The limitation is recorded here, not hidden.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn opbits_realloc_publishes_after_old_pair() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        // An all-zero `OsslProvider` is a valid value: every field is a raw pointer, an atomic, a
+        // scalar or a null-niche `Option<_>`, and `ossl_provider_set_operation_bit` reads only the
+        // two operation-bit members and the lock set below.
+        // SAFETY: zero is a valid bit pattern for every field of `OsslProvider`.
+        let mut p: OsslProvider = unsafe { core::mem::zeroed() };
+        p.opbits_lock = CRYPTO_THREAD_lock_new();
+        assert!(
+            !p.opbits_lock.is_null(),
+            "the operation-bits lock must allocate"
+        );
+
+        adv_alloc::reset();
+        adv_alloc::arm_realloc(1, false);
+        // SAFETY: `p` is live, its `opbits_lock` is live, and the pair is `(NULL, 0)`.
+        adv_alloc::arm_reenter(
+            core::ptr::addr_of_mut!(p.operation_bits),
+            core::ptr::addr_of_mut!(p.operation_bits_sz),
+        );
+        // SAFETY: `p` is live; bit 3 needs exactly one byte, so this is the intercepted realloc.
+        let rc = unsafe { ossl_provider_set_operation_bit(&mut p, 3) };
+        adv_alloc::disarm_realloc();
+
+        assert_eq!(rc, 1, "the operation bit must be set");
+        assert_eq!(
+            adv_alloc::reenter_observed(),
+            Some((0, 0)),
+            "during the realloc the pair must still be the old `(NULL, 0)`"
+        );
+        assert!(
+            !p.operation_bits.is_null(),
+            "the new block must be published"
+        );
+        assert_eq!(
+            p.operation_bits_sz, 1,
+            "the size must be published with the block"
+        );
+        // SAFETY: the realloc above returned a live one-byte block and the pair is in bounds.
+        assert_eq!(unsafe { *p.operation_bits }, 1 << 3, "bit 3 must be set");
+
+        // Release the members this probe owns, exactly as the authority's remove/free path does.
+        // SAFETY: `p.operation_bits` is the single block from the realloc above.
+        unsafe {
+            CRYPTO_free(
+                p.operation_bits.cast::<c_void>(),
+                FILE,
+                L_REMOVE_METHODS_FREE_BITS,
+            );
+            p.operation_bits = ptr::null_mut();
+            p.operation_bits_sz = 0;
+        }
+        // SAFETY: `p.opbits_lock` came from `CRYPTO_THREAD_lock_new` and is released once here.
+        unsafe { CRYPTO_THREAD_lock_free(p.opbits_lock) };
+        adv_alloc::assert_no_double_free();
     }
 }

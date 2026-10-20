@@ -34,7 +34,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::a_type::{ASN1_TYPE_new, ASN1_TYPE_pack_sequence};
@@ -45,7 +45,9 @@ use crate::asn1::items::{ASN1_ANY_it, ASN1_INTEGER_it};
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
 use crate::asn1::prim::ASN1_INTEGER_set;
-use crate::asn1::string::{ASN1_INTEGER_new, ASN1_OCTET_STRING_new};
+use crate::asn1::string::{
+    ASN1_INTEGER_new, ASN1_OCTET_STRING_new, FILE as STRING_FILE, LINE as STRING_LINE,
+};
 use crate::asn1::x_algor::{
     ossl_X509_ALGOR_from_nid, X509Algor, X509_ALGOR_free, X509_ALGOR_it, X509_ALGOR_new,
 };
@@ -58,7 +60,8 @@ use crate::evp::cipher_ctx::{
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_hmacWithSHA1, NID_hmacWithSHA256, NID_id_pbkdf2, NID_pbes2, NID_rc2_cbc, NID_undef,
     OBJ_nid2obj,
@@ -72,6 +75,69 @@ const PKCS5_DEFAULT_PBE2_SALT_LEN: c_int = 16;
 
 /// `EVP_MAX_IV_LENGTH` — `include/openssl/evp.h:36`.
 const EVP_MAX_IV_LENGTH: usize = 16;
+
+/// An owned salt block drawn for [`PKCS5_pbkdf2_set_ex`].
+///
+/// The authority allocates it with `OPENSSL_malloc` at `p5_pbev2.c:206` and, when a failure
+/// reaches `err:`, releases it through `PBKDF2PARAM_free` -> `ASN1_STRING_free` -> the string
+/// layer's `CRYPTO_free` at `(asn1_lib.c, 0)`. On success the octet string takes it over.
+struct SaltBuf {
+    ptr: *mut c_uchar,
+    file: *const c_char,
+    line: c_int,
+}
+
+impl SaltBuf {
+    /// `CRYPTO_malloc(len, alloc_file, alloc_line)`, released by `Drop` at
+    /// `release_file`/`release_line`, or `None` when the allocator answers NULL. `len` is a byte
+    /// count, so there is no product to guard.
+    fn new(
+        len: usize,
+        alloc_file: SeamFile,
+        alloc_line: c_int,
+        release_file: SeamFile,
+        release_line: c_int,
+    ) -> Option<SaltBuf> {
+        let alloc_file = alloc_file.as_ptr();
+        let release_file = release_file.as_ptr();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, alloc_file, alloc_line)
+        }
+        .cast::<c_uchar>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(SaltBuf {
+                ptr: raw,
+                file: release_file,
+                line: release_line,
+            })
+        }
+    }
+
+    /// The block's address, for the caller-supplied copy or the `RAND` draw.
+    fn as_ptr(&self) -> *mut c_uchar {
+        self.ptr
+    }
+
+    /// Give up ownership to the octet string that becomes the block's owner.
+    fn into_raw(self) -> *mut c_uchar {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for SaltBuf {
+    /// The block's single release on the path that never reaches the octet string, at the
+    /// string layer's own release coordinates.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not handed out; `Drop` runs
+        // once, so this is its single release.
+        unsafe { CRYPTO_free(self.ptr.cast::<c_void>(), self.file, self.line) };
+    }
+}
 
 /// `EVP_CTRL_PBE_PRF_NID` — `include/openssl/evp.h:386`, the PRF-preference probe.
 const EVP_CTRL_PBE_PRF_NID: c_int = 0x7;
@@ -424,6 +490,15 @@ pub unsafe extern "C" fn PKCS5_pbe2_set_iv_ex(
         }
 
         let ivlen = EVP_CIPHER_get_iv_length(cipher);
+        // The authority fills `unsigned char iv[EVP_MAX_IV_LENGTH]` with `ivlen`
+        // bytes and has no bound check. A caller-registered method
+        // (`EVP_CIPHER_meth_set_iv_length`) may declare a longer IV, which the
+        // authority would overrun; refuse instead of reproducing the
+        // out-of-bounds write (§17). No authority error site exists on this
+        // arm, so the refusal is the bare `err:` tail.
+        if ivlen > EVP_MAX_IV_LENGTH as c_int {
+            return pbe2_err(ctx, pbe2, ret);
+        }
         if ivlen > 0 {
             if !aiv.is_null() {
                 ptr::copy_nonoverlapping(aiv, iv.as_mut_ptr(), ivlen as usize);
@@ -609,19 +684,31 @@ pub unsafe extern "C" fn PKCS5_pbkdf2_set_ex(
         } else {
             saltlen
         };
-        // SAFETY: `osalt` is this frame's own string.
-        (*osalt).data = CRYPTO_malloc(saltlen as usize, FILE.as_ptr(), 206).cast::<c_uchar>();
-        if (*osalt).data.is_null() {
+        // `SaltBuf::new` is the authority's `OPENSSL_malloc(saltlen)` at `p5_pbev2.c:206`. Its
+        // `Drop` releases the block at the coordinates the authority's `ASN1_STRING_free` uses
+        // on the `RAND` failure path; `into_raw` below is the store into the octet string.
+        let Some(sstr) = SaltBuf::new(
+            saltlen as usize,
+            SeamFile::new(FILE),
+            206,
+            SeamFile::new(STRING_FILE),
+            STRING_LINE,
+        ) else {
             return pbkdf2_err(kdf, keyfunc);
-        }
-        (*osalt).length = saltlen;
+        };
 
         if !salt.is_null() {
-            ptr::copy_nonoverlapping(salt, (*osalt).data, saltlen as usize);
-        } else if RAND_bytes_ex(libctx, (*osalt).data, saltlen as usize, 0) <= 0 {
+            ptr::copy_nonoverlapping(salt, sstr.as_ptr(), saltlen as usize);
+        } else if RAND_bytes_ex(libctx, sstr.as_ptr(), saltlen as usize, 0) <= 0 {
             raise_site(&err_sites::P5_PBEV2_214);
+            // The authority frees the same block in `PBKDF2PARAM_free` at `err:`; dropping the
+            // handle here keeps that allocator event (and its coordinates) instead of leaking.
+            drop(sstr);
             return pbkdf2_err(kdf, keyfunc);
         }
+        // SAFETY: `osalt` is this frame's own string, and the block is handed over exactly once.
+        (*osalt).data = sstr.into_raw();
+        (*osalt).length = saltlen;
 
         let iter = if iter <= 0 { PKCS5_DEFAULT_ITER } else { iter };
         if ASN1_INTEGER_set((*kdf).iter, c_long::from(iter)) == 0 {

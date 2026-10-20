@@ -104,7 +104,8 @@ use crate::runtime::stack::{
 use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::{conf_add_error_name_value, ossl_a2i_ipadd, ossl_v3_name_cmp};
 use crate::x509::x509_lu::X509StoreCtx;
-use crate::x509::x_x509::X509;
+use crate::x509::x509_set::X509_up_ref;
+use crate::x509::x_x509::{X509_free, X509};
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in:99`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -1169,10 +1170,18 @@ unsafe extern "C" fn ip_address_family_cmp(a_: *const c_void, b_: *const c_void)
 ///
 /// # Safety
 ///
-/// `f` is a live address family whose `addressFamily` is a live octet string.
+/// `f` is NULL or a live address family whose `addressFamily` is NULL or a live octet string.
 unsafe fn ip_address_family_check_len(f: *const IpAddressFamily) -> c_int {
+    if f.is_null() {
+        return 0;
+    }
     // SAFETY: `f` is live per the contract.
-    let len = unsafe { (*(*f).addressFamily).length };
+    let address_family = unsafe { (*f).addressFamily };
+    if address_family.is_null() {
+        return 0;
+    }
+    // SAFETY: `address_family` is a live octet string.
+    let len = unsafe { (*address_family).length };
     c_int::from((2..=3).contains(&len))
 }
 
@@ -1244,12 +1253,20 @@ unsafe fn make_addressPrefix(
     prefixlen: c_int,
     afilen: c_int,
 ) -> c_int {
-    let bytelen = (prefixlen + 7) / 8;
-    let bitlen = prefixlen % 8;
-
-    if prefixlen < 0 || prefixlen > afilen * 8 {
+    // The authority computes `(prefixlen + 7) / 8` before its range check. An exported caller can
+    // pass `INT_MAX`, for which that sum is signed-overflow UB in C and a debug panic here; the
+    // authority's failure result for an out-of-range prefix is 0, so answer that instead.
+    let Some(prefix_bits) = afilen.checked_mul(8) else {
+        return 0;
+    };
+    if prefixlen < 0 || prefixlen > prefix_bits {
         return 0;
     }
+    let Some(rounded) = prefixlen.checked_add(7) else {
+        return 0;
+    };
+    let bytelen = rounded / 8;
+    let bitlen = prefixlen % 8;
     let aor = IPAddressOrRange_new();
     if aor.is_null() {
         return 0;
@@ -1997,10 +2014,34 @@ unsafe fn ip_address_or_ranges_canonize(aors: *mut OpenSslStack, afi: c_uint) ->
             unsafe { OPENSSL_sk_set(aors, i, merged.cast::<c_void>()) };
             // SAFETY: `aors` is live and `i + 1` is in bounds.
             unsafe { OPENSSL_sk_delete(aors, i + 1) };
-            // SAFETY: `a` and `b` are live elements this call owns after the delete.
+            // A caller-built list may repeat an element. Freeing one that is still listed would
+            // leave a dangling entry behind (a later read or release would be a use-after-free or
+            // double free), so release each pointer only once the list no longer references it.
+            // SAFETY: `aors` is a live stack.
+            let remaining = unsafe { OPENSSL_sk_num(aors) };
+            let mut a_referenced = false;
+            let mut b_referenced = false;
+            let mut k: c_int = 0;
+            while k < remaining {
+                // SAFETY: `k` is in bounds.
+                let element = unsafe { OPENSSL_sk_value(aors, k) };
+                if element == a.cast::<c_void>() {
+                    a_referenced = true;
+                }
+                if element == b.cast::<c_void>() {
+                    b_referenced = true;
+                }
+                k += 1;
+            }
+            // SAFETY: each pointer that is no longer listed is an element this call owns after the
+            // `set`/`delete`; when `a` and `b` alias, the pointer is released exactly once.
             unsafe {
-                IPAddressOrRange_free(a);
-                IPAddressOrRange_free(b);
+                if !a_referenced {
+                    IPAddressOrRange_free(a);
+                }
+                if b != a && !b_referenced {
+                    IPAddressOrRange_free(b);
+                }
             }
             // `--i; continue;` re-tests the same index after the list shrank.
             continue;
@@ -2054,12 +2095,20 @@ pub unsafe extern "C" fn X509v3_addr_canonize(addr: *mut OpenSslStack) -> c_int 
     while i < unsafe { OPENSSL_sk_num(addr) } {
         // SAFETY: `i` is in bounds.
         let f = unsafe { OPENSSL_sk_value(addr, i) }.cast::<IpAddressFamily>();
+        // A caller-built family can be NULL or carry a NULL choice; the authority's dereferences
+        // would be UB and its surrounding code treats a malformed family as a failure.
+        if f.is_null() {
+            return 0;
+        }
         // SAFETY: `f` is live.
         if unsafe { ip_address_family_check_len(f) } == 0 {
             return 0;
         }
         // SAFETY: `f` is live and its choice is live.
         let choice = unsafe { (*f).ipAddressChoice };
+        if choice.is_null() {
+            return 0;
+        }
         // SAFETY: `choice` is live.
         if unsafe { (*choice).type_ } == IPAddressChoice_addressesOrRanges
             // SAFETY: the list arm is live under the selector; `f` is live.
@@ -2108,6 +2157,78 @@ unsafe fn strspn(s: *const c_char, accept: &[u8]) -> usize {
     }
 }
 
+/// The length of a NUL-terminated string, excluding the terminator.
+///
+/// # Safety
+///
+/// `s` is NUL-terminated and readable up to and including the terminator.
+unsafe fn nul_terminated_len(s: *const c_char) -> usize {
+    let mut n = 0usize;
+    loop {
+        // SAFETY: `s` is NUL-terminated per the contract, so the walk stops in bounds.
+        if unsafe { *s.add(n) } == 0 {
+            return n;
+        }
+        n += 1;
+    }
+}
+
+/// `base + step` when the sum is a valid index into a buffer of `len` bytes. Index `len` names the
+/// terminator (readable, and writable only as the terminator); anything past it is rejected.
+fn checked_offset(base: usize, step: usize, len: usize) -> Option<usize> {
+    let end = base.checked_add(step)?;
+    if end <= len {
+        Some(end)
+    } else {
+        None
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `v2i_IPAddrBlocks` string it allocates with `CRYPTO_strdup`
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `CRYPTO_strdup` string.
+///
+/// [`Self::take`] adopts the seam's result and `Drop` is its single release, through the same
+/// allocator seam and at the authority's own site. The adopted site is the `err:` path; the two
+/// success paths select their own before the value drops.
+struct OwnedStr {
+    ptr: ptr::NonNull<c_char>,
+    line: c_int,
+}
+
+impl OwnedStr {
+    /// Adopt a `CRYPTO_strdup` result, or `None` for NULL. `line` is the authority's release site.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a NUL-terminated string this unit allocated through the crate's
+    /// `CRYPTO_strdup` seam, is owned by the caller, and will not be freed or handed to any other
+    /// owner -- this handle's `Drop` is its single release.
+    unsafe fn take(ptr: *mut c_char, line: c_int) -> Option<OwnedStr> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedStr { ptr, line })
+    }
+
+    /// The string's address, for the parse below.
+    fn as_ptr(&self) -> *mut c_char {
+        self.ptr.as_ptr()
+    }
+
+    /// Choose the authority's release site for this string.
+    fn set_line(&mut self, line: c_int) {
+        self.line = line;
+    }
+}
+
+impl Drop for OwnedStr {
+    /// The string's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `CRYPTO_strdup` answered and has not handed out; its
+        // single release is the authority's own plain `CRYPTO_free` at the selected site.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE.as_ptr(), self.line) };
+    }
+}
+
 /// `static void *v2i_IPAddrBlocks(const struct v3_ext_method *method, struct v3_ext_ctx *ctx,
 /// STACK_OF(CONF_VALUE) *values)` — `crypto/x509/v3_addr.c:917-1082`.
 ///
@@ -2125,7 +2246,7 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
     const V4ADDR_CHARS: &[u8] = b"0123456789.";
     const V6ADDR_CHARS: &[u8] = b"0123456789.:abcdefABCDEF";
 
-    let mut s: *mut c_char = ptr::null_mut();
+    let mut s: Option<OwnedStr> = None;
     let mut t: *mut c_char = ptr::null_mut();
 
     // SAFETY: `ip_address_family_cmp` is the comparator for this element type.
@@ -2210,19 +2331,31 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                 // SAFETY: `t` points into `value`.
                 t = unsafe { t.add(strspn(t, b" \t")) };
                 // SAFETY: `t` is NUL-terminated; the file/line are this unit's.
-                s = unsafe { CRYPTO_strdup(t, FILE.as_ptr(), LINE_V2I_STRDUP_SAFI) };
+                s = unsafe {
+                    OwnedStr::take(
+                        CRYPTO_strdup(t, FILE.as_ptr(), LINE_V2I_STRDUP_SAFI),
+                        LINE_V2I_ERR_FREE,
+                    )
+                };
             } else {
                 // SAFETY: `val` is live; `val->value` is NUL-terminated.
                 let value = unsafe { (*val).value };
                 // SAFETY: `value` is NUL-terminated; the file/line are this unit's.
-                s = unsafe { CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP) };
+                s = unsafe {
+                    OwnedStr::take(
+                        CRYPTO_strdup(value, FILE.as_ptr(), LINE_V2I_STRDUP),
+                        LINE_V2I_ERR_FREE,
+                    )
+                };
             }
-            if s.is_null() {
+            if s.is_none() {
                 break 'each false;
             }
+            // The adopted string's address for the parse below.
+            let s_ptr = s.as_ref().map(OwnedStr::as_ptr).unwrap_or(ptr::null_mut());
 
-            // SAFETY: `s` is NUL-terminated; the literal is static.
-            if unsafe { strcmp(s, c"inherit".as_ptr()) } == 0 {
+            // SAFETY: `s_ptr` is NUL-terminated; the literal is static.
+            if unsafe { strcmp(s_ptr, c"inherit".as_ptr()) } == 0 {
                 // SAFETY: `addr` is live; `safi_mut` is NULL or this frame's storage.
                 if unsafe { X509v3_addr_add_inherit(addr, afi, safi_mut) } == 0 {
                     // SAFETY: the site is a compiled-in constant.
@@ -2231,25 +2364,43 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                     unsafe { conf_add_error_name_value(val) };
                     break 'each false;
                 }
-                // SAFETY: `s` is this call's own allocation.
-                unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_FREE_INHERIT) };
-                s = ptr::null_mut();
+                // The authority's own release on the `inherit` path.
+                if let Some(mut st) = s.take() {
+                    st.set_line(LINE_V2I_FREE_INHERIT);
+                }
                 i += 1;
                 continue;
             }
 
-            // SAFETY: `s` is NUL-terminated; `addr_chars` is a static byte set.
-            let mut i1 = unsafe { strspn(s, addr_chars) } as c_int;
-            // SAFETY: `s.add(i1)` points into `s`'s buffer.
-            let mut i2 = i1 + unsafe { strspn(s.add(i1 as usize), b" \t") } as c_int;
-            // SAFETY: `i2` indexes within `s` (bounded by its NUL).
-            let delim = unsafe { *s.add(i2 as usize) } as u8;
-            i2 += 1;
-            // SAFETY: `i1` indexes within `s`.
-            unsafe { *s.add(i1 as usize) = 0 };
+            // The parse below indexes the duplicated string. Derive its length once and keep every
+            // offset in `usize`, so a `usize`-to-`c_int` cast cannot wrap and every index is
+            // validated against the terminator before it is dereferenced.
+            // SAFETY: `s_ptr` is NUL-terminated.
+            let s_len = unsafe { nul_terminated_len(s_ptr) };
+            // SAFETY: `s_ptr` is NUL-terminated; `addr_chars` is a static byte set.
+            let Some(i1) = checked_offset(0, unsafe { strspn(s_ptr, addr_chars) }, s_len) else {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_ADDR_1011) };
+                // SAFETY: `val` is live per the stack contract.
+                unsafe { conf_add_error_name_value(val) };
+                break 'each false;
+            };
+            // SAFETY: `i1` is a valid index (at most the terminator).
+            let Some(i2) = checked_offset(i1, unsafe { strspn(s_ptr.add(i1), b" \t") }, s_len)
+            else {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_ADDR_1011) };
+                // SAFETY: `val` is live per the stack contract.
+                unsafe { conf_add_error_name_value(val) };
+                break 'each false;
+            };
+            // SAFETY: `i2` is a valid index, so the delimiter or the terminator is readable.
+            let delim = unsafe { *s_ptr.add(i2) } as u8;
+            // SAFETY: `i1` is a valid index; this is the authority's own split of the copy.
+            unsafe { *s_ptr.add(i1) = 0 };
 
-            // SAFETY: `min` has 16 writable bytes; `s` is NUL-terminated.
-            if unsafe { ossl_a2i_ipadd(min.as_mut_ptr(), s) } != length {
+            // SAFETY: `min` has 16 writable bytes; `s_ptr` is NUL-terminated.
+            if unsafe { ossl_a2i_ipadd(min.as_mut_ptr(), s_ptr) } != length {
                 // SAFETY: the site is a compiled-in constant.
                 unsafe { raise_site(&V3_ADDR_1011) };
                 // SAFETY: `val` is live per the stack contract.
@@ -2259,10 +2410,20 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
 
             match delim {
                 b'/' => {
-                    // SAFETY: `s.add(i2)` is NUL-terminated; `&raw mut t` is writable.
-                    let prefixlen = unsafe { strtoul(s.add(i2 as usize), &raw mut t, 10) } as c_int;
-                    // SAFETY: `t` and `s.add(i2)` point into `s`.
-                    let (at_start, tc) = unsafe { (t == s.add(i2 as usize), *t) };
+                    // SAFETY: `i2` names the delimiter, so `i2 + 1` is at most the terminator.
+                    let Some(arg) = checked_offset(i2, 1, s_len) else {
+                        // SAFETY: the site is a compiled-in constant.
+                        unsafe { raise_site(&V3_ADDR_1023) };
+                        // SAFETY: `val` is live per the stack contract.
+                        unsafe { conf_add_error_name_value(val) };
+                        break 'each false;
+                    };
+                    // `(int)strtoul(...)` is the authority's own narrowing (`v3_addr.c:1018`); a
+                    // value with the high bit set becomes negative and is rejected below.
+                    // SAFETY: `arg` is a valid index; `&raw mut t` is writable.
+                    let prefixlen = unsafe { strtoul(s_ptr.add(arg), &raw mut t, 10) } as c_int;
+                    // SAFETY: `t` and `s_ptr.add(arg)` point into `s_ptr`.
+                    let (at_start, tc) = unsafe { (t == s_ptr.add(arg), *t) };
                     if at_start || tc != 0 || prefixlen > length * 8 || prefixlen < 0 {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1023) };
@@ -2282,20 +2443,45 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                     }
                 }
                 b'-' => {
-                    // SAFETY: `s.add(i2)` points at a readable byte in `s`.
-                    i1 = i2 + unsafe { strspn(s.add(i2 as usize), b" \t") } as c_int;
-                    // SAFETY: `s.add(i1)` points at a readable byte in `s`.
-                    i2 = i1 + unsafe { strspn(s.add(i1 as usize), addr_chars) } as c_int;
-                    // SAFETY: `i2` indexes within `s`.
-                    if i1 == i2 || unsafe { *s.add(i2 as usize) } != 0 {
+                    // SAFETY: `i2` names the delimiter, so `i2 + 1` is at most the terminator.
+                    let Some(after) = checked_offset(i2, 1, s_len) else {
+                        // SAFETY: the site is a compiled-in constant.
+                        unsafe { raise_site(&V3_ADDR_1036) };
+                        // SAFETY: `val` is live per the stack contract.
+                        unsafe { conf_add_error_name_value(val) };
+                        break 'each false;
+                    };
+                    // SAFETY: `after` is a valid index.
+                    let Some(i1b) =
+                        checked_offset(after, unsafe { strspn(s_ptr.add(after), b" \t") }, s_len)
+                    else {
+                        // SAFETY: the site is a compiled-in constant.
+                        unsafe { raise_site(&V3_ADDR_1036) };
+                        // SAFETY: `val` is live per the stack contract.
+                        unsafe { conf_add_error_name_value(val) };
+                        break 'each false;
+                    };
+                    // SAFETY: `i1b` is a valid index.
+                    let Some(i2b) =
+                        checked_offset(i1b, unsafe { strspn(s_ptr.add(i1b), addr_chars) }, s_len)
+                    else {
+                        // SAFETY: the site is a compiled-in constant.
+                        unsafe { raise_site(&V3_ADDR_1036) };
+                        // SAFETY: `val` is live per the stack contract.
+                        unsafe { conf_add_error_name_value(val) };
+                        break 'each false;
+                    };
+                    // SAFETY: `i2b` is a valid index (at most the terminator).
+                    if i1b == i2b || unsafe { *s_ptr.add(i2b) } != 0 {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1036) };
                         // SAFETY: `val` is live per the stack contract.
                         unsafe { conf_add_error_name_value(val) };
                         break 'each false;
                     }
-                    // SAFETY: `max` has 16 writable bytes; `s.add(i1)` is a NUL-terminated suffix.
-                    if unsafe { ossl_a2i_ipadd(max.as_mut_ptr(), s.add(i1 as usize)) } != length {
+                    // SAFETY: `max` has 16 writable bytes; `s_ptr.add(i1b)` is a NUL-terminated
+                    // suffix.
+                    if unsafe { ossl_a2i_ipadd(max.as_mut_ptr(), s_ptr.add(i1b)) } != length {
                         // SAFETY: the site is a compiled-in constant.
                         unsafe { raise_site(&V3_ADDR_1041) };
                         // SAFETY: `val` is live per the stack contract.
@@ -2353,9 +2539,10 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
                 }
             }
 
-            // SAFETY: `s` is this call's own allocation.
-            unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_FREE) };
-            s = ptr::null_mut();
+            // The authority's own release at the end of the loop body.
+            if let Some(mut st) = s.take() {
+                st.set_line(LINE_V2I_FREE);
+            }
             i += 1;
         }
         // SAFETY: `addr` is a live stack.
@@ -2366,8 +2553,8 @@ unsafe extern "C" fn v2i_IPAddrBlocks(
     };
 
     if !ok {
-        // SAFETY: `s` is NULL or this call's own allocation.
-        unsafe { CRYPTO_free(s.cast::<c_void>(), FILE.as_ptr(), LINE_V2I_ERR_FREE) };
+        // `s` drops here at the `err:` site it was adopted with.
+        drop(s.take());
         // SAFETY: `addr` is live and owns its elements; the thunk frees each.
         unsafe { OPENSSL_sk_pop_free(addr, Some(ip_address_family_free_void)) };
         return ptr::null_mut();
@@ -2394,8 +2581,19 @@ pub unsafe extern "C" fn X509v3_addr_inherits(addr: *mut OpenSslStack) -> c_int 
     while i < unsafe { OPENSSL_sk_num(addr) } {
         // SAFETY: `i` is in bounds.
         let f = unsafe { OPENSSL_sk_value(addr, i) }.cast::<IpAddressFamily>();
-        // SAFETY: `f` is live and its choice is live.
-        if unsafe { (*(*f).ipAddressChoice).type_ } == IPAddressChoice_inherit {
+        if f.is_null() {
+            i += 1;
+            continue;
+        }
+        // SAFETY: `f` is live.
+        let choice = unsafe { (*f).ipAddressChoice };
+        if choice.is_null() {
+            // A malformed family does not inherit; the authority's dereference would be UB.
+            i += 1;
+            continue;
+        }
+        // SAFETY: `choice` is live.
+        if unsafe { (*choice).type_ } == IPAddressChoice_inherit {
             return 1;
         }
         i += 1;
@@ -2478,6 +2676,51 @@ unsafe fn addr_contains(
     1
 }
 
+/// Validate the families a caller-built block list exposes before the subset walk lets the
+/// comparator (used by `sort`/`find`) or a union arm read them.
+///
+/// # Safety
+///
+/// `addr` is NULL or a live `STACK_OF(IPAddressFamily)`.
+unsafe fn blocks_shape_valid(addr: *mut OpenSslStack) -> bool {
+    // SAFETY: `addr` is NULL or live per the contract; a NULL stack has no elements.
+    let num = unsafe { OPENSSL_sk_num(addr) };
+    let mut i: c_int = 0;
+    while i < num {
+        // SAFETY: `i` is in bounds.
+        let f = unsafe { OPENSSL_sk_value(addr, i) }.cast::<IpAddressFamily>();
+        if f.is_null() {
+            return false;
+        }
+        // SAFETY: `f` is live; `ip_address_family_check_len` tolerates NULL members.
+        if unsafe { ip_address_family_check_len(f) } == 0 {
+            return false;
+        }
+        // `check_len` established `addressFamily` with length 2..=3, so its data must exist; the
+        // comparator reads both `data` and `length`.
+        // SAFETY: `f` is live; `addressFamily` was checked above.
+        let address_family = unsafe { (*f).addressFamily };
+        // SAFETY: `address_family` is live (checked above).
+        if unsafe { (*address_family).data }.is_null() {
+            return false;
+        }
+        // SAFETY: `f` is live.
+        let choice = unsafe { (*f).ipAddressChoice };
+        if choice.is_null() {
+            return false;
+        }
+        // SAFETY: `choice` is live.
+        let choice_type = unsafe { (*choice).type_ };
+        if choice_type != IPAddressChoice_inherit
+            && choice_type != IPAddressChoice_addressesOrRanges
+        {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
 /// `int X509v3_addr_subset(IPAddrBlocks *a, IPAddrBlocks *b)` — `crypto/x509/v3_addr.c:1159-1185`.
 ///
 /// # Safety
@@ -2485,15 +2728,23 @@ unsafe fn addr_contains(
 /// `a` and `b` are NULL or live `STACK_OF(IPAddressFamily)`.
 #[no_mangle]
 pub unsafe extern "C" fn X509v3_addr_subset(a: *mut OpenSslStack, b: *mut OpenSslStack) -> c_int {
+    // `v3_addr.c:1163-1164`: `a == NULL || a == b` is a subset. `v3_addr.c:1165`: a NULL `b`
+    // (with a non-NULL `a`, since the identity case returned above) is not a subset.
     if a.is_null() || a == b {
         return 1;
     }
-    // A NULL `b` is not a subset.
     if b.is_null() {
         return 0;
     }
     // SAFETY: `a` is non-null (checked above) and `b` was just checked.
     if unsafe { X509v3_addr_inherits(a) != 0 || X509v3_addr_inherits(b) != 0 } {
+        return 0;
+    }
+    // Validate both caller-asserted lists before sorting `b` or calling `sk_find(b, fa)`. The
+    // comparator dereferences a family's `addressFamily`, and `find` compares `fa` from `a` first,
+    // so `a` must be validated as well as `b`.
+    // SAFETY: `a` and `b` are live and non-NULL (checked above).
+    if unsafe { !blocks_shape_valid(a) || !blocks_shape_valid(b) } {
         return 0;
     }
     // SAFETY: `b` is a live stack; the comparator is over its element type.
@@ -2505,6 +2756,9 @@ pub unsafe extern "C" fn X509v3_addr_subset(a: *mut OpenSslStack, b: *mut OpenSs
     while i < unsafe { OPENSSL_sk_num(a) } {
         // SAFETY: `i` is in bounds.
         let fa = unsafe { OPENSSL_sk_value(a, i) }.cast::<IpAddressFamily>();
+        if fa.is_null() {
+            return 0;
+        }
         // SAFETY: `b` is live; `fa` is a live element.
         let j = unsafe { OPENSSL_sk_find(b, fa.cast::<c_void>()) };
         // SAFETY: `j` may be -1 (yielding NULL) or in bounds.
@@ -2516,11 +2770,29 @@ pub unsafe extern "C" fn X509v3_addr_subset(a: *mut OpenSslStack, b: *mut OpenSs
         if unsafe { ip_address_family_check_len(fa) == 0 || ip_address_family_check_len(fb) == 0 } {
             return 0;
         }
-        // SAFETY: both choices are live under their selectors.
+        // SAFETY: both families survived the checks above.
+        let fa_choice = unsafe { (*fa).ipAddressChoice };
+        // SAFETY: as above.
+        let fb_choice = unsafe { (*fb).ipAddressChoice };
+        if fa_choice.is_null() || fb_choice.is_null() {
+            return 0;
+        }
+        // The authority reaches the list arm because `inherits` rejected any inheriting input; a
+        // malformed selector is rejected here rather than reading the wrong union arm.
+        // SAFETY: both choices are live (checked above).
+        let fa_type = unsafe { (*fa_choice).type_ };
+        // SAFETY: as above.
+        let fb_type = unsafe { (*fb_choice).type_ };
+        if fa_type != IPAddressChoice_addressesOrRanges
+            || fb_type != IPAddressChoice_addressesOrRanges
+        {
+            return 0;
+        }
+        // SAFETY: both choices select the live `addressesOrRanges` arm.
         if unsafe {
             addr_contains(
-                (*(*fb).ipAddressChoice).u.cast::<OpenSslStack>(),
-                (*(*fa).ipAddressChoice).u.cast::<OpenSslStack>(),
+                (*fb_choice).u.cast::<OpenSslStack>(),
+                (*fa_choice).u.cast::<OpenSslStack>(),
                 length_from_afi(X509v3_addr_get_afi(fb)),
             )
         } == 0
@@ -2587,20 +2859,107 @@ const V3_ADDR_1246: crate::runtime::err::err_sites::ErrSite =
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or a live `X509StoreCtx` whose `verify_cb` is non-NULL whenever `ctx` is non-NULL;
-/// `x` is NULL or a live `X509`.
+/// `ctx` is NULL or a live `X509StoreCtx`; `x` is NULL or a live `X509`. `ctx->verify_cb` may be
+/// NULL: `X509_STORE_CTX_set_verify_cb(ctx, NULL)` is an application operation, and an earlier
+/// callback in the same walk may perform it.
 unsafe fn validation_err(ctx: *mut X509StoreCtx, x: *mut X509, i: c_int, err: c_int) -> c_int {
     if !ctx.is_null() {
-        // SAFETY: `ctx` is live and `verify_cb` is non-NULL per the caller's contract, and `x` is
-        // NULL or live; the callback's own contract is the `X509_STORE_CTX_verify_cb` ABI.
+        // SAFETY: `ctx` is live and `x` is NULL or live; the callback's own contract is the
+        // `X509_STORE_CTX_verify_cb` ABI.
         unsafe {
             (*ctx).error = err;
             (*ctx).error_depth = i;
             (*ctx).current_cert = x;
-            ((*ctx).verify_cb.unwrap_unchecked())(0, ctx.cast::<c_void>())
+            match (*ctx).verify_cb {
+                Some(cb) => cb(0, ctx.cast::<c_void>()),
+                // The default callback (`verify_cb` in `x509_vfy.c`) returns its `ok` argument;
+                // `validation_err` passes 0, so a cleared callback reports the same failure
+                // rather than calling through a NULL function pointer.
+                None => 0,
+            }
         }
     } else {
         0
+    }
+}
+
+/// An owned snapshot of a certificate chain taken before an application callback can run.
+///
+/// `stack` is a shallow `OPENSSL_sk_dup` of the chain's pointer array and every non-NULL
+/// certificate in it has an extra reference, so releasing or replacing `ctx->chain` from inside
+/// `verify_cb` cannot invalidate the walk's view. `Drop` releases the array and those references
+/// exactly once.
+struct ChainSnapshot {
+    stack: *mut OpenSslStack,
+}
+
+impl ChainSnapshot {
+    /// Take the snapshot.
+    ///
+    /// # Safety
+    ///
+    /// `chain` is a live stack of live `X509` pointers or NULL elements.
+    unsafe fn take(chain: *mut OpenSslStack) -> Option<ChainSnapshot> {
+        // SAFETY: `chain` is live per the contract; the duplicate shares the element pointers.
+        let stack = unsafe { OPENSSL_sk_dup(chain) };
+        if stack.is_null() {
+            return None;
+        }
+        // SAFETY: `stack` is the live duplicate just built.
+        let num = unsafe { OPENSSL_sk_num(stack) };
+        let mut i: c_int = 0;
+        while i < num {
+            // SAFETY: `i` is in bounds.
+            let x = unsafe { OPENSSL_sk_value(stack, i) }.cast::<X509>();
+            if !x.is_null() {
+                // The shared refcount protocol reports `0` only if the count cannot be
+                // incremented: a zero/destroying object, or a live count already at
+                // `i32::MAX` (where it leaves the count unchanged instead of wrapping it
+                // into the destroying sentinel). A live certificate from the caller's chain
+                // normally increments successfully, but the snapshot must not keep walking
+                // if one does not: release the references it already took and report the
+                // failure so the walk can take the authority's out-of-memory path.
+                // SAFETY: `x` is a live certificate from the caller's chain.
+                if unsafe { X509_up_ref(x) } == 0 {
+                    let mut j: c_int = 0;
+                    while j < i {
+                        // SAFETY: `j` is in bounds of the duplicate just built.
+                        let taken = unsafe { OPENSSL_sk_value(stack, j) }.cast::<X509>();
+                        if !taken.is_null() {
+                            // SAFETY: `taken` is live and `take` acquired exactly one
+                            // reference to it above; this releases that reference.
+                            unsafe { X509_free(taken) };
+                        }
+                        j += 1;
+                    }
+                    // SAFETY: `stack` is this call's own shallow duplicate; the elements'
+                    // references were all released by the loop above.
+                    unsafe { OPENSSL_sk_free(stack) };
+                    return None;
+                }
+            }
+            i += 1;
+        }
+        Some(ChainSnapshot { stack })
+    }
+}
+
+impl Drop for ChainSnapshot {
+    fn drop(&mut self) {
+        // SAFETY: `self.stack` is this value's own shallow duplicate; `OPENSSL_sk_free` releases
+        // only the pointer array. Each element was up-referenced by `take`.
+        unsafe {
+            let num = OPENSSL_sk_num(self.stack);
+            let mut i: c_int = 0;
+            while i < num {
+                let x = OPENSSL_sk_value(self.stack, i).cast::<X509>();
+                if !x.is_null() {
+                    X509_free(x);
+                }
+                i += 1;
+            }
+            OPENSSL_sk_free(self.stack);
+        }
     }
 }
 
@@ -2610,9 +2969,25 @@ unsafe fn validation_err(ctx: *mut X509StoreCtx, x: *mut X509, i: c_int, err: c_
 ///
 /// `chain` is a live non-empty `STACK_OF(X509)`; `ctx` is NULL or a live `X509StoreCtx`; `ext` is
 /// NULL or a live `IPAddrBlocks`; and `ctx` is non-NULL whenever `ext` is NULL.
+///
+/// ## Reentrancy
+///
+/// `verify_cb` is application code. It may call `X509_STORE_CTX_set_verify_cb(ctx, NULL)` and may
+/// release or replace `ctx->chain` (and with it the certificates' references). When `ctx` is
+/// non-NULL this function takes an owned snapshot of the chain and holds an `X509_up_ref` on every
+/// certificate before the first callback can run, so neither the pointer array nor the certificates
+/// the walk reads can be invalidated; each certificate's cached extension is re-read after a
+/// callback. This is deliberately stronger than `v3_addr.c:1212-1325`, which keeps reading
+/// `ctx->chain` across the callback.
+///
+/// What cannot be guaranteed: a callback that mutates the *contents* of a live cached extension in
+/// place, or otherwise replaces `X509::rfc3779_addr` after a callback that has already contributed
+/// elements to `child`. `IPAddressFamily` has no shared-ownership handle, so `child`'s borrowed
+/// elements cannot be protected against in-place cache mutation; `chain`/certificate lifetime and
+/// context mutation are protected.
 unsafe fn addr_validate_path_internal(
     ctx: *mut X509StoreCtx,
-    chain: *mut OpenSslStack,
+    mut chain: *mut OpenSslStack,
     mut ext: *mut OpenSslStack,
 ) -> c_int {
     let mut child: *mut OpenSslStack = ptr::null_mut();
@@ -2639,6 +3014,28 @@ unsafe fn addr_validate_path_internal(
         return 0;
     }
 
+    // The callback can mutate the context. Snapshot the chain and retain its certificates before
+    // the first callback runs; without a context there is no callback and the caller owns the
+    // chain. `ext` supplied by the caller is likewise caller-owned (and never crosses a callback
+    // through the exported entry points, which pass `ctx == NULL` for a resource set).
+    let ext_from_chain = ext.is_null();
+    let _snapshot = if ctx.is_null() {
+        None
+    } else {
+        // SAFETY: `chain` is live and non-empty per the checks above.
+        match unsafe { ChainSnapshot::take(chain) } {
+            Some(snapshot) => {
+                chain = snapshot.stack;
+                Some(snapshot)
+            }
+            None => {
+                // SAFETY: `ctx` is non-NULL on this arm.
+                unsafe { (*ctx).error = X509_V_ERR_OUT_OF_MEM };
+                return 0;
+            }
+        }
+    };
+
     'done: {
         // Figure out where to start.  If we don't have an extension to check, we're done.
         // Otherwise, check canonical form and set up for walking up the chain.
@@ -2649,6 +3046,9 @@ unsafe fn addr_validate_path_internal(
             i = 0;
             // SAFETY: `chain` is a live non-empty stack (asserted above).
             x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+            if x.is_null() {
+                break 'done;
+            }
             // SAFETY: `x` is a live certificate.
             ext = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
             if ext.is_null() {
@@ -2662,6 +3062,11 @@ unsafe fn addr_validate_path_internal(
             rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_INVALID_EXTENSION) };
             if rv == 0 {
                 break 'done;
+            }
+            if ext_from_chain && !x.is_null() {
+                // The callback may have refreshed the certificate's cached extension.
+                // SAFETY: `x` is live (the snapshot holds a reference).
+                ext = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
             }
         }
         // SAFETY: `ext` is a live stack; the comparator is over its element type.
@@ -2686,8 +3091,11 @@ unsafe fn addr_validate_path_internal(
         while i < unsafe { OPENSSL_sk_num(chain) } {
             // SAFETY: `i` is in bounds.
             x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+            if x.is_null() {
+                break 'done;
+            }
             // SAFETY: `x` is a live certificate.
-            let x_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
+            let mut x_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
             // SAFETY: `x_addr` is NULL or live.
             if unsafe { X509v3_addr_is_canonical(x_addr) } == 0 {
                 // SAFETY: `validation_err`'s contract holds here.
@@ -2695,6 +3103,10 @@ unsafe fn addr_validate_path_internal(
                 if rv == 0 {
                     break 'done;
                 }
+                // The callback may have refreshed or replaced the certificate's cached
+                // extension; re-read it rather than reusing the pre-callback pointer.
+                // SAFETY: `x` is live (the snapshot holds a reference).
+                x_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
             }
             if x_addr.is_null() {
                 j = 0;
@@ -2706,8 +3118,13 @@ unsafe fn addr_validate_path_internal(
                     if unsafe { ip_address_family_check_len(fc) } == 0 {
                         break 'done;
                     }
-                    // SAFETY: `fc` and its choice are live.
-                    if unsafe { (*(*fc).ipAddressChoice).type_ } != IPAddressChoice_inherit {
+                    // SAFETY: `fc` is live.
+                    let fc_choice = unsafe { (*fc).ipAddressChoice };
+                    if fc_choice.is_null() {
+                        break 'done;
+                    }
+                    // SAFETY: `fc_choice` is live.
+                    if unsafe { (*fc_choice).type_ } != IPAddressChoice_inherit {
                         // SAFETY: `validation_err`'s contract holds here.
                         rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
                         if rv == 0 {
@@ -2734,11 +3151,13 @@ unsafe fn addr_validate_path_internal(
                 // SAFETY: `k` is -1 (yielding NULL) or in bounds.
                 let fp = unsafe { OPENSSL_sk_value(x_addr, k) }.cast::<IpAddressFamily>();
                 if fp.is_null() {
-                    // SAFETY: `fc` and its choice are live.
-                    // SAFETY: `fc` and its choice are live.
-                    if unsafe { (*(*fc).ipAddressChoice).type_ }
-                        == IPAddressChoice_addressesOrRanges
-                    {
+                    // SAFETY: `fc` is live.
+                    let fc_choice = unsafe { (*fc).ipAddressChoice };
+                    if fc_choice.is_null() {
+                        break 'done;
+                    }
+                    // SAFETY: `fc_choice` is live.
+                    if unsafe { (*fc_choice).type_ } == IPAddressChoice_addressesOrRanges {
                         // SAFETY: `validation_err`'s contract holds here.
                         rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
                         if rv == 0 {
@@ -2755,17 +3174,32 @@ unsafe fn addr_validate_path_internal(
                 } {
                     break 'done;
                 }
-                // SAFETY: `fp` and its choice are live.
-                if unsafe { (*(*fp).ipAddressChoice).type_ } == IPAddressChoice_addressesOrRanges {
+                // SAFETY: both families were checked above.
+                let fc_choice = unsafe { (*fc).ipAddressChoice };
+                // SAFETY: as above.
+                let fp_choice = unsafe { (*fp).ipAddressChoice };
+                if fc_choice.is_null() || fp_choice.is_null() {
+                    break 'done;
+                }
+                // SAFETY: `fp_choice` is live under its selector.
+                if unsafe { (*fp_choice).type_ } == IPAddressChoice_addressesOrRanges {
                     // SAFETY: `fc` is a live address family.
                     let length = length_from_afi(unsafe { X509v3_addr_get_afi(fc) });
-                    // SAFETY: `fc` and `fp` are live under their selectors, and their
+                    // SAFETY: `fc_choice` is live and selects either a suffix or the list arm; a
+                    // malformed selector is rejected rather than reading the wrong union arm.
+                    let fc_type = unsafe { (*fc_choice).type_ };
+                    if fc_type != IPAddressChoice_inherit
+                        && fc_type != IPAddressChoice_addressesOrRanges
+                    {
+                        break 'done;
+                    }
+                    // SAFETY: both choices are live under their selectors, and their
                     // `addressesOrRanges` stacks are live `IPAddressOrRanges`.
                     let contained = unsafe {
-                        (*(*fc).ipAddressChoice).type_ == IPAddressChoice_inherit
+                        fc_type == IPAddressChoice_inherit
                             || addr_contains(
-                                (*(*fp).ipAddressChoice).u.cast::<OpenSslStack>(),
-                                (*(*fc).ipAddressChoice).u.cast::<OpenSslStack>(),
+                                (*fp_choice).u.cast::<OpenSslStack>(),
+                                (*fc_choice).u.cast::<OpenSslStack>(),
                                 length,
                             ) != 0
                     };
@@ -2786,30 +3220,40 @@ unsafe fn addr_validate_path_internal(
         }
 
         // Trust anchor can't inherit.
-        // SAFETY: `x` is a live certificate.
-        let ta_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
-        if !ta_addr.is_null() {
-            j = 0;
-            // SAFETY: `ta_addr` is a live stack.
-            while j < unsafe { OPENSSL_sk_num(ta_addr) } {
-                // SAFETY: `j` is in bounds.
-                let fp = unsafe { OPENSSL_sk_value(ta_addr, j) }.cast::<IpAddressFamily>();
-                // SAFETY: `fp` is a live address family.
-                if unsafe { ip_address_family_check_len(fp) } == 0 {
-                    break 'done;
-                }
-                // SAFETY: `fp` and its choice are live.
-                let inherits = unsafe { (*(*fp).ipAddressChoice).type_ } == IPAddressChoice_inherit;
-                // SAFETY: `child` is a live stack; the find is reached only when `inherits` holds.
-                let found = inherits && unsafe { OPENSSL_sk_find(child, fp.cast::<c_void>()) } >= 0;
-                if found {
-                    // SAFETY: `validation_err`'s contract holds here.
-                    rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
-                    if rv == 0 {
+        if !x.is_null() {
+            // Re-read after the last callback: the callback may have refreshed the cache.
+            // SAFETY: `x` is live (the snapshot holds a reference).
+            let ta_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
+            if !ta_addr.is_null() {
+                j = 0;
+                // SAFETY: `ta_addr` is a live stack.
+                while j < unsafe { OPENSSL_sk_num(ta_addr) } {
+                    // SAFETY: `j` is in bounds.
+                    let fp = unsafe { OPENSSL_sk_value(ta_addr, j) }.cast::<IpAddressFamily>();
+                    // SAFETY: `fp` is a live address family.
+                    if unsafe { ip_address_family_check_len(fp) } == 0 {
                         break 'done;
                     }
+                    // SAFETY: `fp` is live.
+                    let fp_choice = unsafe { (*fp).ipAddressChoice };
+                    if fp_choice.is_null() {
+                        break 'done;
+                    }
+                    // SAFETY: `fp_choice` is live.
+                    let inherits = unsafe { (*fp_choice).type_ } == IPAddressChoice_inherit;
+                    // SAFETY: `child` is a live stack; the find is reached only when `inherits`
+                    // holds.
+                    let found =
+                        inherits && unsafe { OPENSSL_sk_find(child, fp.cast::<c_void>()) } >= 0;
+                    if found {
+                        // SAFETY: `validation_err`'s contract holds here.
+                        rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                        if rv == 0 {
+                            break 'done;
+                        }
+                    }
+                    j += 1;
                 }
-                j += 1;
             }
         }
         ret = 1;
@@ -2866,4 +3310,428 @@ pub unsafe extern "C" fn X509v3_addr_validate_resource_set(
     }
     // SAFETY: `chain` and `ext` are live per the checks above.
     unsafe { addr_validate_path_internal(ptr::null_mut(), chain, ext) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::string::ASN1_STRING_free;
+    use crate::x509::x509_vfy::{X509_STORE_CTX_free, X509_STORE_CTX_new};
+    use crate::x509::x_x509::X509_new;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    /// A fresh block list owning its families.
+    fn empty_blocks() -> *mut OpenSslStack {
+        // `OPENSSL_sk_new` is a safe constructor; the comparator is the element type's.
+        OPENSSL_sk_new(Some(ip_address_family_cmp))
+    }
+
+    /// Release a block list built by these tests.
+    unsafe fn free_blocks(blocks: *mut OpenSslStack) {
+        if !blocks.is_null() {
+            // SAFETY: `blocks` owns its families and the item free frees each one.
+            unsafe { OPENSSL_sk_pop_free(blocks, Some(ip_address_family_free_void)) };
+        }
+    }
+
+    /// Push one IPv4 prefix onto `blocks`.
+    unsafe fn push_prefix(
+        blocks: *mut OpenSslStack,
+        addr: [c_uchar; 4],
+        prefixlen: c_int,
+    ) -> c_int {
+        let mut addr = addr;
+        // SAFETY: `blocks` is live and the buffers satisfy the export's contract.
+        unsafe {
+            X509v3_addr_add_prefix(
+                blocks,
+                IANA_AFI_IPV4,
+                ptr::null(),
+                addr.as_mut_ptr(),
+                prefixlen,
+            )
+        }
+    }
+
+    /// A certificate whose cached `IPAddrBlocks` is the given (deliberately unsorted) list.
+    unsafe fn cert_with(prefixes: &[([c_uchar; 4], c_int)]) -> *mut X509 {
+        let x = X509_new();
+        assert!(!x.is_null());
+        let blocks = empty_blocks();
+        assert!(!blocks.is_null());
+        for &(addr, prefixlen) in prefixes {
+            // SAFETY: `blocks` is live and the prefix is IPv4.
+            assert_eq!(unsafe { push_prefix(blocks, addr, prefixlen) }, 1);
+        }
+        // SAFETY: `x` is live and its cache slot is writable. `X509_free` does not release the
+        // cached extension, so the test releases `blocks` separately.
+        unsafe { (*x).rfc3779_addr = blocks.cast::<c_void>() };
+        x
+    }
+
+    // ---- Finding 3: `prefixlen + 7` and the exported adders -------------------------------
+
+    #[test]
+    fn add_prefix_rejects_prefixlen_arithmetic_boundaries() {
+        // SAFETY: the stack and buffers are live for the whole test.
+        unsafe {
+            let blocks = empty_blocks();
+            assert!(!blocks.is_null());
+            let mut addr = [10u8, 0, 0, 0];
+            for prefixlen in [c_int::MAX, c_int::MAX - 6, c_int::MIN, 33, -1] {
+                // SAFETY: `blocks` is live; an out-of-range prefix must fail without overflow.
+                assert_eq!(
+                    X509v3_addr_add_prefix(
+                        blocks,
+                        IANA_AFI_IPV4,
+                        ptr::null(),
+                        addr.as_mut_ptr(),
+                        prefixlen,
+                    ),
+                    0,
+                    "prefixlen {prefixlen} must be rejected",
+                );
+            }
+            // The in-range boundaries still build a prefix.
+            assert_eq!(
+                X509v3_addr_add_prefix(blocks, IANA_AFI_IPV4, ptr::null(), addr.as_mut_ptr(), 0,),
+                1
+            );
+            assert_eq!(
+                X509v3_addr_add_prefix(blocks, IANA_AFI_IPV4, ptr::null(), addr.as_mut_ptr(), 32,),
+                1
+            );
+            free_blocks(blocks);
+        }
+    }
+
+    #[test]
+    fn add_range_rejects_inverted_bounds() {
+        // SAFETY: the stack and buffers are live for the whole test.
+        unsafe {
+            let blocks = empty_blocks();
+            assert!(!blocks.is_null());
+            let mut equal = [1u8, 2, 3, 4];
+            assert_eq!(
+                X509v3_addr_add_range(
+                    blocks,
+                    IANA_AFI_IPV4,
+                    ptr::null(),
+                    equal.as_mut_ptr(),
+                    equal.as_mut_ptr(),
+                ),
+                1
+            );
+            let mut high = [2u8, 0, 0, 0];
+            let mut low = [1u8, 0, 0, 0];
+            assert_eq!(
+                X509v3_addr_add_range(
+                    blocks,
+                    IANA_AFI_IPV4,
+                    ptr::null(),
+                    high.as_mut_ptr(),
+                    low.as_mut_ptr(),
+                ),
+                0
+            );
+            free_blocks(blocks);
+        }
+    }
+
+    // ---- Finding 4: NULL, empty and self-aliasing inputs ---------------------------------
+
+    #[test]
+    fn null_and_malformed_families_do_not_dereference_the_choice() {
+        // SAFETY: every object used here is live and released before the test ends.
+        unsafe {
+            assert_eq!(X509v3_addr_canonize(ptr::null_mut()), 0);
+            assert_eq!(X509v3_addr_inherits(ptr::null_mut()), 0);
+            assert_eq!(X509v3_addr_subset(ptr::null_mut(), ptr::null_mut()), 1);
+
+            // An empty extension is canonical and inherits nothing.
+            let empty = empty_blocks();
+            assert!(!empty.is_null());
+            assert_eq!(X509v3_addr_canonize(empty), 1);
+            assert_eq!(X509v3_addr_inherits(empty), 0);
+            assert_eq!(X509v3_addr_subset(empty, empty), 1);
+            free_blocks(empty);
+
+            // A family whose `ipAddressChoice` is NULL: the authority would dereference it.
+            let malformed = empty_blocks();
+            assert!(!malformed.is_null());
+            let f = IPAddressFamily_new();
+            assert!(!f.is_null());
+            // SAFETY: `f` is live; normalise its members so only the choice is NULL.
+            if !(*f).ipAddressChoice.is_null() {
+                IPAddressChoice_free((*f).ipAddressChoice);
+                (*f).ipAddressChoice = ptr::null_mut();
+            }
+            if (*f).addressFamily.is_null() {
+                (*f).addressFamily = ASN1_OCTET_STRING_new();
+                assert!(!(*f).addressFamily.is_null());
+            }
+            let key = [0u8, 1u8];
+            assert_eq!(
+                ASN1_OCTET_STRING_set((*f).addressFamily, key.as_ptr(), 2),
+                1
+            );
+            assert_eq!(OPENSSL_sk_push(malformed, f.cast::<c_void>()), 1);
+            assert_eq!(X509v3_addr_canonize(malformed), 0);
+            assert_eq!(X509v3_addr_inherits(malformed), 0);
+            // Same-pointer input short-circuits before any family walk.
+            assert_eq!(X509v3_addr_subset(malformed, malformed), 1);
+            let other = empty_blocks();
+            assert!(!other.is_null());
+            assert_eq!(X509v3_addr_subset(malformed, other), 0);
+            free_blocks(other);
+            free_blocks(malformed);
+        }
+    }
+
+    #[test]
+    fn subset_validates_a_before_the_comparator_reads_it() {
+        // SAFETY: every object used here is live and released before the test ends.
+        unsafe {
+            let a_blocks = empty_blocks();
+            assert!(!a_blocks.is_null());
+            let a_family = IPAddressFamily_new();
+            assert!(!a_family.is_null());
+            // Leave `addressFamily` NULL: `ip_address_family_cmp` dereferences it when `sk_find`
+            // compares the key taken from `a` against an entry of `b`.
+            if !(*a_family).addressFamily.is_null() {
+                ASN1_STRING_free((*a_family).addressFamily);
+                (*a_family).addressFamily = ptr::null_mut();
+            }
+            // A non-inheriting choice keeps `inherits(a)` from short-circuiting the walk.
+            if (*a_family).ipAddressChoice.is_null() {
+                (*a_family).ipAddressChoice = IPAddressChoice_new();
+                assert!(!(*a_family).ipAddressChoice.is_null());
+            }
+            (*(*a_family).ipAddressChoice).type_ = IPAddressChoice_addressesOrRanges;
+            assert_eq!(OPENSSL_sk_push(a_blocks, a_family.cast::<c_void>()), 1);
+
+            // `b` is valid and non-empty, so an unvalidated `sk_find` would run the comparator.
+            let b_blocks = empty_blocks();
+            assert!(!b_blocks.is_null());
+            assert_eq!(push_prefix(b_blocks, [10u8, 0, 0, 0], 8), 1);
+            assert_eq!(X509v3_addr_subset(a_blocks, b_blocks), 0);
+            free_blocks(b_blocks);
+            free_blocks(a_blocks);
+        }
+    }
+
+    #[test]
+    fn subset_matches_the_authority_null_and_identity_cases() {
+        // SAFETY: `blocks` is live and owned by this test.
+        unsafe {
+            let blocks = empty_blocks();
+            assert!(!blocks.is_null());
+            // `v3_addr.c:1163-1164`: `a == NULL || a == b` -> 1. `:1165`: `b == NULL` -> 0.
+            assert_eq!(X509v3_addr_subset(ptr::null_mut(), blocks), 1);
+            assert_eq!(X509v3_addr_subset(blocks, ptr::null_mut()), 0);
+            assert_eq!(X509v3_addr_subset(blocks, blocks), 1);
+            free_blocks(blocks);
+        }
+    }
+
+    #[test]
+    fn canonize_does_not_free_an_element_that_is_still_listed() {
+        // SAFETY: every object used here is live and released before the test ends.
+        unsafe {
+            let blocks = empty_blocks();
+            assert!(!blocks.is_null());
+            let first = [10u8, 0, 0, 0];
+            let mut second = [11u8, 0, 0, 0];
+            assert_eq!(push_prefix(blocks, first, 8), 1);
+            // Build the adjacent second prefix and list it twice, so the merge at index 0/1
+            // leaves a second reference to it behind. Releasing it there would leave a dangling
+            // entry that the merge walk and the final free both read.
+            let mut duplicate: *mut IpAddressOrRange = ptr::null_mut();
+            // SAFETY: `duplicate` is a writable slot and `second` has four readable bytes.
+            assert_eq!(
+                make_addressPrefix(&raw mut duplicate, second.as_mut_ptr(), 8, 4),
+                1
+            );
+            let family = OPENSSL_sk_value(blocks, 0).cast::<IpAddressFamily>();
+            // SAFETY: one family was pushed by `push_prefix`.
+            let ranges = (*((*family).ipAddressChoice)).u.cast::<OpenSslStack>();
+            assert_eq!(OPENSSL_sk_push(ranges, duplicate.cast::<c_void>()), 2);
+            assert_eq!(OPENSSL_sk_push(ranges, duplicate.cast::<c_void>()), 3);
+            // The remaining duplicate overlaps the merged range, so canonisation fails cleanly;
+            // it must not have released the still-listed pointer.
+            assert_eq!(X509v3_addr_canonize(blocks), 0);
+            free_blocks(blocks);
+        }
+    }
+
+    // ---- Finding 1: a callback that clears itself between two errors ----------------------
+
+    static CLEAR_CB_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn clear_self_cb(_ok: c_int, ctx: *mut c_void) -> c_int {
+        // SAFETY: `ctx` is the live context `validation_err` was called with.
+        unsafe { (*ctx.cast::<X509StoreCtx>()).verify_cb = None };
+        CLEAR_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    #[test]
+    fn validation_err_after_the_callback_clears_itself_uses_the_default() {
+        // SAFETY: the context is live for the whole test.
+        unsafe {
+            CLEAR_CB_CALLS.store(0, Ordering::SeqCst);
+            let ctx = X509_STORE_CTX_new();
+            assert!(!ctx.is_null());
+            (*ctx).verify_cb = Some(clear_self_cb);
+            assert_eq!(
+                validation_err(ctx, ptr::null_mut(), 0, X509_V_ERR_INVALID_EXTENSION),
+                1
+            );
+            assert_eq!(CLEAR_CB_CALLS.load(Ordering::SeqCst), 1);
+            assert!((*ctx).verify_cb.is_none());
+            // The application cleared the callback between the two errors. The default callback
+            // returns the `ok` argument (0), so the second error reports failure, not UB.
+            assert_eq!(
+                validation_err(ctx, ptr::null_mut(), 1, X509_V_ERR_UNNESTED_RESOURCE),
+                0
+            );
+            assert_eq!(CLEAR_CB_CALLS.load(Ordering::SeqCst), 1);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    // ---- Finding 2: the walk survives a callback that releases the chain ------------------
+
+    static FREE_CHAIN_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn free_chain_cb(_ok: c_int, ctx: *mut c_void) -> c_int {
+        let ctx = ctx.cast::<X509StoreCtx>();
+        // SAFETY: `ctx` is the live context the walk was called with.
+        unsafe {
+            let chain = (*ctx).chain;
+            if !chain.is_null() {
+                // The callback releases the chain the context exposed and clears the slot. The
+                // certificates remain alive because the walk holds its own references.
+                OPENSSL_sk_free(chain);
+                (*ctx).chain = ptr::null_mut();
+            }
+        }
+        FREE_CHAIN_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    #[test]
+    fn path_walk_survives_a_callback_that_frees_the_chain() {
+        // SAFETY: every object used here is live and released before the test ends.
+        unsafe {
+            FREE_CHAIN_CALLS.store(0, Ordering::SeqCst);
+            // The first certificate's extension is unsorted, so the walk reports an error; the
+            // second has no extension, which produces the second error.
+            let first = cert_with(&[([10u8, 0, 0, 0], 8), ([1u8, 0, 0, 0], 8)]);
+            let second = X509_new();
+            assert!(!second.is_null());
+            let chain = OPENSSL_sk_new_null();
+            assert!(!chain.is_null());
+            assert_eq!(OPENSSL_sk_push(chain, first.cast::<c_void>()), 1);
+            assert_eq!(OPENSSL_sk_push(chain, second.cast::<c_void>()), 2);
+            let ctx = X509_STORE_CTX_new();
+            assert!(!ctx.is_null());
+            (*ctx).chain = chain;
+            (*ctx).verify_cb = Some(free_chain_cb);
+            // The callback frees `ctx->chain` during the first error; the walk continues on its
+            // snapshot and reaches the second error.
+            assert_eq!(X509v3_addr_validate_path(ctx), 1);
+            assert_eq!(FREE_CHAIN_CALLS.load(Ordering::SeqCst), 2);
+            assert!((*ctx).chain.is_null());
+            X509_STORE_CTX_free(ctx);
+            let first_ext = (*first).rfc3779_addr.cast::<OpenSslStack>();
+            X509_free(first);
+            X509_free(second);
+            free_blocks(first_ext);
+        }
+    }
+
+    /// A certificate at `i32::MAX` cannot be up-referenced. The snapshot must fail, release
+    /// the references it already took (here the first certificate's), and leave both
+    /// certificates to their original owners without a double free.
+    #[test]
+    fn chain_snapshot_refuses_up_ref_overflow_and_releases_partial_refs() {
+        // SAFETY: every object is live and released before the test ends.
+        unsafe {
+            let first = X509_new();
+            let second = X509_new();
+            assert!(!first.is_null());
+            assert!(!second.is_null());
+            let chain = OPENSSL_sk_new_null();
+            assert!(!chain.is_null());
+            assert_eq!(OPENSSL_sk_push(chain, first.cast::<c_void>()), 1);
+            assert_eq!(OPENSSL_sk_push(chain, second.cast::<c_void>()), 2);
+
+            // The first increment succeeds, the second is refused at `i32::MAX`.
+            (*second).references.store(i32::MAX, Ordering::Release);
+            assert!(ChainSnapshot::take(chain).is_none());
+
+            // `take` released the reference it acquired on `first`; `second` was never
+            // incremented and is still at `i32::MAX`.
+            assert_eq!((*first).references.load(Ordering::Acquire), 1);
+            assert_eq!((*second).references.load(Ordering::Acquire), i32::MAX);
+
+            // Restore a live count and release each certificate exactly once.
+            (*second).references.store(1, Ordering::Release);
+            X509_free(first);
+            X509_free(second);
+            OPENSSL_sk_free(chain);
+        }
+    }
+
+    // ---- Finding 5: `v2i` length arithmetic ----------------------------------------------
+
+    #[test]
+    fn checked_offset_rejects_inconsistent_lengths() {
+        assert_eq!(checked_offset(0, 3, 4), Some(3));
+        assert_eq!(checked_offset(2, 2, 4), Some(4));
+        assert_eq!(checked_offset(3, 2, 4), None);
+        assert_eq!(checked_offset(usize::MAX, 1, usize::MAX), None);
+    }
+
+    #[test]
+    fn v2i_rejects_inconsistent_address_and_prefix_lengths() {
+        // SAFETY: the stacks, entries and strings are live for the duration of each call.
+        unsafe {
+            let bad_values: [&core::ffi::CStr; 4] = [
+                c"1.2.3.0/33",
+                c"1.2.3.0/",
+                c"1.2.3.0/999999999999999999999999999999",
+                c"1.2.3.0 - 1.2.3",
+            ];
+            for value in bad_values {
+                let values = OPENSSL_sk_new_null();
+                assert!(!values.is_null());
+                let mut cv = ConfValue {
+                    section: c"test".as_ptr().cast_mut(),
+                    name: c"IPv4".as_ptr().cast_mut(),
+                    value: value.as_ptr().cast_mut(),
+                };
+                // SAFETY: `values` is live and `cv` outlives the call.
+                assert_eq!(OPENSSL_sk_push(values, (&raw mut cv).cast::<c_void>()), 1);
+                let parsed = v2i_IPAddrBlocks(ptr::null(), ptr::null_mut(), values);
+                assert!(parsed.is_null());
+                OPENSSL_sk_free(values);
+            }
+
+            let values = OPENSSL_sk_new_null();
+            assert!(!values.is_null());
+            let mut cv = ConfValue {
+                section: c"test".as_ptr().cast_mut(),
+                name: c"IPv4".as_ptr().cast_mut(),
+                value: c"1.2.3.0/24".as_ptr().cast_mut(),
+            };
+            // SAFETY: `values` is live and `cv` outlives the call.
+            assert_eq!(OPENSSL_sk_push(values, (&raw mut cv).cast::<c_void>()), 1);
+            let parsed = v2i_IPAddrBlocks(ptr::null(), ptr::null_mut(), values);
+            assert!(!parsed.is_null());
+            free_blocks(parsed.cast::<OpenSslStack>());
+            OPENSSL_sk_free(values);
+        }
+    }
 }

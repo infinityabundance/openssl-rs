@@ -87,7 +87,9 @@ fn cast_exp(l: c_uint, big: &mut [c_uint; 4], bytes: &mut [c_uint; 16], n: usize
 /// `crypto/cast/c_skey.c:32-123`.
 ///
 /// # Safety
-/// `key` writable; `data` readable for `len` bytes.
+/// `key` writable; `data` readable for `min(len, 16)` bytes when `len` is positive, and
+/// may be NULL when `len <= 0` (a negative `len` selects the short key, as in the
+/// authority's `for (i = 0; i < len; i++)`).
 #[allow(clippy::needless_range_loop)]
 #[no_mangle]
 pub unsafe extern "C" fn CAST_set_key(key: *mut CastKey, len: c_int, data: *const u8) {
@@ -103,7 +105,10 @@ pub unsafe extern "C" fn CAST_set_key(key: *mut CastKey, len: c_int, data: *cons
         if len > 16 {
             len = 16;
         }
-        for i in 0..len as usize {
+        // The authority's bound is a signed `int`, so a negative length runs zero
+        // iterations. `len as usize` would wrap to a huge bound and read past `data`.
+        let n = if len > 0 { len as usize } else { 0 };
+        for i in 0..n {
             x[i] = *data.add(i) as c_uint;
         }
         (*key).short_key = c_int::from(len <= 10);
@@ -518,6 +523,12 @@ unsafe fn l2nn(l1: c_uint, l2: c_uint, p: *mut u8, n: c_uint) {
 ///
 /// # Safety
 /// `in`/`out` `length` bytes; `ks` live; `iv` eight bytes (written back).
+///
+/// **A negative `length` selects zero blocks and skips the partial arm**, as the
+/// authority's loop does. The authority would still take its `l != -CAST_BLOCK` arm
+/// and compute a negative partial length, which its `n2ln` loop ignores but whose
+/// `l2n` then writes a whole block; that is an out-of-contract write for a negative
+/// length, so this transcription does not reproduce it (§17).
 #[no_mangle]
 pub unsafe extern "C" fn CAST_cbc_encrypt(
     input: *const u8,
@@ -551,7 +562,7 @@ pub unsafe extern "C" fn CAST_cbc_encrypt(
                 lo = lo.add(8);
                 l -= 8;
             }
-            if l != -8 {
+            if l > -8 {
                 let (p0, p1) = n2ln(li, (l + 8) as c_uint);
                 tin[0] = p0 ^ tout0;
                 tin[1] = p1 ^ tout1;
@@ -583,7 +594,7 @@ pub unsafe extern "C" fn CAST_cbc_encrypt(
                 xor1 = tin1;
                 l -= 8;
             }
-            if l != -8 {
+            if l > -8 {
                 let tin0 = n2l(li);
                 let tin1 = n2l(li.add(4));
                 tin[0] = tin0;
@@ -741,5 +752,54 @@ mod tests {
             )
         };
         assert_eq!(out, [0x23, 0x8b, 0x4f, 0xe5, 0x84, 0x7e, 0x44, 0xb2]);
+    }
+
+    /// A negative `len` is inside the authority's signed loop bound: no bytes are read
+    /// from `data` (which may be NULL) and the key is marked short. A `len as usize`
+    /// transcription would walk a huge range instead.
+    #[test]
+    fn a_negative_key_length_selects_the_short_key_and_reads_nothing() {
+        let mut ks = CastKey {
+            data: [0; 32],
+            short_key: -1,
+        };
+        // SAFETY: `data` is NULL and a negative length reads no bytes; `key` is live.
+        unsafe { CAST_set_key(&mut ks, -1, core::ptr::null()) };
+        assert_eq!(ks.short_key, 1);
+
+        // The same schedule the all-zero key produces through the ordinary path.
+        let zero = [0u8; 16];
+        let mut want = CastKey {
+            data: [0; 32],
+            short_key: 0,
+        };
+        // SAFETY: live local of exactly the length passed.
+        unsafe { CAST_set_key(&mut want, 16, zero.as_ptr()) };
+        assert_eq!(ks.data, want.data);
+    }
+
+    /// A negative CBC length takes the authority's `l != -CAST_BLOCK` arm with a negative
+    /// partial length. Its `n2ln` reads nothing, but it then writes a whole block; this
+    /// transcription skips the arm instead, so the caller's buffers are untouched beyond
+    /// the IV write the empty message still performs.
+    #[test]
+    fn a_negative_cbc_length_skips_the_partial_block() {
+        let ks = schedule(&[0x11u8; 16]);
+        let mut iv = [0u8; 8];
+        let mut out = [0xAAu8; 8];
+        // SAFETY: `input` is NULL and a negative length reads no input; `out`/`iv` are
+        // live locals.
+        unsafe {
+            CAST_cbc_encrypt(
+                core::ptr::null(),
+                out.as_mut_ptr(),
+                -1,
+                &ks as *const CastKey,
+                iv.as_mut_ptr(),
+                CAST_ENCRYPT,
+            )
+        };
+        assert_eq!(out, [0xAAu8; 8], "no output block is written");
+        assert_eq!(iv, [0u8; 8], "the unchanged IV is written back");
     }
 }

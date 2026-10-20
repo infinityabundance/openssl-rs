@@ -1,0 +1,218 @@
+{
+  "receipt": "boundary-sweep-B36",
+  "date": "2026-10-20",
+  "mechanism": "ERR",
+  "subphase": "NEO-ERR-6 safe-interface residual (24 raw-file allocation helpers)",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "ab346a0d3",
+    "base_subject": "Merge stage/p25/b35: independent ERR adjudication",
+    "committed": false,
+    "changed_files": 38,
+    "diffstat": "237 insertions(+), 137 deletions(-) across 38 source files; the ERR ledger is a separate documentation edit",
+    "working_tree_blob": {
+      "src/asn1/owned.rs": "a76c0fde3620b8c4480c31add1380797f0658de2",
+      "src/ml_dsa/key.rs": "37201ee6977ad120f5a19fbbcfe1f4fdbd6e4050",
+      "src/ml_dsa/encoders.rs": "51726fa8559adafe7a9e4f00b739391a7075e4ef",
+      "src/ml_kem/key.rs": "94169cbeadc1ec24f21ca1841af080cb1974e8a1",
+      "src/ml_kem/mod.rs": "e273e2903ce35c3803b31262b6f45a4d1b7c1200",
+      "src/evp/bio_enc.rs": "6edd757fbf47a3587cf3a91743ae74b28057f936",
+      "src/ec/lib.rs": "9ab636e70e7397c877c3d66a1c7734a3746cf837",
+      "src/evp/cipher_ctx.rs": "2a76461c0b5764f9d7817134d8a673f31d36cf57",
+      "src/provider/mac_legacy_kmgmt.rs": "38e3bc06a1a8f0f68f054ea72d43759b66e7098f",
+      "src/runtime/err.rs": "6e9a67ead6e01c2ada7e694a0c4a47c37e3a197f",
+      "src/runtime/err_state.rs": "a74e4d69327734e7cd4620015dd4f269725bfca0"
+    },
+    "unchanged_shared_definition": "src/runtime/mem_coords.rs (SeamFile) and src/runtime/mem.rs (allocator seam) are untouched by B36; their B34 blobs are unchanged."
+  },
+  "stop_status": "NO_STOP_DEFECT OBSERVED IN THE EXECUTED CHECKS. The NEO-ERR-6 safe-interface gap is closed at the type level: no safe fn with a raw file parameter reaches a CRYPTO_* allocation entry point. Nothing is promoted to INDEPENDENTLY_CHECKED or SAFETY_DISCHARGED; the independent reviewer must re-adjudicate.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change. No exported symbol, extern \"C\" signature, #[repr(C)] layout or allocator-seam (size/file/line) coordinate changed. The only Rust-callability change is an internal `pub(crate)` helper, ErrState::set_debug: safe -> unsafe.",
+    "external_contracts": [
+      "CRYPTO_* `file` is NULL or a NUL-terminated C string valid for the call; unchanged from B34.",
+      "SeamFile carries a static coordinate (or NULL); a dynamic external-C coordinate cannot be represented by it, which is why set_debug is an unsafe fn rather than a SeamFile consumer.",
+      "OSSL_ERR_STATE_restore's source slot strings remain NULL-or-NUL-terminated per its existing # Safety; its set_debug call is now inside an unsafe block."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B36-ERR-6",
+      "file": "24 helper definitions listed in helpers_converted; call sites in 37 files",
+      "operation": "safe owner-constructor parameter `file: *const c_char` forwarding to CRYPTO_malloc/zalloc/calloc/malloc_array/secure_malloc",
+      "before": "The helper was a safe fn. A safe in-crate caller could pass a fabricated pointer; on allocation failure/overflow, report_alloc_err -> raise_with -> c_strlen read it as a C string: UB reachable through a safe interface.",
+      "after": "The parameter is `SeamFile` in all 24 helpers. Each body derives the raw pointer with `file.as_ptr()` only at the allocator release/alloc call. Call sites pass `SeamFile::new(<&'static CStr>)`, `SeamFile::NULL`, or a typed const. A raw pointer is inexpressible at the signature.",
+      "mechanism": "ELIMINATED: the unsafe read is no longer reachable through a safe fn; the static-lifetime precondition is expressed by the type, not by a comment.",
+      "hidden": 0,
+      "state": "FIXED (author; not independently checked)"
+    },
+    {
+      "id": "B36-ERR-6b",
+      "file": "src/runtime/err.rs:400 ErrState::set_debug; callers at :928, :949, :979, :1032, :1064, :1107 and src/runtime/err_state.rs:278",
+      "operation": "indirect safe forward through CRYPTO_strdup to malloc_request -> report_alloc_err -> c_strlen",
+      "before": "pub(crate) fn set_debug accepted raw file/func and duplicated them through unsafe dup_c; the allocation-failure path could read `file` with c_strlen. The 24-site enumeration missed it because the allocator call is indirect.",
+      "after": "pub(crate) unsafe fn with a # Safety clause: file/func are NULL or NUL-terminated. All seven call sites are inside unsafe fns or unsafe blocks with stated SAFETY comments. SeamFile was rejected because an external C caller's coordinate need only be valid for the call, not for static storage.",
+      "mechanism": "ELIMINATED for safe callers: the compiler now forces each caller to establish the contract; no safe path reaches the read.",
+      "hidden": 0,
+      "state": "FIXED (author; not independently checked)"
+    },
+    {
+      "id": "B36-ERR-6c",
+      "file": "src/evp/cipher_ctx.rs (OwnedBlock::malloc call at the evp_lib coordinate)",
+      "operation": "cross-module call site of the converted shared helper",
+      "before": "Passed the raw FILE_LIB constant to OwnedBlock::malloc.",
+      "after": "Passes FILE_LIB_SEAM (a SeamFile). The raw FILE_LIB is retained for the existing unsafe OwnedBlock::from_raw call.",
+      "mechanism": "RELOCATED to the typed call; the first enumeration missed this site and `cargo check --lib` caught it.",
+      "hidden": 0,
+      "state": "FIXED (author; not independently checked)"
+    }
+  ],
+  "helper_disposition": {
+    "converted_to_SeamFile": [
+      "src/asn1/owned.rs:53 OwnedBlock::malloc",
+      "src/asn1/owned.rs:70 OwnedBlock::zalloc",
+      "src/asn1/text.rs:82 OwnedBuf::new",
+      "src/asn1/p5_pbe.rs:75 SaltBuf::new",
+      "src/asn1/p5_pbev2.rs:94 SaltBuf::new",
+      "src/ml_dsa/encoders.rs:117 OwnedBuf::malloc",
+      "src/ml_dsa/encoders.rs:141 OwnedBuf::secure_malloc",
+      "src/ml_dsa/key.rs:181 OwnedBuf::new_array",
+      "src/ml_dsa/key.rs:199 OwnedBuf::new_array_cleansed",
+      "src/ml_dsa/key.rs:226 OwnedBuf::new_secure",
+      "src/ml_dsa/key.rs:241 OwnedBuf::new_secure_cleansed",
+      "src/evp/bio_enc.rs:177 OwnedCtx::zalloc",
+      "src/ssl/ssl_lib.rs:662 RawCtx::zalloc",
+      "src/pkcs12/p12_utl.rs:72 OwnedBuf::new",
+      "src/bn/primes.rs:1335 OwnedMods::calloc",
+      "src/ec/lib.rs:163 OwnedCtx::new",
+      "src/ec/print.rs:69 OwnedClearBuf::new",
+      "src/ec/oct.rs:67 PointBuf::new",
+      "src/ml_kem/key.rs:133 OwnedBuf::new",
+      "src/ml_kem/key.rs:150 OwnedBuf::new_secure",
+      "src/ml_kem/key.rs:165 OwnedBuf::new_secure_cleansed",
+      "src/async/async_wait.rs:140 OwnedFdLookup::new_zeroed",
+      "src/apps/mac.rs:98 OwnedBuf::new",
+      "src/provider/mac_legacy_kmgmt.rs:171 OwnedBuf::new_secure"
+    ],
+    "made_unsafe_fn": [
+      "src/runtime/err.rs:400 ErrState::set_debug (indirect CRYPTO_strdup; dynamic external-C coordinate)"
+    ],
+    "retained_safe_but_not_allocator": [
+      "src/ml_dsa/poly.rs:94 PolyHandle::clear_plain (CRYPTO_free only; free has no failure c_strlen path)",
+      "src/ml_dsa/poly.rs:102 PolyHandle::clear_secure (CRYPTO_secure_clear_free only)",
+      "src/ssl/ssl_lib.rs:2743 RawCtx clear (CRYPTO_free only)",
+      "src/asn1/text.rs:100 OwnedBuf::empty (stores a coordinate for a later free; does not allocate or read it)",
+      "src/compat/arch.rs:166 lock and its trait declaration (passes the coordinate to an application locking callback; external callback contract)",
+      "src/runtime/release_probe.rs:39 record (test instrumentation; stores, never reads)",
+      "src/dso/dlfcn.rs:74 dlopen (libc extern declaration, not an in-crate helper)"
+    ]
+  },
+  "safe_interface_control": {
+    "type_level": "SeamFile has a private field and only two safe constructors: new(&'static CStr) and NULL. There is no From<*const c_char>, no public field and no safe arbitrary-pointer constructor. A safe caller therefore cannot fabricate one, and every converted signature requires one.",
+    "compile_time": "src/asn1/owned.rs #[cfg(test)] binds both shared constructors to fn(usize, SeamFile, c_int) -> Option<OwnedBlock<u8>>. A regression to *const c_char fails to compile. cargo check --lib and clippy --all-targets compiled the assertions.",
+    "static_enumeration": "The src scan reports 0 safe fns with a raw file parameter that call a CRYPTO_* allocation entry point. The 8 remaining safe file-parameter functions are the non-allocator set above.",
+    "compile_fail_harness": "NOT_RUN: trybuild is not a dependency. The reviewer can add a per-helper compile-fail harness, but the type system already makes the raw-pointer call ill-typed at all 24 signatures; the const assertion locks the shared constructor.",
+    "not_claimed": "This is not a proof that every indirect forward in the crate was found by the scan. set_debug was found and fixed manually; the independent reviewer must re-run the closure check."
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "no diff (after cargo fmt --all)"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "Finished dev profile; RC=0"
+    },
+    {
+      "id": "BATCH-TESTS-SERIAL",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib",
+      "result": "PASS",
+      "observed": "1707 passed; 0 failed; 31 ignored; finished in 65.86s"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1707 passed; 0 failed; 31 ignored; finished in 90.84s"
+    },
+    {
+      "id": "MIRI-SB",
+      "instrument": "CARGO_TARGET_DIR=/work/.miri-err-target MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-ignore-leaks' cargo +nightly-2026-10-01 miri test --lib runtime::err -- --test-threads=1",
+      "result": "PASS",
+      "observed": "19 passed; 0 failed; 1728 filtered out"
+    },
+    {
+      "id": "MIRI-TB",
+      "instrument": "same with MIRIFLAGS='-Zmiri-tree-borrows -Zmiri-disable-isolation -Zmiri-ignore-leaks'",
+      "result": "PASS",
+      "observed": "19 passed; 0 failed; 1728 filtered out"
+    },
+    {
+      "id": "ASAN",
+      "instrument": "RUSTFLAGS='-Zsanitizer=address -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0' CARGO_INCREMENTAL=0 ASAN_OPTIONS=detect_leaks=0 OPENSSL_RS_COURT_DATA=68719476736 cargo +nightly-2026-10-01 test --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=1",
+      "result": "PASS",
+      "observed": "19 passed; 0 failed; 1719 filtered out; no AddressSanitizer report",
+      "note": "OPENSSL_RS_COURT_DATA must be set on the host so the court applies RLIMIT_DATA. 32 TiB failed the ASan shadow reservation (errno 12); 64 TiB succeeded."
+    },
+    {
+      "id": "TSAN",
+      "instrument": "RUSTFLAGS='-Zsanitizer=thread -Cdebuginfo=0 -Ccodegen-units=256 -Copt-level=0' CARGO_INCREMENTAL=0 TSAN_OPTIONS=detect_leaks=0 OPENSSL_RS_COURT_DATA=68719476736 cargo +nightly-2026-10-01 test -Zbuild-std --lib --target x86_64-unknown-linux-gnu runtime::err -- --test-threads=4",
+      "result": "PASS",
+      "observed": "19 passed; 0 failed; 1719 filtered out; no ThreadSanitizer report"
+    },
+    {
+      "id": "STRUCTURAL",
+      "instrument": "git diff -U0 filtered for #[no_mangle], pub (unsafe) extern \"C\" fn, #[repr(C)]",
+      "result": "PASS",
+      "observed": "no changed lines; mem_coords.rs unchanged"
+    }
+  ],
+  "not_run": [
+    {
+      "check": "independent re-adjudication",
+      "reason": "B36 is an author repair; AGENTS.md section 15 requires a non-author reviewer. Status PENDING."
+    },
+    {
+      "check": "per-helper compile-fail harness",
+      "reason": "trybuild is not a dependency; the shared signature is compile-locked and the type system covers the private helpers."
+    },
+    {
+      "check": "full-library Miri / Loom / Kani / differential ERR court",
+      "reason": "unchanged from B34's scope: mixed C/FFI crate, no modeled state machine, and this is a boundary repair not a compatibility court."
+    }
+  ],
+  "obligations": {
+    "discharged": [
+      "NEO-ERR-6 safe-interface residual for safe Rust callers of the 24 allocation helpers",
+      "NEO-ERR-6 indirect forward through ErrState::set_debug (now unsafe fn)"
+    ],
+    "retained": [
+      "NEO-ERR-3 destination provenance: external ABI contract only (no runtime marker)",
+      "NEO-ERR-4 source extent: external ABI contract only (bounded copy would change behaviour)",
+      "R-ERR-1 thread-local ErrState has no Drop (authority parity; resource residual)",
+      "R-ERR-8 GNU strerror_r ABI assumption",
+      "R-ERR-9 C adapter probe is outside cargo test"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "RE_ADJUDICATION_PENDING",
+    "independently_checked": false,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "B36 does not graduate ERR. The independent reviewer must re-derive the 24-signature closure, inspect the set_debug contract and its callers, re-run the recorded controls, and decide whether the remaining free-only/callback/instrumentation raw-file functions carry any hidden c_strlen obligation."
+  },
+  "non_claims": [
+    "Not a SAFE_COMPATIBLE promotion; consumer count remains 0/33.",
+    "Not an independent check; the author wrote the repair and the evidence.",
+    "Not a proof that the syntactic enumeration found every indirect forward; set_debug was found manually.",
+    "No differential/functional ERR court was run in B36.",
+    "Miri covers the Rust unit tests, not the C variadic adapter or the dlsym-resolved authority path."
+  ]
+}

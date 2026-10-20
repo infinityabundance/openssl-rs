@@ -38,18 +38,30 @@
 //! length of zero or less is passed straight through rather than being turned into
 //! an allocation of zero bytes.
 //!
+//! ## Ownership
+//!
+//! The encoder's transient blocks are owned handles whose `Drop` is their only
+//! release. [`item_flags_i2d`]'s output buffer is an [`OwnedBlock`] given up to the
+//! caller's slot with `into_raw`; `set_seq_out`'s `SET OF` sort scratch (the
+//! `DerEnc` list and the encoding buffer) are two more, so the tail free and the
+//! error-path free are the handles' and not a hand-written walk. Both stay
+//! `CRYPTO_malloc` blocks at the authority's exact sizes and through this file's
+//! own `__FILE__`, so an installed `CRYPTO_set_mem_functions` hook observes them
+//! exactly as it observes the authority's.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::bitstr::ossl_i2c_ASN1_BIT_STRING;
 use crate::asn1::layout::*;
+use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ossl_i2c_ASN1_INTEGER;
 use crate::asn1::utl;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack};
 
@@ -92,14 +104,15 @@ unsafe fn item_flags_i2d(
             return len;
         }
         // SAFETY: `len` is the size the sizing pass just computed, and it is
-        // positive here.
-        let buf = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE) as *mut c_uchar;
-        if buf.is_null() {
+        // positive here. Ownership passes to the caller's slot, so the handle gives
+        // the block up with `into_raw`.
+        let Some(buf) = OwnedBlock::<u8>::malloc(len as usize, SeamFile::new(FILE), LINE) else {
             // The authority returns -1 here without raising: a caller distinguishes
             // "could not allocate" from "would not fit" by the sign, not by the
             // queue.
             return -1;
-        }
+        };
+        let buf = buf.into_raw().cast::<c_uchar>();
         let mut p = buf;
         // SAFETY: `p` has room for `len` bytes and `v` is a live slot.
         unsafe { item_ex_i2d(&mut v, &mut p, it, -1, flags) };
@@ -709,9 +722,11 @@ unsafe fn ex_i2c(
         }
     }
 
-    if !cout.is_null() && len != 0 {
+    if !cout.is_null() && len > 0 {
         // SAFETY: `cont` is readable for `len` bytes and `cout` is writable for the
-        // same, per the caller's contract and the arm that set them.
+        // same, per the caller's contract and the arm that set them. A non-positive
+        // `len` cannot describe content; the authority's `memcpy` with a negative
+        // length is undefined, so this crate declines to reproduce it (AGENTS.md §17).
         unsafe { core::ptr::copy_nonoverlapping(cont, cout, len as usize) };
     }
     len
@@ -1001,19 +1016,17 @@ unsafe fn set_seq_out(
     let count = n.max(0) as usize;
     // SAFETY: the caller's measurement, non-negative because it was accumulated.
     let buflen = skcontlen.max(0) as usize;
-    let derlst =
-        CRYPTO_malloc(count * core::mem::size_of::<DerEnc>(), FILE.as_ptr(), LINE) as *mut DerEnc;
-    if derlst.is_null() {
+    let derlst = OwnedBlock::<DerEnc>::malloc(count, SeamFile::new(FILE), LINE);
+    let Some(derlst) = derlst else {
         return 0;
-    }
-    let tmpdat = CRYPTO_malloc(buflen, FILE.as_ptr(), LINE) as *mut c_uchar;
-    if tmpdat.is_null() {
-        // SAFETY: `derlst` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(derlst.cast::<c_void>(), FILE.as_ptr(), LINE) };
+    };
+    let tmpdat = OwnedBlock::<u8>::malloc(buflen, SeamFile::new(FILE), LINE);
+    let Some(tmpdat) = tmpdat else {
+        // `derlst`'s `Drop` releases the list on this path.
         return 0;
-    }
+    };
 
-    let mut p = tmpdat;
+    let mut p = tmpdat.as_ptr();
     let mut i: c_int = 0;
     while i < n {
         // SAFETY: `i` indexes the caller's stack.
@@ -1023,7 +1036,7 @@ unsafe fn set_seq_out(
         let len = unsafe { item_ex_i2d(&mut skitem, &mut p, item, -1, iclass) };
         // SAFETY: `i` is inside the list just allocated.
         unsafe {
-            let e = derlst.add(i as usize);
+            let e = derlst.as_ptr().add(i as usize);
             (*e).data = start;
             (*e).length = len;
             (*e).field = skitem.cast::<c_void>();
@@ -1032,7 +1045,7 @@ unsafe fn set_seq_out(
     }
 
     // SAFETY: `derlst` holds `count` initialised entries.
-    let list = unsafe { core::slice::from_raw_parts_mut(derlst, count) };
+    let list = unsafe { core::slice::from_raw_parts_mut(derlst.as_ptr(), count) };
     list.sort_by(der_cmp);
 
     // SAFETY: `out` is a live slot whose pointee has room for `skcontlen` bytes.
@@ -1059,10 +1072,7 @@ unsafe fn set_seq_out(
         }
     }
 
-    // SAFETY: both buffers came from this allocator and are not owned elsewhere.
-    unsafe {
-        CRYPTO_free(derlst.cast::<c_void>(), FILE.as_ptr(), LINE);
-        CRYPTO_free(tmpdat.cast::<c_void>(), FILE.as_ptr(), LINE);
-    }
+    // `derlst` and `tmpdat` release through their handles' `Drop`, the single release
+    // for each block and the one both the tail path and the error path above reach.
     1
 }

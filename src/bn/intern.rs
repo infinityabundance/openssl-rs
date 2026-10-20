@@ -95,7 +95,8 @@ use crate::runtime::err::err_sites::{
     BN_INTERN_97,
 };
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// The authority's `__FILE__` for every raise site this unit defines, and the line the
 /// generated table records instead — `raise_site` reads the site, and these two arguments
@@ -145,17 +146,18 @@ pub(crate) unsafe fn bn_compute_wNAF(
 
     // SAFETY: `scalar` is null-or-live per this function's `# Safety` section.
     if unsafe { BN_is_zero(scalar) } != 0 {
-        // SAFETY: `CRYPTO_malloc` needs no caller pointer and answers null on failure.
-        let r = CRYPTO_malloc(1, FILE.as_ptr(), LINE).cast::<u8>();
-        if r.is_null() {
+        // The one-byte block is a local owner until it is handed to the caller.
+        let Some(r) =
+            OwnedBuf::new_plain_released(1, SeamFile::new(FILE), LINE, SeamFile::new(FILE), LINE)
+        else {
             return core::ptr::null_mut();
-        }
+        };
         // SAFETY: `r` owns the one byte just allocated, and `ret_len` is writable.
         unsafe {
-            *r = 0;
+            *r.as_ptr() = 0;
             *ret_len = 1;
         }
-        return r.cast::<c_char>();
+        return r.into_raw().cast::<c_char>();
     }
 
     if w <= 0 || w > 7 {
@@ -196,20 +198,18 @@ pub(crate) unsafe fn bn_compute_wNAF(
     // reads it without mutating.
     let len = usize::try_from(unsafe { BN_num_bits(scalar) }).unwrap_or_default();
 
-    // SAFETY: `CRYPTO_malloc` needs no caller pointer and answers null on failure.
-    let r = CRYPTO_malloc(len + 1, FILE.as_ptr(), LINE).cast::<u8>();
-    // SAFETY: `r` is null here, and the authority's `goto err` releases it and answers NULL.
-    if r.is_null() {
+    // `len + 1` is checked so an impossible wrapped request never reaches the allocator;
+    // on that path no block is allocated and the answer is the authority's NULL.
+    let Some(r_buf) = len.checked_add(1).and_then(|len| {
+        OwnedBuf::new_plain_released(len, SeamFile::new(FILE), LINE, SeamFile::new(FILE), LINE)
+    }) else {
         return core::ptr::null_mut();
-    }
+    };
+    let r = r_buf.as_ptr();
 
     // The whole body from here to the end of the loop is the authority's, and a refusal
-    // leaves through `free_and_null` with `r` already allocated — the authority's `err:`.
-    let bail = |r: *mut u8| -> *mut c_char {
-        // SAFETY: `r` came from the `CRYPTO_malloc` above and is released exactly once.
-        unsafe { CRYPTO_free(r.cast(), FILE.as_ptr(), LINE) };
-        core::ptr::null_mut()
-    };
+    // leaves through the owner's `Drop` -- the authority's `err:` with `r` already
+    // allocated.
 
     let mut window_val: c_int = (limbs_of_scalar.d[0] & (mask as u64)) as c_int;
     let mut j: usize = 0;
@@ -236,7 +236,7 @@ pub(crate) unsafe fn bn_compute_wNAF(
             if digit <= -bit || digit >= bit || (digit & 1) == 0 {
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BN_INTERN_97) };
-                return bail(r);
+                return core::ptr::null_mut();
             }
 
             window_val -= digit;
@@ -246,7 +246,7 @@ pub(crate) unsafe fn bn_compute_wNAF(
             if window_val != 0 && window_val != next_bit && window_val != bit {
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BN_INTERN_109) };
-                return bail(r);
+                return core::ptr::null_mut();
             }
         }
 
@@ -261,18 +261,18 @@ pub(crate) unsafe fn bn_compute_wNAF(
         if window_val > next_bit {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_INTERN_120) };
-            return bail(r);
+            return core::ptr::null_mut();
         }
     }
 
     if j > len + 1 {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BN_INTERN_126) };
-        return bail(r);
+        return core::ptr::null_mut();
     }
     // SAFETY: `ret_len` is writable per this function's `# Safety` section.
     unsafe { *ret_len = j };
-    r.cast::<c_char>()
+    r_buf.into_raw().cast::<c_char>()
 }
 
 /// `int bn_get_dmax(const BIGNUM *a)` — `crypto/bn/bn_intern.c:142-145`.
@@ -306,9 +306,13 @@ pub(crate) unsafe fn bn_set_all_zero(a: *mut BigNum) {
     // SAFETY: `a` is null-or-live, and uniquely owned, per this function's `# Safety` section.
     if let Some(b) = unsafe { as_mut(a) } {
         let top = c_int::try_from(b.d.len()).unwrap_or(c_int::MAX);
-        // SAFETY: `a` is live per this function's `# Safety` section; `bn_get_dmax` reads
-        // the same object through a shared reference, which is not a mutable borrow.
-        let dmax = unsafe { bn_get_dmax(a) };
+        // In this representation `dmax` and `top` are the same number (see the module
+        // doc), so the authority's `[top, dmax)` padding range is empty. Deriving it
+        // from `b` rather than calling `bn_get_dmax(a)` matters: that helper builds a
+        // second, shared reference over the same object while `b` (the unique borrow)
+        // is still live, which is an aliasing conflict under Stacked/Tree Borrows and
+        // would make the write below undefined.
+        let dmax = top;
         if dmax > top {
             let dmax = dmax as usize;
             b.d[top as usize..dmax].fill(0);
@@ -360,7 +364,11 @@ pub(crate) unsafe fn bn_copy_words(out: *mut Limb, value: *const BigNum, size: c
 /// # Safety
 ///
 /// `a` must be null or point to a live `BIGNUM`. The answer is valid only while `a` is
-/// alive, unmodified, and not borrowed mutably.
+/// alive, unmodified, and not borrowed mutably, and **must not be written through**: it
+/// is derived from a shared borrow of `a`, so a store through it would be an aliasing
+/// violation even though the authority's return type is non-const. Every authority
+/// caller on this crate's paths only reads it; a future writer needs an exclusive
+/// owner-derived pointer instead.
 #[allow(dead_code)]
 pub(crate) unsafe fn bn_get_words(a: *const BigNum) -> *mut Limb {
     // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -430,6 +438,7 @@ pub(crate) unsafe fn bn_set_words(a: *mut BigNum, words: *const Limb, num_words:
 mod tests {
     use super::*;
     use crate::bn::bignum::{new_owned, BN_free};
+    use crate::runtime::mem::CRYPTO_free;
 
     /// The digits of a wNAF buffer, copied out of the caller-owned allocation so the test
     /// can release it.

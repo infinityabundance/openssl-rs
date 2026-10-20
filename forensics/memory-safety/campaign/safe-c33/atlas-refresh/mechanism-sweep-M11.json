@@ -1,0 +1,155 @@
+{
+  "receipt": "mechanism-sweep-M11",
+  "date": "2026-10-19",
+  "branch": "integrate/safe-c33",
+  "source_head": "052114d2270398e00e353ca69038466d56b14a98",
+  "worktree": true,
+  "verification_level": "FAST plus BATCH; one confirmed UB (uninitialized scalar) repaired; no open STOP",
+  "scope": "mechanism-contract sweep over attribution ranks 101-108 (unattributed-site ranking). Six ordinary files audited; two BIO callback files deferred to a BOUNDARY batch. Repairs in src/property/parse.rs, src/pem/pem_lib.rs, src/x509/x509_acert.rs, src/ssl/ssl_ciph.rs and a contract clarification in src/x509/pcy_tree.rs.",
+  "files": [
+    "src/pem/pem_lib.rs",
+    "src/property/parse.rs",
+    "src/x509/pcy_tree.rs",
+    "src/x509/x509_acert.rs",
+    "src/ssl/ssl_ciph.rs",
+    "src/x509/x509_att.rs"
+  ],
+  "files_not_run": [
+    "src/ssl/bio_ssl.rs",
+    "src/runtime/bio/bss_bio.rs"
+  ],
+  "contracts_reused": [
+    "OB-1 OwnedBuf plain/cleansed adoption at authority coordinates (property definitions, AttDataBuf, SSL_CIPHER_description scratch block)",
+    "Module-local PemBuf / OwnedDer owners with authority release sites (pem_lib reader and writer buffers)",
+    "OwnedTree / OwnedLevels / OwnedNode policy-graph ownership, with tree_levels/level_ptr as the only level-address arithmetic",
+    "ASN.1 item layout and getter/borrow contracts (x509_acert static templates and accessors; x509_att stack helpers)",
+    "C-ABI exported-symbol signatures, out-parameter writability, and NULL-tolerant destructor contracts",
+    "Category-B BIO method/callback contracts were not exercised; the two BIO files were deferred"
+  ],
+  "defects": [
+    {
+      "id": "M11-D1",
+      "file": "src/property/parse.rs",
+      "lines_post_fix": "836, 891, 980",
+      "severity": "medium",
+      "class": "uninitialized-value UB (STOP-and-clear)",
+      "description": "ossl_parse_query's '-name' override arm assigned oper/optional/name_idx but never type_. stack_to_property_list and ossl_property_merge copy the definition as a whole, and ossl_property_list_to_string forms a reference to it, so an uninitialized scalar was read even though every current consumer tests oper before the union. This is UB independent of whether a reader currently observes the field.",
+      "fix": "Both parsers now write a fully initialized definition (definition_zeroed()) into each fresh CRYPTO_malloc block immediately after adoption. The value is all-zero, i.e. type_ == OSSL_PROPERTY_TYPE_STRING, oper == OSSL_PROPERTY_OPER_EQ, name_idx == 0, v == 0; the parsers' existing per-field assignments overwrite the fields they name. A focused assertion pins the override clause's type_.",
+      "witness": "property::parse 7/0, including a_query_records_negation_override_and_optionality now asserting the override clause's initialized type. No in-tree reader observes a behaviour change; the authority leaves the field unset, so deterministic zero is a documented divergence on an unobservable path."
+    },
+    {
+      "id": "M11-D2",
+      "file": "src/pem/pem_lib.rs",
+      "lines_post_fix": "288-301",
+      "severity": "medium",
+      "class": "length truncation -> out-of-bounds write",
+      "description": "PEM_def_callback stored strlen(userdata) in a c_int and passed the truncated value to memcpy. A NUL-terminated string longer than INT_MAX (C-valid input) or a negative num made the size argument enormous, so the copy wrote out of bounds. The authority has the same signed truncation.",
+      "fix": "Compute the length as size_t, clamp it to max(num, 0), copy that many bytes, and return the same c_int. For every valid (num >= 0, length <= INT_MAX) the result is byte-identical to the authority.",
+      "witness": "pem::pem_lib 2/0: def_callback_copies_at_most_num_bytes and def_callback_clamps_a_negative_length (the latter would have attempted an enormous memcpy before the fix)."
+    },
+    {
+      "id": "M11-D3",
+      "file": "src/pem/pem_lib.rs",
+      "lines_post_fix": "823",
+      "severity": "low",
+      "class": "negative length reaching EVP_DecryptUpdate",
+      "description": "PEM_do_header checked only *plen > INT_MAX; a negative *plen was converted to c_int and passed as the input length to EVP_DecryptUpdate.",
+      "fix": "Reject !(0..=INT_MAX).contains(&len) before any cipher operation, raising the authority's existing PEM_LIB_459 site. All in-tree callers pass the reader's non-negative length.",
+      "witness": "pem::pem_lib and pem:: tests pass; no in-tree caller reaches the negative arm."
+    },
+    {
+      "id": "M11-D4",
+      "file": "src/pem/pem_lib.rs",
+      "lines_post_fix": "1016",
+      "severity": "low",
+      "class": "negative encoder result reaching EVP_EncryptUpdate/PEM_write_bio",
+      "description": "PEM_ASN1_write_bio_internal accepted a negative return from the second i2d/i2d_ctx pass and used it as a byte count.",
+      "fix": "Break to the shared epilogue when the second pass answers negative, so the DER handle is clear-freed and no cipher/write call receives a negative length.",
+      "witness": "The focused PEM tests and the full suite pass; the authority's own failure path is the same early exit."
+    },
+    {
+      "id": "M11-D5",
+      "file": "src/x509/x509_acert.rs, src/ssl/ssl_ciph.rs",
+      "lines_post_fix": "x509_acert.rs:1459,1509; ssl_ciph.rs:812",
+      "severity": "low",
+      "class": "length conversion / negative callback length",
+      "description": "c_strlen returned size_t truncated to c_int for the octet-string attribute path, and ciphersuite_cb accepted a negative len (its guard was len == 0, not len <= 0) before a copy.",
+      "fix": "c_strlen now returns Option<c_int> and the caller fails the attribute add when the length does not fit; ciphersuite_cb requires len > 0. CONF values and CONF_parse_list already bound those inputs, so reachable behaviour is unchanged.",
+      "witness": "clippy and the full suite pass; no in-module tests exist for either file."
+    },
+    {
+      "id": "M11-D6",
+      "file": "src/x509/pcy_tree.rs",
+      "lines_post_fix": "904, 974",
+      "severity": "low",
+      "class": "missing documented precondition",
+      "description": "tree_calculate_authority_set and tree_calculate_user_set index levels[nlevel - 1] but their Safety sections said only that the tree was live. tree_init always builds n + 1 >= 2 levels.",
+      "fix": "Both Safety sections now state the at-least-two-level precondition established by tree_init.",
+      "witness": "contract-only change; no code movement."
+    }
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_introduced": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "gates": {
+    "fmt": "PASS (cargo fmt --all -- --check)",
+    "clippy_all_targets_deny_warnings": "PASS (cargo clippy --all-targets -- -D warnings)",
+    "lib_serial": "PASS (1590 passed / 0 failed / 26 ignored; --test-threads=1; 256.43 s)",
+    "lib_test_threads_4": "PASS (1590 passed / 0 failed / 26 ignored; 97.04 s; no secure-heap isolation failure)",
+    "focused_tests": "PASS (property::parse 7/0; pem::pem_lib 2/0; pem:: 3/0; pcy_tree, x509_acert and ssl_ciph have no in-module tests)",
+    "affected_adversarial_probes": "NOT_RUN (no phase5 adversarial probe is wired for pem/property/policy-tree/ssl_ciph; the fixes are output-neutral for contract-conforming inputs)"
+  },
+  "not_discharged": true,
+  "deferred": [
+    {
+      "gate": "src/ssl/bio_ssl.rs BIO method/callback boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "src/runtime/bio/bss_bio.rs BIO pair callback boundary",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "Miri over ossl_parse_query/ossl_parse_property and the PEM negative-length paths",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "ASan/negative control for M11-D2 (pre-fix enormous memcpy) and an authority differential for the override-clause type_ divergence",
+      "status": "NOT_RUN",
+      "runs_at": "BOUNDARY"
+    },
+    {
+      "gate": "SEAL regeneration, dependency-closure audit and independent review for this slice",
+      "status": "NOT_RUN",
+      "runs_at": "SEAL"
+    }
+  ],
+  "residuals": [
+    "src/property/parse.rs: the authority leaves an override clause's type field unset; the candidate now writes a deterministic zero. Every reader in list.rs/query.rs/parse.rs tests oper before touching type, so no observable behaviour differs, but no authority differential was run.",
+    "src/ssl/bio_ssl.rs and src/runtime/bio/bss_bio.rs were not inspected at all; their BIO callback/method boundaries are deferred rather than declared clean.",
+    "src/x509/pcy_tree.rs, src/x509/x509_acert.rs, src/ssl/ssl_ciph.rs and src/x509/x509_att.rs have no in-module unit tests; their assurance rests on the full library suite and contract review.",
+    "src/x509/x509_att.rs X509at_get_attr_by_OBJ uses lastpos + 1 (a contract-invalid INT_MAX input would panic in debug / wrap in release, not cause UB); left as authority-parity."
+  ],
+  "boundary_control": {
+    "status": "NOT_RUN",
+    "reason": "M11-D1 is an initialization/aliasing invariant and M11-D2 is a length conversion; both were repaired and covered by focused tests, but the campaign's Miri and ASan negative controls for these specific paths belong to the BOUNDARY batch."
+  },
+  "next_queue": {
+    "file": "src/dh/pmeth.rs",
+    "rank_in_attribution": 109,
+    "unattributed_sites": 126,
+    "then": [
+      "src/runtime/confmod/mod.rs (110, 126)",
+      "src/bn/gf2m.rs (111, 125)",
+      "src/decoder_meth.rs (112, 125)",
+      "src/asn1/time.rs (113, 124)"
+    ]
+  }
+}

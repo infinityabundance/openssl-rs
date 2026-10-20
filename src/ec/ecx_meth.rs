@@ -90,12 +90,15 @@ use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_memcmp, CRYPTO_memdup};
+use crate::runtime::mem::{CRYPTO_memcmp, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, NID_undef, OBJ_nid2ln, OBJ_nid2obj, NID_ED25519, NID_ED448};
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::x509::x509_set::{X509SigInfo, X509_SIG_INFO_set};
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0_param, X509_PUBKEY_set0_param};
 
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c");
 
 /// `X25519_BITS` — `include/crypto/ecx.h:32`.
 const X25519_BITS: c_int = 253;
@@ -158,8 +161,11 @@ unsafe extern "C" fn ecx_pub_encode(pk: *mut X509Pubkey, pkey: *const EvpPkey) -
         )
     };
     if ok == 0 {
-        // SAFETY: `penc` is live and still owned here.
-        unsafe { CRYPTO_clear_free(penc.cast(), keylen(pkey), FILE, 46) };
+        // `penc` is the fresh copy this call still owns; the handle's `Drop` is the authority's own
+        // cleansing `OPENSSL_clear_free(penc, keylen)` at (FILE, 46).
+        // SAFETY: `penc` is live and still owned here; `keylen(pkey)` is both the
+        // `CRYPTO_memdup` allocation length and the cleansing length.
+        drop(unsafe { OwnedBuf::adopt_cleansed(penc, keylen(pkey), FILE_SEAM, 46) });
         // SAFETY: a compile-time-constant site (`ecx_meth.c:48`).
         unsafe { raise_site(&err_sites::ECX_METH_48) };
         return 0;
@@ -306,8 +312,11 @@ unsafe extern "C" fn ecx_priv_encode(p8: *mut Pkcs8PrivKeyInfo, pkey: *const Evp
         )
     };
     if ok == 0 {
-        // SAFETY: `penc` is live and still owned here.
-        unsafe { CRYPTO_clear_free(penc.cast(), penclen as usize, FILE, 121) };
+        // `penc` is the fresh encoding this call still owns; the handle's `Drop` is the authority's
+        // own cleansing `OPENSSL_clear_free(penc, penclen)` at (FILE, 121).
+        // SAFETY: `penc` is NULL or this call's own block; `penclen` is both the
+        // `i2d_ASN1_OCTET_STRING` allocation length and the cleansing length.
+        drop(unsafe { OwnedBuf::adopt_cleansed(penc, penclen as usize, FILE_SEAM, 121) });
         // SAFETY: a compile-time-constant site (`ecx_meth.c:123`).
         unsafe { raise_site(&err_sites::ECX_METH_123) };
         return 0;

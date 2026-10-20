@@ -62,9 +62,10 @@ use crate::params::{
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_CIPHERS};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{
     NID_undef, OBJ_NAME_do_all, OBJ_NAME_do_all_sorted, OBJ_NAME_get, OBJ_get0_data, OBJ_nid2ln,
     OBJ_nid2obj, OBJ_nid2sn, ObjName,
@@ -139,6 +140,10 @@ const LINE_ZALLOC_CIPHER: c_int = 1849;
 const LINE_FREE_TYPE_NAME: c_int = 2115;
 /// `OPENSSL_free(cipher)` in `evp_cipher_free_int`.
 const LINE_FREE_CIPHER: c_int = 2118;
+
+/// A second name for [`FILE`] for the [`CtxDestroy`] implementation below, whose associated
+/// `FILE` would otherwise shadow the module constant inside its own definition.
+const CTX_FILE: *const c_char = FILE;
 
 // ---------------------------------------------------------------------------------------------
 // The provider's `OSSL_FUNC_CIPHER_*` ids, from `include/openssl/core_dispatch.h`
@@ -391,19 +396,54 @@ struct StaticCipher(EvpCipher);
 // writes.
 unsafe impl Sync for StaticCipher {}
 
+// SAFETY: (a) the only separately allocated member is `type_name`, which `destroy_body` releases
+// exactly once (a NULL `type_name`/`prov` from a partially built object is the seam's own no-op),
+// and it never releases the enclosing block, which `OwnedCtx` releases; (b) an all-zero block is a
+// valid `EvpCipher` -- every pointer is NULL, every callback `Option` is `None`, and `AtomicI32`
+// admits zero -- and `destroy_body` is sound on it.
+unsafe impl CtxDestroy for EvpCipher {
+    const FILE: *const c_char = CTX_FILE;
+    const LINE_ALLOC: c_int = LINE_ZALLOC_CIPHER;
+    const LINE_FREE: c_int = LINE_FREE_CIPHER;
+
+    /// `evp_cipher_free_int`'s body without the block release: the owned `type_name` and the
+    /// provider reference, in the authority's order.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this crate allocated and has not released (the trait contract).
+    unsafe fn destroy_body(ptr: *mut Self) {
+        // SAFETY: `ptr` is live per the trait contract; `type_name` is NULL or this object's own
+        // string and `prov` is NULL or a referenced provider.
+        unsafe {
+            CRYPTO_free(
+                (*ptr).type_name.cast::<c_void>(),
+                CTX_FILE,
+                LINE_FREE_TYPE_NAME,
+            );
+            ossl_provider_free((*ptr).prov);
+        }
+    }
+}
+
 /// `EVP_CIPHER *evp_cipher_new(void)`.
 ///
 /// A zeroed block and a reference count of 1. **The zeroing is what makes a fetched method's legacy
 /// half inert**: every function pointer in it starts NULL and `origin` starts `EVP_ORIG_DYNAMIC`,
 /// so a fresh object is releasable before anything has been filled in.
 pub(crate) fn evp_cipher_new() -> *mut EvpCipher {
-    let cipher = CRYPTO_zalloc(core::mem::size_of::<EvpCipher>(), FILE, LINE_ZALLOC_CIPHER)
-        .cast::<EvpCipher>();
-    if !cipher.is_null() {
-        // SAFETY: `cipher` is a fresh zeroed block this call owns.
-        unsafe { (*cipher).refcnt = AtomicI32::new(1) };
-    }
-    cipher
+    // `RawCtx::zalloc` is the authority's `OPENSSL_zalloc(sizeof(EVP_CIPHER))` at
+    // `evp_enc.c:1849`, at the same size and coordinates. The block is staged until its reference
+    // count is the authority's constructed `1`, so a partial initialisation releases the block
+    // alone and never runs the destructor body.
+    let Some(cipher) = RawCtx::<EvpCipher>::zalloc() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `cipher.as_ptr()` is a fresh block this call owns, and writing the count is its only
+    // pre-publication initialisation; every other field is the valid zeroed state.
+    unsafe { (*cipher.as_ptr()).refcnt = AtomicI32::new(1) };
+    // SAFETY: every field is now the authority's constructed state, so the storage is a valid
+    // `EvpCipher`; the raw pointer transfers ownership to the caller.
+    unsafe { cipher.assume_init() }.into_raw()
 }
 
 /// `static void set_legacy_nid(const char *name, void *vlegacy_nid)`.
@@ -860,16 +900,10 @@ unsafe extern "C" fn evp_cipher_free(cipher: *mut c_void) {
 /// # Safety
 /// `cipher` must be a live `EvpCipher` with no references left.
 unsafe fn evp_cipher_free_int(cipher: *mut EvpCipher) {
-    // SAFETY: `cipher` is live per the contract.
-    unsafe {
-        CRYPTO_free(
-            (*cipher).type_name.cast::<c_void>(),
-            FILE,
-            LINE_FREE_TYPE_NAME,
-        );
-        ossl_provider_free((*cipher).prov);
-        CRYPTO_free(cipher.cast::<c_void>(), FILE, LINE_FREE_CIPHER);
-    }
+    // SAFETY: `cipher` is live with no references left per the contract; `from_raw` reclaims the
+    // heap object, and its `Drop` runs the authority's own order -- `type_name` at
+    // `evp_enc.c:2115`, the provider reference, then the block at `evp_enc.c:2118`.
+    drop(unsafe { OwnedCtx::<EvpCipher>::from_raw(cipher) });
 }
 
 /// `EVP_CIPHER *EVP_CIPHER_fetch(OSSL_LIB_CTX *ctx, const char *algorithm,
@@ -969,7 +1003,12 @@ pub unsafe extern "C" fn EVP_CIPHER_up_ref(cipher: *mut EvpCipher) -> c_int {
     // SAFETY: `cipher` is live per the contract.
     unsafe {
         if (*cipher).origin == EVP_ORIG_DYNAMIC {
-            (*cipher).refcnt.fetch_add(1, Ordering::AcqRel);
+            // The shared protocol refuses a zero, destroying or `i32::MAX` count without
+            // changing it.
+            // SAFETY: `cipher` is live, its `EVP_ORIG_DYNAMIC` origin means this refcount is
+            // published and positive, and the C-ABI caller holds the reference this call
+            // acts for; the acquired reference is owned once by that caller.
+            return crate::runtime::refcount::up_ref(&(*cipher).refcnt);
         }
     }
     1
@@ -992,10 +1031,14 @@ pub unsafe extern "C" fn EVP_CIPHER_free(cipher: *mut EvpCipher) {
     if unsafe { (*cipher).origin } != EVP_ORIG_DYNAMIC {
         return;
     }
-    // SAFETY: `cipher` is live.
-    let last = unsafe { (*cipher).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `cipher` is live; this frame owns the reference it releases and, on `Last`,
+    // is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*cipher).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The method's `type_name` release and `ossl_provider_free` can run a provider
+        // teardown callback; a re-entrant `EVP_CIPHER_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference.
     unsafe { evp_cipher_free_int(cipher) };
@@ -1955,6 +1998,48 @@ pub unsafe extern "C" fn EVP_CIPHER_do_all_sorted(fn_: Option<CipherDoAllFn>, ar
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::sync::atomic::AtomicUsize;
+
+    static TEARDOWN_CIPHER: AtomicUsize = AtomicUsize::new(0);
+    static TEARDOWN_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The provider's `teardown` hook is application/provider-controlled. Re-entering
+    /// `EVP_CIPHER_free` for the method whose release triggered it must observe the destroying
+    /// sentinel and stop.
+    unsafe extern "C" fn reentrant_teardown(_provctx: *mut c_void) {
+        let cipher = TEARDOWN_CIPHER.load(Ordering::SeqCst) as *mut EvpCipher;
+        if !cipher.is_null() {
+            TEARDOWN_CALLS.fetch_add(1, Ordering::SeqCst);
+            // SAFETY: the target method is the one whose last reference is being released; its
+            // block is still allocated here.
+            unsafe { EVP_CIPHER_free(cipher) }
+        }
+    }
+
+    #[test]
+    fn free_reentry_from_provider_teardown_is_a_noop() {
+        // SAFETY: every object below is allocated by this test and handed to its owning API.
+        unsafe {
+            let prov = crate::provider::provider_new(
+                c"cipher-reentrancy-test".as_ptr(),
+                None,
+                ptr::null_mut(),
+            );
+            assert!(!prov.is_null());
+            (*prov).flags |= crate::provider::FLAG_INITIALIZED;
+            (*prov).teardown = reentrant_teardown as *mut c_void;
+
+            let cipher = evp_cipher_new();
+            assert!(!cipher.is_null());
+            (*cipher).origin = EVP_ORIG_DYNAMIC;
+            (*cipher).prov = prov;
+            TEARDOWN_CIPHER.store(cipher as usize, Ordering::SeqCst);
+            TEARDOWN_CALLS.store(0, Ordering::SeqCst);
+            EVP_CIPHER_free(cipher);
+            TEARDOWN_CIPHER.store(0, Ordering::SeqCst);
+            assert_eq!(TEARDOWN_CALLS.load(Ordering::SeqCst), 1);
+        }
+    }
 
     /// `EVP_CIPH_ECB_MODE` and `EVP_CIPH_CBC_MODE` — `include/openssl/evp.h`.
     ///
@@ -2184,3 +2269,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpCipher => zero_state_sweep_evp_cipher);

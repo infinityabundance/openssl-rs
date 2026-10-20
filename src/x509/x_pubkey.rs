@@ -138,8 +138,12 @@ use crate::runtime::buffer::BufMem;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::member_slot::{CStrSlot, EmptyCStrSlot};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::owned_str::OwnedCStr;
 use crate::x509::x_x509::X509;
 
 /// `EVP_PKEY_PUBLIC_KEY` — `include/openssl/evp.h:110`, `KEY_PARAMETERS | SELECT_PUBLIC_KEY`.
@@ -190,6 +194,10 @@ const LINE_FREE_TMPBUF: c_int = 237;
 /// `X509_PUBKEY_set`'s `OPENSSL_free(der)` (`:363`).
 const LINE_FREE_DER: c_int = 363;
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of a scratch buffer
+// ---------------------------------------------------------------------------------------------
+
 /// `struct X509_pubkey_st` — `X509_PUBKEY`, from `crypto/x509/x_pubkey.c:31-43`.
 ///
 /// The file's own definition, not a header's, so its fields are crate-private. The `ASN1_ITEM`
@@ -216,9 +224,13 @@ pub struct X509Pubkey {
     /// [`ossl_x509_PUBKEY_get0_libctx`] and passed to the decoder. The crate models an
     /// `OSSL_LIB_CTX *` as `*mut c_void`, as every landed entry point does.
     pub(crate) libctx: *mut c_void,
-    /// `char *propq` — the decoding property query, owned by the object and passed to the
-    /// decoder.
-    pub(crate) propq: *mut c_char,
+    /// `char *propq` — the decoding property query, an object-owned C-string **member buffer**.
+    /// Its ownership invariant is stated once by [`PropqSlot`] and mediated by [`PropqSlot`]/
+    /// [`X509Pubkey::propq`]; see the `MEMBER-BUFFER-MODEL.md` note. It stays `*mut c_char` at
+    /// this exact offset so the `#[repr(C)]` layout is the authority's, and it is
+    /// **module-private** because every read, write and release now goes through this module's
+    /// handle/reader.
+    propq: *mut c_char,
     /// `unsigned int flag_force_legacy : 1` — forces the legacy decode path in
     /// [`x509_pubkey_decode`]; set by `d2i_PUBKEY_int` for `ossl_d2i_PUBKEY_legacy` and by
     /// [`X509_PUBKEY_dup`] when `EVP_PKEY_dup` fails.
@@ -234,6 +246,38 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Pubkey, propq) == 32);
     assert!(core::mem::offset_of!(X509Pubkey, flag_force_legacy) == 40);
 };
+
+impl X509Pubkey {
+    /// The object-owned property-query string (NULL when unset) — the authoritative read of the
+    /// `propq` member buffer. Reads cannot free or alias, but funnelling them here keeps the
+    /// field's writers enumerable (see [`PropqSlot`]).
+    pub(crate) fn propq(&self) -> *const c_char {
+        self.propq
+    }
+}
+
+/// The `X509_PUBKEY::propq` member handle.
+///
+/// The member-buffer invariant and the clear/store token protocol are stated once in
+/// [`crate::runtime::member_slot`]. `X509_PUBKEY::propq` is private, the item layer zeroes the
+/// object at construction, and the member is written only through this handle, so [`Self::of`]
+/// is **safe**.
+pub(crate) struct PropqSlot<'a>(CStrSlot<'a>);
+
+impl<'a> PropqSlot<'a> {
+    /// Derive the handle from a live object.
+    pub(crate) fn of(x: &'a mut X509Pubkey) -> PropqSlot<'a> {
+        // SAFETY: `x` is live; `propq` is private to this module, constructed NULL by
+        // the item layer and written only by this handle, so the invariant holds and
+        // the `&mut` borrow is exclusive for `'a`.
+        PropqSlot(unsafe { CStrSlot::of(&mut x.propq) })
+    }
+
+    /// Release any incumbent at the authority's own site and answer the store token.
+    pub(crate) fn clear(&mut self, file: SeamFile, line: c_int) -> EmptyCStrSlot<'_> {
+        self.0.clear(file, line)
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The `X509_PUBKEY_INTERNAL` item — `ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` (`:63-66`)
@@ -300,11 +344,14 @@ pub unsafe extern "C" fn ossl_d2i_X509_PUBKEY_INTERNAL(
     propq: *const c_char,
 ) -> *mut X509Pubkey {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut xpub = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_INTERNAL,
-    )
+    let mut xpub = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_INTERNAL,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if xpub.is_null() {
@@ -353,20 +400,22 @@ unsafe fn x509_pubkey_set0_libctx(
     propq: *const c_char,
 ) -> c_int {
     if !x.is_null() {
-        // SAFETY: `x` is live per the contract.
+        // SAFETY: `x` is live per the contract and its `propq` obeys the member-buffer invariant.
         unsafe {
             (*x).libctx = libctx;
-            CRYPTO_free(
-                (*x).propq.cast::<c_void>(),
-                FILE.as_ptr(),
-                LINE_FREE_PROPQ_SET0,
-            );
-            (*x).propq = ptr::null_mut();
+            let mut slot = PropqSlot::of(&mut *x);
+            // Release any incumbent at the authority's own site (`:52`), leaving it unset. A NULL
+            // incumbent makes this a no-op, exactly as the authority's NULL guard does. The
+            // returned token is the only way to store into the now-empty field.
+            let empty = slot.clear(SeamFile::new(FILE), LINE_FREE_PROPQ_SET0);
             if !propq.is_null() {
-                (*x).propq = CRYPTO_strdup(propq, FILE.as_ptr(), LINE_STRDUP_SET0);
-                if (*x).propq.is_null() {
+                // SAFETY: `propq` is NUL-terminated per the contract; the seam answers a
+                // fresh block this call owns.
+                let Some(copy) = OwnedCStr::dup(propq, SeamFile::new(FILE), LINE_STRDUP_SET0)
+                else {
                     return 0;
-                }
+                };
+                empty.store(copy);
             }
         }
     }
@@ -389,11 +438,10 @@ unsafe extern "C" fn x509_pubkey_ex_free(pval: *mut *mut c_void, _it: *const Asn
                 X509_ALGOR_free((*pubkey).algor);
                 ASN1_BIT_STRING_free((*pubkey).public_key);
                 EVP_PKEY_free((*pubkey).pkey);
-                CRYPTO_free(
-                    (*pubkey).propq.cast::<c_void>(),
-                    FILE.as_ptr(),
-                    LINE_FREE_PROPQ,
-                );
+                // `pubkey` is live and its `propq` obeys the member-buffer invariant, so `clear`
+                // is that block's one release at the authority's own site (`:93`); a NULL
+                // incumbent makes it a no-op.
+                PropqSlot::of(&mut *pubkey).clear(SeamFile::new(FILE), LINE_FREE_PROPQ);
                 CRYPTO_free(pubkey.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PUBKEY);
                 *pval = ptr::null_mut();
             }
@@ -446,11 +494,14 @@ unsafe extern "C" fn x509_pubkey_ex_new_ex(
     propq: *const c_char,
 ) -> c_int {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut ret = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_NEW_EX,
-    )
+    let mut ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_NEW_EX,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if ret.is_null() {
@@ -508,7 +559,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
     let in_saved = unsafe { *in_ };
     let mut ret: c_int;
     let mut dctx: *mut OsslDecoderCtx = ptr::null_mut();
-    let mut tmpbuf: *mut c_uchar = ptr::null_mut();
+    let mut tmpbuf: Option<OwnedBuf> = None;
 
     // SAFETY: `pval` is a live slot per the contract.
     if unsafe { *pval }.is_null()
@@ -581,7 +632,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
             if aclass != V_ASN1_UNIVERSAL {
                 // SAFETY: `in_saved` is readable for `publen` bytes; the allocator takes the
                 // file/line for its mdbg record only.
-                tmpbuf = unsafe {
+                let raw = unsafe {
                     CRYPTO_memdup(
                         in_saved.cast::<c_void>(),
                         publen,
@@ -590,12 +641,18 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                     )
                 }
                 .cast::<c_uchar>();
-                if tmpbuf.is_null() {
+                if raw.is_null() {
                     return 0;
                 }
-                in_data = tmpbuf;
-                // SAFETY: `tmpbuf` owns `publen` bytes, so the first is writable.
-                unsafe { *tmpbuf = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
+                // The block is `CRYPTO_memdup`'s own; the handle is its single release.
+                // SAFETY: `raw` is a live block the crate allocated and no one else owns.
+                let buf =
+                    // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+                    unsafe { OwnedBuf::adopt_plain_nullable(raw,SeamFile::new(FILE), LINE_FREE_TMPBUF) };
+                // SAFETY: `buf` owns `publen` bytes, so the first is writable.
+                unsafe { *buf.as_ptr() = (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) as u8 };
+                in_data = buf.as_ptr();
+                tmpbuf = Some(buf);
             }
 
             let mut txtoidname = [0 as c_char; OSSL_MAX_NAME_SIZE];
@@ -624,7 +681,7 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
                     txtoidname.as_ptr(),
                     EVP_PKEY_PUBLIC_KEY,
                     (*pubkey).libctx,
-                    (*pubkey).propq,
+                    (*pubkey).propq(),
                 )
             };
             if !dctx.is_null() {
@@ -646,11 +703,11 @@ unsafe extern "C" fn x509_pubkey_ex_d2i_ex(
         ret = 1;
     }
 
-    // SAFETY: `dctx` is NULL or a live context; `tmpbuf` is NULL or this call's own buffer.
-    unsafe {
-        OSSL_DECODER_CTX_free(dctx);
-        CRYPTO_free(tmpbuf.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_TMPBUF);
-    }
+    // SAFETY: `dctx` is NULL or a live context.
+    unsafe { OSSL_DECODER_CTX_free(dctx) };
+    // `tmpbuf`'s handle, if any, releases the `CRYPTO_memdup` block here; the authority frees the
+    // decoder context first, then the scratch buffer.
+    drop(tmpbuf);
     ret
 }
 
@@ -844,11 +901,14 @@ pub unsafe extern "C" fn i2d_X509_PUBKEY_bio(bp: *mut Bio, xpk: *const X509Pubke
 #[no_mangle]
 pub unsafe extern "C" fn X509_PUBKEY_dup(a: *const X509Pubkey) -> *mut X509Pubkey {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let mut pubkey = CRYPTO_zalloc(
-        core::mem::size_of::<X509Pubkey>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_DUP,
-    )
+    let mut pubkey = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Pubkey>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_DUP,
+        )
+    }
     .cast::<X509Pubkey>();
 
     if pubkey.is_null() {
@@ -858,7 +918,7 @@ pub unsafe extern "C" fn X509_PUBKEY_dup(a: *const X509Pubkey) -> *mut X509Pubke
     let (a_libctx, a_propq, a_algor, a_pubkey, a_pkey) = unsafe {
         (
             (*a).libctx,
-            (*a).propq,
+            (*a).propq(),
             (*a).algor,
             (*a).public_key,
             (*a).pkey,
@@ -977,18 +1037,28 @@ pub unsafe extern "C" fn X509_PUBKEY_set(x: *mut *mut X509Pubkey, pkey: *mut Evp
         };
 
         // SAFETY: `ectx` is NULL or live; the two locals are writable.
-        if unsafe { OSSL_ENCODER_to_data(ectx, &raw mut der, &raw mut derlen) } != 0 {
+        let encoded = unsafe { OSSL_ENCODER_to_data(ectx, &raw mut der, &raw mut derlen) } != 0;
+        // The block is the encoder's own; the handle is its single release at the authority's
+        // line, when this arm returns.
+        // SAFETY: `der` is NULL or the block `OSSL_ENCODER_to_data` allocated and no one else
+        // owns.
+        let der = unsafe {
+            // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+            OwnedBuf::adopt_plain_nullable(
+                der.cast::<c_uchar>(),
+                SeamFile::new(FILE),
+                LINE_FREE_DER,
+            )
+        };
+        if encoded {
             // SAFETY: `der` owns `derlen` bytes.
-            let mut pder: *const c_uchar = der;
+            let mut pder: *const c_uchar = der.as_ptr();
             // SAFETY: `pder` is a readable cursor for `derlen` bytes.
             pk = unsafe { d2i_X509_PUBKEY(ptr::null_mut(), &raw mut pder, derlen as c_long) };
         }
 
-        // SAFETY: `ectx` is NULL or live; `der` is NULL or this call's own.
-        unsafe {
-            OSSL_ENCODER_CTX_free(ectx);
-            CRYPTO_free(der.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_DER);
-        }
+        // SAFETY: `ectx` is NULL or live.
+        unsafe { OSSL_ENCODER_CTX_free(ectx) };
     }
 
     if pk.is_null() {
@@ -1196,11 +1266,14 @@ unsafe fn d2i_PUBKEY_int(
 
     if !libctx.is_null() || !propq.is_null() || force_legacy != 0 {
         // SAFETY: the allocator takes the file/line for its mdbg record only.
-        xpk2 = CRYPTO_zalloc(
-            core::mem::size_of::<X509Pubkey>(),
-            FILE.as_ptr(),
-            LINE_ZALLOC_D2I_INT,
-        )
+        xpk2 = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<X509Pubkey>(),
+                FILE.as_ptr(),
+                LINE_ZALLOC_D2I_INT,
+            )
+        }
         .cast::<X509Pubkey>();
         if xpk2.is_null() {
             return ptr::null_mut();
@@ -2298,7 +2371,7 @@ pub(crate) unsafe extern "C" fn ossl_x509_PUBKEY_get0_libctx(
             *plibctx = (*key).libctx;
         }
         if !ppropq.is_null() {
-            *ppropq = (*key).propq;
+            *ppropq = (*key).propq();
         }
     }
     1

@@ -185,8 +185,9 @@ pub struct Engine {
     pub(crate) cmd_defns: *const EngineCmdDefn,
     /// `int flags`
     pub(crate) flags: c_int,
-    /// `CRYPTO_REF_COUNT struct_ref` — the structural reference count.
-    pub(crate) struct_ref: c_int,
+    /// `CRYPTO_REF_COUNT struct_ref` — the structural reference count. `CRYPTO_REF_COUNT` is
+    /// the authority's C11 `_Atomic int`; [`AtomicI32`] is its layout-compatible Rust form.
+    pub(crate) struct_ref: AtomicI32,
     /// `int funct_ref` — the functional reference count; `funct_ref <= struct_ref`.
     pub(crate) funct_ref: c_int,
     /// `CRYPTO_EX_DATA ex_data` — the per-ENGINE data block.
@@ -204,6 +205,8 @@ pub struct Engine {
 }
 
 const _: () = {
+    assert!(size_of::<AtomicI32>() == size_of::<c_int>());
+    assert!(core::mem::align_of::<AtomicI32>() == core::mem::align_of::<c_int>());
     assert!(size_of::<Engine>() == 224);
     assert!(core::mem::offset_of!(Engine, id) == 0);
     assert!(core::mem::offset_of!(Engine, name) == 8);
@@ -234,6 +237,107 @@ const _: () = {
     assert!(core::mem::offset_of!(Engine, next_dyn) == 208);
     assert!(core::mem::offset_of!(Engine, dynamic_id) == 216);
 };
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `ENGINE` object
+// ---------------------------------------------------------------------------------------------
+
+/// An owned `ENGINE` block still under construction.
+///
+/// [`ENGINE_new`] allocates the block and fills its members one at a time; on its `CRYPTO_new_ex_data`
+/// refusal the authority's release is the block alone (`crypto/engine/eng_lib.c:46`), so the
+/// destructor ([`OwnedEngine`]) over members that may not be set must not run. [`Self::finish`] hands
+/// the block to the C ABI on success.
+struct RawEngine {
+    ptr: ptr::NonNull<Engine>,
+}
+
+impl RawEngine {
+    /// `CRYPTO_zalloc(sizeof(*ret), FILE, 36)`, or `None` when it answers NULL.
+    fn new() -> Option<RawEngine> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<Engine>()` bytes, which is exactly `Engine`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW)
+        }
+        .cast::<Engine>();
+        ptr::NonNull::new(raw).map(|ptr| RawEngine { ptr })
+    }
+
+    /// The writable start of the block.
+    fn as_ptr(&self) -> *mut Engine {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C ABI's answer.
+    fn finish(self) -> *mut Engine {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for RawEngine {
+    /// The authority's `ENGINE_new` refusal release (`crypto/engine/eng_lib.c:46`): the block alone,
+    /// at the authority's own `OPENSSL_free` site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated and has not been handed out; its single
+        // release is the authority's own plain `CRYPTO_free`.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_FREE) };
+    }
+}
+
+/// An owned `ENGINE` block at its last structural reference.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its exact `CRYPTO_zalloc` size/`file`/`line`,
+/// but its *ownership* is this type: [`Self::from_raw`] reclaims the block the refcount reaches zero
+/// on and `Drop` runs the authority's own destructor body (`engine_free_util`'s,
+/// `crypto/engine/eng_lib.c:77-102`) followed by its single block release. The destructor's
+/// `engine_remove_dynamic_id` step takes the caller's `not_locked` flag, so the owner carries it --
+/// the generic `CtxDestroy` shape in the adjacent units cannot express that runtime argument.
+struct OwnedEngine {
+    ptr: ptr::NonNull<Engine>,
+    not_locked: c_int,
+}
+
+impl OwnedEngine {
+    /// Reclaim the `ENGINE` block at its last structural reference, for release by `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live `ENGINE` this file allocated whose caller holds its last structural
+    /// reference, so no other owner will release it; `Drop` is the block's single release.
+    unsafe fn from_raw(ptr: *mut Engine, not_locked: c_int) -> Option<OwnedEngine> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedEngine { ptr, not_locked })
+    }
+}
+
+impl Drop for OwnedEngine {
+    /// `engine_free_util`'s last-reference body (`crypto/engine/eng_lib.c:77-102`): the dynamically
+    /// allocated public-key method tables, the destroy hook, the dynamic-id unlink, the ex-data free
+    /// and the block release -- the authority's own order.
+    fn drop(&mut self) {
+        let ptr = self.ptr.as_ptr();
+        // SAFETY: `ptr` is the block `from_raw` reclaimed at its last reference; every member is set
+        // because only a completed `ENGINE_new` object reaches its last reference, and this is the
+        // block's single release.
+        unsafe {
+            crate::engine::tb_pkmeth::engine_pkey_meths_free(ptr);
+            crate::engine::tb_asnmth::engine_pkey_asn1_meths_free(ptr);
+            if let Some(destroy) = (*ptr).destroy {
+                destroy(ptr);
+            }
+            crate::engine::eng_list::engine_remove_dynamic_id(ptr, self.not_locked);
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_ENGINE,
+                ptr.cast::<c_void>(),
+                ptr::addr_of_mut!((*ptr).ex_data),
+            );
+            CRYPTO_free(ptr.cast::<c_void>(), FILE, LINE_FREE);
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // The engine-wide lock — `eng_lib.c:15-25`
@@ -286,41 +390,43 @@ pub(crate) unsafe fn run_engine_lock_init() -> bool {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The reference count — `internal/refcount.h`, the `#ifndef CRYPTO_NEW_FREE_DEFINED` arm
+// The reference count — `internal/refcount.h`, shared destroying-sentinel protocol
 // ---------------------------------------------------------------------------------------------
+//
+// `Engine::struct_ref` is the authority's `CRYPTO_REF_COUNT` (a C11 `_Atomic int`). The
+// authority moves it with a plain fetch-add/fetch-sub, which cannot distinguish "the count
+// reached zero" from "the destructor is running". `Engine_free`'s last-reference body calls
+// the `destroy` hook and `CRYPTO_free_ex_data`, so an application callback can re-enter
+// `ENGINE_free` while the object is being torn down; a second teardown would be a double free.
+// The crate's shared protocol (`runtime::refcount`) reserves `i32::MIN` for that state and
+// refuses both a re-entrant release and a resurrection.
 
-/// `CRYPTO_UP_REF(refcnt, &ret)` — relaxed fetch-add, answering the **new** value.
+/// `CRYPTO_UP_REF` with the shared checked/sentinel protocol.
+///
+/// Answers 1 when the reference was taken and 0 without changing the count when the count is
+/// zero, negative, destroying, or `i32::MAX`.
 ///
 /// # Safety
-/// `p` must be a live refcount and `ret` a writable slot.
-pub(crate) unsafe fn up_ref(p: *mut c_int, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers.
-    let new = unsafe { (*p).wrapping_add(1) };
-    // SAFETY: as above.
-    unsafe { *p = new };
-    // SAFETY: the caller offers a writable slot.
-    unsafe { *ret = new };
+/// `p` must be a live `AtomicI32` refcount of a live `ENGINE` whose count is published
+/// and positive, and the caller must hold the structural reference it acts for (or act
+/// for an owner that will not release it during the call), acquiring exactly one new
+/// reference.
+pub(crate) unsafe fn up_ref(p: *mut AtomicI32) -> c_int {
+    // SAFETY: the caller guarantees `p` is a live refcount belonging to a live object and
+    // acts for an existing owner; the new reference is owned exactly once by that caller.
+    unsafe { crate::runtime::refcount::up_ref(&*p) }
 }
 
-/// `CRYPTO_DOWN_REF(refcnt, &ret)` — fetch-sub, answering the **new** value.
-///
-/// The fallback `CRYPTO_NEW_FREE_DEFINED` arm has no fence; the release/acquire fence the
-/// atomic arm carries is reproduced anyway, because `engine_free_util` depends on the
-/// destructor seeing every earlier mutation.
+/// `CRYPTO_DOWN_REF` with the shared checked/sentinel protocol.
 ///
 /// # Safety
-/// As [`up_ref`].
-pub(crate) unsafe fn down_ref(p: *mut c_int, ret: *mut c_int) {
-    // SAFETY: the caller guarantees both pointers.
-    let new = unsafe { (*p).wrapping_sub(1) };
-    // SAFETY: as above.
-    unsafe { *p = new };
-    core::sync::atomic::fence(Ordering::Release);
-    if new == 0 {
-        core::sync::atomic::fence(Ordering::Acquire);
-    }
-    // SAFETY: the caller offers a writable slot.
-    unsafe { *ret = new };
+/// As [`up_ref`], plus: the caller owns exactly one reference to the object whose
+/// `struct_ref` is `p`, and on [`crate::runtime::refcount::DownRef::Last`] it is the
+/// unique destructor runner and must not use the object afterwards.
+pub(crate) unsafe fn down_ref(p: *mut AtomicI32) -> crate::runtime::refcount::DownRef {
+    // SAFETY: the caller guarantees `p` is a live refcount of a live object and owns the
+    // reference this call releases; on `Last` it alone runs the destructor body.
+    unsafe { crate::runtime::refcount::down_ref(&*p) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -337,15 +443,14 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
             unsafe { raise_site(&ENG_LIB_33) };
             return ptr::null_mut();
         }
-        let ret = CRYPTO_zalloc(size_of::<Engine>(), FILE, LINE_NEW) as *mut Engine;
-        if ret.is_null() {
+        let Some(raw) = RawEngine::new() else {
             return ptr::null_mut();
-        }
+        };
+        let ret = raw.as_ptr();
         // `CRYPTO_NEW_REF(&ret->struct_ref, 1)` — the fallback arm assigns.
-        // SAFETY: `ret` is a fresh zeroed `Engine`.
-        unsafe { (*ret).struct_ref = 1 };
-        // SAFETY: `ret` is live and its `ex_data` block is in place.
+        // SAFETY: `ret` is a fresh zeroed `Engine` and its `ex_data` block is in place.
         let ok = unsafe {
+            (*ret).struct_ref.store(1, Ordering::Relaxed);
             CRYPTO_new_ex_data(
                 CRYPTO_EX_INDEX_ENGINE,
                 ret.cast::<c_void>(),
@@ -353,11 +458,10 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
             )
         };
         if ok == 0 {
-            // SAFETY: `ret` is the allocation above and is not used again.
-            unsafe { CRYPTO_free(ret.cast::<c_void>(), FILE, LINE_FREE) };
+            // `raw`'s `Drop` releases the block alone, exactly the authority's refusal path.
             return ptr::null_mut();
         }
-        ret
+        raw.finish()
     })
 }
 
@@ -402,34 +506,19 @@ pub(crate) unsafe fn engine_free_util(e: *mut Engine, not_locked: c_int) -> c_in
     if e.is_null() {
         return 1;
     }
-    let mut i: c_int = 0;
-    // SAFETY: `e` is live and `struct_ref` is its refcount; `i` is a local slot.
-    unsafe { down_ref(ptr::addr_of_mut!((*e).struct_ref), &mut i) };
-    if i > 0 {
-        return 1;
+    // SAFETY: `e` is live, `struct_ref` is its refcount, and this frame owns the structural
+    // reference it releases; on `Last` it is the unique destructor runner.
+    match unsafe { down_ref(ptr::addr_of_mut!((*e).struct_ref)) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // A zero/negative/destroying count is a defined no-op. The destroying arm is the
+        // re-entrant `ENGINE_free` issued by an ex-data or `destroy` callback, which must not
+        // run the destructor body a second time.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return 1,
     }
-    // The dynamically allocated public-key methods, then the destroy hook, then the
-    // dynamic-id unlink, the ex-data free and the object itself — the authority's order.
-    // SAFETY: `e` is live and this is its last reference.
-    unsafe {
-        crate::engine::tb_pkmeth::engine_pkey_meths_free(e);
-        crate::engine::tb_asnmth::engine_pkey_asn1_meths_free(e);
-    }
-    // SAFETY: `e` is live; `destroy` is the caller's hook or NULL.
-    if let Some(destroy) = unsafe { (*e).destroy } {
-        // SAFETY: the hook is the caller's and is called with the ENGINE it was set on.
-        unsafe { destroy(e) };
-    }
-    // SAFETY: `e` is live and this is its last reference.
-    unsafe {
-        crate::engine::eng_list::engine_remove_dynamic_id(e, not_locked);
-        CRYPTO_free_ex_data(
-            CRYPTO_EX_INDEX_ENGINE,
-            e.cast::<c_void>(),
-            ptr::addr_of_mut!((*e).ex_data),
-        );
-        CRYPTO_free(e.cast::<c_void>(), FILE, LINE_FREE);
-    }
+    // SAFETY: `e` is live and this is its last structural reference, so no other owner will release
+    // it; `Drop` runs the authority's own destructor body and this is the block's single release.
+    drop(unsafe { OwnedEngine::from_raw(e, not_locked) });
     1
 }
 
@@ -464,6 +553,61 @@ const _: () = {
     assert!(core::mem::offset_of!(EngineCleanupItem, cb) == 0);
 };
 
+/// An owned `struct st_engine_cleanup_item`.
+///
+/// The item is a plain `CRYPTO_malloc` block the cleanup stack adopts and releases at one site
+/// (`crypto/engine/eng_lib.c`); its `Drop` is that single release.
+struct OwnedItem {
+    ptr: ptr::NonNull<EngineCleanupItem>,
+}
+
+impl OwnedItem {
+    /// `CRYPTO_malloc(sizeof(*item), FILE, 132)`, or `None` when it answers NULL; the item's `cb` is
+    /// set before it is handed out.
+    fn new(cb: Option<EngineCleanupCb>) -> Option<OwnedItem> {
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM)
+        }
+        .cast::<EngineCleanupItem>();
+        let ptr = ptr::NonNull::new(raw)?;
+        // SAFETY: `ptr` is a fresh, writable `EngineCleanupItem` of this call's own allocation.
+        unsafe { (*ptr.as_ptr()).cb = cb };
+        Some(OwnedItem { ptr })
+    }
+
+    /// The item's address, for the stack that takes it over.
+    fn as_ptr(&self) -> *mut EngineCleanupItem {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the item to the cleanup stack that takes it over.
+    fn into_raw(self) -> *mut EngineCleanupItem {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim an element the cleanup stack hands to its `sk_*_pop_free` callback, for release by
+    /// `Drop`.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` is NULL or a live item this file allocated that no other owner will release.
+    unsafe fn from_raw(ptr: *mut EngineCleanupItem) -> Option<OwnedItem> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedItem { ptr })
+    }
+}
+
+impl Drop for OwnedItem {
+    /// The item's single release, through the same seam and the authority's own site.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block this handle owns and has not released; the authority's own
+        // `CRYPTO_free` accepts NULL.
+        unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), FILE, LINE_ITEM) };
+    }
+}
+
 /// `static STACK_OF(ENGINE_CLEANUP_ITEM) *cleanup_stack = NULL` (`:117`).
 static CLEANUP_STACK: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 
@@ -481,15 +625,8 @@ fn int_cleanup_check(create: bool) -> bool {
 }
 
 /// `static ENGINE_CLEANUP_ITEM *int_cleanup_item(ENGINE_CLEANUP_CB *cb)` — `:128-136`.
-fn int_cleanup_item(cb: Option<EngineCleanupCb>) -> *mut EngineCleanupItem {
-    let item =
-        CRYPTO_malloc(size_of::<EngineCleanupItem>(), FILE, LINE_ITEM) as *mut EngineCleanupItem;
-    if item.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `item` is the fresh allocation above and is writable.
-    unsafe { (*item).cb = cb };
-    item
+fn int_cleanup_item(cb: Option<EngineCleanupCb>) -> Option<OwnedItem> {
+    OwnedItem::new(cb)
 }
 
 /// `int engine_cleanup_add_first(ENGINE_CLEANUP_CB *cb)` — `:138-151`.
@@ -500,16 +637,17 @@ pub(crate) unsafe fn engine_cleanup_add_first(cb: Option<EngineCleanupCb>) -> c_
     if !int_cleanup_check(true) {
         return 0;
     }
-    let item = int_cleanup_item(cb);
-    if !item.is_null() {
-        let stack = CLEANUP_STACK.load(Ordering::Acquire);
-        // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
-        if unsafe { OPENSSL_sk_insert(stack, item.cast::<c_void>(), 0) } > 0 {
-            return 1;
-        }
-        // SAFETY: `item` was not inserted and is not used again.
-        unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    let Some(item) = int_cleanup_item(cb) else {
+        return 0;
+    };
+    let stack = CLEANUP_STACK.load(Ordering::Acquire);
+    // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
+    if unsafe { OPENSSL_sk_insert(stack, item.as_ptr().cast::<c_void>(), 0) } > 0 {
+        // The stack now owns the item; `into_raw` gives up this handle's ownership.
+        item.into_raw();
+        return 1;
     }
+    // `item` was not inserted; its `Drop` releases it at the authority's own site.
     0
 }
 
@@ -521,16 +659,17 @@ pub(crate) unsafe fn engine_cleanup_add_last(cb: Option<EngineCleanupCb>) -> c_i
     if !int_cleanup_check(true) {
         return 0;
     }
-    let item = int_cleanup_item(cb);
-    if !item.is_null() {
-        let stack = CLEANUP_STACK.load(Ordering::Acquire);
-        // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
-        if unsafe { OPENSSL_sk_push(stack, item.cast::<c_void>()) } > 0 {
-            return 1;
-        }
-        // SAFETY: `item` was not inserted and is not used again.
-        unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    let Some(item) = int_cleanup_item(cb) else {
+        return 0;
+    };
+    let stack = CLEANUP_STACK.load(Ordering::Acquire);
+    // SAFETY: `stack` is the non-NULL stack `int_cleanup_check` created.
+    if unsafe { OPENSSL_sk_push(stack, item.as_ptr().cast::<c_void>()) } > 0 {
+        // The stack now owns the item; `into_raw` gives up this handle's ownership.
+        item.into_raw();
+        return 1;
     }
+    // `item` was not inserted; its `Drop` releases it at the authority's own site.
     0
 }
 
@@ -549,8 +688,9 @@ unsafe extern "C" fn engine_cleanup_cb_free(item: *mut c_void) {
         // SAFETY: the callback was registered by a caller and is live.
         unsafe { cb() };
     }
-    // SAFETY: `item` is not used again.
-    unsafe { CRYPTO_free(item.cast::<c_void>(), FILE, LINE_ITEM) };
+    // SAFETY: `item` is a live `EngineCleanupItem` this callback takes ownership of per the
+    // `sk_*_pop_free` contract; `Drop` is its single release.
+    drop(unsafe { OwnedItem::from_raw(item) });
 }
 
 // `void engine_cleanup_int(void)` (`crypto/engine/eng_lib.c:175-184`) is withheld. Its closure
@@ -600,7 +740,7 @@ pub unsafe extern "C" fn ENGINE_get_ex_data(e: *const Engine, idx: c_int) -> *mu
 /// `int ENGINE_set_id(ENGINE *e, const char *id)` — `crypto/engine/eng_lib.c:203-211`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_id(e: *mut Engine, id: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -618,7 +758,7 @@ pub unsafe extern "C" fn ENGINE_set_id(e: *mut Engine, id: *const c_char) -> c_i
 /// `int ENGINE_set_name(ENGINE *e, const char *name)` — `:213-221`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_name(e: *mut Engine, name: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -700,7 +840,7 @@ pub unsafe extern "C" fn ENGINE_set_ctrl_function(
 /// `int ENGINE_set_flags(ENGINE *e, int flags)` — `:247-251`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_set_flags(e: *mut Engine, flags: c_int) -> c_int {
     guard_ffi(0, || {
@@ -729,7 +869,7 @@ pub unsafe extern "C" fn ENGINE_set_cmd_defns(
 /// `const char *ENGINE_get_id(const ENGINE *e)` — `:259-262`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_id(e: *const Engine) -> *const c_char {
     guard_ffi(ptr::null(), || {
@@ -741,7 +881,7 @@ pub unsafe extern "C" fn ENGINE_get_id(e: *const Engine) -> *const c_char {
 /// `const char *ENGINE_get_name(const ENGINE *e)` — `:264-267`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_name(e: *const Engine) -> *const c_char {
     guard_ffi(ptr::null(), || {
@@ -765,7 +905,7 @@ pub unsafe extern "C" fn ENGINE_get_destroy_function(
 /// `ENGINE_GEN_INT_FUNC_PTR ENGINE_get_init_function(const ENGINE *e)` — `:274-277`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_init_function(e: *const Engine) -> Option<EngineGenIntFuncPtr> {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -787,7 +927,7 @@ pub unsafe extern "C" fn ENGINE_get_finish_function(
 /// `ENGINE_CTRL_FUNC_PTR ENGINE_get_ctrl_function(const ENGINE *e)` — `:284-287`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_ctrl_function(e: *const Engine) -> Option<EngineCtrlFuncPtr> {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -797,7 +937,7 @@ pub unsafe extern "C" fn ENGINE_get_ctrl_function(e: *const Engine) -> Option<En
 /// `int ENGINE_get_flags(const ENGINE *e)` — `:289-292`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_flags(e: *const Engine) -> c_int {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -807,7 +947,7 @@ pub unsafe extern "C" fn ENGINE_get_flags(e: *const Engine) -> c_int {
 /// `const ENGINE_CMD_DEFN *ENGINE_get_cmd_defns(const ENGINE *e)` — `:294-297`.
 ///
 /// # Safety
-/// `e` must be NULL or point to a live [`Engine`].
+/// `e` must be a non-NULL pointer to a live [`Engine`].
 #[no_mangle]
 pub unsafe extern "C" fn ENGINE_get_cmd_defns(e: *const Engine) -> *const EngineCmdDefn {
     // SAFETY: `e` is the caller's live ENGINE.
@@ -822,4 +962,140 @@ pub unsafe extern "C" fn ENGINE_get_cmd_defns(e: *const Engine) -> *const Engine
 pub extern "C" fn ENGINE_get_static_state() -> *mut c_void {
     static INTERNAL_STATIC_HACK: AtomicI32 = AtomicI32::new(0);
     INTERNAL_STATIC_HACK.as_ptr().cast::<c_void>()
+}
+
+#[cfg(test)]
+mod refcount_tests {
+    use super::*;
+    use crate::engine::eng_list::ENGINE_up_ref;
+    use crate::runtime::ex_data::CRYPTO_get_ex_new_index;
+    use crate::runtime::refcount::REF_DESTROYING;
+    use core::sync::atomic::AtomicUsize;
+    use std::sync::Barrier;
+    use std::thread;
+
+    static DESTROY_CALLS_MT: AtomicUsize = AtomicUsize::new(0);
+    static DESTROY_CALLS_RE: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static REENTER_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static SAW_SENTINEL: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn counting_destroy_mt(_e: *mut Engine) -> c_int {
+        DESTROY_CALLS_MT.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    unsafe extern "C" fn counting_destroy_re(_e: *mut Engine) -> c_int {
+        DESTROY_CALLS_RE.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// The ex-data free hook runs inside `ENGINE_free`'s last-reference body, before the block
+    /// release. Re-entering `ENGINE_free` from it must observe the destroying sentinel.
+    unsafe extern "C" fn reenter_free(
+        parent: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        let e = REENTER_TARGET.load(Ordering::SeqCst) as *mut Engine;
+        if e.is_null() || parent.cast::<Engine>() != e {
+            return;
+        }
+        REENTER_CALLS.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: `parent` is the still-allocated ENGINE whose ex-data is being torn down.
+        let count = unsafe { (*e).struct_ref.load(Ordering::Acquire) };
+        if count == REF_DESTROYING {
+            SAW_SENTINEL.fetch_add(1, Ordering::SeqCst);
+        }
+        // SAFETY: the target is the ENGINE whose ex-data is being torn down; the block is
+        // still allocated at this point.
+        unsafe { ENGINE_free(e) };
+    }
+
+    #[test]
+    fn up_ref_refuses_overflow_without_changing_the_count() {
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its only structural reference.
+        unsafe {
+            (*e).struct_ref.store(i32::MAX, Ordering::Relaxed);
+            assert_eq!(ENGINE_up_ref(e), 0);
+            assert_eq!((*e).struct_ref.load(Ordering::Relaxed), i32::MAX);
+            (*e).struct_ref.store(1, Ordering::Relaxed);
+            assert_eq!(ENGINE_free(e), 1);
+        }
+    }
+
+    #[test]
+    fn eight_threads_share_the_count_and_run_one_destructor() {
+        DESTROY_CALLS_MT.store(0, Ordering::SeqCst);
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its initial structural reference.
+        unsafe { ENGINE_set_destroy_function(e, Some(counting_destroy_mt)) };
+
+        const THREADS: usize = 8;
+        let addr = e as usize;
+        let barrier = Barrier::new(THREADS);
+        thread::scope(|scope| {
+            for _ in 0..THREADS {
+                scope.spawn(|| {
+                    let e = addr as *mut Engine;
+                    barrier.wait();
+                    // SAFETY: the object carries a live reference throughout the race.
+                    unsafe {
+                        assert_eq!(ENGINE_up_ref(e), 1);
+                        assert_eq!(ENGINE_free(e), 1);
+                    }
+                });
+            }
+        });
+
+        // SAFETY: `e` is live; every worker returned its reference.
+        unsafe {
+            assert_eq!((*e).struct_ref.load(Ordering::Acquire), 1);
+            assert_eq!(DESTROY_CALLS_MT.load(Ordering::SeqCst), 0);
+            // The final release is the unique last reference, so it alone tears down.
+            assert_eq!(ENGINE_free(e), 1);
+        }
+        assert_eq!(DESTROY_CALLS_MT.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn reentrant_free_from_an_ex_data_callback_is_a_defined_noop() {
+        REENTER_CALLS.store(0, Ordering::SeqCst);
+        SAW_SENTINEL.store(0, Ordering::SeqCst);
+        DESTROY_CALLS_RE.store(0, Ordering::SeqCst);
+        let idx = CRYPTO_get_ex_new_index(
+            CRYPTO_EX_INDEX_ENGINE,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(reenter_free),
+        );
+        assert!(idx >= 1, "an engine ex-data index must be available");
+
+        let e = ENGINE_new();
+        assert!(!e.is_null());
+        // SAFETY: `e` is live and this call owns its only structural reference.
+        unsafe {
+            ENGINE_set_destroy_function(e, Some(counting_destroy_re));
+            assert_eq!(ENGINE_set_ex_data(e, idx, ptr::dangling_mut::<c_void>()), 1);
+            REENTER_TARGET.store(e as usize, Ordering::SeqCst);
+
+            assert_eq!(ENGINE_free(e), 1);
+        }
+        REENTER_TARGET.store(0, Ordering::SeqCst);
+        assert_eq!(REENTER_CALLS.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            SAW_SENTINEL.load(Ordering::SeqCst),
+            1,
+            "the re-entrant callback observes the destroying sentinel"
+        );
+        assert_eq!(DESTROY_CALLS_RE.load(Ordering::SeqCst), 1);
+    }
 }

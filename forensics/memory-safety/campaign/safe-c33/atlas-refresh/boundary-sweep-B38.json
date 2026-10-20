@@ -1,0 +1,157 @@
+{
+  "receipt": "boundary-sweep-B38",
+  "date": "2026-10-20",
+  "mechanism": "ERR",
+  "subphase": "B37 retained cross-mechanism residual: asn1::text::OwnedBuf raw file coordinate",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "cbd29f620",
+    "base_subject": "Merge stage/p25/b37: ERR mechanism discharge",
+    "committed": false,
+    "changed_files": 1,
+    "diffstat": "src/asn1/text.rs: 46 insertions(+), 12 deletions(-); PERFILE-INDEX.md and this receipt are the separate documentation edit",
+    "working_tree_blob": {
+      "src/asn1/text.rs": "7aded01f861d711b5a25a8b9e138bb4063f4342d"
+    },
+    "unchanged_shared_definition": "src/runtime/mem_coords.rs (SeamFile) and src/runtime/mem.rs (allocator seam) are untouched."
+  },
+  "stop_status": "NO_STOP_DEFECT OBSERVED IN THE EXECUTED CHECKS. The disclosed safe-interface coordinate is now typed end to end inside asn1::text. No new mechanism is discharged and nothing is promoted to INDEPENDENTLY_CHECKED or SAFETY_DISCHARGED; independent re-adjudication is pending.",
+  "authority": {
+    "source": "openssl-3.6.4 (pinned)",
+    "abi": "No C ABI change. No exported symbol, extern \"C\" signature, #[repr(C)] layout or allocator-seam (size/file/line) value changed. OwnedBuf is a private module type and both constructors are private.",
+    "external_contracts": [
+      "CRYPTO_* `file` is NULL or a NUL-terminated C string valid for the call; unchanged.",
+      "SeamFile carries a static NUL-terminated coordinate or NULL. A dynamic external-C coordinate cannot be represented safely, and no call site needed one."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B38-ERR-6b",
+      "file": "src/asn1/text.rs:73-181 (OwnedBuf struct, new, empty, clear_realloc, realloc, Drop)",
+      "operation": "safe constructor `OwnedBuf::empty(file: *const c_char, line)` stored a raw coordinate; Drop passed it to CRYPTO_free and the unsafe growth methods passed it to CRYPTO_realloc/CRYPTO_clear_realloc",
+      "before": "A safe in-crate caller could fabricate any pointer, including one that is not NUL-terminated or does not outlive the owner. The stored coordinate then reached the allocator seam at release/growth, where an installed hook or failure diagnostic may read it as a C string. Current call sites were static, but the coordinate was not inexpressible.",
+      "after": "OwnedBuf stores `file: SeamFile`. Both safe constructors take `SeamFile`; the raw pointer is derived with `file.as_ptr()` only at the CRYPTO_malloc/CRYPTO_free/CRYPTO_realloc/CRYPTO_clear_realloc call. Safe callers can only supply `SeamFile::new(&'static CStr)` or `SeamFile::NULL`.",
+      "mechanism": "ELIMINATED: a non-NUL-terminated or short-lived coordinate is no longer expressible through a safe constructor; the static-lifetime precondition is carried by the type.",
+      "hidden": 0,
+      "state": "FIXED (author; not independently checked)"
+    },
+    {
+      "id": "B38-ERR-6c",
+      "file": "src/asn1/text.rs:441, 639 (a2i_ASN1_INTEGER, a2i_ASN1_STRING)",
+      "operation": "call sites of OwnedBuf::empty",
+      "before": "Passed `F_INT_FILE.as_ptr()` / `F_STRING_FILE.as_ptr()`, raw pointers to static module constants.",
+      "after": "Pass `SeamFile::new(F_INT_FILE)` / `SeamFile::new(F_STRING_FILE)`. Both constants are `&'static CStr`, so the constructor's static-lifetime requirement is checked by the compiler.",
+      "mechanism": "RELOCATED to the typed call; no dynamic coordinate exists, so no `unsafe fn ..._dynamic` route was added and `SeamFile::from_static_ptr` was not used.",
+      "hidden": 0,
+      "state": "FIXED (author; not independently checked)"
+    }
+  ],
+  "constructor_disposition": {
+    "converted_to_SeamFile": [
+      "src/asn1/text.rs:102 OwnedBuf::empty (raw *const c_char -> SeamFile; the struct field also became SeamFile)"
+    ],
+    "already_SeamFile": [
+      "src/asn1/text.rs:82 OwnedBuf::new (converted in B36; now stores the SeamFile instead of re-extracting a raw pointer)"
+    ],
+    "sibling_constructors_checked": [
+      "src/asn1/p5_pbe.rs:75 SaltBuf::new (already SeamFile)",
+      "src/asn1/p5_pbev2.rs:94 SaltBuf::new (already SeamFile)",
+      "src/apps/mac.rs:98 OwnedBuf::new (already SeamFile)",
+      "the remaining B36-converted allocation helpers (already SeamFile)"
+    ],
+    "dynamic_route_added": false,
+    "call_sites_updated": 2,
+    "from_static_ptr_added": false
+  },
+  "safe_interface_control": {
+    "type_level": "OwnedBuf::file is `SeamFile`; SeamFile has a private field and only `new(&'static CStr)` / `NULL` as safe constructors. There is no From<*const c_char>, public field or safe arbitrary-pointer constructor.",
+    "compile_time": "src/asn1/text.rs `#[cfg(test)] mod tests` binds both private constructors: `fn(SeamFile, c_int) -> OwnedBuf` for empty and `fn(usize, SeamFile, c_int) -> Option<OwnedBuf>` for new. A regression to *const c_char fails to compile. `cargo clippy --all-targets` compiled the test target.",
+    "focused_control": "asn1::text::tests::empty_starts_at_a_typed_static_coordinate constructs an empty buffer at a static SeamFile and asserts the block is NULL; Drop is the authority's `CRYPTO_free(NULL, file, line)`.",
+    "compile_fail_harness": "NOT_RUN: trybuild is not a dependency. The const assertions lock both constructor signatures at compile time."
+  },
+  "controls": [
+    {
+      "id": "FAST-FMT",
+      "instrument": "cargo fmt --all -- --check",
+      "result": "PASS",
+      "observed": "clean, RC=0"
+    },
+    {
+      "id": "FAST-FOCUSED",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib asn1::text -- --test-threads=1",
+      "result": "PASS",
+      "observed": "1 passed; 0 failed; 0 ignored; 1738 filtered out; finished in 0.00s"
+    },
+    {
+      "id": "BATCH-CLIPPY",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "observed": "Finished dev profile; RC=0"
+    },
+    {
+      "id": "BATCH-TESTS-SERIAL",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib",
+      "result": "PASS",
+      "observed": "1708 passed; 0 failed; 31 ignored; finished in 68.80s"
+    },
+    {
+      "id": "BATCH-TESTS-T4",
+      "instrument": "CARGO_BUILD_JOBS=4 cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "observed": "1708 passed; 0 failed; 31 ignored; finished in 110.78s"
+    },
+    {
+      "id": "STRUCTURAL",
+      "instrument": "git diff -U0 -- src/asn1/text.rs filtered for added #[no_mangle], #[repr(C)], pub unsafe extern \"C\" or pub extern \"C\" lines",
+      "result": "PASS",
+      "observed": "0 matching added lines; mem_coords.rs and mem.rs unchanged"
+    }
+  ],
+  "not_run": [
+    {
+      "check": "Miri (Stacked Borrows / Tree Borrows)",
+      "reason": "NOT_RUN: this change moves an existing pointer into a typed field and extracts it at the same CRYPTO_* calls; it adds no alias, no allocation, no reference construction and no new unsafe operation, so the task's aliasing/allocation trigger is absent."
+    },
+    {
+      "check": "ASan / TSan",
+      "reason": "NOT_RUN: allocation extents, release path and threading behaviour are unchanged; only the Rust-side coordinate type changed. The focused test exercises the NULL release, not a new allocation path."
+    },
+    {
+      "check": "independent re-adjudication",
+      "reason": "This is an author repair; AGENTS.md section 15 requires a non-author reviewer. Status PENDING."
+    },
+    {
+      "check": "authority differential and full SEAL closure",
+      "reason": "No behavioural change is claimed or expected: the same pointer reaches the same allocator call with the same size/file/line. A differential/SEAL run is a boundary-gate decision, not part of this repair."
+    }
+  ],
+  "obligations": {
+    "discharged": [],
+    "retained_obligation_closed": [
+      "B37 cross-mechanism retained item: asn1::text::OwnedBuf::empty accepted and stored a raw *const c_char whose Drop/growth passed it to CRYPTO_free/CRYPTO_realloc; the coordinate is now a SeamFile. CLOSED AT THE TYPE LEVEL (author evidence; independent check pending)."
+    ],
+    "retained": [
+      "NEO-ERR-3 destination provenance: external ABI contract only (no runtime marker)",
+      "NEO-ERR-4 source extent: external ABI contract only (bounded copy would change behaviour)",
+      "R-ERR-1 thread-local ErrState has no Drop (authority parity; resource residual)",
+      "R-ERR-8 GNU strerror_r ABI assumption",
+      "R-ERR-9 C adapter probe is outside cargo test"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "NO_NEW_MECHANISM_DISCHARGE",
+    "independently_checked": false,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "B38 closes the B37-disclosed residual at the type level and claims no graduation. The independent reviewer must re-derive the constructor closure, inspect the typed call sites, and re-run the recorded controls before any promotion."
+  },
+  "non_claims": [
+    "Not a SAFE_COMPATIBLE promotion; consumer count remains 0/33.",
+    "Not a new mechanism discharge and not an independent check; the author wrote the repair and the evidence.",
+    "Not a proof that every same-shaped private owner in the crate was enumerated; the scan covered asn1::text and the B36 sibling list, and the independent reviewer must re-run it.",
+    "Miri/ASan/TSan were not run because no aliasing or allocation path changed beyond the type."
+  ]
+}

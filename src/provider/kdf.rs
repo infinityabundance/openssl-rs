@@ -43,6 +43,26 @@
 //! `configuration.h` has it. `EVP_MD_CTX_create`/`_destroy` are the authority's macros for
 //! `EVP_MD_CTX_new`/`_free`.
 //!
+//! ## Ownership
+//!
+//! Each KDF unit's context block is an owned [`OwnedCtx`]: `*_new` allocates it through the
+//! crate's allocator seam and hands out its address as `*mut c_void`, and the matching `*_free`
+//! reclaims the owner, whose `Drop` runs the unit's `KdfDestroy::destroy_body` (the authority's
+//! own `*_free` body) and then releases the block. No `*_free` writes a `CRYPTO_free` for its
+//! context any more, and the error paths of every `*_dup` release through the same `Drop`.
+//!
+//! A handful of self-contained scratch buffers (KBKDF's `k_i`, SCRYPT's `B`, PBKDF1's `skey`,
+//! Argon2's threaded-fill arrays and TLS1-PRF's second-half block) are owned [`OwnedBuf`]s whose
+//! `Drop` is the authority's `CRYPTO_free`/`CRYPTO_clear_free`; their tail and error-path frees
+//! were hand-written and are now the handle's.
+//!
+//! The blocks stay `CRYPTO_*` allocations at the authority's exact sizes rather than Rust `Box`es
+//! -- a caller-installed `CRYPTO_set_mem_functions` hook observes them exactly as it observes the
+//! authority's -- so ownership is expressed *above* the seam and the seam is the residual raw
+//! boundary. Each `#[repr(C)]` context keeps its layout and its `unsigned char *`/`size_t` member
+//! pairs unchanged; the member buffers themselves are still released by the context's (relocated)
+//! free body, and making *them* owned is the following unit.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
@@ -295,6 +315,354 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
     // `'static`; no caller state is touched.
     unsafe { raise_site(site) };
     0
+}
+
+/// The `__FILE__` a KDF unit's allocations name, and its whole context destructor.
+///
+/// `destroy_body` is the authority's `*_free` body *minus* the block release -- the member releases
+/// (digest/MAC/cipher teardown and the clear-frees of the key material) and the struct clear -- and
+/// `FILE` is the `__FILE__` the block's own release records. Implementing the trait on each
+/// `#[repr(C)]` context lets [`OwnedCtx`] run the right destructor from `Drop` without a
+/// `CRYPTO_free` written at any call site.
+///
+/// # Safety
+///
+/// An implementer takes on both halves of the contract, because the safe [`OwnedCtx::new`] builds
+/// the owner and its `Drop` runs the implementer's body through a safe interface:
+///
+/// * (a) **destructor** -- `destroy_body(ptr)` runs the authority's `*_free` member body **exactly
+///   once** for that object; it releases **exactly** the members the object owns -- the digest, MAC
+///   and cipher handles, the cleartext key material and the struct clear, every releaser the
+///   authority's own and accepting the not-yet-set NULL/zero state -- and **never** releases the
+///   enclosing block, which [`OwnedCtx`]'s `Drop` releases; and
+/// * (b) **zero-validity** -- an all-zero block of `Self` is a valid `Self` for which `destroy_body`
+///   and every operation the owner performs are sound. This is the obligation the safe
+///   [`OwnedCtx::new`] leans on: it validates a `CRYPTO_zalloc` block with no caller assertion.
+///
+/// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
+/// `destroy_body` on a value that is not a valid `Self`.
+unsafe trait KdfDestroy: Sized {
+    /// `__FILE__` for this unit's `CRYPTO_*` calls.
+    const FILE: *const c_char;
+
+    /// The authority's `*_free` body, without the block release [`OwnedCtx`]'s `Drop` performs.
+    ///
+    /// # Safety
+    /// `ptr` is a live context this unit allocated and has not released.
+    unsafe fn destroy_body(ptr: *mut Self);
+}
+
+/// An owned KDF context block.
+///
+/// The block keeps the authority's `#[repr(C)]` layout and its stable address (the C ABI hands it
+/// out as `*mut c_void` and takes it back in `*_free`), but its *ownership* is this type: `new`
+/// allocates it through the crate's allocator seam and `Drop` is its single release. The block
+/// stays a `CRYPTO_zalloc` at `size_of::<T>()` rather than a Rust `Box` on purpose -- a
+/// caller-installed `CRYPTO_set_mem_functions` hook observes the allocation and its size exactly as
+/// it observes the authority's, which a Rust global allocation would hide.
+struct OwnedCtx<T: KdfDestroy> {
+    ptr: ptr::NonNull<T>,
+}
+
+impl<T: KdfDestroy> OwnedCtx<T> {
+    /// Allocate a fresh, zeroed block of `T`'s size through the installed allocator, or `None` when
+    /// it answers NULL (the authority's refused `CRYPTO_zalloc`).
+    fn new() -> Option<OwnedCtx<T>> {
+        // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
+        // `size_of::<T>()` bytes, which is exactly `T`'s layout.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), T::FILE, LINE)
+        }
+        .cast::<T>();
+        ptr::NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
+    }
+
+    /// The stable address the C ABI hands out and takes back.
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Give up ownership of the block to the C caller's context pointer.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+
+    /// Reclaim a block a previous `into_raw` handed to the C caller, for release by `Drop`.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    unsafe fn from_raw(ptr: *mut T) -> Option<OwnedCtx<T>> {
+        ptr::NonNull::new(ptr).map(|ptr| OwnedCtx { ptr })
+    }
+}
+
+impl<T: KdfDestroy> Drop for OwnedCtx<T> {
+    /// The context destructor: the authority's `*_free` body ([`Self::destroy_body`]) followed by
+    /// the block release, through the same allocator seam the block was allocated on.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `new` allocated (or `from_raw` reclaimed) and this is its
+        // single release; `Drop` runs once, and `destroy_body` is the authority's own free body.
+        unsafe {
+            T::destroy_body(self.ptr.as_ptr());
+            CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE);
+        }
+    }
+}
+
+/// An owned seam byte buffer for a self-contained allocation.
+///
+/// `Drop` is the single release -- a `CRYPTO_clear_free` over `len` bytes when `clear`, otherwise a
+/// plain `CRYPTO_free` -- through the same allocator seam the block came from. Unlike [`OwnedCtx`]
+/// this handle is a function-local (never a `#[repr(C)]` field), so it may carry its own `__FILE__`
+/// and clearing flag without changing any layout. It replaces a scratch allocation whose manual
+/// frees -- both the tail free and every error-path free -- were written by hand.
+struct OwnedBuf {
+    ptr: *mut u8,
+    len: usize,
+    file: *const c_char,
+    clear: bool,
+}
+
+impl OwnedBuf {
+    /// Adopt a block `CRYPTO_malloc`/`CRYPTO_zalloc`/`CRYPTO_calloc` answered, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live block the crate's `CRYPTO_malloc`/`CRYPTO_zalloc`/`CRYPTO_calloc`
+    /// seam allocated in full for `len` bytes (not a sub-range) and aligned for `u8`; this frame
+    /// exclusively owns it and has not released it, and `len` is the block's own allocation length so
+    /// the `clear`-selected `CRYPTO_clear_free`/`CRYPTO_free` `Drop` release is exact.
+    unsafe fn take(ptr: *mut u8, len: usize, file: *const c_char, clear: bool) -> Option<OwnedBuf> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedBuf {
+                ptr,
+                len,
+                file,
+                clear,
+            })
+        }
+    }
+
+    /// The buffer's address, for the raw C calls the derivation makes.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is a block from this allocator (or NULL, a no-op) that `Drop` has not
+        // released before, and `self.len` is the length it was allocated with; `clear` selects the
+        // authority's cleanse-then-free.
+        unsafe {
+            if self.clear {
+                CRYPTO_clear_free(self.ptr.cast(), self.len, self.file, LINE);
+            } else {
+                CRYPTO_free(self.ptr.cast(), self.file, LINE);
+            }
+        }
+    }
+}
+
+// The per-context destructors: each is exactly what its unit's `*_free` performed by hand, minus
+// the block release `OwnedCtx`'s `Drop` now owns. The member releases stay the authority's own
+// `CRYPTO_free`/`CRYPTO_clear_free`/`EVP_*_free` calls, relocated to the context's `Drop`.
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfSskdf {
+    const FILE: *const c_char = FILE_SSKDF;
+    unsafe fn destroy_body(ptr: *mut KdfSskdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { sskdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfX942 {
+    const FILE: *const c_char = FILE_X942;
+    unsafe fn destroy_body(ptr: *mut KdfX942) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { x942kdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPkcs12 {
+    const FILE: *const c_char = FILE_PKCS12KDF;
+    unsafe fn destroy_body(ptr: *mut KdfPkcs12) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pkcs12kdf_cleanup(ptr) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfSshkdf {
+    const FILE: *const c_char = FILE_SSHKDF;
+    unsafe fn destroy_body(ptr: *mut KdfSshkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { sshkdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPbkdf2 {
+    const FILE: *const c_char = FILE_PBKDF2;
+    unsafe fn destroy_body(ptr: *mut KdfPbkdf2) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pbkdf2_cleanup(ptr) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfHkdf {
+    const FILE: *const c_char = FILE_HKDF;
+    unsafe fn destroy_body(ptr: *mut KdfHkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract; `on_free` is 1, as `hkdf_free`
+        // passes it.
+        unsafe { hkdf_reset_ex(ptr.cast(), 1) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Tls1Prf {
+    const FILE: *const c_char = FILE_TLS1_PRF;
+    unsafe fn destroy_body(ptr: *mut Tls1Prf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { tls1_prf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Kbkdf {
+    const FILE: *const c_char = FILE_KBKDF;
+    unsafe fn destroy_body(ptr: *mut Kbkdf) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { kbkdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfScrypt {
+    const FILE: *const c_char = FILE_SCRYPT;
+    unsafe fn destroy_body(ptr: *mut KdfScrypt) {
+        // SAFETY: `ptr` is a live context per the trait contract; the property query and the copied
+        // digest are released before the reset body, exactly as `kdf_scrypt_free` has them.
+        unsafe {
+            CRYPTO_free((*ptr).propq.cast(), FILE_SCRYPT, LINE);
+            EVP_MD_free((*ptr).sha256);
+            kdf_scrypt_reset(ptr.cast());
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for Krb5kdfCtx {
+    const FILE: *const c_char = FILE_KRB5KDF;
+    unsafe fn destroy_body(ptr: *mut Krb5kdfCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { krb5kdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfHmacDrbg {
+    const FILE: *const c_char = FILE_HMACDRBG_KDF;
+    unsafe fn destroy_body(ptr: *mut KdfHmacDrbg) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { hmac_drbg_kdf_reset(ptr.cast()) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block -- plus the
+// matrix a failed derivation may have left (the authority leaks it; see `argon2_release_memory`).
+// (b) holds: an all-zero context is valid with every release a no-op -- what the safe
+// `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfArgon2 {
+    const FILE: *const c_char = FILE_ARGON2;
+    unsafe fn destroy_body(ptr: *mut KdfArgon2) {
+        // SAFETY: `ptr` is a live context per the trait contract; the four buffers are the
+        // authority's `kdf_argon2_free` releases, each a clear-free over its own length.
+        unsafe {
+            // The matrix is not part of the authority's `*_free` body, but a failed derivation
+            // can leave it live; release it before the members and the enclosing block.
+            argon2_release_memory(ptr);
+            if !(*ptr).pwd.is_null() {
+                CRYPTO_clear_free((*ptr).pwd.cast(), (*ptr).pwdlen as usize, FILE_ARGON2, LINE);
+            }
+            if !(*ptr).salt.is_null() {
+                CRYPTO_clear_free(
+                    (*ptr).salt.cast(),
+                    (*ptr).saltlen as usize,
+                    FILE_ARGON2,
+                    LINE,
+                );
+            }
+            if !(*ptr).secret.is_null() {
+                CRYPTO_clear_free(
+                    (*ptr).secret.cast(),
+                    (*ptr).secretlen as usize,
+                    FILE_ARGON2,
+                    LINE,
+                );
+            }
+            if !(*ptr).ad.is_null() {
+                CRYPTO_clear_free((*ptr).ad.cast(), (*ptr).adlen as usize, FILE_ARGON2, LINE);
+            }
+            EVP_MD_free((*ptr).md);
+            EVP_MAC_free((*ptr).mac);
+            CRYPTO_free((*ptr).propq.cast(), FILE_ARGON2, LINE);
+            ptr::write_bytes(ptr.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
+        }
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPbkdf1 {
+    const FILE: *const c_char = FILE_PBKDF1;
+    unsafe fn destroy_body(ptr: *mut KdfPbkdf1) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pbkdf1_cleanup(ptr) };
+    }
+}
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `*_free` body minus the block -- exactly the
+// context's own members, each releaser NULL/zero tolerant, never the enclosing block. (b) holds: an
+// all-zero context is valid with every release a no-op -- what the safe `OwnedCtx::new` leans on.
+unsafe impl KdfDestroy for KdfPvk {
+    const FILE: *const c_char = FILE_PVKKDF;
+    unsafe fn destroy_body(ptr: *mut KdfPvk) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe { pvk_cleanup(ptr) };
+    }
 }
 
 /// `struct sskdf_all_set_ctx_params_st` — `sskdf.c:540-554`, without its two FIPS fields.
@@ -619,14 +987,13 @@ unsafe fn kmac_init(
         }
     }
 
-    if kmac_out_len == 0 {
-        kmac_out_len = derived_key_len;
-    } else if !(kmac_out_len == derived_key_len
-        || kmac_out_len == 20
-        || kmac_out_len == 28
-        || kmac_out_len == 32
-        || kmac_out_len == 48
-        || kmac_out_len == 64)
+    kmac_out_len = sskdf_kmac_alloc_len(kmac_out_len, derived_key_len);
+    if kmac_out_len != derived_key_len
+        && !(kmac_out_len == 20
+            || kmac_out_len == 28
+            || kmac_out_len == 32
+            || kmac_out_len == 48
+            || kmac_out_len == 64)
     {
         return 0;
     }
@@ -647,6 +1014,20 @@ unsafe fn kmac_init(
         }
     }
     1
+}
+
+/// The length `kmac_init` allocates the KMAC output buffer at: the caller's `kmac_out_len` when
+/// set, otherwise `derived_key_len` (`sskdf.c:189-191`). The authority's defaulting is local to
+/// `kmac_init` (its parameter is by value), so after it returns the caller's `kmac_out_len` is
+/// still zero when the parameter was defaulted. The authority's `end:` label then clear-frees the
+/// buffer with that zero and cleanses nothing; this helper is the length that was actually
+/// allocated, which is what the release here must use.
+fn sskdf_kmac_alloc_len(kmac_out_len: usize, derived_key_len: usize) -> usize {
+    if kmac_out_len == 0 {
+        derived_key_len
+    } else {
+        kmac_out_len
+    }
 }
 
 /// `static int SSKDF_mac_kdm(...)` — `sskdf.c:225-297`.
@@ -701,7 +1082,12 @@ unsafe fn sskdf_mac_kdm(
         // SAFETY: the locals are this frame's.
         unsafe {
             if !kmac_buffer.is_null() {
-                CRYPTO_clear_free(kmac_buffer.cast(), derived_key_len, FILE_SSKDF, LINE);
+                CRYPTO_clear_free(
+                    kmac_buffer.cast(),
+                    sskdf_kmac_alloc_len(kmac_out_len, derived_key_len),
+                    FILE_SSKDF,
+                    LINE,
+                );
             }
         }
         return 0;
@@ -714,7 +1100,13 @@ unsafe fn sskdf_mac_kdm(
     if unsafe { EVP_MAC_init(ctx_init, salt, salt_len, ptr::null()) } == 0 {
         // SAFETY: the two locals are this frame's.
         return unsafe {
-            sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr())
+            sskdf_mac_kdm_cleanup(
+                ret,
+                kmac_buffer,
+                kmac_out_len,
+                derived_key_len,
+                mac_buf.as_mut_ptr(),
+            )
         };
     }
 
@@ -724,7 +1116,13 @@ unsafe fn sskdf_mac_kdm(
     if out_len == 0 || (mac == mac_buf.as_mut_ptr() && out_len > mac_buf.len()) {
         // SAFETY: the two locals are this frame's.
         return unsafe {
-            sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr())
+            sskdf_mac_kdm_cleanup(
+                ret,
+                kmac_buffer,
+                kmac_out_len,
+                derived_key_len,
+                mac_buf.as_mut_ptr(),
+            )
         };
     }
 
@@ -785,24 +1183,45 @@ unsafe fn sskdf_mac_kdm(
     }
 
     // SAFETY: the two locals are this frame's.
-    unsafe { sskdf_mac_kdm_cleanup(ret, kmac_buffer, kmac_out_len, mac_buf.as_mut_ptr()) }
+    unsafe {
+        sskdf_mac_kdm_cleanup(
+            ret,
+            kmac_buffer,
+            kmac_out_len,
+            derived_key_len,
+            mac_buf.as_mut_ptr(),
+        )
+    }
 }
 
 /// The `end:` label of `sskdf.c`'s `SSKDF_mac_kdm`: release the KMAC buffer if one was taken,
 /// otherwise cleanse the stack buffer, and answer `ret`.
 ///
+/// §17 divergence: the authority's `end:` label clear-frees `kmac_buffer` with the caller's
+/// `kmac_out_len`, which is still zero when that parameter was defaulted (the defaulting in
+/// `kmac_init` modifies its by-value copy only). That frees the block without cleansing it. Here
+/// the allocation length is computed at the point of use, so the cleanse covers the block that
+/// was allocated.
+///
 /// # Safety
-/// `kmac_buffer` NULL or an allocation this crate owns; `mac_buf` a live 64-byte buffer.
+/// `kmac_buffer` NULL or an allocation this crate owns at `sskdf_kmac_alloc_len(kmac_out_len,
+/// derived_key_len)` bytes; `mac_buf` a live 64-byte buffer.
 unsafe fn sskdf_mac_kdm_cleanup(
     ret: c_int,
     kmac_buffer: *mut u8,
     kmac_out_len: usize,
+    derived_key_len: usize,
     mac_buf: *mut u8,
 ) -> c_int {
     // SAFETY: the two pointers are per the contract.
     unsafe {
         if !kmac_buffer.is_null() {
-            CRYPTO_clear_free(kmac_buffer.cast(), kmac_out_len, FILE_SSKDF, LINE);
+            CRYPTO_clear_free(
+                kmac_buffer.cast(),
+                sskdf_kmac_alloc_len(kmac_out_len, derived_key_len),
+                FILE_SSKDF,
+                LINE,
+            );
         } else {
             cleanse(mac_buf, EVP_MAX_MD_SIZE);
         }
@@ -820,12 +1239,13 @@ unsafe extern "C" fn sskdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfSskdf>(), FILE_SSKDF, LINE).cast::<KdfSskdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        // The context block, allocated through the crate's allocator seam and owned by `ctx` until
+        // it is handed to the caller below.
+        let Some(ctx) = OwnedCtx::<KdfSskdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -856,13 +1276,8 @@ unsafe fn sskdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sskdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            sskdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_SSKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfSskdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *sskdf_dup(void *vctx)` — `sskdf.c:337-366`.
@@ -1918,13 +2333,12 @@ unsafe extern "C" fn x942kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfX942>(), FILE_X942, LINE).cast::<KdfX942>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfX942>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        (*ctx).use_keybits = 1;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        (*ctx.as_ptr()).use_keybits = 1;
+        ctx.into_raw().cast()
     }
 }
 
@@ -1976,13 +2390,8 @@ unsafe fn x942kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn x942kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            x942kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_X942, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfX942>::from_raw(vctx.cast())) };
 }
 
 /// `static void *x942kdf_dup(void *vctx)` — `x942kdf.c:383-417`.
@@ -2495,7 +2904,11 @@ unsafe fn pkcs12kdf_derive(
         let mut b: *mut u8 = ptr::null_mut();
         let mut d: *mut u8 = ptr::null_mut();
         let mut i_buf: *mut u8 = ptr::null_mut();
+        let mut i_buf_len: usize = 0;
         let mut ai: *mut u8 = ptr::null_mut();
+        let mut d_len: usize = 0;
+        let mut ai_len: usize = 0;
+        let mut b_len: usize = 0;
         let mut ret: c_int = 0;
         let mut n = n_in;
         let mut out = out;
@@ -2512,16 +2925,26 @@ unsafe fn pkcs12kdf_derive(
                 }
                 let u = ui as usize;
                 let v = vi as usize;
+                d_len = v;
+                ai_len = u;
+                b_len = v + 1;
                 d = CRYPTO_malloc(v, FILE_PKCS12KDF, LINE).cast();
                 ai = CRYPTO_malloc(u, FILE_PKCS12KDF, LINE).cast();
                 b = CRYPTO_malloc(v + 1, FILE_PKCS12KDF, LINE).cast();
-                let slen = v * saltlen.div_ceil(v);
-                let plen = if passlen != 0 {
-                    v * passlen.div_ceil(v)
-                } else {
-                    0
+                let Some(slen) = v.checked_mul(saltlen.div_ceil(v)) else {
+                    break 'end;
                 };
-                let ilen = slen + plen;
+                let Some(plen) = (if passlen != 0 {
+                    v.checked_mul(passlen.div_ceil(v))
+                } else {
+                    Some(0)
+                }) else {
+                    break 'end;
+                };
+                let Some(ilen) = slen.checked_add(plen) else {
+                    break 'end;
+                };
+                i_buf_len = ilen;
                 i_buf = CRYPTO_malloc(ilen, FILE_PKCS12KDF, LINE).cast();
                 if d.is_null() || ai.is_null() || b.is_null() || i_buf.is_null() {
                     break 'end;
@@ -2584,10 +3007,15 @@ unsafe fn pkcs12kdf_derive(
             }
         }
 
-        CRYPTO_free(ai.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(b.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(d.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(i_buf.cast(), FILE_PKCS12KDF, LINE);
+        /* §17 divergence: `ai` is the derived key and `b` is its block copy; both are
+         * secret-derived. `d` is the id repeated, cleansed with them for uniformity. The
+         * authority plain-frees all three; release them over their allocation lengths. */
+        CRYPTO_clear_free(ai.cast(), ai_len, FILE_PKCS12KDF, LINE);
+        CRYPTO_clear_free(b.cast(), b_len, FILE_PKCS12KDF, LINE);
+        CRYPTO_clear_free(d.cast(), d_len, FILE_PKCS12KDF, LINE);
+        /* §17 divergence: `i_buf` holds the password/salt concatenation (secret material). The
+         * authority plain-frees it; clear it over the length it was allocated at. */
+        CRYPTO_clear_free(i_buf.cast(), i_buf_len, FILE_PKCS12KDF, LINE);
         EVP_MD_CTX_free(ctx);
         ret
     }
@@ -2603,13 +3031,11 @@ unsafe extern "C" fn pkcs12kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPkcs12>(), FILE_PKCS12KDF, LINE)
-            .cast::<KdfPkcs12>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPkcs12>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -2632,13 +3058,8 @@ unsafe fn pkcs12kdf_cleanup(ctx: *mut KdfPkcs12) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pkcs12kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pkcs12kdf_cleanup(vctx.cast::<KdfPkcs12>());
-            CRYPTO_free(vctx, FILE_PKCS12KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPkcs12>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pkcs12_reset(void *vctx)` — `pkcs12kdf.c:175-182`. The `provctx` is saved
@@ -3100,12 +3521,11 @@ unsafe extern "C" fn sshkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfSshkdf>(), FILE_SSHKDF, LINE).cast::<KdfSshkdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<KdfSshkdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -3139,13 +3559,8 @@ unsafe fn sshkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn sshkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            sshkdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_SSHKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfSshkdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_sshkdf_dup(void *vctx)` — `sshkdf.c:96-119`.
@@ -3588,6 +4003,15 @@ unsafe fn pbkdf2_derive(
             return 0;
         }
 
+        // Deliberate §17 divergence: the authority truncates these sizes to `int` at the HMAC
+        // boundary. Refuse before any allocation or buffer read. Exact refused set:
+        // `passlen > i32::MAX`; `saltlen < 0` is a defensive check (the provider entry point
+        // refuses every `salt_len > i32::MAX` before casting). `keylen` is **not** refused: the
+        // loop below is widened to `usize`.
+        if passlen > c_int::MAX as usize || saltlen < 0 {
+            return 0;
+        }
+
         /*
          * This check should always be done because keylen / mdlen >= (2^32 - 1)
          * results in an overflow of the loop counter 'i'.
@@ -3605,7 +4029,7 @@ unsafe fn pbkdf2_derive(
             return 0;
         }
         let mut p = key;
-        let mut tkeylen = keylen as c_int;
+        let mut tkeylen: usize = keylen;
 
         'err: {
             if HMAC_Init_ex(
@@ -3624,7 +4048,11 @@ unsafe fn pbkdf2_derive(
             }
             let mut i: c_ulong = 1;
             while tkeylen != 0 {
-                let cplen = if tkeylen > mdlen { mdlen } else { tkeylen };
+                let cplen = if tkeylen > mdlen as usize {
+                    mdlen as usize
+                } else {
+                    tkeylen
+                };
                 /*
                  * We are unlikely to ever use more than 256 blocks (5120 bits!) but
                  * just in case...
@@ -3642,7 +4070,7 @@ unsafe fn pbkdf2_derive(
                 {
                     break 'err;
                 }
-                ptr::copy_nonoverlapping(digtmp.as_ptr(), p, cplen as usize);
+                ptr::copy_nonoverlapping(digtmp.as_ptr(), p, cplen);
                 let mut j: u64 = 1;
                 while j < iter {
                     if HMAC_CTX_copy(hctx, hctx_tpl) == 0 {
@@ -3653,20 +4081,23 @@ unsafe fn pbkdf2_derive(
                     {
                         break 'err;
                     }
-                    for (k, byte) in digtmp.iter().enumerate().take(cplen as usize) {
+                    for (k, byte) in digtmp.iter().enumerate().take(cplen) {
                         *p.add(k) ^= byte;
                     }
                     j += 1;
                 }
                 tkeylen -= cplen;
                 i += 1;
-                p = p.add(cplen as usize);
+                p = p.add(cplen);
             }
             ret = 1;
         }
 
         HMAC_CTX_free(hctx);
         HMAC_CTX_free(hctx_tpl);
+        // `digtmp` holds the derived U value on every path that reached the loop; cleanse it
+        // before returning (the authority leaves it on the stack).
+        cleanse(digtmp.as_mut_ptr().cast(), digtmp.len());
         ret
     }
 }
@@ -3705,13 +4136,11 @@ unsafe extern "C" fn pbkdf2_new_no_init(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf2>(), FILE_PBKDF2, LINE).cast::<KdfPbkdf2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPbkdf2>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -3750,13 +4179,8 @@ unsafe fn pbkdf2_cleanup(ctx: *mut KdfPbkdf2) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pbkdf2_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pbkdf2_cleanup(vctx.cast::<KdfPbkdf2>());
-            CRYPTO_free(vctx, FILE_PBKDF2, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPbkdf2>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pbkdf2_reset(void *vctx)` — `pbkdf2.c:119-127`.
@@ -3866,6 +4290,12 @@ unsafe extern "C" fn pbkdf2_ctx_derive(
         }
         if (*ctx).salt.is_null() {
             return fail_at(&err_sites::PROV_PBKDF2_275);
+        }
+        // Deliberate §17 divergence: refuse every salt length above `i32::MAX` *before* the cast
+        // below, so the `k * 2^32 + r` truncation cannot silently use a prefix. The authority
+        // casts to `int` and truncates. Exact refused set: `salt_len > i32::MAX`.
+        if (*ctx).salt_len > c_int::MAX as usize {
+            return 0;
         }
         let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
         pbkdf2_derive(
@@ -4681,11 +5111,11 @@ unsafe extern "C" fn hkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfHkdf>(), FILE_HKDF, LINE).cast::<KdfHkdf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<KdfHkdf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -4744,13 +5174,8 @@ unsafe extern "C" fn hkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn hkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            hkdf_reset_ex(vctx, 1);
-            CRYPTO_free(vctx, FILE_HKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfHkdf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_hkdf_dup(void *vctx)` — `hkdf.c:160-190`.
@@ -5814,10 +6239,14 @@ unsafe fn tls1_prf_alg(
                 return 0;
             }
 
-            let tmp = CRYPTO_malloc(olen, FILE_TLS1_PRF, LINE).cast::<u8>();
-            if tmp.is_null() {
+            let Some(tmp) = OwnedBuf::take(
+                CRYPTO_malloc(olen, FILE_TLS1_PRF, LINE).cast::<u8>(),
+                olen,
+                FILE_TLS1_PRF,
+                true,
+            ) else {
                 return 0;
-            }
+            };
 
             if tls1_prf_p_hash(
                 sha1ctx,
@@ -5825,17 +6254,15 @@ unsafe fn tls1_prf_alg(
                 l_s2,
                 seed,
                 seed_len,
-                tmp,
+                tmp.as_ptr(),
                 olen,
             ) == 0
             {
-                CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
                 return 0;
             }
             for i in 0..olen {
-                *out.add(i) ^= *tmp.add(i);
+                *out.add(i) ^= *tmp.as_ptr().add(i);
             }
-            CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
             return 1;
         }
 
@@ -5858,12 +6285,11 @@ unsafe extern "C" fn tls1_prf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<Tls1Prf>(), FILE_TLS1_PRF, LINE).cast::<Tls1Prf>();
-        if !ctx.is_null() {
-            (*ctx).provctx = provctx;
-        }
-        ctx.cast()
+        let Some(ctx) = OwnedCtx::<Tls1Prf>::new() else {
+            return ptr::null_mut();
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -5892,13 +6318,8 @@ unsafe fn tls1_prf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn tls1_prf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            tls1_prf_reset(vctx);
-            CRYPTO_free(vctx, FILE_TLS1_PRF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Tls1Prf>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_tls1_prf_dup(void *vctx)` — `tls1_prf.c:158-183`. Each MAC context is
@@ -6571,13 +6992,12 @@ unsafe extern "C" fn kbkdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Kbkdf>(), FILE_KBKDF, LINE).cast::<Kbkdf>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<Kbkdf>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        kbkdf_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        kbkdf_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -6608,18 +7028,15 @@ unsafe fn kbkdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kbkdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            kbkdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_KBKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Kbkdf>::from_raw(vctx.cast())) };
 }
 
-/// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`. `EVP_MAC_CTX_dup` is called
-/// unconditionally, exactly as the authority does: a NULL `ctx_init` faults on both sides, which
-/// is the authority's own contract (`EVP_MAC_CTX_dup` dereferences its argument).
+/// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`.
+///
+/// The MAC context is duplicated only when the source has one: an un-derived but otherwise
+/// parameterized KBKDF context is validly duplicable, and its duplicate keeps `ctx_init == NULL`.
+/// A non-NULL `ctx_init` that cannot be duplicated refuses the whole duplication.
 ///
 /// # Safety
 /// The dispatch contract.
@@ -6631,14 +7048,19 @@ unsafe extern "C" fn kbkdf_dup(vctx: *mut c_void) -> *mut c_void {
         if dest.is_null() {
             return ptr::null_mut();
         }
-        (*dest).ctx_init = EVP_MAC_CTX_dup((*src).ctx_init);
-        if (*dest).ctx_init.is_null()
-            || ossl_prov_memdup(
-                (*src).ki.cast(),
-                (*src).ki_len,
-                ptr::addr_of_mut!((*dest).ki),
-                ptr::addr_of_mut!((*dest).ki_len),
-            ) == 0
+        if !(*src).ctx_init.is_null() {
+            (*dest).ctx_init = EVP_MAC_CTX_dup((*src).ctx_init);
+            if (*dest).ctx_init.is_null() {
+                kbkdf_free(dest.cast());
+                return ptr::null_mut();
+            }
+        }
+        if ossl_prov_memdup(
+            (*src).ki.cast(),
+            (*src).ki_len,
+            ptr::addr_of_mut!((*dest).ki),
+            ptr::addr_of_mut!((*dest).ki_len),
+        ) == 0
             || ossl_prov_memdup(
                 (*src).label.cast(),
                 (*src).label_len,
@@ -6713,9 +7135,6 @@ unsafe extern "C" fn kbkdf_ctx_derive(
     unsafe {
         let ctx = vctx.cast::<Kbkdf>();
         let mut ret: c_int = 0;
-        let mut k_i: *mut u8 = ptr::null_mut();
-        let mut l: u32 = 0;
-        let mut h: usize = 0;
 
         if is_running() == 0 || kbkdf_set_ctx_params(vctx, params) == 0 {
             return 0;
@@ -6748,7 +7167,7 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 break 'done;
             }
 
-            h = EVP_MAC_CTX_get_mac_size((*ctx).ctx_init);
+            let h = EVP_MAC_CTX_get_mac_size((*ctx).ctx_init);
             if h == 0 {
                 break 'done;
             }
@@ -6767,14 +7186,20 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 }
             }
 
+            let mut l: u32 = 0;
             if (*ctx).use_l != 0 {
                 l = be32(keylen.wrapping_mul(8) as u32);
             }
 
-            k_i = CRYPTO_zalloc(h, FILE_KBKDF, LINE).cast::<u8>();
-            if k_i.is_null() {
+            // The per-block output, owned by `k_i`; its `Drop` is the authority's clear-free.
+            let Some(k_i) = OwnedBuf::take(
+                CRYPTO_zalloc(h, FILE_KBKDF, LINE).cast::<u8>(),
+                h,
+                FILE_KBKDF,
+                true,
+            ) else {
                 break 'done;
-            }
+            };
 
             ret = kbkdf_derive_inner(
                 (*ctx).ctx_init,
@@ -6785,7 +7210,7 @@ unsafe extern "C" fn kbkdf_ctx_derive(
                 (*ctx).label_len,
                 (*ctx).context,
                 (*ctx).context_len,
-                k_i,
+                k_i.as_ptr(),
                 h,
                 l,
                 (*ctx).use_separator,
@@ -6797,7 +7222,6 @@ unsafe extern "C" fn kbkdf_ctx_derive(
         if ret != 1 {
             cleanse(key, keylen);
         }
-        CRYPTO_clear_free(k_i.cast(), h, FILE_KBKDF, LINE);
         ret
     }
 }
@@ -7368,10 +7792,25 @@ unsafe fn scrypt_alg(
             return 1;
         }
 
-        let b: *mut u8 = CRYPTO_malloc((blen + vlen) as usize, FILE_SCRYPT, LINE).cast::<u8>();
-        if b.is_null() {
-            return 0;
+        // Deliberate §17 divergence: the authority casts these to `int` for the PBKDF2 calls
+        // below. Refuse before allocating or reading. Exact refused set: `passlen > i32::MAX`,
+        // `saltlen > i32::MAX`, or `keylen > i32::MAX`.
+        if passlen > c_int::MAX as usize
+            || saltlen > c_int::MAX as usize
+            || keylen > c_int::MAX as usize
+        {
+            return fail_at(&err_sites::PROV_SCRYPT_644);
         }
+
+        let Some(b_owner) = OwnedBuf::take(
+            CRYPTO_malloc((blen + vlen) as usize, FILE_SCRYPT, LINE).cast::<u8>(),
+            (blen + vlen) as usize,
+            FILE_SCRYPT,
+            true,
+        ) else {
+            return 0;
+        };
+        let b: *mut u8 = b_owner.as_ptr();
         let x: *mut u32 = b.add(blen as usize).cast::<u32>();
         let t: *mut u32 = x.add((32 * r) as usize);
         let v: *mut u32 = t.add((32 * r) as usize);
@@ -7419,7 +7858,6 @@ unsafe fn scrypt_alg(
             raise_site(&err_sites::PROV_SCRYPT_699);
         }
 
-        CRYPTO_clear_free(b.cast(), (blen + vlen) as usize, FILE_SCRYPT, LINE);
         rv
     }
 }
@@ -7453,14 +7891,12 @@ unsafe fn kdf_scrypt_new_inner(libctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfScrypt>(), FILE_SCRYPT, LINE).cast::<KdfScrypt>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfScrypt>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).libctx = libctx;
-        kdf_scrypt_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).libctx = libctx;
+        kdf_scrypt_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -7497,16 +7933,8 @@ unsafe fn kdf_scrypt_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kdf_scrypt_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            let ctx = vctx.cast::<KdfScrypt>();
-            CRYPTO_free((*ctx).propq.cast(), FILE_SCRYPT, LINE);
-            EVP_MD_free((*ctx).sha256);
-            kdf_scrypt_reset(vctx);
-            CRYPTO_free(vctx, FILE_SCRYPT, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfScrypt>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_scrypt_dup(void *vctx)` — `scrypt.c:107-137`.
@@ -7521,9 +7949,17 @@ unsafe extern "C" fn kdf_scrypt_dup(vctx: *mut c_void) -> *mut c_void {
         if dest.is_null() {
             return ptr::null_mut();
         }
-        if !(*src).sha256.is_null() && EVP_MD_up_ref((*src).sha256) == 0 {
-            kdf_scrypt_free(dest.cast());
-            return ptr::null_mut();
+        if !(*src).sha256.is_null() {
+            if EVP_MD_up_ref((*src).sha256) == 0 {
+                kdf_scrypt_free(dest.cast());
+                return ptr::null_mut();
+            }
+            /* The acquired reference is published on `dest` immediately, so every later failure
+             * (`propq` or either `ossl_prov_memdup`) releases it through `kdf_scrypt_free`.
+             * §17: the authority assigns `dest->sha256 = src->sha256` only after those copies, so
+             * its failure paths leak the up-ref; the fix is a resource-safety improvement and
+             * does not change any successful result. */
+            (*dest).sha256 = (*src).sha256;
         }
         if !(*src).propq.is_null() {
             (*dest).propq = CRYPTO_strdup((*src).propq, FILE_SCRYPT, LINE);
@@ -7552,7 +7988,6 @@ unsafe extern "C" fn kdf_scrypt_dup(vctx: *mut c_void) -> *mut c_void {
         (*dest).r = (*src).r;
         (*dest).p = (*src).p;
         (*dest).maxmem_bytes = (*src).maxmem_bytes;
-        (*dest).sha256 = (*src).sha256;
         dest.cast()
     }
 }
@@ -8190,6 +8625,17 @@ unsafe fn krb5kdf_alg(
             }
 
             if EVP_CIPHER_get_nid(cipher) == NID_des_ede3_cbc && des3_no_fixup == 0 {
+                /* §17 divergence: the authority's `fixup_des3_key` writes a fixed 24 bytes, so an
+                 * `okey_len` below 24 overflows the caller's buffer. That is a latent C overflow,
+                 * not a defined behaviour, and is not reproduced here: refuse the derivation with
+                 * the authority's own failure value (0) instead. The extent is otherwise reachable
+                 * with a variable-key-length 3DES method (the default provider's fixed 24-byte key
+                 * length is refused earlier by `cipher_init`). */
+                if okey_len < 24 {
+                    raise_site(&err_sites::PROV_KRB5KDF_618);
+                    ret = 0;
+                    break 'out;
+                }
                 ret = krb5kdf_fixup_des3_key(okey);
                 if ret == 0 {
                     raise_site(&err_sites::PROV_KRB5KDF_618);
@@ -8215,13 +8661,11 @@ unsafe extern "C" fn krb5kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<Krb5kdfCtx>(), FILE_KRB5KDF, LINE)
-            .cast::<Krb5kdfCtx>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<Krb5kdfCtx>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -8254,13 +8698,8 @@ unsafe fn krb5kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn krb5kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            krb5kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_KRB5KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<Krb5kdfCtx>::from_raw(vctx.cast())) };
 }
 
 /// `static int krb5kdf_set_membuf(unsigned char **dst, size_t *dst_len, const OSSL_PARAM *p)` —
@@ -8625,14 +9064,14 @@ unsafe extern "C" fn hmac_drbg_kdf_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfHmacDrbg>(), FILE_HMACDRBG_KDF, LINE)
-            .cast::<KdfHmacDrbg>();
-        if ctx.is_null() {
+        // The one unit in this module whose allocation failure is itself an error record: a refused
+        // `CRYPTO_zalloc` raises the authority's site and answers NULL.
+        let Some(ctx) = OwnedCtx::<KdfHmacDrbg>::new() else {
             raise_site(&err_sites::PROV_HMACDRBG_KDF_53);
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -8671,13 +9110,8 @@ unsafe fn hmac_drbg_kdf_reset(vctx: *mut c_void) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn hmac_drbg_kdf_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            hmac_drbg_kdf_reset(vctx);
-            CRYPTO_free(vctx, FILE_HMACDRBG_KDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfHmacDrbg>::from_raw(vctx.cast())) };
 }
 
 /// `static int ossl_drbg_hmac_dup(PROV_DRBG_HMAC *dst, const PROV_DRBG_HMAC *src)` —
@@ -8870,7 +9304,14 @@ unsafe extern "C" fn hmac_drbg_kdf_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p.ent, &mut ptr_, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free((*hmac).entropy.cast(), FILE_HMACDRBG_KDF, LINE);
+            // The incumbent entropy is secret; cleanse it over its allocation length before
+            // replacing it. The authority plain-frees it (AGENTS.md section 5).
+            CRYPTO_clear_free(
+                (*hmac).entropy.cast(),
+                (*hmac).entropylen,
+                FILE_HMACDRBG_KDF,
+                LINE,
+            );
             (*hmac).entropy = ptr_.cast();
             (*hmac).entropylen = size;
             (*hmac).init = 0;
@@ -8881,7 +9322,14 @@ unsafe extern "C" fn hmac_drbg_kdf_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p.nonce, &mut ptr_, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free((*hmac).nonce.cast(), FILE_HMACDRBG_KDF, LINE);
+            // The incumbent nonce is secret; cleanse it over its allocation length before
+            // replacing it. The authority plain-frees it (AGENTS.md section 5).
+            CRYPTO_clear_free(
+                (*hmac).nonce.cast(),
+                (*hmac).noncelen,
+                FILE_HMACDRBG_KDF,
+                LINE,
+            );
             (*hmac).nonce = ptr_.cast();
             (*hmac).noncelen = size;
             (*hmac).init = 0;
@@ -9843,30 +10291,35 @@ unsafe fn fill_mem_blocks_mt(ctx: *mut KdfArgon2) -> c_int {
         let lanes = (*ctx).lanes;
         let threads = (*ctx).threads;
 
-        let t = CRYPTO_calloc(
-            lanes as usize,
-            core::mem::size_of::<*mut c_void>(),
+        let t_owner = OwnedBuf::take(
+            CRYPTO_calloc(
+                lanes as usize,
+                core::mem::size_of::<*mut c_void>(),
+                FILE_ARGON2,
+                LINE,
+            )
+            .cast::<u8>(),
+            lanes as usize * core::mem::size_of::<*mut c_void>(),
             FILE_ARGON2,
-            LINE,
-        )
-        .cast::<*mut c_void>();
-        let t_data = CRYPTO_calloc(
-            lanes as usize,
-            core::mem::size_of::<Argon2ThreadData>(),
+            false,
+        );
+        let t_data_owner = OwnedBuf::take(
+            CRYPTO_calloc(
+                lanes as usize,
+                core::mem::size_of::<Argon2ThreadData>(),
+                FILE_ARGON2,
+                LINE,
+            )
+            .cast::<u8>(),
+            lanes as usize * core::mem::size_of::<Argon2ThreadData>(),
             FILE_ARGON2,
-            LINE,
-        )
-        .cast::<Argon2ThreadData>();
-
-        if t.is_null() || t_data.is_null() {
-            if !t_data.is_null() {
-                CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
-            }
-            if !t.is_null() {
-                CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
-            }
+            false,
+        );
+        let (Some(t_owner), Some(t_data_owner)) = (t_owner, t_data_owner) else {
             return 0;
-        }
+        };
+        let t = t_owner.as_ptr().cast::<*mut c_void>();
+        let t_data = t_data_owner.as_ptr().cast::<Argon2ThreadData>();
 
         let mut ok = true;
         'fill: for r in 0..(*ctx).passes {
@@ -9938,9 +10391,6 @@ unsafe fn fill_mem_blocks_mt(ctx: *mut KdfArgon2) -> c_int {
                 }
             }
         }
-
-        CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
-        CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
 
         c_int::from(ok)
     }
@@ -10094,10 +10544,28 @@ unsafe fn argon2_initialize(ctx: *mut KdfArgon2) -> c_int {
             return 0;
         }
 
-        let memory_blocks = (*ctx).memory_blocks as usize;
-        if memory_blocks.wrapping_mul(ARGON2_BLOCK_SIZE) / ARGON2_BLOCK_SIZE != memory_blocks {
+        let memory_blocks = (*ctx).memory_blocks;
+        // Deliberate §17 divergence. The authority's check at `argon2.c:732` is
+        // `memory_blocks * sizeof(BLOCK) / sizeof(BLOCK) != memory_blocks`; `sizeof` has type
+        // `size_t`, so on x86-64 the `uint32_t` operand is promoted and the predicate is always
+        // false. The authority therefore attempts the allocation. We refuse at the same 32-bit
+        // product boundary (`memory_blocks * 1024 > u32::MAX`) and raise the same reason as the
+        // allocation-failure path, which caps the working memory at 0x3FFFFF blocks. When the
+        // authority's allocation fails it raises the same `PROV_R_INVALID_MEMORY_SIZE` failure, so
+        // the observable difference is confined to hosts that can actually satisfy the request
+        // (under Linux overcommit even that is not guaranteed, since `calloc` may succeed lazily
+        // and fail later in `fill_memory_blocks`).
+        if memory_blocks
+            .checked_mul(ARGON2_BLOCK_SIZE as u32)
+            .is_none()
+        {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_741,
+                c"cannot allocate required memory".as_ptr(),
+            );
             return 0;
         }
+        let memory_blocks = memory_blocks as usize;
 
         if (*ctx).type_ != ARGON2_D {
             (*ctx).memory =
@@ -10125,6 +10593,35 @@ unsafe fn argon2_initialize(ctx: *mut KdfArgon2) -> c_int {
         cleanse(blockhash.as_mut_ptr(), ARGON2_PREHASH_SEED_LENGTH);
 
         1
+    }
+}
+
+/// Release the Argon2 matrix, exactly as `finalize` does, and clear the member so a second call
+/// is a no-op.
+///
+/// The authority releases the matrix only in `finalize`, so an `initialize`/`fill_memory_blocks`
+/// failure leaves it allocated and neither `reset` nor `free` releases it: that is a leak of
+/// secret-bearing storage on a failure path. This helper is the single release for the matrix on
+/// every path (success, failure, reset and free), and the NULL assignment is what makes the
+/// release exactly once. The clear-free pair matches the authority's `finalize`: the plain
+/// allocator for `ARGON2_D`, the secure one for `ARGON2_I`/`ARGON2_ID`.
+///
+/// # Safety
+/// `ctx` is NULL or a live context; a non-NULL `memory` is a live allocation of
+/// `memory_blocks * ARGON2_BLOCK_SIZE` bytes from the allocator selected by `type_`.
+unsafe fn argon2_release_memory(ctx: *mut KdfArgon2) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ctx.is_null() || (*ctx).memory.is_null() {
+            return;
+        }
+        let len = (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE;
+        if (*ctx).type_ != ARGON2_D {
+            CRYPTO_secure_clear_free((*ctx).memory.cast(), len, FILE_ARGON2, LINE);
+        } else {
+            CRYPTO_clear_free((*ctx).memory.cast(), len, FILE_ARGON2, LINE);
+        }
+        (*ctx).memory = ptr::null_mut();
     }
 }
 
@@ -10176,21 +10673,9 @@ unsafe fn argon2_finalize(ctx: *const KdfArgon2, out: *mut c_void) {
         cleanse(blockhash.v.as_mut_ptr().cast::<u8>(), ARGON2_BLOCK_SIZE);
         cleanse(blockhash_bytes.as_mut_ptr(), ARGON2_BLOCK_SIZE);
 
-        if (*ctx).type_ != ARGON2_D {
-            CRYPTO_secure_clear_free(
-                (*ctx).memory.cast(),
-                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
-                FILE_ARGON2,
-                LINE,
-            );
-        } else {
-            CRYPTO_clear_free(
-                (*ctx).memory.cast(),
-                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
+        // SAFETY: `ctx` is live with an allocated matrix per the contract; the helper clears the
+        // member so the later `reset`/`free` cannot release it a second time.
+        argon2_release_memory(ctx.cast_mut());
     }
 }
 
@@ -10469,16 +10954,14 @@ unsafe extern "C" fn kdf_argon2d_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_938);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_D);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_D);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10493,16 +10976,14 @@ unsafe extern "C" fn kdf_argon2i_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_957);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_I);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_I);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10517,16 +10998,14 @@ unsafe extern "C" fn kdf_argon2id_new(provctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
 
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfArgon2>::new() else {
             raise_site(&err_sites::PROV_ARGON2_976);
             return ptr::null_mut();
-        }
+        };
 
-        (*ctx).libctx = prov_libctx_of(provctx);
-        kdf_argon2_init(ctx, ARGON2_ID);
-        ctx.cast()
+        (*ctx.as_ptr()).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx.as_ptr(), ARGON2_ID);
+        ctx.into_raw().cast()
     }
 }
 
@@ -10535,44 +11014,10 @@ unsafe extern "C" fn kdf_argon2id_new(provctx: *mut c_void) -> *mut c_void {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn kdf_argon2_free(vctx: *mut c_void) {
-    let ctx = vctx.cast::<KdfArgon2>();
-
-    // SAFETY: `ctx` is NULL or live per the contract.
-    unsafe {
-        if ctx.is_null() {
-            return;
-        }
-
-        if !(*ctx).pwd.is_null() {
-            CRYPTO_clear_free((*ctx).pwd.cast(), (*ctx).pwdlen as usize, FILE_ARGON2, LINE);
-        }
-        if !(*ctx).salt.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).salt.cast(),
-                (*ctx).saltlen as usize,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
-        if !(*ctx).secret.is_null() {
-            CRYPTO_clear_free(
-                (*ctx).secret.cast(),
-                (*ctx).secretlen as usize,
-                FILE_ARGON2,
-                LINE,
-            );
-        }
-        if !(*ctx).ad.is_null() {
-            CRYPTO_clear_free((*ctx).ad.cast(), (*ctx).adlen as usize, FILE_ARGON2, LINE);
-        }
-
-        EVP_MD_free((*ctx).md);
-        EVP_MAC_free((*ctx).mac);
-        CRYPTO_free((*ctx).propq.cast(), FILE_ARGON2, LINE);
-
-        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
-        CRYPTO_free(vctx, FILE_ARGON2, LINE);
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it, and `Drop` performs the
+    // authority's `kdf_argon2_free` body -- the four clear-frees, the digest/MAC/property-query
+    // releases and the struct clear -- then releases the block.
+    unsafe { drop(OwnedCtx::<KdfArgon2>::from_raw(vctx.cast())) };
 }
 
 /// `static int kdf_argon2_derive(void *vctx, unsigned char *out, size_t outlen, const OSSL_PARAM
@@ -10682,7 +11127,20 @@ unsafe extern "C" fn kdf_argon2_derive(
             }
         }
 
-        if (*ctx).m_cost < 8 * (*ctx).lanes {
+        // `m_cost`, `lanes` and the block size are all caller-supplied. The authority does this
+        // sizing in `uint32_t`; every step below is checked so a future bound regression cannot
+        // wrap or panic. The current domains (`lanes <= 0xFFFFFF`, `m_cost <= u32::MAX`, and a
+        // quotient-multiply that is at most `m_cost`) make every `None` branch unreachable.
+        let lanes_per_sync = match (*ctx).lanes.checked_mul(ARGON2_SYNC_POINTS) {
+            Some(v) => v,
+            None => return 0,
+        };
+        let min_blocks = match lanes_per_sync.checked_mul(2) {
+            Some(v) => v,
+            None => return 0,
+        };
+
+        if (*ctx).m_cost < min_blocks {
             raise_site_data(
                 &err_sites::PROV_ARGON2_1092,
                 c"m_cost must be greater or equal than 8 times the number of lanes".as_ptr(),
@@ -10691,25 +11149,38 @@ unsafe extern "C" fn kdf_argon2_derive(
         }
 
         let mut memory_blocks = (*ctx).m_cost;
-        if memory_blocks < 2 * ARGON2_SYNC_POINTS * (*ctx).lanes {
-            memory_blocks = 2 * ARGON2_SYNC_POINTS * (*ctx).lanes;
+        if memory_blocks < min_blocks {
+            memory_blocks = min_blocks;
         }
 
         /* Ensure that all segments have equal length */
-        let segment_length = memory_blocks / ((*ctx).lanes * ARGON2_SYNC_POINTS);
-        memory_blocks = segment_length * ((*ctx).lanes * ARGON2_SYNC_POINTS);
+        let segment_length = memory_blocks / lanes_per_sync;
+        memory_blocks = match segment_length.checked_mul(lanes_per_sync) {
+            Some(v) => v,
+            None => return 0,
+        };
+        let lane_length = match segment_length.checked_mul(ARGON2_SYNC_POINTS) {
+            Some(v) => v,
+            None => return 0,
+        };
 
         (*ctx).memory = ptr::null_mut();
         (*ctx).memory_blocks = memory_blocks;
         (*ctx).segment_length = segment_length;
         (*ctx).passes = (*ctx).t_cost;
-        (*ctx).lane_length = segment_length * ARGON2_SYNC_POINTS;
+        (*ctx).lane_length = lane_length;
 
         if argon2_initialize(ctx) != 1 {
+            // The matrix may be NULL (allocation refused) or, defensively, live; release either.
+            argon2_release_memory(ctx);
             return 0;
         }
 
         if fill_memory_blocks(ctx) != 1 {
+            /* The authority returns here without releasing `ctx->memory`, leaking the
+             * secret-bearing matrix and leaving it for `reset`/`free` (which do not release it
+             * either). This is a §17 safety divergence: cleanse and release it exactly once. */
+            argon2_release_memory(ctx);
             return 0;
         }
 
@@ -10730,6 +11201,9 @@ unsafe extern "C" fn kdf_argon2_reset(vctx: *mut c_void) {
     unsafe {
         let type_ = (*ctx).type_;
         let libctx = (*ctx).libctx;
+
+        // A matrix left by a failed derivation (or any earlier path) is released here too.
+        argon2_release_memory(ctx);
 
         EVP_MD_free((*ctx).md);
         EVP_MAC_free((*ctx).mac);
@@ -10956,7 +11430,10 @@ unsafe fn kdf_argon2_ctx_set_secret(ctx: *mut KdfArgon2, p: *const OsslParam) ->
         }
 
         if buflen > ARGON2_MAX_SECRET as usize {
-            CRYPTO_free((*ctx).secret.cast(), FILE_ARGON2, LINE);
+            // The copy holds the caller's secret; cleanse the whole allocation before the
+            // refusal. The authority's plain `OPENSSL_free` leaves it in released memory
+            // (AGENTS.md section 5); the release events are unchanged.
+            CRYPTO_clear_free((*ctx).secret.cast(), buflen, FILE_ARGON2, LINE);
             (*ctx).secret = ptr::null_mut();
             (*ctx).secretlen = 0;
             return 0;
@@ -11006,7 +11483,10 @@ unsafe fn kdf_argon2_ctx_set_pwd(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_
                 ARGON2_MAX_PWD_LENGTH,
             );
             raise_site_data(&err_sites::PROV_ARGON2_1280, msg.as_ptr());
-            CRYPTO_free((*ctx).pwd.cast(), FILE_ARGON2, LINE);
+            // The password copy is secret: cleanse the whole allocation before the refusal.
+            // The authority's plain `OPENSSL_free` leaves it in released memory (AGENTS.md
+            // section 5); the release events are unchanged.
+            CRYPTO_clear_free((*ctx).pwd.cast(), buflen, FILE_ARGON2, LINE);
             (*ctx).pwd = ptr::null_mut();
             (*ctx).pwdlen = 0;
             return 0;
@@ -11777,13 +12257,11 @@ unsafe extern "C" fn pbkdf1_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx =
-            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf1>(), FILE_PBKDF1, LINE).cast::<KdfPbkdf1>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPbkdf1>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        ctx.into_raw().cast()
     }
 }
 
@@ -11806,13 +12284,8 @@ unsafe fn pbkdf1_cleanup(ctx: *mut KdfPbkdf1) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pbkdf1_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pbkdf1_cleanup(vctx.cast::<KdfPbkdf1>());
-            CRYPTO_free(vctx, FILE_PBKDF1, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPbkdf1>::from_raw(vctx.cast())) };
 }
 
 /// `static void kdf_pbkdf1_reset(void *vctx)` — `pbkdf1.c:139-146`.
@@ -12132,24 +12605,31 @@ unsafe extern "C" fn pbkdf1_derive_skey(
         if keylen == 0 {
             return ptr::null_mut();
         }
-        let key = CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>();
-        if key.is_null() {
+        /* §17 divergence: the authority releases the derived secret with `OPENSSL_free`. The
+         * key is secret material, so use the clearing release (`OPENSSL_clear_free`) with its
+         * true length; the value, the return and the import call are unchanged. */
+        let Some(key) = OwnedBuf::take(
+            CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>(),
+            keylen,
+            FILE_PBKDF1,
+            true,
+        ) else {
             return ptr::null_mut();
-        }
-        if pbkdf1_derive(vctx, key, keylen, params) == 0 {
-            CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
+        };
+        if pbkdf1_derive(vctx, key.as_ptr(), keylen, params) == 0 {
             return ptr::null_mut();
         }
         let mut import_params = [END, END];
-        import_params[0] =
-            OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, key.cast(), keylen);
-        let ret = import(
+        import_params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_SKEY_PARAM_RAW_BYTES,
+            key.as_ptr().cast(),
+            keylen,
+        );
+        import(
             provctx,
             OSSL_SKEYMGMT_SELECT_SECRET_KEY,
             import_params.as_ptr(),
-        );
-        CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
-        ret
+        )
     }
 }
 
@@ -12259,13 +12739,12 @@ unsafe extern "C" fn pvk_new(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPvk>(), FILE_PVKKDF, LINE).cast::<KdfPvk>();
-        if ctx.is_null() {
+        let Some(ctx) = OwnedCtx::<KdfPvk>::new() else {
             return ptr::null_mut();
-        }
-        (*ctx).provctx = provctx;
-        pvk_init(ctx);
-        ctx.cast()
+        };
+        (*ctx.as_ptr()).provctx = provctx;
+        pvk_init(ctx.as_ptr());
+        ctx.into_raw().cast()
     }
 }
 
@@ -12288,13 +12767,8 @@ unsafe fn pvk_cleanup(ctx: *mut KdfPvk) {
 /// # Safety
 /// The dispatch contract.
 unsafe extern "C" fn pvk_free(vctx: *mut c_void) {
-    // SAFETY: `vctx` is NULL or a live context.
-    unsafe {
-        if !vctx.is_null() {
-            pvk_cleanup(vctx.cast::<KdfPvk>());
-            CRYPTO_free(vctx, FILE_PVKKDF, LINE);
-        }
-    }
+    // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
+    unsafe { drop(OwnedCtx::<KdfPvk>::from_raw(vctx.cast())) };
 }
 
 /// `static void *kdf_pvk_dup(void *vctx)` — `pvkkdf.c:81-99`.
@@ -12935,6 +13409,10 @@ mod tests {
         };
         use crate::params::OSSL_PARAM_construct_uint32;
 
+        // This test fetches/frees KDFs and their digests/MACs; hold the crate-wide lock so no
+        // sibling test can perturb the shared method-store reference counts.
+        let _g = crate::test_support::lock_global_state();
+
         let mut cases = parse_argon2_vectors(ARGON2_VECTORS);
         assert_eq!(cases.len(), 23, "the file's `KDF =` cases");
 
@@ -12997,5 +13475,590 @@ mod tests {
 
         assert_eq!(derived, 12, "the file's derivable cases");
         assert_eq!(refused, 11, "the file's bound cases");
+    }
+
+    /// §17 divergence regression: KRB5KDF with 3DES used to hand `okey` to a fixup that writes a
+    /// fixed 24 bytes. A hand-built variable-key-length method lets the derivation reach that
+    /// point with `okey_len` 16 and 23; the refusal must leave the bytes past `okey_len`
+    /// untouched, and 24 must still derive.
+    #[test]
+    fn krb5kdf_refuses_a_3des_output_shorter_than_the_fixup_extent() {
+        use crate::evp::cipher::{
+            EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EVP_CIPHER_meth_set_do_cipher,
+            EVP_CIPHER_meth_set_init,
+        };
+
+        unsafe extern "C" fn init(
+            _ctx: *mut c_void,
+            _key: *const u8,
+            _iv: *const u8,
+            _enc: c_int,
+        ) -> c_int {
+            1
+        }
+
+        unsafe extern "C" fn do_cipher(
+            _ctx: *mut c_void,
+            out: *mut u8,
+            in_: *const u8,
+            inl: usize,
+        ) -> c_int {
+            for i in 0..inl {
+                // A block-to-block transform that makes successive 3DES rounds distinct, so the
+                // 24-byte fixup does not collapse to a single-DES key and refuse.
+                // SAFETY: the caller's buffer contract covers `inl` readable/writable bytes.
+                unsafe { *out.add(i) = *in_.add(i) ^ 0x5a_u8.wrapping_add(i as u8) };
+            }
+            1
+        }
+
+        // The method is created and freed here; hold the crate-wide lock so the shared method
+        // store cannot be perturbed by a sibling test.
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: this test owns every object it touches.
+        unsafe {
+            for key_len in [16usize, 23, 24] {
+                let cipher = EVP_CIPHER_meth_new(NID_des_ede3_cbc, 8, key_len as c_int);
+                assert!(!cipher.is_null(), "the method was built");
+                assert_eq!(EVP_CIPHER_meth_set_init(cipher, Some(init)), 1);
+                assert_eq!(EVP_CIPHER_meth_set_do_cipher(cipher, Some(do_cipher)), 1);
+
+                let key = [0x11u8; 24];
+                let constant = [0x02u8; 8];
+                // The tail is the canary: a fixed 24-byte write would change it for 16 and 23.
+                let mut out = [0xAAu8; 48];
+                let ret = krb5kdf_alg(
+                    cipher,
+                    ptr::null_mut(),
+                    key.as_ptr(),
+                    key_len,
+                    constant.as_ptr(),
+                    constant.len(),
+                    out.as_mut_ptr(),
+                    key_len,
+                );
+
+                assert!(
+                    out[key_len..].iter().all(|&b| b == 0xAA),
+                    "okey_len {key_len}: nothing may be written past the output extent"
+                );
+                if key_len < 24 {
+                    assert_eq!(ret, 0, "okey_len {key_len}: refused with the failure value");
+                } else {
+                    assert_eq!(ret, 1, "okey_len 24: the derivation still succeeds");
+                }
+
+                EVP_CIPHER_meth_free(cipher);
+            }
+        }
+    }
+
+    /// `kdf_scrypt_dup` publishes the digest reference it takes on `dest` immediately, so a later
+    /// `propq`/`memdup` failure releases it. `CRYPTO_memdup` refuses `siz >= INT_MAX` before
+    /// reading, which drives that failure deterministically: the test observes the reference
+    /// count return to one instead of leaking the up-ref.
+    #[test]
+    fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
+        use core::sync::atomic::Ordering;
+
+        // The fetched SHA256 and the method store are shared process-global state; holding the
+        // crate-wide lock keeps the before/after refcount readings free of a sibling's ±1.
+        let _g = crate::test_support::lock_global_state();
+
+        // SAFETY: this test owns every object it touches.
+        unsafe {
+            let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+            assert!(!md.is_null(), "SHA256 fetches");
+
+            let src = kdf_scrypt_new_inner(ptr::null_mut()).cast::<KdfScrypt>();
+            assert!(!src.is_null(), "a SCRYPT context");
+            (*src).sha256 = md;
+
+            // A one-byte live block with a length `CRYPTO_memdup` refuses before touching it.
+            let salt = CRYPTO_malloc(1, FILE_SCRYPT, LINE).cast::<u8>();
+            assert!(!salt.is_null());
+            (*src).salt = salt;
+            (*src).salt_len = i32::MAX as usize;
+
+            // The method store may already hold references to a fetched digest, so the test
+            // asserts the count is unchanged rather than assuming a particular absolute value.
+            let before = (*md).refcnt.load(Ordering::Acquire);
+            assert!(before >= 1);
+            assert!(
+                kdf_scrypt_dup(src.cast()).is_null(),
+                "the memdup failure refuses the duplicate"
+            );
+            assert_eq!(
+                (*md).refcnt.load(Ordering::Acquire),
+                before,
+                "the duplicate's up-ref was released on the failure path"
+            );
+
+            // `src` owns the fetched digest, so this releases it; no second `EVP_MD_free`.
+            kdf_scrypt_free(src.cast());
+        }
+    }
+
+    /// An un-derived but parameterized KBKDF context is duplicable: the duplicate succeeds with a
+    /// NULL `ctx_init`. When the source has a MAC context, the duplicate owns a distinct one.
+    #[test]
+    fn kbkdf_dup_copies_uninitialised_and_initialised_mac_states() {
+        // The HMAC fetch/free and the MAC context are process-global method-store state; hold the
+        // crate-wide lock so no sibling test can perturb the cache between them.
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: this test owns every context it creates.
+        unsafe {
+            let bare = kbkdf_new(ptr::null_mut());
+            assert!(!bare.is_null(), "a KBKDF context");
+            assert!((*bare.cast::<Kbkdf>()).ctx_init.is_null());
+            let bare_dup = kbkdf_dup(bare);
+            assert!(!bare_dup.is_null(), "an uninitialised duplicate succeeds");
+            assert!((*bare_dup.cast::<Kbkdf>()).ctx_init.is_null());
+            kbkdf_free(bare_dup);
+            kbkdf_free(bare);
+
+            let mac = EVP_MAC_fetch(ptr::null_mut(), c"HMAC".as_ptr(), ptr::null());
+            assert!(!mac.is_null(), "HMAC fetches");
+            let macctx = EVP_MAC_CTX_new(mac);
+            assert!(!macctx.is_null(), "an HMAC context");
+            // `EVP_MAC_CTX_new` holds its own method reference.
+            EVP_MAC_free(mac);
+
+            // Initialise the HMAC state so its `dupctx` has a digest context to copy.
+            let mut mac_params = [
+                OSSL_PARAM_construct_utf8_string(
+                    c"digest".as_ptr(),
+                    c"SHA256".as_ptr().cast_mut(),
+                    0,
+                ),
+                OSSL_PARAM_construct_end(),
+            ];
+            assert_ne!(EVP_MAC_CTX_set_params(macctx, mac_params.as_mut_ptr()), 0);
+            let key = [0x33u8; 16];
+            assert_eq!(
+                EVP_MAC_init(macctx, key.as_ptr(), key.len(), ptr::null()),
+                1
+            );
+
+            let src = kbkdf_new(ptr::null_mut()).cast::<Kbkdf>();
+            assert!(!src.is_null());
+            (*src).ctx_init = macctx;
+            let dup = kbkdf_dup(src.cast()).cast::<Kbkdf>();
+            assert!(!dup.is_null(), "an initialised duplicate succeeds");
+            assert!(!(*dup).ctx_init.is_null());
+            assert_ne!(
+                (*dup).ctx_init,
+                (*src).ctx_init,
+                "the duplicate owns a distinct MAC context"
+            );
+            kbkdf_free(dup.cast());
+            kbkdf_free(src.cast());
+        }
+    }
+
+    /// §17 divergence regression: a failed Argon2 fill used to leave the secret matrix allocated.
+    /// `threads == 0` (an internal state the derivation does not otherwise reject) drives
+    /// `fill_memory_blocks`' threaded arm to its `join(NULL)` refusal *after* the matrix exists,
+    /// so the failure path must cleanse/release it and `free` must not release it again.
+    #[test]
+    fn argon2_failed_fill_releases_the_secret_matrix() {
+        // `kdf_argon2_derive` fetches the BLAKE2B MAC/digest from the shared cache; hold the
+        // crate-wide lock so its fetch/free cannot race a sibling's refcount assertion.
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: this test owns the context and its matrix.
+        unsafe {
+            let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+            assert!(!ctx.is_null(), "an Argon2d context");
+
+            (*ctx).salt = CRYPTO_zalloc(16, FILE_ARGON2, LINE).cast::<u8>();
+            assert!(!(*ctx).salt.is_null());
+            (*ctx).saltlen = 16;
+            (*ctx).outlen = 32;
+            (*ctx).t_cost = 1;
+            (*ctx).m_cost = 8;
+            (*ctx).lanes = 1;
+            (*ctx).threads = 0;
+
+            let mut out = [0u8; 32];
+            assert_eq!(
+                kdf_argon2_derive(ctx.cast(), out.as_mut_ptr(), out.len(), ptr::null()),
+                0,
+                "the threaded fill refuses an unusable worker count"
+            );
+            assert!(
+                (*ctx).memory.is_null(),
+                "the failure path released and cleared the matrix"
+            );
+
+            // A second release would be a double free; `memory` being NULL makes this a no-op.
+            kdf_argon2_free(ctx.cast());
+        }
+    }
+
+    /// The defaulted KMAC output length is the allocation length, not the caller's zero.
+    #[test]
+    fn sskdf_defaulted_kmac_length_is_the_allocation_length() {
+        assert_eq!(sskdf_kmac_alloc_len(0, 80), 80);
+        assert_eq!(sskdf_kmac_alloc_len(20, 80), 20);
+        assert_eq!(sskdf_kmac_alloc_len(64, 80), 64);
+    }
+
+    /// Allocator-injection probes: the process-global seam is one-way, so each runs alone via
+    /// `scripts/adv-probe.sh` (one process per probe). The ordinary suite reports them ignored.
+    mod adv_probe {
+        use super::*;
+        use crate::ssl::adv_alloc;
+
+        /// The Argon2 matrix is cleansed over its full extent before release -- the canary bytes
+        /// must be zero in the allocator hook -- and a second release is a no-op.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn argon2_matrix_release_cleanses_the_whole_block() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: this probe owns the context and the matrix it installs.
+            unsafe {
+                let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+                assert!(!ctx.is_null());
+                (*ctx).type_ = ARGON2_D;
+                (*ctx).memory_blocks = 4;
+                let len = 4 * ARGON2_BLOCK_SIZE;
+                let matrix = CRYPTO_calloc(4, ARGON2_BLOCK_SIZE, FILE_ARGON2, LINE).cast::<Block>();
+                assert!(!matrix.is_null());
+                // The canary: a cleanse of zero bytes would leave this residue visible.
+                ptr::write_bytes(matrix.cast::<u8>(), 0xA5, len);
+                (*ctx).memory = matrix;
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(len);
+                argon2_release_memory(ctx);
+
+                assert!((*ctx).memory.is_null(), "the member is cleared");
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the matrix was not cleansed over its allocation length"
+                );
+                assert!(!adv_alloc::double_free());
+
+                // Exactly once: the NULL member makes the second call a no-op.
+                argon2_release_memory(ctx);
+                assert!(!adv_alloc::double_free());
+                kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// Boundary matrix for the §17 memory refusal, through the normal entry point
+        /// (`m_cost`/salt params -> `kdf_argon2_derive`), so the parameter decoder and the
+        /// `segment_length * lanes * SYNC_POINTS` normalization are exercised too.
+        ///
+        /// `0x3FFFFF` normalizes to `0x3FFFFC` blocks (4 GiB - 4 KiB) and must reach the
+        /// allocation (which this probe refuses, to keep the run cheap). `0x400000` and
+        /// `0x400001` normalize to `0x400000` blocks and must be refused *before* any allocation.
+        /// Every refusal raises `PROV_R_INVALID_MEMORY_SIZE` with the allocation-failure data.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn argon2_memory_boundary_refusal_matrix() {
+            use crate::params::OSSL_PARAM_construct_uint32;
+            use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error_all};
+
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // `(PROV_LIB << 23) | PROV_R_INVALID_MEMORY_SIZE`.
+            const EXPECTED: u64 = (57 << 23) | 235;
+            let mut salt = [0x11u8; 8];
+            let mut out = [0u8; 64];
+
+            // SAFETY: this probe owns the context and every buffer it passes; params live for the
+            // duration of each derive call.
+            unsafe {
+                let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+                assert!(!ctx.is_null());
+
+                for &(m_cost, must_reach_allocation) in &[
+                    (0x003F_FFFFu32, true),
+                    (0x0040_0000u32, false),
+                    (0x0040_0001u32, false),
+                ] {
+                    let mut m = m_cost;
+                    let params = [
+                        OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mut m),
+                        OSSL_PARAM_construct_octet_string(
+                            OSSL_KDF_PARAM_SALT,
+                            salt.as_mut_ptr().cast(),
+                            salt.len(),
+                        ),
+                        OSSL_PARAM_construct_end(),
+                    ];
+                    // lanes defaults to 1, so the normalization rounds down to a multiple of 4.
+                    let blocks = (m_cost / 4) * 4;
+                    let bytes = blocks as usize * ARGON2_BLOCK_SIZE;
+
+                    adv_alloc::reset();
+                    ERR_clear_error();
+                    // If the refusal is bypassed, this is the request the allocator sees. Refusing
+                    // it keeps both the pre-fix diagnostic and the accepted-boundary case cheap.
+                    adv_alloc::arm_any(bytes);
+                    let ret =
+                        kdf_argon2_derive(ctx.cast(), out.as_mut_ptr(), out.len(), params.as_ptr());
+                    adv_alloc::disarm_any();
+                    assert_eq!(ret, 0, "m_cost=0x{m_cost:x} must refuse");
+
+                    let mut file: *const c_char = ptr::null();
+                    let mut line: c_int = 0;
+                    let mut func: *const c_char = ptr::null();
+                    let mut data: *const c_char = ptr::null();
+                    let mut flags: c_int = 0;
+                    let e = ERR_peek_last_error_all(
+                        &mut file, &mut line, &mut func, &mut data, &mut flags,
+                    );
+                    assert_eq!(e as u64, EXPECTED, "m_cost=0x{m_cost:x} error");
+                    assert!(!data.is_null(), "m_cost=0x{m_cost:x} data");
+                    assert_eq!(
+                        core::ffi::CStr::from_ptr(data).to_bytes(),
+                        b"cannot allocate required memory",
+                        "m_cost=0x{m_cost:x} data"
+                    );
+
+                    let saw_refused = adv_alloc::events().iter().any(|ev| {
+                        matches!(ev, adv_alloc::Ev::Malloc { n, refused, .. } if *n == bytes && *refused)
+                    });
+                    if must_reach_allocation {
+                        assert!(saw_refused, "m_cost=0x{m_cost:x} must reach the allocation");
+                    } else {
+                        assert!(
+                            !saw_refused,
+                            "m_cost=0x{m_cost:x} must be refused before allocating"
+                        );
+                        assert!(
+                            !adv_alloc::events().iter().any(
+                                |ev| matches!(ev, adv_alloc::Ev::Malloc { n, .. } if *n >= bytes)
+                            ),
+                            "m_cost=0x{m_cost:x} reached the allocator"
+                        );
+                    }
+                }
+
+                adv_alloc::assert_no_double_free();
+                kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// Width-guard regression for the password KDFs. The authority truncates lengths to
+        /// `int` at the HMAC/PBKDF2 boundary; the port refuses the truncating set before any
+        /// allocation or buffer read. The probe checks that neither path reaches the allocator:
+        /// PBKDF2 with `passlen > i32::MAX` and scrypt with `keylen > i32::MAX`.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn password_kdf_width_guards_refuse_before_allocating() {
+            use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
+
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: the guards return before any pointer is dereferenced or any block is
+            // allocated; `salt`/`key` are live locals and `md` is a fetched digest freed below.
+            unsafe {
+                let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+                assert!(!md.is_null(), "a live digest for the PBKDF2 guard");
+                let salt = [0u8; 16];
+                let mut key = [0u8; 16];
+
+                adv_alloc::reset();
+                let ret = pbkdf2_derive(
+                    ptr::null_mut(),
+                    ptr::dangling::<c_char>(),
+                    c_int::MAX as usize + 1,
+                    salt.as_ptr(),
+                    16,
+                    1000,
+                    md,
+                    key.as_mut_ptr(),
+                    16,
+                    0,
+                );
+                assert_eq!(ret, 0, "PBKDF2 must refuse the truncating passlen");
+                assert!(
+                    adv_alloc::events().is_empty(),
+                    "PBKDF2 reached the allocator before its width guard"
+                );
+
+                // `n=2, r=1, p=1` gives a 640-byte B/V/X/T block; if the keylen guard is
+                // bypassed that request is the one the allocator sees.
+                adv_alloc::reset();
+                let ret = scrypt_alg(
+                    ptr::null(),
+                    0,
+                    salt.as_ptr(),
+                    16,
+                    2,
+                    1,
+                    1,
+                    u64::MAX,
+                    key.as_mut_ptr(),
+                    c_int::MAX as usize + 1,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null(),
+                );
+                assert_eq!(ret, 0, "scrypt must refuse the truncating keylen");
+                assert!(
+                    !adv_alloc::events()
+                        .iter()
+                        .any(|e| matches!(e, adv_alloc::Ev::Malloc { n, .. } if *n == 640)),
+                    "scrypt reached the allocator before its width guard"
+                );
+
+                EVP_MD_free(md);
+            }
+        }
+
+        /// Replacing HMAC-DRBG's entropy cleanses the incumbent copy over its allocation length.
+        /// The authority plain-frees it; the pre-fix code left the first secret in released memory.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn hmac_drbg_entropy_replacement_cleanses_the_incumbent() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            let mut first = [0x5au8; 32];
+            let mut second = [0xa5u8; 32];
+            // SAFETY: this probe owns the context and both parameter arrays; each array is live
+            // for the call that reads it.
+            unsafe {
+                let ctx = hmac_drbg_kdf_new(ptr::null_mut()).cast::<KdfHmacDrbg>();
+                assert!(!ctx.is_null());
+
+                let p1 = [
+                    OSSL_PARAM_construct_octet_string(
+                        OSSL_KDF_PARAM_HMACDRBG_ENTROPY,
+                        first.as_mut_ptr().cast(),
+                        first.len(),
+                    ),
+                    OSSL_PARAM_construct_end(),
+                ];
+                assert_eq!(hmac_drbg_kdf_set_ctx_params(ctx.cast(), p1.as_ptr()), 1);
+                assert_eq!((*ctx).entropylen, first.len());
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(first.len());
+                let p2 = [
+                    OSSL_PARAM_construct_octet_string(
+                        OSSL_KDF_PARAM_HMACDRBG_ENTROPY,
+                        second.as_mut_ptr().cast(),
+                        second.len(),
+                    ),
+                    OSSL_PARAM_construct_end(),
+                ];
+                assert_eq!(hmac_drbg_kdf_set_ctx_params(ctx.cast(), p2.as_ptr()), 1);
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the incumbent entropy was released without being cleansed"
+                );
+                assert!(!adv_alloc::double_free());
+
+                hmac_drbg_kdf_free(ctx.cast());
+            }
+        }
+
+        /// A defaulted `kmac_out_len` still cleanses the whole `derived_key_len` allocation.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn sskdf_defaulted_kmac_cleanse_uses_the_allocation_length() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            const DERIVED_LEN: usize = 80;
+            // SAFETY: the buffer is allocated through the same seam and released once below.
+            unsafe {
+                let len = sskdf_kmac_alloc_len(0, DERIVED_LEN);
+                assert_eq!(len, DERIVED_LEN);
+                let buf = CRYPTO_zalloc(len, FILE_SSKDF, LINE).cast::<u8>();
+                assert!(!buf.is_null());
+                // Non-zero residue: the hook must see all of it zeroed before the release.
+                ptr::write_bytes(buf, 0x5A, len);
+                let mut mac_buf = [0u8; EVP_MAX_MD_SIZE];
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(len);
+                // The caller's `kmac_out_len` is 0 (defaulted); cleanup must use `DERIVED_LEN`.
+                assert_eq!(
+                    sskdf_mac_kdm_cleanup(1, buf, 0, DERIVED_LEN, mac_buf.as_mut_ptr()),
+                    1
+                );
+
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the defaulted KMAC buffer was not cleansed over its allocation"
+                );
+                assert!(!adv_alloc::double_free());
+            }
+        }
+
+        const PBKDF1_KEY_LEN: usize = 20;
+
+        unsafe extern "C" fn import_and_arm(
+            _provctx: *mut c_void,
+            _selection: c_int,
+            _params: *const OsslParam,
+        ) -> *mut c_void {
+            // The key is dropped immediately after the import returns, with no intervening
+            // release, so arming here observes exactly that release.
+            // SAFETY: `pbkdf1_derive_skey` allocated `PBKDF1_KEY_LEN` bytes and has not released
+            // them at this point.
+            unsafe { adv_alloc::arm_cleansed_free(PBKDF1_KEY_LEN) };
+            core::ptr::NonNull::<u8>::dangling().as_ptr().cast()
+        }
+
+        /// The PBKDF1 `derive_skey` key is secret material: the authority plain-frees it.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn pbkdf1_derived_key_is_cleansed_before_release() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // SAFETY: this probe owns the context, its members and the import result is unused.
+            unsafe {
+                let ctx = pbkdf1_new(ptr::null_mut()).cast::<KdfPbkdf1>();
+                assert!(!ctx.is_null());
+                let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
+                assert!(!md.is_null());
+                (*ctx).digest.md = md;
+                (*ctx).digest.alloc_md = md;
+                (*ctx).pass = CRYPTO_zalloc(8, FILE_PBKDF1, LINE).cast::<u8>();
+                (*ctx).salt = CRYPTO_zalloc(8, FILE_PBKDF1, LINE).cast::<u8>();
+                assert!(!(*ctx).pass.is_null() && !(*ctx).salt.is_null());
+                ptr::write_bytes((*ctx).pass, 0x11, 8);
+                ptr::write_bytes((*ctx).salt, 0x22, 8);
+                (*ctx).pass_len = 8;
+                (*ctx).salt_len = 8;
+                (*ctx).iter = 1;
+
+                adv_alloc::reset();
+                let ret = pbkdf1_derive_skey(
+                    ctx.cast(),
+                    ptr::null(),
+                    ptr::null_mut(),
+                    Some(import_and_arm),
+                    PBKDF1_KEY_LEN,
+                    ptr::null(),
+                );
+                assert!(!ret.is_null(), "the import ran");
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the derived key was released without being cleansed"
+                );
+                assert!(!adv_alloc::double_free());
+
+                pbkdf1_free(ctx.cast());
+            }
+        }
     }
 }

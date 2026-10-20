@@ -16,11 +16,9 @@
 //!
 //! ## Classifying a socket error is itself a contract
 //!
-//! `BIO_sock_should_retry` is not "did it fail": a `-1` return consults `errno`
-//! and reports whether the error is one of the transient classes, while a
-//! *negative* return value is classified by the authority with
-//! `((i << 24) >> 31) & 1`. That shift-and-test is reproduced exactly because a
-//! caller's retry loop depends on it.
+//! `BIO_sock_should_retry` is not "did it fail": a `0` or `-1` return consults
+//! `errno` and reports whether the error is one of the transient classes; every
+//! other value, including the other negatives, answers 0 without reading it.
 
 use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
@@ -28,9 +26,9 @@ use core::ptr;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BIO_LIB_1002, BIO_SOCK_248};
 use crate::runtime::err::{raise_site_dynamic, raise_site_dynamic_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::method::{bread_conv, bwrite_conv};
+use super::owned::{CtxDestroy, OwnedCtx};
 use super::sys;
 use super::{Bio, BioMethod, BIO_TYPE_SOCKET};
 
@@ -191,19 +189,19 @@ pub extern "C" fn BIO_sock_non_fatal_error(err: c_int) -> c_int {
 }
 
 /// `int BIO_sock_should_retry(int i)`
+///
+/// Only `0` and `-1` consult `errno`; every other value -- including `-2`, `-5`
+/// and the positive classes -- answers 0 without reading it. `0` is included
+/// because a zero-length `read`/`write` reports 0 while leaving a stale `errno`,
+/// and the authority classifies that `errno`.
 #[no_mangle]
 pub extern "C" fn BIO_sock_should_retry(i: c_int) -> c_int {
     guard_ffi(0, || {
-        if i == -1 {
-            // SAFETY: `errno` is thread-local and always readable.
-            return BIO_sock_non_fatal_error(unsafe { sys::errno() });
-        }
-        if i > 0 {
+        if i != 0 && i != -1 {
             return 0;
         }
-        // The authority shifts the value left by 24 and keeps the top bit;
-        // reproduced exactly rather than re-derived.
-        ((i << 24) >> 31) & 1
+        // SAFETY: `errno` is thread-local and always readable.
+        BIO_sock_non_fatal_error(unsafe { sys::errno() })
     })
 }
 
@@ -283,39 +281,34 @@ pub extern "C" fn BIO_closesocket(sock: c_int) -> c_int {
 
 /// `static int sock_read(BIO *b, char *out, int outl)`
 ///
-/// A NULL `out` peeks one byte without consuming it, which is how a caller tests
-/// readability; that arm is reproduced rather than treated as an error. When the
-/// socket is receiving through kernel TLS the record is read through
-/// [`ktls::read_record`], which re-adds the header the kernel stripped.
+/// A NULL `out` is the authority's no-op arm: it answers 0 without reading the
+/// socket and without touching the retry flags. A non-NULL `out` reads up to
+/// `outl` bytes; a zero-length read still reaches the syscall, and its 0 result
+/// sets `BIO_FLAGS_IN_EOF` unless the current `errno` is retryable (the authority
+/// tests `BIO_sock_should_retry(0)` first).
 ///
 /// # Safety
 /// `b` must be a live socket BIO; `out` must be NULL or valid for `outl` bytes.
 unsafe extern "C" fn sock_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_int {
-    // SAFETY: `b` is live.
-    unsafe {
-        super::BIO_clear_flags(b, super::BIO_FLAGS_RWS | super::BIO_FLAGS_SHOULD_RETRY);
-        if outl == 0 {
-            return 0;
-        }
-        let sock = (*b).num;
-        if out.is_null() {
-            let mut c: [c_char; 1] = [0];
-            let ret = sys::recv(sock, c.as_mut_ptr().cast(), 1, sys::MSG_PEEK);
-            return if ret == 1 { 1 } else { ret as c_int };
-        }
-        let ret = sys::recv(sock, out.cast(), outl as usize, 0) as c_int;
-        if ret <= 0 {
-            if BIO_sock_should_retry(ret) != 0 {
-                super::BIO_set_flags(b, super::BIO_FLAGS_READ | super::BIO_FLAGS_SHOULD_RETRY);
-            } else if ret == 0 {
-                // A zero-length read is end-of-stream, recorded in the flags so
-                // `BIO_CTRL_EOF` can report it without another syscall.
-                (*b).flags |= super::BIO_FLAGS_IN_EOF;
+    let mut ret: c_int = 0;
+    if !out.is_null() {
+        // SAFETY: `b` is live.
+        unsafe {
+            super::BIO_clear_flags(b, super::BIO_FLAGS_RWS | super::BIO_FLAGS_SHOULD_RETRY);
+            let sock = (*b).num;
+            ret = sys::recv(sock, out.cast(), outl as usize, 0) as c_int;
+            if ret <= 0 {
+                if BIO_sock_should_retry(ret) != 0 {
+                    super::BIO_set_flags(b, super::BIO_FLAGS_READ | super::BIO_FLAGS_SHOULD_RETRY);
+                } else if ret == 0 {
+                    // A zero-length read is end-of-stream, recorded in the flags so
+                    // `BIO_CTRL_EOF` can report it without another syscall.
+                    (*b).flags |= super::BIO_FLAGS_IN_EOF;
+                }
             }
-            return ret;
         }
-        ret
     }
+    ret
 }
 
 /// `static int sock_write(BIO *b, const char *in, int inl)`
@@ -375,6 +368,17 @@ struct BssSockData {
     tfo_peer: [u8; 28],
 }
 
+/// The authority's `sock_free` body for the context block. `bss_sock.c`'s `sock_free` only closes
+/// the descriptor and resets the BIO's own fields -- the context block has no destructor body of
+/// its own, so the whole of its ownership is [`OwnedCtx`]'s `Drop`.
+// SAFETY: (a) `sock_free` releases no member of the context block, so `destroy_body` is the empty
+// authority body and never the enclosing block, which `OwnedCtx` releases; (b) `BssSockData` is a
+// `#[repr(C)]` record of an integer and a byte array, so an all-zero block is a valid `BssSockData`
+// the empty body is trivially sound on.
+unsafe impl CtxDestroy for BssSockData {
+    unsafe fn destroy_body(_ptr: *mut BssSockData) {}
+}
+
 /// `static int sock_new(BIO *bi)`
 ///
 /// Measured: the created BIO has `init == 0`. That is not an oversight in the
@@ -389,13 +393,12 @@ unsafe extern "C" fn sock_new(bi: *mut Bio) -> c_int {
         (*bi).init = 0;
         (*bi).num = 0;
         (*bi).flags = 0;
-        // SAFETY: a plain zeroed allocation request.
-        let data = CRYPTO_zalloc(core::mem::size_of::<BssSockData>(), ptr::null(), 0)
-            .cast::<BssSockData>();
-        if data.is_null() {
+        // SAFETY: a plain zeroed allocation request; `OwnedCtx::zalloc` answers NULL or a fresh
+        // block of exactly this type.
+        let Some(data) = OwnedCtx::<BssSockData>::zalloc() else {
             return 0;
-        }
-        (*bi).ptr = data.cast();
+        };
+        (*bi).ptr = data.into_raw().cast();
     }
     1
 }
@@ -421,7 +424,9 @@ unsafe extern "C" fn sock_free(a: *mut Bio) -> c_int {
             (*a).init = 0;
             (*a).flags = 0;
         }
-        CRYPTO_free((*a).ptr, ptr::null(), 0);
+        // SAFETY: `bss_sock.c` releases the private block unconditionally; `from_raw` maps a NULL
+        // pointer to `None` and `Drop` is the block's single release.
+        drop(OwnedCtx::<BssSockData>::from_raw((*a).ptr.cast()));
         (*a).ptr = ptr::null_mut();
     }
     1
@@ -518,4 +523,32 @@ unsafe extern "C" fn sock_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c
         _ => ret = 0,
     }
     ret
+}
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(BssSockData => zero_state_sweep_bss_sock_data);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_retry_reads_errno_only_for_zero_and_minus_one() {
+        // `BIO_sock_should_retry` consults `errno` for exactly 0 and -1. The other
+        // negatives and the positive classes answer 0 *without* reading it, so a stale
+        // retryable `errno` must not make them retryable.
+        // SAFETY: the errno pointer is this thread's and is always valid.
+        unsafe { sys::set_errno(sys::EAGAIN) };
+        assert_eq!(BIO_sock_should_retry(0), 1, "0 with EAGAIN is retryable");
+        assert_eq!(BIO_sock_should_retry(-1), 1, "-1 with EAGAIN is retryable");
+        assert_eq!(BIO_sock_should_retry(-2), 0, "-2 never reads errno");
+        assert_eq!(BIO_sock_should_retry(2), 0, "2 never reads errno");
+
+        // A non-retryable errno gives 0 even at the two values that consult it.
+        // SAFETY: as above.
+        unsafe { sys::set_errno(sys::ECONNREFUSED) };
+        assert_eq!(BIO_sock_should_retry(0), 0);
+        assert_eq!(BIO_sock_should_retry(-1), 0);
+    }
 }

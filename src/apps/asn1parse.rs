@@ -36,7 +36,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint};
 
 use crate::apps::keyio::{bio_open_default, FORMAT_ASN1, FORMAT_PEM};
 use crate::apps::openssl::not_landed;
@@ -44,6 +44,7 @@ use crate::apps::opt::{OptMatch, Opts};
 use crate::apps::tables::ASN1PARSE_OPTIONS;
 use crate::asn1::der::ASN1_parse_dump;
 use crate::asn1::layout::Asn1Item;
+use crate::asn1::owned::OwnedBlock;
 use crate::evp::pem_bridge::PEM_read_bio;
 use crate::runtime::bio::iolib::BIO_read;
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new};
@@ -139,7 +140,10 @@ pub fn main(argv: &[String]) -> i32 {
     let mut dump: c_int = 0;
     let mut informat = FORMAT_PEM;
     let mut offset: c_long = 0;
-    let mut length: c_long = 0;
+    // `unsigned int length = 0;` — `apps/asn1parse.c:85`. The authority stores
+    // the `strtol` result in an `unsigned int`, so a negative `-length` becomes
+    // the corresponding large value; keep that conversion.
+    let mut length: c_uint = 0;
     let mut item: *const Asn1Item = core::ptr::null();
 
     loop {
@@ -179,7 +183,7 @@ pub fn main(argv: &[String]) -> i32 {
             OptMatch::Value("offset", v) => offset = strtol_base0(&v),
             // `case OPT_LENGTH: length = strtol(opt_arg(), NULL, 0); break;` —
             // `apps/asn1parse.c:131-133`.
-            OptMatch::Value("length", v) => length = strtol_base0(&v),
+            OptMatch::Value("length", v) => length = strtol_base0(&v) as c_uint,
             // `case OPT_DUMP: dump = -1; break;` — `apps/asn1parse.c:134-136`.
             OptMatch::Flag("dump") => dump = -1,
             // `case OPT_DLIMIT: dump = strtol(opt_arg(), NULL, 0); break;` —
@@ -309,6 +313,16 @@ pub fn main(argv: &[String]) -> i32 {
             unsafe { BUF_MEM_free(buf) };
             return ret;
         }
+        // `name`/`header` are the generic PEM reader's own blocks (`pem_malloc`, which is a
+        // `CRYPTO_malloc` for this flag profile). The authority frees them at `end:` with
+        // `OPENSSL_free`, so each is adopted here and released exactly once by the owner's
+        // `Drop` at the authority's (NULL, 0) coordinate.
+        // SAFETY: the successful `PEM_read_bio` transferred exclusive ownership of each block to
+        // this frame; each is NULL or a whole NUL-terminated allocation from the crate's
+        // allocator seam, and neither is released anywhere else.
+        let _name = unsafe { OwnedBlock::<c_char>::from_raw(name, core::ptr::null(), 0) };
+        // SAFETY: as above for `header`; the reader's allocation is whole and exclusively owned.
+        let _header = unsafe { OwnedBlock::<c_char>::from_raw(header, core::ptr::null(), 0) };
         // `buf->data = (char *)str; buf->length = buf->max = num;` —
         // `apps/asn1parse.c:199-200`.
         // SAFETY: `buf` is live and uniquely owned here.
@@ -316,17 +330,6 @@ pub fn main(argv: &[String]) -> i32 {
             (*buf).data = strp.cast::<c_char>();
             (*buf).length = num as usize;
             (*buf).max = num as usize;
-        }
-        // The authority leaks `name`/`header` into locals it frees at `end`; mirror the
-        // free here (they are the reader's own allocations).
-        // SAFETY: `name`/`header` are NULL or the `PEM_read_bio` allocations.
-        unsafe {
-            if !name.is_null() {
-                libc_free(name.cast());
-            }
-            if !header.is_null() {
-                libc_free(header.cast());
-            }
         }
         // SAFETY: `buf` is live.
         strp = unsafe { (*buf).data.cast::<c_uchar>() };
@@ -346,9 +349,11 @@ pub fn main(argv: &[String]) -> i32 {
         // does not select it. `BIO_read` on the raw input follows.
         // SAFETY: `buf` is live.
         let mut n: c_long = 0;
-        loop {
+        // The authority's `(unsigned long)n + BUFSIZ`, checked so a wrapped request can never
+        // reach `BUF_MEM_grow` and leave the following `BIO_read` writing past `data`.
+        while let Some(grow_to) = (n as usize).checked_add(BUFSIZ) {
             // SAFETY: `buf` is live.
-            if unsafe { BUF_MEM_grow(buf, (n as usize) + BUFSIZ) } == 0 {
+            if unsafe { BUF_MEM_grow(buf, grow_to) } == 0 {
                 break;
             }
             // SAFETY: `inbio` is live; the destination is `buf->data` with room for BUFSIZ.
@@ -378,8 +383,8 @@ pub fn main(argv: &[String]) -> i32 {
     num -= offset;
     // `if (length == 0 || length > (unsigned int)num) length = (unsigned int)num;` —
     // `apps/asn1parse.c:288-289`.
-    if length == 0 || length > num {
-        length = num;
+    if length == 0 || length > num as c_uint {
+        length = num as c_uint;
     }
 
     if !derout.is_null() {
@@ -393,7 +398,7 @@ pub fn main(argv: &[String]) -> i32 {
                 length as c_int,
             )
         };
-        if c_long::from(w) != length {
+        if w != length as c_int {
             eprintln!("Error writing output");
             // SAFETY: all three are live and not freed again.
             unsafe { crate::runtime::bio::BIO_free(derout) };
@@ -415,7 +420,7 @@ pub fn main(argv: &[String]) -> i32 {
             ASN1_parse_dump(
                 bio_out,
                 strp.add(offset as usize),
-                length,
+                c_long::from(length),
                 c_int::from(indent),
                 dump,
             )
@@ -444,14 +449,4 @@ pub fn main(argv: &[String]) -> i32 {
     // SAFETY: all three are NULL or live and not freed again.
     unsafe { BUF_MEM_free(buf) };
     ret
-}
-
-/// `OPENSSL_free` for the generic PEM reader's allocations. `PEM_read_bio` allocates
-/// `name`/`header` with `OPENSSL_malloc`, which for this crate is the C allocator.
-///
-/// # Safety
-/// `p` must be NULL or an `OPENSSL_malloc` block not freed elsewhere.
-unsafe fn libc_free(p: *mut core::ffi::c_void) {
-    // SAFETY: the caller's contract.
-    unsafe { crate::runtime::mem::CRYPTO_free(p, core::ptr::null(), 0) };
 }

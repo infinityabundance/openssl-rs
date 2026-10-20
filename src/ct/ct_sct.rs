@@ -25,6 +25,7 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+use crate::runtime::owned_buf::OwnedBuf;
 use core::ffi::{c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
@@ -36,13 +37,15 @@ use crate::ct::ct_sct_ctx::{
 };
 use crate::ct::ct_vfy::SCT_CTX_verify;
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_reasons::{
     CT_R_INVALID_LOG_ID_LENGTH, CT_R_UNRECOGNIZED_SIGNATURE_NID, CT_R_UNSUPPORTED_ENTRY_TYPE,
     CT_R_UNSUPPORTED_VERSION,
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_ecdsa_with_SHA256, NID_sha256WithRSAEncryption, NID_undef};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 use crate::x509::x509_cmp::X509_get0_pubkey;
@@ -177,19 +180,39 @@ const _: () = {
     assert!(core::mem::offset_of!(Sct, validation_status) == 96);
 };
 
+// ---------------------------------------------------------------------------------------------
+// Ownership of the `SCT` record and its member blocks
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) holds: `destroy_body` is the authority's `SCT_free` body minus the block -- the log
+// id, the extensions, the signature and the cached encoding, each NULL-tolerant, never the
+// enclosing block. (b) holds: an all-zero `SCT` has every member NULL, so the body is the
+// authority's own all-empty teardown -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for Sct {
+    unsafe fn destroy_body(ptr: *mut Sct) {
+        // SAFETY: `ptr` is a live record per the trait contract; each member is NULL or a block this
+        // file owns.
+        unsafe {
+            CRYPTO_free((*ptr).log_id.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).ext.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).sig.cast::<c_void>(), ptr::null(), 0);
+            CRYPTO_free((*ptr).sct.cast::<c_void>(), ptr::null(), 0);
+        }
+    }
+}
+
 /// `SCT *SCT_new(void)` — `crypto/ct/ct_sct.c:22-32`.
 #[no_mangle]
 pub extern "C" fn SCT_new() -> *mut Sct {
-    let sct = CRYPTO_zalloc(core::mem::size_of::<Sct>(), ptr::null(), 0).cast::<Sct>();
-    if sct.is_null() {
+    let Some(sct) = OwnedCtx::<Sct>::zalloc_at(SeamFile::NULL, 0, SeamFile::NULL, 0) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `sct` is a fresh zeroed allocation of exactly `Sct`.
+    };
+    // SAFETY: `sct.as_ptr()` is a fresh zeroed allocation of exactly `Sct`.
     unsafe {
-        (*sct).entry_type = CT_LOG_ENTRY_TYPE_NOT_SET;
-        (*sct).version = SCT_VERSION_NOT_SET;
+        (*sct.as_ptr()).entry_type = CT_LOG_ENTRY_TYPE_NOT_SET;
+        (*sct.as_ptr()).version = SCT_VERSION_NOT_SET;
     }
-    sct
+    sct.into_raw()
 }
 
 /// `void SCT_free(SCT *sct)` — `crypto/ct/ct_sct.c:34-44`.
@@ -199,17 +222,10 @@ pub extern "C" fn SCT_new() -> *mut Sct {
 /// `sct` is NULL or a live `SCT` this crate's item layer owns and that is not used afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_free(sct: *mut Sct) {
-    if sct.is_null() {
-        return;
-    }
-    // SAFETY: `sct` is live per the contract; each field is NULL or an owned block.
-    unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free((*sct).sct.cast::<c_void>(), ptr::null(), 0);
-        CRYPTO_free(sct.cast::<c_void>(), ptr::null(), 0);
-    }
+    // SAFETY: `sct` is NULL or a live `SCT` this crate's item layer owns and that is not used
+    // afterwards; `from_raw` reclaims it and `Drop` runs the authority's own free body and block
+    // release.
+    drop(unsafe { OwnedCtx::<Sct>::from_raw_at(sct, SeamFile::NULL, 0) });
 }
 
 /// `void sct_free_void(void *p)` — the `FreeFn` thunk `SCT_LIST_free` installs.
@@ -287,7 +303,20 @@ pub unsafe extern "C" fn SCT_set_log_entry_type(sct: *mut Sct, entry_type: c_int
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `log_id` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `log_id` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), i.e. a block whose only valid release is
+/// `CRYPTO_free`; a secure-heap or foreign allocation is excluded. Its allocation
+/// extent is at least `log_id_len` bytes, and `log_id_len` is the length stored and
+/// later read.
+///
+/// On success the callee takes ownership: the pointer is stored in `sct`, and
+/// `SCT_free` releases it exactly once with `CRYPTO_free(ptr, NULL, 0)` (authority
+/// `OPENSSL_free(sct->log_id)`, `crypto/ct/ct_sct.c:85`/`:34-44`). No copy is made.
+/// The single non-adopting path is the V1 length refusal above: it returns 0 before
+/// touching `log_id`, ownership stays with the caller, and the callee does not
+/// release it.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_log_id(
     sct: *mut Sct,
@@ -300,9 +329,15 @@ pub unsafe extern "C" fn SCT_set0_log_id(
         unsafe { raise_site(&CT_SCT_81) };
         return 0;
     }
-    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block, released through the seam;
+    // `log_id`'s ownership passes to `sct`.
     unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).log_id,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).log_id = log_id;
         (*sct).log_id_len = log_id_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -328,9 +363,14 @@ pub unsafe extern "C" fn SCT_set1_log_id(
         unsafe { raise_site(&CT_SCT_95) };
         return 0;
     }
-    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `log_id` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).log_id.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).log_id,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).log_id = ptr::null_mut();
         (*sct).log_id_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -404,12 +444,27 @@ pub unsafe extern "C" fn SCT_set_signature_nid(sct: *mut Sct, nid: c_int) -> c_i
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `ext` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `ext` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), releasable only by `CRYPTO_free`; a
+/// secure-heap or foreign allocation is excluded. Its allocation extent is at least
+/// `ext_len` bytes, and `ext_len` is the length stored and later read.
+///
+/// Ownership transfers unconditionally (there is no refusal path): the pointer is
+/// stored in `sct`, and `SCT_free` releases it exactly once with
+/// `CRYPTO_free(ptr, NULL, 0)` (authority `OPENSSL_free(sct->ext)`,
+/// `crypto/ct/ct_sct.c:140`/`:34-44`). No copy is made.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_extensions(sct: *mut Sct, ext: *mut c_uchar, ext_len: usize) {
-    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).ext,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).ext = ext;
         (*sct).ext_len = ext_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -428,9 +483,14 @@ pub unsafe extern "C" fn SCT_set1_extensions(
     ext: *const c_uchar,
     ext_len: usize,
 ) -> c_int {
-    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `ext` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).ext.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).ext,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).ext = ptr::null_mut();
         (*sct).ext_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -456,12 +516,28 @@ pub unsafe extern "C" fn SCT_set1_extensions(
 ///
 /// # Safety
 ///
-/// `sct` is a live `SCT`; `sig` is NULL or an owned block this call takes over.
+/// This is a public C entry (`#[no_mangle] unsafe extern "C"`): the obligation is
+/// the C caller's. `sct` is a live `SCT`. `sig` is NULL or a block obtained from
+/// this crate's **plain** `CRYPTO_*` allocator seam (`CRYPTO_malloc`,
+/// `CRYPTO_memdup` or `CRYPTO_strdup`), releasable only by `CRYPTO_free`; a
+/// secure-heap or foreign allocation is excluded. Its allocation extent is at least
+/// `sig_len` bytes, and `sig_len` is the length stored and later read.
+///
+/// Ownership transfers unconditionally (there is no refusal path): the pointer is
+/// stored in `sct`, and `SCT_free` releases it exactly once with
+/// `CRYPTO_free(ptr, NULL, 0)` (authority `OPENSSL_free(sct->sig)`,
+/// `crypto/ct/ct_sct.c:164`/`:34-44`). No copy is made.
 #[no_mangle]
 pub unsafe extern "C" fn SCT_set0_signature(sct: *mut Sct, sig: *mut c_uchar, sig_len: usize) {
-    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block, released through the seam;
+    // `sig`'s ownership passes to `sct`.
     unsafe {
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).sig,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).sig = sig;
         (*sct).sig_len = sig_len;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -480,9 +556,14 @@ pub unsafe extern "C" fn SCT_set1_signature(
     sig: *const c_uchar,
     sig_len: usize,
 ) -> c_int {
-    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block.
+    // SAFETY: `sct` is live; its old `sig` is NULL or an owned block, released through the seam.
     unsafe {
-        CRYPTO_free((*sct).sig.cast::<c_void>(), ptr::null(), 0);
+        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*sct).sig,
+            SeamFile::NULL,
+            0,
+        ));
         (*sct).sig = ptr::null_mut();
         (*sct).sig_len = 0;
         (*sct).validation_status = SCT_VALIDATION_STATUS_NOT_SET;
@@ -829,3 +910,7 @@ pub unsafe extern "C" fn SCT_LIST_validate(
     }
     are_scts_valid
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(Sct => zero_state_sweep_sct);

@@ -27,8 +27,12 @@ carries the current figures. All `libssl` exports remain `SCAFFOLDED` and abort 
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for the
   oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase8/COURTS.json` — eighteen courts, all pass, zero residuals. **The
-  totals are `docs/SEAL-CENSUS.md`'s**; the per-court table is §3.
+- Court results: `artifacts/phase8/COURTS.json` — eighteen courts, all pass, **zero unexplained
+  residuals**. Two residuals are the court's pinned, source-witnessed accepted divergences
+  (`defltwrap.pad21` = D561 and `rsa.obj_upref.zero_ref_after` = D562, §5); they match the
+  exact transcript pair recorded in `forensics/tools/phase8_courts.py`'s
+  `ACCEPTED_DIVERGENCES`, and any other difference still fails. **The totals are
+  `docs/SEAL-CENSUS.md`'s**; the per-court table is §3.
 - Obligation ledger: `forensics/phase8-obligations.json` — **0 open in this stratum**
 - Court coverage: `forensics/atlas/court-coverage.json` — every implemented export in exactly one of
   `directly_courted` / `indirectly_courted` / `non_observable`; the counts are
@@ -141,8 +145,8 @@ before a row may be called true.
 
 | court | plane | observations | probe |
 |---|---|---|---|
-| `RT-DIGEST` | differential | 654 | `courts/phase8/rt_digest_probe.c` |
-| `RT-CIPHER` | differential | 6946 | `courts/phase8/rt_cipher_probe.c` |
+| `RT-DIGEST` | differential | 670 | `courts/phase8/rt_digest_probe.c` |
+| `RT-CIPHER` | differential | 7291 | `courts/phase8/rt_cipher_probe.c` |
 | `RT-CIPHER-MEM` | differential | 382 | `courts/phase8/rt_cipher_mem_probe.c` |
 | `RT-RSA` | differential | 1021 | `courts/phase8/rt_rsa_probe.c` |
 | `RT-DH` | differential | 589 | `courts/phase8/rt_dh_probe.c` |
@@ -239,6 +243,17 @@ with a re-reading of this document. The register's entries whose subject code is
 - **`D-CBCHMAC-MAXBUFSZ-ASSERT-1`** — `tls1multi_maxbufsz` before `maxsndfrag` **aborts the authority**
   (measured, exit 134). The crate computes and answers 53 where the authority aborts. This one is
   permanent and deliberate: it is a safety divergence, not a gap.
+- **`D561`, `D562`** — the two deliberate refusals whose **observations are kept**, rather than
+  omitted, and pinned in `forensics/tools/phase8_courts.py`'s `ACCEPTED_DIVERGENCES` with their
+  exact authority/candidate values and a source witness. `D561` is `defltwrap.pad21`: the authority
+  writes `up8(21) + 8 = 32` octets into a provider call whose `outsize` is `EVP_EncryptUpdate`'s
+  `inl + blocksize = 29` (`src/evp/cipher_ctx.rs:3816-3821`), and `src/provider/cipher.rs:3973-3984`
+  refuses the encrypting arm's actual extent (`docs/DECISIONS.md` D561). `D562` is
+  `rsa.obj_upref.zero_ref_after`: the authority's `CRYPTO_UP_REF` turns a zero count into one and
+  reports failure, while `src/runtime/refcount.rs:163-185` refuses without resurrecting the object
+  (`docs/DECISIONS.md` D562, reached through `RSA_up_ref` at `src/rsa/object.rs:719-726`). Neither
+  row may be read as "the authority is right here": in both, the observed authority value is the
+  unsafe behaviour the candidate deliberately does not reproduce.
 - **`D-EC-1`, superseded by `D-EC-2`** — `curve_list[]`'s method column is not transcribed, because
   its one non-NULL value is a perlasm-only method. Recording a `None` in that column was tried and
   rejected: it would be a **fabricated value**, indistinguishable at the ABI from a real one.
@@ -247,8 +262,11 @@ with a re-reading of this document. The register's entries whose subject code is
   where the authority answers `EC_GFp_nistz256_method`, because `crypto/ec/ecp_nistz256.c` is a
   2,328-line unit whose implementation in this authority is **perlasm** and is not transcribed. Three
   named consequences follow, and they are consequences rather than omissions: the
-  `EC_GROUP_method_of` comparison is **not** carried as an `RT-EC` arm (a court's verdict is `pass`
-  only when residuals are empty, so it cannot carry a known difference);
+  `EC_GROUP_method_of` comparison is **not** carried as an `RT-EC` arm. A court's verdict is `pass`
+  only when residuals are empty or exactly the pinned accepted-divergence ledger, and that ledger
+  is reserved for a **candidate refusal with a source witness** (D561, D562 above); a missing
+  perlasm implementation is neither, so a transcript difference here cannot be carried and the arm
+  is omitted instead;
   `EC_nistz256_pre_comp_dup`/`_free` are not given a module, unreachable while no nistz256 group can
   be constructed; and `EC_GROUP_have_precompute_mult` answers 0 where the authority answers 1, so
   `RT-EC` skips that NID. `forensics/prerequisites.json` carries the record machine-readably with

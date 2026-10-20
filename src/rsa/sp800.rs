@@ -308,9 +308,13 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_derive_params_from_pq(
                  * if e is provided as a parameter, don't recompute e, d or n
                  */
                 if !e.is_null() {
-                    /* copy e */
+                    /* copy e. The copy is taken before the old exponent is released: `e` may be
+                     * the object's own `rsa->e` (the public generator passes its `e_value`
+                     * straight through), and the authority's free-then-dup order would read the
+                     * released value on that aliasing path. The observable result is unchanged. */
+                    let new_e = BN_dup(e);
                     BN_free((*rsa).e);
-                    (*rsa).e = BN_dup(e);
+                    (*rsa).e = new_e;
                     if (*rsa).e.is_null() {
                         ok = false;
                     } else {
@@ -321,7 +325,7 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_derive_params_from_pq(
                             ok = false;
                         } else {
                             BN_set_flags((*rsa).d, BN_FLG_CONSTTIME);
-                            if BN_mod_inverse((*rsa).d, e, lcm, ctx).is_null() {
+                            if BN_mod_inverse((*rsa).d, (*rsa).e, lcm, ctx).is_null() {
                                 ok = false;
                             } else if BN_num_bits((*rsa).d) <= (nbits >> 1) {
                                 /* (Step 3) return an error if d is too small */
@@ -394,17 +398,21 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_derive_params_from_pq(
     // `BIGNUM`; every `BN_free` accepts NULL.
     unsafe {
         if ret != 1 {
+            /* `e` and `n` are public; the private exponent and the three CRT components are
+             * cleansed before release. The authority frees this whole group plainly, which would
+             * leave secret limbs in the freed blocks, so the four secret members use the
+             * cleansing release. The value, ownership and release count are unchanged. */
             BN_free((*rsa).e);
             (*rsa).e = core::ptr::null_mut();
-            BN_free((*rsa).d);
+            BN_clear_free((*rsa).d);
             (*rsa).d = core::ptr::null_mut();
             BN_free((*rsa).n);
             (*rsa).n = core::ptr::null_mut();
-            BN_free((*rsa).iqmp);
+            BN_clear_free((*rsa).iqmp);
             (*rsa).iqmp = core::ptr::null_mut();
-            BN_free((*rsa).dmq1);
+            BN_clear_free((*rsa).dmq1);
             (*rsa).dmq1 = core::ptr::null_mut();
-            BN_free((*rsa).dmp1);
+            BN_clear_free((*rsa).dmp1);
             (*rsa).dmp1 = core::ptr::null_mut();
         }
         /* Each pool slot is NULL or live and `BN_clear` accepts both. */
@@ -587,6 +595,50 @@ mod tests {
             assert_eq!(ossl_rsa_sp800_56b_validate_strength(2048, 112), 1);
             assert_eq!(ossl_rsa_sp800_56b_validate_strength(2048, 100), 0);
             assert_eq!(ossl_rsa_sp800_56b_validate_strength(3072, 112), 0);
+        }
+    }
+
+    /// **`e` may be the object's own exponent.** The public generator forwards the caller's
+    /// `e_value`, and `RSA_generate_key_ex(rsa, bits, rsa->e, cb)` is a legal call; the copy must
+    /// therefore be taken before the old `rsa->e` is released. The derivation still succeeds and
+    /// the key keeps the same exponent value in a *new* object.
+    #[test]
+    fn derive_params_accepts_an_exponent_that_aliases_the_objects_own() {
+        use crate::bn::bignum::BN_get_word;
+
+        // SAFETY: every pointer is a fresh object this test owns; `e_alias` is released exactly
+        // once, through `rsa.e`, after the derivation has replaced it.
+        unsafe {
+            let mut rsa = crate::rsa::mp::zeroed_rsa();
+            let ctx = BN_CTX_new_ex(core::ptr::null_mut());
+            assert!(!ctx.is_null());
+            rsa.p = BN_new();
+            rsa.q = BN_new();
+            rsa.e = BN_new();
+            assert!(!rsa.p.is_null() && !rsa.q.is_null() && !rsa.e.is_null());
+            assert_eq!(BN_set_word(rsa.p, 61), 1);
+            assert_eq!(BN_set_word(rsa.q, 53), 1);
+            assert_eq!(BN_set_word(rsa.e, 17), 1);
+            let e_alias = rsa.e;
+
+            assert_eq!(
+                ossl_rsa_sp800_56b_derive_params_from_pq(&mut rsa, 16, e_alias, ctx),
+                1
+            );
+            assert!(!rsa.e.is_null());
+            assert_ne!(rsa.e, e_alias, "the exponent was re-copied");
+            assert_eq!(BN_get_word(rsa.e), 17);
+            assert_eq!(BN_get_word(rsa.n), 3233);
+
+            BN_free(rsa.e);
+            BN_free(rsa.n);
+            BN_clear_free(rsa.d);
+            BN_clear_free(rsa.dmp1);
+            BN_clear_free(rsa.dmq1);
+            BN_clear_free(rsa.iqmp);
+            BN_clear_free(rsa.p);
+            BN_clear_free(rsa.q);
+            BN_CTX_free(ctx);
         }
     }
 }

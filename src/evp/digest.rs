@@ -100,6 +100,23 @@
 //! An `impl` argument that is **not** NULL is a caller holding an ENGINE, which no caller can
 //! obtain here, and is refused at the authority's own raise site (`DIGEST_311`).
 //!
+//! ## Ownership: the method, the context and the legacy `md_data` block own themselves
+//!
+//! The `EVP_MD` block `evp_md_new` builds, the `EVP_MD_CTX` block `EVP_MD_CTX_new` builds and the
+//! legacy `md_data` buffer the init and copy paths allocate are owned here, on the crate's allocator
+//! seam at the authority's own size, file and line, so a caller-installed `CRYPTO_set_mem_functions`
+//! hook observes the allocation and its release. Each is an [`OwnedCtx`]/[`OwnedBuf`] whose `Drop`
+//! is the *single* release: the two exported releasers and `cleanup_old_md_data` reclaim the block
+//! instead of releasing it by hand, and the constructors hand it out with `into_raw`, so the exported
+//! ABI's stable address and its borrowed-until-free lifetime are unchanged.
+//!
+//! **What stays on the seam and what stays raw.** The blocks remain `CRYPTO_zalloc`/`CRYPTO_malloc`
+//! allocations; only their *ownership* moved above the seam. The `#[repr(C)]` `EvpMd`/`EvpMdCtx`
+//! layouts, their field offsets and the `EVP_MD_free`/`EVP_MD_meth_free` refusals are untouched, and
+//! `md_data`'s `Drop` is the authority's own cleanse-then-free. The method's provider half and
+//! `algctx` are the provider's own blocks (released through the method's `freectx`), and the
+//! `type_name`/`description` strings keep the authority's own release, so those stay raw.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
@@ -140,13 +157,15 @@ use crate::params::{
 };
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{
     err_sites, raise_site, ERR_clear_last_mark, ERR_count_to_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_DIGESTS};
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::{
     NID_hmacWithMD5, NID_hmacWithSHA1, NID_hmacWithSHA224, NID_hmacWithSHA256, NID_hmacWithSHA384,
@@ -158,6 +177,7 @@ use crate::runtime::obj::{
     NID_sha512, NID_sha512_224, NID_sha512_256, OBJ_NAME_do_all, OBJ_NAME_do_all_sorted,
     OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn, ObjName,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
 ///
@@ -185,12 +205,36 @@ pub(crate) const OBJ_NAME_TYPE_MD_METH: c_int = 0x01;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/digest.c".as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/digest.c");
+/// The authority's translation unit for `evp_md_free_int`, which is `evp_lib.c` and not
+/// `digest.c`: the method's block and its `type_name` are released there (`:866`/`:863`).
+const FILE_EVP_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_EVP_LIB_SEAM: SeamFile = SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c");
 /// `evp_md_new`'s `OPENSSL_zalloc(sizeof(*md))` (line 944).
 const LINE_ZALLOC_MD: c_int = 944;
 /// `evp_md_free_int`'s `OPENSSL_free(md->type_name)` (line 863), in `crypto/evp/evp_lib.c`.
 const LINE_FREE_TYPE_NAME: c_int = 863;
-/// `evp_md_free_int`'s `OPENSSL_free(md)` (line 867), in the same file.
-const LINE_FREE_MD: c_int = 867;
+/// `evp_md_free_int`'s `OPENSSL_free(md)` (line 866), in the same file.
+const LINE_FREE_MD: c_int = 866;
+/// `evp_md_new`'s constructor-refusal `OPENSSL_free(md)` (line 947), in
+/// `crypto/evp/digest.c`. The converted constructor has no fallible step after the zeroed
+/// allocation (`CRYPTO_NEW_REF` cannot fail), so this release coordinate is **unreachable**; it
+/// is kept distinct from [`LINE_FREE_MD`] so a future fallible step records the authority's own
+/// failure site rather than the object's success release site.
+const LINE_FREE_MD_ON_NEW: c_int = 947;
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the method and context blocks, and of the legacy `md_data` buffer
+// ---------------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the legacy `md_data` buffers
+// ---------------------------------------------------------------------------------------------
+//
+// The shared [`OwnedBuf`] carries the authority's conditional release: the block a seam answered
+// is owned with `adopt_conditional`, whose `clear` is fixed at construction and selects
+// `CRYPTO_clear_free` over the stored length versus the plain `CRYPTO_free`. `into_raw` hands the
+// block to a context, and `adopt_conditional` reclaims one a previous `into_raw` stored.
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the fifteen function-pointer types.
@@ -400,12 +444,19 @@ unsafe impl Sync for StaticMd {}
 /// fills only the provider half, so a fetched `EVP_MD` is `EVP_ORIG_DYNAMIC` with a `type` of
 /// `NID_undef` until `evp_md_from_algorithm` says otherwise.
 pub(crate) fn evp_md_new() -> *mut EvpMd {
-    let md = CRYPTO_zalloc(core::mem::size_of::<EvpMd>(), FILE, LINE_ZALLOC_MD).cast::<EvpMd>();
-    if !md.is_null() {
-        // SAFETY: `md` is a fresh zeroed block this call owns.
-        unsafe { (*md).refcnt = AtomicI32::new(1) };
-    }
-    md
+    // The method block, allocated through the crate's allocator seam; `Drop` is its single release
+    // on every refusal at a caller and `into_raw` hands it out on success.
+    // The release coordinate is `evp_md_new`'s own failure arm (`digest.c:947`). It is
+    // unreachable here because nothing after the allocation can fail, but the owner would report
+    // the authority's failure site if that ever changed.
+    let Some(md) =
+        OwnedCtx::<EvpMd>::zalloc_at(FILE_SEAM, LINE_ZALLOC_MD, FILE_SEAM, LINE_FREE_MD_ON_NEW)
+    else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `md` is a fresh zeroed block this call owns.
+    unsafe { (*md.as_ptr()).refcnt = AtomicI32::new(1) };
+    md.into_raw()
 }
 
 /// `static void set_legacy_nid(const char *name, void *vlegacy_nid)`.
@@ -747,11 +798,35 @@ unsafe extern "C" fn evp_md_free(md: *mut c_void) {
 /// # Safety
 /// `md` must be a live `EvpMd` with no references left.
 unsafe fn evp_md_free_int(md: *mut EvpMd) {
-    // SAFETY: `md` is live per the contract.
+    // SAFETY: `md` is a live method this crate allocated and has not released; `from_raw` reclaims
+    // it and `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the
+    // block release.
     unsafe {
-        CRYPTO_free((*md).type_name.cast::<c_void>(), FILE, LINE_FREE_TYPE_NAME);
-        ossl_provider_free((*md).prov);
-        CRYPTO_free(md.cast::<c_void>(), FILE, LINE_FREE_MD);
+        drop(OwnedCtx::<EvpMd>::from_raw_at(
+            md,
+            FILE_EVP_LIB_SEAM,
+            LINE_FREE_MD,
+        ))
+    };
+}
+
+/// The authority's `evp_md_free_int` body, without the block release [`OwnedCtx`]'s `Drop` performs:
+/// the type name and the provider reference.
+// SAFETY: (a) holds: `destroy_body` is `evp_md_free_int` minus the block -- the type name and the
+// provider reference, each releaser NULL-tolerant, never the enclosing block. (b) holds: an all-zero
+// method has both members NULL, so the body is the authority's own all-empty teardown -- what the
+// safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for EvpMd {
+    unsafe fn destroy_body(ptr: *mut EvpMd) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe {
+            CRYPTO_free(
+                (*ptr).type_name.cast::<c_void>(),
+                FILE_EVP_LIB,
+                LINE_FREE_TYPE_NAME,
+            );
+            ossl_provider_free((*ptr).prov);
+        }
     }
 }
 
@@ -801,7 +876,12 @@ pub unsafe extern "C" fn EVP_MD_up_ref(md: *mut EvpMd) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
         if (*md).origin == EVP_ORIG_DYNAMIC {
-            (*md).refcnt.fetch_add(1, Ordering::AcqRel);
+            // The shared protocol refuses a zero, destroying or `i32::MAX` count without
+            // changing it.
+            // SAFETY: `md` is live, its `EVP_ORIG_DYNAMIC` origin means this refcount is
+            // published and positive, and the C-ABI caller holds the reference this call
+            // acts for; the acquired reference is owned once by that caller.
+            return crate::runtime::refcount::up_ref(&(*md).refcnt);
         }
     }
     1
@@ -824,10 +904,14 @@ pub unsafe extern "C" fn EVP_MD_free(md: *mut EvpMd) {
     if unsafe { (*md).origin } != EVP_ORIG_DYNAMIC {
         return;
     }
-    // SAFETY: `md` is live.
-    let last = unsafe { (*md).refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `md` is live; this frame owns the reference it releases and, on `Last`, is
+    // the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*md).refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // The method's `type_name` release and `ossl_provider_free` can run a provider
+        // teardown callback; a re-entrant `EVP_MD_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
     // SAFETY: the count reached zero, so this is the last reference.
     unsafe { evp_md_free_int(md) };
@@ -1200,6 +1284,13 @@ pub unsafe extern "C" fn EVP_MD_meth_dup(md: *const EvpMd) -> *mut EvpMd {
             // The copy brought the original's origin across, so it is set again: a duplicate of a
             // `METH` method is a `METH` method.
             (*to).origin = EVP_ORIG_METH;
+            // `type_name` is the one owned member the raw copy could have aliased. A `METH`
+            // method never has one: the authority's only assignment (`digest.c:1040`) is in
+            // `evp_md_from_algorithm`, where `prov` is non-NULL -- the case this function has
+            // already refused above (`evp_lib.c:848`). Clearing it keeps one owner per
+            // allocation if that invariant is ever broken; `description` is the provider's own
+            // string and stays shared.
+            (*to).type_name = ptr::null_mut();
         }
     }
     to
@@ -1669,10 +1760,18 @@ unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
     let reuse = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_REUSE) }) != 0;
     if !md_data.is_null() && ctx_size > 0 && (!reuse || force != 0) {
         // SAFETY: `md_data` is the block this context allocated for `digest`, which is
-        // `ctx_size` bytes as that field said when it was allocated.
-        unsafe { CRYPTO_clear_free(md_data, ctx_size as usize, FILE, LINE_CLEAR_MD_DATA) };
-        // SAFETY: `ctx` is live.
-        unsafe { (*ctx).md_data = ptr::null_mut() };
+        // `ctx_size` bytes as that field said when it was allocated; `from_raw` reclaims it and
+        // `Drop` is its single cleansing release. `ctx` is live.
+        unsafe {
+            drop(OwnedBuf::adopt_conditional(
+                md_data.cast::<u8>(),
+                ctx_size as usize,
+                true,
+                FILE_SEAM,
+                LINE_CLEAR_MD_DATA,
+            ));
+            (*ctx).md_data = ptr::null_mut();
+        }
     }
 }
 
@@ -1794,7 +1893,10 @@ pub unsafe extern "C" fn EVP_MD_CTX_reset(ctx: *mut EvpMdCtx) -> c_int {
 /// invisible until the context has been used once.
 #[no_mangle]
 pub extern "C" fn EVP_MD_CTX_new() -> *mut EvpMdCtx {
-    CRYPTO_zalloc(core::mem::size_of::<EvpMdCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMdCtx>()
+    // The context block, allocated through the crate's allocator seam; `into_raw` hands it to the C
+    // caller and `EVP_MD_CTX_free`'s `from_raw` reclaims it.
+    OwnedCtx::<EvpMdCtx>::zalloc_at(FILE_SEAM, LINE_ZALLOC_CTX, FILE_SEAM, LINE_FREE_CTX)
+        .map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
 /// `EVP_MD_CTX *evp_md_ctx_new_ex(EVP_PKEY *pkey, const ASN1_OCTET_STRING *id,
@@ -1860,14 +1962,29 @@ pub(crate) unsafe fn evp_md_ctx_new_ex(
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MD_CTX_free(ctx: *mut EvpMdCtx) {
-    if ctx.is_null() {
-        return;
+    // SAFETY: `ctx` came from this crate's allocator; `from_raw` reclaims it (NULL is a no-op) and
+    // `Drop` runs the authority's own body ([`CtxDestroy::destroy_body`]) followed by the block
+    // release, so this is its last use.
+    unsafe {
+        drop(OwnedCtx::<EvpMdCtx>::from_raw_at(
+            ctx,
+            FILE_SEAM,
+            LINE_FREE_CTX,
+        ))
+    };
+}
+
+/// The authority's `EVP_MD_CTX_free` body, without the block release [`OwnedCtx`]'s `Drop`
+/// performs: the reset that releases everything the context holds.
+// SAFETY: (a) holds: `destroy_body` is `EVP_MD_CTX_free` minus the block -- `EVP_MD_CTX_reset`,
+// which releases everything the context holds and never the enclosing block. (b) holds: an all-zero
+// context resets to the same all-empty state, so the body is the authority's own all-empty teardown
+// -- what the safe `OwnedCtx::zalloc_at` leans on.
+unsafe impl CtxDestroy for EvpMdCtx {
+    unsafe fn destroy_body(ptr: *mut EvpMdCtx) {
+        // SAFETY: `ptr` is live per the trait contract.
+        unsafe { EVP_MD_CTX_reset(ptr) };
     }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe { EVP_MD_CTX_reset(ctx) };
-    // SAFETY: `ctx` came from this crate's allocator and has just been released of everything it
-    // held, so this is its last use.
-    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
 }
 
 /// `int evp_md_ctx_free_algctx(EVP_MD_CTX *ctx)`.
@@ -2179,12 +2296,23 @@ unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
             let update = unsafe { (*type_).update };
             // SAFETY: `ctx` is live.
             unsafe { (*ctx).update = update };
-            let block = CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA);
-            if block.is_null() {
+            // The legacy block, allocated through the crate's allocator seam; `into_raw` stores it
+            // in the context, which owns it until `cleanup_old_md_data` reclaims it at line 38.
+            // SAFETY: `CRYPTO_zalloc` is this crate's allocator seam and the block it answers is
+            // owned by this frame, with no other owner.
+            let Some(block) = (unsafe {
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA).cast(),
+                    ctx_size as usize,
+                    true,
+                    FILE_SEAM,
+                    LINE_CLEAR_MD_DATA,
+                )
+            }) else {
                 return 0;
-            }
+            };
             // SAFETY: `ctx` is live and `block` is this context's own allocation.
-            unsafe { (*ctx).md_data = block };
+            unsafe { (*ctx).md_data = block.into_raw().cast() };
         }
     }
 
@@ -2741,6 +2869,17 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy(out: *mut EvpMdCtx, in_: *const EvpMdCt
 /// The `FAIL_IF_NULL(in->digest)` is not a check but a **contract**: the third arm dereferences
 /// `in->digest` unconditionally, and a NULL there is a caller error on both sides.
 ///
+/// **Same-context copy follows the authority's decision order.** An uninitialised source is
+/// reset (the authority's `*out = *in` is a self-assignment); a provider source with no `dupctx`
+/// returns 0 at `digest.c:615-617` before any copy, self or not; a provider source with `dupctx`
+/// reproduces the provider arm's side effects -- `copyctx` when present, the pctx release, the
+/// `md_data` cleanup, the flag/update copy, or the `keep_fetched` reset when there is no
+/// `copyctx` -- and answers 1. **The legacy arm is the one divergence:** the authority resets the
+/// context and then dereferences the `out->digest` it has just NULLed (`digest.c:684-720`,
+/// measured as a SIGSEGV against 3.6.4), so a legacy self-copy answers 1 here and leaves the
+/// context untouched instead of reproducing that fault. Every `copy_nonoverlapping` below is
+/// then reached only with distinct contexts.
+///
 /// # Safety
 /// `out` must be a live context; `in` NULL or live (and already initialised for the third arm).
 #[no_mangle]
@@ -2754,6 +2893,14 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpM
     // SAFETY: `in_` is live per the contract.
     let in_digest = unsafe { (*in_).digest };
     if in_digest.is_null() {
+        if ptr::eq(out.cast_const(), in_) {
+            // The authority's uninitialised arm resets the destination and then self-assigns;
+            // only the reset has an observable effect (pcontext release, stale data cleanup,
+            // fetched-reference release and the struct cleanse).
+            // SAFETY: `out` is live per the contract.
+            unsafe { EVP_MD_CTX_reset(out) };
+            return 1;
+        }
         // Copying an uninitialised context. The destination is emptied, and the one reference it
         // might hold is released *before* the struct copy, because the copy would otherwise
         // overwrite the only pointer to it.
@@ -2774,17 +2921,69 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpM
     // SAFETY: `in_` is live per the contract.
     let in_no_init = (unsafe { EVP_MD_CTX_test_flags(in_, EVP_MD_CTX_FLAG_NO_INIT) }) != 0;
     if in_prov.is_null() || in_no_init {
+        if ptr::eq(out.cast_const(), in_) {
+            // DIVERGENCE (docs/SECURITY_DIVERGENCE_POLICY.md, AGENTS.md §17): the authority's
+            // legacy arm resets this very context and then reads `out->digest->copy` from the
+            // NULLed field. Answering 1 without side effects keeps a defined result; the
+            // authority has none to reproduce.
+            return 1;
+        }
         // SAFETY: `out` and `in_` are live per the contract.
         return unsafe { evp_md_ctx_copy_legacy(out, in_) };
     }
 
     // SAFETY: `in_digest` is live.
     let (in_dupctx, in_copyctx) = unsafe { ((*in_digest).dupctx, (*in_digest).copyctx) };
+    // This check comes *before* the same-context handling: a provider method without `dupctx`
+    // refuses the copy with 0 even when `out == in`, exactly as the authority does.
     let Some(in_dupctx) = in_dupctx else {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DIGEST_616) };
         return 0;
     };
+
+    if ptr::eq(out.cast_const(), in_) {
+        // Provider self-copy, with `dupctx` present. Reproduce the arm's side effects rather than
+        // short-circuiting: the in-place arm may run the method's `copyctx` (with the same
+        // algorithm context on both sides, as the authority calls it), release the pcontext and
+        // clean stale legacy data; the re-acquiring arm resets with `keep_fetched` and then clears
+        // the two pointers the authority clears.
+        // SAFETY: `out` is live per the contract.
+        if unsafe { (*out).digest } == in_digest {
+            if let Some(copyctx) = in_copyctx {
+                // SAFETY: `copyctx` is the method's own callback and both algorithm contexts
+                // belong to it; for a self-copy they are the same pointer, as in the authority.
+                unsafe { copyctx((*out).algctx, (*in_).algctx) };
+                // SAFETY: `out` is live; its pcontext, if any, is the destination's own.
+                unsafe {
+                    evp_pkey_ctx_free((*out).pctx);
+                    (*out).pctx = ptr::null_mut();
+                }
+                // SAFETY: `out` is live per the contract.
+                unsafe { cleanup_old_md_data(out, 0) };
+                // SAFETY: `out` and `in_` are live, and the fields being copied are scalars.
+                unsafe {
+                    (*out).flags = (*in_).flags;
+                    (*out).update = (*in_).update;
+                }
+                // SAFETY: both contexts are live.
+                return unsafe { evp_md_ctx_copy_clone_pkey(out, in_) };
+            }
+        }
+
+        // The re-acquiring arm on itself: `evp_md_ctx_reset_ex(out, 1)` keeps the fetched
+        // reference, and the authority's `*out = *in` is then a self-assignment, so only the
+        // reset's releases and the two explicit NULLs have an effect.
+        // SAFETY: `out` is live per the contract, and `keep_fetched` is what the authority passes.
+        unsafe { evp_md_ctx_reset_ex(out, 1) };
+        // SAFETY: `out` is live.
+        unsafe {
+            (*out).pctx = ptr::null_mut();
+            (*out).algctx = ptr::null_mut();
+        }
+        // SAFETY: both contexts are live.
+        return unsafe { evp_md_ctx_copy_clone_pkey(out, in_) };
+    }
 
     // SAFETY: `out` is live per the contract.
     if unsafe { (*out).digest } == in_digest {
@@ -2900,8 +3099,20 @@ unsafe fn evp_md_ctx_copy_clone_pkey(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -
 /// *between* the reset and the block fix-up, so `out->digest` afterwards is the source's method and
 /// `out->md_data` has to be repaired by hand.
 ///
+/// **Ownership divergence, deliberate.** The authority's `memcpy` leaves `fetched_digest` and
+/// `algctx` aliased between the two contexts, so freeing both releases one method reference and one
+/// provider context twice (`evp_local.h`'s contracts give each member one owner). The reference is
+/// taken and the algorithm context duplicated here instead; when the method has no `dupctx` the
+/// destination takes NULL rather than a second owner. `fetched_digest` is NULL for every legacy
+/// context and `algctx` is NULL for every legacy method, so this is only reachable through
+/// `EVP_MD_CTX_FLAG_NO_INIT` set after a provider initialise, where `NO_INIT` keeps both unusable
+/// until a re-initialise anyway.
+///
 /// # Safety
-/// `out` and `in_` must both be live contexts with non-NULL methods.
+/// `out` and `in_` must both be live contexts with non-NULL methods, and `out != in_`: the body
+/// copies the whole struct with `ptr::copy_nonoverlapping` after resetting the destination, which
+/// requires the two blocks not to overlap. `EVP_MD_CTX_copy_ex` establishes that precondition
+/// before dispatching here.
 unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_int {
     // SAFETY: `out` and `in_` are live per the contract.
     let tmp_buf = unsafe {
@@ -2921,12 +3132,33 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
     // SAFETY: `out` is live per the contract.
     unsafe { EVP_MD_CTX_clear_flags(out, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) };
 
-    // The two pointers that are *not* copied, because both are about to be fixed up and would
-    // otherwise be a leak and a double free if anything below failed.
+    // The pointers that are *not* copied outright. `md_data` and `pctx` are fixed up below;
+    // `fetched_digest` and `algctx` are owned by the source, and leaving either aliased means both
+    // contexts release it -- the authority's legacy arm does exactly that, while its provider arm
+    // takes a reference and duplicates the algorithm context. Clearing them here is also what makes
+    // every failure return below a safe reset: nothing the destination holds points into the source.
     // SAFETY: `out` is live and was just overwritten from `in_`.
-    unsafe {
+    let (in_fetched, in_algctx) = unsafe {
+        let fetched = (*out).fetched_digest;
+        let algctx = (*out).algctx;
         (*out).md_data = ptr::null_mut();
         (*out).pctx = ptr::null_mut();
+        (*out).fetched_digest = ptr::null_mut();
+        (*out).algctx = ptr::null_mut();
+        (fetched, algctx)
+    };
+
+    // `out->digest` points into the method the source's `fetched_digest` reference keeps alive, so
+    // the destination takes its own reference before it can outlive the source.
+    if !in_fetched.is_null() {
+        // SAFETY: `in_fetched` is the source's live method reference.
+        if unsafe { EVP_MD_up_ref(in_fetched) } == 0 {
+            // SAFETY: `out` now holds only its own copied state.
+            unsafe { EVP_MD_CTX_reset(out) };
+            return 0;
+        }
+        // SAFETY: `out` is live.
+        unsafe { (*out).fetched_digest = in_fetched };
     }
 
     // SAFETY: `out` and `in_` are live; `out->digest` is the source's method.
@@ -2936,11 +3168,27 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
         let block = if !tmp_buf.is_null() {
             tmp_buf
         } else {
-            let fresh = CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA);
-            if fresh.is_null() {
+            // The fresh block, allocated through the crate's allocator seam; `into_raw` stores it
+            // in the destination context, which owns it until `cleanup_old_md_data` reclaims it at
+            // line 38.
+            // SAFETY: `CRYPTO_malloc` is this crate's allocator seam and the block it answers is
+            // owned by this frame, with no other owner.
+            let Some(fresh) = (unsafe {
+                OwnedBuf::adopt_conditional(
+                    CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA).cast(),
+                    ctx_size as usize,
+                    false,
+                    FILE_SEAM,
+                    LINE_CLEAR_MD_DATA,
+                )
+            }) else {
+                // The authority returns 0 here without resetting, so this call invokes no
+                // method `cleanup` (which would see `md_data == NULL`). The destination keeps
+                // the copied method pointer and a NULL `md_data`; a later free runs the reset
+                // exactly as the authority's caller would.
                 return 0;
-            }
-            fresh
+            };
+            fresh.into_raw().cast()
         };
         // SAFETY: `block` is at least `ctx_size` bytes -- either the destination's own old block
         // for this very method, or a fresh allocation of exactly that size -- and `in_md_data` is
@@ -2952,6 +3200,26 @@ unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_
                 ctx_size as usize,
             );
             (*out).md_data = block;
+        }
+    }
+
+    // A provider algorithm context can be present here only when `NO_INIT` was set after a
+    // provider initialise; the authority copies the pointer and leaves both contexts owning it,
+    // which is a double free. Duplicate it when the method can, so the destination owns its own;
+    // otherwise leave it NULL and let the destination never release the source's. Under `NO_INIT`
+    // no operation consults it, and a later re-initialise creates a fresh one.
+    if !in_algctx.is_null() {
+        // SAFETY: `out_digest` is the live method the source used.
+        if let Some(dup) = unsafe { (*out_digest).dupctx } {
+            // SAFETY: `dup` is the method's own callback and `in_algctx` is its context.
+            let algctx = unsafe { dup(in_algctx) };
+            if algctx.is_null() {
+                // SAFETY: `out` now holds only its own copied state.
+                unsafe { EVP_MD_CTX_reset(out) };
+                return 0;
+            }
+            // SAFETY: `out` is live.
+            unsafe { (*out).algctx = algctx };
         }
     }
 
@@ -5608,6 +5876,359 @@ mod tests {
         }
     }
 
+    /// A context copied onto itself follows the authority's decision order: an uninitialised source
+    /// is reset; a provider method with no `dupctx` returns 0 at `digest.c:615-617` *before* the
+    /// self case; a provider method with `dupctx` reproduces the in-place or re-acquiring side
+    /// effects and returns 1; a legacy self-copy returns 1 with no side effects, because the
+    /// authority's legacy arm dereferences the method it has just reset (explicit §17 divergence).
+    /// Both an empty and an armed context are checked, and the armed one keeps its method.
+    #[test]
+    fn copying_a_context_onto_itself_is_a_safe_identity() {
+        /// `static int init(EVP_MD_CTX *)` -- accepts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn init(_ctx: *mut EvpMdCtx) -> c_int {
+            1
+        }
+
+        let ctx = EVP_MD_CTX_new();
+        let md = a_hand_built_method(32);
+        assert!(!ctx.is_null());
+        // SAFETY: both objects are this test's own, and the method is filled in before use.
+        unsafe {
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 1, "an empty context");
+            assert!((*ctx).digest.is_null(), "and nothing was invented");
+
+            (*md).init = Some(init);
+            assert_eq!(EVP_DigestInit_ex(ctx, md, ptr::null_mut()), 1);
+            assert_eq!((*ctx).digest, md);
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 1, "an armed context");
+            assert_eq!((*ctx).digest, md, "and it was not reset");
+            assert_eq!(EVP_MD_CTX_copy(ctx, ctx), 1);
+            assert!(
+                (*ctx).digest.is_null(),
+                "`copy` resets first, as the authority does"
+            );
+
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_meth_free(md);
+        }
+    }
+
+    /// A refused copy answers 0 before touching the destination. The arm used here is the provider
+    /// method with no `dupctx`, which is the early refusal; the hand-built method is made
+    /// provider-shaped by setting `prov` -- the only field that refusal reads -- to a sentinel, and
+    /// it is cleared again before the block is released.
+    #[test]
+    fn a_refused_copy_leaves_the_destination_unchanged() {
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: all three objects are this test's own; the sentinel is never dereferenced.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*src).digest = fake;
+            (*dst).flags = EVP_MD_CTX_FLAG_ONESHOT as c_ulong;
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, src), 0);
+            assert_coordinate(&err_sites::DIGEST_616);
+            assert_eq!(
+                (*dst).flags,
+                EVP_MD_CTX_FLAG_ONESHOT as c_ulong,
+                "flags untouched"
+            );
+            assert!((*dst).digest.is_null(), "and no method was installed");
+            assert!((*dst).md_data.is_null());
+
+            (*fake).prov = ptr::null_mut();
+            // The contexts hold `fake` as `digest`, so they must be released first: `src`'s reset
+            // reads `(*digest).cleanup`/`ctx_size` and would be a use-after-free otherwise.
+            EVP_MD_CTX_free(src);
+            EVP_MD_CTX_free(dst);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// A provider method with no `dupctx` refuses the copy with 0 at `digest.c:615-617`, and that
+    /// refusal comes before any same-context handling -- so a self-copy is refused too, with the
+    /// context untouched.
+    #[test]
+    fn a_provider_self_copy_without_dupctx_is_refused_before_the_self_case() {
+        let fake = evp_md_new();
+        let ctx = EVP_MD_CTX_new();
+        assert!(!fake.is_null() && !ctx.is_null());
+        // SAFETY: both objects are this test's own; the provider sentinel is never dereferenced.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*ctx).digest = fake;
+            (*ctx).flags = EVP_MD_CTX_FLAG_ONESHOT as c_ulong;
+
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 0);
+            assert_coordinate(&err_sites::DIGEST_616);
+            assert_eq!((*ctx).digest, fake, "the context is untouched");
+            assert_eq!((*ctx).flags, EVP_MD_CTX_FLAG_ONESHOT as c_ulong);
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// With `dupctx` present and no `copyctx`, the authority's re-acquiring arm runs on the same
+    /// object: `evp_md_ctx_reset_ex(out, 1)` releases the algorithm context but keeps the fetched
+    /// reference, the self-assignment is a no-op, and `pctx`/`algctx` are cleared.
+    #[test]
+    fn a_provider_self_copy_without_copyctx_takes_the_reacquiring_arm() {
+        /// `static void *dupctx(void *)` -- accepted but not reached by the self arm.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn dup(_ctx: *mut c_void) -> *mut c_void {
+            ptr::null_mut()
+        }
+
+        let fake = evp_md_new();
+        let ctx = EVP_MD_CTX_new();
+        let sentinel: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !ctx.is_null());
+        // SAFETY: both objects are this test's own; the sentinel is only compared, never read.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).dupctx = Some(dup);
+            (*ctx).digest = fake;
+            (*ctx).algctx = sentinel;
+
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 1);
+            assert_eq!((*ctx).digest, fake, "the method survives");
+            assert!(
+                (*ctx).algctx.is_null(),
+                "the algorithm context was released"
+            );
+            assert!((*ctx).md_data.is_null());
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// With `copyctx` present, the authority's in-place arm runs even on itself: the callback sees
+    /// the same algorithm context on both sides, the pcontext is released, stale legacy data is
+    /// cleaned, and the algorithm context is not reset.
+    #[test]
+    fn a_provider_self_copy_with_copyctx_takes_the_in_place_arm() {
+        static CALLS: AtomicI32 = AtomicI32::new(0);
+        static SAME: AtomicI32 = AtomicI32::new(0);
+
+        /// `static void *dupctx(void *)` -- accepted but not reached by the in-place arm.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn dup(_ctx: *mut c_void) -> *mut c_void {
+            ptr::null_mut()
+        }
+
+        /// `static void copyctx(void *, void *)` -- counts and records pointer identity.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; the pointers are compared, not read.
+        unsafe extern "C" fn copyctx(out: *mut c_void, in_: *mut c_void) {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            if out == in_ {
+                SAME.fetch_add(1, Ordering::AcqRel);
+            }
+        }
+
+        let fake = evp_md_new();
+        let ctx = EVP_MD_CTX_new();
+        let sentinel: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !ctx.is_null());
+        // SAFETY: both objects are this test's own; the sentinel is only compared, never read.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).dupctx = Some(dup);
+            (*fake).copyctx = Some(copyctx);
+            (*ctx).digest = fake;
+            (*ctx).algctx = sentinel;
+
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 1);
+            assert_eq!(CALLS.load(Ordering::Acquire), 1, "the callback ran once");
+            assert_eq!(
+                SAME.load(Ordering::Acquire),
+                1,
+                "both sides are the same algorithm context"
+            );
+            assert_eq!((*ctx).algctx, sentinel, "the in-place arm keeps it");
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// The legacy arm's allocation failure returns 0 without resetting, matching the authority, so
+    /// the call itself never invokes the method `cleanup` with `md_data == NULL`. A negative
+    /// `ctx_size` becomes a `usize::MAX` request, which `CRYPTO_malloc` refuses.
+    #[test]
+    fn a_legacy_copy_allocation_failure_does_not_run_cleanup() {
+        static CLEANUPS: AtomicI32 = AtomicI32::new(0);
+
+        /// `static int cleanup(EVP_MD_CTX *)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn cleanup(_ctx: *mut EvpMdCtx) -> c_int {
+            CLEANUPS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let block: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: every object is this test's own; `block` is never read.
+        unsafe {
+            (*fake).ctx_size = -1;
+            (*fake).cleanup = Some(cleanup);
+            (*src).digest = fake;
+            (*src).md_data = block;
+
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, src), 0);
+            assert_eq!(
+                CLEANUPS.load(Ordering::Acquire),
+                0,
+                "no cleanup on the allocation-failure path"
+            );
+            assert_eq!(
+                (*dst).digest,
+                fake,
+                "the authority leaves the copied method pointer"
+            );
+            assert!((*dst).md_data.is_null());
+
+            // Do not run the deliberately NULL-`md_data` cleanup while releasing the test objects.
+            (*fake).cleanup = None;
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(src);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// A legacy copy gives the destination no second owner for the source's `fetched_digest` or
+    /// `algctx`. The authority's `memcpy` leaves both pointers in both contexts; the destination
+    /// here takes its own method reference and never adopts the algorithm-context pointer (the
+    /// hand-built method has no `dupctx`). Freeing both contexts therefore releases each exactly
+    /// once -- the double release this test would hit before the fix.
+    #[test]
+    fn a_legacy_copy_does_not_alias_the_sources_owned_state() {
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let sentinel: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: the method is this test's own heap block; every pointer is set by this frame.
+        unsafe {
+            (*src).digest = fake;
+            (*src).fetched_digest = fake;
+            (*src).algctx = sentinel;
+            EVP_MD_CTX_set_flags(src, EVP_MD_CTX_FLAG_NO_INIT);
+
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, src), 1);
+            assert_eq!(
+                (*fake).refcnt.load(Ordering::Acquire),
+                2,
+                "the destination holds its own reference"
+            );
+            assert_eq!((*dst).fetched_digest, fake);
+            assert!(
+                (*dst).algctx.is_null(),
+                "and not the source's algorithm context"
+            );
+            assert_eq!((*src).algctx, sentinel, "which the source still owns");
+
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(src);
+        }
+    }
+
+    /// A failure after the struct has been copied resets the destination rather than leaving it
+    /// aliased to the source. The trigger here is the method's `dupctx` refusing the algorithm
+    /// context; the destination must end up empty and the source untouched, and both must release
+    /// cleanly.
+    #[test]
+    fn a_failed_legacy_copy_resets_the_destination() {
+        /// `static void *dupctx(void *)` -- refuses.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn refuse_dup(_ctx: *mut c_void) -> *mut c_void {
+            ptr::null_mut()
+        }
+
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let sentinel: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: every object is this test's own; the sentinel is only compared, never read.
+        unsafe {
+            (*fake).dupctx = Some(refuse_dup);
+            (*src).digest = fake;
+            (*src).algctx = sentinel;
+            EVP_MD_CTX_set_flags(src, EVP_MD_CTX_FLAG_NO_INIT);
+            (*dst).flags = EVP_MD_CTX_FLAG_ONESHOT as c_ulong;
+
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, src), 0);
+            assert!((*dst).digest.is_null(), "the destination was reset");
+            assert_eq!((*dst).flags, 0, "including the flag the test set");
+            assert_eq!((*src).algctx, sentinel, "the source keeps its context");
+
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(src);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// Duplicating a hand-built method and freeing the duplicate leaves the original intact and
+    /// usable; the duplicate owns no `type_name` even when the original has one (the raw copy is
+    /// otherwise a second owner of the same allocation).
+    #[test]
+    fn a_duplicated_method_leaves_the_original_usable() {
+        let md = a_hand_built_method(32);
+        assert!(!md.is_null());
+        // SAFETY: `md` is this test's own method, and `dup` is returned with its own ownership.
+        unsafe {
+            let name = crate::runtime::mem::CRYPTO_strdup(c"hand-built".as_ptr(), ptr::null(), 0);
+            assert!(!name.is_null());
+            (*md).type_name = name;
+            let desc = c"a hand-built method".as_ptr();
+            (*md).description = desc;
+
+            let dup = EVP_MD_meth_dup(md);
+            assert!(!dup.is_null());
+            assert_ne!(dup, md);
+            assert_eq!((*dup).type_, (*md).type_);
+            assert_eq!((*dup).pkey_type, (*md).pkey_type);
+            assert_eq!((*dup).md_size, 32);
+            assert_eq!((*dup).origin, EVP_ORIG_METH);
+            assert_eq!((*dup).refcnt.load(Ordering::Acquire), 1);
+            assert!((*dup).type_name.is_null(), "the duplicate owns no name");
+            assert_eq!(
+                (*dup).description,
+                desc,
+                "the description is shared, not owned"
+            );
+
+            EVP_MD_meth_free(dup);
+            assert_eq!((*md).type_name, name, "the original still owns its name");
+            assert_eq!((*md).description, desc);
+            assert_eq!(EVP_MD_meth_get_result_size(md), 32, "and is still usable");
+            EVP_MD_meth_free(md);
+        }
+    }
+
     /// The two refusals the legacy initialise is built around, both of them reachable through
     /// `EVP_DigestInit_ex` and neither of them a fault here.
     ///
@@ -5753,3 +6374,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(EvpMd => zero_state_sweep_evp_md, EvpMdCtx => zero_state_sweep_evp_md_ctx);

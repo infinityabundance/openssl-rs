@@ -1,0 +1,1063 @@
+{
+ "schema": "openssl-rs/p25-safe-c33-closure/1",
+ "task_id": "SAFE-C33-001",
+ "title": "Safe-33 closure inventory: drop-in-compatible downstream families and their internal ownership mechanisms",
+ "branch": "integrate/safe-c33",
+ "base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
+ "base_ref": "origin/main",
+ "head_sha": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
+ "status": "closure-inventory-complete",
+ "candidate": {
+  "crate": "openssl-rs 0.0.27",
+  "reconstructs": "openssl-3.6.4-production",
+  "identity_hash": "fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e",
+  "source_commit": "f0789077aa1982fdb94141ce9a74f45195de60d3"
+ },
+ "cohort": {
+  "verdict": "DROP_IN_PASS",
+  "count": 33,
+  "levels": {
+   "L4-linked": 25,
+   "L7-functional": 8
+  },
+  "l7_functional": [
+   "curl",
+   "haproxy",
+   "isync",
+   "monit",
+   "nginx",
+   "openssh",
+   "pure-ftpd",
+   "redis"
+  ],
+  "build_link_only": [
+   "cyrus-sasl",
+   "dovecot",
+   "fetchmail",
+   "fossil",
+   "hiredis-ssl",
+   "iperf3",
+   "keepalived",
+   "kmod",
+   "ldns",
+   "libarchive",
+   "libevent",
+   "librdkafka",
+   "libretls",
+   "links",
+   "mosquitto",
+   "openvpn",
+   "proxytunnel",
+   "rsync",
+   "socat",
+   "squid",
+   "sslscan",
+   "ssmtp",
+   "stunnel",
+   "tinc",
+   "tnftp"
+  ],
+  "fingerprinted": [
+   "curl",
+   "haproxy",
+   "monit",
+   "openssh",
+   "pure-ftpd",
+   "redis"
+  ],
+  "not_applicable": 967,
+  "families": {
+   "curl": {
+    "family_id": "family:curl",
+    "level": "L7-functional",
+    "rank": 9,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "curl: verified TLS1.3 fetch + unrelated-CA reject",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "cyrus-sasl": {
+    "family_id": "family:cyrus-sasl",
+    "level": "L4-linked",
+    "rank": 449,
+    "libssl": false,
+    "imports": 12,
+    "evidence": "linkage-inferred",
+    "surface": "plugins/.libs/libdigestmd5.so.3.0.0",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "dovecot": {
+    "family_id": "family:dovecot",
+    "level": "L4-linked",
+    "rank": 11,
+    "libssl": true,
+    "imports": 145,
+    "evidence": "linkage-inferred",
+    "surface": "src/lib-dcrypt/.libs/libdcrypt_openssl.so",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "fetchmail": {
+    "family_id": "family:fetchmail",
+    "level": "L4-linked",
+    "rank": 62,
+    "libssl": true,
+    "imports": 67,
+    "evidence": "linkage-inferred",
+    "surface": "fetchmail",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "fossil": {
+    "family_id": "family:fossil",
+    "level": "L4-linked",
+    "rank": 63,
+    "libssl": true,
+    "imports": 67,
+    "evidence": "linkage-inferred",
+    "surface": "fossil",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "haproxy": {
+    "family_id": "family:haproxy",
+    "level": "L7-functional",
+    "rank": 14,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "haproxy: TLS terminator with a verified response",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "hiredis-ssl": {
+    "family_id": "family:hiredis-ssl",
+    "level": "L4-linked",
+    "rank": 836,
+    "libssl": true,
+    "imports": 21,
+    "evidence": "linkage-inferred",
+    "surface": "libhiredis_ssl.so",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "iperf3": {
+    "family_id": "family:iperf3",
+    "level": "L4-linked",
+    "rank": 251,
+    "libssl": false,
+    "imports": 28,
+    "evidence": "linkage-inferred",
+    "surface": "src/.libs/libiperf.so.0.0.0",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "isync": {
+    "family_id": "family:isync",
+    "level": "L7-functional",
+    "rank": 16,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "linkage-inferred",
+    "surface": "isync: mbsync IMAPS fetch from a local IMAP peer into a Maildir",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "keepalived": {
+    "family_id": "family:keepalived",
+    "level": "L4-linked",
+    "rank": 73,
+    "libssl": true,
+    "imports": 34,
+    "evidence": "linkage-inferred",
+    "surface": "keepalived/keepalived",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "kmod": {
+    "family_id": "family:kmod",
+    "level": "L4-linked",
+    "rank": 17,
+    "libssl": false,
+    "imports": 20,
+    "evidence": "linkage-inferred",
+    "surface": "tools/kmod",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "ldns": {
+    "family_id": "family:ldns",
+    "level": "L4-linked",
+    "rank": 141,
+    "libssl": false,
+    "imports": 112,
+    "evidence": "linkage-inferred",
+    "surface": ".libs/libldns.so.3.5.0",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "libarchive": {
+    "family_id": "family:libarchive",
+    "level": "L4-linked",
+    "rank": 263,
+    "libssl": false,
+    "imports": 27,
+    "evidence": "linkage-inferred",
+    "surface": ".libs/libarchive.so.13.7.7",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "libevent": {
+    "family_id": "family:libevent",
+    "level": "L4-linked",
+    "rank": 143,
+    "libssl": true,
+    "imports": 39,
+    "evidence": "linkage-inferred",
+    "surface": ".libs/libevent_openssl-2.1.so.7.0.1",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "librdkafka": {
+    "family_id": "family:librdkafka",
+    "level": "L4-linked",
+    "rank": 21,
+    "libssl": true,
+    "imports": 95,
+    "evidence": "linkage-inferred",
+    "surface": "src/librdkafka.so.1",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "libretls": {
+    "family_id": "family:libretls",
+    "level": "L4-linked",
+    "rank": 145,
+    "libssl": true,
+    "imports": 178,
+    "evidence": "linkage-inferred",
+    "surface": ".libs/libtls.so.28.0.0",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "links": {
+    "family_id": "family:links",
+    "level": "L4-linked",
+    "rank": 84,
+    "libssl": true,
+    "imports": 51,
+    "evidence": "linkage-inferred",
+    "surface": "links",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "monit": {
+    "family_id": "family:monit",
+    "level": "L7-functional",
+    "rank": 27,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "monit: TLS httpd handshake + HTTP response",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "mosquitto": {
+    "family_id": "family:mosquitto",
+    "level": "L4-linked",
+    "rank": 28,
+    "libssl": true,
+    "imports": 92,
+    "evidence": "linkage-inferred",
+    "surface": "lib/libmosquitto.so.1",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "nginx": {
+    "family_id": "family:nginx",
+    "level": "L7-functional",
+    "rank": 88,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "linkage-inferred",
+    "surface": "nginx: verified TLS1.3 server response",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "openssh": {
+    "family_id": "family:openssh",
+    "level": "L7-functional",
+    "rank": 34,
+    "libssl": false,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "openvpn": {
+    "family_id": "family:openvpn",
+    "level": "L4-linked",
+    "rank": 35,
+    "libssl": true,
+    "imports": 238,
+    "evidence": "linkage-inferred",
+    "surface": "src/openvpn/openvpn",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "proxytunnel": {
+    "family_id": "family:proxytunnel",
+    "level": "L4-linked",
+    "rank": 364,
+    "libssl": true,
+    "imports": 36,
+    "evidence": "linkage-inferred",
+    "surface": "proxytunnel",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "pure-ftpd": {
+    "family_id": "family:pure-ftpd",
+    "level": "L7-functional",
+    "rank": 39,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+    "mechanisms": [
+     "ERR",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION"
+    ]
+   },
+   "redis": {
+    "family_id": "family:redis",
+    "level": "L7-functional",
+    "rank": 40,
+    "libssl": true,
+    "imports": 0,
+    "evidence": "fingerprint",
+    "surface": "redis: TLS handshake + encrypted PING/+PONG",
+    "mechanisms": [
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION"
+    ]
+   },
+   "rsync": {
+    "family_id": "family:rsync",
+    "level": "L4-linked",
+    "rank": 381,
+    "libssl": false,
+    "imports": 5,
+    "evidence": "linkage-inferred",
+    "surface": "rsync",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "socat": {
+    "family_id": "family:socat",
+    "level": "L4-linked",
+    "rank": 104,
+    "libssl": true,
+    "imports": 84,
+    "evidence": "linkage-inferred",
+    "surface": "socat",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "squid": {
+    "family_id": "family:squid",
+    "level": "L4-linked",
+    "rank": 45,
+    "libssl": true,
+    "imports": 247,
+    "evidence": "linkage-inferred",
+    "surface": "src/squid",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "sslscan": {
+    "family_id": "family:sslscan",
+    "level": "L4-linked",
+    "rank": 164,
+    "libssl": true,
+    "imports": 152,
+    "evidence": "linkage-inferred",
+    "surface": "sslscan",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "ssmtp": {
+    "family_id": "family:ssmtp",
+    "level": "L4-linked",
+    "rank": 401,
+    "libssl": true,
+    "imports": 15,
+    "evidence": "linkage-inferred",
+    "surface": "ssmtp",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "stunnel": {
+    "family_id": "family:stunnel",
+    "level": "L4-linked",
+    "rank": 403,
+    "libssl": true,
+    "imports": 298,
+    "evidence": "linkage-inferred",
+    "surface": "src/stunnel",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "tinc": {
+    "family_id": "family:tinc",
+    "level": "L4-linked",
+    "rank": 110,
+    "libssl": false,
+    "imports": 53,
+    "evidence": "linkage-inferred",
+    "surface": "src/tincd",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "tnftp": {
+    "family_id": "family:tnftp",
+    "level": "L4-linked",
+    "rank": 413,
+    "libssl": true,
+    "imports": 25,
+    "evidence": "linkage-inferred",
+    "surface": "src/tnftp",
+    "mechanisms": [
+     "ASN1_OCSP",
+     "BIO",
+     "ERR",
+     "EVP_PKEY_PROVIDER",
+     "RAND_CMS_STORE_KEYFMT",
+     "RUNTIME_ALLOC_OWNERSHIP",
+     "RUNTIME_CONCURRENCY",
+     "SSL_SESSION",
+     "X509_VERIFY_POLICY"
+    ]
+   }
+  }
+ },
+ "sources": {
+  "p1000-run": {
+   "path": "forensics/downstream/p1000-run.json",
+   "body_hash": "84023c90a54b9da152f12193de59e7121b9e4e87135fdb0938b9caf5da815f63"
+  },
+  "family-freeze": {
+   "path": "forensics/downstream/family-freeze.json",
+   "body_hash": "8e18c078bd204b59d2f1f256c939094bcad0a480856c54811357490f591ed535",
+   "selection_root_hash": "f2a0454fe4dca98556da2e958b6e70cebaf76becbebba69b2abd752e63deba4e"
+  },
+  "reconciliation": {
+   "path": "forensics/downstream/reconciliation.json",
+   "body_hash": "327ab08b20ad5cbacc95e7c668bd03eafe7c06fa0514fd3a28c03207b97adbe9"
+  },
+  "runtime-functional-atlas": {
+   "path": "forensics/downstream/runtime-functional-atlas.json",
+   "body_hash": "aa9e9d0fc356ada2e80dd6d487456c716fec53ff604488a5fdb992d6ee604549"
+  },
+  "usage-fingerprints": {
+   "path": "forensics/downstream/usage-fingerprints.json"
+  },
+  "source-census": {
+   "path": "artifacts/phase25/source-census.json"
+  },
+  "ownership-planes": {
+   "path": "artifacts/phase25/ownership-planes.json"
+  },
+  "phase22-crosswalk": {
+   "path": "artifacts/phase25/phase22-crosswalk.json"
+  },
+  "phase24-crosswalk": {
+   "path": "artifacts/phase25/phase24-crosswalk.json"
+  },
+  "mechanisms": {
+   "path": "artifacts/phase25/mechanisms.json"
+  },
+  "summary": {
+   "path": "artifacts/phase25/summary.json"
+  }
+ },
+ "state_vocabulary": {
+  "UNSAFE_OPEN": "no ownership work on this mechanism's raw boundary on this branch; the boundary is open",
+  "OWNERSHIP_RECONSTRUCTED": "the branch models ownership for (some of) the region with owning types/Drop, but no proof discharges the raw-pointer boundary; a Drop wrapper alone is never discharge",
+  "SAFETY_DISCHARGED": "a per-site safety contract for the boundary is proven (no unexplained reachable site in the mechanism); not claimed by a Drop wrapper alone",
+  "COMPATIBILITY_CONFIRMED": "downstream drop-in build/link (L4) is confirmed against the authority",
+  "SAFE_COMPATIBLE": "the mechanism is SAFETY_DISCHARGED and a functional (L7) result is confirmed for families depending on it",
+  "BLOCKED": "cannot advance (no authority unit / external dependency)"
+ },
+ "cohort_state": "COMPATIBILITY_CONFIRMED",
+ "mechanisms": [
+  {
+   "id": "ERR",
+   "category": "BIO/error",
+   "state": "UNSAFE_OPEN",
+   "families_total": 33,
+   "families_measured": 6,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 540,
+   "crate_files": 8,
+   "converted_files_on_branch": [],
+   "authority_prefixes": [
+    "crypto/err"
+   ]
+  },
+  {
+   "id": "RAND_CMS_STORE_KEYFMT",
+   "category": "RAND/CMS/STORE/key formats",
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "families_total": 33,
+   "families_measured": 6,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 21499,
+   "crate_files": 96,
+   "converted_files_on_branch": [
+    "src/cms/cms_env.rs",
+    "src/pem/pvkfmt.rs",
+    "src/store/store_lib.rs"
+   ],
+   "authority_prefixes": [
+    "crypto/rand",
+    "crypto/cms",
+    "crypto/store",
+    "crypto/pem",
+    "crypto/pkcs7",
+    "crypto/pkcs12",
+    "crypto/cmp",
+    "crypto/crmf"
+   ]
+  },
+  {
+   "id": "BIO",
+   "category": "BIO/error",
+   "state": "UNSAFE_OPEN",
+   "families_total": 32,
+   "families_measured": 5,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 6593,
+   "crate_files": 40,
+   "converted_files_on_branch": [],
+   "authority_prefixes": [
+    "crypto/bio"
+   ]
+  },
+  {
+   "id": "EVP_PKEY_PROVIDER",
+   "category": "EVP/PKEY/digest/cipher/provider state",
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "families_total": 32,
+   "families_measured": 5,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 90830,
+   "crate_files": 371,
+   "converted_files_on_branch": [
+    "src/ec/smpl.rs",
+    "src/evp/digest.rs",
+    "src/evp/e_aes.rs",
+    "src/evp/p_legacy.rs",
+    "src/evp/pkey_ctx.rs",
+    "src/hpke/mod.rs",
+    "src/provider/cipher.rs",
+    "src/provider/digest.rs",
+    "src/provider/kdf.rs",
+    "src/provider/mac.rs",
+    "src/provider/rand.rs"
+   ],
+   "authority_prefixes": [
+    "crypto/evp",
+    "providers/",
+    "crypto/property",
+    "crypto/param",
+    "crypto/ec",
+    "crypto/rsa",
+    "crypto/dsa",
+    "crypto/dh",
+    "crypto/bn",
+    "crypto/ffc"
+   ]
+  },
+  {
+   "id": "RUNTIME_ALLOC_OWNERSHIP",
+   "category": "runtime allocator/ownership",
+   "state": "UNSAFE_OPEN",
+   "families_total": 31,
+   "families_measured": 4,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 4229,
+   "crate_files": 40,
+   "converted_files_on_branch": [],
+   "authority_prefixes": [
+    "crypto/mem",
+    "crypto/stack",
+    "crypto/ex_data",
+    "crypto/init",
+    "crypto/buffer",
+    "crypto/context",
+    "crypto/lhash"
+   ]
+  },
+  {
+   "id": "ASN1_OCSP",
+   "category": "ASN.1",
+   "state": "UNSAFE_OPEN",
+   "families_total": 31,
+   "families_measured": 4,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 10865,
+   "crate_files": 79,
+   "converted_files_on_branch": [],
+   "authority_prefixes": [
+    "crypto/asn1",
+    "crypto/ocsp",
+    "crypto/ts",
+    "crypto/objects"
+   ]
+  },
+  {
+   "id": "X509_VERIFY_POLICY",
+   "category": "X.509 verify/policy",
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "families_total": 31,
+   "families_measured": 4,
+   "families_inferred": 27,
+   "crate_unsafe_operations": 18207,
+   "crate_files": 97,
+   "converted_files_on_branch": [
+    "src/x509/pcy_data.rs",
+    "src/x509/pcy_lib.rs",
+    "src/x509/pcy_node.rs",
+    "src/x509/pcy_tree.rs",
+    "src/x509/v3_utl.rs",
+    "src/x509/x509_vfy.rs"
+   ],
+   "authority_prefixes": [
+    "crypto/x509"
+   ]
+  },
+  {
+   "id": "RUNTIME_CONCURRENCY",
+   "category": "runtime concurrency",
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "families_total": 25,
+   "families_measured": 5,
+   "families_inferred": 20,
+   "crate_unsafe_operations": 1572,
+   "crate_files": 9,
+   "converted_files_on_branch": [
+    "src/context/namemap.rs",
+    "src/runtime/thread_events.rs"
+   ],
+   "authority_prefixes": [
+    "crypto/threads",
+    "crypto/threads_pthread",
+    "crypto/init"
+   ]
+  },
+  {
+   "id": "SSL_SESSION",
+   "category": "SSL/SSL_CTX/session",
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "families_total": 25,
+   "families_measured": 5,
+   "families_inferred": 20,
+   "crate_unsafe_operations": 11781,
+   "crate_files": 41,
+   "converted_files_on_branch": [
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/ssl_sess.rs",
+    "src/ssl/statem/statem_clnt.rs",
+    "src/ssl/statem/statem_srvr.rs"
+   ],
+   "authority_prefixes": [
+    "ssl/"
+   ]
+  }
+ ],
+ "worklist": [
+  {
+   "rank": 1,
+   "mechanism": "ERR",
+   "families_unlocked": 33,
+   "state": "UNSAFE_OPEN",
+   "already_on_branch": [],
+   "next_action": "audit crypto/err sites in src/runtime/err* and ssl_err_legacy; model the error-queue/ERR_STATE ownership; prove the per-site contract"
+  },
+  {
+   "rank": 2,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "families_unlocked": 33,
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "already_on_branch": [
+    "src/cms/cms_env.rs",
+    "src/pem/pvkfmt.rs",
+    "src/store/store_lib.rs"
+   ],
+   "next_action": "discharge DRBG/CMS/STORE/pkcs7/pkcs12 boundaries; RAND+PEM are near-universal, so a sub-split (DRBG vs key formats) is warranted"
+  },
+  {
+   "rank": 3,
+   "mechanism": "BIO",
+   "families_unlocked": 32,
+   "state": "UNSAFE_OPEN",
+   "already_on_branch": [],
+   "next_action": "audit crypto/bio (src/runtime/bio, core_bio, bio_ssl, method/ctrl callbacks); BIO method-table ownership"
+  },
+  {
+   "rank": 4,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "families_unlocked": 32,
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "already_on_branch": [
+    "src/ec/smpl.rs",
+    "src/evp/digest.rs",
+    "src/evp/e_aes.rs",
+    "src/evp/p_legacy.rs",
+    "src/evp/pkey_ctx.rs",
+    "src/hpke/mod.rs",
+    "src/provider/cipher.rs",
+    "src/provider/digest.rs",
+    "src/provider/kdf.rs",
+    "src/provider/mac.rs",
+    "src/provider/rand.rs"
+   ],
+   "next_action": "largest volume (90.8k ops); carry the reconstruction to discharge on evp/provider contexts and the key primitives"
+  },
+  {
+   "rank": 5,
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "families_unlocked": 31,
+   "state": "UNSAFE_OPEN",
+   "already_on_branch": [],
+   "next_action": "src/runtime/mem*, secure, ex_data, stack, lhash; foundational boundary every other mechanism rests on; hook observability is behaviour"
+  },
+  {
+   "rank": 6,
+   "mechanism": "ASN1_OCSP",
+   "families_unlocked": 31,
+   "state": "UNSAFE_OPEN",
+   "already_on_branch": [],
+   "next_action": "src/asn1, ocsp, ts, runtime/obj; the d2i_*/i2d_* depth/length contracts"
+  },
+  {
+   "rank": 7,
+   "mechanism": "X509_VERIFY_POLICY",
+   "families_unlocked": 31,
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "already_on_branch": [
+    "src/x509/pcy_data.rs",
+    "src/x509/pcy_lib.rs",
+    "src/x509/pcy_node.rs",
+    "src/x509/pcy_tree.rs",
+    "src/x509/v3_utl.rs",
+    "src/x509/x509_vfy.rs"
+   ],
+   "next_action": "strongest sub-evidence (campaign/x509-policy-tree); finish verify/store; the TRANSMUTE at vm-type-confusion-crypto-x509 is still HIDDEN"
+  },
+  {
+   "rank": 8,
+   "mechanism": "RUNTIME_CONCURRENCY",
+   "families_unlocked": 25,
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "already_on_branch": [
+    "src/context/namemap.rs",
+    "src/runtime/thread_events.rs"
+   ],
+   "next_action": "finish crypto/threads/init; 25 unsynchronized mutable globals remain"
+  },
+  {
+   "rank": 9,
+   "mechanism": "SSL_SESSION",
+   "families_unlocked": 25,
+   "state": "OWNERSHIP_RECONSTRUCTED",
+   "already_on_branch": [
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/ssl_sess.rs",
+    "src/ssl/statem/statem_clnt.rs",
+    "src/ssl/statem/statem_srvr.rs"
+   ],
+   "next_action": "finish SSL/CTX/cert/session and remaining statem; ssl/dtls is the UNRESOLVED CVE mechanism"
+  }
+ ],
+ "cve_mechanism_plane": {
+  "total": 7,
+  "eliminated": 3,
+  "hidden": 3,
+  "unresolved": 1,
+  "note": "candidate-level CVE dispositions; never summed with the ownership mechanisms"
+ },
+ "non_claims": [
+  "phase24-crosswalk associations are ELF-symbol-table import observations, not per-operation execution proofs (44872 DOWNSTREAM_RUNTIME_OBSERVED, 0 IMPORT_OBSERVED)",
+  "symbol-level evidence covers 6 of 33; mechanism dependence is measured for 6 and inferred from linkage/surface for 27 (isync and nginx reach L7 with no fingerprint)",
+  "OWNERSHIP_RECONSTRUCTED is not SAFETY_DISCHARGED: a Drop wrapper is not a discharge; 187 unmatched FREES, 368 unmatched refcount decrements, 35 double-free contexts, 25 unsynchronized mutable globals and 5080 UNKNOWN unwind classes remain structurally possible",
+  "leverage family counts are dependence counts, an upper bound, not a minimal hitting set",
+  "33/33 is a selected population, not a random sample; a build is not a functional proof; NOT_APPLICABLE is not a pass; the Phase-25 bounded claim is stated, not proven (passed=false)",
+  "the 967 not-applicable families carry no attributable mechanism: no admitted source recipe; only the 40-family recipe queue is a growth signal"
+ ]
+}

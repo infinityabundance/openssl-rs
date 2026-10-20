@@ -6,6 +6,8 @@
     "claim": "A passing RT-* court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md). A passing CT-* court means the candidate's construction produced the committed expected bytes; it is NOT OpenSSL parity and NOT formal validation (docs/DECISIONS.md D201).",
     "courts": [
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 670,
         "candidate_exit_code": 0,
@@ -20,9 +22,22 @@
           "authority": "artifacts/phase8/probes/rt_digest_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_digest_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 1,
+        "accepted_divergences": [
+          {
+            "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
+            "candidate": "0",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "defltwrap.pad21",
+            "witness": "docs/DECISIONS.md D561; src/provider/cipher.rs:3973-3984 (the encrypting arm's write-extent check, retained after the authority's `outsize < inl` check at cipher_aes_wrp.c:249); src/evp/cipher_ctx.rs:3816-3821 (the provider is handed `inl + blocksize`, 29 here); crypto/modes/wrap128.c:188-228 (padded output is `up8(inl) + 8`, 32 here)."
+          }
+        ],
         "authority_exit_code": 0,
         "authority_observations": 7291,
         "candidate_exit_code": 0,
@@ -31,15 +46,26 @@
         "court": "RT-CIPHER",
         "crashed": false,
         "probe": "courts/phase8/rt_cipher_probe.c",
-        "residual_count": 0,
-        "residuals": [],
+        "residual_count": 1,
+        "residuals": [
+          {
+            "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
+            "candidate": "0",
+            "class": "value",
+            "observation": "defltwrap.pad21"
+          }
+        ],
         "staged_binaries": {
           "authority": "artifacts/phase8/probes/rt_cipher_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_cipher_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 382,
         "candidate_exit_code": 0,
@@ -54,9 +80,22 @@
           "authority": "artifacts/phase8/probes/rt_cipher_mem_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_cipher_mem_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 1,
+        "accepted_divergences": [
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "rsa.obj_upref.zero_ref_after",
+            "witness": "docs/DECISIONS.md D562; src/runtime/refcount.rs:163-185 (`up_ref` refuses a zero, negative, destroying or `i32::MAX` count without changing it); src/rsa/object.rs:719-726 (`RSA_up_ref` calls that gate). The authority's `CRYPTO_UP_REF` increments first and reports the post-increment failure."
+          }
+        ],
         "authority_exit_code": 0,
         "authority_observations": 1021,
         "candidate_exit_code": 0,
@@ -65,15 +104,26 @@
         "court": "RT-RSA",
         "crashed": false,
         "probe": "courts/phase8/rt_rsa_probe.c",
-        "residual_count": 0,
-        "residuals": [],
+        "residual_count": 1,
+        "residuals": [
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "rsa.obj_upref.zero_ref_after"
+          }
+        ],
         "staged_binaries": {
           "authority": "artifacts/phase8/probes/rt_rsa_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_rsa_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 589,
         "candidate_exit_code": 0,
@@ -88,9 +138,13 @@
           "authority": "artifacts/phase8/probes/rt_dh_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_dh_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 342,
         "candidate_exit_code": 0,
@@ -105,9 +159,13 @@
           "authority": "artifacts/phase8/probes/rt_dsa_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_dsa_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 2419,
         "candidate_exit_code": 0,
@@ -122,9 +180,13 @@
           "authority": "artifacts/phase8/probes/rt_ec_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_ec_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 471,
         "candidate_exit_code": 0,
@@ -139,9 +201,13 @@
           "authority": "artifacts/phase8/probes/rt_ameth_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_ameth_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 102,
         "candidate_exit_code": 0,
@@ -156,9 +222,13 @@
           "authority": "artifacts/phase8/probes/rt_pem_key_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_pem_key_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 100,
         "candidate_exit_code": 0,
@@ -173,9 +243,13 @@
           "authority": "artifacts/phase8/probes/rt_pubkey_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_pubkey_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 183,
         "candidate_exit_code": 0,
@@ -190,9 +264,13 @@
           "authority": "artifacts/phase8/probes/rt_ecx_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_ecx_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 608,
         "candidate_exit_code": 0,
@@ -207,9 +285,13 @@
           "authority": "artifacts/phase8/probes/rt_keymgmt_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_keymgmt_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 472,
         "candidate_exit_code": 0,
@@ -224,9 +306,13 @@
           "authority": "artifacts/phase8/probes/rt_signature_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_signature_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 118,
         "candidate_exit_code": 0,
@@ -241,9 +327,13 @@
           "authority": "artifacts/phase8/probes/rt_asymcipher_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_asymcipher_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {
+        "accepted_divergence_count": 0,
+        "accepted_divergences": [],
         "authority_exit_code": 0,
         "authority_observations": 722,
         "candidate_exit_code": 0,
@@ -258,6 +348,8 @@
           "authority": "artifacts/phase8/probes/rt_provider_cap_probe.authority",
           "candidate": "artifacts/phase8/probes/rt_provider_cap_probe.candidate"
         },
+        "unexplained_residual_count": 0,
+        "unexplained_residuals": [],
         "verdict": "pass"
       },
       {

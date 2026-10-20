@@ -73,11 +73,12 @@ use crate::provider::cipher::{param_octet_string, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::kem_util::{ossl_eckem_modename2id, KEM_MODE_DHKEM, KEM_MODE_UNDEFINED};
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::err::raise_site_data;
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_clear_free};
 
 /// `LABEL_KEM` — `ec_kem.c.in:70`, `"KEM"`.
 const LABEL_KEM: &[u8] = b"KEM";
@@ -137,6 +138,65 @@ struct ProvEcCtx {
     kdfname: *const c_char,
     /// `const OSSL_HPKE_KEM_INFO *info` — a `'static` table entry.
     info: *const HpkeKemInfo,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ownership of the context block and its secret IKM seed
+// ---------------------------------------------------------------------------------------------
+
+// SAFETY: (a) `destroy_body` is `eckem_freectx`'s member body, releasing exactly this context's own
+// ephemeral seed and two held key references once (each releaser accepts the unset NULL) and never
+// the enclosing block, which `OwnedCtx` releases; (b) `ProvEcCtx` is a `#[repr(C)]` record of raw
+// pointers, integers and `usize`s, so an all-zero block is a valid `ProvEcCtx` the body is sound on
+// (`CRYPTO_clear_free(NULL, 0, ...)` and two NULL-key releases).
+unsafe impl CtxDestroy for ProvEcCtx {
+    const FILE: *const c_char = FILE_EC_KEM;
+    const LINE_ALLOC: c_int = 199;
+    const LINE_FREE: c_int = 216;
+
+    unsafe fn destroy_body(ptr: *mut ProvEcCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract; `ikm` is NULL or this context's
+        // own secret block and the two keys are NULL or its own references.
+        unsafe {
+            CRYPTO_clear_free((*ptr).ikm.cast(), (*ptr).ikmlen, FILE_EC_KEM, 213);
+            recipient_key_set(ptr, ptr::null_mut());
+            sender_authkey_set(ptr, ptr::null_mut());
+        }
+    }
+}
+
+/// An owned secret seed buffer released with the authority's own cleansing `CRYPTO_clear_free`.
+///
+/// `ProvEcCtx`'s `ikm` member is replaced in place by `eckem_set_ctx_params`: the old block is
+/// adopted here and released at the authority's own `:365` site when the replacement is installed.
+struct OwnedSecret {
+    ptr: *mut u8,
+    len: usize,
+    line: c_int,
+}
+
+impl OwnedSecret {
+    /// Adopt the old `ikm` member from a live context, or `None` for NULL.
+    ///
+    /// # Safety
+    /// `ptr` is NULL or a live secret block this crate allocated that no one else owns and `len` is
+    /// its allocation length; `Drop` performs its single cleansing release.
+    unsafe fn adopt(ptr: *mut u8, len: usize, line: c_int) -> Option<OwnedSecret> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(OwnedSecret { ptr, len, line })
+        }
+    }
+}
+
+impl Drop for OwnedSecret {
+    /// The seed's single release: the authority's own cleansing `CRYPTO_clear_free`.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block `adopt` took over and has not released; `self.len` is its
+        // allocation length; the authority's own `CRYPTO_clear_free` accepts NULL.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE_EC_KEM, self.line) };
+    }
 }
 
 /// `static int eckey_check(const EC_KEY *ec, int requires_privatekey)` — `ec_kem.c.in:72-103`.
@@ -300,20 +360,21 @@ unsafe fn ecpubkey_todata(
 /// # Safety
 /// The KEM `newctx` dispatch contract.
 unsafe extern "C" fn eckem_newctx(provctx: *mut c_void) -> *mut c_void {
-    // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvEcCtx>(), FILE_EC_KEM, 199).cast::<ProvEcCtx>();
-
-    if ctx.is_null() {
+    // A fresh zeroed `PROV_EC_CTX` is the authority's own starting state, so this is
+    // `CRYPTO_zalloc` at the authority's exact size/`file`/`line`; `Drop` reclaims the block at
+    // `eckem_freectx`'s own site.
+    let Some(ctx) = OwnedCtx::<ProvEcCtx>::zalloc() else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ctx` is this call's own allocation; `provctx` is the caller's.
+    };
+    let p = ctx.as_ptr();
+
+    // SAFETY: `p` is this call's own fresh zeroed context; `provctx` is the caller's.
     unsafe {
-        (*ctx).libctx = prov_libctx_of(provctx);
-        (*ctx).mode = KEM_MODE_DHKEM as c_uint;
+        (*p).libctx = prov_libctx_of(provctx);
+        (*p).mode = KEM_MODE_DHKEM as c_uint;
     }
 
-    ctx.cast()
+    ctx.into_raw().cast()
 }
 
 /// `static void eckem_freectx(void *vectx)` — `ec_kem.c.in:211-219`.
@@ -323,14 +384,10 @@ unsafe extern "C" fn eckem_newctx(provctx: *mut c_void) -> *mut c_void {
 unsafe extern "C" fn eckem_freectx(vectx: *mut c_void) {
     let ctx = vectx.cast::<ProvEcCtx>();
 
-    // SAFETY: `ctx` is the caller's context; `recipient_key_set`/`sender_authkey_set` accept a
-    // NULL key and release the held ones, and `ctx` is released last.
-    unsafe {
-        CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_EC_KEM, 213);
-        recipient_key_set(ctx, ptr::null_mut());
-        sender_authkey_set(ctx, ptr::null_mut());
-        CRYPTO_free(ctx.cast(), FILE_EC_KEM, 216);
-    }
+    // SAFETY: `ctx` is NULL or the caller's context and no other owner has released it; `from_raw`
+    // maps NULL to `None`, and its `Drop` runs the authority's own `eckem_freectx` body (the seed
+    // cleanse and the two key releases) and block release.
+    drop(unsafe { OwnedCtx::<ProvEcCtx>::from_raw(ctx) });
 }
 
 /// `static int ossl_ec_match_params(const EC_KEY *key1, const EC_KEY *key2)` —
@@ -562,7 +619,8 @@ unsafe extern "C" fn eckem_set_ctx_params(vctx: *mut c_void, params: *const Ossl
             {
                 return 0;
             }
-            CRYPTO_clear_free((*ctx).ikm.cast(), (*ctx).ikmlen, FILE_EC_KEM, 365);
+            // The seed being replaced is adopted and released at the authority's own site.
+            drop(OwnedSecret::adopt((*ctx).ikm, (*ctx).ikmlen, 365));
             /* Set the ephemeral seed */
             (*ctx).ikm = tmp.cast::<u8>();
             (*ctx).ikmlen = tmplen;
@@ -1531,3 +1589,7 @@ mod tests {
         }
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(ProvEcCtx => zero_state_sweep_prov_ec_ctx);

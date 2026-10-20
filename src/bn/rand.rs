@@ -134,6 +134,63 @@ pub(crate) enum BnrandFlag {
     Private,
 }
 
+// ---------------------------------------------------------------------------------------------
+// Ownership seam
+// ---------------------------------------------------------------------------------------------
+
+/// A temporary random buffer owned by the function that allocates it.
+///
+/// The block stays the `CRYPTO_malloc(bytes, FILE, LINE)` the authority makes, at the authority's
+/// own size and site, because a Rust `Box`/`Vec` would hide the allocation and its release from a
+/// caller-installed `CRYPTO_set_mem_functions` hook. Only its *ownership* is this type:
+/// [`Self::new`] allocates it, `Drop` is the authority's own cleansing
+/// `OPENSSL_clear_free(buf, bytes)`, and [`Self::as_mut_slice`] hands the caller a `&mut [u8]`
+/// derived from the owner rather than a raw pointer.
+struct OwnedBuf {
+    ptr: *mut u8,
+    len: usize,
+}
+
+impl OwnedBuf {
+    /// `CRYPTO_malloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
+    fn new(len: usize) -> Option<OwnedBuf> {
+        // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, exclusively owned block of
+        // `len` bytes.
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, FILE.as_ptr(), LINE)
+        }
+        .cast::<u8>();
+        if raw.is_null() {
+            None
+        } else {
+            Some(OwnedBuf { ptr: raw, len })
+        }
+    }
+
+    /// The owned bytes, as a mutable slice.
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: `self.ptr` is the block this handle owns, `self.len` its length, and `&mut self`
+        // proves exclusive access for the returned borrow's lifetime.
+        unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
+    }
+
+    /// The block's writable start, for the calls that take a raw pointer.
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
+impl Drop for OwnedBuf {
+    /// The block's single release, through the authority's own cleansing
+    /// `OPENSSL_clear_free(buf, bytes)` at its own file/line.
+    fn drop(&mut self) {
+        // SAFETY: `self.ptr` is the block this handle owns and has not released; the authority's
+        // own cleansing free is the whole release.
+        unsafe { CRYPTO_clear_free(self.ptr.cast(), self.len, FILE.as_ptr(), LINE) };
+    }
+}
+
 /// `static int bnrand(BNRAND_FLAG flag, BIGNUM *rnd, int bits, int top, int bottom,
 /// unsigned int strength, BN_CTX *ctx)` — `crypto/bn/bn_rand.c:25-100`.
 ///
@@ -194,18 +251,19 @@ pub(crate) unsafe fn bnrand(
     let libctx: *mut c_void = unsafe { crate::bn::ctx::ossl_bn_get_libctx(ctx) };
 
     // SAFETY: `CRYPTO_malloc` needs no caller pointer and answers null on failure.
-    let buf = CRYPTO_malloc(bytes as usize, FILE.as_ptr(), LINE).cast::<u8>();
-    if buf.is_null() {
-        // The authority's `goto err` with `ret == 0`; the buffer is null, so the
-        // clearing free has nothing to release.
-        return 0;
-    }
+    let mut buf = match OwnedBuf::new(bytes as usize) {
+        Some(buf) => buf,
+        None => {
+            // The authority's `goto err` with `ret == 0`; the buffer is null, so the
+            // clearing free has nothing to release.
+            return 0;
+        }
+    };
 
     let ret = (|| -> c_int {
-        // SAFETY: `buf` came from the `CRYPTO_malloc` above and has not been
-        // released; `bytes >= 1` because `bits >= 1`, so it is writable for `bytes`
-        // bytes and is not aliased.
-        let buf = unsafe { core::slice::from_raw_parts_mut(buf, bytes as usize) };
+        // The owner hands out a `&mut [u8]` for exactly `bytes` bytes; `bytes >= 1` because
+        // `bits >= 1`, and the borrow is exclusive for its lifetime.
+        let buf = buf.as_mut_slice();
 
         // `libctx` is the caller's context (null when `ctx` is null, which the RAND
         // front accepts) and `buf` is writable for `buf.len()` bytes per the block above.
@@ -291,9 +349,7 @@ pub(crate) unsafe fn bnrand(
         1
     })();
 
-    // `OPENSSL_clear_free(buf, bytes)` — the authority's clearing free.
-    // SAFETY: `buf` came from the `CRYPTO_malloc` above and has not been released.
-    unsafe { CRYPTO_clear_free(buf.cast(), bytes as usize, FILE.as_ptr(), LINE) };
+    // `OPENSSL_clear_free(buf, bytes)` is the owner's own `Drop`, run here as the frame unwinds.
     ret
 }
 
@@ -787,19 +843,17 @@ pub(crate) unsafe fn ossl_bn_priv_rand_range_fixed_top(
 }
 
 /// The authority's `end:` label of [`ossl_bn_gen_dsa_nonce_fixed_top`]: the context, the fetched
-/// digest, the key buffer and the three local buffers are released in that order on **every**
-/// exit, which is why that body jumps here rather than repeating the six calls at each of its
-/// failure arms.
+/// digest and the three local buffers are released in that order on **every** exit, which is why
+/// that body jumps here rather than repeating the calls at each of its failure arms. The key
+/// buffer is no longer part of this helper: it is owned by a [`OwnedBuf`] whose `Drop` releases it.
 ///
 /// # Safety
 ///
-/// `mdctx` and `md` are NULL or live; `k_bytes` is NULL or owns `num_k_bytes` bytes; the three
-/// buffers are live locals of the lengths their own call sites pass.
+/// `mdctx` and `md` are NULL or live; the three buffers are live locals of the lengths their own
+/// call sites pass.
 unsafe fn dsa_nonce_end(
     mdctx: *mut crate::evp::digest::EvpMdCtx,
     md: *mut crate::evp::digest::EvpMd,
-    k_bytes: *mut u8,
-    num_k_bytes: usize,
     digest: &mut [u8],
     random_bytes: &mut [u8],
     private_bytes: &mut [u8],
@@ -811,7 +865,6 @@ unsafe fn dsa_nonce_end(
     unsafe {
         EVP_MD_CTX_free(mdctx);
         EVP_MD_free(md);
-        CRYPTO_clear_free(k_bytes.cast(), num_k_bytes, FILE.as_ptr(), LINE);
         OPENSSL_cleanse(digest.as_mut_ptr().cast(), digest.len());
         OPENSSL_cleanse(random_bytes.as_mut_ptr().cast(), random_bytes.len());
         OPENSSL_cleanse(private_bytes.as_mut_ptr().cast(), private_bytes.len());
@@ -874,26 +927,25 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
         return 0;
     }
 
-    // SAFETY: `CRYPTO_malloc` reads no caller pointer.
-    let k_bytes = CRYPTO_malloc(num_k_bytes, FILE.as_ptr(), LINE).cast::<u8>();
-    if k_bytes.is_null() {
+    // The key buffer is owned by the handle, whose `Drop` is the authority's own clearing free on
+    // **every** exit below.
+    let Some(k_bytes) = OwnedBuf::new(num_k_bytes) else {
         // SAFETY: `mdctx` is this call's own and `md` is still NULL.
         unsafe {
             dsa_nonce_end(
                 mdctx,
                 md,
-                k_bytes,
-                num_k_bytes,
                 &mut digest,
                 &mut random_bytes,
                 &mut private_bytes,
             )
         };
         return 0;
-    }
+    };
+    let k_bytes_ptr = k_bytes.as_ptr();
     /* Ensure top byte is set to avoid non-constant time in bin2bn */
     // SAFETY: `k_bytes` owns `num_k_bytes` writable bytes.
-    unsafe { *k_bytes = 0xff };
+    unsafe { *k_bytes_ptr = 0xff };
 
     /* We copy |priv| into a local buffer to avoid exposing its length. */
     // SAFETY: `priv_` is live and `private_bytes` is a local of exactly this size; the authority
@@ -917,8 +969,6 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
             dsa_nonce_end(
                 mdctx,
                 md,
-                k_bytes,
-                num_k_bytes,
                 &mut digest,
                 &mut random_bytes,
                 &mut private_bytes,
@@ -938,8 +988,6 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
             dsa_nonce_end(
                 mdctx,
                 md,
-                k_bytes,
-                num_k_bytes,
                 &mut digest,
                 &mut random_bytes,
                 &mut private_bytes,
@@ -963,8 +1011,6 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
                     dsa_nonce_end(
                         mdctx,
                         md,
-                        k_bytes,
-                        num_k_bytes,
                         &mut digest,
                         &mut random_bytes,
                         &mut private_bytes,
@@ -995,8 +1041,6 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
                     dsa_nonce_end(
                         mdctx,
                         md,
-                        k_bytes,
-                        num_k_bytes,
                         &mut digest,
                         &mut random_bytes,
                         &mut private_bytes,
@@ -1011,20 +1055,21 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
             }
             // SAFETY: `k_bytes` owns `num_k_bytes` bytes and `done + todo <= num_k_bytes`;
             // `digest` holds `todo <= 64` written bytes.
-            unsafe { core::ptr::copy_nonoverlapping(digest.as_ptr(), k_bytes.add(done), todo) };
+            unsafe { core::ptr::copy_nonoverlapping(digest.as_ptr(), k_bytes_ptr.add(done), todo) };
             done += todo;
-            i += 1;
+            // The authority's counter is an `unsigned char`, so it wraps for a range large
+            // enough to need more than 255 digests; `wrapping_add` keeps that instead of
+            // panicking in a debug build.
+            i = i.wrapping_add(1);
         }
 
         // SAFETY: `k_bytes` owns `num_k_bytes` bytes and `out` is live and writable.
-        if unsafe { BN_bin2bn(k_bytes, num_k_bytes as c_int, out) }.is_null() {
+        if unsafe { BN_bin2bn(k_bytes_ptr, num_k_bytes as c_int, out) }.is_null() {
             // SAFETY: every argument is NULL or this call's own.
             unsafe {
                 dsa_nonce_end(
                     mdctx,
                     md,
-                    k_bytes,
-                    num_k_bytes,
                     &mut digest,
                     &mut random_bytes,
                     &mut private_bytes,
@@ -1061,13 +1106,15 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
         dsa_nonce_end(
             mdctx,
             md,
-            k_bytes,
-            num_k_bytes,
             &mut digest,
             &mut random_bytes,
             &mut private_bytes,
         )
     };
+    // The key buffer's single release, at the authority's own site; the handle drops after
+    // `dsa_nonce_end` has released the context and the digest, exactly as the authority frees them
+    // in that order.
+    drop(k_bytes);
     ret
 }
 

@@ -183,6 +183,11 @@ pub unsafe extern "C" fn EVP_BytesToKey(
     if data.is_null() {
         return nkey;
     }
+    // The authority casts a negative `datal` to `size_t` and reads that many bytes — UB for
+    // any real buffer. Refuse the invalid length instead of reproducing it (D-RCU-3 shape).
+    if datal < 0 {
+        return 0;
+    }
 
     // SAFETY: nothing: `EVP_MD_CTX_new` takes no arguments and validates its own allocation.
     let c = EVP_MD_CTX_new();
@@ -681,6 +686,11 @@ pub unsafe extern "C" fn EVP_OpenInit(
     if priv_.is_null() {
         return 1;
     }
+    // `EVP_PKEY_decrypt`'s input length is a `size_t`; the authority converts a negative
+    // `ekl` into a huge one. Refuse it instead of reproducing the out-of-bounds read.
+    if ekl < 0 {
+        return 0;
+    }
 
     // SAFETY: `priv_` is live per the contract; the NULL engine is the only one this crate has.
     pctx = unsafe { EVP_PKEY_CTX_new(priv_, ptr::null_mut()) };
@@ -713,7 +723,11 @@ pub unsafe extern "C" fn EVP_OpenInit(
 
     /* `CRYPTO_malloc` is one of the crate's safe entry points: it validates its own argument and
      * answers NULL rather than reading anything of the caller's. */
-    key = CRYPTO_malloc(keylen, FILE_OPEN, LINE_OPEN_MALLOC).cast::<c_uchar>();
+    key = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(keylen, FILE_OPEN, LINE_OPEN_MALLOC)
+    }
+    .cast::<c_uchar>();
     if key.is_null() {
         // SAFETY: `pctx` is live.
         unsafe { EVP_PKEY_CTX_free(pctx) };
@@ -840,6 +854,14 @@ pub unsafe extern "C" fn EVP_SealInit(
         return 1;
     }
 
+    // The random key is drawn into a fixed `EVP_MAX_KEY_LENGTH` block, so the context's key
+    // length has to fit it before `EVP_CIPHER_CTX_rand_key` is asked to fill it.
+    // SAFETY: `ctx` is live per the contract.
+    let cipher_key_len = unsafe { EVP_CIPHER_CTX_get_key_length(ctx) };
+    if cipher_key_len < 0 || cipher_key_len as usize > key.len() {
+        return 0;
+    }
+
     // SAFETY: `ctx` is live per the contract and `key` is this frame's own `EVP_MAX_KEY_LENGTH`
     // bytes.
     if unsafe { crate::evp::cipher_ctx::EVP_CIPHER_CTX_rand_key(ctx, key.as_mut_ptr()) } <= 0 {
@@ -861,7 +883,7 @@ pub unsafe extern "C" fn EVP_SealInit(
 
         // SAFETY: `ctx` is live per the contract.
         len = unsafe { EVP_CIPHER_CTX_get_key_length(ctx) };
-        if len < 0 {
+        if len < 0 || len as usize > key.len() {
             break 'body;
         }
 
@@ -875,7 +897,13 @@ pub unsafe extern "C" fn EVP_SealInit(
         while i < npubk {
             let keylen = len as usize;
             // SAFETY: `pubk` holds `npubk` live keys per the contract and `i < npubk`.
-            let mut outlen = unsafe { EVP_PKEY_get_size(*pubk.add(i as usize)) } as usize;
+            let key_size = unsafe { EVP_PKEY_get_size(*pubk.add(i as usize)) };
+            // `EVP_PKEY_get_size` is an `int`; a negative answer becomes a vast `size_t` in
+            // the authority. Refuse it instead of handing it to the provider as capacity.
+            if key_size <= 0 {
+                break 'body;
+            }
+            let mut outlen = key_size as usize;
 
             // SAFETY: `libctx` is the provider context or NULL, `pubk[i]` is live, and the NULL
             // property query is the authority's.
@@ -948,6 +976,10 @@ mod tests {
     /// `EVP_set_pw_prompt(NULL)` clears, and the empty buffer answers NULL rather than "".
     #[test]
     fn the_prompt_starts_empty_and_a_null_clears_it() {
+        // `PROMPT_STRING` is a process-global static and the sibling test below writes it too;
+        // the crate-wide lock keeps the two from racing under the parallel-safety gate, exactly
+        // as `docs/CONCURRENCY_MODEL.md` section 7 requires for a global-touching test.
+        let _guard = crate::test_support::lock_global_state();
         // SAFETY: the prompt is this module's own static and these calls only touch it.
         unsafe {
             EVP_set_pw_prompt(ptr::null());
@@ -963,6 +995,8 @@ mod tests {
     /// A prompt longer than 79 bytes is truncated and NUL-terminated at 79.
     #[test]
     fn a_long_prompt_is_truncated_at_seventy_nine() {
+        // Shares the process-global `PROMPT_STRING` with the sibling test above; see there.
+        let _guard = crate::test_support::lock_global_state();
         let long: [c_char; 100] = {
             let mut b = [b'x' as c_char; 100];
             b[99] = 0;
@@ -988,5 +1022,49 @@ mod tests {
         assert_eq!(EVP_MAX_IV_LENGTH, 16);
         assert_eq!(EVP_MAX_MD_SIZE, 64);
         assert_eq!(PKCS5_SALT_LEN, 8);
+    }
+
+    /// A negative `datal` is refused instead of becoming a `SIZE_MAX`-byte read, and the valid
+    /// length still derives the cipher's key length.
+    #[test]
+    fn a_negative_bytestokey_length_is_refused() {
+        use crate::evp::e_aes::EVP_aes_128_cbc;
+        use crate::evp::legacy_md5::EVP_md5;
+
+        let data = [0u8; 8];
+        let mut key = [0u8; 16];
+        let mut iv = [0u8; 16];
+        // SAFETY: the cipher and digest are static method tables, every buffer is this frame's,
+        // and `-1` is the invalid length the boundary refuses.
+        unsafe {
+            assert_eq!(
+                EVP_BytesToKey(
+                    EVP_aes_128_cbc(),
+                    EVP_md5(),
+                    ptr::null(),
+                    data.as_ptr(),
+                    -1,
+                    1,
+                    key.as_mut_ptr(),
+                    iv.as_mut_ptr(),
+                ),
+                0,
+                "a negative length is not a readable extent"
+            );
+            assert_eq!(
+                EVP_BytesToKey(
+                    EVP_aes_128_cbc(),
+                    EVP_md5(),
+                    ptr::null(),
+                    data.as_ptr(),
+                    data.len() as c_int,
+                    1,
+                    key.as_mut_ptr(),
+                    iv.as_mut_ptr(),
+                ),
+                16,
+                "the valid length still answers the key length"
+            );
+        }
     }
 }

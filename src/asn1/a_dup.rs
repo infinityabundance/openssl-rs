@@ -31,7 +31,8 @@ use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::str::OPENSSL_strnlen;
 
 /// The authority translation unit for the duplication path.
@@ -75,22 +76,28 @@ pub unsafe extern "C" fn ASN1_dup(i2d: I2dOfVoid, d2i: D2iOfVoid, x: *const c_vo
         if sized <= 0 {
             return core::ptr::null_mut();
         }
-        // `+ 10` is the authority's slack, reproduced because the allocation either
-        // succeeds or does not, and a caller can observe which.
-        let b = CRYPTO_malloc(sized as usize + 10, FILE.as_ptr(), LINE) as *mut c_uchar;
-        if b.is_null() {
+        // The scratch is this frame's own block: the constructor performs the authority's
+        // `CRYPTO_malloc(sized + 10, FILE, LINE)` -- the `+ 10` slack reproduced because the
+        // allocation either succeeds or does not, and a caller can observe which -- and `Drop`
+        // is its single release.
+        let Some(buf) = OwnedBuf::new_plain_released(
+            sized as usize + 10,
+            SeamFile::new(FILE),
+            LINE,
+            SeamFile::new(FILE),
+            LINE,
+        ) else {
             return core::ptr::null_mut();
-        }
-        let mut p = b;
+        };
+        let mut p = buf.as_ptr();
         // SAFETY: `p` has room for the length the sizing pass reported, and `i2d` is
         // the caller's function.
         let written = unsafe { i2d(x, &mut p) };
-        let mut p2: *const c_uchar = b;
-        // SAFETY: `b` holds `written` bytes and `d2i` is the caller's function.
-        let ret = unsafe { d2i(core::ptr::null_mut(), &mut p2, c_long::from(written)) };
-        // SAFETY: `b` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE) };
-        ret
+        let mut p2: *const c_uchar = buf.as_ptr();
+        // SAFETY: the block holds `written` bytes and `d2i` is the caller's function.
+        // `buf`'s `Drop` is the authority's own `CRYPTO_free(b, FILE, LINE)` tail, after this
+        // decode has read the block.
+        unsafe { d2i(core::ptr::null_mut(), &mut p2, c_long::from(written)) }
     })
 }
 
@@ -176,8 +183,14 @@ pub unsafe extern "C" fn ASN1_item_dup(it: *const Asn1Item, x: *const c_void) ->
             unsafe { raise_site(&err_sites::A_DUP_79) };
             return core::ptr::null_mut();
         }
+        // The encode's buffer is this frame's own; the handle has no `Drop` of its own beyond
+        // the release, so it is dropped (below) at the authority's own tail rather than at scope
+        // end, keeping the free ahead of the `DUP_POST` callback.
+        // SAFETY: `b` is the block `ASN1_item_i2d` allocated for this call and no other owner
+        // will release it.
+        let buf = unsafe { OwnedBuf::adopt_plain(b, SeamFile::new(FILE), LINE) };
         let mut p: *const c_uchar = b;
-        // SAFETY: `b` holds `n` bytes and `p` is advanced by the decode.
+        // SAFETY: the block holds `n` bytes and `p` is advanced by the decode.
         let ret = unsafe {
             ASN1_item_d2i_ex(
                 core::ptr::null_mut(),
@@ -188,8 +201,8 @@ pub unsafe extern "C" fn ASN1_item_dup(it: *const Asn1Item, x: *const c_void) ->
                 propq,
             )
         };
-        // SAFETY: `b` came from this allocator and is not owned elsewhere.
-        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        // The buffer's single release, at the authority's own `CRYPTO_free(b, FILE, LINE)` tail.
+        drop(buf);
 
         if let Some(f) = cb {
             let mut retslot: *mut c_void = ret;

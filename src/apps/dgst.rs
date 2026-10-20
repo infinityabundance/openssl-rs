@@ -210,6 +210,32 @@ fn bio_get_md_ctx(b: *mut Bio) -> *mut EvpMdCtx {
     ctx
 }
 
+/// The authority's `end:` release list — `apps/dgst.c:506-512`, in its order:
+/// `BIO_free(in)`, `BIO_free_all(out)`, `EVP_MD_free(md)`, `EVP_PKEY_free(sigkey)`,
+/// `EVP_MD_CTX_free(signctx)`, `BIO_free(bmd)`. Every argument is NULL or the one
+/// reference this frame owns; `dgst_main` reaches this release from every exit.
+#[allow(clippy::too_many_arguments)]
+fn dgst_cleanup(
+    inb: *mut Bio,
+    out: *mut Bio,
+    md: *mut EvpMd,
+    sigkey: *mut EvpPkey,
+    signctx: *mut EvpMdCtx,
+    bmd: *mut Bio,
+) {
+    // SAFETY: each pointer is NULL or owned by this frame and released here once.
+    // `inb` may be the BIO `BIO_push(bmd, inb)` appended; the authority frees it
+    // before `bmd`, and `BIO_free` does not traverse the filter chain.
+    unsafe {
+        BIO_free(inb);
+        BIO_free_all(out);
+        EVP_MD_free(md);
+        EVP_PKEY_free(sigkey);
+        EVP_MD_CTX_free(signctx);
+        BIO_free(bmd);
+    }
+}
+
 /// `int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout, int
 /// xoflen, EVP_PKEY *key, unsigned char *sigin, int siglen, const char *sig_name,
 /// const char *md_name, const char *file)` — `apps/dgst.c:638-710`. The `xoflen`
@@ -422,6 +448,14 @@ pub fn main(argv: &[String]) -> i32 {
     // `if (do_verify && sigfile == NULL) { ... }` — `apps/dgst.c:262-266`.
     if do_verify && sigfile.is_none() {
         eprintln!("No signature to verify: use the -signature option");
+        dgst_cleanup(
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            md,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+        );
         return 1;
     }
 
@@ -432,6 +466,14 @@ pub fn main(argv: &[String]) -> i32 {
     // SAFETY: as above.
     let bmd = unsafe { BIO_new(BIO_f_md()) };
     if inb.is_null() || bmd.is_null() {
+        dgst_cleanup(
+            inb,
+            core::ptr::null_mut(),
+            md,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            bmd,
+        );
         return 1;
     }
 
@@ -443,6 +485,14 @@ pub fn main(argv: &[String]) -> i32 {
     // `apps/dgst.c:293-295`.
     let out = bio_open_default(outfile.as_deref(), true);
     if out.is_null() {
+        dgst_cleanup(
+            inb,
+            core::ptr::null_mut(),
+            md,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            bmd,
+        );
         return 1;
     }
 
@@ -450,6 +500,14 @@ pub fn main(argv: &[String]) -> i32 {
     // `apps/dgst.c:297-300`. `mac_name` is always NULL here (its arm is not landed).
     if keyfile.is_some() && hmac_key.is_some() {
         eprintln!("MAC and signing key cannot both be specified");
+        dgst_cleanup(
+            inb,
+            out,
+            md,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            bmd,
+        );
         return 1;
     }
 
@@ -465,6 +523,14 @@ pub fn main(argv: &[String]) -> i32 {
             load_key(Some(kf), keyform, "private key")
         };
         if sigkey.is_null() {
+            dgst_cleanup(
+                inb,
+                out,
+                md,
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                bmd,
+            );
             return 1;
         }
         // `if (EVP_PKEY_get_default_digest_name(sigkey, def_md, sizeof(def_md)) == 2
@@ -481,6 +547,7 @@ pub fn main(argv: &[String]) -> i32 {
         // SAFETY: `EVP_MD_CTX_new` has no argument.
         signctx = EVP_MD_CTX_new();
         if signctx.is_null() {
+            dgst_cleanup(inb, out, md, sigkey, core::ptr::null_mut(), bmd);
             return 1;
         }
     }
@@ -497,6 +564,7 @@ pub fn main(argv: &[String]) -> i32 {
             EVP_PKEY_new_raw_private_key(NID_hmac, core::ptr::null_mut(), key.as_ptr(), key.len())
         };
         if sigkey.is_null() {
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
     }
@@ -505,6 +573,7 @@ pub fn main(argv: &[String]) -> i32 {
     // `apps/dgst.c:363-402`. The `impl` (engine) arm is unreachable (no engine).
     if !sigkey.is_null() {
         if oneshot_sign {
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return not_landed("dgst oneshot sign");
         }
         let mctx = bio_get_md_ctx(bmd);
@@ -537,6 +606,7 @@ pub fn main(argv: &[String]) -> i32 {
         };
         if res == 0 {
             eprintln!("Error setting context");
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
     } else {
@@ -544,6 +614,7 @@ pub fn main(argv: &[String]) -> i32 {
         // `apps/dgst.c:404-421`.
         if oneshot_sign {
             eprintln!("Oneshot algorithms don't use a digest");
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
         let mctx = bio_get_md_ctx(bmd);
@@ -553,6 +624,7 @@ pub fn main(argv: &[String]) -> i32 {
         // SAFETY: `mctx`/`md` are live; the engine is NULL.
         if unsafe { EVP_DigestInit_ex(mctx, md, core::ptr::null_mut()) } == 0 {
             eprintln!("Error setting digest");
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
     }
@@ -562,12 +634,16 @@ pub fn main(argv: &[String]) -> i32 {
     let sigbuf: Option<Vec<u8>> = if let (Some(sf), false) = (&sigfile, sigkey.is_null()) {
         let cs = match CString::new(sf.as_str()) {
             Ok(c) => c,
-            Err(_) => return 1,
+            Err(_) => {
+                dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
+                return 1;
+            }
         };
         // SAFETY: `cs` is NUL-terminated.
         let sigbio = unsafe { BIO_new_file(cs.as_ptr(), c"rb".as_ptr()) };
         if sigbio.is_null() {
             eprintln!("Error opening signature file {sf}");
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
         // SAFETY: `sigkey` is live.
@@ -579,6 +655,7 @@ pub fn main(argv: &[String]) -> i32 {
         unsafe { BIO_free(sigbio) };
         if n <= 0 {
             eprintln!("Error reading signature file {sf}");
+            dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
             return 1;
         }
         buf.truncate(n as usize);
@@ -631,6 +708,7 @@ pub fn main(argv: &[String]) -> i32 {
     if files.is_empty() {
         // `BIO_set_fp(in, stdin, BIO_NOCLOSE);` — `apps/dgst.c:467-474`. The empty
         // input is not driven; it reaches the same do_fp with stdin.
+        dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
         return not_landed("dgst (stdin)");
     } else {
         for file in &files {
@@ -677,14 +755,7 @@ pub fn main(argv: &[String]) -> i32 {
     }
 
     // `if (ret != EXIT_SUCCESS) ERR_print_errors(bio_err);` — `apps/dgst.c:503-505`.
-    // SAFETY: the pointers are live and not used again.
-    unsafe {
-        BIO_free(inb);
-        BIO_free_all(out);
-        EVP_MD_free(md);
-        EVP_PKEY_free(sigkey);
-        EVP_MD_CTX_free(signctx);
-        BIO_free(bmd);
-    }
+    // The release list is the authority's `end:` order; every pointer is owned here.
+    dgst_cleanup(inb, out, md, sigkey, signctx, bmd);
     ret
 }

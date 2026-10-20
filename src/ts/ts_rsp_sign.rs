@@ -50,12 +50,13 @@ use crate::pkcs7::pk7_lib::{
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys::{gettimeofday, Timeval};
 use crate::runtime::bio::{BIO_free_all, Bio};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{
     Asn1Object, NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
     NID_id_smime_ct_TSTInfo, NID_pkcs7_signed, NID_pkcs9_contentType, OBJ_cmp, OBJ_dup,
     OBJ_nid2obj, OBJ_obj2txt,
 };
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_value, OpenSslStack,
@@ -85,6 +86,7 @@ use super::ts_rsp_utils::{
 use super::{
     raise_ts, ERR_R_ASN1_LIB, ERR_R_CRYPTO_LIB, ERR_R_OBJ_LIB, ERR_R_PKCS7_LIB, ERR_R_TS_LIB,
 };
+use crate::runtime::mem_coords::SeamFile;
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/ts/ts_rsp_sign.c";
@@ -355,8 +357,11 @@ pub(crate) unsafe extern "C" fn TS_RESP_CTX_new_ex(
     propq: *const core::ffi::c_char,
 ) -> *mut TsRespCtx {
     // SAFETY: `OPENSSL_zalloc` on a positive size.
-    let ctx: *mut TsRespCtx =
-        CRYPTO_zalloc(core::mem::size_of::<TsRespCtx>(), FILE.as_ptr(), 97).cast();
+    let ctx: *mut TsRespCtx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<TsRespCtx>(), FILE.as_ptr(), 97)
+    }
+    .cast();
     if ctx.is_null() {
         return ptr::null_mut();
     }
@@ -1472,13 +1477,17 @@ unsafe fn ts_RESP_process_extensions(ctx: *mut TsRespCtx) -> c_int {
 unsafe fn ossl_ess_add1_signing_cert(si: *mut Pkcs7SignerInfo, sc: *const EssSigningCert) -> c_int {
     // SAFETY: `sc` is live; a NULL out-pointer measures the encoding.
     let len = unsafe { i2d_ESS_SIGNING_CERT(sc, ptr::null_mut()) };
+    // The scratch encoding is this frame's block, allocated through the crate's allocator seam at
+    // the authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own
+    // site.
     // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:637`.
-    let pp = CRYPTO_malloc(len as usize, FILE.as_ptr(), 637).cast::<core::ffi::c_uchar>();
-    if pp.is_null() {
+    let Some(mut pp) = OwnedBuf::new(len as usize, SeamFile::new(FILE), 637) else {
         return 0;
-    }
+    };
+    // The authority releases the encoding at its error tail (`:648`) or, on success, at `:650`.
+    pp.set_release_line(648);
 
-    let mut p = pp;
+    let mut p = pp.as_ptr();
     // SAFETY: `pp` holds `len` bytes and `sc` is live.
     unsafe { i2d_ESS_SIGNING_CERT(sc, &mut p) };
     // SAFETY: no preconditions.
@@ -1486,19 +1495,18 @@ unsafe fn ossl_ess_add1_signing_cert(si: *mut Pkcs7SignerInfo, sc: *const EssSig
     let mut set_failed = seq.is_null();
     if !set_failed {
         // SAFETY: `seq` is live and `pp` holds `len` bytes.
-        set_failed = unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0;
+        set_failed = unsafe { ASN1_STRING_set(seq, pp.as_ptr().cast(), len) } == 0;
     }
     if set_failed {
-        // SAFETY: `seq` is NULL or owned here, and `pp` is owned here.
+        // SAFETY: `seq` is NULL or owned here; the encoding's handle releases it on drop.
         unsafe {
             ASN1_STRING_free(seq);
-            CRYPTO_free(pp.cast(), FILE.as_ptr(), 648);
         }
         return 0;
     }
 
-    // SAFETY: `pp` is owned here.
-    unsafe { CRYPTO_free(pp.cast(), FILE.as_ptr(), 650) };
+    // The authority releases the encoding at its success site, `:650`.
+    pp.set_release_line(650);
     // SAFETY: `si` is live and `seq` is live; the attribute takes a reference.
     if unsafe {
         PKCS7_add_signed_attribute(
@@ -1527,13 +1535,17 @@ unsafe fn ossl_ess_add1_signing_cert_v2(
 ) -> c_int {
     // SAFETY: `sc` is live; a NULL out-pointer measures the encoding.
     let len = unsafe { i2d_ESS_SIGNING_CERT_V2(sc, ptr::null_mut()) };
+    // The scratch encoding is this frame's block, allocated through the crate's allocator seam at
+    // the authority's own size/`file`/`line`; its release is run by `Drop` at the authority's own
+    // site.
     // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:664`.
-    let pp = CRYPTO_malloc(len as usize, FILE.as_ptr(), 664).cast::<core::ffi::c_uchar>();
-    if pp.is_null() {
+    let Some(mut pp) = OwnedBuf::new(len as usize, SeamFile::new(FILE), 664) else {
         return 0;
-    }
+    };
+    // The authority releases the encoding at its error tail (`:675`) or, on success, at `:677`.
+    pp.set_release_line(675);
 
-    let mut p = pp;
+    let mut p = pp.as_ptr();
     // SAFETY: `pp` holds `len` bytes and `sc` is live.
     unsafe { i2d_ESS_SIGNING_CERT_V2(sc, &mut p) };
     // SAFETY: no preconditions.
@@ -1541,19 +1553,18 @@ unsafe fn ossl_ess_add1_signing_cert_v2(
     let mut set_failed = seq.is_null();
     if !set_failed {
         // SAFETY: `seq` is live and `pp` holds `len` bytes.
-        set_failed = unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0;
+        set_failed = unsafe { ASN1_STRING_set(seq, pp.as_ptr().cast(), len) } == 0;
     }
     if set_failed {
-        // SAFETY: `seq` is NULL or owned here, and `pp` is owned here.
+        // SAFETY: `seq` is NULL or owned here; the encoding's handle releases it on drop.
         unsafe {
             ASN1_STRING_free(seq);
-            CRYPTO_free(pp.cast(), FILE.as_ptr(), 675);
         }
         return 0;
     }
 
-    // SAFETY: `pp` is owned here.
-    unsafe { CRYPTO_free(pp.cast(), FILE.as_ptr(), 677) };
+    // The authority releases the encoding at its success site, `:677`.
+    pp.set_release_line(677);
     // SAFETY: `si` is live and `seq` is live; the attribute takes a reference.
     if unsafe {
         PKCS7_add_signed_attribute(
@@ -1844,7 +1855,12 @@ unsafe fn ts_TST_INFO_content_new(p7: *mut Pkcs7) -> c_int {
 /// `long sec, long usec, unsigned precision)` — `ts_rsp_sign.c:830-896`.
 ///
 /// # Safety
-/// `asn1_time` is NULL or a live value owned by the caller.
+///
+/// `asn1_time` is NULL or a live value owned by the caller. A non-NULL value is
+/// **consumed on both outcomes**: it is returned on success and freed here on
+/// failure (the authority's own `ASN1_GENERALIZEDTIME_free(asn1_time); goto err`),
+/// so a caller that receives NULL must not release it again. The only caller in
+/// this unit passes NULL.
 unsafe fn ts_resp_set_gentime_with_precision(
     asn1_time: *mut Asn1String,
     sec: c_long,

@@ -89,9 +89,12 @@ use crate::property::store::{
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
+use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::OpenSslStack;
 use crate::selftest::OsslCallback;
 
@@ -223,8 +226,11 @@ pub struct OsslDecoder {
 /// No preconditions; the answer is NULL or a uniquely-owned object.
 pub(crate) unsafe fn ossl_decoder_new() -> *mut OsslDecoder {
     // SAFETY: the constructor only asks for a zeroed block of the object's size.
-    let decoder =
-        CRYPTO_zalloc(core::mem::size_of::<OsslDecoder>(), ptr::null(), 0).cast::<OsslDecoder>();
+    let decoder = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<OsslDecoder>(), ptr::null(), 0)
+    }
+    .cast::<OsslDecoder>();
     if decoder.is_null() {
         return ptr::null_mut();
     }
@@ -243,9 +249,11 @@ pub(crate) unsafe fn ossl_decoder_new() -> *mut OsslDecoder {
 /// `decoder` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_DECODER_up_ref(decoder: *mut OsslDecoder) -> c_int {
-    // SAFETY: `decoder` is live per the contract; the count is a plain atomic field.
-    unsafe { (*decoder).base.refcnt.fetch_add(1, Ordering::AcqRel) };
-    1
+    // The shared protocol takes a relaxed increment on a live count and refuses a zero,
+    // destroying or `i32::MAX` count without changing it.
+    // SAFETY: `decoder` is live per the contract and this call acts for the C-API
+    // caller's existing reference, acquiring exactly one new reference.
+    unsafe { crate::runtime::refcount::up_ref(&(*decoder).base.refcnt) }
 }
 
 /// `void OSSL_DECODER_free(OSSL_DECODER *decoder)` — `decoder_meth.c:60-75`.
@@ -263,15 +271,21 @@ pub unsafe extern "C" fn OSSL_DECODER_free(decoder: *mut OsslDecoder) {
         return;
     }
 
-    // SAFETY: `decoder` is live per the contract.
-    let last = unsafe { (*decoder).base.refcnt.fetch_sub(1, Ordering::AcqRel) };
-    if last > 1 {
-        return;
+    // SAFETY: `decoder` is live per the contract; this call releases the one reference the
+    // C-API caller owns. On `Last` this frame is the unique destructor runner.
+    match unsafe { crate::runtime::refcount::down_ref(&(*decoder).base.refcnt) } {
+        crate::runtime::refcount::DownRef::Last => {}
+        // `ossl_provider_free` can run a provider teardown callback; a re-entrant
+        // `OSSL_DECODER_free` observes the sentinel.
+        crate::runtime::refcount::DownRef::Remaining
+        | crate::runtime::refcount::DownRef::Retired => return,
     }
 
     // SAFETY: `decoder` is live and this is the last reference; each field is this object's own.
     unsafe {
-        CRYPTO_free((*decoder).base.name.cast(), ptr::null(), 0);
+        // The name block is adopted here so its single release is the handle's `Drop`, at the
+        // authority's own site.
+        drop(OwnedStr::adopt((*decoder).base.name, SeamFile::NULL, 0));
         crate::property::parse::ossl_property_free((*decoder).base.parsed_propdef);
         crate::provider::ossl_provider_free((*decoder).base.prov);
         CRYPTO_free(decoder.cast(), ptr::null(), 0);
@@ -310,13 +324,16 @@ pub(crate) unsafe fn ossl_decoder_from_algorithm(
     unsafe { (*decoder).base.id = id };
     // SAFETY: `algodef` is live; the helper allocates a copy of the first name.
     let name = unsafe { ossl_algorithm_get1_first_name(algodef) };
-    // SAFETY: `decoder` is live; a NULL name is a failure the release below handles.
-    unsafe { (*decoder).base.name = name };
-    if name.is_null() {
+    // The name is a member buffer released by `OSSL_DECODER_free`; adopt it, then hand it to the
+    // field, so no path here writes a `CRYPTO_free`.
+    // SAFETY: `name` is NULL or the helper's fresh block.
+    let Some(name) = (unsafe { OwnedStr::adopt(name, SeamFile::NULL, 0) }) else {
         // SAFETY: `decoder` is live and owned here.
         unsafe { OSSL_DECODER_free(decoder) };
         return ptr::null_mut();
-    }
+    };
+    // SAFETY: `decoder` is live.
+    unsafe { (*decoder).base.name = name.into_raw() };
     // SAFETY: `decoder` is live.
     unsafe { (*decoder).base.algodef = algodef };
     // SAFETY: `algodef` is live; the parse is given the provider's context.
@@ -713,6 +730,35 @@ pub struct OsslDecoderCtx {
 }
 
 // ---------------------------------------------------------------------------
+// Ownership of the module's member blocks
+// ---------------------------------------------------------------------------
+
+/// `OSSL_DECODER_CTX_free`'s member body (`decoder_meth.c:665-675`), without the block release
+/// [`OwnedCtx`]'s `Drop` performs: the cleanup callback with the construct data, the instance chain
+/// through its own `freectx`, and the passphrase bridge's data, in the authority's own order.
+// SAFETY: (a) `destroy_body` is the authority's `OSSL_DECODER_CTX_free` member body, releasing each
+// member exactly once (every releaser accepts the unset NULL/zero state) and never the enclosing
+// block, which `OwnedCtx` releases; (b) `OsslDecoderCtx` is a `#[repr(C)]` record of raw pointers,
+// function pointers, an embedded `OsslPassphraseData` and an `int`, so an all-zero block is a valid
+// `OsslDecoderCtx` the body is sound on -- the authority's own `OPENSSL_zalloc` constructor relies on
+// exactly that value.
+unsafe impl CtxDestroy for OsslDecoderCtx {
+    unsafe fn destroy_body(ptr: *mut OsslDecoderCtx) {
+        // SAFETY: `ptr` is a live context per the trait contract.
+        unsafe {
+            if let Some(cleanup) = (*ptr).cleanup {
+                cleanup((*ptr).construct_data);
+            }
+            crate::runtime::stack::OPENSSL_sk_pop_free(
+                (*ptr).decoder_insts,
+                Some(decoder_instance_free_thunk),
+            );
+            crate::passphrase::ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ptr).pwdata));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // The context trio — `decoder_meth.c:628-675`
 // ---------------------------------------------------------------------------
 
@@ -732,8 +778,9 @@ unsafe extern "C" fn decoder_instance_free_thunk(p: *mut c_void) {
 /// No preconditions; the answer is NULL or a uniquely-owned context.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_DECODER_CTX_new() -> *mut OsslDecoderCtx {
-    // The constructor only asks for a zeroed block of the context's size.
-    CRYPTO_zalloc(core::mem::size_of::<OsslDecoderCtx>(), ptr::null(), 0).cast::<OsslDecoderCtx>()
+    // The constructor only asks for a zeroed block of the context's size and hands it to the caller.
+    // `OsslDecoderCtx`'s zero-validity obligation (b) holds (see the `CtxDestroy` impl above).
+    OwnedCtx::<OsslDecoderCtx>::zalloc().map_or(ptr::null_mut(), |ctx| ctx.into_raw())
 }
 
 /// `int OSSL_DECODER_CTX_set_params(OSSL_DECODER_CTX *ctx, const OSSL_PARAM params[])` —
@@ -802,21 +849,10 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_set_params(
 /// `ctx` must be NULL or a live context this crate allocated.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_DECODER_CTX_free(ctx: *mut OsslDecoderCtx) {
-    if ctx.is_null() {
-        return;
-    }
-    // SAFETY: `ctx` is live per the contract.
-    unsafe {
-        if let Some(cleanup) = (*ctx).cleanup {
-            cleanup((*ctx).construct_data);
-        }
-        crate::runtime::stack::OPENSSL_sk_pop_free(
-            (*ctx).decoder_insts,
-            Some(decoder_instance_free_thunk),
-        );
-        crate::passphrase::ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ctx).pwdata));
-        CRYPTO_free(ctx.cast(), ptr::null(), 0);
-    }
+    // SAFETY: `ctx` is NULL or a live context; `from_raw` reclaims it (NULL is a no-op) and `Drop`
+    // runs the authority's own `OSSL_DECODER_CTX_free` body followed by the block release at the
+    // authority's own site.
+    drop(unsafe { OwnedCtx::<OsslDecoderCtx>::from_raw(ctx) });
 }
 
 // ---------------------------------------------------------------------------
@@ -1516,3 +1552,7 @@ mod tests {
             as unsafe fn(*const crate::provider::OsslProvider) -> c_int;
     }
 }
+
+// OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
+#[cfg(test)]
+crate::runtime::bio::zero_state::zero_state_sweep!(OsslDecoderCtx => zero_state_sweep_ossl_decoder_ctx);
