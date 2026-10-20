@@ -1,11 +1,4 @@
-src/ssl/statem/statem.rs
-src/ssl/t1_enc.rs
-src/ssl/t1_lib.rs
-src/ssl/tls_depr.rs
 src/store/store_meth.rs
-src/ts/mod.rs
-src/ts/ts_lib.rs
-src/ts/ts_req_print.rs
 src/ui/ui_openssl.rs
 src/ui/ui_util.rs
 src/x509/by_store.rs

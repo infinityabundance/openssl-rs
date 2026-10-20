@@ -727,7 +727,10 @@ pub(crate) const DEFAULT_GROUPS: [u16; 7] = [
 /// that never called a group setter reaches exactly the authority's default arm.
 ///
 /// # Safety
-/// `s` must be NULL or a live connection.
+/// `s` must be NULL or a live connection. The returned slice borrows the connection's
+/// `supportedgroups` list (or the static default list); although its type is `'static`, the
+/// caller must not use it after any operation that frees or replaces that list or destroys
+/// `s` — in practice, only for the duration of the current handshake step.
 pub(crate) unsafe fn tls1_get_supported_groups(s: *const Ssl) -> &'static [u16] {
     if !s.is_null() {
         // SAFETY: `s` is live per the contract.
@@ -763,6 +766,8 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
 ///
 /// # Safety
 /// `groups` must hold `ngroups` readable `int`s; `grpext`/`grpextlen` must be writable.
+/// `*grpext` must be NULL or an initialised block allocated from the crate's `CRYPTO_*`
+/// malloc seam and exclusively owned by this call (the authority's `OPENSSL_free(*grpext)`).
 pub(crate) unsafe fn tls1_set_groups(
     grpext: *mut *mut u16,
     grpextlen: *mut usize,
