@@ -624,6 +624,12 @@ pub unsafe extern "C" fn X509_ocspid_print(bp: *mut Bio, x: *mut X509) -> c_int 
             return ocspid_err(der, md);
         }
         der = OwnedDerBuf::malloc(derlen as usize);
+        // The authority's allocation check at `:224` (`if ((der = dertmp =
+        // OPENSSL_malloc(derlen)) == NULL) goto err;`): a NULL block takes the `err:` tail.
+        // Without it the DER walks below would run on a NULL buffer.
+        if der.is_none() {
+            return ocspid_err(der, md);
+        }
         let dptr = der.as_ref().map_or(ptr::null_mut(), |buf| buf.as_ptr());
         let mut dertmp = dptr.cast::<c_uchar>();
         if i2d_X509_NAME(subj, &raw mut dertmp) < 0 {
@@ -1294,5 +1300,96 @@ pub unsafe extern "C" fn X509_STORE_CTX_print_verify_cb(
         }
 
         ok
+    }
+}
+
+/// Targeted negative control for [`X509_ocspid_print`]'s DER allocation failure (`:224`).
+///
+/// The authority checks `OPENSSL_malloc(derlen)` for NULL and takes the `err:` tail; the converted
+/// function must do the same instead of running the DER walks on a NULL buffer. The control installs
+/// the crate's allocator seam with a hook that answers NULL for exactly that allocation, then
+/// asserts the function answers 0 without touching the buffer. Installing the allocator is
+/// process-global, so the test is a no-op unless `X509_OCSPID_ALLOC_PROBE=1` is set and it is the
+/// only test in its process (the court runs it with an exact filter).
+#[cfg(test)]
+mod alloc_probe {
+    use super::*;
+    use std::ffi::CStr as StdCStr;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::runtime::mem::CRYPTO_set_mem_functions;
+    use crate::x509::x_x509::{X509_free, X509_new};
+
+    extern "C" {
+        fn malloc(n: usize) -> *mut c_void;
+        fn realloc(p: *mut c_void, n: usize) -> *mut c_void;
+        fn free(p: *mut c_void);
+    }
+
+    /// Armed only for the DER buffer request at `crypto/x509/t_x509.c:224`.
+    static FAIL_DER: AtomicBool = AtomicBool::new(false);
+
+    unsafe extern "C" fn hook_malloc(n: usize, file: *const c_char, line: c_int) -> *mut c_void {
+        let targeted = FAIL_DER.load(Ordering::SeqCst)
+            && line == LINE_MALLOC_DER
+            && !file.is_null()
+            // SAFETY: the seam's `file` is NULL or a NUL-terminated string.
+            && unsafe { StdCStr::from_ptr(file) } == FILE;
+        if targeted {
+            // One shot: the failure-state allocation `CRYPTO_malloc` makes in response must pass.
+            FAIL_DER.store(false, Ordering::SeqCst);
+            return ptr::null_mut();
+        }
+        // SAFETY: `malloc` has no preconditions.
+        unsafe { malloc(n) }
+    }
+
+    unsafe extern "C" fn hook_realloc(
+        p: *mut c_void,
+        n: usize,
+        _file: *const c_char,
+        _line: c_int,
+    ) -> *mut c_void {
+        // SAFETY: `p` is NULL or a block from `hook_malloc`.
+        unsafe { realloc(p, n) }
+    }
+
+    unsafe extern "C" fn hook_free(p: *mut c_void, _file: *const c_char, _line: c_int) {
+        // SAFETY: `p` is NULL or a block from `hook_malloc`.
+        unsafe { free(p) }
+    }
+
+    #[test]
+    fn x509_ocspid_print_alloc_failure_returns_zero() {
+        if std::env::var("X509_OCSPID_ALLOC_PROBE").as_deref() != Ok("1") {
+            eprintln!("x509_ocspid_print_alloc_failure_returns_zero: skipped (set X509_OCSPID_ALLOC_PROBE=1)");
+            return;
+        }
+
+        // SAFETY: the hooks are valid for the lifetime of this process and every later CRYPTO
+        // allocation routes through them; this is the only test in its process.
+        let installed = unsafe {
+            CRYPTO_set_mem_functions(Some(hook_malloc), Some(hook_realloc), Some(hook_free))
+        };
+        assert_eq!(installed, 1, "the allocator seam accepted the hooks");
+
+        // SAFETY: `X509_new` and `BIO_new` answer NULL or a live object this test owns.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+
+            FAIL_DER.store(true, Ordering::SeqCst);
+            let ret = X509_ocspid_print(bp, x);
+            assert_eq!(ret, 0, "a failed DER allocation answers 0");
+            assert!(
+                !FAIL_DER.load(Ordering::SeqCst),
+                "the control reached the DER allocation at :224"
+            );
+
+            BIO_free(bp);
+            X509_free(x);
+        }
     }
 }

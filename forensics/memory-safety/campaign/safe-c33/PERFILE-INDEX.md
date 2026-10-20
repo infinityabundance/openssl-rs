@@ -7881,3 +7881,83 @@ scopes. No safe-Rust caller can cause UB through this file: every entry point is
 **Next eight from the file head.** `src/x509/t_req.rs`, `src/x509/t_x509.rs`,
 `src/x509/v3_aaa.rs`, `src/x509/v3_akeya.rs`, `src/x509/v3_audit_id.rs`,
 `src/x509/v3_authattid.rs`, `src/x509/v3_battcons.rs`, `src/x509/v3_bcons.rs`.
+
+## M84 (mechanism) — per-file contract sweep (request/certificate/OCSP printers, allowed-attributes and authority-attribute ASN.1 groups, audit-identity row, basic/attribute constraints)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M84.json`](atlas-refresh/mechanism-sweep-M84.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`a0beae8b1`. One source edit: `src/x509/t_x509.rs` (`X509_ocspid_print`'s
+allocation-failure guard, `M84-D1`) plus a `#[cfg(test)]` allocator-hook control.
+The other seven audited units are byte-identical to their landed blobs. No
+`#[repr(C)]` layout, exported symbol/signature, allocator coordinate or lint
+attribute changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/t_req.rs` | `BIO_s_file`/`BIO_ctrl` no-close wrap, `X509_REQ_print_ex` section order and every `req_err` arm, the reused `j`/`get_next` attribute loop, extension stack `pop_free` adapter and its free site | no defect; matches `t_req.c:37-211`, including the `type=0`/`bs=NULL` arm when the object print fails and the authority-faithful extension-stack leak on a print-failure return (`M84-R1`) |
+| `src/x509/t_x509.rs` | `OwnedDerBuf` `CRYPTO_malloc`/`free` seam (`:224`/`:238`/`:264`), `X509_ocspid_print` DER walks and digest fetch, `OwnedStr::adopt` for `get1_ip_asc` (`:485`), signature dump/print, aux/trust/reject/alias/keyid, serial printer, brief printer, `print_certs`/`print_store_certs`, verify callback | **defect `M84-D1`** (missing `OPENSSL_malloc` NULL check at `:224`; repaired); everything else matches `t_x509.c` line for line, including `%ju`/`%jx` and `~`/`!` mask spellings |
+| `src/x509/v3_aaa.rs` | three `#[repr(C)]` size/offset asserts, CHOICE/SEQUENCE/SET-OF templates, item constructors/free/d2i/i2d, all three `i2r` printers and their failure arms | no defect; matches `v3_aaa.c:16-128` |
+| `src/x509/v3_akeya.rs` | `AuthorityKeyid` 24-byte layout, three implicit optional templates, item group | no defect; matches `v3_akeya.c:17-23`; no `_dup` is emitted or declared |
+| `src/x509/v3_audit_id.rs` | the two const-fn row casts `(X509V3_EXT_I2S)`/`(X509V3_EXT_S2I)` and the row literal | no defect; the established v3-table ABI-compatible callback-cast contract applies (pointer arguments only, no ownership crosses, both callees ignore `method`/`ctx`) |
+| `src/x509/v3_authattid.rs` | `OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX` item/template, item group, `i2r_ISSUER_SERIAL`/`i2r_auth_attr_id` | no defect; the embedded `serial` is passed as `&raw const`, matching `v3_ac_tgt.rs`'s audited printer and the `ASN1_EMBED` template |
+| `src/x509/v3_battcons.rs` | 16-byte layout, two optional templates, item group, `i2v`/`v2i` and every free-on-failure arm | no defect; matches `v3_battcons.c:45-86` |
+| `src/x509/v3_bcons.rs` | 16-byte layout, two optional templates, item group, `i2v`/`v2i` and every free-on-failure arm | no defect; matches `v3_bcons.c:45-85` |
+
+**Defect `M84-D1` — high (soundness, OOM-reachable; compatibility divergence).**
+`src/x509/t_x509.rs:626` (original worktree lines 626-630): the port allocated
+the DER scratch block with `OwnedDerBuf::malloc` but did not test the `None`
+answer. The authority checks `if ((der = dertmp = OPENSSL_malloc(derlen)) == NULL)
+ goto err;` (`t_x509.c:224`). On a failed allocation the port left `dptr`/`dertmp`
+NULL, `i2d_X509_NAME(subj, &NULL)` returned the length without writing, and the
+subsequent `EVP_Digest(NULL, derlen, ...)` read a NULL buffer — undefined
+behaviour from a compliant C caller, and a divergence from the authority's 0
+answer. Repaired by taking the `err:` tail when the owner is absent; the
+`CRYPTO_malloc` coordinate (`:224`) and both free coordinates (`:238`/`:264`) are
+unchanged. A targeted negative control installs the allocator seam and answers
+NULL for exactly the `crypto/x509/t_x509.c:224` block.
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated — the repair is a safe `Option::is_none` guard. The
+`#[cfg(test)]` control adds three `unsafe extern "C"` allocator-hook functions,
+each carrying its own liveness sourcing contract; it is test-only, env-gated and
+never reachable from the release configuration. Hidden obligations: **0**.
+
+**Contracts reused.** OB-1/OB-2 `OwnedStr`/`OwnedBuf` seams, OB-3/OB-4 owner and
+member-slot discipline (not exercised here beyond `OwnedStr::adopt`), RC-1, the
+B1/B2/B6–B29 callback contracts for `OPENSSL_sk_pop_free` destructors and BIO
+callbacks, the established v3-table ABI-compatible callback-cast contract,
+`raise_site`/`ErrSite` coordinates, the `CRYPTO_*` allocator seam and
+`OPENSSL_sk_*` NULL/range discipline.
+
+**Residuals.** `M84-R1` (low, authority parity): `X509_REQ_print_ex` returns
+without releasing the `X509_REQ_get_extensions` stack on a printer failure; `err:`
+in `t_req.c` does not free it either. Liveness only, never UB, and left faithful.
+`M84-R2` (info, test-only): the allocator-hook control is process-global and
+must run alone in its process (env `X509_OCSPID_ALLOC_PROBE=1`), as the existing
+probe convention requires.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; targeted allocator control
+**1 passed / 0 failed** (hook observed the `:224` request and the call answered
+0); full library **1700 passed / 0 failed / 31 ignored** (1731 total) serially
+(221.98 s) and with `--test-threads=4` (84.68 s), in the court with
+`CARGO_BUILD_JOBS=4`. Phase-11 X.509 courts on this candidate: **all_pass=True
+over 9**, including **RT-X509-REQ** (76 observations), **RT-X509-ACERT** (178)
+and **RT-X509-V3** (240). No unexplained test removal and no newly ignored test.
+
+**NOT_RUN.** Miri/ASan/Loom/TSan (no owner, aliasing, extent or concurrency
+mechanism changed; the repaired path is allocation-failure-only and is covered
+by the targeted allocator control); dudect/ctgrind (no constant-time claim);
+full Phase-25 forensic regeneration; FRF and SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **38**, `AUDITED-FILES.txt` **725**.
+**Next ordinary position.** `src/x509/v3_bitst.rs`.
+**Next eight from the file head.** `src/x509/v3_bitst.rs`, `src/x509/v3_enum.rs`,
+`src/x509/v3_extku.rs`, `src/x509/v3_group_ac.rs`, `src/x509/v3_ia5.rs`,
+`src/x509/v3_ind_iss.rs`, `src/x509/v3_int.rs`, `src/x509/v3_iobo.rs`.
