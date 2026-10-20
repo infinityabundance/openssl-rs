@@ -87,6 +87,16 @@ exclude = [
     "forensics/tools/**",
     "forensics/receipts/**",
     "forensics/STATUS.md",
+    # Derived campaign evidence. The downstream ledgers, the Safe-33 campaign
+    # records and the cryptographic vector corpora are large, reproducible from
+    # their generators, and read by neither `build.rs`, `src/**`, nor `tests/**`
+    # (verified: the only build-time forensic inputs are AUTHORITIES.json and
+    # multitrack/default-authority.json, and this crate uses no `include_str!` /
+    # `include_bytes!`). They remain committed in git as evidence; shipping them
+    # in the crate would only inflate every downstream `cargo fetch`.
+    "forensics/downstream/**",
+    "forensics/memory-safety/**",
+    "forensics/vectors/**",
     # The FRF store and its court declarations. The store is ~20 MB of captures
     # and content-addressed objects; the declarations reference absolute court
     # container paths. Neither is usable by a crate consumer.
