@@ -1,11 +1,3 @@
-src/rand/pool.rs
-src/rand/prov_seed.rs
-src/rand/rand_uniform.rs
-src/rand/sys.rs
-src/rc2.rs
-src/rc4.rs
-src/rsa/asn1.rs
-src/rsa/backend.rs
 src/rsa/check.rs
 src/rsa/mp_names.rs
 src/rsa/mp.rs

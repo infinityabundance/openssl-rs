@@ -6418,3 +6418,100 @@ This is not a whole-file or consumer-family `SAFE_COMPATIBLE` graduation.
 position.** `src/rand/pool.rs`. **Next eight.** `src/rand/pool.rs`,
 `src/rand/prov_seed.rs`, `src/rand/rand_uniform.rs`, `src/rand/sys.rs`,
 `src/rc2.rs`, `src/rc4.rs`, `src/rsa/asn1.rs`, `src/rsa/backend.rs`.
+
+## M71 (mechanism) — per-file contract sweep (RAND pool/seeding/uniform/platform seam, RC2/RC4, RSA ASN.1 templates and backend bridge)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M71.json`](atlas-refresh/mechanism-sweep-M71.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`b1c8f89a3` (B23 merge). Six findings were repaired: one compatibility
+divergence in `ossl_rsa_dup`'s PSS restriction copy, one unsafe safe-Rust
+platform wrapper, one safe raw-pointer helper signature, and three
+secret-residue / contract-understatement repairs. One test was added to pin
+the authority's duplicated-PSS `maskHash` consequence. Layouts, exported
+symbols, signatures, allocation sizes and `FILE` values are unchanged; no
+unsafe operation was removed and no production unsafe expression was added.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/rand/pool.rs` | `RandPool` zalloc/attach/free, `OwnedBuf` adoption and cleansing release, grow/copy, add/add_begin/add_end, detach/reattach cleanse, adin XOR, selectors and wrapping arithmetic | 2 low-severity contract repairs (M71-D3, M71-D6) |
+| `src/rand/prov_seed.rs` | entropy/nonce pool construction and detach, secure/plain cleanup split, seed-source delegation, `OwnedBuf` user-nonce allocation and transfer | 1 low-severity secret-residue repair (M71-D4) |
+| `src/rand/rand_uniform.rs` | `ossl_assert` refusal arms, 32-bit draw, fixed-point multiply, follow-up carry loop, wrapping arithmetic and `*err` writes | no defect |
+| `src/rand/sys.rs` | `stat`/`utsname`/`fd_set` layouts, `extern "C"` declarations, safe reference wrappers, `getentropy` strong binding, `atoi` | 1 medium-severity unsafe-safe-API repair (M71-D2) |
+| `src/rc2.rs` | key expansion and effective-bits reduction, `c2l`/`l2c`/`c2ln`/`l2cn`, ECB/CBC/CFB64/OFB64 loops, stack key material | 1 low-severity secret-residue repair (M71-D5) |
+| `src/rc4.rs` | KSA/PRGA pointer arithmetic, `Rc4Key` layout and offsets, `RC4_options` static string | no defect |
+| `src/rsa/asn1.rs` | `rsa_cb` NEW/FREE/D2I_POST, PSS/OAEP free hooks, item templates and offsets, generated d2i/i2d/dup wrappers, test-owned DER blocks | no defect |
+| `src/rsa/backend.rs` | `ossl_rsa_fromdata`/`todata`, PSS 30 read/write, `ossl_rsa_dup`, `ossl_rsa_pss_decode`, PKCS#8 key decode, `OwnedPrimeInfo`, private-BN release paths | 1 medium-severity compatibility repair (M71-D1); 1 low-severity secret-residue repair (M71-D7) |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M71-D1 | `src/rsa/backend.rs:1027-1043` | medium | compatibility divergence | the authority's `ossl_rsa_dup` tests `dupkey->pss->maskGenAlgorithm == NULL` (`rsa_backend.c:543-544`). Because `RSA_PSS_PARAMS_dup` deep-copies `maskGenAlgorithm`, that test is false after a successful dup, so the authority leaves the duplicate's `maskHash` NULL and later reads it as SHA1. The transcription instead decoded `dupkey->pss->maskGenAlgorithm` and could reject a key the authority accepts. It now implements the authority's literal condition, with a guard that reports a NULL `dupkey->pss` instead of reproducing the authority's NULL dereference. A new test pins the consequence. |
+| M71-D2 | `src/rand/sys.rs:476-485` | medium | unsafe safe-Rust API | `pub(crate) fn atoi(s: *const c_char)` dereferenced a caller-supplied raw pointer from safe Rust; a crate-internal safe caller could therefore cause UB. It is now `unsafe fn` with a `# Safety` contract, and all five call sites (`src/rand/unix.rs`, `src/rsa/pmeth.rs`, `src/dh/pmeth.rs`, plus tests) carry a `SAFETY:`-noted unsafe block. STOP was invoked and the BATCH gate plus focused tests were run. |
+| M71-D3 | `src/rand/pool.rs:467` | low | unsafe-contract understatement | `rand_pool_grow` was a safe `fn` taking `*mut RandPool` and forming `&mut *pool`, hiding a liveness/uniqueness obligation from its callers. It is now `unsafe fn` with `# Safety: pool is live and this call holds its only reference`; the three internal call sites carry `SAFETY:` notes. |
+| M71-D4 | `src/rand/prov_seed.rs:223-242` | low | secret residue on a failure path | `ossl_rand_get_user_nonce` allocated the nonce buffer plainly and released it plainly when `EVP_RAND_generate` failed, although that call may have written nonce material. The owner is now `OwnedBuf::new_cleansed_released` at the authority's same allocation/release coordinates and the success path still transfers ownership with `into_raw`. Deliberate improvement over the authority's `OPENSSL_free`; not observable through the API. |
+| M71-D5 | `src/rc2.rs:152-181` | low | secret residue in a temporary | the authority expands the key in `key->data` itself; this transcription used a stack `[u8; 128]`, leaving the expanded key (and the caller's key bytes) on the stack after return. The temporary is now cleansed before it goes out of scope. The schedule in `Rc2Key` remains the caller's to cleanse, exactly as before. |
+| M71-D6 | `src/rand/pool.rs:310-311, 707-716` | low | unsafe-contract understatement | `ossl_rand_pool_attach`'s documentation said attached buffers are "never modified", but `ossl_rand_pool_adin_mix_in` XORs into `pool->buffer` for attached pools too. The attach note now says only that such buffers are never freed, and `adin_mix_in`'s `# Safety` requires the buffer (including an attached one) to be writable for `pool.len` bytes. No behaviour changes. |
+| M71-D7 | `src/rsa/backend.rs:456-480` | low | secret residue on an error path | `fromdata_err` (the authority's `err:` label) released `d`, the private exponent, with `BN_free`, matching `rsa_backend.c`'s own label. On every arm that reaches it `d` never entered the key, so the value was left in freed storage. It is now `BN_clear_free(d)`; `n` and `e` stay plainly freed because they are public. Deliberate improvement over the authority, not observable through the API. |
+
+**Secret-bearing buffers.** The RAND pool buffer is entropy: `ossl_rand_pool_free`
+releases it through `CRYPTO_secure_clear_free`/`CRYPTO_clear_free` via
+`OwnedBuf::Drop`, `rand_pool_grow` releases the old block the same way, and
+`ossl_rand_pool_reattach` cleanses before resetting `len`. `detach` transfers
+ownership to the caller, whose `ossl_rand_cleanup_{user_,}entropy` /
+`_nonce` functions cleanse (secure for entropy, plain clear for nonces);
+attached buffers are neither freed nor cleansed, which is the caller's
+obligation. `prov_seed` now cleanses the user-nonce buffer on the
+`EVP_RAND_generate` failure arm (M71-D4). RC2's expanded-key temporary is
+cleansed (M71-D5); `Rc2Key`/`Rc4Key` schedules remain caller-owned and are the
+EVP cipher layer's to cleanse. RSA private components in the ASN.1 templates
+use `CBIGNUM_it` and are cleansed by the B19 BIGNUM destructor; the backend's
+pre-install private exponent is now cleaned on the error arm (M71-D7), and
+duplicated private BNs are released through `RSA_free`'s `BN_clear_free`
+fields. `rand_uniform`'s per-draw `u32` word is entropy-derived but stays a
+stack scalar with no cleansing, as in the authority; no constant-time claim is
+made.
+
+**Assumptions.** Eliminated: 2 hidden obligations (the safe `atoi` pointer and
+the safe `rand_pool_grow` raw dereference are now explicit unsafe contracts).
+Relocated: 0. New: 0 production unsafe operations; two existing bodies changed
+from safe to `unsafe fn`, and no unsafe expression was added. Hidden: **0**.
+Contracts reused: OB-1 `OwnedBuf` (`new_cleansed_released`, `into_raw`), the
+CRYPTO/secure allocator seam coordinates, B19 BIGNUM cleansing, the ASN.1 item
+callback/ownership contract, and D351's authority-text-preservation rule.
+
+**Gates observed (final blob).** FAST `cargo fmt --all -- --check` clean;
+`cargo check --lib` clean; focused `rand::pool` 10/0, `rand::rand_uniform` 5/0,
+`rand::sys` 12/0, `rand::prov_seed` 0 tests, `rc2` 2/0, `rc4` 4/0,
+`rsa::asn1` 6/0, `rsa::backend` 5/0 (including the new duplicate-PSS control),
+`rsa::pmeth` 1/0 and `dh::pmeth` 2/0. BATCH `cargo clippy --all-targets -- -D
+warnings` clean; full library **1677 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (95.81 s) and serial (252.66 s); `scripts/adv-probe.sh`
+26/26. The candidate's library total is 1704 (1677 run + 27 ignored), one more
+than B23's 1703 because of the new control.
+
+**Invalidated evidence.** The prior evidence bound to `src/rsa/backend.rs`'s
+`ossl_rsa_dup` body is replaced by M71-D1's repair and the new control. Evidence
+for `src/rand/sys.rs`'s `atoi` callers is refreshed by the signature change; the
+call sites' surrounding contracts are unchanged. Stage/pool, RC2, RC4, RSA
+ASN.1, allocator-seam and layout receipts elsewhere are unaffected.
+
+**NOT_RUN.** Authority executable differential for these rows (the pinned
+build tree is absent from this checkout; the source tree is present and was
+read directly); ASan (no extent/ownership change; the repaired classes are
+static/contract or cleansing); Miri/Loom (no aliasing or concurrency change);
+allocator-failure injection for the repaired `prov_seed` failure arm;
+dependency-graph regeneration; FRF and SEAL; constant-time (no secret-dependent
+flow).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. M71-D2 was a STOP (unsafe safe-Rust API) and is repaired;
+the BATCH evidence above is the local gate, not a promotion.
+
+**Queue.** `REMAINING-AUDIT.txt` **143**, `AUDITED-FILES.txt` **620**. **Next
+ordinary position.** `src/rsa/check.rs`. **Next eight.** `src/rsa/check.rs`,
+`src/rsa/mp_names.rs`, `src/rsa/mp.rs`, `src/rsa/prn.rs`, `src/rsa/pss.rs`,
+`src/rsa/schemes.rs`, `src/rsa/sign.rs`, `src/rsa/sp800.rs`.

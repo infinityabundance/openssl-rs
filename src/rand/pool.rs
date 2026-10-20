@@ -307,8 +307,9 @@ pub(crate) fn ossl_rand_pool_new(
 /// `RAND_POOL *ossl_rand_pool_attach(const unsigned char *buffer, size_t len, size_t entropy)`
 /// — `rand_pool.c:60-82`.
 ///
-/// The `const` is cast away exactly as the authority does; attached buffers
-/// are never modified or freed.
+/// The `const` is cast away exactly as the authority does. Attached buffers are
+/// never freed, but `ossl_rand_pool_adin_mix_in` XORs into the pool through
+/// that field, so an attached buffer handed to it must be writable.
 pub(crate) fn ossl_rand_pool_attach(
     buffer: *const c_uchar,
     len: usize,
@@ -463,8 +464,8 @@ pub(crate) unsafe fn ossl_rand_pool_entropy_needed(pool: *mut RandPool) -> usize
 /// Increase the allocation size — not usable for an attached pool.
 ///
 /// # Safety
-/// `pool` is a live pool.
-fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
+/// `pool` is a live pool and this call holds its only reference for the duration.
+unsafe fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
     // SAFETY: the caller's contract: `pool` is live and exclusively owned.
     let p = unsafe { &mut *pool };
 
@@ -566,7 +567,8 @@ pub(crate) unsafe fn ossl_rand_pool_bytes_needed(
      * Make sure the buffer is large enough for the requested amount of data.
      * ... (see rand_pool.c:262-273 for the full rationale)
      */
-    if rand_pool_grow(pool, bytes_needed) == 0 {
+    // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+    if unsafe { rand_pool_grow(pool, bytes_needed) } == 0 {
         /* persistent error for this pool */
         // SAFETY: the caller's contract: `pool` is live and exclusively owned.
         let p = unsafe { &mut *pool };
@@ -627,7 +629,8 @@ pub(crate) unsafe fn ossl_rand_pool_add(
             unsafe { raise_site(&err_sites::RAND_POOL_321) };
             return 0;
         }
-        if rand_pool_grow(pool, len) == 0 {
+        // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+        if unsafe { rand_pool_grow(pool, len) } == 0 {
             return 0;
         }
         // SAFETY: `p.buffer` is writable for `p.alloc_len >= p.len + len`
@@ -668,7 +671,8 @@ pub(crate) unsafe fn ossl_rand_pool_add_begin(pool: *mut RandPool, len: usize) -
         return ptr::null_mut();
     }
 
-    if rand_pool_grow(pool, len) == 0 {
+    // SAFETY: `pool` is live and exclusively owned per the caller's contract.
+    if unsafe { rand_pool_grow(pool, len) } == 0 {
         return ptr::null_mut();
     }
 
@@ -708,7 +712,9 @@ pub(crate) unsafe fn ossl_rand_pool_add_end(
 /// — `rand_pool.c:418-444`.
 ///
 /// # Safety
-/// `pool` is a live pool; `adin` is null or readable for `adin_len` bytes.
+/// `pool` is a live pool; `adin` is null or readable for `adin_len` bytes; the
+/// pool's buffer — including one attached by `ossl_rand_pool_attach` — is
+/// writable for `pool.len` bytes.
 pub(crate) unsafe fn ossl_rand_pool_adin_mix_in(
     pool: *mut RandPool,
     adin: *const c_uchar,

@@ -18,6 +18,7 @@
 use core::ffi::{c_int, c_long, c_uint, c_ulong};
 
 use crate::cipher_tables::RC2_KEY_TABLE;
+use crate::runtime::mem::cleanse;
 
 /// `RC2_BLOCK` — `include/openssl/rc2.h:26`.
 pub const RC2_BLOCK: usize = 8;
@@ -128,8 +129,8 @@ unsafe fn l2cn(l1: c_ulong, l2: c_ulong, p: *mut u8, n: c_uint) {
 /// `crypto/rc2/rc2_skey.c:59-104`.
 ///
 /// # Safety
-/// `key` writable; `data` readable for `len` bytes with `len >= 1` (a zero length reads
-/// `data[-1]` in the authority too).
+/// `key` writable; `data` readable for `len` bytes with `len >= 1` (a zero length
+/// underflows the expansion's last-byte index, as it does in the authority).
 // The two index loops below mirror `rc2_skey.c`'s own byte-index arithmetic (the lookback into
 // `k[j]` and the reduction's `k[i + j]`), which an iterator rewrite would obscure.
 #[allow(clippy::needless_range_loop)]
@@ -178,6 +179,11 @@ pub unsafe extern "C" fn RC2_set_key(key: *mut Rc2Key, len: c_int, data: *const 
             let word = ((k[idx] as c_uint) << 8) | (k[idx - 1] as c_uint);
             *ki.sub((127 - idx) / 2) = word & 0xffff;
         }
+
+        // The authority expands the key in `key->data` itself and keeps no second copy. This
+        // transcription uses a stack buffer, so cleanse that temporary representation before it
+        // goes out of scope; the schedule in `(*key).data` remains the caller's to cleanse.
+        cleanse(k.as_mut_ptr(), k.len());
     }
 }
 
