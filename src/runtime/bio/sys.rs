@@ -514,9 +514,14 @@ pub unsafe fn cmsg_firsthdr(mh: *const Msghdr) -> *mut u8 {
 
 /// `CMSG_NXTHDR(mhdr, cmsg)` — the record after `prev`, or NULL.
 ///
-/// Reproduces glibc's inline form, including the two conditions it checks and
-/// the order it checks them in: a record whose own `cmsg_len` is too small ends
-/// the list, and the *next* header must fit entirely inside the buffer.
+/// Reproduces glibc's `__cmsg_nxthdr`, including the two conditions it checks and
+/// the order it checks them in: a record whose own `cmsg_len` is too small ends the
+/// list, and the *next* header must fit entirely inside the buffer. A third check —
+/// the next record's own `cmsg_len` must also be at least a header — is retained
+/// from the earlier transcription as a safety improvement over the C, which returns
+/// a short record and leaves the caller to walk it. The bounds test is evaluated
+/// on offsets so the out-of-bounds `next + sizeof(cmsghdr)` pointer the address form
+/// would form at the end of the buffer is never created.
 ///
 /// # Safety
 /// As for [`cmsg_firsthdr`]; `prev` must be a record returned by
@@ -530,17 +535,34 @@ pub unsafe fn cmsg_nxthdr(mh: *const Msghdr, prev: *mut u8) -> *mut u8 {
     if prev_len < core::mem::size_of::<Cmsghdr>() {
         return core::ptr::null_mut();
     }
-    // SAFETY: the addition stays within the buffer for a well-formed record.
-    let next = unsafe { prev.add(cmsg_align(prev_len)) };
-    // SAFETY: `ctl` is the start of the buffer and `len` its length, so `ctl + len`
-    // is the one-past-the-end address, which may be formed legally.
-    let end = unsafe { ctl.add(len) };
-    // SAFETY: `next` is only dereferenced after the bounds test proves a whole
-    // header is inside the buffer.
-    if unsafe { next.add(core::mem::size_of::<Cmsghdr>()) } > end
-        // SAFETY: the test above established that a full header lies before `end`.
-        || unsafe { cmsg_hdr(next) }.cmsg_len < core::mem::size_of::<Cmsghdr>()
-    {
+    // SAFETY: `prev` is inside the same allocation as `ctl` per the contract, so the
+    // distance between them is an in-bounds offset rather than an out-of-bounds pointer.
+    let off = unsafe { prev.offset_from(ctl) };
+    if off < 0 {
+        return core::ptr::null_mut();
+    }
+    // `CMSG_ALIGN(prev_len)`, in checked form: a corrupted `cmsg_len` must not wrap
+    // the round-up and panic at the FFI boundary.
+    let Some(advance) = prev_len
+        .checked_add(core::mem::align_of::<Cmsghdr>() - 1)
+        .map(|n| n & !(core::mem::align_of::<Cmsghdr>() - 1))
+    else {
+        return core::ptr::null_mut();
+    };
+    // glibc tests `next + CMSG_ALIGN(sizeof(cmsghdr)) <= end` on addresses. Comparing
+    // the *offsets* here is equivalent and never forms the out-of-bounds `next + 16`
+    // pointer that the address form would (the final record ends exactly at `end`).
+    let Some(next_off) = (off as usize).checked_add(advance) else {
+        return core::ptr::null_mut();
+    };
+    if next_off > len || len - next_off < core::mem::size_of::<Cmsghdr>() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `next_off <= len - size_of::<Cmsghdr>()`, so the next record and a whole
+    // header lie inside `[ctl, ctl + len)`.
+    let next = unsafe { ctl.add(next_off) };
+    // SAFETY: a full header was proved to lie before `end`.
+    if unsafe { cmsg_hdr(next) }.cmsg_len < core::mem::size_of::<Cmsghdr>() {
         return core::ptr::null_mut();
     }
     next
@@ -945,4 +967,41 @@ extern "C" {
     /// admitted glibc profile it is available, so a plain `getenv` here would be
     /// a different (setuid-divergent) function than the one observed.
     pub fn secure_getenv(name: *const c_char) -> *mut c_char;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A record whose `cmsg_len` claims more than the buffer must not form an
+    /// out-of-bounds pointer nor wrap the alignment round-up: the walk ends.
+    #[test]
+    fn nxthdr_rejects_a_length_beyond_the_buffer() {
+        let mut buf = [0u8; 32];
+        // SAFETY: the header is written inside `buf`.
+        unsafe {
+            cmsg_set_hdr(
+                buf.as_mut_ptr(),
+                Cmsghdr {
+                    cmsg_len: usize::MAX,
+                    cmsg_level: IPPROTO_IP,
+                    cmsg_type: IP_PKTINFO,
+                },
+            );
+        }
+        let mh = Msghdr {
+            msg_name: core::ptr::null_mut(),
+            msg_namelen: 0,
+            msg_iov: core::ptr::null_mut(),
+            msg_iovlen: 0,
+            msg_control: buf.as_mut_ptr().cast(),
+            msg_controllen: buf.len(),
+            msg_flags: 0,
+        };
+        // SAFETY: `mh` is live with a control buffer of `buf.len()` bytes.
+        let first = unsafe { cmsg_firsthdr(&mh) };
+        assert_eq!(first, buf.as_mut_ptr());
+        // SAFETY: the walk only reads the header inside the buffer.
+        assert!(unsafe { cmsg_nxthdr(&mh, first) }.is_null());
+    }
 }

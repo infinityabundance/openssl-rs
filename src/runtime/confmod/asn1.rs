@@ -187,6 +187,14 @@ unsafe fn do_create(value: *const c_char, name: *const c_char) -> bool {
                 // SAFETY: as for `ostr`: the byte read is not the terminator.
                 ln = unsafe { ln.add(1) };
             }
+            // The floor below is `p == ln`, so it can only fire while `ln` lies *before* the
+            // comma. A long-name half that is entirely whitespace leaves `ln` on the comma
+            // itself, and the authority's walk then reads before `value` (UB in the C: the
+            // guard it relies on is unreachable in exactly this case). That prefix has no long
+            // name at all, so refuse it here instead of reproducing the out-of-bounds read.
+            if ln == last_comma {
+                return false;
+            }
             // The trailing walk, with the authority's floor: `p` starts one before the comma and
             // steps back over whitespace, refusing rather than running past `ln`.
             // SAFETY: the branch is taken only when `last_comma != value`, so `last_comma` is at
@@ -311,4 +319,20 @@ pub extern "C" fn ASN1_add_oid_module() {
         // means the registry could not allocate, which the next `CONF_modules_load` reports as
         // an unknown module name — the same place the authority reports it.
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A `long name, oid` value whose long-name half is entirely whitespace has no
+    /// long name. The authority's backward walk reads before the value in this case
+    /// (its `p == ln` floor is unreachable when `ln` is the comma itself); this
+    /// implementation refuses instead, which is the authority's observed result on
+    /// its builds whenever the byte before the value is not whitespace.
+    #[test]
+    fn all_whitespace_long_name_is_refused() {
+        // SAFETY: both arguments are static NUL-terminated strings.
+        assert!(!unsafe { do_create(c"  ,1.2.3.4".as_ptr(), c"x".as_ptr()) });
+    }
 }

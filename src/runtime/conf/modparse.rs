@@ -134,6 +134,17 @@ pub unsafe extern "C" fn CONF_parse_list(
             }
             // SAFETY: `lstart` points into the caller's NUL-terminated string.
             let p = unsafe { sys::strchr(lstart, sep) };
+            // `strchr(s, 0)` returns the terminator rather than NULL, and the authority's loop
+            // then treats it as a separator, sets `lstart = p + 1`, and reads past the
+            // terminator on the next iteration (UB in the C). A NUL cannot delimit a C string,
+            // so a terminator match is normalised to "no separator" here; for every non-zero
+            // `sep`, `strchr` can never return the terminator and this changes nothing.
+            // SAFETY: a non-NULL `strchr` result points inside `lstart`'s allocation.
+            let p = if !p.is_null() && unsafe { *p } == 0 {
+                ptr::null_mut()
+            } else {
+                p
+            };
             // SAFETY: as above; `p == lstart` is tested before `*lstart` so the
             // read only happens when `lstart` is inside the string.
             let at_end = p == lstart || unsafe { *lstart } == 0;
@@ -326,6 +337,17 @@ mod tests {
         // SAFETY: a NULL list is explicitly handled.
         let ret = unsafe { CONF_parse_list(ptr::null(), b',' as c_int, 0, None, ptr::null_mut()) };
         assert_eq!(ret, 0);
+    }
+
+    /// A NUL separator cannot delimit a C string. `strchr` answers the terminator,
+    /// and the authority's loop then steps past it on the next iteration (UB in the
+    /// C); the walk treats a terminator match as "no separator", so the whole list
+    /// is one element and the empty list is one empty element.
+    #[test]
+    fn a_nul_separator_matches_no_separator() -> Result<(), std::ffi::NulError> {
+        assert_eq!(split("a,b", 0, 0)?, vec![(Some("a,b".into()), 3)]);
+        assert_eq!(split("", 0, 0)?, vec![(None, 0)]);
+        Ok(())
     }
 
     /// The authority's `X509_get_default_cert_area()` for the admitted build.
