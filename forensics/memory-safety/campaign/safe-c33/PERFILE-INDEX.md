@@ -6515,3 +6515,97 @@ the BATCH evidence above is the local gate, not a promotion.
 ordinary position.** `src/rsa/check.rs`. **Next eight.** `src/rsa/check.rs`,
 `src/rsa/mp_names.rs`, `src/rsa/mp.rs`, `src/rsa/prn.rs`, `src/rsa/pss.rs`,
 `src/rsa/schemes.rs`, `src/rsa/sign.rs`, `src/rsa/sp800.rs`.
+
+## M72 (mechanism) — per-file contract sweep (RSA validators, multiprime tables/helpers, printers, PSS, name maps, signing entry points, SP800-56B generator)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M72.json`](atlas-refresh/mechanism-sweep-M72.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`f2d470446` (M71 merge). Five findings were repaired: two zero-length
+raw-pointer UB classes at the public signing/verification ABI, one aliasing
+use-after-free in the SP800-56B derivation, and two secret-residue repairs. One
+test was added for the aliasing path and one existing signing test was
+extended with the NULL/zero-length case. Layouts, exported symbols, signatures,
+allocation sizes and `FILE` values are unchanged; no unsafe operation was added
+or removed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/rsa/check.rs` | the ten SP800-56B validators, `BN_CTX` temporary ownership and cleansing, `BN_FLG_CONSTTIME` flags, the all-NULL CRT arm, `BN_clear` on secret-derived slots | 1 low-severity secret-residue repair (M72-D5) |
+| `src/rsa/mp_names.rs` | three `#[repr(transparent)]` NULL-terminated name tables, the `Sync` assertion, table widths and terminators | no defect |
+| `src/rsa/mp.rs` | `RsaPrimeInfo` `CtxDestroy` body, `_free`/`_free_ex` ownership split, `multip_info_new`, `calc_product`, cap ladder, stack thunks | no defect |
+| `src/rsa/prn.rs` | `RSA_print_fp`/`RSA_print`, throwaway `EVP_PKEY` reference and release, `BIO_ctrl` file attachment | no defect |
+| `src/rsa/pss.rs` | EMSA-PSS add/verify pointer movement, length arithmetic, salt allocation/cleansing, `sLenOut` arms, the twelve parameter accessors | no defect |
+| `src/rsa/schemes.rs` | OAEP/PSS name map, `meth2nid`/`nid2name`, `OSSL_ITEM` layout and `Sync`, static name returns | no defect |
+| `src/rsa/sign.rs` | DigestInfo tables, `encode_pkcs1`, `RSA_sign`/`RSA_verify`, digest recovery, the two ASN.1 OCTET STRING entry points | 2 medium-severity zero-length UB repairs (M72-D1, M72-D2) |
+| `src/rsa/sp800.rs` | SP800-56B prime generation, strength/RNG checks, `derive_params_from_pq` expiry and retry, pairwise test | 1 medium-severity aliasing repair (M72-D3); 1 low-severity secret-residue repair (M72-D4) |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M72-D1 | `src/rsa/sign.rs:391-396` | medium | UB from a zero-length source pointer | `encode_pkcs1` copied the message with `copy_nonoverlapping` without excluding `m_len == 0`; `RSA_sign(type, NULL, 0, ...)` is a legal empty-message call and `copy_nonoverlapping` requires a non-null source even for a zero count. The empty copy is now skipped and the result is the DigestInfo prefix alone, as in the authority. |
+| M72-D2 | `src/rsa/sign.rs:854-860` | medium | UB from a zero-length source pointer | `RSA_verify_ASN1_OCTET_STRING` formed `from_raw_parts(m, m_len)` and `from_raw_parts((*sig).data, m_len)` before comparing; with `m_len == 0` either pointer may be NULL, which `from_raw_parts` rejects even at length zero. The empty comparison is short-circuited, matching the authority's `memcmp(.., 0) == 0` outcome. |
+| M72-D3 | `src/rsa/sp800.rs:310-326` | medium | use-after-free on an aliasing caller | `ossl_rsa_sp800_56b_derive_params_from_pq` freed `rsa->e`, then duplicated `e` and used `e` for the modular inverse. `RSA_generate_key_ex(rsa, bits, rsa->e, cb)` is legal, so on that aliasing path both later uses read released storage. The duplicate is now taken first and the inverse uses the object's new copy; the non-aliasing result and failure arm are unchanged. A focused control pins the aliased call. |
+| M72-D4 | `src/rsa/sp800.rs:396-408` | low | secret residue on a failure path | The derivation `err:` label released `d`, `dmp1`, `dmq1` and `iqmp` with `BN_free`, matching the authority's memory-freedom-only release. Those are private-key components and the label runs on the d-too-small retry arm as well as every failure, leaving secret limbs in freed storage. They now use `BN_clear_free`; `e` and `n` stay plainly freed because they are public. Deliberate improvement, not observable through the API. |
+| M72-D5 | `src/rsa/check.rs:338-342` | low | secret residue in a temporary | `ossl_rsa_check_private_exponent` cleansed `r`, `p1`, `q1`, `lcm` and `gcd` but left `p1q1 = (p-1)(q-1)` in its `BN_CTX` slot. Since `(p-1)(q-1) = n - p - q + 1`, that residue recovers `p + q` and factors `n`. The slot is now `BN_clear`'d with the others. Deliberate improvement over the authority. |
+
+**Secret-bearing buffers.** In `check.rs` the key members are not freed by
+these validators, but every secret-derived `BN_CTX` slot (`r`, `p1`, `q1`,
+`lcm`, `p1q1`, and `check_keypair`'s `|p-q|` slot) is now cleared before
+`BN_CTX_end`; `gcd(p-1,e)` remains uncleansed as in the authority because it is
+public-exponent-derived. `mp.rs` allocates `r`/`d`/`t`/`pp` with
+`BN_secure_new` and releases them with `BN_clear_free`; the record block goes
+through `OwnedCtx`. `pss.rs` releases the salt with `adopt_cleansed` on every
+add path (the authority's `OPENSSL_clear_free`), while the verifier's `DB` and
+`h_` hold public verification material. `sign.rs` cleanses the DigestInfo
+buffer and the public-decrypt buffer through `OwnedBuf`. `sp800.rs` keeps
+`p`/`q` secure and clears them on the generation failure arm, and the
+derivation failure arm now clears `d`/`dmp1`/`dmq1`/`iqmp`. `mp_names.rs`,
+`schemes.rs` and `prn.rs` own no secret-bearing storage.
+
+**Assumptions.** Eliminated: two UB classes at the public ABI (NULL/zero-length
+`copy_nonoverlapping` and `from_raw_parts`) and one caller-dependent UAF. No
+hidden obligation was found: the aliasing precondition is now discharged by
+design rather than by documentation. Relocated: 0. New: 0 production unsafe
+operations. Hidden: **0**. Contracts reused: OB-1 `OwnedBuf`, OB-3
+`OwnedCtx`/`CtxDestroy`, RC-1 key references in `RSA_print`, B19 BIGNUM
+cleansing, the allocator seam, and D351's authority-text rule.
+
+**Gates observed (final blob).** FAST `cargo fmt --all -- --check` clean;
+`cargo check --lib` clean; focused `cargo test --lib rsa:: -- --test-threads=4`
+**85 passed / 0 failed / 1 ignored**, including the new derivation control and
+the extended `encode_pkcs1` zero-length case. BATCH `cargo clippy --all-targets
+-- -D warnings` clean; full library **1678 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (92.53 s) and serial (227.40 s); the RSA-adjacent probe
+`ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc`
+passed 1/1. The candidate's library total is 1705 (1678 run + 27 ignored), one
+more than M71's 1704 because of the new control.
+
+**Invalidated evidence.** The evidence bound to `ossl_rsa_sp800_56b_derive_params_from_pq`
+is replaced by M72-D3/D4 and the new control. The `RSA_sign`/`RSA_verify`
+evidence is refined by M72-D1/D2; the table/ABI facts are unchanged. The
+`check.rs` validator evidence is refreshed by M72-D5's cleansing change. No
+shared owner, allocator coordinate or layout changed, so all other receipts
+remain valid.
+
+**NOT_RUN.** Authority executable differential for these rows (the pinned
+build tree is absent from this checkout); ASan (no extent or ownership change;
+the repaired classes are static UB, cleansing, or an aliasing control);
+Miri/Loom (no concurrency change; the zero-length and aliasing cases are
+covered by focused tests); allocator-failure injection for the derivation
+retry arm; dependency-graph regeneration; FRF and SEAL; constant-time (no
+secret-dependent flow claim).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. M72-D1–D3 are STOP-class repairs and were repaired before
+the BATCH run; the BATCH evidence is the local gate, not a promotion.
+
+**Queue.** `REMAINING-AUDIT.txt` **135**, `AUDITED-FILES.txt` **628**. **Next
+ordinary position.** `src/runtime/bio/bf_buff.rs`. **Next eight.**
+`src/runtime/bio/bf_buff.rs`, `src/runtime/bio/bf_nbio.rs`,
+`src/runtime/bio/bf_null.rs`, `src/runtime/bio/bf_prefix.rs`,
+`src/runtime/bio/bf_readbuff.rs`, `src/runtime/bio/bio_cb.rs`,
+`src/runtime/bio/bss_acpt.rs`, `src/runtime/bio/bss_fd.rs`.
