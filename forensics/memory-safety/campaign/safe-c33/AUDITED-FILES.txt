@@ -594,3 +594,11 @@ src/provider/ml_kem_codecs.rs
 src/provider/ml_kem_kem.rs
 src/evp/method_store.rs
 src/provider/init.rs
+src/provider/ml_kem_kmgmt.rs
+src/provider/mlx_kem.rs
+src/provider/rsa_enc.rs
+src/provider/rsa_kem.rs
+src/provider/securitycheck_default.rs
+src/provider/securitycheck.rs
+src/provider/seeding.rs
+src/provider/skeymgmt.rs
