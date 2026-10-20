@@ -936,10 +936,17 @@ pub unsafe extern "C" fn OSSL_STORE_open_ex(
 
         // SAFETY: the three fields above are the context's live ones.
         unsafe { ossl_store_close_it(&mut tmpctx) };
+        // `ossl_store_close_it` releases the one reference this frame's `OSSL_STORE_LOADER_fetch`
+        // acquired and it was handed over through `tmpctx.fetched_loader`; the local carries no
+        // second release. The authority frees it again at `store_lib.c:234` (the Coverity-
+        // suppressed OOM double release this repair does not reproduce, §17).
+    } else {
+        // SAFETY: no `loader_ctx` exists, so no temporary context took the fetch reference. Every
+        // loop path that fetched a loader and failed to open one already released and nulled it,
+        // so this is either NULL (the authority's no-op) or the single release of the reference
+        // this frame still owns.
+        unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
     }
-    // SAFETY: `fetched_loader` is NULL or a freed-by-the-line-above loader, matching the
-    // authority's own double release on this unreachable-in-candidate path.
-    unsafe { OSSL_STORE_LOADER_free(fetched_loader) };
     // `propq_copy` and `ctx` were scoped to the block above and released by their `Drop` there.
     ptr::null_mut()
 }
@@ -2642,6 +2649,198 @@ mod tests {
             );
             crate::runtime::err::ERR_clear_error();
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// OOM-refusal probe (`scripts/adv-probe.sh`, §16 negative control)
+// ---------------------------------------------------------------------------
+// The allocator hook is process-global, so the probes are `#[ignore]`d and run one process per
+// probe. This one drives the `OSSL_STORE_open_ex` refusal window that B26-X1 names: the provider's
+// loader has opened successfully, then the `OSSL_STORE_CTX` block allocation is refused.
+#[cfg(test)]
+mod adv_probe {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_malloc;
+    use crate::ssl::adv_alloc;
+
+    /// Load the two providers whose published `OSSL_OP_STORE` rows resolve the `file` loader.
+    ///
+    /// # Safety
+    /// The caller serialises with the rest of the process-global provider-state tests.
+    unsafe fn load_providers() {
+        // SAFETY: both names are static NUL-terminated literals, and the caller holds the global
+        // state lock that the provider store requires.
+        unsafe {
+            assert!(
+                !crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"default".as_ptr())
+                    .is_null(),
+                "the default provider loads"
+            );
+            assert!(
+                !crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"base".as_ptr()).is_null(),
+                "the base provider loads"
+            );
+        }
+    }
+
+    /// A real file the published `file` loader can open, and its `file:` URI.
+    fn temporary_store_file() -> (std::path::PathBuf, std::ffi::CString) {
+        let path =
+            std::env::temp_dir().join(format!("openssl-rs-b26x1-{}-store.pem", std::process::id()));
+        std::fs::write(
+            &path,
+            b"-----BEGIN B26X1 PROBE-----\n-----END B26X1 PROBE-----\n",
+        )
+        .expect("the probe writes its own temporary store file");
+        let uri = std::ffi::CString::new(format!("file:{}", path.display()))
+            .expect("the temporary path has no interior NUL");
+        (path, uri)
+    }
+
+    /// A refused `OSSL_STORE_CTX` allocation *after* a successful provider open must leave the
+    /// loader store's cache entry owning a live loader.
+    ///
+    /// Pre-fix (`store_lib.rs:942`), the error path released the fetched loader twice: once through
+    /// `ossl_store_close_it`, once directly. The second release stole the reference the method
+    /// store's cache entry owned, so the cache flush below freed the loader block while the
+    /// implementation entry still pointed at it. Post-fix only `ossl_store_close_it` releases the
+    /// fetched reference, and the flush releases the cache entry's own reference.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn refused_store_ctx_alloc_after_provider_open_preserves_the_cached_loader() {
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        let (path, uri) = temporary_store_file();
+        // SAFETY: the caller holds the process-global state lock.
+        unsafe { load_providers() };
+
+        let propq = c"provider=default";
+        // Warm the loader store's result cache so the probe knows the loader object's address and
+        // can watch its releases. The fetch returns one reference; releasing it leaves the
+        // implementation entry and the cache entry (two references) owning the object.
+        // SAFETY: `scheme`/`propq` are NUL-terminated literals, and `OSSL_STORE_LOADER_fetch`
+        // returns a reference this frame owns.
+        let loader = unsafe {
+            crate::store::store_meth::OSSL_STORE_LOADER_fetch(
+                ptr::null_mut(),
+                c"file".as_ptr(),
+                propq.as_ptr(),
+            )
+        };
+        assert!(!loader.is_null(), "the published `file` row resolves");
+        // SAFETY: `loader` is live and the accessor only reads its provider pointer.
+        let provider = unsafe { crate::store::store_meth::OSSL_STORE_LOADER_get0_provider(loader) };
+        // SAFETY: this releases exactly the reference the fetch above returned.
+        unsafe { crate::store::store_meth::OSSL_STORE_LOADER_free(loader) };
+
+        // Refuse exactly the `OSSL_STORE_CTX` block `OwnedCtx::zalloc` requests at `(NULL, 0)`.
+        // That request is made after the provider's `open` has answered a live loader context and
+        // after `propq_copy` has succeeded -- the B26-X1 OOM window.
+        let ctx_size = core::mem::size_of::<OsslStoreCtx>();
+        let copy_size = propq.to_bytes().len() + 1;
+        adv_alloc::reset();
+        adv_alloc::arm(ctx_size);
+        // SAFETY: every pointer is NULL or NUL-terminated per `OSSL_STORE_open_ex`'s contract.
+        let ctx = unsafe {
+            OSSL_STORE_open_ex(
+                uri.as_ptr(),
+                ptr::null_mut(),
+                propq.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        adv_alloc::disarm();
+        assert!(
+            ctx.is_null(),
+            "the refused context allocation must fail the open"
+        );
+
+        // Self-verify the refusal reached the intended window: the `propq_copy` allocation (the
+        // statement immediately before the context allocation) must be observed *before* the
+        // refused request. An arm consumed inside the provider open cannot satisfy this.
+        let ev = adv_alloc::events();
+        let refused = ev
+            .iter()
+            .position(
+                |e| matches!(e, adv_alloc::Ev::Malloc { n, site: true, refused: true } if *n == ctx_size),
+            )
+            .expect("the armed `OSSL_STORE_CTX` allocation was not the request refused");
+        let copy = ev
+            .iter()
+            .position(
+                |e| matches!(e, adv_alloc::Ev::Malloc { n, site: true, refused: false } if *n == copy_size),
+            )
+            .expect("the property-query copy was not allocated, so the open did not reach the OOM window");
+        assert!(
+            copy < refused,
+            "the refused allocation preceded the property copy, so it was not the context allocation"
+        );
+
+        // Pre-fix, the flush frees the loader block because the stolen reference had already taken
+        // the count to one; post-fix the cache entry still holds its own reference and no allocator
+        // release may be observed here.
+        adv_alloc::assert_no_double_free();
+        // SAFETY: NULL selects the default library context's store loader store; the flush releases
+        // only the cached results' own references.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_cache_flush(ptr::null_mut());
+        }
+        let freed_by_flush = adv_alloc::events()
+            .iter()
+            .any(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize));
+        assert!(
+            !freed_by_flush,
+            "B26-X1: the loader store cache released a loader it no longer owned after a refused context allocation"
+        );
+
+        // Release the implementation entry's reference: post-fix this is the loader block's single
+        // allocator release, and the double-release detector must stay quiet.
+        // SAFETY: `provider` is live (both providers remain loaded) and this is the store that holds
+        // the `file` loader's implementation entry.
+        unsafe {
+            crate::store::store_meth::ossl_store_loader_store_remove_all_provided(provider);
+        }
+        let releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == loader as usize))
+            .count();
+        assert_eq!(
+            releases, 1,
+            "the loader block must be released exactly once across the refused open, the cache flush and the store removal"
+        );
+        adv_alloc::assert_no_double_free();
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    /// Negative control (§16): the recording allocator's double-release detector must fire on a
+    /// deliberate second release, so a quiet [`adv_alloc::double_free`] above means something.
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run scripts/adv-probe.sh (--ignored, one process per probe)"]
+    fn canary_double_release_is_detected() {
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+        // SAFETY: `b` is a fresh block; the second release is the deliberate test-only defect.
+        unsafe {
+            let b = CRYPTO_malloc(16, ptr::null(), 0).cast::<u8>();
+            assert!(!b.is_null());
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+            CRYPTO_free(b.cast(), ptr::null(), 0);
+        }
+        assert!(
+            adv_alloc::double_free(),
+            "the instrument must flag a double release (negative control)"
+        );
     }
 }
 
