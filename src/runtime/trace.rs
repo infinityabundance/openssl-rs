@@ -44,13 +44,16 @@
 //! ## One recorded divergence
 //!
 //! `OSSL_trace_string` has a `buf[81]` local and assigns `len = (int)size`
-//! whenever `full` is non-zero **or** `size <= 80`. A caller passing `full != 0`
-//! with `size > 80` therefore makes the authority read `len` bytes from a buffer
-//! that only ever holds 81 — a stack over-read, and with `text == 0` a stack
-//! overflow writing `buf[i]`. That is a memory fault, not a contract: recorded in
-//! `docs/SECURITY_DIVERGENCE_POLICY.md` and deliberately **not** reproduced. A
-//! caller inside the documented use sees byte-identical output, because the clamp
-//! only engages above `OSSL_TRACE_STRING_MAX`.
+//! whenever `full` is non-zero **or** `size <= 80`. A caller passing `full != 0`,
+//! `text == 0` and `size > 80` therefore makes the authority write `len` bytes
+//! into a buffer that only ever holds 81 — a stack overflow, followed by a
+//! stack over-read when it prints the masked buffer. That is a memory fault,
+//! not a contract: recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` and
+//! deliberately **not** reproduced. The clamp is confined to the `text == 0`
+//! arm; when `text != 0` the bytes are printed straight from the caller's
+//! buffer, which the authority does safely, so that arm keeps the full `size`.
+//! A caller inside the documented use sees byte-identical output, because the
+//! clamp only engages above `OSSL_TRACE_STRING_MAX`.
 
 use core::ffi::{c_char, c_int, c_void};
 
@@ -252,8 +255,12 @@ pub unsafe extern "C" fn OSSL_trace_string(
     let limited = full == 0 && size > OSSL_TRACE_STRING_MAX;
     let len = if limited {
         OSSL_TRACE_STRING_MAX
-    } else {
+    } else if text == 0 {
+        // The authority's `text == 0` arm writes into its 81-byte local, so a
+        // `full != 0` request above the limit is the recorded UB case; clamp it.
         size.min(OSSL_TRACE_STRING_MAX)
+    } else {
+        size
     };
     if limited {
         // SAFETY: `out` is the caller's BIO, and the format is a literal whose one
@@ -400,6 +407,43 @@ mod tests {
             assert!(OSSL_trace_begin(category).is_null());
             OSSL_trace_end(category, core::ptr::null_mut());
         }
+    }
+
+    #[test]
+    fn full_text_above_the_limit_is_not_clamped_but_masked_text_is() {
+        use crate::runtime::bio::bss_mem::BIO_s_mem;
+        use crate::runtime::bio::{BIO_free, BIO_new, BIO_read};
+
+        let data = [b'x'; OSSL_TRACE_STRING_MAX + 20];
+        // `text != 0`, `full != 0`: the authority prints the whole caller buffer.
+        // SAFETY: `BIO_s_mem` is a static method table and `BIO_new` allocates.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and `data` is a live local of `data.len()` bytes.
+        let written = unsafe { OSSL_trace_string(bio, 1, 1, data.as_ptr(), data.len()) };
+        assert_eq!(written as usize, data.len());
+        let mut out = [0u8; OSSL_TRACE_STRING_MAX + 20];
+        // SAFETY: `bio` is live and `out` is writable for its whole length.
+        let read = unsafe { BIO_read(bio, out.as_mut_ptr().cast(), out.len() as c_int) };
+        assert_eq!(read as usize, data.len());
+        assert_eq!(&out[..read as usize], &data[..]);
+        // SAFETY: `bio` is this test's own BIO and is released once.
+        unsafe { BIO_free(bio) };
+
+        // `text == 0`, `full != 0`: the authority writes into its 81-byte local,
+        // so this conversion clamps to 80 masked bytes plus a newline.
+        // SAFETY: as above.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null());
+        // SAFETY: `bio` is live and `data` is a live local of `data.len()` bytes.
+        let written = unsafe { OSSL_trace_string(bio, 0, 1, data.as_ptr(), data.len()) };
+        assert_eq!(written as usize, OSSL_TRACE_STRING_MAX + 1);
+        // SAFETY: `bio` is live and `out` is writable for its whole length.
+        let read = unsafe { BIO_read(bio, out.as_mut_ptr().cast(), out.len() as c_int) };
+        assert_eq!(read as usize, OSSL_TRACE_STRING_MAX + 1);
+        assert_eq!(out[read as usize - 1], b'\n');
+        // SAFETY: `bio` is this test's own BIO and is released once.
+        unsafe { BIO_free(bio) };
     }
 
     #[test]
