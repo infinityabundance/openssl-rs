@@ -1450,6 +1450,17 @@ mod tests {
         assert_ne!(first, UNSET, "no socket was created");
         let first = first as c_int;
 
+        // The advance must actually release the descriptor, not merely forget
+        // it. This check runs before any descriptor is opened, so `first` cannot
+        // have been reused by this process yet.
+        // SAFETY: `first` is the number of the descriptor the state machine
+        // created; `fcntl` accepts a closed descriptor number and reports EBADF.
+        let genuinely_closed = unsafe { sys::fcntl(first, F_GETFD, 0) };
+        assert_eq!(
+            genuinely_closed, -1,
+            "the retry advance must close the descriptor it retires, not just invalidate the slot"
+        );
+
         // Put a fresh descriptor on the number the advance released. Pre-fix the
         // BIO still holds that number; post-fix its slot is invalid.
         // SAFETY: the path is a static NUL-terminated string; `O_RDONLY` is 0.
@@ -1477,7 +1488,7 @@ mod tests {
         assert_eq!(
             POST_ADVANCE_NUM.load(Ordering::SeqCst),
             INVALID_SOCKET as usize,
-            "the advance closed the descriptor but left its number in BIO.num"
+            "the retry advance must leave BIO.num invalid after closing the descriptor"
         );
         // SAFETY: `first` is this test's open descriptor.
         unsafe { sys::close(first) };
