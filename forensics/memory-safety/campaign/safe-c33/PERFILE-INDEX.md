@@ -7790,3 +7790,94 @@ FRF and SEAL.
 **Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/x509/t_req.rs`,
 `src/x509/t_x509.rs`, `src/x509/v3_aaa.rs`, `src/x509/v3_akeya.rs`,
 `src/x509/v3_audit_id.rs`, `src/x509/v3_authattid.rs`, `src/x509/v3_battcons.rs`.
+
+## BOUNDARY SWEEP B29 — console `UI_METHOD`, terminal streams and the signal edge (`ui/ui_openssl.rs`)
+
+Receipt: [`atlas-refresh/boundary-sweep-B29.json`](atlas-refresh/boundary-sweep-B29.json).
+
+**Candidate identity.** `integrate/safe-c33` at source HEAD `1ffcd5ef8`; worktree
+`src/ui/ui_openssl.rs` blob `7f43920ed93d52607039a2125cbd6e44dbe0b38b` (pre-fix
+`c2cf9e63d00a89a1661bd2278de5afb99165b400`). Authority:
+`crypto/ui/ui_openssl.c:195-270` (`write_string`/`read_string`), `:261-271`
+(`read_till_nl`), `:276-368` (`read_string_inner` and its `error:` label), `:371-481`
+(`open_console`), `:483-569` (`noecho`/`echo`/`close_console`), `:573-651`
+(`pushsig`/`popsig`/`recsig`), `:698-730` (the method object and registry);
+`doc/man3/UI_new.pod:197` (the setter's documented non-thread-safety).
+
+**Disposition.** File-level `CONTRACTED`: B29-UI-1 (stream/terminal ownership),
+B29-UI-2 (signal edge) and B29-UI-3 (callback buffers/cleansing) are `SAFETY_DISCHARGED`
+within their stated scopes; B29-UI-4 (process-global method registry) remains an explicitly
+stated caller obligation and is therefore `CONTRACTED`. M83's deferral of this file is resolved.
+
+**Boundaries.**
+
+| ID | Mechanism | Disposition |
+|---|---|---|
+| B29-UI-1 | `fopen(/dev/tty)` + `stdin`/`stderr` fallback, `TTY_IN`/`TTY_OUT`/`TTY_ORIG`/`TTY_NEW`/`is_a_tty`, `tcgetattr`/`tcsetattr`, identity-guarded `fclose`, the per-UI session lock | `SAFETY_DISCHARGED` (one session per process) |
+| B29-UI-2 | `pushsig`/`popsig` over 1..31, `SAVSIG`, `PS`, `recsig`'s `intr_signal` store | `SAFETY_DISCHARGED`; handler touches only an `AtomicI32` |
+| B29-UI-3 | `write_string`, `read_string`, `read_till_nl`, `read_string_inner`/`_error`, 8192-byte result buffer, over-long-line tail, `UI_set_result` | `SAFETY_DISCHARGED`; all exits cleanse |
+| B29-UI-4 | `UI_OPENSSL`, `DEFAULT_UI_METH`, `UI_OpenSSL`, `UI_get_default_method`, `UI_set_default_method` | `CONTRACTED` (caller-ordered mutation/publication; documented setter non-thread-safety) |
+
+**Defects repaired.**
+
+- **B29-D1 (fixed, high, `src/ui/ui_openssl.rs:111-124,283,358,579-581`).** `intr_signal` was a
+  plain `static mut c_int` written by the signal handler and by the reader and read by the error
+  label. The C authority's `volatile sig_atomic_t` promise does not carry into Rust, so this was a
+  data race (UB) and a hidden obligation: the old comment reasoned from the C type. It is now
+  `static INTR_SIGNAL: AtomicI32` with `Ordering::Relaxed` store/load; `recsig`'s body contains no
+  unsafe operation, and the compile-time gate requires native 32-bit atomics. This is the only
+  UB path by which a compliant caller could reach this file, and it is closed.
+- **B29-D2 (fixed, low, `src/ui/ui_openssl.rs:238-255`).** `read_till_nl`'s five-byte tail buffer
+  could retain up to three bytes of an over-long pass phrase and was not cleansed. It is now
+  cleansed on both exits (§5.1). This is a deliberate, behaviour-neutral divergence from the
+  authority and is recorded as such.
+- **B29-D3 (fixed, low, `src/ui/ui_openssl.rs:653-661`).** The file redeclared `static mut stdin`
+  and justified it with the false claim that `sys` exposes stdin only for `stderr`; `sys.rs:72`
+  already declares it. The duplicate declaration is removed and `stdin` is imported from `sys`.
+
+**Controls observed.** New `the_signal_edge_records_sigint_and_cleanses_the_read_buffer` installs
+`recsig` for `SIGUSR1` with `sigaction` (which `pushsig` skips), delivers it with `raise`, observes
+the handler's store, then drives `read_string_inner_error` with `PS=0` and asserts `-1` plus an
+all-zero 8192-byte buffer; a `Drop` guard restores the previous disposition. It passes in the court
+and under ASan. Two temporary negative controls each made the test fail: making the SIGINT
+comparison unmatchable (rc 1 vs -1) and removing the result-buffer cleanse (the fill bytes
+survived). New `read_till_nl_reports_eof_and_newline_after_draining` uses `tmpfile()`/`rewind()` to
+prove the restructured loop still answers 0 at EOF and 1 at a newline. The blob was then restored
+byte-identically (`7f43920e`).
+
+**Gates observed (final blob).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `ui_openssl` **4 passed / 0 failed**;
+full library **1699 passed / 0 failed / 31 ignored** (1730 total) with `--test-threads=4`
+(103.54 s) and `--test-threads=1` (203.98 s), in the court with `CARGO_BUILD_JOBS=4`; the four
+focused tests also pass under the ASan venue (`target/asan-focus`, nightly-2026-10-05).
+
+**Assumptions.** Eliminated: the non-atomic signals/reader race (B29-D1). Relocated: 0. New: 0.
+Hidden: **0**. Production unsafe operations: 3 removed, 1 added (the `read_till_nl` cleanse), net
+-2. Test-only unsafe: 10 expressions in two `#[cfg(test)]` tests. No export, signature,
+`#[repr(C)]` layout, allocator seam coordinate or lint attribute changed.
+
+**Residuals.** `B29-R1` (low): an unknown `tcgetattr` errno leaves the session lock held and both
+streams open; `UI_process` then returns without `close_console` (authority parity, liveness/fd
+leak, not UB). `B29-R2` (low): `pushsig` ignores `sigaction`'s answer, so a failed install makes
+`popsig` install `SIG_DFL` from the zeroed slot (authority parity, not UB). `B29-R3` (low): the
+verify prompt compares with `strcmp` (secret-dependent, early-exit, authority parity; no
+constant-time claim). `B29-R4` (info): the handler table includes synchronous fault signals
+(authority-parity re-execution loop). `B29-R5`/`B29-R6` (info): one console session per process and
+mutation-before-publication of the shared `'static` method object are explicit external ABI
+preconditions, now stated in the module header and at the exports.
+
+**NOT_RUN.** Miri (component absent from the pinned toolchain; no network; libc FILE/termios/
+sigaction FFI), TSan/Loom for the data-race class (no venue; Loom does not model POSIX signals; the
+class is eliminated by type), a real-terminal/pty differential (no test drives the default method),
+`RT-PEM-KEY` (its `userdata` arm never reaches this file), dudect/ctgrind (B29-R3), FRF/SEAL.
+
+**Classification.** `CONTRACTED` for the file; B29-UI-1/2/3 are `SAFETY_DISCHARGED` within their
+scopes. No safe-Rust caller can cause UB through this file: every entry point is
+`unsafe extern "C"`/private, and the one compliant-caller UB path (B29-D1) is closed. Not
+`SAFE_COMPATIBLE`; no promotion is claimed.
+
+**Queue.** `REMAINING-AUDIT.txt` **46**, `AUDITED-FILES.txt` **717**.
+**Next ordinary position.** `src/x509/t_req.rs`.
+**Next eight from the file head.** `src/x509/t_req.rs`, `src/x509/t_x509.rs`,
+`src/x509/v3_aaa.rs`, `src/x509/v3_akeya.rs`, `src/x509/v3_audit_id.rs`,
+`src/x509/v3_authattid.rs`, `src/x509/v3_battcons.rs`, `src/x509/v3_bcons.rs`.

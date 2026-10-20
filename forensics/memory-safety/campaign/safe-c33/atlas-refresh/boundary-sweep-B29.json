@@ -1,0 +1,295 @@
+{
+  "receipt": "boundary-sweep-B29",
+  "date": "2026-10-20",
+  "candidate": {
+    "base_head": "1ffcd5ef8",
+    "branch": "integrate/safe-c33",
+    "files": [
+      "src/ui/ui_openssl.rs"
+    ],
+    "working_tree_blob": {
+      "src/ui/ui_openssl.rs": "7f43920ed93d52607039a2125cbd6e44dbe0b38b"
+    },
+    "pre_fix_blob": {
+      "src/ui/ui_openssl.rs": "c2cf9e63d00a89a1661bd2278de5afb99165b400"
+    }
+  },
+  "stop_status": "CLEAR. One confirmed UB-class hidden obligation (B29-D1) was found and repaired: the signal handler and the main thread shared a plain `static mut int` for `intr_signal`. It is now `static INTR_SIGNAL: AtomicI32` with relaxed store/load, so the handler's only operation is a lock-free atomic store and no `static mut` is reachable from the signal edge. A real-SIGUSR1 control observes the handler's store; the SIGINT mapping and the read-buffer cleanse are each proved by a temporary negative control that made the new test fail, after which the exact blob 7f43920ed93d52607039a2125cbd6e44dbe0b38b was restored. A second, low-severity secret-residue defect (B29-D2, the uncleansed over-long-line tail in `read_till_nl`) is repaired as a recorded §5 divergence. No ABI, `#[repr(C)]` layout, export, signature, allocator seam or lint attribute changed. No memory-safety defect remains; no safe-Rust caller can cause UB. The file-level classification is CONTRACTED, not SAFETY_DISCHARGED, because B29-UI-4's registry concurrency remains an explicitly stated caller obligation with no independent dynamic check.",
+  "authority": {
+    "source": "forensics/authorities/src/openssl-3.5.9/crypto/ui/ui_openssl.c:195-270 (write_string/read_string), :276-368 (read_string_inner and the error label), :261-271 (read_till_nl), :371-481 (open_console), :483-548 (noecho/echo_console), :550-569 (close_console), :573-651 (pushsig/popsig/recsig), :698-730 (UI_METHOD object and registry); doc/man3/UI_new.pod:197 (UI_set_default_method is not thread-safe); candidate src/ui/ui_openssl.rs:28-47, 111-124, 129-201, 223-334, 340-397, 399-471, 526-581, 587-651, 811-889.",
+    "abi": "No export, signature, #[repr(C)] layout, allocator size/file/line, unsafe lint attribute or detector changed. Termios (60) and SigAction (152) keep their asserts; the new assert only requires `target_has_atomic = \"32\"`. The three exported registry functions and their symbols are untouched; the method object's name/function-pointer/ex_data layout is untouched.",
+    "external_contracts": [
+      "A process runs at most one console session at a time: tty_in, tty_out, is_a_tty, savsig, ps and tty_orig/tty_new are process-global, as the authority declares them. Concurrent UI_process calls over the default method would race on these cells; the precondition is stated in the module header and is the same serialisation the authority's unsynchronised globals require.",
+      "UI_set_default_method is documented by the authority as not thread-safe and must not be called at the same time as other OpenSSL functions; the port's plain non-atomic load/store relies on that documented contract.",
+      "UI_OpenSSL returns a *mut to the same 'static method object UI_get_default_method shares; mutating that object must be ordered before publication (a caller obligation, now stated at the export).",
+      "write_string/read_string run only inside UI_process between open_session and close_session, so TTY_OUT/TTY_IN point at the session's streams.",
+      "Constructors establish the callback's string preconditions: general_allocate_prompt rejects a NULL prompt, UI_add_input_boolean's contract requires a readable action_desc, and UI_add_verify_string's requires a readable test_buf, so fputs/strcmp never receive NULL.",
+      "A C caller passing a NULL action_desc or test_buf is outside the stated constructor contracts; the authority's fputs/strcmp would fault and this port does not extend validity to that input."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "B29-UI-1",
+      "file": "src/ui/ui_openssl.rs",
+      "mechanism": "Console stream and terminal-state ownership: fopen(/dev/tty) with stdin/stderr fallback, TTY_IN/TTY_OUT/TTY_ORIG/TTY_NEW/IS_A_TTY, tcgetattr/tcsetattr, fclose identity guards, and the session lock.",
+      "disposition": "SAFETY_DISCHARGED (scope: one console session per process; src/ui/ui_openssl.rs:399-515)",
+      "contract": "open_console holds the UI's lock, sets both stream pointers unconditionally (fopen or the process stream), and installs TTY_ORIG only when tcgetattr succeeds. close_console is reached only after a successful open, and fcloses a stream only when it is not the process's stdin/stderr; both pointers are non-NULL on every successful path, so no NULL close and no double close of the process streams can occur. is_a_tty gates tcsetattr so a redirected stdin never receives it. Every remaining unsafe operation (static access, fopen/fclose/fileno/tcgetattr/tcsetattr/memcpy) has a stated validity contract at its site.",
+      "defects": [],
+      "residuals": [
+        "B29-R1",
+        "B29-R5"
+      ]
+    },
+    {
+      "id": "B29-UI-2",
+      "file": "src/ui/ui_openssl.rs",
+      "mechanism": "Signal-handler reentrancy edge: pushsig/popsig over 1..NX509_SIG-1, SAVSIG, PS, and recsig's storage of the signal number.",
+      "disposition": "SAFETY_DISCHARGED (scope: the handler edge; src/ui/ui_openssl.rs:111-124, 269-290, 340-378, 526-581)",
+      "contract": "recsig runs at an arbitrary instruction on any thread and performs exactly one relaxed store into INTR_SIGNAL, an AtomicI32; it touches no allocation, lock, FILE, SAVSIG entry or other static. INTR_SIGNAL is no longer a `static mut`, so the handler cannot participate in a Rust data race. SAVSIG and PS are written only by the main thread inside one serialized session; the handler never reads them. The push/pop table is filled before PS=1 and read only when PS>=1, so a partially installed table is never restored.",
+      "defects": [
+        "B29-D1"
+      ],
+      "residuals": [
+        "B29-R2",
+        "B29-R4"
+      ]
+    },
+    {
+      "id": "B29-UI-3",
+      "file": "src/ui/ui_openssl.rs",
+      "mechanism": "Prompt/read/write callback buffer lifecycle: write_string, read_string, read_till_nl, read_string_inner, read_string_inner_error, UI_set_result, the 8192-byte result buffer and the over-long-line tail buffer.",
+      "disposition": "SAFETY_DISCHARGED (scope: the callback buffer extents and cleansing; src/ui/ui_openssl.rs:138-220, 238-255, 269-378)",
+      "contract": "fgets receives maxsize 8191 into an 8192-byte array, so it writes at most 8190 bytes plus NUL; the newline is replaced in place only when the pointer is inside that array; read_till_nl passes 4 into a 5-byte array (3 bytes plus NUL) and its chunk is now cleansed on both exits; the error label cleanses the full 8192 bytes on every success and failure path, and there is no return from read_string_inner that bypasses it. UI_set_result is called with a NUL-terminated result. The callback string preconditions are the constructors' (non-NULL prompt/action/test).",
+      "defects": [
+        "B29-D2"
+      ],
+      "residuals": [
+        "B29-R3"
+      ]
+    },
+    {
+      "id": "B29-UI-4",
+      "file": "src/ui/ui_openssl.rs",
+      "mechanism": "Process-global method registry: UI_OPENSSL, DEFAULT_UI_METH, UI_OpenSSL, UI_get_default_method, UI_set_default_method.",
+      "disposition": "CONTRACTED (scope: src/ui/ui_openssl.rs:583-651). The object has 'static lifetime and its name points at a 'static literal; the registry cell and the object's mutation ordering are protected only by stated caller obligations, not by a design mechanism and not by an independent dynamic check.",
+      "contract": "UI_OpenSSL answers a *mut to the one 'static method object; UI_get_default_method answers the current default and UI_set_default_method replaces it with a plain unsynchronised store. The authority's own manual binds this setter ('not thread-safe and should not be called at the same time as other OpenSSL functions'). Concurrent mutation of the shared object, or a read concurrent with the setter, is a data race and is excluded by the stated external contract. No safe-Rust interface returns or consumes these pointers.",
+      "defects": [],
+      "residuals": [
+        "B29-R6"
+      ]
+    }
+  ],
+  "state_table": [
+    {"path": "UI_process -> open_session, lock acquired", "lock": "held", "tty_in/tty_out": "set (fopen or stdin/stderr)", "is_a_tty": "probed", "result": "1; callbacks run, close_session follows"},
+    {"path": "lock acquisition refuses", "lock": "not held", "tty_in/tty_out": "untouched", "is_a_tty": "untouched", "result": "0; UI_process returns -1 without close_session"},
+    {"path": "tcgetattr fails with a non-fatal errno (ENOTTY/EINVAL/ENXIO/EIO/EPERM/ENODEV)", "lock": "held", "tty_in/tty_out": "open", "is_a_tty": "0", "result": "1; no tcsetattr, session continues"},
+    {"path": "tcgetattr fails with any other errno", "lock": "held (leaked)", "tty_in/tty_out": "open (leaked)", "is_a_tty": "1", "result": "0; UI_process -1 without close_session (B29-R1, authority parity)"},
+    {"path": "echo == 0, noecho_console fails", "ps": "1", "result": "teardown: no echo restore, popsig, cleanse, 0/-1"},
+    {"path": "read succeeds", "ps": "2", "result": "UI_set_result, then the error label still restores echo, popsig and cleanses; 1"},
+    {"path": "fgets NULL / EOF / ferror / read_till_nl EOF", "ps": "2", "result": "error label: echo restore, popsig, cleanse; 0"},
+    {"path": "SIGINT recorded by recsig", "ps": "any", "result": "error label maps ok to -1; echo restore, popsig, cleanse"},
+    {"path": "close_console", "lock": "released", "tty_in/tty_out": "fclosed only if not stdin/stderr", "result": "1"}
+  ],
+  "caller_closure": [
+    {
+      "file": "src/ui/ui_lib.rs",
+      "caller": "UI_process:1407-1535",
+      "disposition": "SAFE (unchanged); its opener-failure early return is the precondition for B29-R1",
+      "evidence": "UI_process calls open_session first and returns -1 without calling close_session when it refuses; on every other return it funnels through ui_process_err, which calls close_session. It passes a live ui and a live queue element to each callback. The console callbacks are never exported directly."
+    },
+    {
+      "file": "src/ui/ui_lib.rs",
+      "caller": "UI_set_result (UIT_PROMPT/UIT_VERIFY) from read_string_inner",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "UI_set_result copies the NUL-terminated result into the caller's result buffer under the element's maxsize; the console method supplies result as an 8192-byte NUL-terminated array. The verify comparison then reads UI_get0_result_string and UI_get0_test_string, both of which the constructor contracts make non-NULL."
+    },
+    {
+      "file": "src/ui/ui_lib.rs",
+      "caller": "UI_add_input_string / UI_add_verify_string / UI_add_input_boolean / UI_add_info_string / UI_add_error_string",
+      "disposition": "SAFE (unchanged)",
+      "evidence": "general_allocate_prompt rejects a NULL prompt and a NULL result_buf for prompt types, so out_string is non-NULL for every type; the verify and boolean constructors' own Safety contracts require a readable test_buf and action_desc. Those are exactly the callback preconditions named at B29-UI-3."
+    },
+    {
+      "file": "src/runtime/bio/sys.rs",
+      "caller": "fopen/fclose/fgets/fputs/fflush/feof/ferror/fileno/stdin/stderr/memcpy/strchr and errno()",
+      "disposition": "REUSED (B1/B2 BIO contracts unchanged)",
+      "evidence": "The console method uses the same sys declarations as the BIO methods; their FFI contracts are unchanged. The duplicate local `static mut stdin` declaration was removed so the file consumes the one sys declaration."
+    },
+    {
+      "file": "src/runtime/thread.rs",
+      "caller": "CRYPTO_THREAD_write_lock/unlock across the session",
+      "disposition": "REUSED (B11 thread contract unchanged)",
+      "evidence": "The lock is the per-UI CryptoRwlock created by UI_new_method; open_session acquires it and close_session releases it. No application callback is invoked between those calls, so the non-reentrant lock is not held across a callback edge."
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: clean (final blob 7f43920e).",
+      "clippy": "cargo clippy --all-targets -- -D warnings: PASS (final blob).",
+      "focused_tests": "cargo test --lib ui_openssl -- --test-threads=1: 4 passed / 0 failed (the two existing method tests, the real-signal/cleanse test, and the read_till_nl behaviour test).",
+      "structural_guards": "No export, signature, #[repr(C)] layout, allocator seam coordinate, unsafe lint attribute or detector changed. Termios==60 and SigAction==152 asserts retained; one target_has_atomic=\"32\" assert added. The duplicate extern `static mut stdin` was removed in favour of sys::stdin; the read is still an unsafe static access."
+    },
+    "batch": {
+      "threaded": "cargo test --lib -- --test-threads=4: 1699 passed / 0 failed / 31 ignored (1730 total), 103.54 s.",
+      "serial": "cargo test --lib -- --test-threads=1: 1699 passed / 0 failed / 31 ignored (1730 total), 203.98 s.",
+      "note": "Both runs are on the final blob, after the repairs and both new tests. The baseline before this batch was 1728 total (1697 passed / 31 ignored); +2 tests and no removals."
+    },
+    "asan": {
+      "status": "PASS (targeted, all four ui_openssl tests)",
+      "command": "bash docker/openssl-rs-asan.sh exec env 'RUSTFLAGS=-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1' CC=/asan/bin/asan-cc AR=ar ASAN_OPTIONS=allocator_may_return_null=1:detect_leaks=0:symbolize=1 CARGO_TARGET_DIR=/work/target/asan-focus CARGO_BUILD_JOBS=4 cargo +nightly-2026-10-05 test -Zbuild-std --lib --target x86_64-unknown-linux-gnu -- ui_openssl --test-threads=1",
+      "result": "4 passed / 0 failed. ASan covers the read_till_nl stack buffer and the result-buffer cleanse; it cannot exercise the real /dev/tty blocking path."
+    }
+  },
+  "controls_observed": [
+    "the_signal_edge_records_sigint_and_cleanses_the_read_buffer: installs recsig for SIGUSR1 with sigaction (pushsig deliberately skips it), delivers it with raise(2) so the handler runs on the calling thread, asserts INTR_SIGNAL recorded SIGUSR1, then stores SIGINT and drives read_string_inner_error with PS=0, asserting -1 and that every byte of the caller's 8192-byte buffer is zero. The previous SIGUSR1 disposition is restored by a Drop guard. Passes in the normal court and under ASan.",
+    "Negative control 1 (temporary, SIGINT mapping): the comparison was made unmatchable (`INTR_SIGNAL.load(...) == -1`); the same test failed with rc 1 versus -1. The comparison was restored and the blob hash re-checked.",
+    "Negative control 2 (temporary, cleanse): the OPENSSL_cleanse call in read_string_inner_error was commented out; the same test failed at `result.iter().all(|&b| b == 0)` because the buffer retained its fill bytes. The cleanse was restored and the blob hash re-checked.",
+    "After both controls, `git hash-object src/ui/ui_openssl.rs` is again 7f43920ed93d52607039a2125cbd6e44dbe0b38b (byte-identical to the evaluated final blob), and the four focused tests pass again.",
+    "read_till_nl_reports_eof_and_newline_after_draining: uses tmpfile()+rewind() to prove the restructured loop still answers 0 on EOF before a newline and 1 when the newline is in the drained tail. The cleanse itself is unobservable after return and is a source-level obligation, not a runtime detector claim.",
+    "The two pre-existing tests (the default method object and a UI over it) still pass, confirming UI_OpenSSL/UI_get_default_method identity and UI_free's no-terminal path."
+  ],
+  "miri": {
+    "status": "NOT_RUN",
+    "reason": "The `miri` component is not installed in the pinned court toolchain: `rustup component list --toolchain nightly-2026-10-05` lists no miri and the court has no network to fetch it. Independently, the boundary is libc FILE/termios/sigaction/tmpfile machinery and the constructor path uses the CRYPTO allocator seam and a pthread lock, all outside Miri's supported FFI set. The data-race class is eliminated by type rather than detected at runtime: INTR_SIGNAL is a single AtomicI32 and no `static mut` is reachable from recsig."
+  },
+  "loom_or_tsan": "NOT_RUN. No TSan venue is provisioned, and Loom models lock/atomic protocols rather than POSIX signal delivery. The edited concurrency mechanism is the handler's single relaxed atomic store; there is no lock or shared-ownership transition to model. The full threaded suite (--test-threads=4) is the only dynamic concurrency evidence and does not itself drive a console session.",
+  "terminal_differential": {
+    "status": "NOT_RUN",
+    "reason": "No pty harness was run. By construction no unit test drives the default console method (the module header records that the UI tests use UI_null or a hand-built method and that the RT-PEM-KEY court supplies passwords through PEM_def_callback's userdata arm). The real /dev/tty open/noecho/blocking-read/pushsig/popsig path therefore has source-level and structural evidence only."
+  },
+  "invalidated_evidence": {
+    "closed": "B29-D1 (the hidden non-atomic signals/read/write race on INTR_SIGNAL) is CLOSED; M83's deferral of src/ui/ui_openssl.rs is resolved.",
+    "invalidated": "The pre-fix Safety comment on recsig ('the store is a plain aligned int' and therefore async-signal-safe) is invalid for Rust and is replaced. Any statement that INTR_SIGNAL is accessed non-atomically is invalid for blob 7f43920e.",
+    "not_invalidated": "The B1/B2 BIO sys contracts, RC-1 and OB-1..OB-4, the B11 thread lock contract, the B22 provider-init findings, ui_lib's audited ownership model, and every non-console UI method. UI_null and the wrapper method are untouched."
+  },
+  "hidden_obligations": 0,
+  "hidden_obligations_note": "Zero for the audited file. The one hidden obligation found (B29-D1) was a Rust data race between recsig and the reader, and it is eliminated: the handler can reach only an AtomicI32. Every remaining precondition is stated at its point of use and in the module header: one console session per process, the documented non-thread-safety of UI_set_default_method, mutation ordering for the shared 'static method object, callback ordering by UI_process, and the constructors' non-NULL string contracts. B29-R1..R6 are explicitly recorded residuals, not hidden obligations.",
+  "new_unsafe_assumptions": 0,
+  "new_unsafe_assumptions_note": "None. The atomic conversion removes assumptions; the cleansing call adds no pointer, alignment or lifetime assumption (the buffer is a local array). The test-only sigaction/raise/tmpfile/rewind declarations are cfg(test) and never in a release build.",
+  "unsafe_operations_removed": 3,
+  "unsafe_operations_removed_detail": "The write before pushsig (read_string_inner), the load in the error label, and the store in recsig were `unsafe { static mut INTR_SIGNAL ... }` operations. AtomicI32 store/load are safe Rust, and recsig's body now contains no unsafe operation at all. The duplicate extern `static mut stdin` declaration was also removed (a declaration, not an operation).",
+  "unsafe_operations_introduced": 1,
+  "unsafe_operations_introduced_detail": "OPENSSL_cleanse over the five-byte read_till_nl chunk, with a SAFETY comment naming the local array. Net production unsafe operations: -2.",
+  "test_only_unsafe_added": 10,
+  "test_only_unsafe_note": "Two #[cfg(test)] tests add ten unsafe expressions: UI_OpenSSL/UI_new_method/UI_free, sigaction install and restore, raise, read_string_inner_error, tmpfile, fputs/rewind, read_till_nl and fclose. The raise/tmpfile/rewind externs are declared inside the test module.",
+  "boundary_size": "1 production file, src/ui/ui_openssl.rs (+174/-29), plus two test-only tests and the ledger/receipt updates. The production edits are: the module's concurrency and signal-edge contracts, INTR_SIGNAL→AtomicI32 at four sites, the read_till_nl restructure with cleansing, the callback preconditions, the open_console B29-R1 note, the registry mutation contract, removal of the duplicate stdin declaration, and the target_has_atomic gate.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "No safe-Rust interface reaches this file: UI_OpenSSL, UI_get_default_method, UI_set_default_method, UI_new_method/UI_process and the constructors are unsafe extern \"C\" with stated contracts, and the callback functions are private. A C caller that violates the stated serialization or mutation preconditions is outside the ABI contract; a caller that honours them cannot reach UB through this file. B29-D1 was the only path by which a compliant caller could reach UB, and it is closed.",
+  "residuals": [
+    {
+      "id": "B29-R1",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "low",
+      "disposition": "RETAINED authority-parity liveness/resource leak (not UB)",
+      "description": "open_console:424-431 returns 0 on an errno outside the six admitted values with the per-UI lock still held and both /dev/tty streams open; UI_process then returns -1 without calling close_console. The authority does the same at ui_openssl.c:449-460. The path requires an exotic tcgetattr errno; no invalid release or dangling pointer results."
+    },
+    {
+      "id": "B29-R2",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "low",
+      "disposition": "RETAINED authority-parity ignored-return behaviour (not UB)",
+      "description": "pushsig:540 ignores sigaction's answer. If an install fails, SAVSIG[i] stays zero and popsig:564 installs a zeroed SigAction (SIG_DFL, empty mask) for that signal instead of the previous disposition. The authority ignores the same return. No memory unsafety."
+    },
+    {
+      "id": "B29-R3",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "low",
+      "disposition": "RETAINED authority-parity timing property; dudect/ctgrind NOT_RUN",
+      "description": "read_string:212 compares the two entered strings with strcmp, which is data-dependent and early-exit. The authority does the same. This is a local verify prompt, not a cryptographic check, but no constant-time claim is made and no timing instrument was run."
+    },
+    {
+      "id": "B29-R4",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "info",
+      "disposition": "RETAINED authority-parity liveness behaviour (not UB)",
+      "description": "pushsig installs recsig for synchronous fault signals (SIGSEGV, SIGBUS, SIGFPE, SIGILL) as well as asynchronous ones, exactly as the authority does. A synchronous fault returns to the faulting instruction; this is an authority-parity loop, not memory unsafety."
+    },
+    {
+      "id": "B29-R5",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "info",
+      "disposition": "RETAINED external ABI precondition (now stated)",
+      "description": "The streams, terminal states, SAVSIG and PS are process-global. Concurrent console sessions would race on them; the module header and open_console's contract require one session per process. This is the same serialisation the authority's unsynchronised globals require, and it is now an explicit precondition rather than a hidden assumption."
+    },
+    {
+      "id": "B29-R6",
+      "file": "src/ui/ui_openssl.rs",
+      "severity": "info",
+      "disposition": "RETAINED external ABI precondition (now stated)",
+      "description": "UI_OpenSSL:618 hands out a *mut to the same 'static object UI_get_default_method shares. Mutating it while any thread drives a UI over it is a data race; the export's contract requires mutation to be ordered before publication. No safe-Rust interface exposes the pointer."
+    }
+  ],
+  "not_run": [
+    {
+      "gate": "Miri (Stacked/Tree Borrows)",
+      "blocker": "miri component absent from the pinned court toolchain (no miri in `rustup component list --toolchain nightly-2026-10-05`, no network) and the boundary is libc FILE/termios/sigaction FFI."
+    },
+    {
+      "gate": "TSan / Loom for the data-race class",
+      "blocker": "No TSan venue; Loom does not model POSIX signal delivery. The class is eliminated by type, not detected dynamically."
+    },
+    {
+      "gate": "Real-terminal differential (pty)",
+      "blocker": "No pty harness; no unit test drives the default method, by design. The blocking read, noecho/echo and full pushsig/popsig path are source-reviewed only."
+    },
+    {
+      "gate": "RT-PEM-KEY re-run",
+      "blocker": "Not run for this batch: the court supplies passwords through PEM_def_callback's userdata arm and never reaches the console method, so it is not an affected probe."
+    },
+    {
+      "gate": "dudect / ctgrind",
+      "blocker": "B29-R3 (verify strcmp) has no constant-time claim; no timing instrument was run."
+    },
+    {
+      "gate": "FRF / SEAL forensic regeneration and whole-cohort closure",
+      "blocker": "Deferred to the designed promotion/seal checkpoint."
+    }
+  ],
+  "escalations": [
+    {
+      "id": "B29-D1",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B29",
+      "file": "src/ui/ui_openssl.rs",
+      "line": "111-124 (static), 283 (reset), 358 (read), 579-581 (handler)",
+      "pre_fix_witness": "c2cf9e63d00a89a1661bd2278de5afb99165b400: `static mut INTR_SIGNAL: c_int = 0`; `unsafe { INTR_SIGNAL = 0 }` before pushsig, `unsafe { INTR_SIGNAL } == SIGINT` in the error label, and `unsafe { INTR_SIGNAL = i }` in recsig. Under Rust's memory model the handler's write races the main thread's write/read; the C `volatile sig_atomic_t` promise does not carry over. The pre-fix Safety comment reasoned from the C type, which is why the obligation was hidden.",
+      "source_witness": "src/ui/ui_openssl.rs:121 `static INTR_SIGNAL: AtomicI32 = AtomicI32::new(0);`; :283 and :580 relaxed stores; :358 relaxed load; recsig's body contains only `INTR_SIGNAL.store(i, Ordering::Relaxed)`.",
+      "control_witness": "src/ui/ui_openssl.rs:816 the_signal_edge_records_sigint_and_cleanses_the_read_buffer (real SIGUSR1 delivery passes in the court and under ASan; the SIGINT-mapping and cleanse negative controls each make it fail)."
+    },
+    {
+      "id": "B29-D2",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B29",
+      "file": "src/ui/ui_openssl.rs",
+      "line": "238-255",
+      "pre_fix_witness": "c2cf9e63: read_till_nl's `let mut buf = [0 as c_char; SIZE + 1]` was left on the stack un-cleansed on both returns; it can hold up to three bytes of an over-long pass phrase.",
+      "source_witness": "src/ui/ui_openssl.rs:242-254 breaks out of the loop with a value and calls OPENSSL_cleanse over the full five-byte array before returning.",
+      "control_witness": "read_till_nl_reports_eof_and_newline_after_draining proves the restructured answers (0 at EOF, 1 at a newline) in the court and under ASan; the cleanse itself is unobservable after return and is recorded as a source-level §5 obligation, not a detected result."
+    },
+    {
+      "id": "B29-D3",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B29",
+      "file": "src/ui/ui_openssl.rs",
+      "line": "653-661",
+      "pre_fix_witness": "c2cf9e63 declared a local `extern \"C\" { static mut stdin: *mut FILE; }` and justified it with the false claim that sys exposes stdin only for stderr; sys.rs:72 already declares stdin.",
+      "source_witness": "src/ui/ui_openssl.rs:657-661 now declares only fprintf; stdin is imported from crate::runtime::bio::sys with stderr.",
+      "control_witness": "Structural: the build links the same glibc `stdin` symbol through the one sys declaration; the focused and full suites pass."
+    }
+  ],
+  "queue": {
+    "remaining": 46,
+    "audited": 717,
+    "next_ordinary": "src/x509/t_req.rs",
+    "next_eight": [
+      "src/x509/t_req.rs",
+      "src/x509/t_x509.rs",
+      "src/x509/v3_aaa.rs",
+      "src/x509/v3_akeya.rs",
+      "src/x509/v3_audit_id.rs",
+      "src/x509/v3_authattid.rs",
+      "src/x509/v3_battcons.rs",
+      "src/x509/v3_bcons.rs"
+    ]
+  }
+}
